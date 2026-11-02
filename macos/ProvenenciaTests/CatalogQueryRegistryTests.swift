@@ -1375,7 +1375,7 @@ struct CatalogQueryRegistryTests {
         let session = makeSession()
         let project = session.projectKey
         let key = CatalogQueryKey.personEvents(project: project, entityId: "e1")
-        session.setQueryValue(key, value: [CatalogPersonEvent]())
+        session.setQueryValue(key, value: CatalogPersonTimeline())
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
         #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personEvents)
@@ -1400,16 +1400,29 @@ struct CatalogQueryRegistryTests {
                     person: CatalogPersonSummary(entity: person, name: nil, nameValueCount: 0),
                     roles: [witness]
                 )],
-                dated: true
+                span: CatalogTimelineSpan(from: 1880, to: 1881, openStart: true, openEnd: false)
+            ),
+            CatalogPersonEvent(
+                event: CatalogEventSummary(entity: event, title: CatalogEventTitle(rule: .ref, ref: "EVT-2")),
+                roles: [],
+                participants: []
             ),
         ]
-        store.seededPersonEvents = ["e1": events]
+        let timeline = CatalogPersonTimeline(
+            events: events,
+            birth: CatalogLifeMarker(eventId: nil, besideEventId: "ev1"),
+            death: CatalogLifeMarker(eventId: "ev1", besideEventId: nil)
+        )
+        store.seededPersonEvents = ["e1": timeline]
         let session = makeSession(store: store)
-        let handle: QueryHandle<[CatalogPersonEvent]> = session.query(
+        let handle: QueryHandle<CatalogPersonTimeline> = session.query(
             .personEvents(project: session.projectKey, entityId: "e1")
         )
         await waitForQuery(handle)
-        #expect(handle.value == events)
+        #expect(handle.value == timeline)
+        #expect(handle.value?.events.map(\.dated) == [true, false])
+        #expect(CatalogPersonTimeline().birth == CatalogLifeMarker(eventId: nil, besideEventId: nil))
+        #expect(CatalogPersonTimeline().death == CatalogLifeMarker(eventId: nil, besideEventId: nil))
         await #expect(throws: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])) {
             _ = try await store.listPersonEvents(projectDir: projectDir, entityID: "e9")
         }
