@@ -70,6 +70,13 @@ struct PersonGenderTreatmentTests {
         #expect(PersonGenderTreatment.read(summary(gender: gender("", ""))) == nil)
     }
 
+    @Test func aRelabelledProductTermReadsLikeTheRowsString() {
+        let woman = CatalogConclusionValue.term(id: "t", key: "woman", label: "Female (self-described)", origin: CatalogOrigin.provenencia)
+        let treatment = PersonGenderTreatment.read(summary(gender: CatalogTermFacts(term: woman, count: 1, propertyLabel: "Gender")))
+        #expect(treatment?.text == ReconciledValueDisplay.string(for: woman, propertyKey: SeededPropertyKey.gender))
+        #expect(treatment?.text == "Woman")
+    }
+
     @Test func badgeAndSpokenText() {
         let woman = PersonGenderTreatment.read(summary(gender: gender("woman", "Woman")))
         #expect(woman?.badge.text == "Woman")

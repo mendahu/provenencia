@@ -91,6 +91,15 @@ struct PVBadge: View {
     }
 }
 
+extension PVBadge {
+    /// The "+N" after a title or line when more names or places survived. Hidden
+    /// from VoiceOver: the row or line it sits in already speaks the count.
+    static func moreCount(_ count: Int) -> some View {
+        PVBadge(text: L10n.DesignSystem.badgeMoreCount(count), tone: .neutral, subtle: true)
+            .accessibilityHidden(true)
+    }
+}
+
 /// Applies the VoiceOver label + tooltip a glyph-only badge needs, and is a
 /// no-op for the text badges (which read out their own label).
 private struct PVBadgeIconLabel: ViewModifier {

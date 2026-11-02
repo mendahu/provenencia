@@ -70,8 +70,8 @@ struct PersonGenderTreatment: Equatable {
 
     private static func treatment(_ facts: CatalogTermFacts, basis: Basis) -> PersonGenderTreatment? {
         guard facts.count == 1, let value = facts.term, case .term(_, let key, _, let origin) = value else { return nil }
-        let text = ReconciledValueDisplay.string(for: value)
-        guard !text.isEmpty else { return nil }
+        let propertyKey = basis == .gender ? SeededPropertyKey.gender : SeededPropertyKey.sexAtBirth
+        guard let text = PropertyTermDisplay.name(value, propertyKey: propertyKey), !text.isEmpty else { return nil }
         return PersonGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: facts.propertyLabel)
     }
 

@@ -35,8 +35,8 @@ struct ReconciliationRecord: Equatable, Identifiable {
         orders: NameFormatOrders = NameFormatOrders()
     ) {
         id = outcome.observationID
-        readAs = ReconciledValueDisplay.readAs(outcome, locale: locale, orders: orders)
-        readAsIsPhrase = ReconciledValueDisplay.readAsIsPhrase(outcome)
+        readAs = ReconciledValueDisplay.readAs(outcome, propertyKey: field.propertyKey, locale: locale, orders: orders)
+        readAsIsPhrase = ReconciledValueDisplay.readAsIsPhrase(outcome, propertyKey: field.propertyKey)
         counted = ReconciledValueDisplay.counted(outcome, in: field)
         sourceTitle = Self.sourceTitle(for: outcome)
         phrase = ReconciledValueDisplay.outcomePhrase(outcome, in: field, locale: locale)

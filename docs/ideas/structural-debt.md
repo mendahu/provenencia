@@ -8,5 +8,10 @@
 | A-32 | S12-37 | The Evidence graph canvas keeps its tool and sheet state as loose flags; one tool enum and one sheet enum would replace them. Touch it with the next canvas tool. |
 | A-33 | S13-05 | Two event-person shapes: `EventSummary.subjects` (`EventSubject`, from `hops.SubjectsOfEvent`: subject role, not filtered to canonical) and `PersonEvent` participants (`EventParticipant`, from `hops.ParticipantsOfEvent`: canonical, with roles). Fold them when an Event page lists participants. |
 | A-34 | S13-05 | The per-person query keys `.personFamily` and `.personEvents` (and S13-27's) repeat one descriptor shape; share one descriptor builder, and derive `everyKindHasOneDescriptor`'s count from `Kind.allCases`. Touch it with S13-27. |
+| A-35 | S13-34 | `PVOmnibarHitRow` is filed as a recipe though it is content-agnostic and titled with a `String`; move it to `macos/App/DesignSystem/Components/` with `PVTitleText`. |
+| A-36 | S13-34 | `DateValueDraft` carries three editor flags (`showStartTime`, `showEndTime`, `showAdvanced`) set from the input and toggled inside the draft, so the draft is not pure formatting input; split them into the editor's own state. |
+| A-37 | S13-34 | `DateRowDisplay` and `DateValueDisplay` are two date formatters; unify them behind one style and precision. |
+| A-38 | S13-34 | `L10n.Properties.boundOverflow` ("+%lld") duplicates `PVBadge.moreCount`; move it onto the badge. |
+| A-39 | S13-34 | `PVDeleteImpact` takes `WorkspaceLocation`, a `Features/` type, so the kit check allows it (`scripts/check-guidance-names.allow`); move the type out of `Features/Workspace` or pass the destination in. |
 | — | S14-11 plan | `CatalogQueryStalePolicy`: no descriptor arm sets `.refetchOnRevisit` and only two tests read `stalePolicy(for:)`, beside the cache's `isStale` and `whenHidden: .markStale`. Remove or use it when the cache next changes. |
 | — | S12-15 ship log | Swift's `SourceSurface` raw values and Go's `workspacelocation.Surface*` constants are matched only by a comment; a `swift_vocabulary_test.go` row would catch drift. |

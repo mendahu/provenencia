@@ -396,3 +396,13 @@ private enum NamePartTypeColumn {
         return ceil(longest + PVInputChrome.horizontalInset + trailing + 2)
     }
 }
+
+extension NamePartType {
+    /// The part-type picker's options: untyped first, then each registry type.
+    static var selectOptions: [PVSelectOption] {
+        [PVSelectOption(value: "", label: L10n.string(L10n.NameValue.partTypeNone))]
+            + NamePartType.allCases.map {
+                PVSelectOption(value: $0.rawValue, label: L10n.string($0.label))
+            }
+    }
+}

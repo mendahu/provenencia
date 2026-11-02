@@ -21,9 +21,11 @@ struct PlaceTitleParts: Equatable, Sendable {
         locale: Locale,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let names = toponym?.displayedValues
-            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
-            .filter { !$0.isEmpty } ?? []
+        let names = toponym.map { toponym in
+            toponym.displayedValues
+                .map { ReconciledValueDisplay.string(for: $0.value, propertyKey: toponym.propertyKey, locale: locale, orders: orders) }
+                .filter { !$0.isEmpty }
+        } ?? []
         self.init(names: names, label: entity.label, ref: entity.ref)
     }
 }
@@ -34,7 +36,7 @@ enum PlaceTitleDisplay {
     }
 
     /// First kept name, else the italic label, else the mono ref.
-    static func titleSource(_ parts: PlaceTitleParts) -> ConclusionTitleSource {
+    static func titleSource(_ parts: PlaceTitleParts) -> PVTitleSource {
         let names = parts.names.map(trimmed).filter { !$0.isEmpty }
         if let first = names.first {
             return .name(first)

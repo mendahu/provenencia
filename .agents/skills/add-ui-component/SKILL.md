@@ -66,7 +66,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 - [ ] README row: a new `Components/<Name>/` or `Recipes/<Name>/` folder has a row in the DesignSystem README's built table (`scripts/check-guidance-names.py` fails without it)
 - [ ] Grep’d DesignSystem + Features for an existing near-match
 - [ ] Composed down instead of cloning sideways
-- [ ] No catalog types in Components/
+- [ ] No catalog types in Components/; kit code names no `Features/` type; recipes may read `Platform/` formatters and `Catalog*` types
 - [ ] User copy via add-localized-string; a11y ids at call sites when UI-tested
 - [ ] #Preview with static sample data for new DesignSystem types
 - [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)

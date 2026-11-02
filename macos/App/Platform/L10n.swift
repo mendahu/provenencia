@@ -111,6 +111,24 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static func badgeMoreCount(_ count: Int) -> String {
+            let resource = LocalizedStringResource(
+                "designSystem.badge.moreCount",
+                defaultValue: "+%lld",
+                comment: "Badge after a list row title or line: how many more names or places there are. Argument is the count."
+            )
+            return L10n.format(resource, count)
+        }
+        static let datePlaceLineDateUnknown = LocalizedStringResource(
+            "designSystem.datePlaceLine.dateUnknown",
+            defaultValue: "date unknown",
+            comment: "A date · place line (a Person's birth or death line, an Event's summary): its date is not known"
+        )
+        static let datePlaceLinePlaceUnknown = LocalizedStringResource(
+            "designSystem.datePlaceLine.placeUnknown",
+            defaultValue: "place unknown",
+            comment: "A date · place line (a Person's birth or death line, an Event's summary): its place is not known"
+        )
         static func segmentShortcutHelp(_ label: String, key: String) -> String {
             L10n.format(LocalizedStringResource(
                 "designSystem.segmentedControl.shortcutHelp",
@@ -8963,15 +8981,6 @@ enum L10n {
             ), place)
         }
 
-        static func moreCount(_ count: Int) -> String {
-            let resource = LocalizedStringResource(
-                "conclusions.list.more",
-                defaultValue: "+%lld",
-                comment: "Badge after a list row title or line: how many more names or places there are. Argument is the count."
-            )
-            return L10n.format(resource, count)
-        }
-
         static func lifeSpan(born: String, died: String) -> String {
             let resource = LocalizedStringResource(
                 "conclusions.life.span",
@@ -9532,18 +9541,6 @@ enum L10n {
             "conclusions.person.died",
             defaultValue: "d.",
             comment: "Abbreviation before a Person's death date and place in the page header"
-        )
-
-        static let dateUnknown = LocalizedStringResource(
-            "conclusions.detail.dateUnknown",
-            defaultValue: "date unknown",
-            comment: "Page header: the Person's birth or death date is not known"
-        )
-
-        static let placeUnknown = LocalizedStringResource(
-            "conclusions.detail.placeUnknown",
-            defaultValue: "place unknown",
-            comment: "Page header: the Person's birth or death place is not known"
         )
 
         static let eventDate = LocalizedStringResource(

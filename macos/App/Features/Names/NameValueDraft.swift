@@ -229,3 +229,10 @@ enum NameFormSplit {
         NameValueDraft.Part(id: UUID(), value: value, type: type.rawValue)
     }
 }
+
+extension NameValueDisplay {
+    /// A draft's text in a host preview: its trimmed form.
+    static func string(for draft: NameValueDraft) -> String {
+        draft.trimmedForm
+    }
+}

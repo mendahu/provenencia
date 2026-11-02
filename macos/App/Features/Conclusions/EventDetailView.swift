@@ -28,12 +28,12 @@ private struct EventDetailSecondary: View {
     let place: String?
 
     var body: some View {
-        ConclusionDatePlaceLine(
+        PVDatePlaceLine(
             date: date,
             place: place,
             accessibilityLabel: L10n.DesignSystem.spokenJoin(
-                date ?? L10n.string(L10n.Conclusions.dateUnknown),
-                place ?? L10n.string(L10n.Conclusions.placeUnknown)
+                PVDatePlaceLine.spokenDate(date),
+                PVDatePlaceLine.spokenPlace(place)
             )
         )
     }

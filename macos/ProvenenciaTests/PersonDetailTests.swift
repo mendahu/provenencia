@@ -415,6 +415,26 @@ struct PersonDetailTests {
         #expect(PersonLifeDisplay.lifeLines(bare, locale: en, missing: .stated).count == 2)
     }
 
+    @Test func lifeDateTextPrecision() {
+        let en = Locale(identifier: "en_US")
+        let born = CatalogDateValueInput(kind: "point", startYear: 1790, startMonth: 5, startDay: 3)
+        #expect(PersonLifeDisplay.dateText(born, locale: en, precision: .year) == "1790")
+        #expect(PersonLifeDisplay.dateText(born, locale: en) == "3 May 1790")
+        let about = CatalogDateValueInput(kind: "point", qualifier: "ABT", startYear: 1790)
+        #expect(PersonLifeDisplay.dateText(about, locale: en, precision: .year) == "abt 1790")
+        let anna = CatalogPersonSummary(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "t", label: ""),
+            name: CatalogNameValue(form: "Anna Weber"),
+            nameValueCount: 1,
+            birth: CatalogLifeFacts(date: born, dateCount: 1),
+            death: CatalogLifeFacts(date: CatalogDateValueInput(kind: "point", startYear: 1851), dateCount: 1)
+        )
+        #expect(PersonLifeDisplay.line(anna, locale: en).text == "3 May 1790 – 1851")
+        #expect(PVDatePlaceLine.spokenDate(nil) == "date unknown")
+        #expect(PVDatePlaceLine.spokenDate("1851") == "1851")
+        #expect(PVDatePlaceLine.spokenPlace(nil) == "place unknown")
+    }
+
     @Test func lifeLinesSayUnknownUntilLifeEventsArrive() {
         let lines = PersonDetailContent(detail: detail()).lifeLines
         #expect(lines.map(\.abbreviation) == ["b.", "d."])

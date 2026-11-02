@@ -210,7 +210,7 @@ struct ConclusionDetailBadge: Equatable {
 /// so a kind does not get its own page type. `sections` here is the Place
 /// hierarchy data, not the page's sections.
 protocol ConclusionDetailBody: Equatable {
-    var title: ConclusionTitleSource { get }
+    var title: PVTitleSource { get }
     var ref: String { get }
     var showsRef: Bool { get }
     var members: String { get }
@@ -713,7 +713,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
                     PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
                         .accessibilityLabel(badge.accessibilityLabel)
                 }
-                title
+                PVTitleText(content.title, style: .display(compact: compact))
                 secondary(content)
                     .environment(\.conclusionDetailHeaderCompact, compact)
             }
@@ -765,38 +765,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
                 .accessibilityIdentifier("\(pageIdentifier).lead")
         } else {
             thumb
-        }
-    }
-
-    private func nameText(_ text: String, styled: AttributedString?) -> Text {
-        guard let styled else { return Text(verbatim: text) }
-        return Text(ConclusionListRow.italicizingEmphasis(styled, font: titleFont))
-    }
-
-    private var titleFont: Font { PVFont.display(size: titleSize, weight: PVFontWeight.medium) }
-
-    private var titleSize: CGFloat { compact ? PVTypeScale.h3 : PVTypeScale.display3 }
-
-    @ViewBuilder
-    private var title: some View {
-        switch content.title {
-        case .name(let text, let styled, let spoken):
-            nameText(text, styled: styled)
-                .font(titleFont)
-                .tracking(titleSize * PVTracking.display)
-                .foregroundStyle(PVColor.textDisplay)
-                .accessibilityLabel(Text(verbatim: spoken ?? text))
-                .accessibilityAddTraits(.isHeader)
-        case .label(let text):
-            Text(verbatim: text)
-                .font(titleFont.italic())
-                .foregroundStyle(PVColor.textDisplay)
-                .accessibilityAddTraits(.isHeader)
-        case .ref(let text):
-            Text(verbatim: text)
-                .font(PVFont.mono(size: compact ? PVTypeScale.h4 : PVTypeScale.h1, weight: PVFontWeight.medium))
-                .foregroundStyle(PVColor.textDisplay)
-                .accessibilityAddTraits(.isHeader)
         }
     }
 }

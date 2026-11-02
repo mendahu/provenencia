@@ -190,21 +190,8 @@ enum EvidenceBridgeEdgeSummary {
         guard let observation = termObservation(kind: kind, in: observations) else {
             return nil
         }
-        return termLabel(of: observation, propertyKey: ConnectionSentenceRegistry.termProperty(for: kind))
-    }
-
-    private static func termLabel(of observation: CatalogObservation, propertyKey key: String) -> String? {
-        let catalog = ObservationValueDisplay.string(for: observation)
+        let text = ObservationValueDisplay.string(for: observation)
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        let termKey = observation.valueTermKey
-        if !termKey.isEmpty {
-            return PropertyTermDisplay.name(
-                key: termKey,
-                origin: observation.valueTermOrigin,
-                propertyKey: key,
-                catalogLabel: catalog
-            )
-        }
-        return catalog.isEmpty ? nil : catalog
+        return text.isEmpty ? nil : text
     }
 }

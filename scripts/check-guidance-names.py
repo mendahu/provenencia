@@ -23,6 +23,10 @@ It also fails on a folder under macos/App/DesignSystem/Components/ or Recipes/
 that macos/App/DesignSystem/README.md has no row for (app-health audit A-33):
 a row names its folder as `Components/Name/` or `Recipes/Name/` in backticks.
 
+It fails on any type declared under macos/App/Features/ that Swift code under
+macos/App/DesignSystem/ names (comments aside): the design system imports no
+feature code. A name the kit may take goes in the allow file with the reason.
+
 It reads macos/Provenencia.xcodeproj/project.pbxproj for the synchronized
 folders Xcode builds from disk (PBXFileSystemSynchronizedRootGroup), keeping no
 list of its own, and fails on: a file in one that is not Swift and not in its
@@ -85,6 +89,20 @@ def allowed():
     return names
 
 
+def kit_allowed():
+    """Names under the allow file's `# Kit check:` heading, the only ones the kit check excuses."""
+    names, in_kit = set(), False
+    path = os.path.join(ROOT, "scripts", "check-guidance-names.allow")
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if line.startswith("# Kit check:"):
+                in_kit = True
+            name = line.split("#", 1)[0].strip()
+            if in_kit and name:
+                names.add(name)
+    return names
+
+
 def looks_like_code(name):
     if len(name) < 6 or name.startswith("_") or APPLE.match(name):
         return False
@@ -101,6 +119,55 @@ def kit_rows_missing():
         for name in sorted(os.listdir(base)):
             if os.path.isdir(os.path.join(base, name)) and f"`{layer}/{name}/" not in readme:
                 problems.append(f"macos/App/DesignSystem/README.md: no row for {layer}/{name}/")
+    return problems
+
+
+TYPE_DECL = re.compile(
+    r"^(?:(?:public|private|fileprivate|internal) )?(?:final )?(?:enum|struct|class|protocol|typealias|actor) (\w+)",
+    re.M,
+)
+SWIFTUI_NAMES = {"Text"}
+
+
+def _swift_files(top):
+    for d, _, files in os.walk(top):
+        for f in sorted(files):
+            if f.endswith(".swift"):
+                yield os.path.join(d, f)
+
+
+def _declared(top):
+    names = set()
+    for path in _swift_files(top):
+        with open(path, encoding="utf-8", errors="ignore") as fh:
+            names.update(TYPE_DECL.findall(fh.read()))
+    return names
+
+
+def kit_names_feature_types():
+    """One problem per feature type the design-system code names.
+
+    The design system imports no feature code (docs/design-system-layers.md). The
+    top-level types (declared at column 0; a nested type is reached through its
+    outer type's name) declared under macos/App/Features/ are harvested from the current tree,
+    less any name DesignSystem/ or Platform/ also declares and the SwiftUI names;
+    the Swift code under macos/App/DesignSystem/ is scanned with comments stripped
+    (a line from `//` on; the README is not read). An allowed name is in
+    scripts/check-guidance-names.allow with its reason.
+    """
+    app = os.path.join(ROOT, "macos", "App")
+    features = _declared(os.path.join(app, "Features"))
+    features -= _declared(KIT) | _declared(os.path.join(app, "Platform")) | SWIFTUI_NAMES
+    features -= kit_allowed()
+    problems = []
+    for path in _swift_files(KIT):
+        with open(path, encoding="utf-8", errors="ignore") as fh:
+            for lineno, line in enumerate(fh, 1):
+                code = line.split("//", 1)[0]
+                for name in sorted(features.intersection(WORD.findall(code))):
+                    problems.append(
+                        f"{os.path.relpath(path, ROOT)}:{lineno}: names {name}, a type declared under macos/App/Features/"
+                    )
     return problems
 
 
@@ -207,11 +274,13 @@ def main():
                         if looks_like_code(name) and name not in words and name not in allow:
                             problems.append(f"{rel}:{lineno}: `{span}` names {name}, which no code defines")
     problems += kit_rows_missing()
+    problems += kit_names_feature_types()
     problems += synced_folders_unlisted()
     if problems:
         print("\n".join(problems))
         print(f"check-guidance-names: {len(problems)} problem(s). Rename a stale name to the current code "
               "or add it to scripts/check-guidance-names.allow with the reason; "
+              "a feature type named in design-system code moves to Platform/ or the kit, or is passed in; "
               "give a kit folder a row in macos/App/DesignSystem/README.md; "
               "list a non-Swift file in its synchronized folder's membership exceptions in "
               "macos/Provenencia.xcodeproj/project.pbxproj")

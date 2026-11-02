@@ -81,7 +81,7 @@ struct ReconciledValueDisplayTests {
 
     @Test func aDepictionReadsAsLikeness() {
         let likeness = CatalogConclusionValue.depiction(CatalogDepictionValue(regionJSON: "", imageRelPath: "objects/x.png"))
-        #expect(ReconciledValueDisplay.string(for: likeness) == "Likeness")
+        #expect(ReconciledValueDisplay.string(for: likeness, propertyKey: "occupation") == "Likeness")
     }
 
     @Test func badgesNameEveryShownState() {
@@ -148,15 +148,24 @@ struct ReconciledValueDisplayTests {
 
     @Test func valuesUseTheirOwnDisplays() {
         let en = Locale(identifier: "en_US")
-        #expect(ReconciledValueDisplay.string(for: .none) == "")
-        #expect(ReconciledValueDisplay.string(for: .text("  farmer ")) == "farmer")
-        #expect(ReconciledValueDisplay.string(for: .integer(1890), locale: en) == "1890")
-        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male", origin: CatalogOrigin.provenencia)) == "Male")
-        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "", origin: CatalogOrigin.provenencia)) == "male")
-        #expect(ReconciledValueDisplay.string(for: .name(Self.jamesRobins)) == "James Robins")
+        #expect(ReconciledValueDisplay.string(for: .none, propertyKey: "occupation") == "")
+        #expect(ReconciledValueDisplay.string(for: .text("  farmer "), propertyKey: "occupation") == "farmer")
+        #expect(ReconciledValueDisplay.string(for: .integer(1890), propertyKey: "occupation", locale: en) == "1890")
+        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male", origin: CatalogOrigin.provenencia), propertyKey: SeededPropertyKey.sexAtBirth) == "Male")
+        #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "", origin: CatalogOrigin.provenencia), propertyKey: SeededPropertyKey.sexAtBirth) == "Male")
+        #expect(ReconciledValueDisplay.string(for: .name(Self.jamesRobins), propertyKey: "occupation") == "James Robins")
         let date = CatalogDateValueInput(kind: "point", startYear: 1817, startMonth: 5, startDay: 14)
-        #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == DateRowDisplay.line(date: date, locale: en))
-        #expect(ReconciledValueDisplay.string(for: .date(date), locale: en) == "14 May 1817")
+        #expect(ReconciledValueDisplay.string(for: .date(date), propertyKey: "occupation", locale: en) == DateRowDisplay.line(date: date, locale: en))
+        #expect(ReconciledValueDisplay.string(for: .date(date), propertyKey: "occupation", locale: en) == "14 May 1817")
+    }
+
+    @Test func termNamesFollowOneRule() {
+        let woman = CatalogConclusionValue.term(id: "t", key: SeededGenderTerm.woman, label: "Female (self-described)", origin: CatalogOrigin.provenencia)
+        #expect(ReconciledValueDisplay.string(for: woman, propertyKey: SeededPropertyKey.gender) == "Woman")
+        let twoSpirit = CatalogConclusionValue.term(id: "u", key: "two_spirit", label: "Two-spirit", origin: "user")
+        #expect(ReconciledValueDisplay.string(for: twoSpirit, propertyKey: SeededPropertyKey.gender) == "Two-spirit")
+        let outcome = Self.outcome("o", "kept", recorded: woman)
+        #expect(ReconciledValueDisplay.readAs(outcome, propertyKey: SeededPropertyKey.gender) == "Woman")
     }
 
     @Test func frame1cPhrasesAndMarks() {
@@ -167,7 +176,7 @@ struct ReconciledValueDisplayTests {
         #expect(phrase(1) == "folded into James Robins" && mark(1) == .gitMerge)
         #expect(phrase(2) == "outvoted (2 of 3 Sources)" && mark(2) == .scale)
         #expect(phrase(3) == "weak · low-trust Source" && mark(3) == .signalLow)
-        #expect(ReconciledValueDisplay.readAs(f.outcomes[1]) == "J. Robins")
+        #expect(ReconciledValueDisplay.readAs(f.outcomes[1], propertyKey: "name") == "J. Robins")
         // Kept and folded records went into the value; the rest didn't.
         #expect(f.outcomes.map { ReconciledValueDisplay.counted($0, in: f) } == [true, true, false, false])
     }
@@ -195,8 +204,8 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.outcomeMark(name.outcomes[1], in: name) == .ban)
         #expect(phrase(2) == "kept")
         #expect(ReconciledValueDisplay.outcomeMark(name.outcomes[2], in: name) == .check)
-        #expect(ReconciledValueDisplay.readAs(name.outcomes[2]) == "not James Robinson")
-        #expect(ReconciledValueDisplay.readAsIsPhrase(name.outcomes[2]))
+        #expect(ReconciledValueDisplay.readAs(name.outcomes[2], propertyKey: "name") == "not James Robinson")
+        #expect(ReconciledValueDisplay.readAsIsPhrase(name.outcomes[2], propertyKey: "name"))
         #expect(ReconciledValueDisplay.counted(name.outcomes[2], in: name))
 
         let place = Self.field("merged", key: "birthPlace", label: "Birth place", valueType: "text",
@@ -226,8 +235,8 @@ struct ReconciledValueDisplayTests {
         #expect(both(Self.outcome("p", "provisional", rank: 2)) == ("provisional member", .circleDashed))
         let none = Self.outcome("n", "no_evidence", rank: nil, recorded: .none)
         #expect(both(none) == ("no usable value", .minus))
-        #expect(ReconciledValueDisplay.readAs(none) == "—")
-        #expect(ReconciledValueDisplay.readAsIsPhrase(none))
+        #expect(ReconciledValueDisplay.readAs(none, propertyKey: "name") == "—")
+        #expect(ReconciledValueDisplay.readAsIsPhrase(none, propertyKey: "name"))
         #expect(ReconciledValueDisplay.outcomePhrase(Self.outcome("h", "someday"), in: f) == "")
     }
 

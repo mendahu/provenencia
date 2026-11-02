@@ -6,7 +6,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
     /// Soft cap for Contains before showing a remainder count.
     static let containsVisibleLimit = 12
 
-    var title: ConclusionTitleSource
+    var title: PVTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
     var showsRef: Bool { if case .ref = title { false } else { true } }

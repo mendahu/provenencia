@@ -55,8 +55,8 @@ protocol ConclusionListKind {
     static func updatedAt(_ row: Row) -> String
     /// The `objects/…` path of the row's thumbnail image; "" shows the kind's mark.
     static func thumbnailRelPath(_ row: Row) -> String
-    static func titleSource(_ row: Row) -> ConclusionTitleSource
-    static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource
+    static func titleSource(_ row: Row) -> PVTitleSource
+    static func titleSource(_ row: Row, orders: NameFormatOrders) -> PVTitleSource
     /// Names beyond the one shown. Zero omits the +N badge.
     static func extraCount(_ row: Row) -> Int
     static func accessibilityLabel(_ row: Row) -> String
@@ -69,7 +69,7 @@ protocol ConclusionListKind {
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
 
-    static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource {
+    static func titleSource(_ row: Row, orders: NameFormatOrders) -> PVTitleSource {
         titleSource(row)
     }
 
@@ -180,7 +180,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                     },
                     itemAccessibilityIdentifier: { "\(Kind.identifierRoot).row.\(Kind.ref($0))" },
                     onActivate: { navigation.go(to: Kind.location($0, orders: session.nameFormat)) },
-                    primary: { ConclusionListRow.title(Kind.titleSource($0, orders: session.nameFormat), extraCount: Kind.extraCount($0)) },
+                    primary: { PVTitleText(Kind.titleSource($0, orders: session.nameFormat), extraCount: Kind.extraCount($0)) },
                     secondary: { Kind.secondary($0) }
                 )
             }

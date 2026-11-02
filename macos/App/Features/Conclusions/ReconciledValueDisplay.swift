@@ -80,9 +80,10 @@ enum ReconciledValueDisplay {
     }
 
     /// One value as text: names and dates through their own displays, terms
-    /// by label (else key). Empty for no value.
+    /// through ``PropertyTermDisplay``. Empty for no value.
     static func string(
         for value: CatalogConclusionValue,
+        propertyKey: String,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
@@ -93,8 +94,8 @@ enum ReconciledValueDisplay {
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         case .integer(let integer):
             return integer.formatted(.number.grouping(.never).locale(locale))
-        case .term(_, let key, let label, _):
-            return label.isEmpty ? key : label
+        case .term:
+            return PropertyTermDisplay.name(value, propertyKey: propertyKey) ?? ""
         case .date(let date):
             return DateRowDisplay.line(date: date, locale: locale)
         case .name(let name):
@@ -112,18 +113,19 @@ enum ReconciledValueDisplay {
     /// What the record said: its value, "not …" for a negative, or "—".
     static func readAs(
         _ outcome: CatalogReconcilerOutcome,
+        propertyKey: String,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> String {
-        let value = string(for: outcome.recorded, locale: locale, orders: orders)
+        let value = string(for: outcome.recorded, propertyKey: propertyKey, locale: locale, orders: orders)
         if value.isEmpty { return L10n.string(L10n.Conclusions.readAsNone) }
         return isNegative(outcome) ? L10n.Conclusions.readAsNot(value) : value
     }
 
     /// Whether "Read as" is a plain phrase ("not …", "—") rather than a value
     /// in its value type's face.
-    static func readAsIsPhrase(_ outcome: CatalogReconcilerOutcome) -> Bool {
-        isNegative(outcome) || string(for: outcome.recorded).isEmpty
+    static func readAsIsPhrase(_ outcome: CatalogReconcilerOutcome, propertyKey: String) -> Bool {
+        isNegative(outcome) || string(for: outcome.recorded, propertyKey: propertyKey).isEmpty
     }
 
     /// The records that went into the shown value, read in primary ink; the
@@ -155,7 +157,7 @@ enum ReconciledValueDisplay {
         case .kept:
             return L10n.string(L10n.Conclusions.outcomeKept)
         case .folded:
-            let into = field.values.first { $0.rank == outcome.valueRank }.map { string(for: $0.value, locale: locale) } ?? ""
+            let into = field.values.first { $0.rank == outcome.valueRank }.map { string(for: $0.value, propertyKey: field.propertyKey, locale: locale) } ?? ""
             return into.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeFolded)
                 : L10n.Conclusions.outcomeFoldedInto(into)

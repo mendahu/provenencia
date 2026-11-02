@@ -19,11 +19,11 @@ enum EventsList: ConclusionListKind {
     static func updatedAt(_ summary: CatalogEventSummary) -> String { summary.updated.at }
     static func thumbnailRelPath(_ summary: CatalogEventSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ summary: CatalogEventSummary) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogEventSummary) -> PVTitleSource {
         titleSource(summary, orders: NameFormatOrders())
     }
 
-    static func titleSource(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> PVTitleSource {
         EventTitleDisplay.titleSource(summary, orders: orders)
     }
 
@@ -57,8 +57,7 @@ enum EventsList: ConclusionListKind {
 
     @MainActor
     static func secondary(_ summary: CatalogEventSummary) -> EventSecondaryLine {
-        let line = EventSecondaryDisplay.content(summary)
-        return EventSecondaryLine(date: line.date, place: line.place, extraPlaces: line.extraPlaces)
+        EventSecondaryLine(content: EventSecondaryDisplay.content(summary))
     }
 }
 
@@ -81,42 +80,34 @@ enum EventSecondaryDisplay {
 
     /// The same date and place on one line. Empty when the event has neither.
     static func line(_ summary: CatalogEventSummary, locale: Locale = .autoupdatingCurrent) -> String {
-        let line = content(summary, locale: locale)
-        if line.date.isEmpty { return line.place }
-        if line.place.isEmpty { return line.date }
-        return L10n.Conclusions.lineJoin(first: line.date, rest: line.place)
+        line(content(summary, locale: locale))
+    }
+
+    /// The date and place of an already-built `Content` on one line.
+    static func line(_ content: Content) -> String {
+        if content.date.isEmpty { return content.place }
+        if content.place.isEmpty { return content.date }
+        return L10n.Conclusions.lineJoin(first: content.date, rest: content.place)
     }
 }
 
-/// The Events row's date, then its place. The +N is other kept places.
+/// The Events row's date, then its place, on the Person header's line. The +N is
+/// other kept places. The row's own label speaks it, so the line is hidden from VoiceOver.
 struct EventSecondaryLine: View {
-    let date: String
-    let place: String
-    let extraPlaces: Int
+    let content: EventSecondaryDisplay.Content
 
     /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
-        if !date.isEmpty || !place.isEmpty {
-            HStack(spacing: PVSpacing.space4) {
-                if !date.isEmpty {
-                    Text(verbatim: date)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .fixedSize(horizontal: true, vertical: false)
-                }
-                if !date.isEmpty && !place.isEmpty {
-                    Text(verbatim: "·")
-                        .foregroundStyle(PVColor.textFaint)
-                }
-                if !place.isEmpty {
-                    Text(verbatim: place)
-                        .italic()
-                        .lineLimit(1)
-                }
-                if extraPlaces > 0 {
-                    PVBadge(text: L10n.Conclusions.moreCount(extraPlaces), tone: .neutral, subtle: true)
-                        .accessibilityHidden(true)
-                }
-            }
+        if !content.date.isEmpty || !content.place.isEmpty {
+            PVDatePlaceLine(
+                date: content.date.isEmpty ? nil : content.date,
+                place: content.place.isEmpty ? nil : content.place,
+                accessibilityLabel: EventSecondaryDisplay.line(content),
+                missing: .omitted,
+                dateTone: PVColor.textMuted,
+                extraCount: content.extraPlaces
+            )
+            .accessibilityHidden(true)
         }
     }
 }

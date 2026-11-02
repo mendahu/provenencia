@@ -119,7 +119,7 @@ struct PersonTitleDisplayTests {
         ])
         #expect(PersonTitleDisplay.titleSource(summary(name: plain), orders: orders) == .name("James Robins"))
 
-        let italic = ConclusionListRow.italicizingEmphasis(try #require(d.styled), font: .body)
+        let italic = PVTitleText.italicizingEmphasis(try #require(d.styled), font: .body)
         for run in italic.runs {
             let isSmith = String(italic[run.range].characters) == "Smith"
             #expect((run[AttributeScopes.SwiftUIAttributes.FontAttribute.self] != nil) == isSmith)

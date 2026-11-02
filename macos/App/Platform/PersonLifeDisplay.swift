@@ -11,7 +11,7 @@ enum PersonLifeDisplay {
     }
 
     static func line(_ summary: CatalogPersonSummary, locale: Locale = .autoupdatingCurrent) -> Line {
-        let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale)
+        let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale, precision: .full)
         let places = placeSpan(birth: summary.birth.places, death: summary.death.places)
         let extra = DerivedPlace.extra(summary.birth.places) + DerivedPlace.extra(summary.death.places)
         let text: String
@@ -37,18 +37,17 @@ enum PersonLifeDisplay {
         var accessibilityLabel: String
     }
 
-    /// What a line says of a half that is not recorded. `.stated` is the
-    /// header: both lines always, the half "unknown", spoken in full
-    /// ("Born 3 May 1790, Bremen"). `.omitted` is a tile: only lines with a
-    /// date or a place, the half left out, spoken mid-sentence in lowercase
-    /// ("born 3 May 1790, Bremen"; "died 1851").
-    enum Missing: Equatable { case stated, omitted }
-
     /// The *b.* and *d.* lines of a Person.
+    ///
+    /// `missing` is how a half that is not recorded reads. `.stated` is the
+    /// header: both lines always, the half "unknown", spoken in full ("Born 3
+    /// May 1790, Bremen"). `.omitted` is a tile: only lines with a date or a
+    /// place, the half left out, spoken mid-sentence in lowercase ("born 3 May
+    /// 1790, Bremen"; "died 1851").
     static func lifeLines(
         _ summary: CatalogPersonSummary?,
         locale: Locale = .autoupdatingCurrent,
-        missing: Missing
+        missing: PVDatePlaceLine.Missing
     ) -> [LifeLine] {
         let born = lifeLine(
             L10n.Conclusions.personBornAbbr, facts: summary?.birth, locale: locale, missing: missing,
@@ -65,7 +64,7 @@ enum PersonLifeDisplay {
         _ abbreviation: LocalizedStringResource,
         facts: CatalogLifeFacts?,
         locale: Locale,
-        missing: Missing,
+        missing: PVDatePlaceLine.Missing,
         spoken: LocalizedStringResource
     ) -> LifeLine? {
         let date = dateText(facts?.date, locale: locale)
@@ -76,8 +75,8 @@ enum PersonLifeDisplay {
         case .stated:
             label = L10n.Conclusions.a11yLifeLine(
                 word,
-                date: date.isEmpty ? L10n.string(L10n.Conclusions.dateUnknown) : date,
-                place: place.isEmpty ? L10n.string(L10n.Conclusions.placeUnknown) : place
+                date: PVDatePlaceLine.spokenDate(date.isEmpty ? nil : date),
+                place: PVDatePlaceLine.spokenPlace(place.isEmpty ? nil : place)
             )
         case .omitted:
             switch (date.isEmpty, place.isEmpty) {
@@ -96,18 +95,23 @@ enum PersonLifeDisplay {
     }
 
     /// The date a life row shows. Empty when none is recorded.
-    static func dateText(_ date: CatalogDateValueInput?, locale: Locale = .autoupdatingCurrent) -> String {
+    static func dateText(
+        _ date: CatalogDateValueInput?,
+        locale: Locale = .autoupdatingCurrent,
+        precision: DateRowDisplay.Precision = .full
+    ) -> String {
         guard let date else { return "" }
-        return DateRowDisplay.line(date: date, locale: locale)
+        return DateRowDisplay.line(date: date, precision: precision, locale: locale)
     }
 
     private static func dateSpan(
         birth: CatalogDateValueInput?,
         death: CatalogDateValueInput?,
-        locale: Locale
+        locale: Locale,
+        precision: DateRowDisplay.Precision = .full
     ) -> String {
-        let born = dateText(birth, locale: locale)
-        let died = dateText(death, locale: locale)
+        let born = dateText(birth, locale: locale, precision: precision)
+        let died = dateText(death, locale: locale, precision: precision)
         switch (born.isEmpty, died.isEmpty) {
         case (true, true):
             return ""

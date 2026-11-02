@@ -22,6 +22,15 @@ enum ObservationValueDisplay {
             }
         }
 
+        if !observation.valueTermKey.isEmpty {
+            return PropertyTermDisplay.name(
+                key: observation.valueTermKey,
+                origin: observation.valueTermOrigin,
+                propertyKey: observation.propertyKey,
+                catalogLabel: observation.valueText
+            )
+        }
+
         let text = observation.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty {
             return text

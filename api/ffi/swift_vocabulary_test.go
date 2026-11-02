@@ -48,7 +48,7 @@ const (
 	swiftGraphKinds   = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
 	swiftCatalogMut   = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
-	swiftNamePartType = "../../macos/App/Features/Names/NamePartType.swift"
+	swiftNamePartType = "../../macos/App/Platform/NamePartType.swift"
 
 	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"

@@ -16,4 +16,12 @@ enum PropertyTermDisplay {
     static func name(term: CatalogPropertyTerm, propertyKey: String) -> String {
         name(key: term.key, origin: term.origin, propertyKey: propertyKey, catalogLabel: term.label)
     }
+
+    /// A conclusion value's term name; nil for any other value, or a term with
+    /// neither a key nor a label.
+    static func name(_ value: CatalogConclusionValue, propertyKey: String) -> String? {
+        guard case .term(_, let key, let label, let origin) = value else { return nil }
+        let text = name(key: key, origin: origin, propertyKey: propertyKey, catalogLabel: label)
+        return text.isEmpty ? nil : text
+    }
 }

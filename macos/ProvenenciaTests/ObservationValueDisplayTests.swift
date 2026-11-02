@@ -33,6 +33,20 @@ struct ObservationValueDisplayTests {
         #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "1882-04-03")
     }
 
+    @Test func termNamesFollowOneRule() {
+        var obs = base(valueText: "Female (self-described)", propertyValueType: "term")
+        obs.propertyKey = SeededPropertyKey.gender
+        obs.valueTermKey = "woman"
+        obs.valueTermOrigin = CatalogOrigin.provenencia
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Woman")
+        obs.valueText = "Two-spirit"
+        obs.valueTermKey = "two_spirit"
+        obs.valueTermOrigin = "user"
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Two-spirit")
+        obs.valueTermKey = ""
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Two-spirit")
+    }
+
     @Test func nameUsesFormWhenValueTextEmpty() {
         var obs = base(propertyValueType: "name")
         obs.nameForm = "Ada Lovelace"

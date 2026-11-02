@@ -274,7 +274,7 @@ struct DateValueDraft: Equatable, Sendable {
 
     private static func pointQualifierOK(_ qual: String) -> Bool {
         switch qual {
-        case "", "ABT", "BEF", "AFT": return true
+        case "", DateQualifier.about, DateQualifier.before, DateQualifier.after: return true
         default: return false
         }
     }

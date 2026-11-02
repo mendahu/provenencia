@@ -37,6 +37,42 @@
         }
       }
     },
+    "designSystem.badge.moreCount": {
+      "comment": "Badge after a list row title or line: how many more names or places there are. Argument is the count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "designSystem.datePlaceLine.dateUnknown": {
+      "comment": "A date · place line (a Person's birth or death line, an Event's summary): its date is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "date unknown"
+          }
+        }
+      }
+    },
+    "designSystem.datePlaceLine.placeUnknown": {
+      "comment": "A date · place line (a Person's birth or death line, an Event's summary): its place is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "place unknown"
+          }
+        }
+      }
+    },
     "designSystem.checkbox.locked": {
       "comment": "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear",
       "extractionState": "manual",
@@ -16374,18 +16410,6 @@
         }
       }
     },
-    "conclusions.list.more": {
-      "comment": "Badge after a list row title or line: how many more names or places there are. Argument is the count.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld"
-          }
-        }
-      }
-    },
     "conclusions.life.span": {
       "comment": "Persons row: birth date, then death date. Arguments are the two formatted dates.",
       "extractionState": "manual",
@@ -17054,30 +17078,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "d."
-          }
-        }
-      }
-    },
-    "conclusions.detail.dateUnknown": {
-      "comment": "Page header: the Person's birth or death date is not known",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "date unknown"
-          }
-        }
-      }
-    },
-    "conclusions.detail.placeUnknown": {
-      "comment": "Page header: the Person's birth or death place is not known",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "place unknown"
           }
         }
       }

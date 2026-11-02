@@ -18,11 +18,11 @@ enum PersonsList: ConclusionListKind {
     static func updatedAt(_ summary: CatalogPersonSummary) -> String { summary.updated.at }
     static func thumbnailRelPath(_ summary: CatalogPersonSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ summary: CatalogPersonSummary) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogPersonSummary) -> PVTitleSource {
         titleSource(summary, orders: NameFormatOrders())
     }
 
-    static func titleSource(_ summary: CatalogPersonSummary, orders: NameFormatOrders) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogPersonSummary, orders: NameFormatOrders) -> PVTitleSource {
         PersonTitleDisplay.titleSource(summary, style: .sorted, orders: orders)
     }
 
@@ -68,8 +68,7 @@ struct PersonLifeLine: View {
                 Text(verbatim: line.text)
                     .lineLimit(1)
                 if line.extraPlaces > 0 {
-                    PVBadge(text: L10n.Conclusions.moreCount(line.extraPlaces), tone: .neutral, subtle: true)
-                        .accessibilityHidden(true)
+                    PVBadge.moreCount(line.extraPlaces)
                 }
             }
         }

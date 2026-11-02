@@ -10,7 +10,7 @@ enum PersonTitleDisplay {
         entity: CatalogCanonicalEntity,
         style: NameDisplayStyle = .natural,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> ConclusionTitleSource {
+    ) -> PVTitleSource {
         if let name {
             let d = NameValueDisplay.display(for: name, style: style, orders: orders)
             if !d.text.isEmpty { return .name(d.text, styled: d.styled, spoken: d.spoken) }
@@ -23,7 +23,7 @@ enum PersonTitleDisplay {
         _ summary: CatalogPersonSummary,
         style: NameDisplayStyle = .natural,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> ConclusionTitleSource {
+    ) -> PVTitleSource {
         titleSource(name: summary.name, entity: summary.entity, style: style, orders: orders)
     }
 

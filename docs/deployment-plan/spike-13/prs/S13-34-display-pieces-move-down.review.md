@@ -87,3 +87,9 @@ All answered 2026-11-02:
 
 ### X-9 · minor · Smaller choices
 **Answer:** Fixed. D-1 maps an empty name to nil and the gender guard keeps line 70 nil; `NameValueDisplay.string(form:)` moves; structural-debt rows take the next free A-numbers; the S13-13 and S13-35 plans already record the hand-over.
+
+## Amendment after Planned (2026-11-02, ship loop)
+
+### A-1 · STEP-7 stop · D-12 harvests nested feature types
+The implementer stopped at STEP-7: the `^\s*…` harvest picked up nested feature types with generic names (`Group`, `Action`, `Draft`, `Family`, `Open`, `Field`) and found 15 false hits in kit code beyond `WorkspaceLocation`.
+**Answer (user):** harvest top-level declarations only. D-12's regex is anchored at column 0; a nested type is still caught through its outer type's name. See the ship log.

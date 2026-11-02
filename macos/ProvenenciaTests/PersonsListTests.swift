@@ -142,6 +142,30 @@ struct ConclusionListKindTests {
         #expect(PlacesList.extraCount(place) == 1)
     }
 
+    @Test func eventsRowSecondLine() {
+        func place(_ id: String, _ name: String) -> CatalogChainedPlace {
+            CatalogChainedPlace(
+                entity: CatalogCanonicalEntity(id: id, ref: "PLC-\(id)", subjectTypeID: "t", label: ""), names: [name]
+            )
+        }
+        var event = CatalogEventSummary(
+            entity: CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            date: CatalogDateValueInput(kind: "point", startYear: 1844, startMonth: 6, startDay: 4),
+            places: [place("1", "Bremen"), place("2", "Hamburg"), place("3", "Lübeck")],
+            title: CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-1", typeLabel: "Marriage", place: "Bremen")
+        )
+        let en = Locale(identifier: "en_US")
+        let full = EventSecondaryDisplay.content(event, locale: en)
+        #expect(full == EventSecondaryDisplay.Content(date: "4 Jun 1844", place: "Bremen", extraPlaces: 2))
+        event.places = []
+        #expect(EventSecondaryDisplay.content(event, locale: en)
+            == EventSecondaryDisplay.Content(date: "4 Jun 1844", place: "", extraPlaces: 0))
+        event.date = nil
+        #expect(EventSecondaryDisplay.content(event, locale: en)
+            == EventSecondaryDisplay.Content(date: "", place: "", extraPlaces: 0))
+        #expect(EventSecondaryDisplay.line(event, locale: en) == "")
+    }
+
     @Test func rowLabelsSpeakThePlacesTheBadgeCounts() {
         let york = CatalogCanonicalEntity(id: "pl1", ref: "PLC-1", subjectTypeID: "t", label: "")
         let kingston = CatalogCanonicalEntity(id: "pl2", ref: "PLC-2", subjectTypeID: "t", label: "")
