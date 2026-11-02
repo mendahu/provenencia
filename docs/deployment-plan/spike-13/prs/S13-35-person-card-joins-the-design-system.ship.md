@@ -66,5 +66,5 @@ Reviewers: MNT (scope `9a8116f9...c8490e8e`; the only lens with a Fix-now major)
 MNT-1: **Resolved** (`PVDatePlaceLine.text(date:place:)` at `PVDatePlaceLine.swift:57-65`; `rg 'lineJoin\(' macos/App` → definition + that one call; six nil/empty cases in `PersonDetailTests.datePlaceLineTextJoinsWhatIsRecorded`). New findings: none. Verdict: Clean. No Fix plan 2.
 
 ## Result
-Gate PASS (`c8490e8e`) · CI pending · open: none · follow-ups: CON-5 (a unit seam for SwiftUI key handling so kit Return/focus behaviours can be held by a test) · to user: — · CON miss: none
+Gate PASS (`c8490e8e`) · CI green (localizable, test; run 41537748130) · open: none · follow-ups: CON-5 (a unit seam for SwiftUI key handling so kit Return/focus behaviours can be held by a test) · to user: — · CON miss: none
 `origin/main` unchanged since the branch was cut (`a0275471`); no merge needed.
