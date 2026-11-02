@@ -34,4 +34,4 @@ Head `4a68fdf4`. Gate PASS (orchestrator run). F-1 done: `loadLinks` split into 
 Not run: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: none · to user: — · CON miss: none
