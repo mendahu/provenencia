@@ -37,6 +37,18 @@
         }
       }
     },
+    "designSystem.badge.moreCount": {
+      "comment": "Badge after a list row title or line: how many more names or places there are. Argument is the count.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
     "designSystem.checkbox.locked": {
       "comment": "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear",
       "extractionState": "manual",
@@ -16370,18 +16382,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Open %@"
-          }
-        }
-      }
-    },
-    "conclusions.list.more": {
-      "comment": "Badge after a list row title or line: how many more names or places there are. Argument is the count.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "+%lld"
           }
         }
       }

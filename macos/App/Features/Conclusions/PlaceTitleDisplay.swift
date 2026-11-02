@@ -36,7 +36,7 @@ enum PlaceTitleDisplay {
     }
 
     /// First kept name, else the italic label, else the mono ref.
-    static func titleSource(_ parts: PlaceTitleParts) -> ConclusionTitleSource {
+    static func titleSource(_ parts: PlaceTitleParts) -> PVTitleSource {
         let names = parts.names.map(trimmed).filter { !$0.isEmpty }
         if let first = names.first {
             return .name(first)

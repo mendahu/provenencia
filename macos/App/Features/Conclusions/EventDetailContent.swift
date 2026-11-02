@@ -4,7 +4,7 @@ import Foundation
 /// summary it carries (S9-24, board S9-D6). The summary supplies the title, the
 /// kept date or span (the band) and the places. The date's Why stays on this page's date row.
 struct EventDetailContent: ConclusionDetailBody {
-    var title: ConclusionTitleSource
+    var title: PVTitleSource
     var ref: String
     var showsRef: Bool { if case .ref = title { false } else { true } }
     var members: String

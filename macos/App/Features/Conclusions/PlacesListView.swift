@@ -18,7 +18,7 @@ enum PlacesList: ConclusionListKind {
     static func updatedAt(_ summary: CatalogPlaceSummary) -> String { summary.updated.at }
     static func thumbnailRelPath(_ summary: CatalogPlaceSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ summary: CatalogPlaceSummary) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogPlaceSummary) -> PVTitleSource {
         PlaceTitleDisplay.titleSource(summary.titleParts)
     }
 

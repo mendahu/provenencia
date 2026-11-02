@@ -111,6 +111,14 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static func badgeMoreCount(_ count: Int) -> String {
+            let resource = LocalizedStringResource(
+                "designSystem.badge.moreCount",
+                defaultValue: "+%lld",
+                comment: "Badge after a list row title or line: how many more names or places there are. Argument is the count."
+            )
+            return L10n.format(resource, count)
+        }
         static func segmentShortcutHelp(_ label: String, key: String) -> String {
             L10n.format(LocalizedStringResource(
                 "designSystem.segmentedControl.shortcutHelp",
@@ -8961,15 +8969,6 @@ enum L10n {
                 defaultValue: "Open %@",
                 comment: "Icon button on a derived place row that opens the Place page; argument is the place name"
             ), place)
-        }
-
-        static func moreCount(_ count: Int) -> String {
-            let resource = LocalizedStringResource(
-                "conclusions.list.more",
-                defaultValue: "+%lld",
-                comment: "Badge after a list row title or line: how many more names or places there are. Argument is the count."
-            )
-            return L10n.format(resource, count)
         }
 
         static func lifeSpan(born: String, died: String) -> String {

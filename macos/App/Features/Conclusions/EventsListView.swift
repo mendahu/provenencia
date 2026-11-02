@@ -19,11 +19,11 @@ enum EventsList: ConclusionListKind {
     static func updatedAt(_ summary: CatalogEventSummary) -> String { summary.updated.at }
     static func thumbnailRelPath(_ summary: CatalogEventSummary) -> String { summary.pictureImageRelPath }
 
-    static func titleSource(_ summary: CatalogEventSummary) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogEventSummary) -> PVTitleSource {
         titleSource(summary, orders: NameFormatOrders())
     }
 
-    static func titleSource(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> ConclusionTitleSource {
+    static func titleSource(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> PVTitleSource {
         EventTitleDisplay.titleSource(summary, orders: orders)
     }
 
@@ -113,8 +113,7 @@ struct EventSecondaryLine: View {
                         .lineLimit(1)
                 }
                 if extraPlaces > 0 {
-                    PVBadge(text: L10n.Conclusions.moreCount(extraPlaces), tone: .neutral, subtle: true)
-                        .accessibilityHidden(true)
+                    PVBadge.moreCount(extraPlaces)
                 }
             }
         }

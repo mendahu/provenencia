@@ -4,7 +4,7 @@ import Foundation
 /// S9-D5). Pure: views only lay it out.
 struct PersonDetailContent: ConclusionDetailBody {
     /// Name → label → ref (PD-1).
-    var title: ConclusionTitleSource
+    var title: PVTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
     var showsRef: Bool { if case .ref = title { false } else { true } }

@@ -7,7 +7,7 @@ import SwiftUI
 struct PersonTileContent: Equatable {
     /// The person's entity id.
     var id: String
-    var title: ConclusionTitleSource
+    var title: PVTitleSource
     var lines: [PersonLifeDisplay.LifeLine]
     var imageRelPath: String
     var colors: PVThumbnail.Colors?
@@ -96,7 +96,7 @@ struct PersonTile: View {
                 )
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: PVSpacing.space4) {
-                        ConclusionListRow.title(content.title, lineLimit: 2, emphasized: content.isFocus)
+                        PVTitleText(content.title, lineLimit: 2, emphasized: content.isFocus)
                             .font(PVListText.titleFont)
                             .foregroundStyle(PVColor.textPrimary)
                         if content.isFocus {

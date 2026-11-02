@@ -10,7 +10,7 @@ enum EventTitleDisplay {
         _ summary: CatalogEventSummary,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> ConclusionTitleSource {
+    ) -> PVTitleSource {
         var title = summary.title
         if title.typeKey.isEmpty {
             title.typeKey = summary.eventTypeKey
@@ -32,7 +32,7 @@ enum EventTitleDisplay {
         _ title: CatalogEventTitle,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
-    ) -> ConclusionTitleSource {
+    ) -> PVTitleSource {
         let type = typeWord(title)
         switch title.rule {
         case .recordedName:
@@ -68,7 +68,7 @@ enum EventTitleDisplay {
     }
 
     /// An Event whose summary has not loaded: its label, else its ref.
-    static func untitled(_ entity: CatalogCanonicalEntity) -> ConclusionTitleSource {
+    static func untitled(_ entity: CatalogCanonicalEntity) -> PVTitleSource {
         let label = entity.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return label.isEmpty ? .ref(entity.ref) : .label(label)
     }
