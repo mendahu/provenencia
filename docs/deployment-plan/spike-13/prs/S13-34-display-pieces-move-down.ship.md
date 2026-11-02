@@ -76,4 +76,4 @@ Reviewers: MNT (scope `9f215942...a1f8d168`). CON and UX had only minors (checke
 No new findings. MNT-2 **Resolved** (orchestrator read: allow-file header describes both uses; `kit_allowed()` reads only the `# Kit check:` section, guidance check keeps `allowed()`). MNT-3 **Resolved** (`PersonLifeDisplay.swift:40-46` summary first, `missing` described after).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — (D-12 STEP-7 stop answered: top-level only) · CON miss: none
+Gate PASS · CI green (both `test` jobs pass; `localizable` skipped) · open: none · follow-ups: none · to user: — (D-12 STEP-7 stop answered: top-level only) · CON miss: none
