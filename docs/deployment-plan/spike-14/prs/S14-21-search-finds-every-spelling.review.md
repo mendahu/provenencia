@@ -72,3 +72,33 @@
 
 ### M-8 · nit · Say the alias lines' lasting purpose after S14-26
 **Answer:** Fixed. One sentence in D-7.
+
+## Round 2
+
+Executability round 2 confirmed that X-1 – X-10 hold.
+
+### X-11 · blocker · `locatedBirth` cannot be extracted as specified
+**Answer:** Fixed. STEP-6 now gives the signature `locatedBirth(toponym string, forms ...string)`. The helper covers:
+- the person from `forms`
+- the birth event: type `birth`, date 1817
+- the place, with its toponym
+- the three positions
+- both bridges
+
+It stops before `promote` and `fileBridges`. `TestSummarySearchFindsTheListTitle` passes "James Robins", "Kenneth Robins" and keeps every assertion.
+
+### X-12 · blocker · Query tokens with a dash or slash break `FoldedSpelling`'s one-token contract
+**Answer:** Fixed. D-4 splits each sanitized token with `RawTokens` and folds each part, writing `("tok" OR ("p1" AND "p2"))`. T-4 has a `søby-kirke` row and a "Soby-Kirke" retrieval case. The reviewer's other point was that dots and commas mid-word would add `folded` text to filenames and numbers. In answer, D-2's punctuation clause now covers mid-word apostrophes only, so existing documents' bm25 stays as today. T-1 rows: "1,200", "scan.pdf" → none; "D’Arcy" → `darcy`.
+
+### X-13 · major · T-5's `Rules` and `Value` are unstated
+**Answer:** Fixed. T-5 names:
+- the package: external `valuecompare_test`
+- the rules: `matchregistry.Default().Value` with `NewAliasIndex`
+- the value: `namevaluetest.Western`
+- the cap: the 33-word case runs against `MaxWords` 32
+
+### X-14 · major · Row order and keying in `recomputeBatch` are implicit
+**Answer:** Fixed. §6 sorts new rows by `bytes.Compare(PropertyID)` then `Rank`, matching SQLite's `memcmp` order. Rows are keyed by `string(entity_id)`, and an id with no rows on either side is unmoved.
+
+### X-15 · minor · The trigram `'delete'` row
+**Answer:** Fixed. §6 says the trigram `'delete'` row keeps four columns.
