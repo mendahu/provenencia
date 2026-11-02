@@ -63,54 +63,74 @@ struct PVPersonCard: View {
     var open: () -> Void = {}
 
     var body: some View {
-        PVTileCard(
-            size: size,
-            isRaised: content.isFocus,
-            accessibilityLabel: content.spokenLabel,
-            help: size == .compact ? content.helpText : content.title.text,
-            action: content.isFocus ? nil : open,
-            thumbnail: {
-                CachedThumbnail(
-                    projectDir: projectDir,
-                    relPath: content.imageRelPath,
-                    size: size.thumbnail,
-                    cornerRadius: PVRadius.sm,
-                    fallbackMark: .subjectPerson,
-                    fallbackLabel: L10n.PersonCard.noLikeness,
-                    colors: content.colors
-                )
-            },
-            title: {
-                PVTitleText(content.title, lineLimit: size.titleLineLimit, emphasized: content.isFocus)
-                    .font(PVListText.titleFont)
-                    .foregroundStyle(PVColor.textPrimary)
-            },
-            lines: {
-                if size == .compact {
-                    if !content.years.isEmpty {
-                        Text(verbatim: content.years)
-                            .font(PVFont.mono(size: PVTypeScale.caption))
-                            .foregroundStyle(PVColor.textMuted)
-                            .lineLimit(size.linesLineLimit)
-                    }
-                } else {
-                    ForEach(content.lines, id: \.abbreviation) { line in
-                        PVDatePlaceLine(
-                            leading: line.abbreviation,
-                            date: line.date,
-                            place: line.place,
-                            accessibilityLabel: line.accessibilityLabel,
-                            missing: .omitted
-                        )
-                    }
-                }
-            },
-            trailing: {
-                if content.isFocus && size == .regular {
-                    PVBadge(L10n.PersonCard.thisPerson)
-                }
-            }
+        if content.isFocus && size == .regular {
+            PVTileCard(
+                size: size,
+                isRaised: content.isFocus,
+                accessibilityLabel: content.spokenLabel,
+                help: help,
+                action: nil,
+                thumbnail: { thumbnail },
+                title: { title },
+                lines: { lines },
+                trailing: { PVBadge(L10n.PersonCard.thisPerson) }
+            )
+        } else {
+            PVTileCard(
+                size: size,
+                isRaised: content.isFocus,
+                accessibilityLabel: content.spokenLabel,
+                help: help,
+                action: content.isFocus ? nil : open,
+                thumbnail: { thumbnail },
+                title: { title },
+                lines: { lines }
+            )
+        }
+    }
+
+    private var help: String {
+        size == .compact ? content.helpText : content.title.text
+    }
+
+    private var thumbnail: some View {
+        CachedThumbnail(
+            projectDir: projectDir,
+            relPath: content.imageRelPath,
+            size: size.thumbnail,
+            cornerRadius: PVRadius.sm,
+            fallbackMark: .subjectPerson,
+            fallbackLabel: L10n.PersonCard.noLikeness,
+            colors: content.colors
         )
+    }
+
+    private var title: some View {
+        PVTitleText(content.title, lineLimit: size.titleLineLimit, emphasized: content.isFocus)
+            .font(PVListText.titleFont)
+            .foregroundStyle(PVColor.textPrimary)
+    }
+
+    @ViewBuilder
+    private var lines: some View {
+        if size == .compact {
+            if !content.years.isEmpty {
+                Text(verbatim: content.years)
+                    .font(PVFont.mono(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(size.linesLineLimit)
+            }
+        } else {
+            ForEach(content.lines, id: \.abbreviation) { line in
+                PVDatePlaceLine(
+                    leading: line.abbreviation,
+                    date: line.date,
+                    place: line.place,
+                    accessibilityLabel: line.accessibilityLabel,
+                    missing: .omitted
+                )
+            }
+        }
     }
 }
 
