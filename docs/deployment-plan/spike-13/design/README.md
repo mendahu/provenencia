@@ -10,7 +10,7 @@ In order.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| [S13-D4](S13-D4-timeline-section.md) | Timeline section (written 2026-11-02, board not drawn) | S13-13 |
+| [S13-D4](S13-D4-timeline-section.md) | Timeline section (board drawn 2026-11-02, turn 12) | S13-13 |
 | S13-D5 | Gallery section and likeness viewer | S13-14, S13-15 |
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
 | S13-D7 | Claim review sheet | Descoped 2026-10-29 with S13-18 |
