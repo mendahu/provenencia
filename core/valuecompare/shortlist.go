@@ -81,6 +81,32 @@ func (name) wordKeys(v Value, r Rules) (index, lookup []string) {
 	return sortedUnique(append(slices.Clone(keys), pi...)), sortedUnique(append(keys, pl...))
 }
 
+// NameFoldsInto are the tokens the reconciler's fold keeps into a name's
+// words: for each given, nickname or untyped word, the names that
+// AliasIndex.FoldsInto lists, without the name's own words. Sorted, no
+// duplicates; nil for a value that is not a name, has no such word, or has
+// more words than Names.MaxWords.
+func NameFoldsInto(v Value, r Rules) []string {
+	words, generation := nameWords(v, r)
+	if len(words) == 0 || tooManyWords(words, generation, r) {
+		return nil
+	}
+	own := map[string]bool{}
+	var out []string
+	for _, w := range words {
+		t, ok := AliasToken(w.text, r.Words)
+		if !ok {
+			continue
+		}
+		own[t] = true
+		if PrefixRuleRole(w.role) {
+			out = append(out, r.Names.Aliases.FoldsInto(t, w.role)...)
+		}
+	}
+	out = slices.DeleteFunc(out, func(t string) bool { return own[t] })
+	return sortedUnique(out)
+}
+
 // prefixKeys are the given-like words' prefix keys. A word files itself whole
 // (g:) and its strict prefixes (p:); a lookup asks for the same word as a
 // prefix (p:) and its strict prefixes as whole words (g:). So a word meets the

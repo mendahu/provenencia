@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"math"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -460,4 +461,46 @@ func TestWarmRulesReusesIndex(t *testing.T) {
 			t.Error("a nil graph builds a different index from the warm one")
 		}
 	})
+}
+
+func TestProductFoldsInto(t *testing.T) {
+	tables := ProductTables()
+	idx := ProductIndex()
+	w := matchregistry.Default().Value.Words
+	tokens := map[string]bool{}
+	for _, table := range tables {
+		for _, set := range table.Sets {
+			for _, raw := range set {
+				if k, ok := valuecompare.AliasToken(raw, w); ok {
+					tokens[k] = true
+				}
+			}
+		}
+	}
+	pairs, names, most := 0, 0, 0
+	for into := range tokens {
+		from := idx.FoldsInto(into, valuecompare.RoleGiven)
+		for _, f := range from {
+			if !idx.Expands(f, into, valuecompare.RoleGiven) {
+				t.Errorf("%s listed into %s but does not Expand", f, into)
+			}
+		}
+		pairs += len(from)
+		if len(from) > 0 {
+			names++
+		}
+		most = max(most, len(from))
+	}
+	if pairs != 2627 || names != 1157 || most != 15 {
+		t.Errorf("pairs %d names %d most %d, want 2627 1157 15", pairs, names, most)
+	}
+	if got := idx.FoldsInto("thomas", valuecompare.RoleGiven); !reflect.DeepEqual(got, []string{"thom", "thos", "tom", "tommy"}) {
+		t.Errorf("thomas: %v", got)
+	}
+	if got := idx.FoldsInto("tom", valuecompare.RoleGiven); !reflect.DeepEqual(got, []string{"tommy"}) {
+		t.Errorf("tom: %v", got)
+	}
+	if slices.Contains(idx.FoldsInto("william", valuecompare.RoleGiven), "robert") {
+		t.Error("william holds robert")
+	}
 }
