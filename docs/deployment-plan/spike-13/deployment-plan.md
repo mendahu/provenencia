@@ -107,7 +107,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **The provenance sheet replaces the Why on the Person page only.** Event and Place keep the Why accordion until they adopt sections; the accordion is deleted then, not this spike (user, 2026-10-26). The shared row takes the sheet or the accordion by caller; this is known debt owned by the Event and Place redesign. Binds S13-11.
 
 - **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` stays the one page for Person, Event and Place. S13-09 gives it a sections slot; Event and Place pass a single section and look unchanged (R-1), and the Person page later passes five. When Event and Place adopt sections, they fill the slot. Binds S13-09, S13-10.
-- **One person tile, built once.** The tile is built in S13-12 (Family) and reused by S13-13 (Timeline), placed per [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) as a recipe once it has the second caller. Briefs S13-D3 and S13-D4 draw the same tile. Binds S13-12, S13-13.
+- **One person tile, built once; the shell in the kit, the content at the call site** (user, 2026-11-02; replaces "placed as a recipe once it has the second caller"). The tile is built in S13-12 (Family) and reused by S13-13 (Timeline); briefs S13-D3 and S13-D4 draw the same tile. What the design system holds is content-agnostic: a tile shell with slots (a thumbnail, a title, lines, a trailing mark) and its interaction, and basic treatments such as the gender colors. Shared helpers that resolve values (a term's name, a date line's text) live at the repository level (`Platform/`), and the person content (which name, which life lines, which badge) is built in the feature that calls the tile. S13-32 decouples today's tile that way before S13-13 reuses it; no Conclusions display type moves into `DesignSystem/` ([`design-system-layers.md`](../../design-system-layers.md): lower layers do not import higher ones). Binds S13-12, S13-13, S13-32.
 - **Colors reuse `PersonGenderTreatment`** (R-3), fed from `PersonSummary`'s terms (S13-02). Binds S13-12, S13-13.
 - **A timeline tile opens the participant on Timeline** (user, 2026-11-02). A click on a participant's tile in the Timeline section opens that person's Person page on its Timeline section, so the researcher walks from one life to the next, as a family tile opens on Family; every other link to a Person still lands on Vitals (S13-D1 PPF-5). An event's title opens its Event page (R-28). Binds S13-13.
 - **Timeline lists fold** (user, 2026-11-02). As on Family, nothing is hidden for good: each event's participants fold at 15 and the event list (the dated list and the Undated group each) at 50, behind the shared "Show N more" row; Go still returns every event and participant. Binds S13-13.
@@ -134,7 +134,8 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-12 | Family section | 3 | The family diagram with person tiles, lines and several families; each unit's children in birth order and the siblings once with the person among them (Go, two proto fields); two columns from board S13-D3; a tile opens the relative on Family | [S13-D3](design/archive/S13-D3-family-section.md) | S13-04, S13-10 | [S13-12](prs/S13-12-family-section.md) | Landed #676 |
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventSummary`s sorted by `sortEvents`, with the person's roles and the other participants as {roles, `PersonSummary`} | — | S13-01, S13-02, S13-31 | [S13-05](prs/S13-05-person-timeline-read.md) | Landed #680 |
-| S13-13 | Timeline section | 4 | The chronological event list with roles, the event's lead picture (else the Event mark), participants as person tiles opening on Timeline, Undated group, folds (events 50, participants 15); the person tile becomes a recipe | [S13-D4](design/S13-D4-timeline-section.md) | S13-05, S13-12 | [S13-13](prs/S13-13-timeline-section.md) | Blocked — on board S13-D4 |
+| S13-32 | The person tile becomes a kit shell | 4 | Preparatory, Swift only, no visible change: today's `PersonTile` splits into a content-agnostic tile shell in the design system (thumbnail, title, lines and trailing-mark slots; the focus-ring button, hover lift and Return activation) and the person content built in `Features/Conclusions`; shared value resolvers (a term value's name) move to `Platform/`; Family moves onto it | — (no chrome change) | S13-12 | — | Scoped |
+| S13-13 | Timeline section | 4 | The chronological event list with roles, the event's lead picture (else the Event mark), participants as person tiles opening on Timeline, Undated group, folds (events 50, participants 15); one host for a section's own read, shared with Family | [S13-D4](design/S13-D4-timeline-section.md) | S13-05, S13-12, S13-32 | [S13-13](prs/S13-13-timeline-section.md) | Blocked — on S13-32 and board S13-D4 |
 | S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait and open Citation | S13-D5 | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | — | Scoped |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery | S13-D5 | S13-14 | — | Scoped |
 | S13-08 | Unpromoting the last member | 6 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact`, wherever Unpromote runs; an unpromote Impact preflight for both confirms | — | S13-25 | — | Scoped |
@@ -203,6 +204,7 @@ SLICE 3 — Family
 
 SLICE 4 — Timeline
   S13-05  Person timeline read
+  S13-32  The person tile becomes a kit shell   (preparatory)
   ✎ S13-D4 ──▶ S13-13  Timeline section
   Check: bar 4
 
@@ -236,11 +238,11 @@ S13-99 — Dogfood close / docs
 ```text
 S13-23 ──▶ S13-24 ──▶ S13-25 ──▶ S13-08
 S13-23 ──▶ S14-02, S14-22    S13-24 ──▶ S14-16, S14-20      (Spike 14)
-S11-30 ──▶ S13-02 ──┬──────────────▶ S13-04 ──▶ S13-12 ──▶ S13-13
-S11-39 ──▶ S13-03 ──┤                  ▲                     ▲
-S11-39 ──▶ S11-51 ──┘                  │                     │
-S13-01 ──┬─────────────────────────────┘                     │
-         ├──▶ S13-05 ◀── S13-02 ─────────────────────────────┘
+S11-30 ──▶ S13-02 ──┬──────────────▶ S13-04 ──▶ S13-12 ──▶ S13-32 ──▶ S13-13
+S11-39 ──▶ S13-03 ──┤                  ▲                               ▲
+S11-39 ──▶ S11-51 ──┘                  │                               │
+S13-01 ──┬─────────────────────────────┘                               │
+         ├──▶ S13-05 ◀── S13-02 ───────────────────────────────────────┘
          └──▶ S13-16
 S13-09 ──▶ S13-10 ──┬──▶ S13-11 ◀── S13-06
                     ├──▶ S13-12
@@ -401,6 +403,13 @@ Go, plus deleting Swift's draft rule.
 **Not this PR.** The section (S13-13); event depictions (R-26).
 **Check.** Handler tests: a witness role appears; a child's birth the person is not linked to does not; undated events come last and flagged.
 **Context.** Working rule "Timeline is direct participation, any role"; R-23 – R-28; `hops.EventsOfSubject`, `EventSummary.subjects` (whether `EventSubject` folds into {role, `PersonSummary`} later is logged in the plan).
+
+#### S13-32 — The person tile becomes a kit shell
+
+**Ships.** A preparatory refactor with no visible change (user, 2026-11-02: "The components that should be promoted into the design system should be content-agnostic … the content should live at the call sites"). Today's `Features/Conclusions/PersonTile.swift` reads six Conclusions display types, so it cannot move into `DesignSystem/` as it is. It splits into: (1) a content-agnostic tile shell in `DesignSystem/` with slots for a thumbnail, a title, lines and a trailing mark, a fixed height and a declared minimum width, and the relative tile's interaction (focus ring, hover lift, Return activation as one kit modifier, which `PersonFamilyMoreRow` also takes); (2) the person content (title, life lines, gender colors, the focus's "This person" badge, the spoken label) built in `Features/Conclusions` and passed into the slots, shared by Family and, next, the Timeline; (3) shared value resolvers at the repository level: `PropertyTermDisplay.name(_ value: CatalogConclusionValue, propertyKey:)`, which `PersonGenderTreatment` and S13-13's roles use instead of `ReconciledValueDisplay.string(for:)`. The gender colors stay a kit treatment (`PVThumbnail.Colors`) fed by `PersonGenderTreatment`. The tile's "this person" keys lose their Family name. Family moves onto it and looks the same.
+**Not this PR.** The Timeline (S13-13); moving `PersonTitleDisplay`, `PersonLifeDisplay`, `DateRowDisplay` or `NameValueDisplay` into `DesignSystem/` (they stay where they are; the content builder calls them).
+**Check.** Family looks and reads as before (`PersonTileTests`, `PersonFamilyContentTests`, `PersonFamilyLayoutTests` green); nothing under `macos/App/DesignSystem/` names a `Person*`, `Conclusion*` or `L10n.Conclusions` symbol.
+**Context.** Working rule "One person tile, built once; the shell in the kit, the content at the call site"; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md); [`design-system-layers.md`](../../design-system-layers.md); S13-13 plan review M-1, M-2, M-4, M-8 ([`prs/S13-13-timeline-section.review.md`](prs/S13-13-timeline-section.review.md)).
 
 #### S13-13 — Timeline section
 
