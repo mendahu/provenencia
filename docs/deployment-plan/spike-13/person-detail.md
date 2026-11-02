@@ -10,7 +10,7 @@ The Person page (`macos/App/Features/Conclusions/PersonDetailView.swift`, worded
 
 - **R-1. Person page only.** Event and Place pages keep their current layout this spike. The section pattern may be reused for them later.
 - **R-2. Canonical people only.** Everything on the page is canonical (promoted) entities. A relative, participant, or anything else that exists only as an unpromoted Subject does not appear. Where nothing is promoted, nothing is drawn.
-- **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PersonGenderTreatment`, S10-23), including its treatment for unknown values.
+- **R-3. Reuse the existing gender/sex colors.** Every person treatment on the page (Family, Timeline participants) uses the color logic already shipped (`PVGenderTreatment`, `PersonGenderTreatment` until S13-35; S10-23), including its treatment for unknown values.
 
 ## Design, then build, one view at a time
 
@@ -60,9 +60,10 @@ The first quasi-family-tree visualization in the app.
 ## 3. Timeline
 
 - **R-23. Events this person took part in directly,** in chronological order, so the section reads as a visualization of the life from birth to death. Family events the person was not a participant in (a child's birth they are not recorded at) are not listed.
-- **R-24. Undated events** go in an "Undated" group at the end.
+- **R-24. Undated events** sit together between the birth and death markers (user, 2026-11-02; until then, an "Undated" group at the end).
+- **R-24a. A lifeline.** A line drawn to scale over the life, from birth to death, with each dated event pointing to its place on it, so gaps in the record show as empty stretches (not labelled). Birth and death always have a marker: the recorded event, else a placeholder ("Birth unknown", "Death unknown") that invents no date and is placed by which event types may come before birth or after death. Every event sits at its own date (user, 2026-11-02).
 - **R-25. Each event shows** a name, a date, a location, and the person's role in it.
-- **R-26. A placeholder thumbnail slot for an event depiction.** Event depictions are not built; the slot is reserved so the layout does not change when they arrive.
+- **R-26. The event's picture.** Each event shows its lead picture (the chosen or earliest Event picture, as the Events list row shows it), else the Event mark. Event pictures shipped in Spike 14 (S14-02); until 2026-11-02 this requirement reserved an empty placeholder slot (user, 2026-11-02).
 - **R-27. Participants.** Each event lists the other canonical people who took part, each with their role and drawn as the shared person tile (R-21), each a link to their Person page.
 - **R-28. Each event links** to its Event page.
 
@@ -98,7 +99,7 @@ On each claim in the Sources section.
 - **Editing an identity claim's argument:** later; this spike is view only (R-40). Pins are gone ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5).
 - **How the records connect on Event and Place pages, Promote ranking with the new comparison, and a research log:** later ([`evidence-graph-comparison.md`](evidence-graph-comparison.md#later)).
 - **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
-- **Event depictions:** Spike 14 batch 1 adds `event_picture` and the Event page's gallery ([Spike 14](../spike-14/deployment-plan.md)); the Timeline keeps its placeholder (R-26) until this spike chooses to fill it.
+- **Event depictions beyond the lead picture:** Spike 14 batch 1 added `event_picture` and the Event page's gallery ([Spike 14](../spike-14/deployment-plan.md)); the Timeline shows each event's lead picture (R-26, 2026-11-02), and an event's gallery stays on its Event page.
 - **Unpromoted Subjects anywhere on the page:** refused (R-2).
 - **Kinship beyond the nuclear family** (grandparents, aunts and uncles, godparents, census households): stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
 
