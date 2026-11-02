@@ -3,7 +3,6 @@ package conclusionsummaries
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
@@ -626,8 +625,8 @@ type lifePick struct {
 	// dateProp is the Property the date was read from (eventDate).
 	dateProp []byte
 	count    int
-	sort     string
-	ok       bool
+	// key is the pick's place in date order.
+	key dateKey
 }
 
 // lifePicks returns the person's surviving birth and death events, in the
@@ -671,11 +670,14 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 }
 
 func lifeFrom(v vocab, ev *graphcache.Node) (lifePick, error) {
-	date, dateCount, dateKey, dateOK, propID, err := eventDate(v, ev)
+	date, dateCount, sortKey, dateOK, propID, err := eventDate(v, ev)
 	if err != nil {
 		return lifePick{}, err
 	}
-	return lifePick{event: ev, date: date, dateProp: propID, count: dateCount, sort: dateKey, ok: dateOK}, nil
+	return lifePick{
+		event: ev, date: date, dateProp: propID, count: dateCount,
+		key: dateKey{key: sortKey, ok: dateOK, ref: strings.ToLower(ev.Ref)},
+	}, nil
 }
 
 // eventDate reads an Event's date: the kept date, else the kept start date.
@@ -700,7 +702,7 @@ func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (L
 	}
 	lead := items[0]
 	for _, item := range items[1:] {
-		if lifeBefore(item, lead) {
+		if dateKeyLess(item.key, lead.key) {
 			lead = item
 		}
 	}
@@ -714,16 +716,6 @@ func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (L
 		Date: lead.date, DateCount: lead.count,
 		Places: places,
 	}, nil
-}
-
-func lifeBefore(a, b lifePick) bool {
-	if a.ok != b.ok {
-		return a.ok
-	}
-	if a.sort != b.sort {
-		return a.sort < b.sort
-	}
-	return a.event.Ref < b.event.Ref
 }
 
 // PersonLifeOwners names, for a Person's birth and death rows, the entity
@@ -790,7 +782,7 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGra
 }
 
 func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
-	sort.SliceStable(picks, func(i, j int) bool { return lifeBefore(picks[i], picks[j]) })
+	sortByDateKey(picks, func(p lifePick) dateKey { return p.key })
 	var out LifeOwners
 	listed := map[string]bool{}
 	dated := map[string]bool{}
@@ -958,20 +950,7 @@ type dateKey struct {
 }
 
 func sortEvents(rows []EventSummary) {
-	type keyed struct {
-		h EventSummary
-		k dateKey
-	}
-	keyedRows := make([]keyed, len(rows))
-	for i := range rows {
-		keyedRows[i] = keyed{h: rows[i], k: eventKeyOf(rows[i])}
-	}
-	sort.SliceStable(keyedRows, func(i, j int) bool {
-		return dateKeyLess(keyedRows[i].k, keyedRows[j].k)
-	})
-	for i := range rows {
-		rows[i] = keyedRows[i].h
-	}
+	sortByDateKey(rows, eventKeyOf)
 }
 
 func dateKeyLess(a, b dateKey) bool {

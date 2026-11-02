@@ -38,13 +38,20 @@ func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 // ref; the one owner of birth order. Each key is computed once, and rows with
 // equal keys keep their order.
 func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
+	sortByDateKey(rows, func(row T) dateKey { return birthKeyOf(summary(row)) })
+}
+
+// sortByDateKey orders rows by their date key: dated first, earliest first,
+// then by ref. Each key is computed once, and rows with equal keys keep their
+// order.
+func sortByDateKey[T any](rows []T, key func(T) dateKey) {
 	type keyed struct {
 		row T
 		key dateKey
 	}
 	keyedRows := make([]keyed, len(rows))
 	for i := range rows {
-		keyedRows[i] = keyed{row: rows[i], key: birthKeyOf(summary(rows[i]))}
+		keyedRows[i] = keyed{row: rows[i], key: key(rows[i])}
 	}
 	sort.SliceStable(keyedRows, func(i, j int) bool {
 		return dateKeyLess(keyedRows[i].key, keyedRows[j].key)
