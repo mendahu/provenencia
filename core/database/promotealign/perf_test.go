@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -132,6 +133,10 @@ func TestLargeSourceBudgets(t *testing.T) {
 	over := func(t *testing.T, what string, got, budget time.Duration) {
 		t.Helper()
 		t.Logf("%s: %v (budget %v)", what, got, budget)
+		// Verify mode rebuilds the cache on every commit; budgets are measured without it.
+		if graphcache.VerifyMode() {
+			return
+		}
 		if got > budget {
 			t.Errorf("%s took %v, over the %v budget", what, got, budget)
 		}

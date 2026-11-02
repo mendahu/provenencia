@@ -130,7 +130,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-16 | Promote and Source writes return their effects | 5 | Promote and Source handlers return `WriteEffects`; sidebar counts become a `counts` effects list; a test pins effects on every audited write; the dead `promoteSubject` path goes; one shared proto header message (was S12-32) | — | S13-24 | — | Scoped |
 | S14-17 | Vocabulary writes return their effects; dead RPCs go | 5 | Vocabulary handlers return `WriteEffects` and the allow-list empties; unclaimed RPCs and test-only store methods deleted (was S12-33) | — | S14-16 | — | Scoped |
 | S14-18 | Name folds never crash | 5 | The reconciler resolves values through the fold graph without panics; `CacheVersion` bump; Go only (was S12-40) | — | — | [S14-18-name-folds-never-crash.md](prs/S14-18-name-folds-never-crash.md) | Landed #677 |
-| S14-19 | A merge leaves no stale link in the graph cache | 5 | `PROVENENCIA_GRAPH_VERIFY=1` passes `TestMemoFollowsCommit/a_handle_merged`: a handle merge drops the link the catalog no longer has; Go only (was the bug half of S12-43) | — | — | [S14-19-merge-leaves-no-stale-link.md](prs/S14-19-merge-leaves-no-stale-link.md) | Planned |
+| S14-19 | A merge leaves no stale link in the graph cache | 5 | `PROVENENCIA_GRAPH_VERIFY=1` passes `TestMemoFollowsCommit/a_handle_merged`: a handle merge drops the link the catalog no longer has; Go only (was the bug half of S12-43) | — | — | [S14-19-merge-leaves-no-stale-link.md](prs/S14-19-merge-leaves-no-stale-link.md) | Landed #681 |
 | S14-20 | The Promote page recovers and speaks | 5 | One serial, latest-wins proposal runner; Go releases a decided pair whose Subject or record went away and names it; errors scrolled into view and announced; the "start as Skip" line goes; `graphalign.Subject.Provenance` goes (was S12-44) | — | S14-14, S13-24 | — | Scoped |
 | S14-21 | Search finds every spelling | 5 | The search document carries folded spellings and nickname expansions; a join reprojects only what changed; FakeStore's search returns seeded hits in seeded order (was S12-47, S12-50) | — | — | — | Scoped |
 | S14-22 | Promote's wire says what Go decided | 5 | The proposal says whether each connection will file and why not through one pure cycle rule (was S12-48) | — | S13-23 | — | Scoped |
@@ -367,10 +367,10 @@ One PR (user, 2026-11-01).
 
 #### S14-19 — A merge leaves no stale link in the graph cache
 
-**Ships.** With `PROVENENCIA_GRAPH_VERIFY=1`, `promotealign` `TestMemoFollowsCommit/a_handle_merged` fails today: after a handle merge the graph cache keeps a link the catalog no longer has. The merge's effects drop that link, and the verify-mode test passes. Go only.
+**Ships.** With `PROVENENCIA_GRAPH_VERIFY=1`, `promotealign` `TestMemoFollowsCommit/a_handle_merged` fails today: after a handle merge the graph cache keeps a link the catalog no longer has. `graphcache.OnCommit` reloads the loaded neighbors of a committed merged handle, so none keeps the link, and the verify-mode test passes. Go only.
 **Not this PR.** S12-43's performance work (the shortlist index kept on commit, profile memos, budgets at Scale), descoped 2026-10-29 to [`ideas/promote-ranking.md`](../../ideas/promote-ranking.md).
 **Check.** `PROVENENCIA_GRAPH_VERIFY=1 go test ./core/database/promotealign/...` passes.
-**Context.** Bar outcome 19; `core/database/graphcache` (memos and `Deps`), the merge path in `canonicalentities`; `use-catalog-session`.
+**Context.** Bar outcome 19; `core/database/graphcache` `OnCommit` (memos and `Deps`).
 
 #### S14-20 — The Promote page recovers and speaks
 

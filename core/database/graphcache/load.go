@@ -198,12 +198,25 @@ type linkRaw struct {
 }
 
 func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
+	raws, err := g.linkRaws(ids)
+	if err != nil {
+		return nil, err
+	}
+	assocIDs := make([][]byte, 0, len(raws))
+	for _, r := range raws {
+		assocIDs = append(assocIDs, r.assoc)
+	}
+	return g.finishLinks(raws, assocIDs)
+}
+
+// linkRaws runs the link query for ids and keeps the rows a registered
+// bridge accepts. It does not read disambiguation.
+func (g *Graph) linkRaws(ids [][]byte) ([]linkRaw, error) {
 	q, args := linkLoadSQL(g.valueTable, g.entityTable, ids)
 	rows, err := g.query(q, args...)
 	if err != nil {
 		return nil, err
 	}
-	var assocIDs [][]byte
 	var raws []linkRaw
 	for rows.Next() {
 		var r linkRaw
@@ -222,14 +235,13 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 		r.neighbor = cloneID(r.neighbor)
 		r.neighborType = cloneID(r.neighborType)
 		raws = append(raws, r)
-		assocIDs = append(assocIDs, r.assoc)
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
 		return nil, err
 	}
 	_ = rows.Close()
-	return g.finishLinks(raws, assocIDs)
+	return raws, nil
 }
 
 // LinkLoadSQL is the association-edge query loadLinks runs.

@@ -1,6 +1,7 @@
 package graphcache_test
 
 import (
+	"bytes"
 	"database/sql"
 	"strings"
 	"testing"
@@ -131,6 +132,89 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	// over the committed handles. A reload per association adds another chunk.
 	if n > 16 {
 		t.Fatalf("queries %d, want one reload of the shared endpoint", n)
+	}
+}
+
+func TestCommitOfAMergedHandle(t *testing.T) {
+	tests := []struct {
+		name                      string
+		mergedLoaded, eventLoaded bool
+	}{
+		{"both loaded", true, true},
+		{"only the event loaded", false, true},
+		{"neither loaded", false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := graphcachetest.OpenCatalog(t)
+			canon := graphcachetest.NewCanon(t, c)
+			p, q := canon.Person(), canon.Person()
+			e, joins := canon.Birth(p, nil, nil)
+			canon.Commit(joins...)
+			g := c.Graph()
+			g.Drop()
+			if tt.eventLoaded {
+				if _, err := g.Node(e); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tt.mergedLoaded {
+				if _, err := g.Node(p); err != nil {
+					t.Fatal(err)
+				}
+			}
+			canon.Merge(p, q)
+			canon.Commit(p, q)
+			if loaded(g, e) != tt.eventLoaded || loaded(g, p) != tt.mergedLoaded {
+				t.Fatalf("loaded: event %v, merged %v", loaded(g, e), loaded(g, p))
+			}
+			if tt.eventLoaded {
+				n, ok := g.Cached(e)
+				if !ok {
+					t.Fatal("the event is not cached")
+				}
+				for _, l := range n.Links {
+					if bytes.Equal(l.Neighbor, p) {
+						t.Fatal("the event still links to the merged Person")
+					}
+				}
+			}
+			if tt.mergedLoaded {
+				m, ok := g.Cached(p)
+				if !ok {
+					t.Fatal("the merged Person is not cached")
+				}
+				if !m.Merged {
+					t.Fatal("the merged Person is not marked merged")
+				}
+				if len(m.Links) != 1 || !bytes.Equal(m.Links[0].Neighbor, e) {
+					t.Fatalf("the merged Person's links %+v, want its one link to the event", m.Links)
+				}
+			}
+			if err := g.Verify(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestCommitOfAMergedHandleNeitherLoadedQueries(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	p, q := canon.Person(), canon.Person()
+	_, joins := canon.Birth(p, nil, nil)
+	canon.Commit(joins...)
+	g := c.Graph()
+	g.Drop()
+	canon.Merge(p, q)
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	canon.Commit(p, q)
+	// Two queries: the entity-row read of the committed handles and one link
+	// query for the merged handle's neighbors. Nothing is loaded, so nothing
+	// reloads, and the scan reads no disambiguation.
+	if n != 2 {
+		t.Fatalf("queries %d, want 2", n)
 	}
 }
 
