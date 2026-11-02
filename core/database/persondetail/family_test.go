@@ -362,6 +362,24 @@ func TestPersonFamilyOriginSiblings(t *testing.T) {
 			"Johann[Anna+Heinrich,Katharina]", "Friedrich[Anna+Heinrich,Katharina]",
 			"Christian[Katharina]", "Margarethe[Anna+Heinrich]", "Wilhelm[Anna+Heinrich]")
 	})
+	t.Run("two sets sharing a parent", func(t *testing.T) {
+		w := newKinWorld(t)
+		johann, heinrich, anna, kath := w.person("Johann"), w.person("Heinrich"), w.person("Anna"), w.person("Katharina")
+		marg, fried, wil, chris := w.person("Margarethe"), w.person("Friedrich"), w.person("Wilhelm"), w.person("Christian")
+		born(w, johann, 1817, heinrich, anna)
+		born(w, fried, 1820, heinrich, anna)
+		born(w, marg, 1815, heinrich, anna)
+		born(w, wil, 0, heinrich, anna)
+		born(w, chris, 1823, nil, nil)
+		for _, p := range [][]byte{johann, fried, chris} {
+			w.k.Parent(heinrich, p)
+			w.k.Parent(kath, p)
+		}
+		w.k.Marriage(heinrich, kath)
+		check(t, origin(w, johann),
+			"Johann[Anna+Heinrich,Heinrich+Katharina]", "Friedrich[Anna+Heinrich,Heinrich+Katharina]",
+			"Margarethe[Anna+Heinrich]", "Wilhelm[Anna+Heinrich]", "Christian[Heinrich+Katharina]")
+	})
 	t.Run("recorded sibling after the set", func(t *testing.T) {
 		w := newKinWorld(t)
 		pat, john, mary, quin, rae := w.person("Pat"), w.person("John"), w.person("Mary"), w.person("Quin"), w.person("Rae")

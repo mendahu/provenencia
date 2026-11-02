@@ -1,8 +1,6 @@
 package persondetail
 
 import (
-	"slices"
-
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -226,28 +224,35 @@ func originSiblings(family Family, byBirth func([]kinship.Relative), summaries c
 			o.ParentSets = append(o.ParentSets, k)
 		}
 	}
-	placed := map[*OriginSibling]bool{}
-	var out []OriginSibling
-	place := func(match func(*OriginSibling) bool) {
-		var group []kinship.Relative
-		for _, o := range all {
-			if !placed[o] && match(o) {
-				placed[o] = true
-				group = append(group, o.Relative)
-			}
+	// One pass buckets each entry: the full bucket, else the bucket of its
+	// largest parent set (the walk from last to first places it at the first
+	// set it is in), else the recorded bucket.
+	full := make([]kinship.Relative, 0)
+	perSet := make([][]kinship.Relative, sets)
+	var recorded []kinship.Relative
+	for _, o := range all {
+		switch {
+		case len(o.ParentSets) == 0:
+			recorded = append(recorded, o.Relative)
+		case len(o.ParentSets) == sets:
+			full = append(full, o.Relative)
+		default:
+			k := o.ParentSets[len(o.ParentSets)-1]
+			perSet[k] = append(perSet[k], o.Relative)
 		}
+	}
+	var out []OriginSibling
+	emit := func(group []kinship.Relative) {
 		byBirth(group)
 		for _, r := range group {
 			out = append(out, *byID[string(r.ID)])
 		}
 	}
-	if sets > 0 {
-		place(func(o *OriginSibling) bool { return len(o.ParentSets) == sets })
-		for k := sets - 1; k >= 0; k-- {
-			place(func(o *OriginSibling) bool { return slices.Contains(o.ParentSets, k) })
-		}
+	emit(full)
+	for k := sets - 1; k >= 0; k-- {
+		emit(perSet[k])
 	}
-	place(func(o *OriginSibling) bool { return len(o.ParentSets) == 0 })
+	emit(recorded)
 	return out
 }
 
