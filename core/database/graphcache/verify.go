@@ -231,17 +231,33 @@ func sameValues(got map[string][]Value, want []TruthRow) error {
 	return nil
 }
 
+// valueEqual is v equal to t in every field, the vote counts included.
 func valueEqual(v Value, t TruthRow) bool {
-	return v.Rank == t.Rank && v.Reason == t.Reason &&
-		v.HasText == t.HasText && v.Text == t.Text &&
-		v.HasInteger == t.HasInteger && v.Integer == t.Integer &&
-		bytes.Equal(v.TermID, t.TermID) &&
-		bytes.Equal(v.EntityID, t.EntityID) &&
-		bytes.Equal(v.Date, t.Date) &&
-		bytes.Equal(v.Name, t.Name) &&
-		bytes.Equal(v.ImageFileID, t.ImageFileID) &&
-		v.Support == t.Support &&
-		v.Against == t.Against
+	return SameDisplay(RowOf(v, t.PropertyID), t) && v.Support == t.Support && v.Against == t.Against
+}
+
+// SameDisplay reports whether two rows show the same value: every field but
+// the vote counts (Support, Against), which a join moves without changing what
+// any reader displays.
+func SameDisplay(a, b TruthRow) bool {
+	return bytes.Equal(a.PropertyID, b.PropertyID) && a.Rank == b.Rank && a.Reason == b.Reason &&
+		a.HasText == b.HasText && a.Text == b.Text &&
+		a.HasInteger == b.HasInteger && a.Integer == b.Integer &&
+		bytes.Equal(a.TermID, b.TermID) &&
+		bytes.Equal(a.EntityID, b.EntityID) &&
+		bytes.Equal(a.Date, b.Date) &&
+		bytes.Equal(a.Name, b.Name) &&
+		bytes.Equal(a.ImageFileID, b.ImageFileID)
+}
+
+// RowOf is the stored value v of the Property as a TruthRow.
+func RowOf(v Value, property []byte) TruthRow {
+	return TruthRow{
+		PropertyID: property, Rank: v.Rank, Reason: v.Reason,
+		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
+		TermID: v.TermID, EntityID: v.EntityID, Date: v.Date, Name: v.Name, ImageFileID: v.ImageFileID,
+		Support: v.Support, Against: v.Against,
+	}
 }
 
 func sameMembers(got, want []Member) error {

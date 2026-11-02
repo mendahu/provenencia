@@ -213,21 +213,25 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	}
 }
 
-func TestSummarySearchFindsTheListTitle(t *testing.T) {
-	f := newHandleFixture(t)
-	person := f.person("James Robins", "Kenneth Robins")
+// locatedBirth creates a person from forms, a birth Event (1817) and a place
+// with toponym, their three positions, and the participation and location
+// bridges. It stops before promote and fileBridges.
+func (f *handleFixture) locatedBirth(toponym string, forms ...string) (person, event, place subjects.Subject) {
+	f.t.Helper()
+	t := f.t
+	person = f.person(forms...)
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	event := f.subject("event", func(s subjects.Subject) []observations.Input {
+	event = f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
 			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 		}
 	})
-	place := f.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true}}
+	place = f.subject("place", func(s subjects.Subject) []observations.Input {
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: toponym, HasText: true}}
 	})
 	for i, s := range []subjects.Subject{person, event, place} {
 		if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
@@ -269,6 +273,12 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	return person, event, place
+}
+
+func TestSummarySearchFindsTheListTitle(t *testing.T) {
+	f := newHandleFixture(t)
+	person, event, place := f.locatedBirth("York", "James Robins", "Kenneth Robins")
 	promoted := f.promote(person, nil)
 	f.promote(event, nil)
 	f.promote(place, nil)
@@ -612,4 +622,46 @@ func TestNicknameFindsTheFormalName(t *testing.T) {
 			t.Fatalf("got %+v", hits)
 		}
 	})
+}
+
+func TestJoinReprojectsDependentsOnlyWhenTheRootMoves(t *testing.T) {
+	f := newHandleFixture(t)
+	person, event, place := f.locatedBirth("York", "James Robins")
+	personH := f.promote(person, nil)
+	eventH := f.promote(event, nil)
+	placeH := f.promote(place, nil)
+	f.fileBridges()
+
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range []struct {
+		kind string
+		id   []byte
+		ref  string
+	}{{KindPerson, personH.Entity.ID, personH.Entity.Ref}, {KindEvent, eventH.Entity.ID, eventH.Entity.Ref}} {
+		if err := searchindex.Upsert(db, searchindex.Document{
+			Kind: h.kind, EntityID: uuidString(h.id), DisplayRef: h.ref, Ref: h.ref, DisplayTitle: "stalemarker", Title: "stalemarker",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	found := func(text string) string {
+		return refsOf(f.search(text, KindPerson, KindEvent))
+	}
+	both := fmt.Sprint([]string{"event:" + eventH.Entity.Ref, "person:" + personH.Entity.Ref})
+
+	f.promote(f.place("York"), placeH.Entity.ID)
+	if got := found("stalemarker"); got != both {
+		t.Fatalf("a join that moves no shown value reprojected a dependent: %s", got)
+	}
+
+	f.promote(f.place("Eboracum"), placeH.Entity.ID)
+	if got := found("stalemarker"); got != "[]" {
+		t.Fatalf("marker survived a join that adds a toponym: %s", got)
+	}
+	if got := found("Eboracum"); got != both {
+		t.Fatalf("Eboracum finds %s, want the Event and the Person", got)
+	}
 }
