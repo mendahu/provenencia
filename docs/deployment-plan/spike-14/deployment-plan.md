@@ -128,7 +128,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-14 | Copy and VoiceOver on graph work | 5 | The graph named in VoiceOver and history; plural counts; Cancel is a danger confirm's default; a dirty graph form asks first; kit toasts and callouts announce; headings; `PVField` names its content (was S12-29, S12-30, S12-45) | — | — | [S14-14-graph-work-voiceover.md](prs/S14-14-graph-work-voiceover.md) | Landed #675 |
 | S14-15 | Xcode synchronized folders | 5 | `project.pbxproj` on synchronized folders; `check-guidance-names.py` holds non-Swift files in them to the project's membership exceptions; the pbxproj steps leave the skills and rule (was S12-31) | — | — | [S14-15-xcode-synchronized-folders.md](prs/S14-15-xcode-synchronized-folders.md) | Landed #668 |
 | S14-16 | Promote and Source writes return their effects | 5 | Promote and Source handlers return `WriteEffects`; sidebar counts become a `counts` effects list; a test pins effects on every audited write; the dead `promoteSubject` path goes (was S12-32; the shared proto header message landed in #662) | — | S13-24 | [S14-16-promote-source-effects.md](prs/S14-16-promote-source-effects.md) | Landed #686 |
-| S14-17 | Vocabulary writes return their effects; dead RPCs go | 5 | Vocabulary handlers return `WriteEffects` and the allow-list empties; unclaimed RPCs and test-only store methods deleted (was S12-33) | — | S14-16 | — | Scoped |
+| S14-17 | Vocabulary writes return their effects; dead RPCs go | 5 | Vocabulary handlers return `WriteEffects` in two lists, `source_vocabulary` and `property_vocabulary`, and the allow-list empties; the vocabulary counts nothing draws go; unclaimed RPCs and test-only store methods deleted (was S12-33) | — | S14-16, S14-27 | [S14-17-vocabulary-effects.md](prs/S14-17-vocabulary-effects.md) | Blocked — on S14-27 |
 | S14-18 | Name folds never crash | 5 | The reconciler resolves values through the fold graph without panics; `CacheVersion` bump; Go only (was S12-40) | — | — | [S14-18-name-folds-never-crash.md](prs/S14-18-name-folds-never-crash.md) | Landed #677 |
 | S14-19 | A merge leaves no stale link in the graph cache | 5 | `PROVENENCIA_GRAPH_VERIFY=1` passes `TestMemoFollowsCommit/a_handle_merged`: a handle merge drops the link the catalog no longer has; Go only (was the bug half of S12-43) | — | — | [S14-19-merge-leaves-no-stale-link.md](prs/S14-19-merge-leaves-no-stale-link.md) | Landed #681 |
 | S14-20 | The Promote page recovers and speaks | 5 | One serial, latest-wins proposal runner; Go releases a decided pair whose Subject or record went away and names it; errors scrolled into view and announced; the "start as Skip" line goes; `graphalign.Subject.Provenance` goes (was S12-44) | — | S14-14, S13-24 | — | Scoped |
@@ -138,7 +138,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-24 | Give every workspace page its width class | 6 | `PVSpacing.widthWideBreakpoint` (1600), `PVWidthClass` and the `pvWidthClass` environment value, measured once at `WorkspaceDestinationHost`; no visible change | — | — | [S14-24-wide-width-class.md](prs/S14-24-wide-width-class.md) | Landed #628 |
 | S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
 | S14-26 | A folded nickname shows as a nickname | 3 | When the reconciler folds a nickname recorded as a given name into its formal name (S11-28), the reconciled name keeps it as a `nick` part, so S14-09's quotes show it: *James “Jake” Robins* | — | S14-09, S14-18 | — | Scoped |
-| S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-17 | — | Scoped |
+| S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-16 | [S14-27-lists-through-descriptors.md](prs/S14-27-lists-through-descriptors.md) | Planned |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -176,8 +176,8 @@ SLICE 5 — Audit fixes (batch 5)
   S14-19  A merge leaves no stale link in the graph cache
   S14-21  Search finds every spelling
   S14-16  Promote and Source writes return their effects   (after S13-24)
-  S14-17  Vocabulary writes return their effects
-  S14-27  Every write reaches its keys through their descriptors   (after S14-17)
+  S14-27  Every write reaches its keys through their descriptors   (after S14-16)
+  S14-17  Vocabulary writes return their effects   (after S14-27)
   S14-20  The Promote page recovers and speaks   (after S14-14, S13-24)
   S14-22  Promote's wire says what Go decided   (after S13-23)
   Check: bar outcomes 15 – 20.
@@ -206,8 +206,8 @@ S13-23 ──▶ S14-02   (Spike 13: deletes the Promote files the old plan rena
 S13-10 ──▶ S14-02   (Spike 13: Page columns and PersonDetailSections, which S14-02 builds on)
 S14-13 ──▶ S14-03
 S14-D6 ──▶ S14-03
-S14-16 ──▶ S14-17
-S14-17 ──▶ S14-27
+S14-16 ──▶ S14-27
+S14-27 ──▶ S14-17
 S14-14 ──▶ S14-20
 S13-24 ──▶ S14-16, S14-20      (Spike 13)
 S13-23 ──▶ S14-22             (Spike 13)
@@ -346,18 +346,19 @@ One PR (user, 2026-11-01).
 
 #### S14-17 — Vocabulary writes return their effects; dead RPCs go
 
-**Ships.** The Source type, metadata field, Property, binding and term writes return `WriteEffects`, their callers apply them, and the `CatalogMutation` cases that go dead are deleted. `EnsureFileThumbnail`, `GetSubjectTypePresentation`, `ListPlaceableSubjectTypes`, `ListProperties`, `ListSubjectTypeProperties` and `RemoveInstallIdentity` go with their handlers, tests and FakeStore code (method numbers reserved), as do the test-only `listSubjectTypes` and `clearSubjectPosition`.
-**Also ships (S14-16 review M-13, 2026-11-02).** The source type and metadata field writes report `counts` (Go `effects.ListCounts` on their registry entries), so their sidebar badges come from the recount, and `CatalogCounts.publishSourceTypes` / `publishMetadata` and the list-load `syncCatalogCounts` hooks that call them go; the Properties badge (`publishProperties`, not in `GetWorkspaceNavCounts`) moves onto the recount the same way or the plan says why not.
-**Not this PR.** Deleting `UpdatePropertyTerm`, `DeletePropertyTerm` or `ReorderSubjectTypeProperties` (named by idea files): they stay and return `WriteEffects` like the rest, so the allow-list empties; the audit's test-net items (L-16).
-**Check.** Handler tests assert effects; the pin test's allow-list is empty; no RPC is left without a Swift caller except the three kept; `macos-client-patterns.md` rule 2 lists only exceptions effects cannot express.
-**Context.** Audit A-29, A-35; working rule "Every audited write returns its effects, and a test holds them to it"; `add-ffi-handler`. After S14-16, whose pin test it empties. The plan confirms `RemoveInstallIdentity` is not planned before deleting it.
+**Ships.** The Source type, metadata field, Property, binding and term writes return `WriteEffects`, their callers apply them, and the `CatalogMutation` cases that go dead are deleted. Go's one `vocabulary` list splits into `source_vocabulary` and `property_vocabulary`, and each label-holding key follows its family through S14-27's descriptor slot, so a Source-side write reaches no Property-side key and the reverse ("One cache owns each list" stands; user, 2026-11-02). The type–field join (`AssignTypeField`, `RemoveTypeField`) stays unaudited and drops its `user_id` (user, 2026-11-02). `EnsureFileThumbnail`, `GetSubjectTypePresentation`, `ListPlaceableSubjectTypes`, `ListProperties`, `ListSubjectTypeProperties` and `RemoveInstallIdentity` go with their handlers and tests (method numbers reserved), as do the test-only `listSubjectTypes` and `clearSubjectPosition` and, with them, the `ListSubjectTypes` and `ClearSubjectPosition` RPCs they were the last Swift callers of (found at planning, 2026-11-02).
+**Also ships (S14-16 review M-13; re-scoped by the user, 2026-11-02).** The vocabulary counts nothing draws go: the sidebar shows no Configure badge, so `CatalogCounts` keeps only the Research badges, the Source types and Metadata header lines count the rows they show, and `publishSourceTypes` / `publishMetadata` / `publishProperties`, the `syncCatalogCounts` hooks, `GetWorkspaceNavCounts`'s two vocabulary fields and the `CountByOrigin` reads go. No vocabulary write reports `counts`.
+**Not this PR.** Deleting `UpdatePropertyTerm`, `DeletePropertyTerm` or `ReorderSubjectTypeProperties` (named by idea files): they stay and return `WriteEffects` like the rest, so the allow-list empties; the audit's test-net items (L-16); the descriptor slot (S14-27).
+**Depends on.** S14-16, whose pin test it empties; S14-27, whose list slot it uses (user, 2026-11-02).
+**Check.** Handler tests assert effects; the pin test's allow-list is empty; no RPC is left without a Swift caller except the three kept; a composer custom term reloads no Source page or canvas; `macos-client-patterns.md` rule 2 lists only exceptions effects cannot express.
+**Context.** Audit A-29, A-35; working rule "Every audited write returns its effects, and a test holds them to it"; `add-ffi-handler`. The plan confirms `RemoveInstallIdentity` is not planned before deleting it (confirmed 2026-11-02).
 
 #### S14-27 — Every write reaches its keys through their descriptors
 
 **Ships.** A `CatalogQueryFollows` slot for a write's catalog-wide `lists` (and `structure`), so the Properties workspace declares the lists it follows in its own descriptor, as every other key declares `touchedHandles`, `evidenceGraphs` and `reads`. `CatalogQueryRegistry.invalidations(for list:)` and the `lists` / `structure` half of `invalidations(for:project:)` go, leaving one path from a write's effects to the keys it reloads (`WorkspaceSession.revalidatedKeys`) beside the mutation-name `invalidateOn` that S14-16 and S14-17 shrink. No reload a researcher sees changes.
 **Not this PR.** The sidebar `counts` list (S14-16 sets it; it drives the recount, not a key); removing `invalidateOn`.
 **Check.** Registry and session tests: each list and `structure` reloads exactly the keys it did before; `rg 'invalidations\(for list' macos/App` finds nothing; `add-workspace-place` and `macos-client-patterns.md` describe one path.
-**Context.** S13-01 ship log (2026-11-01: a cache-wide look after S13-01 moved the other effect slots onto descriptor `refreshes`); [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) Refresh; [`macos-client-patterns.md`](../../macos-client-patterns.md) cache contract. After S14-17, the last PR to change which effects writes report.
+**Context.** S13-01 ship log (2026-11-01: a cache-wide look after S13-01 moved the other effect slots onto descriptor `refreshes`); [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) Refresh; [`macos-client-patterns.md`](../../macos-client-patterns.md) cache contract. After S14-16; ahead of S14-17, which then adds its two vocabulary lists to the descriptors through this slot instead of growing the switch (S14-17 plan review M-2; user, 2026-11-02). The slot is one `CatalogQueryFollows` case taking a `CatalogList`, used with `applyHiddenPolicyOnAny(follows:)` (S14-17 D-6 names it `.list(_:)`).
 
 #### S14-18 — Name folds never crash
 
