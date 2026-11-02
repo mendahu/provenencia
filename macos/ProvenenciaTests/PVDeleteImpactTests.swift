@@ -49,14 +49,57 @@ struct PVDeleteImpactCopyTests {
         )])
     }
 
-    @Test func pinnedObservationConfirmNamesTheEvidenceItLeaves() {
-        let copy = PVDeleteImpactCopy.confirmCopy(
-            for: PVDeleteImpactPreviewData.observation,
-            report: PVDeleteImpactPreviewData.pinnedObservation
+    @Test func graphDeleteConfirmNamesTheCitationsItTakes() {
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "citations.graph_id",
+                    kind: "citation",
+                    total: 2,
+                    listed: [
+                        PVDeleteImpactPreviewData.listed(ref: "CIT-A", title: "CIT-A"),
+                        PVDeleteImpactPreviewData.listed(ref: "CIT-B", title: "CIT-B"),
+                    ]
+                ),
+            ]
         )
-        #expect(copy.message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: "PER-7KD45")))
-        #expect(!copy.message.contains(L10n.DeleteImpact.leavesHandle(handleRefs: "PER-7KD45")))
-        #expect(PVDeleteImpactControls.showsDestructiveAction(PVDeleteImpactPreviewData.pinnedObservation))
+        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s 2 citations are deleted with it: CIT-A and CIT-B."])
+    }
+
+    @Test func graphDeleteConfirmCountsCitationsBeyondTheListedCap() {
+        let listed = (1...20).map { PVDeleteImpactPreviewData.listed(ref: "CIT-\($0)", title: "CIT-\($0)") }
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(via: "citations.graph_id", kind: "citation", total: 25, listed: listed),
+            ]
+        )
+        let lines = PVDeleteImpactCopy.cascadeLines(report)
+        #expect(lines.count == 1)
+        #expect(lines[0].hasPrefix("The graph’s 25 citations are deleted with it: CIT-1, "))
+        #expect(lines[0].hasSuffix(", and 5 more."))
+    }
+
+    @Test func graphDeleteConfirmReadsSingularForOneCitation() {
+        let report = CatalogDeleteImpact(
+            allowed: true,
+            gate: .ok,
+            groups: [],
+            cascades: [
+                CatalogDeleteImpactGroup(
+                    via: "citations.graph_id",
+                    kind: "citation",
+                    total: 1,
+                    listed: [PVDeleteImpactPreviewData.listed(ref: "CIT-A", title: "CIT-A")]
+                ),
+            ]
+        )
+        #expect(PVDeleteImpactCopy.cascadeLines(report) == ["The graph’s 1 citation is deleted with it: CIT-A."])
     }
 
     @Test func blockedCitationListsThreeObservations() {
@@ -79,8 +122,20 @@ struct PVDeleteImpactCopyTests {
     @Test func unknownViaStillListsRefs() {
         let group = PVDeleteImpactPreviewData.unknownVia.groups[0]
         #expect(!PVDeleteImpactCopy.isKnownVia(group.via))
-        #expect(PVDeleteImpactCopy.heading(group) == "2 narratives reference this")
+        #expect(PVDeleteImpactCopy.heading(group) == "2 items reference this")
         #expect(group.listed.map(\.ref) == ["NAR-3JQ8", "NAR-3JQ9"])
+    }
+
+    @Test func nounReadsPluralKey() {
+        #expect(L10n.DeleteImpact.noun("citation", count: 1) == "citation")
+        #expect(L10n.DeleteImpact.noun("citation", count: 2) == "citations")
+        #expect(L10n.DeleteImpact.noun("identity_claim") == "identity claim")
+        #expect(L10n.DeleteImpact.noun("unknown_kind") == "item")
+    }
+
+    @Test func unknownViaHeadingPlural() {
+        #expect(L10n.DeleteImpact.viaFallback(kind: "file", total: 1) == "1 file references this")
+        #expect(L10n.DeleteImpact.viaFallback(kind: "file", total: 3) == "3 files reference this")
     }
 
     @Test func extraGatesHaveNoDestructiveButtonAndNoInventedList() {
@@ -152,8 +207,6 @@ struct PVDeleteImpactCopyTests {
             ("subjects.graph_id", "subject", 3, "This graph has 3 subjects"),
             ("evidencegraphs.artifact_in_use", "citation", 1, "1 citation in this graph uses this artifact"),
             ("evidencegraphs.artifact_in_use", "citation", 2, "2 citations in this graph use this artifact"),
-            ("evidencegraphs.citations_need_graph", "citation", 1, "1 citation would be left in no evidence graph"),
-            ("evidencegraphs.citations_need_graph", "citation", 3, "3 citations would be left in no evidence graph"),
         ]
         for item in cases {
             #expect(PVDeleteImpactCopy.isKnownVia(item.0))
@@ -161,17 +214,20 @@ struct PVDeleteImpactCopyTests {
         }
     }
 
-    @Test @MainActor func activateNavigatesThenDismisses() {
+    @Test @MainActor func activateClosesThenNavigates() {
         var navigated: WorkspaceLocation?
-        var dismissed = false
+        var closed = false
         let row = PVDeleteImpactPreviewData.listed(ref: "OBS-4Q2PA", title: "Name: Ellen Hartley")
         PVDeleteImpactControls.activate(
             row,
             onNavigate: { navigated = $0 },
-            dismiss: { dismissed = true },
-            then: { $0() }
+            close: PVSheetClose { next in
+                closed = true
+                #expect(navigated == nil)
+                next()
+            }
         )
-        #expect(dismissed)
+        #expect(closed)
         #expect(navigated == row.location)
     }
 }

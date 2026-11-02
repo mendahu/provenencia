@@ -143,9 +143,7 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
     @ViewBuilder
     private var errorCaption: some View {
         if let error, !error.isEmpty {
-            Text(error)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.danger)
+            PVErrorText(error, size: .caption)
         }
     }
 

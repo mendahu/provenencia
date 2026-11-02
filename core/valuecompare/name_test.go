@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -40,7 +41,7 @@ const (
 // nv builds a name value from "code=value" parts separated by "|", with a form
 // that says nothing, so the parts have to carry the test.
 //
-//	g given (initials too) · n nick · s surname · sp surname_prefix ·
+//	g given (initials too) · n nick · s surname · f former_surname · sp surname_prefix ·
 //	x suffix · p prefix · u undetermined · _ untyped
 func nv(spec string) valuecompare.Value {
 	n := &namevalue.Value{Form: "(as written)"}
@@ -60,7 +61,7 @@ func nv(spec string) valuecompare.Value {
 
 var partCodes = map[string]string{
 	"g": namevalue.PartTypeGiven, "n": namevalue.PartTypeNick,
-	"s": namevalue.PartTypeSurname, "sp": namevalue.PartTypeSurnamePrefix, "x": namevalue.PartTypeSuffix,
+	"s": namevalue.PartTypeSurname, "f": namevalue.PartTypeFormerSurname, "sp": namevalue.PartTypeSurnamePrefix, "x": namevalue.PartTypeSuffix,
 	"p": namevalue.PartTypePrefix, "u": namevalue.PartTypeUndetermined, "_": "",
 }
 
@@ -172,6 +173,10 @@ var nameCases = []nameCase{
 	// AC-1.4
 	differentWhy("AC-1.4 no table", nv("g=Jim"), nv("g=James"), valuecompare.CauseNoMatch),
 	{name: "AC-1.4 surnames use no given alias", rules: withTables(nicknameTable), a: nv("s=Bill"), b: nv("s=William"),
+		rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
+
+	// S14-09: a former surname is a family word, so it cannot pair with a different surname.
+	{name: "S14-09 former surname beside a different surname", a: nv("g=Mary|s=Brown"), b: nv("g=Mary|f=Smith|s=Jones"),
 		rel: valuecompare.Different, why: valuecompare.CauseNoMatch},
 
 	// AC-1.5
@@ -308,6 +313,22 @@ func TestNameMaxWords(t *testing.T) {
 				t.Errorf("%d words: %s %s, too long %v, want %v", n, res.Relation, det.Cause, got, wantLong)
 			}
 		}
+	}
+}
+
+// A former surname is a family word: the record Mary Smith pairs it.
+func TestFormerSurnamePairsAsFamily(t *testing.T) {
+	res, det := valuecompare.Compare(nv("g=Mary|s=Smith"), nv("g=Mary|f=Smith|s=Jones"), matchregistry.Default().Value)
+	if res.Relation != valuecompare.Contains {
+		t.Fatalf("relation %s, want contains", res.Relation)
+	}
+	if !slices.ContainsFunc(det.Parts, func(m valuecompare.PartMatch) bool {
+		return m.A == part(valuecompare.PartFamily, "smith") && m.B == part(valuecompare.PartFamily, "smith") && m.Relation == valuecompare.Same
+	}) {
+		t.Errorf("parts %+v hold no smith/smith Same pair", det.Parts)
+	}
+	if !slices.Equal(det.OnlyB, []valuecompare.Part{part(valuecompare.PartFamily, "jones")}) {
+		t.Errorf("only B %v, want jones", det.OnlyB)
 	}
 }
 
@@ -585,5 +606,48 @@ func TestNameRulesComeFromRules(t *testing.T) {
 				t.Fatalf("got %s %s, want %s %s", res.Relation, det.Cause, tc.rel, tc.why)
 			}
 		})
+	}
+}
+
+func tomIndex() (valuecompare.Rules, valuecompare.AliasIndex) {
+	r := matchregistry.Default().Value
+	idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+		Key: "t", Kind: valuecompare.AliasNickname, Roles: valuecompare.AliasRoles(), FormalFirst: true,
+		Sets: [][]string{{"thomas", "tom", "tommy"}},
+	}}, r.Words)
+	r.Names.Aliases = idx
+	return r, idx
+}
+
+func TestAliasIndexFoldsInto(t *testing.T) {
+	_, idx := tomIndex()
+	if got := idx.FoldsInto("thomas", valuecompare.RoleGiven); !slices.Equal(got, []string{"tom", "tommy"}) {
+		t.Errorf("thomas: %v", got)
+	}
+	if got := idx.FoldsInto("tom", valuecompare.RoleGiven); len(got) != 0 {
+		t.Errorf("tom: %v", got)
+	}
+	if got := idx.FoldsInto("thomas", valuecompare.RoleFamily); len(got) != 0 {
+		t.Errorf("family role: %v", got)
+	}
+	var zero valuecompare.AliasIndex
+	if got := zero.FoldsInto("thomas", valuecompare.RoleGiven); got != nil {
+		t.Errorf("zero index: %v", got)
+	}
+}
+
+func TestNameFoldsInto(t *testing.T) {
+	r, _ := tomIndex()
+	name := func(form string) valuecompare.Value {
+		return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Western(form)}
+	}
+	if got := valuecompare.NameFoldsInto(name("Thomas Smith"), r); !slices.Equal(got, []string{"tom", "tommy"}) {
+		t.Errorf("Thomas Smith: %v", got)
+	}
+	if got := valuecompare.NameFoldsInto(name("Smith"), r); got != nil {
+		t.Errorf("Smith: %v", got)
+	}
+	if got := valuecompare.NameFoldsInto(name(strings.Repeat("Ann ", 33)+"Smith"), r); got != nil {
+		t.Errorf("33 words: %v", got)
 	}
 }

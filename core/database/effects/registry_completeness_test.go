@@ -1,9 +1,7 @@
 package effects
 
 import (
-	"reflect"
 	"slices"
-	"sort"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -56,12 +54,12 @@ func TestCascadeIntoNonEmptyEffectIsAudited(t *testing.T) {
 	}
 }
 
-// TestGradeTablesHaveNoHandles checks that credibility and confidence grades
-// are an explicit empty effect. They are seed-stable: a grade edit must not
-// fan out to every handle weighed by sort order. Source credibility grades
-// are seed-locked in deleteimpact; claim confidence grades have no delete.
+// TestGradeTablesHaveNoHandles checks that credibility grades are an explicit
+// empty effect. They are seed-stable: a grade edit must not fan out to every
+// handle weighed by sort order. Source credibility grades are seed-locked in
+// deleteimpact.
 func TestGradeTablesHaveNoHandles(t *testing.T) {
-	for _, name := range []string{"source_credibility_grades", "claim_confidence_grades"} {
+	for _, name := range []string{"source_credibility_grades"} {
 		eff, ok := registry[name]
 		if !ok {
 			t.Fatalf("missing %s", name)
@@ -109,7 +107,6 @@ func TestSourceEvidenceIsNotActivity(t *testing.T) {
 		{"date_values", true, true},
 		{"name_values", true, true},
 		{"identity_claims", true, false},
-		{"identity_claim_evidence", true, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.table, func(t *testing.T) {
@@ -153,37 +150,12 @@ func TestPropertyUsageList(t *testing.T) {
 	}
 }
 
-// TestEvidenceGraphsList pins which tables move the graph list, and that a
-// None entry cannot.
-func TestEvidenceGraphsList(t *testing.T) {
-	var got []string
-	for table, eff := range registry {
-		if slices.Contains(eff.Lists, ListEvidenceGraphs) {
-			got = append(got, table)
-		}
-	}
-	sort.Strings(got)
-	want := []string{"evidence_graph_artifacts", "evidence_graphs"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("tables with ListEvidenceGraphs = %v, want %v", got, want)
-	}
-	if err := (Effect{None: true, Lists: []List{ListEvidenceGraphs}}).validate("x"); err == nil {
-		t.Fatal("a None entry with Lists validated")
-	}
-	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {
-		t.Fatal("an undeclared list validated")
-	}
-	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
-		t.Fatal("ListsOnField without Lists validated")
-	}
-}
-
 // TestEvidenceGraphPathsEndAtGraphs pins which tables name Evidence graphs and
 // that every such path ends at evidence_graphs.
 func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 	want := []string{
 		"sources", "citations", "observations", "subjects",
-		"evidence_graphs", "identity_claims", "identity_claim_evidence",
+		"evidence_graphs", "identity_claims",
 		"date_values", "name_values", "depiction_values",
 	}
 	var got []string
@@ -205,5 +177,18 @@ func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 	slices.Sort(want)
 	if !slices.Equal(got, want) {
 		t.Errorf("tables with an EvidenceGraph path = %v, want %v", got, want)
+	}
+}
+
+// TestListsValidate pins that a bad Lists declaration does not validate.
+func TestListsValidate(t *testing.T) {
+	if err := (Effect{None: true, Lists: []List{ListVocabulary}}).validate("x"); err == nil {
+		t.Fatal("a None entry with Lists validated")
+	}
+	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {
+		t.Fatal("an undeclared list validated")
+	}
+	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
+		t.Fatal("ListsOnField without Lists validated")
 	}
 }

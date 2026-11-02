@@ -25,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -170,6 +171,9 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 			t.Fatal(err)
 		}
 		arts = append(arts, art)
+	}
+	if _, err := derivatives.EnsureThumbnail(c, arts[0].FileID); err != nil {
+		t.Fatal(err)
 	}
 	mode, artID, err := sources.NormalizeCover(c, orig.ID, sources.CoverModeArtifact, arts[0].ID)
 	if err != nil {

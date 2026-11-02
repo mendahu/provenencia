@@ -30,7 +30,7 @@ func Validate(v Value) error {
 // Readable returns v as it may be shown. RegionJSON is emptied unless it
 // passes locator.ValidateDepictionRegion against the locator of the Citation
 // that holds the value; ImageFileID is emptied unless the stored File's media
-// type is image/png, which is what ingest.StageImage always stores. Every
+// type is ImageMediaType, which is what ingest.StageImage always stores. Every
 // reader that returns a stored depiction to the app goes through Readable.
 // LookupTx in core/database/depictionvalues does not: audit records what is
 // stored.
@@ -42,11 +42,15 @@ func Readable(v Value, citationLocatorJSON, imageMediaType string) Value {
 	return v
 }
 
+// ImageMediaType is the media type of every stored depiction image: ingest
+// re-encodes what it stages as a PNG.
+const ImageMediaType = "image/png"
+
 // ReadableImage is the image half of Readable: the File id a reader may hand to
 // the app. It returns imageFileID when it is non-empty and the stored File's
 // media type is image/png, else nil.
 func ReadableImage(imageFileID []byte, mediaType string) []byte {
-	if len(imageFileID) == 0 || mediaType != "image/png" {
+	if len(imageFileID) == 0 || mediaType != ImageMediaType {
 		return nil
 	}
 	return imageFileID

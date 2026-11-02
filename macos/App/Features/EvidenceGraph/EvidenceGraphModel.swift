@@ -330,22 +330,17 @@ final class EvidenceGraphModel {
     }
 
     /// Opens the selected file in its own app. Leaves the card selection and camera alone.
-    func openSelectedFile() {
+    func openSelectedFile() async {
         let id = resolvedFileArtifactID
         guard let row = fileRows.first(where: { $0.id == id }) else { return }
         selectedFileArtifactID = id
         fileOpenError = nil
-        switch ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) {
-        case nil:
-            break
-        case .unsafe:
-            fileOpenError = L10n.ObjectOpen.refused(filename: row.displayFilename)
-        case .missing:
-            fileOpenError = L10n.EvidenceGraph.fileNotFoundMessage(
-                name: row.title,
-                filename: row.displayFilename
-            )
-        }
+        guard let refusal = await ProjectFiles.openObject(projectDir: session.projectKey.projectDir, relPath: row.relPath) else { return }
+        fileOpenError = L10n.ObjectOpen.message(
+            for: refusal,
+            filename: row.displayFilename,
+            missing: L10n.EvidenceGraph.fileNotFoundMessage(name: row.title, filename: row.displayFilename)
+        )
     }
 
     func presentation(for typeKey: String) -> CatalogSubjectTypePresentation? {
@@ -1325,6 +1320,17 @@ final class EvidenceGraphModel {
         case .event: L10n.EvidenceGraph.armedHintEvent
         case .place: L10n.EvidenceGraph.armedHintPlace
         }
+    }
+
+    /// What VoiceOver says for the canvas: the armed tool's hint, else the
+    /// graph's name ("Evidence graph, Jones household"), else just "Evidence graph".
+    var canvasAccessibilityLabel: String {
+        if armedConnect { return L10n.string(connectArmedHint) }
+        if let kind = armedKind { return L10n.string(armedHint(for: kind)) }
+        if let name = WorkspaceLocationLabels.graphName(graphID: graphID, names: LocationNames(session: session)) {
+            return L10n.EvidenceGraph.canvasAccessibility(graph: name)
+        }
+        return L10n.string(L10n.Workspace.evidenceGraphTitle)
     }
 
     var connectArmedHint: LocalizedStringResource {

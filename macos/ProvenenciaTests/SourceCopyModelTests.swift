@@ -120,6 +120,23 @@ struct SourceCopyModelTests {
         #expect(model.loadState == .ready)
     }
 
+    /// T-8: Copy Source puts the returned row into the cached Sources list; it does not reload it.
+    @Test func copyInsertsTheReturnedRow() async {
+        let store = makeStore()
+        let (model, session) = await loaded(store)
+        let listKey = CatalogQueryKey.sourcesList(project: session.projectKey)
+        let list: QueryHandle<[CatalogSource]> = session.query(listKey)
+        await waitForQuery(list)
+        let callsBefore = store.listSourcesCalls
+
+        let copy = await model.copy()
+        await session.settleWrites()
+
+        #expect(list.value?.count == 2)
+        #expect(list.value?.last == copy)
+        #expect(store.listSourcesCalls == callsBefore)
+    }
+
     @Test func copyAllCreatesCopyAndReturnsIt() async {
         let store = makeStore()
         let (model, _) = await loaded(store)

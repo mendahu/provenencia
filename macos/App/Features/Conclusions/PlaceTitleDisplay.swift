@@ -6,11 +6,31 @@ struct PlaceTitleParts: Equatable, Sendable {
     var names: [String] = []
     var label: String = ""
     var ref: String = ""
+
+    init(names: [String] = [], label: String = "", ref: String = "") {
+        self.names = names
+        self.label = label
+        self.ref = ref
+    }
+
+    /// A Place read from its `toponym` field: the displayed values, as the
+    /// reconciled-value display words them, without the empty ones.
+    init(
+        toponym: CatalogConclusionField?,
+        entity: CatalogCanonicalEntity,
+        locale: Locale,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
+        let names = toponym?.displayedValues
+            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
+            .filter { !$0.isEmpty } ?? []
+        self.init(names: names, label: entity.label, ref: entity.ref)
+    }
 }
 
 enum PlaceTitleDisplay {
-    static func title(_ header: CatalogPlaceHeader) -> String {
-        titleSource(header.titleParts).text
+    static func title(_ summary: CatalogPlaceSummary) -> String {
+        titleSource(summary.titleParts).text
     }
 
     /// First kept name, else the italic label, else the mono ref.
@@ -36,10 +56,16 @@ enum PlaceTitleDisplay {
     }
 }
 
-extension CatalogPlaceHeader {
+extension CatalogPlaceSummary {
     var titleParts: PlaceTitleParts {
         PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
     }
 
     var extraNameCount: Int { PlaceTitleDisplay.extraNameCount(titleParts) }
+}
+
+extension CatalogChainedPlace {
+    var titleParts: PlaceTitleParts {
+        PlaceTitleParts(names: names, label: entity.label, ref: entity.ref)
+    }
 }

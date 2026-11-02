@@ -3,80 +3,56 @@ import Foundation
 /// The Person page, worded from one `CatalogConclusionDetail` (S9-16, board
 /// S9-D5). Pure: views only lay it out.
 struct PersonDetailContent: ConclusionDetailBody {
-    /// One header line: *b. 14 May 1817 · York*. Date and place come from
-    /// the Person header. Nil when that half is not recorded.
-    struct LifeLine: Equatable {
-        var abbreviation: String
-        var date: String?
-        var place: String?
-        var accessibilityLabel: String
-    }
-
     /// Name → label → ref (PD-1).
-    var title: PersonHeaderDisplay.TitleSource
+    var title: ConclusionTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
     var showsRef: Bool { if case .ref = title { false } else { true } }
     var members: String
-    var lifeLines: [LifeLine]
+    var lifeLines: [PersonLifeDisplay.LifeLine]
     var rows: [ReconciledValueRowModel]
     /// Nil when gender and sex at birth give nothing to show (S10-23).
     var treatment: PersonGenderTreatment?
-    /// The `objects/…` path of the likeness the Person header leads with; "" for none.
-    var likenessImageRelPath: String
-    /// The gallery, earliest recorded first.
-    var likenesses: [ConclusionDetailLikeness]
-    var thumbnail: ConclusionDetailThumbnail {
-        .init(
-            mark: .subjectPerson,
-            label: likenessImageRelPath.isEmpty
-                ? L10n.Conclusions.personNoLikeness : L10n.Conclusions.personLikenessThumb,
-            imageRelPath: likenessImageRelPath,
-            imageLabel: leadLabel,
-            colors: treatment?.thumbnailColors,
-            offersEarliest: likenesses.first.map { !$0.isPortrait } ?? false
-        )
-    }
+    /// The gallery of likenesses, earliest recorded first.
+    var gallery: ConclusionDetailGallery
+    /// Leads with the gallery's lead likeness.
+    var thumbnail: ConclusionDetailThumbnail
     var badge: ConclusionDetailBadge? { treatment?.badge }
-
-    /// Spoken label of the header thumb while it shows the lead likeness: the
-    /// gallery tile with that image gives its Source; nil when there is none.
-    private var leadLabel: String? {
-        guard !likenessImageRelPath.isEmpty else { return nil }
-        if let tile = likenesses.first(where: { $0.imageRelPath == likenessImageRelPath }) {
-            return L10n.Conclusions.likenessLabel(tile.sourceTitle)
-        }
-        return L10n.string(L10n.Conclusions.personLikenessThumb)
-    }
 
     init(
         detail: CatalogConclusionDetail,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let header = detail.header?.person
+        let summary = detail.summary?.person
         let nameField = detail.fields.first { $0.propertyKey == SeededPropertyKey.name }
         var leadName: CatalogNameValue?
         if case .name(let name)? = nameField?.displayedValues.first?.value { leadName = name }
-        title = PersonHeaderDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
+        title = PersonTitleDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        lifeLines = [
-            Self.lifeLine(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: header?.birth, locale: locale),
-            Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: header?.death, locale: locale),
-        ]
-        rows = Self.rows(detail.fields, header: header, locale: locale, orders: orders)
-        treatment = PersonGenderTreatment.read(detail.fields)
-        likenessImageRelPath = header?.pictureImageRelPath ?? ""
-        likenesses = detail.pictures.map {
-            ConclusionDetailLikeness(
-                id: $0.record.observationID,
-                imageRelPath: $0.imageRelPath,
-                sourceTitle: ReconciliationRecord.sourceTitle(for: $0.record),
-                location: ReconciliationRecord.composerLocation(for: $0.record),
-                isPortrait: $0.leads
-            )
-        }
+        lifeLines = PersonLifeDisplay.lifeLines(summary, locale: locale, missing: .stated)
+        rows = Self.rows(detail.fields, summary: summary, derivedRows: detail.derivedRows, locale: locale, orders: orders)
+        treatment = PersonGenderTreatment.read(summary)
+        gallery = ConclusionDetailGallery(
+            title: L10n.Conclusions.likenessesSection,
+            openTip: L10n.Conclusions.likenessOpenTip,
+            fallbackMark: .subjectPerson,
+            tiles: ConclusionDetailGallery.tiles(
+                from: detail,
+                tileLabel: L10n.Conclusions.likenessTileLabel,
+                useAsLabel: L10n.Conclusions.useAsPortraitLabel,
+                chosenBody: L10n.Conclusions.toastPortraitChosenBody
+            ),
+            choose: .personPortrait
+        )
+        thumbnail = .leading(
+            gallery: gallery,
+            noImage: L10n.Conclusions.personNoLikeness,
+            withImage: L10n.Conclusions.personLikenessThumb,
+            leadLabel: L10n.Conclusions.likenessLabel,
+            colors: treatment?.thumbnailColors
+        )
     }
 
     /// A Person always shows its name and four life rows, stated empty when
@@ -86,7 +62,8 @@ struct PersonDetailContent: ConclusionDetailBody {
     /// speaks to it (sex at birth, a custom birth weight), in binding order.
     static func rows(
         _ fields: [CatalogConclusionField],
-        header: CatalogPersonHeader? = nil,
+        summary: CatalogPersonSummary? = nil,
+        derivedRows: [CatalogDerivedRow] = [],
         locale: Locale,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> [ReconciledValueRowModel] {
@@ -99,57 +76,43 @@ struct PersonDetailContent: ConclusionDetailBody {
                 emptyText: L10n.string(L10n.Conclusions.emptyName)
             ))
         }
-        let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle)] = [
-            ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date),
-            ("life.birthPlace", L10n.Conclusions.personBirthPlace, L10n.Conclusions.emptyBirthPlace, .place),
-            ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date),
-            ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place),
+        let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle, CatalogDerivedRowKind)] = [
+            ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date, .birthDate),
+            ("life.birthPlace", L10n.Conclusions.personBirthPlace, L10n.Conclusions.emptyBirthPlace, .place, .birthPlace),
+            ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date, .deathDate),
+            ("life.deathPlace", L10n.Conclusions.personDeathPlace, L10n.Conclusions.emptyDeathPlace, .place, .deathPlace),
         ]
-        let facts: [CatalogLifeFacts?] = [header?.birth, header?.birth, header?.death, header?.death]
+        let facts: [CatalogLifeFacts?] = [summary?.birth, summary?.birth, summary?.death, summary?.death]
         for (index, entry) in life.enumerated() {
-            let (id, label, empty, style) = entry
+            let (id, label, empty, style, kind) = entry
             let side = facts[index]
             let lead: String
             let mixed: Bool
             let opens: ReconciledValueRowModel.Opens?
+            let shownOwnerID: String?
             let competing = (side?.eventCount ?? 0) > 1
             if style == .date {
                 lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
                 mixed = competing || (side?.dateCount ?? 0) > 1
                 opens = side?.event.map(ReconciledValueRowModel.Opens.event)
+                shownOwnerID = side?.event?.id
             } else {
+                let shown = DerivedPlace.shown(side?.places ?? [])
                 lead = DerivedPlace.name(side?.places ?? [])
                 mixed = competing || DerivedPlace.extra(side?.places ?? []) > 0
-                opens = side?.places.first.map(ReconciledValueRowModel.Opens.place)
+                opens = (shown ?? side?.places.first).map(ReconciledValueRowModel.Opens.place)
+                shownOwnerID = shown?.entity.id
             }
             rows.append(.derived(
                 id: id, label: L10n.string(label), style: style, lead: lead,
-                emptyText: L10n.string(empty), mixed: mixed, opens: opens
+                emptyText: L10n.string(empty), mixed: mixed, opens: opens,
+                owners: derivedRows.first { $0.kind == kind }?.owners ?? [],
+                shownOwnerID: shownOwnerID, kind: kind, locale: locale, orders: orders
             ))
         }
         for field in fields where field.propertyKey != SeededPropertyKey.name && !field.outcomes.isEmpty {
             rows.append(ReconciledValueRowModel(field: field, locale: locale, orders: orders))
         }
         return rows
-    }
-
-    private static func lifeLine(
-        _ abbreviation: LocalizedStringResource,
-        spoken: LocalizedStringResource,
-        facts: CatalogLifeFacts?,
-        locale: Locale
-    ) -> LifeLine {
-        let date = PersonLifeDisplay.dateText(facts?.date, locale: locale)
-        let place = DerivedPlace.name(facts?.places ?? [])
-        return LifeLine(
-            abbreviation: L10n.string(abbreviation),
-            date: date.isEmpty ? nil : date,
-            place: place.isEmpty ? nil : place,
-            accessibilityLabel: L10n.Conclusions.a11yLifeLine(
-                L10n.string(spoken),
-                date: date.isEmpty ? L10n.string(L10n.Conclusions.dateUnknown) : date,
-                place: place.isEmpty ? L10n.string(L10n.Conclusions.placeUnknown) : place
-            )
-        )
     }
 }

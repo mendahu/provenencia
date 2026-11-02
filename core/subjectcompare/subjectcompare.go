@@ -200,3 +200,18 @@ func (r Rules) Lead(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabk
 	lead, _, ok := r.Role(kind, key)
 	return lead, ok
 }
+
+// Meta returns the meta a property's values compare under for the kind. A
+// property with a lead compares under the lead, except a period end, which
+// compares under its own key; a property with no lead compares under its own
+// key. The rest of how a property counts reads from Role: it counts under the
+// lead when there is one (else under its own key, unweighted), its weights are
+// Weights[kind][lead], and its values compare through Side when there is a
+// lead and the role is not RolePeriodEnd.
+func (r Rules) Meta(kind vocabkey.SubjectType, p vocabkey.PropertyKey) vocabkey.PropertyKey {
+	lead, role, ok := r.Role(kind, p)
+	if !ok || role == RolePeriodEnd {
+		return p
+	}
+	return lead
+}

@@ -13,7 +13,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
@@ -135,8 +137,10 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		res, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator, Notes: []string{"Faded ink", "Second hand"},
 			}, nil)
 		})
@@ -167,8 +171,8 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		_ = tx.Rollback()
 		f.c.EndWrite()
 	}()
-	// obsA is pinned on both claims of one handle: one handle, reported once.
-	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, f.obsA)
+	// B's claim is released: one claim change, one handle.
+	got, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, f.b.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +188,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 		types = append(types, ch.EntityType)
 	}
 	sort.Strings(types)
-	if strings.Join(types, ",") != "identity_claim_evidence,identity_claim_evidence" {
+	if strings.Join(types, ",") != "identity_claim" {
 		t.Fatalf("changes %v", types)
 	}
 }
@@ -213,4 +217,75 @@ func runFieldDelete(c *database.Catalog, userID, id []byte) error {
 			return struct{}{}, changes, err
 		})
 	return err
+}
+
+// releaseCitation lists the Citation's columns by hand (the import cycle keeps
+// it from calling citations); its delete change must name every column, so a
+// new column fails here until the release carries it.
+func TestReleaseCitationChangeNamesEveryColumn(t *testing.T) {
+	c, userID := testCatalog(t)
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx, err := c.BeginWrite()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		_ = tx.Rollback()
+		c.EndWrite()
+	}()
+	changes, err := deleteimpact.ReleaseCitation(tx, res.Citation.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, ch := range changes {
+		if ch.EntityType != "citation" || ch.Action != rowchange.ActionDelete {
+			continue
+		}
+		for k := range ch.Fields {
+			got = append(got, k)
+		}
+	}
+	rows, err := tx.Query(`SELECT name FROM pragma_table_info('citations')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var want []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		want = append(want, name)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(got)
+	sort.Strings(want)
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("delete change fields %v, citations columns %v", got, want)
+	}
 }

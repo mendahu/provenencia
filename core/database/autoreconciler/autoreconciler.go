@@ -14,9 +14,8 @@
 //
 // Upkeep goes through writes.Run, which calls RecomputeTx with the handles
 // effects.Resolve named. Subject delete calls RecomputeTx once more after the
-// rows are gone, so header documents see the cleared values. HandlesFor* are
-// the sets the registry fixtures compare. Claim confidence and status have no
-// edit path yet.
+// rows are gone, so summary documents see the cleared values. HandlesFor* are
+// the sets the registry fixtures compare. Claim status has no edit path yet.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
@@ -28,7 +27,7 @@
 //
 // Inputs: every Observation on an accepted or provisional member (rejected
 // members don't count), with its Source, polarity, Source credibility,
-// transcription certainty, and claim confidence and status; each term's key
+// transcription certainty, and claim status; each term's key
 // and each name's parts. Subject-valued Properties wait for S9-28. Date
 // windows are stored as date_lo / date_hi.
 package autoreconciler
@@ -40,14 +39,14 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -78,7 +77,9 @@ import (
 //	18: a nickname or abbreviation of a given name folds into its formal name; the reconciler reads the product alias seed and its nickname heads (S11-28).
 //	19: Des is a nickname of Desiree and of Desirae (S11-44).
 //	20: a given name that is the start of another folds into it, like an initial (S11-45).
-const CacheVersion = 20
+//	21: a claim's confidence grade no longer weakens or orders its values (S13-24).
+//	22: a fold follows chains to the formal value it reaches; a fold cycle keeps each value (S14-18).
+const CacheVersion = 22
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name
@@ -91,6 +92,27 @@ type Querier interface {
 	Exec(query string, args ...any) (sql.Result, error)
 	Query(query string, args ...any) (*sql.Rows, error)
 	QueryRow(query string, args ...any) *sql.Row
+}
+
+// ProvenanceColumns is the select-list fragment that reads a candidate's
+// provenance: the Source's credibility grade as sort_order relative to the
+// provenencia default (standard), then whether the transcription is uncertain.
+// No assessment, no grade, or no vocabulary reads as 0. It binds the aliases c
+// for citations and a for artifacts, and the query includes ProvenanceJoins,
+// after which sg (source_credibility_grades) is in scope for a caller's own
+// column. Scan it with ProvenanceDest.
+const ProvenanceColumns = `COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
+				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+			c.transcription_uncertain`
+
+// ProvenanceJoins is the join fragment ProvenanceColumns needs; the alias
+// contract is on ProvenanceColumns.
+const ProvenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
+		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
+
+// ProvenanceDest are the scan targets for ProvenanceColumns, in its order.
+func ProvenanceDest(p *autoreconcile.Provenance) []any {
+	return []any{&p.Credibility, &p.Uncertain}
 }
 
 const (
@@ -110,18 +132,14 @@ const (
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
 	// Source it is cited under, and provenance as grade sort_order relative to
-	// the provenencia default grade (standard, moderate); no assessment, no
-	// grade, or no vocabulary reads as 0.
+	// the provenencia default grade (standard); no assessment, no grade, or no
+	// vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
 			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
 			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
 			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
-			COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
-				WHERE key = 'standard' AND origin = 'provenencia'), 0),
-			c.transcription_uncertain,
-			COALESCE(cg.sort_order - (SELECT sort_order FROM claim_confidence_grades
-				WHERE key = 'moderate' AND origin = 'provenencia'), 0)
+			` + ProvenanceColumns + `
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
@@ -130,9 +148,7 @@ const (
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
 		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
-		LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
-		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id
-		LEFT JOIN claim_confidence_grades cg ON cg.id = ic.confidence_grade_id
+		` + ProvenanceJoins + `
 		WHERE ic.status IN ('accepted', 'provisional')
 		  AND ic.entity_id IN (`
 
@@ -170,9 +186,9 @@ const (
 
 // RecomputeTx rewrites the cached rows of the given handles from truth tables.
 // A handle with no members (or no cacheable values) ends with no rows. The
-// handles' search documents, and the documents of handles whose headers read
+// handles' search documents, and the documents of handles whose summaries read
 // them, are reprojected in the same transaction. Subject delete passes the
-// released handles, observers, linked handles, and header dependents through
+// released handles, observers, linked handles, and summary dependents through
 // this call after the rows are gone, so a removed member updates the rows
 // that named it.
 func RecomputeTx(q Querier, entityIDs [][]byte) error {
@@ -180,29 +196,43 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 	return err
 }
 
-// RecomputeReported is RecomputeTx plus the header dependents that walk found.
+// RecomputeReported is RecomputeTx plus the summary dependents that walk found.
 // The commit drops stored rows for those ids and does not walk again.
 func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(entityIDs)
-	before, err := conclusionheaders.AssociationEndpoints(q, ids)
+	before, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
+	var moved [][]byte
 	if err := sqlbatch.Each(ids, func(batch [][]byte) error {
-		return recomputeBatch(q, batch)
+		m, err := recomputeBatch(q, batch)
+		moved = append(moved, m...)
+		return err
 	}); err != nil {
 		return nil, err
 	}
-	after, err := conclusionheaders.AssociationEndpoints(q, ids)
+	after, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
 	roots := database.UniqueBlobIDs(append(append(append([][]byte(nil), ids...), before...), after...))
-	deps, err := conclusionheaders.Dependents(q, roots)
+	deps, err := conclusionsummaries.Dependents(q, roots)
 	if err != nil {
 		return nil, err
 	}
-	if err := searchindex.ReprojectHandles(q, append(roots, deps...)); err != nil {
+	// Dependents' search text reads only the roots' displayed rows, so a root
+	// whose rows did not move needs none of its dependents reprojected. deps
+	// stays the full walk: the graph cache drops displays that read a label.
+	reproject := deps
+	if len(moved) < len(ids) {
+		movedRoots := database.UniqueBlobIDs(append(append(append([][]byte(nil), moved...), before...), after...))
+		reproject, err = conclusionsummaries.Dependents(q, movedRoots)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := searchindex.ReprojectHandles(q, append(roots, reproject...)); err != nil {
 		return nil, err
 	}
 	return deps, nil
@@ -314,27 +344,41 @@ func EnsureCatalog(c *database.Catalog) error {
 	return nil
 }
 
-func recomputeBatch(q Querier, ids [][]byte) error {
+// recomputeBatch rewrites the batch's rows and returns the ids whose displayed
+// rows differ from the ones it replaced (graphcache.SameDisplay: everything but
+// the vote counts).
+func recomputeBatch(q Querier, ids [][]byte) (moved [][]byte, err error) {
 	in := database.SQLInPlaceholders(len(ids)) + `)`
+	stored, err := graphcache.Over(q).StoredValues(ids)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := q.Exec(sqlDeleteFor+in, database.BlobArgs(ids)...); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := q.Exec(sqlDeleteOutcomesFor+in, database.BlobArgs(ids)...); err != nil {
-		return err
+		return nil, err
 	}
 	groups, err := load(q, ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	written := map[string][]graphcache.TruthRow{}
 	for _, g := range groups {
 		res, err := autoreconcile.Reconcile(ValueRules, g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for i, cl := range res.Values {
-			if err := insertRow(q, g, i+1, cl); err != nil {
-				return err
+			row, err := truthRow(g, i+1, cl)
+			if err != nil {
+				return nil, err
 			}
+			if err := insertRow(q, g, row, cl.Value); err != nil {
+				return nil, err
+			}
+			ek := string(g.entityID)
+			written[ek] = append(written[ek], row)
 		}
 		for _, o := range res.Outcomes {
 			var rank any
@@ -351,11 +395,16 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 			}
 			if _, err := q.Exec(sqlInsertOutcome, g.entityID, g.propertyID, o.ObservationID, string(o.Reason), rank, deniedBy,
 				voteSupport, voteTotal); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	for _, id := range ids {
+		if !graphcache.SameDisplayRows(stored[string(id)], written[string(id)]) {
+			moved = append(moved, id)
+		}
+	}
+	return moved, nil
 }
 
 // group is one (handle, Property) and its candidates.
@@ -398,12 +447,12 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			neutral                           bool
 			provisional, negative             bool
 			sourceID                          []byte
-			credibility, confidence           int
-			uncertain                         bool
+			provenance                        autoreconcile.Provenance
 		)
-		if err := rows.Scan(&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
-			&provisional, &negative, &sourceID, &credibility, &uncertain, &confidence); err != nil {
+			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
+		if err := rows.Scan(dest...); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
@@ -420,7 +469,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
 			Depiction: depictionvalues.FromJoin(depictionID, region, imageID, locatorJSON, mediaType),
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
-			Provenance: autoreconcile.Provenance{Credibility: credibility, Uncertain: uncertain, ClaimConfidence: confidence}}
+			Provenance: provenance}
 		all = append(all, pending{g: g, c: c, dateID: dateID, nameID: nameID})
 		if len(dateID) > 0 {
 			dateIDs = append(dateIDs, dateID)
@@ -499,38 +548,37 @@ func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
 	return out, nil
 }
 
-func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) error {
-	v := cl.Value
+// insertRow writes row, the one build of a value row (truthRow), and computes
+// only what the stored row adds: the date window and the sort key from v.
+func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Value) error {
 	var (
-		text, sortKey     any
-		integer           any
-		termID            any
-		valueEntity       any
-		imageFileID       any
-		dateBlob, nameBlb any
-		dateLo, dateHi    any
+		text, sortKey  any
+		integer        any
+		termID         any
+		valueEntity    any
+		imageFileID    any
+		dateBlob, name any
+		dateLo, dateHi any
 	)
-	if v.HasText {
-		text = v.Text
+	if row.HasText {
+		text = row.Text
 	}
-	if v.HasInteger {
-		integer = v.Integer
+	if row.HasInteger {
+		integer = row.Integer
 	}
-	if len(v.TermID) > 0 {
-		termID = v.TermID
+	if len(row.TermID) > 0 {
+		termID = row.TermID
 	}
-	if len(v.EntityID) > 0 {
-		valueEntity = v.EntityID
+	if len(row.EntityID) > 0 {
+		valueEntity = row.EntityID
 	}
-	if v.Depiction != nil && len(v.Depiction.ImageFileID) > 0 {
-		imageFileID = v.Depiction.ImageFileID
+	if len(row.ImageFileID) > 0 {
+		imageFileID = row.ImageFileID
+	}
+	if row.Date != nil {
+		dateBlob = row.Date
 	}
 	if v.Date != nil {
-		b, err := valuecodec.MarshalDate(*v.Date)
-		if err != nil {
-			return err
-		}
-		dateBlob = b
 		if w, ok := valuecompare.DateWindow(*v.Date); ok {
 			if w.Lo != nil {
 				dateLo = *w.Lo
@@ -540,18 +588,14 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 			}
 		}
 	}
-	if v.Name != nil {
-		b, err := valuecodec.MarshalName(*v.Name)
-		if err != nil {
-			return err
-		}
-		nameBlb = b
+	if row.Name != nil {
+		name = row.Name
 	}
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, valueEntity, dateBlob, nameBlb, imageFileID, dateLo, dateHi, sortKey,
-		cl.Support, cl.Against, string(cl.Reason))
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, integer, termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
+		row.Support, row.Against, row.Reason)
 	return err
 }
 

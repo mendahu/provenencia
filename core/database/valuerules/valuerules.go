@@ -6,6 +6,7 @@ package valuerules
 
 import (
 	"database/sql"
+	"sync"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namealiases"
@@ -38,8 +39,11 @@ func Load(g *graphcache.Graph, q Querier) (rules valuecompare.Rules, namePattern
 // Product returns the rules the reconciler cache reads: the shipped registry
 // and the product alias seed, never a catalog's own rows or name formats. The
 // cache then changes only when autoreconciler.CacheVersion does.
-func Product() valuecompare.Rules {
+// It is built once; every call returns the same value, which callers must not mutate.
+func Product() valuecompare.Rules { return product() }
+
+var product = sync.OnceValue(func() valuecompare.Rules {
 	rules := matchregistry.Default().Value
 	rules.Names.Aliases = namealiases.ProductIndex()
 	return rules
-}
+})

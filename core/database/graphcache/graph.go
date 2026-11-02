@@ -5,6 +5,7 @@
 package graphcache
 
 import (
+	"bytes"
 	"database/sql"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -33,7 +34,7 @@ type Graph struct {
 	vocab   Vocabulary
 	vocabOK bool
 
-	// displays are finished header rows keyed by handle id. memos are the
+	// displays are composed (not finished) summary rows keyed by handle id. memos are the
 	// results owners store per node through registered slots (memo.go).
 	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
 	// the memos features derive from it, so a memo cannot outlive its graph.
@@ -74,7 +75,7 @@ type Graph struct {
 // Node is one canonical entity. Kind is not stored: callers look the type
 // id up. Values keeps every auto-reconciler rank. Members are accepted and
 // provisional subjects in claim id order. Argument and Label are the
-// entity row's own text; a header uses them when it has no reconciled name.
+// entity row's own text; a summary uses them when it has no reconciled name.
 type Node struct {
 	ID            []byte
 	Ref           string
@@ -138,6 +139,27 @@ type Member struct {
 	SourceID  []byte
 	GraphID   []byte
 	Accepted  bool
+}
+
+// AcceptedMembers returns the node's accepted identity claims in Members
+// order. A nil node has none.
+func (n *Node) AcceptedMembers() []Member {
+	if n == nil {
+		return nil
+	}
+	var accepted []Member
+	for _, m := range n.Members {
+		if m.Accepted {
+			accepted = append(accepted, m)
+		}
+	}
+	return accepted
+}
+
+// Is reports whether the node is an unmerged Subject of typeID. A nil node is
+// none.
+func (n *Node) Is(typeID []byte) bool {
+	return n != nil && !n.Merged && bytes.Equal(n.SubjectTypeID, typeID)
 }
 
 // Link is one association seen from this node. AssociationRef is the sort

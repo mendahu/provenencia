@@ -236,21 +236,22 @@ struct CitationComposerObservationsColumn: View {
         .accessibilityIdentifier("citationComposer.line.\(line.id)")
     }
 
-    private func depictionPerson(_ line: CitationSavedLine) -> String? {
+    /// The label of the Subject the line depicts; nil when it is unknown.
+    private func depictionSubject(_ line: CitationSavedLine) -> String? {
         model.vocabulary.subjectsByID[line.subjectID]?.label
     }
 
-    /// "Likeness of Ben Ford"; nil when the person is unknown.
+    /// "Likeness of Ben Ford"; nil when the Subject is unknown.
     private func depictionThumbLabel(_ line: CitationSavedLine) -> String? {
-        depictionPerson(line).map { L10n.CitationComposer.depictionThumbLabel(line.label, $0) }
+        depictionSubject(line).map { L10n.CitationComposer.depictionThumbLabel(line.label, $0) }
     }
 
-    /// What VoiceOver reads for a saved likeness: "Likeness, Ben Ford" with the
+    /// What VoiceOver reads for a saved likeness: "Likeness, Ben Ford" (the Subject's label) with the
     /// badges the row shows (Negative, Saved) as its value. Nil for other lines,
     /// which keep their combined reading.
     private func depictionReading(_ line: CitationSavedLine, fresh: Bool) -> LineReading? {
         guard line.imageRelPath != nil else { return nil }
-        let label = depictionPerson(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) }
+        let label = depictionSubject(line).map { L10n.CitationComposer.depictionLineLabel(line.label, $0) }
             ?? line.label
         var badges: [String] = []
         if line.negative { badges.append(L10n.string(L10n.CitationComposer.negativeLabel)) }

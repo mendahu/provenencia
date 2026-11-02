@@ -143,7 +143,7 @@ func buildFacetReleases() []facetRelease {
 	return []facetRelease{
 		// --- Conclusion ---------------------------------------------------
 		// A Subject leaves every handle it has a claim on (any status); the
-		// handles stay. Claims' own pins go first.
+		// handles stay.
 		{
 			Parent: catalogmodel.KindSubject, Via: "identity_claims.subject_id",
 			Named: true, Child: catalogmodel.KindCanonicalEntity,
@@ -153,34 +153,7 @@ func buildFacetReleases() []facetRelease {
 				WHERE ic.subject_id = ?
 				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 			Remaining: `SELECT COUNT(*) FROM identity_claims WHERE subject_id = ?`,
-			Release:   releaseSubjectClaims,
-		},
-		// A pinned Observation leaves the exhibit of every claim that pinned
-		// it; those claims stay, weaker (model §5.2 review).
-		{
-			Parent: catalogmodel.KindObservation, Via: "identity_claim_evidence.observation_id",
-			Named: true, Child: catalogmodel.KindCanonicalEntity,
-			Count: countSQLFn(`SELECT COUNT(DISTINCT ic.entity_id) FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				WHERE ev.observation_id = ?`),
-			List: listSQLFn(`SELECT DISTINCT e.id, e.ref FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ev.observation_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
-			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE observation_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
-				FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				WHERE ev.observation_id = ? ORDER BY ev.identity_claim_id`),
-		},
-		{
-			Parent: catalogmodel.KindIdentityClaim, Via: "identity_claim_evidence.identity_claim_id",
-			Remaining: `SELECT COUNT(*) FROM identity_claim_evidence WHERE identity_claim_id = ?`,
-			Release: pinRelease(`SELECT ev.identity_claim_id, ev.observation_id
-				FROM identity_claim_evidence ev
-				JOIN identity_claims ic ON ic.id = ev.identity_claim_id
-				WHERE ev.identity_claim_id = ? ORDER BY ev.observation_id`),
+			Release:   releaseEach(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, releaseClaim),
 		},
 
 		// --- Interpretation -------------------------------------------------
@@ -199,6 +172,16 @@ func buildFacetReleases() []facetRelease {
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", col{"cover_mode", colText}),
+		// A graph's Citations go with it, each through releaseCitation (a graph
+		// with Subjects is refused first, so none has an Observation).
+		{
+			Parent: catalogmodel.KindEvidenceGraph, Via: "citations.graph_id",
+			Named: true, Child: catalogmodel.KindCitation,
+			Count:     countSQLFn(`SELECT COUNT(*) FROM citations WHERE graph_id = ?`),
+			List:      listSQLFn(`SELECT id, ref FROM citations WHERE graph_id = ? ORDER BY ref COLLATE NOCASE LIMIT ?`),
+			Remaining: `SELECT COUNT(*) FROM citations WHERE graph_id = ?`,
+			Release:   releaseEach(`SELECT id FROM citations WHERE graph_id = ? ORDER BY id`, releaseCitation),
+		},
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
@@ -230,32 +213,37 @@ func buildFacetReleases() []facetRelease {
 
 // --- Conclusion releases ----------------------------------------------------
 
-func releaseSubjectClaims(tx *sql.Tx, subjectID []byte) (released, error) {
-	rows, err := tx.Query(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, subjectID)
-	if err != nil {
-		return released{}, err
-	}
-	var ids [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return released{}, err
-		}
-		ids = append(ids, id)
-	}
-	if err := rows.Close(); err != nil {
-		return released{}, err
-	}
-	var out released
-	for _, id := range ids {
-		r, err := releaseClaim(tx, id)
+// releaseEach releases every row selectIDs returns for the parent id through
+// one, in that order, and merges what they removed. The ids are read and the
+// rows closed before the first release, which writes on the same Tx.
+func releaseEach(selectIDs string, one func(*sql.Tx, []byte) (released, error)) func(*sql.Tx, []byte) (released, error) {
+	return func(tx *sql.Tx, parentID []byte) (released, error) {
+		rows, err := tx.Query(selectIDs, parentID)
 		if err != nil {
 			return released{}, err
 		}
-		out.merge(r)
+		var ids [][]byte
+		for rows.Next() {
+			var id []byte
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return released{}, err
+			}
+			ids = append(ids, id)
+		}
+		if err := rows.Close(); err != nil {
+			return released{}, err
+		}
+		var out released
+		for _, id := range ids {
+			r, err := one(tx, id)
+			if err != nil {
+				return released{}, err
+			}
+			out.merge(r)
+		}
+		return out, nil
 	}
-	return out, nil
 }
 
 // ReleaseClaim is releaseClaim on the write's Tx: it schedules the purge of any
@@ -272,22 +260,21 @@ func ReleaseClaim(tx *database.Tx, claimID []byte) ([]rowchange.Change, error) {
 	return r.Changes, nil
 }
 
-// releaseClaim removes one identity claim, audited: its pins first (through
-// ReleaseFacets), then the row, then the claim's own delete change carrying the
-// fields the effects registry resolves a ghost row from. It is the one claim
-// removal; Subject delete and Unpromote both call it. Does not commit.
+// releaseClaim removes one identity claim, audited: its registered facets (none
+// today), then the row, then the claim's own delete change carrying the fields
+// the effects registry resolves a ghost row from. It is the one claim removal;
+// Subject delete and Unpromote both call it. Does not commit.
 func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
 	if tx == nil || len(claimID) != 16 {
 		return released{}, ErrInvalid
 	}
 	var (
-		id, subjectID, entityID, typeID, gradeID []byte
-		status                                   string
-		argument                                 sql.NullString
+		id, subjectID, entityID, typeID []byte
+		status                          string
 	)
-	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status,
-		confidence_grade_id, argument FROM identity_claims WHERE id = ?`, claimID).
-		Scan(&id, &subjectID, &entityID, &typeID, &status, &gradeID, &argument); err != nil {
+	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status
+		FROM identity_claims WHERE id = ?`, claimID).
+		Scan(&id, &subjectID, &entityID, &typeID, &status); err != nil {
 		return released{}, err
 	}
 	out, err := releaseFacets(tx, catalogmodel.KindIdentityClaim, id)
@@ -302,60 +289,74 @@ func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
 		EntityID:   id,
 		Action:     rowchange.ActionDelete,
 		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                  database.UUIDJSON(id),
-			"subject_id":          database.UUIDJSON(subjectID),
-			"entity_id":           database.UUIDJSON(entityID),
-			"subject_type_id":     database.UUIDJSON(typeID),
-			"status":              status,
-			"confidence_grade_id": database.UUIDJSON(gradeID),
-			"argument":            nullStringJSON(argument),
+			"id":              database.UUIDJSON(id),
+			"subject_id":      database.UUIDJSON(subjectID),
+			"entity_id":       database.UUIDJSON(entityID),
+			"subject_type_id": database.UUIDJSON(typeID),
+			"status":          status,
 		}),
 	})
 	return out, nil
 }
 
-// pinRelease deletes the pins q selects (claim id, observation id) and audits
-// each under its claim's id, so replaying (identity_claim_evidence, claim id)
-// yields that claim's exhibit history. The claim join keeps a pin whose claim
-// is already gone out of this release; effects.Handles walks identity_claim_id
-// to the handle, including through that claim's delete when the row is gone.
-func pinRelease(q string) func(*sql.Tx, []byte) (released, error) {
-	return func(tx *sql.Tx, parentID []byte) (released, error) {
-		rows, err := tx.Query(q, parentID)
-		if err != nil {
-			return released{}, err
-		}
-		type pin struct{ claimID, observationID []byte }
-		var pins []pin
-		for rows.Next() {
-			var p pin
-			if err := rows.Scan(&p.claimID, &p.observationID); err != nil {
-				rows.Close()
-				return released{}, err
-			}
-			pins = append(pins, p)
-		}
-		if err := rows.Close(); err != nil {
-			return released{}, err
-		}
-		var out released
-		for _, p := range pins {
-			if _, err := tx.Exec(`DELETE FROM identity_claim_evidence
-				WHERE identity_claim_id = ? AND observation_id = ?`, p.claimID, p.observationID); err != nil {
-				return released{}, err
-			}
-			out.Changes = append(out.Changes, rowchange.Change{
-				EntityType: "identity_claim_evidence",
-				EntityID:   p.claimID,
-				Action:     rowchange.ActionDelete,
-				Fields: rowchange.DeletedRow(map[string]any{
-					"identity_claim_id": database.UUIDJSON(p.claimID),
-					"observation_id":    database.UUIDJSON(p.observationID),
-				}),
-			})
-		}
-		return out, nil
+// ReleaseCitation is releaseCitation on the write's Tx: it schedules the purge
+// of any File released and returns the audit changes.
+func ReleaseCitation(tx *database.Tx, citationID []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
 	}
+	r, err := releaseCitation(tx.Tx, citationID)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseCitation removes one Citation, audited: its notes (through
+// releaseFacets), then the row, then the Citation's own delete change over
+// every column. It is the one Citation removal; citations.Delete and a graph
+// delete both call it. The caller has already refused a Citation that still has
+// Observations. Does not commit.
+func releaseCitation(tx *sql.Tx, citationID []byte) (released, error) {
+	if tx == nil || len(citationID) != 16 {
+		return released{}, ErrInvalid
+	}
+	var (
+		id, artifactID, graphID                 []byte
+		ref, locator                            string
+		transcription, label, transcriptionNote sql.NullString
+		uncertain                               int
+	)
+	if err := tx.QueryRow(`SELECT id, ref, artifact_id, graph_id, locator_json, transcription, label,
+		transcription_uncertain, transcription_note FROM citations WHERE id = ?`, citationID).
+		Scan(&id, &ref, &artifactID, &graphID, &locator, &transcription, &label, &uncertain, &transcriptionNote); err != nil {
+		return released{}, err
+	}
+	out, err := releaseFacets(tx, catalogmodel.KindCitation, id)
+	if err != nil {
+		return released{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM citations WHERE id = ?`, id); err != nil {
+		return released{}, err
+	}
+	out.Changes = append(out.Changes, rowchange.Change{
+		EntityType: "citation",
+		EntityID:   id,
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"id":                      database.UUIDJSON(id),
+			"ref":                     ref,
+			"artifact_id":             database.UUIDJSON(artifactID),
+			"graph_id":                database.UUIDJSON(graphID),
+			"locator_json":            locator,
+			"transcription":           nullStringJSON(transcription),
+			"label":                   nullStringJSON(label),
+			"transcription_uncertain": uncertain != 0,
+			"transcription_note":      nullStringJSON(transcriptionNote),
+		}),
+	})
+	return out, nil
 }
 
 // --- Interpretation releases ------------------------------------------------

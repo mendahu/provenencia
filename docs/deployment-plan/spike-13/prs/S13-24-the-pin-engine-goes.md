@@ -1,6 +1,6 @@
 # S13-24 — The pin engine goes
 
-**Status:** Planned
+**Status:** Landed in #639 (2026-10-30)
 **Spike / slice:** Spike 13 · Slice 0 — Removing Observation pins
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Promote page already shows no band or pins since S13-23, and Vitals loses one cause word, "low-confidence claim", which only a claim graded before S13-23 could show; user, 2026-10-30)
@@ -370,3 +370,16 @@ None.
 
 **Title:** S13-24 — The pin engine goes
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-24-the-pin-engine-goes.md`.
+
+## Landed note
+
+The code differs from the plan in these ways:
+
+- T-8's "negative, fixed" case expects target "" and `TestProposeHoldsAFoundRecord`'s fixed pair starts unset: both pairs score under the weak band (1.5), and D-8 starts a placed row with no band unset, as the old Swift rule did. The plan's T-8 table said "handle".
+- `TestMemoFollowsCommit/a Source retitled` is removed: a Source retitle changed only the evidence query's output, and Propose does not read the title.
+- Tests that read a deleted `Comparisons` outcome assert the row's `Score` instead (`TestProposeJudgesAgainstTheMajority`, `TestProposeMultipleToponyms`, `TestProposeComparesTheLifespan`, `TestEventPeriodStandsForTheDate`); `TestGenderPoolsWithSex` keeps only its band and score check.
+- `TestContestedRow` is `TestAConflictCountsAgainstAPlacedPair` and `TestProposeMarksAConflictingRowContested` is `TestProposeFilesAConflictingRowOnTheLinks`, so AC-4.1's `rg` finds nothing.
+- `MemoSnapshotForTest` drops its `memberGraphID` parameter with `MemoSnapshot.Members`; the `BridgedOnly` test export goes with `bridgedOnly`.
+- The "all weak and agreeing still reconcile" names case uses an uncertain transcription where it used a low-confidence claim.
+- `conclusion-reconciliation.md`'s Promote package row loses its pin mention, and `promote-graph-alignment.md` line 51 drops the Contested flag and row reason it said were still computed: the removal makes both false.
+- The manual check (section 10) was not run in the app.

@@ -104,13 +104,13 @@ struct WorkspaceDestinationHost: View {
             EventsListView(session: session)
                 .accessibilityIdentifier("workspace.destination.events")
         case .eventDetail:
-            EventDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
+            EventDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "", userID: userID)
                 .accessibilityIdentifier("workspace.destination.eventDetail")
         case .placesList:
             PlacesListView(session: session)
                 .accessibilityIdentifier("workspace.destination.places")
         case .placeDetail:
-            PlaceDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "")
+            PlaceDetailView(session: session, entityId: navigation.currentLocation.entityId ?? "", userID: userID)
                 .accessibilityIdentifier("workspace.destination.placeDetail")
         }
     }

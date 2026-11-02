@@ -448,9 +448,10 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph] {
         var req = Provenencia_Engine_V1_ListEvidenceGraphsRequest()
         req.projectDir = projectDir
+        if let sourceID { req.sourceID = sourceID }
         let resp: Provenencia_Engine_V1_ListEvidenceGraphsResponse = try await provenenciaCall(
             method: CoreMethod.listEvidenceGraphs,
             request: req
@@ -945,22 +946,20 @@ struct GoStore: GenealogyStore {
                 target: PromoteTargetCode(wire: r.target),
                 handleID: r.handleID,
                 handleRef: r.handleRef,
-                assessment: r.assessment,
-                reason: PromoteReasonCode(wire: r.reason),
                 alternatives: r.alternatives.map { a in
                     CatalogPromoteGraphAlignmentAlternative(
                         handleID: a.handleID,
                         handleRef: a.handleRef,
-                        header: Self.mapPromoteAlternativeHeader(a.header)
+                        summary: Self.mapConclusionSummary(a.summary)
                     )
                 },
                 conflictWithFixed: r.conflictWithFixed,
                 possibleDuplicate: r.possibleDuplicate,
                 duplicateOfSubjectID: r.duplicateOfSubjectID,
                 viaNeighborSubjectID: r.viaNeighborSubjectID,
-                moveReason: r.moveReason.isEmpty ? nil : PromoteReasonCode(wire: r.moveReason),
+                moveReason: r.moveReason.isEmpty ? nil : PromoteMoveReason(wire: r.moveReason),
                 moveNeighborSubjectID: r.moveNeighborSubjectID,
-                header: Self.mapPromoteRowHeader(r.header)
+                summary: Self.mapConclusionSummary(r.summary)
             )
         }
         return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
@@ -1057,88 +1056,71 @@ struct GoStore: GenealogyStore {
         }
     }
 
-    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
-        var req = Provenencia_Engine_V1_ListPersonHeadersRequest()
+    func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary] {
+        var req = Provenencia_Engine_V1_ListPersonSummariesRequest()
         req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListPersonHeadersResponse = try await provenenciaCall(
-            method: CoreMethod.listPersonHeaders,
+        let resp: Provenencia_Engine_V1_ListPersonSummariesResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonSummaries,
             request: req
         )
-        return resp.headers.map(Self.mapPersonHeader)
+        return resp.summaries.map(Self.mapPersonSummary)
     }
 
-    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
-        var req = Provenencia_Engine_V1_ListEventHeadersRequest()
+    func listEventSummaries(projectDir: String) async throws -> [CatalogEventSummary] {
+        var req = Provenencia_Engine_V1_ListEventSummariesRequest()
         req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListEventHeadersResponse = try await provenenciaCall(
-            method: CoreMethod.listEventHeaders,
+        let resp: Provenencia_Engine_V1_ListEventSummariesResponse = try await provenenciaCall(
+            method: CoreMethod.listEventSummaries,
             request: req
         )
-        return resp.headers.map(Self.mapEventHeader)
+        return resp.summaries.map(Self.mapEventSummary)
     }
 
-    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
-        var req = Provenencia_Engine_V1_ListPlaceHeadersRequest()
+    func listPlaceSummaries(projectDir: String) async throws -> [CatalogPlaceSummary] {
+        var req = Provenencia_Engine_V1_ListPlaceSummariesRequest()
         req.projectDir = projectDir
-        let resp: Provenencia_Engine_V1_ListPlaceHeadersResponse = try await provenenciaCall(
-            method: CoreMethod.listPlaceHeaders,
+        let resp: Provenencia_Engine_V1_ListPlaceSummariesResponse = try await provenenciaCall(
+            method: CoreMethod.listPlaceSummaries,
             request: req
         )
-        return resp.headers.map(Self.mapPlaceHeader)
+        return resp.summaries.map(Self.mapPlaceSummary)
     }
 
-    private static func mapConclusionHeader(
-        _ header: Provenencia_Engine_V1_ConclusionDetail.OneOf_Header?
-    ) -> CatalogConclusionHeader? {
-        switch header {
-        case .person(let h): .person(mapPersonHeader(h))
-        case .event(let h): .event(mapEventHeader(h))
-        case .place(let h): .place(mapPlaceHeader(h))
+    private static func mapConclusionSummary(
+        _ summary: Provenencia_Engine_V1_ConclusionSummary
+    ) -> CatalogConclusionSummary? {
+        switch summary.kind {
+        case .person(let p): .person(mapPersonSummary(p))
+        case .event(let e): .event(mapEventSummary(e))
+        case .place(let p): .place(mapPlaceSummary(p))
         case nil: nil
         }
     }
 
-    private static func mapPromoteRowHeader(
-        _ header: Provenencia_Engine_V1_PromoteGraphAlignmentRow.OneOf_Header?
-    ) -> CatalogConclusionHeader? {
-        switch header {
-        case .person(let h): .person(mapPersonHeader(h))
-        case .event(let h): .event(mapEventHeader(h))
-        case .place(let h): .place(mapPlaceHeader(h))
-        case nil: nil
-        }
-    }
-
-    private static func mapPromoteAlternativeHeader(
-        _ header: Provenencia_Engine_V1_PromoteGraphAlignmentAlternative.OneOf_Header?
-    ) -> CatalogConclusionHeader? {
-        switch header {
-        case .person(let h): .person(mapPersonHeader(h))
-        case .event(let h): .event(mapEventHeader(h))
-        case .place(let h): .place(mapPlaceHeader(h))
-        case nil: nil
-        }
-    }
-
-    private static func mapSearchHeader(_ h: Provenencia_Engine_V1_SearchHit) -> CatalogConclusionHeader? {
-        switch h.header {
-        case .person(let header): return .person(mapPersonHeader(header))
-        case .event(let header): return .event(mapEventHeader(header))
-        case .place(let header): return .place(mapPlaceHeader(header))
-        case nil: return nil
-        }
-    }
-
-    private static func mapPersonHeader(_ h: Provenencia_Engine_V1_PersonHeader) -> CatalogPersonHeader {
-        CatalogPersonHeader(
+    private static func mapPersonSummary(_ h: Provenencia_Engine_V1_PersonSummary) -> CatalogPersonSummary {
+        CatalogPersonSummary(
             entity: mapCanonicalEntity(h.entity),
             name: h.hasName ? mapNameValue(h.name) : nil,
             nameValueCount: Int(h.nameValueCount),
             birth: mapLifeFacts(h.birth),
             death: mapLifeFacts(h.death),
+            gender: mapTermFacts(h.gender),
+            sexAtBirth: mapTermFacts(h.sexAtBirth),
             updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
             pictureImageRelPath: h.pictureImageRelPath
         )
+    }
+
+    private static func mapTermFacts(_ f: Provenencia_Engine_V1_TermFacts) -> CatalogTermFacts {
+        CatalogTermFacts(
+            term: f.hasTerm ? mapConclusionTerm(f.term) : nil,
+            count: Int(f.count),
+            propertyLabel: f.propertyLabel
+        )
+    }
+
+    private static func mapConclusionTerm(_ t: Provenencia_Engine_V1_ConclusionTerm) -> CatalogConclusionValue {
+        .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
     }
 
     private static func mapLifeFacts(_ life: Provenencia_Engine_V1_LifeFacts) -> CatalogLifeFacts {
@@ -1147,12 +1129,12 @@ struct GoStore: GenealogyStore {
             eventCount: Int(life.eventCount),
             date: life.hasDate ? mapDateValue(life.date) : nil,
             dateCount: Int(life.dateCount),
-            places: life.places.map(mapHeaderPlace)
+            places: life.places.map(mapChainedPlace)
         )
     }
 
-    private static func mapHeaderPlace(_ place: Provenencia_Engine_V1_HeaderPlace) -> CatalogHeaderPlace {
-        CatalogHeaderPlace(
+    private static func mapChainedPlace(_ place: Provenencia_Engine_V1_ChainedPlace) -> CatalogChainedPlace {
+        CatalogChainedPlace(
             entity: mapCanonicalEntity(place.entity),
             names: place.names,
             parents: place.parents,
@@ -1168,8 +1150,8 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapEventHeader(_ h: Provenencia_Engine_V1_EventHeader) -> CatalogEventHeader {
-        CatalogEventHeader(
+    private static func mapEventSummary(_ h: Provenencia_Engine_V1_EventSummary) -> CatalogEventSummary {
+        CatalogEventSummary(
             entity: mapCanonicalEntity(h.entity),
             eventName: h.eventName,
             eventNameCount: Int(h.eventNameCount),
@@ -1184,15 +1166,15 @@ struct GoStore: GenealogyStore {
             endDate: h.hasEndDate ? mapDateValue(h.endDate) : nil,
             endDateCount: Int(h.endDateCount),
             subjects: h.subjects.map(mapEventSubject),
-            places: h.places.map(mapHeaderPlace),
+            places: h.places.map(mapChainedPlace),
             title: mapEventTitle(h.title),
             updated: CatalogActivity(revision: h.updatedRevision, at: h.updatedAt),
             pictureImageRelPath: h.pictureImageRelPath
         )
     }
 
-    private static func mapPlaceHeader(_ h: Provenencia_Engine_V1_PlaceHeader) -> CatalogPlaceHeader {
-        CatalogPlaceHeader(
+    private static func mapPlaceSummary(_ h: Provenencia_Engine_V1_PlaceSummary) -> CatalogPlaceSummary {
+        CatalogPlaceSummary(
             entity: mapCanonicalEntity(h.entity),
             names: h.names,
             startDate: h.hasStartDate ? mapDateValue(h.startDate) : nil,
@@ -1221,6 +1203,114 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup] {
+        var req = Provenencia_Engine_V1_ListPersonClaimsRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ListPersonClaimsResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonClaims,
+            request: req
+        )
+        return resp.groups.map { group in
+            CatalogPersonClaimGroup(
+                sourceID: group.sourceID,
+                sourceRef: group.sourceRef,
+                title: group.sourceTitle,
+                sourceTypeID: group.sourceTypeID,
+                claims: group.claims.map { claim in
+                    CatalogPersonClaim(
+                        claimID: claim.claimID,
+                        graphID: claim.graphID,
+                        graphRef: claim.graphRef,
+                        graphName: claim.graphName,
+                        subject: Self.mapSubject(claim.subject),
+                        observations: claim.observations.map(Self.mapObservation)
+                    )
+                }
+            )
+        }
+    }
+
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily {
+        var req = Provenencia_Engine_V1_GetPersonFamilyRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetPersonFamilyResponse = try await provenenciaCall(
+            method: CoreMethod.getPersonFamily,
+            request: req
+        )
+        return CatalogPersonFamily(
+            units: resp.units.compactMap(Self.mapFamilyUnit),
+            person: resp.hasPerson ? Self.mapPersonSummary(resp.person) : nil,
+            originSiblings: resp.originSiblings.map {
+                CatalogOriginSibling(member: Self.mapFamilyMember($0.member), parentSets: $0.parentSets.map(Int.init))
+            }
+        )
+    }
+
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent] {
+        var req = Provenencia_Engine_V1_ListPersonEventsRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_ListPersonEventsResponse = try await provenenciaCall(
+            method: CoreMethod.listPersonEvents,
+            request: req
+        )
+        return resp.events.map { e in
+            CatalogPersonEvent(
+                event: Self.mapEventSummary(e.event),
+                roles: e.roles.map(Self.mapConclusionTerm),
+                participants: e.participants.map {
+                    CatalogEventParticipant(person: Self.mapPersonSummary($0.person), roles: $0.roles.map(Self.mapConclusionTerm))
+                },
+                dated: e.dated
+            )
+        }
+    }
+
+    /// A unit of a kind this build doesn't know is dropped, as is a shape of a
+    /// pattern it doesn't know.
+    private static func mapFamilyUnit(_ u: Provenencia_Engine_V1_FamilyUnit) -> CatalogFamilyUnit? {
+        let kind: CatalogFamilyUnit.Kind
+        switch u.kind {
+        case .parents: kind = .parents
+        case .partner: kind = .partner
+        case .oneParent: kind = .oneParent
+        case .siblings: kind = .siblings
+        case .unspecified, .UNRECOGNIZED: return nil
+        }
+        return CatalogFamilyUnit(
+            kind: kind,
+            partners: u.partners.map(mapFamilyMember),
+            children: u.children.map(mapFamilyMember)
+        )
+    }
+
+    private static func mapFamilyMember(_ m: Provenencia_Engine_V1_FamilyMember) -> CatalogFamilyMember {
+        CatalogFamilyMember(
+            person: mapPersonSummary(m.person),
+            link: m.hasLink ? mapFamilyLink(m.link) : nil
+        )
+    }
+
+    private static func mapFamilyLink(_ l: Provenencia_Engine_V1_FamilyLink) -> CatalogFamilyLink {
+        CatalogFamilyLink(
+            recorded: l.recorded,
+            associationIDs: l.associationIds,
+            implied: l.implied.compactMap { shape in
+                let pattern: CatalogKinshipShape.Pattern
+                switch shape.pattern {
+                case .marriageSpouses: pattern = .marriageSpouses
+                case .birthParents: pattern = .birthParents
+                case .sharedParent: pattern = .sharedParent
+                case .parentOfParent: pattern = .parentOfParent
+                case .unspecified, .UNRECOGNIZED: return nil
+                }
+                return CatalogKinshipShape(pattern: pattern, pivotID: shape.pivotID)
+            }
+        )
+    }
+
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
         var req = Provenencia_Engine_V1_GetConclusionDetailRequest()
         req.projectDir = projectDir
@@ -1231,34 +1321,60 @@ struct GoStore: GenealogyStore {
         )
         return CatalogConclusionDetail(
             entity: Self.mapCanonicalEntity(resp.entity),
-            fields: resp.fields.map { f in
-                CatalogConclusionField(
-                    propertyID: f.propertyID,
-                    propertyKey: f.propertyKey,
-                    label: f.label,
-                    // A value type this build doesn't know is laid out as text.
-                    valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
-                    state: ReconciledState(wire: f.state),
-                    values: f.values.map { v in
-                        CatalogReconciledValue(
-                            rank: Int(v.rank),
-                            reason: ReconcilerReason(wire: v.reason),
-                            support: Int(v.support),
-                            against: Int(v.against),
-                            value: Self.mapConclusionValue(v.value)
-                        )
-                    },
-                    outcomes: f.outcomes.map(Self.mapReconcilerOutcome)
-                )
-            },
+            fields: resp.fields.map(Self.mapConclusionField),
             memberCount: Int(resp.memberCount),
-            header: Self.mapConclusionHeader(resp.header),
+            summary: Self.mapConclusionSummary(resp.summary),
             pictures: resp.pictures.map {
                 CatalogPicture(
                     imageRelPath: $0.imageRelPath,
                     record: Self.mapReconcilerOutcome($0.record),
                     preferred: $0.preferred,
                     leads: $0.leads
+                )
+            },
+            derivedRows: resp.derivedRows.compactMap(Self.mapDerivedRow)
+        )
+    }
+
+    private static func mapConclusionField(_ f: Provenencia_Engine_V1_ConclusionField) -> CatalogConclusionField {
+        CatalogConclusionField(
+            propertyID: f.propertyID,
+            propertyKey: f.propertyKey,
+            label: f.label,
+            // A value type this build doesn't know is laid out as text.
+            valueType: PropertyValueType(rawValue: f.valueType) ?? .text,
+            state: ReconciledState(wire: f.state),
+            values: f.values.map { v in
+                CatalogReconciledValue(
+                    rank: Int(v.rank),
+                    reason: ReconcilerReason(wire: v.reason),
+                    support: Int(v.support),
+                    against: Int(v.against),
+                    value: Self.mapConclusionValue(v.value)
+                )
+            },
+            outcomes: f.outcomes.map(Self.mapReconcilerOutcome)
+        )
+    }
+
+    /// A row of a kind this build doesn't know is dropped.
+    private static func mapDerivedRow(_ r: Provenencia_Engine_V1_DerivedRow) -> CatalogDerivedRow? {
+        let kind: CatalogDerivedRowKind
+        switch r.kind {
+        case .birthDate: kind = .birthDate
+        case .birthPlace: kind = .birthPlace
+        case .deathDate: kind = .deathDate
+        case .deathPlace: kind = .deathPlace
+        case .unspecified, .UNRECOGNIZED: return nil
+        }
+        return CatalogDerivedRow(
+            kind: kind,
+            owners: r.owners.map {
+                CatalogOwnerField(
+                    entity: mapCanonicalEntity($0.entity),
+                    event: $0.hasEvent ? mapEventSummary($0.event) : nil,
+                    place: $0.hasPlace ? mapChainedPlace($0.place) : nil,
+                    field: mapConclusionField($0.field)
                 )
             }
         )
@@ -1281,11 +1397,14 @@ struct GoStore: GenealogyStore {
             sourceTitle: o.sourceTitle,
             credibilityKey: o.credibilityKey,
             transcriptionUncertain: o.transcriptionUncertain,
-            claimConfidenceKey: o.claimConfidenceKey,
             credibilityOffset: Int(o.credibilityOffset),
-            claimConfidenceOffset: Int(o.claimConfidenceOffset),
             voteSupport: Int(o.voteSupport),
-            voteTotal: Int(o.voteTotal)
+            voteTotal: Int(o.voteTotal),
+            artifactLabel: o.artifactLabel,
+            citationLabel: o.citationLabel,
+            artifactPage: Int(o.artifactPage),
+            pageLabel: o.pageLabel,
+            groupRank: Int(o.groupRank)
         )
     }
 
@@ -1293,7 +1412,7 @@ struct GoStore: GenealogyStore {
         switch v.kind {
         case .text(let t): return .text(t)
         case .integer(let i): return .integer(i)
-        case .term(let t): return .term(id: t.id, key: t.key, label: t.label, origin: t.origin)
+        case .term(let t): return mapConclusionTerm(t)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
         case .depiction(let d): return .depiction(mapDepictionValue(d))
@@ -1542,6 +1661,7 @@ struct GoStore: GenealogyStore {
     func createCitationWithObservations(
         projectDir: String,
         userID: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -1554,6 +1674,7 @@ struct GoStore: GenealogyStore {
         var req = Provenencia_Engine_V1_CreateCitationWithObservationsRequest()
         req.projectDir = projectDir
         req.userID = userID
+        req.graphID = graphID
         req.artifactID = artifactID
         req.locatorJson = locatorJSON
         req.transcription = transcription
@@ -1790,7 +1911,7 @@ struct GoStore: GenealogyStore {
             },
             lists: Set(effects.lists.compactMap(CatalogList.init(rawValue:))),
             structure: effects.structure,
-            headerHandles: effects.headerHandles,
+            summaryHandles: effects.summaryHandles,
             handleScopes: effects.handleScopes,
             sourceScopes: effects.sourceScopes,
             activity: CatalogActivity(revision: effects.revision, at: effects.revisionAt)
@@ -1935,7 +2056,7 @@ struct GoStore: GenealogyStore {
             thumbnailRelPath: h.thumbnailRelPath,
             iconKey: h.iconKey,
             memberCount: Int(h.memberCount),
-            header: Self.mapSearchHeader(h)
+            summary: Self.mapConclusionSummary(h.summary)
         )
     }
 
@@ -2060,7 +2181,7 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapSubject(_ s: Provenencia_Engine_V1_Subject) -> CatalogSubject {
+    static func mapSubject(_ s: Provenencia_Engine_V1_Subject) -> CatalogSubject {
         CatalogSubject(
             id: s.id,
             ref: s.ref,

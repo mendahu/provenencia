@@ -41,7 +41,6 @@ Applies to (authoritative schemas in the linked docs):
 | --- | --- |
 | `source_types`, `source_metadata_fields` | [`source-layer-data-model.md`](source-layer-data-model.md) |
 | `subject_types`, `properties`, `property_terms`, `source_credibility_grades` | [`interpretation-layer-data-model.md`](interpretation-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
-| `claim_confidence_grades` | [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md), [`research-judgment-model.md`](research-judgment-model.md) |
 | `name_format_profiles` | [`structured-name-model.md`](structured-name-model.md) |
 
 Does **not** apply to join/suggestion tables (`source_type_metadata_fields`, `subject_type_properties`, `name_format_profile_parts`), domain instance rows, or NameValue part `type` keys (compiled product registry, not `property_terms`).
@@ -538,6 +537,7 @@ given               -- GIVN (an initial is a given name written short: "J.")
 nick                -- NICK
 surname_prefix      -- SPFX
 surname             -- SURN
+former_surname      -- no GEDCOM part tag (GEDCOM 7: a NAME with TYPE MAIDEN or BIRTH)
 suffix              -- NSFX
 undetermined
 ```
@@ -559,9 +559,10 @@ idx   part_type
 0     prefix
 1     given
 2     nick
-3     surname_prefix
-4     surname
-5     suffix
+3     former_surname
+4     surname_prefix
+5     surname
+6     suffix
 ```
 
 Sorted style (list order; separator `", "` after the surname group — *Robins, James*). Proposed, to be settled with the name-format work ([`structured-name-model.md`](structured-name-model.md) §4.5):
@@ -574,7 +575,8 @@ idx   part_type
 2     prefix
 3     given
 4     nick
-5     suffix
+5     former_surname
+6     suffix
 ```
 
 ## 4.4 `project_settings`
@@ -653,18 +655,7 @@ Handle provenencia badges (from records / inferred / asserted / unlinked) are co
 
 ## 5.5 Claim confidence grades
 
-Open vocabulary for `identity_claims.confidence_grade_id` and `reconciliation_claims.confidence_grade_id` (via `claim_confidence_grades`). Three-point scale with a baseline middle. **Do not** reuse Source credibility keys — same shape, different semantics ([`research-judgment-model.md`](research-judgment-model.md)).
-
-```text
-key                 sort_order    label (draft product copy)
-low_confidence      1             Low confidence
-moderate            2             Moderate
-high_confidence     3             High confidence
-```
-
-`confidence_grade_id` is nullable. Claim `status` remains the separate workflow vocabulary in §5.1–5.2.
-
-**Seeded** (Spike 9, S9-01): `claimconfidencegrades.Install` at catalog create, alongside Source credibility grades. Existing projects are not backfilled.
+Dropped by S13-25: Identity Claims carry no confidence; a Reconciliation Claim vocabulary is open.
 
 ---
 

@@ -42,3 +42,7 @@ func TestFoo(t *testing.T) {
 - One `TestX` per behavior family, not `TestXSuccess` / `TestXEmpty` / `TestXError` as separate functions unless the setup cannot share a table.
 - Name rows so `go test -v` reads as a spec.
 - Keep `t.Helper()` on shared marshal/setup funcs.
+
+## Fuzz targets
+
+A package that parses bytes the app did not write gets a `Fuzz…` target over its parser. Seeds come from `testdata/` and small encoder output, added with `f.Add`. Every crasher is fixed and committed under `testdata/fuzz/<Target>/`, which `go test` then runs. A PR that adds or changes such a parser runs the fuzzer for 5 minutes locally (`go test -run '^$' -fuzz <Target> -fuzztime 5m`). `core/raster` `FuzzDecodeJPEGDC` is the example.

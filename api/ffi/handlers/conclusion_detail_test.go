@@ -187,6 +187,7 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 		MemberCount: 4,
 		Fields: []conclusiondetails.Field{{Outcomes: []conclusiondetails.Outcome{{
 			Reason: "outvoted", ArtifactID: artifact, Vote: autoreconcile.Vote{Support: 2, Of: 3},
+			ArtifactLabel: "Vol. 3", CitationLabel: "Baptism of Ada", ArtifactPage: 37, PageLabel: "23", GroupRank: 2,
 		}}}},
 	}
 	got := conclusionDetailProto(d)
@@ -194,10 +195,14 @@ func TestConclusionDetailProtoCarriesVoteArtifactAndMembers(t *testing.T) {
 	if got.GetMemberCount() != 4 || o.GetArtifactId() != database.UUIDString(artifact) || o.GetVoteSupport() != 2 || o.GetVoteTotal() != 3 {
 		t.Fatalf("%+v", got)
 	}
+	if o.GetArtifactLabel() != "Vol. 3" || o.GetCitationLabel() != "Baptism of Ada" || o.GetArtifactPage() != 37 ||
+		o.GetPageLabel() != "23" || o.GetGroupRank() != 2 {
+		t.Fatalf("citation parts %+v", o)
+	}
 }
 
-// A page reads its handle's header with its detail: one load, one error.
-func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
+// A page reads its handle's summary with its detail: one load, one error.
+func TestGetConclusionDetailCarriesItsSummary(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	tests := []struct {
 		name    string
@@ -205,30 +210,30 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 		check   func(t *testing.T, d *engine.ConclusionDetail, id string)
 	}{
 		{
-			name:    "a Person carries the Person header",
+			name:    "a Person carries the Person summary",
 			fixture: namedPersonID,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				if h := d.GetPerson(); h.GetEntity().GetId() != id || h.GetName().GetForm() == "" {
-					t.Fatalf("person header %+v", h)
+				if h := d.GetSummary().GetPerson(); h.GetEntity().GetId() != id || h.GetName().GetForm() == "" {
+					t.Fatalf("person summary %+v", h)
 				}
 			},
 		},
 		{
-			name:    "an Event carries the Event header and its title",
+			name:    "an Event carries the Event summary and its title",
 			fixture: citedEvent,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				h := d.GetEvent()
+				h := d.GetSummary().GetEvent()
 				if h.GetEntity().GetId() != id || h.GetTitle().GetRule() != engine.EventTitleRule_EVENT_TITLE_RULE_RECORDED_NAME {
-					t.Fatalf("event header %+v", h)
+					t.Fatalf("event summary %+v", h)
 				}
 			},
 		},
 		{
-			name:    "a Place carries the Place header",
+			name:    "a Place carries the Place summary",
 			fixture: citedPlace,
 			check: func(t *testing.T, d *engine.ConclusionDetail, id string) {
-				if h := d.GetPlace(); h.GetEntity().GetId() != id || len(h.GetNames()) == 0 {
-					t.Fatalf("place header %+v", h)
+				if h := d.GetSummary().GetPlace(); h.GetEntity().GetId() != id || len(h.GetNames()) == 0 {
+					t.Fatalf("place summary %+v", h)
 				}
 			},
 		},
@@ -245,6 +250,9 @@ func TestGetConclusionDetailCarriesItsHeader(t *testing.T) {
 				t.Fatal(err)
 			}
 			tt.check(t, &d, id)
+			if d.GetSummary().GetPerson() == nil && len(d.GetDerivedRows()) != 0 {
+				t.Fatalf("derived rows on a non-Person: %+v", d.GetDerivedRows())
+			}
 		})
 	}
 }
@@ -274,7 +282,7 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 	if d.GetPictures()[0].GetRecord().GetObservationId() >= d.GetPictures()[1].GetRecord().GetObservationId() {
 		t.Fatalf("not earliest first: %+v", d.GetPictures())
 	}
-	if got := d.GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
+	if got := d.GetSummary().GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("person lead %q, first tile %q", got, d.GetPictures()[0].GetImageRelPath())
 	}
 }
@@ -303,7 +311,7 @@ func TestGetConclusionDetailEventPictureLead(t *testing.T) {
 	if leadPath == "" {
 		t.Fatalf("no leading picture among %+v", d.GetPictures())
 	}
-	if got := d.GetEvent().GetPictureImageRelPath(); got != leadPath {
+	if got := d.GetSummary().GetEvent().GetPictureImageRelPath(); got != leadPath {
 		t.Fatalf("event lead %q, leading tile %q", got, leadPath)
 	}
 }
@@ -362,8 +370,8 @@ func TestSetPreferredLikeness(t *testing.T) {
 	if d.GetPictures()[0].GetLeads() || !d.GetPictures()[1].GetLeads() {
 		t.Fatalf("leads after choosing B %+v", d.GetPictures())
 	}
-	if d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[1].GetImageRelPath() {
-		t.Fatalf("lead %q, second tile %q", d.GetPerson().GetPictureImageRelPath(), d.GetPictures()[1].GetImageRelPath())
+	if d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[1].GetImageRelPath() {
+		t.Fatalf("lead %q, second tile %q", d.GetSummary().GetPerson().GetPictureImageRelPath(), d.GetPictures()[1].GetImageRelPath())
 	}
 
 	resp, err = set(b)
@@ -379,7 +387,7 @@ func TestSetPreferredLikeness(t *testing.T) {
 	}
 	d = detail()
 	if d.GetPictures()[0].GetPreferred() || d.GetPictures()[1].GetPreferred() ||
-		d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() {
+		d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("after clear %+v", d)
 	}
 	if !d.GetPictures()[0].GetLeads() || d.GetPictures()[1].GetLeads() {
@@ -403,7 +411,97 @@ func TestSetPreferredLikeness(t *testing.T) {
 		t.Fatal(err)
 	}
 	d = detail()
-	if len(d.GetPictures()) != 1 || d.GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() || d.GetPictures()[0].GetPreferred() {
+	if len(d.GetPictures()) != 1 || d.GetSummary().GetPerson().GetPictureImageRelPath() != d.GetPictures()[0].GetImageRelPath() || d.GetPictures()[0].GetPreferred() {
 		t.Fatalf("after delete %+v", d)
+	}
+}
+
+func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, _ := connectFixture(t)
+
+	termID := func(propertyID, key string) string {
+		t.Helper()
+		out, err := ListPropertyTerms(marshalProto(t, &engine.ListPropertyTermsRequest{ProjectDir: dir, PropertyId: propertyID}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var terms engine.ListPropertyTermsResponse
+		if err := proto.Unmarshal(out, &terms); err != nil {
+			t.Fatal(err)
+		}
+		for _, term := range terms.GetTerms() {
+			if term.GetKey() == key {
+				return term.GetId()
+			}
+		}
+		t.Fatalf("no term %q", key)
+		return ""
+	}
+	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var props engine.ListPropertiesResponse
+	if err := proto.Unmarshal(propsOut, &props); err != nil {
+		t.Fatal(err)
+	}
+	propID := map[string]string{}
+	for _, p := range props.GetProperties() {
+		propID[p.GetKey()] = p.GetId()
+	}
+
+	if _, err := CreateCitedBridge(marshalProto(t, &engine.CreateCitedBridgeRequest{
+		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
+		BridgeTypeKey: "participation", ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{PropertyId: personProp, ValueSubjectId: personID},
+			{PropertyId: eventProp, ValueSubjectId: eventID},
+			{PropertyId: roleProp, ValueTermId: termID(roleProp, "subject")},
+		},
+	})); err != nil {
+		t.Fatal(err)
+	}
+	day := func() *engine.DateValueInput {
+		y, m, d := int32(1817), int32(5), int32(14)
+		return &engine.DateValueInput{Kind: "point", Calendar: "gregorian", StartYear: &y, StartMonth: &m, StartDay: &d}
+	}
+	for i, drafts := range [][]*engine.ObservationDraft{
+		{
+			{SubjectId: eventID, PropertyId: propID["event_type"], ValueTermId: termID(propID["event_type"], "birth")},
+			{SubjectId: eventID, PropertyId: propID["date"], Date: day()},
+		},
+		{{SubjectId: eventID, PropertyId: propID["date"], Date: day()}},
+	} {
+		if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON, Observations: drafts,
+		})); err != nil {
+			t.Fatalf("citation %d: %v", i, err)
+		}
+	}
+	person := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+	event := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: eventID})
+
+	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: person.Entity.GetId()}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d engine.ConclusionDetail
+	if err := proto.Unmarshal(out, &d); err != nil {
+		t.Fatal(err)
+	}
+	rows := d.GetDerivedRows()
+	if len(rows) != 1 || rows[0].GetKind() != engine.DerivedRowKind_DERIVED_ROW_KIND_BIRTH_DATE || len(rows[0].GetOwners()) != 1 {
+		t.Fatalf("derived rows %+v", rows)
+	}
+	owner := rows[0].GetOwners()[0]
+	if owner.GetEntity().GetId() != event.Entity.GetId() || owner.GetEvent().GetEntity().GetId() != event.Entity.GetId() {
+		t.Fatalf("owner %+v", owner)
+	}
+	if owner.GetPlace() != nil {
+		t.Fatalf("a date owner holds a Place: %+v", owner.GetPlace())
+	}
+	if owner.GetField().GetPropertyKey() != "date" || len(owner.GetField().GetOutcomes()) != 2 {
+		t.Fatalf("owner field %+v", owner.GetField())
 	}
 }

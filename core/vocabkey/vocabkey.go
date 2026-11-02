@@ -115,6 +115,7 @@ const (
 	TermSpouse      BridgeTerm = "spouse"
 	TermParent      BridgeTerm = "parent"
 	TermGrandparent BridgeTerm = "grandparent"
+	TermSibling     BridgeTerm = "sibling"
 )
 
 // BridgeKey is one bridge read from one end: its bridge type, its term in

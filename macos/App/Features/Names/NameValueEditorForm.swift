@@ -25,6 +25,7 @@ struct NameValueEditorForm: View {
                 storedAsSection
             }
         }
+        .environment(\.pvFieldLabel, nil)
         .pvConfirm(
             item: $pendingSplit,
             copy: { _ in
@@ -61,6 +62,7 @@ struct NameValueEditorForm: View {
                     focus: formFocus,
                     onBlur: fillEmptyPartsFromForm
                 )
+                .environment(\.pvFieldLabel, L10n.NameValue.formLabel)
                 .frame(maxWidth: .infinity)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).form")
                 .accessibilityHint(draft.formError.map { Text(verbatim: $0) } ?? Text(L10n.NameValue.formHint))
@@ -75,9 +77,7 @@ struct NameValueEditorForm: View {
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).split")
             }
             if let error = draft.formError {
-                Text(verbatim: error)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(error, size: .caption)
             }
             Text(L10n.NameValue.formHint)
                 .font(PVFont.body(size: PVTypeScale.caption, italic: true))
@@ -179,6 +179,7 @@ struct NameValueEditorForm: View {
                     isInvalid: draft.partValueError(at: index) != nil,
                     activateOnAppear: part.id == partValueToFocus
                 )
+                .environment(\.pvFieldLabel, L10n.NameValue.partValueLabel)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).value")
                 PVSelect(
                     selection: partTypeBinding(index),
@@ -223,9 +224,7 @@ struct NameValueEditorForm: View {
                 .frame(width: 88)
             }
             if let error = draft.partValueError(at: index) {
-                Text(verbatim: error)
-                    .font(PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(error, size: .caption)
                     .padding(.leading, 30)
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).part.\(index).error")
             }

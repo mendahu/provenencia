@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -163,10 +164,7 @@ func ListSubjects(in []byte) ([]byte, error) {
 		}
 		out = &engine.ListSubjectsResponse{}
 		for _, s := range eg.Subjects {
-			out.Subjects = append(out.Subjects, subjectProto(subjects.Subject{
-				ID: s.ID, Ref: s.Ref, SourceID: s.SourceID, SubjectTypeID: s.SubjectTypeID,
-				Label: s.Label, Description: s.Description,
-			}))
+			out.Subjects = append(out.Subjects, evidenceSubjectProto(s))
 		}
 		return nil
 	})
@@ -274,6 +272,14 @@ func subjectProto(s subjects.Subject) *engine.Subject {
 		Label:         s.Label,
 		Description:   s.Description,
 	}
+}
+
+// evidenceSubjectProto maps a Subject stored on an Evidence graph.
+func evidenceSubjectProto(s graphcache.EvidenceSubject) *engine.Subject {
+	return subjectProto(subjects.Subject{
+		ID: s.ID, Ref: s.Ref, SourceID: s.SourceID, SubjectTypeID: s.SubjectTypeID,
+		Label: s.Label, Description: s.Description,
+	})
 }
 
 func subjectPositionProto(p subjectpositions.Position) *engine.SubjectPosition {

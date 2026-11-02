@@ -18,12 +18,40 @@ struct L10nPluralTests {
             let several = L10n.format(resource, in: .main, locale: L10n.formattingLocale, arguments: shape.arguments(count: 2))
 
             #expect(one != several, "\(key) reads the same for 1 and 2: \(one)")
-            #expect(one.contains("1"), "\(key) for 1: \(one)")
-            #expect(several.contains("2"), "\(key) for 2: \(several)")
+            // A key that is a bare noun or verb picked by the count prints no number.
+            if shape.printsNumber {
+                #expect(one.contains("1"), "\(key) for 1: \(one)")
+                #expect(several.contains("2"), "\(key) for 2: \(several)")
+            }
             for text in [one, several] {
                 #expect(!text.contains("%") && !text.contains("#@"), "\(key) left a placeholder: \(text)")
             }
         }
+    }
+
+    @Test func graphCopyNamesTheGraph() {
+        let strings = [
+            L10n.string(L10n.Promote.mapRestHint),
+            L10n.string(L10n.Promote.graphUnavailable),
+            L10n.string(L10n.Promote.graphUnavailableRepropose),
+            L10n.string(L10n.EvidenceGraph.addPropertyUnavailable),
+            L10n.string(L10n.CitationComposer.pairPickBoth),
+        ]
+        for text in strings {
+            #expect(!text.contains("this Source"), "\(text)")
+            #expect(text.contains("vidence graph"), "\(text)")
+        }
+    }
+
+    @Test func countsTakePlurals() {
+        #expect(L10n.Promote.promoting(count: 1) == "1 subject on this graph")
+        #expect(L10n.Promote.promoting(count: 3) == "3 subjects on this graph")
+        #expect(L10n.CitationComposer.pageCount(count: 1) == "1 page")
+        #expect(L10n.CitationComposer.pageCount(count: 2) == "2 pages")
+        #expect(L10n.CitationComposer.artifactCitationCount(count: 1) == "1 citation")
+        #expect(L10n.CitationComposer.artifactCitationCount(count: 2) == "2 citations")
+        #expect(L10n.CitationComposer.citationStepperCount(count: 1) == "1 observation")
+        #expect(L10n.CitationComposer.citationStepperCount(count: 2) == "2 observations")
     }
 
     /// A language with more plural forms than English, resolved through the same
@@ -80,6 +108,9 @@ private struct PluralShape {
     private var countPositions: Set<Int> = []
     private var stringPositions: Set<Int> = []
     private var numberPositions: Set<Int> = []
+    /// True when some text holds a number specifier at a count position; a key
+    /// that only picks a bare noun or verb by the count (`%#@noun@`) prints no number.
+    private(set) var printsNumber = false
 
     init?(entry: [String: Any]) {
         guard let format = entry["NSStringLocalizedFormatKey"] as? String else { return nil }
@@ -91,8 +122,14 @@ private struct PluralShape {
             countPositions.insert(Self.position(ofVariable: name, in: format) ?? 1)
         }
         for text in texts {
-            for (position, isString) in Self.specifiers(in: text) where !countPositions.contains(position) {
-                if isString { stringPositions.insert(position) } else { numberPositions.insert(position) }
+            for (position, isString) in Self.specifiers(in: text) {
+                if countPositions.contains(position) {
+                    if !isString { printsNumber = true }
+                } else if isString {
+                    stringPositions.insert(position)
+                } else {
+                    numberPositions.insert(position)
+                }
             }
         }
     }

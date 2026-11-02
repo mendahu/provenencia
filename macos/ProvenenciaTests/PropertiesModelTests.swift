@@ -32,6 +32,29 @@ struct PropertiesModelTests {
         )
     }
 
+    private func placeType() -> CatalogSubjectType {
+        CatalogSubjectType(
+            id: "type-place",
+            key: "place",
+            origin: "provenencia",
+            label: "Place",
+            description: "",
+            refPrefix: "PLC",
+            candidateRefPrefix: "CPL"
+        )
+    }
+
+    private func pictureProperty(key: String) -> CatalogProperty {
+        CatalogProperty(
+            id: "prop-\(key)",
+            key: key,
+            origin: "provenencia",
+            label: "Picture",
+            description: "",
+            valueType: "depiction"
+        )
+    }
+
     private func nameProperty() -> CatalogProperty {
         CatalogProperty(
             id: "prop-name",
@@ -724,5 +747,51 @@ struct PropertiesModelTests {
         #expect(L10n.string(SubjectPropertyValueType.label("nope")) == "Text")
         #expect(!SubjectPropertyValueType.researcherCreatable.contains("depiction"))
         #expect(PropertyValueType(rawValue: "depiction") == .depiction)
+    }
+
+    @Test func rowAccessibilityTellsTwoPicturePropertiesApart() async {
+        let event = eventType()
+        let place = placeType()
+        let eventPicture = pictureProperty(key: "event_picture")
+        let placePicture = pictureProperty(key: "place_picture")
+        let (model, session, _) = makeModel(
+            properties: [eventPicture, placePicture],
+            types: [event, place],
+            fieldsByType: [
+                event.id: [CatalogSubjectTypeProperty(property: eventPicture, sortOrder: 0, locked: false)],
+                place.id: [CatalogSubjectTypeProperty(property: placePicture, sortOrder: 0, locked: false)],
+            ]
+        )
+        await warm(model, session: session)
+        let valueType = L10n.string(SubjectPropertyValueType.label("depiction"))
+        let bound = L10n.Properties.rowBoundAnnouncement(count: 1)
+        let seeded = L10n.string(L10n.Properties.originSeededShort)
+        let eventLabel = model.rowAccessibilityLabel(for: eventPicture)
+        let placeLabel = model.rowAccessibilityLabel(for: placePicture)
+        #expect(eventLabel == "Picture, event_picture, \(valueType), \(seeded), \(bound), Event")
+        #expect(placeLabel.contains("place_picture") && placeLabel.contains("Place"))
+        #expect(eventLabel != placeLabel)
+    }
+
+    @Test func rowAccessibilityOfAnUnboundPropertyHasNoTrailingComma() async {
+        let custom = CatalogProperty(
+            id: "prop-custom", key: "custom-fact", origin: CatalogOrigin.user, label: "Custom fact",
+            description: "", valueType: "text"
+        )
+        let (model, session, _) = makeModel(properties: [custom], types: [personType()])
+        await warm(model, session: session)
+        let label = model.rowAccessibilityLabel(for: custom)
+        #expect(label.hasSuffix(L10n.Properties.rowBoundAnnouncement(count: 0)))
+        #expect(!label.hasSuffix(", "))
+    }
+
+    @Test func rowAccessibilitySpeaksAPluginOriginAsThePillDoes() async {
+        let plugin = CatalogProperty(
+            id: "prop-plugin", key: "grave_plot", origin: "plugin:findagrave", label: "Grave plot",
+            description: "", valueType: "text"
+        )
+        let (model, session, _) = makeModel(properties: [plugin], types: [personType()])
+        await warm(model, session: session)
+        #expect(model.rowAccessibilityLabel(for: plugin).contains("Supplied by the findagrave plugin"))
     }
 }

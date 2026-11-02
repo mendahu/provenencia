@@ -1,0 +1,437 @@
+package conclusionsummaries_test
+
+import (
+	"bytes"
+	"testing"
+
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/subjectpositions"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/eventtitle"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/writes"
+)
+
+func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
+	f.t.Helper()
+	f.citeOn(f.artifact, s, in...)
+}
+
+// citeOn is cite on art's own Source graph.
+func (f *fixture) citeOn(art artifacts.Artifact, s subjects.Subject, in ...observations.Input) {
+	f.t.Helper()
+	for i := range in {
+		in[i].SubjectID = s.ID
+	}
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
+	must(f.t, err)
+}
+
+func (f *fixture) at(s subjects.Subject, x, y int64) {
+	f.t.Helper()
+	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		return subjectpositions.Set(tx, s.ID, x, y)
+	})
+	must(f.t, err)
+}
+
+func (f *fixture) promoteSubject(s subjects.Subject) []byte {
+	f.t.Helper()
+	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	return res.Entity.ID
+}
+
+func (f *fixture) participation(person, event subjects.Subject, role string) {
+	f.t.Helper()
+	f.bridge("participation", person, event, []observations.Input{
+		{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
+		{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
+		{PropertyID: f.prop("role").ID, ValueTermID: f.term("role", role).ID},
+	})
+}
+
+func (f *fixture) location(event, place subjects.Subject) {
+	f.t.Helper()
+	f.bridge("location", event, place, []observations.Input{
+		{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
+		{PropertyID: f.prop("place").ID, ValueSubjectID: place.ID},
+	})
+}
+
+func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observations.Input) {
+	f.t.Helper()
+	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
+			Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			Observations: obs,
+		})
+	})
+	must(f.t, err)
+}
+
+func (f *fixture) named(s subjects.Subject, form string) {
+	f.t.Helper()
+	f.cite(s, observations.Input{PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
+}
+
+func TestCanonicalWalks(t *testing.T) {
+	f := newFixture(t)
+	james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(james, "James Robins")
+	f.at(james, 0, 0)
+	mary := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(mary, "Mary Smith")
+	f.at(mary, 0, 2)
+	ann := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(ann, "Ann Lee")
+	f.at(ann, 0, 4)
+	unnamed := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.at(unnamed, 0, 6)
+	witness := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(witness, "Witness Webb")
+	f.at(witness, 0, 8)
+
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(birth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
+	)
+	f.at(birth, 4, 0)
+	death := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(death,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
+		observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(1880, 0, 0)},
+	)
+	f.at(death, 4, 2)
+	marriage := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(marriage, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "marriage").ID})
+	f.at(marriage, 4, 4)
+	census := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(census, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "census").ID})
+	f.at(census, 4, 6)
+	baptism := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
+	f.at(baptism, 4, 8)
+	eventTypeID := f.prop("event_type").ID
+	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
+		})
+	must(t, err)
+	fire := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})
+	f.at(fire, 4, 10)
+
+	york := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
+	f.cite(york,
+		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true},
+		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Tkaronto", HasText: true},
+	)
+	f.at(york, 8, 0)
+	toronto := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
+	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Toronto", HasText: true})
+	f.at(toronto, 8, 2)
+
+	f.participation(james, birth, "subject")
+	f.participation(witness, birth, "witness")
+	f.participation(james, death, "subject")
+	f.participation(james, marriage, "subject")
+	f.participation(mary, marriage, "subject")
+	f.participation(james, census, "subject")
+	f.participation(mary, census, "subject")
+	f.participation(ann, census, "subject")
+	f.participation(unnamed, baptism, "subject")
+	f.location(birth, york)
+	f.location(birth, toronto)
+	f.location(death, toronto)
+	f.location(fire, york)
+
+	jamesID := f.promoteSubject(james)
+	f.promoteSubject(mary)
+	f.promoteSubject(ann)
+	unnamedID := f.promoteSubject(unnamed)
+	f.promoteSubject(witness)
+	birthID := f.promoteSubject(birth)
+	deathID := f.promoteSubject(death)
+	marriageID := f.promoteSubject(marriage)
+	censusID := f.promoteSubject(census)
+	baptismID := f.promoteSubject(baptism)
+	fireID := f.promoteSubject(fire)
+	yorkID := f.promoteSubject(york)
+	torontoID := f.promoteSubject(toronto)
+
+	var jamesSummary conclusionsummaries.PersonSummary
+	for _, h := range f.list() {
+		if bytes.Equal(h.Entity.ID, jamesID) {
+			jamesSummary = h
+		}
+	}
+	if jamesSummary.Birth.Date == nil || jamesSummary.Birth.Date.StartYear == nil || *jamesSummary.Birth.Date.StartYear != 1817 {
+		t.Fatalf("birth date %+v", jamesSummary.Birth.Date)
+	}
+	if jamesSummary.Birth.DateCount != 1 {
+		t.Fatalf("birth date count %d", jamesSummary.Birth.DateCount)
+	}
+	if jamesSummary.Death.Date == nil || jamesSummary.Death.Date.StartYear == nil || *jamesSummary.Death.Date.StartYear != 1880 {
+		t.Fatalf("death date %+v", jamesSummary.Death.Date)
+	}
+	if got := placeNames(jamesSummary.Birth.Places); !sameSet(got, []string{"York", "Tkaronto", "Toronto"}) {
+		t.Fatalf("birth places %v", got)
+	}
+	for _, name := range placeNames(jamesSummary.Birth.Places) {
+		if bytes.Contains([]byte(name), []byte(",")) {
+			t.Fatalf("chain %q", name)
+		}
+	}
+	yorkPlace := chainedPlace(jamesSummary.Birth.Places, "York")
+	if !sameSet(yorkPlace.Names, []string{"York", "Tkaronto"}) {
+		t.Fatalf("York names %+v", yorkPlace)
+	}
+	if got := placeNames(jamesSummary.Death.Places); !sameSet(got, []string{"Toronto"}) {
+		t.Fatalf("death places %v", got)
+	}
+	t.Run("life facts name the event and places they read", func(t *testing.T) {
+		if e := jamesSummary.Birth.Event; e == nil || !bytes.Equal(e.ID, birthID) || e.Ref == "" || len(e.SubjectTypeID) != 16 {
+			t.Fatalf("birth event %+v", e)
+		}
+		if e := jamesSummary.Death.Event; e == nil || !bytes.Equal(e.ID, deathID) {
+			t.Fatalf("death event %+v", e)
+		}
+		if p := chainedPlace(jamesSummary.Birth.Places, "York"); !bytes.Equal(p.Entity.ID, yorkID) || p.Entity.Ref == "" {
+			t.Fatalf("York entity %+v", p.Entity)
+		}
+		if p := chainedPlace(jamesSummary.Death.Places, "Toronto"); !bytes.Equal(p.Entity.ID, torontoID) {
+			t.Fatalf("Toronto entity %+v", p.Entity)
+		}
+	})
+
+	events := map[string]conclusionsummaries.EventSummary{}
+	for _, h := range f.events() {
+		events[string(h.Entity.ID)] = h
+	}
+	birthSummary := events[string(birthID)]
+	if forms := subjectForms(birthSummary); !sameSet(forms, []string{"James Robins"}) {
+		t.Fatalf("birth subjects %v", forms)
+	}
+	if birthSummary.Type.Term == nil || birthSummary.Type.Term.Key != "birth" {
+		t.Fatalf("birth type %+v", birthSummary.Type.Term)
+	}
+	if len(birthSummary.Places) != 2 {
+		t.Fatalf("birth locations %d", len(birthSummary.Places))
+	}
+	marriageSummary := events[string(marriageID)]
+	if forms := subjectForms(marriageSummary); !sameSet(forms, []string{"James Robins", "Mary Smith"}) {
+		t.Fatalf("marriage subjects %v", forms)
+	}
+	if marriageSummary.Type.Term.Key != "marriage" {
+		t.Fatalf("marriage type %s", marriageSummary.Type.Term.Key)
+	}
+	if forms := subjectForms(events[string(censusID)]); len(forms) != 3 {
+		t.Fatalf("census subjects %v", forms)
+	}
+	if events[string(baptismID)].Subjects[0].Name != nil || !bytes.Equal(events[string(baptismID)].Subjects[0].Entity.ID, unnamedID) {
+		t.Fatalf("unnamed %+v", events[string(baptismID)].Subjects)
+	}
+	fireSummary := events[string(fireID)]
+	if len(fireSummary.Subjects) != 0 || fireSummary.Type.Term.Label != "Fire" {
+		t.Fatalf("fire %+v subjects %d", fireSummary.Type.Term, len(fireSummary.Subjects))
+	}
+	if got := placeNames(fireSummary.Places); !sameSet(got, []string{"York", "Tkaronto"}) {
+		t.Fatalf("fire places %v", got)
+	}
+	if len(fireSummary.Places) != 1 || !bytes.Equal(fireSummary.Places[0].Entity.ID, yorkID) {
+		t.Fatalf("fire place entity %+v", fireSummary.Places)
+	}
+
+	t.Run("each event's title rule comes from its own parts", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			id       []byte
+			want     eventtitle.Rule
+			subjects int
+		}{
+			{name: "birth of one subject", id: birthID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "marriage of two", id: marriageID, want: eventtitle.RuleCouple, subjects: 2},
+			{name: "census of three", id: censusID, want: eventtitle.RuleSubjects, subjects: 3},
+			{name: "baptism of an unnamed person", id: baptismID, want: eventtitle.RuleSubject, subjects: 1},
+			{name: "fire at York", id: fireID, want: eventtitle.RuleTypeAtPlace},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				title := events[string(tt.id)].Title
+				if title.Rule != tt.want || len(title.Parts.Subjects) != tt.subjects {
+					t.Fatalf("rule %s with %d subjects", title.Rule, len(title.Parts.Subjects))
+				}
+			})
+		}
+		if p := events[string(birthID)].Title.Parts; p.TypeKey != "birth" || p.TypeLabel != "Birth" {
+			t.Fatalf("birth parts %+v", p)
+		}
+		if p := events[string(fireID)].Title.Parts; p.Place != "York" || p.TypeLabel != "Fire" {
+			t.Fatalf("fire parts %+v", p)
+		}
+		if s := events[string(baptismID)].Title.Parts.Subjects; s[0].Name != nil {
+			t.Fatalf("unnamed subject carried a name %+v", s[0].Name)
+		}
+	})
+
+	again := map[string][]string{}
+	for _, h := range f.events() {
+		again[string(h.Entity.ID)] = subjectForms(h)
+	}
+	if !sameSet(again[string(censusID)], subjectForms(events[string(censusID)])) ||
+		!bytes.Equal([]byte(joinForms(again[string(censusID)])), []byte(joinForms(subjectForms(events[string(censusID)])))) {
+		t.Fatal("subject order moved")
+	}
+
+	db, err := f.c.DB()
+	must(t, err)
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{yorkID})
+	must(t, err)
+	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) || database.ContainsBlobID(deps, deathID) {
+		t.Fatalf("place dependents missing birth/fire/james or included the death")
+	}
+	// The witness is not a subject of the birth, so the place walk does not reach them.
+	fromJames, err := conclusionsummaries.Dependents(db, [][]byte{jamesID})
+	must(t, err)
+	if !database.ContainsBlobID(fromJames, birthID) || !database.ContainsBlobID(fromJames, deathID) || !database.ContainsBlobID(fromJames, marriageID) || !database.ContainsBlobID(fromJames, censusID) {
+		t.Fatal("person dependents missed an event")
+	}
+	if database.ContainsBlobID(fromJames, yorkID) || database.ContainsBlobID(fromJames, baptismID) {
+		t.Fatal("person walk reached a place or someone else's event")
+	}
+	// James's summary embeds his birth's date: a change to the birth must
+	// reach him. The witness is not a subject, so they are not reached.
+	fromBirth, err := conclusionsummaries.Dependents(db, [][]byte{birthID})
+	must(t, err)
+	if !database.ContainsBlobID(fromBirth, jamesID) || database.ContainsBlobID(fromBirth, birthID) || database.ContainsBlobID(fromBirth, yorkID) {
+		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
+	}
+}
+
+func placeNames(places []conclusionsummaries.ChainedPlace) []string {
+	var out []string
+	for _, p := range places {
+		out = append(out, p.Names...)
+	}
+	return out
+}
+
+func chainedPlace(places []conclusionsummaries.ChainedPlace, name string) conclusionsummaries.ChainedPlace {
+	for _, p := range places {
+		for _, n := range p.Names {
+			if n == name {
+				return p
+			}
+		}
+	}
+	return conclusionsummaries.ChainedPlace{}
+}
+
+func subjectForms(h conclusionsummaries.EventSummary) []string {
+	var out []string
+	for _, s := range h.Subjects {
+		if s.Name == nil {
+			out = append(out, "")
+			continue
+		}
+		out = append(out, s.Name.Form)
+	}
+	return out
+}
+
+func joinForms(forms []string) string {
+	out := ""
+	for _, f := range forms {
+		out += f + "\x00"
+	}
+	return out
+}
+
+func sameSet(got, want []string) bool {
+	if len(got) != len(want) {
+		return false
+	}
+	seen := map[string]int{}
+	for _, g := range got {
+		seen[g]++
+	}
+	for _, w := range want {
+		seen[w]--
+		if seen[w] < 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// Two surviving births are a disagreement: the summary counts them and leads
+// with the earliest dated one, whatever the refs say.
+func TestCompetingLifeEvents(t *testing.T) {
+	tests := []struct {
+		name      string
+		years     []int // 0 = undated
+		wantCount int
+		wantYear  int // 0 = no date
+	}{
+		{name: "one birth", years: []int{1817}, wantCount: 1, wantYear: 1817},
+		{name: "the earliest dated birth leads", years: []int{1819, 1815, 1817}, wantCount: 3, wantYear: 1815},
+		{name: "a dated birth leads an undated one", years: []int{0, 1821}, wantCount: 2, wantYear: 1821},
+		{name: "undated births still count", years: []int{0, 0}, wantCount: 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+			f.named(james, "James Robins")
+			f.at(james, 0, 0)
+			var births []subjects.Subject
+			for i, year := range tt.years {
+				birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
+				if year != 0 {
+					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(year, 0, 0)})
+				}
+				f.cite(birth, in...)
+				f.at(birth, 4, int64(2*i))
+				f.participation(james, birth, "subject")
+				births = append(births, birth)
+			}
+			jamesID := f.promoteSubject(james)
+			for _, b := range births {
+				f.promoteSubject(b)
+			}
+			var birth conclusionsummaries.LifeFacts
+			for _, h := range f.list() {
+				if bytes.Equal(h.Entity.ID, jamesID) {
+					birth = h.Birth
+				}
+			}
+			if birth.EventCount != tt.wantCount || birth.Event == nil {
+				t.Fatalf("event count %d event %+v", birth.EventCount, birth.Event)
+			}
+			var year int
+			if birth.Date != nil && birth.Date.StartYear != nil {
+				year = *birth.Date.StartYear
+			}
+			if year != tt.wantYear {
+				t.Fatalf("lead year %d, want %d", year, tt.wantYear)
+			}
+		})
+	}
+}

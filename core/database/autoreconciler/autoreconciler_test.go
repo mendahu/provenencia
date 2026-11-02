@@ -18,8 +18,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/gallery"
@@ -83,7 +83,6 @@ func newFixture(t *testing.T) *fixture {
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
-	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
@@ -168,9 +167,8 @@ func (f *fixture) cite(in ...observations.Input) []observations.Observation {
 		must(f.t, err)
 		art = f.arts[string(s.SourceID)]
 	}
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator}, in)
-	})
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	res, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
 	must(f.t, err)
 	return res.Observations
 }
@@ -197,13 +195,6 @@ func (f *fixture) certainty(citationID []byte, uncertain bool) error {
 		return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
 	})
 	return err
-}
-
-// grade is a seeded claim confidence grade's id.
-func (f *fixture) grade(key string) []byte {
-	g, err := claimconfidencegrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return g.ID
 }
 
 func negative(in observations.Input) observations.Input {
@@ -338,8 +329,6 @@ func rowsFor(all []row, entityID, propertyID []byte) []row {
 	return out
 }
 
-// rebuiltSnapshot rebuilds inside a rolled-back transaction, so upkeep state
-// is left as it was.
 // outcome is one auto_reconciler_outcomes row as stored.
 type outcome struct {
 	EntityID, PropertyID, ObservationID []byte
@@ -371,17 +360,6 @@ func (f *fixture) outcomes() []outcome {
 	db, err := f.c.DB()
 	must(f.t, err)
 	return outcomesSnapshot(f.t, db)
-}
-
-func (f *fixture) rebuiltSnapshot() []row {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
-	tx, err := db.Begin()
-	must(f.t, err)
-	defer func() { _ = tx.Rollback() }()
-	must(f.t, autoreconciler.Rebuild(tx))
-	return snapshot(f.t, tx)
 }
 
 func TestReconciledValues(t *testing.T) {
@@ -615,15 +593,11 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 || names[0].Rank != 1 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=James|surname=Robins|suffix=Jr." {
+		if got := nameSpec(t, names[0].Name); got != "given=James|surname=Robins|suffix=Jr." {
 			t.Fatalf("parts %s", got)
 		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
 		if n.Form != "James Robins Jr." || *names[0].SortKey != "james robins jr" {
 			t.Fatalf("form %q sort %q", n.Form, *names[0].SortKey)
 		}
@@ -639,13 +613,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=Christopher|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Christopher|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -660,6 +628,23 @@ func TestReconciledNames(t *testing.T) {
 		}
 		if age := rowsFor(all, h, f.props["age"].ID); len(age) != 1 {
 			t.Fatalf("age %+v", age)
+		}
+	})
+
+	t.Run("a chain of folds files and rebuilds", func(t *testing.T) {
+		a, b, c := f.subject("person"), f.subjectOn(f.other, "person"), f.subject("person")
+		f.cite(nameIn(a, f.props["name"], "given=Ann|surname=Robins"))
+		f.cite(nameIn(b, f.props["name"], "given=Anna|surname=Robins"))
+		f.cite(nameIn(c, f.props["name"], "given=Hannah|surname=Robins"))
+		h := f.promote(a)
+		f.join(b, h)
+		f.join(c, h)
+		names := rowsFor(f.rows(), h, f.props["name"].ID)
+		if len(names) != 1 {
+			t.Fatalf("names %+v", names)
+		}
+		if got := nameSpec(t, names[0].Name); got != "given=Hannah|surname=Robins" {
+			t.Fatalf("parts %s", got)
 		}
 	})
 
@@ -682,7 +667,8 @@ func (f *fixture) likenessIn(s subjects.Subject, shade uint8) observations.Input
 // likeness save path.
 func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []observations.Observation {
 	f.t.Helper()
-	res, _, err := observationstest.SaveCitation(f.c, userID, art, in...)
+	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
+	res, _, err := observationstest.SaveCitation(f.c, userID, graph, art, in...)
 	must(f.t, err)
 	return res.Observations
 }
@@ -915,7 +901,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 // A stale cache rebuilds on open: old versions, and the 3 and 4 stamped by
 // the closed PRs' builds, which must never read as current.
 // The auto-reconciler weighs real evidence (S9-14): each Observation's
-// Source, credibility, certainty, claim confidence and status, and polarity.
+// Source, credibility, certainty, status, and polarity.
 func TestReconciledEvidence(t *testing.T) {
 	texts := func(f *fixture, h []byte) string {
 		var out []string
@@ -951,9 +937,10 @@ func TestReconciledEvidence(t *testing.T) {
 	t.Run("an uncertain transcription is weak", func(t *testing.T) {
 		f := newFixture(t)
 		a, b := f.subject("place"), f.subjectOn(f.other, "place")
+		graph := evidencegraphstest.SoleGraph(t, f.c, f.artifact.SourceID).ID
 		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
+				GraphID: graph, ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
 			}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
 		})
 		must(t, err)
@@ -1004,23 +991,6 @@ func TestReconciledEvidence(t *testing.T) {
 			t.Fatalf("negative outcome %+v", o)
 		}
 		f.assertUpkeepEqualsRebuild("denied")
-	})
-
-	t.Run("a low-confidence claim's different given name is weak", func(t *testing.T) {
-		f := newFixture(t)
-		a, b := f.subject("person"), f.subjectOn(f.other, "person")
-		f.cite(nameIn(a, f.props["name"], "given=Jake|surname=Robins"))
-		f.cite(nameIn(b, f.props["name"], "given=James|surname=Robins"))
-		p6a4 := promote.Input{SubjectID: a.ID, ConfidenceGradeID: f.grade("low_confidence")}
-		res := promotetest.Save(t, f.c, userID, p6a4)
-		f.join(b, res.Entity.ID)
-		names := rowsFor(f.rows(), res.Entity.ID, f.props["name"].ID)
-		if len(names) != 2 || names[0].Reason != "kept" || names[1].Reason != "weak" {
-			t.Fatalf("names %+v", names)
-		}
-		if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Robins" {
-			t.Fatalf("displayed %+v %v", n, err)
-		}
 	})
 
 	t.Run("a misspelt surname from one Source in three is outvoted", func(t *testing.T) {
@@ -1108,7 +1078,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20, 21} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -1166,23 +1136,7 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 // differs from a full rebuild (taken in a rolled-back transaction).
 func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	f.t.Helper()
-	if got, want := f.rows(), f.rebuiltSnapshot(); !reflect.DeepEqual(got, want) {
-		f.t.Fatalf("%s: upkeep has %d rows, rebuild %d", at, len(got), len(want))
-	}
-	// The outcomes (the auto-reconciler's reasoning) must match a rebuild too.
-	{
-		db, err := f.c.DB()
-		must(f.t, err)
-		got := outcomesSnapshot(f.t, db)
-		tx, err := db.Begin()
-		must(f.t, err)
-		must(f.t, autoreconciler.Rebuild(tx))
-		want := outcomesSnapshot(f.t, tx)
-		_ = tx.Rollback()
-		if !reflect.DeepEqual(got, want) {
-			f.t.Fatalf("%s: upkeep has %d outcomes, rebuild %d", at, len(got), len(want))
-		}
-	}
+	autoreconcilertest.AssertCacheMatchesRebuild(f.t, f.c)
 	// The handle search documents ride on the same upkeep (RecomputeTx), so
 	// they must equal a full search rebuild too.
 	db, err := f.c.DB()
@@ -1472,7 +1426,6 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			joins := 0
 			kinds := []string{"person", "person", "event", "place"}
 			credibilities := []string{"low_trust", "standard", "high_trust"}
-			grades := []string{"", "low_confidence", "moderate", "high_confidence"}
 			names := []string{"given=James|surname=Robins", "given=james|surname=robins", "given=Kenneth|surname=Robins",
 				"given=J.|surname=Robins", "given=James|given=K.|surname=Robins", "surname=Robbins",
 				"given=Mary|surname=Smith", "form:James Robins"}
@@ -1525,9 +1478,6 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					// Mint, or join a handle of the Subject's kind already minted.
 					s := subs[rng.Intn(len(subs))]
 					in := promote.Input{SubjectID: s.ID}
-					if g := grades[rng.Intn(len(grades))]; g != "" {
-						in.ConfidenceGradeID = f.grade(g)
-					}
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
@@ -1660,12 +1610,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 			if len(res.Values) != 1 {
 				t.Fatalf("%d values", len(res.Values))
 			}
-			var given []string
-			for _, p := range res.Values[0].Value.Name.Parts {
-				if p.Type == "given" {
-					given = append(given, p.Value)
-				}
-			}
+			given := givenOf(res.Values[0].Value)
 			want := []string{tc.want}
 			if tc.want == "" {
 				want = []string{tc.a, tc.b}
@@ -1686,7 +1631,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 var productAliasPin = struct {
 	CacheVersion int
 	Hash         string
-}{CacheVersion: 20, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
+}{CacheVersion: 22, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
 
 // TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
 // alias seed, so a seed edit must come with a CacheVersion bump.
@@ -1717,5 +1662,128 @@ func TestProductAliasTablesPinCacheVersion(t *testing.T) {
 	}
 	if autoreconciler.CacheVersion != productAliasPin.CacheVersion {
 		t.Fatalf("CacheVersion %d, pinned %d: write the new version beside the new hash", autoreconciler.CacheVersion, productAliasPin.CacheVersion)
+	}
+}
+
+// nameSpec renders a name's parts as "type=value|…".
+func nameSpec(t *testing.T, raw []byte) string {
+	t.Helper()
+	n, err := valuecodec.UnmarshalName(raw)
+	must(t, err)
+	var parts []string
+	for _, p := range n.Parts {
+		parts = append(parts, p.Type+"="+p.Value)
+	}
+	return strings.Join(parts, "|")
+}
+
+// givenOf lists a reconciled name's given parts in order.
+func givenOf(v autoreconcile.Value) []string {
+	var given []string
+	for _, p := range v.Name.Parts {
+		if p.Type == "given" {
+			given = append(given, p.Value)
+		}
+	}
+	return given
+}
+
+// TestValueRulesFoldChains: under the product rules a name folds through its
+// chain to the formal name it reaches, and a cycle with no way out keeps each
+// name (S14-18).
+func TestValueRulesFoldChains(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		in      []string // one given spec per candidate
+		given   []string
+		reasons []autoreconcile.Reason // per candidate, in order
+	}{
+		{"AC-1.1", []string{"B.", "Bill", "William"}, []string{"William"}, folded3},
+		{"AC-1.2", []string{"D.", "Dick", "Richard"}, []string{"Richard"}, folded3},
+		{"AC-1.3", []string{"P.", "Peggy", "Margaret"}, []string{"Margaret"}, folded3},
+		{"AC-1.4", []string{"Mo", "Molly", "Mary"}, []string{"Mary"}, folded3},
+		{"AC-1.5", []string{"Caroline", "Chick", "Charles"}, []string{"Charles"}, folded3},
+		{"AC-1.6", []string{"Ann", "Anna", "Hannah"}, []string{"Hannah"}, folded3},
+		{"AC-1.7", []string{"Dick", "Ricky", "Rick"}, []string{"Dick", "Ricky", "Rick"},
+			[]autoreconcile.Reason{autoreconcile.ReasonKept, autoreconcile.ReasonKept, autoreconcile.ReasonKept}},
+		{"AC-1.8", []string{"Joseph", "José", "Joseph|given=Jose"}, []string{"Joseph", "Jose"},
+			[]autoreconcile.Reason{autoreconcile.ReasonFolded, autoreconcile.ReasonFolded, autoreconcile.ReasonKept}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var in []autoreconcile.Candidate
+			for i, g := range tc.in {
+				in = append(in, autoreconcile.Candidate{
+					ObservationID: []byte{0, 0, 0, byte(i + 1)},
+					Value:         autoreconcile.Value{Name: nameValue("given=" + g + "|surname=Robins")},
+				})
+			}
+			res, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Values) != 1 {
+				t.Fatalf("%d values", len(res.Values))
+			}
+			if got := givenOf(res.Values[0].Value); !slices.Equal(got, tc.given) {
+				t.Fatalf("given %v, want %v", got, tc.given)
+			}
+			if len(res.Values[0].ObservationIDs) != len(in) {
+				t.Fatalf("value holds %d candidates, want %d", len(res.Values[0].ObservationIDs), len(in))
+			}
+			for i, o := range res.Outcomes {
+				if o.Reason != tc.reasons[i] {
+					t.Fatalf("candidate %d: reason %q, want %q", i+1, o.Reason, tc.reasons[i])
+				}
+			}
+		})
+	}
+}
+
+var folded3 = []autoreconcile.Reason{autoreconcile.ReasonFolded, autoreconcile.ReasonFolded, autoreconcile.ReasonKept}
+
+// TestValueRulesNamesInvariants: random lists of nicknames, initials, prefixes
+// and accented forms never panic, put each candidate in one value, and do not
+// depend on input order (S14-18).
+func TestValueRulesNamesInvariants(t *testing.T) {
+	words := []string{"B.", "Bill", "William", "D.", "Dick", "Richard", "Rick", "Ricky", "P.", "Peggy", "Margaret",
+		"Mo", "Molly", "Mary", "Caroline", "Chick", "Charles", "Ann", "Anna", "Hannah", "Joseph", "José", "Jose",
+		"Des", "Desiree", "J.", "Jim", "James", "Jake"}
+	for _, seed := range []int64{1, 2, 3, 4} {
+		rng := rand.New(rand.NewSource(seed))
+		for list := 0; list < 500; list++ {
+			var in []autoreconcile.Candidate
+			for i, k := 0, rng.Intn(8); i < k; i++ {
+				var parts []string
+				for j, w := 0, 1+rng.Intn(3); j < w; j++ {
+					parts = append(parts, "given="+words[rng.Intn(len(words))])
+				}
+				in = append(in, autoreconcile.Candidate{
+					ObservationID: []byte{0, 0, 0, byte(i + 1)},
+					Value:         autoreconcile.Value{Name: nameValue(strings.Join(parts, "|") + "|surname=Robins")},
+				})
+			}
+			where := fmt.Sprintf("seed %d list %d", seed, list)
+			got, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatalf("%s: %v", where, err)
+			}
+			seen := map[byte]int{}
+			for _, v := range got.Values {
+				for _, oid := range v.ObservationIDs {
+					seen[oid[3]]++
+				}
+			}
+			for _, c := range in {
+				if seen[c.ObservationID[3]] != 1 {
+					t.Fatalf("%s: candidate %d in %d values", where, c.ObservationID[3], seen[c.ObservationID[3]])
+				}
+			}
+			shuffled := slices.Clone(in)
+			rng.Shuffle(len(shuffled), func(i, j int) { shuffled[i], shuffled[j] = shuffled[j], shuffled[i] })
+			again, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, shuffled, nil, propertymeta.CardinalitySingle)
+			if err != nil || !reflect.DeepEqual(again, got) {
+				t.Fatalf("%s: input order changed the result (%v)", where, err)
+			}
+		}
 	}
 }

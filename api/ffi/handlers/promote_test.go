@@ -9,19 +9,16 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
-
 	// promotableSubject creates a person Subject and returns a promote request for it.
-	"github.com/mendahu/provenencia/core/writes"
 )
 
 func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
@@ -348,11 +345,7 @@ func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...stri
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(form)})
 		}
-		_, err = writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID[:]}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID[:], citations.CreateInput{
-				ArtifactID: art.ID, LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`,
-			}, in)
-		})
+		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, in...)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -377,38 +370,16 @@ func TestPromoteSubjectJoin(t *testing.T) {
 	first := promotableSubject(t)
 	minted := promoteOK(t, first)
 
-	out, err := ListClaimConfidenceGrades(marshalProto(t, &engine.ListClaimConfidenceGradesRequest{ProjectDir: first.GetProjectDir()}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var grades engine.ListClaimConfidenceGradesResponse
-	if err := proto.Unmarshal(out, &grades); err != nil {
-		t.Fatal(err)
-	}
-	var keys []string
-	for _, g := range grades.GetGrades() {
-		keys = append(keys, g.GetKey())
-	}
-	if strings.Join(keys, ",") != "low_confidence,moderate,high_confidence" {
-		t.Fatalf("grades %v", keys)
-	}
-	high := grades.GetGrades()[2]
-
 	joined := promoteOK(t, &engine.PromoteSubjectRequest{
 		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
 		SubjectId: personBeside(t, first), EntityId: minted.Entity.GetId(),
-		ConfidenceGradeId: high.GetId(), Argument: "Same name and age.",
 	})
 	if joined.Entity.GetRef() != minted.Entity.GetRef() || joined.Claim.GetEntityId() != minted.Entity.GetId() {
 		t.Fatalf("joined %+v onto %+v", joined.Entity, minted.Entity)
 	}
-	if joined.Claim.GetConfidenceGradeId() != high.GetId() || joined.Claim.GetArgument() != "Same name and age." {
-		t.Fatalf("claim %+v", joined.Claim)
-	}
 
 	for name, req := range map[string]*engine.PromoteSubjectRequest{
 		"bad entity id": {ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first), EntityId: "nope"},
-		"bad grade id":  {ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first), ConfidenceGradeId: "nope"},
 	} {
 		if _, err := PromoteSubject(marshalProto(t, req)); err == nil {
 			t.Fatalf("%s accepted", name)

@@ -2,6 +2,7 @@ package database
 
 import (
 	"errors"
+	"io/fs"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -284,5 +285,43 @@ func TestDSN(t *testing.T) {
 				t.Fatalf("unencoded ? in path %s", got)
 			}
 		})
+	}
+}
+
+func TestRequireProject(t *testing.T) {
+	parent := t.TempDir()
+	c, err := Create(parent, "P.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := c.Dir()
+	_ = c.Close()
+	file := filepath.Join(parent, "plain.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name string
+		dir  string
+		want error
+	}{
+		{"a project", dir, nil},
+		{"a folder with no catalog", t.TempDir(), ErrNotAProject},
+		{"a file", file, ErrNotAProject},
+		{"a missing folder", filepath.Join(parent, "gone"), fs.ErrNotExist},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := RequireProject(tt.dir)
+			if tt.want == nil && err != nil || tt.want != nil && !errors.Is(err, tt.want) {
+				t.Fatalf("err = %v, want %v", err, tt.want)
+			}
+			if _, openErr := Open(tt.dir); tt.want != nil && !errors.Is(openErr, tt.want) {
+				t.Fatalf("Open err = %v, want %v", openErr, tt.want)
+			}
+		})
+	}
+	if _, err := os.Stat(filepath.Join(parent, "gone")); err == nil {
+		t.Fatal("RequireProject created the folder")
 	}
 }

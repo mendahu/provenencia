@@ -30,9 +30,9 @@ const (
 
 const (
 	sqlInsert = `INSERT INTO identity_claims
-		(id, subject_id, entity_id, subject_type_id, status, confidence_grade_id, argument)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`
-	sqlColumns            = `id, subject_id, entity_id, subject_type_id, status, confidence_grade_id, COALESCE(argument, '')`
+		(id, subject_id, entity_id, subject_type_id, status)
+		VALUES (?, ?, ?, ?, ?)`
+	sqlColumns            = `id, subject_id, entity_id, subject_type_id, status`
 	sqlGet                = `SELECT ` + sqlColumns + ` FROM identity_claims WHERE id = ?`
 	sqlAcceptedForSubject = `SELECT ` + sqlColumns + ` FROM identity_claims
 		WHERE subject_id = ? AND status = 'accepted'`
@@ -45,22 +45,18 @@ const (
 
 // Claim is one identity_claims row.
 type Claim struct {
-	ID                []byte
-	SubjectID         []byte
-	EntityID          []byte
-	SubjectTypeID     []byte
-	Status            string
-	ConfidenceGradeID []byte // nil = no grade
-	Argument          string
+	ID            []byte
+	SubjectID     []byte
+	EntityID      []byte
+	SubjectTypeID []byte
+	Status        string
 }
 
 // CreateInput is the fields for a new claim. subject_type_id is read from the subject.
 type CreateInput struct {
-	SubjectID         []byte
-	EntityID          []byte
-	Status            string
-	ConfidenceGradeID []byte
-	Argument          string
+	SubjectID []byte
+	EntityID  []byte
+	Status    string
 }
 
 // Create inserts a claim. The caller records the returned changes as
@@ -103,11 +99,7 @@ func AppendFiling(tx *sql.Tx, subjectID []byte, changes []rowchange.Change) ([][
 // subject is ErrAlreadyMember.
 func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	in.Status = strings.TrimSpace(in.Status)
-	in.Argument = strings.TrimSpace(in.Argument)
 	if len(in.SubjectID) != 16 || len(in.EntityID) != 16 || !statusOK(in.Status) {
-		return Claim{}, rowchange.Change{}, ErrInvalid
-	}
-	if len(in.ConfidenceGradeID) != 0 && len(in.ConfidenceGradeID) != 16 {
 		return Claim{}, rowchange.Change{}, ErrInvalid
 	}
 	var subjectTypeID []byte
@@ -132,7 +124,7 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 	}
 	idBytes := id[:]
 	if _, err := tx.Exec(sqlInsert, idBytes, in.SubjectID, in.EntityID, subjectTypeID,
-		in.Status, database.NullBlob(in.ConfidenceGradeID), database.NullString(in.Argument)); err != nil {
+		in.Status); err != nil {
 		return Claim{}, rowchange.Change{}, mapInsert(tx, err, in.EntityID, subjectTypeID)
 	}
 
@@ -141,23 +133,19 @@ func InsertTx(tx *sql.Tx, in CreateInput) (Claim, rowchange.Change, error) {
 		EntityID:   idBytes,
 		Action:     rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{
-			"id":                  id.String(),
-			"subject_id":          database.UUIDJSON(in.SubjectID),
-			"entity_id":           database.UUIDJSON(in.EntityID),
-			"subject_type_id":     database.UUIDJSON(subjectTypeID),
-			"status":              in.Status,
-			"confidence_grade_id": database.UUIDJSON(in.ConfidenceGradeID),
-			"argument":            database.NullString(in.Argument),
+			"id":              id.String(),
+			"subject_id":      database.UUIDJSON(in.SubjectID),
+			"entity_id":       database.UUIDJSON(in.EntityID),
+			"subject_type_id": database.UUIDJSON(subjectTypeID),
+			"status":          in.Status,
 		}),
 	}
 	return Claim{
-		ID:                append([]byte(nil), idBytes...),
-		SubjectID:         append([]byte(nil), in.SubjectID...),
-		EntityID:          append([]byte(nil), in.EntityID...),
-		SubjectTypeID:     subjectTypeID,
-		Status:            in.Status,
-		ConfidenceGradeID: append([]byte(nil), in.ConfidenceGradeID...),
-		Argument:          in.Argument,
+		ID:            append([]byte(nil), idBytes...),
+		SubjectID:     append([]byte(nil), in.SubjectID...),
+		EntityID:      append([]byte(nil), in.EntityID...),
+		SubjectTypeID: subjectTypeID,
+		Status:        in.Status,
 	}, change, nil
 }
 
@@ -233,7 +221,7 @@ type rowScanner interface {
 func scanClaim(row rowScanner) (Claim, error) {
 	var cl Claim
 	if err := row.Scan(&cl.ID, &cl.SubjectID, &cl.EntityID, &cl.SubjectTypeID,
-		&cl.Status, &cl.ConfidenceGradeID, &cl.Argument); err != nil {
+		&cl.Status); err != nil {
 		return Claim{}, err
 	}
 	return cl, nil
@@ -253,7 +241,7 @@ func scanClaims(rows *sql.Rows) ([]Claim, error) {
 }
 
 // mapInsert names a type mismatch the composite FK caught; other constraint
-// failures (missing handle or grade, duplicate pair) are ErrInvalid.
+// failures (missing handle, duplicate pair) are ErrInvalid.
 func mapInsert(tx *sql.Tx, err error, entityID, subjectTypeID []byte) error {
 	if !database.IsConstraintViolation(err) {
 		return err

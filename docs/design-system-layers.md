@@ -40,7 +40,7 @@ DesignSystem/
   Components/                     # design-system layer
     Button/
       PVButton.swift
-      # optional: README.md, private helpers, previews-only fixtures
+      # optional: private helpers, previews-only fixtures; a README.md is listed in DesignSystem's membership exceptions
     Input/
       PVInput.swift
     Confirm/

@@ -6,11 +6,44 @@ import Testing
 struct SearchCatalogStoreTests {
     private let projectDir = "/tmp/search.provenencia"
 
-    @Test func emptyQueryReturnsNoHits() async throws {
+    private func hit(kind: String, id: String) -> CatalogSearchHit {
+        CatalogSearchHit(
+            kind: kind, id: id, ref: id.uppercased(), title: id, subtitle: "", matchReason: "title",
+            location: WorkspaceLocation(section: .sources)
+        )
+    }
+
+    private func seededStore() -> FakeStore {
         let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Ilminster", description: ""),
+        store.seededSearchHits = [
+            hit(kind: "source", id: "s1"), hit(kind: "person", id: "p1"), hit(kind: "place", id: "l1"),
         ]
+        return store
+    }
+
+    @Test func returnsSeededHitsInSeededOrder() async throws {
+        let store = seededStore()
+        let hits = try await store.searchCatalog(
+            projectDir: projectDir, query: "anything", location: .sectionRoot(.sources), kinds: []
+        )
+        #expect(hits.map(\.id) == ["s1", "p1", "l1"])
+        #expect(store.heldCatalogProjectDir == projectDir)
+    }
+
+    @Test func filtersSeededHitsByRequestedKinds() async throws {
+        let store = seededStore()
+        let some = try await store.searchCatalog(
+            projectDir: projectDir, query: "anything", location: nil, kinds: ["person", "place"]
+        )
+        #expect(some.map(\.id) == ["p1", "l1"])
+        let none = try await store.searchCatalog(
+            projectDir: projectDir, query: "anything", location: nil, kinds: ["nonsense"]
+        )
+        #expect(none.isEmpty)
+    }
+
+    @Test func emptyQueryReturnsNoHits() async throws {
+        let store = seededStore()
         let hits = try await store.searchCatalog(
             projectDir: projectDir,
             query: "   ",
@@ -21,212 +54,14 @@ struct SearchCatalogStoreTests {
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
-    @Test func fakeSearchFoldsLikeGo() async throws {
-        let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Montréal register", description: ""),
-        ]
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir, query: "Montreal", location: .sectionRoot(.sources),
-            kinds: []
-        )
-        #expect(hits.first?.id == "src-1")
-        #expect(hits.first?.matchReason == "title")
-    }
-
-    @Test func findsSourceByTitleAndMapsLocation() async throws {
-        let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(
-                id: "src-1",
-                ref: "SRC-ILMIN",
-                sourceTypeID: "t1",
-                title: "Ilminster parish register",
-                description: "notes"
-            ),
-            CatalogSource(
-                id: "src-2",
-                ref: "SRC-OTHER",
-                sourceTypeID: "t1",
-                title: "Unrelated census",
-                description: ""
-            ),
-        ]
-        store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(id: "t1", key: "parish", origin: "provenencia", label: "Parish register", description: ""),
-        ]
-
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir,
-            query: "Ilminster",
-            location: .sectionRoot(.sources),
-            kinds: []
-        )
-        #expect(hits.count == 1)
-        let hit = try #require(hits.first)
-        #expect(hit.kind == "source")
-        #expect(hit.id == "src-1")
-        #expect(hit.ref == "SRC-ILMIN")
-        #expect(hit.location.section == .sources)
-        #expect(hit.location.sourceId == "src-1")
-        #expect(hit.location.ref == "SRC-ILMIN")
-        #expect(hit.subtitle == "Parish register")
-        #expect(store.heldCatalogProjectDir == projectDir)
-    }
-
-    /// The §2 fixture: a census Source with a Default, a Jones and a Smith graph.
-    private func seedCensusGraphs(_ store: FakeStore) -> (source: CatalogSource, jones: CatalogEvidenceGraph) {
-        let source = CatalogSource(
-            id: "src-w3", ref: "SRC-W3CEN", sourceTypeID: "", title: "1881 Census, Ward 3", description: ""
-        )
-        let jones = CatalogEvidenceGraph(
-            id: "g-jones", ref: "GPH-J0NES", sourceID: "src-w3", name: "Jones household",
-            description: "Thomas Jones and family, page 2", artifactIDs: ["a2"]
-        )
-        store.sourcesByProject[projectDir] = [source]
-        store.evidenceGraphsByProject[projectDir] = [
-            CatalogEvidenceGraph(
-                id: "g-default", ref: "GPH-DEF01", sourceID: "src-w3", name: "Default",
-                description: "", artifactIDs: ["a1"]
-            ),
-            jones,
-            CatalogEvidenceGraph(
-                id: "g-smith", ref: "GPH-SM1TH", sourceID: "src-w3", name: "Smith household",
-                description: "", artifactIDs: ["a1"]
-            ),
-        ]
-        return (source, jones)
-    }
-
-    @Test func findsEvidenceGraphByNameRefAndDescription() async throws {
-        let store = FakeStore()
-        let (source, jones) = seedCensusGraphs(store)
-        func graphHits(_ query: String) async throws -> [CatalogSearchHit] {
-            try await store.searchCatalog(
-                projectDir: projectDir, query: query, location: .sectionRoot(.sources), kinds: []
-            ).filter { $0.kind == "evidence_graph" }
+    @Test func searchErrorIsThrown() async {
+        let store = seededStore()
+        store.searchCatalogError = CoreInvokeError.coded(status: 1, code: "catalog.closed", kind: .user, params: [])
+        await #expect(throws: CoreInvokeError.self) {
+            _ = try await store.searchCatalog(
+                projectDir: projectDir, query: "anything", location: nil, kinds: []
+            )
         }
-
-        let byName = try await graphHits("jones hou")
-        let hit = try #require(byName.first { $0.id == jones.id })
-        #expect(hit.subtitle == "1881 Census, Ward 3")
-        #expect(hit.matchReason == "title")
-        #expect(hit.location == SourcesListNavigation.canvasLocation(for: source, graph: jones))
-
-        let byDescription = try await graphHits("thomas")
-        #expect(byDescription.count == 1)
-        #expect(byDescription.first?.id == jones.id)
-        #expect(byDescription.first?.matchReason == "description")
-
-        let all = try await store.searchCatalog(
-            projectDir: projectDir, query: "GPH-J0NES", location: .sectionRoot(.sources), kinds: []
-        )
-        #expect(all.first?.id == jones.id)
-        #expect(all.first?.matchReason == "ref")
-
-        store.sourcesByProject[projectDir] = []
-        #expect(try await graphHits("jones hou").isEmpty)
-        #expect(store.heldCatalogProjectDir == projectDir)
-    }
-
-    @Test func findsTypeAndFieldByLabel() async throws {
-        let store = FakeStore()
-        store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(
-                id: "t1",
-                key: "book",
-                origin: "provenencia",
-                label: "Published book",
-                description: "",
-                iconKey: "type_book"
-            ),
-        ]
-        store.fieldsByProject[projectDir] = [
-            CatalogMetadataField(
-                id: "f1",
-                key: "publication-date",
-                origin: "provenencia",
-                label: "Publication date",
-                dataType: "date",
-                description: ""
-            ),
-        ]
-
-        let typeHits = try await store.searchCatalog(
-            projectDir: projectDir,
-            query: "Published book",
-            location: .sectionRoot(.sourceTypes),
-            kinds: []
-        )
-        #expect(typeHits.contains {
-            $0.kind == "source_type" && $0.location.typeId == "t1" && $0.iconKey == "type_book"
-        })
-
-        let fieldHits = try await store.searchCatalog(
-            projectDir: projectDir,
-            query: "Publication",
-            location: .sectionRoot(.metadata),
-            kinds: []
-        )
-        #expect(fieldHits.contains { $0.kind == "metadata_field" && $0.location.fieldId == "f1" })
-    }
-
-    @Test func findsSourceByRef() async throws {
-        let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "src-1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet title", description: ""),
-            CatalogSource(id: "src-2", ref: "SRC-OTHER", sourceTypeID: "", title: "SRC-ZZ9K2 in title", description: ""),
-        ]
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir,
-            query: "SRC-ZZ9K2",
-            location: .sectionRoot(.sources),
-            kinds: []
-        )
-        #expect(hits.first?.id == "src-1")
-        #expect(hits.first?.matchReason == "ref")
-    }
-
-    @Test func prefixRefPromotesSource() async throws {
-        let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "src-1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet", description: ""),
-            CatalogSource(id: "src-2", ref: "SRC-AAAAA", sourceTypeID: "", title: "Noise", description: ""),
-        ]
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir,
-            query: "SRC-ZZ",
-            location: .sectionRoot(.sources),
-            kinds: []
-        )
-        #expect(hits.first?.id == "src-1")
-        #expect(hits.first?.matchReason == "ref")
-    }
-
-    @Test func kindPriorityIsATenthAndSectionNudgeStillMatters() async throws {
-        let (store, james) = try await robinsSearchStore(projectDir: projectDir)
-
-        let boosted = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources), kinds: [])
-        #expect(boosted.map(\.kind) == ["source", "person"])
-
-        let onPersons = try await store.searchCatalog(projectDir: projectDir, query: "Robins", location: .sectionRoot(.persons), kinds: [])
-        #expect(onPersons.map(\.kind) == ["person", "source"])
-
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir, query: "Robins", location: .sectionRoot(.sources), kinds: ["person"]
-        )
-        #expect(hits.map(\.ref) == [james.entity.ref])
-        #expect(hits.first?.title == "James Robins")
-        #expect(hits.first?.memberCount == 2)
-        #expect(hits.first?.location == WorkspaceLocation(section: .persons, entityId: james.entity.id))
-    }
-
-    @Test func searchWithoutLocationHasNoSectionNudge() async throws {
-        let (store, _) = try await robinsSearchStore(projectDir: projectDir)
-        let hits = try await store.searchCatalog(
-            projectDir: projectDir, query: "Robins", location: nil, kinds: []
-        )
-        #expect(hits.map(\.kind) == ["person", "source"])
     }
 
     @Test func entityIdRoundTripsThroughTheEngineLocation() {
@@ -236,42 +71,4 @@ struct SearchCatalogStoreTests {
         proto.entityID = "e-1"
         #expect(GoStore.mapWorkspaceLocationFromProto(proto) == location)
     }
-}
-
-/// The Robins store: a Source `SRC-1` titled `Robins register` and one person
-/// handle (James Robins, two member Subjects) promoted from `sub-1` and `sub-2`.
-func robinsSearchStore(projectDir: String) async throws -> (store: FakeStore, james: CatalogPromoteResult) {
-    let store = FakeStore()
-    store.subjectTypesByProject[projectDir] = [
-        CatalogSubjectType(
-            id: "type-person", key: "person", origin: "provenencia", label: "Person",
-            description: "", refPrefix: "PER", candidateRefPrefix: "CPR"
-        ),
-    ]
-    store.sourcesByProject[projectDir] = [
-        CatalogSource(id: "src-1", ref: "SRC-1", sourceTypeID: "", title: "Robins register", description: ""),
-    ]
-    store.subjectsByGraph["g1"] = [
-        CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
-        CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
-    ]
-    store.observationsByGraph["g1"] = [
-        CatalogObservation(
-            id: "o1", ref: "OBS-1", citationID: "c1", subjectID: "sub-1", propertyID: "p-name",
-            polarity: "positive", valueText: "James Robins", valueInteger: nil, valueDateID: "",
-            valueNameID: "n-1", nameForm: "James Robins",
-            nameParts: [
-                CatalogNameValuePart(value: "James", type: "given"),
-                CatalogNameValuePart(value: "Robins", type: "surname"),
-            ],
-            valueSubjectID: "", valueTermID: "",
-            propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
-        ),
-    ]
-    let james = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
-    _ = try await store.promoteSubject(
-        projectDir: projectDir, userID: "u", subjectID: "sub-2",
-        entityID: james.entity.id
-    )
-    return (store, james)
 }

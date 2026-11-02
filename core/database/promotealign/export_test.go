@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/subjectcompare"
 )
 
 // LayerBridges exposes the bridges the loader reads for one Evidence graph.
@@ -53,20 +52,16 @@ func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) 
 	return refs, nil
 }
 
-// BridgedOnly exposes the filter that limits a neighbor entity's read members.
-var BridgedOnly = bridgedOnly
-
 // MemoSnapshot is what the graph holds as promotealign's Evidence graph memos.
 type MemoSnapshot struct {
 	Layer     graphalign.Layer
 	LayerKind map[string]string // primary Subject id -> kind
 	LayerOK   bool
-	Members   map[string]subjectcompare.Values
 }
 
-// MemoSnapshotForTest reads the memoized layer of graphID and the memoized
-// member values of memberGraphID, as stored. Nothing is built.
-func MemoSnapshotForTest(c *database.Catalog, graphID, memberGraphID []byte) MemoSnapshot {
+// MemoSnapshotForTest reads the memoized layer of graphID, as stored. Nothing
+// is built.
+func MemoSnapshotForTest(c *database.Catalog, graphID []byte) MemoSnapshot {
 	db, err := c.DB()
 	if err != nil {
 		return MemoSnapshot{}
@@ -83,9 +78,6 @@ func MemoSnapshotForTest(c *database.Catalog, graphID, memberGraphID []byte) Mem
 		for id, p := range m.primary {
 			out.LayerKind[id] = p.kind
 		}
-	}
-	if v, ok := c.Graph().EvidenceGraphMemo(memberGraphID, membersMemoKey+namePattern); ok {
-		out.Members = v.(map[string]subjectcompare.Values)
 	}
 	return out
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
@@ -53,7 +52,7 @@ func TestIdentityClaims(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if string(cl.SubjectTypeID) != string(f.personType.ID) || cl.ConfidenceGradeID != nil {
+				if string(cl.SubjectTypeID) != string(f.personType.ID) {
 					t.Fatalf("%+v", cl)
 				}
 				got, err := identityclaims.AcceptedEntityForSubject(f.c, f.james.ID)
@@ -172,42 +171,6 @@ func TestIdentityClaims(t *testing.T) {
 					VALUES (?, ?, ?, ?, 'maybe')`, id[:], f.james.ID, f.per1.ID, f.personType.ID)
 				if !database.IsConstraintViolation(err) {
 					t.Fatalf("raw insert: %v", err)
-				}
-			},
-		},
-		{
-			name: "confidence grade and argument stored",
-			run: func(t *testing.T, f fixture) {
-				if err := claimconfidencegrades.Install(f.c); err != nil {
-					t.Fatal(err)
-				}
-				high, err := claimconfidencegrades.Lookup(f.c, "high_confidence", vocabkey.OriginProvenencia)
-				if err != nil {
-					t.Fatal(err)
-				}
-				cl, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
-					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
-						SubjectID: f.james.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
-						ConfidenceGradeID: high.ID, Argument: " Same age and parish. ",
-					})
-				})
-				if err != nil {
-					t.Fatal(err)
-				}
-				got, err := identityclaims.Get(f.c, cl.ID)
-				if err != nil || string(got.ConfidenceGradeID) != string(high.ID) || got.Argument != "Same age and parish." {
-					t.Fatalf("%v %+v", err, got)
-				}
-				p6a1 := identityclaims.CreateInput{
-					SubjectID: f.jim.ID, EntityID: f.per1.ID, Status: identityclaims.StatusAccepted,
-					ConfidenceGradeID: make([]byte, 16),
-				}
-				_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
-					return identityclaims.Create(tx, userID, p6a1)
-				})
-
-				if !errors.Is(err, identityclaims.ErrInvalid) {
-					t.Fatalf("unknown grade: %v", err)
 				}
 			},
 		},

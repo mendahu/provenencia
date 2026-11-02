@@ -88,4 +88,19 @@ struct ArtifactRegionDraft: Equatable, Sendable {
             to: CGPoint(x: CGRect.unitSquare.maxX, y: CGRect.unitSquare.maxY)
         )
     )
+
+    /// The rectangle around the region: itself when it is a rectangle, else the
+    /// box of its points. A depiction is drawn as a rectangle, so "use the
+    /// citation's region" sets this.
+    var boundingRectangle: ArtifactRegionDraft {
+        if kind == .rectangle { return self }
+        let box = ArtifactRegionGeometry.boundingRect(of: points)
+        return ArtifactRegionDraft(
+            kind: .rectangle,
+            points: ArtifactRegionGeometry.rectanglePoints(
+                from: CGPoint(x: box.minX, y: box.minY),
+                to: CGPoint(x: box.maxX, y: box.maxY)
+            )
+        )
+    }
 }

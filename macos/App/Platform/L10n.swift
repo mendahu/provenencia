@@ -122,22 +122,22 @@ enum L10n {
         static let formDialogDiscardTitle = LocalizedStringResource(
             "designSystem.formDialog.discardTitle",
             defaultValue: "Discard changes?",
-            comment: "Title when an outside click would close a form sheet that has edits"
+            comment: "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardMessage = LocalizedStringResource(
             "designSystem.formDialog.discardMessage",
             defaultValue: "Your changes will be lost.",
-            comment: "Body when an outside click would close a form sheet that has edits"
+            comment: "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardConfirm = LocalizedStringResource(
             "designSystem.formDialog.discardConfirm",
             defaultValue: "Discard",
-            comment: "Confirms discarding a form sheet's edits after an outside click"
+            comment: "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)"
         )
         static let formDialogDiscardKeep = LocalizedStringResource(
             "designSystem.formDialog.discardKeep",
             defaultValue: "Keep editing",
-            comment: "Returns to the form sheet after an outside click"
+            comment: "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)"
         )
 
         static let toastDismiss = LocalizedStringResource(
@@ -145,6 +145,21 @@ enum L10n {
             defaultValue: "Dismiss",
             comment: "Accessibility label for a PVToast's dismiss button"
         )
+
+        static func spokenJoin(_ first: String, _ second: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "designSystem.spokenJoin",
+                defaultValue: "%1$@, %2$@",
+                comment: "VoiceOver join of two spoken parts (a label and its detail, a title and its message)"
+            ), first, second)
+        }
+
+        /// The parts spoken as one line, joined two at a time through the
+        /// catalog; nil when there are none.
+        static func spokenJoin(_ parts: [String]) -> String? {
+            guard let first = parts.first else { return nil }
+            return parts.dropFirst().reduce(first) { spokenJoin($0, $1) }
+        }
 
         static let reorderHandle = LocalizedStringResource(
             "designSystem.reorder.handle",
@@ -1352,8 +1367,6 @@ enum L10n {
             L10n.format(LocalizedStringResource("promote.reason.neighborReleased", defaultValue: "after %@ was unmatched", comment: "Why a row moved: a neighbor lost its match; argument is the neighbor name. Follows \"Updated · \""), neighbor)
         }
         static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
-        /// Which wording a value's type picks for a line sentence.
-        private enum ValueFamily { case name, date, likeness, other }
         /// The state text of a connection subrow: "Promotes on Done", or "Waits for <end>". nil for a
         /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
         /// name; empty reads "its other end".
@@ -1427,8 +1440,8 @@ enum L10n {
         static let done = LocalizedStringResource("promote.done.action", defaultValue: "Done", comment: "Promotes the rows on the Promote page")
         static let cancel = LocalizedStringResource("promote.cancel", defaultValue: "Cancel", comment: "Leaves the Promote page")
         static let staleTitle = LocalizedStringResource("promote.stale.title", defaultValue: "Nothing was promoted — the catalog changed while this page was open", comment: "Callout title when Done loses the revision race")
-        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Source's Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without the Source's graph; the page would otherwise look empty")
-        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Source's Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Source's graph")
+        static let graphUnavailable = LocalizedStringResource("promote.error.graphUnavailable", defaultValue: "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again.", comment: "Callout when the Promote page opens without its Evidence graph; the page would otherwise look empty")
+        static let graphUnavailableRepropose = LocalizedStringResource("promote.error.graphUnavailableRepropose", defaultValue: "Provenencia couldn't read this Evidence graph to propose the rows again. Your rows and decisions are kept.", comment: "Callout when proposing again after a decision can't read the Evidence graph")
         static let stale = LocalizedStringResource("promote.stale.notice", defaultValue: "Provenencia proposed the rows again. Rows you decided are kept. Review the updated rows and press Done.", comment: "Callout body when Done loses the revision race")
         static func promotedTitle(promoted: Int, connections: Int) -> String {
             L10n.format(LocalizedStringResource("promote.toast.promotedTitle", defaultValue: "Promoted %1$lld subjects and %2$lld connections", comment: "Toast title after Done; 1 = subjects promoted, 2 = connections promoted"), promoted, connections)
@@ -1452,7 +1465,7 @@ enum L10n {
         static func singleSummary(more: Int) -> String {
             L10n.format(LocalizedStringResource("promote.page.singleSummary", defaultValue: "1 row · %lld more on this graph", comment: "Header before the rest of the graph is mapped; argument is how many other subjects"), more)
         }
-        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Source", comment: "Beside the control that maps the rest of the graph")
+        static let mapRestHint = LocalizedStringResource("promote.page.mapRestHint", defaultValue: "Adds a row for every other person, event and place on this Evidence graph", comment: "Beside the control that maps the rest of the graph")
         static let columnSource = LocalizedStringResource("promote.page.column.source", defaultValue: "On this Source", comment: "Promote row column: the subject on this Source")
         static let columnTarget = LocalizedStringResource("promote.page.column.target", defaultValue: "Promotes to", comment: "Promote row column: the handle the subject will promote to")
         static func sectionCount(_ count: Int) -> String {
@@ -1723,8 +1736,8 @@ enum L10n {
 
         static let addPropertyUnavailable = LocalizedStringResource(
             "evidenceGraph.subject.addPropertyUnavailable",
-            defaultValue: "Add property, unavailable — this Source has no Artifacts",
-            comment: "VoiceOver when Add property is disabled because the Source has no Artifact"
+            defaultValue: "Add property, unavailable — this evidence graph has no artifacts",
+            comment: "VoiceOver when Add property is disabled because the graph has no Artifact"
         )
 
         // MARK: Promote + membership footer (S9-D8 / S9-04)
@@ -1826,6 +1839,14 @@ enum L10n {
                 )
             }
             return L10n.format(resource, ref)
+        }
+
+        static func canvasAccessibility(graph: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "evidenceGraph.canvas.accessibilityLabel",
+                defaultValue: "Evidence graph, %@",
+                comment: "VoiceOver label of the Evidence graph canvas; argument is the graph's name"
+            ), graph)
         }
 
         static let promoteAll = LocalizedStringResource(
@@ -2827,6 +2848,35 @@ enum L10n {
             defaultValue: "Surname",
             comment: "NameValue part type: surname"
         )
+        static let partTypeFormerSurname = LocalizedStringResource(
+            "nameValue.part.type.former_surname",
+            defaultValue: "Former surname",
+            comment: "NameValue part type: former_surname"
+        )
+        static let displayNick = LocalizedStringResource(
+            "nameValue.display.nick",
+            defaultValue: "“%@”",
+            comment: "A nickname inside a displayed name; the argument is the nickname. Keep exactly one %@"
+        )
+        static func a11yNick(_ nickname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.nick",
+                defaultValue: "%@, nickname",
+                comment: "VoiceOver: a nickname inside a spoken name; the argument is the nickname. Keep exactly one %@"
+            ), nickname)
+        }
+        static func a11yFormerSurname(_ surname: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "nameValue.a11y.former_surname",
+                defaultValue: "former surname %@",
+                comment: "VoiceOver: a former surname inside a spoken name; the argument is the surname. Keep exactly one %@"
+            ), surname)
+        }
+        static let displayFormerSurname = LocalizedStringResource(
+            "nameValue.display.former_surname",
+            defaultValue: "(%@)",
+            comment: "A former surname inside a displayed name; the argument is the surname. Keep exactly one %@"
+        )
         static let partTypeSuffix = LocalizedStringResource(
             "nameValue.part.type.suffix",
             defaultValue: "Suffix",
@@ -3134,6 +3184,14 @@ enum L10n {
             comment: "Region tool: click-to-place polygon vertices"
         )
 
+        static func freeformCapReached(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "artifactViewer.freeformCapReached",
+                defaultValue: "This freehand region holds its most points, %lld. Click the first point to close it.",
+                comment: "VoiceOver announcement when a freehand region has its most points; argument is that number"
+            ), count)
+        }
+
         static let findToggle = LocalizedStringResource(
             "artifactViewer.findToggle",
             defaultValue: "Find in PDF",
@@ -3329,7 +3387,7 @@ enum L10n {
 
         static let depictionNeedsPage = LocalizedStringResource(
             "citationComposer.depictionNeedsPage",
-            defaultValue: "Set this citation's page and save the citation to draw a region.",
+            defaultValue: "This citation has no page yet. Save the viewer's page to it to draw a region.",
             comment: "Warning when an existing PDF citation has no page, so a depiction cannot be drawn"
         )
 
@@ -3341,7 +3399,7 @@ enum L10n {
 
         static let depictionRegionHidden = LocalizedStringResource(
             "citationComposer.depictionRegionHidden",
-            defaultValue: "This region no longer matches the citation's page. Draw it again.",
+            defaultValue: "This region no longer matches the citation's page. Draw it again or use a region button below.",
             comment: "Warning when a saved depiction's region no longer matches its citation's page"
         )
 
@@ -3351,9 +3409,15 @@ enum L10n {
             comment: "Error when the app cannot cut the drawn region from the open file"
         )
 
+        static let depictionCaptionCutFailed = LocalizedStringResource(
+            "citationComposer.depictionCaptionCutFailed",
+            defaultValue: "The region could not be cut from the file. Check that the file is still in the project, then draw it again.",
+            comment: "Caption under the depiction preview when the drawn region could not be cut from the open file"
+        )
+
         static let depictionCaptionEmpty = LocalizedStringResource(
             "citationComposer.depictionCaptionEmpty",
-            defaultValue: "Nothing drawn yet. Draw the region on the file",
+            defaultValue: "Nothing drawn yet. Draw on the file, or use a region button below",
             comment: "Caption beside the depiction preview when no region is drawn"
         )
 
@@ -3371,7 +3435,7 @@ enum L10n {
 
         static let depictionCaptionNeedsPage = LocalizedStringResource(
             "citationComposer.depictionCaptionNeedsPage",
-            defaultValue: "Draw is unavailable until the citation has a page",
+            defaultValue: "Draw and the region buttons wait until the citation has a page",
             comment: "Caption beside the depiction preview when the citation has no page"
         )
 
@@ -3380,6 +3444,26 @@ enum L10n {
             defaultValue: "Save waits for the region to be drawn again",
             comment: "Caption beside the depiction preview when the saved region is hidden"
         )
+
+        static let depictionCaptionCannotCut = LocalizedStringResource(
+            "citationComposer.depictionCaptionCannotCut",
+            defaultValue: "Draw is unavailable: the file is not showing in the viewer",
+            comment: "Caption beside the depiction preview when the viewer holds nothing the region can be cut from"
+        )
+
+        static let depictionPreviewSavedLabel = LocalizedStringResource(
+            "citationComposer.depictionPreviewSavedLabel",
+            defaultValue: "Saved image",
+            comment: "VoiceOver label of the depiction preview when it shows the image already saved"
+        )
+
+        static func depictionSavePage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.depictionSavePage",
+                defaultValue: "Save page %lld to this citation",
+                comment: "Button in the no-page warning that saves the viewer's page to the citation; argument is the viewer's page"
+            ), page)
+        }
 
         static func depictionWrongPage(_ page: Int) -> String {
             L10n.format(LocalizedStringResource(
@@ -3928,9 +4012,25 @@ enum L10n {
             ), width, height)
         }
 
+        static func citationLoadFailed(ref: String, reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailed",
+                defaultValue: "Couldn't open %1$@. %2$@",
+                comment: "Under the Citation picker when a Citation fails to load; 1 = the Citation's ref, 2 = the reason"
+            ), ref, reason)
+        }
+
+        static func citationLoadFailedUnnamed(reason: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "citationComposer.citationLoadFailedUnnamed",
+                defaultValue: "Couldn't open this citation. %@",
+                comment: "Under the Citation picker when a Citation fails to load and its ref is not known; argument is the reason"
+            ), reason)
+        }
+
         static let pairPickBoth = LocalizedStringResource(
             "citationComposer.pairPickBoth",
-            defaultValue: "Pick two subjects on this Source. The pair decides what the bridge can say",
+            defaultValue: "Pick two subjects on this Evidence graph. The pair decides what the bridge can say",
             comment: "Bridge draft before either end is chosen"
         )
 
@@ -4986,6 +5086,24 @@ enum L10n {
                 defaultValue: "Provenencia won't open “%@”. Its file type could run a program, or it isn't a type Provenencia stores.",
                 comment: "Error when Open refuses a stored file; argument is the file name"
             ), filename)
+        }
+
+        static func notOpened(filename: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "objectOpen.notOpened.message",
+                defaultValue: "macOS couldn't open “%@” in its app.",
+                comment: "Error when Open hands a stored file to its app and macOS fails to open it; argument is the file name"
+            ), filename)
+        }
+
+        /// The one mapping from a refusal to the sentence a surface shows.
+        /// `missing` is the surface's own sentence for a file that is not there.
+        static func message(for refusal: ProjectFiles.ObjectRefusal, filename: String, missing: String) -> String {
+            switch refusal {
+            case .unsafe: refused(filename: filename)
+            case .notOpened: notOpened(filename: filename)
+            case .missing: missing
+            }
         }
     }
 
@@ -7264,6 +7382,13 @@ enum L10n {
                 comment: "VoiceOver fragment for how many types a property is bound to"
             ), count)
         }
+        static func rowAccessibility(label: String, key: String, valueType: String, origin: String, bound: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "properties.table.rowAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@, %4$@, %5$@",
+                comment: "VoiceOver label of a Properties table row; 1 = label, 2 = key (tells Properties that share a label apart), 3 = value type, 4 = origin, 5 = how many types it is bound to"
+            ), label, key, valueType, origin, bound)
+        }
         static func emptySearchTitle(query: String) -> String {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
@@ -8075,241 +8200,106 @@ enum L10n {
     }
 
     enum DeleteImpact {
-        static func noun(_ kind: String, count: Int = 1) -> String {
-            let pair: (LocalizedStringResource, LocalizedStringResource)
-            switch kind {
-            case "source":
-                pair = (nounSource, nounSources)
-            case "artifact":
-                pair = (nounArtifact, nounArtifacts)
-            case "evidence_graph":
-                pair = (nounEvidenceGraph, nounEvidenceGraphs)
-            case "citation":
-                pair = (nounCitation, nounCitations)
-            case "observation":
-                pair = (nounObservation, nounObservations)
-            case "subject":
-                pair = (nounSubject, nounSubjects)
-            case "source_type":
-                pair = (nounSourceType, nounSourceTypes)
-            case "metadata_field":
-                pair = (nounMetadataField, nounMetadata)
-            case "source_credibility_grade":
-                pair = (nounCredibilityGrade, nounCredibilityGrades)
-            case "subject_type":
-                pair = (nounSubjectType, nounSubjectTypes)
-            case "property":
-                pair = (nounProperty, nounProperties)
-            case "property_term":
-                pair = (nounPropertyTerm, nounPropertyTerms)
-            case "canonical_entity":
-                pair = (nounCanonicalEntity, nounCanonicalEntities)
-            case "user":
-                pair = (nounUser, nounUsers)
-            case "project":
-                pair = (nounProject, nounProjects)
-            case "file":
-                pair = (nounFile, nounFiles)
-            case "narrative":
-                pair = (nounNarrative, nounNarratives)
-            case "reconciliation_claim":
-                pair = (nounReconciliationClaim, nounReconciliationClaims)
-            default:
-                pair = (nounItem, nounItems)
-            }
-            return L10n.string(count == 1 ? pair.0 : pair.1)
-        }
+        /// One plural catalog key per Go `catalogmodel.Kind`, holding the bare
+        /// noun for a count ("citation" / "citations"). `TestSwiftVocabularyMatchesGo`
+        /// keeps this table equal to Go's kinds; a kind with no entry reads "item".
+        static let kindNouns: [String: LocalizedStringResource] = [
+            "source": LocalizedStringResource(
+                "deleteImpact.kind.source",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "artifact": LocalizedStringResource(
+                "deleteImpact.kind.artifact",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "evidence_graph": LocalizedStringResource(
+                "deleteImpact.kind.evidence_graph",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "citation": LocalizedStringResource(
+                "deleteImpact.kind.citation",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "observation": LocalizedStringResource(
+                "deleteImpact.kind.observation",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject": LocalizedStringResource(
+                "deleteImpact.kind.subject",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_type": LocalizedStringResource(
+                "deleteImpact.kind.source_type",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "metadata_field": LocalizedStringResource(
+                "deleteImpact.kind.metadata_field",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "source_credibility_grade": LocalizedStringResource(
+                "deleteImpact.kind.source_credibility_grade",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "subject_type": LocalizedStringResource(
+                "deleteImpact.kind.subject_type",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property": LocalizedStringResource(
+                "deleteImpact.kind.property",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "property_term": LocalizedStringResource(
+                "deleteImpact.kind.property_term",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "canonical_entity": LocalizedStringResource(
+                "deleteImpact.kind.canonical_entity",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count for a Conclusion handle (PER-…, EVT-…, PLC-…)"
+            ),
+            "user": LocalizedStringResource(
+                "deleteImpact.kind.user",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "project": LocalizedStringResource(
+                "deleteImpact.kind.project",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count (infra)"
+            ),
+            "file": LocalizedStringResource(
+                "deleteImpact.kind.file",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+            "identity_claim": LocalizedStringResource(
+                "deleteImpact.kind.identity_claim",
+                defaultValue: "%#@noun@",
+                comment: "Impact kind noun, bare, by count"
+            ),
+        ]
 
-        static let nounSource = LocalizedStringResource(
-            "deleteImpact.kind.source.one",
-            defaultValue: "source",
-            comment: "Singular Impact kind noun"
+        private static let itemNoun = LocalizedStringResource(
+            "deleteImpact.kind.item",
+            defaultValue: "%#@noun@",
+            comment: "Impact kind noun, bare, by count; fallback for a kind with no noun"
         )
-        static let nounSources = LocalizedStringResource(
-            "deleteImpact.kind.source.other",
-            defaultValue: "sources",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounArtifact = LocalizedStringResource(
-            "deleteImpact.kind.artifact.one",
-            defaultValue: "artifact",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounArtifacts = LocalizedStringResource(
-            "deleteImpact.kind.artifact.other",
-            defaultValue: "artifacts",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounEvidenceGraph = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.one",
-            defaultValue: "evidence graph",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounEvidenceGraphs = LocalizedStringResource(
-            "deleteImpact.kind.evidence_graph.other",
-            defaultValue: "evidence graphs",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCitation = LocalizedStringResource(
-            "deleteImpact.kind.citation.one",
-            defaultValue: "citation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCitations = LocalizedStringResource(
-            "deleteImpact.kind.citation.other",
-            defaultValue: "citations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounObservation = LocalizedStringResource(
-            "deleteImpact.kind.observation.one",
-            defaultValue: "observation",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounObservations = LocalizedStringResource(
-            "deleteImpact.kind.observation.other",
-            defaultValue: "observations",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubject = LocalizedStringResource(
-            "deleteImpact.kind.subject.one",
-            defaultValue: "subject",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjects = LocalizedStringResource(
-            "deleteImpact.kind.subject.other",
-            defaultValue: "subjects",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSourceType = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.one",
-            defaultValue: "source type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSourceTypes = LocalizedStringResource(
-            "deleteImpact.kind.sourceType.other",
-            defaultValue: "source types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounMetadataField = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.one",
-            defaultValue: "metadata field",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounMetadata = LocalizedStringResource(
-            "deleteImpact.kind.metadataField.other",
-            defaultValue: "metadata fields",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCredibilityGrade = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.one",
-            defaultValue: "credibility grade",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounCredibilityGrades = LocalizedStringResource(
-            "deleteImpact.kind.credibilityGrade.other",
-            defaultValue: "credibility grades",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounSubjectType = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.one",
-            defaultValue: "subject type",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounSubjectTypes = LocalizedStringResource(
-            "deleteImpact.kind.subjectType.other",
-            defaultValue: "subject types",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounProperty = LocalizedStringResource(
-            "deleteImpact.kind.property.one",
-            defaultValue: "property",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounProperties = LocalizedStringResource(
-            "deleteImpact.kind.property.other",
-            defaultValue: "properties",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounPropertyTerm = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.one",
-            defaultValue: "property term",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounPropertyTerms = LocalizedStringResource(
-            "deleteImpact.kind.propertyTerm.other",
-            defaultValue: "property terms",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounCanonicalEntity = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.one",
-            defaultValue: "person, event, or place",
-            comment: "Singular Impact kind noun for a Conclusion handle (PER-…, EVT-…, PLC-…)"
-        )
-        static let nounCanonicalEntities = LocalizedStringResource(
-            "deleteImpact.kind.canonicalEntity.other",
-            defaultValue: "people, events, or places",
-            comment: "Plural Impact kind noun for Conclusion handles"
-        )
-        static let nounUser = LocalizedStringResource(
-            "deleteImpact.kind.user.one",
-            defaultValue: "user",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounUsers = LocalizedStringResource(
-            "deleteImpact.kind.user.other",
-            defaultValue: "users",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounProject = LocalizedStringResource(
-            "deleteImpact.kind.project.one",
-            defaultValue: "project",
-            comment: "Singular infra Impact kind noun"
-        )
-        static let nounProjects = LocalizedStringResource(
-            "deleteImpact.kind.project.other",
-            defaultValue: "projects",
-            comment: "Plural infra Impact kind noun"
-        )
-        static let nounFile = LocalizedStringResource(
-            "deleteImpact.kind.file.one",
-            defaultValue: "file",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounFiles = LocalizedStringResource(
-            "deleteImpact.kind.file.other",
-            defaultValue: "files",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounNarrative = LocalizedStringResource(
-            "deleteImpact.kind.narrative.one",
-            defaultValue: "narrative",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounNarratives = LocalizedStringResource(
-            "deleteImpact.kind.narrative.other",
-            defaultValue: "narratives",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounReconciliationClaim = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.one",
-            defaultValue: "reconciliation claim",
-            comment: "Singular Impact kind noun"
-        )
-        static let nounReconciliationClaims = LocalizedStringResource(
-            "deleteImpact.kind.reconciliation_claim.other",
-            defaultValue: "reconciliation claims",
-            comment: "Plural Impact kind noun"
-        )
-        static let nounItem = LocalizedStringResource(
-            "deleteImpact.kind.item.one",
-            defaultValue: "item",
-            comment: "Singular fallback Impact kind noun"
-        )
-        static let nounItems = LocalizedStringResource(
-            "deleteImpact.kind.item.other",
-            defaultValue: "items",
-            comment: "Plural fallback Impact kind noun"
-        )
+
+        static func noun(_ kind: String, count: Int = 1) -> String {
+            L10n.format(kindNouns[kind] ?? itemNoun, count)
+        }
 
         static func confirmTitle(noun: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
@@ -8328,6 +8318,15 @@ enum L10n {
             ), handleRefs)
         }
 
+        /// Allowed graph delete: the Citations it takes with it. Arguments: how many, citation refs (joined).
+        static func deletesCitations(count: Int, refs: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "deleteImpact.confirm.deletesCitations",
+                defaultValue: "The graph’s %1$lld citations are deleted with it: %2$@.",
+                comment: "Allowed graph delete confirm, appended after the consequence; arguments are how many Citations and the citation ref(s), e.g. CIT-7KD45"
+            ), count, refs)
+        }
+
         /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.
         static func alsoAffects(noun: String, refs: String) -> String {
             return L10n.format(LocalizedStringResource(
@@ -8335,15 +8334,6 @@ enum L10n {
                 defaultValue: "This also changes %1$@ %2$@.",
                 comment: "Allowed-delete confirm line for a non-blocking cascade without specific copy; arguments are kind noun and ref list"
             ), noun, refs)
-        }
-
-        /// Allowed Observation delete: the handle(s) whose claims pinned it. Arguments: handle refs (joined).
-        static func leavesEvidence(handleRefs: String) -> String {
-            return L10n.format(LocalizedStringResource(
-                "deleteImpact.confirm.leavesEvidence",
-                defaultValue: "It’s also removed from the evidence for %@. Those claims stay, with less evidence.",
-                comment: "Allowed Observation delete confirm, appended after the consequence; argument is the handle ref(s) whose Identity Claims pinned it"
-            ), handleRefs)
         }
 
         static let confirmMessage = LocalizedStringResource(
@@ -8413,19 +8403,12 @@ enum L10n {
             viaFormats[via] != nil
         }
 
-        static let viaUnknownOne = LocalizedStringResource(
-            "deleteImpact.via.unknown.one",
-            defaultValue: "%1$lld %2$@ references this",
-            comment: "Unknown-via group heading, singular; arguments are total and kind noun"
-        )
-        static let viaUnknownOther = LocalizedStringResource(
-            "deleteImpact.via.unknown.other",
-            defaultValue: "%1$lld %2$@ reference this",
-            comment: "Unknown-via group heading, plural; arguments are total and kind noun"
-        )
-
         static func viaFallback(kind: String, total: Int) -> String {
-            return L10n.format(total == 1 ? viaUnknownOne : viaUnknownOther, total, noun(kind, count: total))
+            L10n.format(LocalizedStringResource(
+                "deleteImpact.via.unknown",
+                defaultValue: "%1$lld %2$@ %#@verb@ this",
+                comment: "Unknown-via group heading; arguments are total and kind noun (plural noun); the verb agrees with the total"
+            ), total, noun(kind, count: total))
         }
 
         private static let viaFormats: [String: LocalizedStringResource] = [
@@ -8463,11 +8446,6 @@ enum L10n {
                 "deleteImpact.via.evidenceGraphsArtifactInUse",
                 defaultValue: "%lld citations in this graph use this artifact",
                 comment: "Heading over the Citations that keep an Artifact linked to a graph; argument is how many"
-            ),
-            "evidencegraphs.citations_need_graph": LocalizedStringResource(
-                "deleteImpact.via.evidenceGraphsCitationsNeedGraph",
-                defaultValue: "%lld citations would be left in no evidence graph",
-                comment: "Heading over the Citations an unlink or a graph delete would leave in no graph; argument is how many"
             ),
             "citations.artifact_id": LocalizedStringResource(
                 "deleteImpact.via.citationsArtifactId",
@@ -8789,12 +8767,6 @@ enum L10n {
             comment: "Why evidence is weak: the Citation's transcription is marked uncertain"
         )
 
-        static let weakLowConfidenceClaim = LocalizedStringResource(
-            "conclusions.weak.lowConfidenceClaim",
-            defaultValue: "low-confidence claim",
-            comment: "Why evidence is weak: the member's Identity Claim confidence is below moderate"
-        )
-
         static let readAsNone = LocalizedStringResource(
             "conclusions.readAs.none",
             defaultValue: "—",
@@ -8824,6 +8796,158 @@ enum L10n {
             defaultValue: "Why",
             comment: "Button on a Conclusion field that shows the records behind its value"
         )
+
+        static func provenanceOpen(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.open",
+                defaultValue: "Provenance of %@",
+                comment: "Tooltip and VoiceOver label of the control that opens the records behind a field's value; argument is the field label"
+            ), label)
+        }
+
+        static func provenanceRecordCount(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.recordCount",
+                defaultValue: "%lld records",
+                comment: "Provenance sheet summary: how many records sit behind the value; argument is the count"
+            ), count)
+        }
+
+        /// "4 records from 2 birth events", "… death events", "… Places".
+        static func provenanceRecordsFromOwners(records: Int, owners: Int, kind: CatalogDerivedRowKind) -> String {
+            let resource: LocalizedStringResource
+            switch kind {
+            case .birthDate:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromBirthEvents",
+                    defaultValue: "%1$lld records from %2$lld birth events",
+                    comment: "Provenance sheet summary of a birth date backed by several birth events; arguments are the record count and the event count"
+                )
+            case .deathDate:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromDeathEvents",
+                    defaultValue: "%1$lld records from %2$lld death events",
+                    comment: "Provenance sheet summary of a death date backed by several death events; arguments are the record count and the event count"
+                )
+            case .birthPlace, .deathPlace:
+                resource = LocalizedStringResource(
+                    "conclusions.provenance.recordsFromPlaces",
+                    defaultValue: "%1$lld records from %2$lld Places",
+                    comment: "Provenance sheet summary of a birth or death place backed by several Places; arguments are the record count and the Place count"
+                )
+            }
+            return L10n.format(resource, records, owners)
+        }
+
+        static func provenanceStateSingle(_ sources: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.stateSingle",
+                defaultValue: "from %@",
+                comment: "Provenance sheet summary state of a field with one value from one Source; argument is the Source count text"
+            ), sources)
+        }
+
+        static func provenanceSummaryJoin(_ first: String, _ second: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.summaryJoin",
+                defaultValue: "%1$@ · %2$@",
+                comment: "Joins two parts of the provenance sheet summary (state, disagreement, record count)"
+            ), first, second)
+        }
+
+        static let provenanceOtherRecords = LocalizedStringResource(
+            "conclusions.provenance.otherRecords",
+            defaultValue: "Other records",
+            comment: "Provenance sheet heading over the records that count under no displayed value"
+        )
+
+        static func provenanceOwnerShown(_ line: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.ownerShown",
+                defaultValue: "%@, shown value",
+                comment: "VoiceOver for the group line of the owner behind the shown value; argument is the spoken group line"
+            ), line)
+        }
+
+        static let provenanceOwnerShownMark = LocalizedStringResource(
+            "conclusions.provenance.ownerShownMark",
+            defaultValue: "· shown",
+            comment: "Visible mark after the group line of the owner behind the shown value"
+        )
+
+        static let provenanceColumnCitation = LocalizedStringResource(
+            "conclusions.provenance.column.citation",
+            defaultValue: "Citation",
+            comment: "Provenance sheet column heading: the record's citation line"
+        )
+
+        static let provenanceColumnRecord = LocalizedStringResource(
+            "conclusions.provenance.column.record",
+            defaultValue: "Record",
+            comment: "Provenance sheet column heading: the record's Observation and Subject refs"
+        )
+
+        static let provenanceSourceLink = LocalizedStringResource(
+            "conclusions.provenance.link.source",
+            defaultValue: "Source",
+            comment: "Provenance sheet link that opens the record's Source"
+        )
+
+        static func provenanceObservationLink(_ ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.link.observation",
+                defaultValue: "Observation %@",
+                comment: "Provenance sheet link that opens the record's Observation; argument is the Observation ref"
+            ), ref)
+        }
+
+        static func provenanceSourceLinkSpoken(_ title: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.provenance.link.sourceSpoken",
+                defaultValue: "Source %@",
+                comment: "VoiceOver label of the provenance sheet link that opens the record's Source; argument is the Source title"
+            ), title)
+        }
+
+        static let provenanceCopyCitation = LocalizedStringResource(
+            "conclusions.provenance.copyCitation",
+            defaultValue: "Copy citation",
+            comment: "Tooltip and VoiceOver label of the provenance sheet button that copies a record's citation line"
+        )
+
+        static let provenanceCitationCopied = LocalizedStringResource(
+            "conclusions.provenance.citationCopied",
+            defaultValue: "Citation copied",
+            comment: "VoiceOver announcement after the provenance sheet's copy citation button copies the citation line"
+        )
+
+        static let provenanceDone = LocalizedStringResource(
+            "conclusions.provenance.done",
+            defaultValue: "Done",
+            comment: "Button that closes the provenance sheet"
+        )
+
+        static let citationLineSeparator = LocalizedStringResource(
+            "conclusions.citationLine.separator",
+            defaultValue: ", ",
+            comment: "Joins the parts of a record's citation line (Source, Artifact, Citation, page)"
+        )
+
+        static func citationPagePrinted(_ label: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.citationLine.pagePrinted",
+                defaultValue: "p. %@",
+                comment: "Citation line: the page's printed label; argument is the label"
+            ), label)
+        }
+
+        static func citationPageImage(_ page: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.citationLine.pageImage",
+                defaultValue: "image %lld",
+                comment: "Citation line: the page of the digital image when the page has no printed label; argument is the page number"
+            ), page)
+        }
 
         static let openEvent = LocalizedStringResource(
             "conclusions.detail.openEvent",
@@ -9079,6 +9203,150 @@ enum L10n {
             comment: "Accessibility label of the empty portrait slot on a Person page"
         )
 
+        static let familyThisPerson = LocalizedStringResource(
+            "conclusions.family.thisPerson",
+            defaultValue: "This person",
+            comment: "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group"
+        )
+
+        static let familyThisPersonSpoken = LocalizedStringResource(
+            "conclusions.family.thisPersonSpoken",
+            defaultValue: "this person",
+            comment: "VoiceOver ending of the focus tile of the Family section, mid-sentence"
+        )
+
+        static let familyRoleParent = LocalizedStringResource(
+            "conclusions.family.role.parent",
+            defaultValue: "Parent",
+            comment: "VoiceOver role of a parent's tile in the Family section"
+        )
+
+        static let familyRoleSibling = LocalizedStringResource(
+            "conclusions.family.role.sibling",
+            defaultValue: "Sibling",
+            comment: "VoiceOver role of a sibling's tile in the Family section"
+        )
+
+        static let familyRolePartner = LocalizedStringResource(
+            "conclusions.family.role.partner",
+            defaultValue: "Partner",
+            comment: "VoiceOver role of a partner's tile in the Family section"
+        )
+
+        static let familyRoleChild = LocalizedStringResource(
+            "conclusions.family.role.child",
+            defaultValue: "Child",
+            comment: "VoiceOver role of a child's tile in the Family section"
+        )
+
+        static let familyCaptionParent = LocalizedStringResource(
+            "conclusions.family.caption.parent",
+            defaultValue: "Parent",
+            comment: "Caption over a single parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionParents = LocalizedStringResource(
+            "conclusions.family.caption.parents",
+            defaultValue: "Parents",
+            comment: "Caption over a pair of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParent = LocalizedStringResource(
+            "conclusions.family.caption.otherParent",
+            defaultValue: "Other parent",
+            comment: "Caption over a second set of one parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParents = LocalizedStringResource(
+            "conclusions.family.caption.otherParents",
+            defaultValue: "Other parents",
+            comment: "Caption over a second set of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionSiblings = LocalizedStringResource(
+            "conclusions.family.caption.siblings",
+            defaultValue: "Siblings",
+            comment: "Caption over siblings who have no recorded parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartner = LocalizedStringResource(
+            "conclusions.family.caption.partner",
+            defaultValue: "Partner",
+            comment: "Caption over one partner with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartners = LocalizedStringResource(
+            "conclusions.family.caption.partners",
+            defaultValue: "Partners",
+            comment: "Caption over several partners with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnerAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnerAndChildren",
+            defaultValue: "Partner and children",
+            comment: "Caption over one partner and the children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnersAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnersAndChildren",
+            defaultValue: "Partners and children",
+            comment: "Caption over several partners and their children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionChildren = LocalizedStringResource(
+            "conclusions.family.caption.children",
+            defaultValue: "Children",
+            comment: "Caption over children with no recorded partner in the Family section (drawn in capitals)"
+        )
+
+        static let familyGroupThisPersonAndSiblings = LocalizedStringResource(
+            "conclusions.family.group.thisPersonAndSiblings",
+            defaultValue: "This person and siblings",
+            comment: "VoiceOver label of the group holding the person and their siblings in the Family section"
+        )
+
+        static func familyGroupPartner(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partner",
+                defaultValue: "Partner %@",
+                comment: "VoiceOver label of a partner's group with no children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
+        static func familyGroupPartnerAndChildren(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partnerAndChildren",
+                defaultValue: "Partner %@ and children",
+                comment: "VoiceOver label of a partner's group with children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
+        static let familyEmptyTitle = LocalizedStringResource(
+            "conclusions.family.emptyTitle",
+            defaultValue: "No family yet",
+            comment: "Title of the empty Family section of a Person page"
+        )
+
+        static let familyEmptyMessage = LocalizedStringResource(
+            "conclusions.family.emptyMessage",
+            defaultValue: "Relatives appear here when people linked to this person in an Evidence graph are promoted.",
+            comment: "Message of the empty Family section of a Person page"
+        )
+
+        static let familyErrorTitle = LocalizedStringResource(
+            "conclusions.family.errorTitle",
+            defaultValue: "Family could not be read",
+            comment: "Title of the Callout shown when a Person's Family section could not be read"
+        )
+
+        static func familyShowMore(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.showMore",
+                defaultValue: "Show %lld more",
+                comment: "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden"
+            ), count)
+        }
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",
@@ -9136,6 +9404,110 @@ enum L10n {
             "conclusions.person.toastPortraitEarliestBody",
             defaultValue: "Using the earliest likeness as the portrait.",
             comment: "Toast body after clearing the portrait"
+        ))
+
+        static let picturesSection = LocalizedStringResource(
+            "conclusions.detail.pictures",
+            defaultValue: "Pictures",
+            comment: "Section heading over an Event's or Place's picture crops"
+        )
+
+        static let pictureOpenTip = LocalizedStringResource(
+            "conclusions.picture.open",
+            defaultValue: "Open citation",
+            comment: "Help text on a picture tile in an Event's or Place's gallery"
+        )
+
+        static func pictureTileLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.picture.tile",
+                defaultValue: "Picture from %@. Open citation",
+                comment: "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the Source title"
+            ), source)
+        }
+
+        static func pictureFrom(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.picture.from",
+                defaultValue: "Picture from %@",
+                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title"
+            ), source)
+        }
+
+        static let eventPictureThumb = LocalizedStringResource(
+            "conclusions.event.pictureThumb",
+            defaultValue: "Event picture",
+            comment: "Label of the Event page header thumb when it shows a picture"
+        )
+
+        static let placePictureThumb = LocalizedStringResource(
+            "conclusions.place.pictureThumb",
+            defaultValue: "Place picture",
+            comment: "Label of the Place page header thumb when it shows a picture"
+        )
+
+        static let thumbnailBadge = LocalizedStringResource(
+            "conclusions.thumbnail.badge",
+            defaultValue: "Thumbnail",
+            comment: "Badge on the gallery picture chosen as the Event's or Place's thumbnail"
+        )
+
+        static let useAsThumbnail = LocalizedStringResource(
+            "conclusions.thumbnail.useAs",
+            defaultValue: "Use as thumbnail",
+            comment: "Button under a gallery picture that makes it the Event's or Place's thumbnail"
+        )
+
+        static func useAsThumbnailLabel(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.thumbnail.useAsLabel",
+                defaultValue: "Use the picture from %@ as thumbnail",
+                comment: "Accessibility label of the button that makes a gallery picture the thumbnail; the argument is the Source title (or the Observation ref when the title is empty)"
+            ), source)
+        }
+
+        static let useEarliestPicture = LocalizedStringResource(
+            "conclusions.thumbnail.useEarliest",
+            defaultValue: "Use earliest picture",
+            comment: "Header thumb menu item and accessibility action that clears the Event's or Place's thumbnail choice"
+        )
+
+        static let eventThumbnailMenuTitle = LocalizedStringResource(
+            "conclusions.event.thumbnailMenuTitle",
+            defaultValue: "Event thumbnail",
+            comment: "Title of the Event page header thumb menu"
+        )
+
+        static let placeThumbnailMenuTitle = LocalizedStringResource(
+            "conclusions.place.thumbnailMenuTitle",
+            defaultValue: "Place thumbnail",
+            comment: "Title of the Place page header thumb menu"
+        )
+
+        static let thumbnailMenuHint = LocalizedStringResource(
+            "conclusions.thumbnail.menuHint",
+            defaultValue: "Right-click for thumbnail options",
+            comment: "Help and accessibility hint on the Event or Place page header thumb while a thumbnail is chosen"
+        )
+
+        static let toastThumbnailUpdatedTitle = L10n.string(LocalizedStringResource(
+            "conclusions.thumbnail.toastTitle",
+            defaultValue: "Thumbnail updated",
+            comment: "Toast title after choosing or clearing an Event's or Place's thumbnail"
+        ))
+
+        static func toastThumbnailChosenBody(_ source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.thumbnail.toastChosenBody",
+                defaultValue: "Using the picture from %@ as the thumbnail.",
+                comment: "Toast body after choosing a thumbnail; the argument is the tile's Source title"
+            ), source)
+        }
+
+        static let toastThumbnailEarliestBody = L10n.string(LocalizedStringResource(
+            "conclusions.thumbnail.toastEarliestBody",
+            defaultValue: "Using the earliest picture as the thumbnail.",
+            comment: "Toast body after clearing the thumbnail choice"
         ))
 
         static let eventNoImage = LocalizedStringResource(
@@ -9418,7 +9790,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "conclusions.outcome.weakBecause",
                 defaultValue: "weak · %@",
-                comment: "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription, low-confidence claim)"
+                comment: "Auto-reconciler outcome: weak evidence; argument lists why (low-trust Source, uncertain transcription)"
             ), causes)
         }
 
@@ -9443,6 +9815,14 @@ enum L10n {
                 "conclusions.why.title",
                 defaultValue: "Why “%@”",
                 comment: "Heading of the records behind a value; argument is the value"
+            ), value)
+        }
+
+        static func whyTitleName(_ value: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.why.title.name",
+                defaultValue: "Why %@",
+                comment: "Heading of the records behind a name value; the argument is the displayed name, which may carry its own quotes"
             ), value)
         }
 
@@ -9510,20 +9890,40 @@ enum L10n {
             ), label)
         }
 
-        static func a11yList(_ first: String, rest: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.a11y.list",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins two parts of a spoken Conclusion field (label, value, state, disagreement)"
-            ), first, rest)
-        }
-
         static func a11yLifeLine(_ word: String, date: String, place: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.a11y.vital",
                 defaultValue: "%1$@ %2$@, %3$@",
                 comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
             ), word, date, place)
+        }
+
+        static let a11yBornInline = LocalizedStringResource(
+            "conclusions.a11y.bornInline",
+            defaultValue: "born",
+            comment: "VoiceOver word before a person tile's birth date and place, mid-sentence"
+        )
+
+        static let a11yDiedInline = LocalizedStringResource(
+            "conclusions.a11y.diedInline",
+            defaultValue: "died",
+            comment: "VoiceOver word before a person tile's death date and place, mid-sentence"
+        )
+
+        static func a11yLifeLineKnown(_ word: String, part: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalKnown",
+                defaultValue: "%1$@ %2$@",
+                comment: "VoiceOver for a person tile line with one half known; arguments are born/died and the date or the place"
+            ), word, part)
+        }
+
+        static func a11yLifeLinePlaceOnly(_ word: String, place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalPlaceOnly",
+                defaultValue: "%1$@ in %2$@",
+                comment: "VoiceOver for a person tile line with only a place known; arguments are born/died and the place"
+            ), word, place)
         }
 
         static func sexAtBirthBadge(_ value: String) -> String {
@@ -9586,14 +9986,6 @@ enum L10n {
     /// Last-updated cell on a list row: the hover help and the spoken suffix.
     /// The day words and the stamp are `L10n.Timestamp`.
     enum LastUpdated {
-        static func a11yJoin(_ base: String, _ updated: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "lastUpdated.a11y.join",
-                defaultValue: "%1$@, %2$@",
-                comment: "Joins a list row's spoken label and its last-updated phrase"
-            ), base, updated)
-        }
-
         static func a11yUpdated(_ text: String) -> String {
             L10n.format(LocalizedStringResource(
                 "lastUpdated.a11y.updated",
@@ -10303,14 +10695,9 @@ enum L10n {
             defaultValue: "An evidence graph needs at least one artifact.",
             comment: "FFI error evidencegraphs.last_artifact"
         )
-        static let evidenceGraphsCitationsNeedGraph = LocalizedStringResource(
-            "error.evidencegraphs.citations_need_graph",
-            defaultValue: "An artifact with citations must stay in at least one evidence graph.",
-            comment: "FFI error evidencegraphs.citations_need_graph"
-        )
         static let evidenceGraphsInUse = LocalizedStringResource(
             "error.evidencegraphs.in_use",
-            defaultValue: "Subjects or citations still need this evidence graph.",
+            defaultValue: "Subjects still need this evidence graph.",
             comment: "FFI error evidencegraphs.in_use"
         )
         static let evidenceGraphsLastGraph = LocalizedStringResource(
@@ -10561,8 +10948,6 @@ enum L10n {
                 return L10n.string(evidenceGraphsArtifactInUse)
             case "evidencegraphs.last_artifact":
                 return L10n.string(evidenceGraphsLastArtifact)
-            case "evidencegraphs.citations_need_graph":
-                return L10n.string(evidenceGraphsCitationsNeedGraph)
             case "evidencegraphs.in_use":
                 return L10n.string(evidenceGraphsInUse)
             case "evidencegraphs.last_graph":

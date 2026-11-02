@@ -456,7 +456,7 @@ private struct ThrowingStore: GenealogyStore {
         path _: String
     ) async throws
         -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects) { throw StoreBoom.boom }
-    func listEvidenceGraphs(projectDir _: String) async throws -> [CatalogEvidenceGraph] { throw StoreBoom.boom }
+    func listEvidenceGraphs(projectDir _: String, sourceID _: String?) async throws -> [CatalogEvidenceGraph] { throw StoreBoom.boom }
     func createEvidenceGraph(
         projectDir _: String,
         userID _: String,
@@ -605,16 +605,26 @@ private struct ThrowingStore: GenealogyStore {
     func listEvidenceGraphEventTitles(projectDir _: String, graphID _: String) async throws -> [String: CatalogEventTitle] {
         throw StoreBoom.boom
     }
-    func listPersonHeaders(projectDir _: String) async throws -> [CatalogPersonHeader] {
+    func listPersonSummaries(projectDir _: String) async throws -> [CatalogPersonSummary] {
         throw StoreBoom.boom
     }
-    func listEventHeaders(projectDir _: String) async throws -> [CatalogEventHeader] {
+    func listEventSummaries(projectDir _: String) async throws -> [CatalogEventSummary] {
         throw StoreBoom.boom
     }
-    func listPlaceHeaders(projectDir _: String) async throws -> [CatalogPlaceHeader] {
+    func listPlaceSummaries(projectDir _: String) async throws -> [CatalogPlaceSummary] {
         throw StoreBoom.boom
     }
     func getConclusionDetail(projectDir _: String, entityID _: String) async throws -> CatalogConclusionDetail {
+        throw StoreBoom.boom
+    }
+    func listPersonClaims(projectDir _: String, entityID _: String) async throws -> [CatalogPersonClaimGroup] {
+        throw StoreBoom.boom
+    }
+
+    func getPersonFamily(projectDir _: String, entityID _: String) async throws -> CatalogPersonFamily {
+        throw StoreBoom.boom
+    }
+    func listPersonEvents(projectDir _: String, entityID _: String) async throws -> [CatalogPersonEvent] {
         throw StoreBoom.boom
     }
     func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
@@ -708,6 +718,7 @@ private struct ThrowingStore: GenealogyStore {
     func createCitationWithObservations(
         projectDir _: String,
         userID _: String,
+        graphID _: String,
         artifactID _: String,
         locatorJSON _: String,
         transcription _: String,

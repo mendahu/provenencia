@@ -16,7 +16,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 		Reads:          readProtos(set.Reads),
 		Lists:          listStrings(set.Lists),
 		Structure:      set.Structure,
-		HeaderHandles:  idStrings(set.HeaderDeps),
+		SummaryHandles: idStrings(set.SummaryDeps),
 		HandleScopes:   idStrings(set.HandleScopes),
 		Revision:       res.Revision,
 		RevisionAt:     res.At,

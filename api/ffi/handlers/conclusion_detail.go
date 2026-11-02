@@ -5,7 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
@@ -31,7 +31,7 @@ func GetConclusionDetail(in []byte) ([]byte, error) {
 			return err
 		}
 		out = conclusionDetailProto(d)
-		lead, err := attachHeader(c, d, out)
+		lead, err := attachSummary(c, d, out)
 		if err != nil {
 			return err
 		}
@@ -86,26 +86,57 @@ func SetPreferredLikeness(in []byte) ([]byte, error) {
 func conclusionDetailProto(d conclusiondetails.Detail) *engine.ConclusionDetail {
 	out := &engine.ConclusionDetail{Entity: canonicalEntityProto(d.Entity), MemberCount: int32(d.MemberCount)}
 	for _, f := range d.Fields {
-		pf := &engine.ConclusionField{
-			PropertyId:  database.UUIDString(f.PropertyID),
-			PropertyKey: f.PropertyKey,
-			Label:       f.Label,
-			ValueType:   f.ValueType,
-			State:       string(f.State),
+		out.Fields = append(out.Fields, conclusionFieldProto(f))
+	}
+	return out
+}
+
+func conclusionFieldProto(f conclusiondetails.Field) *engine.ConclusionField {
+	pf := &engine.ConclusionField{
+		PropertyId:  database.UUIDString(f.PropertyID),
+		PropertyKey: f.PropertyKey,
+		Label:       f.Label,
+		ValueType:   f.ValueType,
+		State:       string(f.State),
+	}
+	for _, v := range f.Values {
+		pf.Values = append(pf.Values, &engine.ReconciledValueDetail{
+			Rank:    int32(v.Rank),
+			Reason:  v.Reason,
+			Support: int32(v.Support),
+			Against: int32(v.Against),
+			Value:   conclusionValueProto(v.Value, nil),
+		})
+	}
+	for _, o := range f.Outcomes {
+		pf.Outcomes = append(pf.Outcomes, reconcilerOutcomeProto(o))
+	}
+	return pf
+}
+
+// derivedRowsProto maps a Person's life rows, each owner with its entity,
+// field and, for an Event, its summary.
+func derivedRowsProto(rows []conclusiondetails.DerivedRow) []*engine.DerivedRow {
+	kinds := map[conclusiondetails.DerivedRowKind]engine.DerivedRowKind{
+		conclusiondetails.DerivedRowBirthDate:  engine.DerivedRowKind_DERIVED_ROW_KIND_BIRTH_DATE,
+		conclusiondetails.DerivedRowBirthPlace: engine.DerivedRowKind_DERIVED_ROW_KIND_BIRTH_PLACE,
+		conclusiondetails.DerivedRowDeathDate:  engine.DerivedRowKind_DERIVED_ROW_KIND_DEATH_DATE,
+		conclusiondetails.DerivedRowDeathPlace: engine.DerivedRowKind_DERIVED_ROW_KIND_DEATH_PLACE,
+	}
+	var out []*engine.DerivedRow
+	for _, r := range rows {
+		pr := &engine.DerivedRow{Kind: kinds[r.Kind]}
+		for _, o := range r.Owners {
+			po := &engine.ConclusionOwnerField{Entity: canonicalEntityProto(o.Entity), Field: conclusionFieldProto(o.Field)}
+			if o.Event != nil {
+				po.Event = eventSummaryProto(*o.Event, nil)
+			}
+			if o.Place != nil {
+				po.Place = chainedPlaceProto(*o.Place)
+			}
+			pr.Owners = append(pr.Owners, po)
 		}
-		for _, v := range f.Values {
-			pf.Values = append(pf.Values, &engine.ReconciledValueDetail{
-				Rank:    int32(v.Rank),
-				Reason:  v.Reason,
-				Support: int32(v.Support),
-				Against: int32(v.Against),
-				Value:   conclusionValueProto(v.Value, nil),
-			})
-		}
-		for _, o := range f.Outcomes {
-			pf.Outcomes = append(pf.Outcomes, reconcilerOutcomeProto(o))
-		}
-		out.Fields = append(out.Fields, pf)
+		out = append(out, pr)
 	}
 	return out
 }
@@ -128,9 +159,12 @@ func reconcilerOutcomeProto(o conclusiondetails.Outcome) *engine.ReconcilerOutco
 		SourceTitle:            o.SourceTitle,
 		CredibilityKey:         o.CredibilityKey,
 		TranscriptionUncertain: o.Provenance.Uncertain,
-		ClaimConfidenceKey:     o.ClaimConfidenceKey,
 		CredibilityOffset:      int32(o.Provenance.Credibility),
-		ClaimConfidenceOffset:  int32(o.Provenance.ClaimConfidence),
+		ArtifactLabel:          o.ArtifactLabel,
+		CitationLabel:          o.CitationLabel,
+		ArtifactPage:           int32(o.ArtifactPage),
+		PageLabel:              o.PageLabel,
+		GroupRank:              int32(o.GroupRank),
 	}
 	if len(o.DeniedBy) > 0 {
 		po.DeniedByObservationId = database.UUIDString(o.DeniedBy)
@@ -163,9 +197,9 @@ func conclusionValueProto(v conclusiondetails.Value, depiction *engine.Depiction
 	return &engine.ConclusionValue{}
 }
 
-// attachHeader reads the handle's header for its kind beside the detail. It
-// returns the header's picture lead File id (nil when none).
-func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) ([]byte, error) {
+// attachSummary reads the handle's summary for its kind beside the detail. It
+// returns the summary's picture lead File id (nil when none).
+func attachSummary(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) ([]byte, error) {
 	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
 	if err != nil {
 		return nil, err
@@ -176,35 +210,40 @@ func attachHeader(c *database.Catalog, d conclusiondetails.Detail, out *engine.C
 	ids := [][]byte{d.Entity.ID}
 	switch st.Key {
 	case vocabkey.Person:
-		h, err := conclusionheaders.PersonsByIDs(c, ids)
+		h, err := conclusionsummaries.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return nil, err
 		}
-		out.Header = &engine.ConclusionDetail_Person{Person: personHeaderProto(h[0])}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Person{Person: personSummaryProto(h[0], nil)}}
+		rows, err := conclusiondetails.PersonDerivedRows(c, d.Entity.ID)
+		if err != nil {
+			return nil, err
+		}
+		out.DerivedRows = derivedRowsProto(rows)
 		return h[0].PictureImageFileID, nil
 	case vocabkey.Event:
-		h, err := conclusionheaders.EventsByIDs(c, ids)
+		h, err := conclusionsummaries.EventsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return nil, err
 		}
-		out.Header = &engine.ConclusionDetail_Event{Event: eventHeaderProto(h[0])}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Event{Event: eventSummaryProto(h[0], nil)}}
 		return h[0].PictureImageFileID, nil
 	case vocabkey.Place:
-		h, err := conclusionheaders.PlacesByIDs(c, ids)
+		h, err := conclusionsummaries.PlacesByIDs(c, ids)
 		if err != nil || len(h) != 1 {
 			return nil, err
 		}
-		if err := conclusionheaders.AttachPlaceRelationships(c, &h[0]); err != nil {
+		if err := conclusionsummaries.AttachPlaceRelationships(c, &h[0]); err != nil {
 			return nil, err
 		}
-		out.Header = &engine.ConclusionDetail_Place{Place: placeHeaderProto(h[0])}
+		out.Summary = &engine.ConclusionSummary{Kind: &engine.ConclusionSummary_Place{Place: placeSummaryProto(h[0], nil)}}
 		return h[0].PictureImageFileID, nil
 	}
 	return nil, nil
 }
 
 // attachPictures lists the detail's pictures with their image paths, and sets
-// the header's lead path, in one RelPaths call. A picture whose path cannot
+// the summary's lead path, in one RelPaths call. A picture whose path cannot
 // be derived is still listed, with an empty path.
 func attachPictures(c *database.Catalog, d conclusiondetails.Detail, lead []byte, out *engine.ConclusionDetail) error {
 	var imageIDs [][]byte
@@ -219,13 +258,13 @@ func attachPictures(c *database.Catalog, d conclusiondetails.Detail, lead []byte
 		return err
 	}
 	path := paths[string(lead)]
-	if person := out.GetPerson(); person != nil {
+	if person := out.GetSummary().GetPerson(); person != nil {
 		person.PictureImageRelPath = path
 	}
-	if event := out.GetEvent(); event != nil {
+	if event := out.GetSummary().GetEvent(); event != nil {
 		event.PictureImageRelPath = path
 	}
-	if place := out.GetPlace(); place != nil {
+	if place := out.GetSummary().GetPlace(); place != nil {
 		place.PictureImageRelPath = path
 	}
 	for _, l := range d.Pictures {

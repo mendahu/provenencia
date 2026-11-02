@@ -310,7 +310,7 @@ the rule; do not restate it.
 - A Source-keyed field kept beside its graph-keyed replacement (S12-10's citation effects, S12-14's progress Source id) against the spike's "replace, not beside" rule — Q14.
 - One more entry in hand-kept parallel lists (eight for a cache key, four switches for a search kind): the registry is due before the next entry — Q2.
 - An audited write that returns no effects, with a hand-written mutation in Swift beside the effects path — Q14.
-- A preflight and its write that each derive the same rule, or a second "stage, then write" beside `ingest.StagedImage` — Q14.
+- A preflight and its write that each derive the same rule, or a second "stage, then write" beside `ingest.Staged` (`withStaged` in `api/ffi/handlers/catalog.go`) — Q14.
 - A step that moves an interface into a package that already imports the caller's package (`core/database` imports `effects`) — Q3; check the import graph.
 - A client decision keyed to engine values: client code that branches on how two engine-owned numbers relate (a threshold against a band), or re-derives whether the engine will accept an action, decides with values it cannot see. Have the engine send the decision or its result — Q3.
 - A string vocabulary that crosses the client boundary (a band, a part type, a state) parsed with a fallback and no parity test: a renamed value silently reads as the fallback. Every such set gets the guard the others have — Q4.

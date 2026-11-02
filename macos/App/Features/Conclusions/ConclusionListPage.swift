@@ -69,8 +69,6 @@ protocol ConclusionListKind {
 extension ConclusionListKind {
     static func extraCount(_: Row) -> Int { 0 }
 
-    static func thumbnailRelPath(_: Row) -> String { "" }
-
     static func titleSource(_ row: Row, orders: NameFormatOrders) -> ConclusionTitleSource {
         titleSource(row)
     }
@@ -161,7 +159,7 @@ private struct ConclusionListBody<Kind: ConclusionListKind>: View {
                 PVCallout(tone: .danger, message: message)
             case .rows(let rows, _):
                 PVList(
-                    // Go owns list order (conclusionheaders.sortByTitle); rows show as given.
+                    // Go owns list order (conclusionsummaries.SortByTitle); rows show as given.
                     items: rows,
                     thumbnail: {
                         CachedThumbnail(

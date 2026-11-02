@@ -1,6 +1,6 @@
 ---
 description: Matching layers and the match registry: comparers, knobs, relation and cause codes
-globs: core/valuecompare/**,core/propertycompare/**,core/subjectcompare/**,core/subjectprofile/**,core/segmentcompare/**,core/kinship/**,core/shortlist/**,core/graphalign/**,core/claimevidence/**,core/matchregistry/**,docs/matching-model.md
+globs: core/valuecompare/**,core/propertycompare/**,core/subjectcompare/**,core/subjectprofile/**,core/segmentcompare/**,core/kinship/**,core/shortlist/**,core/graphalign/**,core/matchregistry/**,docs/matching-model.md
 alwaysApply: false
 ---
 

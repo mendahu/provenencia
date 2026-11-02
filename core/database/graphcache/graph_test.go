@@ -1,6 +1,7 @@
 package graphcache_test
 
 import (
+	"bytes"
 	"database/sql"
 	"strings"
 	"testing"
@@ -131,6 +132,89 @@ func TestCommitReloadsASharedEndpointOnce(t *testing.T) {
 	// over the committed handles. A reload per association adds another chunk.
 	if n > 16 {
 		t.Fatalf("queries %d, want one reload of the shared endpoint", n)
+	}
+}
+
+func TestCommitOfAMergedHandle(t *testing.T) {
+	tests := []struct {
+		name                      string
+		mergedLoaded, eventLoaded bool
+	}{
+		{"both loaded", true, true},
+		{"only the event loaded", false, true},
+		{"neither loaded", false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := graphcachetest.OpenCatalog(t)
+			canon := graphcachetest.NewCanon(t, c)
+			p, q := canon.Person(), canon.Person()
+			e, joins := canon.Birth(p, nil, nil)
+			canon.Commit(joins...)
+			g := c.Graph()
+			g.Drop()
+			if tt.eventLoaded {
+				if _, err := g.Node(e); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tt.mergedLoaded {
+				if _, err := g.Node(p); err != nil {
+					t.Fatal(err)
+				}
+			}
+			canon.Merge(p, q)
+			canon.Commit(p, q)
+			if loaded(g, e) != tt.eventLoaded || loaded(g, p) != tt.mergedLoaded {
+				t.Fatalf("loaded: event %v, merged %v", loaded(g, e), loaded(g, p))
+			}
+			if tt.eventLoaded {
+				n, ok := g.Cached(e)
+				if !ok {
+					t.Fatal("the event is not cached")
+				}
+				for _, l := range n.Links {
+					if bytes.Equal(l.Neighbor, p) {
+						t.Fatal("the event still links to the merged Person")
+					}
+				}
+			}
+			if tt.mergedLoaded {
+				m, ok := g.Cached(p)
+				if !ok {
+					t.Fatal("the merged Person is not cached")
+				}
+				if !m.Merged {
+					t.Fatal("the merged Person is not marked merged")
+				}
+				if len(m.Links) != 1 || !bytes.Equal(m.Links[0].Neighbor, e) {
+					t.Fatalf("the merged Person's links %+v, want its one link to the event", m.Links)
+				}
+			}
+			if err := g.Verify(); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestCommitOfAMergedHandleNeitherLoadedQueries(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	p, q := canon.Person(), canon.Person()
+	_, joins := canon.Birth(p, nil, nil)
+	canon.Commit(joins...)
+	g := c.Graph()
+	g.Drop()
+	canon.Merge(p, q)
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	canon.Commit(p, q)
+	// Two queries: the entity-row read of the committed handles and one link
+	// query for the merged handle's neighbors. Nothing is loaded, so nothing
+	// reloads, and the scan reads no disambiguation.
+	if n != 2 {
+		t.Fatalf("queries %d, want 2", n)
 	}
 }
 
@@ -549,5 +633,55 @@ func TestWarmNeeded(t *testing.T) {
 	g.SetNameFormat(struct{}{})
 	if !g.WarmNeeded() {
 		t.Error("SetNameFormat did not set the flag")
+	}
+}
+
+func TestAcceptedMembers(t *testing.T) {
+	var nilNode *graphcache.Node
+	cases := []struct {
+		name    string
+		node    *graphcache.Node
+		want    []byte
+		wantLen int
+	}{
+		{"nil node", nilNode, nil, 0},
+		{"no members", &graphcache.Node{}, nil, 0},
+		{"only provisional", &graphcache.Node{Members: []graphcache.Member{{SubjectID: []byte{1}}}}, nil, 0},
+		{"mixed keeps order", &graphcache.Node{Members: []graphcache.Member{
+			{SubjectID: []byte{1}, Accepted: true},
+			{SubjectID: []byte{2}},
+			{SubjectID: []byte{3}, Accepted: true},
+		}}, []byte{1, 3}, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.node.AcceptedMembers()
+			if len(got) != tc.wantLen {
+				t.Fatalf("got %d accepted members, want %d", len(got), tc.wantLen)
+			}
+			for i, m := range got {
+				if m.SubjectID[0] != tc.want[i] || !m.Accepted {
+					t.Fatalf("member %d is %+v", i, m)
+				}
+			}
+		})
+	}
+}
+
+func TestNodeIs(t *testing.T) {
+	person, place := []byte{1}, []byte{2}
+	for _, tc := range []struct {
+		name string
+		n    *graphcache.Node
+		want bool
+	}{
+		{"a nil node", nil, false},
+		{"the type", &graphcache.Node{SubjectTypeID: person}, true},
+		{"another type", &graphcache.Node{SubjectTypeID: place}, false},
+		{"merged", &graphcache.Node{SubjectTypeID: person, Merged: true}, false},
+	} {
+		if got := tc.n.Is(person); got != tc.want {
+			t.Errorf("%s: Is = %v, want %v", tc.name, got, tc.want)
+		}
 	}
 }

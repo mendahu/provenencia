@@ -3,10 +3,8 @@ package derivatives
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"hash/crc32"
 	"image"
 	"image/png"
 	"os"
@@ -15,11 +13,15 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/raster"
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"github.com/mendahu/provenencia/core/ref"
 )
 
@@ -134,6 +136,49 @@ func TestEnsureThumbnailIdempotent(t *testing.T) {
 	}
 }
 
+func TestEnsureThumbnailOversizedJPEG(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	srcID := installSourceFile(t, c, rastertest.OversizedJPEG(t), "image/jpeg", "big.jpg")
+
+	first, err := EnsureThumbnail(c, srcID)
+	if err != nil || first.Skipped {
+		t.Fatalf("%+v %v", first, err)
+	}
+	derived, err := files.Lookup(c, first.Link.DerivedFileID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if derived.MediaType != "image/jpeg" {
+		t.Fatalf("derived media type = %q", derived.MediaType)
+	}
+	rel, err := files.StorageRelPath(derived.ChecksumSHA256, derived.MediaType)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(filepath.Join(c.Dir(), filepath.FromSlash(rel)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Width != 256 || cfg.Height != 255 {
+		t.Fatalf("thumb = %dx%d, want 256x255", cfg.Width, cfg.Height)
+	}
+	second, err := EnsureThumbnail(c, srcID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(second.Link.ID) != string(first.Link.ID) {
+		t.Fatal("second call made a new link")
+	}
+}
+
 func TestEnsureThumbnailSkipsNonImage(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -197,31 +242,6 @@ func TestEnsureThumbnailFromGeneratedPNG(t *testing.T) {
 	}
 }
 
-// bombPNG returns a PNG signature + valid IHDR declaring w×h pixels; enough
-// for DecodeConfig, tiny on disk — a header-declared decompression bomb.
-func bombPNG(t *testing.T, w, h uint32) []byte {
-	t.Helper()
-	var buf bytes.Buffer
-	buf.Write([]byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'})
-	data := make([]byte, 13)
-	binary.BigEndian.PutUint32(data[0:], w)
-	binary.BigEndian.PutUint32(data[4:], h)
-	data[8] = 8 // bit depth
-	data[9] = 6 // color type RGBA
-	var length [4]byte
-	binary.BigEndian.PutUint32(length[:], 13)
-	buf.Write(length[:])
-	buf.WriteString("IHDR")
-	buf.Write(data)
-	crc := crc32.NewIEEE()
-	crc.Write([]byte("IHDR"))
-	crc.Write(data)
-	var sum [4]byte
-	binary.BigEndian.PutUint32(sum[:], crc.Sum32())
-	buf.Write(sum[:])
-	return buf.Bytes()
-}
-
 // installFileRow inserts a files row without writing an object, so tests can
 // declare arbitrary ByteSize/checksum metadata.
 func installFileRow(t *testing.T, c *database.Catalog, checksum, mediaType string, byteSize int64) []byte {
@@ -265,15 +285,15 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "declared ByteSize over source cap",
 			srcID: func(t *testing.T) []byte {
-				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", maxSourceBytes+1)
+				return installFileRow(t, c, hex.EncodeToString(tinySum[:]), "image/png", raster.MaxDecodeBytes+1)
 			},
 			wantIs: ErrUnprocessable,
 		},
 		{
 			name: "object bytes do not match catalog checksum",
 			srcID: func(t *testing.T) []byte {
-				id := installSourceFile(t, c, bombPNG(t, 4, 4), "image/png", "swap.png")
-				sum := sha256.Sum256(bombPNG(t, 4, 4))
+				id := installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 4, 4), "image/png", "swap.png")
+				sum := sha256.Sum256(rastertest.HeaderOnlyPNG(t, 4, 4))
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
 				if err != nil {
 					t.Fatal(err)
@@ -289,7 +309,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "object is a symlink to an outside file with the same bytes",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 5, 5)
+				data := rastertest.HeaderOnlyPNG(t, 5, 5)
 				id := installSourceFile(t, c, data, "image/png", "link.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -314,7 +334,7 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 		{
 			name: "source's shard folder is a symlink",
 			srcID: func(t *testing.T) []byte {
-				data := bombPNG(t, 6, 6)
+				data := rastertest.HeaderOnlyPNG(t, 6, 6)
 				id := installSourceFile(t, c, data, "image/png", "shard.png")
 				sum := sha256.Sum256(data)
 				rel, err := files.StorageRelPath(hex.EncodeToString(sum[:]), "image/png")
@@ -342,9 +362,17 @@ func TestEnsureThumbnailRejectsUnsafeSources(t *testing.T) {
 			wantIs: ErrUnprocessable,
 		},
 		{
+			name: "truncated jpeg",
+			srcID: func(t *testing.T) []byte {
+				b := rastertest.GoFixture(t, "video-001.jpeg")
+				return installSourceFile(t, c, b[:len(b)/2], "image/jpeg", "half.jpg")
+			},
+			wantIs: ErrUnprocessable,
+		},
+		{
 			name: "pixel bomb png over decode budget",
 			srcID: func(t *testing.T) []byte {
-				return installSourceFile(t, c, bombPNG(t, 100000, 100000), "image/png", "bomb.png")
+				return installSourceFile(t, c, rastertest.HeaderOnlyPNG(t, 100000, 100000), "image/png", "bomb.png")
 			},
 			wantIs: ErrUnprocessable,
 		},
@@ -527,4 +555,233 @@ func newID(t *testing.T) []byte {
 		t.Fatal(err)
 	}
 	return id[:]
+}
+
+// sessionProject makes a project and closes it, so the test works through
+// catalogsession.Do and can hold it with catalogsessiontest.Hold.
+func tinyPNG(t *testing.T) []byte {
+	t.Helper()
+	b, err := os.ReadFile("testdata/tiny.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+func TestPlanStageCommit(t *testing.T) {
+	t.Run("a File with no link is staged while the session is held, then committed", func(t *testing.T) {
+		dir := catalogsessiontest.Project(t)
+		var srcID []byte
+		var job *Job
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID = installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			res, j, err := Plan(c, srcID, ThumbnailSpec())
+			if err != nil || j == nil || res.Skipped || len(res.Link.ID) != 0 {
+				t.Fatalf("Plan = %+v, %v, %v", res, j, err)
+			}
+			job = j
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		release := catalogsessiontest.Hold(t, dir)
+		staged, err := job.Stage(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		release()
+
+		err = catalogsession.Do(dir, func(c *database.Catalog) error {
+			stages := ingest.Stages{staged}
+			defer stages.Settle(c)
+			res, err := Commit(c, job)
+			if err != nil {
+				return err
+			}
+			if string(res.Link.SourceFileID) != string(srcID) || len(res.Link.DerivedFileID) != 16 {
+				t.Fatalf("link %+v", res.Link)
+			}
+			derived, err := files.Lookup(c, res.Link.DerivedFileID)
+			if err != nil || derived.MediaType != "image/jpeg" {
+				t.Fatalf("derived %+v, %v", derived, err)
+			}
+			rel, err := files.StorageRelPath(derived.ChecksumSHA256, derived.MediaType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(filepath.Join(c.Dir(), filepath.FromSlash(rel))); err != nil {
+				t.Fatal(err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a File with a link plans no job, and a PDF is skipped", func(t *testing.T) {
+		dir := catalogsessiontest.Project(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			made, err := EnsureThumbnail(c, srcID)
+			if err != nil {
+				return err
+			}
+			res, job, err := Plan(c, srcID, ThumbnailSpec())
+			if err != nil || job != nil || string(res.Link.ID) != string(made.Link.ID) {
+				t.Fatalf("Plan = %+v, %v, %v", res, job, err)
+			}
+			pdfID := installSourceFile(t, c, []byte("%PDF-1.4"), "application/pdf", "doc.pdf")
+			res, job, err = Plan(c, pdfID, ThumbnailSpec())
+			if err != nil || job != nil || !res.Skipped {
+				t.Fatalf("Plan(pdf) = %+v, %v, %v", res, job, err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestCommitAfterChange(t *testing.T) {
+	// plan makes a project with one PNG File, plans it, and stages the job.
+	plan := func(t *testing.T) (dir string, srcID []byte, job *Job, staged *ingest.Staged) {
+		t.Helper()
+		dir = catalogsessiontest.Project(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			srcID = installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+			_, j, err := Plan(c, srcID, ThumbnailSpec())
+			job = j
+			return err
+		})
+		if err != nil || job == nil {
+			t.Fatalf("plan: %v, %v", job, err)
+		}
+		staged, err = job.Stage(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(staged.Discard)
+		return dir, srcID, job, staged
+	}
+
+	t.Run("a commit adds no audit revision", func(t *testing.T) {
+		dir, _, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			defer ingest.Stages{staged}.Settle(c)
+			before := auditTotal(t, c)
+			if _, err := Commit(c, job); err != nil {
+				return err
+			}
+			if after := auditTotal(t, c); after != before {
+				t.Fatalf("audit revisions %d, was %d", after, before)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a link made meanwhile is returned and nothing unreferenced is left", func(t *testing.T) {
+		dir, srcID, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			made, err := EnsureThumbnail(c, srcID)
+			if err != nil {
+				return err
+			}
+			stages := ingest.Stages{staged}
+			res, err := Commit(c, job)
+			if err != nil {
+				return err
+			}
+			stages.Settle(c)
+			if string(res.Link.ID) != string(made.Link.ID) {
+				t.Fatalf("Commit link %x, want %x", res.Link.ID, made.Link.ID)
+			}
+			var objects, temps int
+			err = filepath.WalkDir(filepath.Join(c.Dir(), "objects"), func(p string, d os.DirEntry, err error) error {
+				if err != nil || d.IsDir() {
+					return err
+				}
+				if strings.HasPrefix(d.Name(), ".") {
+					temps++
+				} else {
+					objects++
+				}
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			// The source object and the one thumbnail; no temp.
+			if objects != 2 || temps != 0 {
+				t.Fatalf("objects = %d, temps = %d", objects, temps)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("a source File deleted meanwhile is invalid and leaves no link", func(t *testing.T) {
+		dir, srcID, job, staged := plan(t)
+		err := catalogsession.Do(dir, func(c *database.Catalog) error {
+			defer ingest.Stages{staged}.Settle(c)
+			db, err := c.DB()
+			if err != nil {
+				return err
+			}
+			if _, err := db.Exec(`DELETE FROM files WHERE id = ?`, srcID); err != nil {
+				return err
+			}
+			if _, err := Commit(c, job); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("Commit err = %v, want ErrInvalid", err)
+			}
+			var n int
+			if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives`).Scan(&n); err != nil || n != 0 {
+				t.Fatalf("links = %d, %v", n, err)
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
+func TestStageAfterPurge(t *testing.T) {
+	dir := catalogsessiontest.Project(t)
+	var job *Job
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		srcID := installSourceFile(t, c, tinyPNG(t), "image/png", "tiny.png")
+		_, j, err := Plan(c, srcID, ThumbnailSpec())
+		job = j
+		return err
+	})
+	if err != nil || job == nil {
+		t.Fatalf("plan: %v, %v", job, err)
+	}
+	// What files.PurgeAfterCommit does after an Artifact delete.
+	err = filepath.WalkDir(filepath.Join(dir, "objects"), func(p string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		return os.Remove(p)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	staged, err := job.Stage(dir)
+	if err == nil {
+		staged.Discard()
+		t.Fatal("Stage succeeded with the source object gone")
+	}
+	if !Refused(err) {
+		t.Fatalf("Stage err = %v, want Refused", err)
+	}
 }

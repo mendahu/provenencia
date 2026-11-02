@@ -25,13 +25,13 @@ func TestVocabularyBindings(t *testing.T) {
 	if len(v.Bindings) == 0 {
 		t.Fatal("the seeded vocabulary carries no bindings")
 	}
-	got := v.BindingOrder()[vocabkey.Person]
+	got := v.TypeOrder(seededTypeID(t, c, "person"))
 	want := seededPersonOrder()
 	if !slices.Equal(got, want) {
-		t.Fatalf("BindingOrder()[person] = %v, want %v", got, want)
+		t.Fatalf("TypeOrder(person) = %v, want %v", got, want)
 	}
-	if ev := v.BindingOrder()[vocabkey.Event]; len(ev) < 3 || ev[0] != "event_type" {
-		t.Fatalf("BindingOrder()[event] = %v, want event_type first", ev)
+	if ev := v.TypeOrder(seededTypeID(t, c, "event")); len(ev) < 3 || ev[0] != "event_type" {
+		t.Fatalf("TypeOrder(event) = %v, want event_type first", ev)
 	}
 }
 
@@ -57,10 +57,10 @@ func TestVocabularyBindingsPluginTypeSeededKey(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := v.BindingOrder()[vocabkey.Person]
+	got := v.TypeOrder(seededTypeID(t, c, "person"))
 	want := seededPersonOrder()
 	if !slices.Equal(got, want) {
-		t.Fatalf("BindingOrder()[person] = %v, want only the provenencia person's %v", got, want)
+		t.Fatalf("TypeOrder(person) = %v, want only the provenencia person's %v", got, want)
 	}
 	if order := v.TypeOrder(typeID); !slices.Equal(order, []vocabkey.PropertyKey{"interests"}) {
 		t.Fatalf("TypeOrder(plugin person) = %v", order)
@@ -135,11 +135,21 @@ func TestVocabularyDropsOnBindingReorder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := v.BindingOrder()[vocabkey.Person]
+	got := v.TypeOrder(person.ID)
 	seeded := seededPersonOrder()
 	if len(got) != len(bs) || got[0] != seeded[len(seeded)-1] || got[len(got)-1] != seeded[0] {
 		t.Fatalf("order after reorder = %v", got)
 	}
+}
+
+// seededTypeID is the provenencia subject type's id for key.
+func seededTypeID(t *testing.T, c *database.Catalog, key string) []byte {
+	t.Helper()
+	st, err := subjecttypes.Lookup(c, key, vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return st.ID
 }
 
 // seededPersonOrder is the registry's person binding order, so a seeded

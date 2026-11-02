@@ -15,7 +15,6 @@ The Person page is a stub. This spike turns it into a fixed header over five sec
 | [**Deployment plan**](deployment-plan.md) | Goal, working rules, PR map, order, open questions |
 | [**Person detail**](person-detail.md) | Requirements, spike-wide rules, cross-spike dependencies, not this spike |
 | [**How a person's records connect**](evidence-graph-comparison.md) | The comparison between a person's Evidence graphs and the view of their links (slice 7) |
-| [**Source provenance date**](source-provenance-date.md) | The first-class Source date the Sources section shows (moved from ideas) |
 | [**Completed**](completed.md) | Finished steps |
 | [Design briefs](design/) | Claude Design, written just before the PR they gate |
 | PR plans (`prs/`) | One per PR, written just before the PR |

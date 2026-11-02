@@ -3,9 +3,12 @@ package handlers
 import (
 	"database/sql"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
@@ -169,6 +172,42 @@ func damageCatalog(t *testing.T, dir, query string, args ...any) {
 	if err := catalogsession.CloseAll(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// objectTemps lists the files at the top of dir/objects whose name starts with
+// prefix (".ingest-" or ".stage-"), with their sizes.
+func objectTemps(t *testing.T, dir, prefix string) map[string]int64 {
+	t.Helper()
+	entries, err := os.ReadDir(filepath.Join(dir, "objects"))
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	out := map[string]int64{}
+	for _, e := range entries {
+		if !strings.HasPrefix(e.Name(), prefix) {
+			continue
+		}
+		if info, err := e.Info(); err == nil {
+			out[e.Name()] = info.Size()
+		}
+	}
+	return out
+}
+
+// waitForTemp polls dir/objects every 10 ms, for up to 5 s, until a top-level
+// file named prefix* of at least minSize bytes exists.
+func waitForTemp(t *testing.T, dir, prefix string, minSize int64) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		for _, size := range objectTemps(t, dir, prefix) {
+			if size >= minSize {
+				return
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("no %s* temp of at least %d bytes in %s/objects: %v", prefix, minSize, dir, objectTemps(t, dir, prefix))
 }
 
 func assertWantEqual(t *testing.T, out []byte, want proto.Message) {

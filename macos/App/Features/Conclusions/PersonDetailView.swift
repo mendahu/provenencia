@@ -2,19 +2,11 @@ import SwiftUI
 
 /// The Person page (S9-16, board S9-D5). A configuration of
 /// `ConclusionDetailPage`: portrait, name, the b. / d. lines, and the sections under them. Life dates
-/// and places come from the Person header the detail carries.
+/// and places come from the Person summary the detail carries.
 struct PersonDetailView: View {
     let session: WorkspaceSession
     let entityId: String
-    @State private var portrait: ConclusionPortraitModel
-
-    init(session: WorkspaceSession, entityId: String, userID: String) {
-        self.session = session
-        self.entityId = entityId
-        _portrait = State(
-            initialValue: ConclusionPortraitModel(session: session, userID: userID, entityId: entityId)
-        )
-    }
+    let userID: String
 
     var body: some View {
         ConclusionDetailPage(
@@ -22,18 +14,18 @@ struct PersonDetailView: View {
             entityId: entityId,
             pageIdentifier: "persons.detail",
             errorIdentifier: "persons.detail.error",
+            userID: userID,
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
-            summary: { PersonDetailLifeLines(lines: $0.lifeLines) },
-            portrait: portrait,
-            pageSections: { PersonDetailSections(content: $0, context: $1) }
+            secondary: { PersonDetailLifeLines(lines: $0.lifeLines) },
+            pageSections: { PersonDetailSections(entityId: entityId, content: $0, context: $1) }
         )
-        .vocabularyToastOverlay($portrait.toast, identifier: "persons.detail.toast")
     }
 }
 
 /// The Person page below its header: the open section (Vitals, Gallery, or a section that
 /// arrives later). The page owns which section is open and passes it in the context.
 private struct PersonDetailSections: View {
+    let entityId: String
     let content: PersonDetailContent
     let context: ConclusionDetailPageSectionsContext
 
@@ -48,20 +40,23 @@ private struct PersonDetailSections: View {
                 provenance: .sheet
             )
         case .gallery:
-            if content.likenesses.isEmpty {
+            if content.gallery.tiles.isEmpty {
                 PVEmptyState(
                     glyph: ConclusionPageSection.gallery.glyph,
                     title: L10n.Conclusions.galleryEmptyTitle,
                     message: L10n.string(L10n.Conclusions.galleryEmptyMessage)
                 )
             } else {
-                ConclusionDetailLikenessSection(
+                ConclusionDetailGallerySection(
                     projectDir: context.projectDir,
-                    likenesses: content.likenesses,
-                    portrait: context.portrait
+                    pageIdentifier: context.pageIdentifier,
+                    gallery: content.gallery,
+                    lead: context.lead
                 )
             }
-        case .family, .timeline, .sources:
+        case .family:
+            PersonFamilySection(entityId: entityId)
+        case .timeline, .sources:
             PVEmptyState(
                 glyph: section.glyph,
                 title: section.label,
@@ -73,7 +68,7 @@ private struct PersonDetailSections: View {
 
 /// The two life lines under a Person's name.
 private struct PersonDetailLifeLines: View {
-    let lines: [PersonDetailContent.LifeLine]
+    let lines: [PersonLifeDisplay.LifeLine]
     @Environment(\.conclusionDetailHeaderCompact) private var compact
 
     var body: some View {

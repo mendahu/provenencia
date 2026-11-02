@@ -1,10 +1,9 @@
 package graphcache
 
 import (
-	"os"
-
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 // OnCommit applies a committed write. Structure drops the store. A handle
@@ -14,6 +13,9 @@ import (
 // Finished rows for those handles, and for whatever reads them, are dropped
 // after the reload. Loaded last-activity maps move forward to the commit.
 // A read does not consult the audit log beyond the first Activity load.
+// A deleted handle's neighbors become roots; its writer commits the
+// associations it removed. A merged handle's loaded neighbors are reloaded by
+// the graph, so none keeps a link a fresh load would drop.
 func (g *Graph) OnCommit(c effects.Commit) error {
 	if g == nil {
 		return nil
@@ -43,7 +45,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		return err
 	}
 	var entities, assocs []entityRow
-	var reload [][]byte
+	var reload, merged [][]byte
 	roots := append([][]byte(nil), ids...)
 	for _, id := range ids {
 		row, ok := rows[string(id)]
@@ -72,6 +74,9 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 			continue
 		}
 		entities = append(entities, row)
+		if row.merged {
+			merged = append(merged, row.id)
+		}
 	}
 	for _, row := range entities {
 		if g.entityNeedsReload(row) {
@@ -86,6 +91,12 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		reload = append(reload, ends...)
 		roots = append(roots, touched...)
 	}
+	neighbors, touched, err := g.mergedNeighbors(merged)
+	if err != nil {
+		return err
+	}
+	reload = append(reload, neighbors...)
+	roots = append(roots, touched...)
 	if err := g.loadIDs(reload, true); err != nil {
 		return err
 	}
@@ -106,8 +117,8 @@ func (g *Graph) dropCommittedDisplays(roots [][]byte, set effects.Set) error {
 	if len(g.displays) == 0 {
 		return nil
 	}
-	if set.HeaderDepsWalked {
-		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.HeaderDeps...)))
+	if set.SummaryDepsWalked {
+		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.SummaryDeps...)))
 		return nil
 	}
 	return g.forgetDisplays(roots)
@@ -138,8 +149,31 @@ func (g *Graph) detachAssociation(id []byte) (reload, touched [][]byte, err erro
 	return append(reload, fresh...), append(old, fresh...), nil
 }
 
+// mergedNeighbors finds the unmerged nodes each merged handle's own links
+// name. reload is the ones already loaded, whose links to the handle a fresh
+// load would drop; touched is all of them, which a stored row may still name.
+func (g *Graph) mergedNeighbors(ids [][]byte) (reload, touched [][]byte, err error) {
+	if len(ids) == 0 {
+		return nil, nil, nil
+	}
+	err = sqlbatch.Each(ids, func(chunk [][]byte) error {
+		raws, err := g.linkRaws(chunk)
+		if err != nil {
+			return err
+		}
+		for _, r := range raws {
+			touched = append(touched, r.neighbor)
+			if _, ok := g.nodes[string(r.neighbor)]; ok {
+				reload = append(reload, r.neighbor)
+			}
+		}
+		return nil
+	})
+	return reload, touched, err
+}
+
 func (g *Graph) verifyIfSet() error {
-	if os.Getenv("PROVENENCIA_GRAPH_VERIFY") != "1" {
+	if !VerifyMode() {
 		return nil
 	}
 	return g.Verify()

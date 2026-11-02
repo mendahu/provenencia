@@ -90,15 +90,15 @@ struct EventTitleDisplayTests {
         )
     }
 
-    @Test func headerTypeFillsATitleThatOmittedIt() {
-        let header = CatalogEventHeader(
+    @Test func summaryTypeFillsATitleThatOmittedIt() {
+        let summary = CatalogEventSummary(
             entity: CatalogCanonicalEntity(id: "e", ref: "EVT-1", subjectTypeID: "t", label: ""),
             eventTypeKey: "birth",
             eventTypeOrigin: CatalogOrigin.provenencia,
             title: title(.subject, subjects: ["Jeremiah Arthur Gumtree"])
         )
         #expect(
-            EventTitleDisplay.title(header, locale: en)
+            EventTitleDisplay.title(summary, locale: en)
                 == L10n.EventTitle.ofOne(
                     type: L10n.string(L10n.PropertyTerm.eventTypeBirth),
                     subject: "Jeremiah Arthur Gumtree",

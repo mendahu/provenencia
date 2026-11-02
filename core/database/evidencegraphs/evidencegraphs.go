@@ -23,22 +23,11 @@ var (
 	ErrInvalid       = apperr.New(apperr.CodeEvidenceGraphsInvalid, apperr.KindUser)
 	ErrArtifactInUse = apperr.New(apperr.CodeEvidenceGraphsArtifactInUse, apperr.KindUser)
 	ErrLastArtifact  = apperr.New(apperr.CodeEvidenceGraphsLastArtifact, apperr.KindUser)
-	// ErrCitationsNeedGraph: an Artifact with Citations keeps at least one graph.
-	ErrCitationsNeedGraph = apperr.New(apperr.CodeEvidenceGraphsCitationsNeedGraph, apperr.KindUser)
-	// ErrInUse is returned by Delete while Subjects belong to the graph or while
-	// it is the only graph of an Artifact with Citations.
+	// ErrInUse is returned by Delete while Subjects belong to the graph.
 	ErrInUse = apperr.New(apperr.CodeEvidenceGraphsInUse, apperr.KindConflict)
 	// ErrLastGraph: a Source keeps at least one graph.
 	ErrLastGraph = apperr.New(apperr.CodeEvidenceGraphsLastGraph, apperr.KindUser)
 )
-
-// SQLObservationsInGraph is the one spelling of "an Observation on this
-// Citation in graph G": the Observations of Citation c on Subjects of one
-// graph. It binds one graph id, and the Citation table is aliased c. The
-// Unlink check here and the Citation reads in core/database/citations are
-// built from it.
-const SQLObservationsInGraph = `observations o JOIN subjects s ON s.id = o.subject_id
-	WHERE o.citation_id = c.id AND s.graph_id = ?`
 
 const (
 	sqlInsert = `INSERT INTO evidence_graphs (id, ref, source_id, name, description)
@@ -74,13 +63,10 @@ const (
 	// sqlArtifactGraphs reads one Artifact's links inside a write.
 	sqlArtifactGraphs = `SELECT graph_id FROM evidence_graph_artifacts
 		WHERE artifact_id = ? ORDER BY graph_id`
-	// sqlCitationsNeedGraph lists the Artifact's Citations that this graph alone
-	// holds, built from the one spelling the graph delete probe uses.
-	sqlCitationsNeedGraph = `SELECT c.id, c.ref FROM ` + deleteimpact.SQLCitationsOnlyInGraph +
-		` AND c.artifact_id = ? ORDER BY c.ref COLLATE NOCASE`
-	// The ref is selected for the order and dropped.
+	// A graph's Citations on an Artifact, with or without Observations. The ref
+	// is selected for the order and dropped.
 	sqlCitationsUsing = `SELECT c.id, c.ref FROM citations c
-		WHERE c.artifact_id = ? AND EXISTS (SELECT 1 FROM ` + SQLObservationsInGraph + `)
+		WHERE c.artifact_id = ? AND c.graph_id = ?
 		ORDER BY c.ref COLLATE NOCASE`
 	sqlMissingRef = `SELECT id FROM evidence_graphs WHERE ref IS NULL`
 	sqlSetRef     = `UPDATE evidence_graphs SET ref = ? WHERE id = ?`
@@ -224,8 +210,8 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Graph, []rowchange.
 	return g, changes, nil
 }
 
-// Delete deletes a graph that is not its Source's last, has no Subjects and is
-// not the only graph of an Artifact with Citations, releasing its links.
+// Delete deletes a graph that is not its Source's last and has no Subjects,
+// releasing its links and its Citations (audited, through deleteimpact).
 // Deleteimpact's report decides, so the delete preview and this write agree.
 func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(graphID) != 16 {
@@ -510,9 +496,9 @@ func IsLinkedTx(tx *sql.Tx, graphID, artifactID []byte) (bool, error) {
 	return true, nil
 }
 
-// CitationsUsingArtifactTx returns the Citations on the Artifact that have at
-// least one Observation on a Subject of the graph, with their refs, ordered by
-// ref. Only ID and Ref are set.
+// CitationsUsingArtifactTx returns the graph's Citations on the Artifact, with
+// or without Observations, with their refs, ordered by ref. Only ID and Ref are
+// set.
 func CitationsUsingArtifactTx(tx *sql.Tx, graphID, artifactID []byte) ([]deleteimpact.Listed, error) {
 	if tx == nil || len(graphID) != 16 || len(artifactID) != 16 {
 		return nil, ErrInvalid
@@ -555,7 +541,7 @@ const UnlinkVia = apperr.CodeEvidenceGraphsArtifactInUse
 // Citation reason, those Citations shaped for the DeleteImpact recipe.
 type UnlinkBlock struct {
 	GraphID, ArtifactID []byte
-	Reason              error // ErrArtifactInUse, ErrLastArtifact or ErrCitationsNeedGraph
+	Reason              error // ErrArtifactInUse or ErrLastArtifact
 	Citations           deleteimpact.Group
 }
 
@@ -609,11 +595,10 @@ func UnlinkImpact(c *database.Catalog, pairs []Pair) ([]UnlinkBlock, error) {
 
 // checkUnlink is the one unlink check behind Unlink and UnlinkImpact: nil when
 // the pair is not linked or may be unlinked. Otherwise the first reason, in
-// order: the graph's Citations use the Artifact (ErrArtifactInUse), it is the
-// graph's only link (ErrLastArtifact), or the Artifact's Citations that this
-// graph alone holds are not empty (ErrCitationsNeedGraph). The rows are the
-// Citations behind the first and third reason; they are listed only when list
-// is true, since Unlink needs just the reason and UnlinkImpact the rows.
+// order: the graph has a Citation on the Artifact (ErrArtifactInUse), or it is
+// the graph's only link (ErrLastArtifact). The rows are the Citations behind the
+// first reason; they are listed only when list is true, since Unlink needs just
+// the reason and UnlinkImpact the rows.
 func checkUnlink(tx *sql.Tx, p Pair, list bool) (*UnlinkBlock, []deleteimpact.Listed, error) {
 	linked, err := IsLinkedTx(tx, p.GraphID, p.ArtifactID)
 	if err != nil {
@@ -652,23 +637,6 @@ func checkUnlink(tx *sql.Tx, p Pair, list bool) (*UnlinkBlock, []deleteimpact.Li
 	}
 	if n == 1 {
 		return block(ErrLastArtifact), nil, nil
-	}
-	if !list {
-		needed, err := citationRowsExist(tx, sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
-		if err != nil {
-			return nil, nil, err
-		}
-		if needed {
-			return block(ErrCitationsNeedGraph), nil, nil
-		}
-		return nil, nil, nil
-	}
-	need, err := queryCitationRows(tx, sqlCitationsNeedGraph, p.GraphID, p.ArtifactID)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(need) > 0 {
-		return block(ErrCitationsNeedGraph), need, nil
 	}
 	return nil, nil, nil
 }
@@ -729,8 +697,7 @@ func Link(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Chan
 
 // Unlink removes an Artifact from a graph. A link that is not there returns no
 // changes. checkUnlink decides: the graph's Citations keep the Artifact linked
-// (ErrArtifactInUse), a graph keeps at least one Artifact (ErrLastArtifact),
-// and an Artifact with Citations keeps at least one graph (ErrCitationsNeedGraph).
+// (ErrArtifactInUse), and a graph keeps at least one Artifact (ErrLastArtifact).
 func Unlink(tx *database.Tx, userID, graphID, artifactID []byte) ([]rowchange.Change, error) {
 	if err := checkLink(tx, userID, graphID, artifactID); err != nil {
 		return nil, err

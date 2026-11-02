@@ -9,11 +9,11 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -122,15 +122,12 @@ func TestHandlePaths(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 	year := 1842
-	created, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-			ArtifactID: art.ID, LocatorJSON: locator,
-		}, []observations.Input{{
-			SubjectID: boston.ID, PropertyID: dateProp.ID,
-			Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
-		}})
-	})
+	created, _, err := observationstest.Cite(c, userID, graph, art.ID, locator, []observations.Input{{
+		SubjectID: boston.ID, PropertyID: dateProp.ID,
+		Date: &datevalue.Value{Kind: datevalue.KindPoint, StartYear: &year},
+	}}...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,23 +296,6 @@ func TestHandlePaths(t *testing.T) {
 		got := mustHandleScopes(t, tx, ch)
 		if !idSet(got, aliceRes.Entity.ID, bobRes.Entity.ID) {
 			t.Fatalf("subject move scoped %d handles", len(got))
-		}
-	})
-
-	t.Run("evidence pin reaches its handle", func(t *testing.T) {
-		pinID, err := uuid.NewV7()
-		if err != nil {
-			t.Fatal(err)
-		}
-		ch := rowchange.Change{
-			EntityType: "identity_claim_evidence", EntityID: pinID[:], Action: rowchange.ActionCreate,
-			Fields: map[string]rowchange.FieldDiff{
-				"identity_claim_id": {New: dashed(aliceRes.Claim.ID)},
-			},
-		}
-		got := mustHandleScopes(t, tx, ch)
-		if !idSet(got, aliceRes.Entity.ID) {
-			t.Fatalf("pin scoped %d handles", len(got))
 		}
 	})
 

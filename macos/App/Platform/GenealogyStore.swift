@@ -240,8 +240,8 @@ struct CatalogSearchHit: Sendable, Equatable, Identifiable {
     var iconKey: String = ""
     /// Accepted members, for `person` / `event` / `place` hits.
     var memberCount: Int = 0
-    /// The list header for a person, event, or place hit. Title stays match text.
-    var header: CatalogConclusionHeader? = nil
+    /// The list summary for a person, event, or place hit. Title stays match text.
+    var summary: CatalogConclusionSummary? = nil
 }
 
 struct CatalogSubjectType: Sendable, Equatable, Identifiable {
@@ -317,7 +317,7 @@ struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
 struct CatalogPromoteGraphAlignmentAlternative: Sendable, Equatable {
     var handleID: String
     var handleRef: String
-    var header: CatalogConclusionHeader?
+    var summary: CatalogConclusionSummary?
 }
 
 /// One Subject's proposal from `proposePromoteGraphAlignment` (S9-42).
@@ -327,10 +327,6 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var target: PromoteTargetCode
     var handleID: String
     var handleRef: String
-    /// strong, medium, weak, none. Read only by the draft rule (S13-24 moves it to Go).
-    var assessment: String
-    /// Read only by the draft rule.
-    var reason: PromoteReasonCode = .unplaced
     var alternatives: [CatalogPromoteGraphAlignmentAlternative]
     var conflictWithFixed: Bool
     var possibleDuplicate: Bool
@@ -339,9 +335,9 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     /// The neighbor row this one was reached from; empty when it was not.
     var viaNeighborSubjectID: String = ""
     /// A move reason when settling released an earlier pair of this row in this proposal; nil otherwise.
-    var moveReason: PromoteReasonCode? = nil
+    var moveReason: PromoteMoveReason? = nil
     var moveNeighborSubjectID: String = ""
-    var header: CatalogConclusionHeader?
+    var summary: CatalogConclusionSummary?
 
     var id: String { subjectID }
 }
@@ -407,8 +403,9 @@ struct CatalogNameValue: Sendable, Equatable {
 
 /// One Place reached from a birth, death, or event. `names` are kept toponyms
 /// in rank order. `parents` is the hierarchical chain at the walk's date.
-struct CatalogHeaderPlace: Sendable, Equatable {
-    /// The Place; its page owns the names' Why.
+struct CatalogChainedPlace: Sendable, Equatable {
+    /// The Place; a Person page's place rows carry the event–place link's
+    /// records in `CatalogConclusionDetail.derivedRows`.
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var parents: [String] = []
@@ -430,15 +427,24 @@ struct CatalogPlaceRelationship: Sendable, Equatable, Identifiable {
 
 /// A birth or a death composed from the canonical graph.
 struct CatalogLifeFacts: Sendable, Equatable {
-    /// The birth or death event read; `nil` when none is linked. Its page
-    /// owns the date's Why.
+    /// The birth or death event read; `nil` when none is linked. A Person page
+    /// reads its date's records from `CatalogConclusionDetail.derivedRows`.
     var event: CatalogCanonicalEntity?
     /// Surviving birth (or death) events; above 1 is a disagreement, and
     /// `event` is the earliest dated one.
     var eventCount: Int = 0
     var date: CatalogDateValueInput?
     var dateCount: Int = 0
-    var places: [CatalogHeaderPlace] = []
+    var places: [CatalogChainedPlace] = []
+}
+
+/// One term-valued Property of a summary: the rank-1 displayed term, how many
+/// values are displayed (above 1 is a disagreement), and the Property's label.
+struct CatalogTermFacts: Sendable, Equatable {
+    /// Always `.term` or nil; built by `GoStore.mapConclusionTerm`.
+    var term: CatalogConclusionValue?
+    var count = 0
+    var propertyLabel = ""
 }
 
 /// One subject-role person on an event.
@@ -449,9 +455,9 @@ struct CatalogEventSubject: Sendable, Equatable {
 }
 
 /// One Person as a row, composed by Go from the auto-reconciler cache (S9-07).
-/// Structures only; `PersonHeaderDisplay` formats the title. Birth and death
+/// Structures only; `PersonTitleDisplay` formats the title. Birth and death
 /// are read by `PersonLifeDisplay`.
-struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
+struct CatalogPersonSummary: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     /// Displayed auto-reconciled name; `nil` when no member names the Person.
     var name: CatalogNameValue?
@@ -459,10 +465,13 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
+    /// The displayed gender and sex at birth terms; `PersonGenderTreatment` chooses the colors.
+    var gender = CatalogTermFacts()
+    var sexAtBirth = CatalogTermFacts()
     /// The last revision that touched this Person and when; revision 0 when unknown.
     var updated = CatalogActivity()
     /// The `objects/…` path of the picture the Person leads with; "" when none.
-    /// Filled by the Person list and the detail reads only.
+    /// Filled by the Person list, the detail reads, and omnibar search hits.
     var pictureImageRelPath: String = ""
 
     var id: String { entity.id }
@@ -471,7 +480,7 @@ struct CatalogPersonHeader: Sendable, Equatable, Identifiable {
 /// One Event as a row, composed by Go from the auto-reconciler cache (S9-22).
 /// Structures only; `EventTitleDisplay` formats the title. A point `date`
 /// wins over `startDate` / `endDate`.
-struct CatalogEventHeader: Sendable, Equatable, Identifiable {
+struct CatalogEventSummary: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     var eventName: String = ""
     var eventNameCount: Int = 0
@@ -488,7 +497,7 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
     var endDateCount: Int = 0
     /// Subject-role persons, then every location's kept names.
     var subjects: [CatalogEventSubject] = []
-    var places: [CatalogHeaderPlace] = []
+    var places: [CatalogChainedPlace] = []
     /// The naming-matrix rule Go chose, and its parts.
     var title: CatalogEventTitle
     /// The last revision that touched this Event and when; revision 0 when unknown.
@@ -500,7 +509,7 @@ struct CatalogEventHeader: Sendable, Equatable, Identifiable {
 }
 
 /// An Event's title as Go chose it (Spike 9 R4): which row of the naming
-/// matrix applies, and the parts that row reads. Canonical headers and
+/// matrix applies, and the parts that row reads. Canonical summaries and
 /// Evidence graph cards both carry one, so they can't disagree.
 /// `EventTitleDisplay` fills the rule's L10n template; it does not choose.
 struct CatalogEventTitle: Sendable, Equatable {
@@ -532,7 +541,7 @@ struct CatalogEventTitle: Sendable, Equatable {
 /// `names` are the kept toponyms in rank order. Period and parents come from
 /// the Place chain composer; `kind` stays empty. `PlaceTitleDisplay` formats
 /// the title.
-struct CatalogPlaceHeader: Sendable, Equatable, Identifiable {
+struct CatalogPlaceSummary: Sendable, Equatable, Identifiable {
     var entity: CatalogCanonicalEntity
     var names: [String] = []
     var startDate: CatalogDateValueInput?
@@ -588,7 +597,7 @@ struct CatalogReconciledValue: Sendable, Equatable, Identifiable {
 
 /// What the auto-reconciler did with one Observation, with the record's own
 /// value and the evidence it weighed. Empty keys are the scale defaults
-/// (standard credibility, moderate confidence).
+/// (standard credibility).
 struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var observationID: String
     var observationRef: String
@@ -608,19 +617,25 @@ struct CatalogReconcilerOutcome: Sendable, Equatable, Identifiable {
     var sourceTitle: String
     var credibilityKey: String
     var transcriptionUncertain: Bool
-    var claimConfidenceKey: String
     /// Grade order relative to the default grade, as the auto-reconciler
     /// weighed it: below 0 is weak evidence.
     var credibilityOffset: Int = 0
-    var claimConfidenceOffset: Int = 0
     /// For "outvoted": the winning value's Sources of every Source that
     /// voted on that unit. 0 otherwise.
     var voteSupport: Int = 0
     var voteTotal: Int = 0
+    /// The citation line's parts: the Artifact and Citation labels ("" for
+    /// none) and the Citation locator's page (0, "" for none).
+    var artifactLabel: String = ""
+    var citationLabel: String = ""
+    var artifactPage: Int = 0
+    var pageLabel: String = ""
+    /// The displayed value the record counts under: its value rank for a kept
+    /// or folded record of a displayed value, else 0.
+    var groupRank: Int = 0
 
     var id: String { observationID }
     var isLowTrustSource: Bool { credibilityOffset < 0 }
-    var isLowConfidenceClaim: Bool { claimConfidenceOffset < 0 }
 }
 
 /// One Property of a handle's detail. Go computes `state`.
@@ -652,6 +667,116 @@ struct CatalogPicture: Sendable, Equatable, Identifiable {
     var id: String { record.observationID }
 }
 
+/// The accepted claims of one Person that come from one Source. The Source's
+/// type is its id; the app resolves the label from the source types list.
+struct CatalogPersonClaimGroup: Sendable, Equatable {
+    var sourceID: String
+    var sourceRef: String
+    var title: String
+    var sourceTypeID: String
+    var claims: [CatalogPersonClaim]
+}
+
+/// One accepted claim: the claimed Subject and its Observations, on the
+/// Evidence graph that holds them. `graphRef` is empty for a graph with no ref.
+struct CatalogPersonClaim: Sendable, Equatable {
+    var claimID: String
+    var graphID: String
+    var graphRef: String
+    var graphName: String
+    var subject: CatalogSubject
+    var observations: [CatalogObservation]
+}
+
+/// A Person's family units (S13-04), grouped by Go: parent sets with the
+/// siblings through them, each partner with the children they share, the
+/// children with no other known parent, and siblings with no shown shared
+/// parent, in that order. Canonical people only. Each unit's children are in
+/// birth order, undated last (S13-12).
+struct CatalogPersonFamily: Sendable, Equatable {
+    var units: [CatalogFamilyUnit]
+    /// The person's own summary; nil when an engine did not send it.
+    var person: CatalogPersonSummary? = nil
+    /// Every sibling once with the person among them, in the order the page
+    /// draws them.
+    var originSiblings: [CatalogOriginSibling] = []
+}
+
+/// One event of a Person's timeline (S13-05): an event the person took part in
+/// directly, in any role. `roles` are the person's distinct role terms on it
+/// (usually one; empty when the participation has none), `participants` the
+/// other canonical people on it in participation order. `dated` is false for an
+/// event Go's order puts last; Swift does not sort, group or title.
+struct CatalogPersonEvent: Sendable, Equatable, Identifiable {
+    var event: CatalogEventSummary
+    var roles: [CatalogConclusionValue]
+    var participants: [CatalogEventParticipant]
+    var dated: Bool
+
+    var id: String { event.entity.id }
+}
+
+/// One other canonical person on an event and their role terms.
+struct CatalogEventParticipant: Sendable, Equatable {
+    var person: CatalogPersonSummary
+    var roles: [CatalogConclusionValue]
+}
+
+/// One child of the person's parents, or a sibling recorded with no shared
+/// parent. The person's own member has no link. `parentSets` are the indexes,
+/// among the `.parents` units, of the parent sets it is a child of; empty for a
+/// sibling recorded only.
+struct CatalogOriginSibling: Sendable, Equatable {
+    var member: CatalogFamilyMember
+    var parentSets: [Int]
+}
+
+/// One family unit.
+struct CatalogFamilyUnit: Sendable, Equatable {
+    /// What a unit is to the person.
+    enum Kind: Sendable, Equatable {
+        /// `partners`: a set of the person's parents; `children`: siblings through each.
+        case parents
+        /// `partners`: one partner; `children`: the person's children with them.
+        case partner
+        /// `children`: the person's children with no other known parent.
+        case oneParent
+        /// `children`: siblings with no shown shared parent.
+        case siblings
+    }
+
+    var kind: Kind
+    var partners: [CatalogFamilyMember]
+    var children: [CatalogFamilyMember]
+}
+
+/// One relative and the person's link to them. `link` is nil for a co-parent
+/// known only through a child.
+struct CatalogFamilyMember: Sendable, Equatable {
+    var person: CatalogPersonSummary
+    var link: CatalogFamilyLink?
+}
+
+/// What a link rests on: `recorded` when it is filed (not only implied),
+/// `associationIDs` the relationship and participation entities behind it, and
+/// `implied` the patterns that imply it.
+struct CatalogFamilyLink: Sendable, Equatable {
+    var recorded: Bool
+    var associationIDs: [String]
+    var implied: [CatalogKinshipShape]
+}
+
+/// One pattern that implies a link, through its pivot (the marriage or birth,
+/// or the shared parent).
+struct CatalogKinshipShape: Sendable, Equatable {
+    enum Pattern: Sendable, Equatable {
+        case marriageSpouses, birthParents, sharedParent, parentOfParent
+    }
+
+    var pattern: Pattern
+    var pivotID: String
+}
+
 /// One handle's detail (S9-15), composed by Go from the auto-reconciler cache.
 /// Generic over kind: Person, Event and Place pages all read it.
 struct CatalogConclusionDetail: Sendable, Equatable {
@@ -659,31 +784,64 @@ struct CatalogConclusionDetail: Sendable, Equatable {
     var fields: [CatalogConclusionField]
     /// Accepted members.
     var memberCount: Int = 0
-    /// The handle's header for its kind, read in the same call, so a page
+    /// The handle's summary for its kind, read in the same call, so a page
     /// has one load, one error, and one consistent read.
-    var header: CatalogConclusionHeader?
+    var summary: CatalogConclusionSummary?
     /// The handle's pictures, earliest recorded first.
     var pictures: [CatalogPicture] = []
+    /// A Person's life rows: the records of each field a row reads off another
+    /// handle, keyed by that handle (S13-06). Empty for every other kind.
+    var derivedRows: [CatalogDerivedRow] = []
+}
+
+/// A Person life row whose value is read off other handles.
+enum CatalogDerivedRowKind: Sendable, Equatable {
+    case birthDate, birthPlace, deathDate, deathPlace
+}
+
+/// The field a derived row reads off the entity that owns it. `event` is the
+/// owner's summary when the owner is an Event. `place` is the Place a place
+/// row's owner (an event–place link) holds on its place end.
+struct CatalogOwnerField: Sendable, Equatable {
+    var entity: CatalogCanonicalEntity
+    var event: CatalogEventSummary? = nil
+    var place: CatalogChainedPlace? = nil
+    var field: CatalogConclusionField
+}
+
+/// One life row's records, one owner per entity it reads, in Go's order.
+struct CatalogDerivedRow: Sendable, Equatable {
+    var kind: CatalogDerivedRowKind
+    var owners: [CatalogOwnerField]
 }
 
 /// One handle's row for its kind, as the lists show it.
-enum CatalogConclusionHeader: Sendable, Equatable {
-    case person(CatalogPersonHeader)
-    case event(CatalogEventHeader)
-    case place(CatalogPlaceHeader)
+enum CatalogConclusionSummary: Sendable, Equatable {
+    case person(CatalogPersonSummary)
+    case event(CatalogEventSummary)
+    case place(CatalogPlaceSummary)
 }
 
-extension CatalogConclusionHeader {
-    var person: CatalogPersonHeader? {
-        if case .person(let header) = self { header } else { nil }
+extension CatalogConclusionSummary {
+    var person: CatalogPersonSummary? {
+        if case .person(let summary) = self { summary } else { nil }
     }
 
-    var event: CatalogEventHeader? {
-        if case .event(let header) = self { header } else { nil }
+    var event: CatalogEventSummary? {
+        if case .event(let summary) = self { summary } else { nil }
     }
 
-    var place: CatalogPlaceHeader? {
-        if case .place(let header) = self { header } else { nil }
+    var place: CatalogPlaceSummary? {
+        if case .place(let summary) = self { summary } else { nil }
+    }
+
+    /// The `objects/…` path of the picture this summary leads with; "" when none.
+    var pictureImageRelPath: String {
+        switch self {
+        case .person(let summary): summary.pictureImageRelPath
+        case .event(let summary): summary.pictureImageRelPath
+        case .place(let summary): summary.pictureImageRelPath
+        }
     }
 }
 
@@ -1129,7 +1287,8 @@ protocol GenealogyStore: Sendable {
         artifactID: String,
         path: String
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph]
+    /// The project's graphs, or one Source's when `sourceID` is set.
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph]
     func createEvidenceGraph(
         projectDir: String,
         userID: String,
@@ -1307,13 +1466,24 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
     func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle]
-    /// Every unmerged Person as a row header, in Go's list order (by shown title, then ref-only by ref).
-    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader]
-    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader]
-    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader]
+    /// Every unmerged Person as a row summary, in Go's list order (by shown title, then ref-only by ref).
+    func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary]
+    func listEventSummaries(projectDir: String) async throws -> [CatalogEventSummary]
+    func listPlaceSummaries(projectDir: String) async throws -> [CatalogPlaceSummary]
     /// One handle's fields, auto-reconciled values and outcomes. Throws
     /// `conclusiondetails.not_found` for an unknown or merged handle.
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail
+    /// A Person's accepted claims grouped by Source, in Go's order (Source title,
+    /// then Source ref; claims by Evidence graph name, then ref). Throws
+    /// `conclusiondetails.not_found` for an unknown or merged handle.
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup]
+    /// A Person's family units (S13-04). Throws `conclusiondetails.not_found`
+    /// for an unknown or merged handle.
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily
+    /// The canonical events a Person took part in, in any role, in Go's date
+    /// order (S13-05). Throws `conclusiondetails.not_found` for an unknown or
+    /// merged handle, or one that is no Person.
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent]
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,
@@ -1385,6 +1555,7 @@ protocol GenealogyStore: Sendable {
     func createCitationWithObservations(
         projectDir: String,
         userID: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,

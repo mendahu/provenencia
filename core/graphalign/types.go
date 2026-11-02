@@ -21,8 +21,8 @@ type Subject struct {
 // Bridge links two primary Subjects on the layer (walked undirected).
 type Bridge struct {
 	// Edge's Associations are the bridge Subjects behind the edge. The layers
-	// never read them; the loader sets them and the claim evidence query reads
-	// them back, as it does a value's Ref.
+	// never read them; the loader sets them for a later reader of the bridge
+	// Subjects (S13-29's shared loader).
 	kinship.Edge
 	// Recording is how the kinship patterns imply the link; the zero value is a
 	// link only recorded.
@@ -92,16 +92,6 @@ const (
 	AssessNone   Assessment = "none"
 )
 
-// Comparison is one lead property's outcome on the chosen (or top) candidate:
-// an input to the score. Key, Result (Outcome, Cause, Speaking: A the
-// Subject's value, B the handle's) and Points come from subject compare.
-type Comparison struct {
-	subjectcompare.PropertyResult
-	// Derived: the lead is a property the profile builder derives (a person's
-	// lifespan), with no catalog row.
-	Derived bool
-}
-
 // Via is the layer edge that seeded this row's handle, when the walk
 // reached it from an already-decided neighbor.
 type Via struct {
@@ -115,8 +105,7 @@ type Reason string
 const (
 	ReasonVia     Reason = "via"     // reached from a mapped neighbor (Row.Via)
 	ReasonDecided Reason = "decided" // held as given (a decision or an existing claim)
-	ReasonAgrees  Reason = "agrees"  // property-only match; ReasonProperty agrees most
-	ReasonWeak    Reason = "weak"    // an alternative below the weak bar: too little agrees to name
+	ReasonAgrees  Reason = "agrees"  // property-only match
 	ReasonTaken   Reason = "taken"   // another row took the handle (Flags.DuplicateOf)
 	ReasonEmpty   Reason = "empty"   // nothing to match on
 	// ReasonUnplaced is the zero value: Align placed nothing and nothing else
@@ -139,17 +128,11 @@ type Move struct {
 	NeighborSubjectID []byte
 }
 
-// Alternative is a handle the researcher can choose. Assessment and Reason
-// describe this record on its own, so the page can show them for the
-// selected record and show nothing for Skip, New, or an empty menu.
+// Alternative is a handle the researcher can choose, with its score.
 type Alternative struct {
-	HandleID       []byte
-	Ref            string
-	Score          float64
-	Assessment     Assessment
-	Reason         Reason // via, agrees, or weak
-	ReasonProperty vocabkey.PropertyKey
-	ViaNeighbor    []byte
+	HandleID []byte
+	Ref      string
+	Score    float64
 }
 
 // RowFlags call out conflicts and duplicates for the page.
@@ -163,9 +146,6 @@ type RowFlags struct {
 	// alike.
 	PossibleDuplicate bool
 	DuplicateOf       []byte
-	// Contested: a comparison behind the pair this row reports conflicts,
-	// whatever its band.
-	Contested bool
 }
 
 // Row is one Subject's proposal.
@@ -180,12 +160,9 @@ type Row struct {
 	Score        float64
 	Assessment   Assessment
 	Alternatives []Alternative
-	Comparisons  []Comparison
 	Reason       Reason
-	// ReasonProperty is the agreeing Property behind ReasonAgrees.
-	ReasonProperty vocabkey.PropertyKey
-	Via            *Via
-	Flags          RowFlags
+	Via          *Via
+	Flags        RowFlags
 	// Move is set when settling released an earlier pair of this row and the
 	// row's final target is not that handle.
 	Move *Move
@@ -194,4 +171,30 @@ type Row struct {
 // Proposal is Align's full output: one row per primary Subject.
 type Proposal struct {
 	Rows []Row
+}
+
+// RowStart is what the page starts a row on: the wire's target, handle_id
+// and handle_ref.
+type RowStart struct {
+	Target   Target
+	HandleID []byte
+	Ref      string
+}
+
+// Start is what the page starts the row on: a placed row's handle when it
+// has a band; a held New or Skip as given; an unplaced row's best candidate
+// when it is in the weak band and no other row took it; otherwise nothing.
+func (r Row) Start() RowStart {
+	switch {
+	case r.Target == TargetHandle:
+		if r.Assessment == AssessNone {
+			return RowStart{}
+		}
+		return RowStart{Target: TargetHandle, HandleID: r.HandleID, Ref: r.HandleRef}
+	case r.Target == TargetNew || r.Target == TargetSkip:
+		return RowStart{Target: r.Target}
+	case r.Reason != ReasonTaken && r.Assessment == AssessWeak && len(r.Alternatives) > 0:
+		return RowStart{Target: TargetHandle, HandleID: r.Alternatives[0].HandleID, Ref: r.Alternatives[0].Ref}
+	}
+	return RowStart{}
 }

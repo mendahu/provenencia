@@ -53,7 +53,7 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 	if len(present) == 0 {
 		return nil
 	}
-	values, err := g.loadValues(present)
+	values, err := g.StoredValues(present)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,11 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 	return out, nil
 }
 
-func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) {
+// StoredValues reads the stored value rows of ids: entity id, then property id
+// to the rows in rank order. An id with no rows is absent. It is the one read
+// of stored rows into Value; the reconciler's upkeep compares it to the rows it
+// is about to write.
+func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error) {
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_term_id, COALESCE(t.key, ''),
@@ -198,12 +202,25 @@ type linkRaw struct {
 }
 
 func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
+	raws, err := g.linkRaws(ids)
+	if err != nil {
+		return nil, err
+	}
+	assocIDs := make([][]byte, 0, len(raws))
+	for _, r := range raws {
+		assocIDs = append(assocIDs, r.assoc)
+	}
+	return g.finishLinks(raws, assocIDs)
+}
+
+// linkRaws runs the link query for ids and keeps the rows a registered
+// bridge accepts. It does not read disambiguation.
+func (g *Graph) linkRaws(ids [][]byte) ([]linkRaw, error) {
 	q, args := linkLoadSQL(g.valueTable, g.entityTable, ids)
 	rows, err := g.query(q, args...)
 	if err != nil {
 		return nil, err
 	}
-	var assocIDs [][]byte
 	var raws []linkRaw
 	for rows.Next() {
 		var r linkRaw
@@ -222,14 +239,13 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 		r.neighbor = cloneID(r.neighbor)
 		r.neighborType = cloneID(r.neighborType)
 		raws = append(raws, r)
-		assocIDs = append(assocIDs, r.assoc)
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
 		return nil, err
 	}
 	_ = rows.Close()
-	return g.finishLinks(raws, assocIDs)
+	return raws, nil
 }
 
 // LinkLoadSQL is the association-edge query loadLinks runs.

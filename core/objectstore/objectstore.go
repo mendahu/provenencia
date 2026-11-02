@@ -243,6 +243,7 @@ func installTemp(root *os.Root, tmp, inner, checksum string) (wrote bool, err er
 // Temp is a streamed object being written inside projectDir/objects. Install
 // moves it into place; Discard removes it. Callers never see its path.
 type Temp struct {
+	projectDir   string
 	root         *os.Root
 	f            *os.File
 	name         string
@@ -262,7 +263,7 @@ func CreateTemp(projectDir, prefix string) (*Temp, error) {
 		_ = root.Close()
 		return nil, err
 	}
-	return &Temp{root: root, f: f, name: name}, nil
+	return &Temp{projectDir: projectDir, root: root, f: f, name: name}, nil
 }
 
 // Write appends p to the temp file.
@@ -284,10 +285,16 @@ func (t *Temp) Close() error {
 
 // Install moves the temp file to rel (slash-separated, starting with objects/)
 // unless a file there already matches checksum. wrote is true when this call
-// left new bytes at rel. The temp is gone afterward.
+// left new bytes at rel. The temp is gone afterward. It refuses with
+// ErrUnsafeObjects, and discards the temp, when projectDir/objects is no
+// longer the folder the temp was made in (a symlink, or a folder swapped in).
 func (t *Temp) Install(rel, checksum string) (wrote bool, err error) {
 	inner, err := innerPath(rel)
 	if err != nil {
+		return false, err
+	}
+	if err := t.requireSameObjects(); err != nil {
+		t.Discard()
 		return false, err
 	}
 	if !t.closed {
@@ -298,6 +305,28 @@ func (t *Temp) Install(rel, checksum string) (wrote bool, err error) {
 	_ = t.root.Close()
 	t.done = true
 	return wrote, err
+}
+
+// requireSameObjects opens projectDir/objects afresh and compares it with the
+// folder the temp holds.
+func (t *Temp) requireSameObjects() error {
+	now, err := openObjectsRoot(t.projectDir, false)
+	if err != nil {
+		return err
+	}
+	defer now.Close()
+	a, err := t.root.Stat(".")
+	if err != nil {
+		return err
+	}
+	b, err := now.Stat(".")
+	if err != nil {
+		return err
+	}
+	if !os.SameFile(a, b) {
+		return ErrUnsafeObjects
+	}
+	return nil
 }
 
 // Discard removes the temp file without installing it. It does nothing after

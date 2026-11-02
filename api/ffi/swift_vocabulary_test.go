@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -24,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/objectpath"
 	"github.com/mendahu/provenencia/core/onboarding"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -39,13 +41,14 @@ import (
 // limit on either side fails here, not as a silently missing badge, row or
 // match, or a wrongly refused input.
 const (
-	swiftVocabulary = "../../macos/App/Platform/ConclusionVocabulary.swift"
-	swiftL10n       = "../../macos/App/Platform/L10n.swift"
-	swiftValueKinds = "../../macos/App/Platform/InterpretationValueKinds.swift"
-	swiftMarks      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
-	swiftCatalogMut = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
-	swiftSearchKind = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftVocabulary   = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n         = "../../macos/App/Platform/L10n.swift"
+	swiftValueKinds   = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks        = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds   = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
+	swiftCatalogMut   = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftNamePartType = "../../macos/App/Features/Names/NamePartType.swift"
 
 	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"
@@ -404,6 +407,16 @@ func listStrings() []string {
 	return out
 }
 
+// partTypeKeys is every product name part type key; Swift's NamePartType
+// decodes name parts with them.
+func partTypeKeys() []string {
+	var out []string
+	for _, info := range namevalue.PartTypes() {
+		out = append(out, info.Key)
+	}
+	return out
+}
+
 // readStrings is every keyed read's wire key.
 func readStrings() []string {
 	var out []string
@@ -442,16 +455,13 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				string(autoreconcile.ReasonNoEvidence), string(autoreconcile.ReasonAgainst)),
 		},
 		{
-			name: "promote reasons", path: swiftVocabulary, enum: "PromoteReasonCode", re: wireCase,
-			want: sorted(string(graphalign.ReasonVia), string(graphalign.ReasonDecided), string(graphalign.ReasonAgrees),
-				string(graphalign.ReasonWeak), string(graphalign.ReasonTaken), string(graphalign.ReasonUnplaced),
-				string(graphalign.ReasonEmpty), string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
+			name: "promote reasons", path: swiftVocabulary, enum: "PromoteMoveReason", re: wireCase,
+			want: sorted(string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
 		},
 		{
 			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
-			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact,
-				apperr.CodeEvidenceGraphsCitationsNeedGraph),
+			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact),
 		},
 		{
 			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,
@@ -465,6 +475,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
 			want: sorted(propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
 				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
+		},
+		{
+			name: "name part types", path: swiftNamePartType, enum: "NamePartType", re: listCase,
+			want: sorted(partTypeKeys()...),
 		},
 		{
 			name: "primary kinds", path: swiftGraphKinds, enum: "EvidencePrimaryKind", re: rawCase,
@@ -521,7 +535,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteReasonCode"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteMoveReason"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
@@ -608,6 +622,33 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
 				}
 			}
+		}
+	})
+	t.Run("every delete-impact kind has a noun", func(t *testing.T) {
+		want := map[string]bool{"item": true}
+		for _, table := range catalogmodel.Tables {
+			if table.Kind != "" {
+				want[string(table.Kind)] = true
+			}
+		}
+		b, err := os.ReadFile(swiftL10n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]bool{}
+		for _, m := range regexp.MustCompile(`"deleteImpact\.kind\.(\w+)"`).FindAllStringSubmatch(string(b), -1) {
+			got[m[1]] = true
+		}
+		if !reflect.DeepEqual(got, want) {
+			names := func(set map[string]bool) []string {
+				out := make([]string, 0, len(set))
+				for k := range set {
+					out = append(out, k)
+				}
+				sort.Strings(out)
+				return out
+			}
+			t.Errorf("Swift deleteImpact.kind.<kind> keys differ from Go's catalogmodel kinds (plus item):\n swift %v\n go    %v", names(got), names(want))
 		}
 	})
 	t.Run("the relationship inverse map is the seeded inverse", func(t *testing.T) {

@@ -40,12 +40,6 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    enum Assessment: String, Equatable, Sendable {
-        case strong, medium, weak, none
-
-        init(wire: String) { self = Assessment(rawValue: wire) ?? .none }
-    }
-
     /// Why a suggested row moved on the last proposal. The page words it.
     enum Reason: Equatable, Sendable {
         /// Reached from this neighbor row once it was matched.
@@ -65,7 +59,7 @@ struct PromoteFlow: Equatable, Sendable {
             case .neighborPlaced: self = .neighborPlaced(neighborID: id)
             case .neighborMoved: self = .neighborMoved(neighborID: id)
             case .neighborReleased: self = .neighborReleased(neighborID: id)
-            default: return nil
+            case .unrecognized: return nil
             }
         }
 
@@ -383,7 +377,7 @@ struct PromoteFlow: Equatable, Sendable {
     /// selected like a menu pick. Returns true when suggested rows should be
     /// proposed again.
     @discardableResult
-    mutating func hold(subjectID: String, id: String, ref: String, header: CatalogConclusionHeader?) -> Bool {
+    mutating func hold(subjectID: String, id: String, ref: String, summary: CatalogConclusionSummary?) -> Bool {
         guard !id.isEmpty,
               let index = rows.firstIndex(where: { $0.subjectID == subjectID }),
               !rows[index].anchor else { return false }
@@ -392,7 +386,7 @@ struct PromoteFlow: Equatable, Sendable {
             item = offered
         } else {
             item = Self.item(
-                id: id, ref: ref, header: header, orders: nameOrders
+                id: id, ref: ref, summary: summary, orders: nameOrders
             )
             rows[index].menu.append(item)
         }
@@ -542,26 +536,11 @@ struct PromoteFlow: Equatable, Sendable {
         proposal.possibleDuplicate && !proposal.duplicateOfSubjectID.isEmpty ? proposal.duplicateOfSubjectID : nil
     }
 
+    /// Where the row starts is Go's call (`graphalign.Row.Start`): a record named by `target` and
+    /// `handleID`, or nothing, which leaves the choice open so Skip and New are the researcher's.
     private static func draftTarget(_ proposal: CatalogPromoteGraphAlignmentRow, menu: [Alternative]) -> Target {
-        let assessment = Assessment(wire: proposal.assessment)
-        // No suggestion: leave the choice open so Skip and New are the researcher's.
-        if assessment == .none {
-            return .unset
-        }
         if proposal.target == .handle, let first = menu.first, first.id == proposal.handleID {
             return .handle(id: first.id, ref: first.ref, title: first.title)
-        }
-        // Another row on the page took this record. Drafting it again would
-        // promote two subjects on one handle, so the choice stays open, with the
-        // duplicate note naming the other row, whatever the band.
-        if proposal.reason == .taken {
-            return .unset
-        }
-        // Below the accept bar (a registry where the weak bar sits under it)
-        // the candidate is an alternative, not the row target. Still open on
-        // that match.
-        if assessment == .weak, let match = menu.first {
-            return .handle(id: match.id, ref: match.ref, title: match.title)
         }
         return .unset
     }
@@ -569,26 +548,26 @@ struct PromoteFlow: Equatable, Sendable {
     private static func menu(for proposal: CatalogPromoteGraphAlignmentRow, orders: NameFormatOrders) -> [Alternative] {
         var out: [Alternative] = []
         if proposal.target == .handle, !proposal.handleID.isEmpty {
-            out.append(item(id: proposal.handleID, ref: proposal.handleRef, header: proposal.header, orders: orders))
+            out.append(item(id: proposal.handleID, ref: proposal.handleRef, summary: proposal.summary, orders: orders))
         }
         for alt in proposal.alternatives where alt.handleID != proposal.handleID {
-            out.append(item(id: alt.handleID, ref: alt.handleRef, header: alt.header, orders: orders))
+            out.append(item(id: alt.handleID, ref: alt.handleRef, summary: alt.summary, orders: orders))
         }
         return out
     }
 
-    /// One menu item, titled sorted and subtitled from the record's header, whichever way the
+    /// One menu item, titled sorted and subtitled from the record's summary, whichever way the
     /// record reached the menu.
     private static func item(
         id: String,
         ref: String,
-        header: CatalogConclusionHeader?,
+        summary: CatalogConclusionSummary?,
         orders: NameFormatOrders
     ) -> Alternative {
         Alternative(
             id: id, ref: ref,
-            title: header.map { ConclusionHeaderDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
-            subtitle: header.map(ConclusionHeaderDisplay.secondary) ?? ""
+            title: summary.map { ConclusionSummaryDisplay.title($0, style: .sorted, orders: orders) } ?? ref,
+            subtitle: summary.map(ConclusionSummaryDisplay.secondary) ?? ""
         )
     }
 }

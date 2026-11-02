@@ -17,6 +17,12 @@ struct ReconciledValueDisplayTests {
         CatalogReconciledValue(rank: rank, reason: ReconcilerReason(wire: reason), support: support, against: against, value: v)
     }
 
+    static func picture(_ id: String, path: String, title: String, leads: Bool = false) -> CatalogPicture {
+        var picture = CatalogPicture(imageRelPath: path, record: outcome(id, "kept", title: title))
+        picture.leads = leads
+        return picture
+    }
+
     static func outcome(
         _ id: String,
         _ reason: String,
@@ -27,17 +33,18 @@ struct ReconciledValueDisplayTests {
         deniedBy: String = "",
         credibilityOffset: Int = 0,
         uncertain: Bool = false,
-        claimConfidenceOffset: Int = 0,
-        vote: (Int, Int) = (0, 0)
+        vote: (Int, Int) = (0, 0),
+        groupRank: Int? = nil
     ) -> CatalogReconcilerOutcome {
         CatalogReconcilerOutcome(
             observationID: id, observationRef: "OBS-\(id)", reason: ReconcilerReason(wire: reason), valueRank: rank,
             deniedByObservationID: deniedBy, recorded: recorded, subjectID: "sub-\(id)", subjectRef: "CPR-\(id)",
             graphID: "g-\(id)",
             citationID: "cit-\(id)", artifactID: "art-\(id)", sourceID: source, sourceTitle: title, credibilityKey: "",
-            transcriptionUncertain: uncertain, claimConfidenceKey: "",
-            credibilityOffset: credibilityOffset, claimConfidenceOffset: claimConfidenceOffset,
-            voteSupport: vote.0, voteTotal: vote.1
+            transcriptionUncertain: uncertain,
+            credibilityOffset: credibilityOffset,
+            voteSupport: vote.0, voteTotal: vote.1,
+            groupRank: groupRank ?? (["kept", "folded"].contains(reason) ? rank ?? 0 : 0)
         )
     }
 
@@ -102,6 +109,20 @@ struct ReconciledValueDisplayTests {
             Self.outcome("census", "no_evidence", rank: nil, source: "d"),
         ])
         #expect(ReconciledValueDisplay.countLine(mixed) == "3 Sources")
+    }
+
+    @Test func sourceCountCountsOnlyTheSourcesBehindDisplayedValues() {
+        // Records the engine put under no displayed value (group rank 0) do
+        // not count, whatever their value rank.
+        let mixed = Self.field("mixed", key: "deathDate", [
+            Self.value(1, "kept", support: 1), Self.value(2, "kept", support: 1), Self.value(3, "outvoted"),
+        ], outcomes: [
+            Self.outcome("burial", "kept", rank: 1, source: "a"),
+            Self.outcome("bible", "kept", rank: 2, source: "b"),
+            Self.outcome("news", "outvoted", rank: 3, source: "c"),
+            Self.outcome("kept-but-lost", "kept", rank: 3, source: "d", groupRank: 0),
+        ])
+        #expect(ReconciledValueDisplay.sourceCount(mixed) == 2)
     }
 
     @Test func againstLineSaysHowManyRecordsDisagree() {
@@ -213,12 +234,12 @@ struct ReconciledValueDisplayTests {
     @Test func weakSaysWhichEvidenceIsWeak() {
         let f = Self.field("single", [Self.value(1, "kept")])
         func phrase(_ o: CatalogReconcilerOutcome) -> String { ReconciledValueDisplay.outcomePhrase(o, in: f) }
-        #expect(phrase(Self.outcome("a", "weak", claimConfidenceOffset: -1)) == "weak · low-confidence claim")
+        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true)) == "weak · " + ListFormatter.localizedString(byJoining: ["low-trust Source", "uncertain transcription"]))
         #expect(phrase(Self.outcome("a", "weak")) == "weak")
         // Above-default grades are not causes.
-        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: 1, uncertain: true, claimConfidenceOffset: 1)) == "weak · uncertain transcription")
-        let all = Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true, claimConfidenceOffset: -1)
-        #expect(ReconciledValueDisplay.weakCauses(all) == ["low-trust Source", "uncertain transcription", "low-confidence claim"])
+        #expect(phrase(Self.outcome("a", "weak", credibilityOffset: 1, uncertain: true)) == "weak · uncertain transcription")
+        let all = Self.outcome("a", "weak", credibilityOffset: -2, uncertain: true)
+        #expect(ReconciledValueDisplay.weakCauses(all) == ["low-trust Source", "uncertain transcription"])
         #expect(phrase(all) == "weak · " + ListFormatter.localizedString(byJoining: ReconciledValueDisplay.weakCauses(all)))
     }
 

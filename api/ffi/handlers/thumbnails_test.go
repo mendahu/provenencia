@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/raster/rastertest"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -88,6 +89,25 @@ func TestEnsureFileThumbnail(t *testing.T) {
 				}
 				if len(resp.GetRelPath()) < len("objects/") || resp.GetRelPath()[:8] != "objects/" {
 					t.Fatalf("rel_path %q", resp.GetRelPath())
+				}
+			},
+		},
+		{
+			name: "pdf skipped",
+			reqFn: func(t *testing.T) proto.Message {
+				s := newThumbSource(t)
+				p := filepath.Join(t.TempDir(), "deed.pdf")
+				writePDF(t, p)
+				ingested := s.addArtifact(t, "Deed", p)
+				return &engine.EnsureFileThumbnailRequest{ProjectDir: s.dir, FileId: ingested.File.Id}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.EnsureFileThumbnailResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if !resp.GetSkipped() || resp.GetRelPath() != "" {
+					t.Fatalf("want skipped empty, got %v", &resp)
 				}
 			},
 		},
@@ -202,25 +222,7 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 				// Drop the derivative SetCover created so ListSources must not
 				// regenerate it while holding the catalog session.
-				if err := catalogsession.Close(f.dir); err != nil {
-					t.Fatal(err)
-				}
-				c, err := database.Open(f.dir)
-				if err != nil {
-					t.Fatal(err)
-				}
-				db, err := c.DB()
-				if err != nil {
-					_ = c.Close()
-					t.Fatal(err)
-				}
-				if _, err := db.Exec(`DELETE FROM file_derivatives`); err != nil {
-					_ = c.Close()
-					t.Fatal(err)
-				}
-				if err := c.Close(); err != nil {
-					t.Fatal(err)
-				}
+				damageCatalog(t, f.dir, "DELETE FROM file_derivatives")
 				return &engine.ListSourcesRequest{ProjectDir: f.dir}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -369,5 +371,204 @@ func TestListSourcesAndWorkspaceThumbnails(t *testing.T) {
 				}
 			},
 		},
+	})
+}
+
+// thumbSource is a Source for the thumbnail pass tests; addArtifact puts
+// Artifacts on it.
+type thumbSource struct {
+	dir, userID, sourceID string
+}
+
+func newThumbSource(t *testing.T) thumbSource {
+	t.Helper()
+	dir, userID, typeID := sourceFixture(t)
+	var created engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+		ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Scans",
+	}, &created)
+	return thumbSource{dir: dir, userID: userID, sourceID: created.Source.Id}
+}
+
+// addArtifact creates an Artifact holding the file at path and returns the
+// ingest response.
+func (s thumbSource) addArtifact(t *testing.T, label, path string) *engine.IngestArtifactFileResponse {
+	t.Helper()
+	var art engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: s.dir, UserId: s.userID, SourceId: s.sourceID, Label: label,
+	}, &art)
+	var ingested engine.IngestArtifactFileResponse
+	mustRPC(t, IngestArtifactFile, &engine.IngestArtifactFileRequest{
+		ProjectDir: s.dir, UserId: s.userID, ArtifactId: art.Artifact.Id, Path: path,
+	}, &ingested)
+	return &ingested
+}
+
+// addArtifactOnFile creates an Artifact on a File an Artifact already holds.
+func (s thumbSource) addArtifactOnFile(t *testing.T, label, fileID string) {
+	t.Helper()
+	var art engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: s.dir, UserId: s.userID, SourceId: s.sourceID, Label: label, FileId: fileID,
+	}, &art)
+}
+
+func (s thumbSource) workspace(t *testing.T) *engine.GetSourceWorkspaceResponse {
+	t.Helper()
+	var ws engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: s.dir, SourceId: s.sourceID}, &ws)
+	return &ws
+}
+
+// count runs a COUNT(*) query on the project's catalog.
+func (s thumbSource) count(t *testing.T, query string) int {
+	t.Helper()
+	var n int
+	err := catalogsession.Do(s.dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		return db.QueryRow(query).Scan(&n)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// writeShadedPNG writes a w x h PNG whose pixels are shade, so each shade is a
+// File of its own.
+func writeShadedPNG(t *testing.T, path string, shade uint8) {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 8, 8))
+	draw.Draw(img, img.Bounds(), image.NewUniform(color.Gray{Y: shade}), image.Point{}, draw.Src)
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// writeLateFailingJPEG writes the oversized JPEG without its EOI marker: it
+// decodes far enough to fail late, over the pixel budget.
+func writeLateFailingJPEG(t *testing.T) string {
+	t.Helper()
+	raw := rastertest.OversizedJPEG(t)
+	path := filepath.Join(t.TempDir(), "late.jpg")
+	if err := os.WriteFile(path, raw[:len(raw)-2], 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+const (
+	revisionCount   = `SELECT COUNT(*) FROM audit_transactions`
+	derivativeCount = `SELECT COUNT(*) FROM file_derivatives`
+)
+
+func TestWorkspaceThumbnailPass(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+
+	t.Run("two Artifacts with no derivatives get both paths and no revision", func(t *testing.T) {
+		s := newThumbSource(t)
+		for i := range 2 {
+			p := filepath.Join(t.TempDir(), "p.png")
+			writeShadedPNG(t, p, uint8(10+i))
+			s.addArtifact(t, "Page", p)
+		}
+		damageCatalog(t, s.dir, "DELETE FROM file_derivatives")
+		before := s.count(t, revisionCount)
+		ws := s.workspace(t)
+		if len(ws.Artifacts) != 2 {
+			t.Fatalf("artifacts %d", len(ws.Artifacts))
+		}
+		for _, a := range ws.Artifacts {
+			if a.GetThumbnailRelPath() == "" {
+				t.Fatalf("no thumbnail for %q", a.GetLabel())
+			}
+		}
+		if n := s.count(t, derivativeCount); n != 2 {
+			t.Fatalf("derivative rows %d, want 2", n)
+		}
+		if after := s.count(t, revisionCount); after != before {
+			t.Fatalf("revisions %d, was %d", after, before)
+		}
+	})
+
+	t.Run("two Artifacts on one File decode once", func(t *testing.T) {
+		s := newThumbSource(t)
+		p := filepath.Join(t.TempDir(), "p.png")
+		writePNG(t, p)
+		first := s.addArtifact(t, "Page", p)
+		s.addArtifactOnFile(t, "Again", first.File.Id)
+		damageCatalog(t, s.dir, "DELETE FROM file_derivatives")
+		ws := s.workspace(t)
+		if len(ws.Artifacts) != 2 || ws.Artifacts[0].GetThumbnailRelPath() == "" ||
+			ws.Artifacts[0].GetThumbnailRelPath() != ws.Artifacts[1].GetThumbnailRelPath() {
+			t.Fatalf("thumbnails %q, %q", ws.Artifacts[0].GetThumbnailRelPath(), ws.Artifacts[1].GetThumbnailRelPath())
+		}
+		if n := s.count(t, derivativeCount); n != 1 {
+			t.Fatalf("derivative rows %d, want 1", n)
+		}
+	})
+
+	t.Run("a late-failing JPEG shows no thumbnail and writes no link", func(t *testing.T) {
+		s := newThumbSource(t)
+		ingested := s.addArtifact(t, "Late", writeLateFailingJPEG(t))
+		if ingested.Artifact.GetThumbnailRelPath() != "" {
+			t.Fatalf("ingest thumbnail %q", ingested.Artifact.GetThumbnailRelPath())
+		}
+		ws := s.workspace(t)
+		if len(ws.Artifacts) != 1 || ws.Artifacts[0].GetThumbnailRelPath() != "" {
+			t.Fatalf("workspace %+v", ws.Artifacts)
+		}
+		if n := s.count(t, derivativeCount); n != 0 {
+			t.Fatalf("derivative rows %d, want 0", n)
+		}
+	})
+
+	t.Run("17 Artifacts fill in two batches", func(t *testing.T) {
+		s := newThumbSource(t)
+		for i := range thumbnailBatch + 1 {
+			p := filepath.Join(t.TempDir(), "p.png")
+			writeShadedPNG(t, p, uint8(i*7))
+			s.addArtifact(t, "Page", p)
+		}
+		damageCatalog(t, s.dir, "DELETE FROM file_derivatives")
+		ws := s.workspace(t)
+		if len(ws.Artifacts) != thumbnailBatch+1 {
+			t.Fatalf("artifacts %d", len(ws.Artifacts))
+		}
+		for _, a := range ws.Artifacts {
+			if a.GetThumbnailRelPath() == "" {
+				t.Fatalf("no thumbnail for artifact %q", a.GetId())
+			}
+		}
+		if n := s.count(t, derivativeCount); n != thumbnailBatch+1 {
+			t.Fatalf("derivative rows %d, want %d", n, thumbnailBatch+1)
+		}
+	})
+
+	t.Run("every derivative present changes nothing", func(t *testing.T) {
+		s := newThumbSource(t)
+		p := filepath.Join(t.TempDir(), "p.png")
+		writePNG(t, p)
+		s.addArtifact(t, "Page", p)
+		first := s.workspace(t)
+		links, objects := s.count(t, derivativeCount), len(objectRelPaths(t, s.dir))
+		second := s.workspace(t)
+		if !proto.Equal(first, second) {
+			t.Fatalf("workspace changed: %v vs %v", first, second)
+		}
+		if s.count(t, derivativeCount) != links || len(objectRelPaths(t, s.dir)) != objects {
+			t.Fatal("a repeat read changed links or objects")
+		}
+		if temps := objectTemps(t, s.dir, "."); len(temps) != 0 {
+			t.Fatalf("temps left: %v", temps)
+		}
 	})
 }

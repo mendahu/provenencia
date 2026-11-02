@@ -5,7 +5,8 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/search"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 	"google.golang.org/protobuf/proto"
@@ -33,7 +34,7 @@ func SearchCatalog(in []byte) ([]byte, error) {
 		for _, h := range hits {
 			out.Hits = append(out.Hits, hitToProto(h))
 		}
-		return fillHitHeaders(c, out.Hits)
+		return fillHitSummaries(c, out.Hits)
 	})
 	if err != nil {
 		return nil, err
@@ -92,45 +93,26 @@ func locationToProto(loc workspacelocation.Location) *engine.WorkspaceLocation {
 	}
 }
 
-// fillHitHeaders attaches the list header for each person, event, and place hit.
-func fillHitHeaders(c *database.Catalog, hits []*engine.SearchHit) error {
-	var persons, events, places [][]byte
+// fillHitSummaries attaches the list summary for each person, event, and place
+// hit, with the lead picture path its list row shows.
+func fillHitSummaries(c *database.Catalog, hits []*engine.SearchHit) error {
+	var w conclusionsummaries.Want
 	for _, h := range hits {
-		id, err := parseID(h.GetId())
-		if err != nil {
-			continue
-		}
-		switch h.GetKind() {
-		case search.KindPerson:
-			persons = append(persons, id)
-		case search.KindEvent:
-			events = append(events, id)
-		case search.KindPlace:
-			places = append(places, id)
+		if id, err := parseID(h.GetId()); err == nil {
+			w.Add(h.GetKind(), id)
 		}
 	}
-	headers, err := conclusionheaders.ByIDs(c, persons, events, places)
+	summaries, err := conclusionsummaries.ByIDs(c, w)
+	if err != nil {
+		return err
+	}
+	paths, err := files.RelPaths(c, summaries.PictureImageFileIDs())
 	if err != nil {
 		return err
 	}
 	for _, h := range hits {
-		id, err := parseID(h.GetId())
-		if err != nil {
-			continue
-		}
-		switch h.GetKind() {
-		case search.KindPerson:
-			if p, ok := headers.Person(id); ok {
-				h.Header = &engine.SearchHit_Person{Person: personHeaderProto(p)}
-			}
-		case search.KindEvent:
-			if e, ok := headers.Event(id); ok {
-				h.Header = &engine.SearchHit_Event{Event: eventHeaderProto(e)}
-			}
-		case search.KindPlace:
-			if p, ok := headers.Place(id); ok {
-				h.Header = &engine.SearchHit_Place{Place: placeHeaderProto(p)}
-			}
+		if id, err := parseID(h.GetId()); err == nil {
+			h.Summary = conclusionSummaryProto(summaries, h.GetKind(), id, paths)
 		}
 	}
 	return nil

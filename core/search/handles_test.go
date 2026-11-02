@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -24,7 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/workspacelocation"
@@ -82,9 +83,7 @@ func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []obser
 	s := subjectstest.On(f.t, f.c, f.user, f.graph, kind, "")
 	if in != nil {
 		obs := in(s)
-		if _, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: f.user}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, f.user, citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator}, obs)
-		}); err != nil {
+		if _, _, err := observationstest.Cite(f.c, f.user, f.graph, f.artifact, handleLocator, obs...); err != nil {
 			f.t.Fatal(err)
 		}
 	}
@@ -96,6 +95,17 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 		var in []observations.Input
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western(form)})
+		}
+		return in
+	})
+}
+
+// place creates a place Subject with one toponym Observation per form.
+func (f *handleFixture) place(toponyms ...string) subjects.Subject {
+	return f.subject("place", func(s subjects.Subject) []observations.Input {
+		var in []observations.Input
+		for _, name := range toponyms {
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true})
 		}
 		return in
 	})
@@ -214,23 +224,24 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 	}
 }
 
-func TestHeaderSearchFindsTheListTitle(t *testing.T) {
-	f := newHandleFixture(t)
-	person := f.person("James Robins", "Kenneth Robins")
+// locatedBirth creates a person from forms, a birth Event (1817) and a place
+// with toponym, their three positions, and the participation and location
+// bridges. It stops before promote and fileBridges.
+func (f *handleFixture) locatedBirth(toponym string, forms ...string) (person, event, place subjects.Subject) {
+	f.t.Helper()
+	t := f.t
+	person = f.person(forms...)
 	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
 	}
-	y := 1817
-	event := f.subject("event", func(s subjects.Subject) []observations.Input {
+	event = f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 		}
 	})
-	place := f.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true}}
-	})
+	place = f.place(toponym)
 	for i, s := range []subjects.Subject{person, event, place} {
 		if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 			return subjectpositions.Set(tx, s.ID, int64(i), 0)
@@ -271,6 +282,12 @@ func TestHeaderSearchFindsTheListTitle(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
+	return person, event, place
+}
+
+func TestSummarySearchFindsTheListTitle(t *testing.T) {
+	f := newHandleFixture(t)
+	person, event, place := f.locatedBirth("York", "James Robins", "Kenneth Robins")
 	promoted := f.promote(person, nil)
 	f.promote(event, nil)
 	f.promote(place, nil)
@@ -339,12 +356,7 @@ func (f *handleFixture) fileBridges() {
 
 func TestAlternateToponymIsMatchContext(t *testing.T) {
 	f := newHandleFixture(t)
-	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{
-			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montréal", HasText: true},
-			{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Montreal", HasText: true},
-		}
-	}), nil)
+	place := f.promote(f.place("Montréal", "Montreal"), nil)
 	hits := f.search("Montreal", KindPlace)
 	if len(hits) != 1 || hits[0].Ref != place.Entity.Ref || hits[0].Title != "Montréal" {
 		t.Fatalf("title %+v", hits)
@@ -354,12 +366,7 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 	}
 
 	g := newHandleFixture(t)
-	other := g.promote(g.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{
-			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Montréal", HasText: true},
-			{SubjectID: s.ID, PropertyID: g.prop("toponym").ID, ValueText: "Ville-Marie", HasText: true},
-		}
-	}), nil)
+	other := g.promote(g.place("Montréal", "Ville-Marie"), nil)
 	hits = g.search("Ville Marie", KindPlace)
 	if len(hits) != 1 || hits[0].Ref != other.Entity.Ref || hits[0].Title != "Montréal" {
 		t.Fatalf("title %+v", hits)
@@ -375,16 +382,13 @@ func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	y, m := 1817, 5
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian", StartYear: &y, StartMonth: &m}},
+			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 5, 0)},
 		}
 	}), nil)
-	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "York, Upper Canada", HasText: true}}
-	}), nil)
+	place := f.promote(f.place("York, Upper Canada"), nil)
 	f.promote(f.person("York Smith"), nil)
 
 	if hits := f.search("Birth", KindEvent); len(hits) != 1 || hits[0].Ref != event.Entity.Ref || hits[0].Title != "Unspecified birth" {
@@ -467,9 +471,7 @@ func kindsOf(hits []Hit) []string {
 func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.promote(f.person("James Robins"), nil)
-	place := f.promote(f.subject("place", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: "Robins", HasText: true}}
-	}), nil)
+	place := f.promote(f.place("Robins"), nil)
 	typeID := seedType(t, f.c, "Census", "")
 	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: f.user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, f.user, sources.CreateInput{
@@ -542,5 +544,128 @@ func TestHandleKindsArePrimaryKinds(t *testing.T) {
 	sort.Strings(want)
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("Handle kinds = %v, want vocabkey.PrimaryKinds() = %v", got, want)
+	}
+}
+
+func TestFoldedSpellingsFindPlaces(t *testing.T) {
+	f := newHandleFixture(t)
+	for _, tt := range []struct{ title, query string }{
+		{"Ærøskøbing", "Aeroskobing"},
+		{"Søby", "Soby"},
+		{"Łask", "Lask"},
+		{"Œuilly", "Oeuilly"},
+		{"Straße", "Strasse"},
+	} {
+		place := f.promote(f.place(tt.title), nil)
+		hits := f.search(tt.query, KindPlace)
+		if len(hits) == 0 || hits[0].Ref != place.Entity.Ref || hits[0].MatchReason != "title" {
+			t.Errorf("%q: want %s first as a title hit, got %+v", tt.query, tt.title, hits)
+		}
+	}
+
+	t.Run("a deduped alternate keeps the place findable both ways", func(t *testing.T) {
+		f := newHandleFixture(t)
+		place := f.promote(f.place("Søby", "Soby"), nil)
+		for _, q := range []string{"Soby", "Søby"} {
+			if hits := f.search(q, KindPlace); len(hits) != 1 || hits[0].Ref != place.Entity.Ref {
+				t.Errorf("%q: %+v", q, hits)
+			}
+		}
+	})
+
+	t.Run("a place written without the letter is found with it", func(t *testing.T) {
+		f := newHandleFixture(t)
+		place := f.promote(f.place("Soby"), nil)
+		if hits := f.search("Søby", KindPlace); len(hits) != 1 || hits[0].Ref != place.Entity.Ref {
+			t.Errorf("%+v", hits)
+		}
+	})
+}
+
+func TestNicknameFindsTheFormalName(t *testing.T) {
+	t.Run("a folded nickname finds the person", func(t *testing.T) {
+		f := newHandleFixture(t)
+		thomas := f.promote(f.person("Tom Smith", "Thomas Smith"), nil)
+		hits := f.search("Tom", KindPerson)
+		if len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref || hits[0].Title != "Thomas Smith" ||
+			hits[0].MatchReason != "other" || hits[0].MatchSnippet != "" {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+	t.Run("a nickname no record spells finds the person", func(t *testing.T) {
+		f := newHandleFixture(t)
+		thomas := f.promote(f.person("Thomas Smith"), nil)
+		if hits := f.search("Tommy", KindPerson); len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+	t.Run("a tag word finds nothing", func(t *testing.T) {
+		f := newHandleFixture(t)
+		f.promote(f.person("Thomas Smith"), nil)
+		for _, q := range []string{"Al", "Ali", "Alias"} {
+			if hits := f.search(q, KindPerson); len(hits) != 0 {
+				t.Fatalf("%q: got %+v", q, hits)
+			}
+		}
+	})
+	t.Run("an alternate's tag word finds nothing", func(t *testing.T) {
+		f := newHandleFixture(t)
+		f.promote(f.person("Tom Smith", "Thomas Smith"), nil)
+		f.promote(f.place("York", "Yorke"), nil)
+		if hits := f.search("Nam", KindPerson); len(hits) != 0 {
+			t.Fatalf("Nam: got %+v", hits)
+		}
+		if hits := f.search("Topo", KindPlace); len(hits) != 0 {
+			t.Fatalf("Topo: got %+v", hits)
+		}
+	})
+	t.Run("a name that does not fold into it finds nothing", func(t *testing.T) {
+		f := newHandleFixture(t)
+		f.promote(f.person("William Smith"), nil)
+		if hits := f.search("Robert", KindPerson); len(hits) != 0 {
+			t.Fatalf("got %+v", hits)
+		}
+	})
+}
+
+func TestJoinReprojectsDependentsOnlyWhenTheRootMoves(t *testing.T) {
+	f := newHandleFixture(t)
+	person, event, place := f.locatedBirth("York", "James Robins")
+	personH := f.promote(person, nil)
+	eventH := f.promote(event, nil)
+	placeH := f.promote(place, nil)
+	f.fileBridges()
+
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, h := range []struct {
+		kind string
+		id   []byte
+		ref  string
+	}{{KindPerson, personH.Entity.ID, personH.Entity.Ref}, {KindEvent, eventH.Entity.ID, eventH.Entity.Ref}} {
+		if err := searchindex.Upsert(db, searchindex.Document{
+			Kind: h.kind, EntityID: uuidString(h.id), DisplayRef: h.ref, Ref: h.ref, DisplayTitle: "stalemarker", Title: "stalemarker",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	found := func(text string) string {
+		return refsOf(f.search(text, KindPerson, KindEvent))
+	}
+	both := fmt.Sprint([]string{"event:" + eventH.Entity.Ref, "person:" + personH.Entity.Ref})
+
+	f.promote(f.place("York"), placeH.Entity.ID)
+	if got := found("stalemarker"); got != both {
+		t.Fatalf("a join that moves no shown value reprojected a dependent: %s", got)
+	}
+
+	f.promote(f.place("Eboracum"), placeH.Entity.ID)
+	if got := found("stalemarker"); got != "[]" {
+		t.Fatalf("marker survived a join that adds a toponym: %s", got)
+	}
+	if got := found("Eboracum"); got != both {
+		t.Fatalf("Eboracum finds %s, want the Event and the Person", got)
 	}
 }

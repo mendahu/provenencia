@@ -1,6 +1,7 @@
 // Package raster is the one bounded image codec: it decodes only allowlisted
-// formats within a pixel budget, and re-encodes. Thumbnails and staged images
-// both use it.
+// formats, refuses input over a byte limit (MaxDecodeBytes) and an image over
+// a pixel budget (MaxDecodePixels), and re-encodes. Thumbnails and staged
+// images both use it.
 //
 // Security: golang.org/x/image decoders (bmp, tiff, webp) parse fully
 // untrusted input here and have a history of memory-exhaustion CVEs.
@@ -43,9 +44,22 @@ const MaxEdgeLimit = 4096
 // defense against decompression bombs (see image package security notes).
 const MaxDecodePixels = 64_000_000 // 64 MP ≈ 256 MiB RGBA
 
-// ErrTooLarge means the image declares more pixels than MaxDecodePixels
-// allows, so it was rejected before full decode.
-var ErrTooLarge = errors.New("raster: image dimensions exceed decode budget")
+// MaxDecodeBytes caps how many bytes a decode may see. decode refuses larger
+// input before it reads a header.
+const MaxDecodeBytes = 128 << 20 // 128 MiB
+
+// maxDecodeBytes is MaxDecodeBytes; tests lower it so they do not allocate
+// 128 MiB.
+var maxDecodeBytes = MaxDecodeBytes
+
+// ErrTooLarge means the input is longer than MaxDecodeBytes, or the image
+// declares more pixels than MaxDecodePixels allows, so it was rejected before
+// full decode.
+var ErrTooLarge = errors.New("raster: image exceeds decode budget")
+
+// ErrUndecodable means the bytes are an allowlisted raster format but cannot
+// be decoded: truncated, corrupt, or a variant the decoder does not read.
+var ErrUndecodable = errors.New("raster: image bytes cannot be decoded")
 
 // ErrUnsupportedFormat means the bytes are not one of the allowlisted
 // raster formats, regardless of the recorded media type.
@@ -98,9 +112,15 @@ func Supported(mediaType string) bool {
 }
 
 // EncodeJPEG decodes src, scales to MaxEdge, applies Transforms, and encodes JPEG.
-// Before full decode it checks the sniffed format against the package allowlist
+// Before full decode it checks the input length against MaxDecodeBytes
+// (ErrTooLarge), the sniffed format against the package allowlist
 // (ErrUnsupportedFormat) and the declared pixel count against MaxDecodePixels
 // (ErrTooLarge), so header-declared decompression bombs never allocate.
+// Bytes of an allowlisted format that cannot be decoded are ErrUndecodable.
+//
+// A JPEG declaring more than MaxDecodePixels is not refused: it decodes at 1/8
+// scale from its DC coefficients, so on that path the output is at most
+// ⌈W/8⌉ × ⌈H/8⌉ pixels whatever MaxEdge asks.
 func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	if err := checkMaxEdge(opts); err != nil {
 		return nil, err
@@ -112,7 +132,7 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	if quality < 1 || quality > 100 {
 		return nil, fmt.Errorf("raster: Quality must be 1–100 or 0 for default")
 	}
-	img, err := prepare(src, opts)
+	img, err := prepare(src, opts, true)
 	if err != nil {
 		return nil, err
 	}
@@ -123,14 +143,15 @@ func EncodeJPEG(src []byte, opts Options) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// EncodePNG decodes src with the same format allowlist and pixel budget as
-// EncodeJPEG, scales to MaxEdge, applies Transforms, and encodes PNG. Quality
-// is ignored.
+// EncodePNG decodes src with the same byte limit, format allowlist and pixel
+// budget as EncodeJPEG, scales to MaxEdge, applies Transforms, and encodes PNG. Quality
+// is ignored. It never takes the reduced JPEG path: an image over the pixel
+// budget is ErrTooLarge.
 func EncodePNG(src []byte, opts Options) ([]byte, error) {
 	if err := checkMaxEdge(opts); err != nil {
 		return nil, err
 	}
-	img, err := prepare(src, opts)
+	img, err := prepare(src, opts, false)
 	if err != nil {
 		return nil, err
 	}
@@ -151,12 +172,22 @@ func checkMaxEdge(opts Options) error {
 	return nil
 }
 
-// decode refuses a format outside formats (or outside supportedFormats) and an
-// image declaring more than MaxDecodePixels before any full decode.
-func decode(src []byte, formats []string) (image.Image, error) {
+// decode refuses input over maxDecodeBytes, a format outside formats (or
+// outside supportedFormats) and an image declaring more than MaxDecodePixels
+// before any full decode.
+//
+// When reduceJPEG is set, a JPEG declaring more than MaxDecodePixels is not
+// refused: it decodes at 1/8 scale from its DC coefficients (decodeJPEGDC).
+func decode(src []byte, formats []string, reduceJPEG bool) (image.Image, error) {
+	if len(src) > maxDecodeBytes {
+		return nil, ErrTooLarge
+	}
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(src))
 	if err != nil {
-		return nil, err
+		if errors.Is(err, image.ErrFormat) {
+			return nil, ErrUnsupportedFormat
+		}
+		return nil, fmt.Errorf("%w: %w", ErrUndecodable, err)
 	}
 	if _, ok := supportedFormats[format]; !ok {
 		return nil, ErrUnsupportedFormat
@@ -164,18 +195,33 @@ func decode(src []byte, formats []string) (image.Image, error) {
 	if formats != nil && !slices.Contains(formats, format) {
 		return nil, ErrUnsupportedFormat
 	}
-	if cfg.Width < 1 || cfg.Height < 1 ||
-		int64(cfg.Width)*int64(cfg.Height) > MaxDecodePixels {
+	if cfg.Width < 1 || cfg.Height < 1 {
 		return nil, ErrTooLarge
 	}
+	if int64(cfg.Width)*int64(cfg.Height) > MaxDecodePixels {
+		if !reduceJPEG || format != "jpeg" {
+			return nil, ErrTooLarge
+		}
+		img, err := decodeJPEGDC(src, MaxDecodePixels)
+		if err != nil {
+			if errors.Is(err, ErrTooLarge) {
+				return nil, err
+			}
+			return nil, fmt.Errorf("%w: %w", ErrUndecodable, err)
+		}
+		return img, nil
+	}
 	img, _, err := image.Decode(bytes.NewReader(src))
-	return img, err
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrUndecodable, err)
+	}
+	return img, nil
 }
 
 // prepare decodes src, scales it to MaxEdge, and applies Transforms. It does
-// not check options.
-func prepare(src []byte, opts Options) (image.Image, error) {
-	img, err := decode(src, opts.Formats)
+// not check options. reduceJPEG is passed to decode.
+func prepare(src []byte, opts Options, reduceJPEG bool) (image.Image, error) {
+	img, err := decode(src, opts.Formats, reduceJPEG)
 	if err != nil {
 		return nil, err
 	}

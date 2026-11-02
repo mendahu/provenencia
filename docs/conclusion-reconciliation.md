@@ -37,7 +37,7 @@ Names and dates have the most interesting logic because they are structured, but
 # 2. Principles
 
 1. **Display policy, never truth.** Auto-reconciliation is stateless projection. It never writes a claim, an Observation, a DateValue or a NameValue row ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §2.5, §7). Its output lives only in the derived auto-reconciler cache, rebuildable from truth tables.
-2. **No stored scores.** Reconciliation weighs credibility, certainty and confidence but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
+2. **No stored scores.** Reconciliation weighs credibility and certainty but never multiplies them into a stored rollup ([`research-judgment-model.md`](research-judgment-model.md) §1.1). The cache stores order, counts and reasons, not a likelihood.
 3. **A Reconciliation Claim always wins.** An accepted Reconciliation Claim on (entity, Property) is the displayed value, whatever the reconciler would say. A provisional claim is a working choice the UI shows differently. A rejected claim is history only. This holds for **every** value type.
 4. **Be bold, and show why.** Because a researcher can always override with a claim, the reconciler may choose decisively. It must say what it considered and why each candidate won or lost, so the UI can explain it.
 5. **The Observation normalizes; the reconciler doesn't interpret.** Turning what a Source said into a comparable value is the Observation's job. A cited age becomes a birth DateValue on the Observation, with UI help for first-class events such as birth and death. The reconciler compares values of one type and does not reach into another Property to reinterpret them.
@@ -66,10 +66,9 @@ A **candidate** is one Observation of the Property on a member Subject of the en
 | Source | Citation → Artifact → Source | majority counts **Sources**, not Observations |
 | Source credibility | `source_credibility_assessments` (none = `standard`) | evidence strength |
 | Transcription certainty | `citations.transcription_uncertain` | evidence strength |
-| Identity Claim confidence | the member's claim (none = `moderate`) | evidence strength |
 | Identity Claim status | the member's claim | membership (below) |
 
-Credibility and confidence are read relative to their vocabulary's default grade by **sort order**, not by key. A candidate is **weak** if any of the three is below default. One candidate is **stronger** than another by comparing credibility, then certainty, then confidence.
+Credibility is read relative to its vocabulary's default grade by **sort order**, not by key. A candidate is **weak** if either is below default. One candidate is **stronger** than another by comparing credibility, then certainty.
 
 **Membership status:**
 
@@ -87,7 +86,7 @@ One pipeline for every value type. Each value type supplies a small module (§7)
    - Provisional-member candidates are eliminated (`provisional`).
    - Candidates with no usable value are eliminated (`no_evidence`): an empty value, a name with no parts, a term the module calls no evidence (such as an *unknown* sex term).
 2. **Deny.** A negative candidate eliminates the positive candidates with the **same value** whose evidence it is stronger than (`denied`). Those candidates cast no vote. A negative at equal or lower strength only counts against.
-3. **Group.** The module's *same value* test groups equal values. Its *fold* test folds a less specific value into a more specific one it fits (`folded`): `[J]` into `[James]`, `MAY 1985` into `14 MAY 1985`. When a value fits several, it folds into the best supported, then the strongest.
+3. **Group.** The module's *same value* test groups equal values. Its *fold* test folds a less specific value into a more specific one it fits (`folded`): `[J]` into `[James]`, `MAY 1985` into `14 MAY 1985`. When a value fits several, it folds into the best supported, then the strongest. A fold follows chains: *B.* folds into *Bill* and *Bill* into *William*, so *B.* reaches *William*; each value folds into the best supported, then the strongest, value it reaches that folds into nothing. Values in a fold cycle with no way out (*Dick*, *Ricky*, *Rick*) each stay a value.
 4. **Majority.** Support is counted in **distinct Sources** (a derivative Source counts as its own Source until derivation can be recorded). A value with support from at least two Sources and more than half the support crowds out the rest (`outvoted`); a module may limit what it outvotes (names: spelling variants only, §7.2). Two of three wins; one to one keeps both.
 5. **Confidence.** Among survivors, a value carried only by weak candidates is eliminated when a value with a non-weak carrier survived (`weak`).
 6. **Merge.** The module merges each surviving group into one displayed value. Single-valued Properties have one or more surviving values (§8). When several survive, the state is *mixed* and all are shown.
@@ -115,7 +114,7 @@ The reconciler returns the **answer and its reasoning**, so the UI can be rich a
 | `no_evidence` | nothing usable to compare |
 | `against` | a negative that counted against a value without eliminating it |
 
-**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search reads them all, so an outvoted spelling still finds its Person. Matching reads the profile instead: displayed values count for a match, denied values against it, and outvoted, weak and provisional values are left out ([`matching-model.md`](matching-model.md)).
+**Eliminated means not displayed, never dropped.** Every distinct value is cached, with a reason on each value (`kept` when displayed, else `outvoted`, `weak`, `denied` or `provisional`). The state and list counts read the displayed values; search reads them all, so an outvoted spelling still finds its Person. A nickname the reconciler folded away finds it too: a Person's search document carries the names that fold into its shown name under the product alias seed (S14-21). Matching reads the profile instead: displayed values count for a match, denied values against it, and outvoted, weak and provisional values are left out ([`matching-model.md`](matching-model.md)).
 
 The cache stores the reasoning with the values: state, support, the against count, and every candidate's outcome and reason. List and detail pages render from it without re-running the reconciler.
 
@@ -199,7 +198,7 @@ Many displayed values come from another entity. A Person's birth date is their b
 1. Each entity reconciles its own Properties, association ends included (the `subject` module).
 2. Derived values read the reconciled values of the entities they point at.
 
-The model allows a Person with two birth Events, and the reconciler must handle it: the derived value reconciles across the Events' reconciled values. The **UI should push the researcher toward a cleaner state**, merging duplicate Events into one canonical Event so reconciliation happens inside it.
+The model allows a Person with two birth Events, and the reconciler must handle it: the derived value reconciles across the Events' reconciled values. The **UI should push the researcher toward a cleaner state**, merging duplicate Events into one canonical Event so reconciliation happens inside it. A derived value's Why lists each owning entity's field records, judged on that entity.
 
 ---
 
@@ -211,7 +210,7 @@ Writes that recompute affected entities:
 
 - Observation save or delete, Subject delete, Promote (claim create)
 - Source credibility change, Citation certainty change
-- Identity Claim status or confidence change (no edit path exists yet)
+- Identity Claim status change (no edit path exists yet)
 - **Property configuration change** (cardinality, and any per-Property reconciliation setting)
 - Reconciliation Claim write (when claims ship)
 
@@ -271,7 +270,7 @@ The rebuild-equals-upkeep tests hold upkeep equal to a full rebuild. Every new t
 
 # 12. Implementation status
 
-The auto-reconciler, its cache, the pages that read it, place chains, Promote, and header search documents have shipped. A full rebuild of the cache matches incremental upkeep.
+The auto-reconciler, its cache, the pages that read it, place chains, Promote, and summary search documents have shipped. A full rebuild of the cache matches incremental upkeep.
 
 | Piece | Where |
 | --- | --- |
@@ -283,9 +282,10 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |
 | Detail read: each field's state, values, and outcomes with their evidence | `core/database/conclusiondetails` |
 | Subject-valued bridges filed by their ends | `core/database/identityclaims` |
-| Place chains at a date, folded from `part_of` | `core/database/conclusionheaders` |
+| Place chains at a date, folded from `part_of` | `core/database/conclusionsummaries` |
+| A summary of any kind on the wire: one `ConclusionSummary` field, built by `conclusionSummaryProto` and mapped by `mapConclusionSummary`; mixed-kind reads go through `Want.Add` and `ByIDs` | `core/database/conclusionsummaries`, `api/ffi/handlers`, `macos/App/Platform/GoStore.swift` |
 | Graph alignment and the proposal read | `core/graphalign`, `core/database/promotealign` |
-| Batch Promote: claims, one-hop pins (to be removed, [conclusion layer §5](conclusion-layer-data-model.md#5-membership-evidence)), and bridges in one transaction | `core/database/promote` |
-| Search documents composed from the list headers | `core/database/searchindex`, `core/search` |
+| Batch Promote: claims and bridges in one transaction | `core/database/promote` |
+| Search documents composed from the list summaries | `core/database/searchindex`, `core/search` |
 
 Reconciliation Claims, which would override a cached value, are not built. An earlier names-first cut of the name and evidence work was closed; its migrations landed with the schema that shipped.

@@ -132,18 +132,21 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 **Where.** `EvidenceGraphView.swift` (VoiceOver container label "Evidence graph"; header reads the Source title); `WorkspaceToolbar.swift` `HistoryJumpRow` (reads `location.title` and `location.ref`, the Source's); `SourcesListNavigation.canvasLocation`.
 **Problem.** Only the toolbar breadcrumb names the graph, and it truncates first. The Source page, the Jones canvas and the Smith canvas read the same in the history menu.
 **Fix.** The canvas's VoiceOver label names the graph ("Evidence graph, %@"); graph, composer and Promote history rows read the graph name from `session.evidenceGraph(id:)` as `BreadcrumbNames` does, falling back to "Evidence graph". No header change (working rule "No graph name in the canvas header").
+**Fixed in S14-14.**
 
 ### A-13 — A Kept-linked Citation link discards a dirty graph form
 
 **Where.** `SourceGraphFormDialog.swift` (`dismiss: { model = nil }` handed to the Kept-linked `PVDeleteImpactGroupList`); `PVDeleteImpact.swift` `activate`.
 **Problem.** `dismiss` sets the binding directly, skipping `PVSheetChrome.dismiss()` and its `isDirty` check, so a typed name or description is lost; the rows stay live while saving.
 **Fix.** When the form is dirty, ask the kit's "Discard changes?" first (`activate(…, then:)` exists); disable the rows while saving. Overrides S12-D3 GF-8 (working rule "A dirty form asks before a link inside it navigates away").
+**Fixed in S14-14.**
 
 ### A-14 — Copy says "this Source" where the action is one graph
 
 **Where.** `Platform/L10n.swift`: `promote.page.mapRestHint` ("…on this Source"), `promote.error.graphUnavailable` and `…Repropose` ("this Source's Evidence graph"), `evidenceGraph.subject.addPropertyUnavailable` ("this Source has no Artifacts", spoken as a card action when the graph links none), `citationComposer.pairPickBoth`.
 **Problem.** Map the rest adds one graph's Subjects (`PromoteFlow.swift`); VoiceOver says the Source has no Artifacts when it does.
 **Fix.** Reword each to name the Evidence graph; `addPropertyUnavailable` matches the canvas callout ("…this evidence graph has no artifacts").
+**Fixed in S14-14.**
 
 ### A-15 — FakeStore is a second engine with no parity check
 
@@ -162,12 +165,14 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 **Where.** `DesignSystem/Components/Confirm/PVConfirm.swift` (confirm button `.keyboardShortcut(.defaultAction)`; `.onAppear { cancelFocused = true }` with the comment "Return must not complete a destructive action"); `DesignSystem/README.md`.
 **Problem.** Return activates the default button whatever has focus, so Return deletes the graph, Artifact or Source.
 **Fix.** For the danger tone, Cancel is the default action and the destructive button has no Return shortcut (working rule "A danger confirm's default action is Cancel"). Update the README line.
+**Fixed in S14-14.**
 
 ### A-18 — VoiceOver is not told graph write results or failures
 
 **Where.** `PVToast.swift`, `VocabularyChrome.swift` (`VocabularyToastOverlay`); `SourceGraphFormDialog.swift` and `SourcePageArtifactsView.swift` error callouts; `Platform/AccessibilityAnnouncement.swift` (three callers, none here).
 **Problem.** "Evidence graph added" and "Evidence graph deleted" toasts vanish after 5 s unannounced; "Couldn't save the evidence graph" and a refused card save appear with focus still on the button.
 **Fix.** Post `AccessibilityAnnouncement.post` once in the toast overlay when the toast changes (every toast gains it); announce a form's error callout when it appears.
+**Fixed in S14-14.**
 
 ### A-19 — The composer swallows a failed Citation load
 
@@ -180,11 +185,13 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 **Where.** `L10n.swift` and `Localizable.xcstrings`: `promote.toast.filedTitle` and `.filedBody`, `promote.page.promoting`, `.rowSummary`, `.mapRest`, `citationComposer.artifactCitationCount`, `.citationStepperCount`, `.pageCount`; `DeleteImpact.noun` picks singular or plural in Swift (`count == 1 ? …`).
 **Problem.** "Filed 1 subjects and 1 connections", "1 citations", "1 pages". `L10nPluralTests` only checks keys that already have variations; `check-localizable-xcstrings.py` has no such check.
 **Fix.** `one` / `other` variations (substitutions for two counts); plural keys replace the Swift noun pick; the script fails on `%lld <word>` with no variations, with an allow-list ("Page %lld").
+**Fixed in S14-14.**
 
 ### A-21 — Section headers are not VoiceOver headings
 
 **Where.** `DesignSystem/Components/SectionHeader/PVSectionHeader.swift` (no `.isHeader`); precedent `ConclusionDetailPage.swift`.
 **Fix.** `.accessibilityAddTraits(.isHeader)` on the header title, in the kit.
+**Fixed in S14-14.**
 
 ### A-22 — Cover and portrait resets are not audited
 
@@ -294,7 +301,7 @@ Low items from the audit, not pulled into the spike (user, 2026-10-27). Each nam
 - **L-13.** `L10n.swift` is 11,205 lines; six members are unused (`armedEscHint`, `evidenceGraphStubBody`, `gateUnknownTitle`, `gateUnknownBody`, `ingestUnreadableTitle`, `ingestUnreadableHelp`).
 - **L-14.** `WorkspaceLocation` is twenty optional fields keyed by surface; graph locations are built five ways.
 - **L-15.** `PVFlowLayout` has one caller; `WorkspaceSession.evidenceGraphsBySource` has none. Near S12-26.
-- **L-16.** Test net: `TestCallRouter`'s unknown-method row calls method 100 (`METHOD_UNPROMOTE_SUBJECT`); `PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`); a `c.DB()` read inside `writes.Run` hangs on the single connection instead of failing. Near S12-33.
+- **L-16.** Test net: `TestCallRouter`'s unknown-method row calls method 100 (`METHOD_UNPROMOTE_SUBJECT`); `PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`; **fixed in S14-19**); a `c.DB()` read inside `writes.Run` hangs on the single connection instead of failing. Near S12-33.
 - **L-17.** Breadcrumbs, the canvas header title and DeleteImpact Citation rows truncate with no `.help`; a refused card save reads "…an artifact you removed" for an unchecked graph. Near S12-29.
 
 **Nits.** `SourceGraph*` Swift type names against the `EvidenceGraph` rule; the `"filed"` filter shim in `SourcesListSettings.swift`; error codes compared as string literals in Swift; `FakeStore` (Platform) calling `SourcesListNavigation` (Features); `CoreInvoke.swift` and `dispatch.go` restating the proto `Method` enum; `graphfill/load.go` repeating `evidencegraphs.SourceOf`; the graph status rule decided in Swift from Go's counts; two glyphs for an Evidence graph; graph-form Save enabled with no change; a blocked graph button is a focusable no-op; `graphprogress` drops a user type keyed `source` without checking origin.

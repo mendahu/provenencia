@@ -23,13 +23,13 @@ func TestWriteEffectsProto(t *testing.T) {
 	b, bStr := newID()
 
 	tests := []struct {
-		name          string
-		res           writes.Result
-		handles       []string
-		headerHandles []string
-		handleScopes  []string
-		revision      int64
-		revisionAt    string
+		name           string
+		res            writes.Result
+		handles        []string
+		summaryHandles []string
+		handleScopes   []string
+		revision       int64
+		revisionAt     string
 	}{
 		{name: "empty set"},
 		{
@@ -40,10 +40,10 @@ func TestWriteEffectsProto(t *testing.T) {
 			revisionAt:   "2026-10-15T16:00:00Z",
 		},
 		{
-			name:          "handles and header deps stay apart",
-			res:           writes.Result{Effects: effects.Set{Handles: [][]byte{a}, HeaderDeps: [][]byte{b}}},
-			handles:       []string{aStr},
-			headerHandles: []string{bStr},
+			name:           "handles and summary deps stay apart",
+			res:            writes.Result{Effects: effects.Set{Handles: [][]byte{a}, SummaryDeps: [][]byte{b}}},
+			handles:        []string{aStr},
+			summaryHandles: []string{bStr},
 		},
 	}
 	for _, tt := range tests {
@@ -52,8 +52,8 @@ func TestWriteEffectsProto(t *testing.T) {
 			if !reflect.DeepEqual(got.GetHandles(), tt.handles) {
 				t.Fatalf("Handles = %v, want %v", got.GetHandles(), tt.handles)
 			}
-			if !reflect.DeepEqual(got.GetHeaderHandles(), tt.headerHandles) {
-				t.Fatalf("HeaderHandles = %v, want %v", got.GetHeaderHandles(), tt.headerHandles)
+			if !reflect.DeepEqual(got.GetSummaryHandles(), tt.summaryHandles) {
+				t.Fatalf("SummaryHandles = %v, want %v", got.GetSummaryHandles(), tt.summaryHandles)
 			}
 			if !reflect.DeepEqual(got.GetHandleScopes(), tt.handleScopes) {
 				t.Fatalf("HandleScopes = %v, want %v", got.GetHandleScopes(), tt.handleScopes)
@@ -67,9 +67,9 @@ func TestWriteEffectsProto(t *testing.T) {
 
 func TestWriteEffectsProtoLists(t *testing.T) {
 	got := writeEffectsProto(writes.Result{Effects: effects.Set{
-		Lists: []effects.List{effects.ListVocabulary, effects.ListEvidenceGraphs},
+		Lists: []effects.List{effects.ListVocabulary, effects.ListPropertyUsage},
 	}})
-	if want := []string{"vocabulary", "evidence_graphs"}; !reflect.DeepEqual(got.GetLists(), want) {
+	if want := []string{"vocabulary", "property_usage"}; !reflect.DeepEqual(got.GetLists(), want) {
 		t.Fatalf("Lists = %v, want %v", got.GetLists(), want)
 	}
 	if got := writeEffectsProto(writes.Result{}); got.GetLists() != nil {

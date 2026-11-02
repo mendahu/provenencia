@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -51,6 +52,13 @@ func runDelete(c *database.Catalog, userID, id []byte) error {
 }
 
 func runSetCover(c *database.Catalog, userID, sourceID []byte, mode string, primaryArtifactID []byte) (Source, error) {
+	if mode == CoverModeArtifact {
+		// The thumbnail is made before the cover is chosen (SetSourceCover does
+		// it outside the session). A File that gets none is NormalizeCover's to refuse.
+		if fileID, err := CoverArtifactFile(c, sourceID, primaryArtifactID); err == nil {
+			_, _ = derivatives.EnsureThumbnail(c, fileID)
+		}
+	}
 	mode, artID, err := NormalizeCover(c, sourceID, mode, primaryArtifactID)
 	if err != nil {
 		return Source{}, err
@@ -802,4 +810,83 @@ func runArtifactCreate(c *database.Catalog, userID []byte, in artifacts.CreateIn
 			return artifacts.Create(tx, userID, in)
 		})
 	return a, err
+}
+
+func TestNormalizeCoverNeedsThumbnail(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mine, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Mine"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Other"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := t.TempDir() + "/scan.png"
+	writeTinyPNG(t, path)
+	fres, err := ingest.File(c, path, userID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := runArtifactCreate(c, userID, artifacts.CreateInput{SourceID: mine.ID, FileID: fres.File.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := NormalizeCover(c, mine.ID, CoverModeArtifact, art.ID); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("no thumbnail: err = %v, want ErrInvalid", err)
+	}
+	if _, err := derivatives.EnsureThumbnail(c, fres.File.ID); err != nil {
+		t.Fatal(err)
+	}
+	mode, id, err := NormalizeCover(c, mine.ID, CoverModeArtifact, art.ID)
+	if err != nil || mode != CoverModeArtifact || !bytes.Equal(id, art.ID) {
+		t.Fatalf("with thumbnail: %q %x %v", mode, id, err)
+	}
+	if _, _, err := NormalizeCover(c, other.ID, CoverModeArtifact, art.ID); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("another Source's Artifact: err = %v, want ErrInvalid", err)
+	}
+}
+
+func TestCoverArtifactID(t *testing.T) {
+	id := bytes.Repeat([]byte{7}, 16)
+	for _, tc := range []struct {
+		name string
+		mode string
+		id   []byte
+		want bool
+	}{
+		{"artifact with an id", CoverModeArtifact, id, true},
+		{"mode is trimmed", " artifact ", id, true},
+		{"artifact with no id", CoverModeArtifact, nil, false},
+		{"artifact with a short id", CoverModeArtifact, []byte{1}, false},
+		{"type icon", CoverModeTypeIcon, id, false},
+		{"unknown mode", "pinned", id, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := CoverArtifactID(tc.mode, tc.id)
+			if ok != tc.want {
+				t.Fatalf("ok = %v, want %v", ok, tc.want)
+			}
+			if ok && !bytes.Equal(got, id) {
+				t.Fatalf("id = %x, want %x", got, id)
+			}
+		})
+	}
 }

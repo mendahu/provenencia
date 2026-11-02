@@ -109,6 +109,8 @@ For a **count with a noun** ("3 fields"), use one key with `plural` variations i
       "other" : { "stringUnit" : { "state" : "translated", "value" : "%arg citations" } } } } } } } } }
 ```
 
+A count in copy is a plural key: `scripts/check-localizable-xcstrings.py` fails on an English `%lld <word>` with no variations or substitutions (add a word that takes no plural, like "of" or "more", to `NON_INFLECTING`). A plural word that prints no number (a bare noun or verb picked by a count) is a substitution with value `%#@noun@` and forms without `%arg`, as `deleteImpact.kind.citation`; a top-level `plural` variation must reference the number, or the catalog does not compile.
+
 The format function is the same `L10n.format(resource, kind, count)`; the catalog picks the form. `L10n.format` picks a formatting locale that matches the resolved localization, so plural variations choose the right form — don't call `String(format:)` on copy yourself.
 
 5. Add/update the key in `Localizable.xcstrings` (`extractionState: "manual"`, `en` `state: "translated"`, same comment/value as `defaultValue`). For Info.plist TCC/copy keys, use `InfoPlist.xcstrings` instead (e.g. `NSDocumentsFolderUsageDescription`) — do not put those only in `INFOPLIST_KEY_*` build settings.
@@ -133,10 +135,8 @@ PVIconButton(.dismiss, label: L10n.NameValue.partRemove(position: 2)) { … }  /
 When a sentence styles some of its words (a name in semibold, a Source title in italic link ink), keep it **one** translatable format and let the arguments carry the styling, so a translation can reorder them. Never split the sentence into pieces joined in Swift.
 
 ```swift
-StyledFormat.attributed(L10n.Promote.titleHandle, [
-    .init(text: name),
-    .init(text: joins, attributes: muted),   // an AttributeContainer
-    .init(text: recordTitle),
+StyledFormat.attributed(decoration.format, [
+    .init(text: word, attributes: italic),   // an AttributeContainer
 ])
 ```
 
@@ -144,6 +144,7 @@ StyledFormat.attributed(L10n.Promote.titleHandle, [
 - Its grammar is only `%@` (the next argument), `%n$@` (argument n, 1-based) and `%%` (a percent sign). Any other specifier stays literal, so a styled format has no `%lld`.
 - The catalog value follows the usual rule: more than one argument means numbered placeholders (`%1$@ … %2$@`).
 - An `AttributedString` is accepted wherever `PVCopy` is (`PVSectionHeader` titles, `Text(_:)`), so the result goes straight to the component.
+- A format that some surfaces draw styled and others plain (`NamePartDecoration.format`) reads its plain text as `String(StyledFormat.attributed(…).characters)`, so the format has one parser. Copy that is only ever plain goes through `L10n.format`.
 - Keep fonts and colors out of the helper that builds the string: mark runs with a semantic role attribute, and map roles to design tokens where the view is drawn.
 
 ## Whole phrases

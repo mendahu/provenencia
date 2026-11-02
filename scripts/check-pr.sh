@@ -16,7 +16,7 @@
 #   go-test       go test -tags fts5 ./api/... ./core/...
 #   localizable   scripts/check-localizable-xcstrings.py
 #   guidance-names  scripts/check-guidance-names.py: every code name a skill or
-#                 Cursor rule cites still exists, and every kit Components or Recipes folder has a DesignSystem README row
+#                 Cursor rule cites still exists, and every kit Components or Recipes folder has a DesignSystem README row, and every non-Swift file in a synchronized Xcode folder is a membership exception
 #   plan-docs     scripts/check-plan-docs.py on the plans and open briefs this branch changes
 #   xcode-test    xcodebuild test (ProvenenciaTests), the CI command. macOS only:
 #                 anywhere else it fails, because a PR is not checked without it.

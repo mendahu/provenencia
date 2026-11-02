@@ -1,5 +1,6 @@
 import AppKit
 import CoreGraphics
+import CoreText
 import Foundation
 import PDFKit
 import UniformTypeIdentifiers
@@ -137,6 +138,24 @@ enum ArtifactFileFixtures {
             throw ArtifactFileFixtureError.failed
         }
         try write(data, projectDir: projectDir, relPath: relPath)
+    }
+
+    /// One 200×200 pt page with a line of text, so the viewer finds a text layer.
+    static func writeTextPDF(projectDir: String, relPath: String, text: String) throws {
+        let data = NSMutableData()
+        var box = CGRect(x: 0, y: 0, width: 200, height: 200)
+        guard let consumer = CGDataConsumer(data: data as CFMutableData),
+              let context = CGContext(consumer: consumer, mediaBox: &box, nil)
+        else { throw ArtifactFileFixtureError.failed }
+        context.beginPDFPage(nil)
+        let line = CTLineCreateWithAttributedString(
+            NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 18)])
+        )
+        context.textPosition = CGPoint(x: 20, y: 100)
+        CTLineDraw(line, context)
+        context.endPDFPage()
+        context.closePDF()
+        try write(data as Data, projectDir: projectDir, relPath: relPath)
     }
 
     /// One 100×200 pt page with a black 10×10 pt square at its unrotated

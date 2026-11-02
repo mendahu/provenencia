@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -132,15 +133,11 @@ func TestConclusionHandleSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := writes.Run(c, writes.Op{Action: "create_citation_with_observations", UserID: userID},
-		func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				ArtifactID: art.ID, LocatorJSON: evidenceLocator,
-			}, []observations.Input{
-				{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
-				{SubjectID: ada.ID, PropertyID: seenWith.ID, ValueSubjectID: bob.ID},
-			})
-		}); err != nil {
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	if _, _, err := observationstest.Cite(c, userID, graph, art.ID, evidenceLocator, []observations.Input{
+		{SubjectID: ada.ID, PropertyID: nameProp.ID, Name: &namevalue.Value{Form: "Ada"}},
+		{SubjectID: ada.ID, PropertyID: seenWith.ID, ValueSubjectID: bob.ID},
+	}...); err != nil {
 		t.Fatal(err)
 	}
 	adaPromoted := promotetest.Save(t, c, userID, promote.Input{SubjectID: ada.ID})

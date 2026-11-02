@@ -92,8 +92,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 
-	// Notes and pins are released first; claims that pinned this Observation
-	// stay, weaker (model §5.2). The caller records the returned changes.
+	// Notes are released first; the caller records the returned changes.
 	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindObservation, id)
 	if err != nil {
 		return nil, err

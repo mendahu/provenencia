@@ -68,8 +68,8 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (gra
 	return prop, rev, prof, nil
 }
 
-// inputs is what a proposal and a claim evidence query both read first: the
-// Evidence graph's layer and the rules and vocabulary it was built with.
+// inputs is what a proposal reads first: the Evidence graph's layer and the
+// rules and vocabulary it was built with.
 type inputs struct {
 	graphID     []byte
 	cfg         graphalign.Config

@@ -50,7 +50,7 @@ The first quasi-family-tree visualization in the app.
 
 - **R-16. Simple, not a canvas.** A plain laid-out diagram, not a `GraphCanvas` host or a pannable/zoomable surface.
 - **R-17. The nuclear family.** Shows this person's **parents, siblings, spouse(s), and children**: the people they grew up with and the people who grew up with them.
-- **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings from a shared parent** (new). Extending the graph cache's implied links to make this easy is in scope.
+- **R-18. Implied relationships count.** The diagram shows as much as can be concluded automatically: direct links, links implied through events (shared marriage, a birth's parents, already read through `canonlinks.Reader.For`, S11-49), and **siblings**, both recorded (a `sibling` link, parents unknown) and implied by a shared parent (new). Extending the graph cache's implied links to make this easy is in scope.
 - **R-18a. Siblings are for the page, not for matching.** Matching keeps its current patterns (spouse, parent, grandparent); Promote and the evidence sheet do not count a shared parent as sibling evidence. Revisit if matching needs it later ([`kinship-view.md`](../../ideas/kinship-view.md)).
 - **R-19. Several families.** A person with more than one spouse shows each family. A person with conflicting parents shows each set. The layout handles both.
 - **R-20. Every relative is a link** to that relative's Person page, so the user can bounce from person to person.
@@ -79,7 +79,7 @@ The user thinks of this section as "where the sources are". The data is the pers
 
 - **R-33. One entry per identity claim.**
 - **R-34. Grouped by Source.** Since Spike 12 a Source can hold several Evidence graphs, so one Source can contribute several claims. Claims from the same Source are grouped under it.
-- **R-35. Each Source group shows** the Source's title, type, and date (a new first-class Source date, [`source-provenance-date.md`](source-provenance-date.md)), and the claims' Subjects beneath it as Evidence graph subject cards.
+- **R-35. Each Source group shows** the Source's title and type, and the claims' Subjects beneath it as Evidence graph subject cards. (The Source's date was descoped on 2026-10-31: it lands in Spike 15 with the other Source fields a standard citation needs, [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md).)
 - **R-36. Groups are ordered by Source title.**
 - **R-37. Each Source links** to its Source page.
 
@@ -89,7 +89,7 @@ On each claim in the Sources section.
 
 - **R-38. Remove.** Un-promote the Subject from this person, the same behavior as the un-promote control in the Evidence graph today.
 - **R-39. Removing the last claim** deletes the canonical person, wherever the unpromote happens (the Evidence graph too). A warning says so before it happens; if the user proceeds, the app returns to the Persons list.
-- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); the review is replaced by a view of how the person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md), slice 7).
+- **R-40. Review (view only).** Open the claim's pinned evidence and its argument, so the user can see why the Subject was connected to this person. Editing pins or the argument is not this spike. **Reopened 2026-10-29:** Identity Claims no longer carry pins or an argument; the table and columns were dropped by S13-25 ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5); the review is replaced by a view of how the person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md), slice 7).
 
 ## Not this spike
 
@@ -116,7 +116,7 @@ Spikes 11 and 12 closed on 2026-10-29; their open work moved to Spike 14.
 | S11-39 Matching reads kinship shapes | Blocked — re-plan | Siblings are page-only (R-18a), so the sibling inference must not reach matching's pattern set and S11-39's goldens do not move. Both still edit `core/kinship` and the graph cache's kinship results, so the sibling PR names S11-39 as a dependency or rebases on it |
 | S11-40 / S11-42 Implied links in claim evidence and on the evidence sheet | Scoped | Claim review (R-40) shows a claim's evidence and argument; S11-40 changes what the claim evidence query returns for relationships. The review view should reuse that query and sheet, so it follows S11-40 or is designed to absorb it |
 | S14-09 Quote nicknames and add former surnames (Spike 14; was S11-29, moved 2026-10-29) | Blocked — re-plan | Changes how Person titles render: the header (R-4), Family tiles and Timeline participants |
-| S11-30 Gender meets sex at birth | In review | Feeds the gender/sex color treatment reused on every tile (R-3) |
+| S11-30 Gender meets sex at birth | Landed (#509) | Feeds the gender/sex color treatment reused on every tile (R-3) |
 | S11-28, S11-44, S11-45 Nickname fold, nickname sets, prefix names | Planned / Scoped | Change the reconciler's outcomes and causes, which the provenance sheet explains (R-9). The sheet should word causes from the reconciler's records, not a fixed list |
 
 **Preparatory refactor considered and declined** ([review K-12](deployment-plan.review.md)): `core/kinship` still reads links through `segmentcompare` and so imports the whole compare stack ([`kinship-view.md`](../../ideas/kinship-view.md), S11-38 review M-3; S11-41 unified the reading but did not move it to its own pure package). Before the Family section's engine path imports `core/kinship`, consider moving link reading out. Note that this touches the same files as S11-39.

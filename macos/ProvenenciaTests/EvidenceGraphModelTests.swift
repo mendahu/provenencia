@@ -151,6 +151,10 @@ struct EvidenceGraphModelTests {
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
         )
+        // The canvas is on screen, so its graph key reloads on a write instead of going stale.
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, sourceSurface: .graph
+        ))
         return EvidenceGraphModel(
             graphID: graphID,
             sourceID: sourceID,
@@ -158,6 +162,20 @@ struct EvidenceGraphModelTests {
             store: store,
             userID: "user-1"
         )
+    }
+
+    @Test func canvasLabelNamesTheGraph() {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        #expect(model.canvasAccessibilityLabel == L10n.string(L10n.Workspace.evidenceGraphTitle))
+
+        model.session.setQueryValue(model.session.evidenceGraphsKey, value: [
+            evidenceGraph(graphID, sourceID: sourceID, name: "Jones household"),
+        ])
+        #expect(model.canvasAccessibilityLabel == "Evidence graph, Jones household")
+
+        model.armedConnect = true
+        #expect(model.canvasAccessibilityLabel == L10n.string(model.connectArmedHint))
     }
 
     /// Card copy is formatted once per snapshot, matches the card formatters,
@@ -411,10 +429,7 @@ struct EvidenceGraphModelTests {
         )
         #expect(effects.evidenceGraphs == [graphID])
         #expect(created.sourceID == sourceID)
-        let registry = CatalogQueryRegistry.standard
-        let project = ProjectKey(projectDir: projectDir)
-        #expect(registry.invalidations(for: effects, project: project)
-            .contains(.key(.evidenceGraph(project: project, graphId: graphID))))
+        #expect(model.session.revalidatedKeys(for: effects).contains(key))
         model.session.apply(effects)
         await waitForQuery(handle)
         #expect(handle.value?.subjects.map(\.id) == [created.id])
@@ -2238,7 +2253,7 @@ struct EvidenceGraphModelTests {
     @Test func openSelectedFileReportsAMissingFileAndKeepsTheSelection() async {
         let model = await fileModel(artifactIDs: ["a", "b"])
         model.selectFile("b")
-        model.openSelectedFile()
+        await model.openSelectedFile()
         #expect(
             model.fileOpenError
                 == L10n.EvidenceGraph.fileNotFoundMessage(name: "Page b", filename: "b.jpg")
@@ -2257,7 +2272,7 @@ struct EvidenceGraphModelTests {
         try ArtifactFileFixtures.write(Data("x".utf8), projectDir: projectDir, relPath: rel, mode: 0o644)
         let model = await fileModel(artifactIDs: ["a"], relPath: rel)
         let row = try #require(model.fileRows.first)
-        model.openSelectedFile()
+        await model.openSelectedFile()
         #expect(model.fileOpenError == L10n.ObjectOpen.refused(filename: row.displayFilename))
         if case .fileOpenFailed = model.canvasNotice {} else {
             Issue.record("canvasNotice \(String(describing: model.canvasNotice)), want .fileOpenFailed")
@@ -2266,22 +2281,22 @@ struct EvidenceGraphModelTests {
 
     @Test func armingAToolClearsTheMissingFileError() async {
         let model = await fileModel(artifactIDs: ["a"])
-        func missingFileError() -> String? {
-            model.openSelectedFile()
+        func missingFileError() async -> String? {
+            await model.openSelectedFile()
             return model.fileOpenError
         }
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleArm(.person)
         #expect(model.armedKind == .person)
         #expect(model.fileOpenError == nil)
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleConnect()
         #expect(model.armedConnect)
         #expect(model.fileOpenError == nil)
 
-        #expect(missingFileError() != nil)
+        #expect(await missingFileError() != nil)
         model.toggleSelect()
         #expect(model.armedSelect)
         #expect(model.fileOpenError == nil)

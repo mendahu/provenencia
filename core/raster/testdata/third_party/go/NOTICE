@@ -1,0 +1,6 @@
+Go image test files
+===================
+
+The JPEG files in this folder were copied from the Go 1.27 distribution's
+src/image/testdata/ for the core/raster tests. They are licensed under the Go
+authors' BSD-style licence in LICENSE.

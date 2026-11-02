@@ -162,6 +162,21 @@ final class PropertiesModel {
         return L10n.Properties.deletePropertyAccessibility(label: property.label)
     }
 
+    /// What VoiceOver reads for a Property's table row: label, key (two Properties may share a
+    /// label), value type, origin, how many types it is bound to, and their labels.
+    func rowAccessibilityLabel(for property: CatalogProperty) -> String {
+        let bound = snapshot.boundTypes(for: property.id)
+        let spoken = L10n.Properties.rowAccessibility(
+            label: property.label,
+            key: property.key,
+            valueType: L10n.string(SubjectPropertyValueType.label(property.valueType)),
+            origin: PropertiesOriginCell.spokenOrigin(property.origin),
+            bound: L10n.Properties.rowBoundAnnouncement(count: bound.count)
+        )
+        guard !bound.isEmpty else { return spoken }
+        return spoken + ", " + bound.map(\.label).joined(separator: ", ")
+    }
+
     var canEditSelected: Bool {
         guard let property = selectedProperty else { return false }
         return !CatalogOrigin.isPlugin(property.origin)

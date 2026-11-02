@@ -76,6 +76,22 @@ enum PVConfirmTone {
 
     /// Leading glyph on the confirm control (`PVConfirmDialog`'s `confirmIcon`).
     var confirmIcon: PVSymbol? { self == .danger ? .trash : nil }
+
+    /// Whether Return presses the confirm button. A danger confirm's default
+    /// action is Cancel, so a reflex Return keeps the record; an irreversible
+    /// confirm keeps Return on its confirm button.
+    var returnConfirms: Bool { self == .irreversible }
+}
+
+extension PVConfirmCopy {
+    /// The "Discard changes?" question every dirty form asks, whether the sheet
+    /// chrome or a card asks it.
+    static let discardChanges = PVConfirmCopy(
+        title: L10n.string(L10n.DesignSystem.formDialogDiscardTitle),
+        message: L10n.string(L10n.DesignSystem.formDialogDiscardMessage),
+        confirm: L10n.DesignSystem.formDialogDiscardConfirm,
+        cancel: L10n.DesignSystem.formDialogDiscardKeep
+    )
 }
 
 /// Pure enablement for confirm footer buttons — extracted for unit tests.
@@ -149,6 +165,7 @@ struct PVConfirmContent<Detail: View>: View {
                     .buttonStyle(.pv(.secondary, size: .lg))
                     .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
                     .focused($cancelFocused)
+                    .keyboardShortcut(tone.returnConfirms ? nil : .defaultAction)
                     .modifier(ConfirmOptionalAccessibilityIdentifier(
                         prefix: accessibilityIdentifierPrefix,
                         suffix: "cancel"
@@ -165,7 +182,7 @@ struct PVConfirmContent<Detail: View>: View {
                     }
                 }
                 .buttonStyle(.pv(tone.buttonVariant, size: .lg))
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(tone.returnConfirms ? .defaultAction : nil)
                 .disabled(PVConfirmControls.isActionDisabled(isRunning: isRunning))
                 .modifier(ConfirmOptionalAccessibilityIdentifier(
                     prefix: accessibilityIdentifierPrefix,
@@ -173,7 +190,8 @@ struct PVConfirmContent<Detail: View>: View {
                 ))
             }
         }
-        // Focus starts on cancel — Return must not complete a destructive action.
+        // Focus starts on cancel, and a danger confirm's Return shortcut is on
+        // Cancel (`PVConfirmTone.returnConfirms`): Return keeps the record.
         .onAppear { cancelFocused = true }
     }
 }

@@ -63,6 +63,7 @@ func defaultValue() valuecompare.Rules {
 			Western: valuecompare.NamePattern{
 				PartRoles: map[string]valuecompare.NameRole{
 					namevalue.PartTypeSurname:       valuecompare.RoleFamily,
+					namevalue.PartTypeFormerSurname: valuecompare.RoleFamily,
 					namevalue.PartTypeGiven:         valuecompare.RoleGiven,
 					namevalue.PartTypeNick:          valuecompare.RoleNick,
 					namevalue.PartTypeSuffix:        valuecompare.RoleGeneration,

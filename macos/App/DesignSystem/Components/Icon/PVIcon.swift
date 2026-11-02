@@ -5,6 +5,8 @@ enum PVSymbol: String {
     case folderPlus = "folder.badge.plus"
     case folderOpen = "folder"
     case check = "checkmark"
+    /// Lucide `copy` — copy a value to the clipboard (`PVClipboardButton`).
+    case copy = "doc.on.doc"
     case info = "info.circle"
     case chevronDown = "chevron.down"
     case chevronUp = "chevron.up"

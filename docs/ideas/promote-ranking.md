@@ -13,7 +13,7 @@ Each item is described in the second app-health audit, now at [`deployment-plan/
 | Item | Was | Problem |
 | --- | --- | --- |
 | B-2 | S12-41 | Setting a Source person to New or Skip, or another row taking a record, can make a one-cardinality conflict (their birth) vanish from the neighbors' scores. |
-| B-8, B-9 | S12-43 (performance half) | A handle commit throws away the name index and every Source's ranked candidates, and profiles are rebuilt; see [`name-index-on-commit.md`](name-index-on-commit.md). Also: the graph cache's three warm slots (alias index, name format, match index) should be one keyed slot, and its header display rows should be memo slots. |
+| B-8, B-9 | S12-43 (performance half) | A handle commit throws away the name index and every Source's ranked candidates, and profiles are rebuilt; see [`name-index-on-commit.md`](name-index-on-commit.md). Also: the graph cache's three warm slots (alias index, name format, match index) should be one keyed slot, and its summary display rows should be memo slots. |
 | B-8, B-11 | S12-51 | Each proposal walks the whole connected canon and compares would-be-new rows against each other more than once; see [`narrower-canon-walk.md`](narrower-canon-walk.md). |
 | B-19, B-20, B-22 | S12-46 | Names compare differently depending on how they are written: initials and aliases on folded tokens, NFC and compatibility forms, format characters. Also mirrored in Swift's `TextMatch`. |
 

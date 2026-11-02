@@ -27,11 +27,17 @@ enum ReconciledValueDisplay {
     static func sourceCount(_ field: CatalogConclusionField) -> Int {
         let shown = field.displayedValues
         guard shown.count > 1 else { return shown.first?.support ?? 0 }
-        let ranks = Set(shown.map(\.rank))
-        let sources = Set(field.outcomes.filter { outcome in
-            (outcome.reason == .kept || outcome.reason == .folded) && outcome.valueRank.map(ranks.contains) == true
-        }.map(\.sourceID))
-        return sources.isEmpty ? shown.reduce(0) { $0 + $1.support } : sources.count
+        return distinctSourceCount(
+            of: field.outcomes.filter { $0.groupRank > 0 },
+            fallback: shown.reduce(0) { $0 + $1.support }
+        )
+    }
+
+    /// The distinct Sources among these outcomes; `fallback` (summed support)
+    /// when none carries a Source id.
+    static func distinctSourceCount(of outcomes: [CatalogReconcilerOutcome], fallback: Int) -> Int {
+        let sources = Set(outcomes.map(\.sourceID))
+        return sources.isEmpty ? fallback : sources.count
     }
 
     /// "1 Source", "3 Sources", "by you"; nil for an empty field.
@@ -197,12 +203,11 @@ enum ReconciledValueDisplay {
     }
 
     /// Why a record's evidence is weak, in the auto-reconciler's order: the
-    /// Source, the transcription, then the claim.
+    /// Source, then the transcription.
     static func weakCauses(_ outcome: CatalogReconcilerOutcome) -> [String] {
         var causes: [String] = []
         if outcome.isLowTrustSource { causes.append(L10n.string(L10n.Conclusions.weakLowTrustSource)) }
         if outcome.transcriptionUncertain { causes.append(L10n.string(L10n.Conclusions.weakUncertainTranscription)) }
-        if outcome.isLowConfidenceClaim { causes.append(L10n.string(L10n.Conclusions.weakLowConfidenceClaim)) }
         return causes
     }
 
@@ -227,6 +232,6 @@ enum ReconciledValueDisplay {
             return L10n.Conclusions.a11yEmpty(label)
         }
         let parts = [label, lead, state] + [againstLine(field)].compactMap { $0 }
-        return parts.dropFirst().reduce(parts[0]) { L10n.Conclusions.a11yList($0, rest: $1) }
+        return L10n.DesignSystem.spokenJoin(parts) ?? label
     }
 }

@@ -109,27 +109,23 @@ type Candidate struct {
 // its vocabulary's default grade: 0 is the default, below it negative, above
 // it positive.
 type Provenance struct {
-	Credibility     int  // the Citation's Source credibility vs `standard`
-	Uncertain       bool // the Citation's transcription is uncertain
-	ClaimConfidence int  // the member's Identity Claim confidence vs `moderate`
+	Credibility int  // the Citation's Source credibility vs `standard`
+	Uncertain   bool // the Citation's transcription is uncertain
 }
 
-// Weak is evidence below the default anywhere: a low-trust Source, an
-// uncertain transcription, or a low-confidence claim.
+// Weak is evidence below the default anywhere: a low-trust Source or an
+// uncertain transcription.
 func (p Provenance) Weak() bool {
-	return p.Credibility < 0 || p.Uncertain || p.ClaimConfidence < 0
+	return p.Credibility < 0 || p.Uncertain
 }
 
 // Stronger reports whether p is strictly stronger than q, comparing Source
-// credibility, then transcription certainty, then claim confidence.
+// credibility, then transcription certainty. Two equal ones are not stronger.
 func (p Provenance) Stronger(q Provenance) bool {
 	if p.Credibility != q.Credibility {
 		return p.Credibility > q.Credibility
 	}
-	if p.Uncertain != q.Uncertain {
-		return !p.Uncertain
-	}
-	return p.ClaimConfidence > q.ClaimConfidence
+	return p.Uncertain != q.Uncertain && !p.Uncertain
 }
 
 // ReconciledValue is one distinct value and the Observations behind it.
@@ -154,6 +150,10 @@ func (r Reason) Displayed() bool { return r == ReasonKept }
 // a vote for a displayed value, or weak evidence; a weak photo does not contradict
 // another photo (working rule "A gallery is the reconciled likeness values").
 func (r Reason) InGallery() bool { return r == ReasonKept || r == ReasonWeak }
+
+// IntoValue reports whether a record whose outcome has this reason counts toward
+// a displayed value: kept as given, or folded into a fuller one.
+func (r Reason) IntoValue() bool { return r == ReasonKept || r == ReasonFolded }
 
 func (c ReconciledValue) Displayed() bool { return c.Reason.Displayed() }
 

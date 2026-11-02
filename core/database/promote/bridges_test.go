@@ -2,25 +2,19 @@ package promote_test
 
 import (
 	"bytes"
-	"database/sql"
 	"errors"
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/audit"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/project"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -279,53 +273,6 @@ func (w *bridgeWorld) relationships(term propertyterms.Term) int {
 	return n
 }
 
-func (w *bridgeWorld) cacheMatchesRebuild() {
-	w.t.Helper()
-	db, err := w.c.DB()
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	before := cacheDump(w.t, db)
-	tx, err := db.Begin()
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	defer func() { _ = tx.Rollback() }()
-	if err := autoreconciler.Rebuild(tx); err != nil {
-		w.t.Fatal(err)
-	}
-	if after := cacheDump(w.t, tx); after != before {
-		w.t.Fatalf("upkeep differs from a rebuild\nupkeep:\n%s\nrebuild:\n%s", before, after)
-	}
-}
-
-func cacheDump(t *testing.T, q interface {
-	Query(string, ...any) (*sql.Rows, error)
-}) string {
-	t.Helper()
-	var b strings.Builder
-	for _, table := range []string{"auto_reconciler_values", "auto_reconciler_outcomes"} {
-		rows, err := q.Query(`SELECT * FROM ` + table + ` ORDER BY 1, 2, 3`)
-		if err != nil {
-			t.Fatal(err)
-		}
-		cols, _ := rows.Columns()
-		for rows.Next() {
-			vals := make([]any, len(cols))
-			ptrs := make([]any, len(cols))
-			for i := range vals {
-				ptrs[i] = &vals[i]
-			}
-			if err := rows.Scan(ptrs...); err != nil {
-				t.Fatal(err)
-			}
-			fmt.Fprintf(&b, "%s %v\n", table, vals)
-		}
-		_ = rows.Close()
-	}
-	return b.String()
-}
-
 func TestBridgeFiling(t *testing.T) {
 	t.Run("participation files when both ends are promoted and a second record joins", func(t *testing.T) {
 		w := newBridgeWorld(t)
@@ -369,7 +316,7 @@ func TestBridgeFiling(t *testing.T) {
 		if w.roleRows(got[0]) != 2 {
 			t.Fatalf("role rows %d, want the two roles kept apart from the key", w.roleRows(got[0]))
 		}
-		w.cacheMatchesRebuild()
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})
 
 	t.Run("spouse is one relationship and parent keeps direction", func(t *testing.T) {
@@ -388,7 +335,7 @@ func TestBridgeFiling(t *testing.T) {
 		if w.relationships(w.parent) != 2 {
 			t.Fatalf("parent associations %d, want 2", w.relationships(w.parent))
 		}
-		w.cacheMatchesRebuild()
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})
 
 	t.Run("a self-link is not filed and the claim stands", func(t *testing.T) {
@@ -533,7 +480,7 @@ func TestBridgeFiling(t *testing.T) {
 		if got := w.handles("place_relationship"); len(got) != 6 {
 			t.Fatalf("place_relationship associations %d, want 6", len(got))
 		}
-		w.cacheMatchesRebuild()
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})
 }
 
@@ -549,48 +496,13 @@ func TestPlaceRelationshipTypeCreateRefused(t *testing.T) {
 	}
 }
 
-func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
+func TestBridgeSubjectDeleteKeepsTheEndClaims(t *testing.T) {
 	w := newBridgeWorld(t)
 	james := w.node("person", "James", 0, 0)
 	birth := w.node("event", "Birth", 2, 0)
 	bridge := w.participation(james, birth, w.subjectRole)
-	person := w.promote(james)
+	w.promote(james)
 	w.promote(birth)
-	var edge observations.Observation
-	for _, o := range bridge.Observations {
-		if bytes.Equal(o.PropertyID, w.personProp.ID) {
-			edge = o
-		}
-	}
-	if len(edge.ID) != 16 {
-		t.Fatal("missing person edge")
-	}
-	db, err := w.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatal(err)
-	}
-	change, ok, err := identityclaims.PinTx(tx, person.Claim.ID, edge.ID)
-	if err != nil || !ok {
-		t.Fatalf("pin %v %v", err, ok)
-	}
-	rev := audit.Revision{
-		UserID: userID, ActionType: "pin_edge", CreatedAt: project.NowUTC(),
-		Changes: []rowchange.Change{change},
-	}
-	set, err := effects.Resolve(tx, rev.Changes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := audit.Record(tx, rev, set); err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.Commit(); err != nil {
-		t.Fatal(err)
-	}
 
 	if _, err := writes.Call(w.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
@@ -598,34 +510,7 @@ func TestBridgeSubjectDeleteReleasesPins(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM identity_claim_evidence
-		WHERE identity_claim_id = ? AND observation_id = ?`, person.Claim.ID, edge.ID).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	if n != 0 {
-		t.Fatalf("pin survived")
-	}
 	if _, err := identityclaims.AcceptedEntityForSubject(w.c, james.ID); err != nil {
 		t.Fatalf("person claim: %v", err)
-	}
-	rows, err := db.Query(`SELECT ch.entity_type FROM audit_changes ch
-		JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-		WHERE t.action_type = 'delete_subject'
-		ORDER BY ch.entity_type`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var types []string
-	for rows.Next() {
-		var entityType string
-		if err := rows.Scan(&entityType); err != nil {
-			t.Fatal(err)
-		}
-		types = append(types, entityType)
-	}
-	if !strings.Contains(strings.Join(types, ","), "identity_claim_evidence") {
-		t.Fatalf("delete audited %v, want the pin released with the observation", types)
 	}
 }

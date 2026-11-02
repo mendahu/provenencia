@@ -96,7 +96,7 @@ const (
 	MethodDeleteCitation                    = int32(engine.Method_METHOD_DELETE_CITATION)
 	MethodPromoteSubject                    = int32(engine.Method_METHOD_PROMOTE_SUBJECT)
 	MethodListSubjectMemberships            = int32(engine.Method_METHOD_LIST_SUBJECT_MEMBERSHIPS)
-	MethodListPersonHeaders                 = int32(engine.Method_METHOD_LIST_PERSON_HEADERS)
+	MethodListPersonSummaries               = int32(engine.Method_METHOD_LIST_PERSON_SUMMARIES)
 	MethodProposePromoteGraphAlignment      = int32(engine.Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT)
 	MethodApplyPromoteGraphAlignment        = int32(engine.Method_METHOD_APPLY_PROMOTE_GRAPH_ALIGNMENT)
 	MethodGetNameFormat                     = int32(engine.Method_METHOD_GET_NAME_FORMAT)
@@ -108,12 +108,13 @@ const (
 	MethodUpdateEvidenceGraph               = int32(engine.Method_METHOD_UPDATE_EVIDENCE_GRAPH)
 	MethodDeleteEvidenceGraph               = int32(engine.Method_METHOD_DELETE_EVIDENCE_GRAPH)
 	MethodGetEvidenceGraphUnlinkImpact      = int32(engine.Method_METHOD_GET_EVIDENCE_GRAPH_UNLINK_IMPACT)
-	MethodGetPromoteClaimEvidence           = int32(engine.Method_METHOD_GET_PROMOTE_CLAIM_EVIDENCE)
 	MethodReorderSubjectTypeProperties      = int32(engine.Method_METHOD_REORDER_SUBJECT_TYPE_PROPERTIES)
-	MethodListClaimConfidenceGrades         = int32(engine.Method_METHOD_LIST_CLAIM_CONFIDENCE_GRADES)
 	MethodGetConclusionDetail               = int32(engine.Method_METHOD_GET_CONCLUSION_DETAIL)
-	MethodListEventHeaders                  = int32(engine.Method_METHOD_LIST_EVENT_HEADERS)
-	MethodListPlaceHeaders                  = int32(engine.Method_METHOD_LIST_PLACE_HEADERS)
+	MethodListPersonClaims                  = int32(engine.Method_METHOD_LIST_PERSON_CLAIMS)
+	MethodGetPersonFamily                   = int32(engine.Method_METHOD_GET_PERSON_FAMILY)
+	MethodListPersonEvents                  = int32(engine.Method_METHOD_LIST_PERSON_EVENTS)
+	MethodListEventSummaries                = int32(engine.Method_METHOD_LIST_EVENT_SUMMARIES)
+	MethodListPlaceSummaries                = int32(engine.Method_METHOD_LIST_PLACE_SUMMARIES)
 	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
 )
 
@@ -322,28 +323,30 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteEvidenceGraph(in)
 	case MethodGetEvidenceGraphUnlinkImpact:
 		return handlers.GetEvidenceGraphUnlinkImpact(in)
-	case MethodGetPromoteClaimEvidence:
-		return handlers.GetPromoteClaimEvidence(in)
 	case MethodReorderSubjectTypeProperties:
 		return handlers.ReorderSubjectTypeProperties(in)
 	case MethodListSubjectMemberships:
 		return handlers.ListSubjectMemberships(in)
-	case MethodListPersonHeaders:
-		return handlers.ListPersonHeaders(in)
+	case MethodListPersonSummaries:
+		return handlers.ListPersonSummaries(in)
 	case MethodProposePromoteGraphAlignment:
 		return handlers.ProposePromoteGraphAlignment(in)
 	case MethodApplyPromoteGraphAlignment:
 		return handlers.ApplyPromoteGraphAlignment(in)
 	case MethodGetNameFormat:
 		return handlers.GetNameFormat(in)
-	case MethodListClaimConfidenceGrades:
-		return handlers.ListClaimConfidenceGrades(in)
 	case MethodGetConclusionDetail:
 		return handlers.GetConclusionDetail(in)
-	case MethodListEventHeaders:
-		return handlers.ListEventHeaders(in)
-	case MethodListPlaceHeaders:
-		return handlers.ListPlaceHeaders(in)
+	case MethodListPersonClaims:
+		return handlers.ListPersonClaims(in)
+	case MethodGetPersonFamily:
+		return handlers.GetPersonFamily(in)
+	case MethodListPersonEvents:
+		return handlers.ListPersonEvents(in)
+	case MethodListEventSummaries:
+		return handlers.ListEventSummaries(in)
+	case MethodListPlaceSummaries:
+		return handlers.ListPlaceSummaries(in)
 	case MethodListEvidenceGraphEventTitles:
 		return handlers.ListEvidenceGraphEventTitles(in)
 	default:

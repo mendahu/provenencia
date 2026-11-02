@@ -68,6 +68,21 @@ struct PropertiesValueTypePill: View {
 struct PropertiesOriginCell: View {
     let origin: String
 
+    /// The origin as VoiceOver speaks it: the words the cell or `OriginPill` shows. An origin
+    /// neither shows is spoken raw.
+    static func spokenOrigin(_ origin: String) -> String {
+        if origin == CatalogOrigin.user {
+            return L10n.string(L10n.Properties.originUserShort)
+        }
+        if origin == CatalogOrigin.provenencia {
+            return L10n.string(L10n.Properties.originSeededShort)
+        }
+        if CatalogOrigin.isPlugin(origin) {
+            return OriginPill.pluginLabel(for: origin)
+        }
+        return origin
+    }
+
     var body: some View {
         if origin == CatalogOrigin.user {
             PVBadge(L10n.Properties.originUserShort, tone: .warning, subtle: true)

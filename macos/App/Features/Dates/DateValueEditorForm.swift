@@ -29,6 +29,7 @@ struct DateValueEditorForm: View {
                 advancedSection
             }
         }
+        .environment(\.pvFieldLabel, nil)
     }
 
     private var kindSection: some View {
@@ -139,14 +140,10 @@ struct DateValueEditorForm: View {
                 )
             }
             if let fieldErr = draft.cascadeFieldError(start: start) {
-                Text(fieldErr)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(fieldErr)
                     .accessibilityIdentifier(start ? "\(accessibilityIdentifierPrefix).start.fieldError" : "\(accessibilityIdentifierPrefix).end.fieldError")
             } else if !start, let err = draft.endError {
-                Text(err)
-                    .font(PVFont.body(size: PVTypeScale.micro))
-                    .foregroundStyle(PVColor.danger)
+                PVErrorText(err)
             }
             if start ? draft.showStartTime : draft.showEndTime {
                 timeBlock(start: start)
@@ -266,6 +263,7 @@ struct DateValueEditorForm: View {
                     .font(PVFont.body(size: PVTypeScale.micro))
                     .foregroundStyle(PVColor.textSecondary)
                 PVInput(text: $draft.phrase, size: .sm, prompt: L10n.Sources.datePhrasePrompt)
+                .environment(\.pvFieldLabel, L10n.Sources.datePhrase)
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).phrase")
                 Text(L10n.Sources.datePhraseHint)
                     .font(PVFont.body(size: PVTypeScale.micro, italic: true))
@@ -299,6 +297,7 @@ struct DateValueEditorForm: View {
                 focus: equalsFocus,
                 activateOnAppear: activateOnAppear
             )
+                .environment(\.pvFieldLabel, label)
                 .frame(width: width)
                 .disabled(disabled)
                 .opacity(disabled ? 0.42 : 1)

@@ -125,7 +125,7 @@ The Person page keeps its header and gains a section switcher under it: Vitals, 
 | Sections and Wide arrangements on Event and Place pages | not this spike (R-1); D-1 and D-5 leave them a slot |
 | A secondary column for any Person section | S13-D2 / S13-11, S13-D6 / S13-16 (board PPF-W2: the column stays free for them) |
 | `ConclusionListPage.page` on Page columns; list beside detail | the Conclusion lists' redesign ([`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md)) |
-| The Source page on Page columns | S13-21 if S13-D8 says so, else [`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md) |
+| The Source page on Page columns | [`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md) (S13-21 was descoped 2026-10-31) |
 | A narrow-window frame or fallback for the switcher (PPF-12) | not planned — the board set it aside at the user's request; D-6's chips drop their glyph before a label truncates |
 | The kit CSS (`spacing.css`, the `@container` query, WL-10) and a size or glyph prop on the web `PVChip` | the Claude Design design-system project |
 | `PVTabs` (the web kit's underline tabs) in the Swift kit | not planned — the board uses the segmented `ChipGroup` |

@@ -88,10 +88,6 @@ type cand struct {
 	handleID []byte
 	ref      string
 	score    float64
-	edge     float64
-	result   subjectcompare.Result
-	// links are the segment results behind edge, one per layer link that has one
-	links []segmentcompare.Result
 	// via is the placed neighbor whose link nominated this handle, and viaKey
 	// the layer link's key
 	via     []byte
@@ -254,7 +250,7 @@ func (st *state) score(sk string, h *Handle, c *cand) {
 		edge += l.Evidence
 	}
 	sc := ScoreCandidate(r, edge, s.Provenance)
-	c.score, c.edge, c.result, c.links = sc.Score, sc.Edge, sc.Result, links
+	c.score = sc.Score
 	c.version++
 }
 

@@ -17,7 +17,7 @@ func filedSubject(t *testing.T, observed bool) (dir, userID, sourceID, subjectID
 	dir, userID, sourceID, artifactID, subjectID, propID := citationFixture(t)
 	if observed {
 		if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
-			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON,
 			Observations: []*engine.ObservationDraft{{SubjectId: subjectID, PropertyId: propID, ValueText: "Boston"}},
 		})); err != nil {
 			t.Fatal(err)

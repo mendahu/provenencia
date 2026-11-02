@@ -4,7 +4,7 @@
 // localizable.
 //
 // Every surface that titles an Event chooses through Choose: canonical
-// headers, Evidence graph cards, and later search documents. So a card,
+// summaries, Evidence graph cards, and later search documents. So a card,
 // a list row, a page, and a search hit can't title the same Event
 // differently.
 package eventtitle

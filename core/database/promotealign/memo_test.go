@@ -44,32 +44,6 @@ func newWarmFixture(t *testing.T) *warmFixture {
 	return &warmFixture{f: f, srcB: srcB, artB: artB, member: member, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
 }
 
-func (w *warmFixture) request() promotealign.EvidenceRequest {
-	return promotealign.EvidenceRequest{
-		GraphID: w.f.graph(w.srcB), SubjectID: w.bPerson.ID, HandleID: w.personHandle,
-		Neighbors: []graphalign.Fixed{{SubjectID: w.bBirth.ID, HandleID: w.birthHandle}},
-	}
-}
-
-// T-18 (AC-4.1): a second Evidence for one row, with no commit between, issues
-// no query through the graph.
-func TestEvidenceWarmIssuesNoQuery(t *testing.T) {
-	w := newWarmFixture(t)
-	cold := w.f.evidence(w.request())
-	if len(cold.Relationships) != 1 {
-		t.Fatalf("relationships = %d, want 1", len(cold.Relationships))
-	}
-	n := 0
-	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
-	warm := w.f.evidence(w.request())
-	if n != 0 {
-		t.Fatalf("the second Evidence issued %d graph queries", n)
-	}
-	if !reflect.DeepEqual(cold, warm) {
-		t.Fatalf("warm Evidence differs from cold:\ncold %+v\nwarm %+v", cold, warm)
-	}
-}
-
 // T-18 (AC-4.2): a second Propose on one Source, with no commit between,
 // issues no query through the graph. The first built the shortlist index.
 func TestProposeWarmIssuesNoQuery(t *testing.T) {
@@ -87,33 +61,24 @@ func TestProposeWarmIssuesNoQuery(t *testing.T) {
 }
 
 // T-19 (AC-4.3): after a commit that changes a member, a title or a handle,
-// Evidence and Propose follow it: the warm output is a fresh read's.
+// Propose follows it: the warm output is a fresh read's.
 func TestMemoFollowsCommit(t *testing.T) {
 	// compare warms the caches, applies the commit, and checks that the
 	// output changed, and equals what a cold graph reads.
 	compare := func(t *testing.T, w *warmFixture, commit func()) {
 		t.Helper()
-		beforeE, errE := promotealign.Evidence(w.f.c, w.request())
 		beforeP := w.f.propose(w.f.graph(w.srcB), nil)
-		if errE != nil {
-			t.Fatal(errE)
-		}
 		commit()
-		warmE, warmErr := promotealign.Evidence(w.f.c, w.request())
 		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
 		w.f.c.Graph().Drop()
-		freshE, freshErr := promotealign.Evidence(w.f.c, w.request())
 		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
-		if !sameErr(warmErr, freshErr) || !sameErr(warmPErr, freshPErr) {
-			t.Fatalf("errors differ: warm %v / %v, fresh %v / %v", warmErr, warmPErr, freshErr, freshPErr)
-		}
-		if !reflect.DeepEqual(warmE, freshE) {
-			t.Errorf("warm Evidence follows the commit wrongly:\nwarm  %+v\nfresh %+v", warmE, freshE)
+		if !sameErr(warmPErr, freshPErr) {
+			t.Fatalf("errors differ: warm %v, fresh %v", warmPErr, freshPErr)
 		}
 		if !reflect.DeepEqual(warmP, freshP) {
 			t.Errorf("warm Propose follows the commit wrongly:\nwarm  %+v\nfresh %+v", warmP, freshP)
 		}
-		if reflect.DeepEqual(beforeE, freshE) && reflect.DeepEqual(beforeP, freshP) && freshErr == nil {
+		if reflect.DeepEqual(beforeP, freshP) && freshPErr == nil {
 			t.Errorf("the commit changed nothing the test can see")
 		}
 	}
@@ -140,21 +105,6 @@ func TestMemoFollowsCommit(t *testing.T) {
 				return
 			}
 			t.Fatal("the member has no name Observation")
-		})
-	})
-
-	t.Run("a Source retitled", func(t *testing.T) {
-		w := newWarmFixture(t)
-		compare(t, w, func() {
-			src := w.f.source
-			src.Title = "Parish register"
-			_, err := writes.Call(w.f.c, writes.Op{Action: "update_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-				ch, err := sources.Update(tx, userID, src)
-				return src, ch, err
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
 		})
 	})
 
@@ -187,20 +137,17 @@ func sameErr(a, b error) bool {
 }
 
 // T-19 (D-21): a memoized layer and member values are never changed by a
-// reader: Propose and Evidence leave them as they were stored.
+// reader: Propose leaves them as they were stored.
 func TestMemoIsNotMutated(t *testing.T) {
 	w := newWarmFixture(t)
-	w.f.evidence(w.request())
 	w.f.propose(w.f.graph(w.srcB), nil)
-	w.f.evidence(promotealign.EvidenceRequest{GraphID: w.f.graph(w.srcB), SubjectID: w.bPerson.ID, HandleID: w.personHandle})
 	first := w.snapshot(t)
-	if !first.LayerOK || len(first.Layer.Subjects) == 0 || len(first.Members) == 0 {
+	if !first.LayerOK || len(first.Layer.Subjects) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
 	for i := 0; i < 2; i++ {
 		w.f.propose(w.f.graph(w.srcB), []graphalign.Fixed{{SubjectID: w.bPerson.ID, HandleID: w.personHandle}})
-		w.f.evidence(w.request())
 		if after := memoJSON(t, w); after != before {
 			t.Fatalf("a read changed the memo:\nbefore %s\nafter  %s", before, after)
 		}
@@ -212,12 +159,10 @@ func TestMemoIsNotMutated(t *testing.T) {
 	}
 }
 
-// snapshot is the memoized layer of the incoming Source's graph and the member
-// values of the fixture Source's graph.
+// snapshot is the memoized layer of the incoming Source's graph.
 func (w *warmFixture) snapshot(t *testing.T) promotealign.MemoSnapshot {
 	t.Helper()
-	return promotealign.MemoSnapshotForTest(w.f.c,
-		w.f.graph(w.srcB), w.f.graph(w.f.source))
+	return promotealign.MemoSnapshotForTest(w.f.c, w.f.graph(w.srcB))
 }
 
 func memoJSON(t *testing.T, w *warmFixture) string {
@@ -230,7 +175,7 @@ func memoJSON(t *testing.T, w *warmFixture) string {
 	return string(b)
 }
 
-// D-22: handle profiles live as long as the match index: kept by an Evidence,
+// D-22: handle profiles live as long as the match index: kept by a Propose,
 // shared by the next one, and dropped by a handle commit.
 func TestProfilesLiveWithTheMatchIndex(t *testing.T) {
 	w := newWarmFixture(t)
@@ -238,14 +183,14 @@ func TestProfilesLiveWithTheMatchIndex(t *testing.T) {
 	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
 		t.Fatal("a dropped graph holds a match index")
 	}
-	w.f.evidence(w.request())
+	w.f.propose(w.f.graph(w.srcB), nil)
 	kept, ok := promotealign.ProfilesKeptForTest(w.f.c)
 	if !ok || kept == 0 {
-		t.Fatalf("after Evidence the index holds %d profiles (index %v)", kept, ok)
+		t.Fatalf("after Propose the index holds %d profiles (index %v)", kept, ok)
 	}
-	w.f.evidence(w.request())
+	w.f.propose(w.f.graph(w.srcB), nil)
 	if again, _ := promotealign.ProfilesKeptForTest(w.f.c); again != kept {
-		t.Fatalf("a second Evidence changed the kept profiles from %d to %d", kept, again)
+		t.Fatalf("a second Propose changed the kept profiles from %d to %d", kept, again)
 	}
 	w.f.join(w.f.person(w.f.source, w.f.artifact, "John Smith"), w.personHandle)
 	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {

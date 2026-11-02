@@ -10,16 +10,21 @@ import SwiftUI
 protocol PVCopy {
     /// The copy as a `Text`, resolved from the catalog or shown verbatim.
     var pvText: Text { get }
+    /// The copy as a plain `String`, for speaking it.
+    var pvString: String { get }
 }
 
 extension LocalizedStringResource: PVCopy {
     var pvText: Text { Text(self) }
+    var pvString: String { L10n.string(self) }
 }
 
 extension String: PVCopy {
     var pvText: Text { Text(verbatim: self) }
+    var pvString: String { self }
 }
 
 extension AttributedString: PVCopy {
     var pvText: Text { Text(self) }
+    var pvString: String { String(characters) }
 }

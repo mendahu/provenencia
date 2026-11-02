@@ -96,7 +96,7 @@ private struct SourcePageContent: View {
                             .accessibilityIdentifier("sources.page.loadError")
                     } else {
                         if let pageError = model.pageError {
-                            PVCallout(tone: .danger, message: pageError)
+                            PVCallout(tone: .danger, message: pageError, announces: true)
                                 .accessibilityIdentifier("sources.page.error")
                         }
                         overviewColumns
@@ -204,6 +204,18 @@ private struct SourcePageContent: View {
             isRunning: model.metadata.isClearing,
             accessibilityIdentifierPrefix: "sources.page.metadata.delete",
             onConfirm: { Task { await model.metadata.confirmClear() } }
+        ) { _ in
+            EmptyView()
+        }
+        .pvConfirm(
+            item: Binding(
+                get: { model.artifacts.pendingEditSwitch },
+                set: { if $0 == nil { model.artifacts.cancelEditSwitch() } }
+            ),
+            copy: { _ in .discardChanges },
+            tone: .danger,
+            accessibilityIdentifierPrefix: "sources.page.artifact.discard",
+            onConfirm: { model.artifacts.confirmEditSwitch() }
         ) { _ in
             EmptyView()
         }

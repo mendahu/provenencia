@@ -23,6 +23,7 @@ const (
 	PartTypeNick          = "nick"
 	PartTypeSurnamePrefix = "surname_prefix"
 	PartTypeSurname       = "surname"
+	PartTypeFormerSurname = "former_surname"
 	PartTypeSuffix        = "suffix"
 	PartTypeUndetermined  = "undetermined"
 )

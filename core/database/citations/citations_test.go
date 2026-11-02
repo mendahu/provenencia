@@ -1,6 +1,7 @@
 package citations
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"slices"
@@ -36,6 +37,7 @@ func TestCitations(t *testing.T) {
 
 	type seed struct {
 		artifact    artifacts.Artifact
+		graph       []byte
 		person      subjects.Subject
 		place       subjects.Subject
 		toponymProp properties.Property
@@ -106,7 +108,7 @@ func TestCitations(t *testing.T) {
 			t.Fatal(err)
 		}
 		return c, seed{
-			artifact: art, person: person, place: place,
+			artifact: art, graph: graph, person: person, place: place,
 			toponymProp: toponymProp, sexProp: sexProp, femaleTerm: femaleTerm,
 		}
 	}
@@ -162,6 +164,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := createCitation(c, userID, CreateInput{
+					GraphID:       s.graph,
 					ArtifactID:    s.artifact.ID,
 					LocatorJSON:   validLocator,
 					Transcription: "Alice, female, of Boston",
@@ -221,6 +224,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := createCitation(c, userID, CreateInput{
+					GraphID:     s.graph,
 					ArtifactID:  s.artifact.ID,
 					LocatorJSON: validLocator,
 					Notes:       []string{"see folio 12"},
@@ -318,6 +322,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := createCitation(c, userID, CreateInput{
+					GraphID:       s.graph,
 					ArtifactID:    s.artifact.ID,
 					LocatorJSON:   validLocator,
 					Transcription: "was",
@@ -391,6 +396,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				_, err := createCitation(c, userID, CreateInput{
+					GraphID:     s.graph,
 					ArtifactID:  s.artifact.ID,
 					LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":0}]}`,
 				}, []observations.Input{{
@@ -407,6 +413,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				if _, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 				}, []observations.Input{{
 					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
@@ -436,18 +443,19 @@ func TestCitations(t *testing.T) {
 				def := evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)
 				smith := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Smith", s.artifact.ID)
 				clara := subjectstest.On(t, c, userID, smith.ID, "person", "Clara")
-				mk := func(subject []byte) []byte {
+				mk := func(graph, subject []byte) []byte {
 					var obs []observations.Input
 					if subject != nil {
 						obs = []observations.Input{{SubjectID: subject, PropertyID: s.sexProp.ID, ValueTermID: s.femaleTerm.ID}}
 					}
-					res, err := createCitation(c, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, obs)
+					res, err := createCitation(c, userID, CreateInput{GraphID: graph, ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, obs)
 					if err != nil {
 						t.Fatal(err)
 					}
 					return res.Citation.ID
 				}
-				a, b, cc := mk(s.person.ID), mk(clara.ID), mk(nil)
+				a, b := mk(def.ID, s.person.ID), mk(smith.ID, clara.ID)
+				cc, d := mk(def.ID, nil), mk(smith.ID, nil)
 				refs := func(graph []byte) []string {
 					list, err := ListByArtifact(c, graph, s.artifact.ID)
 					if err != nil {
@@ -473,8 +481,8 @@ func TestCitations(t *testing.T) {
 				if got := refs(def.ID); !same(got, a, cc) {
 					t.Fatalf("default lists %x want A, C", got)
 				}
-				if got := refs(smith.ID); !same(got, b, cc) {
-					t.Fatalf("smith lists %x want B, C", got)
+				if got := refs(smith.ID); !same(got, b, d) {
+					t.Fatalf("smith lists %x want B, D", got)
 				}
 				counts, err := CountByEvidenceGraph(c, def.ID)
 				if err != nil {
@@ -496,7 +504,10 @@ func TestCitations(t *testing.T) {
 				in := func(subject []byte) observations.Input {
 					return observations.Input{SubjectID: subject, PropertyID: s.sexProp.ID, ValueTermID: s.femaleTerm.ID}
 				}
-				if _, err := createCitation(c, userID, CreateInput{ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, []observations.Input{in(s.person.ID), in(ben.ID), in(clara.ID)}); err != nil {
+				if _, err := createCitation(c, userID, CreateInput{GraphID: def.ID, ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, []observations.Input{in(s.person.ID), in(ben.ID)}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := createCitation(c, userID, CreateInput{GraphID: smith.ID, ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, []observations.Input{in(clara.ID)}); err != nil {
 					t.Fatal(err)
 				}
 				d, err := ListByArtifact(c, def.ID, s.artifact.ID)
@@ -525,8 +536,13 @@ func TestCitations(t *testing.T) {
 				}
 				def := evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)
 				smith := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Smith", s.artifact.ID)
-				for _, art := range [][]byte{s.artifact.ID, art2.ID} {
-					if _, err := createCitation(c, userID, CreateInput{ArtifactID: art, LocatorJSON: validLocator}, nil); err != nil {
+				for _, in := range []CreateInput{
+					{GraphID: def.ID, ArtifactID: s.artifact.ID},
+					{GraphID: def.ID, ArtifactID: art2.ID},
+					{GraphID: smith.ID, ArtifactID: s.artifact.ID},
+				} {
+					in.LocatorJSON = validLocator
+					if _, err := createCitation(c, userID, in, nil); err != nil {
 						t.Fatal(err)
 					}
 				}
@@ -546,10 +562,74 @@ func TestCitations(t *testing.T) {
 			},
 		},
 		{
+			name: "Citations belong to their graph",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				def := evidencegraphstest.SoleGraph(t, c, s.artifact.SourceID)
+				jones := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Jones", s.artifact.ID)
+				res, err := createCitation(c, userID, CreateInput{GraphID: jones.ID, ArtifactID: s.artifact.ID, LocatorJSON: validLocator}, nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(res.Citation.GraphID, jones.ID) {
+					t.Fatalf("graph %x want jones", res.Citation.GraphID)
+				}
+				inDefault, err := ListByArtifact(c, def.ID, s.artifact.ID)
+				if err != nil || len(inDefault) != 0 {
+					t.Fatalf("default lists %d Citations, err %v", len(inDefault), err)
+				}
+				inJones, err := ListByArtifact(c, jones.ID, s.artifact.ID)
+				if err != nil || len(inJones) != 1 {
+					t.Fatalf("jones lists %d Citations, err %v", len(inJones), err)
+				}
+				art := uuid.Must(uuid.FromBytes(s.artifact.ID)).String()
+				dc, err := CountByEvidenceGraph(c, def.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, ok := dc[art]; ok {
+					t.Fatalf("default counts the Jones Citation: %v", dc)
+				}
+				jc, err := CountByEvidenceGraph(c, jones.ID)
+				if err != nil || jc[art] != 1 {
+					t.Fatalf("jones counts %v, err %v", jc, err)
+				}
+			},
+		},
+		{
+			name: "create needs a linked graph",
+			run: func(t *testing.T) {
+				c, s := mustSeed(t)
+				art2, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: s.artifact.SourceID, Label: "Scan 2"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				jones := evidencegraphstest.Create(t, c, userID, s.artifact.SourceID, "Jones", s.artifact.ID)
+				for name, in := range map[string]CreateInput{
+					"no graph":       {ArtifactID: s.artifact.ID, LocatorJSON: validLocator},
+					"unlinked graph": {GraphID: jones.ID, ArtifactID: art2.ID, LocatorJSON: validLocator},
+					"unknown graph":  {GraphID: bytes.Repeat([]byte{9}, 16), ArtifactID: s.artifact.ID, LocatorJSON: validLocator},
+				} {
+					if _, err := createCitation(c, userID, in, nil); !errors.Is(err, ErrInvalid) {
+						t.Fatalf("%s: err %v, want citations.invalid", name, err)
+					}
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				var n int
+				if err := db.QueryRow(`SELECT COUNT(*) FROM citations`).Scan(&n); err != nil || n != 0 {
+					t.Fatalf("%d Citations written, err %v", n, err)
+				}
+			},
+		},
+		{
 			name: "create with zero observations",
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				res, err := createCitation(c, userID, CreateInput{
+					GraphID:       s.graph,
 					ArtifactID:    s.artifact.ID,
 					LocatorJSON:   validLocator,
 					Transcription: "transcribe first",
@@ -584,6 +664,7 @@ func TestCitations(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 				}, []observations.Input{{
 					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
@@ -592,6 +673,7 @@ func TestCitations(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 				}, []observations.Input{{
 					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
@@ -600,6 +682,7 @@ func TestCitations(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: art2.ID, LocatorJSON: validLocator,
 				}, []observations.Input{{
 					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
@@ -623,6 +706,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				if _, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 				}, nil); err != nil {
 					t.Fatal(err)
@@ -654,6 +738,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				cit, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 					Notes: []string{"keep me", "and me"},
 				}, nil)
@@ -687,6 +772,7 @@ func TestCitations(t *testing.T) {
 			run: func(t *testing.T) {
 				c, s := mustSeed(t)
 				cit, err := createCitation(c, userID, CreateInput{
+					GraphID:    s.graph,
 					ArtifactID: s.artifact.ID, LocatorJSON: validLocator,
 				}, []observations.Input{{
 					SubjectID: s.person.ID, PropertyID: s.sexProp.ID,

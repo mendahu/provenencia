@@ -1,39 +1,40 @@
 package promotealign_test
 
 import (
-	"fmt"
 	"math/rand/v2"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
-	"github.com/mendahu/provenencia/core/claimevidence"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
 // four cores, as scripts/check-pr.sh and CI do. The warm figure was raised from
 // 250 ms by the user on 2026-10-26 when the fixture gained the 12-generation
-// tree and matching read kinship links (S11-39).
+// tree and matching read kinship links (S11-39). The after-commit figure was
+// raised from 1.5 s by the user on 2026-11-01: the CI runner measured 1.6–2.05 s
+// where a Mac measures 0.6 s (S13-02, S13-03).
 const (
 	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
 	budgetWarm         = 350 * time.Millisecond
-	budgetAfterCommit  = 1500 * time.Millisecond
-	budgetEvidence     = 100 * time.Millisecond
+	budgetAfterCommit  = 2500 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
-	// budgetPlaceEvidence is a place row's evidence on a cold graph: without
-	// kinship links to derive it reads two nodes, not the place's 6,000 events.
-	budgetPlaceEvidence = 10 * time.Millisecond
+	// budgetJoinOntoCity: joining a second "City" toponym onto the city moves no
+	// shown value, so only the city's document is reprojected, not its 6,000
+	// events and their people. B-10 measured 6.06 s before S14-21.
+	budgetJoinOntoCity = 1 * time.Second
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -47,6 +48,8 @@ type largeFixture struct {
 	onePlace sources.Source
 	other    sources.Source
 	otherA   artifacts.Artifact
+	// city is the city's handle id.
+	city []byte
 }
 
 func newLargeFixture(t *testing.T) *largeFixture {
@@ -103,7 +106,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	}
 
 	otherSrc, otherArt := f.newSource("Other")
-	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt}
+	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt, city: cityID}
 }
 
 // fastest is the least of n timed runs of run; each run's own setup stays
@@ -137,6 +140,10 @@ func TestLargeSourceBudgets(t *testing.T) {
 	over := func(t *testing.T, what string, got, budget time.Duration) {
 		t.Helper()
 		t.Logf("%s: %v (budget %v)", what, got, budget)
+		// Verify mode rebuilds the cache on every commit; budgets are measured without it.
+		if graphcache.VerifyMode() {
+			return
+		}
 		if got > budget {
 			t.Errorf("%s took %v, over the %v budget", what, got, budget)
 		}
@@ -204,49 +211,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 		over(t, "proposal after a handle commit", d, budgetAfterCommit)
 	})
 
-	// evidenceRequests is one request for each handle row, naming every handle
-	// row as a neighbor.
-	evidenceRequests := func() []promotealign.EvidenceRequest {
-		var neighbors []graphalign.Fixed
-		for _, r := range propose().Rows {
-			if r.Target == graphalign.TargetHandle {
-				neighbors = append(neighbors, graphalign.Fixed{SubjectID: r.SubjectID, HandleID: r.HandleID})
-			}
-		}
-		var reqs []promotealign.EvidenceRequest
-		for _, n := range neighbors {
-			reqs = append(reqs, promotealign.EvidenceRequest{
-				GraphID: aGraph, SubjectID: n.SubjectID, HandleID: n.HandleID, Neighbors: neighbors,
-			})
-		}
-		return reqs
-	}
-	pass := func(reqs []promotealign.EvidenceRequest) {
-		for _, req := range reqs {
-			f.evidence(req)
-		}
-	}
-
-	t.Run("evidence warm", func(t *testing.T) {
-		reqs := evidenceRequests()
-		pass(reqs)
-		d := fastest(3, func() time.Duration { return since(func() { pass(reqs) }) })
-		over(t, fmt.Sprintf("warm Evidence on %d handle rows", len(reqs)), d, budgetEvidence)
-	})
-
 	t.Run("warm queries", func(t *testing.T) {
-		reqs := evidenceRequests()
-		pass(reqs)
 		propose()
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
 		defer f.c.Graph().SetQueryCounterForTest(nil)
 		selects := databasetest.CountSelects(t, f.c)
-		pass(reqs)
-		if n != 0 || selects.N() != 0 {
-			t.Errorf("warm Evidence issued %d graph queries and %d SELECTs, want 0 and 0", n, selects.N())
-		}
-		selects.Reset()
 		propose()
 		if n != 0 {
 			t.Errorf("a warm Propose issued %d graph queries, want 0", n)
@@ -274,49 +244,17 @@ func TestLargeSourceBudgets(t *testing.T) {
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
 	})
 
-	// A place has no kinship links, so evidence on its row must not walk its
-	// 6,000 events for them.
-	t.Run("evidence on a place row", func(t *testing.T) {
-		var city *graphalign.Row
-		p := f.propose(onePlaceGraph, nil)
-		for i, r := range p.Rows {
-			if r.Target == graphalign.TargetHandle && r.Kind == "place" {
-				city = &p.Rows[i]
-			}
+	t.Run("join a place onto the city", func(t *testing.T) {
+		var joining []subjects.Subject
+		for i := 0; i < 3; i++ {
+			joining = append(joining, f.place(lf.other, lf.otherA, "City"))
 		}
-		if city == nil {
-			t.Fatal("the one-place Source has no place row with a handle")
-		}
-		req := promotealign.EvidenceRequest{GraphID: onePlaceGraph, SubjectID: city.SubjectID, HandleID: city.HandleID}
+		i := 0
 		d := fastest(3, func() time.Duration {
-			f.c.Graph().Drop()
-			must(t, catalogsession.WarmOnOpen(f.c))
-			return since(func() { f.evidence(req) })
+			s := joining[i]
+			i++
+			return since(func() { f.join(s, lf.city) })
 		})
-		over(t, "evidence on the place row, cold", d, budgetPlaceEvidence)
-	})
-
-	// A pass over Source A touches 21 Evidence graphs; a cap of 8 evicts along
-	// the way and every response must still match the default cap's.
-	t.Run("evidence under a small cap", func(t *testing.T) {
-		const small = 8
-		reqs := evidenceRequests()
-		f.c.Graph().Drop()
-		want := make([]claimevidence.Evidence, len(reqs))
-		for i, req := range reqs {
-			want[i] = f.evidence(req)
-		}
-		f.c.Graph().SetEvidenceGraphCapForTest(small)
-		defer f.c.Graph().SetEvidenceGraphCapForTest(0)
-		f.c.Graph().Drop()
-		for i, req := range reqs {
-			got := f.evidence(req)
-			if n := f.c.Graph().LoadedEvidenceGraphCountForTest(); n > small {
-				t.Fatalf("request %d left %d Evidence graphs loaded, want at most %d", i, n, small)
-			}
-			if !reflect.DeepEqual(got, want[i]) {
-				t.Fatalf("request %d under cap %d differs from the default cap's response", i, small)
-			}
-		}
+		over(t, "join a place onto the city", d, budgetJoinOntoCity)
 	})
 }

@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// Type text of a list row. Not on `PVList`: a generic type cannot hold a stored static.
+enum PVListText {
+    /// The primary line of a row; a title built outside the slot (an italicized name) matches it.
+    static let titleFont = PVFont.body(size: PVTypeScale.body)
+}
+
 /// The browse list for navigation targets — mirrors the design system's
 /// `components/PVList.jsx`. Homogeneous rows: an optional thumbnail slot, a
 /// title, an optional secondary line, a trailing mono reference, and a
@@ -140,7 +146,7 @@ struct PVList<Item: Identifiable, Thumbnail: View, Primary: View, Secondary: Vie
                 }
                 VStack(alignment: .leading, spacing: 3) {
                     primary(item)
-                        .font(PVFont.body(size: PVTypeScale.body))
+                        .font(PVListText.titleFont)
                         .foregroundStyle(PVColor.textPrimary)
                         .lineLimit(1)
                         .truncationMode(.tail)

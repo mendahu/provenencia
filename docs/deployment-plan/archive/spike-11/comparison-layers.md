@@ -468,7 +468,7 @@ A survey of comparison, normalization and dedupe code outside `core/match` (2026
 | Layer | Consumers today, once moved | Future consumers (`docs/ideas/`) |
 |---|---|---|
 | 1 value compare | Promote, `Rank`, the reconciler's grouping and pins, place-chain date windows (`conclusionheaders`) | Term dedupe ("godfather" vs "god-father", `term-management.md`), gazetteer lookup, Daitch–Mokotoff tier, international names |
-| 2 property compare | Promote's claim evidence (`core/claimevidence`), reconciler checks | Whether provisional values count (`possible-values.md`) |
+| 2 property compare | the claim evidence sheet (removed in S13-24), reconciler checks | Whether provisional values count (`possible-values.md`) |
 | 3 subject compare | Duplicate New rows (`alikeNew`), merge hints (entity vs entity = two profiles) | Gazetteer place matching, duplicate Subjects while entering a Source |
 | 4 entity compare | Promote candidates (S11-13) | Weak-claim review (`identity-claim-review.md`), share-package import (`share-packages.md`) |
 

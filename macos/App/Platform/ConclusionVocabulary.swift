@@ -58,17 +58,8 @@ enum ReconcilerReason: Sendable, Equatable {
     }
 }
 
-/// Why a Promote row reads as it does, and why settling moved it
-/// (`graphalign.Reason`). The page words the typed cases.
-enum PromoteReasonCode: Sendable, Equatable {
-    /// Promote suggests no record for this row.
-    case unplaced
-    case via
-    case decided
-    case agrees
-    case weak
-    case taken
-    case empty
+/// Why settling moved a Promote row (`graphalign.Move.Reason`). The page words the typed cases.
+enum PromoteMoveReason: Sendable, Equatable {
     case neighborPlaced
     case neighborMoved
     case neighborReleased
@@ -77,13 +68,6 @@ enum PromoteReasonCode: Sendable, Equatable {
 
     init(wire: String) {
         switch wire {
-        case "": self = .unplaced
-        case "via": self = .via
-        case "decided": self = .decided
-        case "agrees": self = .agrees
-        case "weak": self = .weak
-        case "taken": self = .taken
-        case "empty": self = .empty
         case "neighbor_placed": self = .neighborPlaced
         case "neighbor_moved": self = .neighborMoved
         case "neighbor_released": self = .neighborReleased
@@ -181,14 +165,14 @@ enum SeededPropertyKey {
     static let to = "to"
 }
 
-/// Seeded `gender` terms the Person header colours by (`subjectvocab` seed).
+/// Seeded `gender` terms the Person summary colours by (`subjectvocab` seed).
 enum SeededGenderTerm {
     static let man = "man"
     static let woman = "woman"
     static let nonBinary = "non_binary"
 }
 
-/// Seeded `sex_at_birth` terms (`subjectvocab` seed); the Person header colours by female and male.
+/// Seeded `sex_at_birth` terms (`subjectvocab` seed); the Person summary colours by female and male.
 enum SeededSexAtBirthTerm {
     static let female = "female"
     static let male = "male"
@@ -268,15 +252,12 @@ enum DateQualifier {
 }
 
 /// Why the engine refuses to unlink an Artifact from a graph (the code of the
-/// refusal: `evidencegraphs.artifact_in_use`, `.last_artifact`,
-/// `.citations_need_graph`).
+/// refusal: `evidencegraphs.artifact_in_use`, `.last_artifact`).
 enum EvidenceGraphUnlinkReason: Sendable, Equatable {
-    /// The graph's Citations use the Artifact.
+    /// The graph has Citations on the Artifact.
     case artifactInUse
     /// The graph keeps at least one Artifact.
     case lastArtifact
-    /// The Artifact's Citations need it to stay in a graph.
-    case citationsNeedGraph
     /// A reason this build doesn't know.
     case unrecognized(String)
 
@@ -284,7 +265,6 @@ enum EvidenceGraphUnlinkReason: Sendable, Equatable {
         switch wire {
         case "evidencegraphs.artifact_in_use": self = .artifactInUse
         case "evidencegraphs.last_artifact": self = .lastArtifact
-        case "evidencegraphs.citations_need_graph": self = .citationsNeedGraph
         default: self = .unrecognized(wire)
         }
     }
@@ -293,7 +273,6 @@ enum EvidenceGraphUnlinkReason: Sendable, Equatable {
         switch self {
         case .artifactInUse: "evidencegraphs.artifact_in_use"
         case .lastArtifact: "evidencegraphs.last_artifact"
-        case .citationsNeedGraph: "evidencegraphs.citations_need_graph"
         case .unrecognized(let code): code
         }
     }

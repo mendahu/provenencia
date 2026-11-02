@@ -35,10 +35,9 @@ struct PromoteModelTests {
         return store
     }
 
-    private func row(_ id: String, handleID: String, assessment: String = "strong") -> CatalogPromoteGraphAlignmentRow {
+    private func row(_ id: String, handleID: String) -> CatalogPromoteGraphAlignmentRow {
         CatalogPromoteGraphAlignmentRow(
             subjectID: id, kind: "person", target: .handle, handleID: handleID, handleRef: "PER-\(handleID)",
-            assessment: assessment, reason: .unplaced,
             alternatives: [
                 CatalogPromoteGraphAlignmentAlternative(handleID: "other", handleRef: "PER-OTHER"),
             ],
@@ -127,7 +126,7 @@ struct PromoteModelTests {
         let store = store(subjects: subjects)
         store.promoteProposals = [
             CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
-            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9", assessment: "strong")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
         ]
         let model = model(store: store, subjectID: "a")
         await model.load()
@@ -273,7 +272,7 @@ struct PromoteModelTests {
         model.mapRest()
         #expect(model.flow.row("a")?.target == .unset)
 
-        model.hold(subjectID: "a", id: "e-far", ref: "PER-FAR", header: nil)
+        model.hold(subjectID: "a", id: "e-far", ref: "PER-FAR", summary: nil)
         _ = await waitUntil { !model.isProposing }
         #expect(store.lastPromoteFixed == [CatalogPromoteGraphAlignmentFixed(subjectID: "a", handleID: "e-far")])
         let ada = model.flow.row("a")
@@ -299,6 +298,16 @@ struct PromoteModelTests {
             entity: CatalogCanonicalEntity(id: "p-1", ref: "PLC-1", subjectTypeID: "type-place", label: "Polly Street"),
             kind: "place"
         )
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "person", id: "e-far", ref: "PER-FAR", title: "Polly Jones", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .persons, entityId: "e-far")
+            ),
+            CatalogSearchHit(
+                kind: "place", id: "p-1", ref: "PLC-1", title: "Polly Street", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .places, entityId: "p-1")
+            ),
+        ]
         return store
     }
 
@@ -553,27 +562,5 @@ struct PromoteModelTests {
         #expect(model.shouldHoldNavigation(.back) == false)
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(model.shouldHoldNavigation(.back) == true)
-    }
-
-    @Test func aPinnedObservationDeleteNamesThePerson() async throws {
-        let store = FakeStore()
-        let person = CatalogCanonicalEntity(id: "e1", ref: "PER-7KD45", subjectTypeID: "type-person", label: "")
-        store.observationsByGraph[graphID] = [
-            CatalogObservation(
-                id: "obs-1", ref: "OBS-1", citationID: "c1", subjectID: "a", propertyID: "p-name",
-                polarity: "positive", valueText: "Ada", valueInteger: nil, valueDateID: "",
-                valueNameID: "n1", nameForm: "Ada", valueSubjectID: "", valueTermID: "",
-                propertyKey: "name", propertyLabel: "Name", propertyValueType: "name"
-            ),
-        ]
-        store.pinsByObservation["obs-1"] = [person]
-        let impact = try await store.getDeleteImpact(projectDir: projectDir, kind: "observation", id: "obs-1")
-        #expect(impact.allowed)
-        #expect(impact.cascades.first?.listed.map(\.ref) == ["PER-7KD45"])
-        let copy = PVDeleteImpactCopy.confirmCopy(
-            for: PVDeleteImpactTarget(kind: "observation", id: "obs-1", ref: "OBS-1", title: "Name"),
-            report: impact
-        )
-        #expect(copy.message.contains(L10n.DeleteImpact.leavesEvidence(handleRefs: "PER-7KD45")))
     }
 }

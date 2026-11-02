@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -14,7 +15,6 @@ import (
 func from(src string, c Candidate) Candidate { c.SourceID = []byte(src); return c }
 func lowTrust(c Candidate) Candidate         { c.Provenance.Credibility = -1; return c }
 func uncertain(c Candidate) Candidate        { c.Provenance.Uncertain = true; return c }
-func lowClaim(c Candidate) Candidate         { c.Provenance.ClaimConfidence = -1; return c }
 func highTrust(c Candidate) Candidate        { c.Provenance.Credibility = 1; return c }
 func neg(c Candidate) Candidate              { c.Negative = true; return c }
 func prov(c Candidate) Candidate             { c.Provisional = true; return c }
@@ -97,9 +97,6 @@ func TestPipeline(t *testing.T) {
 			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
 		{"confidence", "an uncertain transcription is weak",
 			[]Candidate{uncertain(text(1, "Robbins")), text(2, "Robins")},
-			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
-		{"confidence", "a low-confidence claim is weak",
-			[]Candidate{lowClaim(text(1, "Robbins")), text(2, "Robins")},
 			[]wantRow{{[]byte{2}, ReasonKept, 1, 0}, {[]byte{1}, ReasonWeak, 1, 0}}, StateSingle},
 		{"confidence", "all weak: nothing stronger disagrees (credibility outranks certainty)",
 			[]Candidate{lowTrust(text(1, "A")), uncertain(text(2, "B"))},
@@ -258,7 +255,7 @@ func TestPipelineInvariants(t *testing.T) {
 				c.SourceID = []byte(sources[rng.Intn(len(sources))])
 				c.Negative = rng.Intn(8) == 0
 				c.Provisional = rng.Intn(8) == 0
-				c.Provenance = Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0, ClaimConfidence: rng.Intn(3) - 1}
+				c.Provenance = Provenance{Credibility: rng.Intn(3) - 1, Uncertain: rng.Intn(5) == 0}
 				in = append(in, c)
 			}
 			where := fmt.Sprintf("seed %d list %d: %+v", seed, list, in)
@@ -314,23 +311,19 @@ func TestProvenance(t *testing.T) {
 		stronger bool
 	}{
 		{"equal is not stronger", std, std, false},
-		{"credibility leads", Provenance{Credibility: 1, Uncertain: true, ClaimConfidence: -1}, std, true},
-		{"lower credibility loses whatever follows", Provenance{Credibility: -1, ClaimConfidence: 1}, std, false},
-		{"then certainty", std, Provenance{Uncertain: true, ClaimConfidence: 1}, true},
-		{"then claim confidence", Provenance{ClaimConfidence: 1}, std, true},
-		{"lower claim confidence", Provenance{ClaimConfidence: -1}, std, false},
+		{"credibility leads", Provenance{Credibility: 1, Uncertain: true}, std, true},
+		{"lower credibility loses whatever follows", Provenance{Credibility: -1}, std, false},
+		{"then certainty", std, Provenance{Uncertain: true}, true},
 	} {
 		if got := tc.p.Stronger(tc.q); got != tc.stronger {
 			t.Errorf("%s: Stronger = %v", tc.name, got)
 		}
 	}
 	for p, weak := range map[Provenance]bool{
-		std:                                  false,
-		{Credibility: 1}:                     false,
-		{Credibility: -1}:                    true,
-		{Uncertain: true}:                    true,
-		{ClaimConfidence: -1}:                true,
-		{Credibility: 1, ClaimConfidence: 1}: false,
+		std:               false,
+		{Credibility: 1}:  false,
+		{Credibility: -1}: true,
+		{Uncertain: true}: true,
 	} {
 		if p.Weak() != weak {
 			t.Errorf("%+v: Weak = %v", p, !weak)
@@ -382,5 +375,52 @@ func TestOutvotedVote(t *testing.T) {
 				t.Errorf("%s: %+v", tc.name, o)
 			}
 		}
+	}
+}
+
+// foldValues resolves every value through its chain of folds to a value that
+// folds into nothing; a value that reaches none is its own root with a total
+// (S14-18).
+func TestFoldValuesRoots(t *testing.T) {
+	m := moduleFor(aliasRules, propertymeta.ValueTypeName)
+	build := func(names ...string) []*unitValue {
+		var vals []*unitValue
+		for i, n := range names {
+			units, ok := m.split(Value{Name: parse("given=" + n)})
+			if !ok {
+				t.Fatalf("no units for %s", n)
+			}
+			vals = append(vals, &unitValue{u: units["given"], rank: i, sources: map[string]bool{fmt.Sprint("s", i): true}})
+		}
+		return vals
+	}
+	for _, tc := range []struct {
+		name  string
+		names []string
+		into  map[string]string // name → the name it must reach; absent means a root
+	}{
+		{"chain", []string{"B.", "Bill", "William"}, map[string]string{"B.": "William", "Bill": "William"}},
+		{"cycle", []string{"Dick", "Ricky", "Rick"}, nil},
+		{"cycle with a way out", []string{"Dick", "Ricky", "Rick", "Richard"},
+			map[string]string{"Dick": "Richard", "Ricky": "Richard", "Rick": "Richard"}},
+		{"alias chain", []string{"Ann", "Anna", "Hannah"}, map[string]string{"Ann": "Hannah", "Anna": "Hannah"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			vals := build(tc.names...)
+			foldValues(m, "given", vals)
+			for i, v := range vals {
+				n := tc.names[i]
+				if v.into == nil && v.total == nil {
+					t.Fatalf("%s is a root with no total", n)
+				}
+				if v.into != nil && v.into.into != nil {
+					t.Fatalf("%s folds into %s, which folds on", n, tc.names[slices.Index(vals, v.into)])
+				}
+				want, folds := tc.into[n]
+				if folds != (v.into != nil) || (folds && tc.names[slices.Index(vals, v.into)] != want) {
+					t.Fatalf("%s: into %v, want %q", n, v.into != nil, want)
+				}
+			}
+		})
 	}
 }

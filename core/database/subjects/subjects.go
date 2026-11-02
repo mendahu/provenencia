@@ -14,7 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
@@ -204,8 +204,8 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 // Delete erases a Subject when Impact allows it. Connection facets (edge +
 // disambiguation rows on a bridge) are released first. Positions CASCADE.
 // Handles the released changes name, handles that observed this Subject, linked
-// handles, and their header dependents are recomputed here in one call.
-// Header documents are written at the end of that call, so they have to see
+// handles, and their summary dependents are recomputed here in one call.
+// Summary documents are written at the end of that call, so they have to see
 // the released values already gone. Run recomputes the returned changes again.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(id) != 16 {
@@ -231,10 +231,10 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
-	// Header dependents are snapshotted while the link still exists. The
+	// Summary dependents are snapshotted while the link still exists. The
 	// recompute itself runs after the rows are gone, and it includes the
 	// handles effects.Handles reads off the released changes: RecomputeTx
-	// writes header search documents after it clears values, so those
+	// writes summary search documents after it clears values, so those
 	// documents have to be in the same call.
 	inbound, err := autoreconciler.HandlesObservingSubject(tx.Tx, id)
 	if err != nil {
@@ -244,7 +244,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err != nil {
 		return nil, err
 	}
-	deps, err := conclusionheaders.HeaderDependents(tx.Tx, ends)
+	deps, err := conclusionsummaries.Dependents(tx.Tx, ends)
 	if err != nil {
 		return nil, err
 	}

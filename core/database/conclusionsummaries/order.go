@@ -1,0 +1,86 @@
+package conclusionsummaries
+
+import (
+	"sort"
+	"strings"
+
+	"github.com/mendahu/provenencia/core/database/nameformats"
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
+)
+
+// titleCollator is built once. Constructing it sorts the whole collation
+// table, which is most of a list's time when every call makes a new one.
+var titleCollator = collate.New(language.Und, collate.IgnoreCase, collate.IgnoreDiacritics)
+
+// SortByTitle orders any titled row by the title it shows (a Person or Place
+// row by its name or toponym, else its working label; a Source group by its
+// title), ignoring case and diacritics (Montréal beside Montreal), by the
+// Unicode root collation so the order is the same in every locale. A row
+// titled only by its ref sorts last, by ref. Ties break by ref. This is the
+// one owner of title order; the app shows rows as given.
+func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
+	sort.SliceStable(rows, func(i, j int) bool {
+		ti, tj := strings.TrimSpace(title(rows[i])), strings.TrimSpace(title(rows[j]))
+		if (ti == "") != (tj == "") {
+			return tj == ""
+		}
+		if ti != "" {
+			if o := titleCollator.CompareString(ti, tj); o != 0 {
+				return o < 0
+			}
+		}
+		return strings.ToLower(ref(rows[i])) < strings.ToLower(ref(rows[j]))
+	})
+}
+
+// SortByBirth orders people by birth date: dated first, earliest first, then by
+// ref; the one owner of birth order. Each key is computed once, and rows with
+// equal keys keep their order.
+func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
+	sortByDateKey(rows, func(row T) dateKey { return birthKeyOf(summary(row)) })
+}
+
+// HasEventDate reports whether the event order (EventsByIDs, ListEvents)
+// places h among the dated rows: a date, else a start date, with a sort key.
+func HasEventDate(h EventSummary) bool { return eventKeyOf(h).ok }
+
+// sortByDateKey orders rows by their date key: dated first, earliest first,
+// then by ref. Each key is computed once, and rows with equal keys keep their
+// order.
+func sortByDateKey[T any](rows []T, key func(T) dateKey) {
+	type keyed struct {
+		row T
+		key dateKey
+	}
+	keyedRows := make([]keyed, len(rows))
+	for i := range rows {
+		keyedRows[i] = keyed{row: rows[i], key: key(rows[i])}
+	}
+	sort.SliceStable(keyedRows, func(i, j int) bool {
+		return dateKeyLess(keyedRows[i].key, keyedRows[j].key)
+	})
+	for i := range rows {
+		rows[i] = keyedRows[i].row
+	}
+}
+
+// personSortKey is the People list order. A name with parts sorts by the
+// profile's sorted order, undecorated; the row may add quotes and parentheses. A catalog with no
+// default profile joins those parts in stored order. form is the transcription
+// and is not a sort input: a name with no parts sorts by its working label.
+func personSortKey(h PersonSummary, order []nameformats.PartOrder) string {
+	if h.Name != nil && len(h.Name.Parts) > 0 {
+		if key := strings.TrimSpace(nameformats.Format(*h.Name, order)); key != "" {
+			return key
+		}
+	}
+	return strings.TrimSpace(h.Entity.Label)
+}
+
+func placeTitle(h PlaceSummary) string {
+	if len(h.Names) > 0 {
+		return h.Names[0]
+	}
+	return h.Entity.Label
+}

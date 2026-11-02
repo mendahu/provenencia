@@ -25,7 +25,6 @@ new Install into **`onboarding.createCatalog` only**.
 | --- | --- | --- |
 | `core/database/sourcevocab/` | `registry.go` (`seedTypes` / `seedFields` / `seedSuggestions`) | Source types, metadata fields, type→field suggestions (uses `sourcetypes` / `metadatafields`) |
 | `core/database/sourcecredibilitygrades/` | `registry.go` (`seedGrades`) | Credibility grades (`low_trust` / `standard` / `high_trust`) |
-| `core/database/claimconfidencegrades/` | `registry.go` (`seedGrades`) | Claim confidence grades (`low_confidence` / `moderate` / `high_confidence`) for Identity (later Reconciliation) Claims |
 | `core/connectrules/` | `productBridges` / `productRefusals` (`Bridge.Endpoints` + `Disambiguation` + `Pairs`); `All()` / `Register` | Product connect matrix: which Properties on which bridge types are endpoints or disambiguation. Impact, edge-lock, Connect, and Install bridge bindings loop `All()` / `BridgeBindings()`. Future plugins append via `Register`. |
 | `core/database/subjectvocab/` | `registry.go` (`seedTypes` / `seedProperties` / `seedBindings` / `seedTerms`) | Interpretation Subject types, Properties, non-bridge `subject_type_properties`, **`property_terms`** (S7-01b), plus compiled presentation. Bridge bindings are derived from `connectrules.BridgeBindings()` (product origin only at create). |
 | `core/database/nameformats/` | `registry.go` (`seedProfiles`) | Name format profiles: part order, roles, weights, and which profile is the project default. Install writes the list. Load and Format do not branch on the profile key. |
@@ -55,7 +54,7 @@ new Install into **`onboarding.createCatalog` only**.
 
 Same pattern as Source: edit that package’s `registry.go`, keep
 `origin = provenencia`, no SQL seeds, tests that create installs and open does
-not heal. For `subjectvocab`, `TestInstallMatchesRegistry` already checks every seeded Property, term and binding against the registry, so a new row needs no Install test: add its product values (labels, value type, cardinality, sort order, lock) as a case in `TestSeedProductValues`. Tests in other packages read the registry (`BindingsForType`, `len(seedProperties)`) instead of restating seed lists or counts. `core/claimevidence`'s `seedOrder` is a matching fixture, not a copy of the seed, and stays as it is. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
+not heal. For `subjectvocab`, `TestInstallMatchesRegistry` already checks every seeded Property, term and binding against the registry, so a new row needs no Install test: add its product values (labels, value type, cardinality, sort order, lock) as a case in `TestSeedProductValues`. Tests in other packages read the registry (`BindingsForType`, `len(seedProperties)`) instead of restating seed lists or counts. Subject type keys/prefixes: `docs/seeded-vocabulary.md` §3.1.
 Property value types: `text` \| `integer` \| `date` \| `name` \| `subject` \| **`term`** \| **`depiction`**.
 Kind/edge Properties (`event_type`, `role`, `relationship_type`) use `term` + `property_terms` (S7-01b) — not free-text Observation strings.
 **`value_type = term` and `depiction` Properties are Install/registry only** (`origin=provenencia` or `plugin:<id>`). Researcher Create Property must refuse `term` and `depiction`.
@@ -85,7 +84,7 @@ Uniqueness is **`UNIQUE (key, origin)`**. Lookup is always `(key, origin)`, neve
 
 - Each domain’s `Install` upserts its registry into a new catalog.
 - Call **only** from `onboarding.createCatalog` (after `database.Create`). Today that is:
-  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `claimconfidencegrades.Install` → `subjectvocab.Install` → `nameformats.Install` → `namealiases.Install`
+  `sourcevocab.Install` → `sourcecredibilitygrades.Install` → `subjectvocab.Install` → `nameformats.Install` → `namealiases.Install`
   (then `catalogsession.ReconcileOnOpen`).
 - **Do not** call `Install` from `OpenCatalog`, `catalogsession.Do`, or on every open.
 - **Do not** heal deleted `provenencia` rows or restored suggestion joins on open.
@@ -101,7 +100,6 @@ Researcher-facing paths:
 core/onboarding/ready.go
   createCatalog → database.Create + sourcevocab.Install
                   + sourcecredibilitygrades.Install
-                  + claimconfidencegrades.Install
                   + subjectvocab.Install + nameformats.Install
                   + namealiases.Install
                   + catalogsession.ReconcileOnOpen

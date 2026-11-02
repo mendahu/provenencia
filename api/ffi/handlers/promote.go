@@ -4,7 +4,6 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -30,18 +29,12 @@ func PromoteSubject(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	gradeID, err := optionalID(req.GetConfidenceGradeId())
-	if err != nil {
-		return nil, err
-	}
 	var out *engine.PromoteSubjectResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		res, _, err := writes.Run(c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 			return promote.Save(tx, userID, promote.Input{
-				SubjectID:         subjectID,
-				EntityID:          entityID,
-				ConfidenceGradeID: gradeID,
-				Argument:          req.GetArgument(),
+				SubjectID: subjectID,
+				EntityID:  entityID,
 			})
 		})
 		if err != nil {
@@ -83,34 +76,6 @@ func UnpromoteSubject(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.UnpromoteSubjectResponse{Effects: writeEffectsProto(wrote)}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func ListClaimConfidenceGrades(in []byte) ([]byte, error) {
-	var req engine.ListClaimConfidenceGradesRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_claim_confidence_grades", err)
-	}
-	out := &engine.ListClaimConfidenceGradesResponse{}
-	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := claimconfidencegrades.List(c)
-		if err != nil {
-			return err
-		}
-		for _, g := range rows {
-			out.Grades = append(out.Grades, &engine.ClaimConfidenceGrade{
-				Id:        database.UUIDString(g.ID),
-				Key:       g.Key,
-				Origin:    g.Origin,
-				Label:     g.Label,
-				SortOrder: int32(g.SortOrder),
-			})
-		}
 		return nil
 	})
 	if err != nil {
@@ -174,11 +139,9 @@ func canonicalEntityProto(e canonicalentities.Entity) *engine.CanonicalEntity {
 
 func identityClaimProto(c identityclaims.Claim) *engine.IdentityClaim {
 	return &engine.IdentityClaim{
-		Id:                database.UUIDString(c.ID),
-		SubjectId:         database.UUIDString(c.SubjectID),
-		EntityId:          database.UUIDString(c.EntityID),
-		Status:            c.Status,
-		ConfidenceGradeId: database.UUIDString(c.ConfidenceGradeID),
-		Argument:          c.Argument,
+		Id:        database.UUIDString(c.ID),
+		SubjectId: database.UUIDString(c.SubjectID),
+		EntityId:  database.UUIDString(c.EntityID),
+		Status:    c.Status,
 	}
 }

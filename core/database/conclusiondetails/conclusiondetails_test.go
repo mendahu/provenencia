@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -13,9 +14,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/conclusionheaders"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -32,6 +32,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -51,6 +52,7 @@ type fixture struct {
 	person subjecttypes.Type
 	name   properties.Property
 	sex    properties.Property
+	date   properties.Property
 }
 
 func must(t *testing.T, err error) {
@@ -70,7 +72,6 @@ func newFixture(t *testing.T) *fixture {
 	must(t, users.Upsert(c, userID, "Tester", r))
 	must(t, subjectvocab.Install(c))
 	must(t, sourcecredibilitygrades.Install(c))
-	must(t, claimconfidencegrades.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	must(t, err)
 	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{}}
@@ -79,6 +80,8 @@ func newFixture(t *testing.T) *fixture {
 	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 	must(t, err)
 	f.sex, err = properties.Lookup(c, "sex_at_birth", vocabkey.OriginProvenencia)
+	must(t, err)
+	f.date, err = properties.Lookup(c, "date", vocabkey.OriginProvenencia)
 	must(t, err)
 	return f
 }
@@ -111,9 +114,7 @@ func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
 	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
-		return citations.CreateWithObservations(tx, userID, citations.CreateInput{ArtifactID: f.arts[string(s.SourceID)].ID, LocatorJSON: locator}, []observations.Input{in})
-	})
+	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, []observations.Input{in}...)
 	must(f.t, err)
 	return res.Observations[0]
 }
@@ -205,7 +206,7 @@ func TestForEntity(t *testing.T) {
 	if o := outcomeOf(name, bare.ID); o.Reason != "no_evidence" || o.ValueRank != 0 || o.Recorded.Name == nil || o.Recorded.Name.Form != "James Robins" {
 		t.Fatalf("no-evidence outcome %+v", o)
 	}
-	// Outcomes are ordered by the value they went into; no value last.
+	// Outcomes are ordered by the value they count under; no value last.
 	if last := name.Outcomes[len(name.Outcomes)-1]; last.ValueRank != 0 {
 		t.Fatalf("outcome order %+v", name.Outcomes)
 	}
@@ -214,6 +215,67 @@ func TestForEntity(t *testing.T) {
 	// but nobody recorded it, so it isn't read.
 	if len(d.Fields) != 1 || d.Fields[0].PropertyKey != "name" {
 		t.Fatalf("fields %+v", d.Fields)
+	}
+}
+
+// The citation line's parts come with each outcome: the Artifact and Citation
+// labels and the Citation locator's page.
+func TestForEntityCitationParts(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register of Baptisms")
+	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Vol. 3"})
+	must(t, err)
+	a := f.personOn(src)
+	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: a.GraphID, ArtifactID: art.ID, Label: "Baptism of Ada",
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
+		}, []observations.Input{f.nameIn(a, "given=Ada|surname=Lovelace")})
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	o := outcomeOf(field(f.detail(h), "name"), res.Observations[0].ID)
+	if o.ArtifactLabel != "Vol. 3" || o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.PageLabel != "" {
+		t.Fatalf("citation parts %+v", o)
+	}
+}
+
+// Go decides which displayed value each record counts under: kept and folded
+// records of a displayed value, and no other.
+func TestForEntityGroupsOutcomesByShownValue(t *testing.T) {
+	f := newFixture(t)
+	register, census, bible := f.source("Register"), f.source("Census"), f.source("Bible")
+	a, b, c := f.personOn(register), f.personOn(census), f.personOn(bible)
+	initial := f.cite(a, f.nameIn(a, "given=J.|surname=Robins"))
+	full := f.cite(b, f.nameIn(b, "given=James|surname=Robins"))
+	misspelt := f.cite(c, f.nameIn(c, "given=James|surname=Robbins"))
+	bare := f.cite(a, f.nameIn(a, "form:James Robins"))
+	h := f.promote(a, nil)
+	f.promote(b, h)
+	f.promote(c, h)
+
+	name := field(f.detail(h), "name")
+	for _, want := range []struct {
+		id        []byte
+		reason    string
+		groupRank int
+	}{{initial.ID, "folded", 1}, {full.ID, "kept", 1}, {misspelt.ID, "outvoted", 0}, {bare.ID, "no_evidence", 0}} {
+		if o := outcomeOf(name, want.id); o.Reason != want.reason || o.GroupRank != want.groupRank {
+			t.Fatalf("outcome %+v, want %s under %d", o, want.reason, want.groupRank)
+		}
+	}
+	if len(name.Outcomes) != 4 {
+		t.Fatalf("outcomes %+v", name.Outcomes)
+	}
+	// Kept and folded by Observation id, then the outvoted, then no evidence.
+	first, second := initial.ID, full.ID
+	if bytes.Compare(first, second) > 0 {
+		first, second = second, first
+	}
+	for i, id := range [][]byte{first, second, misspelt.ID, bare.ID} {
+		if !bytes.Equal(name.Outcomes[i].ObservationID, id) {
+			t.Fatalf("outcome %d is %+v", i, name.Outcomes[i])
+		}
 	}
 }
 
@@ -343,10 +405,10 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}
 	f.c.Graph().Drop()
-	rows, err := conclusionheaders.PersonsByIDs(f.c, [][]byte{h})
+	rows, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{h})
 	must(t, err)
 	if len(rows) != 1 || rows[0].PictureImageFileID != nil {
-		t.Fatalf("header leads with %x", rows[0].PictureImageFileID)
+		t.Fatalf("summary leads with %x", rows[0].PictureImageFileID)
 	}
 }
 
@@ -383,15 +445,29 @@ func TestForEntityEvidence(t *testing.T) {
 	neg := f.nameIn(c, "given=James|surname=Robbins")
 	neg.Polarity = observations.PolarityNegative
 	negative := f.cite(c, neg)
+	d := f.personOn(census)
+	uncertainRes, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: d.GraphID, ArtifactID: f.arts[string(d.SourceID)].ID, LocatorJSON: locator, TranscriptionUncertain: true,
+		}, []observations.Input{f.nameIn(d, "given=James|surname=Robins")})
+	})
+	must(t, err)
+	uncertain := uncertainRes.Observations[0]
 	h := f.promote(a, nil)
 	f.promote(b, h)
 	f.promote(c, h)
+	f.promote(d, h)
 
 	name := field(f.detail(h), "name")
-	// Provenance is the auto-reconciler's own view: weak from the Source alone.
+	// Provenance is the auto-reconciler's own view: weak from the Source alone,
+	// or uncertain under a standard Source.
 	if o := outcomeOf(name, weak.ID); o.Reason != "weak" || o.CredibilityKey != "low_trust" ||
-		!o.Provenance.Weak() || o.Provenance.Credibility >= 0 || o.Provenance.Uncertain || o.Provenance.ClaimConfidence != 0 {
+		o.Provenance != (autoreconcile.Provenance{Credibility: -1, Uncertain: false}) {
 		t.Fatalf("weak outcome %+v", o)
+	}
+	if o := outcomeOf(name, uncertain.ID); o.CredibilityKey != "" ||
+		o.Provenance != (autoreconcile.Provenance{Credibility: 0, Uncertain: true}) {
+		t.Fatalf("uncertain outcome %+v", o)
 	}
 	// An outcome names the Evidence graph of its Observation's Subject.
 	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {
@@ -516,4 +592,64 @@ func termID(t *testing.T, f *fixture, key string) []byte {
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
 	return id
+}
+
+func (f *fixture) dateIn(s subjects.Subject, year int) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: f.date.ID, Date: datevaluetest.YMD(year, 0, 0)}
+}
+
+func TestFieldsOf(t *testing.T) {
+	f := newFixture(t)
+	register, census, bible := f.source("Register"), f.source("Census"), f.source("Bible")
+	a, b := f.subjectOn(register, "event"), f.subjectOn(census, "event")
+	c := f.subjectOn(bible, "event")
+	f.cite(a, f.dateIn(a, 1817))
+	f.cite(b, f.dateIn(b, 1817))
+	f.cite(c, f.dateIn(c, 1818))
+	first := f.promote(a, nil)
+	f.promote(b, first)
+	second := f.promote(c, nil)
+	merged := f.promote(f.subjectOn(f.source("Other"), "event"), nil)
+	db, err := f.c.DB()
+	must(t, err)
+	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, first, merged)
+	must(t, err)
+	f.c.Graph().Drop()
+
+	tests := []struct {
+		name  string
+		ids   [][]byte
+		check func(t *testing.T, got map[string][]conclusiondetails.Field)
+	}{
+		{"a repeat and a merged id add no entity", [][]byte{first, second, first, merged}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			if len(got) != 2 {
+				t.Fatalf("entities %d, want 2 (a repeat and a merged id add none)", len(got))
+			}
+			one := got[string(first)]
+			if len(one) != 1 || one[0].PropertyKey != "date" || len(one[0].Outcomes) != 2 || len(one[0].Values) != 1 ||
+				one[0].State != autoreconcile.StateMerged || one[0].Values[0].Support != 2 {
+				t.Fatalf("first event %+v", one)
+			}
+			two := got[string(second)]
+			if len(two) != 1 || len(two[0].Outcomes) != 1 || two[0].State != autoreconcile.StateSingle {
+				t.Fatalf("second event %+v", two)
+			}
+			if _, ok := got[string(merged)]; ok {
+				t.Fatal("merged id composed")
+			}
+		}},
+		{"one node matches ForEntity", [][]byte{first}, func(t *testing.T, got map[string][]conclusiondetails.Field) {
+			d := f.detail(first)
+			if !reflect.DeepEqual(got[string(first)], d.Fields) {
+				t.Fatalf("one-node fieldsOf %+v\nForEntity %+v", got[string(first)], d.Fields)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := conclusiondetails.FieldsOf(f.c, tc.ids)
+			must(t, err)
+			tc.check(t, got)
+		})
+	}
 }

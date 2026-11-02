@@ -13,7 +13,7 @@ import (
 )
 
 // StagedFile is an image already checked and re-encoded by Go and not yet
-// stored. *ingest.StagedImage satisfies it. The write calls InsertTx inside its
+// stored. *ingest.Staged satisfies it. The write calls InsertTx inside its
 // own transaction; every decode and disk write happened before the write began.
 type StagedFile interface {
 	InsertTx(tx *sql.Tx) (files.File, []rowchange.Change, error)
@@ -21,7 +21,7 @@ type StagedFile interface {
 
 // DepictionInput is the value of a depiction Property: a region of the
 // Citation's page and the image of it. A caller sets
-// RegionJSON and ImagePath; ingest.StageDepictions reads ImagePath and sets
+// RegionJSON and ImagePath; ingest.StageDepictions (withStagedDepictions, before the catalog session) reads ImagePath and sets
 // Image. The write never reads ImagePath.
 type DepictionInput struct {
 	RegionJSON string

@@ -36,7 +36,10 @@ type registry struct {
 
 var reg = registry{sessions: make(map[string]*session)}
 
-func key(projectDir string) (string, error) {
+// Key is the registry key for projectDir: trimmed and cleaned. An empty path is
+// database.ErrNotAProject. Do and Close key by it, and callers that need the
+// folder Do will use call it too.
+func Key(projectDir string) (string, error) {
 	projectDir = strings.TrimSpace(projectDir)
 	if projectDir == "" {
 		return "", database.ErrNotAProject
@@ -187,7 +190,7 @@ func getOrOpen(projectDir string) (*session, error) {
 // fails it does not. A warm error never replaces fn's result, and leaves the
 // flag set so the next call tries again.
 func Do(projectDir string, fn func(*database.Catalog) error) error {
-	dir, err := key(projectDir)
+	dir, err := Key(projectDir)
 	if err != nil {
 		return err
 	}
@@ -233,7 +236,7 @@ func runLocked(dir string, s *session, fn func(*database.Catalog) error) error {
 
 // Close releases the held catalog for projectDir, if any.
 func Close(projectDir string) error {
-	dir, err := key(projectDir)
+	dir, err := Key(projectDir)
 	if err != nil {
 		return err
 	}

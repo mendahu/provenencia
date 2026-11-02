@@ -40,20 +40,26 @@ const (
 	// ReadEvidenceGraphProgress: the Subject, filed and Observation counts of
 	// a graph.
 	ReadEvidenceGraphProgress Read = "evidence_graph_progress"
+	// ReadEvidenceGraphs: the graphs of a Source, with their linked Artifacts
+	// (the graph list).
+	ReadEvidenceGraphs Read = "evidence_graphs"
 )
 
 // KeyTable is the table whose ids key the read: Evidence graphs for
-// citations and evidence_graph_progress. "" for an unknown read.
+// citations and evidence_graph_progress, Sources for evidence_graphs. "" for
+// an unknown read.
 func (r Read) KeyTable() string {
 	switch r {
 	case ReadCitations, ReadEvidenceGraphProgress:
 		return "evidence_graphs"
+	case ReadEvidenceGraphs:
+		return "sources"
 	}
 	return ""
 }
 
 // Reads is every keyed read, in the order Set.Reads reports them.
-var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress}
+var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs}
 
 // ReadPath is one keyed read: Read says which, Path says whose key ids (it
 // ends at Read.KeyTable()).
@@ -81,12 +87,10 @@ const (
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
 	ListPropertyUsage List = "property_usage"
-	// ListEvidenceGraphs: a graph or link row was written.
-	ListEvidenceGraphs List = "evidence_graphs"
 )
 
 // Lists is every catalog-wide list, in the order Set.Lists reports them.
-var Lists = []List{ListVocabulary, ListPropertyUsage, ListEvidenceGraphs}
+var Lists = []List{ListVocabulary, ListPropertyUsage}
 
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
@@ -110,12 +114,12 @@ type Set struct {
 	Lists []List
 	// Structure is set when the graph cache drops whole; it is not a list.
 	Structure bool
-	// HeaderDeps are handles whose stored rows read Handles. Run fills this
-	// from the walk RecomputeTx already did. HeaderDepsWalked says that walk
+	// SummaryDeps are handles whose stored rows read Handles. Run fills this
+	// from the walk RecomputeTx already did. SummaryDepsWalked says that walk
 	// happened, including when it found nobody, so a commit drops those rows
 	// and does not walk again.
-	HeaderDeps       [][]byte
-	HeaderDepsWalked bool
+	SummaryDeps       [][]byte
+	SummaryDepsWalked bool
 }
 
 // Effect is what a change to one table touches. An empty field means that job
@@ -199,10 +203,6 @@ var subjectGraph = field("graph_id")
 // claimGraph is an Identity Claim to the Evidence graph of its Subject.
 var claimGraph = from("subject_id", field("graph_id"))
 
-// claimEvidenceGraph is Identity Claim evidence to the Evidence graph of its
-// claim's Subject.
-var claimEvidenceGraph = up("identity_claim_id", "subject_id", "graph_id")
-
 // graphsOfSource is a path ending at a Source, to every Evidence graph of it.
 func graphsOfSource(p Path) Path {
 	return chain(p, inbound("evidence_graphs", "source_id"))
@@ -217,13 +217,6 @@ func valueGraph(col string) Path {
 // citationObservationGraphs is a Citation to the Evidence graphs of its
 // Observations.
 var citationObservationGraphs = chain(inbound("observations", "citation_id"), observationGraph)
-
-// citationArtifactGraphs is a Citation to the Evidence graphs its Artifact is
-// linked to.
-var citationArtifactGraphs = chain(
-	up("artifact_id"),
-	across("evidence_graph_artifacts", "artifact_id", "graph_id"),
-)
 
 // valueSource is a value row to the Source of the Observations that hold it
 // in col, through each Observation's Citation. SourceScope walks it;
@@ -269,7 +262,7 @@ var observers = chain(
 var registry = map[string]Effect{
 	"sources": {
 		Entity:        "source",
-		EvidenceGraph: onField("title", graphsOfSource(self())),
+		EvidenceGraph: graphsOfSource(union(onField("title", self()), onField("source_type_id", self()))),
 		SourceScope:   self(),
 		Search: []SearchDoc{
 			{Kind: DocSource, Path: self()},
@@ -298,7 +291,7 @@ var registry = map[string]Effect{
 		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	// An Artifact's own fields move no loaded graph row and no citation
-	// membership: its links, Citations and Observations carry their own graphs.
+	// membership: its Citations and Observations carry their own graphs.
 	"artifacts": {
 		Entity:      "artifact",
 		SourceScope: field("source_id"),
@@ -307,9 +300,8 @@ var registry = map[string]Effect{
 	"citations": {
 		Entity:        "citation",
 		EvidenceGraph: citationObservationGraphs,
-		// A Citation with no Observation yet shows in the graphs its Artifact
-		// is linked to.
-		Reads:       []ReadPath{{ReadCitations, prefer(citationObservationGraphs, citationArtifactGraphs)}},
+		// A Citation belongs to the one graph it was made in.
+		Reads:       []ReadPath{{ReadCitations, field("graph_id")}},
 		SourceScope: up("artifact_id", "source_id"),
 		Handles:     onField("transcription_uncertain", sqlPath(sqlHandlesForCitation)),
 	},
@@ -341,15 +333,14 @@ var registry = map[string]Effect{
 	"evidence_graphs": {
 		Entity:        "evidence_graph",
 		EvidenceGraph: self(),
+		Reads:         []ReadPath{{ReadEvidenceGraphs, field("source_id")}},
 		SourceScope:   field("source_id"),
-		Lists:         []List{ListEvidenceGraphs},
 		Search:        []SearchDoc{{Kind: DocEvidenceGraph, Path: self()}},
 	},
 	"evidence_graph_artifacts": {
 		Entity:      "evidence_graph_artifact",
-		Reads:       []ReadPath{{ReadCitations, field("graph_id")}},
+		Reads:       []ReadPath{{ReadEvidenceGraphs, up("graph_id", "source_id")}},
 		SourceScope: up("graph_id", "source_id"),
-		Lists:       []List{ListEvidenceGraphs},
 	},
 	"files": {
 		Entity:      "file",
@@ -401,16 +392,8 @@ var registry = map[string]Effect{
 		),
 		HandleScope: field("entity_id"),
 	},
-	"identity_claim_evidence": {
-		Entity:        "identity_claim_evidence",
-		EvidenceGraph: claimEvidenceGraph,
-		Reads:         []ReadPath{{ReadEvidenceGraphProgress, claimEvidenceGraph}},
-		Handles:       up("identity_claim_id", "entity_id"),
-		HandleScope:   up("identity_claim_id", "entity_id"),
-	},
 
 	"source_credibility_grades":   {None: true},
-	"claim_confidence_grades":     {None: true},
 	"users":                       {None: true},
 	"subject_positions":           {Entity: "subject_position", None: true},
 	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListVocabulary}},

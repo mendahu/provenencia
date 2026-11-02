@@ -16,6 +16,8 @@ enum ProjectFiles {
         /// The object is there but its name has no extension, or its type could
         /// run a program or open another item.
         case unsafe
+        /// The object is there and safe, but macOS failed to hand it to the app.
+        case notOpened
     }
 
     /// Joins `projectDir` with a slash-separated `relPath` from the catalog
@@ -120,17 +122,37 @@ enum ProjectFiles {
         return NSWorkspace.shared.urlForApplication(toOpen: type)
     }
 
+    /// Hands `url` to the app for its type. Throws `ObjectRefusal.missing` when no
+    /// app opens the type, and whatever `NSWorkspace` throws when macOS fails to
+    /// open it. The default `launch` of `openObject`.
+    @MainActor
+    static func launch(_ url: URL) async throws {
+        guard let app = openingApplication(for: url) else { throw ObjectRefusal.missing }
+        try await NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
+    }
+
     /// Opens a stored object in the app for its type. Returns `nil` when it was
     /// handed to that app, else why not: `.unsafe` from `openableObjectURL`,
-    /// `.missing` when the path is rejected or no app opens the type.
-    static func openObject(projectDir: String, relPath: String) -> ObjectRefusal? {
+    /// `.missing` when the path is rejected or no app opens the type, and
+    /// `.notOpened` when `launch` fails for any other reason.
+    @MainActor
+    static func openObject(
+        projectDir: String,
+        relPath: String,
+        launch: @MainActor (URL) async throws -> Void = ProjectFiles.launch
+    ) async -> ObjectRefusal? {
         switch openableObjectURL(projectDir: projectDir, relPath: relPath) {
         case .failure(let refusal):
             return refusal
         case .success(let url):
-            guard let app = openingApplication(for: url) else { return .missing }
-            NSWorkspace.shared.open([url], withApplicationAt: app, configuration: NSWorkspace.OpenConfiguration())
-            return nil
+            do {
+                try await launch(url)
+                return nil
+            } catch let refusal as ObjectRefusal {
+                return refusal
+            } catch {
+                return .notOpened
+            }
         }
     }
 

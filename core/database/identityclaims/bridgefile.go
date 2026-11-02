@@ -89,7 +89,7 @@ const fileCond = `s.id IN (SELECT ? UNION ALL SELECT o.subject_id FROM observati
 const graphCond = `s.graph_id = ?`
 
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
-// accepted claim of every bridge that has subjectID as an end, pins first, in
+// accepted claim of every bridge that has subjectID as an end, in
 // bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
 // per graph. The bridges' handles (their associations) are left alone. Does
 // not commit.

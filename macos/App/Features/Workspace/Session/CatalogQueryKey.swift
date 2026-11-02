@@ -19,16 +19,25 @@ enum CatalogQueryKey: Hashable, Sendable {
     case evidenceGraphProgress(project: ProjectKey)
     /// Every Evidence graph of the project with its linked Artifact ids (S12-05).
     case evidenceGraphsList(project: ProjectKey)
-    /// Every Person header, composed from the auto-reconciler cache (S9-07).
+    /// Every Person summary, composed from the auto-reconciler cache (S9-07).
     case personsList(project: ProjectKey)
-    /// Every Event header, composed from the auto-reconciler cache (S9-22).
+    /// Every Event summary, composed from the auto-reconciler cache (S9-22).
     case eventsList(project: ProjectKey)
-    /// Every Place header, composed from the auto-reconciler cache (S9-25).
+    /// Every Place summary, composed from the auto-reconciler cache (S9-25).
     case placesList(project: ProjectKey)
-    /// One handle's detail, any kind (S9-15), with its kind's header (birth
+    /// One handle's detail, any kind (S9-15), with its kind's summary (birth
     /// and death, an Event's subjects and title, a Place's names) read in the
     /// same call. Evicted, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
+    /// One Person's accepted claims grouped by Source (S13-01), read for the
+    /// Sources section. Evicted, not revalidated, while off screen.
+    case personClaims(project: ProjectKey, entityId: String)
+    /// One Person's family units (S13-04), read for the Family section.
+    /// Evicted, not revalidated, while off screen.
+    case personFamily(project: ProjectKey, entityId: String)
+    /// One Person's timeline events (S13-05), read for the Timeline section.
+    /// Evicted, not revalidated, while off screen.
+    case personEvents(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload. Each kind has one
     /// `CatalogQueryDescriptor` (`Kind.descriptor`).
@@ -51,6 +60,9 @@ enum CatalogQueryKey: Hashable, Sendable {
         case eventsList
         case placesList
         case conclusionDetail
+        case personClaims
+        case personFamily
+        case personEvents
     }
 
     var kind: Kind {
@@ -91,6 +103,12 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .placesList
         case .conclusionDetail:
             return .conclusionDetail
+        case .personClaims:
+            return .personClaims
+        case .personFamily:
+            return .personFamily
+        case .personEvents:
+            return .personEvents
         }
     }
 
@@ -113,7 +131,10 @@ enum CatalogQueryKey: Hashable, Sendable {
              .personsList(let project),
              .eventsList(let project),
              .placesList(let project),
-             .conclusionDetail(let project, _):
+             .conclusionDetail(let project, _),
+             .personClaims(let project, _),
+             .personFamily(let project, _),
+             .personEvents(let project, _):
             project
         }
     }

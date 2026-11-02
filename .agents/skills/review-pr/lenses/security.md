@@ -19,14 +19,14 @@ risk and the fix. Do not write exploits.
 
 | Boundary | Where | Untrusted input |
 | --- | --- | --- |
-| Ingest | `core/ingest`, `core/ingest/mediatypes`, `macos/App/Platform/IngestMediaPolicy.swift`; `ingest.StageImage` decodes and re-encodes app-rendered images | Any file the researcher drops or picks: name, size, type, bytes |
+| Ingest | `core/ingest`, `core/ingest/mediatypes`, `macos/App/Platform/IngestMediaPolicy.swift`; `ingest.Staged` (`StageFile`, `StageImage`, `StageBytes`) copies, hashes and decodes outside the catalog session, and `StageImage` re-encodes app-rendered images | Any file the researcher drops or picks: name, size, type, bytes |
 | Object store | `core/objectpath`, `core/objectstore` (every Go object read, write, install, and removal goes through an `os.Root` on objects/); Swift reads: `macos/App/Platform/ProjectFiles.swift` `objectURL` (an `lstat` walk from objects/) | Content hashes and relative paths read back from the catalog |
-| Derivatives | `core/derivatives` (thumbnails), `core/raster` (the one bounded codec, also used by staging) | Image and PDF bytes decoded in-process |
+| Derivatives | `core/derivatives` (thumbnails), `core/raster` (the one bounded codec: bytes, pixels, format allowlist; also used by staging; holds a hand-written, fuzzed reduced JPEG decoder) | Image and PDF bytes decoded in-process |
 | Project open | `core/database` migrate and schema check, `core/catalogsession` | A `*.provenencia` folder from someone else: its SQLite, its files |
 | Identity | `core/identity`, `identity.json`, `active-project.json` | Files under Documents another app or user can edit |
 | FFI | `api/ffi`, `api/ffi/handlers`, `macos/App/Platform/GoStore.swift`, `CoreInvoke.swift` | Bytes from Swift; errors going back |
 | Catalog values | `core/urlshape`, `core/locator`, `valuecodec` | URLs, locator JSON, text that later renders |
-| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/claimevidence`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
+| Stored numbers and lists | `core/matchregistry`, `core/valuecompare`, `core/propertycompare`, `core/subjectcompare`, `core/subjectprofile`, `core/segmentcompare`, `core/kinship`, `core/shortlist`, `core/graphalign`, `core/autoreconcile`, `core/database/namealiases` | Weights, counts, and lists read back from a catalog another tool may have written: `NaN`, `+Inf`, `1e308`, a negative weight, a 10,000-word name |
 
 ## How to work
 
@@ -131,7 +131,7 @@ lens ([`review-pr`](../SKILL.md) "Close the loop").
   overflow. A crafted position crashed the canvas, and restore reopened it on
   launch. Bound on write, clamp on read, check in Swift.
 - **A full decode in Swift.** `NSImage(contentsOf:)` on an original has no
-  pixel or type bound; Go's `raster` has both. Check before decoding.
+  pixel or type bound; Go's `raster` has a byte, pixel and type bound. Check before decoding.
 - **A panic across cgo.** The core runs in the app's process; without a
   `recover` at `ffi.Call`, one panic ends the app.
 - **A value checked on its way in, trusted on its way out.** Every finding

@@ -4,14 +4,14 @@ import Testing
 
 struct PlacesListTests {
 
-    private func header(
+    private func summary(
         _ ref: String,
         names: [String] = [],
         label: String = "",
         parents: [String] = [],
         candidates: Bool = false
-    ) -> CatalogPlaceHeader {
-        CatalogPlaceHeader(
+    ) -> CatalogPlaceSummary {
+        CatalogPlaceSummary(
             entity: CatalogCanonicalEntity(id: "id-\(ref)", ref: ref, subjectTypeID: "t", label: label),
             names: names,
             parents: parents,
@@ -20,8 +20,8 @@ struct PlacesListTests {
     }
 
     @Test func headerMetaCountsAndShowsRefreshing() {
-        let one = [header("PLC-1", names: ["York"])]
-        let two = one + [header("PLC-2")]
+        let one = [summary("PLC-1", names: ["York"])]
+        let two = one + [summary("PLC-2")]
         #expect(ConclusionListPresentation.rows(one, refreshing: false).meta(
             count: L10n.Workspace.placeCount, refreshing: L10n.Workspace.placeCountRefreshing
         ) == "1 place · by name")
@@ -31,7 +31,7 @@ struct PlacesListTests {
         #expect(ConclusionListPresentation.rows(two, refreshing: true).meta(
             count: L10n.Workspace.placeCount, refreshing: L10n.Workspace.placeCountRefreshing
         ) == "2 places · by name · refreshing")
-        #expect(ConclusionListPresentation<[CatalogPlaceHeader]>.empty.meta(
+        #expect(ConclusionListPresentation<[CatalogPlaceSummary]>.empty.meta(
             count: L10n.Workspace.placeCount, refreshing: L10n.Workspace.placeCountRefreshing
         ) == nil)
     }
@@ -73,7 +73,7 @@ struct PlacesListTests {
     }
 
     @Test func rowOpensThePlaceDetailPlace() {
-        let place = header("PLC-1", names: ["York"])
+        let place = summary("PLC-1", names: ["York"])
         let location = WorkspaceLocation.placeDetail(
             entityId: place.entity.id,
             ref: place.entity.ref,

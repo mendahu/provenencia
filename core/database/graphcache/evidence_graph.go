@@ -87,13 +87,18 @@ type EvidenceEdge struct {
 	ToRef          string
 }
 
-// EvidenceGraph is one loaded Evidence graph. SourceID and SourceTitle are the
-// graph's Source, set by the loader; a graph whose row does not exist is not
+// EvidenceGraph is one loaded Evidence graph. SourceID, SourceRef, SourceTitle
+// and SourceTypeID are the graph's Source, and GraphRef and GraphName the
+// graph's own, set by the loader. GraphRef is "" for a graph with no ref. A graph whose row does not exist is not
 // Found and has no SourceID, so no Source drop removes it.
 type EvidenceGraph struct {
 	GraphID      []byte
+	GraphRef     string
+	GraphName    string
 	SourceID     []byte
+	SourceRef    string
 	SourceTitle  string
+	SourceTypeID []byte
 	Found        bool
 	Subjects     []EvidenceSubject
 	Observations []EvidenceObservation

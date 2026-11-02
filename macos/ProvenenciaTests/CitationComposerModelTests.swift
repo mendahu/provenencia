@@ -228,9 +228,14 @@ struct CitationComposerModelTests {
                 artifactID: "art-0"
             )
         }
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        // The composer is on screen, so its graph key reloads on a write instead of going stale.
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: sourceID, graphId: graphID, sourceSurface: .graph
+        ))
         return CitationComposerModel(
             entry: entry,
-            session: WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store),
+            session: session,
             store: store,
             userID: "user-1"
         )
@@ -280,7 +285,7 @@ struct CitationComposerModelTests {
             $0.values.valueText = "miller"
         }
         await model.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { $0.hasPrefix("addObservationsToCitation") })
         #expect(model.activeCitationID != nil)
         #expect(model.observations.contains { $0.persistedRef == "OBS-FAKE1" && $0.state == .saved })
@@ -618,7 +623,7 @@ struct CitationComposerModelTests {
         await model.prepare()
         model.transcription = "note"
         await model.fields.saveCitation()
-        #expect(store.recordedCalls.contains { $0 == "createCitationWithObservations observations=0" })
+        #expect(store.recordedCalls.contains { $0 == "createCitationWithObservations graph=\(graphID) observations=0" })
         #expect(model.activeCitationID != nil)
         store.recordedCalls = []
         model.transcription = "changed"
@@ -647,7 +652,7 @@ struct CitationComposerModelTests {
         await model.saveAuthoring()
         let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
         #expect(creates.count == 1)
-        #expect(creates.first == "createCitationWithObservations observations=0")
+        #expect(creates.first == "createCitationWithObservations graph=\(graphID) observations=0")
         let adds = store.recordedCalls.filter { $0.hasPrefix("addObservationsToCitation") }
         #expect(adds.count == 2)
         #expect(model.activeCitationID != nil)
@@ -770,7 +775,7 @@ struct CitationComposerModelTests {
         fresh.mutateBridge { $0.termID = "term-witness" }
         store.recordedCalls = []
         await fresh.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=3")
                 && !call.contains("citationID=nil")
@@ -831,7 +836,7 @@ struct CitationComposerModelTests {
         #expect(model.shouldHoldNavigation(.back))
         store.recordedCalls = []
         await model.saveAuthoring()
-        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations observations=0") })
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
         #expect(store.recordedCalls.contains { call in
             call.hasPrefix("createCitedBridge citationID=") && call.contains("observations=2")
                 && !call.contains("citationID=nil")
@@ -1675,7 +1680,8 @@ struct CitationComposerModelTests {
         model.requestSelectArtifact("art-1")
         let switched = await waitUntil { !model.isSwitchingCitation && model.selectedArtifactID == "art-1" }
         #expect(switched)
-        #expect(model.fields.error != nil)
+        #expect(model.citationLoadError != nil)
+        #expect(model.fields.error == nil)
         #expect(model.activeCitationID == nil)
     }
 
@@ -1755,7 +1761,8 @@ struct CitationComposerModelTests {
             .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
         )
         await model.refreshCitationLines()
-        #expect(model.fields.error != nil)
+        #expect(model.citationLoadError?.hasPrefix("Couldn't open CIT-1.") == true)
+        #expect(model.fields.error == nil)
         #expect(model.observationRows.rows.count == rowCount)
 
         store.citationsByID["cit-1"] = kept
@@ -1763,7 +1770,52 @@ struct CitationComposerModelTests {
             .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
         )
         await model.refreshCitationLines()
-        #expect(model.fields.error == nil)
+        #expect(model.citationLoadError == nil)
+    }
+
+    /// A Citation the composer never listed or loaded has no ref to name.
+    @Test func loadFailureUnlistedIsUnnamed() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.selectCitation("cit-missing")
+        await model.awaitIdentitySwitch()
+        #expect(model.citationLoadError?.hasPrefix("Couldn't open this citation.") == true)
+    }
+
+    @Test func loadFailureLeavesFieldError() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        model.fields.error = "Couldn't save."
+        store.citationsByID["cit-1"] = nil
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.citationLoadError != nil)
+        #expect(model.fields.error == "Couldn't save.")
+    }
+
+    @Test func newCitationClearsLoadFailure() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        store.citationsByID["cit-1"] = nil
+        model.session.invalidate(
+            .citationsByArtifact(project: model.session.projectKey, graphId: graphID, artifactId: "art-0")
+        )
+        await model.refreshCitationLines()
+        #expect(model.citationLoadError != nil)
+        model.beginNewCitation()
+        await model.awaitIdentitySwitch()
+        #expect(model.citationLoadError == nil)
     }
 
     @Test func customTermReturnsToTheNewObservationDialog() async {

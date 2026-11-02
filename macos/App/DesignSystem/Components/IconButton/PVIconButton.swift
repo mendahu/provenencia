@@ -3,14 +3,16 @@ import SwiftUI
 /// Tone for `PVIconButton` — `neutral` is the default chrome color,
 /// `danger` tints the glyph for a destructive action (the web board sets
 /// `style={{ color: 'var(--danger)' }}` on the delete button), and
-/// `accent` is a filled primary control (metadata inline Save).
+/// `accent` is a filled primary control (metadata inline Save), and
+/// `success` tints the glyph green for a done state (the clipboard button's check).
 enum PVIconButtonTone {
-    case neutral, danger, accent
+    case neutral, danger, accent, success
 
     fileprivate var foreground: Color {
         switch self {
         case .neutral: PVColor.textSecondary
         case .danger: PVColor.danger
+        case .success: PVColor.success
         case .accent: PVColor.accentForeground
         }
     }
@@ -18,14 +20,14 @@ enum PVIconButtonTone {
     fileprivate var restingFill: Color {
         switch self {
         case .accent: PVColor.accent
-        case .neutral, .danger: .clear
+        case .neutral, .danger, .success: .clear
         }
     }
 
     fileprivate var hoverFill: Color {
         switch self {
         case .accent: PVColor.accentHover
-        case .neutral, .danger: PVColor.surfaceHover
+        case .neutral, .danger, .success: PVColor.surfaceHover
         }
     }
 }

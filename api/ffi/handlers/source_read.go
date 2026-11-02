@@ -38,35 +38,72 @@ func loadPropertyInfo(c *database.Catalog) (map[string]propertyInfo, error) {
 	return out, nil
 }
 
-// listedProtosFromGraph projects stored observations. A citation id keeps
-// that citation's rows, in the graph's ref order. Nil keeps every row.
-func listedProtosFromGraph(c *database.Catalog, eg graphcache.EvidenceGraph, citationID []byte) ([]*engine.Observation, error) {
+// listedContext is the vocabulary a response maps its Observations with, read
+// once per response.
+type listedContext struct {
+	props map[string]propertyInfo
+	terms map[string]graphcache.VocabTerm
+}
+
+func newListedContext(c *database.Catalog) (listedContext, error) {
 	props, err := loadPropertyInfo(c)
 	if err != nil {
-		return nil, err
+		return listedContext{}, err
 	}
 	terms := map[string]graphcache.VocabTerm{}
 	if c != nil && c.Graph() != nil {
 		v, err := c.Graph().Vocabulary()
 		if err != nil {
-			return nil, err
+			return listedContext{}, err
 		}
 		terms = v.TermsByID()
 	}
+	return listedContext{props: props, terms: terms}, nil
+}
+
+// rows projects the graph's stored Observations that keep accepts, in the
+// graph's ref order. Subject labels, for Observations whose value is another
+// Subject, come from the graph's Subjects.
+func (lc listedContext) rows(eg graphcache.EvidenceGraph, keep func(graphcache.EvidenceObservation) bool) ([]observations.Listed, error) {
+	var kept []graphcache.EvidenceObservation
+	for _, o := range eg.Observations {
+		if keep(o) {
+			kept = append(kept, o)
+		}
+	}
+	return lc.rowsOf(eg, kept)
+}
+
+// rowsOf projects the given stored Observations of eg, in order, with the
+// Subject labels of eg.
+func (lc listedContext) rowsOf(eg graphcache.EvidenceGraph, obs []graphcache.EvidenceObservation) ([]observations.Listed, error) {
 	subjectLabels := map[string]string{}
 	for _, s := range eg.Subjects {
 		subjectLabels[string(s.ID)] = s.Label
 	}
 	var rows []observations.Listed
-	for _, o := range eg.Observations {
-		if citationID != nil && !bytes.Equal(o.CitationID, citationID) {
-			continue
-		}
-		listed, err := listedFromSource(o, props, terms, subjectLabels)
+	for _, o := range obs {
+		listed, err := listedFromSource(o, lc.props, lc.terms, subjectLabels)
 		if err != nil {
 			return nil, err
 		}
 		rows = append(rows, listed)
+	}
+	return rows, nil
+}
+
+// listedProtosFromGraph projects stored observations. A citation id keeps
+// that citation's rows, in the graph's ref order. Nil keeps every row.
+func listedProtosFromGraph(c *database.Catalog, eg graphcache.EvidenceGraph, citationID []byte) ([]*engine.Observation, error) {
+	lc, err := newListedContext(c)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := lc.rows(eg, func(o graphcache.EvidenceObservation) bool {
+		return citationID == nil || bytes.Equal(o.CitationID, citationID)
+	})
+	if err != nil {
+		return nil, err
 	}
 	return listedProtos(c, rows)
 }

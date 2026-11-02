@@ -257,7 +257,7 @@ struct PlaceRegistryTests {
         #expect(resolve(location)?.placeID != .sourcePromote)
     }
 
-    @Test func eventsListWarmsTheHeaderRead() {
+    @Test func eventsListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.events))
         #expect(place?.placeID == .eventsList)
         #expect(place?.queryKeys == [.eventsList(project: project)])
@@ -270,7 +270,18 @@ struct PlaceRegistryTests {
         #expect(persons?.placeID == .personsList)
     }
 
-    @Test func placesListWarmsTheHeaderRead() {
+    @Test func personDetailOnFamilyWarmsTheFamily() {
+        let family = resolve(WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna").withPageSection(.family))
+        #expect(family?.placeID == .personDetail)
+        #expect(family?.queryKeys == [
+            .conclusionDetail(project: project, entityId: "per-1"),
+            .personFamily(project: project, entityId: "per-1"),
+        ])
+        let vitals = resolve(.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna"))
+        #expect(vitals?.queryKeys == [.conclusionDetail(project: project, entityId: "per-1")])
+    }
+
+    @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)
         #expect(place?.queryKeys == [.placesList(project: project)])

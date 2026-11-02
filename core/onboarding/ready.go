@@ -3,7 +3,6 @@ package onboarding
 import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/claimconfidencegrades"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
@@ -31,10 +30,6 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 		_ = c.Close()
 		return nil, err
 	}
-	if err := claimconfidencegrades.Install(c); err != nil {
-		_ = c.Close()
-		return nil, err
-	}
 	if err := subjectvocab.Install(c); err != nil {
 		_ = c.Close()
 		return nil, err
@@ -56,7 +51,7 @@ func createCatalog(parent, folder string) (*database.Catalog, error) {
 
 // OpenCatalog opens a project once (migrate + the open-time repairs of catalogsession.ReconcileOnOpen).
 // Prefer catalogsession.Do for researcher paths so opens are amortized and serialized.
-// Does not re-install or heal Source vocabulary, credibility or claim confidence grades, Interpretation subject vocabulary, name formats, or alias tables.
+// Does not re-install or heal Source vocabulary, credibility grades, Interpretation subject vocabulary, name formats, or alias tables.
 func OpenCatalog(projectDir string) (*database.Catalog, error) {
 	c, err := database.Open(projectDir)
 	if err != nil {

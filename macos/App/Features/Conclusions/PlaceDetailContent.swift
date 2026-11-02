@@ -16,31 +16,37 @@ struct PlaceDetailContent: ConclusionDetailBody {
     var chainIsRecorded: Bool
     var rows: [ReconciledValueRowModel]
     var sections: [ConclusionDetailSection]
-    var thumbnail: ConclusionDetailThumbnail { .init(mark: .subjectPlace, label: L10n.Conclusions.placeNoImage) }
+    /// The pictures recorded for the Place, earliest first.
+    var gallery: ConclusionDetailGallery
+    /// Leads with the gallery's lead picture.
+    var thumbnail: ConclusionDetailThumbnail
 
     init(detail: CatalogConclusionDetail, locale: Locale = .autoupdatingCurrent) {
         let toponym = detail.fields.first { $0.propertyKey == SeededPropertyKey.toponym }
-        let names = toponym?.displayedValues.compactMap { value -> String? in
-            let text = ReconciledValueDisplay.string(for: value.value, locale: locale)
-            return text.isEmpty ? nil : text
-        } ?? []
         title = PlaceTitleDisplay.titleSource(
-            PlaceTitleParts(names: names, label: detail.entity.label, ref: detail.entity.ref)
+            PlaceTitleParts(toponym: toponym, entity: detail.entity, locale: locale)
         )
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        let header = detail.header?.place
+        let summary = detail.summary?.place
         let line = PlaceChainDisplay.line(
-            parents: header?.parents ?? [],
-            candidates: header?.parentsAreCandidates ?? false
+            parents: summary?.parents ?? [],
+            candidates: summary?.parentsAreCandidates ?? false
         )
         chainIsRecorded = !line.isEmpty
         chain = chainIsRecorded ? line : L10n.string(L10n.Conclusions.placeNoParent)
         rows = [
             Self.namesRow(toponym, locale: locale),
-            Self.periodRow(detail: detail, header: header, locale: locale),
+            Self.periodRow(detail: detail, summary: summary, locale: locale),
         ]
-        sections = Self.relationshipSections(header: header)
+        sections = Self.relationshipSections(summary: summary)
+        gallery = .pictures(from: detail, fallbackMark: .subjectPlace, choose: .placeThumbnail)
+        thumbnail = .leading(
+            gallery: gallery,
+            noImage: L10n.Conclusions.placeNoImage,
+            withImage: L10n.Conclusions.placePictureThumb,
+            leadLabel: L10n.Conclusions.pictureFrom
+        )
     }
 
     /// The Names row is the `toponym` field, relabeled. Several kept names
@@ -70,14 +76,14 @@ struct PlaceDetailContent: ConclusionDetailBody {
 
     static func periodRow(
         detail: CatalogConclusionDetail,
-        header: CatalogPlaceHeader?,
+        summary: CatalogPlaceSummary?,
         locale: Locale
     ) -> ReconciledValueRowModel {
         let label = L10n.string(L10n.Conclusions.placePeriod)
         let empty = L10n.string(L10n.Conclusions.emptyPlacePeriod)
         let lead = PlacePeriodDisplay.span(
-            start: header?.startDate,
-            end: header?.endDate,
+            start: summary?.startDate,
+            end: summary?.endDate,
             locale: locale
         )
         let fields = detail.fields.filter {
@@ -93,11 +99,11 @@ struct PlaceDetailContent: ConclusionDetailBody {
         )
     }
 
-    static func relationshipSections(header: CatalogPlaceHeader?) -> [ConclusionDetailSection] {
-        let partOf = header?.partOf ?? []
-        let contains = header?.contains ?? []
-        let predecessors = header?.predecessors ?? []
-        let successors = header?.successors ?? []
+    static func relationshipSections(summary: CatalogPlaceSummary?) -> [ConclusionDetailSection] {
+        let partOf = summary?.partOf ?? []
+        let contains = summary?.contains ?? []
+        let predecessors = summary?.predecessors ?? []
+        let successors = summary?.successors ?? []
         let visibleContains = Array(contains.prefix(containsVisibleLimit))
         let omitted = max(0, contains.count - visibleContains.count)
 

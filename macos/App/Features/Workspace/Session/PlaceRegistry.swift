@@ -189,7 +189,9 @@ struct PlaceRegistry: Sendable {
             priority: 20,
             matches: { $0.section == .persons && $0.entityId != nil },
             queryKeys: { project, location in
-                location.entityId.map { [.conclusionDetail(project: project, entityId: $0)] } ?? []
+                guard let entityId = location.entityId else { return [] }
+                return [.conclusionDetail(project: project, entityId: entityId)]
+                    + (location.pageSection?.queryKey(project: project, entityId: entityId).map { [$0] } ?? [])
             },
             viewIdentity: { $0.entityId }
         ),

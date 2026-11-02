@@ -37,6 +37,10 @@ enum PVToastTone {
 /// See `DesignSystem/README.md` / `PVButton.swift` for the component
 /// pattern this follows.
 ///
+/// A toast speaks its title and message to VoiceOver when it appears (a danger
+/// toast interrupts), so no call site posts its own announcement. A toast
+/// remounted with `.id(toast)` speaks each new one.
+///
 /// Auto-dismisses after `autoDismissAfter` (default 5 seconds) by calling
 /// `onDismiss`, unless it's `nil` — pass `autoDismissAfter: nil` to keep a
 /// toast on screen until the user (or the caller) dismisses it explicitly.
@@ -93,6 +97,10 @@ struct PVToast: View {
         .clipShape(RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous))
         .pvShadow(PVElevation.lg)
         .accessibilityElement(children: .combine)
+        .pvAnnounce(
+            AccessibilityAnnouncement.text(title: title, message: message),
+            priority: AccessibilityAnnouncement.priority(danger: tone == .danger)
+        )
         .task {
             guard let autoDismissAfter else { return }
             try? await Task.sleep(for: .seconds(autoDismissAfter))

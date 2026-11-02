@@ -27,15 +27,29 @@ struct EvidenceGraphStoreTests {
             name: " Jones ", description: "Household 12", artifactIDs: ["a1"]
         )
         #expect(jones.name == "Jones")
-        let listed = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let listed = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(listed.map(\.name) == ["Smith", "Jones"])
         #expect(store.heldCatalogProjectDir == projectDir)
     }
 
+    @Test func listsOneSourcesGraphs() async throws {
+        let store = seededStore()
+        store.evidenceGraphsByProject[projectDir] = [
+            evidenceGraph("g1", sourceID: "a", name: "Default"),
+            evidenceGraph("g2", sourceID: "b", name: "Default"),
+            evidenceGraph("g3", sourceID: "a", name: "Jones"),
+        ]
+        let ofA = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: "a")
+        #expect(ofA.map(\.id) == ["g1", "g3"])
+        let all = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
+        #expect(all.map(\.id) == ["g1", "g2", "g3"])
+        #expect(store.listEvidenceGraphsSourceIDs == ["a", nil])
+    }
+
     @Test func writesReturnScriptedEffects() async throws {
         let store = seededStore()
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.evidenceGraphs])
-        let expected: Set<CatalogList> = [.evidenceGraphs]
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.vocabulary])
+        let expected: Set<CatalogList> = [.vocabulary]
         let (made, created) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Jones", description: "", artifactIDs: ["a1"]
@@ -48,7 +62,7 @@ struct EvidenceGraphStoreTests {
         for effects in [created, updated, deleted] {
             #expect(effects.lists == expected)
         }
-        #expect(try await store.listEvidenceGraphs(projectDir: projectDir).isEmpty)
+        #expect(try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil).isEmpty)
     }
 
     @Test func updateKeepsLinksWhenNoneGiven() async throws {
@@ -57,7 +71,7 @@ struct EvidenceGraphStoreTests {
         _ = try await store.updateEvidenceGraph(
             projectDir: projectDir, userID: userID, graphID: "g1", name: "Household", description: "d", artifactIDs: []
         )
-        let listed = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let listed = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(listed[0].name == "Household")
         #expect(listed[0].artifactIDs == ["a1", "a2"])
     }
@@ -141,7 +155,7 @@ struct EvidenceGraphStoreTests {
         let (created, _) = try await store.createSource(
             projectDir: projectDir, userID: userID, sourceTypeID: "t", title: "Deed", description: ""
         )
-        let graphs = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let graphs = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(graphs.map(\.name) == ["Default"])
         #expect(graphs.first?.sourceID == created.id)
         #expect(graphs.first?.id != created.id)
@@ -152,14 +166,14 @@ struct EvidenceGraphStoreTests {
             fileID: "", label: "Page 1", description: "", graphIDs: nil
         )
         #expect(store.createArtifactGraphIDs == [nil])
-        let linked = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let linked = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(linked.first?.artifactIDs == [])
 
         let (copy, _) = try await store.copySource(
             projectDir: projectDir, userID: userID, sourceID: created.id, title: "Deed copy", sourceTypeID: "t",
             copyDescription: false, copyMetadata: false, copyCredibility: false, artifactIDs: [artifact.id]
         )
-        let all = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let all = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         let copied = try #require(all.first { $0.sourceID == copy.id })
         #expect(copied.name == "Default")
         #expect(copied.artifactIDs.count == 1)
@@ -206,11 +220,11 @@ struct EvidenceGraphStoreTests {
             evidenceGraph("g2", name: "Jones", artifactIDs: ["a1"]),
         ]
         _ = try await store.deleteArtifact(projectDir: projectDir, userID: userID, artifactID: "a1")
-        let afterArtifact = try await store.listEvidenceGraphs(projectDir: projectDir)
+        let afterArtifact = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(afterArtifact.map(\.artifactIDs) == [["a2"], []])
 
         try await store.deleteSource(projectDir: projectDir, userID: userID, sourceID: sourceID)
-        #expect(try await store.listEvidenceGraphs(projectDir: projectDir).isEmpty)
+        #expect(try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil).isEmpty)
     }
 
     /// T-13 (D-14): the fake answers with each scripted block whose pair was asked,

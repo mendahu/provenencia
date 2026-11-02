@@ -1,11 +1,22 @@
 package namevalue
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 func TestPartTypesRegistry(t *testing.T) {
 	types := PartTypes()
-	if len(types) != 7 {
-		t.Fatalf("len=%d", len(types))
+	want := []string{"prefix", "given", "nick", "surname_prefix", "surname", "former_surname", "suffix", "undetermined"}
+	var keys []string
+	for _, info := range types {
+		keys = append(keys, info.Key)
+	}
+	if !slices.Equal(keys, want) {
+		t.Fatalf("keys=%v, want %v", keys, want)
+	}
+	if err := Validate(Value{Form: "Mary (Smith) Jones", Parts: []Part{{Idx: 0, Type: PartTypeFormerSurname, Value: "Smith"}}}); err != nil {
+		t.Fatalf("former_surname rejected: %v", err)
 	}
 	for i, info := range types {
 		if info.Key == "" || info.L10nKey == "" {

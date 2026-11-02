@@ -71,8 +71,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var subjectsByGraph: [String: [CatalogSubject]] = [:]
     /// Accepted Identity Claim per Subject id (Promote): the claim and its handle.
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
-    /// Distinct handles that pin an Observation, for delete-impact confirms.
-    var pinsByObservation: [String: [CatalogCanonicalEntity]] = [:]
     /// Queued graph-alignment proposals. The first is consumed; the last repeats.
     var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
     /// Per-call delay before a proposal returns, consumed in call order, so
@@ -82,16 +80,23 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
     /// The last Done the page sent, for tests.
     var lastPromoteBatch: [CatalogPromoteGraphAlignmentFixed]?
-    /// Event and Place headers as Go would compose them, seeded by tests in
+    /// Event and Place summaries as Go would compose them, seeded by tests in
     /// list order. FakeStore does not reconcile, walk, or title them; Go owns
-    /// those rules (`conclusionheaders`, `eventtitle`) and their tests.
-    var seededEventHeaders: [CatalogEventHeader] = []
-    var seededPlaceHeaders: [CatalogPlaceHeader] = []
+    /// those rules (`conclusionsummaries`, `eventtitle`) and their tests.
+    var seededEventSummaries: [CatalogEventSummary] = []
+    var seededPlaceSummaries: [CatalogPlaceSummary] = []
     /// Event card titles Go would choose, per Evidence graph then Subject id.
     var eventTitlesByGraph: [String: [String: CatalogEventTitle]] = [:]
     /// A handle's detail as Go would compose it, seeded by tests. Persons
     /// without a seed fall back to the name mirror below.
     var seededConclusionDetails: [String: CatalogConclusionDetail] = [:]
+    /// A Person's claims as Go would group them, seeded by tests. An entity
+    /// with no seed is unknown (an empty list is a seeded Person with none).
+    var seededPersonClaims: [String: [CatalogPersonClaimGroup]] = [:]
+    /// A Person's family by entity id; an unseeded id throws `conclusiondetails.not_found`.
+    var seededPersonFamilies: [String: CatalogPersonFamily] = [:]
+    /// A Person's timeline events by entity id; an unseeded id throws `conclusiondetails.not_found`.
+    var seededPersonEvents: [String: [CatalogPersonEvent]] = [:]
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -122,10 +127,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteSubjectDelayNanoseconds: UInt64 = 0
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
-    var listSubjectsCalls = 0
+    /// The graph id of each `listSubjects` call, in order.
+    var listSubjectsGraphIDs: [String] = []
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
+    /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
+    var citationCountsGraphIDs: [String] = []
     var getEvidenceGraphProgressCalls = 0
     var deleteSourceCalls = 0
     var deleteArtifactCalls = 0
@@ -151,6 +159,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var graphProgressByGraph: [String: EvidenceGraphProgress] = [:]
     var listEvidenceGraphProgressError: Error?
     var listEvidenceGraphsError: Error?
+    /// The `sourceID` of each `listEvidenceGraphs` call, in order (nil: the whole project).
+    var listEvidenceGraphsSourceIDs: [String?] = []
+    /// While on, `listEvidenceGraphs` suspends after recording the call and before it reads.
+    let listEvidenceGraphsHold = FakeHold()
+    /// How many times `listSources` was called.
+    var listSourcesCalls = 0
     var createEvidenceGraphError: Error?
     /// Effects every write returns until a test assigns another value.
     var nextWriteEffects: CatalogWriteEffects = .empty
@@ -163,6 +177,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     private var nextAuditRevision: Int64 = 1
     /// When set, `searchCatalog` throws (any search caller's error UI).
     var searchCatalogError: Error?
+    /// What `searchCatalog` returns, in this order, filtered to the requested kinds.
+    var seededSearchHits: [CatalogSearchHit] = []
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
     /// When set, `updateSource` throws (identity title/type/description saves).
@@ -389,6 +405,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listSources(projectDir: String) async throws -> [CatalogSource] {
         return try withState {
+            listSourcesCalls += 1
             markCatalogSessionHeld(projectDir)
             if let listSourcesError { throw listSourcesError }
             // Match Go `sources.List`: newest-created-first (UUIDv7 / id DESC).
@@ -787,11 +804,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func listEvidenceGraphs(projectDir: String) async throws -> [CatalogEvidenceGraph] {
+    func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph] {
         try withState {
+            listEvidenceGraphsSourceIDs.append(sourceID)
             if let listEvidenceGraphsError { throw listEvidenceGraphsError }
+        }
+        await listEvidenceGraphsHold.wait()
+        return withState {
             markCatalogSessionHeld(projectDir)
-            return evidenceGraphsByProject[projectDir] ?? []
+            let rows = evidenceGraphsByProject[projectDir] ?? []
+            guard let sourceID else { return rows }
+            return rows.filter { $0.sourceID == sourceID }
         }
     }
 
@@ -1255,322 +1278,21 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    /// Handle kinds: Persons by auto-reconciled name or ref, Events and Places by ref or
-    /// label (FakeStore has no event / place values). Other kinds: the vocabulary
-    /// fake below, filtered to the requested kinds.
+    /// Seeded hits in seeded order for the requested kinds; ranks nothing (`.cursor/rules/swift-tests.mdc`).
     func searchCatalog(
         projectDir: String,
         query: String,
-        location: WorkspaceLocation?,
+        location _: WorkspaceLocation?,
         kinds: [String]
     ) async throws -> [CatalogSearchHit] {
-        // No kinds is every kind; an unknown requested kind matches nothing, as in Go.
-        let wanted = kinds.isEmpty
-            ? Set(CatalogSearchKind.allCases)
-            : Set(kinds.compactMap(CatalogSearchKind.init(rawValue:)))
-        var scored: [(hit: CatalogSearchHit, score: Double)] = []
-        let handleWanted = wanted.intersection(Self.handleSearchKinds)
-        if !handleWanted.isEmpty {
-            scored += try withState {
-                if let searchCatalogError { throw searchCatalogError }
-                markCatalogSessionHeld(projectDir)
-                return handleSearchHits(query: query, kinds: handleWanted)
-            }
-        }
-        if !wanted.isSubset(of: Self.handleSearchKinds) {
-            let vocabulary = try await vocabularySearchHits(projectDir: projectDir, query: query, location: location)
-            scored += vocabulary.filter { item in item.hit.searchKind.map { wanted.contains($0) } ?? false }
-        }
-        return Array(Self.orderedByMixedScore(scored).prefix(50).map(\.hit))
-    }
-
-    /// Handle kinds mirrored from `KindSpec.Handle`: the primary kinds.
-    private static let handleSearchKinds = Set(EvidencePrimaryKind.allCases.map { CatalogSearchKind($0) })
-
-    /// Kind share mirrored from `KindSpec.Priority` and `ScoreMix` (90% text, 10% kind).
-    private static func searchPriority(_ kind: CatalogSearchKind?) -> Double {
-        switch kind {
-        case .person: 4
-        case .event: 3
-        case .place: 2
-        case .source: 1
-        case .sourceType, .metadataField, .evidenceGraph, nil: 0
-        }
-    }
-
-    private static func orderedByMixedScore(
-        _ scored: [(hit: CatalogSearchHit, score: Double)]
-    ) -> [(hit: CatalogSearchHit, score: Double)] {
-        let maxPriority = 4.0
-        return scored.enumerated().map { item in
-            let fraction = searchPriority(item.element.hit.searchKind) / maxPriority
-            let mixed = item.element.score * (0.9 + 0.1 * fraction)
-            return (offset: item.offset, hit: item.element.hit, score: mixed)
-        }.sorted { a, b in
-            if a.score != b.score { return a.score > b.score }
-            if a.hit.kind != b.hit.kind { return a.hit.kind < b.hit.kind }
-            if a.hit.title != b.hit.title { return a.hit.title < b.hit.title }
-            return a.offset < b.offset
-        }.map { (hit: $0.hit, score: $0.score) }
-    }
-
-    /// Call inside `withState`.
-    private func handleSearchHits(query: String, kinds: Set<CatalogSearchKind>) -> [(hit: CatalogSearchHit, score: Double)] {
-        let q = TextMatch.Query(query, locale: TextMatch.posix)
-        guard !q.isEmpty else { return [] }
-        let names = Dictionary(personHeaders().map { ($0.entity.id, $0.name?.form ?? "") }, uniquingKeysWith: { a, _ in a })
-        var seen = Set<String>()
-        var out: [(hit: CatalogSearchHit, score: Double)] = []
-        for membership in membershipBySubject.values.sorted(by: { $0.entity.ref < $1.entity.ref }) {
-            guard let primary = EvidencePrimaryKind(rawValue: membership.kind),
-                  kinds.contains(CatalogSearchKind(primary)),
-                  seen.insert(membership.entity.id).inserted
-            else { continue }
-            let entity = membership.entity
-            let header = handleSearchHeader(kind: primary, id: entity.id)
-            let name = names[entity.id] ?? ""
-            let title = !name.isEmpty ? name : (!entity.label.isEmpty ? entity.label : entity.ref)
-            guard q.matches(title, entity.ref, entity.label, handleSearchMatchText(header)) else { continue }
-            let section: WorkspaceSection = switch primary {
-            case .person: .persons
-            case .event: .events
-            case .place: .places
-            }
-            let refMatch = q.matches(entity.ref)
-            out.append((
-                CatalogSearchHit(
-                    kind: CatalogSearchKind(primary).rawValue, id: entity.id, ref: entity.ref, title: title, subtitle: "",
-                    matchReason: refMatch ? "ref" : "title",
-                    location: WorkspaceLocation(section: section, entityId: entity.id, ref: entity.ref, title: title),
-                    memberCount: membershipBySubject.values.filter { $0.entity.id == entity.id }.count,
-                    header: header
-                ),
-                refMatch ? 12 : 10
-            ))
-        }
-        return out
-    }
-
-    /// The list header for a handle hit, when the fake has one.
-    private func handleSearchHeader(kind: EvidencePrimaryKind, id: String) -> CatalogConclusionHeader? {
-        switch kind {
-        case .person:
-            if let header = personHeaders().first(where: { $0.entity.id == id }) {
-                return .person(header)
-            }
-        case .event:
-            if let header = seededEventHeaders.first(where: { $0.entity.id == id }) {
-                return .event(header)
-            }
-        case .place:
-            if let header = seededPlaceHeaders.first(where: { $0.entity.id == id }) {
-                return .place(header)
-            }
-        }
-        return nil
-    }
-
-    /// Match text the lists would show, so a query for an event title or a
-    /// place chain finds the handle the way the index does.
-    private func handleSearchMatchText(_ header: CatalogConclusionHeader?) -> String {
-        switch header {
-        case .person(let header):
-            return PersonLifeDisplay.line(header).text
-        case .event(let header):
-            return EventTitleDisplay.title(header) + " " + EventSecondaryDisplay.line(header)
-        case .place(let header):
-            return (header.names + header.parents).joined(separator: " ")
-        case nil:
-            return ""
-        }
-    }
-
-    /// Scores one ref-bearing record (Source or Evidence graph): field weights, the ref
-    /// fast path (8 for an exact ref, 3 for a prefix) and the Sources-context boost.
-    /// Returns nil when the record does not match.
-    private static func scoreRefRecord(
-        values: [String: String],
-        ref: String,
-        tokens: [String],
-        raw: String,
-        refKey: (key: String, exact: Bool)?,
-        inSources: Bool
-    ) -> (score: Double, reason: String)? {
-        var (score, reason) = scoreSearchFields(
-            fields: [("title", 10), ("ref", 12), ("description", 3)],
-            values: values,
-            tokens: tokens.isEmpty ? [raw.lowercased()] : tokens
-        )
-        var refBoost = 1.0
-        if let refKey {
-            let upper = ref.uppercased()
-            if refKey.exact && upper == refKey.key {
-                refBoost = 8
-            } else if !refKey.exact && upper.hasPrefix(refKey.key) {
-                refBoost = 3
-            }
-            if refBoost > 1 {
-                score = max(score, 12)
-                reason = "ref"
-            } else if score <= 0 {
-                return nil
-            }
-        } else {
-            guard score > 0 else { return nil }
-        }
-        return (score * (inSources ? 1.1 : 1.0) * refBoost, reason)
-    }
-
-    private func vocabularySearchHits(
-        projectDir: String,
-        query: String,
-        location: WorkspaceLocation?
-    ) async throws -> [(hit: CatalogSearchHit, score: Double)] {
-        return try withState {
-            markCatalogSessionHeld(projectDir)
+        try withState {
             if let searchCatalogError { throw searchCatalogError }
-            let raw = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            let tokens = Self.tokenizeSearch(raw)
-            let refKey = Self.classifyRefQuery(raw)
-            guard !tokens.isEmpty || refKey != nil else { return [] }
-
-            var scored: [(hit: CatalogSearchHit, score: Double)] = []
-            let types = sourceTypesByProject[projectDir] ?? []
-            let typeLabelByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0.label) })
-            let typeIconByID = Dictionary(uniqueKeysWithValues: types.map { ($0.id, $0.iconKey) })
-
-            for source in sourcesByProject[projectDir] ?? [] {
-                var description = source.description
-                if let typeLabel = typeLabelByID[source.sourceTypeID], !typeLabel.isEmpty {
-                    description = "\(description) \(typeLabel)".trimmingCharacters(in: .whitespaces)
-                }
-                let values = [
-                    "title": source.title,
-                    "ref": source.ref,
-                    "description": description,
-                ]
-                guard let (score, reason) = Self.scoreRefRecord(
-                    values: values,
-                    ref: source.ref,
-                    tokens: tokens,
-                    raw: raw,
-                    refKey: refKey,
-                    inSources: location?.section == .sources
-                ) else { continue }
-                scored.append((
-                    CatalogSearchHit(
-                        kind: CatalogSearchKind.source.rawValue,
-                        id: source.id,
-                        ref: source.ref,
-                        title: source.title,
-                        subtitle: typeLabelByID[source.sourceTypeID] ?? "",
-                        matchReason: reason,
-                        location: WorkspaceLocation(
-                            section: .sources,
-                            sourceId: source.id,
-                            ref: source.ref,
-                            title: source.title
-                        ),
-                        thumbnailRelPath: source.thumbnailRelPath,
-                        iconKey: typeIconByID[source.sourceTypeID] ?? ""
-                    ),
-                    score
-                ))
-            }
-
-            let sourceByID = Dictionary(
-                (sourcesByProject[projectDir] ?? []).map { ($0.id, $0) },
-                uniquingKeysWith: { first, _ in first }
-            )
-            for graph in evidenceGraphsByProject[projectDir] ?? [] {
-                guard let source = sourceByID[graph.sourceID] else { continue }
-                guard let (score, reason) = Self.scoreRefRecord(
-                    values: ["title": graph.name, "ref": graph.ref, "description": graph.description],
-                    ref: graph.ref,
-                    tokens: tokens,
-                    raw: raw,
-                    refKey: refKey,
-                    inSources: location?.section == .sources
-                ) else { continue }
-                scored.append((
-                    CatalogSearchHit(
-                        kind: CatalogSearchKind.evidenceGraph.rawValue,
-                        id: graph.id,
-                        ref: graph.ref,
-                        title: graph.name,
-                        subtitle: source.title,
-                        matchReason: reason,
-                        location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
-                    ),
-                    score
-                ))
-            }
-
-            // Ref-shaped queries only promote Sources and Evidence graphs (vocab has no such refs).
-            if refKey == nil {
-                for type in types {
-                    let (score, reason) = Self.scoreSearchFields(
-                        fields: [("label", 10), ("key", 8), ("description", 3)],
-                        values: [
-                            "label": type.label,
-                            "key": type.key,
-                            "description": type.description,
-                        ],
-                        tokens: tokens
-                    )
-                    guard score > 0 else { continue }
-                    let boost = location?.section == .sourceTypes ? 1.1 : 1.0
-                    scored.append((
-                        CatalogSearchHit(
-                            kind: CatalogSearchKind.sourceType.rawValue,
-                            id: type.id,
-                            ref: "",
-                            title: type.label,
-                            subtitle: type.key,
-                            matchReason: reason,
-                            location: WorkspaceLocation(
-                                section: .sourceTypes,
-                                typeId: type.id,
-                                title: type.label
-                            ),
-                            iconKey: type.iconKey
-                        ),
-                        score * boost
-                    ))
-                }
-
-                for field in fieldsByProject[projectDir] ?? [] {
-                    let (score, reason) = Self.scoreSearchFields(
-                        fields: [("label", 10), ("key", 8), ("description", 3)],
-                        values: [
-                            "label": field.label,
-                            "key": field.key,
-                            "description": field.description,
-                        ],
-                        tokens: tokens
-                    )
-                    guard score > 0 else { continue }
-                    let boost = location?.section == .metadata ? 1.1 : 1.0
-                    scored.append((
-                        CatalogSearchHit(
-                            kind: CatalogSearchKind.metadataField.rawValue,
-                            id: field.id,
-                            ref: "",
-                            title: field.label,
-                            subtitle: field.key,
-                            matchReason: reason,
-                            location: WorkspaceLocation(
-                                section: .metadata,
-                                fieldId: field.id,
-                                title: field.label
-                            )
-                        ),
-                        score * boost
-                    ))
-                }
-            }
-
-            return scored
+            markCatalogSessionHeld(projectDir)
+            guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
+            guard !kinds.isEmpty else { return seededSearchHits }
+            // An unknown requested kind matches nothing, as in Go.
+            let wanted = Set(kinds.compactMap(CatalogSearchKind.init(rawValue:)))
+            return seededSearchHits.filter { $0.searchKind.map(wanted.contains) ?? false }
         }
     }
 
@@ -1791,8 +1513,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: membership.entity.id,
                         handleRef: membership.entity.ref,
-                        assessment: "strong",
-                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1807,8 +1527,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                         target: .handle,
                         handleID: entity.id,
                         handleRef: entity.ref,
-                        assessment: "strong",
-                        reason: .decided,
                         alternatives: [],
                         conflictWithFixed: false,
                         possibleDuplicate: false
@@ -1820,8 +1538,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     target: .unplaced,
                     handleID: "",
                     handleRef: "",
-                    assessment: "none",
-                    reason: .unplaced,
                     alternatives: [],
                     conflictWithFixed: false,
                     possibleDuplicate: false
@@ -1899,13 +1615,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // `async let`s beside position writes that log their calls.
         return withState {
             markCatalogSessionHeld(projectDir)
-            let headers = Dictionary(
-                personHeaders().map { ($0.entity.id, $0) },
+            let summaries = Dictionary(
+                personSummaries().map { ($0.entity.id, $0) },
                 uniquingKeysWith: { first, _ in first }
             )
             return (subjectsByGraph[graphID] ?? []).compactMap { subject -> CatalogSubjectMembership? in
                 guard var membership = membershipBySubject[subject.id] else { return nil }
-                membership.name = headers[membership.entity.id]?.name
+                membership.name = summaries[membership.entity.id]?.name
                 return membership
             }
         }
@@ -1915,25 +1631,25 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         Set(memberships.values.filter { $0.kind == kind }.map(\.entity.id)).count
     }
 
-    func listPersonHeaders(projectDir: String) async throws -> [CatalogPersonHeader] {
+    func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary] {
         // A read: no `recordedCalls`.
         return withState {
             markCatalogSessionHeld(projectDir)
-            return personHeaders()
+            return personSummaries()
         }
     }
 
-    func listEventHeaders(projectDir: String) async throws -> [CatalogEventHeader] {
+    func listEventSummaries(projectDir: String) async throws -> [CatalogEventSummary] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return seededEventHeaders
+            return seededEventSummaries
         }
     }
 
-    func listPlaceHeaders(projectDir: String) async throws -> [CatalogPlaceHeader] {
+    func listPlaceSummaries(projectDir: String) async throws -> [CatalogPlaceSummary] {
         withState {
             markCatalogSessionHeld(projectDir)
-            return seededPlaceHeaders
+            return seededPlaceSummaries
         }
     }
 
@@ -1941,17 +1657,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Observations group by parts (`nameField`), the most-supported value
     /// (then the earliest) is rank 1, and named Persons sort by name before
     /// unnamed ones by ref. Call inside `withState`.
-    private func personHeaders() -> [CatalogPersonHeader] {
+    private func personSummaries() -> [CatalogPersonSummary] {
         let members = membershipBySubject.values.filter { $0.kind == "person" }
         let byEntity = Dictionary(grouping: members, by: \.entity.id)
-        let headers = byEntity.values.compactMap { group -> CatalogPersonHeader? in
+        let summaries = byEntity.values.compactMap { group -> CatalogPersonSummary? in
             guard let entity = group.first?.entity else { return nil }
             let field = nameField(memberIDs: Set(group.map(\.subjectID)), sources: [])
             var top: CatalogNameValue?
             if case let .name(name)? = field.values.first?.value { top = name }
-            return CatalogPersonHeader(entity: entity, name: top, nameValueCount: field.values.count)
+            return CatalogPersonSummary(entity: entity, name: top, nameValueCount: field.values.count)
         }
-        return headers.sorted { a, b in
+        return summaries.sorted { a, b in
             switch (a.name, b.name) {
             case let (x?, y?) where x.form.lowercased() != y.form.lowercased():
                 return x.form.lowercased() < y.form.lowercased()
@@ -1959,6 +1675,39 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             case (.none, .some): return false
             default: return a.entity.ref.localizedCaseInsensitiveCompare(b.entity.ref) == .orderedAscending
             }
+        }
+    }
+
+    func listPersonClaims(projectDir: String, entityID: String) async throws -> [CatalogPersonClaimGroup] {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonClaims[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
+        }
+    }
+
+    func getPersonFamily(projectDir: String, entityID: String) async throws -> CatalogPersonFamily {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonFamilies[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
+        }
+    }
+
+    func listPersonEvents(projectDir: String, entityID: String) async throws -> [CatalogPersonEvent] {
+        // A read: no `recordedCalls`.
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            guard let seeded = seededPersonEvents[entityID] else {
+                throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+            }
+            return seeded
         }
     }
 
@@ -1972,8 +1721,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard var detail = conclusionDetail(projectDir: projectDir, entityID: entityID) else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
-            if let person = personHeaders().first(where: { $0.entity.id == entityID }) {
-                detail.header = .person(person)
+            if let person = personSummaries().first(where: { $0.entity.id == entityID }) {
+                detail.summary = .person(person)
             }
             return detail
         }
@@ -2028,8 +1777,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     sourceID: sourceID,
                     sourceTitle: sources.first { $0.id == sourceID }?.title ?? "",
                     credibilityKey: "",
-                    transcriptionUncertain: false,
-                    claimConfidenceKey: ""
+                    transcriptionUncertain: false
                 ))
             }
         }
@@ -2051,6 +1799,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             guard let rank = outcomes[i].valueRank.flatMap({ rankOf[$0] }) else { continue }
             outcomes[i].valueRank = rank
             outcomes[i].reason = rank == 1 ? .kept : .outvoted
+            outcomes[i].groupRank = rank == 1 ? 1 : 0
             if rank != 1 {
                 outcomes[i].voteSupport = ranked.first?.support ?? 0
                 outcomes[i].voteTotal = voters
@@ -2071,9 +1820,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             valueType: .name,
             state: state,
             values: ranked,
-            outcomes: outcomes.sorted { ($0.valueRank ?? .max, $0.observationID) < ($1.valueRank ?? .max, $1.observationID) }
+            outcomes: outcomes.sorted {
+                (Self.lastIfNone($0.groupRank), $0.valueRank ?? .max, $0.observationID)
+                    < (Self.lastIfNone($1.groupRank), $1.valueRank ?? .max, $1.observationID)
+            }
         )
     }
+
+    /// A group rank sorts after every real one when it is 0 (none).
+    private static func lastIfNone(_ rank: Int) -> Int { rank == 0 ? .max : rank }
 
     /// Go `autoreconcile` `nameModule.split`, simplified: by part type, untyped
     /// words at `Same`, so case and punctuation never matter and accents do
@@ -2134,7 +1889,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject] {
         return try withState {
-            listSubjectsCalls += 1
+            listSubjectsGraphIDs.append(graphID)
             markCatalogSessionHeld(projectDir)
             if let listSubjectsError {
                 throw listSubjectsError
@@ -2523,6 +2278,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             (citation, observations, _) = try await createCitationWithObservations(
                 projectDir: projectDir,
                 userID: userID,
+                graphID: plan.graphID,
                 artifactID: artifactID,
                 locatorJSON: locatorJSON,
                 transcription: transcription,
@@ -2575,6 +2331,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func createCitationWithObservations(
         projectDir: String,
         userID _: String,
+        graphID: String,
         artifactID: String,
         locatorJSON: String,
         transcription: String,
@@ -2585,7 +2342,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         observations drafts: [CatalogObservationDraft]
     ) async throws -> (CatalogCitation, [CatalogObservation], CatalogWriteEffects) {
         let delay: UInt64 = withState {
-            recordedCalls.append("createCitationWithObservations observations=\(drafts.count)")
+            recordedCalls.append("createCitationWithObservations graph=\(graphID) observations=\(drafts.count)")
             return createCitationDelayNanoseconds
         }
         if delay > 0 {
@@ -2758,7 +2515,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 observationsByGraph[graphID] = list.filter { $0.id != observationID }
                 bumpActivity(sourceOfGraph(graphID))
             }
-            pinsByObservation[observationID] = nil
             return nextWriteEffects
         }
     }
@@ -2816,13 +2572,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func citationCountsByEvidenceGraph(projectDir: String, graphID: String) async throws -> [String: Int] {
         return withState {
             markCatalogSessionHeld(projectDir)
-            guard let graph = evidenceGraphsByProject[projectDir]?.first(where: { $0.id == graphID }) else {
+            citationCountsGraphIDs.append(graphID)
+            guard evidenceGraphsByProject[projectDir]?.contains(where: { $0.id == graphID }) == true else {
                 return [:]
             }
-            let artifactIDs = Set(graph.artifactIDs)
+            // No membership rule in the fake: every seeded Citation counts on its Artifact,
+            // as `listCitationsByArtifact` lists every seeded Citation.
             var counts: [String: Int] = [:]
-            for citation in citationsByID.values
-            where artifactIDs.contains(citation.artifactID) {
+            for citation in citationsByID.values {
                 counts[citation.artifactID, default: 0] += 1
             }
             return counts
@@ -3136,30 +2893,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         if isEdgeLocked(observation: existing, projectDir: projectDir) {
             return CatalogDeleteImpact(allowed: false, gate: .edgeLocked, groups: [])
         }
-        let handles = pinsByObservation[id] ?? []
-        guard !handles.isEmpty else {
-            return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
-        }
-        return CatalogDeleteImpact(
-            allowed: true,
-            gate: .ok,
-            groups: [],
-            cascades: [
-                CatalogDeleteImpactGroup(
-                    via: "identity_claim_evidence.observation_id",
-                    kind: "canonical_entity",
-                    total: handles.count,
-                    listed: handles.map { entity in
-                        CatalogDeleteImpactListed(
-                            id: entity.id,
-                            ref: entity.ref,
-                            title: entity.ref,
-                            location: WorkspaceLocation(section: .sources, ref: entity.ref, title: entity.ref)
-                        )
-                    }
-                ),
-            ]
-        )
+        return CatalogDeleteImpact(allowed: true, gate: .ok, groups: [])
     }
 
     private func subjectDeleteImpact(projectDir: String, id: String) -> CatalogDeleteImpact {
@@ -3580,63 +3314,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     private func markCatalogSessionHeld(_ projectDir: String) {
         heldCatalogProjectDir = projectDir
-    }
-
-    /// Exact catalog ref or PREFIX-token prefix (mirrors core/search classifyRefQuery).
-    private static func classifyRefQuery(_ query: String) -> (key: String, exact: Bool)? {
-        let s = query.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
-        guard !s.isEmpty else { return nil }
-        let exactPattern = /^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{5}$/
-        if s.wholeMatch(of: exactPattern) != nil {
-            return (s, true)
-        }
-        let prefixPattern = /^[A-Z]{3}-[0-9A-HJKMNP-TV-Z]{1,4}$/
-        if s.wholeMatch(of: prefixPattern) != nil {
-            return (s, false)
-        }
-        return nil
-    }
-
-    private static func tokenizeSearch(_ query: String) -> [String] {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !trimmed.isEmpty else { return [] }
-        return trimmed.split(whereSeparator: \.isWhitespace).compactMap { part in
-            let cleaned = part.trimmingCharacters(in: CharacterSet(charactersIn: "\"'.,;:!?()[]{}"))
-            return cleaned.isEmpty ? nil : String(cleaned)
-        }
-    }
-
-    private static func scoreSearchFields(
-        fields: [(name: String, weight: Double)],
-        values: [String: String],
-        tokens: [String]
-    ) -> (score: Double, reason: String) {
-        let tokenKeys = tokens.map { TextMatch.key($0, locale: TextMatch.posix) }.filter { !$0.isEmpty }
-        guard !tokenKeys.isEmpty else { return (0, "") }
-        let valueKeys = Dictionary(fields.map {
-            ($0.name, TextMatch.key(values[$0.name] ?? "", locale: TextMatch.posix))
-        }, uniquingKeysWith: { first, _ in first })
-        var score = 0.0
-        var bestField = ""
-        var bestWeight = 0.0
-        var matchedTokens = 0
-        for tok in tokenKeys {
-            var tokHit = false
-            for field in fields {
-                let value = valueKeys[field.name] ?? ""
-                guard !value.isEmpty, value.contains(tok) else { continue }
-                tokHit = true
-                score += field.weight
-                if field.weight > bestWeight || (field.weight == bestWeight && bestField.isEmpty) {
-                    bestWeight = field.weight
-                    bestField = field.name
-                }
-            }
-            if tokHit { matchedTokens += 1 }
-        }
-        guard matchedTokens > 0 else { return (0, "") }
-        score *= Double(matchedTokens) / Double(tokenKeys.count)
-        return (score, bestField)
     }
 
     /// Resolves list/identity paint fields from persisted cover mode.

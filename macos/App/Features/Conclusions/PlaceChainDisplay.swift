@@ -31,7 +31,7 @@ enum PlaceChainDisplay {
     }
 
     /// Leaf name plus parent chain for a folded Location (Person / Event rows).
-    static func placeLine(_ place: CatalogHeaderPlace, maxSegments: Int = maxSegments) -> String {
+    static func placeLine(_ place: CatalogChainedPlace, maxSegments: Int = maxSegments) -> String {
         let leaf = place.names
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty } ?? ""

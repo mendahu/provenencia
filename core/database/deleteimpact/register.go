@@ -6,24 +6,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// ViaCitationsNeedGraph heads the Citations an unlink or a graph delete would
-// leave in no Evidence graph. A domain via is named for its refusal code.
-const ViaCitationsNeedGraph = apperr.CodeEvidenceGraphsCitationsNeedGraph
-
-// SQLCitationsOnlyInGraph is the one spelling of "the Citations an Evidence
-// graph alone holds": Citations whose Artifact is linked to this graph and to
-// no other. It binds one graph id, and the Citation table is aliased c. The
-// graph delete probe and the Unlink check in core/database/evidencegraphs are
-// both built from it.
-const SQLCitationsOnlyInGraph = `citations c WHERE c.artifact_id IN (
-		SELECT l.artifact_id FROM evidence_graph_artifacts l WHERE l.graph_id = ?
-		AND NOT EXISTS (SELECT 1 FROM evidence_graph_artifacts o
-			WHERE o.artifact_id = l.artifact_id AND o.graph_id <> l.graph_id))`
 
 type inboundEdge struct {
 	Parent catalogmodel.Kind
@@ -157,9 +142,6 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 		fkEdge(catalogmodel.KindSource, "artifacts.source_id", catalogmodel.KindArtifact, "artifacts", "source_id", "ref"),
 		fkEdge(catalogmodel.KindSource, "subjects.source_id", catalogmodel.KindSubject, "subjects", "source_id", "ref"),
 		fkEdge(catalogmodel.KindEvidenceGraph, "subjects.graph_id", catalogmodel.KindSubject, "subjects", "graph_id", "ref"),
-		joinEdge(catalogmodel.KindEvidenceGraph, ViaCitationsNeedGraph, catalogmodel.KindCitation,
-			"SELECT COUNT(*) FROM "+SQLCitationsOnlyInGraph,
-			"SELECT c.id, c.ref FROM "+SQLCitationsOnlyInGraph+" ORDER BY c.ref COLLATE NOCASE LIMIT ?"),
 		fkEdge(catalogmodel.KindArtifact, "citations.artifact_id", catalogmodel.KindCitation, "citations", "artifact_id", "ref"),
 		fkEdge(catalogmodel.KindCitation, "observations.citation_id", catalogmodel.KindObservation, "observations", "citation_id", "ref"),
 		subjectResourceInbound(),
@@ -186,13 +168,6 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 		fkEdge(catalogmodel.KindFile, "artifacts.file_id", catalogmodel.KindArtifact, "artifacts", "file_id", "ref"),
 		fkEdge(catalogmodel.KindSubjectType, "canonical_entities.subject_type_id", catalogmodel.KindCanonicalEntity, "canonical_entities", "subject_type_id", "ref"),
 		fkEdge(catalogmodel.KindCanonicalEntity, "canonical_entities.merged_into_id", catalogmodel.KindCanonicalEntity, "canonical_entities", "merged_into_id", "ref"),
-		// Claims have no ref; name the handle each claim files onto.
-		joinEdge(catalogmodel.KindClaimConfidenceGrade, "identity_claims.confidence_grade_id", catalogmodel.KindCanonicalEntity,
-			`SELECT COUNT(DISTINCT entity_id) FROM identity_claims WHERE confidence_grade_id = ?`,
-			`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ic.confidence_grade_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
 	}
 })
 

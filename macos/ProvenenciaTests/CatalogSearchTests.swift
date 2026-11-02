@@ -22,14 +22,14 @@ struct CatalogSearchModelTests {
             CatalogNameValuePart(value: "John Henry", type: "given"),
             CatalogNameValuePart(value: "Smith", type: "surname"),
         ])
-        let header = CatalogPersonHeader(
+        let summary = CatalogPersonSummary(
             entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""),
             name: name, nameValueCount: 1
         )
         let hit = CatalogSearchHit(
             kind: "person", id: "e1", ref: "PER-1", title: "John Henry Smith", subtitle: "", matchReason: "title",
             location: WorkspaceLocation(section: .persons, entityId: "e1", ref: "PER-1", title: "John Henry Smith"),
-            header: .person(header)
+            summary: .person(summary)
         )
         let orders = NameFormatOrders(natural: [], sorted: [
             NameFormatPart(partType: "surname", trailingSeparator: ", "),
@@ -41,11 +41,18 @@ struct CatalogSearchModelTests {
         #expect(CatalogSearchHitPresentation.accessibilityLabel(for: hit).hasPrefix(CatalogSearchHitPresentation.title(for: hit)))
     }
 
-    @Test func exactRefHitIsTop() async {
+    @Test func modelKeepsEngineOrder() async {
         let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "s1", ref: "SRC-ZZ9K2", sourceTypeID: "", title: "Quiet", description: ""),
-            CatalogSource(id: "s2", ref: "SRC-OTHER", sourceTypeID: "", title: "SRC-ZZ9K2 in title", description: ""),
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "source", id: "s1", ref: "SRC-ZZ9K2", title: "Quiet", subtitle: "", matchReason: "ref",
+                location: WorkspaceLocation(section: .sources, sourceId: "s1", ref: "SRC-ZZ9K2", title: "Quiet")
+            ),
+            CatalogSearchHit(
+                kind: "source", id: "s2", ref: "SRC-OTHER", title: "SRC-ZZ9K2 in title", subtitle: "",
+                matchReason: "title",
+                location: WorkspaceLocation(section: .sources, sourceId: "s2", ref: "SRC-OTHER", title: "SRC-ZZ9K2 in title")
+            ),
         ]
         let model = CatalogSearchModel()
         model.query = "SRC-ZZ9K2"
@@ -96,24 +103,25 @@ struct CatalogSearchModelTests {
     }
 
     @Test func kindsRestrictHits() async throws {
-        let (store, james) = try await robinsSearchStore(projectDir: projectDir)
+        let store = FakeStore()
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "person", id: "e-1", ref: "PER-1", title: "James Robins", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .persons, entityId: "e-1")
+            ),
+            CatalogSearchHit(
+                kind: "source", id: "src-1", ref: "SRC-1", title: "Robins register", subtitle: "",
+                matchReason: "title", location: WorkspaceLocation(section: .sources, sourceId: "src-1")
+            ),
+        ]
         let model = CatalogSearchModel(kinds: ["person"])
         model.query = "Robins"
         model.scheduleSearch(projectDir: projectDir, location: nil, store: store)
         await waitForSearch(model)
         #expect(model.hits.map(\.kind) == ["person"])
-        #expect(model.hits.first?.ref == james.entity.ref)
+        #expect(model.hits.first?.ref == "PER-1")
         #expect(model.hasSearched)
         #expect(model.searchError == nil)
-    }
-
-    @Test func noLocationGivesNoSectionNudge() async throws {
-        let (store, _) = try await robinsSearchStore(projectDir: projectDir)
-        let model = CatalogSearchModel()
-        model.query = "Robins"
-        model.scheduleSearch(projectDir: projectDir, location: nil, store: store)
-        await waitForSearch(model)
-        #expect(model.hits.map(\.kind) == ["person", "source"])
     }
 
     @Test func cancelKeepsResultsAndStopsLoading() {
@@ -152,11 +160,11 @@ struct CatalogSearchModelTests {
 
 @Suite
 struct CatalogSearchHitPresentationTests {
-    @Test func aHeaderIsTitledByItsKind() {
+    @Test func aSummaryIsTitledByItsKind() {
         func entity(_ ref: String) -> CatalogCanonicalEntity {
             CatalogCanonicalEntity(id: ref, ref: ref, subjectTypeID: "t", label: "")
         }
-        let person = CatalogPersonHeader(
+        let person = CatalogPersonSummary(
             entity: entity("PER-1"),
             name: CatalogNameValue(form: "John Smith", parts: [
                 CatalogNameValuePart(value: "John", type: "given"),
@@ -164,23 +172,23 @@ struct CatalogSearchHitPresentationTests {
             ]),
             nameValueCount: 1
         )
-        let event = CatalogEventHeader(
+        let event = CatalogEventSummary(
             entity: entity("EVT-1"),
             title: CatalogEventTitle(rule: .typeAtPlace, ref: "EVT-1", typeLabel: "Birth", place: "Gumpertz")
         )
-        let place = CatalogPlaceHeader(entity: entity("PLC-1"), names: ["The farm"], parents: ["Ontario", "Canada"])
+        let place = CatalogPlaceSummary(entity: entity("PLC-1"), names: ["The farm"], parents: ["Ontario", "Canada"])
 
-        #expect(ConclusionHeaderDisplay.title(.person(person), style: .sorted)
-            == PersonHeaderDisplay.title(person, style: .sorted))
-        #expect(ConclusionHeaderDisplay.title(.event(event)) == EventTitleDisplay.title(event))
-        #expect(ConclusionHeaderDisplay.title(.place(place)) == PlaceTitleDisplay.title(place))
-        #expect(ConclusionHeaderDisplay.secondary(.person(person)) == PersonLifeDisplay.line(person).text)
-        #expect(ConclusionHeaderDisplay.secondary(.event(event)) == EventSecondaryDisplay.line(event))
-        #expect(ConclusionHeaderDisplay.secondary(.place(place))
+        #expect(ConclusionSummaryDisplay.title(.person(person), style: .sorted)
+            == PersonTitleDisplay.title(person, style: .sorted))
+        #expect(ConclusionSummaryDisplay.title(.event(event)) == EventTitleDisplay.title(event))
+        #expect(ConclusionSummaryDisplay.title(.place(place)) == PlaceTitleDisplay.title(place))
+        #expect(ConclusionSummaryDisplay.secondary(.person(person)) == PersonLifeDisplay.line(person).text)
+        #expect(ConclusionSummaryDisplay.secondary(.event(event)) == EventSecondaryDisplay.line(event))
+        #expect(ConclusionSummaryDisplay.secondary(.place(place))
             == PlaceChainDisplay.line(parents: ["Ontario", "Canada"], candidates: false))
-        #expect(ConclusionHeaderDisplay.ref(.person(person)) == "PER-1")
-        #expect(ConclusionHeaderDisplay.ref(.event(event)) == "EVT-1")
-        #expect(ConclusionHeaderDisplay.ref(.place(place)) == "PLC-1")
+        #expect(ConclusionSummaryDisplay.ref(.person(person)) == "PER-1")
+        #expect(ConclusionSummaryDisplay.ref(.event(event)) == "EVT-1")
+        #expect(ConclusionSummaryDisplay.ref(.place(place)) == "PLC-1")
     }
 
     @Test func accessibilityLabelComposesVisibleRowMetadata() {
@@ -286,6 +294,22 @@ struct CatalogSearchHitPresentationTests {
         #expect(L10n.string(CatalogSearchHitPresentation.kindLabel(for: hit.searchKind)) == L10n.string(L10n.Workspace.omnibarKindSource))
         #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit)?.glyph == .symbol(.search))
         #expect(leadHit(kind: "source_type").searchKind == .sourceType)
+    }
+
+    @Test func aConclusionHitWithAPictureLeadsWithIt() {
+        let entity = CatalogCanonicalEntity(id: "p", ref: "PER-1", subjectTypeID: "t", label: "")
+        var person = CatalogPersonSummary(entity: entity, name: nil, nameValueCount: 0)
+        person.pictureImageRelPath = "objects/ab/cdef.png"
+        var hit = leadHit(kind: "person")
+        hit.summary = .person(person)
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit) == nil)
+        #expect(CatalogSearchHitPresentation.leadRelPath(for: hit) == "objects/ab/cdef.png")
+        #expect(CatalogSearchHitPresentation.fallbackMark(for: hit) == EvidencePrimaryKind.person.markKey)
+
+        // No picture: the kind mark, as before.
+        person.pictureImageRelPath = ""
+        hit.summary = .person(person)
+        #expect(CatalogSearchHitPresentation.leadThumbnail(for: hit)?.glyph == .mark(EvidencePrimaryKind.person.markKey))
     }
 
     private func leadHit(kind: String, iconKey: String = "") -> CatalogSearchHit {

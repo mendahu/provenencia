@@ -57,6 +57,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	var out *engine.GetSourceWorkspaceResponse
+	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		s, err := sources.Get(c, sourceID)
 		if err != nil {
@@ -70,7 +71,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		arts, err := listArtifactsProto(c, sourceID)
+		arts, err := listArtifactsProto(c, sourceID, pass)
 		if err != nil {
 			return err
 		}
@@ -94,6 +95,9 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		out.Credibility = cred
 		return nil
 	})
+	if err == nil {
+		err = pass.run(req.GetProjectDir(), nil)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +303,10 @@ func SetSourceCover(in []byte) ([]byte, error) {
 		}
 	}
 	var out *engine.SetSourceCoverResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+	// Artifact mode needs the cover's thumbnail first. It is made outside the
+	// session, so a first session reads the cover rule and plans it, and the
+	// write below shares the session that commits it. NormalizeCover decides.
+	set := func(c *database.Catalog) error {
 		mode, artID, err := sources.NormalizeCover(c, sourceID, req.GetCoverMode(), primaryID)
 		if err != nil {
 			return err
@@ -317,7 +324,22 @@ func SetSourceCover(in []byte) ([]byte, error) {
 		}
 		out = &engine.SetSourceCoverResponse{Source: sp}
 		return nil
-	})
+	}
+	if coverArtifactID, ok := sources.CoverArtifactID(req.GetCoverMode(), primaryID); ok {
+		pass := &thumbnailPass{}
+		err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+			fileID, err := sources.CoverArtifactFile(c, sourceID, coverArtifactID)
+			if err != nil {
+				return err
+			}
+			return pass.need(c, fileID, nil)
+		})
+		if err == nil {
+			err = pass.run(req.GetProjectDir(), set)
+		}
+	} else {
+		err = withProjectCatalog(req.GetProjectDir(), set)
+	}
 	if err != nil {
 		return nil, err
 	}

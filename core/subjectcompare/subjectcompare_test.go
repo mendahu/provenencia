@@ -363,3 +363,24 @@ func TestRulesRole(t *testing.T) {
 		}
 	}
 }
+
+func TestMeta(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want vocabkey.PropertyKey
+	}{
+		{vocabkey.Person, name, name},
+		{vocabkey.Person, gender, sex},
+		{vocabkey.Event, end, end},
+		{vocabkey.Event, start, start},
+		{vocabkey.Event, date, date},
+		{vocabkey.Person, vocabkey.PropertyKey("religion"), "religion"},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, vocabkey.PropertyLifespanSpan},
+	} {
+		if got := rules.Meta(c.kind, c.key); got != c.want {
+			t.Errorf("Meta(%s, %s) = %q; want %q", c.kind, c.key, got, c.want)
+		}
+	}
+}

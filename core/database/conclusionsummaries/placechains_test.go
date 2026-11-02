@@ -1,0 +1,805 @@
+package conclusionsummaries_test
+
+import (
+	"bytes"
+	"fmt"
+	"reflect"
+	"testing"
+
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+
+	// placeSubject cites a Place (and optional period) but does not promote — call
+	// promoteSubject after placeRel so bridges file with the ends.
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/writes"
+)
+
+func year(y int) *int { return &y }
+
+func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subjects.Subject {
+	f.t.Helper()
+	s := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
+	f.at(s, x, y)
+	in := []observations.Input{
+		{PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true},
+	}
+	if start != nil {
+		in = append(in, observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(*start, 0, 0)})
+	}
+	if end != nil {
+		in = append(in, observations.Input{PropertyID: f.prop("end_date").ID, Date: datevaluetest.YMD(*end, 0, 0)})
+	}
+	f.cite(s, in...)
+	return s
+}
+
+func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) {
+	f.t.Helper()
+	term := f.term("place_relationship_type", kind)
+	fromProp := f.prop("from").ID
+	toProp := f.prop("to").ID
+	typeProp := f.prop("place_relationship_type").ID
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
+			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			Observations: []observations.Input{
+				{PropertyID: fromProp, ValueSubjectID: from.ID},
+				{PropertyID: toProp, ValueSubjectID: to.ID},
+				{PropertyID: typeProp, ValueTermID: term.ID},
+			},
+		})
+	})
+	must(f.t, err)
+	if linkStart != nil || linkEnd != nil {
+		var extra []observations.Input
+		if linkStart != nil {
+			extra = append(extra, observations.Input{
+				SubjectID: res.Subject.ID, PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(*linkStart, 0, 0),
+			})
+		}
+		if linkEnd != nil {
+			extra = append(extra, observations.Input{
+				SubjectID: res.Subject.ID, PropertyID: f.prop("end_date").ID, Date: datevaluetest.YMD(*linkEnd, 0, 0),
+			})
+		}
+		_, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+			return observations.AddToCitation(tx, userID, res.Citation.ID, extra)
+		})
+		must(f.t, err)
+	}
+}
+
+func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
+	f := newFixture(t)
+	// Toronto itself is undated (always) so undated links follow the parents'
+	// periods alone — 1820 / 1850 / 1950 pick UC / PC / Ontario.
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	uc := f.placeSubject("Upper Canada", year(1791), year(1841), 2, 0)
+	pc := f.placeSubject("Province of Canada", year(1841), year(1867), 4, 0)
+	ontario := f.placeSubject("Ontario", year(1867), nil, 6, 0)
+	f.placeRel(toronto, uc, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(toronto, pc, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	torontoID := f.promoteSubject(toronto)
+	f.promoteSubject(uc)
+	f.promoteSubject(pc)
+	f.promoteSubject(ontario)
+
+	parents := func(y int) []string {
+		t.Helper()
+		got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, *datevaluetest.YMD(y, 0, 0))
+		must(t, err)
+		return got
+	}
+	if got := parents(1820); !sameSet(got, []string{"Upper Canada"}) {
+		t.Fatalf("1820 parents %v", got)
+	}
+	if got := parents(1850); !sameSet(got, []string{"Province of Canada"}) {
+		t.Fatalf("1850 parents %v", got)
+	}
+	if got := parents(1950); !sameSet(got, []string{"Ontario"}) {
+		t.Fatalf("1950 parents %v", got)
+	}
+	// About 1841 → both UC and PC candidates.
+	abt := *datevaluetest.YMD(1841, 0, 0)
+	abt.Qualifier = datevalue.QualifierABT
+	got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, abt)
+	must(t, err)
+	if !sameSet(got, []string{"Upper Canada", "Province of Canada"}) {
+		t.Fatalf("about 1841 parents %v", got)
+	}
+}
+
+func TestPlaceSeveralParentsAreAllCandidates(t *testing.T) {
+	f := newFixture(t)
+	farm := f.placeSubject("The Farm", nil, nil, 0, 0)
+	township := f.placeSubject("York Township", nil, nil, 2, 0)
+	county := f.placeSubject("York County", nil, nil, 4, 0)
+	f.placeRel(farm, township, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(farm, county, propertyterms.KeyPartOf, nil, nil)
+	farmID := f.promoteSubject(farm)
+	f.promoteSubject(township)
+	f.promoteSubject(county)
+	got, err := conclusionsummaries.ParentsAtDate(f.c, farmID, conclusionsummaries.TodayDate())
+	must(t, err)
+	if !sameSet(got, []string{"York Township", "York County"}) {
+		t.Fatalf("parents %v", got)
+	}
+}
+
+func TestIrelandUKDatedMembershipDropsAfter1922(t *testing.T) {
+	f := newFixture(t)
+	ireland := f.placeSubject("Ireland", nil, nil, 0, 0)
+	uk := f.placeSubject("United Kingdom", nil, nil, 2, 0)
+	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
+	irelandID := f.promoteSubject(ireland)
+	ukID := f.promoteSubject(uk)
+	before, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *datevaluetest.YMD(1900, 0, 0))
+	must(t, err)
+	if !sameSet(before, []string{"United Kingdom"}) {
+		t.Fatalf("1900 %v", before)
+	}
+	after, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *datevaluetest.YMD(1923, 0, 0))
+	must(t, err)
+	if len(after) != 0 {
+		t.Fatalf("1923 still has parents %v", after)
+	}
+	// Both places continue: UK still lists Ireland as a former part only via
+	// the dated link — PartsAtDate at 1923 is empty.
+	parts, err := conclusionsummaries.PartsAtDate(f.c, ukID, *datevaluetest.YMD(1923, 0, 0))
+	must(t, err)
+	if len(parts) != 0 {
+		t.Fatalf("UK parts in 1923 %v", parts)
+	}
+	parts1900, err := conclusionsummaries.PartsAtDate(f.c, ukID, *datevaluetest.YMD(1900, 0, 0))
+	must(t, err)
+	if !sameSet(parts1900, []string{"Ireland"}) {
+		t.Fatalf("UK parts in 1900 %v", parts1900)
+	}
+}
+
+func TestSuccessionNeverBuildsChain(t *testing.T) {
+	f := newFixture(t)
+	york := f.placeSubject("York", year(1793), year(1834), 0, 0)
+	toronto := f.placeSubject("Toronto", year(1834), nil, 2, 0)
+	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
+	yorkID := f.promoteSubject(york)
+	torontoID := f.promoteSubject(toronto)
+	parents, err := conclusionsummaries.ParentsAtDate(f.c, yorkID, *datevaluetest.YMD(1834, 0, 0))
+	must(t, err)
+	if len(parents) != 0 {
+		t.Fatalf("succession leaked into chain %v", parents)
+	}
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, yorkID)
+	must(t, err)
+	if len(pred) != 0 || !sameSet(succ, []string{"Toronto"}) {
+		t.Fatalf("york succession pred=%v succ=%v", pred, succ)
+	}
+	pred, succ, err = conclusionsummaries.SuccessionNames(f.c, torontoID)
+	must(t, err)
+	if !sameSet(pred, []string{"York"}) || len(succ) != 0 {
+		t.Fatalf("toronto succession pred=%v succ=%v", pred, succ)
+	}
+}
+
+func TestSuccessionSplitAndAmalgamation(t *testing.T) {
+	f := newFixture(t)
+	oldA := f.placeSubject("Old A", nil, nil, 0, 0)
+	oldB := f.placeSubject("Old B", nil, nil, 2, 0)
+	newOne := f.placeSubject("New", nil, nil, 4, 0)
+	left := f.placeSubject("Left", nil, nil, 0, 2)
+	right := f.placeSubject("Right", nil, nil, 2, 2)
+	f.placeRel(oldA, newOne, propertyterms.KeySucceededBy, nil, nil)
+	f.placeRel(oldB, newOne, propertyterms.KeySucceededBy, nil, nil)
+	f.placeRel(newOne, left, propertyterms.KeySucceededBy, nil, nil)
+	f.placeRel(newOne, right, propertyterms.KeySucceededBy, nil, nil)
+	f.promoteSubject(oldA)
+	f.promoteSubject(oldB)
+	newID := f.promoteSubject(newOne)
+	f.promoteSubject(left)
+	f.promoteSubject(right)
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, newID)
+	must(t, err)
+	if !sameSet(pred, []string{"Old A", "Old B"}) || !sameSet(succ, []string{"Left", "Right"}) {
+		t.Fatalf("amalgamation/split pred=%v succ=%v", pred, succ)
+	}
+}
+
+func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	ontario := f.placeSubject("Ontario", nil, nil, 2, 0)
+	scotland := f.placeSubject("Scotland", nil, nil, 4, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(person, "James")
+	f.at(person, 0, 4)
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.at(birth, 4, 4)
+	f.cite(birth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	)
+	f.participation(person, birth, "subject")
+	f.location(birth, toronto)
+	f.location(birth, ontario)
+	f.promoteSubject(person)
+	f.promoteSubject(birth)
+	f.promoteSubject(toronto)
+	f.promoteSubject(ontario)
+
+	persons, err := conclusionsummaries.ListPersons(f.c)
+	must(t, err)
+	if len(persons) != 1 {
+		t.Fatalf("persons %d", len(persons))
+	}
+	places := persons[0].Birth.Places
+	if len(places) != 1 {
+		t.Fatalf("folded places %d (%+v)", len(places), places)
+	}
+	if !sameSet(places[0].Names, []string{"Toronto"}) {
+		t.Fatalf("leaf names %v", places[0].Names)
+	}
+	if !sameSet(places[0].Parents, []string{"Ontario"}) {
+		t.Fatalf("chain parents %v", places[0].Parents)
+	}
+
+	// Unrelated Scotland stays a competing value.
+	birth2 := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.at(birth2, 4, 6)
+	f.cite(birth2,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	)
+	person2 := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(person2, "Mary")
+	f.at(person2, 0, 6)
+	f.participation(person2, birth2, "subject")
+	f.location(birth2, toronto)
+	f.location(birth2, scotland)
+	f.promoteSubject(person2)
+	f.promoteSubject(birth2)
+	f.promoteSubject(scotland)
+	persons, err = conclusionsummaries.ListPersons(f.c)
+	must(t, err)
+	var mary *conclusionsummaries.PersonSummary
+	for i := range persons {
+		if persons[i].Name != nil && persons[i].Name.Form == "Mary" {
+			mary = &persons[i]
+			break
+		}
+	}
+	if mary == nil || len(mary.Birth.Places) != 2 {
+		t.Fatalf("competing places %+v", mary)
+	}
+}
+
+// Two places under one parent are two readings, even when a third record
+// names only that parent: Toronto and Hamilton stay competing beside Ontario.
+func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	hamilton := f.placeSubject("Hamilton", nil, nil, 2, 0)
+	ontario := f.placeSubject("Ontario", nil, nil, 4, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(hamilton, ontario, propertyterms.KeyPartOf, nil, nil)
+
+	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(person, "James")
+	f.at(person, 0, 4)
+	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.at(birth, 4, 4)
+	f.cite(birth,
+		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	)
+	f.participation(person, birth, "subject")
+	f.location(birth, toronto)
+	f.location(birth, hamilton)
+	f.location(birth, ontario)
+	f.promoteSubject(person)
+	f.promoteSubject(birth)
+	f.promoteSubject(toronto)
+	f.promoteSubject(hamilton)
+	f.promoteSubject(ontario)
+
+	persons, err := conclusionsummaries.ListPersons(f.c)
+	must(t, err)
+	if len(persons) != 1 {
+		t.Fatalf("persons %d", len(persons))
+	}
+	var leaves []string
+	for _, p := range persons[0].Birth.Places {
+		leaves = append(leaves, p.Names...)
+	}
+	if !sameSet(leaves, []string{"Toronto", "Hamilton"}) {
+		t.Fatalf("birth places %v, want Toronto and Hamilton competing (Ontario folded into each)", leaves)
+	}
+}
+
+func TestPlaceSummaryParentsAndPeriod(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", year(1834), nil, 0, 0)
+	ontario := f.placeSubject("Ontario", year(1867), nil, 2, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.promoteSubject(toronto)
+	f.promoteSubject(ontario)
+	got := f.places()
+	var h *conclusionsummaries.PlaceSummary
+	for i := range got {
+		if sameSet(got[i].Names, []string{"Toronto"}) {
+			h = &got[i]
+			break
+		}
+	}
+	if h == nil || h.StartDate == nil || *h.StartDate.StartYear != 1834 {
+		t.Fatalf("toronto period %+v", h)
+	}
+	if !sameSet(h.Parents, []string{"Ontario"}) {
+		t.Fatalf("toronto parents %v", h.Parents)
+	}
+}
+
+func TestAttachPlaceRelationships(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", year(1834), nil, 0, 0)
+	uc := f.placeSubject("Upper Canada", year(1791), year(1841), 2, 0)
+	ontario := f.placeSubject("Ontario", year(1867), nil, 4, 0)
+	york := f.placeSubject("York", year(1793), year(1834), 6, 0)
+	f.placeRel(toronto, uc, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
+	torontoID := f.promoteSubject(toronto)
+	f.promoteSubject(uc)
+	f.promoteSubject(ontario)
+	yorkID := f.promoteSubject(york)
+	summaries, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{torontoID})
+	must(t, err)
+	if len(summaries) != 1 {
+		t.Fatalf("%d", len(summaries))
+	}
+	h := summaries[0]
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &h))
+	if len(h.PartOf) != 2 {
+		t.Fatalf("part_of %+v", h.PartOf)
+	}
+	titles := map[string]bool{}
+	for _, r := range h.PartOf {
+		titles[r.Title] = true
+		if r.Kind != conclusionsummaries.RelPartOf {
+			t.Fatalf("kind %s", r.Kind)
+		}
+	}
+	if !titles["Upper Canada"] || !titles["Ontario"] {
+		t.Fatalf("part_of titles %v", titles)
+	}
+	if len(h.Predecessors) != 1 || h.Predecessors[0].Title != "York" {
+		t.Fatalf("predecessors %+v", h.Predecessors)
+	}
+	if len(h.Successors) != 0 {
+		t.Fatalf("successors %+v", h.Successors)
+	}
+	// York → Toronto succession both ways; successor shows Toronto's period.
+	yh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{yorkID})
+	must(t, err)
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &yh[0]))
+	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
+		t.Fatalf("york successors %+v", yh[0].Successors)
+	}
+	if yh[0].Successors[0].StartDate == nil || yh[0].Successors[0].StartDate.StartYear == nil ||
+		*yh[0].Successors[0].StartDate.StartYear != 1834 {
+		t.Fatalf("york successor period %+v", yh[0].Successors[0])
+	}
+}
+
+func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
+	f := newFixture(t)
+	ireland := f.placeSubject("Ireland", nil, nil, 0, 0)
+	uk := f.placeSubject("United Kingdom", nil, nil, 2, 0)
+	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
+	irelandID := f.promoteSubject(ireland)
+	ukID := f.promoteSubject(uk)
+	ih, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{irelandID})
+	must(t, err)
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &ih[0]))
+	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
+		t.Fatalf("ireland part_of %+v", ih[0].PartOf)
+	}
+	if ih[0].PartOf[0].EndDate == nil || ih[0].PartOf[0].EndDate.StartYear == nil ||
+		*ih[0].PartOf[0].EndDate.StartYear != 1922 {
+		t.Fatalf("ireland membership end %+v", ih[0].PartOf[0])
+	}
+	uh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{ukID})
+	must(t, err)
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &uh[0]))
+	// Contains is "today"; a membership that ended in 1922 is not listed.
+	for _, c := range uh[0].Contains {
+		if c.Title == "Ireland" {
+			t.Fatalf("UK contains former Ireland %+v", uh[0].Contains)
+		}
+	}
+}
+
+func TestDependentsIncludeChildPlaces(t *testing.T) {
+	f := newFixture(t)
+	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
+	ontario := f.placeSubject("Ontario", nil, nil, 2, 0)
+	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
+	torontoID := f.promoteSubject(toronto)
+	ontarioID := f.promoteSubject(ontario)
+	db, err := f.c.DB()
+	must(t, err)
+	deps, err := conclusionsummaries.Dependents(db, [][]byte{ontarioID})
+	must(t, err)
+	if !database.ContainsBlobID(deps, torontoID) {
+		t.Fatalf("parent dependents missing child: %d", len(deps))
+	}
+}
+
+func TestUndatedPlacesAlwaysHold(t *testing.T) {
+	f := newFixture(t)
+	child := f.placeSubject("Child", nil, nil, 0, 0)
+	parent := f.placeSubject("Parent", nil, nil, 2, 0)
+	f.placeRel(child, parent, propertyterms.KeyPartOf, nil, nil)
+	childID := f.promoteSubject(child)
+	f.promoteSubject(parent)
+	for _, y := range []int{1, 1000, 2020} {
+		got, err := conclusionsummaries.ParentsAtDate(f.c, childID, *datevaluetest.YMD(y, 0, 0))
+		must(t, err)
+		if !sameSet(got, []string{"Parent"}) {
+			t.Fatalf("%d parents %v", y, got)
+		}
+	}
+}
+
+// lifeEvent cites a birth or death event for person, dated by the Property
+// dateKey ("date" or "start_date"; "" for no date) at year, located at places.
+// It does not promote.
+func (f *fixture) lifeEvent(person subjects.Subject, kind, dateKey string, y int, y2 int64, places ...subjects.Subject) subjects.Subject {
+	f.t.Helper()
+	ev := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.at(ev, 6, y2)
+	in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", kind).ID}}
+	if dateKey != "" {
+		in = append(in, observations.Input{PropertyID: f.prop(dateKey).ID, Date: datevaluetest.YMD(y, 0, 0)})
+	}
+	f.cite(ev, in...)
+	f.participation(person, ev, "subject")
+	for _, p := range places {
+		f.location(ev, p)
+	}
+	return ev
+}
+
+func (f *fixture) lifePerson() subjects.Subject {
+	f.t.Helper()
+	p := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.named(p, "Ann")
+	f.at(p, 0, 20)
+	return p
+}
+
+// deniedDate cites a date on event that a stronger negative of the same date
+// denies: the positive rides an uncertain transcription, the negative does not.
+func (f *fixture) deniedDate(event subjects.Subject, y int) {
+	f.t.Helper()
+	date := f.prop("date").ID
+	for _, c := range []struct {
+		uncertain bool
+		polarity  string
+	}{{true, observations.PolarityPositive}, {false, observations.PolarityNegative}} {
+		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+				GraphID:    f.graph,
+				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: c.uncertain,
+			}, []observations.Input{{SubjectID: event.ID, PropertyID: date, Date: datevaluetest.YMD(y, 0, 0), Polarity: c.polarity}})
+		})
+		must(f.t, err)
+	}
+}
+
+func TestPersonLifeOwners(t *testing.T) {
+	type owner struct {
+		entity []byte
+		prop   string
+		place  []byte // the Place a place owner holds on its link's place end
+	}
+	// link is the association of event's `location` link to place.
+	link := func(f *fixture, event, place []byte) []byte {
+		f.t.Helper()
+		links, err := f.c.Graph().Follow(event, hops.PlacesOfEvent)
+		must(f.t, err)
+		for _, l := range links {
+			if bytes.Equal(l.Neighbor, place) {
+				return l.Association
+			}
+		}
+		f.t.Fatalf("event %x has no location link to %x", event, place)
+		return nil
+	}
+	type world struct {
+		person       []byte
+		birth, death struct{ dates, places []owner }
+	}
+	cases := []struct {
+		name  string
+		build func(f *fixture) world
+	}{
+		{"one birth event with a date at York", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			var w world
+			w.person = f.promoteSubject(p)
+			e, y := f.promoteSubject(ev), f.promoteSubject(york)
+			w.birth.dates = []owner{{e, "date", nil}}
+			w.birth.places = []owner{{link(f, e, y), "place", y}}
+			return w
+		}},
+		{"start_date only", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "start_date", 1817, 2)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "start_date", nil}}
+			return w
+		}},
+		{"earlier birth event first", func(f *fixture) world {
+			p := f.lifePerson()
+			late := f.lifeEvent(p, "birth", "date", 1818, 2)
+			early := f.lifeEvent(p, "birth", "date", 1817, 4)
+			var w world
+			w.person = f.promoteSubject(p)
+			l, e := f.promoteSubject(late), f.promoteSubject(early)
+			w.birth.dates = []owner{{e, "date", nil}, {l, "date", nil}}
+			return w
+		}},
+		{"death at two Places that do not fold", func(f *fixture) world {
+			mtl := f.placeSubject("Montréal", nil, nil, 0, 0)
+			paris := f.placeSubject("Paris", nil, nil, 0, 2)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "death", "date", 1900, 4, mtl, paris)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.death.dates = []owner{{f.promoteSubject(ev), "date", nil}}
+			// The order the summary gives the Places: compared below against
+			// the summary's own walk.
+			f.promoteSubject(mtl)
+			f.promoteSubject(paris)
+			return w
+		}},
+		{"York on two birth events is listed once", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			a := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			b := f.lifeEvent(p, "birth", "date", 1818, 4, york)
+			var w world
+			w.person = f.promoteSubject(p)
+			ae, be := f.promoteSubject(a), f.promoteSubject(b)
+			y := f.promoteSubject(york)
+			w.birth.dates = []owner{{ae, "date", nil}, {be, "date", nil}}
+			w.birth.places = []owner{{link(f, ae, y), "place", y}, {link(f, be, y), "place", y}}
+			return w
+		}},
+		{"a parent Place is not an owner", func(f *fixture) world {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			shire := f.placeSubject("Yorkshire", nil, nil, 2, 0)
+			f.placeRel(york, shire, propertyterms.KeyPartOf, nil, nil)
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2, york, shire)
+			var w world
+			w.person = f.promoteSubject(p)
+			e, y := f.promoteSubject(ev), f.promoteSubject(york)
+			f.promoteSubject(shire)
+			w.birth.dates = []owner{{e, "date", nil}}
+			w.birth.places = []owner{{link(f, e, y), "place", y}}
+			return w
+		}},
+		{"denied-only date", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "", 0, 2)
+			f.deniedDate(ev, 1817)
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date", nil}}
+			return w
+		}},
+		{"same event linked twice", func(f *fixture) world {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "date", 1817, 2)
+			f.participation(p, ev, "subject")
+			var w world
+			w.person = f.promoteSubject(p)
+			w.birth.dates = []owner{{f.promoteSubject(ev), "date", nil}}
+			return w
+		}},
+		{"no events", func(f *fixture) world {
+			p := f.lifePerson()
+			return world{person: f.promoteSubject(p)}
+		}},
+		{"unknown id", func(f *fixture) world {
+			return world{person: bytes16(0x7a)}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			w := tc.build(f)
+			birth, death, err := conclusionsummaries.PersonLifeOwners(f.c, w.person)
+			must(t, err)
+			check := func(side string, got conclusionsummaries.LifeOwners, want struct{ dates, places []owner }) {
+				t.Helper()
+				for _, part := range []struct {
+					name string
+					got  []conclusionsummaries.FieldOwner
+					want []owner
+				}{{"dates", got.Dates, want.dates}, {"places", got.Places, want.places}} {
+					if len(part.got) != len(part.want) {
+						// A case that leaves the order to the summary's walk.
+						if part.want == nil && side == "death" && part.name == "places" && len(part.got) == 2 {
+							continue
+						}
+						t.Fatalf("%s %s: %d owners, want %d", side, part.name, len(part.got), len(part.want))
+					}
+					for i := range part.got {
+						if !bytes.Equal(part.got[i].Entity.ID, part.want[i].entity) {
+							t.Fatalf("%s %s[%d]: wrong entity", side, part.name, i)
+						}
+						if (part.want[i].place == nil) != (part.got[i].Place == nil) ||
+							part.want[i].place != nil && !bytes.Equal(part.got[i].Place.Entity.ID, part.want[i].place) {
+							t.Fatalf("%s %s[%d]: wrong Place", side, part.name, i)
+						}
+						if wantID := f.prop(part.want[i].prop).ID; !bytes.Equal(part.got[i].PropertyID, wantID) {
+							t.Fatalf("%s %s[%d]: property %x, want %s", side, part.name, i, part.got[i].PropertyID, part.want[i].prop)
+						}
+					}
+				}
+			}
+			check("birth", birth, w.birth)
+			check("death", death, w.death)
+			if tc.name == "death at two Places that do not fold" {
+				persons, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{w.person})
+				must(t, err)
+				summary := persons[0].Death.Places
+				if len(death.Places) != 2 || len(summary) != 2 {
+					t.Fatalf("death places %d, summary %d", len(death.Places), len(summary))
+				}
+				for i := range summary {
+					if !bytes.Equal(death.Places[i].Place.Entity.ID, summary[i].Entity.ID) {
+						t.Fatalf("death place %d is not the summary's", i)
+					}
+				}
+			}
+		})
+	}
+}
+
+func bytes16(b byte) []byte { return bytes.Repeat([]byte{b}, 16) }
+
+func TestPersonDerivedRows(t *testing.T) {
+	tests := []struct {
+		name string
+		run  func(t *testing.T, f *fixture)
+	}{
+		{"graph queries do not grow with events and Places", func(t *testing.T, f *fixture) {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			small := f.lifePerson()
+			smallBirth := f.lifeEvent(small, "birth", "date", 1817, 2, york)
+			big := f.lifePerson()
+			var bigPlaces []subjects.Subject
+			for i := range 2 {
+				bigPlaces = append(bigPlaces, f.placeSubject(fmt.Sprintf("Town %d", i), nil, nil, int64(4+2*i), 0))
+			}
+			bigBirths := []subjects.Subject{
+				f.lifeEvent(big, "birth", "date", 1818, 10, bigPlaces...),
+				f.lifeEvent(big, "birth", "date", 1819, 12, bigPlaces...),
+			}
+			smallID, bigID := f.promoteSubject(small), f.promoteSubject(big)
+			f.promoteSubject(smallBirth)
+			for _, b := range bigBirths {
+				f.promoteSubject(b)
+			}
+			f.promoteSubject(york)
+			for _, p := range bigPlaces {
+				f.promoteSubject(p)
+			}
+			count := func(id []byte) (int, []conclusiondetails.DerivedRow) {
+				t.Helper()
+				g := f.c.Graph()
+				g.Drop()
+				_, err := g.Vocabulary()
+				must(t, err)
+				n := 0
+				g.SetQueryCounterForTest(func() { n++ })
+				defer g.SetQueryCounterForTest(nil)
+				rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+				must(t, err)
+				return n, rows
+			}
+			smallN, smallRows := count(smallID)
+			bigN, bigRows := count(bigID)
+			if len(smallRows) != 2 || len(bigRows) != 2 {
+				t.Fatalf("rows: small %d, big %d, want a birth date and a birth place each", len(smallRows), len(bigRows))
+			}
+			if len(bigRows[0].Owners) != 2 || len(bigRows[1].Owners) != 4 {
+				t.Fatalf("big owners: %d dates, %d places", len(bigRows[0].Owners), len(bigRows[1].Owners))
+			}
+			if smallN == 0 || smallN != bigN {
+				t.Fatalf("graph queries: %d for one event and Place, %d for two events and two Places", smallN, bigN)
+			}
+		}},
+
+		{"born and died at York", func(t *testing.T, f *fixture) {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			birth := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			death := f.lifeEvent(p, "death", "date", 1890, 4, york)
+			id := f.promoteSubject(p)
+			f.promoteSubject(birth)
+			f.promoteSubject(death)
+			yorkID := f.promoteSubject(york)
+			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			must(t, err)
+			kinds := map[conclusiondetails.DerivedRowKind]conclusiondetails.DerivedRow{}
+			for _, r := range rows {
+				kinds[r.Kind] = r
+			}
+			bp, dp := kinds[conclusiondetails.DerivedRowBirthPlace], kinds[conclusiondetails.DerivedRowDeathPlace]
+			if len(bp.Owners) != 1 || len(dp.Owners) != 1 {
+				t.Fatalf("place rows %+v / %+v", bp, dp)
+			}
+			for _, o := range []conclusiondetails.OwnerField{bp.Owners[0], dp.Owners[0]} {
+				if o.Place == nil || !bytes.Equal(o.Place.Entity.ID, yorkID) || !reflect.DeepEqual(o.Place.Names, []string{"York"}) {
+					t.Fatalf("owner %+v does not hold York", o)
+				}
+				if o.Field.PropertyKey != "place" || len(o.Field.Outcomes) != 1 || o.Field.Outcomes[0].Recorded.Text != "York" {
+					t.Fatalf("owner field %+v, want the link's one record read as York", o.Field)
+				}
+			}
+			if bytes.Equal(bp.Owners[0].Entity.ID, dp.Owners[0].Entity.ID) || bytes.Equal(bp.Owners[0].Entity.ID, yorkID) {
+				t.Fatal("birth and death owners should be their own links, not York")
+			}
+			if bp.Owners[0].Event != nil || kinds[conclusiondetails.DerivedRowBirthDate].Owners[0].Event == nil {
+				t.Fatal("only date owners carry an Event summary")
+			}
+		}},
+		{"denied-only date", func(t *testing.T, f *fixture) {
+			p := f.lifePerson()
+			ev := f.lifeEvent(p, "birth", "", 0, 2)
+			f.deniedDate(ev, 1817)
+			id := f.promoteSubject(p)
+			evID := f.promoteSubject(ev)
+			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			must(t, err)
+			if len(rows) != 1 || rows[0].Kind != conclusiondetails.DerivedRowBirthDate || len(rows[0].Owners) != 1 {
+				t.Fatalf("rows %+v, want one birth date owner", rows)
+			}
+			o := rows[0].Owners[0]
+			denied := 0
+			for _, out := range o.Field.Outcomes {
+				if out.Reason == "denied" {
+					denied++
+				}
+			}
+			if !bytes.Equal(o.Entity.ID, evID) || denied != 1 {
+				t.Fatalf("owner %+v, want the event's date field with one denied outcome", o)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) { tc.run(t, newFixture(t)) })
+	}
+}

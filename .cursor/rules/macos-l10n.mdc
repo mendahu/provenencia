@@ -19,6 +19,7 @@ Follow the project skill `.agents/skills/add-localized-string/SKILL.md`. Full no
 - Keys: semantic dotted (`onboarding.chooseFile.welcomeTitle`). Nest by feature under `L10n`.
 - Copy as a `String` (`Button` titles, AppKit, models): `L10n.string(L10n.…)`. **Never** `String(localized:)` — it re-parses the whole strings table on every call (CI rejects it).
 - Copy with arguments: static key + `%@` / `%lld` (positional when 2+) in catalog/`defaultValue`, filled by an `L10n` format function returning `String` via `L10n.format(_:_:)`. **Never** interpolate into a `LocalizedStringResource` (CI rejects it).
+- A format that some surfaces draw styled and others plain (`NamePartDecoration.format`) reads its plain text as `String(StyledFormat.attributed(…).characters)`, so the format has one parser. Copy that is only ever plain goes through `L10n.format`.
 - Design-system labels take `PVCopy`: a static resource or a formatted `String`.
 - Counts with a noun: one key with catalog `plural` variations (substitutions when other arguments share the string), filled by `L10n.format`. **Never** `count == 1 ? oneKey : otherKey` in Swift.
 - Stable `.accessibilityIdentifier` for UI tests — not localized titles.
