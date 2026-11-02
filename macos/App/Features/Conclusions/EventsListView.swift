@@ -57,8 +57,7 @@ enum EventsList: ConclusionListKind {
 
     @MainActor
     static func secondary(_ summary: CatalogEventSummary) -> EventSecondaryLine {
-        let line = EventSecondaryDisplay.content(summary)
-        return EventSecondaryLine(date: line.date, place: line.place, extraPlaces: line.extraPlaces)
+        EventSecondaryLine(content: EventSecondaryDisplay.content(summary))
     }
 }
 
@@ -81,37 +80,34 @@ enum EventSecondaryDisplay {
 
     /// The same date and place on one line. Empty when the event has neither.
     static func line(_ summary: CatalogEventSummary, locale: Locale = .autoupdatingCurrent) -> String {
-        let line = content(summary, locale: locale)
-        if line.date.isEmpty { return line.place }
-        if line.place.isEmpty { return line.date }
-        return L10n.Conclusions.lineJoin(first: line.date, rest: line.place)
+        line(content(summary, locale: locale))
+    }
+
+    /// The date and place of an already-built `Content` on one line.
+    static func line(_ content: Content) -> String {
+        if content.date.isEmpty { return content.place }
+        if content.place.isEmpty { return content.date }
+        return L10n.Conclusions.lineJoin(first: content.date, rest: content.place)
     }
 }
 
 /// The Events row's date, then its place, on the Person header's line. The +N is
 /// other kept places. The row's own label speaks it, so the line is hidden from VoiceOver.
 struct EventSecondaryLine: View {
-    let date: String
-    let place: String
-    let extraPlaces: Int
+    let content: EventSecondaryDisplay.Content
 
     /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
-        if !date.isEmpty || !place.isEmpty {
+        if !content.date.isEmpty || !content.place.isEmpty {
             PVDatePlaceLine(
-                date: date.isEmpty ? nil : date,
-                place: place.isEmpty ? nil : place,
-                accessibilityLabel: line,
+                date: content.date.isEmpty ? nil : content.date,
+                place: content.place.isEmpty ? nil : content.place,
+                accessibilityLabel: EventSecondaryDisplay.line(content),
                 missing: .omitted,
-                extraCount: extraPlaces
+                dateTone: PVColor.textMuted,
+                extraCount: content.extraPlaces
             )
             .accessibilityHidden(true)
         }
-    }
-
-    private var line: String {
-        if date.isEmpty { return place }
-        if place.isEmpty { return date }
-        return L10n.Conclusions.lineJoin(first: date, rest: place)
     }
 }

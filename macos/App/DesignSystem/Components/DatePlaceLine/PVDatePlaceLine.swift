@@ -19,6 +19,8 @@ struct PVDatePlaceLine: View {
     let accessibilityLabel: String
     var missing: Missing = .stated
     var dateSize: CGFloat = PVTypeScale.caption
+    /// The date's ink; a list row mutes it.
+    var dateTone: Color = PVColor.textPrimary
     /// Places beyond the one shown; a "+N" badge when above zero.
     var extraCount: Int = 0
 
@@ -29,6 +31,7 @@ struct PVDatePlaceLine: View {
         accessibilityLabel: String,
         missing: Missing = .stated,
         dateSize: CGFloat = PVTypeScale.caption,
+        dateTone: Color = PVColor.textPrimary,
         extraCount: Int = 0
     ) {
         self.leading = leading
@@ -37,6 +40,7 @@ struct PVDatePlaceLine: View {
         self.accessibilityLabel = accessibilityLabel
         self.missing = missing
         self.dateSize = dateSize
+        self.dateTone = dateTone
         self.extraCount = extraCount
     }
 
@@ -60,7 +64,7 @@ struct PVDatePlaceLine: View {
             if let date {
                 Text(verbatim: date)
                     .font(PVFont.mono(size: dateSize))
-                    .foregroundStyle(PVColor.textPrimary)
+                    .foregroundStyle(dateTone)
                     .lineLimit(missing == .omitted ? 1 : nil)
                     .layoutPriority(1)
             } else if missing == .stated {
