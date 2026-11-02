@@ -119,6 +119,16 @@ enum L10n {
             )
             return L10n.format(resource, count)
         }
+        static let datePlaceLineDateUnknown = LocalizedStringResource(
+            "designSystem.datePlaceLine.dateUnknown",
+            defaultValue: "date unknown",
+            comment: "A date · place line (a Person's birth or death line, an Event's summary): its date is not known"
+        )
+        static let datePlaceLinePlaceUnknown = LocalizedStringResource(
+            "designSystem.datePlaceLine.placeUnknown",
+            defaultValue: "place unknown",
+            comment: "A date · place line (a Person's birth or death line, an Event's summary): its place is not known"
+        )
         static func segmentShortcutHelp(_ label: String, key: String) -> String {
             L10n.format(LocalizedStringResource(
                 "designSystem.segmentedControl.shortcutHelp",
@@ -9531,18 +9541,6 @@ enum L10n {
             "conclusions.person.died",
             defaultValue: "d.",
             comment: "Abbreviation before a Person's death date and place in the page header"
-        )
-
-        static let dateUnknown = LocalizedStringResource(
-            "conclusions.detail.dateUnknown",
-            defaultValue: "date unknown",
-            comment: "Page header: the Person's birth or death date is not known"
-        )
-
-        static let placeUnknown = LocalizedStringResource(
-            "conclusions.detail.placeUnknown",
-            defaultValue: "place unknown",
-            comment: "Page header: the Person's birth or death place is not known"
         )
 
         static let eventDate = LocalizedStringResource(

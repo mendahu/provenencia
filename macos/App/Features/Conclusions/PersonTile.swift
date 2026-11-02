@@ -105,7 +105,7 @@ struct PersonTile: View {
                         }
                     }
                     ForEach(content.lines, id: \.abbreviation) { line in
-                        ConclusionDatePlaceLine(
+                        PVDatePlaceLine(
                             leading: line.abbreviation,
                             date: line.date,
                             place: line.place,

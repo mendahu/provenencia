@@ -88,7 +88,8 @@ enum EventSecondaryDisplay {
     }
 }
 
-/// The Events row's date, then its place. The +N is other kept places.
+/// The Events row's date, then its place, on the Person header's line. The +N is
+/// other kept places. The row's own label speaks it, so the line is hidden from VoiceOver.
 struct EventSecondaryLine: View {
     let date: String
     let place: String
@@ -97,25 +98,20 @@ struct EventSecondaryLine: View {
     /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
         if !date.isEmpty || !place.isEmpty {
-            HStack(spacing: PVSpacing.space4) {
-                if !date.isEmpty {
-                    Text(verbatim: date)
-                        .font(PVFont.mono(size: PVTypeScale.caption))
-                        .fixedSize(horizontal: true, vertical: false)
-                }
-                if !date.isEmpty && !place.isEmpty {
-                    Text(verbatim: "·")
-                        .foregroundStyle(PVColor.textFaint)
-                }
-                if !place.isEmpty {
-                    Text(verbatim: place)
-                        .italic()
-                        .lineLimit(1)
-                }
-                if extraPlaces > 0 {
-                    PVBadge.moreCount(extraPlaces)
-                }
-            }
+            PVDatePlaceLine(
+                date: date.isEmpty ? nil : date,
+                place: place.isEmpty ? nil : place,
+                accessibilityLabel: line,
+                missing: .omitted,
+                extraCount: extraPlaces
+            )
+            .accessibilityHidden(true)
         }
+    }
+
+    private var line: String {
+        if date.isEmpty { return place }
+        if place.isEmpty { return date }
+        return L10n.Conclusions.lineJoin(first: date, rest: place)
     }
 }

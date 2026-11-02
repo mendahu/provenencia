@@ -49,6 +49,30 @@
         }
       }
     },
+    "designSystem.datePlaceLine.dateUnknown": {
+      "comment": "A date · place line (a Person's birth or death line, an Event's summary): its date is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "date unknown"
+          }
+        }
+      }
+    },
+    "designSystem.datePlaceLine.placeUnknown": {
+      "comment": "A date · place line (a Person's birth or death line, an Event's summary): its place is not known",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "place unknown"
+          }
+        }
+      }
+    },
     "designSystem.checkbox.locked": {
       "comment": "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear",
       "extractionState": "manual",
@@ -17054,30 +17078,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "d."
-          }
-        }
-      }
-    },
-    "conclusions.detail.dateUnknown": {
-      "comment": "Page header: the Person's birth or death date is not known",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "date unknown"
-          }
-        }
-      }
-    },
-    "conclusions.detail.placeUnknown": {
-      "comment": "Page header: the Person's birth or death place is not known",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "place unknown"
           }
         }
       }
