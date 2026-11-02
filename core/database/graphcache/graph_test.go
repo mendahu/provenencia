@@ -198,6 +198,26 @@ func TestCommitOfAMergedHandle(t *testing.T) {
 	}
 }
 
+func TestCommitOfAMergedHandleNeitherLoadedQueries(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	canon := graphcachetest.NewCanon(t, c)
+	p, q := canon.Person(), canon.Person()
+	_, joins := canon.Birth(p, nil, nil)
+	canon.Commit(joins...)
+	g := c.Graph()
+	g.Drop()
+	canon.Merge(p, q)
+	var n int
+	g.SetQueryCounterForTest(func() { n++ })
+	canon.Commit(p, q)
+	// Two queries: the entity-row read of the committed handles and one link
+	// query for the merged handle's neighbors. Nothing is loaded, so nothing
+	// reloads, and the scan reads no disambiguation.
+	if n != 2 {
+		t.Fatalf("queries %d, want 2", n)
+	}
+}
+
 func loaded(g *graphcache.Graph, id []byte) bool {
 	_, ok := g.Cached(id)
 	return ok

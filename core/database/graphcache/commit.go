@@ -149,24 +149,22 @@ func (g *Graph) detachAssociation(id []byte) (reload, touched [][]byte, err erro
 	return append(reload, fresh...), append(old, fresh...), nil
 }
 
-// mergedNeighbors finds the nodes that linked to each merged handle before it
-// was merged. reload is the ones already loaded, whose links a fresh load
-// would now drop; touched is all of them, which a stored row may still name.
+// mergedNeighbors finds the unmerged nodes each merged handle's own links
+// name. reload is the ones already loaded, whose links to the handle a fresh
+// load would drop; touched is all of them, which a stored row may still name.
 func (g *Graph) mergedNeighbors(ids [][]byte) (reload, touched [][]byte, err error) {
 	if len(ids) == 0 {
 		return nil, nil, nil
 	}
 	err = sqlbatch.Each(ids, func(chunk [][]byte) error {
-		links, err := g.loadLinks(chunk)
+		raws, err := g.linkRaws(chunk)
 		if err != nil {
 			return err
 		}
-		for _, ls := range links {
-			for _, l := range ls {
-				touched = append(touched, l.Neighbor)
-				if _, ok := g.nodes[string(l.Neighbor)]; ok {
-					reload = append(reload, l.Neighbor)
-				}
+		for _, r := range raws {
+			touched = append(touched, r.neighbor)
+			if _, ok := g.nodes[string(r.neighbor)]; ok {
+				reload = append(reload, r.neighbor)
 			}
 		}
 		return nil
