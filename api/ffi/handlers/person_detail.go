@@ -152,6 +152,70 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+// ListPersonEvents returns every canonical event a canonical person took part
+// in, in any role, as event summaries with the person's roles and the other
+// canonical participants.
+func ListPersonEvents(in []byte) ([]byte, error) {
+	var req engine.ListPersonEventsRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("list_person_events", err)
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	out := &engine.ListPersonEventsResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		rows, summaries, err := persondetail.PersonEvents(c, entityID)
+		if err != nil {
+			return err
+		}
+		paths, err := files.RelPaths(c, summaries.PictureImageFileIDs())
+		if err != nil {
+			return err
+		}
+		for _, r := range rows {
+			e, err := personEventProto(r, summaries, paths)
+			if err != nil {
+				return err
+			}
+			out.Events = append(out.Events, e)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+// personEventProto maps one timeline row. PersonEvents returns a summary for
+// every event and participant it names, so a missing one is a broken
+// invariant, not a case to hide.
+func personEventProto(r persondetail.PersonEvent, summaries conclusionsummaries.Summaries, paths map[string]string) (*engine.PersonEvent, error) {
+	h, ok := summaries.Event(r.Event)
+	if !ok {
+		return nil, fmt.Errorf("list_person_events: event %s has no summary", database.UUIDString(r.Event))
+	}
+	out := &engine.PersonEvent{Event: eventSummaryProto(h, paths), Roles: termsProto(r.Roles), Dated: r.Dated}
+	for _, p := range r.Participants {
+		ph, ok := summaries.Person(p.Person)
+		if !ok {
+			return nil, fmt.Errorf("list_person_events: participant %s has no summary", database.UUIDString(p.Person))
+		}
+		out.Participants = append(out.Participants, &engine.EventParticipant{Person: personSummaryProto(ph, paths), Roles: termsProto(p.Roles)})
+	}
+	return out, nil
+}
+
+func termsProto(ts []conclusionsummaries.Term) []*engine.ConclusionTerm {
+	var out []*engine.ConclusionTerm
+	for i := range ts {
+		out = append(out, termProto(&ts[i]))
+	}
+	return out
+}
+
 // familyMemberProto maps one relative. PersonFamily drops a relative with no
 // summary, so a missing one is a broken invariant, not a case to hide.
 func familyMemberProto(r kinship.Relative, summaries conclusionsummaries.Summaries, paths map[string]string) (*engine.FamilyMember, error) {

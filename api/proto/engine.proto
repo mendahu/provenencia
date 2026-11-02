@@ -125,6 +125,7 @@ enum Method {
   METHOD_REORDER_SUBJECT_TYPE_PROPERTIES = 111;
   METHOD_LIST_PERSON_CLAIMS = 112;
   METHOD_GET_PERSON_FAMILY = 113;
+  METHOD_LIST_PERSON_EVENTS = 114;
 }
 
 message PingRequest {
@@ -1573,6 +1574,38 @@ message GetPersonFamilyResponse {
   repeated FamilyUnit units = 1;
   PersonSummary person = 2;
   repeated OriginSibling origin_siblings = 3;
+}
+
+// ListPersonEventsRequest asks for the events a canonical person took part in.
+// An unknown or merged handle, or one that is no Person, is
+// conclusiondetails.not_found.
+message ListPersonEventsRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+// ListPersonEventsResponse is every canonical event the person took part in
+// directly, in any role: dated first, earliest first, then by ref, the order
+// of ListEventSummaries. Canonical events and participants only.
+message ListPersonEventsResponse {
+  repeated PersonEvent events = 1;
+}
+
+// PersonEvent is one event of a person's timeline: the event, the person's
+// roles on it (one per distinct role term, usually one; empty when the
+// participation has none), the other canonical participants in participation
+// order, and dated, false for an event the order puts last.
+message PersonEvent {
+  EventSummary event = 1;
+  repeated ConclusionTerm roles = 2;
+  repeated EventParticipant participants = 3;
+  bool dated = 4;
+}
+
+// EventParticipant is one other canonical person on an event and their roles.
+message EventParticipant {
+  PersonSummary person = 1;
+  repeated ConclusionTerm roles = 2;
 }
 
 // OriginSibling is one child of the person's parents, or a sibling recorded
