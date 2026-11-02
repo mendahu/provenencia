@@ -34,6 +34,33 @@ func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
 	})
 }
 
+// SortByBirth orders people by birth date: dated first, earliest first, then by
+// ref; the one owner of birth order. Each key is computed once, and rows with
+// equal keys keep their order.
+func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
+	sortByDateKey(rows, func(row T) dateKey { return birthKeyOf(summary(row)) })
+}
+
+// sortByDateKey orders rows by their date key: dated first, earliest first,
+// then by ref. Each key is computed once, and rows with equal keys keep their
+// order.
+func sortByDateKey[T any](rows []T, key func(T) dateKey) {
+	type keyed struct {
+		row T
+		key dateKey
+	}
+	keyedRows := make([]keyed, len(rows))
+	for i := range rows {
+		keyedRows[i] = keyed{row: rows[i], key: key(rows[i])}
+	}
+	sort.SliceStable(keyedRows, func(i, j int) bool {
+		return dateKeyLess(keyedRows[i].key, keyedRows[j].key)
+	})
+	for i := range rows {
+		rows[i] = keyedRows[i].row
+	}
+}
+
 // personSortKey is the People list order. A name with parts sorts by the
 // profile's sorted order, undecorated; the row may add quotes and parentheses. A catalog with no
 // default profile joins those parts in stored order. form is the transcription

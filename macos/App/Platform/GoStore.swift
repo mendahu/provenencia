@@ -1239,7 +1239,13 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.getPersonFamily,
             request: req
         )
-        return CatalogPersonFamily(units: resp.units.compactMap(Self.mapFamilyUnit))
+        return CatalogPersonFamily(
+            units: resp.units.compactMap(Self.mapFamilyUnit),
+            person: resp.hasPerson ? Self.mapPersonSummary(resp.person) : nil,
+            originSiblings: resp.originSiblings.map {
+                CatalogOriginSibling(member: Self.mapFamilyMember($0.member), parentSets: $0.parentSets.map(Int.init))
+            }
+        )
     }
 
     /// A unit of a kind this build doesn't know is dropped, as is a shape of a

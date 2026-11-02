@@ -5297,7 +5297,10 @@ public nonisolated struct Provenencia_Engine_V1_GetPersonFamilyRequest: Sendable
 
 /// GetPersonFamilyResponse is the person's family units, parent sets first,
 /// then partners, then children with no other known parent, then siblings
-/// whose parents are not shown. Canonical people only.
+/// whose parents are not shown. Canonical people only. Children in each unit
+/// are in birth order, undated last. person is the person's own summary.
+/// origin_siblings is every sibling once with the person among them, in the
+/// order the page draws them.
 public nonisolated struct Provenencia_Engine_V1_GetPersonFamilyResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5305,9 +5308,49 @@ public nonisolated struct Provenencia_Engine_V1_GetPersonFamilyResponse: Sendabl
 
   public var units: [Provenencia_Engine_V1_FamilyUnit] = []
 
+  public var person: Provenencia_Engine_V1_PersonSummary {
+    get {_person ?? Provenencia_Engine_V1_PersonSummary()}
+    set {_person = newValue}
+  }
+  /// Returns true if `person` has been explicitly set.
+  public var hasPerson: Bool {self._person != nil}
+  /// Clears the value of `person`. Subsequent reads from it will return its default value.
+  public mutating func clearPerson() {self._person = nil}
+
+  public var originSiblings: [Provenencia_Engine_V1_OriginSibling] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _person: Provenencia_Engine_V1_PersonSummary? = nil
+}
+
+/// OriginSibling is one child of the person's parents, or a sibling recorded
+/// with no shared parent. The person's own member has no link. parent_sets are
+/// the indexes, among the response's PARENTS units, of the parent sets the
+/// member is a child of; empty for a sibling recorded only.
+public nonisolated struct Provenencia_Engine_V1_OriginSibling: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var member: Provenencia_Engine_V1_FamilyMember {
+    get {_member ?? Provenencia_Engine_V1_FamilyMember()}
+    set {_member = newValue}
+  }
+  /// Returns true if `member` has been explicitly set.
+  public var hasMember: Bool {self._member != nil}
+  /// Clears the value of `member`. Subsequent reads from it will return its default value.
+  public mutating func clearMember() {self._member = nil}
+
+  public var parentSets: [Int32] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _member: Provenencia_Engine_V1_FamilyMember? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_FamilyUnit: Sendable {
@@ -16238,7 +16281,7 @@ nonisolated extension Provenencia_Engine_V1_GetPersonFamilyRequest: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_GetPersonFamilyResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetPersonFamilyResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}units\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}units\0\u{1}person\0\u{3}origin_siblings\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16247,20 +16290,73 @@ nonisolated extension Provenencia_Engine_V1_GetPersonFamilyResponse: SwiftProtob
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.units) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._person) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.originSiblings) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.units.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.units, fieldNumber: 1)
+    }
+    try { if let v = self._person {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if !self.originSiblings.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.originSiblings, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_GetPersonFamilyResponse, rhs: Provenencia_Engine_V1_GetPersonFamilyResponse) -> Bool {
     if lhs.units != rhs.units {return false}
+    if lhs._person != rhs._person {return false}
+    if lhs.originSiblings != rhs.originSiblings {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_OriginSibling: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".OriginSibling"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}member\0\u{3}parent_sets\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._member) }()
+      case 2: try { try decoder.decodeRepeatedInt32Field(value: &self.parentSets) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._member {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    if !self.parentSets.isEmpty {
+      try visitor.visitPackedInt32Field(value: self.parentSets, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_OriginSibling, rhs: Provenencia_Engine_V1_OriginSibling) -> Bool {
+    if lhs._member != rhs._member {return false}
+    if lhs.parentSets != rhs.parentSets {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

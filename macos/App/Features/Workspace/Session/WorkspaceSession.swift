@@ -81,6 +81,12 @@ final class WorkspaceSession {
         handles[key] as? QueryHandle<Value>
     }
 
+    /// True while the key's handle holds a value and is reloading it behind
+    /// that value: "refreshing" for a section whose first load is its own spinner.
+    func isRefreshing(_ key: CatalogQueryKey) -> Bool {
+        handles[key].map { $0.hasValue && $0.isFetching } ?? false
+    }
+
     /// Waits out an in-flight load and every partial re-read a write started
     /// for the key, then returns the cached value.
     /// Does not start a load. Nil when the key was never warmed, is stale, or the load failed.

@@ -32,13 +32,13 @@ func TestPersonFamilyQueryCount(t *testing.T) {
 	t.Run("AC-2.1", func(t *testing.T) {
 		w := newKinWorld(t)
 		pat := w.shape("", 2, 2, true)
-		first, _, err := persondetail.PersonFamily(w.c, pat)
+		first, _, _, err := persondetail.PersonFamily(w.c, pat)
 		if err != nil {
 			t.Fatal(err)
 		}
 		var queries int
 		w.c.Graph().SetQueryCounterForTest(func() { queries++ })
-		second, _, err := persondetail.PersonFamily(w.c, pat)
+		second, _, _, err := persondetail.PersonFamily(w.c, pat)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -58,7 +58,7 @@ func TestPersonFamilyQueryCount(t *testing.T) {
 			pat := w.shape("", siblings, children, more)
 			var queries int
 			w.c.Graph().SetQueryCounterForTest(func() { queries++ })
-			if _, _, err := persondetail.PersonFamily(w.c, pat); err != nil {
+			if _, _, _, err := persondetail.PersonFamily(w.c, pat); err != nil {
 				t.Fatal(err)
 			}
 			return queries

@@ -154,6 +154,13 @@ enum L10n {
             ), first, second)
         }
 
+        /// The parts spoken as one line, joined two at a time through the
+        /// catalog; nil when there are none.
+        static func spokenJoin(_ parts: [String]) -> String? {
+            guard let first = parts.first else { return nil }
+            return parts.dropFirst().reduce(first) { spokenJoin($0, $1) }
+        }
+
         static let reorderHandle = LocalizedStringResource(
             "designSystem.reorder.handle",
             defaultValue: "Drag to reorder",
@@ -9196,6 +9203,150 @@ enum L10n {
             comment: "Accessibility label of the empty portrait slot on a Person page"
         )
 
+        static let familyThisPerson = LocalizedStringResource(
+            "conclusions.family.thisPerson",
+            defaultValue: "This person",
+            comment: "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group"
+        )
+
+        static let familyThisPersonSpoken = LocalizedStringResource(
+            "conclusions.family.thisPersonSpoken",
+            defaultValue: "this person",
+            comment: "VoiceOver ending of the focus tile of the Family section, mid-sentence"
+        )
+
+        static let familyRoleParent = LocalizedStringResource(
+            "conclusions.family.role.parent",
+            defaultValue: "Parent",
+            comment: "VoiceOver role of a parent's tile in the Family section"
+        )
+
+        static let familyRoleSibling = LocalizedStringResource(
+            "conclusions.family.role.sibling",
+            defaultValue: "Sibling",
+            comment: "VoiceOver role of a sibling's tile in the Family section"
+        )
+
+        static let familyRolePartner = LocalizedStringResource(
+            "conclusions.family.role.partner",
+            defaultValue: "Partner",
+            comment: "VoiceOver role of a partner's tile in the Family section"
+        )
+
+        static let familyRoleChild = LocalizedStringResource(
+            "conclusions.family.role.child",
+            defaultValue: "Child",
+            comment: "VoiceOver role of a child's tile in the Family section"
+        )
+
+        static let familyCaptionParent = LocalizedStringResource(
+            "conclusions.family.caption.parent",
+            defaultValue: "Parent",
+            comment: "Caption over a single parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionParents = LocalizedStringResource(
+            "conclusions.family.caption.parents",
+            defaultValue: "Parents",
+            comment: "Caption over a pair of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParent = LocalizedStringResource(
+            "conclusions.family.caption.otherParent",
+            defaultValue: "Other parent",
+            comment: "Caption over a second set of one parent in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionOtherParents = LocalizedStringResource(
+            "conclusions.family.caption.otherParents",
+            defaultValue: "Other parents",
+            comment: "Caption over a second set of parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionSiblings = LocalizedStringResource(
+            "conclusions.family.caption.siblings",
+            defaultValue: "Siblings",
+            comment: "Caption over siblings who have no recorded parents in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartner = LocalizedStringResource(
+            "conclusions.family.caption.partner",
+            defaultValue: "Partner",
+            comment: "Caption over one partner with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartners = LocalizedStringResource(
+            "conclusions.family.caption.partners",
+            defaultValue: "Partners",
+            comment: "Caption over several partners with no children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnerAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnerAndChildren",
+            defaultValue: "Partner and children",
+            comment: "Caption over one partner and the children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionPartnersAndChildren = LocalizedStringResource(
+            "conclusions.family.caption.partnersAndChildren",
+            defaultValue: "Partners and children",
+            comment: "Caption over several partners and their children in the Family section (drawn in capitals)"
+        )
+
+        static let familyCaptionChildren = LocalizedStringResource(
+            "conclusions.family.caption.children",
+            defaultValue: "Children",
+            comment: "Caption over children with no recorded partner in the Family section (drawn in capitals)"
+        )
+
+        static let familyGroupThisPersonAndSiblings = LocalizedStringResource(
+            "conclusions.family.group.thisPersonAndSiblings",
+            defaultValue: "This person and siblings",
+            comment: "VoiceOver label of the group holding the person and their siblings in the Family section"
+        )
+
+        static func familyGroupPartner(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partner",
+                defaultValue: "Partner %@",
+                comment: "VoiceOver label of a partner's group with no children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
+        static func familyGroupPartnerAndChildren(_ name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.group.partnerAndChildren",
+                defaultValue: "Partner %@ and children",
+                comment: "VoiceOver label of a partner's group with children in the Family section; argument is the partner's name"
+            ), name)
+        }
+
+        static let familyEmptyTitle = LocalizedStringResource(
+            "conclusions.family.emptyTitle",
+            defaultValue: "No family yet",
+            comment: "Title of the empty Family section of a Person page"
+        )
+
+        static let familyEmptyMessage = LocalizedStringResource(
+            "conclusions.family.emptyMessage",
+            defaultValue: "Relatives appear here when people linked to this person in an Evidence graph are promoted.",
+            comment: "Message of the empty Family section of a Person page"
+        )
+
+        static let familyErrorTitle = LocalizedStringResource(
+            "conclusions.family.errorTitle",
+            defaultValue: "Family could not be read",
+            comment: "Title of the Callout shown when a Person's Family section could not be read"
+        )
+
+        static func familyShowMore(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.family.showMore",
+                defaultValue: "Show %lld more",
+                comment: "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden"
+            ), count)
+        }
+
         static let portraitBadge = LocalizedStringResource(
             "conclusions.person.portraitBadge",
             defaultValue: "Portrait",
@@ -9745,6 +9896,34 @@ enum L10n {
                 defaultValue: "%1$@ %2$@, %3$@",
                 comment: "VoiceOver for a Person header line; arguments are Born/Died, the date, and the place"
             ), word, date, place)
+        }
+
+        static let a11yBornInline = LocalizedStringResource(
+            "conclusions.a11y.bornInline",
+            defaultValue: "born",
+            comment: "VoiceOver word before a person tile's birth date and place, mid-sentence"
+        )
+
+        static let a11yDiedInline = LocalizedStringResource(
+            "conclusions.a11y.diedInline",
+            defaultValue: "died",
+            comment: "VoiceOver word before a person tile's death date and place, mid-sentence"
+        )
+
+        static func a11yLifeLineKnown(_ word: String, part: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalKnown",
+                defaultValue: "%1$@ %2$@",
+                comment: "VoiceOver for a person tile line with one half known; arguments are born/died and the date or the place"
+            ), word, part)
+        }
+
+        static func a11yLifeLinePlaceOnly(_ word: String, place: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.a11y.vitalPlaceOnly",
+                defaultValue: "%1$@ in %2$@",
+                comment: "VoiceOver for a person tile line with only a place known; arguments are born/died and the place"
+            ), word, place)
         }
 
         static func sexAtBirthBadge(_ value: String) -> String {

@@ -17,7 +17,7 @@ struct PersonDetailView: View {
             userID: userID,
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
             secondary: { PersonDetailLifeLines(lines: $0.lifeLines) },
-            pageSections: { PersonDetailSections(content: $0, context: $1) }
+            pageSections: { PersonDetailSections(entityId: entityId, content: $0, context: $1) }
         )
     }
 }
@@ -25,6 +25,7 @@ struct PersonDetailView: View {
 /// The Person page below its header: the open section (Vitals, Gallery, or a section that
 /// arrives later). The page owns which section is open and passes it in the context.
 private struct PersonDetailSections: View {
+    let entityId: String
     let content: PersonDetailContent
     let context: ConclusionDetailPageSectionsContext
 
@@ -53,7 +54,9 @@ private struct PersonDetailSections: View {
                     lead: context.lead
                 )
             }
-        case .family, .timeline, .sources:
+        case .family:
+            PersonFamilySection(entityId: entityId)
+        case .timeline, .sources:
             PVEmptyState(
                 glyph: section.glyph,
                 title: section.label,
@@ -65,7 +68,7 @@ private struct PersonDetailSections: View {
 
 /// The two life lines under a Person's name.
 private struct PersonDetailLifeLines: View {
-    let lines: [PersonDetailContent.LifeLine]
+    let lines: [PersonLifeDisplay.LifeLine]
     @Environment(\.conclusionDetailHeaderCompact) private var compact
 
     var body: some View {

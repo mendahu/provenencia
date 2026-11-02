@@ -256,7 +256,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let spoken: String
         if let shown {
             let parts = [label, shown] + (mixed ? [L10n.string(L10n.Conclusions.badgeMixed)] : [])
-            spoken = parts.dropFirst().reduce(parts[0]) { L10n.DesignSystem.spokenJoin($0, $1) }
+            spoken = L10n.DesignSystem.spokenJoin(parts) ?? label
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }

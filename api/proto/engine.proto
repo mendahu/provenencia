@@ -1565,9 +1565,23 @@ message GetPersonFamilyRequest {
 
 // GetPersonFamilyResponse is the person's family units, parent sets first,
 // then partners, then children with no other known parent, then siblings
-// whose parents are not shown. Canonical people only.
+// whose parents are not shown. Canonical people only. Children in each unit
+// are in birth order, undated last. person is the person's own summary.
+// origin_siblings is every sibling once with the person among them, in the
+// order the page draws them.
 message GetPersonFamilyResponse {
   repeated FamilyUnit units = 1;
+  PersonSummary person = 2;
+  repeated OriginSibling origin_siblings = 3;
+}
+
+// OriginSibling is one child of the person's parents, or a sibling recorded
+// with no shared parent. The person's own member has no link. parent_sets are
+// the indexes, among the response's PARENTS units, of the parent sets the
+// member is a child of; empty for a sibling recorded only.
+message OriginSibling {
+  FamilyMember member = 1;
+  repeated int32 parent_sets = 2;
 }
 
 // FamilyUnitKind is what a unit is to the person.

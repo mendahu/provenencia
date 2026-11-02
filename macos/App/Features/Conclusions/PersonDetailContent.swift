@@ -3,22 +3,13 @@ import Foundation
 /// The Person page, worded from one `CatalogConclusionDetail` (S9-16, board
 /// S9-D5). Pure: views only lay it out.
 struct PersonDetailContent: ConclusionDetailBody {
-    /// One header line: *b. 14 May 1817 · York*. Date and place come from
-    /// the Person summary. Nil when that half is not recorded.
-    struct LifeLine: Equatable {
-        var abbreviation: String
-        var date: String?
-        var place: String?
-        var accessibilityLabel: String
-    }
-
     /// Name → label → ref (PD-1).
     var title: ConclusionTitleSource
     var ref: String
     /// The ref is repeated at the right only when it isn't the title.
     var showsRef: Bool { if case .ref = title { false } else { true } }
     var members: String
-    var lifeLines: [LifeLine]
+    var lifeLines: [PersonLifeDisplay.LifeLine]
     var rows: [ReconciledValueRowModel]
     /// Nil when gender and sex at birth give nothing to show (S10-23).
     var treatment: PersonGenderTreatment?
@@ -40,10 +31,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         title = PersonTitleDisplay.titleSource(name: leadName, entity: detail.entity, style: .natural, orders: orders)
         ref = detail.entity.ref
         members = L10n.Conclusions.memberCount(detail.memberCount)
-        lifeLines = [
-            Self.lifeLine(L10n.Conclusions.personBornAbbr, spoken: L10n.Conclusions.a11yBorn, facts: summary?.birth, locale: locale),
-            Self.lifeLine(L10n.Conclusions.personDiedAbbr, spoken: L10n.Conclusions.a11yDied, facts: summary?.death, locale: locale),
-        ]
+        lifeLines = PersonLifeDisplay.lifeLines(summary, locale: locale, missing: .stated)
         rows = Self.rows(detail.fields, summary: summary, derivedRows: detail.derivedRows, locale: locale, orders: orders)
         treatment = PersonGenderTreatment.read(summary)
         gallery = ConclusionDetailGallery(
@@ -126,25 +114,5 @@ struct PersonDetailContent: ConclusionDetailBody {
             rows.append(ReconciledValueRowModel(field: field, locale: locale, orders: orders))
         }
         return rows
-    }
-
-    private static func lifeLine(
-        _ abbreviation: LocalizedStringResource,
-        spoken: LocalizedStringResource,
-        facts: CatalogLifeFacts?,
-        locale: Locale
-    ) -> LifeLine {
-        let date = PersonLifeDisplay.dateText(facts?.date, locale: locale)
-        let place = DerivedPlace.name(facts?.places ?? [])
-        return LifeLine(
-            abbreviation: L10n.string(abbreviation),
-            date: date.isEmpty ? nil : date,
-            place: place.isEmpty ? nil : place,
-            accessibilityLabel: L10n.Conclusions.a11yLifeLine(
-                L10n.string(spoken),
-                date: date.isEmpty ? L10n.string(L10n.Conclusions.dateUnknown) : date,
-                place: place.isEmpty ? L10n.string(L10n.Conclusions.placeUnknown) : place
-            )
-        )
     }
 }

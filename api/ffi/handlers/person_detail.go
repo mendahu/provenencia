@@ -96,7 +96,7 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 	}
 	out := &engine.GetPersonFamilyResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		family, summaries, err := persondetail.PersonFamily(c, entityID)
+		family, siblings, summaries, err := persondetail.PersonFamily(c, entityID)
 		if err != nil {
 			return err
 		}
@@ -129,6 +129,20 @@ func GetPersonFamily(in []byte) ([]byte, error) {
 				Partners: partners,
 				Children: children,
 			})
+		}
+		if h, ok := summaries.Person(entityID); ok {
+			out.Person = personSummaryProto(h, paths)
+		}
+		for _, s := range siblings {
+			m, err := familyMemberProto(s.Relative, summaries, paths)
+			if err != nil {
+				return err
+			}
+			o := &engine.OriginSibling{Member: m}
+			for _, k := range s.ParentSets {
+				o.ParentSets = append(o.ParentSets, int32(k))
+			}
+			out.OriginSiblings = append(out.OriginSiblings, o)
 		}
 		return nil
 	})

@@ -118,6 +118,7 @@ final class QueryHandle<Value> {
 protocol AnyQueryHandle: AnyObject {
     var isStale: Bool { get }
     var hasValue: Bool { get }
+    var isFetching: Bool { get }
     func markStale()
     func clearStale()
     func beginRefresh()

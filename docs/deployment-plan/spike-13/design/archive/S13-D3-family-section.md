@@ -6,9 +6,9 @@
 **Implements later as:** PR **S13-12** (the Family section and the tile). S13-D4 (Timeline, S13-13) reuses this board's tile for event participants.
 **Board:** agreed 2026-11-01 — Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Family.dc.html*, turn 11 "S13-D3 · Family in two columns — origin and own family", frames 11a – 11q. Answers: two columns, the family of origin on the left (parents stacked, the person and siblings indented beneath on a rail) and the families formed on the right (each partner with their children indented beneath), both top-aligned, one line from the person across the gutter to every partner (FC-1, FC-4; replaces FS-9's stacked units and FS-W1's side-by-side units); tiles 92pt tall with a 70pt portrait, width `(column − 20 − gutter) ÷ 2`, gutter 48 Regular and 96 Wide (FC-2, FC-5; FS-1); the focus drawn once, raised, with a "This person" Badge (FS-3); two parent sets stack as "Parents" and "Other parents", each on its own rail, each sibling once in the order both sets, second only, first only (FC-3; FS-5); lines in `--border-strong`; empty copy as recommended; error Callout titled "Family could not be read"; at Wide only the columns and gutter widen, primary-only (FS-W1, FS-W2). The places truncate on narrow tiles and the right column stays top-aligned, as drawn. The S13-12 plan describes every frame in words.
 **Depends on:** the agreed S13-D1 board (the frame, the header, the switcher; agreed 2026-10-29, [archived brief](archive/S13-D1-person-page-frame.md)); the agreed S10-D12 Person board (the gender treatment on the thumb); S13-04's family read (landed [#671](https://github.com/mendahu/provenencia/pull/671), the data this board draws).
-**Related:** [`../person-detail.md`](../person-detail.md) R-2, R-3, R-16 – R-22; [`../deployment-plan.md`](../deployment-plan.md) working rules "Family groups in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S13-12-family-section.md`](../prs/S13-12-family-section.md).
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../person-detail.md`](../../person-detail.md) R-2, R-3, R-16 – R-22; [`../deployment-plan.md`](../../deployment-plan.md) working rules "Family groups in Go", "One person tile, built once", "Colors reuse `PersonGenderTreatment`", "A family tile opens the relative on Family"; [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S13-12-family-section.md`](../../prs/S13-12-family-section.md).
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -108,7 +108,7 @@ A researcher opens a Person's Family section and sees, in one plain diagram, the
 
 ### 2.1 What this board is not
 
-- A family tree: grandparents, aunts and uncles, cousins, more than one generation up or down (R-17; [`docs/ideas/kinship-view.md`](../../../ideas/kinship-view.md)).
+- A family tree: grandparents, aunts and uncles, cousins, more than one generation up or down (R-17; [`docs/ideas/kinship-view.md`](../../../../ideas/kinship-view.md)).
 - A canvas: no pan, zoom, drag or free placement (R-16). The diagram is laid out by the app from the units.
 - Editing a family: no add parent, add child, link, unlink or reorder.
 - The provenance sheet on a relative or a line (R-13b), or any mark of which records a relationship rests on.
@@ -209,7 +209,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Do not add | Why |
 | --- | --- |
 | A canvas, pan, zoom or free placement | R-16: a plain laid-out diagram. |
-| A tree beyond the nuclear family, or an "expand" to grandparents | R-17; [`docs/ideas/kinship-view.md`](../../../ideas/kinship-view.md). |
+| A tree beyond the nuclear family, or an "expand" to grandparents | R-17; [`docs/ideas/kinship-view.md`](../../../../ideas/kinship-view.md). |
 | A recorded / implied mark: dashed lines, the inferred line color, a Badge | User, 2026-11-01: the diagram draws both the same. |
 | Gendered role words on tiles (Mother, Father, Son) | The roles are Parent, Sibling, Partner, Child; the gender is in the colors. |
 | Placeholder tiles for unknown relatives ("Unknown father") | R-2: where nothing is promoted, nothing is drawn. |
@@ -224,5 +224,5 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 ## 7. Handoff
 
 1. When the board is agreed, record on the **Board** line: the Claude Design turn and frames, the tile's size and thumb size (FS-1), how the focus tile is set apart and whether it repeats per unit (FS-3), how two parent sets sit and their caption (FS-5), the unit order and the line color token (FS-9), the empty-state copy (FS-11), what sits side by side at Wide (FS-W1), and every other change from this brief with the user's answer.
-2. Refresh the [S13-12 plan](../prs/S13-12-family-section.md): copy the answers into its Decisions and **Design → macOS**, close its Open questions, run `review-plan` again, and set it to `Planned` once S13-04 has landed.
-3. S13-12 archives this brief under `design/archive/` and records it in [`../completed.md`](../completed.md). S13-D4 reuses the tile from this board.
+2. Refresh the [S13-12 plan](../../prs/S13-12-family-section.md): copy the answers into its Decisions and **Design → macOS**, close its Open questions, run `review-plan` again, and set it to `Planned` once S13-04 has landed.
+3. S13-12 archives this brief under `design/archive/` and records it in [`../completed.md`](../../completed.md). S13-D4 reuses the tile from this board.

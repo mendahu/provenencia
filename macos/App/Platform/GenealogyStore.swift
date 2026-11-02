@@ -691,9 +691,24 @@ struct CatalogPersonClaim: Sendable, Equatable {
 /// A Person's family units (S13-04), grouped by Go: parent sets with the
 /// siblings through them, each partner with the children they share, the
 /// children with no other known parent, and siblings with no shown shared
-/// parent, in that order. Canonical people only.
+/// parent, in that order. Canonical people only. Each unit's children are in
+/// birth order, undated last (S13-12).
 struct CatalogPersonFamily: Sendable, Equatable {
     var units: [CatalogFamilyUnit]
+    /// The person's own summary; nil when an engine did not send it.
+    var person: CatalogPersonSummary? = nil
+    /// Every sibling once with the person among them, in the order the page
+    /// draws them.
+    var originSiblings: [CatalogOriginSibling] = []
+}
+
+/// One child of the person's parents, or a sibling recorded with no shared
+/// parent. The person's own member has no link. `parentSets` are the indexes,
+/// among the `.parents` units, of the parent sets it is a child of; empty for a
+/// sibling recorded only.
+struct CatalogOriginSibling: Sendable, Equatable {
+    var member: CatalogFamilyMember
+    var parentSets: [Int]
 }
 
 /// One family unit.
