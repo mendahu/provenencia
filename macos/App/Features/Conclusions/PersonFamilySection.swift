@@ -130,7 +130,7 @@ struct PersonFamilyDiagram: View {
                 ZStack(alignment: .topLeading) {
                     ForEach(group.tiles, id: \.id) { placed in
                         if let tile = tiles[placed.id] {
-                            PersonTile(content: tile.content, projectDir: projectDir) {
+                            PVPersonCard(content: tile.content, projectDir: projectDir) {
                                 if let location = tile.location { open(location) }
                             }
                             .frame(width: placed.frame.width, height: placed.frame.height)
@@ -161,19 +161,12 @@ private struct PersonFamilyMoreRow: View {
     let count: Int
     let expand: () -> Void
 
-    @FocusState private var focused: Bool
-
     var body: some View {
         Button(action: expand) {
             Text(verbatim: L10n.Conclusions.familyShowMore(count))
         }
         .buttonStyle(.pv(.ghost, size: .sm))
-        .focused($focused)
-        .onKeyPress(.return) {
-            guard focused else { return .ignored }
-            expand()
-            return .handled
-        }
+        .pvActivatesOnReturn(expand)
     }
 }
 

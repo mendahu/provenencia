@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import Provenencia
 
-struct PersonTileTests {
+struct PVPersonCardTests {
     private let en = Locale(identifier: "en_US")
 
     private func place(_ name: String) -> CatalogChainedPlace {
@@ -46,7 +46,7 @@ struct PersonTileTests {
     }
 
     @Test func tileContentFromSummary() {
-        let tile = PersonTileContent(summary: anna, role: "Parent", isFocus: false, locale: en)
+        let tile = PVPersonCardContent(summary: anna, role: "Parent", isFocus: false, locale: en)
         #expect(tile.id == "anna")
         #expect(tile.title.text == "Anna Weber")
         #expect(tile.lines.map(\.abbreviation) == ["b.", "d."])
@@ -54,26 +54,60 @@ struct PersonTileTests {
         #expect(tile.lines.map(\.place) == ["Bremen", nil])
         #expect(tile.colors != nil)
 
-        let wilhelm = PersonTileContent(summary: summary(id: "wilhelm", name: "Wilhelm Weber"), role: nil, isFocus: false, locale: en)
+        let wilhelm = PVPersonCardContent(summary: summary(id: "wilhelm", name: "Wilhelm Weber"), role: nil, isFocus: false, locale: en)
         #expect(wilhelm.lines.isEmpty && wilhelm.colors == nil && wilhelm.imageRelPath.isEmpty)
 
-        let child = PersonTileContent(summary: summary(id: "kid", ref: "PER-7KQ2M"), role: "Child", isFocus: false, locale: en)
+        let child = PVPersonCardContent(summary: summary(id: "kid", ref: "PER-7KQ2M"), role: "Child", isFocus: false, locale: en)
         #expect(child.title == .ref("PER-7KQ2M"))
     }
 
+    @Test func compactYearsAndHelp() {
+        let card = PVPersonCardContent(summary: anna, role: nil, isFocus: false, locale: en)
+        #expect(card.years == "1790 – 1851")
+        #expect(card.helpText == "Anna Weber\nb. 3 May 1790 · Bremen\nd. 1851")
+
+        func years(birth: CatalogDateValueInput?, death: CatalogDateValueInput?) -> String {
+            PVPersonCardContent(
+                summary: summary(
+                    name: "Wilhelm Weber",
+                    birth: CatalogLifeFacts(date: birth, dateCount: birth == nil ? 0 : 1),
+                    death: CatalogLifeFacts(date: death, dateCount: death == nil ? 0 : 1)
+                ),
+                role: nil, isFocus: false, locale: en
+            ).years
+        }
+        #expect(years(birth: date(1820), death: nil) == "1820 –")
+        #expect(years(birth: nil, death: date(1851)) == "– 1851")
+        var about = date(1790)
+        about.qualifier = "ABT"
+        #expect(years(birth: about, death: date(1851)) == "abt 1790 – 1851")
+        var range = CatalogDateValueInput(kind: "range", startYear: 1790)
+        range.endYear = 1795
+        #expect(years(birth: range, death: date(1851)) == "bet 1790 and 1795 – 1851")
+        var phrase = CatalogDateValueInput(kind: "point")
+        phrase.phrase = "during the war"
+        #expect(years(birth: phrase, death: date(1851)) == "during the war – 1851")
+        #expect(years(birth: nil, death: nil) == "")
+
+        let bare = PVPersonCardContent(summary: summary(name: "Wilhelm Weber"), role: nil, isFocus: false, locale: en)
+        #expect(bare.years == "" && bare.helpText == "Wilhelm Weber")
+    }
+
     @Test func spokenLabels() {
-        #expect(PersonTileContent(summary: anna, role: "Parent", isFocus: false, locale: en).spokenLabel
+        #expect(PVPersonCardContent(summary: anna, role: "Parent", isFocus: false, locale: en).spokenLabel
             == "Parent, Anna Weber, born 3 May 1790, Bremen, died 1851")
-        #expect(PersonTileContent(summary: anna, role: nil, isFocus: false, locale: en).spokenLabel
+        #expect(PVPersonCardContent(summary: anna, role: "Mother", isFocus: false, locale: en).spokenLabel
+            == "Mother, Anna Weber, born 3 May 1790, Bremen, died 1851")
+        #expect(PVPersonCardContent(summary: anna, role: nil, isFocus: false, locale: en).spokenLabel
             == "Anna Weber, born 3 May 1790, Bremen, died 1851")
         let johann = summary(
             id: "johann", name: "Johann Weber",
             birth: CatalogLifeFacts(date: date(1817, 3, 12), dateCount: 1, places: [place("Bremen")]),
             death: CatalogLifeFacts(date: date(1880), dateCount: 1, places: [place("Hamburg")])
         )
-        #expect(PersonTileContent(summary: johann, role: nil, isFocus: true, locale: en).spokenLabel
+        #expect(PVPersonCardContent(summary: johann, role: nil, isFocus: true, locale: en).spokenLabel
             == "Johann Weber, born 12 Mar 1817, Bremen, died 1880, Hamburg, this person")
-        #expect(PersonTileContent(summary: summary(name: "Wilhelm Weber"), role: "Sibling", isFocus: false, locale: en).spokenLabel
+        #expect(PVPersonCardContent(summary: summary(name: "Wilhelm Weber"), role: "Sibling", isFocus: false, locale: en).spokenLabel
             == "Sibling, Wilhelm Weber")
     }
 }

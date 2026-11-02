@@ -12,12 +12,22 @@ struct PersonDetailContent: ConclusionDetailBody {
     var lifeLines: [PersonLifeDisplay.LifeLine]
     var rows: [ReconciledValueRowModel]
     /// Nil when gender and sex at birth give nothing to show (S10-23).
-    var treatment: PersonGenderTreatment?
+    var treatment: PVGenderTreatment?
     /// The gallery of likenesses, earliest recorded first.
     var gallery: ConclusionDetailGallery
     /// Leads with the gallery's lead likeness.
     var thumbnail: ConclusionDetailThumbnail
-    var badge: ConclusionDetailBadge? { treatment?.badge }
+    var badge: ConclusionDetailBadge? { treatment.map(Self.badge) }
+
+    /// The header's gender badge: the value, with "at birth" when only sex at
+    /// birth stands in, in the treatment's ink.
+    static func badge(_ treatment: PVGenderTreatment) -> ConclusionDetailBadge {
+        ConclusionDetailBadge(
+            text: treatment.basis == .gender ? treatment.text : L10n.Conclusions.sexAtBirthBadge(treatment.text),
+            ink: treatment.family.ink,
+            accessibilityLabel: L10n.DesignSystem.spokenJoin(treatment.fieldLabel, treatment.text)
+        )
+    }
 
     init(
         detail: CatalogConclusionDetail,
@@ -33,7 +43,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         members = L10n.Conclusions.memberCount(detail.memberCount)
         lifeLines = PersonLifeDisplay.lifeLines(summary, locale: locale, missing: .stated)
         rows = Self.rows(detail.fields, summary: summary, derivedRows: detail.derivedRows, locale: locale, orders: orders)
-        treatment = PersonGenderTreatment.read(summary)
+        treatment = PVGenderTreatment.read(summary)
         gallery = ConclusionDetailGallery(
             title: L10n.Conclusions.likenessesSection,
             openTip: L10n.Conclusions.likenessOpenTip,
@@ -48,7 +58,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         )
         thumbnail = .leading(
             gallery: gallery,
-            noImage: L10n.Conclusions.personNoLikeness,
+            noImage: L10n.PersonCard.noLikeness,
             withImage: L10n.Conclusions.personLikenessThumb,
             leadLabel: L10n.Conclusions.likenessLabel,
             colors: treatment?.thumbnailColors

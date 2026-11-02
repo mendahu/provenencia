@@ -459,7 +459,7 @@ struct CatalogPersonSummary: Sendable, Equatable, Identifiable {
     var nameValueCount: Int
     var birth: CatalogLifeFacts = CatalogLifeFacts()
     var death: CatalogLifeFacts = CatalogLifeFacts()
-    /// The displayed gender and sex at birth terms; `PersonGenderTreatment` chooses the colors.
+    /// The displayed gender and sex at birth terms; `PVGenderTreatment` chooses the colors.
     var gender = CatalogTermFacts()
     var sexAtBirth = CatalogTermFacts()
     /// The last revision that touched this Person and when; revision 0 when unknown.

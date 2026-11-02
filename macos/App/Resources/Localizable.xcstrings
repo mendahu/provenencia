@@ -16722,8 +16722,8 @@
         }
       }
     },
-    "conclusions.person.noLikeness": {
-      "comment": "Accessibility label of the empty portrait slot on a Person page",
+    "personCard.noLikeness": {
+      "comment": "Accessibility label of the empty portrait slot of a person: the card's thumbnail and the Person page header",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18258,14 +18258,26 @@
         }
       }
     },
-    "conclusions.family.thisPersonSpoken": {
-      "comment": "VoiceOver ending of the focus tile of the Family section, mid-sentence",
+    "personCard.thisPersonSpoken": {
+      "comment": "VoiceOver ending of the person card that stands for the person whose page it is, mid-sentence",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "this person"
+          }
+        }
+      }
+    },
+    "personCard.thisPerson": {
+      "comment": "Badge on a person card that stands for the person whose page it is",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person"
           }
         }
       }

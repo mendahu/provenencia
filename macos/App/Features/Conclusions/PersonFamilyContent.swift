@@ -38,7 +38,7 @@ struct PersonFamilyContent: Equatable {
     struct Tile: Equatable, Identifiable {
         /// "\(column)-\(group)-\(entityId)", unique on the page.
         var id: String
-        var content: PersonTileContent
+        var content: PVPersonCardContent
         var location: WorkspaceLocation?
     }
 
@@ -107,7 +107,7 @@ struct PersonFamilyContent: Equatable {
             let summary = member.person
             return Tile(
                 id: "\(column)-\(group)-\(summary.entity.id)",
-                content: PersonTileContent(summary: summary, role: role.label, isFocus: false, locale: locale, orders: orders),
+                content: PVPersonCardContent(summary: summary, role: role.label, isFocus: false, locale: locale, orders: orders),
                 location: PersonsList.location(summary, orders: orders).withPageSection(.family)
             )
         }
@@ -145,7 +145,7 @@ struct PersonFamilyContent: Equatable {
             if summary.entity.id == focusID {
                 let focus = Tile(
                     id: "l-s-\(summary.entity.id)",
-                    content: PersonTileContent(summary: summary, role: nil, isFocus: true, locale: locale, orders: orders),
+                    content: PVPersonCardContent(summary: summary, role: nil, isFocus: true, locale: locale, orders: orders),
                     location: nil
                 )
                 return Sibling(tile: focus, sets: sets)

@@ -35,6 +35,25 @@ enum PersonLifeDisplay {
         var date: String?
         var place: String?
         var accessibilityLabel: String
+
+        /// The line as plain text: the abbreviation, then date and place; a
+        /// missing half is left out ("b. 3 May 1790 · Bremen", "d. 1851").
+        var text: String {
+            let rest: String
+            switch (date, place) {
+            case (let date?, let place?): rest = L10n.Conclusions.lineJoin(first: date, rest: place)
+            case (let date?, nil): rest = date
+            case (nil, let place?): rest = place
+            case (nil, nil): rest = ""
+            }
+            return rest.isEmpty ? abbreviation : "\(abbreviation) \(rest)"
+        }
+    }
+
+    /// A Person's life span at year precision, for a compact card: "1790 – 1851",
+    /// "1820 –", "– 1851". Empty when neither date has a year or a phrase.
+    static func years(_ summary: CatalogPersonSummary?, locale: Locale = .autoupdatingCurrent) -> String {
+        dateSpan(birth: summary?.birth.date, death: summary?.death.date, locale: locale, precision: .year)
     }
 
     /// The *b.* and *d.* lines of a Person.

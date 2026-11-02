@@ -8217,6 +8217,27 @@ enum L10n {
         }
     }
 
+    /// The person card's own copy (`PVPersonCard`).
+    enum PersonCard {
+        static let thisPerson = LocalizedStringResource(
+            "personCard.thisPerson",
+            defaultValue: "This person",
+            comment: "Badge on a person card that stands for the person whose page it is"
+        )
+
+        static let thisPersonSpoken = LocalizedStringResource(
+            "personCard.thisPersonSpoken",
+            defaultValue: "this person",
+            comment: "VoiceOver ending of the person card that stands for the person whose page it is, mid-sentence"
+        )
+
+        static let noLikeness = LocalizedStringResource(
+            "personCard.noLikeness",
+            defaultValue: "No likeness recorded",
+            comment: "Accessibility label of the empty portrait slot of a person: the card's thumbnail and the Person page header"
+        )
+    }
+
     enum DeleteImpact {
         /// One plural catalog key per Go `catalogmodel.Kind`, holding the bare
         /// noun for a count ("citation" / "citations"). `TestSwiftVocabularyMatchesGo`
@@ -9206,22 +9227,10 @@ enum L10n {
             ), source)
         }
 
-        static let personNoLikeness = LocalizedStringResource(
-            "conclusions.person.noLikeness",
-            defaultValue: "No likeness recorded",
-            comment: "Accessibility label of the empty portrait slot on a Person page"
-        )
-
         static let familyThisPerson = LocalizedStringResource(
             "conclusions.family.thisPerson",
             defaultValue: "This person",
             comment: "Badge on the focus tile of the Family section, and the label of the focus alone in the siblings group"
-        )
-
-        static let familyThisPersonSpoken = LocalizedStringResource(
-            "conclusions.family.thisPersonSpoken",
-            defaultValue: "this person",
-            comment: "VoiceOver ending of the focus tile of the Family section, mid-sentence"
         )
 
         static let familyRoleParent = LocalizedStringResource(

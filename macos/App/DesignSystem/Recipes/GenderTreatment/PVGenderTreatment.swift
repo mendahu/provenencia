@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// How the Person summary shows gender (S10-23, board S10-D12): a Badge above
-/// the name and a tint on the thumb. Gender wins; sex at birth stands in only
+/// How a Person summary shows gender (S10-23, board S10-D12): a badge above
+/// the name (the page words it) and a tint on the thumb. Gender wins; sex at birth stands in only
 /// when the summary shows no gender value, and says so. Pure: the view
 /// only lays it out.
-struct PersonGenderTreatment: Equatable {
+struct PVGenderTreatment: Equatable {
     enum Family: Equatable {
         case man, woman, nonBinary, other
 
@@ -47,14 +47,6 @@ struct PersonGenderTreatment: Equatable {
     /// The Property's own label ("Gender", "Sex at birth").
     var fieldLabel: String
 
-    var badge: ConclusionDetailBadge {
-        ConclusionDetailBadge(
-            text: basis == .gender ? text : L10n.Conclusions.sexAtBirthBadge(text),
-            ink: family.ink,
-            accessibilityLabel: L10n.DesignSystem.spokenJoin(fieldLabel, text)
-        )
-    }
-
     var thumbnailColors: PVThumbnail.Colors {
         PVThumbnail.Colors(tint: family.tint, line: family.line)
     }
@@ -62,17 +54,17 @@ struct PersonGenderTreatment: Equatable {
     /// Reads the Person summary's terms (S13-02). Nil when there is nothing to
     /// show: no summary, no value, a disagreement, or a value that is not a
     /// readable term.
-    static func read(_ summary: CatalogPersonSummary?) -> PersonGenderTreatment? {
+    static func read(_ summary: CatalogPersonSummary?) -> PVGenderTreatment? {
         guard let summary else { return nil }
         if summary.gender.count > 0 { return treatment(summary.gender, basis: .gender) }
         return treatment(summary.sexAtBirth, basis: .sexAtBirth)
     }
 
-    private static func treatment(_ facts: CatalogTermFacts, basis: Basis) -> PersonGenderTreatment? {
+    private static func treatment(_ facts: CatalogTermFacts, basis: Basis) -> PVGenderTreatment? {
         guard facts.count == 1, let value = facts.term, case .term(_, let key, _, let origin) = value else { return nil }
         let propertyKey = basis == .gender ? SeededPropertyKey.gender : SeededPropertyKey.sexAtBirth
         guard let text = PropertyTermDisplay.name(value, propertyKey: propertyKey), !text.isEmpty else { return nil }
-        return PersonGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: facts.propertyLabel)
+        return PVGenderTreatment(family: family(CatalogOrigin.isProduct(origin) ? key : "", basis: basis), basis: basis, text: text, fieldLabel: facts.propertyLabel)
     }
 
     private static func family(_ key: String, basis: Basis) -> Family {

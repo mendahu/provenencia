@@ -83,10 +83,10 @@ struct PersonFamilyLayout: Equatable {
 
     init(content: PersonFamilyContent, width: CGFloat, widthClass: PVWidthClass) {
         let m = Self.margin
-        let th = PersonTile.height
+        let th = PVTileCardSize.regular.height
         let step = th + Self.tileGap
         let gutter = Self.gutter(widthClass)
-        let tp = max((width - m - gutter) / 2, 120).rounded(.down)
+        let tp = max((width - m - gutter) / 2, PVTileCardSize.regular.minimumWidth).rounded(.down)
         let c2 = m + tp + gutter
         columnWidth = tp
         rightX = c2
