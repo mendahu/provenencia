@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-21 — Search finds every spelling
+
+**Landed 2026-11-02** in [#684](https://github.com/mendahu/provenencia/pull/684). Every search document carries a `folded` column (migration `000060`), the spellings unicode61 indexes differently ("Søby", "Straße"), and `core/search` OR-expands a query word's fold letters, so "Soby" finds Søby, and Ærøskøbing, Łask and Œuilly are found from ASCII. Alternates dedupe at a key that keeps word breaks, and a Person's search document carries the names that fold into its shown name under the product alias seed, so "Tom" finds Thomas Smith. A join reprojects a root's dependents only when the root's displayed rows moved (`graphcache.SameDisplayRows`), holding the join onto the 6,000-event city to a one-second budget when no row moves. Secondary line tags are punctuation, so no tag word is searchable. FakeStore's search returns seeded hits in seeded order. `ProjectionVersion` 10. Version 0.2.9. Audit B-7, B-10, B-21.
+
 ## S14-19 — A merge leaves no stale link in the graph cache
 
 **Landed 2026-11-01** in [#681](https://github.com/mendahu/provenencia/pull/681).  `graphcache.OnCommit` reloads the loaded neighbors of every committed merged handle (`mergedNeighbors`, one batched link lookup before the single reload) and adds them to the roots whose displays and memos drop, so no loaded node keeps a link a fresh load drops and `PROVENENCIA_GRAPH_VERIFY=1` passes `promotealign` `TestMemoFollowsCommit/a_handle_merged`. `graphcache.VerifyMode()` is the one reader of that variable (`commit.go`, the `canonlinks` skip, `TestLargeSourceBudgets`), and the budget test logs its timings without failing them in verify mode. `TestCommitOfAMergedHandle` holds the rule. Version 0.2.8. Audit L-16 (verify-mode half).

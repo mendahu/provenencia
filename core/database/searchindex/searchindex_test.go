@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -114,17 +115,22 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 		{
 			name: "place", head: handleHead{id: "p", kind: vocabkey.Place},
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
-			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "Québec"},
 		},
 		{
 			name: "person", head: handleHead{id: "p", kind: vocabkey.Person},
 			v:         handleValues{vocabkey.PropertyName: {"José Robins", "Jose Robins", "JOSÉ ROBINS", "Joe Robins"}},
-			wantTitle: "José Robins", wantSecondary: []string{"name:\tJoe Robins"},
+			wantTitle: "José Robins", wantSecondary: []string{"=\tJoe Robins"},
 		},
 		{
 			name: "label reading like the title adds no line", head: handleHead{id: "p", kind: vocabkey.Place, label: "montreal"},
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
-			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "Québec"},
+		},
+		{
+			name: "a spelling that differs by a word break stays", head: handleHead{id: "p", kind: vocabkey.Place},
+			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Ville-Marie", "Villemarie"}},
+			wantTitle: "Montréal", wantSecondary: []string{"@\tVille-Marie", "@\tVillemarie", "Québec"},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -134,6 +140,80 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 			title, secondary := matchText(tt.head, []byte("p"), tt.v, summaries)
 			if title != tt.wantTitle || !reflect.DeepEqual(secondary, tt.wantSecondary) {
 				t.Fatalf("title %q secondary %q, want %q %q", title, secondary, tt.wantTitle, tt.wantSecondary)
+			}
+		})
+	}
+}
+
+func TestFoldedSpelling(t *testing.T) {
+	for _, tt := range []struct {
+		raw  string
+		want string
+		ok   bool
+	}{
+		{"Søby", "soby", true},
+		{"Montréal", "", false},
+		{"Straße", "strasse", true},
+		{"O'Brien", "obrien", true},
+		{"D’Arcy", "darcy", true},
+		{"1,200", "", false},
+		{"scan.pdf", "", false},
+		{"St.", "", false},
+		{"soby", "", false},
+	} {
+		got, ok := FoldedSpelling(tt.raw)
+		if got != tt.want || ok != tt.ok {
+			t.Errorf("FoldedSpelling(%q) = (%q, %v), want (%q, %v)", tt.raw, got, ok, tt.want, tt.ok)
+		}
+	}
+}
+
+func TestFoldedWords(t *testing.T) {
+	for _, tt := range []struct {
+		texts []string
+		want  string
+	}{
+		{[]string{"Ærøskøbing Havn"}, "aeroskobing"},
+		{[]string{"Straße Straße"}, "strasse"},
+		{[]string{"St. Søby"}, "soby"},
+		{[]string{"Łask", "Søby", "Łask"}, "lask soby"},
+		{[]string{""}, ""},
+	} {
+		if got := foldedWords(tt.texts...); got != tt.want {
+			t.Errorf("foldedWords(%q) = %q, want %q", tt.texts, got, tt.want)
+		}
+	}
+}
+
+func TestMatchTextDropsAlternateTheFoldedColumnCovers(t *testing.T) {
+	place := conclusionsummaries.PlaceSummary{Names: []string{"Søby", "Soby"}}
+	place.Entity.ID = []byte("p")
+	summaries := conclusionsummaries.NewSummaries(nil, nil, []conclusionsummaries.PlaceSummary{place})
+	title, secondary := matchText(handleHead{id: "p", kind: vocabkey.Place}, []byte("p"), handleValues{}, summaries)
+	if title != "Søby" || len(secondary) != 0 {
+		t.Fatalf("title %q secondary %q", title, secondary)
+	}
+}
+
+func TestMatchTextCarriesFoldedInNicknames(t *testing.T) {
+	for _, tt := range []struct {
+		form string
+		v    handleValues
+		want []string
+	}{
+		{"Thomas Smith", handleValues{vocabkey.PropertyName: {"Thomas Smith", "Tomas Smyth"}},
+			[]string{"=\tTomas Smyth", "~\tthom", "~\tthos", "~\ttom", "~\ttommy"}},
+		{"Tom Smith", handleValues{}, []string{"~\ttommy"}},
+		{"Hannah Smith", handleValues{}, []string{"~\tanna", "~\tnan", "~\tnanny"}},
+		{"Smith", handleValues{}, nil},
+	} {
+		t.Run(tt.form, func(t *testing.T) {
+			person := conclusionsummaries.PersonSummary{Name: namevaluetest.Western(tt.form)}
+			person.Entity.ID = []byte("p")
+			summaries := conclusionsummaries.NewSummaries([]conclusionsummaries.PersonSummary{person}, nil, nil)
+			_, secondary := matchText(handleHead{id: "p", kind: vocabkey.Person}, []byte("p"), tt.v, summaries)
+			if !reflect.DeepEqual(secondary, tt.want) {
+				t.Fatalf("secondary %q, want %q", secondary, tt.want)
 			}
 		})
 	}

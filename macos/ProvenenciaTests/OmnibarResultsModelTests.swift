@@ -26,11 +26,12 @@ struct OmnibarResultsModelTests {
 
     @Test func debouncedSearchReturnsHits() async {
         let store = FakeStore()
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(id: "s1", ref: "SRC-ILMIN", sourceTypeID: "t1", title: "Ilminster parish", description: ""),
-        ]
-        store.sourceTypesByProject[projectDir] = [
-            CatalogSourceType(id: "t1", key: "parish", origin: "provenencia", label: "Parish", description: "", iconKey: "type_certificate"),
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "source", id: "s1", ref: "SRC-ILMIN", title: "Ilminster parish", subtitle: "Parish",
+                matchReason: "title", location: WorkspaceLocation(section: .sources, sourceId: "s1"),
+                iconKey: "type_certificate"
+            ),
         ]
         let model = OmnibarResultsModel()
         model.search.query = "Ilminster"
@@ -95,10 +96,10 @@ struct OmnibarResultsModelTests {
     @Test func activateFieldHitFromSearch() async {
         let store = FakeStore()
         let projectDir = "/tmp/omnibar-activate.provenencia"
-        store.fieldsByProject[projectDir] = [
-            CatalogMetadataField(
-                id: "f9", key: "author", origin: "provenencia",
-                label: "Author", dataType: "text", description: ""
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "metadata_field", id: "f9", ref: "", title: "Author", subtitle: "author",
+                matchReason: "title", location: WorkspaceLocation(section: .metadata, fieldId: "f9", title: "Author")
             ),
         ]
         let model = OmnibarResultsModel()
@@ -125,15 +126,18 @@ struct OmnibarResultsModelTests {
     @Test func activateEvidenceGraphHitOpensTheGraph() async {
         let store = FakeStore()
         let projectDir = "/tmp/omnibar-graph.provenencia"
-        store.sourcesByProject[projectDir] = [
-            CatalogSource(
-                id: "src-w3", ref: "SRC-W3CEN", sourceTypeID: "", title: "1881 Census, Ward 3", description: ""
-            ),
-        ]
-        store.evidenceGraphsByProject[projectDir] = [
-            CatalogEvidenceGraph(
-                id: "g-jones", ref: "GPH-J0NES", sourceID: "src-w3", name: "Jones household",
-                description: "", artifactIDs: []
+        let source = CatalogSource(
+            id: "src-w3", ref: "SRC-W3CEN", sourceTypeID: "", title: "1881 Census, Ward 3", description: ""
+        )
+        let graph = CatalogEvidenceGraph(
+            id: "g-jones", ref: "GPH-J0NES", sourceID: "src-w3", name: "Jones household",
+            description: "", artifactIDs: []
+        )
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "evidence_graph", id: "g-jones", ref: "GPH-J0NES", title: "Jones household",
+                subtitle: "1881 Census, Ward 3", matchReason: "title",
+                location: SourcesListNavigation.canvasLocation(for: source, graph: graph)
             ),
         ]
         let model = OmnibarResultsModel()

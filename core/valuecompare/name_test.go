@@ -11,6 +11,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -605,5 +606,48 @@ func TestNameRulesComeFromRules(t *testing.T) {
 				t.Fatalf("got %s %s, want %s %s", res.Relation, det.Cause, tc.rel, tc.why)
 			}
 		})
+	}
+}
+
+func tomIndex() (valuecompare.Rules, valuecompare.AliasIndex) {
+	r := matchregistry.Default().Value
+	idx := valuecompare.NewAliasIndex([]valuecompare.AliasTable{{
+		Key: "t", Kind: valuecompare.AliasNickname, Roles: valuecompare.AliasRoles(), FormalFirst: true,
+		Sets: [][]string{{"thomas", "tom", "tommy"}},
+	}}, r.Words)
+	r.Names.Aliases = idx
+	return r, idx
+}
+
+func TestAliasIndexFoldsInto(t *testing.T) {
+	_, idx := tomIndex()
+	if got := idx.FoldsInto("thomas", valuecompare.RoleGiven); !slices.Equal(got, []string{"tom", "tommy"}) {
+		t.Errorf("thomas: %v", got)
+	}
+	if got := idx.FoldsInto("tom", valuecompare.RoleGiven); len(got) != 0 {
+		t.Errorf("tom: %v", got)
+	}
+	if got := idx.FoldsInto("thomas", valuecompare.RoleFamily); len(got) != 0 {
+		t.Errorf("family role: %v", got)
+	}
+	var zero valuecompare.AliasIndex
+	if got := zero.FoldsInto("thomas", valuecompare.RoleGiven); got != nil {
+		t.Errorf("zero index: %v", got)
+	}
+}
+
+func TestNameFoldsInto(t *testing.T) {
+	r, _ := tomIndex()
+	name := func(form string) valuecompare.Value {
+		return valuecompare.Value{Type: propertymeta.ValueTypeName, Name: namevaluetest.Western(form)}
+	}
+	if got := valuecompare.NameFoldsInto(name("Thomas Smith"), r); !slices.Equal(got, []string{"tom", "tommy"}) {
+		t.Errorf("Thomas Smith: %v", got)
+	}
+	if got := valuecompare.NameFoldsInto(name("Smith"), r); got != nil {
+		t.Errorf("Smith: %v", got)
+	}
+	if got := valuecompare.NameFoldsInto(name(strings.Repeat("Ann ", 33)+"Smith"), r); got != nil {
+		t.Errorf("33 words: %v", got)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
 )
 
@@ -30,6 +31,10 @@ const (
 	budgetAfterCommit  = 2500 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
+	// budgetJoinOntoCity: joining a second "City" toponym onto the city moves no
+	// shown value, so only the city's document is reprojected, not its 6,000
+	// events and their people. B-10 measured 6.06 s before S14-21.
+	budgetJoinOntoCity = 1 * time.Second
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -43,6 +48,8 @@ type largeFixture struct {
 	onePlace sources.Source
 	other    sources.Source
 	otherA   artifacts.Artifact
+	// city is the city's handle id.
+	city []byte
 }
 
 func newLargeFixture(t *testing.T) *largeFixture {
@@ -99,7 +106,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	}
 
 	otherSrc, otherArt := f.newSource("Other")
-	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt}
+	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt, city: cityID}
 }
 
 // fastest is the least of n timed runs of run; each run's own setup stays
@@ -235,5 +242,19 @@ func TestLargeSourceBudgets(t *testing.T) {
 		proposeOnePlace()
 		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
 		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
+	})
+
+	t.Run("join a place onto the city", func(t *testing.T) {
+		var joining []subjects.Subject
+		for i := 0; i < 3; i++ {
+			joining = append(joining, f.place(lf.other, lf.otherA, "City"))
+		}
+		i := 0
+		d := fastest(3, func() time.Duration {
+			s := joining[i]
+			i++
+			return since(func() { f.join(s, lf.city) })
+		})
+		over(t, "join a place onto the city", d, budgetJoinOntoCity)
 	})
 }

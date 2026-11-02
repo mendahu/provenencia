@@ -9,11 +9,13 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 // Kind ids must match core/search constants (wire SearchHit.kind).
@@ -33,7 +35,9 @@ const (
 //	8: a Person or Place document lists each alternate name once, by text key
 //	   (S11-07).
 //	9: Evidence graphs, with their Source in the parent columns (S12-15).
-const ProjectionVersion = 9
+//	10: a folded column for spellings FTS indexes differently, and a Person's
+//	    nicknames that fold into its shown name (S14-21).
+const ProjectionVersion = 10
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -41,6 +45,17 @@ const (
 	BodyTagNote     = "note:\t"
 	BodyTagMetadata = "metadata:\t"
 	BodyTagFilename = "filename:\t"
+)
+
+// Tagged secondary line prefixes for Person and Place handle documents
+// (parsed by core/search for match field codes + snippets, except the alias
+// tag, which only makes the line findable). Each tag is ASCII punctuation and
+// a tab, which the tokenizer and the value rules drop as separators, so no tag
+// word is searchable.
+const (
+	SecondaryTagName    = "=\t"
+	SecondaryTagToponym = "@\t"
+	SecondaryTagAlias   = "~\t"
 )
 
 // Querier is *sql.Tx or *sql.DB.
@@ -75,11 +90,11 @@ func Delete(q Querier, kind, entityID string) error {
 		return nil
 	}
 	var rowid int64
-	var title, ref, secondary, body string
+	var title, ref, secondary, body, folded string
 	err := q.QueryRow(
-		`SELECT rowid, title, ref, secondary, body FROM catalog_search_docs WHERE kind = ? AND entity_id = ?`,
+		`SELECT rowid, title, ref, secondary, body, folded FROM catalog_search_docs WHERE kind = ? AND entity_id = ?`,
 		kind, entityID,
-	).Scan(&rowid, &title, &ref, &secondary, &body)
+	).Scan(&rowid, &title, &ref, &secondary, &body, &folded)
 	if err == sql.ErrNoRows {
 		return nil
 	}
@@ -87,8 +102,8 @@ func Delete(q Querier, kind, entityID string) error {
 		return err
 	}
 	if _, err := q.Exec(
-		`INSERT INTO catalog_search_fts(catalog_search_fts, rowid, title, ref, secondary, body) VALUES('delete', ?, ?, ?, ?, ?)`,
-		rowid, title, ref, secondary, body,
+		`INSERT INTO catalog_search_fts(catalog_search_fts, rowid, title, ref, secondary, body, folded) VALUES('delete', ?, ?, ?, ?, ?, ?)`,
+		rowid, title, ref, secondary, body, folded,
 	); err != nil {
 		return err
 	}
@@ -112,13 +127,14 @@ func Upsert(q Querier, doc Document) error {
 	if err := Delete(q, doc.Kind, doc.EntityID); err != nil {
 		return err
 	}
+	folded := foldedWords(doc.Title, doc.Secondary, doc.Body)
 	res, err := q.Exec(
 		`INSERT INTO catalog_search_docs (
 			kind, entity_id, display_ref, display_title, display_subtitle,
 			display_icon_key, display_thumbnail_rel_path,
 			display_parent_id, display_parent_ref,
-			title, ref, secondary, body
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			title, ref, secondary, body, folded
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		doc.Kind,
 		doc.EntityID,
 		doc.DisplayRef,
@@ -132,6 +148,7 @@ func Upsert(q Querier, doc Document) error {
 		doc.Ref,
 		doc.Secondary,
 		doc.Body,
+		folded,
 	)
 	if err != nil {
 		return err
@@ -141,8 +158,8 @@ func Upsert(q Querier, doc Document) error {
 		return err
 	}
 	if _, err = q.Exec(
-		`INSERT INTO catalog_search_fts(rowid, title, ref, secondary, body) VALUES (?, ?, ?, ?, ?)`,
-		rowid, doc.Title, doc.Ref, doc.Secondary, doc.Body,
+		`INSERT INTO catalog_search_fts(rowid, title, ref, secondary, body, folded) VALUES (?, ?, ?, ?, ?, ?)`,
+		rowid, doc.Title, doc.Ref, doc.Secondary, doc.Body, folded,
 	); err != nil {
 		return err
 	}
@@ -151,6 +168,77 @@ func Upsert(q Querier, doc Document) error {
 		rowid, doc.Title, doc.Ref, doc.Secondary, doc.Body,
 	)
 	return err
+}
+
+// accentOnly is the word rules with no fold table: accents stripped, as
+// remove_diacritics 2 strips them.
+var accentOnly = func() valuecompare.WordRules {
+	w := valueWords
+	w.Folds = nil
+	return w
+}()
+
+// FoldedSpelling is the spelling of one token (as valuecompare.RawTokens
+// splits it) that rescoring reads and SQLite's tokenizer does not index: the
+// token's text key when it holds a letter only the fold table folds (æ, ø, ł,
+// œ, ß, đ, þ, ı), or an apostrophe with a kept rune on both sides, where
+// unicode61 splits the word. Otherwise false. The document, the alternate key
+// and the query all read it, so they cannot disagree.
+func FoldedSpelling(raw string) (string, bool) {
+	f, ok := valuecompare.TextKey(raw, valuecompare.Equivalent, valueWords)
+	if !ok {
+		return "", false
+	}
+	a, _ := valuecompare.TextKey(raw, valuecompare.Equivalent, accentOnly)
+	if f != a || midWordApostrophe(raw) {
+		return f, true
+	}
+	return "", false
+}
+
+// QueryPart is one query token part (as valuecompare.RawTokens splits it) as
+// the index spells it: its FoldedSpelling when it has one (folded true), else
+// its text key with accents stripped and no fold table, which is how
+// remove_diacritics 2 indexes it. Empty when the part has no word.
+func QueryPart(raw string) (spelling string, folded bool) {
+	if f, ok := FoldedSpelling(raw); ok {
+		return f, true
+	}
+	a, _ := valuecompare.TextKey(raw, valuecompare.Equivalent, accentOnly)
+	return a, false
+}
+
+// midWordApostrophe reports an apostrophe (U+0027, U+2019 or U+02BC) with a
+// word rune on both sides.
+func midWordApostrophe(s string) bool {
+	runes := []rune(s)
+	for i := 1; i < len(runes)-1; i++ {
+		switch runes[i] {
+		case '\'', '\u2019', '\u02BC':
+			if unicode.IsLetter(runes[i-1]) || unicode.IsDigit(runes[i-1]) {
+				if unicode.IsLetter(runes[i+1]) || unicode.IsDigit(runes[i+1]) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// foldedWords is the folded column of a document: the FoldedSpelling of every
+// token of the texts, space-joined, each once, in first-seen order.
+func foldedWords(texts ...string) string {
+	seen := map[string]bool{}
+	var out []string
+	for _, t := range texts {
+		for _, raw := range valuecompare.RawTokens(t) {
+			if f, ok := FoldedSpelling(raw); ok && !seen[f] {
+				seen[f] = true
+				out = append(out, f)
+			}
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 // ClearAll wipes the projection (FTS + docs). Meta version is left unchanged.

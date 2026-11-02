@@ -29,7 +29,7 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] A `fieldValuesForKind` case (`core/search/fts.go`) mapping the document's columns onto every registry field the kind declares.
 - [ ] Write-path reproject on domain mutators (same tx when practical)
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
-- [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`, and, until S12-50 removes it, for FakeStore's `searchPriority` (give the kind the value the others have; the fake ranks nothing)
+- [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`
 - [ ] FakeStore returns seeded hits for the kind in seeded order, filtered only by the requested kinds; markCatalogSessionHeld. It ranks and scores nothing: ranking is Go's and is tested in `core/search` (`.cursor/rules/swift-tests.mdc`). The compiler does not ask for the fake hits
 - [ ] Package + FFI + Swift FakeStore tests
 ```
@@ -86,7 +86,11 @@ destination UI.
    (and delete on remove). Keep **both** `catalog_search_fts` (unicode61) and
    `catalog_search_fts_trigram` in sync on Upsert/Delete/ClearAll. Bump
    `ProjectionVersion` when the document shape or index set changes so
-   `searchindex.EnsureCatalog` rebuilds on Open.
+   `searchindex.EnsureCatalog` rebuilds on Open. `Upsert` writes `folded`
+   (spellings unicode61 indexes differently, from `searchindex.FoldedSpelling`)
+   for every kind, and `core/search` OR-expands a query word the same way; a
+   projector never writes FTS rows itself, and the trigram table keeps four
+   columns.
 2. Add a `Search` doc on the table's `effects` registry entry (with the parent
    fan-out, as `source_types` and `sources` do), a case in
    `searchindex.Reproject`, and a loop in `RebuildAll`. A new display column

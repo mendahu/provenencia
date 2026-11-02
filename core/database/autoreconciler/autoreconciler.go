@@ -42,11 +42,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
@@ -204,8 +204,11 @@ func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	var moved [][]byte
 	if err := sqlbatch.Each(ids, func(batch [][]byte) error {
-		return recomputeBatch(q, batch)
+		m, err := recomputeBatch(q, batch)
+		moved = append(moved, m...)
+		return err
 	}); err != nil {
 		return nil, err
 	}
@@ -218,7 +221,18 @@ func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := searchindex.ReprojectHandles(q, append(roots, deps...)); err != nil {
+	// Dependents' search text reads only the roots' displayed rows, so a root
+	// whose rows did not move needs none of its dependents reprojected. deps
+	// stays the full walk: the graph cache drops displays that read a label.
+	reproject := deps
+	if len(moved) < len(ids) {
+		movedRoots := database.UniqueBlobIDs(append(append(append([][]byte(nil), moved...), before...), after...))
+		reproject, err = conclusionsummaries.Dependents(q, movedRoots)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err := searchindex.ReprojectHandles(q, append(roots, reproject...)); err != nil {
 		return nil, err
 	}
 	return deps, nil
@@ -330,27 +344,41 @@ func EnsureCatalog(c *database.Catalog) error {
 	return nil
 }
 
-func recomputeBatch(q Querier, ids [][]byte) error {
+// recomputeBatch rewrites the batch's rows and returns the ids whose displayed
+// rows differ from the ones it replaced (graphcache.SameDisplay: everything but
+// the vote counts).
+func recomputeBatch(q Querier, ids [][]byte) (moved [][]byte, err error) {
 	in := database.SQLInPlaceholders(len(ids)) + `)`
+	stored, err := graphcache.Over(q).StoredValues(ids)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := q.Exec(sqlDeleteFor+in, database.BlobArgs(ids)...); err != nil {
-		return err
+		return nil, err
 	}
 	if _, err := q.Exec(sqlDeleteOutcomesFor+in, database.BlobArgs(ids)...); err != nil {
-		return err
+		return nil, err
 	}
 	groups, err := load(q, ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	written := map[string][]graphcache.TruthRow{}
 	for _, g := range groups {
 		res, err := autoreconcile.Reconcile(ValueRules, g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for i, cl := range res.Values {
-			if err := insertRow(q, g, i+1, cl); err != nil {
-				return err
+			row, err := truthRow(g, i+1, cl)
+			if err != nil {
+				return nil, err
 			}
+			if err := insertRow(q, g, row, cl.Value); err != nil {
+				return nil, err
+			}
+			ek := string(g.entityID)
+			written[ek] = append(written[ek], row)
 		}
 		for _, o := range res.Outcomes {
 			var rank any
@@ -367,11 +395,16 @@ func recomputeBatch(q Querier, ids [][]byte) error {
 			}
 			if _, err := q.Exec(sqlInsertOutcome, g.entityID, g.propertyID, o.ObservationID, string(o.Reason), rank, deniedBy,
 				voteSupport, voteTotal); err != nil {
-				return err
+				return nil, err
 			}
 		}
 	}
-	return nil
+	for _, id := range ids {
+		if !graphcache.SameDisplayRows(stored[string(id)], written[string(id)]) {
+			moved = append(moved, id)
+		}
+	}
+	return moved, nil
 }
 
 // group is one (handle, Property) and its candidates.
@@ -515,38 +548,37 @@ func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
 	return out, nil
 }
 
-func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) error {
-	v := cl.Value
+// insertRow writes row, the one build of a value row (truthRow), and computes
+// only what the stored row adds: the date window and the sort key from v.
+func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Value) error {
 	var (
-		text, sortKey     any
-		integer           any
-		termID            any
-		valueEntity       any
-		imageFileID       any
-		dateBlob, nameBlb any
-		dateLo, dateHi    any
+		text, sortKey  any
+		integer        any
+		termID         any
+		valueEntity    any
+		imageFileID    any
+		dateBlob, name any
+		dateLo, dateHi any
 	)
-	if v.HasText {
-		text = v.Text
+	if row.HasText {
+		text = row.Text
 	}
-	if v.HasInteger {
-		integer = v.Integer
+	if row.HasInteger {
+		integer = row.Integer
 	}
-	if len(v.TermID) > 0 {
-		termID = v.TermID
+	if len(row.TermID) > 0 {
+		termID = row.TermID
 	}
-	if len(v.EntityID) > 0 {
-		valueEntity = v.EntityID
+	if len(row.EntityID) > 0 {
+		valueEntity = row.EntityID
 	}
-	if v.Depiction != nil && len(v.Depiction.ImageFileID) > 0 {
-		imageFileID = v.Depiction.ImageFileID
+	if len(row.ImageFileID) > 0 {
+		imageFileID = row.ImageFileID
+	}
+	if row.Date != nil {
+		dateBlob = row.Date
 	}
 	if v.Date != nil {
-		b, err := valuecodec.MarshalDate(*v.Date)
-		if err != nil {
-			return err
-		}
-		dateBlob = b
 		if w, ok := valuecompare.DateWindow(*v.Date); ok {
 			if w.Lo != nil {
 				dateLo = *w.Lo
@@ -556,18 +588,14 @@ func insertRow(q Querier, g *group, rank int, cl autoreconcile.ReconciledValue) 
 			}
 		}
 	}
-	if v.Name != nil {
-		b, err := valuecodec.MarshalName(*v.Name)
-		if err != nil {
-			return err
-		}
-		nameBlb = b
+	if row.Name != nil {
+		name = row.Name
 	}
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, rank, text, integer, termID, valueEntity, dateBlob, nameBlb, imageFileID, dateLo, dateHi, sortKey,
-		cl.Support, cl.Against, string(cl.Reason))
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, integer, termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
+		row.Support, row.Against, row.Reason)
 	return err
 }
 

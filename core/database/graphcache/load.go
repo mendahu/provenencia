@@ -53,7 +53,7 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 	if len(present) == 0 {
 		return nil
 	}
-	values, err := g.loadValues(present)
+	values, err := g.StoredValues(present)
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,11 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 	return out, nil
 }
 
-func (g *Graph) loadValues(ids [][]byte) (map[string]map[string][]Value, error) {
+// StoredValues reads the stored value rows of ids: entity id, then property id
+// to the rows in rank order. An id with no rows is absent. It is the one read
+// of stored rows into Value; the reconciler's upkeep compares it to the rows it
+// is about to write.
+func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error) {
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_term_id, COALESCE(t.key, ''),

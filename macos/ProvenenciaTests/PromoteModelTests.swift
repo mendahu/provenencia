@@ -298,6 +298,16 @@ struct PromoteModelTests {
             entity: CatalogCanonicalEntity(id: "p-1", ref: "PLC-1", subjectTypeID: "type-place", label: "Polly Street"),
             kind: "place"
         )
+        store.seededSearchHits = [
+            CatalogSearchHit(
+                kind: "person", id: "e-far", ref: "PER-FAR", title: "Polly Jones", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .persons, entityId: "e-far")
+            ),
+            CatalogSearchHit(
+                kind: "place", id: "p-1", ref: "PLC-1", title: "Polly Street", subtitle: "", matchReason: "title",
+                location: WorkspaceLocation(section: .places, entityId: "p-1")
+            ),
+        ]
         return store
     }
 

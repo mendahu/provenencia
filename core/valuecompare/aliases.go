@@ -166,6 +166,27 @@ func (a AliasIndex) Expands(from, into string, role NameRole) bool {
 	return forward && (!reverse || a.prefer[AliasDirection{into, from}])
 }
 
+// FoldsInto lists the tokens a fold keeps into into for role: every token of a
+// set that holds into and allows role, other than into, that Expands. Sorted,
+// no duplicates; nil when none and for the zero index. Direct folds only, as
+// Expands answers one pair; a chain (ann into anna into hannah) is not followed.
+func (a AliasIndex) FoldsInto(into string, role NameRole) []string {
+	var out []string
+	for _, i := range a.byToken[into] {
+		set := a.sets[i]
+		if !set.roles[role] {
+			continue
+		}
+		for token := range set.tokens {
+			if token != into && a.Expands(token, into, role) {
+				out = append(out, token)
+			}
+		}
+	}
+	sort.Strings(out)
+	return slices.Compact(out)
+}
+
 // SetKeys is the key of every set that holds token (an AliasToken): a
 // fixed-size digest of its table key and smallest token. Roles are ignored, so a shortlist may
 // include more than Hit allows. Sorted, no duplicates; nil for the zero index.
