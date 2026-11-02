@@ -101,3 +101,36 @@ F-6b head `01e9a3dd` (`4def3e07` code, `01e9a3dd` Landed note). Orchestrator rea
 CI: first run red — Go `TestLargeSourceBudgets/warm` 373 ms vs 350 ms budget (`promotealign` proposal, untouched by this PR; local gate green) and macOS job never acquired a runner (capacity). Rerun of failed jobs green.
 
 Gate PASS · CI green · open: none (blocker/major) · follow-ups: UX-1 · to user: CON-5 (`fileSubject` refusal order), MNT-3 (`BatchResult.Written`) · CON miss: none
+
+## User decision — 2026-11-02
+On the report, the user answered "Yes, fix both": CON-5 (`fileSubject` refusal order) and MNT-3 (`BatchResult.Written`) are **Fix now**. This supersedes D-17's placement of the primary-type check inside `fileSubject` (and Assumptions' "callers check membership first" for that check) and the Out line "Removing `promote.BatchResult.Written` — not planned" / "What stays". Recorded in the plan's Landed note, not in its Decisions.
+
+### Fix plan 3 (user-approved)
+
+**F-8 — The primary-type refusal comes before the membership refusal again** (from CON-5)
+Files: `core/database/promote/promote.go`, `batch.go`, `promote_test.go`, `batch_test.go`.
+Failing test first: `TestSave` (or the existing refusal table in `promote_test.go`) case "an association Subject already filed by its bridge is unsupported": file both ends of a participation through `promotetest.Save` (which files the bridge, `AppendFiling`), then `Save` the association Subject → want `ErrUnsupportedType` (today: `identityclaims.ErrAlreadyMember`). And a `batch_test.go` case: a `.handle` row naming that association Subject on its own handle → want `ErrUnsupportedType` (today: a silent no-op). Run both red first.
+Do: add one unexported `requirePrimary(tx *sql.Tx, subject subjects.Subject) error` in `promote.go` (the `subjecttypes.GetByIDTx` + `vocabkey.IsPrimaryType` → `ErrUnsupportedType` block, moved out of `fileSubject`). `Save` calls it right after loading the Subject, before its already-member check; `applyRow` calls it right after its graph check, before its already-member lookup — the order both had at base `04a2c99b`. `fileSubject` drops the type check and its doc says callers check the type and membership first.
+Check: both new cases pass; `go test -tags fts5 ./core/database/promote/...` green; scripts/check-pr.sh PASS.
+
+**F-9 — `SaveBatch` returns what its caller uses** (from MNT-3)
+Files: `core/database/promote/batch.go`, `batch_test.go`, `api/ffi/handlers/promote_batch.go`, any other `SaveBatch` caller (`rg -n 'SaveBatch|BatchResult|promote\.Written' core api`).
+Do: delete `Written` and `BatchResult`. `SaveBatch` returns `(struct{}, []rowchange.Change, error)` so it still fits `writes.Run[T]` / `writes.Call[T]` directly (follow an existing `struct{}` write in core if one exists; else that shape). `applyRow` returns `([]rowchange.Change, []byte, error)` (changes, filed entity id or nil). Rewrite the three `batch_test.go` assertions on `res.Written` (around lines 214, 321–324, 354) to read the filed claims back (`identityclaims.AcceptedEntityForSubjectTx` or the package's existing read helper) or to assert on the returned `rowchange.Change`s, proving the same facts: two claims filed; each on the expected handle; an anchor files nothing.
+Check: `rg -n 'BatchResult|promote\.Written|\bWritten\b' core/database/promote api/ffi/handlers` prints nothing (except unrelated words); go tests green; scripts/check-pr.sh PASS.
+
+**F-10 — Landed note**
+Files: the plan.
+Do: in the **Landed** note only, add one difference: "In review, by the user's decision: the primary-type refusal runs before the already-member refusal again (`requirePrimary`, outside `fileSubject`), and `BatchResult` / `Written` are removed; `SaveBatch` returns only its changes." No Decision, Out or Test edits.
+
+## Round 3 — fix (user-approved)
+Head `09b9b7ed`. **Gate (orchestrator) PASS.** F-8: `requirePrimary` runs before the member check in `Save` and `applyRow`; `TestSaveRefusesAnAssociationAlreadyFiledByItsBridge` and `TestSaveBatchRefusesAnAssociationRowAlreadyFiled` ran red first (`already_member`; nil). **CON-5 Resolved.** F-9: `BatchResult` / `Written` gone, `SaveBatch` returns `(struct{}, changes, error)`; `batch_test.go` reads claims back. **MNT-3 Resolved.** F-10 Landed note (7).
+Orchestrator read: `applyRow`'s second return (filed entity id) has no reader (`batch.go:68` binds `_`), in code this PR rewrote; F-9 named that shape. → F-11.
+
+**F-11 — `applyRow` returns only its changes**
+Files: `core/database/promote/batch.go`.
+Do: `applyRow` returns `([]rowchange.Change, error)`; drop the entity id (bind `entity` to `_` from `fileSubject` if unused) and fix its doc comment; `SaveBatch` binds `rowChanges, err := applyRow(…)`.
+Check: `grep -n "applyRow(" core/database/promote/batch.go` shows two returns in the signature; scripts/check-pr.sh PASS.
+F-11 head `13eccf4f` (only `batch.go`). **Gate (orchestrator) PASS.**
+
+## Result (after the user's decision)
+Gate PASS · CI pending on `13eccf4f`+log · open: none · follow-ups: UX-1 · to user: none (CON-5, MNT-3 answered "fix both", fixed in round 3) · CON miss: none
