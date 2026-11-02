@@ -1,7 +1,7 @@
 # Review — S13-05 Person timeline read
 
-**Verdict:** round 1 — Fits with changes / Ready with changes
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet).
+**Verdict:** round 1 — Fits with changes / Ready with changes; round 2 — Fits with changes / Ready with changes. Every finding Fixed, M-1 answered by the user, M-6 declined; no blocker open. Planned 2026-11-02.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
 
 ## To user
 
@@ -87,3 +87,10 @@
 
 ### X-12 · minor · "no SQL" vs graph queries counted
 **Answer:** Fixed — §1 says "no graph query".
+
+## Round 2 — maintainability
+
+Round-1 answers checked against the code; all hold. Three stale words (`shown` in Reach and Edges, "(none)" in the DoD) — Fixed.
+
+### M-11 · blocker · Role labels are a second way to fill `conclusionsummaries.Term`, beside `finishTerm`
+**Answer:** Fixed — D-5: `conclusionsummaries.TermLabeler(c)` *(new)* wraps `vocabulary` + `finishTerm`; `rolesByNeighbor` takes it and builds roles from the link's `TermID` / `TermKey`; `TermsByID` dropped from D-4; Codebase fit row, Current state row, STEP-2 and `TestTermLabeler` (T-1) added.
