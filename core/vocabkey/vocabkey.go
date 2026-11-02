@@ -89,13 +89,18 @@ type Role string
 
 // Seeded term keys matching reads by name.
 const (
-	EventBirth    EventType = "birth"
-	EventDeath    EventType = "death"
-	EventBurial   EventType = "burial"
-	EventMarriage EventType = "marriage"
-	RoleSubject   Role      = "subject"
-	RoleFather    Role      = "father"
-	RoleMother    Role      = "mother"
+	EventBirth     EventType = "birth"
+	EventDeath     EventType = "death"
+	EventBurial    EventType = "burial"
+	EventMarriage  EventType = "marriage"
+	EventFuneral   EventType = "funeral"
+	RoleSubject    Role      = "subject"
+	RoleFather     Role      = "father"
+	RoleMother     Role      = "mother"
+	RoleChild      Role      = "child"
+	RoleWitness    Role      = "witness"
+	RoleInformant  Role      = "informant"
+	RolePallbearer Role      = "pallbearer"
 
 	SexMale     = "male"   // sex_at_birth
 	SexFemale   = "female" // sex_at_birth
