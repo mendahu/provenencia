@@ -35,3 +35,4 @@ NavigationPath          # SwiftUI
 StringProtocol          # Swift standard library
 accessibilityRepresentation  # SwiftUI modifier
 sync_with_base_branch   # a CI tool name ship-pr cites
+WorkspaceLocation       # PVDeleteImpact navigates to a delete's referrers; logged as structural debt (S13-34)
