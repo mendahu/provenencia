@@ -9,9 +9,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/eventtitle"
-	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -226,7 +226,7 @@ func matchText(h handleHead, id []byte, v handleValues, summaries conclusionsumm
 			secondary = append(secondary, personLifeMatch(p)...)
 		}
 		alts = distinctAlternates(title, v[vocabkey.PropertyName])
-		secondary = append(secondary, tagged(alts, "name")...)
+		secondary = append(secondary, tagged(alts, SecondaryTagName)...)
 	case vocabkey.Event:
 		if e, ok := summaries.Event(id); ok {
 			title = eventMatchTitle(e)
@@ -243,7 +243,7 @@ func matchText(h handleHead, id []byte, v handleValues, summaries conclusionsumm
 			parents = p.Parents
 		}
 		alts = distinctAlternates(title, names, v[vocabkey.PropertyToponym])
-		secondary = append(secondary, tagged(alts, "toponym")...)
+		secondary = append(secondary, tagged(alts, SecondaryTagToponym)...)
 		secondary = append(secondary, parents...)
 	}
 	if h.label != "" {
@@ -262,28 +262,45 @@ func tagged(vals []string, tag string) []string {
 	}
 	out := make([]string, len(vals))
 	for i, v := range vals {
-		out[i] = tag + ":\t" + v
+		out[i] = tag + v
 	}
 	return out
 }
 
-// valueWords are the shipped registry's word rules, never catalog data: a text
-// key reads nothing else.
-var valueWords = matchregistry.Default().Value.Words
+// productRules are the rules the reconciler cache reads: the shipped registry
+// and the product alias seed, never catalog data. A text key reads its Words;
+// a Person's folded-in nicknames read its Names.Aliases.
+var productRules = valuerules.Product()
 
-// distinctAlternates walks the lists in order and keeps a value whose text key
-// at Equivalent is neither the title's nor an earlier kept value's. A value
+// valueWords are the word rules of productRules.
+var valueWords = productRules.Words
+
+// alternateKey is a spelling's text key at Equivalent per raw token, joined by
+// one space, so it keeps the word breaks FTS keeps: "Ville-Marie" and
+// "Villemarie" differ, "Ville Marie" and "Ville-Marie" do not.
+func alternateKey(s string) string {
+	var keys []string
+	for _, raw := range valuecompare.RawTokens(s) {
+		if k, ok := valuecompare.TextKey(raw, valuecompare.Equivalent, valueWords); ok {
+			keys = append(keys, k)
+		}
+	}
+	return strings.Join(keys, " ")
+}
+
+// distinctAlternates walks the lists in order and keeps a value whose
+// alternateKey is neither the title's nor an earlier kept value's. A value
 // with no key is dropped; a title with no key excludes nothing.
 func distinctAlternates(title string, lists ...[]string) []string {
 	seen := map[string]bool{}
-	if k, ok := valuecompare.TextKey(title, valuecompare.Equivalent, valueWords); ok {
+	if k := alternateKey(title); k != "" {
 		seen[k] = true
 	}
 	var out []string
 	for _, list := range lists {
 		for _, val := range list {
-			k, ok := valuecompare.TextKey(val, valuecompare.Equivalent, valueWords)
-			if !ok || seen[k] {
+			k := alternateKey(val)
+			if k == "" || seen[k] {
 				continue
 			}
 			seen[k] = true

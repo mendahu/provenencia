@@ -126,6 +126,11 @@ func TestMatchTextListsEachAlternateOnce(t *testing.T) {
 			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Montreal", "Ville-Marie", "Ville Marie"}},
 			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "Québec"},
 		},
+		{
+			name: "a spelling that differs by a word break stays", head: handleHead{id: "p", kind: vocabkey.Place},
+			v:         handleValues{vocabkey.PropertyToponym: {"Montréal", "Ville-Marie", "Villemarie"}},
+			wantTitle: "Montréal", wantSecondary: []string{"toponym:\tVille-Marie", "toponym:\tVillemarie", "Québec"},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			person.Entity.ID, place.Entity.ID = []byte("p"), []byte("p")
@@ -176,5 +181,15 @@ func TestFoldedWords(t *testing.T) {
 		if got := foldedWords(tt.texts...); got != tt.want {
 			t.Errorf("foldedWords(%q) = %q, want %q", tt.texts, got, tt.want)
 		}
+	}
+}
+
+func TestMatchTextDropsAlternateTheFoldedColumnCovers(t *testing.T) {
+	place := conclusionsummaries.PlaceSummary{Names: []string{"Søby", "Soby"}}
+	place.Entity.ID = []byte("p")
+	summaries := conclusionsummaries.NewSummaries(nil, nil, []conclusionsummaries.PlaceSummary{place})
+	title, secondary := matchText(handleHead{id: "p", kind: vocabkey.Place}, []byte("p"), handleValues{}, summaries)
+	if title != "Søby" || len(secondary) != 0 {
+		t.Fatalf("title %q secondary %q", title, secondary)
 	}
 }
