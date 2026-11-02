@@ -593,15 +593,11 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 || names[0].Rank != 1 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=James|surname=Robins|suffix=Jr." {
+		if got := nameSpec(t, names[0].Name); got != "given=James|surname=Robins|suffix=Jr." {
 			t.Fatalf("parts %s", got)
 		}
+		n, err := valuecodec.UnmarshalName(names[0].Name)
+		must(t, err)
 		if n.Form != "James Robins Jr." || *names[0].SortKey != "james robins jr" {
 			t.Fatalf("form %q sort %q", n.Form, *names[0].SortKey)
 		}
@@ -617,13 +613,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=Christopher|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Christopher|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -653,13 +643,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 {
 			t.Fatalf("names %+v", names)
 		}
-		n, err := valuecodec.UnmarshalName(names[0].Name)
-		must(t, err)
-		var parts []string
-		for _, p := range n.Parts {
-			parts = append(parts, p.Type+"="+p.Value)
-		}
-		if got := strings.Join(parts, "|"); got != "given=Hannah|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Hannah|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -1626,12 +1610,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 			if len(res.Values) != 1 {
 				t.Fatalf("%d values", len(res.Values))
 			}
-			var given []string
-			for _, p := range res.Values[0].Value.Name.Parts {
-				if p.Type == "given" {
-					given = append(given, p.Value)
-				}
-			}
+			given := givenOf(res.Values[0].Value)
 			want := []string{tc.want}
 			if tc.want == "" {
 				want = []string{tc.a, tc.b}
@@ -1684,6 +1663,18 @@ func TestProductAliasTablesPinCacheVersion(t *testing.T) {
 	if autoreconciler.CacheVersion != productAliasPin.CacheVersion {
 		t.Fatalf("CacheVersion %d, pinned %d: write the new version beside the new hash", autoreconciler.CacheVersion, productAliasPin.CacheVersion)
 	}
+}
+
+// nameSpec renders a name's parts as "type=value|…".
+func nameSpec(t *testing.T, raw []byte) string {
+	t.Helper()
+	n, err := valuecodec.UnmarshalName(raw)
+	must(t, err)
+	var parts []string
+	for _, p := range n.Parts {
+		parts = append(parts, p.Type+"="+p.Value)
+	}
+	return strings.Join(parts, "|")
 }
 
 // givenOf lists a reconciled name's given parts in order.
