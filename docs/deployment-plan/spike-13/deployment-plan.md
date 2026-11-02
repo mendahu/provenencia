@@ -107,7 +107,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **The provenance sheet replaces the Why on the Person page only.** Event and Place keep the Why accordion until they adopt sections; the accordion is deleted then, not this spike (user, 2026-10-26). The shared row takes the sheet or the accordion by caller; this is known debt owned by the Event and Place redesign. Binds S13-11.
 
 - **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` stays the one page for Person, Event and Place. S13-09 gives it a sections slot; Event and Place pass a single section and look unchanged (R-1), and the Person page later passes five. When Event and Place adopt sections, they fill the slot. Binds S13-09, S13-10.
-- **One person tile, two sizes, in the feature** (user, 2026-11-02; replaces "placed as a recipe once it has the second caller" and, the same day, "the shell in the kit"). The person tile is built in S13-12 (Family) and stays in `Features/Conclusions`, shared within the feature ([`design-system-layers.md`](../../design-system-layers.md) § 3: a feature's shared pieces stay snowflakes; the kit holds content-agnostic components and treatments such as the gender colors, and it imports no feature code). Board S13-D4 (turn 12) gives the Timeline a **compact** size: a 52pt card with a 40pt likeness, the name on one line and the life years, the full b. and d. lines in the tooltip and VoiceOver. Family keeps the regular 92pt size. One tile type with two sizes, not two tiles; S13-13 adds the compact size. Shared value resolvers (a term value's name) live at the repository level (`Platform/`). Binds S13-12, S13-13.
+- **The person card lives in the design system; display is decoupled from content** (user, 2026-11-02; replaces "one person tile, built once" and, the same day, "two sizes, in the feature"). A family tree in another feature will reuse the person card, so it moves to the design system, in a regular size (Family) and a compact size (Timeline, board S13-D4 turn 12). Semantic design-system pieces are welcome when they are reused in different places; the rule that stands is that the design system imports no feature code. So the pieces the card is built from move down a layer first: content-agnostic display (title styling: name plain, label italic, ref mono; the date · place line; a card shell with slots, sizes and its click, focus-ring, hover and Return behaviour) to `DesignSystem/Components/`; value formatting (names, dates, terms, places, a person's title and life span) to `Platform/`, with one rule for a term's name; Provenencia-meaning pieces (the gender colour treatment, the person card) to `DesignSystem/Recipes/`. Event and place cards follow on the same shell when each has a second caller. S13-34 and S13-35 do this before S13-13 (evaluation of `PersonTile`, 2026-11-02). Binds S13-12, S13-13, S13-34, S13-35.
 - **Colors reuse `PersonGenderTreatment`** (R-3), fed from `PersonSummary`'s terms (S13-02). Binds S13-12, S13-13.
 - **A timeline tile opens the participant on Timeline** (user, 2026-11-02). A click on a participant's tile in the Timeline section opens that person's Person page on its Timeline section, so the researcher walks from one life to the next, as a family tile opens on Family; every other link to a Person still lands on Vitals (S13-D1 PPF-5). An event's title opens its Event page (R-28). Binds S13-13.
 - **Timeline lists fold** (user, 2026-11-02). As on Family, nothing is hidden for good: each event's participants fold at 15 and the event list (the dated list and the Undated group each) at 50, behind the shared "Show N more" row; Go still returns every event and participant. Binds S13-13.
@@ -136,8 +136,10 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-19 | One person's links | 3 | Moved to Spike 11 as S11-51 so it ships with S11-39 | — | — | — | Descoped (2026-10-26) → S11-51 |
 | S13-05 | Person timeline read | 4 | An any-role participation hop; `ListPersonEvents` RPC: `EventSummary`s sorted by `sortEvents`, with the person's roles and the other participants as {roles, `PersonSummary`} | — | S13-01, S13-02, S13-31 | [S13-05](prs/S13-05-person-timeline-read.md) | Landed #680 |
 | S13-33 | Timeline positions | 4 | Go and proto: `ListPersonEvents` gives each dated event its place on a day scale (a span on the year line from `valuecompare.DateEnds`, open ends flagged; a date known only by its end, "bef. 1880", is dated and ordered at that end everywhere) and the life's birth and death markers, each the recorded event or a placeholder placed by a declarative table of event types allowed after death or before birth; each event's participants ordered by role, then name; Swift maps them | — (no chrome change) | S13-05 | [S13-33](prs/S13-33-timeline-positions.md) | Planned |
-| S13-32 | The person tile becomes a kit shell | 4 | Preparatory split of the tile into a kit shell and person content | — | — | — | Descoped (2026-11-02): the Timeline's compact card (board S13-D4 turn 12) does not reuse the Family tile as is; the tile stays in the feature with two sizes (S13-13) |
-| S13-13 | Timeline section | 4 | The lifeline drawn to scale with birth and death markers (placeholders when unrecorded), the event list pointing to it, undated events between birth and death, roles, the event's lead picture (else the Event mark), participants as person tiles opening on Timeline, Undated group, folds (events 50, participants 15); the person tile's compact size; full width at Wide (a Page columns mode); one host for a section's own read, shared with Family | [S13-D4](design/S13-D4-timeline-section.md) | S13-05, S13-12, S13-33 | [S13-13](prs/S13-13-timeline-section.md) | Blocked — on S13-33 |
+| S13-32 | The person tile becomes a kit shell | 4 | Preparatory split of the tile into a kit shell and person content | — | — | — | Descoped (2026-11-02) → re-cut as S13-34 and S13-35 |
+| S13-34 | Display pieces move down a layer | 4 | Preparatory, Swift only: title styling and the date · place line become design-system components (`PVTitleText`, `PVDatePlaceLine`); name, date, term, place, person-title and life-span formatting move to `Platform/` out of the Names, Dates and Conclusions features; one rule names a term value (Vitals and the gender badge show the app's name for a built-in term); the life span gains a year precision | — (no chrome change but the term names) | — | — | Scoped |
+| S13-35 | The person card joins the design system | 4 | Preparatory, Swift only: a content-agnostic card shell (`PVTileCard`: slots, regular, compact and row sizes, click, focus ring, hover, Return) with its Return modifier and focus-ring button style; the gender treatment and the person card (`PVPersonCard`, regular and compact) as design-system recipes; Family moves onto them unchanged | — (no chrome change) | S13-34 | — | Scoped |
+| S13-13 | Timeline section | 4 | The lifeline drawn to scale with birth and death markers (placeholders when unrecorded), the event list pointing to it, undated events between birth and death, roles, the event's lead picture (else the Event mark), participants as person tiles opening on Timeline, Undated group, folds (events 50, participants 15); the person tile's compact size; full width at Wide (a Page columns mode); one host for a section's own read, shared with Family | [S13-D4](design/S13-D4-timeline-section.md) | S13-05, S13-12, S13-33, S13-35 | [S13-13](prs/S13-13-timeline-section.md) | Blocked — on S13-33, S13-35 |
 | S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait and open Citation | S13-D5 | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | — | Scoped |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery | S13-D5 | S13-14 | — | Scoped |
 | S13-08 | Unpromoting the last member | 6 | `UnpromoteSubject` on the last accepted member deletes the person through `deleteimpact`, wherever Unpromote runs; an unpromote Impact preflight for both confirms | — | S13-25 | — | Scoped |
@@ -207,6 +209,8 @@ SLICE 3 — Family
 SLICE 4 — Timeline
   S13-05  Person timeline read
   S13-33  Timeline positions
+  S13-34  Display pieces move down a layer   (preparatory)
+  S13-35  The person card joins the design system   (preparatory)
   ✎ S13-D4 ──▶ S13-13  Timeline section
   Check: bar 4
 
@@ -241,6 +245,8 @@ S13-99 — Dogfood close / docs
 S13-23 ──▶ S13-24 ──▶ S13-25 ──▶ S13-08
 S13-23 ──▶ S14-02, S14-22    S13-24 ──▶ S14-16, S14-20      (Spike 14)
 S11-30 ──▶ S13-02 ──┬──────────────▶ S13-04 ──▶ S13-12 ──▶ S13-13 ◀── S13-33 ◀── S13-05
+                                                        ▲
+                                     S13-34 ──▶ S13-35 ──┘
 S11-39 ──▶ S13-03 ──┤                  ▲                     ▲
 S11-39 ──▶ S11-51 ──┘                  │                     │
 S13-01 ──┬─────────────────────────────┘                     │
@@ -395,7 +401,7 @@ Go, plus deleting Swift's draft rule.
 
 **Ships.** The Family section from S13-D3: person tiles, lines, several families, each tile opening its person on Family; `persondetail.PersonFamily` orders each unit's children by birth, undated last (user, 2026-11-01).
 **Check.** Bar 3.
-**Context.** R-16 – R-22; working rules "One person tile, two sizes, in the feature", "Colors reuse `PersonGenderTreatment`".
+**Context.** R-16 – R-22; working rules "The person card lives in the design system; display is decoupled from content", "Colors reuse `PersonGenderTreatment`".
 
 ### Slice 4 — Timeline
 
@@ -413,9 +419,23 @@ Go, plus deleting Swift's draft rule.
 **Check.** Handler tests: a birth on 12 Mar 1817 → one day; "1844 – 1849" → a span; "bef. 1880" → dated, an open start, ordered at 1880; no birth event, an 1835 census first → a birth placeholder before the census; a funeral in 1880 and no death, a census in 1875 → a death placeholder after the census and before the funeral; an undated event has no place; a second read issues no query (`SetQueryCounterForTest`).
 **Context.** Working rule "The timeline is a lifeline"; R-24, R-24a; S13-05 plan D-8 (`Dated`, `HasEventDate`, both replaced by the span); `core/valuecompare/datewindow.go` `DateEnds` ("civil components are read as Gregorian"); `core/subjectprofile` `lifespan` (the matching rule, not reused); [`add-catalog-query`](../../../.agents/skills/add-catalog-query/SKILL.md), [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md).
 
+#### S13-34 — Display pieces move down a layer
+
+**Ships.** A preparatory move with one visible change (working rule "The person card lives in the design system; display is decoupled from content"). (1) Design-system components: `ConclusionTitleSource` and `ConclusionListRow.title` become `PVTitleSource` and `PVTitleText` (name plain, label italic, ref mono); `ConclusionDatePlaceLine` becomes `PVDatePlaceLine` with its own missing-half option and a date size; their copy moves to `L10n.DesignSystem`. (2) `Platform/`: `NameValueDisplay` and its name-format types, `DateRowDisplay` (gaining a year precision that keeps qualifiers and ranges) and `DateValueDisplay`, `PlaceChainDisplay`, `DerivedPlace`, `PersonTitleDisplay` and `PersonLifeDisplay` move out of the Names, Dates and Conclusions features, with editor-only parts left behind as extensions. (3) One rule names a term value: `PropertyTermDisplay.name(_ value: CatalogConclusionValue, propertyKey:)`, through which the Vitals rows (`ReconciledValueDisplay`) and the gender treatment now read, so a relabelled built-in term shows the app's name (user, 2026-11-02).
+**Not this PR.** The card shell and the person card (S13-35); event and place cards; the Events list's own date · place line (a follow-up).
+**Check.** Lists, Vitals, Family and the header look as before except the term names; nothing under `macos/App/DesignSystem/` or `Platform/` imports a `Features/` type the move touched; the moved types' tests pass.
+**Context.** Evaluation of `PersonTile` (2026-11-02); S13-13 plan D-5, D-18, D-20 (moved here); [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md); [`design-system-layers.md`](../../design-system-layers.md).
+
+#### S13-35 — The person card joins the design system
+
+**Ships.** The person card in the design system, Family unchanged. `PVTileCard` (Components): a content-agnostic card with thumbnail, title, lines and trailing slots, `regular`, `compact` and `row` sizes, a raised option, and an optional action that makes it a button with the focus ring, hover lift and Return; `pvActivatesOnReturn` and `PVFocusRingButtonStyle` (Components) beside it. `PVGenderTreatment` (Recipes) from `PersonGenderTreatment`, its detail-page badge left in the feature. `PVPersonCard` (Recipes) from `PersonTile` and `PersonTileContent`, regular and compact (52pt, 40pt likeness, one-line name, the life span at year precision, full lines in the tooltip and VoiceOver), its copy in its own L10n namespace. After it, nothing under `macos/App/DesignSystem/` imports `Features/`.
+**Not this PR.** The Timeline (S13-13); event and place cards (when each has a second caller).
+**Check.** Family looks, reads and behaves as before at both widths; the compact size in a preview; `PersonTileTests` and the Family tests pass on the new names.
+**Context.** Working rule "The person card lives in the design system; display is decoupled from content"; S13-13 plan D-4, D-10, D-19 (moved here); board S13-D4 turn 12 (the compact card); [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md).
+
 #### S13-32 — The person tile becomes a kit shell
 
-**Descoped (2026-11-02).** It split the tile into a design-system shell and person content so the Timeline could reuse the Family tile. Board S13-D4 (turn 12) draws the Timeline's participants as a compact card, so the tile stays in `Features/Conclusions` with two sizes (working rule "One person tile, two sizes, in the feature"), and S13-13 adds the compact size. Its two shared pieces move to S13-13: `PropertyTermDisplay.name(_:propertyKey:)` and the kit's Return modifier.
+**Descoped (2026-11-02), then re-cut the same day as S13-34 and S13-35.** It split the tile into a design-system shell and person content. The user then chose to hoist the person card into the design system (a family tree in another feature will reuse it) and to move the display pieces it is built from down a layer first; S13-34 and S13-35 carry that work.
 
 #### S13-13 — Timeline section
 
