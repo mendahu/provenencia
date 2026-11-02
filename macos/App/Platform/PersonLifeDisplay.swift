@@ -11,7 +11,7 @@ enum PersonLifeDisplay {
     }
 
     static func line(_ summary: CatalogPersonSummary, locale: Locale = .autoupdatingCurrent) -> Line {
-        let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale)
+        let dates = dateSpan(birth: summary.birth.date, death: summary.death.date, locale: locale, precision: .full)
         let places = placeSpan(birth: summary.birth.places, death: summary.death.places)
         let extra = DerivedPlace.extra(summary.birth.places) + DerivedPlace.extra(summary.death.places)
         let text: String
@@ -93,18 +93,23 @@ enum PersonLifeDisplay {
     }
 
     /// The date a life row shows. Empty when none is recorded.
-    static func dateText(_ date: CatalogDateValueInput?, locale: Locale = .autoupdatingCurrent) -> String {
+    static func dateText(
+        _ date: CatalogDateValueInput?,
+        locale: Locale = .autoupdatingCurrent,
+        precision: DateRowDisplay.Precision = .full
+    ) -> String {
         guard let date else { return "" }
-        return DateRowDisplay.line(date: date, locale: locale)
+        return DateRowDisplay.line(date: date, precision: precision, locale: locale)
     }
 
     private static func dateSpan(
         birth: CatalogDateValueInput?,
         death: CatalogDateValueInput?,
-        locale: Locale
+        locale: Locale,
+        precision: DateRowDisplay.Precision = .full
     ) -> String {
-        let born = dateText(birth, locale: locale)
-        let died = dateText(death, locale: locale)
+        let born = dateText(birth, locale: locale, precision: precision)
+        let died = dateText(death, locale: locale, precision: precision)
         switch (born.isEmpty, died.isEmpty) {
         case (true, true):
             return ""
