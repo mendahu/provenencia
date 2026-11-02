@@ -61,7 +61,7 @@ type unitValue struct {
 	rank    int             // best-ranked carrier
 	sources map[string]bool // Sources carrying exactly this value
 	strong  bool            // some exact carrier is not weak
-	into    *unitValue      // the fuller value it folds into; nil on a root
+	into    *unitValue      // the value it reaches through folds (a sink); nil on a root
 	// Set on roots:
 	total     map[string]bool // Sources once folded values are added
 	anyStrong bool            // some carrier, folded ones included, is not weak
