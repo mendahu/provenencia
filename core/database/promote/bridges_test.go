@@ -514,3 +514,20 @@ func TestBridgeSubjectDeleteKeepsTheEndClaims(t *testing.T) {
 		t.Fatalf("person claim: %v", err)
 	}
 }
+
+// An association Subject is not a primary type: saving one that is already
+// filed by its bridge is unsupported, not "already a member".
+func TestSaveRefusesAnAssociationAlreadyFiledByItsBridge(t *testing.T) {
+	w := newBridgeWorld(t)
+	james := w.node("person", "James", 0, 0)
+	birth := w.node("event", "Birth", 2, 0)
+	bridge := w.participation(james, birth, w.subjectRole)
+	w.promote(james)
+	w.promote(birth)
+	_, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+		return promote.Save(tx, userID, promote.Input{SubjectID: bridge.Subject.ID})
+	})
+	if !errors.Is(err, promote.ErrUnsupportedType) {
+		t.Fatalf("err %v, want promote.ErrUnsupportedType", err)
+	}
+}

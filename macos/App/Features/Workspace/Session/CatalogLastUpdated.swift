@@ -27,10 +27,7 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case handle
     /// `CatalogWriteEffects.sourceScopes`.
     case source
-    /// The key ids of one entry of `CatalogWriteEffects.reads`. A read also
-    /// follows the ids its mutation names when the effects did not
-    /// (`CatalogMutation.readIDs(for:)`: Promote's graph, a deleted Source;
-    /// S14-16 removes these special cases).
+    /// The key ids of one entry of `CatalogWriteEffects.reads`.
     case reads(CatalogRead)
     /// `CatalogWriteEffects.touchedHandles`: every handle a write changed or
     /// whose summary it changed.
@@ -39,18 +36,14 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case evidenceGraphs
 
     /// The ids of a write that this slot follows.
-    func ids(in effects: CatalogWriteEffects, mutation: CatalogMutation?) -> [String] {
+    func ids(in effects: CatalogWriteEffects) -> [String] {
         switch self {
         case .handle:
             return effects.handleScopes
         case .source:
             return effects.sourceScopes
         case .reads(let read):
-            var ids = effects.reads.first { $0.read == read }?.ids ?? []
-            for id in mutation?.readIDs(for: read) ?? [] where !ids.contains(id) {
-                ids.append(id)
-            }
-            return ids
+            return effects.reads.first { $0.read == read }?.ids ?? []
         case .touchedHandles:
             return effects.touchedHandles
         case .evidenceGraphs:

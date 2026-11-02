@@ -321,7 +321,7 @@ func TestSearchHitHidesDamagedCoverThumbnail(t *testing.T) {
 func TestSearchHitCarriesPersonPicture(t *testing.T) {
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
-	promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+	promoteInDir(t, dir, userID, personID, "")
 
 	raw, err := ListPersonSummaries(marshalProto(t, &engine.ListPersonSummariesRequest{ProjectDir: dir}))
 	if err != nil {

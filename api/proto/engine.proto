@@ -48,6 +48,9 @@ enum Method {
   // Identity Claims carry no confidence, and Done files claims and bridges only.
   reserved 89, 110;
   reserved "METHOD_LIST_CLAIM_CONFIDENCE_GRADES", "METHOD_GET_PROMOTE_CLAIM_EVIDENCE";
+  // S14-16: Promote files through ApplyPromoteGraphAlignment.
+  reserved 85;
+  reserved "METHOD_PROMOTE_SUBJECT";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -104,7 +107,6 @@ enum Method {
   METHOD_DELETE_SOURCE = 82;
   METHOD_DELETE_ARTIFACT = 83;
   METHOD_DELETE_CITATION = 84;
-  METHOD_PROMOTE_SUBJECT = 85;
   METHOD_LIST_SUBJECT_MEMBERSHIPS = 86;
   METHOD_LIST_PERSON_SUMMARIES = 87;
   METHOD_GET_CONCLUSION_DETAIL = 90;
@@ -546,6 +548,7 @@ message UpdateSourceRequest {
 
 message UpdateSourceResponse {
   Source source = 1;
+  WriteEffects effects = 2;
 }
 
 message DeleteSourceRequest {
@@ -554,7 +557,9 @@ message DeleteSourceRequest {
   string source_id = 3;
 }
 
-message DeleteSourceResponse {}
+message DeleteSourceResponse {
+  WriteEffects effects = 1;
+}
 
 message SetSourceCoverRequest {
   string project_dir = 1;
@@ -568,6 +573,7 @@ message SetSourceCoverRequest {
 
 message SetSourceCoverResponse {
   Source source = 1;
+  WriteEffects effects = 2;
 }
 
 message AddSourceNoteRequest {
@@ -1110,34 +1116,6 @@ message CanonicalEntity {
   string ref = 2;
   string subject_type_id = 3;
   string label = 4;
-}
-
-// IdentityClaim files one Subject onto one handle; accepted claims are members.
-message IdentityClaim {
-  string id = 1;
-  string subject_id = 2;
-  string entity_id = 3;
-  string status = 4; // provisional | accepted | rejected
-  reserved 5, 6;
-  reserved "confidence_grade_id", "argument";
-}
-
-// PromoteSubject files an accepted claim for the Subject, one transaction:
-// onto a newly minted handle of its type when entity_id is empty, else onto
-// that existing handle (same type, unmerged; claim only). Refuses members and
-// non-primary kinds.
-message PromoteSubjectRequest {
-  string project_dir = 1;
-  string user_id = 2;
-  string subject_id = 3;
-  string entity_id = 4; // empty = mint a new handle
-  reserved 5, 6;
-  reserved "confidence_grade_id", "argument";
-}
-
-message PromoteSubjectResponse {
-  CanonicalEntity entity = 1;
-  IdentityClaim claim = 2;
 }
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
@@ -1813,16 +1791,10 @@ message ApplyPromoteGraphAlignmentRow {
   reserved "confidence_grade_id", "argument", "pin_ids", "default_pins";
 }
 
-message ApplyPromoteGraphAlignmentWritten {
-  CanonicalEntity entity = 1;
-  IdentityClaim claim = 2;
-  reserved 3;
-  reserved "pins";
-}
-
 message ApplyPromoteGraphAlignmentResponse {
-  int64 revision = 1;
-  repeated ApplyPromoteGraphAlignmentWritten written = 2;
+  reserved 1, 2;
+  reserved "revision", "written";
+  WriteEffects effects = 3;
 }
 
 message ListSubjectsRequest {

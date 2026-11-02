@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,8 +24,8 @@ func filedSubject(t *testing.T, observed bool) (dir, userID, sourceID, subjectID
 			t.Fatal(err)
 		}
 	}
-	promoted := promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID})
-	return dir, userID, sourceID, subjectID, promoted.GetEntity().GetId()
+	promoted := promoteInDir(t, dir, userID, subjectID, "")
+	return dir, userID, sourceID, subjectID, database.UUIDString(promoted.Entity.ID)
 }
 
 // TestSourceWritesReturnEffects: a Source-page or graph write tells the app
@@ -126,4 +127,72 @@ func contains(ids []string, id string) bool {
 		}
 	}
 	return false
+}
+
+// TestUpdateAndCoverReturnEffects: a rename or a cover change reports the
+// Source and, for a title, its graphs, and never a sidebar recount.
+func TestUpdateAndCoverReturnEffects(t *testing.T) {
+	t.Run("a rename reports the Source and its graph, no counts", func(t *testing.T) {
+		dir, userID, sourceID, _, _ := filedSubject(t, false)
+		var listed engine.ListSourcesResponse
+		mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: dir}, &listed)
+		var typeID string
+		for _, src := range listed.GetSources() {
+			if src.GetId() == sourceID {
+				typeID = src.GetSourceTypeId()
+			}
+		}
+		var resp engine.UpdateSourceResponse
+		mustRPC(t, UpdateSource, &engine.UpdateSourceRequest{
+			ProjectDir: dir, UserId: userID, SourceId: sourceID,
+			SourceTypeId: typeID, Title: "Renamed",
+		}, &resp)
+		eff := resp.GetEffects()
+		if !contains(eff.GetSourceScopes(), sourceID) {
+			t.Fatalf("source_scopes = %v, want %s", eff.GetSourceScopes(), sourceID)
+		}
+		if graphID := soleGraphID(t, dir, sourceID); !contains(eff.GetEvidenceGraphs(), graphID) {
+			t.Fatalf("evidence_graphs = %v, want %s", eff.GetEvidenceGraphs(), graphID)
+		}
+		if contains(eff.GetLists(), "counts") {
+			t.Fatalf("lists = %v, a rename moved the counts", eff.GetLists())
+		}
+	})
+	t.Run("an artifact cover and a revert to the type icon report the Source only", func(t *testing.T) {
+		f := sourceWithPNG(t)
+		for _, req := range []*engine.SetSourceCoverRequest{
+			{ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, CoverMode: "artifact", PrimaryArtifactId: f.artifactID},
+			{ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, CoverMode: "type_icon"},
+		} {
+			var resp engine.SetSourceCoverResponse
+			mustRPC(t, SetSourceCover, req, &resp)
+			eff := resp.GetEffects()
+			if !contains(eff.GetSourceScopes(), f.sourceID) {
+				t.Fatalf("%s: source_scopes = %v, want %s", req.GetCoverMode(), eff.GetSourceScopes(), f.sourceID)
+			}
+			if len(eff.GetEvidenceGraphs()) != 0 {
+				t.Fatalf("%s: evidence_graphs = %v, want none", req.GetCoverMode(), eff.GetEvidenceGraphs())
+			}
+			if contains(eff.GetLists(), "counts") {
+				t.Fatalf("%s: lists = %v, a cover change moved the counts", req.GetCoverMode(), eff.GetLists())
+			}
+		}
+	})
+}
+
+func TestDeleteSourceReturnsEffects(t *testing.T) {
+	dir, userID, sourceID, _ := subjectFixture(t)
+	graphID := soleGraphID(t, dir, sourceID)
+	var resp engine.DeleteSourceResponse
+	mustRPC(t, DeleteSource, &engine.DeleteSourceRequest{ProjectDir: dir, UserId: userID, SourceId: sourceID}, &resp)
+	eff := resp.GetEffects()
+	if !contains(eff.GetEvidenceGraphs(), graphID) {
+		t.Fatalf("evidence_graphs = %v, want %s", eff.GetEvidenceGraphs(), graphID)
+	}
+	if !readHas(eff, "evidence_graphs", sourceID) {
+		t.Fatalf("reads = %v, want evidence_graphs for %s", eff.GetReads(), sourceID)
+	}
+	if !contains(eff.GetLists(), "counts") {
+		t.Fatalf("lists = %v, want counts", eff.GetLists())
+	}
 }

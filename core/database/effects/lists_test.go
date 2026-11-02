@@ -40,6 +40,15 @@ func TestResolveLists(t *testing.T) {
 	obs := func(action string, fields map[string]rowchange.FieldDiff) rowchange.Change {
 		return rowchange.Change{EntityType: "observation", EntityID: id(4), Action: action, Fields: fields}
 	}
+	source := func(action string, fields map[string]rowchange.FieldDiff) rowchange.Change {
+		return rowchange.Change{EntityType: "source", EntityID: id(7), Action: action, Fields: fields}
+	}
+	entity := func(action string, fields map[string]rowchange.FieldDiff) rowchange.Change {
+		return rowchange.Change{EntityType: "canonical_entity", EntityID: id(8), Action: action, Fields: fields}
+	}
+	title := map[string]rowchange.FieldDiff{"title": {Old: "a", New: "b"}}
+	preferred := map[string]rowchange.FieldDiff{"preferred_likeness_observation_id": {Old: id(5), New: id(6)}}
+	merged := map[string]rowchange.FieldDiff{"merged_into_id": {Old: nil, New: id(6)}}
 	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
 	prop := map[string]rowchange.FieldDiff{"property_id": {Old: id(5), New: id(6)}}
 
@@ -57,6 +66,19 @@ func TestResolveLists(t *testing.T) {
 			[]effects.List{effects.ListPropertyUsage}},
 		{"observation delete", []rowchange.Change{obs(rowchange.ActionDelete, text)},
 			[]effects.List{effects.ListPropertyUsage}},
+		{"source create", []rowchange.Change{source(rowchange.ActionCreate, rowchange.FullRow(map[string]any{"title": "a"}))},
+			[]effects.List{effects.ListCounts}},
+		{"source title edit", []rowchange.Change{source(rowchange.ActionUpdate, title)}, nil},
+		{"source delete", []rowchange.Change{source(rowchange.ActionDelete, rowchange.FullRow(map[string]any{"title": "a"}))},
+			[]effects.List{effects.ListCounts}},
+		{"handle create", []rowchange.Change{entity(rowchange.ActionCreate, rowchange.FullRow(map[string]any{"ref": "PER-1"}))},
+			[]effects.List{effects.ListCounts}},
+		{"handle preferred picture edit", []rowchange.Change{entity(rowchange.ActionUpdate, preferred)}, nil},
+		{"handle merge", []rowchange.Change{entity(rowchange.ActionUpdate, merged)},
+			[]effects.List{effects.ListCounts}},
+		{"source type then source keeps list order",
+			[]rowchange.Change{source(rowchange.ActionCreate, rowchange.FullRow(map[string]any{"title": "a"})), sourceType},
+			[]effects.List{effects.ListVocabulary, effects.ListCounts}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

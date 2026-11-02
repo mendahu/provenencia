@@ -61,11 +61,27 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 		if err := proto.Unmarshal(applied, &res); err != nil {
 			t.Fatal(err)
 		}
-		if len(res.Written) != 1 || !strings.HasPrefix(res.Written[0].Entity.GetRef(), "PER-") {
-			t.Fatalf("%+v", res.Written)
+		eff := res.GetEffects()
+		if eff.GetRevision() <= proposal.GetRevision() {
+			t.Fatalf("revision %d, proposal %d", eff.GetRevision(), proposal.GetRevision())
 		}
-		if res.GetRevision() <= proposal.GetRevision() {
-			t.Fatalf("revision %d, proposal %d", res.GetRevision(), proposal.GetRevision())
+		if len(eff.GetHandles()) != 1 {
+			t.Fatalf("handles = %v, want the one new handle", eff.GetHandles())
+		}
+		var detail engine.ConclusionDetail
+		mustRPC(t, GetConclusionDetail, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: eff.GetHandles()[0]}, &detail)
+		if !strings.HasPrefix(detail.GetEntity().GetRef(), "PER-") {
+			t.Fatalf("ref = %q", detail.GetEntity().GetRef())
+		}
+		graphID := soleGraphID(t, dir, sourceID)
+		if !contains(eff.GetEvidenceGraphs(), graphID) {
+			t.Fatalf("evidence_graphs = %v, want %s", eff.GetEvidenceGraphs(), graphID)
+		}
+		if !readHas(eff, "evidence_graph_progress", graphID) {
+			t.Fatalf("reads = %v, want progress for %s", eff.GetReads(), graphID)
+		}
+		if !contains(eff.GetLists(), "counts") {
+			t.Fatalf("lists = %v, want counts", eff.GetLists())
 		}
 	})
 
@@ -84,8 +100,55 @@ func TestApplyPromoteGraphAlignment(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(res.GetWritten()) != 1 || res.GetWritten()[0].GetEntity().GetId() != f.handle {
-			t.Fatalf("written = %+v, want one row on %s", res.GetWritten(), f.handle)
+		if !contains(res.GetEffects().GetHandles(), f.handle) {
+			t.Fatalf("handles = %v, want %s", res.GetEffects().GetHandles(), f.handle)
+		}
+		if contains(res.GetEffects().GetLists(), "counts") {
+			t.Fatalf("a join reported counts: %v", res.GetEffects().GetLists())
 		}
 	})
+}
+
+// A Done whose connection has both ends filed mints an association handle
+// beside the two it files, and reports all three.
+func TestApplyPromoteGraphAlignmentReportsABridgeMint(t *testing.T) {
+	dir, userID, sourceID, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+	var bridge engine.CreateCitedBridgeResponse
+	mustRPC(t, CreateCitedBridge, &engine.CreateCitedBridgeRequest{
+		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
+		BridgeTypeKey: "participation", ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{PropertyId: personProp, ValueSubjectId: personID},
+			{PropertyId: eventProp, ValueSubjectId: eventID},
+			{PropertyId: roleProp, ValueTermId: roleTerm},
+		},
+	}, &bridge)
+	graphID := soleGraphID(t, dir, sourceID)
+	var proposal engine.ProposePromoteGraphAlignmentResponse
+	mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{ProjectDir: dir, GraphId: graphID}, &proposal)
+	var res engine.ApplyPromoteGraphAlignmentResponse
+	mustRPC(t, ApplyPromoteGraphAlignment, &engine.ApplyPromoteGraphAlignmentRequest{
+		ProjectDir: dir, UserId: userID, GraphId: graphID, SeenRevision: proposal.GetRevision(),
+		Rows: []*engine.ApplyPromoteGraphAlignmentRow{
+			{SubjectId: personID, Target: "new"},
+			{SubjectId: eventID, Target: "new"},
+		},
+	}, &res)
+	if !contains(res.GetEffects().GetLists(), "counts") {
+		t.Fatalf("lists = %v, want counts", res.GetEffects().GetLists())
+	}
+	// The person, the event and the association their connection minted.
+	if got := len(res.GetEffects().GetHandles()); got != 3 {
+		t.Fatalf("handles = %v, want the person, the event and the association", res.GetEffects().GetHandles())
+	}
+}
+
+// readHas reports whether the effects name a keyed read for the id.
+func readHas(eff *engine.WriteEffects, read, id string) bool {
+	for _, r := range eff.GetReads() {
+		if r.GetRead() == read && contains(r.GetIds(), id) {
+			return true
+		}
+	}
+	return false
 }

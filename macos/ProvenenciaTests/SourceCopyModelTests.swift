@@ -267,6 +267,7 @@ struct SourceCopyModelTests {
     @Test func copyRecountsThroughSession() async {
         let store = makeStore()
         let (model, session) = await loaded(store)
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.counts])
         let counts = CatalogCounts(projectDir: projectDir, store: store)
         session.onNavCountsMoved = { await counts.refreshAll() }
         _ = await model.copy()

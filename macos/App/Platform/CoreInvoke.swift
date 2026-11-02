@@ -117,7 +117,6 @@ enum CoreMethod {
     static let deleteSource = Int32(Provenencia_Engine_V1_Method.deleteSource.rawValue)
     static let deleteArtifact = Int32(Provenencia_Engine_V1_Method.deleteArtifact.rawValue)
     static let deleteCitation = Int32(Provenencia_Engine_V1_Method.deleteCitation.rawValue)
-    static let promoteSubject = Int32(Provenencia_Engine_V1_Method.promoteSubject.rawValue)
     static let unpromoteSubject = Int32(Provenencia_Engine_V1_Method.unpromoteSubject.rawValue)
     static let setPreferredLikeness = Int32(Provenencia_Engine_V1_Method.setPreferredLikeness.rawValue)
     static let listSubjectMemberships = Int32(Provenencia_Engine_V1_Method.listSubjectMemberships.rawValue)

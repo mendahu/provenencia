@@ -47,7 +47,6 @@ struct SourcesModelTests {
         store: FakeStore = FakeStore(),
         sources: [CatalogSource] = [],
         types: [CatalogSourceType] = [],
-        catalogCounts: CatalogCounts? = nil,
         settingsStore: SourcesListSettingsStore? = nil
     ) -> (SourcesModel, WorkspaceSession) {
         store.sourcesByProject[projectDir] = sources
@@ -66,7 +65,6 @@ struct SourcesModelTests {
             session: session,
             userID: userID,
             store: store,
-            catalogCounts: catalogCounts,
             settingsStore: settingsStore
         )
         return (model, session)
@@ -89,7 +87,6 @@ struct SourcesModelTests {
         ) {
             await waitForQuery(graphsHandle)
         }
-        model.syncCatalogCounts()
     }
 
     private func warmProgress(_ model: SourcesModel, session: WorkspaceSession) async {
@@ -124,22 +121,19 @@ struct SourcesModelTests {
         #expect(model.copying?.original.id == "s1")
     }
 
-    @Test func sessionQueryPopulatesSourcesTypesAndPublishesCount() async {
+    @Test func sessionQueryPopulatesSourcesAndTypes() async {
         let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
         let (model, session) = makeModel(
             store: store,
             sources: [
                 source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001"),
                 source(id: "s2", title: "Deed", typeID: "t2", ref: "SRC-0002"),
             ],
-            types: [photoType(), bookType()],
-            catalogCounts: counts
+            types: [photoType(), bookType()]
         )
         await warmLists(model, session: session)
         #expect(model.sources.count == 2)
         #expect(model.types.count == 2)
-        #expect(counts.sources == 2)
         let album = model.sources.first { $0.id == "s1" }
         #expect(album != nil)
         #expect(model.typeLabel(for: album!) == "Photograph")
@@ -474,44 +468,6 @@ struct SourcesModelTests {
 
         #expect(model.sources.first?.title == "Deed renamed")
         #expect(model.sources.first?.coverMode == "type_icon")
-    }
-
-    /// A hidden list publishes its count only once its reload lands, not from the stale cached rows.
-    @Test func hiddenListRepublishesCountAfterReload() async {
-        let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session) = makeModel(
-            store: store,
-            sources: [
-                source(id: "s1", title: "Album", typeID: "t1", ref: "SRC-0001"),
-                source(id: "s2", title: "Deed", typeID: "t1", ref: "SRC-0002"),
-            ],
-            types: [photoType()],
-            catalogCounts: counts
-        )
-        await warmLists(model, session: session)
-        #expect(counts.sources == 2)
-
-        // The list is hidden: a write marks it stale instead of reloading it.
-        store.sourcesByProject[projectDir]?.removeAll { $0.id == "s2" }
-        session.apply(.deletedSource(id: "s2"))
-
-        // Coming back reloads it. The cached `.ready` value must not be republished.
-        model.warmListQueries()
-        guard let handle: QueryHandle<[CatalogSource]> = session.queryHandle(
-            SourcesModel.sourcesListKey(for: session)
-        ) else {
-            Issue.record("sources handle missing")
-            return
-        }
-        #expect(handle.isFetching)
-        #expect(!handle.isSettled)
-
-        await waitForQuery(handle)
-        #expect(handle.isSettled)
-        model.syncCatalogCounts()
-        #expect(model.sources.count == 1)
-        #expect(counts.sources == 1)
     }
 
     /// A write's activity moves the row in the Updated sort without a reload.

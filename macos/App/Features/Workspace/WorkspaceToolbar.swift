@@ -216,8 +216,7 @@ struct WorkspaceToolbar: View {
         if let graphID = location.graphSurfaceID, let sourceID = location.sourceId {
             let onCanvas = location.sourceSurface == .graph
             let carriedTitle = onCanvas ? location.title : location.sourceTitle
-            let sourceLabel = names.sourceTitle(sourceID).flatMap { $0.trimmedNonEmpty }
-                ?? carriedTitle.flatMap { $0.trimmedNonEmpty }
+            let sourceLabel = WorkspaceLocationLabels.sourceTitle(sourceID: sourceID, carried: carriedTitle, names: names)
             if let sourceLabel {
                 items.append(
                     PVBreadcrumbItem(

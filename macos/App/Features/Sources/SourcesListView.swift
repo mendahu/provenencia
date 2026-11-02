@@ -11,15 +11,13 @@ struct SourcesListView: View {
         session: WorkspaceSession,
         userID: String,
         projectUuid: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         _model = State(
             initialValue: SourcesModel(
                 session: session,
                 userID: userID,
                 store: store,
-                catalogCounts: catalogCounts,
                 settingsStore: SourcesListSettingsStore(projectUuid: projectUuid, userID: userID)
             )
         )
@@ -112,7 +110,6 @@ private struct SourcesListContent: View {
             model.refreshTypes()
             model.selectSoleTypeIfNeeded()
         }
-        .onSettled(sourcesHandle) { model.syncCatalogCounts() }
         .onChange(of: typesHandle.status) { _, _ in
             if model.isAdding { model.selectSoleTypeIfNeeded() }
         }

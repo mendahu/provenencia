@@ -38,7 +38,7 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 
 	var out *engine.ApplyPromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		res, result, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (promote.BatchResult, []rowchange.Change, error) {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			return promote.SaveBatch(tx, userID, promote.Batch{
 				GraphID:      graphID,
 				SeenRevision: req.GetSeenRevision(),
@@ -48,16 +48,7 @@ func ApplyPromoteGraphAlignment(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		if result.Revision != 0 {
-			res.Revision = result.Revision
-		}
-		out = &engine.ApplyPromoteGraphAlignmentResponse{Revision: res.Revision}
-		for _, w := range res.Written {
-			out.Written = append(out.Written, &engine.ApplyPromoteGraphAlignmentWritten{
-				Entity: canonicalEntityProto(w.Entity),
-				Claim:  identityClaimProto(w.Claim),
-			})
-		}
+		out = &engine.ApplyPromoteGraphAlignmentResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {

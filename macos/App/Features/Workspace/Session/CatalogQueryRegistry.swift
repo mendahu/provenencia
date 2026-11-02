@@ -82,20 +82,14 @@ struct CatalogQueryRegistry: Sendable {
 
     /// Writes that can change any Conclusion value and report no
     /// `WriteEffects` (Spike 9 Q5). Every Conclusion key — lists and details —
-    /// invalidates on this one set. A write that reports its handles (a
-    /// citation, a credibility change, a Subject delete) invalidates through
-    /// `invalidations(for:)` instead, and a note reports none, so a Source-page
+    /// invalidates on this one set. A write that reports its handles (Promote,
+    /// a citation, a credibility change, a Subject delete) revalidates through
+    /// each key's `refreshes` on `touchedHandles` instead, so a Source-page
     /// write no longer reloads every list. A Property update, including a
-    /// cardinality change, rides `updatedProperty` (S9-37).
+    /// cardinality change, rides `updatedProperty` (S9-37), which reports no
+    /// effects until S14-17.
     static let conclusionTriggers: Set<CatalogMutationKind> = [
-        .promotedSubject, .deletedSource, .updatedProperty,
-    ]
-
-    /// Writes that change a sidebar count (Sources, Persons, Events, Places).
-    /// `WorkspaceSession.apply` recounts after each; features never call
-    /// `CatalogCounts.refreshAll()`.
-    static let navCountTriggers: Set<CatalogMutationKind> = [
-        .createdSource, .deletedSource, .promotedSubject,
+        .updatedProperty,
     ]
 
     func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
@@ -125,6 +119,10 @@ struct CatalogQueryRegistry: Sendable {
         switch list {
         case .vocabulary, .propertyUsage:
             return [.key(.propertiesWorkspace(project: project))]
+        case .counts:
+            // The sidebar recount is not a cache key: the session runs
+            // `onNavCountsMoved` for it.
+            return []
         }
     }
 
@@ -279,21 +277,16 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .evidenceGraph:
-            // Writes that report effects name the graphs they move
-            // (`WriteEffects.evidenceGraphs`); Promote reports none. The graph
+            // Every write that moves a graph, Promote and a Source delete
+            // included, names it in `WriteEffects.evidenceGraphs`. The graph
             // on screen reloads; a visited graph that is hidden goes stale and
             // reloads when its canvas, composer or Promote is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [.deletedSource, .promotedSubject],
+                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, mutation in
-                    if let graphId = mutation.evidenceGraphId {
-                        return .key(.evidenceGraph(project: project, graphId: graphId))
-                    }
-                    return .allCached(.evidenceGraph)
-                },
+                invalidation: { _, _ in .allCached(.evidenceGraph) },
                 refreshes: [.applyHiddenPolicy(follows: .evidenceGraphs) { _, key in
                     guard case .evidenceGraph(_, let graphId) = key else { return [] }
                     return [graphId]
@@ -500,9 +493,8 @@ extension CatalogQueryKey.Kind {
         case .evidenceGraphsList:
             // Graph and link writes report the `evidence_graphs` read for their
             // Source (`WriteEffects.reads`), and the arm re-reads that Source's
-            // graphs and merges them into the warmed list. `deleteSource` reports
-            // none, so `CatalogMutation.readIDs(for:)` names the deleted Source.
-            // A hidden list goes stale until it is shown again.
+            // graphs and merges them into the warmed list; `deleteSource` reports
+            // it for the deleted Source too. A hidden list goes stale until it is shown again.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,

@@ -206,7 +206,7 @@ struct GoStore: GenealogyStore {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateSourceRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -218,7 +218,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.updateSource,
             request: req
         )
-        return Self.mapSource(resp.source)
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
     func setSourceCover(
@@ -227,7 +227,7 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_SetSourceCoverRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -238,7 +238,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.setSourceCover,
             request: req
         )
-        return Self.mapSource(resp.source)
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
@@ -256,15 +256,16 @@ struct GoStore: GenealogyStore {
         return (Self.mapNote(resp.note), Self.mapWriteEffects(resp.effects))
     }
 
-    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws {
+    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_DeleteSourceRequest()
         req.projectDir = projectDir
         req.userID = userID
         req.sourceID = sourceID
-        let _: Provenencia_Engine_V1_DeleteSourceResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_DeleteSourceResponse = try await provenenciaCall(
             method: CoreMethod.deleteSource,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
@@ -900,32 +901,6 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func promoteSubject(
-        projectDir: String,
-        userID: String,
-        subjectID: String,
-        entityID: String?
-    ) async throws -> CatalogPromoteResult {
-        var req = Provenencia_Engine_V1_PromoteSubjectRequest()
-        req.projectDir = projectDir
-        req.userID = userID
-        req.subjectID = subjectID
-        req.entityID = entityID ?? ""
-        let resp: Provenencia_Engine_V1_PromoteSubjectResponse = try await provenenciaCall(
-            method: CoreMethod.promoteSubject,
-            request: req
-        )
-        return CatalogPromoteResult(
-            entity: Self.mapCanonicalEntity(resp.entity),
-            claim: CatalogIdentityClaim(
-                id: resp.claim.id,
-                subjectID: resp.claim.subjectID,
-                entityID: resp.claim.entityID,
-                status: resp.claim.status
-            )
-        )
-    }
-
     func proposePromoteGraphAlignment(
         projectDir: String,
         graphID: String,
@@ -979,7 +954,7 @@ struct GoStore: GenealogyStore {
         graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws {
+    ) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_ApplyPromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -992,10 +967,11 @@ struct GoStore: GenealogyStore {
             if !fixed.handleID.isEmpty { proto.entityID = fixed.handleID }
             return proto
         }
-        let _: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
+        let resp: Provenencia_Engine_V1_ApplyPromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.applyPromoteGraphAlignment,
             request: req
         )
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle] {
@@ -1654,7 +1630,7 @@ struct GoStore: GenealogyStore {
             Self.mapSubject(resp.subject),
             Self.mapCitation(resp.citation),
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1690,7 +1666,7 @@ struct GoStore: GenealogyStore {
         return (
             Self.mapCitation(resp.citation),
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1731,7 +1707,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             resp.observations.map(Self.mapObservation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1852,7 +1828,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             Self.mapCitation(resp.citation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1874,7 +1850,7 @@ struct GoStore: GenealogyStore {
         )
         return (
             Self.mapObservation(resp.observation),
-            resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+            Self.mapWriteEffects(resp.effects)
         )
     }
 
@@ -1887,7 +1863,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.deleteObservation,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     func deleteCitation(projectDir: String, userID: String, citationID: String) async throws -> CatalogWriteEffects {
@@ -1899,7 +1875,7 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.deleteCitation,
             request: req
         )
-        return resp.hasEffects ? Self.mapWriteEffects(resp.effects) : .empty
+        return Self.mapWriteEffects(resp.effects)
     }
 
     private static func mapWriteEffects(_ effects: Provenencia_Engine_V1_WriteEffects) -> CatalogWriteEffects {

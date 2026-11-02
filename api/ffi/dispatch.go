@@ -94,7 +94,6 @@ const (
 	MethodDeleteSource                      = int32(engine.Method_METHOD_DELETE_SOURCE)
 	MethodDeleteArtifact                    = int32(engine.Method_METHOD_DELETE_ARTIFACT)
 	MethodDeleteCitation                    = int32(engine.Method_METHOD_DELETE_CITATION)
-	MethodPromoteSubject                    = int32(engine.Method_METHOD_PROMOTE_SUBJECT)
 	MethodListSubjectMemberships            = int32(engine.Method_METHOD_LIST_SUBJECT_MEMBERSHIPS)
 	MethodListPersonSummaries               = int32(engine.Method_METHOD_LIST_PERSON_SUMMARIES)
 	MethodProposePromoteGraphAlignment      = int32(engine.Method_METHOD_PROPOSE_PROMOTE_GRAPH_ALIGNMENT)
@@ -305,8 +304,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteArtifact(in)
 	case MethodDeleteCitation:
 		return handlers.DeleteCitation(in)
-	case MethodPromoteSubject:
-		return handlers.PromoteSubject(in)
 	case MethodUnpromoteSubject:
 		return handlers.UnpromoteSubject(in)
 	case MethodSetPreferredLikeness:

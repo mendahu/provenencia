@@ -123,8 +123,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var recordedCalls: [String] = []
     /// Optional delay before each `createCitationWithObservations` (race tests).
     var createCitationDelayNanoseconds: UInt64 = 0
-    /// Holds `promoteSubject` open this long, for tests of in-flight writes.
-    var promoteSubjectDelayNanoseconds: UInt64 = 0
     /// When set, `listSources` throws instead of returning the in-memory list.
     var listSourcesError: Error?
     /// The graph id of each `listSubjects` call, in order.
@@ -181,6 +179,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededSearchHits: [CatalogSearchHit] = []
     /// When set, `workspaceNavCounts` throws instead of returning counts.
     var workspaceNavCountsError: Error?
+    /// Pauses a `workspaceNavCounts` call after it reads its snapshot, so a test can finish a later recount first.
+    let workspaceNavCountsHold = FakeHold()
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
     /// When set, `addObservationsToCitation` throws after recording the call.
@@ -505,7 +505,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
             if let updateSourceError { throw updateSourceError }
             var list = sourcesByProject[projectDir] ?? []
@@ -518,7 +518,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
-            return enrichCoverFields(list[idx])
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
         }
     }
 
@@ -528,7 +528,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
-    ) async throws -> CatalogSource {
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
             var list = sourcesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
@@ -553,7 +553,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
-            return enrichCoverFields(list[idx])
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
         }
     }
 
@@ -595,7 +595,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func deleteSource(projectDir: String, userID _: String, sourceID: String) async throws {
+    func deleteSource(projectDir: String, userID _: String, sourceID: String) async throws -> CatalogWriteEffects {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteSourceCalls += 1
@@ -613,6 +613,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             metadataBySource[sourceID] = nil
             credibilityBySource[sourceID] = nil
+            return nextWriteEffects
         }
     }
 
@@ -1255,7 +1256,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts {
-        return try withState {
+        let counts: WorkspaceNavCounts = try withState {
             markCatalogSessionHeld(projectDir)
             if let workspaceNavCountsError { throw workspaceNavCountsError }
             let types = sourceTypesByProject[projectDir] ?? []
@@ -1269,6 +1270,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 places: Self.handleCount(membershipBySubject, kind: "place")
             )
         }
+        await workspaceNavCountsHold.wait()
+        return counts
     }
 
     func nameFormat(projectDir: String) async throws -> NameFormatOrders {
@@ -1362,62 +1365,61 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func promoteSubject(
+    /// Seeds a promotion: writes the Subject's membership and accepted claim the way a Done leaves them,
+    /// on a new handle of its type when `entityID` is `nil`, else joined to that existing handle. Off the
+    /// protocol and with no refusals: a test asks for this state, and a Subject, type or handle the fake
+    /// does not hold is a test bug. Records no call.
+    @discardableResult
+    func seedPromotion(
         projectDir: String,
-        userID _: String,
         subjectID: String,
-        entityID: String?
-    ) async throws -> CatalogPromoteResult {
-        let delay = withState { promoteSubjectDelayNanoseconds }
-        if delay > 0 {
-            try? await Task.sleep(nanoseconds: delay)
-        }
-        return try withState {
+        entityID: String? = nil
+    ) -> (entity: CatalogCanonicalEntity, claim: CatalogIdentityClaim) {
+        withState {
             markCatalogSessionHeld(projectDir)
-            recordedCalls.append("promoteSubject id=\(subjectID)" + (entityID.map { " entity=\($0)" } ?? ""))
             guard let subject = subjectsByGraph.values.flatMap({ $0 }).first(where: { $0.id == subjectID }),
                   let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID })
             else {
-                throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                preconditionFailure("seedPromotion: the fake holds no Subject \(subjectID) with a type")
             }
-            guard Self.primaryTypeKeys.contains(type.key) else {
-                throw CoreInvokeError.coded(status: 1, code: "promote.unsupported_type", kind: .user, params: [])
-            }
-            if membershipBySubject[subjectID] != nil {
-                throw CoreInvokeError.coded(status: 1, code: "identityclaims.already_member", kind: .conflict, params: [])
-            }
-            let entity: CatalogCanonicalEntity
+            var existing: CatalogCanonicalEntity?
             if let entityID {
-                guard let existing = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity else {
-                    throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
+                guard let found = membershipBySubject.values.first(where: { $0.entity.id == entityID })?.entity else {
+                    preconditionFailure("seedPromotion: the fake holds no handle \(entityID)")
                 }
-                guard existing.subjectTypeID == type.id else {
-                    throw CoreInvokeError.coded(status: 1, code: "identityclaims.type_mismatch", kind: .user, params: [])
-                }
-                entity = existing
-            } else {
-                entity = CatalogCanonicalEntity(
-                    id: UUID().uuidString.lowercased(),
-                    ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
-                    subjectTypeID: type.id,
-                    label: ""
-                )
+                existing = found
             }
-            let claim = CatalogIdentityClaim(
-                id: UUID().uuidString.lowercased(),
-                subjectID: subjectID,
-                entityID: entity.id,
-                status: "accepted"
-            )
-            membershipBySubject[subjectID] = CatalogSubjectMembership(
-                subjectID: subjectID,
-                claimID: claim.id,
-                entity: entity,
-                kind: type.key
-            )
-            claimBySubject[subjectID] = claim
-            return CatalogPromoteResult(entity: entity, claim: claim)
+            return seedPromotionLocked(subjectID: subjectID, type: type, entity: existing)
         }
+    }
+
+    /// The fake's one membership writer: mints a handle of `type` when `existing` is `nil`, else joins
+    /// `existing`, then writes the accepted claim and the membership. Call inside `withState`.
+    private func seedPromotionLocked(
+        subjectID: String,
+        type: CatalogSubjectType,
+        entity existing: CatalogCanonicalEntity?
+    ) -> (entity: CatalogCanonicalEntity, claim: CatalogIdentityClaim) {
+        let entity = existing ?? CatalogCanonicalEntity(
+            id: UUID().uuidString.lowercased(),
+            ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
+            subjectTypeID: type.id,
+            label: ""
+        )
+        let claim = CatalogIdentityClaim(
+            id: UUID().uuidString.lowercased(),
+            subjectID: subjectID,
+            entityID: entity.id,
+            status: "accepted"
+        )
+        membershipBySubject[subjectID] = CatalogSubjectMembership(
+            subjectID: subjectID,
+            claimID: claim.id,
+            entity: entity,
+            kind: type.key
+        )
+        claimBySubject[subjectID] = claim
+        return (entity, claim)
     }
 
     /// Removes the Subject's promotion, and the promotion of every Subject on its Source that has a membership
@@ -1555,7 +1557,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws {
+    ) async throws -> CatalogWriteEffects {
         try withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
@@ -1570,36 +1572,18 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                       let type = subjectTypesByProject[projectDir]?.first(where: { $0.id == subject.subjectTypeID }),
                       Self.primaryTypeKeys.contains(type.key)
                 else { continue }
-                let entity: CatalogCanonicalEntity
+                var existing: CatalogCanonicalEntity?
                 if row.target == .handle {
-                    guard let existing = membershipBySubject.values.first(where: { $0.entity.id == row.handleID })?.entity,
-                          existing.subjectTypeID == type.id
+                    guard let found = membershipBySubject.values.first(where: { $0.entity.id == row.handleID })?.entity,
+                          found.subjectTypeID == type.id
                     else { continue }
-                    entity = existing
-                } else {
-                    entity = CatalogCanonicalEntity(
-                        id: UUID().uuidString.lowercased(),
-                        ref: "\(type.refPrefix)-FAKE\(membershipBySubject.count + 1)",
-                        subjectTypeID: type.id,
-                        label: ""
-                    )
+                    existing = found
                 }
-                let claim = CatalogIdentityClaim(
-                    id: UUID().uuidString.lowercased(),
-                    subjectID: subject.id,
-                    entityID: entity.id,
-                    status: "accepted"
-                )
-                membershipBySubject[subject.id] = CatalogSubjectMembership(
-                    subjectID: subject.id,
-                    claimID: claim.id,
-                    entity: entity,
-                    kind: type.key
-                )
-                claimBySubject[subject.id] = claim
+                _ = seedPromotionLocked(subjectID: subject.id, type: type, entity: existing)
                 written += 1
             }
             if written > 0 { nextAuditRevision += 1 }
+            return nextWriteEffects
         }
     }
 

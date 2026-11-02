@@ -6,14 +6,11 @@ import (
 	"errors"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/vocabkey"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
 )
 
 // Row targets for one Done. They match graphalign.Target strings.
@@ -39,70 +36,48 @@ type Batch struct {
 	Rows         []BatchRow
 }
 
-// Written is one claim the batch filed.
-type Written struct {
-	Entity canonicalentities.Entity
-	Claim  identityclaims.Claim
-}
-
-// BatchResult is the revision the batch wrote (or SeenRevision when nothing
-// changed) and the claims it filed. Anchors and skips are absent.
-type BatchResult struct {
-	Revision int64
-	Written  []Written
-}
-
 // SaveBatch files one Done in a single transaction: claims and bridges whose
-// ends are both handles. The caller records the returned
-// changes as promote_batch. Revision on the result is SeenRevision; the
-// caller replaces it with the revision it recorded when that is non-zero,
-// so an all-skip batch still reports the revision the proposal was read at.
-// A catalog write since SeenRevision is ErrStale and writes nothing.
-func SaveBatch(tx *database.Tx, userID []byte, in Batch) (BatchResult, []rowchange.Change, error) {
+// ends are both handles. The caller records the returned changes as
+// promote_batch. A catalog write since SeenRevision is ErrStale and writes
+// nothing.
+func SaveBatch(tx *database.Tx, userID []byte, in Batch) (struct{}, []rowchange.Change, error) {
 	if tx == nil {
-		return BatchResult{}, nil, ErrInvalid
+		return struct{}{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return BatchResult{}, nil, err
+		return struct{}{}, nil, err
 	}
 
 	q := tx.Tx
 	if _, err := evidencegraphs.SourceOf(q, in.GraphID); err != nil {
 		if errors.Is(err, evidencegraphs.ErrInvalid) {
-			return BatchResult{}, nil, ErrInvalid
+			return struct{}{}, nil, ErrInvalid
 		}
-		return BatchResult{}, nil, err
+		return struct{}{}, nil, err
 	}
 	rev, err := latestRevision(q)
 	if err != nil {
-		return BatchResult{}, nil, err
+		return struct{}{}, nil, err
 	}
 	if rev != in.SeenRevision {
-		return BatchResult{}, nil, ErrStale
+		return struct{}{}, nil, ErrStale
 	}
 
-	var (
-		changes []rowchange.Change
-		written []Written
-	)
+	var changes []rowchange.Change
 	for _, row := range in.Rows {
-		w, rowChanges, _, err := applyRow(q, in.GraphID, row)
+		rowChanges, err := applyRow(q, in.GraphID, row)
 		if err != nil {
-			return BatchResult{}, nil, err
-		}
-		if w == nil {
-			continue
+			return struct{}{}, nil, err
 		}
 		changes = append(changes, rowChanges...)
-		written = append(written, *w)
 	}
 
 	_, filed, err := identityclaims.FileEvidenceGraphBridgesTx(q, in.GraphID)
 	if err != nil {
-		return BatchResult{}, nil, err
+		return struct{}{}, nil, err
 	}
 	changes = append(changes, filed...)
-	return BatchResult{Revision: rev, Written: written}, changes, nil
+	return struct{}{}, changes, nil
 }
 
 func latestRevision(tx *sql.Tx) (int64, error) {
@@ -111,84 +86,61 @@ func latestRevision(tx *sql.Tx) (int64, error) {
 	return rev, err
 }
 
-// applyRow files one claim. A nil Written is an anchor or a skip.
-func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) (*Written, []rowchange.Change, []byte, error) {
+// applyRow files one claim and returns its changes;
+// an anchor or a skip files nothing and returns nil.
+func applyRow(tx *sql.Tx, graphID []byte, row BatchRow) ([]rowchange.Change, error) {
 	switch row.Target {
 	case TargetSkip:
 		if len(row.EntityID) != 0 {
-			return nil, nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
-		return nil, nil, nil, nil
+		return nil, nil
 	case TargetNew:
 		if len(row.EntityID) != 0 {
-			return nil, nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
 	case TargetHandle:
 		if len(row.EntityID) != 16 {
-			return nil, nil, nil, ErrInvalid
+			return nil, ErrInvalid
 		}
 	default:
-		return nil, nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 	if len(row.SubjectID) != 16 {
-		return nil, nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 
 	subject, err := subjects.GetTx(tx, row.SubjectID)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 	if !bytes.Equal(subject.GraphID, graphID) {
-		return nil, nil, nil, ErrInvalid
+		return nil, ErrInvalid
 	}
-	st, err := subjecttypes.GetByIDTx(tx, subject.SubjectTypeID)
-	if err != nil {
-		return nil, nil, nil, err
+	if err := requirePrimary(tx, subject); err != nil {
+		return nil, err
 	}
-	if !vocabkey.IsPrimaryType(st.Key, st.Origin) {
-		return nil, nil, nil, ErrUnsupportedType
-	}
-
 	existing, err := identityclaims.AcceptedEntityForSubjectTx(tx, subject.ID)
 	if err == nil {
 		if row.Target == TargetHandle && bytes.Equal(existing.EntityID, row.EntityID) {
-			return nil, nil, nil, nil
+			return nil, nil
 		}
-		return nil, nil, nil, identityclaims.ErrAlreadyMember
+		return nil, identityclaims.ErrAlreadyMember
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	var (
-		entity  canonicalentities.Entity
-		changes []rowchange.Change
-	)
-	if row.Target == TargetNew {
-		minted, change, err := canonicalentities.InsertTx(tx, canonicalentities.CreateInput{
-			SubjectTypeID: subject.SubjectTypeID,
-		})
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		entity, changes = minted, append(changes, change)
-	} else {
-		entity, err = joinTarget(tx, row.EntityID, subject.SubjectTypeID)
-		if err != nil {
-			return nil, nil, nil, err
-		}
+	var entityID []byte
+	if row.Target == TargetHandle {
+		entityID = row.EntityID
 	}
-	claim, claimChange, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
-		SubjectID: subject.ID,
-		EntityID:  entity.ID,
-		Status:    identityclaims.StatusAccepted,
-	})
+	_, _, changes, err := fileSubject(tx, subject, entityID)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
-	changes = append(changes, claimChange)
-	return &Written{Entity: entity, Claim: claim}, changes, entity.ID, nil
+	return changes, nil
 }

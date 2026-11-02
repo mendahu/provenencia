@@ -78,10 +78,12 @@ final class SourcePageContext {
 
     /// Applies an enriched Source (cover fields included) to the workspace and
     /// list cache. Pass `typeChanged` when the write moved the Source to another
-    /// type, so its suggested metadata rows and per-type counts refetch.
-    func applySource(_ source: CatalogSource, typeChanged: Bool = false) {
+    /// type, so its suggested metadata rows and per-type counts refetch. The
+    /// write's `effects` name its graphs and Source activity; the mutation
+    /// carries the enriched row.
+    func applySource(_ source: CatalogSource, effects: CatalogWriteEffects, typeChanged: Bool = false) {
         workspace?.source = source
-        session.apply(typeChanged ? .changedSourceType(source) : .updatedSource(source))
+        session.apply(effects, typeChanged ? .changedSourceType(source) : .updatedSource(source))
     }
 
     /// Applies a non-identity page write (note, artifact, credibility): the
@@ -117,14 +119,14 @@ final class SourcePageContext {
     func setSourceCover(mode: String, primaryArtifactID: String = "") async -> Bool {
         clearPageError()
         do {
-            let updated = try await store.setSourceCover(
+            let (updated, effects) = try await store.setSourceCover(
                 projectDir: projectDir,
                 userID: userID,
                 sourceID: sourceID,
                 coverMode: mode,
                 primaryArtifactID: primaryArtifactID
             )
-            applySource(updated)
+            applySource(updated, effects: effects)
             return true
         } catch {
             pageError = L10n.Errors.message(for: error)

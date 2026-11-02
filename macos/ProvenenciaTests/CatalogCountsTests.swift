@@ -55,8 +55,8 @@ struct CatalogCountsTests {
             CatalogSubject(id: "sub-1", ref: "CPR-1", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
             CatalogSubject(id: "sub-2", ref: "CPR-2", sourceID: "s1", subjectTypeID: "type-person", label: "", description: ""),
         ]
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-1")
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "u", subjectID: "sub-2")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-2")
         let counts = makeCounts(store: store)
         await counts.refreshAll()
         #expect(counts.persons == 2)
@@ -108,12 +108,32 @@ struct CatalogCountsTests {
         let counts = makeCounts()
         counts.publishMetadata(CatalogCountSummary(total: 5, seeded: 2, user: 2, plugin: 1))
         counts.publishSourceTypes(CatalogCountSummary(total: 3, seeded: 1, user: 2, plugin: 0))
-        counts.publishSources(7)
         #expect(counts.badge(for: .metadata) == 5)
         #expect(counts.metadata?.plugin == 1)
         #expect(counts.badge(for: .sourceTypes) == 3)
         #expect(counts.sourceTypes?.user == 2)
-        #expect(counts.badge(for: .sources) == 7)
+    }
+
+    /// Two recounts overlap: the one started last reads the newest catalog, so the earlier,
+    /// slower one finishing after it must not overwrite its counts.
+    @Test func newestRecountWins() async throws {
+        let store = FakeStore()
+        store.workspaceNavCountsHold.isOn = true
+        let counts = makeCounts(store: store)
+
+        let first = Task { await counts.refreshAll() }
+        // The first recount has read zero Sources and is held before returning them.
+        try #require(await waitUntil(timeout: .seconds(15)) { store.workspaceNavCountsHold.count == 1 })
+        store.workspaceNavCountsHold.isOn = false
+        _ = try await store.createSource(
+            projectDir: projectDir, userID: "u", sourceTypeID: "t1", title: "New", description: ""
+        )
+
+        await counts.refreshAll()
+        #expect(counts.sources == 1)
+        store.workspaceNavCountsHold.release()
+        await first.value
+        #expect(counts.sources == 1)
     }
 
     @Test func summaryFromRowsSplitsByOrigin() {

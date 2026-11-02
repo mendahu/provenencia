@@ -74,8 +74,8 @@ type ReadIDs struct {
 	IDs  [][]byte
 }
 
-// List names a catalog-wide list a write changed: one the app caches whole
-// and a row change cannot be patched into. The values are the wire keys
+// List names a catalog-wide fact a write changed that no row id names: a list
+// the app caches whole, or the sidebar counts. The values are the wire keys
 // (WriteEffects.lists) and Swift's CatalogList raw values.
 type List string
 
@@ -87,10 +87,13 @@ const (
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
 	ListPropertyUsage List = "property_usage"
+	// ListCounts: a Source or a handle (of any type) was created, deleted or
+	// merged, so a sidebar count may have changed.
+	ListCounts List = "counts"
 )
 
 // Lists is every catalog-wide list, in the order Set.Lists reports them.
-var Lists = []List{ListVocabulary, ListPropertyUsage}
+var Lists = []List{ListVocabulary, ListPropertyUsage, ListCounts}
 
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
@@ -142,13 +145,19 @@ type Effect struct {
 	// change moves; Handles is the recompute set.
 	HandleScope Path
 	Search      []SearchDoc
-	// Lists are the catalog-wide lists a change to the table moves.
+	// Lists are the catalog-wide lists a change to the table moves. Which
+	// updates move them is one choice: all (the default), those writing
+	// ListsOnField, or none (ListsOnCreateDelete). Creates and deletes always
+	// move them.
 	Lists []List
 	// ListsOnField, when set, narrows an update: it moves Lists only if it
-	// writes this field. Creates and deletes always move them.
+	// writes this field.
 	ListsOnField string
-	Structure    Path
-	None         bool
+	// ListsOnCreateDelete, when set, means an update never moves Lists. It
+	// is the other choice beside ListsOnField, and needs Lists.
+	ListsOnCreateDelete bool
+	Structure           Path
+	None                bool
 }
 
 // Has reports whether the batch changed the list.
@@ -240,9 +249,13 @@ func ownedValue(entity, col string) Effect {
 }
 
 // movesLists reports whether the change moves the entry's Lists: always for
-// a create or delete, and for an update only when it writes ListsOnField.
+// a create or delete, and for an update never under ListsOnCreateDelete, else
+// only when it writes ListsOnField.
 func (e Effect) movesLists(ch rowchange.Change) bool {
 	if len(e.Lists) == 0 {
+		return false
+	}
+	if ch.Action == rowchange.ActionUpdate && e.ListsOnCreateDelete {
 		return false
 	}
 	if ch.Action != rowchange.ActionUpdate || e.ListsOnField == "" {
@@ -268,6 +281,9 @@ var registry = map[string]Effect{
 			{Kind: DocSource, Path: self()},
 			{Kind: DocEvidenceGraph, Path: onField("title", graphsOfSource(self()))},
 		},
+		// A rename or cover change moves no sidebar count.
+		Lists:               []List{ListCounts},
+		ListsOnCreateDelete: true,
 	},
 	"source_notes": {
 		Entity:      "source_note",
@@ -381,7 +397,12 @@ var registry = map[string]Effect{
 			onField("neutral", self()),
 		),
 	},
-	"canonical_entities": {Entity: "canonical_entity", Handles: self(), HandleScope: self()},
+	"canonical_entities": {
+		Entity: "canonical_entity", Handles: self(), HandleScope: self(),
+		// The sidebar counts filter merged_into_id IS NULL, so a merge moves
+		// them; a preferred-picture update does not.
+		Lists: []List{ListCounts}, ListsOnField: "merged_into_id",
+	},
 	"identity_claims": {
 		Entity:        "identity_claim",
 		EvidenceGraph: claimGraph,
@@ -485,6 +506,12 @@ func (e Effect) validate(table string) error {
 	}
 	if e.ListsOnField != "" && len(e.Lists) == 0 {
 		return errf("%s: ListsOnField without Lists", table)
+	}
+	if e.ListsOnCreateDelete && len(e.Lists) == 0 {
+		return errf("%s: ListsOnCreateDelete without Lists", table)
+	}
+	if e.ListsOnCreateDelete && e.ListsOnField != "" {
+		return errf("%s: ListsOnCreateDelete with ListsOnField", table)
 	}
 	for _, p := range e.paths() {
 		if p.zero() {

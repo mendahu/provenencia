@@ -35,16 +35,9 @@ import (
 // Observations and returns the project dir and the handle ref.
 func namedPerson(t *testing.T) (dir, handleRef string) {
 	t.Helper()
-	req := promotableSubject(t)
-	subjectID, err := uuid.Parse(req.SubjectId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	userID, err := uuid.Parse(req.UserId)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := withProjectCatalog(req.ProjectDir, func(c *database.Catalog) error {
+	dir, userIDStr, subjectIDStr := promotableSubject(t)
+	subjectID, userID := uuid.MustParse(subjectIDStr), uuid.MustParse(userIDStr)
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
 		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
 		if err != nil {
 			return err
@@ -71,15 +64,7 @@ func namedPerson(t *testing.T) (dir, handleRef string) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	out, err := PromoteSubject(marshalProto(t, req))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var promoted engine.PromoteSubjectResponse
-	if err := proto.Unmarshal(out, &promoted); err != nil {
-		t.Fatal(err)
-	}
-	return req.ProjectDir, promoted.Entity.GetRef()
+	return dir, promoteInDir(t, dir, userIDStr, subjectIDStr, "").Entity.Ref
 }
 
 func TestListPersonSummaries(t *testing.T) {
@@ -130,7 +115,7 @@ func TestListPersonSummaries(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
 				saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 128))
-				promoteOK(t, &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: personID})
+				promoteInDir(t, dir, userID, personID, "")
 				return &engine.ListPersonSummariesRequest{ProjectDir: dir}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {

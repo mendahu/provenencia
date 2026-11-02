@@ -7,21 +7,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/identityclaims"
-	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"google.golang.org/protobuf/proto"
-	// promotableSubject creates a person Subject and returns a promote request for it.
 )
 
-func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
+// promotableSubject creates a person Subject and returns its project dir, user and id.
+func promotableSubject(t *testing.T) (dir, userID, subjectID string) {
 	t.Helper()
 	dir, userID, sourceID, typeID := subjectFixture(t)
 	out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
@@ -34,68 +26,35 @@ func promotableSubject(t *testing.T) *engine.PromoteSubjectRequest {
 	if err := proto.Unmarshal(out, &created); err != nil {
 		t.Fatal(err)
 	}
-	return &engine.PromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: created.Subject.GetId()}
+	return dir, userID, created.Subject.GetId()
 }
 
-func TestPromoteSubject(t *testing.T) {
-	runRPC(t, PromoteSubject, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "bad subject id",
-			reqFn: func(t *testing.T) proto.Message {
-				req := promotableSubject(t)
-				req.SubjectId = "nope"
-				return req
-			},
-			wantErr: true,
-		},
-		{
-			name: "unknown subject",
-			reqFn: func(t *testing.T) proto.Message {
-				req := promotableSubject(t)
-				req.SubjectId = uuid.Must(uuid.NewV7()).String()
-				return req
-			},
-			wantErr: true,
-		},
-		{
-			name:  "mints a handle and an accepted claim",
-			reqFn: func(t *testing.T) proto.Message { return promotableSubject(t) },
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var resp engine.PromoteSubjectResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				if resp.Claim.GetStatus() != identityclaims.StatusAccepted {
-					t.Fatalf("status %q", resp.Claim.GetStatus())
-				}
-				if !strings.HasPrefix(resp.Entity.GetRef(), "PER-") {
-					t.Fatalf("ref %q", resp.Entity.GetRef())
-				}
-				in := req.(*engine.PromoteSubjectRequest)
-				if resp.Claim.GetSubjectId() != in.GetSubjectId() || resp.Claim.GetEntityId() != resp.Entity.GetId() {
-					t.Fatalf("%+v", resp.Claim)
-				}
-			},
-		},
-		{
-			name:      "second promote refused",
-			reqFn:     func(t *testing.T) proto.Message { return promotableSubject(t) },
-			calls:     2,
-			wantErr:   true,
-			wantErrIs: identityclaims.ErrAlreadyMember,
-		},
-	})
+// promoteInDir files the Subject through the engine's filing rule, as a test seed: onto a new
+// handle when entityID is empty, else onto that handle.
+func promoteInDir(t *testing.T, dir, userID, subjectID, entityID string) promote.Result {
+	t.Helper()
+	subject, user := uuid.MustParse(subjectID), uuid.MustParse(userID)
+	in := promote.Input{SubjectID: subject[:]}
+	if entityID != "" {
+		entity := uuid.MustParse(entityID)
+		in.EntityID = entity[:]
+	}
+	var res promote.Result
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		res = promotetest.Save(t, c, user[:], in)
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return res
 }
 
 func TestUnpromoteSubject(t *testing.T) {
 	promoted := func(t *testing.T) *engine.UnpromoteSubjectRequest {
 		t.Helper()
-		req := promotableSubject(t)
-		if _, err := PromoteSubject(marshalProto(t, req)); err != nil {
-			t.Fatal(err)
-		}
-		return &engine.UnpromoteSubjectRequest{ProjectDir: req.GetProjectDir(), UserId: req.GetUserId(), SubjectId: req.GetSubjectId()}
+		dir, userID, subjectID := promotableSubject(t)
+		promoteInDir(t, dir, userID, subjectID, "")
+		return &engine.UnpromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID}
 	}
 	memberships := func(t *testing.T, dir, subjectID string) int {
 		t.Helper()
@@ -206,17 +165,10 @@ func TestUnpromoteSubject(t *testing.T) {
 }
 
 func TestGetDeleteImpactPromotedSubject(t *testing.T) {
-	req := promotableSubject(t)
-	out, err := PromoteSubject(marshalProto(t, req))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var promoted engine.PromoteSubjectResponse
-	if err := proto.Unmarshal(out, &promoted); err != nil {
-		t.Fatal(err)
-	}
-	out, err = GetDeleteImpact(marshalProto(t, &engine.GetDeleteImpactRequest{
-		ProjectDir: req.GetProjectDir(), Kind: "subject", Id: req.GetSubjectId(),
+	dir, userID, subjectID := promotableSubject(t)
+	promoted := promoteInDir(t, dir, userID, subjectID, "")
+	out, err := GetDeleteImpact(marshalProto(t, &engine.GetDeleteImpactRequest{
+		ProjectDir: dir, Kind: "subject", Id: subjectID,
 	}))
 	if err != nil {
 		t.Fatal(err)
@@ -230,7 +182,7 @@ func TestGetDeleteImpactPromotedSubject(t *testing.T) {
 	}
 	g := report.GetCascades()[0]
 	if g.GetVia() != "identity_claims.subject_id" || g.GetKind() != "canonical_entity" ||
-		len(g.GetListed()) != 1 || g.GetListed()[0].GetRef() != promoted.Entity.GetRef() {
+		len(g.GetListed()) != 1 || g.GetListed()[0].GetRef() != promoted.Entity.Ref {
 		t.Fatalf("%+v", g)
 	}
 }
@@ -257,18 +209,9 @@ func TestListSubjectMemberships(t *testing.T) {
 			return created.Subject.GetId()
 		}
 		f := fixture{dir: dir, sourceID: sourceID, promotedID: create("James"), plainID: create("Jim")}
-		out, err := PromoteSubject(marshalProto(t, &engine.PromoteSubjectRequest{
-			ProjectDir: dir, UserId: userID, SubjectId: f.promotedID,
-		}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var promoted engine.PromoteSubjectResponse
-		if err := proto.Unmarshal(out, &promoted); err != nil {
-			t.Fatal(err)
-		}
-		f.handleRef = promoted.Entity.GetRef()
-		f.claimID = promoted.Claim.GetId()
+		promoted := promoteInDir(t, dir, userID, f.promotedID, "")
+		f.handleRef = promoted.Entity.Ref
+		f.claimID = database.UUIDString(promoted.Claim.ID)
 		return f
 	}
 
@@ -310,79 +253,4 @@ func TestListSubjectMemberships(t *testing.T) {
 			wantErr: true,
 		},
 	})
-}
-
-// personBeside creates another person Subject on the same Source as req's,
-// named by forms (one Observation each), and returns its id.
-func personBeside(t *testing.T, req *engine.PromoteSubjectRequest, forms ...string) string {
-	t.Helper()
-	first := uuid.MustParse(req.GetSubjectId())
-	userID := uuid.MustParse(req.GetUserId())
-	var id []byte
-	if err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		var graphID, typeID []byte
-		if err := db.QueryRow(`SELECT graph_id, subject_type_id FROM subjects WHERE id = ?`, first[:]).Scan(&graphID, &typeID); err != nil {
-			return err
-		}
-		s := subjectstest.OfType(t, c, userID[:], graphID, typeID, "")
-		id = s.ID
-		if len(forms) == 0 {
-			return nil
-		}
-		name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
-		if err != nil {
-			return err
-		}
-		art, err := artifactstest.Create(c, userID[:], artifacts.CreateInput{SourceID: s.SourceID, Label: "Scan"})
-		if err != nil {
-			return err
-		}
-		var in []observations.Input
-		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: name.ID, Name: namevaluetest.Western(form)})
-		}
-		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, in...)
-		return err
-	}); err != nil {
-		t.Fatal(err)
-	}
-	return database.UUIDString(id)
-}
-
-func promoteOK(t *testing.T, req *engine.PromoteSubjectRequest) *engine.PromoteSubjectResponse {
-	t.Helper()
-	out, err := PromoteSubject(marshalProto(t, req))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.PromoteSubjectResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	return &resp
-}
-
-func TestPromoteSubjectJoin(t *testing.T) {
-	first := promotableSubject(t)
-	minted := promoteOK(t, first)
-
-	joined := promoteOK(t, &engine.PromoteSubjectRequest{
-		ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(),
-		SubjectId: personBeside(t, first), EntityId: minted.Entity.GetId(),
-	})
-	if joined.Entity.GetRef() != minted.Entity.GetRef() || joined.Claim.GetEntityId() != minted.Entity.GetId() {
-		t.Fatalf("joined %+v onto %+v", joined.Entity, minted.Entity)
-	}
-
-	for name, req := range map[string]*engine.PromoteSubjectRequest{
-		"bad entity id": {ProjectDir: first.GetProjectDir(), UserId: first.GetUserId(), SubjectId: personBeside(t, first), EntityId: "nope"},
-	} {
-		if _, err := PromoteSubject(marshalProto(t, req)); err == nil {
-			t.Fatalf("%s accepted", name)
-		}
-	}
 }

@@ -299,12 +299,6 @@ struct CatalogSubjectMembership: Sendable, Equatable {
     var name: CatalogNameValue? = nil
 }
 
-/// One saved Promote step: the handle and the claim it wrote.
-struct CatalogPromoteResult: Sendable, Equatable {
-    var entity: CatalogCanonicalEntity
-    var claim: CatalogIdentityClaim
-}
-
 /// A row's target as the Promote page holds it, for a proposal or a Done: on `handleID` (target
 /// handle), or off every handle (target new or skip, no handle).
 struct CatalogPromoteGraphAlignmentFixed: Sendable, Equatable {
@@ -1211,7 +1205,7 @@ protocol GenealogyStore: Sendable {
         copyCredibility: Bool,
         artifactIDs: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects)
-    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws
+    func deleteSource(projectDir: String, userID: String, sourceID: String) async throws -> CatalogWriteEffects
     func updateSource(
         projectDir: String,
         userID: String,
@@ -1219,7 +1213,7 @@ protocol GenealogyStore: Sendable {
         sourceTypeID: String,
         title: String,
         description: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     /// Pin a raster Artifact as cover, or revert to the Source type icon (`type_icon`).
     /// Non-image Files (PDF, …) cannot be cover.
     func setSourceCover(
@@ -1228,7 +1222,7 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
-    ) async throws -> CatalogSource
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects)
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
@@ -1427,14 +1421,6 @@ protocol GenealogyStore: Sendable {
         description: String
     ) async throws -> (CatalogSubject, CatalogWriteEffects)
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
-    /// Promote the Subject with an accepted claim (one transaction): onto a new handle of its type when
-    /// `entityID` is `nil`, else onto that existing handle (same type, unmerged; claim only).
-    func promoteSubject(
-        projectDir: String,
-        userID: String,
-        subjectID: String,
-        entityID: String?
-    ) async throws -> CatalogPromoteResult
     /// Take a primary Subject's promotion back: its accepted claim and, in the same write, the accepted
     /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
     /// no accepted claim writes nothing.
@@ -1461,7 +1447,7 @@ protocol GenealogyStore: Sendable {
         graphID: String,
         seenRevision: Int64,
         rows: [CatalogPromoteGraphAlignmentFixed]
-    ) async throws
+    ) async throws -> CatalogWriteEffects
     /// Accepted handle of every promoted Subject on one Evidence graph.
     func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
@@ -1669,16 +1655,6 @@ extension GenealogyStore {
             userID: userID,
             observation: observation,
             depictionInput: nil
-        )
-    }
-
-    /// Promote onto a new handle (the graph card's Confirm).
-    func promoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogPromoteResult {
-        try await promoteSubject(
-            projectDir: projectDir,
-            userID: userID,
-            subjectID: subjectID,
-            entityID: nil
         )
     }
 }

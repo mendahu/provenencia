@@ -113,6 +113,23 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(wentTo?.title == "1851 census")
     }
 
+    /// A blank session title does not hide the title the location carries.
+    @Test func blankSessionTitleFallsBackToTheCarriedOne() {
+        let blank = LocationNames(sourceTitle: { _ in "  " }, graphName: { _ in nil })
+        #expect(WorkspaceLocationLabels.sourceTitle(sourceID: "src-1", carried: "Census", names: blank) == "Census")
+        #expect(WorkspaceLocationLabels.sourceTitle(sourceID: "src-1", carried: "  ", names: blank) == nil)
+        #expect(WorkspaceLocationLabels.sourceTitle(sourceID: "src-1", carried: "Census", names: names) == "1851 census")
+        let items = WorkspaceToolbar.breadcrumbItems(
+            for: .promote(
+                sourceId: "src-1", graphId: "g-1", subjectId: "sub-1", kind: .person,
+                ref: "SUB-AAAAA", title: "James Robins", sourceTitle: "Census"
+            ),
+            names: blank,
+            goTo: { _ in }
+        )
+        #expect(items[1].label == "Census")
+    }
+
     @Test func citationComposerCrumbsNameSourceAndGraph() {
         var wentTo: WorkspaceLocation?
         let items = WorkspaceToolbar.breadcrumbItems(

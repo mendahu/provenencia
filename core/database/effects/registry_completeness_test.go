@@ -191,4 +191,13 @@ func TestListsValidate(t *testing.T) {
 	if err := (Effect{ListsOnField: "property_id"}).validate("x"); err == nil {
 		t.Fatal("ListsOnField without Lists validated")
 	}
+	if err := (Effect{ListsOnCreateDelete: true}).validate("x"); err == nil {
+		t.Fatal("ListsOnCreateDelete without Lists validated")
+	}
+	if err := (Effect{Lists: []List{ListCounts}, ListsOnCreateDelete: true, ListsOnField: "x"}).validate("x"); err == nil {
+		t.Fatal("ListsOnCreateDelete with ListsOnField validated")
+	}
+	if err := (Effect{Lists: []List{ListCounts}, ListsOnCreateDelete: true}).validate("x"); err != nil {
+		t.Fatalf("ListsOnCreateDelete with Lists failed: %v", err)
+	}
 }

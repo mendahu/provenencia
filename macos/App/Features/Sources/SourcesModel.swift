@@ -95,20 +95,17 @@ final class SourcesModel {
     private let userID: String
     private let store: any GenealogyStore
     private let session: WorkspaceSession
-    private let catalogCounts: CatalogCounts?
     private let settingsStore: SourcesListSettingsStore?
 
     init(
         session: WorkspaceSession,
         userID: String,
         store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil,
         settingsStore: SourcesListSettingsStore? = nil
     ) {
         self.session = session
         self.userID = userID
         self.store = store
-        self.catalogCounts = catalogCounts
         self.settingsStore = settingsStore
         self.settings = settingsStore?.load() ?? SourcesListSettings()
     }
@@ -447,12 +444,5 @@ final class SourcesModel {
             createError = L10n.Errors.message(for: error)
             return nil
         }
-    }
-
-    /// Publishes the count of a settled list to the sidebar. The view calls it
-    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
-    /// may be stale.
-    func syncCatalogCounts() {
-        catalogCounts?.publishSources(sources.count)
     }
 }

@@ -293,7 +293,7 @@ struct CatalogQueryRegistryTests {
         for (id, x) in [("sub-1", Int64(1)), ("sub-2", Int64(4))] {
             store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: x, gridY: 1)
         }
-        let promoted = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let promoted = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<EvidenceGraphRows> = session.query(
@@ -336,8 +336,8 @@ struct CatalogQueryRegistryTests {
             nameObservation(id: "o3", subjectID: "sub-1", form: "ROBINS, James",
                             parts: [part("ROBINS", "surname"), part("James", "given")]),
         ]
-        let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
-        let bare = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-2")
+        let james = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
+        let bare = store.seedPromotion(projectDir: projectDir, subjectID: "sub-2")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
@@ -373,7 +373,7 @@ struct CatalogQueryRegistryTests {
             nameObservation(id: "o2", subjectID: "sub-1", form: "Jose Robins",
                             parts: [part("Jose", "given"), part("Robins", "surname")]),
         ]
-        _ = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        _ = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<[CatalogPersonSummary]> = session.query(
@@ -408,7 +408,7 @@ struct CatalogQueryRegistryTests {
                             parts: [part("ROBINS", "surname"), part("James", "given")]),
             nameObservation(id: "o4", subjectID: "sub-1", form: "J. Robins", parts: []),
         ]
-        let james = try await store.promoteSubject(projectDir: projectDir, userID: "user-1", subjectID: "sub-1")
+        let james = store.seedPromotion(projectDir: projectDir, subjectID: "sub-1")
 
         let session = makeSession(store: store)
         let handle: QueryHandle<CatalogConclusionDetail> = session.query(
@@ -647,8 +647,7 @@ struct CatalogQueryRegistryTests {
     }
 
     /// T-14: a write's effects name the Evidence graphs to reload, one warmed key each
-    /// (`revalidatedKeys`); a mutation that names a graph does the same, and a Source
-    /// delete reloads every cached graph.
+    /// (`revalidatedKeys`); no mutation names a graph, a Source delete included.
     @Test func evidenceGraphEffectsReloadOnlyThatGraph() {
         let registry = CatalogQueryRegistry.standard
         let session = makeSession()
@@ -660,12 +659,12 @@ struct CatalogQueryRegistryTests {
         let graph2 = CatalogQueryInvalidation.key(graph2Key)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g-2"])) == [graph2Key])
         #expect(registry.invalidations(for: CatalogWriteEffects(evidenceGraphs: ["g-2"]), project: project).isEmpty)
-        #expect(registry.invalidations(by: .promotedSubject(graphId: "g-1"), project: project).first
-            == .key(.evidenceGraph(project: project, graphId: "g-1")))
         let deleted = registry.invalidations(by: .deletedSubject, project: project)
         #expect(!deleted.contains { $0 == .allCached(.evidenceGraph) || $0 == graph2 })
-        #expect(registry.invalidations(by: .deletedSource(id: "src-1"), project: project)
+        // A Source delete names its graphs in its effects, not in its mutation.
+        #expect(!registry.invalidations(by: .deletedSource(id: "src-1"), project: project)
             .contains(.allCached(.evidenceGraph)))
+        #expect(CatalogQueryKey.Kind.evidenceGraph.descriptor.invalidateOn.isEmpty)
     }
 
     /// Work under a Source moves its "Updated" revision. The write reports its
@@ -702,7 +701,6 @@ struct CatalogQueryRegistryTests {
         let writes: [CatalogMutation] = [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
             .deletedSubject,
-            .promotedSubject(graphId: "g-1"),
         ]
         for mutation in writes {
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
@@ -873,14 +871,6 @@ struct CatalogQueryRegistryTests {
             .key(.sourcesList(project: project)),
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
-            .allCached(.evidenceGraph),
-            .key(.personsList(project: project)),
-            .key(.eventsList(project: project)),
-            .key(.placesList(project: project)),
-            .allCached(.conclusionDetail),
-            .allCached(.personClaims),
-            .allCached(.personFamily),
-            .allCached(.personEvents),
         ])
         // Adding vocabulary touches only the list that owns it — the Source
         // page reads that list rather than carrying its own copy.
@@ -923,10 +913,10 @@ struct CatalogQueryRegistryTests {
         // key they and the mutation both name is revalidated once per `apply`.
         let both = registry.invalidations(
             for: CatalogWriteEffects(evidenceGraphs: ["g-1"]),
-            by: .promotedSubject(graphId: "g-1"),
+            by: .updatedProperty,
             project: project
         )
-        #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.count == 1)
+        #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.isEmpty)
         // A Subject delete reports its handles and its graph in `WriteEffects`, so
         // the lists, the details and the graph are not named here.
         // The citation reads follow the write's `reads`, not this mutation.
@@ -959,28 +949,13 @@ struct CatalogQueryRegistryTests {
             CatalogQueryKey.Kind.personClaims.descriptor.refreshes.map(\.follows)
                 == [.touchedHandles, .evidenceGraphs]
         )
-        // A read follows only its own entry; progress also follows a mutation's graph.
+        // A read follows only its own entry of the effects.
         let reads = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])])
-        #expect(CatalogQueryFollows.reads(.citations).ids(in: reads, mutation: nil) == ["g-1"])
-        #expect(CatalogQueryFollows.reads(.evidenceGraphProgress).ids(in: reads, mutation: nil).isEmpty)
-        #expect(
-            CatalogQueryFollows.reads(.evidenceGraphProgress)
-                .ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")) == ["g-9"]
-        )
-        #expect(CatalogQueryFollows.reads(.citations).ids(in: .empty, mutation: .promotedSubject(graphId: "g-9")).isEmpty)
+        #expect(CatalogQueryFollows.reads(.citations).ids(in: reads) == ["g-1"])
+        #expect(CatalogQueryFollows.reads(.evidenceGraphProgress).ids(in: reads).isEmpty)
         #expect(registry.hiddenPolicy(.citationCounts(project: project, graphId: "g1")) == .markStale)
-        // A Promote changes that graph's cards (their membership row) and every
-        // Conclusion key.
-        #expect(registry.invalidations(by: .promotedSubject(graphId: "g-1"), project: project) == [
-            .key(.evidenceGraph(project: project, graphId: "g-1")),
-            .key(.personsList(project: project)),
-            .key(.eventsList(project: project)),
-            .key(.placesList(project: project)),
-            .allCached(.conclusionDetail),
-            .allCached(.personClaims),
-            .allCached(.personFamily),
-            .allCached(.personEvents),
-        ])
+        // A Property update reports no effects, so it still stales every Conclusion key.
+        #expect(registry.invalidations(by: .updatedProperty, project: project).contains(.allCached(.conclusionDetail)))
         #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
             .key(.propertyTerms(project: project, propertyId: "p1")),
         ])
@@ -992,7 +967,6 @@ struct CatalogQueryRegistryTests {
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
             .deletedSubject,
-            .promotedSubject(graphId: "g-1"),
             .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
@@ -1018,7 +992,7 @@ struct CatalogQueryRegistryTests {
             #expect(invalidations.contains(.allCached(.personFamily)) == isTrigger, "\(mutation)")
             #expect(invalidations.contains(.allCached(.personEvents)) == isTrigger, "\(mutation)")
         }
-        #expect(CatalogQueryRegistry.conclusionTriggers == [.promotedSubject, .deletedSource, .updatedProperty])
+        #expect(CatalogQueryRegistry.conclusionTriggers == [.updatedProperty])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.metadataFieldsList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
@@ -1307,17 +1281,20 @@ struct CatalogQueryRegistryTests {
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(.evidenceGraphsList(project: project)) == .markStale)
     }
 
-    @Test func navCountTriggersAreSourceAndPromoteWrites() {
-        #expect(CatalogQueryRegistry.navCountTriggers == [.createdSource, .deletedSource, .promotedSubject])
+    /// The sidebar recount is not a cache key: `counts` invalidates nothing.
+    @Test func countsListNamesNoKey() {
+        #expect(CatalogQueryRegistry.invalidations(for: .counts, project: ProjectKey(projectDir: projectDir)).isEmpty)
     }
 
-    /// T-10 (AC-2.2): a promote stales every cached person's claims.
-    @Test func personClaimsInvalidateOnPromote() {
-        let project = ProjectKey(projectDir: projectDir)
-        let invalidations = CatalogQueryRegistry.standard.invalidations(by: .promotedSubject(graphId: "g-1"), project: project)
-        #expect(invalidations.contains(.allCached(.personClaims)))
-        #expect(invalidations.contains(.allCached(.conclusionDetail)))
+    /// A write that touches a handle revalidates the cached `personClaims` key through `touchedHandles`;
+    /// the key is evicted while hidden.
+    @Test func personClaimsRevalidateOnTouchedHandle() {
+        let session = makeSession()
+        let project = session.projectKey
         let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        session.setQueryValue(key, value: [CatalogPersonClaimGroup]())
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
+        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personClaims)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
@@ -1345,13 +1322,15 @@ struct CatalogQueryRegistryTests {
         }
     }
 
-    /// T-6 (AC-4.2, AC-4.3): a promote stales every cached person's family; the
-    /// key is evicted while hidden and follows every touched handle.
-    @Test func personFamilyInvalidateOnPromote() {
-        let project = ProjectKey(projectDir: projectDir)
-        let invalidations = CatalogQueryRegistry.standard.invalidations(by: .promotedSubject(graphId: "g-1"), project: project)
-        #expect(invalidations.contains(.allCached(.personFamily)))
+    /// A write that touches a handle revalidates the cached `personFamily` key through `touchedHandles`;
+    /// the key is evicted while hidden.
+    @Test func personFamilyRevalidateOnTouchedHandle() {
+        let session = makeSession()
+        let project = session.projectKey
         let key = CatalogQueryKey.personFamily(project: project, entityId: "e1")
+        session.setQueryValue(key, value: CatalogPersonFamily(units: []))
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
+        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personFamily)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
@@ -1390,13 +1369,15 @@ struct CatalogQueryRegistryTests {
         }
     }
 
-    /// T-6 (AC-4.2, AC-4.3): a promote stales every cached person's timeline;
-    /// the key is evicted while hidden and follows every touched handle.
-    @Test func personEventsInvalidateOnPromote() {
-        let project = ProjectKey(projectDir: projectDir)
-        let invalidations = CatalogQueryRegistry.standard.invalidations(by: .promotedSubject(graphId: "g-1"), project: project)
-        #expect(invalidations.contains(.allCached(.personEvents)))
+    /// A write that touches a handle revalidates the cached `personEvents` key through `touchedHandles`;
+    /// the key is evicted while hidden.
+    @Test func personEventsRevalidateOnTouchedHandle() {
+        let session = makeSession()
+        let project = session.projectKey
         let key = CatalogQueryKey.personEvents(project: project, entityId: "e1")
+        session.setQueryValue(key, value: [CatalogPersonEvent]())
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
+        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personEvents)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
