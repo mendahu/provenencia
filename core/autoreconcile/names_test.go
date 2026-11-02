@@ -522,13 +522,15 @@ func checkNameList(t *testing.T, rules valuecompare.Rules, in []Candidate, rng *
 	}
 
 	// Renaming types one-to-one renames the result and nothing else. Alias
-	// tables key on a name's role, so a rename that moves a name out of the
-	// given, nick and untyped roles may legitimately stop a fold: aliasRules
-	// skip this check (the fuzz target found Rick, Ricky, Ricky as nicks).
-	if !reflect.DeepEqual(rules.Names.Aliases, testRules.Names.Aliases) {
-		return
-	}
+	// tables key on a name's role (given, nick, untyped), and a name moved out
+	// of those roles may legitimately stop a fold (Rick, Ricky, Ricky as nicks
+	// renamed to suffixes). So under alias tables those three stay as they are
+	// and the others permute among roles the tables do not key on (prefix
+	// stays: an unknown type would read as untyped).
 	rename := map[string]string{"given": "x", "surname": "given", "prefix": "", "suffix": "nick", "nick": "suffix", "": "surname"}
+	if !reflect.DeepEqual(rules.Names.Aliases, testRules.Names.Aliases) {
+		rename = map[string]string{"given": "given", "nick": "nick", "": "", "surname": "suffix", "suffix": "surname", "prefix": "prefix"}
+	}
 	renamed := make([]Candidate, len(in))
 	for i, c := range in {
 		n := *c.Value.Name
