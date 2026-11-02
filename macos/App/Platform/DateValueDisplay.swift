@@ -68,11 +68,11 @@ enum DateValueDisplay {
 
     private static func applyQualifier(_ raw: String, to point: String, locale: Locale) -> String {
         switch raw.trimmingCharacters(in: .whitespacesAndNewlines) {
-        case "ABT":
+        case DateQualifier.about:
             return L10n.Dates.displayAbout(point, locale: locale)
-        case "BEF":
+        case DateQualifier.before:
             return L10n.Dates.displayBefore(point, locale: locale)
-        case "AFT":
+        case DateQualifier.after:
             return L10n.Dates.displayAfter(point, locale: locale)
         default:
             return point
