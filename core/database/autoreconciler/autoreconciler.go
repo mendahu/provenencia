@@ -363,7 +363,7 @@ func recomputeBatch(q Querier, ids [][]byte) (moved [][]byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	written := map[string]map[string][]graphcache.TruthRow{}
+	written := map[string][]graphcache.TruthRow{}
 	for _, g := range groups {
 		res, err := autoreconcile.Reconcile(ValueRules, g.valueType, g.candidates, nil, g.cardinality)
 		if err != nil {
@@ -377,11 +377,8 @@ func recomputeBatch(q Querier, ids [][]byte) (moved [][]byte, err error) {
 			if err := insertRow(q, g, row, cl.Value); err != nil {
 				return nil, err
 			}
-			ek, pk := string(g.entityID), string(g.propertyID)
-			if written[ek] == nil {
-				written[ek] = map[string][]graphcache.TruthRow{}
-			}
-			written[ek][pk] = append(written[ek][pk], row)
+			ek := string(g.entityID)
+			written[ek] = append(written[ek], row)
 		}
 		for _, o := range res.Outcomes {
 			var rank any
@@ -403,31 +400,11 @@ func recomputeBatch(q Querier, ids [][]byte) (moved [][]byte, err error) {
 		}
 	}
 	for _, id := range ids {
-		if !sameDisplay(stored[string(id)], written[string(id)]) {
+		if !graphcache.SameDisplayRows(stored[string(id)], written[string(id)]) {
 			moved = append(moved, id)
 		}
 	}
 	return moved, nil
-}
-
-// sameDisplay compares an entity's stored rows to the rows just written, per
-// Property in rank order.
-func sameDisplay(stored map[string][]graphcache.Value, written map[string][]graphcache.TruthRow) bool {
-	if len(stored) != len(written) {
-		return false
-	}
-	for prop, values := range stored {
-		rows := written[prop]
-		if len(values) != len(rows) {
-			return false
-		}
-		for i, v := range values {
-			if !graphcache.SameDisplay(graphcache.RowOf(v, []byte(prop)), rows[i]) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 // group is one (handle, Property) and its candidates.

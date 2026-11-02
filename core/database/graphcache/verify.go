@@ -209,6 +209,20 @@ func (g *Graph) verifyKind(typeID []byte) error {
 }
 
 func sameValues(got map[string][]Value, want []TruthRow) error {
+	return walkValues(got, want, valueEqual)
+}
+
+// SameDisplayRows reports whether the stored values show what the written rows
+// show, per Property in rank order. Vote counts are ignored.
+func SameDisplayRows(stored map[string][]Value, written []TruthRow) bool {
+	return walkValues(stored, written, func(v Value, t TruthRow) bool {
+		return SameDisplay(rowOf(v, t.PropertyID), t)
+	}) == nil
+}
+
+// walkValues compares stored values to truth rows: the Property count, each
+// Property's row count in rank order, then each pair with same.
+func walkValues(got map[string][]Value, want []TruthRow, same func(Value, TruthRow) bool) error {
 	byProp := map[string][]TruthRow{}
 	for _, row := range want {
 		byProp[string(row.PropertyID)] = append(byProp[string(row.PropertyID)], row)
@@ -223,7 +237,7 @@ func sameValues(got map[string][]Value, want []TruthRow) error {
 			return fmt.Errorf("property %x rank count %d, truth %d", prop, len(rows), len(truth))
 		}
 		for i := range rows {
-			if !valueEqual(rows[i], truth[i]) {
+			if !same(rows[i], truth[i]) {
 				return fmt.Errorf("property %x rank %d differs", prop, rows[i].Rank)
 			}
 		}
@@ -233,7 +247,7 @@ func sameValues(got map[string][]Value, want []TruthRow) error {
 
 // valueEqual is v equal to t in every field, the vote counts included.
 func valueEqual(v Value, t TruthRow) bool {
-	return SameDisplay(RowOf(v, t.PropertyID), t) && v.Support == t.Support && v.Against == t.Against
+	return SameDisplay(rowOf(v, t.PropertyID), t) && v.Support == t.Support && v.Against == t.Against
 }
 
 // SameDisplay reports whether two rows show the same value: every field but
@@ -250,8 +264,8 @@ func SameDisplay(a, b TruthRow) bool {
 		bytes.Equal(a.ImageFileID, b.ImageFileID)
 }
 
-// RowOf is the stored value v of the Property as a TruthRow.
-func RowOf(v Value, property []byte) TruthRow {
+// rowOf is the stored value v of the Property as a TruthRow.
+func rowOf(v Value, property []byte) TruthRow {
 	return TruthRow{
 		PropertyID: property, Rank: v.Rank, Reason: v.Reason,
 		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
