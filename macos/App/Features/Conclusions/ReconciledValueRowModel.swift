@@ -57,7 +57,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         orders: NameFormatOrders = NameFormatOrders()
     ) {
         let lead = field.displayedValues.first
-            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
+            .map { ReconciledValueDisplay.string(for: $0.value, propertyKey: field.propertyKey, locale: locale, orders: orders) }
             .flatMap { $0.isEmpty ? nil : $0 }
         let listed = Self.listedValues(of: field, locale: locale, orders: orders)
         let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
@@ -70,7 +70,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         count = ReconciledValueDisplay.countLine(field)
         against = ReconciledValueDisplay.againstLine(field)
         otherValuesLabel = ReconciledValueDisplay.otherValuesLabel(field)
-        otherValues = ReconciledValueDisplay.otherValues(field).map { Self.otherValue($0, locale: locale, orders: orders) }
+        otherValues = ReconciledValueDisplay.otherValues(field).map { Self.otherValue($0, propertyKey: field.propertyKey, locale: locale, orders: orders) }
         listedValues = listed
         whyTitle = listed.count > 1
             ? L10n.Conclusions.whyThese(listed.count, label: field.label)
@@ -102,12 +102,13 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     /// A displayed value as a line: its text and its Source count.
     static func otherValue(
         _ value: CatalogReconciledValue,
+        propertyKey: String,
         locale: Locale,
         orders: NameFormatOrders
     ) -> OtherValue {
         OtherValue(
             rank: value.rank,
-            text: ReconciledValueDisplay.string(for: value.value, locale: locale, orders: orders),
+            text: ReconciledValueDisplay.string(for: value.value, propertyKey: propertyKey, locale: locale, orders: orders),
             support: L10n.Conclusions.sourceCount(value.support)
         )
     }
@@ -135,7 +136,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             if !showsHeadings {
                 heading = nil
             } else if run.rank > 0, let value = field.displayedValues.first(where: { $0.rank == run.rank }) {
-                heading = .value(otherValue(value, locale: locale, orders: orders))
+                heading = .value(otherValue(value, propertyKey: field.propertyKey, locale: locale, orders: orders))
             } else {
                 heading = .otherRecords
             }
@@ -169,7 +170,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                     other += run.records
                     continue
                 }
-                let shown = otherValue(value, locale: locale, orders: orders)
+                let shown = otherValue(value, propertyKey: member.field.propertyKey, locale: locale, orders: orders)
                 let outcomes = member.field.outcomes.filter { $0.groupRank == run.rank }
                 if let index = valueRuns.firstIndex(where: { $0.value.text == shown.text }) {
                     valueRuns[index].records += run.records
@@ -202,7 +203,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     ) -> [OtherValue] {
         guard field.state == .multiple else { return [] }
         return field.displayedValues.compactMap { value in
-            let listed = Self.otherValue(value, locale: locale, orders: orders)
+            let listed = Self.otherValue(value, propertyKey: field.propertyKey, locale: locale, orders: orders)
             return listed.text.isEmpty ? nil : listed
         }
     }

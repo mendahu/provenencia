@@ -215,6 +215,42 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
     }
 
+    @Test func aRelabelledProductRoleReadsWithTheAppsName() {
+        var role = observation(propertyKey: "role", valueText: "Witness at the ceremony", valueType: "term")
+        role.valueTermKey = "witness"
+        role.valueTermOrigin = CatalogOrigin.provenencia
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Marriage")
+        eventType.valueTermKey = "marriage"
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .participation, observations: [
+            observation(propertyKey: "person", valueSubjectID: "p1"),
+            observation(propertyKey: "event", valueSubjectID: "e1"),
+            role,
+        ])
+        let snap = snapshot(bridge: placed, subjects: [
+            primary(
+                id: "p1", kind: .person, label: "Alice", ref: "CPR-1",
+                observations: [identityObservation(subjectID: "p1", propertyKey: "name", valueText: "Alice")]
+            ),
+            primary(id: "e1", kind: .event, label: "Marriage", ref: "CEV-1", observations: [eventType]),
+        ])
+        let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
+        #expect(sentence.lowercased().contains("witness"))
+        #expect(!sentence.contains("ceremony"))
+    }
+
+    @Test func everyBridgeKindReadsItsTermFromTheSeededProperty() {
+        let expected: [EvidenceBridgeKind: String] = [
+            .relationship: SeededPropertyKey.relationshipType,
+            .participation: SeededPropertyKey.role,
+            .location: SeededPropertyKey.role,
+            .placeRelationship: SeededPropertyKey.placeRelationshipType,
+        ]
+        for kind in EvidenceBridgeKind.allCases {
+            #expect(ConnectionSentenceRegistry.termProperty(for: kind) == expected[kind])
+        }
+    }
+
     @Test func aUserTermKeyedLikeAProductTermReadsGenerically() {
         // A researcher's own role "subject", labelled "Main person", at a product birth.
         var role = observation(propertyKey: "role", valueText: "Main person", valueType: "term")

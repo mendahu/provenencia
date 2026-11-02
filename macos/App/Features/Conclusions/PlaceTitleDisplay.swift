@@ -21,9 +21,11 @@ struct PlaceTitleParts: Equatable, Sendable {
         locale: Locale,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let names = toponym?.displayedValues
-            .map { ReconciledValueDisplay.string(for: $0.value, locale: locale, orders: orders) }
-            .filter { !$0.isEmpty } ?? []
+        let names = toponym.map { toponym in
+            toponym.displayedValues
+                .map { ReconciledValueDisplay.string(for: $0.value, propertyKey: toponym.propertyKey, locale: locale, orders: orders) }
+                .filter { !$0.isEmpty }
+        } ?? []
         self.init(names: names, label: entity.label, ref: entity.ref)
     }
 }
