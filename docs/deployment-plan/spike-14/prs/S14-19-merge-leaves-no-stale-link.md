@@ -42,10 +42,10 @@ The catalog's in-memory graph (`core/database/graphcache`) drops a link to a han
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | A Person P and a birth Event E joined by a `participation`; E and P are loaded. P is set `merged_into_id` = Q, and the commit names P and Q | E has no link to P; P is loaded with `Merged` true; `g.Verify()` returns nil |
+| AC-1.1 | A Person P and a birth Event E joined by a `participation`; E and P are loaded. P is set `merged_into_id` = Q, and the commit names P and Q | E has no link to P; P is loaded with `Merged` true and keeps its link to E; `g.Verify()` returns nil |
 | AC-1.2 | The same, but only E is loaded (P never read) | E has no link to P; P is not loaded by the commit; `g.Verify()` returns nil |
 | AC-1.3 | The same, but neither E nor P is loaded | The commit loads neither E nor P; `g.Verify()` returns nil |
-| AC-1.4 | `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` | Passes, `TestMemoFollowsCommit/a_handle_merged` included (the map's Check) |
+| AC-1.4 | `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/...` | Passes, `TestMemoFollowsCommit/a_handle_merged` included (the map's Check) |
 | AC-1.5 | `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` with and without `PROVENENCIA_GRAPH_VERIFY=1` | Every package that passed at the planning base still passes |
 
 ## 3. Scope
@@ -82,7 +82,7 @@ Verified by reading the code at `e2efbd0`. The planning session could not run Go
 | Verify | `core/database/graphcache/verify.go` `(*Graph).Verify`, `verifyIDs`, `sameLinks` | Compares each loaded node's `Links` with `loadLinks` of its id. Runs after every `OnCommit` when `PROVENENCIA_GRAPH_VERIFY=1` (`commit.go` `verifyIfSet`) |
 | Memos | `core/database/graphcache/memo.go` `dropMemos`, `NodeMemo.Deps` | Drops each slot's results for `roots` and for what the slot's `Deps` names for them |
 | Merge in tests | `core/database/graphcache/graphcachetest/graphcachetest.go` `(*Canon).Merge`, `(*Canon).Commit` | `Merge(id, into)` sets `merged_into_id`; `Commit(ids...)` commits `effects.Set{Handles: ids}` |
-| Merge in product | `core/database/canonicalentities/canonicalentities.go` | Reads `merged_into_id` only (`MergedIntoID`, counts skip merged). No Go code outside tests writes `merged_into_id` (`rg 'merged_into_id\s*=' --type go` hits only `graphcachetest.go`) |
+| Merge in product | `core/database/canonicalentities/canonicalentities.go` | Reads `merged_into_id` only (`MergedIntoID`, counts skip merged). No Go code outside tests writes `merged_into_id`: `rg 'merged_into_id\s*=' --type go --glob '!*_test.go'` hits only `graphcachetest.go` (a test helper package); eight `_test.go` files merge with raw SQL |
 | Failing test | `core/database/promotealign/memo_test.go` `TestMemoFollowsCommit` "a handle merged" | Warms Propose, merges `w.personHandle` into another promoted Person with SQL, commits `Handles: [personHandle]`, and compares warm with fresh. In verify mode the commit's `Verify` fails: the birth handle (loaded by Propose) still links to the merged Person |
 | Budget test | `core/database/promotealign/perf_test.go` `TestLargeSourceBudgets`, its `over` helper, `budget*` constants | Fails a subtest when a timing is over budget. Audit L-16 lists it as failing in verify mode; five Spike 13 – 14 ship logs record it missing its budgets on CI runners without verify mode. Its timed sections (`since(...)`) contain no commit |
 | Graph tests | `core/database/graphcache/graph_test.go` `TestCommitOfAnAssociationLoadsEndpoints`, `TestCommitReloadsASharedEndpointOnce`, helper `loaded` | Cover association commits; no test commits a merged handle |
@@ -163,31 +163,31 @@ None — no user-facing copy.
 **STEP-1 — Reproduce**
 Files: none.
 Do: on a clean checkout of the base, run the verify-mode suite and the whole Go suite in verify mode, and record every failure.
-Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` fails `TestMemoFollowsCommit/a_handle_merged` with a `links: count 1, catalog 0` error. Record what `TestLargeSourceBudgets` reports. Then `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...`: record the list of failing packages (the AC-1.5 baseline).
+Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m -v ./core/database/promotealign/...` fails `TestMemoFollowsCommit/a_handle_merged` with a `links: count 1, catalog 0` error. For `TestLargeSourceBudgets`, record each failing subtest and its message, and sort them into budget lines (the `t.Errorf` in `over`) and anything else (`Fatalf`, `Errorf` in "warm queries" or "memo matches a fresh run", a timeout). Anything else is a Stop condition. Every verify-mode command in this plan uses `-timeout 30m`. Then `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./api/... ./core/...`: record the list of failing packages (the AC-1.5 baseline).
 
 **STEP-2 — The merge-commit test**
 Files: `core/database/graphcache/graph_test.go`.
-Do: add `TestCommitOfAMergedHandle` (D-5), table-driven per `.cursor/rules/go-tests.mdc`: cases "both loaded" (AC-1.1), "only the event loaded" (AC-1.2), "neither loaded" (AC-1.3). Each case: `canon.Entity("person")` twice (P, Q), `canon.Entity("event")` (E), `canon.Link("participation", map[string][]byte{"person": P, "event": E}, "role", "subject")`, commit the link, `g.Drop()`, load per the case with `g.Node`, then `canon.Merge(P, Q)` and `canon.Commit(P, Q)`. Assert per the AC table, using `loaded` and `g.Cached(E)`'s `Links`, and `g.Verify()` returns nil.
+Do: add `TestCommitOfAMergedHandle` (D-5), table-driven per `.cursor/rules/go-tests.mdc`: `tests := []struct{ name string; mergedLoaded, eventLoaded bool }` with rows "both loaded" (true, true; AC-1.1), "only the event loaded" (false, true; AC-1.2), "neither loaded" (false, false; AC-1.3). Each row, in `t.Run`: `c := graphcachetest.OpenCatalog(t)`, `canon := graphcachetest.NewCanon(t, c)`, P and Q from `canon.Entity("person")`, E from `canon.Entity("event")`, `assoc := canon.Link("participation", map[string][]byte{"person": P, "event": E}, "role", "subject")`, `canon.Commit(assoc)`, `g := c.Graph()`, `g.Drop()`. Then `g.Node(E)` when `eventLoaded` and `g.Node(P)` when `mergedLoaded` (`Node` loads only the id it is given, `graph.go` `(*Graph).Node`). Then `canon.Merge(P, Q)` and `canon.Commit(P, Q)`. Assert: `loaded(g, E) == eventLoaded` and `loaded(g, P) == mergedLoaded`; when E is loaded, no entry of `g.Cached(E)`'s `Links` has `Neighbor` equal to P (`bytes.Equal`); when P is loaded, `g.Cached(P)`'s `Merged` is true and its `Links` still hold one link with `Neighbor` E (a merged node keeps its own links, as a fresh load gives); `g.Verify()` returns nil. Do not touch Q's neighbors: Q has none, and D-1 reloads only a merged handle's.
 Check: `CGO_ENABLED=1 go test -tags fts5 -run TestCommitOfAMergedHandle ./core/database/graphcache/` fails "both loaded" and "only the event loaded" (E still links to P), and passes "neither loaded".
 
 **STEP-3 — Reload a merged handle's neighbors**
 Files: `core/database/graphcache/commit.go`.
 Do: per §6 Go core: the `merged` list in `OnCommit`, `mergedNeighbors` *(new)*, appends to `reload` and `roots` before `loadIDs`, and the doc comment sentence.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/graphcache/...` passes, `TestCommitOfAMergedHandle` included; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -run TestMemoFollowsCommit ./core/database/promotealign/` passes.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/graphcache/...` passes, `TestCommitOfAMergedHandle` included; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m -run TestMemoFollowsCommit ./core/database/promotealign/` passes.
 
 **STEP-4 — Budgets log in verify mode**
 Files: `core/database/promotealign/perf_test.go`.
-Do: D-4 in `over`.
-Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` passes (AC-1.4); `CGO_ENABLED=1 go test -tags fts5 -run TestLargeSourceBudgets ./core/database/promotealign/` still fails a subtest when a budget constant is set to `time.Nanosecond` locally (revert after checking; do not commit it).
+Do: D-4 in `over`; add `"os"` to the file's imports.
+Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/...` passes (AC-1.4); `CGO_ENABLED=1 go test -tags fts5 -run TestLargeSourceBudgets ./core/database/promotealign/` still fails a subtest when a budget constant is set to `time.Nanosecond` locally (revert after checking; do not commit it).
 
 **STEP-5 — Whole suite**
 Files: none.
 Do: run the suite both ways and compare with STEP-1's baseline.
-Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` fails no package beyond STEP-1's list minus `promotealign`; `scripts/check-pr.sh` prints `check-pr: PASS` (AC-1.5).
+Check: `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./api/... ./core/...` fails no package beyond STEP-1's list minus `promotealign`; `scripts/check-pr.sh` prints `check-pr: PASS` (AC-1.5).
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row status; S14-19 scope entry Context: "`core/database/graphcache` `OnCommit` (memos and `Deps`)" in place of "the merge path in `canonicalentities`", and drop `use-catalog-session`), this plan (status, Landed note), `docs/deployment-plan/spike-14/app-health-audit.md` (L-16: mark its `a_handle_merged` and `TestLargeSourceBudgets` verify-mode items fixed in S14-19, with a closing "Fixed in S14-19." the way the items above it carry "**Fixed in S14-14.**"), `VERSION`, `core/version.go`, `MARKETING_VERSION`.
-Do: per the Definition of done.
+Files: `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row status; S14-19 scope entry Context: "`core/database/graphcache` `OnCommit` (memos and `Deps`)" in place of "the merge path in `canonicalentities`", and drop `use-catalog-session`), this plan (status, Landed note), `docs/deployment-plan/spike-14/app-health-audit.md` (L-16: replace "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`);" with "`PROVENENCIA_GRAPH_VERIFY=1` is not suite-clean (`promotealign` `TestMemoFollowsCommit/a_handle_merged`, `TestLargeSourceBudgets`; **fixed in S14-19**);" and leave the rest of the bullet as it is), `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj`.
+Do: per the Definition of done. Version: the next patch after what `VERSION` holds on your base (0.2.7 → 0.2.8 at the planning base), in all three places. `completed.md`: a new `## S14-19 — A merge leaves no stale link in the graph cache` section at the top (newest first), one paragraph starting `**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N).` Map row: Plan column links this file; Status `Landed in #N (YYYY-MM-DD)` like the other landed rows.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-19-merge-leaves-no-stale-link.md` reports no errors; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -196,7 +196,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/graphcache/graph_test.go` `TestCommitOfAMergedHandle` *(new)* "both loaded" | P, E loaded; merge P into Q; commit P, Q → E has no link to P; P loaded with `Merged`; `Verify` nil | AC-1.1, D-1, D-5 |
+| T-1 | Go | `core/database/graphcache/graph_test.go` `TestCommitOfAMergedHandle` *(new)* "both loaded" | P, E loaded; merge P into Q; commit P, Q → E has no link to P; P loaded with `Merged` and its link to E; `Verify` nil | AC-1.1, D-1, D-5 |
 | T-2 | Go | same, "only the event loaded" | E loaded, P not; merge; commit → E has no link to P; P not loaded; `Verify` nil | AC-1.2, D-1, D-3 |
 | T-3 | Go | same, "neither loaded" | nothing loaded; merge; commit → E and P not loaded; `Verify` nil | AC-1.3, D-2 |
 | T-4 | Go | `core/database/promotealign/memo_test.go` `TestMemoFollowsCommit` "a handle merged" (unchanged) under `PROVENENCIA_GRAPH_VERIFY=1` | warm Propose, merge, commit → no verify error; warm equals fresh | AC-1.4 |
@@ -211,7 +211,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `g
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
-- [ ] PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/... passes (the map's Check)
+- [ ] PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/... passes (the map's Check)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left — none in this PR
 - [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it) — nothing is renamed or deleted
@@ -230,7 +230,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `g
 
 None in the app: no product action merges handles. The reviewer runs:
 
-1. `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` → `ok`.
+1. `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 -timeout 30m ./core/database/promotealign/...` → `ok`.
 2. `CGO_ENABLED=1 go test -tags fts5 -run TestCommitOfAMergedHandle -v ./core/database/graphcache/` → three subtests pass.
 
 ## 11. Risks and stop conditions
@@ -244,10 +244,10 @@ None in the app: no product action merges handles. The reviewer runs:
 
 - STEP-1's verify-mode `TestMemoFollowsCommit/a_handle_merged` passes, or fails with an error other than a `links:` mismatch on a neighbor of the merged handle.
 - After STEP-3, `TestMemoFollowsCommit/a_handle_merged` still fails in verify mode, with any error (values, members, identity, a memo check).
-- `TestLargeSourceBudgets` fails in verify mode on anything other than an "over the … budget" line (a `Fatal` in "fixture", "memo matches a fresh run" or "warm queries", or a test timeout).
+- `TestLargeSourceBudgets` fails in verify mode on anything other than a budget line written by `over` (a `Fatal` in "fixture", "memo matches a fresh run" or "warm queries", or the 30-minute test timeout).
 - `TestCommitReloadsASharedEndpointOnce` needs its query ceiling raised.
 - A package that passed in STEP-1 fails in STEP-5, in either mode.
-- `rg 'merged_into_id\s*=' --type go` finds a writer outside `graphcachetest.go` (a product merge path landed after the base).
+- `rg 'merged_into_id\s*=' --type go --glob '!*_test.go'` finds a hit outside `core/database/graphcache/graphcachetest/graphcachetest.go` (a product merge path landed after the base).
 
 ## 12. Open questions
 
