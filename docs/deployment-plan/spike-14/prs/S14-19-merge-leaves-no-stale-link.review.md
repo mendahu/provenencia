@@ -1,7 +1,7 @@
 # Review — S14-19 A merge leaves no stale link in the graph cache
 
-**Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready (after round-2 fixes)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None.
@@ -60,3 +60,9 @@ Executability (sonnet): every round-1 answer confirmed against the code; no bloc
 
 ### X-9 · minor · STEP-6's Context-line edit is ambiguous
 **Answer:** Fixed — STEP-6 gives the whole replacement Context line.
+
+Maintainability (opus): every round-1 answer confirmed against the code; no new blocker. Fits. Two notes below blocker:
+- Use the existing `graphcachetest.Canon.Person` and `Birth` helpers in STEP-2. **Answer:** Fixed — STEP-2 and D-5 use `canon.Person()` and `canon.Birth(P, nil, nil)`.
+- When P is loaded, its links are read twice in one merge commit (`mergedNeighbors` and the reload). **Answer:** Declined — only on commits naming a merged handle, which no product writer makes; D-2 keeps one reload, and `TestCommitReloadsASharedEndpointOnce` holds the unmerged query count.
+
+**Final:** Fits — Ready. 2 rounds. No open blocker; To user: none.
