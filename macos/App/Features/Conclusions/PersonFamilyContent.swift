@@ -96,10 +96,13 @@ struct PersonFamilyContent: Equatable {
         let focusID = family.person?.entity.id
         func tile(_ member: CatalogFamilyMember, role: PersonFamilyRole, column: String, group: String) -> PersonCardLink {
             let summary = member.person
-            return PersonCardLink(
+            return PersonCardLink.link(
                 id: "\(column)-\(group)-\(summary.entity.id)",
-                content: PVPersonCardContent(summary: summary, role: role.label, isFocus: false, locale: locale, orders: orders),
-                location: PersonsList.location(summary, orders: orders).withPageSection(.family)
+                summary: summary,
+                role: role.label,
+                opensOn: .family,
+                locale: locale,
+                orders: orders
             )
         }
 

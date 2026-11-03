@@ -194,6 +194,11 @@ struct PersonTimelineContent: Equatable {
         items = before + undatedItems + [dated[deathAt]] + after
     }
 
+    /// The names of the role terms among `values`; one that is not a term, or has no name, is skipped.
+    private static func roleNames(_ values: [CatalogConclusionValue]) -> [String] {
+        values.compactMap { PropertyTermDisplay.name($0, propertyKey: SeededPropertyKey.role) }
+    }
+
     private static func participantLinkID(eventId: String, personId: String) -> String { "\(eventId)-\(personId)" }
 
     private static func row(
@@ -204,9 +209,7 @@ struct PersonTimelineContent: Equatable {
     ) -> Row {
         let summary = event.event
         let roles = event.roles.compactMap { value -> RoleBadge? in
-            PropertyTermDisplay.name(value, propertyKey: SeededPropertyKey.role).map {
-                RoleBadge(text: $0, isSubject: value.productKey == SeededRoleTerm.subject)
-            }
+            roleNames([value]).first.map { RoleBadge(text: $0, isSubject: value.productKey == SeededRoleTerm.subject) }
         }
         var spoken = EventsList.spokenLine(summary, orders: orders, locale: locale)
         if let joined = L10n.DesignSystem.spokenJoin(roles.map(\.text)) {
@@ -223,19 +226,13 @@ struct PersonTimelineContent: Equatable {
             location: EventsList.location(summary, orders: orders),
             span: event.span,
             participants: shown.map { participant in
-                let names = participant.roles.compactMap {
-                    PropertyTermDisplay.name($0, propertyKey: SeededPropertyKey.role)
-                }
-                return PersonCardLink(
+                PersonCardLink.link(
                     id: participantLinkID(eventId: summary.id, personId: participant.person.id),
-                    content: PVPersonCardContent(
-                        summary: participant.person,
-                        role: L10n.DesignSystem.spokenJoin(names),
-                        isFocus: false,
-                        locale: locale,
-                        orders: orders
-                    ),
-                    location: PersonsList.location(participant.person, orders: orders).withPageSection(.timeline)
+                    summary: participant.person,
+                    role: L10n.DesignSystem.spokenJoin(roleNames(participant.roles)),
+                    opensOn: .timeline,
+                    locale: locale,
+                    orders: orders
                 )
             },
             participantsHidden: event.participants.count - shown.count,

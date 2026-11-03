@@ -139,7 +139,6 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     @Environment(\.pvWidthClass) private var widthClass
     @State private var offset: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
-    @State private var viewportHeight: CGFloat = 0
     @State private var viewportSize: CGSize = .zero
     @State private var isScrolled = false
     @State private var fullBandHeight: CGFloat = 0
@@ -253,7 +252,6 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         .onGeometryChange(for: CGSize.self) { $0.size } action: {
             viewportSize = $0
             guard measures else { return }
-            viewportHeight = $0.height
             refreshScrolled()
         }
         .environment(\.pvPageViewportSize, viewportSize)
@@ -267,7 +265,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     private func refreshScrolled() {
         let next = PVPageColumnsMetrics.isScrolled(
             offset: offset,
-            overflow: contentHeight - viewportHeight,
+            overflow: contentHeight - viewportSize.height,
             wasScrolled: isScrolled,
             bandShrink: max(0, fullBandHeight - compactBandHeight)
         )

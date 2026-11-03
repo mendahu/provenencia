@@ -10,3 +10,21 @@ struct PersonCardLink: Equatable, Identifiable {
     var content: PVPersonCardContent
     var location: WorkspaceLocation?
 }
+
+extension PersonCardLink {
+    /// A card for another person that opens them on `section` of their page.
+    static func link(
+        id: String,
+        summary: CatalogPersonSummary,
+        role: String?,
+        opensOn section: ConclusionPageSection,
+        locale: Locale,
+        orders: NameFormatOrders
+    ) -> PersonCardLink {
+        PersonCardLink(
+            id: id,
+            content: PVPersonCardContent(summary: summary, role: role, isFocus: false, locale: locale, orders: orders),
+            location: PersonsList.location(summary, orders: orders).withPageSection(section)
+        )
+    }
+}
