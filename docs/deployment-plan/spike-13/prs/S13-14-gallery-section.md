@@ -12,9 +12,9 @@
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut, as S13-12 and S13-13 did ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-depiction-value`](../../../../.agents/skills/add-depiction-value/SKILL.md) (read only: what a gallery picture is)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [person-detail.md § 4. Gallery](../person-detail.md#4-gallery) (R-29, R-31, R-32; R-1, R-2, R-13b); brief [S13-D5](../design/S13-D5-gallery-and-viewer.md) GA-1 – GA-10, GA-W1, GA-W2; the S14-02 plan ([`../../spike-14/prs/S14-02-pictures-in-the-app.md`](../../spike-14/prs/S14-02-pictures-in-the-app.md)) D-1 – D-5; working rules: "Sections are places", "Redesigns adopt Page columns", "One sectioned Conclusion page, not a Person fork"; Spike 14 working rules "The gallery layer is named gallery, not likeness", "An Event or Place chooses its thumbnail as a Person chooses its portrait"
+**Context:** [person-detail.md § 4. Gallery](../person-detail.md#4-gallery) (R-29, R-31, R-32; R-1, R-2, R-13b); brief [S13-D5](../design/S13-D5-gallery-and-viewer.md) GA-1 – GA-10, GA-W1, GA-W2; the S14-02 plan ([`../../spike-14/prs/S14-02-pictures-in-the-app.md`](../../spike-14/prs/S14-02-pictures-in-the-app.md)) D-1 – D-5; working rules: "The Person's gallery is redrawn on the Person page only", "Sections are places", "Redesigns adopt Page columns", "One sectioned Conclusion page, not a Person fork"; Spike 14 working rules "The gallery layer is named gallery, not likeness", "An Event or Place chooses its thumbnail as a Person chooses its portrait"
 **Planned:** 2026-11-03 against `main` @ `42eb321` (draft: everything that does not depend on the board's frames; § 12 lists what the board settles)
-**Review:** [`S13-14-gallery-section.review.md`](S13-14-gallery-section.review.md)
+**Review:** [`S13-14-gallery-section.review.md`](S13-14-gallery-section.review.md) — round 1: Fits with changes / Ready with changes; every finding Fixed or Declined; round 2 runs on the board refresh
 
 ### Implementer — read this first
 
@@ -44,9 +44,9 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Johann Weber with the brief's seven likenesses (§ 5) | Seven tiles in the engine's order, each at the board's tile size (GA-1); the caption of tile 5 is cut at two lines; tile 6's caption "OBS-7Q2KD" is in mono; tile 7 shows the Person mark in Johann's gender colors |
-| AC-1.2 | VoiceOver on tile 2 | Reads "Likeness from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23" (the citation line, `CitationLineDisplay.line`); on tile 4 the same with ", portrait" |
+| AC-1.2 | VoiceOver on tile 2 | Reads "Likeness from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23" (the citation line) with the hint "Open citation"; on tile 4 "Likeness from Carte de visite, Atelier Strumper, Hamburg, Front, portrait" |
 | AC-1.3 | A person with no likeness | The EmptyState "No likenesses yet" with the photo glyph (GA-8) |
-| AC-1.4 | The Event and Place pages | Their Pictures section looks and behaves as before (96pt tiles, click opens the Citation, no Open citation control, no Use earliest control) |
+| AC-1.4 | The Event and Place pages | Their Pictures section looks and behaves as before (96pt tiles, click opens the Citation, no Open citation control, no Use earliest control). Only their VoiceOver label changes: it names the citation line, and the lead tile adds ", thumbnail" (D-3, D-4): "Picture from Hamburger Nachrichten, Issue 221, p. 4, thumbnail. Open citation" |
 
 **US-2.** As a researcher, I set a likeness as the portrait, or go back to the earliest, from the Gallery.
 
@@ -108,9 +108,10 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | Header menu | `ConclusionDetailPage.swift` `ConclusionDetailHeader.thumbnail` | `pvRightClickMenu` with `copy.useEarliest` while `content.gallery.offersEarliest` |
 | Citation line | `macos/App/Features/Conclusions/CitationLineDisplay.swift` `CitationLineDisplay.line(_:)` | "Source, Artifact, Citation, page" from a `CatalogReconcilerOutcome` (S13-11) |
 | Full width | `macos/App/Features/Workspace/WorkspaceLocation.swift` `ConclusionPageSection.fillsWidth` | `true` for `.timeline` only; `ConclusionDetailPage.swift` passes `primaryFill: pageSection?.fillsWidth` to `PVPageColumns` |
-| Strings | `macos/App/Platform/L10n.swift` `L10n.Conclusions` | `likenessesSection` "Likenesses", `likenessOpenTip` "Open citation", `likenessTileLabel(_:)` "Likeness from %@", `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel(_:)`, `useEarliestLikeness` "Use earliest likeness", `toastPortraitUpdatedTitle`, `toastPortraitChosenBody(_:)`, `toastPortraitEarliestBody`, `galleryEmptyTitle`, `galleryEmptyMessage` |
+| Strings | `macos/App/Platform/L10n.swift` `L10n.Conclusions` | `likenessesSection` "Likenesses", `likenessOpenTip` "Open citation", `likenessTileLabel(_:)` "Likeness from %@. Open citation", `pictureTileLabel(_:)` "Picture from %@. Open citation", `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel(_:)`, `useEarliestLikeness` "Use earliest likeness", `toastPortraitUpdatedTitle`, `toastPortraitChosenBody(_:)`, `toastPortraitEarliestBody`, `galleryEmptyTitle`, `galleryEmptyMessage` |
+| Tile button | `macos/App/DesignSystem/Components/FocusRingButton/` `PVFocusRingButtonStyle`; `macos/App/DesignSystem/Components/ReturnActivation/PVReturnActivation.swift` `pvActivatesOnReturn(when:_:)` | Today's tile uses the focus ring style; a SwiftUI `Button` does not activate on Return on macOS, so `PersonTimelineSection` adds `pvActivatesOnReturn(when:)` with its focused id |
 | Context menu | `macos/App/DesignSystem/Components/ContextMenu/PVContextMenu.swift`, `PVActionMenu.swift` (`pvRightClickMenu`, `PVActionMenuItem`) | The kit's right-click menu, as the header thumb uses |
-| Tests | `macos/ProvenenciaTests/PersonDetailTests.swift` `likenessesBecomeTilesEarliestFirst`, `portraitFlagsFollowThePreferredLikeness`, `headerThumbIsTheLeadLikeness`, the `fillsWidth` loop (line 386); `macos/ProvenenciaTests/ReconciledValueDisplayTests.swift` fixture `picture(_:path:title:leads:)` | The gallery content and the lead flags; `fillsWidth == (section == .timeline)` |
+| Tests | `macos/ProvenenciaTests/PersonDetailTests.swift` `likenessesBecomeTilesEarliestFirst`, `portraitFlagsFollowThePreferredLikeness`, `headerThumbIsTheLeadLikeness`, the `fillsWidth` loop (line 387); `macos/ProvenenciaTests/ReconciledValueDisplayTests.swift` fixture `picture(_:path:title:leads:)` | The gallery content and the lead flags; `fillsWidth == (section == .timeline)` |
 
 **Precedent.** S13-13 ([#691](https://github.com/mendahu/provenencia/pull/691)) replaced an S13-10 placeholder case in `PersonDetailSections` with a section view of its own and opted it into `fillsWidth`; copy that shape (a new file in `Features/Conclusions/`, one case line in `PersonDetailSections`, one `fillsWidth` case, the test loop updated). S14-02 ([#641](https://github.com/mendahu/provenencia/pull/641)) made the gallery kind-blind (`ConclusionDetailGallery`, `LeadCopy`): the new section reads only that slot and the lead model, as `ConclusionDetailGallerySection` does. Do not copy S13-13's own read and host: the gallery comes with the page's detail read.
 
@@ -119,17 +120,18 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | The Person page only. `PersonDetailSections` `.gallery` draws the new section; `ConclusionDetailDefaultPageSections` keeps drawing `ConclusionDetailGallerySection` for Event and Place | User, 2026-11-03; R-1 (Event and Place keep their look) | All three kinds — the Event and Place pages would change look without a board |
-| D-2 | The new section is `ConclusionGallerySection` *(new)* in `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)*, kind-blind: it takes `projectDir`, `pageIdentifier`, `gallery: ConclusionDetailGallery`, `lead: ConclusionLeadModel` and `fallbackColors: PVThumbnail.Colors?`, and speaks only the slot's words. `ConclusionDetailGallerySection` stays unchanged for Event and Place; both are known debt that the Event and Place redesign removes by adopting `ConclusionGallerySection` | The map scope entry: "the old and new galleries can coexist and retiring the old one does not drop the Event and Place galleries"; kind-blind so the second caller adopts it with no fork (working rule "One sectioned Conclusion page, not a Person fork") | A `style:` parameter on `ConclusionDetailGallerySection` — every line of its body would branch on it; a Person-named view — Event and Place could not adopt it |
-| D-3 | Each `ConclusionDetailPicture` gains `citationLine: String` *(new)*, set in `ConclusionDetailGallery.tiles(from:…)` from `CitationLineDisplay.line($0.record)`, and `titleIsRef: Bool` *(new)*, true when `$0.record.sourceTitle` is empty (so `sourceTitle` is the Observation ref, `ReconciliationRecord.sourceTitle(for:)`). The `tileLabel` closure receives the citation line instead of the Source title, for every kind | One wording of a citation for the page (S13-11's line); computed once where the tiles are built; Event and Place speak the longer label too, which only adds the Artifact, Citation and page | A second formatter in the section — a near-copy of `CitationLineDisplay` |
-| D-4 | The portrait's spoken label adds ", portrait" through `L10n.Conclusions.likenessTileLabelLead(_:)` *(new)*, chosen in the section by `tile.isLead` | GA-9 | A Badge read by VoiceOver separately — it splits one tile into two stops |
+| D-2 | The new section is `ConclusionGallerySection` *(new)* in `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)*, kind-blind: it takes `projectDir`, `pageIdentifier`, `gallery: ConclusionDetailGallery`, and `lead: ConclusionLeadModel`, and speaks only the slot's words (every string comes from `ConclusionDetailGallery`, its `LeadCopy` or its tiles). `ConclusionDetailGallerySection` stays unchanged for Event and Place; both are known debt that the Event and Place redesign removes by adopting `ConclusionGallerySection` | The map scope entry: "the old and new galleries can coexist and retiring the old one does not drop the Event and Place galleries"; kind-blind so the second caller adopts it with no fork (working rule "One sectioned Conclusion page, not a Person fork") | A `style:` parameter on `ConclusionDetailGallerySection` — every line of its body would branch on it; a Person-named view — Event and Place could not adopt it |
+| D-3 | `CitationLineDisplay` gains `parts(_:) -> CitationLineDisplay.Parts` *(new)*: `title` (`ReconciliationRecord.sourceTitle(for:)`), `titleIsRef` (`outcome.sourceTitle.isEmpty`, the same untrimmed test `sourceTitle(for:)` uses), `detail` (the Artifact, Citation and page joined as today, "" when none), `observationRef`, and `line` (title then detail, today's output). `line(_:)` returns `parts(_:).line`. Each `ConclusionDetailPicture` gains one field `citation: CitationLineDisplay.Parts` *(new)*, set in `ConclusionDetailGallery.tiles(from:…)`. The tile label closures receive `citation.line` instead of the Source title, for every kind | One formatter, one output for the Spike 15 citation formatter to replace (`CitationLineDisplay`'s doc; `spike-15/citation-formats.md`); S13-15's caption reads the same parts, so neither PR adds fields one at a time | A second formatter in the section; separate `citationLine` / `titleIsRef` / `detail` fields — four fields for one value |
+| D-4 | `tiles(from:…)` takes two more kind closures: `leadTileLabel: (String) -> String` and `openLabel: (String) -> String`, and sets `accessibilityLabel` from `leadTileLabel` when `$0.leads`, else `tileLabel`, and `openLabel` *(new field)* from `openLabel(citation.title)`. Person passes `likenessTileLabelLead` *(new)* and `likenessOpenLabel` *(new)*; `pictures(from:…)` passes `pictureTileLabelLead` *(new)* and `pictureOpenLabel` *(new)* | Every per-tile string is built where the others are, by kind (M-1); the section stays kind-blind; Event and Place adopt with no new plumbing | Picking a Person key in the section by `tile.isLead` — the section would speak Person words |
 | D-5 | Open citation is `navigation.go(to: tile.location)`, the same call the tile's image makes today, from the tile's own control and from its context menu (`pvRightClickMenu` with two `PVActionMenuItem`s: Set as portrait, unless the tile leads, and Open citation) | R-32; one navigation for both routes; the kit menu the header uses | A second navigation path or a new menu component |
 | D-6 | The Gallery's Use earliest likeness control calls `lead.useEarliest(copy: gallery.choose)` and shows while `gallery.offersEarliest`; its title is `gallery.choose.useEarliest` | The header menu's rule and copy, so the two controls never disagree (user, 2026-11-03: keep the header menu) | A Gallery-only rule — two rules for one state |
-| D-7 | The tile's fallback mark wears the person's gender colors: `PersonDetailSections` passes `content.treatment?.thumbnailColors` as `fallbackColors` | Brief § 2 ("the Person mark on the sunken Thumbnail, in the gender colors"), as the header thumb does | No colors — the tile and the header thumb would disagree |
+| D-7 | `ConclusionDetailGallery` gains `fallbackColors: PVThumbnail.Colors? = nil` *(new)* beside `fallbackMark`; `PersonDetailContent` sets it from `treatment?.thumbnailColors`; `ConclusionDetailThumbnail.leading` reads it and drops its `colors:` parameter (its only caller with colors is `PersonDetailContent`). The tile's fallback wears it | Brief § 2 (the Person mark in the gender colors, as the header thumb); one slot fact instead of a parameter on every view (M-4) | A `fallbackColors` parameter on the section and the viewer |
 | D-8 | `ConclusionPageSection.gallery.fillsWidth` is `true` | GA-W1 (rule 3: grids fill the width), the Timeline precedent | A secondary column — the section has nothing supporting to put in it |
-| D-9 | The tile size is a `static let` on `ConclusionGallerySection` (the board's GA-1 value). `CachedThumbnail.pictureCrop` stays 96 for Event and Place. `ThumbnailCache.maxPixelSize` (512) is not changed: it covers a tile up to 256pt at 2× | One constant per view; the cache cap is the header thumb's | Changing `pictureCrop` — it would resize the Event and Place tiles |
+| D-9 | One tile view for both sections: `GalleryTileView` becomes `internal` and gains `size: CGFloat`, `colors: PVThumbnail.Colors?`, `help: String` and `captionIsMono: Bool`; `ConclusionDetailGallerySection` passes `CachedThumbnail.pictureCrop`, nil, the Source title and false (no change for Event and Place); `ConclusionGallerySection` passes its `static let tile` (the board's GA-1 value), `gallery.fallbackColors`, `citation.line` and `citation.titleIsRef`. `CachedThumbnail.pictureCrop`'s doc says it is the Event and Place size. `ThumbnailCache.maxPixelSize` (512) is not changed: it covers a tile up to 256pt at 2× | One tile, not two copies of crop, caption and focus (M-5) | A private tile in the new file |
+| D-11 | The tile image's button keeps `PVFocusRingButtonStyle`, adds `pvActivatesOnReturn(when: focusedID == tile.id)` and `.accessibilityHint(gallery.openTip)`; its spoken label is `tile.accessibilityLabel` | GA-9 (Return opens it); the Timeline precedent | `onKeyPress(.return)` by hand |
 | D-10 | No new query, read, cache key or navigation place. The gallery stays on `GetConclusionDetail` (working rule "Each section reads its own query": Gallery is part of today's detail read) | The rule names Gallery as part of `GetConclusionDetail` | A gallery read of its own — no data is missing |
 
-The board settles GA-1's size, GA-2's second line, GA-3's and GA-4's placement, GA-5's place and GA-6's heading; § 12 lists them. They are layout inside `ConclusionGallerySection` and change no Decision above.
+The board settles GA-1's size, GA-2's second line, GA-3's and GA-4's placement, GA-5's place and GA-6's heading; § 12 lists them. They are layout inside `ConclusionGallerySection` and change no Decision above. A tile the board draws that `GalleryTileView`'s parameters cannot express is a stop condition, not a second tile.
 
 **Rules this plan bends.** None.
 
@@ -140,13 +142,14 @@ The board settles GA-1's size, GA-2's second line, GA-3's and GA-4's placement, 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
 | `ConclusionGallerySection` *(new)*, `ConclusionGallerySection.swift` *(new)* | view, file | `ConclusionDetailPage.swift` `ConclusionDetailGallerySection` | D-2: the Event and Place pages keep the old one unchanged; the new one is kind-blind so they adopt it later |
-| The new section's tile view (private, in the new file) | view | `GalleryTileView` (private) | Depends on the board: if the agreed tile is `GalleryTileView` with a larger size and colors, the implementer moves `GalleryTileView` to the new file as `internal`, adds `size` and `colors` parameters, and both sections use it; otherwise a private tile in the new file. The board's answer fixes which (§ 12) |
-| `ConclusionDetailPicture.citationLine` *(new)*, `.titleIsRef` *(new)* | fields | `CitationLineDisplay.line`, `ReconciliationRecord.sourceTitle(for:)` | Reuse them; the fields carry their results so the view decides nothing about records |
-| `L10n.Conclusions.likenessTileLabelLead(_:)` *(new)*, `likenessOpenLabel(_:)` *(new)* | keys | `likenessTileLabel(_:)`, `useAsPortraitLabel(_:)` | New wordings; same shape and namespace |
+| `GalleryTileView` parameters (`size`, `colors`, `help`, `captionIsMono`) | view change | `GalleryTileView` | Extended, not copied (D-9) |
+| `CitationLineDisplay.Parts` *(new)*, `parts(_:)` *(new)* | type, func | `CitationLineDisplay.line(_:)` | `line` is rebuilt on it (D-3) |
+| `ConclusionDetailPicture.citation`, `.openLabel` *(new)*; `ConclusionDetailGallery.fallbackColors` *(new)* | fields | `fallbackMark`, `accessibilityLabel`, `useAsLabel` | Same place and shape as the slot's existing facts (D-3, D-4, D-7) |
+| `L10n.Conclusions.likenessTileLabelLead(_:)`, `likenessOpenLabel(_:)`, `pictureTileLabelLead(_:)`, `pictureOpenLabel(_:)` *(new)* | keys | `likenessTileLabel(_:)`, `pictureTileLabel(_:)`, `useAsPortraitLabel(_:)` | New wordings; same shape and namespaces; one pair per kind (D-4) |
 
 **Builds on.** The S14-02 gallery slot and lead model; `CitationLineDisplay`; `pvRightClickMenu`; Page columns' full-width mode (S13-13).
-**Deletes.** In `PersonDetailSections`, the Person's use of `ConclusionDetailGallerySection`. Nothing else becomes dead: Event and Place still call it.
-**Next adds.** S13-15 adds the viewer to `ConclusionGallerySection` (the image's click opens it). The Event and Place redesign passes their gallery to `ConclusionGallerySection` and deletes `ConclusionDetailGallerySection` and `GalleryTileView`.
+**Deletes.** In `PersonDetailSections`, the Person's use of `ConclusionDetailGallerySection`; the `colors:` parameter of `ConclusionDetailThumbnail.leading` (D-7). Nothing else becomes dead: Event and Place still call the old section. The two sections side by side are recorded debt: the map's working rule "The Person's gallery is redrawn on the Person page only" (added with this plan) records it, owned by the Event and Place redesign, as "The provenance sheet replaces the Why on the Person page only" is.
+**Next adds.** S13-15 adds the viewer to `ConclusionGallerySection` (the image's click opens it). The Event and Place redesign passes their gallery to `ConclusionGallerySection` and deletes `ConclusionDetailGallerySection`; their per-tile strings already exist (D-4).
 
 ### Reach
 
@@ -183,40 +186,43 @@ None —.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Gallery section | `ConclusionGallerySection` *(new)* | `Features/Conclusions/ConclusionGallerySection.swift` | D-2. Heading line per GA-6 (`PVSectionHeader` with `meta` count and the D-6 control as its trailing content, if the board keeps it) |
-| Tile | private tile view or the moved `GalleryTileView` | same file | D-9 size; `CachedThumbnail` with `fallbackMark: gallery.fallbackMark`, `colors: fallbackColors`; caption `PVTypeScale.caption`, muted, two lines, `.help(tile.citationLine)`; the caption in `PVFont.mono` when `tile.titleIsRef` (D-3) |
+| Gallery section | `ConclusionGallerySection` *(new)* | `Features/Conclusions/ConclusionGallerySection.swift` | D-2. Heading line per GA-6 (`PVSectionHeader(title:meta:actions:)` with the count as `meta` and the D-6 control in `actions:`, if the board keeps it) |
+| Tile | `GalleryTileView` (now internal) | `ConclusionDetailPage.swift` | D-9; the image button per D-11 |
 | Portrait mark | `PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)` | — | As today |
 | Set as portrait | `PVButton(gallery.choose.useAs, variant: .ghost, size: .sm)` | — | As today, disabled while `lead.isSaving`, focus back to the tile after a choice |
-| Open citation | `PVIconButton(.quote, label: …)` or `PVButton`, per the board (GA-4) | — | D-5; tooltip `gallery.openTip` |
+| Open citation | `PVIconButton(.quote, label: tile.openLabel)` or `PVButton(gallery.openTip)`, per the board (GA-4) | — | D-5; tooltip `gallery.openTip`; spoken `tile.openLabel` |
+| Tile button | `macos/App/DesignSystem/Components/FocusRingButton/` `PVFocusRingButtonStyle`; `macos/App/DesignSystem/Components/ReturnActivation/PVReturnActivation.swift` `pvActivatesOnReturn(when:_:)` | Today's tile uses the focus ring style; a SwiftUI `Button` does not activate on Return on macOS, so `PersonTimelineSection` adds `pvActivatesOnReturn(when:)` with its focused id |
 | Context menu | `pvRightClickMenu` + `PVActionMenuItem` | — | D-5 |
 | Use earliest likeness | `PVButton(gallery.choose.useEarliest, variant: .ghost, size: .sm)` | — | D-6, GA-5 |
 | Empty | `PVEmptyState` | `PersonDetailView.swift` | Unchanged |
 
-States: empty (EmptyState), saving (buttons disabled), refreshing (the switcher row's indicator, unchanged), image missing (fallback mark in colors). Accessibility: each tile is one `.accessibilityElement(children: .contain)` labelled per D-3/D-4; the image's button is the open action (Citation now, viewer in S13-15); Set as portrait and Open citation are buttons labelled with the Source; ids `"\(pageIdentifier).picture.\(id)"`, `.leadBadge`, `.useAsLead` (kept), `.openCitation` *(new)*, `"\(pageIdentifier).gallery.useEarliest"` *(new)*.
+States: empty (EmptyState), saving (buttons disabled), refreshing (the switcher row's indicator, unchanged), image missing (fallback mark in colors). Accessibility: each tile is one `.accessibilityElement(children: .contain)` labelled per D-3/D-4; the image's button is the open action (Citation now with the hint `gallery.openTip`, viewer in S13-15); Set as portrait and Open citation are buttons labelled with the Source; ids `"\(pageIdentifier).picture.\(id)"`, `.leadBadge`, `.useAsLead` (kept), `.openCitation` *(new)*, `"\(pageIdentifier).gallery.useEarliest"` *(new)*.
 
 ### Strings
 
-L10n keys *(new)* in `L10n.Conclusions`:
+L10n keys *(new)* in `L10n.Conclusions` (`%@` is the citation line for the tile labels, the Source title for the open labels):
 - `likenessTileLabelLead(_:)` = "Likeness from %@, portrait" (`conclusions.person.likenessTile.lead`)
 - `likenessOpenLabel(_:)` = "Open the citation of the likeness from %@" (`conclusions.person.likenessOpen.label`)
+- `pictureTileLabelLead(_:)` = "Picture from %@, thumbnail. Open citation" (`conclusions.picture.tile.lead`)
+- `pictureOpenLabel(_:)` = "Open the citation of the picture from %@" (`conclusions.picture.open.label`)
 
-Changed meaning: `likenessTileLabel(_:)` and `pictureTileLabel(_:)` now receive the citation line (D-3); their comments say so. Reused: `likenessOpenTip`, `useEarliestLikeness`, `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel(_:)`, the portrait Toasts, `galleryEmptyTitle`, `galleryEmptyMessage`. Any heading or caption wording the board adds is listed here on refresh.
+Changed: `likenessTileLabel(_:)` becomes "Likeness from %@" (the ". Open citation" moves to the hint, D-11) and receives the citation line; `pictureTileLabel(_:)` keeps "Picture from %@. Open citation" and receives the citation line. Both comments say the argument is the citation line; `Localizable.xcstrings` is updated with them. Reused: `likenessOpenTip`, `useEarliestLikeness`, `portraitBadge`, `useAsPortrait`, `useAsPortraitLabel(_:)`, the portrait Toasts, `galleryEmptyTitle`, `galleryEmptyMessage`. Any heading or caption wording the board adds is listed here on refresh.
 
 ## 7. Steps
 
 **STEP-1 — The citation line on each tile**
-Files: `macos/App/Features/Conclusions/ConclusionDetailPage.swift` (`ConclusionDetailPicture`, `ConclusionDetailGallery.tiles`), `macos/App/Platform/L10n.swift` (comments of `likenessTileLabel`, `pictureTileLabel`), `macos/ProvenenciaTests/PersonDetailTests.swift`. Skill: `add-swift-test`, `add-localized-string`.
-Do: D-3. Add T-1.
+Files: `macos/App/Features/Conclusions/CitationLineDisplay.swift`, `macos/App/Features/Conclusions/ConclusionDetailPage.swift` (`ConclusionDetailPicture`, `ConclusionDetailGallery`, `tiles`, `pictures`, `ConclusionDetailThumbnail.leading`), `macos/App/Features/Conclusions/PersonDetailContent.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/PersonDetailTests.swift`. Skill: `add-swift-test`, `add-localized-string`.
+Do: D-3, D-4, D-7 and the § Strings keys. Add T-1, T-4, T-5.
 Check: `xcodebuild test` (as `scripts/check-pr.sh` runs it) passes `PersonDetailTests`.
 
 **STEP-2 — The new section, drawn from the slot**
 Files: `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)*, `macos/App/Features/Conclusions/PersonDetailView.swift`. Skill: `add-ui-component`.
-Do: D-1, D-2, D-7, D-9: the grid and tiles at the board's size, captions, the image's button opening the Citation, the Portrait Badge and Set as portrait. `PersonDetailSections` `.gallery` draws it. The Xcode project uses synchronized folders (`PBXFileSystemSynchronizedRootGroup`): no `project.pbxproj` edit.
+Do: D-1, D-2, D-9, D-11: `GalleryTileView`'s new parameters (the old section passes today's values), the grid and tiles at the board's size, captions, the image's button opening the Citation, the Portrait Badge and Set as portrait. `PersonDetailSections` `.gallery` draws it. The Xcode project uses synchronized folders (`PBXFileSystemSynchronizedRootGroup`): no `project.pbxproj` edit.
 Check: the app builds; the Person's Gallery draws the new tiles; an Event page's Pictures is unchanged.
 
 **STEP-3 — Open citation, the context menu, the heading, accessibility**
 Files: `ConclusionGallerySection.swift`, `L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
-Do: D-4, D-5, GA-6 as the board decides, GA-9 labels and ids.
+Do: D-5, GA-6 as the board decides, GA-9 ids.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; VoiceOver reads AC-1.2.
 
 **STEP-4 — Use earliest likeness in the Gallery**
@@ -240,12 +246,14 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `galleryTilesCarryTheCitationLine` *(new)* | A picture whose record has Source "Hamburger Adressbuch 1861", Artifact "Volume 3", Citation "Entry 214", page label "23" → `citationLine == "Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23"`, `titleIsRef == false` and `accessibilityLabel == likenessTileLabel(that line)`; a record with no title and no parts → `citationLine` and `sourceTitle` are the Observation ref, `titleIsRef == true` | AC-1.2, D-3 |
+| T-1 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `galleryTilesCarryTheCitationParts` *(new)* | `D.picture("a", path:, title: "Hamburger Adressbuch 1861")` with its `record.artifactLabel = "Volume 3"`, `record.citationLabel = "Entry 214"`, `record.pageLabel = "23"` set on the returned value → `citation.title == "Hamburger Adressbuch 1861"`, `citation.detail == "Volume 3, Entry 214, p. 23"`, `citation.line` the two joined, `titleIsRef == false`, `accessibilityLabel == likenessTileLabel(citation.line)`, `openLabel == likenessOpenLabel("Hamburger Adressbuch 1861")`; the same picture with `leads = true` → `likenessTileLabelLead(citation.line)`; title "" and no parts → `title` and `line` are the Observation ref, `detail == ""`, `titleIsRef == true` | AC-1.2, D-3, D-4 |
 | T-2 | Swift | `PersonDetailTests` the `fillsWidth` loop (updated) | `fillsWidth == (section == .timeline \|\| section == .gallery)` | AC-4.1, D-8 |
-| T-3 | Swift | `PersonDetailTests` `portraitFlagsFollowThePreferredLikeness` (extended) | One picture → `offersEarliest == false`; chosen = earliest → false; chosen ≠ earliest → true | AC-2.2, AC-2.3, D-6 |
-| T-4 | Swift | `PersonDetailTests` `likenessesBecomeTilesEarliestFirst` (updated) | Its `accessibilityLabel` expectations follow D-3 | AC-1.2 |
+| T-3 | Swift | `PersonDetailTests` `portraitFlagsFollowThePreferredLikeness` (one case added) | One picture that leads → `offersEarliest == false` (the two-picture cases are already there) | AC-2.3, D-6 |
+| T-4 | Swift | `PersonDetailTests` `likenessesBecomeTilesEarliestFirst` (updated) | Its `accessibilityLabel` expectations follow D-3; and `L10n.Conclusions.likenessTileLabel("X") == "Likeness from X"` (pins the wording) | AC-1.2 |
+| T-5 | Swift | `PersonDetailTests` `eventPicturesKeepTheirWording` *(new)* | `EventDetailContent` with one leading picture → `accessibilityLabel == "Picture from Register, thumbnail. Open citation"`; a second, not leading → `"Picture from Register 2. Open citation"`; `gallery.fallbackColors == nil` | AC-1.4, D-4, D-7 |
+| T-6 | Swift | `PersonDetailTests` `headerThumbIsTheLeadLikeness` (updated) | The thumb's `colors` come from `gallery.fallbackColors` | D-7 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PersonDetailTests` (labels), `ReconciledValueDisplayTests` (shared fixture), any Event or Place test that pins `pictureTileLabel`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PersonDetailTests` (labels, the citation line cases at line 671), `ReconciledValueDisplayTests` (shared fixture).
 
 ## 9. Definition of done
 
@@ -281,13 +289,14 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 | Risk | Mitigation |
 | --- | --- |
-| The agreed tile is too far from `GalleryTileView` to share | § 6 Codebase fit: a private tile in the new file; the old one stays for Event and Place |
-| Passing the citation line to `pictureTileLabel` changes Event and Place VoiceOver | D-3 accepts it; it only adds the Artifact, Citation and page |
+| The agreed tile is too far from `GalleryTileView` to share | Stop and report (D-9); a second tile is not written |
+| Passing the citation line to `pictureTileLabel` changes Event and Place VoiceOver | Accepted (AC-1.4): it only adds the Artifact, Citation and page, and ", thumbnail" on the lead; T-5 pins it |
 
 **Stop and report if:**
 
 - The agreed board changes the header, its thumb menu, or the Event or Place Pictures (D-1; user, 2026-11-03).
 - The board asks for data the detail read does not carry (a likeness date, a Subject name) — that is a follow-up engine PR (working rule "Engine PRs run ahead of their slice").
+- The board's tile cannot be drawn through `GalleryTileView`'s parameters (D-9).
 - The board asks for a tile above 256pt, which `ThumbnailCache.maxPixelSize` would render soft at 2× (D-9).
 - `ConclusionDetailGallery.offersEarliest` or `ConclusionLeadModel` no longer do what § 4 says.
 
@@ -295,7 +304,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 
 The board settles these; the plan stays `Blocked — on board S13-D5` until they are answered on the **Board** line:
 
-1. GA-1: the tile size (recommended 160pt) and whether `GalleryTileView` is shared (§ 6 Codebase fit).
+1. GA-1: the tile size (recommended 160pt).
 2. GA-2: whether the caption has a second line with the page.
 3. GA-3, GA-4: where the Portrait Badge, Set as portrait and Open citation sit; Open citation as an IconButton or a Button.
 4. GA-5, GA-6: where Use earliest likeness sits, and whether the heading line stays.

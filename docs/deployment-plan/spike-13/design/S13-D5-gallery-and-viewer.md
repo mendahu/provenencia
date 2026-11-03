@@ -9,6 +9,7 @@
 **Related:** [`../person-detail.md`](../person-detail.md) R-29 – R-32 (and R-1, R-2, R-13b); [`../deployment-plan.md`](../deployment-plan.md) S13-14 and S13-15 scope entries, working rule "Sections are places"; Spike 14 working rules "The gallery layer is named gallery, not likeness", "An Event or Place chooses its thumbnail as a Person chooses its portrait" ([`../../spike-14/deployment-plan.md`](../../spike-14/deployment-plan.md#working-rules)); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Review:** [`S13-D5-gallery-and-viewer.review.md`](S13-D5-gallery-and-viewer.review.md) — round 1 Fits with changes / Ready with changes, every finding Fixed
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -121,7 +122,7 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 
 | | |
 | --- | --- |
-| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W2: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Set as portrait, Open Citation, the visible way back to the earliest, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. A click on a tile does nothing new until S13-15: S13-14 keeps it opening the Citation. |
+| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W3: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Set as portrait, Open Citation, the visible way back to the earliest, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. A click on a tile does nothing new until S13-15: S13-14 keeps it opening the Citation. |
 | Ships in **S13-15** | LV-1 … LV-9 and LV-W1: the viewer, opened by a click on a tile, with stepping, the counter, the caption, Set as portrait, Open Citation, closing, keyboard and VoiceOver, light and dark, at Regular and Wide. The tile's click moves from Open Citation to the viewer. |
 | Later boards | The Event and Place pages adopt this gallery and the viewer when they get sections (R-1). |
 | Stays out | Any change to the header, switcher or other sections; the Event and Place pages. |
@@ -146,12 +147,13 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | GA-10 | **Dark mode.** Frames 1, 3 and 5 in dark: tiles, the sunken fallback with the Person mark in its gender colors, the Badge, the buttons. |
 | GA-W1 | **The grid at Wide.** Rule 3: the grid fills the pane between the page gutters (Page columns' full-width mode, as the Timeline section; the header keeps its band) and adds tiles per row; tiles keep their size. No secondary column: the section has nothing supporting to put in it. Captions keep their width. |
 | GA-W2 | **Crossing 1600 keeps the place (rule 5).** Resizing keeps the section, the scroll position and the focused tile. A note on the Wide frame. |
+| GA-W3 | **No likenesses at Wide.** The EmptyState stays centered in the primary column; the section does not stretch it. |
 
 ### 4.2 Likeness viewer
 
 | ID | Requirement |
 | --- | --- |
-| LV-1 | **Opening.** A click on a tile's image, or Return / Space with the image focused, opens the viewer on that likeness. Pick its form and say why: (A) a large kit sheet over the page (the sheet presenter every app sheet uses: a click outside and Escape close it); (B) an overlay that dims and covers the pane, with the image in its middle; (C) the tile expanding in place inside the grid. Recommended: (A) or (B); (C) moves every tile below it. |
+| LV-1 | **Opening.** A click on a tile's image, or Return / Space with the image focused, opens the viewer on that likeness. Pick its form and say why: (A) a large kit sheet over the page (the sheet presenter every app sheet uses: a click outside and Escape close it); (B) an overlay that dims and covers the pane, with the image in its middle; (C) the tile expanding in place inside the grid. **Recommended: (A)**, the kit sheet (Panel inside the sheet presenter), which already owns Escape, a click outside and focus. (B) would need a new page-level presenter the kit does not have; draw it only as an alternative frame, marked as that cost. (C) moves every tile below it. |
 | LV-2 | **The image.** The whole likeness, fit inside the viewer's image area, centered, on the sunken surface; never above its pixel size at 2× (§ 2). While the full image loads the tile's image shows, scaled; a missing image shows the Person mark (§ 2). |
 | LV-3 | **Stepping.** Previous and next IconButtons beside the image or under it, and the ← → keys; previous is disabled on the first likeness, next on the last (no wrap). A position counter ("3 of 7") in mono. A gallery of one shows neither button nor counter. |
 | LV-4 | **The caption.** Under the image: the Source title in the body face (a ref in mono), the citation line's remaining parts (Artifact, Citation, page) in a muted line, and the Observation ref in mono. Long titles wrap; nothing is cut. |
@@ -168,7 +170,7 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | --- | --- | --- | --- |
 | Gallery section | Tiles wrap in the primary column | The grid fills the pane between the gutters (full-width mode); more tiles per row; tiles keep their size (GA-W1) | Nothing moves; the primary widens |
 | Likeness viewer | The viewer at the size LV-1's form gives in a 1102 × 900 pane | A larger image area, capped by the image's size; the caption keeps its measure (LV-W1) | Nothing moves |
-| No likenesses | EmptyState in the primary column | Centered primary-only | Nothing |
+| No likenesses | EmptyState in the primary column | Centered primary-only (GA-W3) | Nothing |
 
 ---
 
@@ -198,6 +200,7 @@ Sample person: **Johann Weber** (man), as on the Family and Timeline boards. Sev
 8. **Viewer, keyboard.** Focus on next after a → press; the VoiceOver reading of the image area as a note (LV-8).
 9. **Dark mode.** Frames 1, 3, 5, 6 and 8 in dark (GA-10, LV-9).
 10. **Wide gallery.** Frame 1 at Wide, full width, with the rule-5 note (GA-W1, GA-W2).
+10b. **Wide large and empty.** Frame 4 (40 likenesses) at Wide, and frame 5 (no likenesses) at Wide (GA-W1, GA-W3).
 11. **Wide viewer.** The viewer at Wide on 4 and on 2 (LV-W1).
 
 ---
@@ -215,11 +218,14 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Portrait mark | Component | Ship | `PVBadge` (accent, `photo` icon) | GA-3, LV-5. Today's Badge. |
 | Set as portrait, Use earliest likeness, Open citation | Component | Ship | `PVButton` (ghost, `sm`); `PVIconButton` for an icon-only Open citation | GA-3 – GA-5, LV-5. Not a new action control. |
 | Tile context menu | Component | Ship | `PVContextMenu` / `pvRightClickMenu` with `PVActionMenuItem` | GA-4. The two actions only. |
+| Tile image button | Component | Ship | `PVFocusRingButtonStyle`; `pvActivatesOnReturn(when:)` (`DesignSystem/Components/ReturnActivation/`) | GA-9, LV-1. The kit focus ring, and Return opens it (a plain button does not on macOS), as the Timeline title does. |
 | Grid | Component | Ship | an adaptive `LazyVGrid` at the tile's size, as today | GA-7, GA-W1. |
 | Section heading line | Component | Ship | `PVSectionHeader` (title, meta count, trailing control) | GA-6. If the board keeps a heading. |
 | No likenesses | Component | Ship | `PVEmptyState` | GA-8. The Gallery glyph `photo`. |
 | Portrait Toast | Component | Ship | `PVToast` through the page's lead model | GA-3, GA-5, LV-5. Today's Toast and copy. |
-| Likeness viewer | Snowflake | **New** | `Features/Conclusions/` *(new file, named in the S13-15 plan)* | LV-1 – LV-8. Presented through the kit sheet presenter (`pvSheet`) for form (A), or an overlay on the page for (B). Not the Artifact viewer (no zoom, no region tools). A feature snowflake, not a kit primitive; its known second call site is the Event and Place pages when they adopt sections (R-1). |
+| Viewer panel | Component | Ship | `PVPanel` (title, subtitle, title accessory, footer) inside `pvSheet` | LV-1, LV-4 – LV-6. The provenance sheet's body: the title row holds the close IconButton, the footer the actions. |
+| Viewer image surface | Component | Ship | the sunken surface token (`surfaceSunken`) | LV-2. No new token. |
+| Likeness viewer | Snowflake | **New** | `Features/Conclusions/` *(new file, named in the S13-15 plan)* | LV-1 – LV-8. Presented through the kit sheet presenter (`pvSheet`) for form (A); (B) would be a new page-level presenter. Not the Artifact viewer (no zoom, no region tools). A feature snowflake, not a kit primitive; its known second call site is the Event and Place pages when they adopt sections (R-1). |
 | Previous, next, close | Component | Ship | `PVIconButton` (`chevronBack`, `chevronForward`, `dismiss`) | LV-3, LV-6. |
 | Position counter, Observation ref | Component | Ship | mono caption text | LV-3, LV-4. |
 | Viewer caption | Snowflake | Ship | `CitationLineDisplay` (the provenance sheet's citation line) | LV-4, GA-2's tooltip. One wording of a citation for the page. |
