@@ -80,8 +80,12 @@ struct PersonTimelinePlacementTests {
     }
 
     @Test func narrowListStacksPeople() {
-        #expect(!PersonTimelinePlacement.stacksPeople(listWidth: 946))
-        #expect(PersonTimelinePlacement.stacksPeople(listWidth: 608))
+        // Regular: gutter 56, picture 72, one 300pt people column, four 16pt gaps and a 280pt text column.
+        #expect(PersonTimelinePlacement.stacksPeople(itemsWidth: 771, widthClass: .regular))
+        #expect(!PersonTimelinePlacement.stacksPeople(itemsWidth: 772, widthClass: .regular))
+        // Wide: the people column is three cards and two gaps, 930pt.
+        #expect(PersonTimelinePlacement.stacksPeople(itemsWidth: 1401, widthClass: .wide))
+        #expect(!PersonTimelinePlacement.stacksPeople(itemsWidth: 1402, widthClass: .wide))
     }
 
     @Test func aBirthdayPairSitsTogether() throws {

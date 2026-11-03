@@ -80,17 +80,34 @@ struct PersonTimelinePlacement: Equatable {
     /// The least the text column may be before the people go under it.
     static let minimumTextWidth: CGFloat = 280
 
-    /// Whether the people column goes under the title: the text column would be
-    /// under `minimumTextWidth` in a list `listWidth` wide (gutter, picture,
-    /// people column and three gaps taken out).
-    static func stacksPeople(listWidth: CGFloat) -> Bool {
-        let people = PVTileCardSize.compact.minimumWidth
-        return listWidth - gutterWidth - rowPicture - people - 3 * rowGap < minimumTextWidth
-    }
-
     /// The event row's picture and the gap between its columns.
     static let rowPicture: CGFloat = 72
     static let rowGap: CGFloat = 16
+    /// The gap between the people cards of a Wide row.
+    static let cardColumnGap: CGFloat = 15
+
+    /// The people column: one compact card at Regular; three and their two gaps at Wide.
+    static func peopleWidth(_ widthClass: PVWidthClass) -> CGFloat {
+        let card = PVTileCardSize.compact.minimumWidth
+        return widthClass == .wide ? 3 * card + 2 * cardColumnGap : card
+    }
+
+    /// The text column's width in items `itemsWidth` wide, with the people beside
+    /// it: the gutter, picture and people column and four gaps (gutter|picture,
+    /// picture|text, text|spacer, spacer|people) taken out.
+    static func textWidth(itemsWidth: CGFloat, widthClass: PVWidthClass) -> CGFloat {
+        itemsWidth - gutterWidth - rowPicture - peopleWidth(widthClass) - 4 * rowGap
+    }
+
+    /// The widest the text column grows: the page's content measure less the
+    /// line column, the gutter, the picture and two gaps.
+    static let textCap: CGFloat = PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth - PersonTimelineLifeline.listGap - gutterWidth - rowPicture - 2 * rowGap
+
+    /// Whether the people column goes under the title: the text column beside it
+    /// would be under `minimumTextWidth`.
+    static func stacksPeople(itemsWidth: CGFloat, widthClass: PVWidthClass) -> Bool {
+        textWidth(itemsWidth: itemsWidth, widthClass: widthClass) < minimumTextWidth
+    }
 
     /// `pointsPerYear` keeps a scale already chosen; nil chooses one. An item
     /// with no measured height takes `estimatedHeight`, so every item is placed.

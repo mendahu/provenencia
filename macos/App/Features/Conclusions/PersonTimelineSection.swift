@@ -60,8 +60,10 @@ struct PersonTimelineList: View {
     @State private var pendingReveal: String?
     /// The row that owns the focused card, to return to if the card is gone.
     @State private var focusedOwner: String?
-    /// The list's measured width.
-    @State private var listWidth: CGFloat = 0
+    /// The last title or card that had the keyboard, to tell a card taken away from a click elsewhere.
+    @State private var lastFocused: String?
+    /// The items' measured width, after the line column.
+    @State private var itemsWidth: CGFloat = 0
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
     /// The title button or card with the keyboard: a row's event id or a card's id.
@@ -87,7 +89,7 @@ struct PersonTimelineList: View {
                         item: item,
                         previous: index > 0 ? items[index - 1] : nil,
                         projectDir: projectDir,
-                        stacksPeople: PersonTimelinePlacement.stacksPeople(listWidth: listWidth),
+                        stacksPeople: PersonTimelinePlacement.stacksPeople(itemsWidth: itemsWidth, widthClass: widthClass),
                         open: open,
                         expand: unfold,
                         focused: $focused
@@ -100,6 +102,7 @@ struct PersonTimelineList: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { itemsWidth = $0 }
             .pvScrollsRowIntoView(scrollTarget, anchor: .top, whenRequested: scrollRequest)
         }
         .overlay(alignment: .topLeading) {
@@ -111,10 +114,15 @@ struct PersonTimelineList: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
         .onChange(of: focused) {
             if let id = focused, let row = content.items.compactMap(\.eventRow).first(where: { $0.id == id || $0.participants.contains { $0.id == id } }) {
                 focusedOwner = row.id
+            }
+            if let id = focused {
+                lastFocused = id
+            } else if let last = lastFocused {
+                lastFocused = nil
+                if let owner = focusedOwner, !isShown(last) { focused = owner }
             }
         }
         .onChange(of: widthClass) { keepFocus() }
@@ -147,8 +155,11 @@ struct PersonTimelineList: View {
     /// A card that a width change took away returns the keyboard to its row's title.
     private func keepFocus() {
         guard let id = focused, let owner = focusedOwner else { return }
-        let shown = content.items.compactMap(\.eventRow).contains { $0.id == id || $0.participants.contains { $0.id == id } }
-        if !shown { focused = owner }
+        if !isShown(id) { focused = owner }
+    }
+
+    private func isShown(_ id: String) -> Bool {
+        content.items.compactMap(\.eventRow).contains { $0.id == id || $0.participants.contains { $0.id == id } }
     }
 
     /// "Show N more": the button is gone once the list grows, so the keyboard
@@ -257,18 +268,6 @@ private struct PersonTimelineEventRow: View {
 
     private static let picture = PersonTimelinePlacement.rowPicture
     private static let gap = PersonTimelinePlacement.rowGap
-    private static let cardColumnGap: CGFloat = 15
-
-    private var textWidth: CGFloat {
-        PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth - PersonTimelineLifeline.listGap - PersonTimelinePlacement.gutterWidth - Self.picture - 2 * Self.gap
-    }
-
-    /// 300pt at Regular; three cards and two gaps at Wide.
-    private var peopleWidth: CGFloat {
-        let card = PVTileCardSize.compact.minimumWidth
-        return widthClass == .wide ? 3 * card + 2 * Self.cardColumnGap : card
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: Self.gap) {
             Color.clear
@@ -306,7 +305,7 @@ private struct PersonTimelineEventRow: View {
                 }
                 if stacksPeople && !row.participants.isEmpty { people.padding(.top, 4) }
             }
-            .frame(maxWidth: textWidth, alignment: .leading)
+            .frame(maxWidth: PersonTimelinePlacement.textCap, alignment: .leading)
             Spacer(minLength: 0)
             if !stacksPeople && !row.participants.isEmpty { people }
         }
@@ -318,7 +317,7 @@ private struct PersonTimelineEventRow: View {
         VStack(alignment: .leading, spacing: 4) {
             if widthClass == .wide {
                 LazyVGrid(
-                    columns: Array(repeating: GridItem(.flexible(), spacing: Self.cardColumnGap, alignment: .topLeading), count: 3),
+                    columns: Array(repeating: GridItem(.flexible(), spacing: PersonTimelinePlacement.cardColumnGap, alignment: .topLeading), count: 3),
                     alignment: .leading,
                     spacing: 4
                 ) {
@@ -334,7 +333,7 @@ private struct PersonTimelineEventRow: View {
                 .accessibilityIdentifier("persons.detail.timeline.more.\(row.id)")
             }
         }
-        .frame(width: peopleWidth, alignment: .leading)
+        .frame(width: PersonTimelinePlacement.peopleWidth(widthClass), alignment: .leading)
     }
 
     private func card(_ link: PersonCardLink) -> some View {
