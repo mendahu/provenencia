@@ -66,26 +66,19 @@ func pageBridges(eg graphcache.EvidenceGraph, vocab graphcache.Vocabulary) []gra
 }
 
 // pageEnds is where the page puts each Subject a bridge can name: what Done
-// sends and nothing else. An already-promoted Subject is its handle whatever
-// the scope. With only set, every other Subject is off the page. A caller's
-// fixed row is its handle, New or Skip; any other row starts as the proposal
-// starts it (a handle), or has no target yet. A Subject left out is not on the
-// page.
-func pageEnds(eg graphcache.EvidenceGraph, primary map[string]primarySubject, caller []graphalign.Fixed, rows []graphalign.Row, only []byte) map[string]graphalign.EndTarget {
+// sends and nothing else. An already-promoted Subject (promoted, the handles
+// mergeFixed anchored) is its handle whatever the scope. With only set, every
+// other Subject is off the page. A caller's fixed row is its handle, New or
+// Skip; any other row starts as the proposal starts it (a handle), or has no
+// target yet. A Subject left out is not on the page.
+func pageEnds(promoted map[string][]byte, primary map[string]primarySubject, caller []graphalign.Fixed, rows []graphalign.Row, only []byte) map[string]graphalign.EndTarget {
 	ends := map[string]graphalign.EndTarget{}
 	decided := make(map[string]graphalign.Fixed, len(caller))
 	for _, f := range caller {
 		decided[string(f.SubjectID)] = f
 	}
-	for _, m := range eg.Members {
-		sk := string(m.SubjectID)
-		if _, ok := primary[sk]; !ok {
-			continue
-		}
-		if _, ok := decided[sk]; ok {
-			continue
-		}
-		ends[sk] = graphalign.EndTarget{Target: graphalign.TargetHandle, HandleID: m.EntityID}
+	for sk, handle := range promoted {
+		ends[sk] = endTarget(graphalign.TargetHandle, handle)
 	}
 	if len(only) > 0 {
 		for sk := range primary {
@@ -103,27 +96,28 @@ func pageEnds(eg graphcache.EvidenceGraph, primary map[string]primarySubject, ca
 			continue
 		}
 		if f, ok := decided[sk]; ok {
-			switch f.Target {
-			case graphalign.TargetNew:
-				ends[sk] = graphalign.EndTarget{Target: graphalign.TargetNew}
-			case graphalign.TargetSkip:
-				ends[sk] = graphalign.EndTarget{Waits: graphalign.ConnectionSkipped}
-			default:
-				ends[sk] = graphalign.EndTarget{Target: graphalign.TargetHandle, HandleID: f.HandleID}
+			if f.Target == "" {
+				f.Target = graphalign.TargetHandle
 			}
+			ends[sk] = endTarget(f.Target, f.HandleID)
 			continue
 		}
 		start := started[sk].Start()
-		switch start.Target {
-		case graphalign.TargetHandle:
-			ends[sk] = graphalign.EndTarget{Target: graphalign.TargetHandle, HandleID: start.HandleID}
-		case graphalign.TargetNew:
-			ends[sk] = graphalign.EndTarget{Target: graphalign.TargetNew}
-		case graphalign.TargetSkip:
-			ends[sk] = graphalign.EndTarget{Waits: graphalign.ConnectionSkipped}
-		default:
-			ends[sk] = graphalign.EndTarget{Waits: graphalign.ConnectionUnset}
-		}
+		ends[sk] = endTarget(start.Target, start.HandleID)
 	}
 	return ends
+}
+
+// endTarget is where one Subject lands: its handle, New, a wait for Skip, or
+// a wait for a target not set yet.
+func endTarget(t graphalign.Target, handleID []byte) graphalign.EndTarget {
+	switch t {
+	case graphalign.TargetHandle:
+		return graphalign.EndTarget{Target: graphalign.TargetHandle, HandleID: handleID}
+	case graphalign.TargetNew:
+		return graphalign.EndTarget{Target: graphalign.TargetNew}
+	case graphalign.TargetSkip:
+		return graphalign.EndTarget{Waits: graphalign.ConnectionSkipped}
+	}
+	return graphalign.EndTarget{Waits: graphalign.ConnectionUnset}
 }

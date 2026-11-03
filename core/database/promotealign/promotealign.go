@@ -53,7 +53,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
 
-	anchors, err := mergeFixed(c.Graph(), in.graphID, primary, fixed)
+	anchors, promoted, err := mergeFixed(c.Graph(), in.graphID, primary, fixed)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -76,7 +76,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(eg, in.primary, fixed, prop.Rows, only), canon.Edges)
+	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(promoted, in.primary, fixed, prop.Rows, only), canon.Edges)
 	return prop, rev, prof, nil
 }
 
@@ -142,15 +142,17 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
 // as free anchors, read from the Evidence graph's accepted members. Caller fixed wins
-// when both name the same Subject.
-func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) ([]graphalign.Fixed, error) {
+// when both name the same Subject. promoted is the handle of each Subject
+// added from the members, by Subject id.
+func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) (anchors []graphalign.Fixed, promoted map[string][]byte, err error) {
 	out := make([]graphalign.Fixed, 0, len(caller)+len(primary))
 	seen := map[string]bool{}
+	promoted = map[string][]byte{}
 
 	for _, f := range caller {
 		fixed, err := checkFixed(g, primary, f)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, fixed)
 		seen[string(f.SubjectID)] = true
@@ -158,7 +160,7 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primaryS
 
 	eg, err := g.EvidenceGraph(graphID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for _, m := range eg.Members {
 		sk := string(m.SubjectID)
@@ -172,12 +174,13 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primaryS
 			SubjectID: bytes.Clone(m.SubjectID),
 			HandleID:  bytes.Clone(m.EntityID),
 		})
+		promoted[sk] = m.EntityID
 		seen[sk] = true
 	}
 
 	// Stable order: by subject id bytes (each Subject appears once).
 	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i].SubjectID, out[j].SubjectID) < 0 })
-	return out, nil
+	return out, promoted, nil
 }
 
 // checkFixed validates one caller pair and returns it with its ids copied: the
