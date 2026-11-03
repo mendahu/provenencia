@@ -138,7 +138,10 @@ final class MetadataModel {
         return fields.first { $0.id == id }
     }
 
-    var countLine: String {
+    /// Nil until the list has a value, so the header shows no zero counts.
+    var countLine: String? {
+        let handle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(Self.fieldsListKey(for: session))
+        guard handle?.value != nil else { return nil }
         if fields.pluginCount > 0 {
             return L10n.Metadata.countLineWithPlugin(
                 total: fields.count, seeded: fields.seededCount, user: fields.userCount, plugin: fields.pluginCount

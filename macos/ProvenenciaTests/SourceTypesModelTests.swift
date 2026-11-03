@@ -231,6 +231,14 @@ struct SourceTypesModelTests {
         #expect(model.countLine == L10n.SourceTypes.countLine(total: 5, seeded: 3, user: 2))
     }
 
+    /// F-6: no count line until the list has a value.
+    @Test func countLineIsAbsentUntilTheListLoads() async {
+        let (model, session) = makeModel(types: [seededType(id: "t1", label: "A")])
+        #expect(model.countLine == nil)
+        await warm(model, session: session)
+        #expect(model.countLine != nil)
+    }
+
     // MARK: Add
 
     @Test func addingMintsTheKeyFromTheLabelAndLandsOnTheNewType() async {

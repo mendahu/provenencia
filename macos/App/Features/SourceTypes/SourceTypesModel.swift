@@ -224,7 +224,10 @@ final class SourceTypesModel {
         return types.first { $0.id == id }
     }
 
-    var countLine: String {
+    /// Nil until the list has a value, so the header shows no zero counts.
+    var countLine: String? {
+        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.typesListKey(for: session))
+        guard handle?.value != nil else { return nil }
         if types.pluginCount > 0 {
             return L10n.SourceTypes.countLineWithPlugin(
                 total: types.count, seeded: types.seededCount, user: types.userCount, plugin: types.pluginCount

@@ -249,6 +249,14 @@ struct MetadataModelTests {
         #expect(model.countLine == L10n.Metadata.countLineWithPlugin(total: 5, seeded: 4, user: 0, plugin: 1))
     }
 
+    /// F-6: no count line until the list has a value.
+    @Test func countLineIsAbsentUntilTheListLoads() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1", label: "A")])
+        #expect(model.countLine == nil)
+        await warm(model, session: session)
+        #expect(model.countLine != nil)
+    }
+
     @Test func isDirtyTracksUnsavedEditsAndRevertClearsThem() async {
         let (model, session) = makeModel(fields: [userField()])
         await warm(model, session: session)
