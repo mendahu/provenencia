@@ -48,8 +48,9 @@ struct ConclusionGallerySection: View {
         .onChange(of: focused) {
             if let stop = focused {
                 lastFocused = stop
-                // The pending stop landed, or the keyboard went to another one: either way it is done.
-                pendingFocus = nil
+                // The keyboard went to another stop: the pending one is done. The pending stop itself stays
+                // until the expiry, so its tile's onAppear can still claim it if the lazy grid drops it again.
+                if pendingFocus != stop { pendingFocus = nil }
             } else if pendingFocus != nil {
                 // The tile dropped after the width update: bring it back and try again.
                 requestScroll()
@@ -66,8 +67,9 @@ struct ConclusionGallerySection: View {
     }
 
     /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile: scroll it back
-    /// into view, then give its stop the keyboard once the tile exists. The pending stop ends a moment
-    /// later, so a tile that never dropped does not take the keyboard back after a click elsewhere.
+    /// into view, then give its stop the keyboard once the tile exists. The pending stop ends at the
+    /// expiry a moment later (a landing does not end it), so a tile that never dropped does not take the
+    /// keyboard back after a click elsewhere.
     private func keepFocus() {
         guard let stop = focused ?? lastFocused else { return }
         pendingFocus = stop
@@ -77,6 +79,7 @@ struct ConclusionGallerySection: View {
             applyPending()
             try? await Task.sleep(for: .milliseconds(400))
             if pendingFocus == stop { pendingFocus = nil }
+            if focused == nil { lastFocused = nil }
         }
     }
 
@@ -92,9 +95,9 @@ struct ConclusionGallerySection: View {
         guard let pending = pendingFocus else { return }
         let tile = gallery.tiles.first { $0.id == pending.id }
         if case .useAs(let id) = pending, tile?.isLead == true || lead.isSaving {
-            focused = .image(id)
+            FocusClaim.claim($focused, .image(id))
         } else {
-            focused = pending
+            FocusClaim.claim($focused, pending)
         }
     }
 
