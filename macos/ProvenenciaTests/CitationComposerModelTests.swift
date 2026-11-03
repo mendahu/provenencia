@@ -1278,6 +1278,59 @@ struct CitationComposerModelTests {
         #expect(store.propertyTermsByProperty[occupationPropertyID]?.contains { $0.label == "Weaver" } == true)
     }
 
+    /// T-10 (AC-1.4): a custom term reports `property_vocabulary` and its
+    /// Property's `property_terms` read. That Property's term list reloads; no
+    /// other term list, Source page or canvas does, and the draft keeps the term.
+    @Test func customTermReloadsTermsAndKeepsTheDraft() async throws {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let project = model.session.projectKey
+        let ownKey = CatalogQueryKey.propertyTerms(project: project, propertyId: occupationPropertyID)
+        let otherKey = CatalogQueryKey.propertyTerms(project: project, propertyId: rolePropertyID)
+        let pageKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: sourceID)
+        let canvasKey = CatalogQueryKey.evidenceGraph(project: project, graphId: graphID)
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: project)
+        model.session.setQueryValue(ownKey, value: [CatalogPropertyTerm]())
+        model.session.setQueryValue(otherKey, value: [CatalogPropertyTerm]())
+        model.session.setQueryValue(pageKey, value: CatalogSourceWorkspace(
+            source: CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+            notes: [], metadata: [], artifacts: [], credibility: nil
+        ))
+        model.session.setQueryValue(canvasKey, value: EvidenceGraphRows(graphId: graphID))
+        model.session.setQueryValue(propertiesKey, value: PropertiesSnapshot.empty)
+        let propertiesBefore = store.getPropertiesWorkspaceCalls
+
+        model.beginPropertyDraft(subjectID: subjectID)
+        model.mutateProperty { $0.values.propertyID = occupationPropertyID }
+        model.beginAddCustomTerm(propertyID: occupationPropertyID)
+        model.customTermDraft?.label = "Cooper"
+        store.nextWriteEffects = CatalogWriteEffects(
+            reads: [CatalogWriteEffectsRead(read: .propertyTerms, ids: [occupationPropertyID])],
+            lists: [.propertyVocabulary]
+        )
+        await model.confirmCustomTerm()
+        await model.session.settleWrites()
+
+        let own: QueryHandle<[CatalogPropertyTerm]> = try #require(model.session.queryHandle(ownKey))
+        #expect(own.value?.contains { $0.label == "Cooper" } == true)
+        let other: QueryHandle<[CatalogPropertyTerm]> = try #require(model.session.queryHandle(otherKey))
+        #expect(!other.isStale)
+        let page: QueryHandle<CatalogSourceWorkspace> = try #require(model.session.queryHandle(pageKey))
+        #expect(!page.isStale)
+        let canvas: QueryHandle<EvidenceGraphRows> = try #require(model.session.queryHandle(canvasKey))
+        #expect(!canvas.isStale)
+        let properties: QueryHandle<PropertiesSnapshot> = try #require(model.session.queryHandle(propertiesKey))
+        #expect(properties.isStale || store.getPropertiesWorkspaceCalls > propertiesBefore)
+        #expect(model.customTermDraft == nil)
+        if case .property(let draft) = model.authoring {
+            #expect(draft.values.valueTermID.isEmpty == false)
+        } else {
+            Issue.record("the term should land on the draft")
+        }
+    }
+
     private func type(id: String, key: String, label: String, prefix: String) -> CatalogSubjectType {
         CatalogSubjectType(
             id: id, key: key, origin: "provenencia", label: label, description: "",

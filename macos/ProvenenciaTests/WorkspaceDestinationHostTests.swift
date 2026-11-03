@@ -48,8 +48,7 @@ struct WorkspaceDestinationHostTests {
             WorkspaceDestinationHost(
                 userID: "user-1",
                 sessionDisplayName: "",
-                store: store,
-                catalogCounts: CatalogCounts(projectDir: projectDir, store: store)
+                store: store
             )
             .environment(navigation)
             .environment(session),

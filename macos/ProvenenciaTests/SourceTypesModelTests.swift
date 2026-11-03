@@ -40,8 +40,7 @@ struct SourceTypesModelTests {
         store: FakeStore = FakeStore(),
         types: [CatalogSourceType] = [],
         fields: [CatalogMetadataField] = [],
-        suggestions: [String: [CatalogTypeSuggestion]] = [:],
-        catalogCounts: CatalogCounts? = nil
+        suggestions: [String: [CatalogTypeSuggestion]] = [:]
     ) -> (SourceTypesModel, WorkspaceSession) {
         store.sourceTypesByProject[projectDir] = types
         store.fieldsByProject[projectDir] = fields
@@ -50,8 +49,7 @@ struct SourceTypesModelTests {
         let model = SourceTypesModel(
             session: session,
             userID: userID,
-            store: store,
-            catalogCounts: catalogCounts
+            store: store
         )
         return (model, session)
     }
@@ -81,7 +79,7 @@ struct SourceTypesModelTests {
 
     // MARK: List
 
-    @Test func loadPopulatesTypesPoolAndCounts() async {
+    @Test func loadPopulatesTypesPool() async {
         let (model, session) = makeModel(
             types: [seededType(), userType(), pluginType()],
             fields: [field(id: "f1", label: "Author")]
@@ -223,11 +221,20 @@ struct SourceTypesModelTests {
         #expect(model.toast?.body == L10n.SourceTypes.toastRemovedBody(field: "Author", type: "Book", valueCount: 0))
     }
 
+    /// T-12 (AC-4.1): the header counts the rows the page shows.
+    @Test func countLineCountsTheRowsShown() async {
+        let (model, session) = makeModel(types: [
+            seededType(id: "t1", label: "A"), seededType(id: "t3", label: "B"), seededType(id: "t4", label: "C"),
+            userType(id: "t2", label: "D"), userType(id: "t5", label: "E"),
+        ])
+        await warm(model, session: session)
+        #expect(model.countLine == L10n.SourceTypes.countLine(total: 5, seeded: 3, user: 2))
+    }
+
     // MARK: Add
 
     @Test func addingMintsTheKeyFromTheLabelAndLandsOnTheNewType() async {
-        let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let (model, session) = makeModel(types: [seededType()], catalogCounts: counts)
+        let (model, session) = makeModel(types: [seededType()])
         await warm(model, session: session)
 
         model.openAdd()
@@ -243,8 +250,48 @@ struct SourceTypesModelTests {
         #expect(model.selectedType?.iconKey == PVMarkKey.defaultTypeMark.rawValue)
         #expect(model.suggestions.isEmpty)
         #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastAddedTitle))
-        #expect(counts.sourceTypes?.total == 2)
-        #expect(counts.sourceTypes?.user == 1)
+    }
+
+    /// T-7 (AC-1.3): a type create reloads the Source vocabulary lists from its
+    /// effects and leaves a visited Source page alone; an update that changed
+    /// nothing reports no effects and reloads nothing. The store holds a row the
+    /// cache has not seen, so a reload shows as that row arriving.
+    @Test func addingATypeReloadsFromItsEffects() async throws {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, types: [seededType()])
+        await warm(model, session: session)
+        let project = session.projectKey
+        let pageKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        session.setQueryValue(pageKey, value: CatalogSourceWorkspace(
+            source: CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+            notes: [], metadata: [], artifacts: [], credibility: nil
+        ))
+        let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.query(
+            CatalogQueryKey.metadataFieldsList(project: project)
+        )
+        await waitForQuery(fieldsHandle)
+        let typesHandle: QueryHandle<[CatalogSourceType]> = try #require(
+            session.queryHandle(SourceTypesModel.typesListKey(for: session))
+        )
+        store.fieldsByProject[projectDir] = [field(id: "f9", label: "Unseen")]
+
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.sourceVocabulary])
+        model.openAdd()
+        model.draft?.label = "Diary"
+        await model.submit()
+        await session.settleWrites()
+
+        #expect(model.selectedType?.key == "diary")
+        #expect(typesHandle.value?.contains { $0.key == "diary" } == true)
+        #expect(fieldsHandle.value?.map(\.id) == ["f9"])
+        let page: QueryHandle<CatalogSourceWorkspace> = try #require(session.queryHandle(pageKey))
+        #expect(!page.isStale)
+
+        store.fieldsByProject[projectDir] = [field(id: "f10", label: "Later")]
+        store.nextWriteEffects = .empty
+        await model.submit()
+        await session.settleWrites()
+        #expect(fieldsHandle.value?.map(\.id) == ["f9"])
     }
 
     @Test func addingReturnsLocationForWorkspaceNavigation() async {
@@ -460,13 +507,11 @@ struct SourceTypesModelTests {
     @Test func confirmingDeleteDropsTheTypeAndItsSuggestions() async {
         let author = field(id: "f1", label: "Author")
         let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
         let (model, session) = makeModel(
             store: store,
             types: [userType()],
             fields: [author],
-            suggestions: ["t2": [CatalogTypeSuggestion(field: author, sortOrder: 0)]],
-            catalogCounts: counts
+            suggestions: ["t2": [CatalogTypeSuggestion(field: author, sortOrder: 0)]]
         )
         await warm(model, session: session)
         model.select("t2")
@@ -484,8 +529,6 @@ struct SourceTypesModelTests {
         #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastDeletedTitle))
         // The suggestion join cascades; the field vocabulary row does not.
         #expect(store.fieldsByProject[projectDir]?.map(\.id) == ["f1"])
-        #expect(counts.sourceTypes?.total == 0)
-        #expect(counts.metadata?.total == 1)
     }
 
     @Test func syncSelectionAppliesTypeAfterWarm() async {

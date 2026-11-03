@@ -50,18 +50,15 @@ final class PropertiesModel {
     private let userID: String
     private let store: any GenealogyStore
     private let session: WorkspaceSession
-    private let catalogCounts: CatalogCounts?
 
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         self.session = session
         self.userID = userID
         self.store = store
-        self.catalogCounts = catalogCounts
     }
 
     static func workspaceKey(for session: WorkspaceSession) -> CatalogQueryKey {
@@ -204,13 +201,6 @@ final class PropertiesModel {
         return snapshot.properties.first { $0.id == id }
     }
 
-    /// Publishes the count of a settled list to the sidebar. The view calls it
-    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
-    /// may be stale.
-    func syncCatalogCounts() {
-        catalogCounts?.publishProperties(.from(snapshot.properties))
-    }
-
     // MARK: Selection
 
     /// Reconciles strip category + inspector row to `location` once the snapshot is cached.
@@ -349,7 +339,7 @@ final class PropertiesModel {
         formError = nil
         defer { isSaving = false }
         do {
-            let updated = try await store.updateProperty(
+            let (updated, effects) = try await store.updateProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 propertyID: property.id,
@@ -358,7 +348,7 @@ final class PropertiesModel {
                 description: trimmedDescription,
                 cardinality: property.cardinality
             )
-            session.apply(.updatedProperty)
+            session.apply(effects)
             isEditingIdentity = false
             toast = VocabularyToast(
                 title: L10n.string(L10n.Properties.toastUpdatedTitle),
@@ -382,7 +372,7 @@ final class PropertiesModel {
         formError = nil
         defer { isSaving = false }
         do {
-            _ = try await store.updateProperty(
+            let (_, effects) = try await store.updateProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 propertyID: property.id,
@@ -391,7 +381,7 @@ final class PropertiesModel {
                 description: property.description,
                 cardinality: cardinality
             )
-            session.apply(.updatedProperty)
+            session.apply(effects)
             cardinalityNotice = true
             return true
         } catch {
@@ -425,12 +415,12 @@ final class PropertiesModel {
     func confirmPendingImpact() async -> Bool {
         guard let property = pendingDeleteProperty else { return false }
         return await deleteImpact.confirm { target in
-            try await store.deleteProperty(
+            let effects = try await store.deleteProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 propertyID: target.id
             )
-            session.apply(.deletedProperty)
+            session.apply(effects)
             selectedPropertyID = nil
             cardinalityNotice = false
             formError = nil
@@ -474,7 +464,7 @@ final class PropertiesModel {
         formError = nil
         defer { isSaving = false }
         do {
-            let created = try await store.createProperty(
+            let (created, createdEffects) = try await store.createProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 label: label,
@@ -482,18 +472,17 @@ final class PropertiesModel {
                 description: draft.description,
                 cardinality: draft.cardinality
             )
+            // Each write's effects apply as it lands: a failed bind leaves the
+            // created Property shown, with `formError` set.
+            session.apply(createdEffects)
             for typeID in draft.bindTypeIDs {
-                try await store.assignSubjectTypeProperty(
+                let boundEffects = try await store.assignSubjectTypeProperty(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     subjectTypeID: typeID,
                     propertyID: created.id
                 )
-            }
-            if draft.bindTypeIDs.isEmpty {
-                session.apply(.createdProperty)
-            } else {
-                session.apply(.mutatedSubjectTypeProperties)
+                session.apply(boundEffects)
             }
             closeCreate()
             selectedPropertyID = created.id
@@ -523,26 +512,26 @@ final class PropertiesModel {
                 return
             }
             do {
-                try await store.removeSubjectTypeProperty(
+                let effects = try await store.removeSubjectTypeProperty(
                     projectDir: session.projectKey.projectDir,
                     userID: userID,
                     subjectTypeID: type.id,
                     propertyID: property.id
                 )
-                session.apply(.mutatedSubjectTypeProperties)
+                session.apply(effects)
             } catch {
                 formError = L10n.Errors.message(for: error)
             }
             return
         }
         do {
-            try await store.assignSubjectTypeProperty(
+            let effects = try await store.assignSubjectTypeProperty(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 subjectTypeID: type.id,
                 propertyID: property.id
             )
-            session.apply(.mutatedSubjectTypeProperties)
+            session.apply(effects)
         } catch {
             formError = L10n.Errors.message(for: error)
         }

@@ -8,7 +8,6 @@ struct WorkspaceContent: View {
     let userID: String
     let sessionDisplayName: String
     let store: any GenealogyStore
-    let catalogCounts: CatalogCounts
 
     /// Hosted here (not on the 52pt toolbar row) so the jump menu / omnibar
     /// results can paint and receive hits over the page below.
@@ -26,8 +25,7 @@ struct WorkspaceContent: View {
             WorkspaceDestinationHost(
                 userID: userID,
                 sessionDisplayName: sessionDisplayName,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

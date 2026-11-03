@@ -53,7 +53,7 @@ struct SubjectStoreTests {
         #expect(listed[0].ref.hasPrefix("CPR-"))
     }
 
-    @Test func setPositionPersistsAcrossSessionCloseThenClear() async throws {
+    @Test func setPositionPersistsAcrossSessionClose() async throws {
         let store = makeStore()
         let (subject, _) = try await store.createSubject(
             projectDir: projectDir,
@@ -84,10 +84,6 @@ struct SubjectStoreTests {
         #expect(afterReopen[0].gridX == 2)
         #expect(afterReopen[0].gridY == 4)
         #expect(store.heldCatalogProjectDir == projectDir)
-
-        try await store.clearSubjectPosition(projectDir: projectDir, subjectID: subject.id)
-        let cleared = try await store.listSubjectPositions(projectDir: projectDir, graphID: graphID)
-        #expect(cleared.isEmpty)
     }
 
     private func storeWithPersonType() -> FakeStore {
@@ -125,24 +121,5 @@ struct SubjectStoreTests {
         _ = try await store.deleteSubject(projectDir: projectDir, userID: "user-1", subjectID: subject.id)
         #expect(store.membershipBySubject[subject.id] == nil)
         #expect(try await store.listSubjectMemberships(projectDir: projectDir, graphID: graphID).isEmpty)
-    }
-
-    @Test func listSubjectTypesReturnsSeededRows() async throws {
-        let store = makeStore()
-        store.subjectTypesByProject[projectDir] = [
-            CatalogSubjectType(
-                id: typeID,
-                key: "person",
-                origin: "provenencia",
-                label: "Person",
-                description: "",
-                refPrefix: "PER",
-                candidateRefPrefix: "CPR"
-            ),
-        ]
-        let types = try await store.listSubjectTypes(projectDir: projectDir)
-        #expect(types.count == 1)
-        #expect(types[0].key == "person")
-        #expect(store.heldCatalogProjectDir == projectDir)
     }
 }

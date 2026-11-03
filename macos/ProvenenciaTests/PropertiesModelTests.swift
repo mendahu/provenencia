@@ -82,16 +82,13 @@ struct PropertiesModelTests {
         store: FakeStore = FakeStore(),
         properties: [CatalogProperty] = [],
         types: [CatalogSubjectType] = [],
-        fieldsByType: [String: [CatalogSubjectTypeProperty]] = [:],
-        catalogCounts: CatalogCounts? = nil
+        fieldsByType: [String: [CatalogSubjectTypeProperty]] = [:]
     ) -> (PropertiesModel, WorkspaceSession, FakeStore) {
         store.propertiesByProject[projectDir] = properties
         store.subjectTypesByProject[projectDir] = types
         store.subjectTypePropertiesByType = fieldsByType
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-        let model = PropertiesModel(
-            session: session, userID: userID, store: store, catalogCounts: catalogCounts
-        )
+        let model = PropertiesModel(session: session, userID: userID, store: store)
         return (model, session, store)
     }
 
@@ -230,30 +227,61 @@ struct PropertiesModelTests {
         #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
     }
 
-    /// Properties on screen: a create reloads the list, and its count is published
-    /// from the reload, not from the cached snapshot the write returns to.
-    @Test func createPublishesTheCountOnceTheReloadSettles() async {
+    /// T-9 (AC-1.1): a Property relabel reports `property_vocabulary`; a hidden
+    /// Person page is evicted, the hidden Persons list is marked stale, and the
+    /// Properties page reloads.
+    @Test func renamingAPropertyStalesConclusionPages() async throws {
         let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session, _) = makeModel(
-            store: store, properties: [nameProperty()], types: [personType()], catalogCounts: counts
-        )
+        let property = userProperty()
+        let (model, session, _) = makeModel(store: store, properties: [property], types: [personType()])
+        let project = session.projectKey
+        let detailKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        let listKey = CatalogQueryKey.personsList(project: project)
+        session.setQueryValue(detailKey, value: CatalogConclusionDetail(
+            entity: CatalogCanonicalEntity(id: "e1", ref: "PER-1", subjectTypeID: "t", label: ""), fields: []
+        ))
+        session.setQueryValue(listKey, value: [CatalogPersonSummary]())
+        _ = await showProperties(model, session: session)
+        let baseline = store.getPropertiesWorkspaceCalls
+
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyVocabulary])
+        model.selectProperty(property.id)
+        #expect(await model.submitEdit(label: "Trade", description: property.description))
+        await session.settleWrites()
+
+        let detail: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
+        #expect(detail == nil)
+        let list: QueryHandle<[CatalogPersonSummary]>? = session.queryHandle(listKey)
+        #expect(list?.isStale == true)
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
+    }
+
+    /// T-9 (D-7): the create flow applies each write's effects as it lands, so
+    /// a failed bind leaves the created Property shown, with `formError` set.
+    @Test func createAppliesEachWriteAsItLands() async {
+        let store = FakeStore()
+        let person = personType()
+        let event = eventType()
+        let (model, session, _) = makeModel(store: store, properties: [nameProperty()], types: [person, event])
         let handle = await showProperties(model, session: session)
-        model.syncCatalogCounts()
-        #expect(counts.properties?.total == 1)
+        _ = handle
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyVocabulary])
+        struct BindFailed: Error {}
+        store.assignSubjectTypePropertyErrors[event.id] = BindFailed()
+        let baseline = store.getPropertiesWorkspaceCalls
 
-        counts.publishProperties(CatalogCountSummary(total: 7, seeded: 7, user: 0, plugin: 0))
         model.openCreate()
-        model.draft?.label = "Languages spoken"
-        #expect(await model.submitCreate() != nil)
-        #expect(!handle.isSettled)
-        #expect(counts.properties?.total == 7)
+        model.draft = PropertiesModel.Draft(
+            label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [person.id, event.id]
+        )
+        let location = await model.submitCreate()
+        await session.settleWrites()
 
-        await waitForQuery(handle)
-        #expect(handle.isSettled)
-        model.syncCatalogCounts()
-        #expect(counts.properties?.total == 2)
-        #expect(counts.properties?.user == 1)
+        #expect(location == nil)
+        #expect(model.formError != nil)
+        #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
+        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
+        #expect(store.getPropertiesWorkspaceCalls > baseline)
     }
 
     @Test func createDefaultsToOneValueAndCanSubmitSeveral() async {
@@ -326,6 +354,7 @@ struct PropertiesModelTests {
             properties: [custom],
             types: [person]
         )
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyVocabulary])
         await warm(model, session: session)
         model.selectProperty(custom.id)
         await model.toggleBinding(to: person)
@@ -433,30 +462,6 @@ struct PropertiesModelTests {
         #expect(await model.confirmPendingImpact())
         #expect(store.propertiesByProject[projectDir]?.isEmpty == true)
         #expect(model.selectedPropertyID == nil)
-    }
-
-    /// Properties on screen: a delete publishes its count from the reload.
-    @Test func deletePublishesTheCountOnceTheReloadSettles() async {
-        let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let property = userProperty()
-        let (model, session, _) = makeModel(
-            store: store, properties: [nameProperty(), property], types: [personType()],
-            catalogCounts: counts
-        )
-        let handle = await showProperties(model, session: session)
-        model.selectProperty(property.id)
-        await model.askDelete()
-
-        counts.publishProperties(CatalogCountSummary(total: 7, seeded: 7, user: 0, plugin: 0))
-        #expect(await model.confirmPendingImpact())
-        #expect(!handle.isSettled)
-        #expect(counts.properties?.total == 7)
-
-        await waitForQuery(handle)
-        model.syncCatalogCounts()
-        #expect(counts.properties?.total == 1)
-        #expect(counts.properties?.user == 0)
     }
 
     @Test func boundOnlyPropertyConfirmDeletes() async {

@@ -497,7 +497,7 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String,
         iconKey _: String
-    ) async throws -> CatalogSourceType { throw StoreBoom.boom }
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSourceType(
         projectDir _: String,
         userID _: String,
@@ -505,23 +505,21 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         description _: String,
         iconKey _: String
-    ) async throws -> CatalogSourceType { throw StoreBoom.boom }
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects) { throw StoreBoom.boom }
     func deleteSourceType(
         projectDir _: String,
         userID _: String,
         typeID _: String
-    ) async throws { throw StoreBoom.boom }
+    ) async throws -> CatalogWriteEffects { .empty }
     func listTypeSuggestions(projectDir _: String, typeID _: String) async throws
         -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
     func assignTypeField(
         projectDir _: String,
-        userID _: String,
         typeID _: String,
         fieldID _: String
     ) async throws -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
     func removeTypeField(
         projectDir _: String,
-        userID _: String,
         typeID _: String,
         fieldID _: String
     ) async throws -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
@@ -532,7 +530,7 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         dataType _: String,
         description _: String
-    ) async throws -> CatalogMetadataField { throw StoreBoom.boom }
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateMetadataField(
         projectDir _: String,
         userID _: String,
@@ -540,12 +538,12 @@ private struct ThrowingStore: GenealogyStore {
         label _: String,
         dataType _: String,
         description _: String
-    ) async throws -> CatalogMetadataField { throw StoreBoom.boom }
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects) { throw StoreBoom.boom }
     func deleteMetadataField(
         projectDir _: String,
         userID _: String,
         fieldID _: String
-    ) async throws { throw StoreBoom.boom }
+    ) async throws -> CatalogWriteEffects { .empty }
     func workspaceNavCounts(projectDir _: String) async throws -> WorkspaceNavCounts {
         throw StoreBoom.boom
     }
@@ -558,7 +556,6 @@ private struct ThrowingStore: GenealogyStore {
         location _: WorkspaceLocation?,
         kinds _: [String]
     ) async throws -> [CatalogSearchHit] { throw StoreBoom.boom }
-    func listSubjectTypes(projectDir _: String) async throws -> [CatalogSubjectType] { throw StoreBoom.boom }
     func createSubject(
         projectDir _: String,
         userID _: String,
@@ -642,9 +639,6 @@ private struct ThrowingStore: GenealogyStore {
         gridX _: Int64,
         gridY _: Int64
     ) async throws -> CatalogSubjectPosition { throw StoreBoom.boom }
-    func clearSubjectPosition(projectDir _: String, subjectID _: String) async throws {
-        throw StoreBoom.boom
-    }
     func listSubjectPositions(projectDir _: String, graphID _: String) async throws
         -> [CatalogSubjectPosition] { throw StoreBoom.boom }
     func createProperty(
@@ -654,7 +648,7 @@ private struct ThrowingStore: GenealogyStore {
         valueType _: String,
         description _: String,
         cardinality _: String
-    ) async throws -> CatalogProperty { throw StoreBoom.boom }
+    ) async throws -> (CatalogProperty, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateProperty(
         projectDir _: String,
         userID _: String,
@@ -663,10 +657,9 @@ private struct ThrowingStore: GenealogyStore {
         valueType _: String,
         description _: String,
         cardinality _: String
-    ) async throws -> CatalogProperty { throw StoreBoom.boom }
-    func deleteProperty(projectDir _: String, userID _: String, propertyID _: String) async throws {
-        throw StoreBoom.boom
-    }
+    ) async throws -> (CatalogProperty, CatalogWriteEffects) { throw StoreBoom.boom }
+    func deleteProperty(projectDir _: String, userID _: String, propertyID _: String) async throws
+        -> CatalogWriteEffects { .empty }
     func listPropertyTerms(projectDir _: String, propertyID _: String) async throws -> [CatalogPropertyTerm] {
         throw StoreBoom.boom
     }
@@ -676,19 +669,19 @@ private struct ThrowingStore: GenealogyStore {
         propertyID _: String,
         label _: String,
         description _: String
-    ) async throws -> CatalogPropertyTerm { throw StoreBoom.boom }
+    ) async throws -> (CatalogPropertyTerm, CatalogWriteEffects) { throw StoreBoom.boom }
     func assignSubjectTypeProperty(
         projectDir _: String,
         userID _: String,
         subjectTypeID _: String,
         propertyID _: String
-    ) async throws { throw StoreBoom.boom }
+    ) async throws -> CatalogWriteEffects { .empty }
     func removeSubjectTypeProperty(
         projectDir _: String,
         userID _: String,
         subjectTypeID _: String,
         propertyID _: String
-    ) async throws { throw StoreBoom.boom }
+    ) async throws -> CatalogWriteEffects { .empty }
     func listConnectRules() async throws -> [CatalogConnectRule] { throw StoreBoom.boom }
     func createCitedBridge(
         projectDir _: String,

@@ -1005,12 +1005,10 @@ struct WorkspaceSessionTests {
         let project = session.projectKey
         let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
         session.setQueryValue(key, value: claims(onGraph: "g1"))
-        let effects = CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"])
+        let effects = CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"], lists: [.propertyVocabulary])
 
         #expect(session.revalidatedKeys(for: effects) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(by: .updatedProperty, project: project)
-            .contains(.allCached(.personClaims)))
-        session.apply(effects, .updatedProperty)
+        session.apply(effects)
         await session.settleWrites()
         #expect(session.queryHandle(key) as QueryHandle<[CatalogPersonClaimGroup]>? == nil)
     }
@@ -1475,7 +1473,7 @@ struct WorkspaceSessionTests {
         #expect(handle?.isStale == false)
 
         session.apply(.empty, .createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
-        session.apply(CatalogWriteEffects(lists: [.vocabulary]))
+        session.apply(CatalogWriteEffects(lists: [.propertyVocabulary]))
         session.apply(.mutatedSourceWorkspace(sourceId: "s1"))
         session.apply(CatalogWriteEffects(sourceScopes: ["s1"], activity: CatalogActivity(revision: 1)))
         await session.settleWrites()

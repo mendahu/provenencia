@@ -12,15 +12,13 @@ struct MetadataView: View {
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         _model = State(
             initialValue: MetadataModel(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         )
     }
@@ -96,7 +94,6 @@ private struct MetadataContent: View {
         .onChange(of: fieldsHandle.status) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
-        .onSettled(fieldsHandle) { model.syncCatalogCounts() }
         .onChange(of: fieldsHandle.value) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }

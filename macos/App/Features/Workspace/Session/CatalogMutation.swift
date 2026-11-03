@@ -15,14 +15,14 @@ enum CatalogMutation: Sendable, Equatable {
     case createdSource(CatalogSource)
     case deletedSource(id: String)
 
-    case createdSourceType
-    case updatedSourceType(id: String)
-    case deletedSourceType(id: String)
-
-    case createdMetadataField
+    /// A field was relabelled or deleted. Each Source page restates the
+    /// field's derived rows, which `source_vocabulary` cannot tell from a field
+    /// create, so these two name the Source pages. They carry the field's id.
     case updatedMetadataField(id: String)
     case deletedMetadataField(id: String)
 
+    /// The type–field join is not audited and reports no effects, so these
+    /// name the type's suggestions key.
     case assignedTypeSuggestion(typeId: String)
     case removedTypeSuggestion(typeId: String)
 
@@ -32,22 +32,17 @@ enum CatalogMutation: Sendable, Equatable {
     /// Metadata values for one source changed. Narrower than
     /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
     case mutatedSourceMetadata(sourceId: String)
-
-    case createdProperty
-    case updatedProperty
-    case deletedProperty
-    case mutatedSubjectTypeProperties
-
-    /// A term was added to one Property's vocabulary.
-    case createdPropertyTerm(propertyId: String)
 }
 
 /// A catalog-wide list a write changed. The raw values are Go's
 /// `effects.List` wire keys (`WriteEffects.lists`); a key this build does not
 /// know is dropped when the effects are decoded.
 enum CatalogList: String, Sendable, CaseIterable {
-    /// A vocabulary label changed.
-    case vocabulary = "vocabulary"
+    /// A Source type or a metadata field changed.
+    case sourceVocabulary = "source_vocabulary"
+    /// A subject type, Property or Property term label, or a subject type's
+    /// Property binding, changed.
+    case propertyVocabulary = "property_vocabulary"
     /// An Observation was created, deleted, or moved to another Property, so
     /// the Properties workspace's `usedBy` counts changed.
     case propertyUsage = "property_usage"
@@ -69,10 +64,12 @@ enum CatalogRead: String, Sendable, CaseIterable {
     case evidenceGraphProgress = "evidence_graph_progress"
     /// The graphs of a Source with their linked Artifacts (the graph list).
     case evidenceGraphs = "evidence_graphs"
+    /// The terms of a Property (the term list).
+    case propertyTerms = "property_terms"
 }
 
-/// One keyed read and the key ids (Evidence graphs, or Sources for
-/// `evidence_graphs`) it moved for.
+/// One keyed read and the key ids (Evidence graphs, Sources for
+/// `evidence_graphs`, Properties for `property_terms`) it moved for.
 struct CatalogWriteEffectsRead: Sendable, Equatable {
     var read: CatalogRead
     var ids: [String]
@@ -116,21 +113,12 @@ enum CatalogMutationKind: Hashable, Sendable {
     case changedSourceType
     case createdSource
     case deletedSource
-    case createdSourceType
-    case updatedSourceType
-    case deletedSourceType
-    case createdMetadataField
     case updatedMetadataField
     case deletedMetadataField
     case assignedTypeSuggestion
     case removedTypeSuggestion
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
-    case createdProperty
-    case updatedProperty
-    case deletedProperty
-    case mutatedSubjectTypeProperties
-    case createdPropertyTerm
 }
 
 extension CatalogMutation {
@@ -145,14 +133,6 @@ extension CatalogMutation {
             return .createdSource
         case .deletedSource:
             return .deletedSource
-        case .createdSourceType:
-            return .createdSourceType
-        case .updatedSourceType:
-            return .updatedSourceType
-        case .deletedSourceType:
-            return .deletedSourceType
-        case .createdMetadataField:
-            return .createdMetadataField
         case .updatedMetadataField:
             return .updatedMetadataField
         case .deletedMetadataField:
@@ -165,16 +145,6 @@ extension CatalogMutation {
             return .mutatedSourceWorkspace
         case .mutatedSourceMetadata:
             return .mutatedSourceMetadata
-        case .createdProperty:
-            return .createdProperty
-        case .updatedProperty:
-            return .updatedProperty
-        case .deletedProperty:
-            return .deletedProperty
-        case .mutatedSubjectTypeProperties:
-            return .mutatedSubjectTypeProperties
-        case .createdPropertyTerm:
-            return .createdPropertyTerm
         }
     }
 

@@ -11,15 +11,13 @@ struct PropertiesView: View {
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         _model = State(
             initialValue: PropertiesModel(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         )
     }
@@ -94,7 +92,6 @@ private struct PropertiesContent: View {
         .onChange(of: handle.status) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
-        .onSettled(handle) { model.syncCatalogCounts() }
         .onChange(of: handle.value) { _, _ in
             reconcileSelection(for: navigation.currentLocation)
         }
