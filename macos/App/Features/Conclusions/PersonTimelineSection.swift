@@ -45,23 +45,16 @@ struct PersonTimelineList: View {
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
 
-    @Environment(\.pvPageViewportSize) private var viewportSize
-
     /// Each item's frame in the section's own space.
     @State private var itemFrames: [String: CGRect] = [:]
-    /// The section's frame in the page's scroll space: where the viewport sits over it.
-    @State private var sectionFrame: CGRect = .zero
     @State private var lifeline = PersonTimelineLifeline(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), itemFrames: [:])
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
 
     private nonisolated static let space = "persons.detail.timeline"
 
+    /// Reads no scroll state: the page's scroll moves only `PersonTimelineTethers`.
     var body: some View {
-        let visible = CGRect(
-            x: -sectionFrame.minX, y: -sectionFrame.minY, width: viewportSize.width, height: viewportSize.height
-        )
-        let tethers = lifeline.tethers(itemFrames: itemFrames, visible: visible)
         HStack(alignment: .top, spacing: 0) {
             Color.clear.frame(width: PersonTimelineLifeline.columnWidth)
             VStack(alignment: .leading, spacing: 0) {
@@ -84,13 +77,13 @@ struct PersonTimelineList: View {
             .pvScrollsRowIntoView(scrollTarget, anchor: .top, whenRequested: scrollRequest)
         }
         .overlay(alignment: .topLeading) {
-            PersonTimelineLine(lifeline: lifeline, tethers: tethers, select: select)
+            ZStack(alignment: .topLeading) {
+                PersonTimelineLine(lifeline: lifeline, select: select)
+                PersonTimelineTethers(lifeline: lifeline, itemFrames: itemFrames)
+            }
         }
         .coordinateSpace(name: Self.space)
         .accessibilityElement(children: .contain)
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)) } action: {
-            sectionFrame = $0
-        }
         .onChange(of: itemFrames) { rebuild() }
         .onChange(of: content) { rebuild() }
         .onAppear { rebuild() }
@@ -239,41 +232,35 @@ private struct PersonTimelineEventRow: View {
     }
 }
 
-/// The lifeline's drawing and its clickable points: the line, ticks and labels,
-/// stubs, points and caps, and a curve from each row in view to its point. Hidden
-/// from VoiceOver and the keyboard; the rows carry the meaning.
+/// The lifeline's static drawing and its clickable points: the line, ticks and
+/// labels, stubs, points and caps. It reads only the lifeline, so a scroll does
+/// not redraw it. Hidden from VoiceOver and the keyboard; the rows carry the meaning.
 private struct PersonTimelineLine: View {
     let lifeline: PersonTimelineLifeline
-    let tethers: [PersonTimelineLifeline.Tether]
     let select: (String) -> Void
-
-    /// Room above and below the line for a cap's radius.
-    private static let pad: CGFloat = 8
-    private static let hit: CGFloat = 24
 
     private var lineX: CGFloat { PersonTimelineLifeline.lineX }
 
     var body: some View {
-        let inView = Set(tethers.map(\.id))
         ZStack(alignment: .topLeading) {
             Canvas { context, _ in
-                context.translateBy(x: 0, y: Self.pad)
-                draw(into: &context, inView: inView)
+                context.translateBy(x: 0, y: PersonTimelineDrawing.pad)
+                draw(into: &context)
             }
             .frame(
                 width: PersonTimelineLifeline.columnWidth + 4,
-                height: lifeline.origin + lifeline.length + 2 * Self.pad,
+                height: lifeline.origin + lifeline.length + 2 * PersonTimelineDrawing.pad,
                 alignment: .topLeading
             )
-            .offset(y: -Self.pad)
+            .offset(y: -PersonTimelineDrawing.pad)
             .allowsHitTesting(false)
             ForEach(lifeline.marks, id: \.id) { mark in
                 Button { select(mark.id) } label: { Color.clear }
                     .buttonStyle(.plain)
                     .focusable(false)
-                    .frame(width: Self.hit, height: hitHeight(mark))
+                    .frame(width: PersonTimelineDrawing.hit, height: hitHeight(mark))
                     .contentShape(Rectangle())
-                    .offset(x: lineX - Self.hit / 2, y: lifeline.origin + top(mark) - 6)
+                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: lifeline.origin + top(mark) - 6)
                     .accessibilityIdentifier("persons.detail.timeline.point.\(mark.id)")
             }
         }
@@ -296,7 +283,7 @@ private struct PersonTimelineLine: View {
         }
     }
 
-    private func draw(into context: inout GraphicsContext, inView: Set<String>) {
+    private func draw(into context: inout GraphicsContext) {
         let line = PVColor.borderStrong
         let dash = StrokeStyle(lineWidth: 1.5, dash: [3, 3])
         // The line, solid except over the stubs.
@@ -328,45 +315,57 @@ private struct PersonTimelineLine: View {
                 context.draw(context.resolve(label), at: CGPoint(x: lineX - 8 - 4, y: y), anchor: .trailing)
             }
         }
-        // Points and caps.
+        // Points and caps, all at rest; the rows in view are redrawn in the accent above.
         for mark in lifeline.marks {
-            let color = inView.contains(mark.id) ? PVColor.accent : PVColor.borderStrong
-            switch mark.shape {
-            case .dot(let y):
-                let c = CGPoint(x: lineX, y: lifeline.origin + y)
-                context.fill(Path(ellipseIn: CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8)), with: .color(color))
-            case .bar(let from, let to, let openStart, let openEnd):
-                let top = lifeline.origin + from, bottom = max(lifeline.origin + to, top + 6)
-                let rect = CGRect(x: lineX - 3, y: top, width: 6, height: bottom - top)
-                let fade = min(16, rect.height)
-                let shading: GraphicsContext.Shading = .linearGradient(
-                    Gradient(stops: [
-                        .init(color: openStart ? color.opacity(0) : color, location: 0),
-                        .init(color: color, location: openStart ? fade / rect.height : 0),
-                        .init(color: color, location: openEnd ? 1 - fade / rect.height : 1),
-                        .init(color: openEnd ? color.opacity(0) : color, location: 1),
-                    ]),
-                    startPoint: CGPoint(x: lineX, y: rect.minY),
-                    endPoint: CGPoint(x: lineX, y: rect.maxY)
-                )
-                context.fill(Path(roundedRect: rect, cornerRadius: 3), with: shading)
-            case .cap(let y, let isPlaceholder):
-                let c = CGPoint(x: lineX, y: lifeline.origin + y)
-                let circle = Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12))
-                if isPlaceholder {
-                    context.fill(circle, with: .color(PVColor.surfacePage))
-                    context.stroke(circle, with: .color(PVColor.textMuted), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    let mark = Text(verbatim: "?")
-                        .font(PVFont.mono(size: PVTypeScale.micro))
-                        .foregroundStyle(PVColor.textMuted)
-                    context.draw(context.resolve(mark), at: c, anchor: .center)
-                } else {
-                    context.fill(circle, with: .color(color))
-                }
-            }
+            PersonTimelineDrawing.draw(mark, of: lifeline, color: PVColor.borderStrong, into: &context)
         }
-        // Tethers: a curve from the point to a dot at the row's edge (a dashed dot alone for an undated row).
+    }
+}
+
+/// The part of the lifeline the page's scroll moves: the points of the rows in
+/// view drawn in the accent, and a curve from each to its row. It alone reads
+/// where the viewport sits over the section, so a scroll step redraws only this.
+private struct PersonTimelineTethers: View {
+    let lifeline: PersonTimelineLifeline
+    let itemFrames: [String: CGRect]
+
+    @Environment(\.pvPageViewportSize) private var viewportSize
+    /// The section's frame in the page's scroll space: where the viewport sits over it.
+    @State private var sectionFrame: CGRect = .zero
+
+    var body: some View {
+        let visible = CGRect(
+            x: -sectionFrame.minX, y: -sectionFrame.minY, width: viewportSize.width, height: viewportSize.height
+        )
+        let tethers = lifeline.tethers(itemFrames: itemFrames, visible: visible)
+        Color.clear
+            .frame(width: PersonTimelineLifeline.columnWidth)
+            .frame(maxHeight: .infinity)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)) } action: {
+                sectionFrame = $0
+            }
+            .overlay(alignment: .topLeading) {
+                Canvas { context, _ in
+                    context.translateBy(x: 0, y: PersonTimelineDrawing.pad)
+                    draw(tethers, into: &context)
+                }
+                .frame(
+                    width: PersonTimelineLifeline.columnWidth + 4,
+                    height: sectionFrame.height + 2 * PersonTimelineDrawing.pad,
+                    alignment: .topLeading
+                )
+                .offset(y: -PersonTimelineDrawing.pad)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    private func draw(_ tethers: [PersonTimelineLifeline.Tether], into context: inout GraphicsContext) {
         for tether in tethers {
+            if let mark = lifeline.mark(tether.id) {
+                PersonTimelineDrawing.draw(mark, of: lifeline, color: PVColor.accent, into: &context)
+            }
+            // A curve from the point to a dot at the row's edge (a dashed dot alone for an undated row).
             let dot = CGRect(x: tether.to.x - 3, y: tether.to.y - 3, width: 6, height: 6)
             if tether.isDashed {
                 context.stroke(Path(ellipseIn: dot), with: .color(PVColor.textMuted), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
@@ -382,6 +381,55 @@ private struct PersonTimelineLine: View {
             )
             context.stroke(curve, with: .color(PVColor.accent), lineWidth: 1)
             context.fill(Path(ellipseIn: dot), with: .color(PVColor.accent))
+        }
+    }
+}
+
+/// What the line's two layers share: their sizes and how one point or cap is drawn.
+private enum PersonTimelineDrawing {
+    /// Room above and below the line for a cap's radius.
+    static let pad: CGFloat = 8
+    static let hit: CGFloat = 24
+
+    static func draw(
+        _ mark: PersonTimelineLifeline.Mark,
+        of lifeline: PersonTimelineLifeline,
+        color: Color,
+        into context: inout GraphicsContext
+    ) {
+        let lineX = PersonTimelineLifeline.lineX
+        switch mark.shape {
+        case .dot(let y):
+            let c = CGPoint(x: lineX, y: lifeline.origin + y)
+            context.fill(Path(ellipseIn: CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8)), with: .color(color))
+        case .bar(let from, let to, let openStart, let openEnd):
+            let top = lifeline.origin + from, bottom = max(lifeline.origin + to, top + 6)
+            let rect = CGRect(x: lineX - 3, y: top, width: 6, height: bottom - top)
+            let fade = min(16, rect.height)
+            let shading: GraphicsContext.Shading = .linearGradient(
+                Gradient(stops: [
+                    .init(color: openStart ? color.opacity(0) : color, location: 0),
+                    .init(color: color, location: openStart ? fade / rect.height : 0),
+                    .init(color: color, location: openEnd ? 1 - fade / rect.height : 1),
+                    .init(color: openEnd ? color.opacity(0) : color, location: 1),
+                ]),
+                startPoint: CGPoint(x: lineX, y: rect.minY),
+                endPoint: CGPoint(x: lineX, y: rect.maxY)
+            )
+            context.fill(Path(roundedRect: rect, cornerRadius: 3), with: shading)
+        case .cap(let y, let isPlaceholder):
+            let c = CGPoint(x: lineX, y: lifeline.origin + y)
+            let circle = Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12))
+            if isPlaceholder {
+                context.fill(circle, with: .color(PVColor.surfacePage))
+                context.stroke(circle, with: .color(PVColor.textMuted), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                let mark = Text(verbatim: "?")
+                    .font(PVFont.mono(size: PVTypeScale.micro))
+                    .foregroundStyle(PVColor.textMuted)
+                context.draw(context.resolve(mark), at: c, anchor: .center)
+            } else {
+                context.fill(circle, with: .color(color))
+            }
         }
     }
 }
