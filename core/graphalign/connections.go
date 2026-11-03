@@ -90,7 +90,7 @@ func Connections(bridges []PageBridge, ends map[string]EndTarget, canon []CanonE
 		switch res.Decision {
 		case connectrules.DecisionFiles:
 			c.Outcome = ConnectionFiles
-			if len(values) == 2 && rule.IsAcyclic(term) {
+			if len(values) > 1 && rule.IsAcyclic(term) {
 				page[key] = append(page[key], connectrules.Link{From: values[0][0].Record, To: values[1][0].Record})
 			}
 		case connectrules.DecisionWaits:
