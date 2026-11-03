@@ -1,7 +1,7 @@
 # S14-22 — Promote's wire says what Go decided
 
 **Status:** Landed in #700 (2026-11-03)
-**Landed:** Base was `main` @ `fe93195f`, as planned; every §4 row held. Differences: the filed-link type is `connectrules.Link`, not `Edge`, because `connectrules.Edge` is already a function there; `Bridge.IsAcyclic(term)` is exported, so `graphalign.Connections` can record an acyclic page link it decides files; `Connections` guards that record with `len(values) > 1`, because `core/matchregistry` forbids a bare number in `graphalign`; `Propose`'s scope overrides a caller's fixed row for a Subject outside it, as Done never sends one.
+**Landed:** Base was `main` @ `fe93195f`, as planned; every §4 row held. Differences: the filed-link type is `connectrules.Link`, not `Edge`, because `connectrules.Edge` is already a function there; `connectrules.Decide` returns the `Records` it resolved and the acyclic `Link` it checked, so `graphalign.Connections` and Done's filer add that link to one prebuilt `connectrules.Links` per type and term and re-derive neither; D-11's "`WaitReason` stays" clause was superseded by the user in review: `ConnectionState.waits` carries `PromoteConnectionOutcome` and `WaitReason` is gone; `Propose`'s scope overrides a caller's fixed row for a Subject outside it, as Done never sends one.
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes (batch 5; was Spike 12's S12-48)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a connection that would close a loop is drawn with the self-link subrow's existing warning callout and wording pattern; no view gains or loses a control, and every other subrow looks as it does today)

@@ -70,16 +70,12 @@ struct PromoteFlow: Equatable, Sendable {
         }
     }
 
-    /// Why a connection's end does not promote.
-    enum WaitReason: Equatable, Sendable {
-        case skipped, unset, notOnPage
-    }
-
     /// Whether a connection promotes on Done, and if not, why.
     enum ConnectionState: Equatable, Sendable {
         case promotes
-        /// An end does not promote: `endID` is the Subject that waits (the connection's first end when both do).
-        case waits(endID: String?, why: WaitReason)
+        /// An end does not promote: `endID` is the Subject Go names as waiting, and `why` is Go's
+        /// outcome for it (skipped, unset or not on the page).
+        case waits(endID: String?, why: PromoteConnectionOutcome)
         /// Both ends land on one record; `ref` is that record's.
         case selfLink(ref: String)
         /// Filing it would make places loop.
@@ -264,9 +260,7 @@ struct PromoteFlow: Equatable, Sendable {
         let waiting = connection.waitingSubjectID.isEmpty ? nil : connection.waitingSubjectID
         switch connection.outcome {
         case .files: return .promotes
-        case .skipped: return .waits(endID: waiting, why: .skipped)
-        case .unset: return .waits(endID: waiting, why: .unset)
-        case .notOnPage: return .waits(endID: waiting, why: .notOnPage)
+        case .skipped, .unset, .notOnPage: return .waits(endID: waiting, why: connection.outcome)
         case .selfLink: return .selfLink(ref: row(fact.endA)?.shownRef ?? row(fact.endB)?.shownRef ?? "")
         case .cycle: return .closesCycle
         case .unrecognized: return .waits(endID: nil, why: .notOnPage)

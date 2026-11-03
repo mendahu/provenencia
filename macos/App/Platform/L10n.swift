@@ -1417,7 +1417,7 @@ enum L10n {
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.skipped", defaultValue: "Waits for %@, who is skipped.", comment: "VoiceOver: a Promote connection that waits for an end that is skipped; argument is its name"), endName)
                     case .unset:
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.unset", defaultValue: "Waits for %@, who has no target yet.", comment: "VoiceOver: a Promote connection that waits for an end with no target yet; argument is its name"), endName)
-                    case .notOnPage:
+                    default:
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.notOnPage", defaultValue: "Waits for %@, who is not on this page.", comment: "VoiceOver: a Promote connection that waits for an end that is not on the page; argument is its name"), endName)
                     }
                 }
