@@ -1338,7 +1338,9 @@ func TestTermLabeler(t *testing.T) {
 func TestEventAge(t *testing.T) {
 	born := datevaluetest.YMD(1817, 3, 12)
 	age := func(lo, hi int) conclusionsummaries.AgeRange { return conclusionsummaries.AgeRange{Lo: lo, Hi: hi} }
-	ev := func(d *datevalue.Value) conclusionsummaries.EventSummary { return conclusionsummaries.EventSummary{Date: d} }
+	ev := func(d *datevalue.Value) conclusionsummaries.EventSummary {
+		return conclusionsummaries.EventSummary{Date: d}
+	}
 	cases := []struct {
 		name   string
 		in     conclusionsummaries.EventSummary
