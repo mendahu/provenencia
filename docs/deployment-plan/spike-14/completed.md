@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-27 — Every write reaches its keys through their descriptors
+
+**Landed 2026-11-03** in [#693](https://github.com/mendahu/provenencia/pull/693). A cached read now follows a catalog-wide list or graph structure through its own descriptor (`.list(…)`, `.structure` entries on `refreshes`), as it follows handles, graphs and keyed reads, so `CatalogQueryRegistry` keeps only what a mutation names. The Properties workspace declares the three entries it reloads on, the `lists` switch and the `.deletedSubject` mutation are gone (a Subject delete reloads Observation `usedBy` from its `property_usage` effect, pinned by a Go test), and the id-reading constructors refuse a catalog-wide slot. No reload a researcher sees changes.
+
 ## S14-16 — Promote and Source writes return their effects
 
 **Landed 2026-11-02** in [#686](https://github.com/mendahu/provenencia/pull/686). A Promote Done, a Source rename, type or cover change and a Source delete return `WriteEffects`, and their callers apply them, so a Done reloads the canvas, its progress and the people it filed, not every cached Person, Event and Place page. Sidebar counts are an effects list, `counts` (`sources` and `canonical_entities` creates, deletes and merges, via `Effect.ListsOnCreateDelete`), so the session recounts from `WriteEffects.lists` and the newest recount wins; `navCountTriggers`, `.promotedSubject`, `readIDs(for:)` and the Sources list-load badge publish are gone, and `conclusionTriggers` is `[.updatedProperty]`. The Promote header reads its Source row from the session, so a rename or type change shows at once. The dead `PromoteSubject` RPC (method 85 reserved), its Swift path and `identityClaimProto` are deleted, and `promote.fileSubject` is the one filing rule behind `Save` and `SaveBatch`. `TestEveryAuditedWriteReturnsEffects` holds every request with a `user_id` to a response with `WriteEffects`, with S14-17's 16 vocabulary writes on its allow-list. Version 0.2.10.
