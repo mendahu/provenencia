@@ -33,14 +33,7 @@ func TestListPersonClaims(t *testing.T) {
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, Name: "Burials", ArtifactIds: []string{artifactID},
 	}, &created)
 	burials := created.GetGraph().GetId()
-	var subjTypes engine.ListSubjectTypesResponse
-	mustRPC(t, ListSubjectTypes, &engine.ListSubjectTypesRequest{ProjectDir: dir}, &subjTypes)
-	personTypeID := ""
-	for _, typ := range subjTypes.Types {
-		if typ.GetKey() == "person" {
-			personTypeID = typ.GetId()
-		}
-	}
+	personTypeID := subjectTypeIDByKey(t, dir, "person")
 	// A Person Subject carries no Subject-valued Property until one is assigned.
 	mustRPC(t, AssignSubjectTypeProperty, &engine.AssignSubjectTypePropertyRequest{
 		ProjectDir: dir, UserId: userID, SubjectTypeId: personTypeID, PropertyId: personPropID,

@@ -144,35 +144,38 @@ func TestRetiredFieldsStayReserved(t *testing.T) {
 		methodDesc.Values().ByNumber(85) != nil {
 		t.Error("METHOD_PROMOTE_SUBJECT (85) is not reserved")
 	}
-}
-
-// effectsPending is the audited writes that still return no WriteEffects, by
-// request name, with the PR that converts each. S14-17 converts them and
-// deletes the entries; when the map is empty it deletes the map.
-var effectsPending = map[string]string{
-	"CreateSourceTypeRequest":          "S14-17",
-	"UpdateSourceTypeRequest":          "S14-17",
-	"DeleteSourceTypeRequest":          "S14-17",
-	"CreateMetadataFieldRequest":       "S14-17",
-	"UpdateMetadataFieldRequest":       "S14-17",
-	"DeleteMetadataFieldRequest":       "S14-17",
-	"AssignTypeFieldRequest":           "S14-17",
-	"RemoveTypeFieldRequest":           "S14-17",
-	"CreatePropertyRequest":            "S14-17",
-	"UpdatePropertyRequest":            "S14-17",
-	"DeletePropertyRequest":            "S14-17",
-	"CreatePropertyTermRequest":        "S14-17",
-	"UpdatePropertyTermRequest":        "S14-17",
-	"DeletePropertyTermRequest":        "S14-17",
-	"AssignSubjectTypePropertyRequest": "S14-17",
-	"RemoveSubjectTypePropertyRequest": "S14-17",
+	for num, name := range map[protoreflect.EnumNumber]protoreflect.Name{
+		5: "METHOD_REMOVE_INSTALL_IDENTITY", 41: "METHOD_ENSURE_FILE_THUMBNAIL", 45: "METHOD_LIST_SUBJECT_TYPES",
+		51: "METHOD_CLEAR_SUBJECT_POSITION", 53: "METHOD_LIST_PROPERTIES", 57: "METHOD_LIST_SUBJECT_TYPE_PROPERTIES",
+		60: "METHOD_LIST_PLACEABLE_SUBJECT_TYPES", 61: "METHOD_GET_SUBJECT_TYPE_PRESENTATION",
+	} {
+		if !methodDesc.ReservedRanges().Has(num) || !methodDesc.ReservedNames().Has(name) || methodDesc.Values().ByNumber(num) != nil {
+			t.Errorf("%s (%d) is not reserved", name, num)
+		}
+	}
+	navDesc := (&engine.GetWorkspaceNavCountsResponse{}).ProtoReflect().Descriptor()
+	for _, n := range []protoreflect.Name{"source_types", "metadata_fields"} {
+		if !navDesc.ReservedNames().Has(n) || navDesc.Fields().ByName(n) != nil {
+			t.Errorf("GetWorkspaceNavCountsResponse.%s is not reserved", n)
+		}
+	}
+	for _, n := range []protoreflect.FieldNumber{2, 3} {
+		if !navDesc.ReservedRanges().Has(n) || navDesc.Fields().ByNumber(n) != nil {
+			t.Errorf("GetWorkspaceNavCountsResponse field %d is not reserved", n)
+		}
+	}
+	for _, name := range []string{"AssignTypeFieldRequest", "RemoveTypeFieldRequest"} {
+		d := engine.File_engine_proto.Messages().ByName(protoreflect.Name(name))
+		if d == nil || !d.ReservedNames().Has("user_id") || !d.ReservedRanges().Has(2) || d.Fields().ByName("user_id") != nil {
+			t.Errorf("%s.user_id (2) is not reserved", name)
+		}
+	}
 }
 
 // missingEffects returns one message per audited write, a message named
 // ...Request with a user_id field, whose ...Response has no WriteEffects
-// field and is not in pending, and one per pending entry that names no such
-// request or whose response already has the field.
-func missingEffects(file protoreflect.FileDescriptor, pending map[string]string) []string {
+// field.
+func missingEffects(file protoreflect.FileDescriptor) []string {
 	messages := map[string]protoreflect.MessageDescriptor{}
 	for i := 0; i < file.Messages().Len(); i++ {
 		m := file.Messages().Get(i)
@@ -188,29 +191,16 @@ func missingEffects(file protoreflect.FileDescriptor, pending map[string]string)
 		return false
 	}
 	var out []string
-	audited := map[string]bool{}
 	for name, m := range messages {
 		if !strings.HasSuffix(name, "Request") || m.Fields().ByName("user_id") == nil {
 			continue
 		}
-		audited[name] = true
 		resp, ok := messages[strings.TrimSuffix(name, "Request")+"Response"]
 		switch {
 		case !ok:
 			out = append(out, name+" has no response message")
-		case hasEffects(resp):
-			if _, listed := pending[name]; listed {
-				out = append(out, name+" returns effects but is still in effectsPending")
-			}
-		default:
-			if _, listed := pending[name]; !listed {
-				out = append(out, name+" returns no WriteEffects")
-			}
-		}
-	}
-	for name := range pending {
-		if !audited[name] {
-			out = append(out, name+" is in effectsPending but is not an audited request")
+		case !hasEffects(resp):
+			out = append(out, name+" returns no WriteEffects")
 		}
 	}
 	slices.Sort(out)
@@ -219,9 +209,9 @@ func missingEffects(file protoreflect.FileDescriptor, pending map[string]string)
 
 // TestEveryAuditedWriteReturnsEffects holds every request with a user_id to a
 // response that carries WriteEffects, so a write cannot drop what it touched
-// and leave the app to guess. effectsPending is the shrinking allow-list.
+// and leave the app to guess. No write is excused.
 func TestEveryAuditedWriteReturnsEffects(t *testing.T) {
-	if got := missingEffects(engine.File_engine_proto, effectsPending); len(got) != 0 {
+	if got := missingEffects(engine.File_engine_proto); len(got) != 0 {
 		t.Fatalf("audited writes without effects:\n%s", strings.Join(got, "\n"))
 	}
 
@@ -257,30 +247,13 @@ func TestEveryAuditedWriteReturnsEffects(t *testing.T) {
 		return fd
 	}
 	t.Run("a response without effects fails naming the request", func(t *testing.T) {
-		got := missingEffects(fixture(t, false), nil)
+		got := missingEffects(fixture(t, false))
 		if len(got) != 1 || !strings.HasPrefix(got[0], "XRequest") {
 			t.Fatalf("got %v", got)
 		}
 	})
 	t.Run("a response with effects passes", func(t *testing.T) {
-		if got := missingEffects(fixture(t, true), nil); len(got) != 0 {
-			t.Fatalf("got %v", got)
-		}
-	})
-	t.Run("a pending entry for a request with effects is stale", func(t *testing.T) {
-		got := missingEffects(fixture(t, true), map[string]string{"XRequest": "S14-17"})
-		if len(got) != 1 || !strings.HasPrefix(got[0], "XRequest") {
-			t.Fatalf("got %v", got)
-		}
-	})
-	t.Run("a pending entry for no request is stale", func(t *testing.T) {
-		got := missingEffects(fixture(t, true), map[string]string{"GoneRequest": "S14-17"})
-		if len(got) != 1 || !strings.HasPrefix(got[0], "GoneRequest") {
-			t.Fatalf("got %v", got)
-		}
-	})
-	t.Run("a pending entry allows a response without effects", func(t *testing.T) {
-		if got := missingEffects(fixture(t, false), map[string]string{"XRequest": "S14-17"}); len(got) != 0 {
+		if got := missingEffects(fixture(t, true)); len(got) != 0 {
 			t.Fatalf("got %v", got)
 		}
 	})

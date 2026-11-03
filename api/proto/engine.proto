@@ -12,7 +12,6 @@ enum Method {
   METHOD_GET_VERSION = 2;
   METHOD_GET_INSTALL_IDENTITY = 3;
   METHOD_COMPLETE_ONBOARDING = 4;
-  METHOD_REMOVE_INSTALL_IDENTITY = 5;
   METHOD_GET_ACTIVE_PROJECT = 6;
   METHOD_OPEN_PROJECT = 7;
   METHOD_REMOVE_ACTIVE_PROJECT = 8;
@@ -51,6 +50,12 @@ enum Method {
   // S14-16: Promote files through ApplyPromoteGraphAlignment.
   reserved 85;
   reserved "METHOD_PROMOTE_SUBJECT";
+  // S14-17: RPCs with no Swift caller.
+  reserved 5, 41, 45, 51, 53, 57, 60, 61;
+  reserved "METHOD_REMOVE_INSTALL_IDENTITY", "METHOD_ENSURE_FILE_THUMBNAIL",
+    "METHOD_LIST_SUBJECT_TYPES", "METHOD_CLEAR_SUBJECT_POSITION",
+    "METHOD_LIST_PROPERTIES", "METHOD_LIST_SUBJECT_TYPE_PROPERTIES",
+    "METHOD_LIST_PLACEABLE_SUBJECT_TYPES", "METHOD_GET_SUBJECT_TYPE_PRESENTATION";
   METHOD_UPDATE_METADATA_FIELD = 28;
   METHOD_DELETE_SOURCE_TYPE = 29;
   METHOD_DELETE_METADATA_FIELD = 30;
@@ -64,27 +69,20 @@ enum Method {
   METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT = 38;
   METHOD_DISMISS_SOURCE_METADATA_SUGGESTION = 39;
   METHOD_REORDER_SOURCE_METADATA = 40;
-  METHOD_ENSURE_FILE_THUMBNAIL = 41;
   METHOD_CLOSE_CATALOG_SESSION = 42;
   METHOD_SET_SOURCE_COVER = 43;
   METHOD_SEARCH_CATALOG = 44;
-  METHOD_LIST_SUBJECT_TYPES = 45;
   METHOD_CREATE_SUBJECT = 46;
   METHOD_UPDATE_SUBJECT = 47;
   METHOD_DELETE_SUBJECT = 48;
   METHOD_LIST_SUBJECTS = 49;
   METHOD_SET_SUBJECT_POSITION = 50;
-  METHOD_CLEAR_SUBJECT_POSITION = 51;
   METHOD_LIST_SUBJECT_POSITIONS = 52;
-  METHOD_LIST_PROPERTIES = 53;
   METHOD_CREATE_PROPERTY = 54;
   METHOD_UPDATE_PROPERTY = 55;
   METHOD_DELETE_PROPERTY = 56;
-  METHOD_LIST_SUBJECT_TYPE_PROPERTIES = 57;
   METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY = 58;
   METHOD_REMOVE_SUBJECT_TYPE_PROPERTY = 59;
-  METHOD_LIST_PLACEABLE_SUBJECT_TYPES = 60;
-  METHOD_GET_SUBJECT_TYPE_PRESENTATION = 61;
   METHOD_LIST_CONNECT_RULES = 62;
   METHOD_LIST_PROPERTY_TERMS = 63;
   METHOD_CREATE_PROPERTY_TERM = 64;
@@ -169,12 +167,6 @@ message CompleteOnboardingResponse {
   string ref = 4;
   ProjectInfo project = 5;
 }
-
-message RemoveInstallIdentityRequest {
-  string identity_dir = 1;
-}
-
-message RemoveInstallIdentityResponse {}
 
 message GetActiveProjectRequest {
   string identity_dir = 1;
@@ -747,14 +739,14 @@ message WriteEffects {
   repeated string source_scopes = 10;
   reserved 11;
   reserved "citation_sources";
-  // Catalog-wide lists this write changed: effects.List values ("vocabulary",
-  // "property_usage"). Swift drops the reads that show each.
+  // Catalog-wide lists this write changed: effects.List values ("source_vocabulary",
+  // "property_vocabulary", "property_usage"). Swift drops the reads that show each.
   repeated string lists = 13;
   // Evidence graphs whose loaded rows this write changed (graphcache drops each).
   repeated string evidence_graphs = 14;
   // Keyed partial reads this write moved, each with the ids of the read's key
   // table (Evidence graphs for "citations" and "evidence_graph_progress",
-  // Sources for "evidence_graphs"): effects.Read values. Swift refreshes only
+  // Sources for "evidence_graphs", Properties for "property_terms"): effects.Read values. Swift refreshes only
   // those keys' reads.
   repeated WriteEffectsRead reads = 15;
 }
@@ -821,6 +813,7 @@ message CreateSourceTypeRequest {
 
 message CreateSourceTypeResponse {
   SourceType type = 1;
+  WriteEffects effects = 2;
 }
 
 message ListMetadataFieldsRequest {
@@ -843,6 +836,7 @@ message CreateMetadataFieldRequest {
 
 message CreateMetadataFieldResponse {
   MetadataField field = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateMetadataFieldRequest {
@@ -856,6 +850,7 @@ message UpdateMetadataFieldRequest {
 
 message UpdateMetadataFieldResponse {
   MetadataField field = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdateSourceTypeRequest {
@@ -869,6 +864,7 @@ message UpdateSourceTypeRequest {
 
 message UpdateSourceTypeResponse {
   SourceType type = 1;
+  WriteEffects effects = 2;
 }
 
 message ListTypeSuggestionsRequest {
@@ -886,7 +882,8 @@ message ListTypeSuggestionsResponse {
 // client never has to re-derive sort_order.
 message AssignTypeFieldRequest {
   string project_dir = 1;
-  string user_id = 2;
+  reserved 2;
+  reserved "user_id"; // the join is not audited (catalog-deletes.md)
   string type_id = 3;
   string field_id = 4;
 }
@@ -900,7 +897,8 @@ message AssignTypeFieldResponse {
 // for it keep that value.
 message RemoveTypeFieldRequest {
   string project_dir = 1;
-  string user_id = 2;
+  reserved 2;
+  reserved "user_id"; // the join is not audited (catalog-deletes.md)
   string type_id = 3;
   string field_id = 4;
 }
@@ -915,7 +913,9 @@ message DeleteSourceTypeRequest {
   string type_id = 3;
 }
 
-message DeleteSourceTypeResponse {}
+message DeleteSourceTypeResponse {
+  WriteEffects effects = 1;
+}
 
 message DeleteMetadataFieldRequest {
   string project_dir = 1;
@@ -923,46 +923,24 @@ message DeleteMetadataFieldRequest {
   string field_id = 3;
 }
 
-message DeleteMetadataFieldResponse {}
-
-// VocabularyOriginCounts is the sidebar / vocabulary-header split for a
-// catalog vocabulary (source_types or source_metadata_fields). total is
-// always seeded + user + plugin.
-message VocabularyOriginCounts {
-  int32 total = 1;
-  int32 seeded = 2;
-  int32 user = 3;
-  int32 plugin = 4;
+message DeleteMetadataFieldResponse {
+  WriteEffects effects = 1;
 }
 
 // GetWorkspaceNavCounts opens the project catalog once and returns COUNT(*)
-// badges for every workspace sidebar destination, including origin splits
-// for vocabulary rows. Prefer this over N serial list/count RPCs on appear.
+// badges for the sidebar's Research destinations. Prefer this over N serial
+// list/count RPCs on appear.
 message GetWorkspaceNavCountsRequest {
   string project_dir = 1;
 }
 
 message GetWorkspaceNavCountsResponse {
   int32 sources = 1;
-  VocabularyOriginCounts source_types = 2;
-  VocabularyOriginCounts metadata_fields = 3;
-  reserved 4;
-  reserved "files";
+  reserved 2, 3, 4;
+  reserved "source_types", "metadata_fields", "files";
   int32 persons = 5; // unmerged Person handles
   int32 events = 6;  // unmerged Event handles
   int32 places = 7;  // unmerged Place handles
-}
-
-// EnsureFileThumbnail lazily creates (or returns) the default thumbnail
-// derivative for a File that is the primary File of some Artifact.
-message EnsureFileThumbnailRequest {
-  string project_dir = 1;
-  string file_id = 2;
-}
-
-message EnsureFileThumbnailResponse {
-  string rel_path = 1; // objects/… path; empty when skipped
-  bool skipped = 2;    // non-image, unprocessable, or no derivative
 }
 
 message CloseCatalogSessionRequest {
@@ -1058,14 +1036,6 @@ message SubjectPosition {
   string subject_id = 1;
   int64 grid_x = 2;
   int64 grid_y = 3;
-}
-
-message ListSubjectTypesRequest {
-  string project_dir = 1;
-}
-
-message ListSubjectTypesResponse {
-  repeated SubjectType types = 1;
 }
 
 message CreateSubjectRequest {
@@ -1860,13 +1830,6 @@ message SetSubjectPositionResponse {
   SubjectPosition position = 1;
 }
 
-message ClearSubjectPositionRequest {
-  string project_dir = 1;
-  string subject_id = 2;
-}
-
-message ClearSubjectPositionResponse {}
-
 message ListSubjectPositionsRequest {
   string project_dir = 1;
   reserved 2;
@@ -1938,14 +1901,6 @@ message ConnectEdge {
   string endpoint_type_key = 2;
 }
 
-message ListPropertiesRequest {
-  string project_dir = 1;
-}
-
-message ListPropertiesResponse {
-  repeated Property properties = 1;
-}
-
 message CreatePropertyRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -1960,6 +1915,7 @@ message CreatePropertyRequest {
 
 message CreatePropertyResponse {
   Property property = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdatePropertyRequest {
@@ -1975,6 +1931,7 @@ message UpdatePropertyRequest {
 
 message UpdatePropertyResponse {
   Property property = 1;
+  WriteEffects effects = 2;
 }
 
 message DeletePropertyRequest {
@@ -1983,15 +1940,8 @@ message DeletePropertyRequest {
   string property_id = 3;
 }
 
-message DeletePropertyResponse {}
-
-message ListSubjectTypePropertiesRequest {
-  string project_dir = 1;
-  string subject_type_id = 2;
-}
-
-message ListSubjectTypePropertiesResponse {
-  repeated SubjectTypeProperty properties = 1;
+message DeletePropertyResponse {
+  WriteEffects effects = 1;
 }
 
 message AssignSubjectTypePropertyRequest {
@@ -2001,7 +1951,9 @@ message AssignSubjectTypePropertyRequest {
   string property_id = 4;
 }
 
-message AssignSubjectTypePropertyResponse {}
+message AssignSubjectTypePropertyResponse {
+  WriteEffects effects = 1;
+}
 
 message RemoveSubjectTypePropertyRequest {
   string project_dir = 1;
@@ -2010,7 +1962,9 @@ message RemoveSubjectTypePropertyRequest {
   string property_id = 4;
 }
 
-message RemoveSubjectTypePropertyResponse {}
+message RemoveSubjectTypePropertyResponse {
+  WriteEffects effects = 1;
+}
 
 // ReorderSubjectTypePropertiesRequest sets a type's binding order. property_ids
 // is every bound property of the type, each once, in the new order.
@@ -2024,20 +1978,6 @@ message ReorderSubjectTypePropertiesRequest {
 message ReorderSubjectTypePropertiesResponse {
   repeated SubjectTypeProperty properties = 1;
   WriteEffects effects = 2;
-}
-
-message ListPlaceableSubjectTypesRequest {}
-
-message ListPlaceableSubjectTypesResponse {
-  repeated SubjectTypePresentation types = 1;
-}
-
-message GetSubjectTypePresentationRequest {
-  string type_key = 1;
-}
-
-message GetSubjectTypePresentationResponse {
-  SubjectTypePresentation presentation = 1;
 }
 
 message ListConnectRulesRequest {}
@@ -2065,6 +2005,7 @@ message CreatePropertyTermRequest {
 
 message CreatePropertyTermResponse {
   PropertyTerm term = 1;
+  WriteEffects effects = 2;
 }
 
 message UpdatePropertyTermRequest {
@@ -2077,6 +2018,7 @@ message UpdatePropertyTermRequest {
 
 message UpdatePropertyTermResponse {
   PropertyTerm term = 1;
+  WriteEffects effects = 2;
 }
 
 message DeletePropertyTermRequest {
@@ -2085,7 +2027,9 @@ message DeletePropertyTermRequest {
   string term_id = 3;
 }
 
-message DeletePropertyTermResponse {}
+message DeletePropertyTermResponse {
+  WriteEffects effects = 1;
+}
 
 // NameValuePartInput is one ordered segment when inserting a NameValue.
 message NameValuePartInput {

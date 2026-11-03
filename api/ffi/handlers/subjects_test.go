@@ -31,61 +31,7 @@ func subjectFixture(t *testing.T) (projectDir, userID, sourceID, subjectTypeID s
 	if err := proto.Unmarshal(createOut, &created); err != nil {
 		t.Fatal(err)
 	}
-	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var types engine.ListSubjectTypesResponse
-	if err := proto.Unmarshal(typesOut, &types); err != nil {
-		t.Fatal(err)
-	}
-	if len(types.Types) == 0 {
-		t.Fatal("expected seeded subject types")
-	}
-	personID := ""
-	for _, typ := range types.Types {
-		if typ.GetKey() == "person" {
-			personID = typ.GetId()
-			break
-		}
-	}
-	if personID == "" {
-		personID = types.Types[0].GetId()
-	}
-	return dir, userID, created.Source.GetId(), personID
-}
-
-func TestListSubjectTypes(t *testing.T) {
-	runRPC(t, ListSubjectTypes, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "lists seeded types",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _ := sourceFixture(t)
-				return &engine.ListSubjectTypesRequest{ProjectDir: dir}
-			},
-			want: nil,
-			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var list engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(out, &list); err != nil {
-					t.Fatal(err)
-				}
-				if len(list.Types) == 0 {
-					t.Fatal("expected seeded subject types")
-				}
-				found := false
-				for _, typ := range list.Types {
-					if typ.GetKey() == "person" && typ.GetCandidateRefPrefix() == "CPR" {
-						found = true
-						break
-					}
-				}
-				if !found {
-					t.Fatalf("person type missing: %+v", list.Types)
-				}
-			},
-		},
-	})
+	return dir, userID, created.Source.GetId(), subjectTypeIDByKey(t, dir, "person")
 }
 
 func TestCreateSubject(t *testing.T) {
@@ -354,7 +300,7 @@ func TestSubjectPositions(t *testing.T) {
 	runRPC(t, SetSubjectPosition, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
-			name: "set list clear persist across session close",
+			name: "set list persist across session close",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, typeID := subjectFixture(t)
 				createOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
@@ -433,26 +379,6 @@ func TestSubjectPositions(t *testing.T) {
 					list.Positions[0].GetGridX() != 3 || list.Positions[0].GetGridY() != 5 {
 					t.Fatalf("%+v", list.Positions[0])
 				}
-
-				if _, err := ClearSubjectPosition(marshalProto(t, &engine.ClearSubjectPositionRequest{
-					ProjectDir: sr.ProjectDir,
-					SubjectId:  sr.SubjectId,
-				})); err != nil {
-					t.Fatal(err)
-				}
-				listOut, err = ListSubjectPositions(marshalProto(t, &engine.ListSubjectPositionsRequest{
-					ProjectDir: sr.ProjectDir,
-					GraphId:    soleGraphID(t, sr.ProjectDir, sourceID),
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				if err := proto.Unmarshal(listOut, &list); err != nil {
-					t.Fatal(err)
-				}
-				if len(list.Positions) != 0 {
-					t.Fatalf("want empty after clear, got %+v", list.Positions)
-				}
 			},
 		},
 	})
@@ -509,12 +435,6 @@ func TestSubjectPositionsAreBounded(t *testing.T) {
 	if p := list(); p.GetGridX() != 1000000 || p.GetGridY() != -1000000 {
 		t.Fatalf("not clamped: %+v", p)
 	}
-}
-
-func TestClearSubjectPositionBadProto(t *testing.T) {
-	runRPC(t, ClearSubjectPosition, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-	})
 }
 
 func TestListSubjectPositionsBadProto(t *testing.T) {

@@ -13,7 +13,6 @@ package subjectvocab
 import (
 	"database/sql"
 	"errors"
-	"sort"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -415,21 +414,6 @@ func Install(c *database.Catalog) error {
 	return nil
 }
 
-// PlaceableTypes returns registry types placeable on the Evidence graph, palette order.
-func PlaceableTypes() []TypeInfo {
-	var out []TypeInfo
-	for _, t := range seedTypes {
-		if !t.Placeable {
-			continue
-		}
-		out = append(out, typeInfoFromSeed(t))
-	}
-	sort.Slice(out, func(i, j int) bool {
-		return out[i].PaletteSort < out[j].PaletteSort
-	})
-	return out
-}
-
 // TypeByKey returns registry TypeInfo for a proveniencia type key, or false.
 func TypeByKey(key string) (TypeInfo, bool) {
 	key = strings.TrimSpace(key)
@@ -439,15 +423,6 @@ func TypeByKey(key string) (TypeInfo, bool) {
 		}
 	}
 	return TypeInfo{}, false
-}
-
-// PresentationFor returns presentation tokens for a type key.
-func PresentationFor(key string) (Presentation, bool) {
-	info, ok := TypeByKey(key)
-	if !ok {
-		return Presentation{}, false
-	}
-	return info.Presentation, true
 }
 
 // BindingsForType returns seed bindings for a type key (compiled registry +

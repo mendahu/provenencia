@@ -16,7 +16,6 @@ const (
 	MethodGetVersion                        = int32(engine.Method_METHOD_GET_VERSION)
 	MethodGetInstallIdentity                = int32(engine.Method_METHOD_GET_INSTALL_IDENTITY)
 	MethodCompleteOnboarding                = int32(engine.Method_METHOD_COMPLETE_ONBOARDING)
-	MethodRemoveInstallIdentity             = int32(engine.Method_METHOD_REMOVE_INSTALL_IDENTITY)
 	MethodGetActiveProject                  = int32(engine.Method_METHOD_GET_ACTIVE_PROJECT)
 	MethodOpenProject                       = int32(engine.Method_METHOD_OPEN_PROJECT)
 	MethodRemoveActiveProject               = int32(engine.Method_METHOD_REMOVE_ACTIVE_PROJECT)
@@ -51,27 +50,20 @@ const (
 	MethodUpsertSourceCredibilityAssessment = int32(engine.Method_METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT)
 	MethodDismissSourceMetadataSuggestion   = int32(engine.Method_METHOD_DISMISS_SOURCE_METADATA_SUGGESTION)
 	MethodReorderSourceMetadata             = int32(engine.Method_METHOD_REORDER_SOURCE_METADATA)
-	MethodEnsureFileThumbnail               = int32(engine.Method_METHOD_ENSURE_FILE_THUMBNAIL)
 	MethodCloseCatalogSession               = int32(engine.Method_METHOD_CLOSE_CATALOG_SESSION)
 	MethodSetSourceCover                    = int32(engine.Method_METHOD_SET_SOURCE_COVER)
 	MethodSearchCatalog                     = int32(engine.Method_METHOD_SEARCH_CATALOG)
-	MethodListSubjectTypes                  = int32(engine.Method_METHOD_LIST_SUBJECT_TYPES)
 	MethodCreateSubject                     = int32(engine.Method_METHOD_CREATE_SUBJECT)
 	MethodUpdateSubject                     = int32(engine.Method_METHOD_UPDATE_SUBJECT)
 	MethodDeleteSubject                     = int32(engine.Method_METHOD_DELETE_SUBJECT)
 	MethodListSubjects                      = int32(engine.Method_METHOD_LIST_SUBJECTS)
 	MethodSetSubjectPosition                = int32(engine.Method_METHOD_SET_SUBJECT_POSITION)
-	MethodClearSubjectPosition              = int32(engine.Method_METHOD_CLEAR_SUBJECT_POSITION)
 	MethodListSubjectPositions              = int32(engine.Method_METHOD_LIST_SUBJECT_POSITIONS)
-	MethodListProperties                    = int32(engine.Method_METHOD_LIST_PROPERTIES)
 	MethodCreateProperty                    = int32(engine.Method_METHOD_CREATE_PROPERTY)
 	MethodUpdateProperty                    = int32(engine.Method_METHOD_UPDATE_PROPERTY)
 	MethodDeleteProperty                    = int32(engine.Method_METHOD_DELETE_PROPERTY)
-	MethodListSubjectTypeProperties         = int32(engine.Method_METHOD_LIST_SUBJECT_TYPE_PROPERTIES)
 	MethodAssignSubjectTypeProperty         = int32(engine.Method_METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY)
 	MethodRemoveSubjectTypeProperty         = int32(engine.Method_METHOD_REMOVE_SUBJECT_TYPE_PROPERTY)
-	MethodListPlaceableSubjectTypes         = int32(engine.Method_METHOD_LIST_PLACEABLE_SUBJECT_TYPES)
-	MethodGetSubjectTypePresentation        = int32(engine.Method_METHOD_GET_SUBJECT_TYPE_PRESENTATION)
 	MethodListConnectRules                  = int32(engine.Method_METHOD_LIST_CONNECT_RULES)
 	MethodListPropertyTerms                 = int32(engine.Method_METHOD_LIST_PROPERTY_TERMS)
 	MethodCreatePropertyTerm                = int32(engine.Method_METHOD_CREATE_PROPERTY_TERM)
@@ -148,8 +140,6 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.GetInstallIdentity(in)
 	case MethodCompleteOnboarding:
 		return handlers.CompleteOnboarding(in)
-	case MethodRemoveInstallIdentity:
-		return handlers.RemoveInstallIdentity(in)
 	case MethodGetActiveProject:
 		return handlers.GetActiveProject(in)
 	case MethodOpenProject:
@@ -218,16 +208,12 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DismissSourceMetadataSuggestion(in)
 	case MethodReorderSourceMetadata:
 		return handlers.ReorderSourceMetadata(in)
-	case MethodEnsureFileThumbnail:
-		return handlers.EnsureFileThumbnail(in)
 	case MethodCloseCatalogSession:
 		return handlers.CloseCatalogSession(in)
 	case MethodSetSourceCover:
 		return handlers.SetSourceCover(in)
 	case MethodSearchCatalog:
 		return handlers.SearchCatalog(in)
-	case MethodListSubjectTypes:
-		return handlers.ListSubjectTypes(in)
 	case MethodCreateSubject:
 		return handlers.CreateSubject(in)
 	case MethodUpdateSubject:
@@ -238,28 +224,18 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.ListSubjects(in)
 	case MethodSetSubjectPosition:
 		return handlers.SetSubjectPosition(in)
-	case MethodClearSubjectPosition:
-		return handlers.ClearSubjectPosition(in)
 	case MethodListSubjectPositions:
 		return handlers.ListSubjectPositions(in)
-	case MethodListProperties:
-		return handlers.ListProperties(in)
 	case MethodCreateProperty:
 		return handlers.CreateProperty(in)
 	case MethodUpdateProperty:
 		return handlers.UpdateProperty(in)
 	case MethodDeleteProperty:
 		return handlers.DeleteProperty(in)
-	case MethodListSubjectTypeProperties:
-		return handlers.ListSubjectTypeProperties(in)
 	case MethodAssignSubjectTypeProperty:
 		return handlers.AssignSubjectTypeProperty(in)
 	case MethodRemoveSubjectTypeProperty:
 		return handlers.RemoveSubjectTypeProperty(in)
-	case MethodListPlaceableSubjectTypes:
-		return handlers.ListPlaceableSubjectTypes(in)
-	case MethodGetSubjectTypePresentation:
-		return handlers.GetSubjectTypePresentation(in)
 	case MethodListConnectRules:
 		return handlers.ListConnectRules(in)
 	case MethodListPropertyTerms:

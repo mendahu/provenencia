@@ -487,13 +487,16 @@ func TestCreateCitedBridge(t *testing.T) {
 
 	t.Run("missing position invalid", func(t *testing.T) {
 		s := mustSeed(t)
-		if _, err := writes.Call(s.c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := subjectpositions.Clear(tx, s.place.ID)
-			return struct{}{}, changes, err
-		}); err != nil {
+		// The row goes outside writes.Call: writes.Run rolls back a closure that
+		// returns no changes.
+		db, err := s.c.DB()
+		if err != nil {
 			t.Fatal(err)
 		}
-		_, err := writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
+		if _, err := db.Exec("DELETE FROM subject_positions WHERE subject_id = ?", s.place.ID); err != nil {
+			t.Fatal(err)
+		}
+		_, err = writes.Call(s.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (Result, []rowchange.Change, error) {
 			return CreateCitedBridge(tx, userID, CreateInput{
 				FromSubjectID: s.event.ID,
 				ToSubjectID:   s.place.ID,

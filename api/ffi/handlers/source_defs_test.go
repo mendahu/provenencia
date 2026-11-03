@@ -556,14 +556,14 @@ func TestAssignAndRemoveTypeField(t *testing.T) {
 				// Assign Folio first so stored order and label order disagree.
 				for _, fieldID := range []string{second, first} {
 					if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
-						ProjectDir: dir, UserId: userID, TypeId: typeID, FieldId: fieldID,
+						ProjectDir: dir, TypeId: typeID, FieldId: fieldID,
 					})); err != nil {
 						t.Fatal(err)
 					}
 				}
 				// Re-assigning must not reorder.
 				return &engine.AssignTypeFieldRequest{
-					ProjectDir: dir, UserId: userID, TypeId: typeID, FieldId: second,
+					ProjectDir: dir, TypeId: typeID, FieldId: second,
 				}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -578,7 +578,7 @@ func TestAssignAndRemoveTypeField(t *testing.T) {
 				}
 				ar := req.(*engine.AssignTypeFieldRequest)
 				rout, err := RemoveTypeField(marshalProto(t, &engine.RemoveTypeFieldRequest{
-					ProjectDir: ar.ProjectDir, UserId: ar.UserId, TypeId: ar.TypeId, FieldId: ar.FieldId,
+					ProjectDir: ar.ProjectDir, TypeId: ar.TypeId, FieldId: ar.FieldId,
 				}))
 				if err != nil {
 					t.Fatal(err)

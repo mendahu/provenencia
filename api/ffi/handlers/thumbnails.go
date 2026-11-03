@@ -10,42 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"google.golang.org/protobuf/proto"
 )
-
-// EnsureFileThumbnail lazily creates (or returns) the default thumbnail for a
-// File that is the primary File of some Artifact in the project.
-func EnsureFileThumbnail(in []byte) ([]byte, error) {
-	var req engine.EnsureFileThumbnailRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("ensure_file_thumbnail", err)
-	}
-	fileID, err := parseID(req.GetFileId())
-	if err != nil {
-		return nil, err
-	}
-	out := &engine.EnsureFileThumbnailResponse{}
-	pass := &thumbnailPass{}
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		ok, err := artifacts.HasPrimaryFile(c, fileID)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			return artifacts.ErrInvalid
-		}
-		return pass.need(c, fileID, func(rel string, skipped bool) {
-			out.RelPath, out.Skipped = rel, skipped
-		})
-	})
-	if err == nil {
-		err = pass.run(req.GetProjectDir(), nil)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
 
 // derivedRelPath is the one link-to-path tail: the objects/… path of the
 // link's derived File. A derived File that is gone, or whose stored type has no
@@ -186,8 +151,8 @@ func sourceCoverThumbnails(c *database.Catalog, rows []sources.Source) (map[stri
 
 // enrichSourceProto fills identity + cover mode + resolved thumbnail fields +
 // artifact gate for Create/Update/Get workspace responses. Cover thumbs stay
-// lookup-only; generation belongs on thumbnailPass (EnsureFileThumbnail and
-// SetSourceCover).
+// lookup-only; generation belongs on thumbnailPass (SetSourceCover and the
+// Artifact reads).
 func enrichSourceProto(c *database.Catalog, s sources.Source) (*engine.Source, error) {
 	if err := sources.AttachActivity(c, &s); err != nil {
 		return nil, err

@@ -438,18 +438,8 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 		t.Fatalf("no term %q", key)
 		return ""
 	}
-	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var props engine.ListPropertiesResponse
-	if err := proto.Unmarshal(propsOut, &props); err != nil {
-		t.Fatal(err)
-	}
-	propID := map[string]string{}
-	for _, p := range props.GetProperties() {
-		propID[p.GetKey()] = p.GetId()
-	}
+	eventTypeProp := propertyIDByKey(t, dir, "event_type")
+	dateProp := propertyIDByKey(t, dir, "date")
 
 	if _, err := CreateCitedBridge(marshalProto(t, &engine.CreateCitedBridgeRequest{
 		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
@@ -468,10 +458,10 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 	}
 	for i, drafts := range [][]*engine.ObservationDraft{
 		{
-			{SubjectId: eventID, PropertyId: propID["event_type"], ValueTermId: termID(propID["event_type"], "birth")},
-			{SubjectId: eventID, PropertyId: propID["date"], Date: day()},
+			{SubjectId: eventID, PropertyId: eventTypeProp, ValueTermId: termID(eventTypeProp, "birth")},
+			{SubjectId: eventID, PropertyId: dateProp, Date: day()},
 		},
-		{{SubjectId: eventID, PropertyId: propID["date"], Date: day()}},
+		{{SubjectId: eventID, PropertyId: dateProp, Date: day()}},
 	} {
 		if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
 			ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON, Observations: drafts,

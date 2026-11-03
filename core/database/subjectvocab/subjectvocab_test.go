@@ -200,19 +200,8 @@ func TestSubjectVocab(t *testing.T) {
 			},
 		},
 		{
-			name: "registry placeable presentation connect",
+			name: "registry presentation locked connect rules",
 			run: func(t *testing.T, _ *database.Catalog) {
-				placeable := PlaceableTypes()
-				if len(placeable) != 3 {
-					t.Fatalf("placeable=%d", len(placeable))
-				}
-				if placeable[0].Key != "person" || placeable[1].Key != "event" || placeable[2].Key != "place" {
-					t.Fatalf("%+v", placeable)
-				}
-				pres, ok := PresentationFor("person")
-				if !ok || pres.InkToken != "subjectPersonInk" || pres.IconSymbol != "subject_person" {
-					t.Fatalf("%+v ok=%v", pres, ok)
-				}
 				for _, info := range AllTypes() {
 					if info.Presentation.L10nKey == "" || info.Presentation.IconSymbol == "" {
 						t.Fatalf("missing presentation %+v", info)

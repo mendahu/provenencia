@@ -138,7 +138,7 @@ func TestSubjectPositions(t *testing.T) {
 			},
 		},
 		{
-			name: "get missing is tray; clear returns to tray",
+			name: "get missing is tray",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
 				src := mustSource(t, c, "Deed")
@@ -146,31 +146,6 @@ func TestSubjectPositions(t *testing.T) {
 				_, err := subjectpositions.Get(c, sub)
 				if !errors.Is(err, sql.ErrNoRows) {
 					t.Fatalf("got %v", err)
-				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-					return subjectpositions.Set(tx, sub, 0, 0)
-				}); err != nil {
-					t.Fatal(err)
-				}
-				before := auditCount(t, c)
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := subjectpositions.Clear(tx, sub)
-					return struct{}{}, changes, err
-				}); err != nil {
-					t.Fatal(err)
-				}
-				if _, err := writes.Call(c, writes.Op{}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := subjectpositions.Clear(tx, sub)
-					return struct{}{}, changes, err
-				}); err != nil {
-					t.Fatal(err)
-				}
-				_, err = subjectpositions.Get(c, sub)
-				if !errors.Is(err, sql.ErrNoRows) {
-					t.Fatalf("got %v", err)
-				}
-				if auditCount(t, c) != before {
-					t.Fatal("clear wrote audit")
 				}
 			},
 		},

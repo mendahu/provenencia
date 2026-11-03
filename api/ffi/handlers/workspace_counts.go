@@ -4,9 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
@@ -19,14 +17,6 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 	var out *engine.GetWorkspaceNavCountsResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		sourceCount, err := sources.Count(c)
-		if err != nil {
-			return err
-		}
-		types, err := sourcetypes.CountByOrigin(c)
-		if err != nil {
-			return err
-		}
-		fields, err := metadatafields.CountByOrigin(c)
 		if err != nil {
 			return err
 		}
@@ -43,12 +33,10 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.GetWorkspaceNavCountsResponse{
-			Sources:        int32(sourceCount),
-			SourceTypes:    typeOriginProto(types),
-			MetadataFields: fieldOriginProto(fields),
-			Persons:        int32(persons),
-			Events:         int32(events),
-			Places:         int32(places),
+			Sources: int32(sourceCount),
+			Persons: int32(persons),
+			Events:  int32(events),
+			Places:  int32(places),
 		}
 		return nil
 	})
@@ -56,22 +44,4 @@ func GetWorkspaceNavCounts(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
-}
-
-func typeOriginProto(c sourcetypes.OriginCounts) *engine.VocabularyOriginCounts {
-	return &engine.VocabularyOriginCounts{
-		Total:  int32(c.Total),
-		Seeded: int32(c.Seeded),
-		User:   int32(c.User),
-		Plugin: int32(c.Plugin),
-	}
-}
-
-func fieldOriginProto(c metadatafields.OriginCounts) *engine.VocabularyOriginCounts {
-	return &engine.VocabularyOriginCounts{
-		Total:  int32(c.Total),
-		Seeded: int32(c.Seeded),
-		User:   int32(c.User),
-		Plugin: int32(c.Plugin),
-	}
 }

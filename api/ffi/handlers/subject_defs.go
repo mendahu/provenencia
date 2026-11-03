@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -11,29 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
-
-func ListProperties(in []byte) ([]byte, error) {
-	var req engine.ListPropertiesRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_properties", err)
-	}
-	var out *engine.ListPropertiesResponse
-	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := properties.List(c)
-		if err != nil {
-			return err
-		}
-		out = &engine.ListPropertiesResponse{}
-		for _, p := range rows {
-			out.Properties = append(out.Properties, propertyProto(p))
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
 
 func CreateProperty(in []byte) ([]byte, error) {
 	var req engine.CreatePropertyRequest
@@ -46,13 +22,13 @@ func CreateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		got, wrote, err := writes.Run(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 			return properties.Create(tx, userID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
 		})
 		if err != nil {
 			return err
 		}
-		out = &engine.CreatePropertyResponse{Property: propertyProto(got)}
+		out = &engine.CreatePropertyResponse{Property: propertyProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -76,13 +52,13 @@ func UpdateProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdatePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		got, wrote, err := writes.Run(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 			return properties.Update(tx, userID, propertyID, req.GetLabel(), req.GetValueType(), req.GetDescription(), req.GetCardinality())
 		})
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdatePropertyResponse{Property: propertyProto(got)}
+		out = &engine.UpdatePropertyResponse{Property: propertyProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -106,40 +82,14 @@ func DeleteProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeletePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_property", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := properties.Delete(tx, userID, propertyID)
 			return struct{}{}, changes, err
-		}); err != nil {
-			return err
-		}
-		out = &engine.DeletePropertyResponse{}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func ListSubjectTypeProperties(in []byte) ([]byte, error) {
-	var req engine.ListSubjectTypePropertiesRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_subject_type_properties", err)
-	}
-	typeID, err := parseID(req.GetSubjectTypeId())
-	if err != nil {
-		return nil, err
-	}
-	var out *engine.ListSubjectTypePropertiesResponse
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := subjectvocab.ListBindings(c, typeID)
+		})
 		if err != nil {
 			return err
 		}
-		out = &engine.ListSubjectTypePropertiesResponse{}
-		for _, b := range rows {
-			out.Properties = append(out.Properties, subjectTypePropertyProto(b))
-		}
+		out = &engine.DeletePropertyResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -218,14 +168,15 @@ func AssignSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.AssignSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionAssign, UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionAssign, UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjectvocab.AppendBinding(tx, userID, typeID, propertyID)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.AssignSubjectTypePropertyResponse{}
+		out = &engine.AssignSubjectTypePropertyResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -253,45 +204,19 @@ func RemoveSubjectTypeProperty(in []byte) ([]byte, error) {
 	}
 	var out *engine.RemoveSubjectTypePropertyResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionRemove, UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: subjectvocab.ActionRemove, UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjectvocab.DeleteBinding(tx, userID, typeID, propertyID)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.RemoveSubjectTypePropertyResponse{}
+		out = &engine.RemoveSubjectTypePropertyResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
 		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
-func ListPlaceableSubjectTypes(in []byte) ([]byte, error) {
-	var req engine.ListPlaceableSubjectTypesRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_placeable_subject_types", err)
-	}
-	out := &engine.ListPlaceableSubjectTypesResponse{}
-	for _, t := range subjectvocab.PlaceableTypes() {
-		out.Types = append(out.Types, subjectTypePresentationProto(t))
-	}
-	return proto.Marshal(out)
-}
-
-func GetSubjectTypePresentation(in []byte) ([]byte, error) {
-	var req engine.GetSubjectTypePresentationRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("get_subject_type_presentation", err)
-	}
-	info, ok := subjectvocab.TypeByKey(req.GetTypeKey())
-	if !ok {
-		return nil, apperr.New(apperr.CodeSubjectVocabInvalid, apperr.KindUser)
-	}
-	out := &engine.GetSubjectTypePresentationResponse{
-		Presentation: subjectTypePresentationProto(info),
 	}
 	return proto.Marshal(out)
 }
