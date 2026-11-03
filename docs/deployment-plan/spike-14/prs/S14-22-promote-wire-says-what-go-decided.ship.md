@@ -81,4 +81,4 @@ Nits (logged): `MNT-9 · core/database/identityclaims/bridgefile.go:286 · inlin
 No Fix plan 2 (no round-2 blockers).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: two-term filed-link set (above), MNT-9, MNT-10 (nits) · later PR: UX-1 → S14-20 · to user: MNT-4 (Fix now), UX-1 (S14-20), both answered 2026-11-03 · CON miss: none
+Gate PASS · CI green · open: none · follow-ups: two-term filed-link set (above), MNT-9, MNT-10 (nits) · later PR: UX-1 → S14-20 · to user: MNT-4 (Fix now), UX-1 (S14-20), both answered 2026-11-03 · CON miss: none
