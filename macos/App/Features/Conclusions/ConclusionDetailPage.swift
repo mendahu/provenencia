@@ -593,7 +593,7 @@ struct ConclusionDetailGallerySection: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @FocusState private var focusedID: String?
 
-    private static let column: CGFloat = 120
+    private static let column = GalleryTileLook.small.column
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -622,10 +622,9 @@ struct ConclusionDetailGallerySection: View {
         return VStack(alignment: .leading, spacing: PVSpacing.space3) {
             GalleryTileView(
                 projectDir: projectDir,
-                relPath: tile.imageRelPath,
-                fallbackMark: gallery.fallbackMark,
-                caption: tile.citation.title,
-                captionWidth: Self.column
+                tile: tile,
+                look: .small,
+                fallbackMark: gallery.fallbackMark
             ) {
                 Button {
                     navigation.go(to: tile.location)
@@ -638,6 +637,7 @@ struct ConclusionDetailGallerySection: View {
                 .focused($focusedID, equals: tile.id)
                 .help(Text(gallery.openTip))
                 .accessibilityLabel(tile.accessibilityLabel)
+                .accessibilityHint(L10n.string(gallery.openTip))
                 .accessibilityIdentifier(tileID)
             }
             if tile.isLead {
@@ -775,50 +775,115 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
     }
 }
 
-/// One picture: its crop over a muted caption of up to two lines. The gallery passes the button that
-/// opens the Citation as `overlay` (drawn over the crop only).
-private struct GalleryTileView<Overlay: View>: View {
+/// Every measure of a gallery tile. `.small` is the Event and Place Pictures' tile; `.large` is
+/// the Person's Gallery tile.
+@MainActor
+enum GalleryTileLook {
+    case small
+    case large
+
+    /// The crop's side.
+    var crop: CGFloat {
+        switch self {
+        case .small: CachedThumbnail.pictureCrop
+        case .large: 160
+        }
+    }
+
+    /// The tile's column, which the caption keeps to.
+    var column: CGFloat {
+        switch self {
+        case .small: 120
+        case .large: 160
+        }
+    }
+}
+
+/// One picture: its crop over a caption of its citation. The gallery passes the button that opens
+/// the Citation as `overlay` (drawn over the crop only). `look` holds every measure of the two
+/// galleries.
+struct GalleryTileView<Overlay: View>: View {
     let projectDir: String
-    let relPath: String
+    let tile: ConclusionDetailPicture
+    let look: GalleryTileLook
     let fallbackMark: PVMarkKey
-    let caption: String
-    let captionWidth: CGFloat
+    var colors: PVThumbnail.Colors? = nil
     private let overlay: Overlay
 
     init(
         projectDir: String,
-        relPath: String,
+        tile: ConclusionDetailPicture,
+        look: GalleryTileLook,
         fallbackMark: PVMarkKey,
-        caption: String,
-        captionWidth: CGFloat,
+        colors: PVThumbnail.Colors? = nil,
         @ViewBuilder overlay: () -> Overlay
     ) {
         self.projectDir = projectDir
-        self.relPath = relPath
+        self.tile = tile
+        self.look = look
         self.fallbackMark = fallbackMark
-        self.caption = caption
-        self.captionWidth = captionWidth
+        self.colors = colors
         self.overlay = overlay()
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            CachedThumbnail(
-                projectDir: projectDir,
-                relPath: relPath,
-                size: CachedThumbnail.pictureCrop,
-                fallbackMark: fallbackMark
-            )
-            .accessibilityHidden(true)
-            .overlay { overlay }
-            Text(verbatim: caption)
+            crop
+            caption
+        }
+    }
+
+    @ViewBuilder
+    private var crop: some View {
+        let image = CachedThumbnail(
+            projectDir: projectDir,
+            relPath: tile.imageRelPath,
+            size: look.crop,
+            fallbackMark: fallbackMark,
+            colors: look == .large ? colors : nil
+        )
+        .accessibilityHidden(true)
+        .overlay { overlay }
+        switch look {
+        case .small:
+            image
+        case .large:
+            image.pvLiftHover(scale: 1.02)
+        }
+    }
+
+    @ViewBuilder
+    private var caption: some View {
+        switch look {
+        case .small:
+            Text(verbatim: tile.citation.title)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
                 .lineLimit(2)
                 .truncationMode(.tail)
-                .frame(maxWidth: captionWidth, alignment: .leading)
-                .help(Text(verbatim: caption))
+                .frame(maxWidth: look.column, alignment: .leading)
+                .help(Text(verbatim: tile.citation.title))
                 .accessibilityHidden(true)
+        case .large:
+            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+                Text(verbatim: tile.citation.title)
+                    .font(tile.citation.titleIsRef
+                        ? PVFont.mono(size: PVTypeScale.caption)
+                        : PVFont.body(size: PVTypeScale.caption))
+                    .foregroundStyle(PVColor.textPrimary)
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                if !tile.citation.detail.isEmpty {
+                    Text(verbatim: tile.citation.detail)
+                        .font(PVFont.body(size: PVTypeScale.caption))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(maxWidth: look.column, alignment: .leading)
+            .help(Text(verbatim: tile.citation.line))
+            .accessibilityHidden(true)
         }
     }
 }

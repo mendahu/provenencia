@@ -12,7 +12,8 @@ struct CachedThumbnail: View {
         case well
     }
 
-    /// A gallery picture's stored crop, as the Person, Event and Place galleries draw it.
+    /// A gallery picture's stored crop in the `.small` tile look (`GalleryTileView.Look`): the Event and Place
+    /// Pictures. The Person's Gallery draws its tiles at 160.
     static let pictureCrop: CGFloat = 96
 
     /// Glyph size inside a card well. The board draws the type or file mark at 56.

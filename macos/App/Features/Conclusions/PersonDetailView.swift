@@ -47,7 +47,7 @@ private struct PersonDetailSections: View {
                     message: L10n.string(L10n.Conclusions.galleryEmptyMessage)
                 )
             } else {
-                ConclusionDetailGallerySection(
+                ConclusionGallerySection(
                     projectDir: context.projectDir,
                     pageIdentifier: context.pageIdentifier,
                     gallery: content.gallery,
