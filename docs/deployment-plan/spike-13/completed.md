@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-13 — Timeline section
+
+**Landed 2026-11-02** in [#691](https://github.com/mendahu/provenencia/pull/691). A Person's Timeline shows the life on a lifeline drawn to scale from birth to death beside the event list, earliest first: each dated event points to its place on the line, birth and death always have a marker (a placeholder when unrecorded), undated events sit just before the death marker, and each row shows the event's picture, title, date and place, the person's roles and the other people as compact cards by role. A click on an event opens its Event page and a click on a card opens that person's Timeline; long lists fold behind "Show N more". At Wide the section fills the pane while the header keeps its measure (Page columns' opt-in `primaryFill`). Family and the Timeline share one section host, one "Show N more" row and one `PersonCardLink`.
+
 ## S13-35 — The person card joins the design system
 
 **Landed 2026-11-02** in [#690](https://github.com/mendahu/provenencia/pull/690). The person card is a design-system piece any feature can place, so a family tree can reuse it. `PVTileCard` is a content-agnostic card shell with thumbnail, title, lines and trailing slots at a regular and a compact size; `PVPersonCard` fills it, and the compact size (52pt, one-line name, the life span in years, full lines in the tooltip) has no caller until the Timeline. `PVGenderTreatment` is a recipe now, with the badge built on the Person page. Return activation (`pvActivatesOnReturn`) and the bare-button focus ring (`PVFocusRingButtonStyle`) are kit pieces that Family, the citation composer, the gallery tile and the artifact preview use. Family looks and behaves as before.
