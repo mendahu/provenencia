@@ -16,6 +16,7 @@ func TestReadsDeclare(t *testing.T) {
 		ReadEvidenceGraphProgress: {
 			"identity_claims", "observations", "subjects",
 		},
+		ReadPropertyTerms: {"property_terms"},
 		ReadEvidenceGraphs: {
 			"evidence_graph_artifacts", "evidence_graphs",
 		},

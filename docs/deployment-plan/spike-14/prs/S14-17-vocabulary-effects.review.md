@@ -1,7 +1,7 @@
 # Review — S14-17 Vocabulary writes return their effects; dead RPCs go
 
-**Verdict:** Fits with changes — Ready with changes (round 1, all findings answered; status Blocked — on S14-27, so round 2 runs on the refresh after S14-27 lands)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2 on the refresh against S14-27, 2026-11-03; every finding Fixed; status Planned)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), fresh each round
 
 ## To user
 
@@ -15,7 +15,9 @@
 - D-9 also deletes `ListSubjectTypes` and `ClearSubjectPosition` (their last Swift callers are the test-only methods the map deletes), and D-11 deletes their now-dead callees.
 - `evidenceGraph` / `citationsByArtifact` do not follow `property_vocabulary` (M-3 declined in part, below).
 - D-7: the Properties create flow applies each write's effects as it lands (X-3).
-- S14-27's slot is named `CatalogQueryFollows.list(_:)` here and in the S14-27 scope entry; S14-27's plan may choose otherwise, and this plan is refreshed when it lands.
+- S14-27 landed its slot as `CatalogQueryFollows.list(CatalogList)` and `.structure` (#693, stacked base), as D-6 names it.
+- Refresh (2026-11-03): D-11 extends to the test sites the first pass missed (`TestSubjectTypePropertiesAndRegistry`, `TestReorderSubjectTypeProperties`'s `list` helper, `TestSubjectPositions`' clear half), in the shape D-11 already used.
+- M-10's fix (D-14) is a keyed read, not a third list: it is not a vocabulary family, so the user's "two lists" answer stands.
 
 ## Round 1
 
@@ -78,3 +80,30 @@
 
 ### X-12 · minor · Smaller gaps
 **Answer:** Fixed — D-8 names the `WorkspaceView` argument; `badge(for:)` `default` arm; the `enrichSourceProto` comment text in D-9; the reserved pair's place and comment in D-9; the structural-debt line's text in STEP-8. §4 names `GoStore.mapOriginCounts`.
+
+## Round 2 — refresh against S14-27 (2026-11-03)
+
+Plan refreshed against `s14-27-lists-through-descriptors` @ `f1b3fe65` (S14-16 merged into `main` @ `42eb321c`). Before review, a §4 sweep corrected: the `ListVocabulary` test files (three were missing), `citations_test.go` line 75, the dead-RPC test sites (`TestSubjectTypePropertiesAndRegistry`, `TestReorderSubjectTypeProperties`, `TestSubjectPositions`, dedicated tests), the S14-27 Registry and Follow-slot rows, the Docs and Swift tests line numbers, and the sidebar's `catalogCounts` path. Fresh reviewers then read the refreshed plan.
+
+### M-9 · major · The Go display cache would still drop on Source-vocabulary writes it holds nothing from
+`graphcache.OnCommit` (`commit.go:25–31`) drops labels, the vocabulary, every graph's derived memos and the match index, and sets `warmNeeded`; `graphcache.Vocabulary` holds only Properties, terms, types and bindings, and no non-test graphcache, canonlinks or conclusionsummaries file reads Source types or fields. D-5 as written made every Source type or field write rebuild that at the map's Scale.
+**Answer:** Fixed — D-5: `OnCommit` drops only on `ListPropertyVocabulary`; Edges/Assumptions reworded; T-3 asserts both sides (`warm_test.go`, `graph_test.go`). Verified: `rg -l 'source_types|metadatafields' core/database/graphcache core/database/canonlinks core/database/conclusionsummaries` lists only test files.
+
+### M-10 · major · `propertyTerms` would reload every warmed key on any Property-family write
+Today `.createdPropertyTerm(propertyId:)` names one key; `CatalogPropertyTerm` holds no Property label, binding or type. The repo's keyed-read mechanism (`effects.Read`, `KeyTable`, `ReadPath` with `field(…)`; `ReadEvidenceGraphs`) keeps the precision with Go declaring it.
+**Answer:** Fixed — new D-14 (`ReadPropertyTerms`, `KeyTable` `properties`, `Reads` on `property_terms`; Swift `CatalogRead.propertyTerms`); D-6 drops `propertyTerms` from the `property_vocabulary` family and gives it a `.reads(.propertyTerms)` refresh; AC-1.4, T-1, T-5, T-10, Scale, Codebase fit, Scope, STEP-1/2/3 and D-13's README line updated.
+
+### X-1 · major · STEP-1's check cannot pass: the Swift parity test fails until STEP-2
+**Answer:** Fixed — STEP-1's check runs `./core/... ./api/ffi/handlers/...` and says the `api/ffi` parity rows ("catalog-wide lists", "catalog reads") go green in STEP-2; D-5 names `write_effects_test.go` 77–78 (`TestWriteEffectsProtoLists` wants `"property_vocabulary"`).
+
+### X-2 · minor · The family for table-less test commits was left open
+**Answer:** Fixed — D-5: the table-less commits use `ListPropertyVocabulary`; `Canon.CommitVocabulary` keeps its name with a Property-side doc.
+
+### X-3 · minor · §4 names two helpers that read no deleted RPC
+**Answer:** Fixed — the row names `subjectFixture` (`ListSubjectTypes`) and says `mustRPC` is the reader the new helpers use; `sourceFixture` (reads `ListSourceTypes`, which stays) is dropped.
+
+### X-4 · minor · The `typeSuggestions` / `propertyTerms` `invalidation` closures left a choice
+**Answer:** Fixed — D-6: `typeSuggestions`' closure stays as it is (its `default` arm stays for exhaustiveness); `propertyTerms`' closure is the constant D-6 already gave.
+
+### X-5 · nit · Status still read Blocked
+**Answer:** Fixed — Status `Planned`.

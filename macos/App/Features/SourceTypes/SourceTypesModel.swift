@@ -45,18 +45,15 @@ final class SourceTypesModel {
     private let userID: String
     private let store: any GenealogyStore
     private let session: WorkspaceSession
-    private let catalogCounts: CatalogCounts?
 
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         self.session = session
         self.userID = userID
         self.store = store
-        self.catalogCounts = catalogCounts
     }
 
     // MARK: Session handles
@@ -227,14 +224,16 @@ final class SourceTypesModel {
         return types.first { $0.id == id }
     }
 
-    var countLine: String {
-        let summary = catalogCounts?.sourceTypes ?? .from(types)
-        if summary.plugin > 0 {
+    /// Nil until the list has a value, so the header shows no zero counts.
+    var countLine: String? {
+        let handle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(Self.typesListKey(for: session))
+        guard handle?.value != nil else { return nil }
+        if types.pluginCount > 0 {
             return L10n.SourceTypes.countLineWithPlugin(
-                total: summary.total, seeded: summary.seeded, user: summary.user, plugin: summary.plugin
+                total: types.count, seeded: types.seededCount, user: types.userCount, plugin: types.pluginCount
             )
         }
-        return L10n.SourceTypes.countLine(total: summary.total, seeded: summary.seeded, user: summary.user)
+        return L10n.SourceTypes.countLine(total: types.count, seeded: types.seededCount, user: types.userCount)
     }
 
     // MARK: Selection
@@ -336,11 +335,11 @@ final class SourceTypesModel {
         do {
             switch mode {
             case .adding:
-                let created = try await store.createSourceType(
+                let (created, effects) = try await store.createSourceType(
                     projectDir: session.projectKey.projectDir, userID: userID,
                     label: label, description: draft.description, iconKey: draft.iconKey
                 )
-                session.apply(.createdSourceType)
+                session.apply(effects)
                 patchTypesList { rows in
                     rows.append(created)
                 }
@@ -351,18 +350,17 @@ final class SourceTypesModel {
                     body: L10n.SourceTypes.toastAddedBody(label: created.label, key: created.key),
                     tone: .success
                 )
-                publishCounts()
                 return WorkspaceLocation(
                     section: .sourceTypes,
                     typeId: created.id,
                     title: created.label
                 )
             case .editing(let id):
-                let updated = try await store.updateSourceType(
+                let (updated, effects) = try await store.updateSourceType(
                     projectDir: session.projectKey.projectDir, userID: userID, typeID: id,
                     label: label, description: draft.description, iconKey: draft.iconKey
                 )
-                session.apply(.updatedSourceType(id: updated.id))
+                session.apply(effects)
                 patchTypesList { rows in
                     if let idx = rows.firstIndex(where: { $0.id == updated.id }) {
                         rows[idx] = updated
@@ -394,7 +392,7 @@ final class SourceTypesModel {
         defer { isAssigning = false }
         do {
             let updated = try await store.assignTypeField(
-                projectDir: session.projectKey.projectDir, userID: userID, typeID: type.id, fieldID: fieldID
+                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID
             )
             session.apply(.assignedTypeSuggestion(typeId: type.id))
             patchSuggestions(updated, typeID: type.id)
@@ -422,7 +420,7 @@ final class SourceTypesModel {
         defer { removingFieldID = nil }
         do {
             let updated = try await store.removeTypeField(
-                projectDir: session.projectKey.projectDir, userID: userID, typeID: type.id, fieldID: fieldID
+                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID
             )
             session.apply(.removedTypeSuggestion(typeId: type.id))
             patchSuggestions(updated, typeID: type.id)
@@ -467,10 +465,10 @@ final class SourceTypesModel {
     func confirmPendingImpact() async -> Bool {
         guard let type = pendingDeleteType else { return false }
         return await deleteImpact.confirm { target in
-            try await store.deleteSourceType(
+            let effects = try await store.deleteSourceType(
                 projectDir: session.projectKey.projectDir, userID: userID, typeID: target.id
             )
-            session.apply(.deletedSourceType(id: target.id))
+            session.apply(effects)
             patchTypesList { rows in rows.removeAll { $0.id == target.id } }
             formError = nil
             suggestionError = nil
@@ -480,16 +478,10 @@ final class SourceTypesModel {
                 body: L10n.SourceTypes.toastDeletedBody(label: type.label),
                 tone: .success
             )
-            publishCounts()
         }
     }
 
     // MARK: Helpers
-
-    private func publishCounts() {
-        catalogCounts?.publishSourceTypes(.from(types))
-        catalogCounts?.publishMetadata(.from(fields))
-    }
 
     private func patchTypesList(_ mutate: (inout [CatalogSourceType]) -> Void) {
         let key = CatalogQueryKey.sourceTypesList(project: session.projectKey)

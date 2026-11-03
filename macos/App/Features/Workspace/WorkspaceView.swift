@@ -58,8 +58,7 @@ struct WorkspaceView: View {
                 projectDir: projectDir,
                 userID: userID,
                 sessionDisplayName: model.session?.displayName ?? "",
-                store: model.store,
-                catalogCounts: catalogCounts
+                store: model.store
             )
         }
         // Leading, not the default center: if a destination ever does insist
@@ -67,7 +66,6 @@ struct WorkspaceView: View {
         // the trailing edge. Centering it slides the fixed-width sidebar
         // under the traffic lights.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .environment(catalogCounts)
         .environment(navigation)
         .environment(session)
         .vocabularyToastOverlay($countsToast, identifier: "workspace.counts.toast")

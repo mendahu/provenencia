@@ -12,15 +12,13 @@ struct SourceTypesView: View {
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         _model = State(
             initialValue: SourceTypesModel(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         )
     }

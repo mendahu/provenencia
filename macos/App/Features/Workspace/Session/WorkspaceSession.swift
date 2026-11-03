@@ -246,11 +246,10 @@ final class WorkspaceSession {
     /// each warmed key runs its descriptor `patches` in order (last-updated
     /// cells from the effects, then an enriched Source row and page shell).
     /// Then it revalidates, once per key through one dedupe set, the union of
-    /// what the registry invalidates (the catalog-wide lists and structure the
-    /// effects reported, and what the mutation names: the Source page's own
+    /// what the registry invalidates for the mutation (the Source page's own
     /// workspace, the metadata field list), the warmed keys whose descriptor
-    /// `refreshes` follow ids the effects reported (`revalidatedKeys`: each
-    /// Evidence graph it names, the handles that changed), the keys a patch
+    /// `refreshes` follow what the effects reported (`revalidatedKeys`: ids, the
+    /// catalog-wide lists, structure), the keys a patch
     /// found with their first load still in flight, and the keys a `.run`
     /// refresh cannot run for. Keys the registry evicts or marks stale when
     /// hidden are not loaded unless on screen. Last, it starts each warmed
@@ -267,7 +266,7 @@ final class WorkspaceSession {
     /// refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
         let awaiting = applyPatches(effects, mutation)
-        let invalidated = cachedKeys(for: registry.invalidations(for: effects, by: mutation, project: projectKey))
+        let invalidated = mutation.map { cachedKeys(for: registry.invalidations(by: $0, project: projectKey)) } ?? []
         let refreshed = revalidatedKeys(for: effects)
         var running: [(key: CatalogQueryKey, run: CatalogQueryRefresh.Run, ids: [String])] = []
         var fallbacks: [CatalogQueryKey] = []

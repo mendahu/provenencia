@@ -12,36 +12,18 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 	runRPC(t, GetWorkspaceNavCounts, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff, 0xff, 0xff, 0xff}, wantErr: true},
 		{
-			name: "onboarded project has seeded vocab and zero sources",
+			name: "onboarded project has zero sources and no handles",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _ := sourceFixture(t)
 				return &engine.GetWorkspaceNavCountsRequest{ProjectDir: dir}
 			},
-			want: &engine.GetWorkspaceNavCountsResponse{
-				Sources: 0,
-				SourceTypes: &engine.VocabularyOriginCounts{
-					Total: 1, Seeded: 1,
-				},
-				MetadataFields: &engine.VocabularyOriginCounts{
-					Total: 3, Seeded: 3,
-				},
-			},
+			want:  &engine.GetWorkspaceNavCountsResponse{Sources: 0},
 			exact: true,
 		},
 		{
-			name: "counts user vocab and sources after ingest",
+			name: "counts sources after ingest",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
-				if _, err := CreateSourceType(marshalProto(t, &engine.CreateSourceTypeRequest{
-					ProjectDir: dir, UserId: userID, Label: "Deed",
-				})); err != nil {
-					t.Fatal(err)
-				}
-				if _, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
-					ProjectDir: dir, UserId: userID, Label: "Folio", DataType: "text",
-				})); err != nil {
-					t.Fatal(err)
-				}
 				cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
 					ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Photo",
 				}))
@@ -71,15 +53,7 @@ func TestGetWorkspaceNavCounts(t *testing.T) {
 				}
 				return &engine.GetWorkspaceNavCountsRequest{ProjectDir: dir}
 			},
-			want: &engine.GetWorkspaceNavCountsResponse{
-				Sources: 1,
-				SourceTypes: &engine.VocabularyOriginCounts{
-					Total: 2, Seeded: 1, User: 1,
-				},
-				MetadataFields: &engine.VocabularyOriginCounts{
-					Total: 4, Seeded: 3, User: 1,
-				},
-			},
+			want:  &engine.GetWorkspaceNavCountsResponse{Sources: 1},
 			exact: true,
 		},
 	})

@@ -44,14 +44,14 @@ func CreateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateSourceTypeResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "create_source_type"},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "create_source_type"},
 			func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
 				return sourcetypes.Create(tx, req.GetLabel(), req.GetDescription(), req.GetIconKey())
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateSourceTypeResponse{Type: sourceTypeProto(got)}
+		out = &engine.CreateSourceTypeResponse{Type: sourceTypeProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -74,7 +74,7 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "update_source_type"},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "update_source_type"},
 			func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
 				return sourcetypes.Update(tx, typeID, req.GetLabel(), req.GetDescription(), req.GetIconKey())
 			})
@@ -87,7 +87,7 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 		if got.SuggestedFields, err = sourcevocab.CountSuggestions(c, typeID); err != nil {
 			return err
 		}
-		out = &engine.UpdateSourceTypeResponse{Type: sourceTypeProto(got)}
+		out = &engine.UpdateSourceTypeResponse{Type: sourceTypeProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -125,7 +125,7 @@ func AssignTypeField(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("assign_type_field", err)
 	}
-	typeID, fieldID, err := parseSuggestionJoin(req.GetUserId(), req.GetTypeId(), req.GetFieldId())
+	typeID, fieldID, err := parseSuggestionJoin(req.GetTypeId(), req.GetFieldId())
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func RemoveTypeField(in []byte) ([]byte, error) {
 	if err := proto.Unmarshal(in, &req); err != nil {
 		return nil, unmarshalErr("remove_type_field", err)
 	}
-	typeID, fieldID, err := parseSuggestionJoin(req.GetUserId(), req.GetTypeId(), req.GetFieldId())
+	typeID, fieldID, err := parseSuggestionJoin(req.GetTypeId(), req.GetFieldId())
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +174,9 @@ func RemoveTypeField(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-// parseSuggestionJoin validates the user and both join sides — the shared
-// preamble of assign and remove.
-func parseSuggestionJoin(userID, typeID, fieldID string) ([]byte, []byte, error) {
-	if _, err := parseUserID(userID); err != nil {
-		return nil, nil, err
-	}
+// parseSuggestionJoin validates both join sides — the shared preamble of
+// assign and remove. The join is not audited, so it takes no user.
+func parseSuggestionJoin(typeID, fieldID string) ([]byte, []byte, error) {
 	tid, err := parseID(typeID)
 	if err != nil {
 		return nil, nil, err
@@ -239,14 +236,14 @@ func CreateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreateMetadataFieldResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "create_metadata_field"},
 			func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
 				return metadatafields.Create(tx, req.GetLabel(), req.GetDataType(), req.GetDescription())
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.CreateMetadataFieldResponse{Field: metadataFieldProto(got)}
+		out = &engine.CreateMetadataFieldResponse{Field: metadataFieldProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -269,7 +266,7 @@ func UpdateMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdateMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "update_metadata_field"},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "update_metadata_field"},
 			func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
 				return metadatafields.Update(tx, fieldID, req.GetLabel(), req.GetDataType(), req.GetDescription())
 			})
@@ -279,7 +276,7 @@ func UpdateMetadataField(in []byte) ([]byte, error) {
 		if got.UsedBy, err = metadatafields.UsedBy(c, fieldID); err != nil {
 			return err
 		}
-		out = &engine.UpdateMetadataFieldResponse{Field: metadataFieldProto(got)}
+		out = &engine.UpdateMetadataFieldResponse{Field: metadataFieldProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -303,14 +300,15 @@ func DeleteSourceType(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteSourceTypeResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_source_type", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := sourcetypes.Delete(tx, userID, typeID)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.DeleteSourceTypeResponse{}
+		out = &engine.DeleteSourceTypeResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -334,14 +332,15 @@ func DeleteMetadataField(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeleteMetadataFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if _, _, err := writes.Run(c, writes.Op{Action: "delete_metadata_field", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_metadata_field", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := metadatafields.Delete(tx, userID, fieldID)
 				return struct{}{}, changes, err
-			}); err != nil {
+			})
+		if err != nil {
 			return err
 		}
-		out = &engine.DeleteMetadataFieldResponse{}
+		out = &engine.DeleteMetadataFieldResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {

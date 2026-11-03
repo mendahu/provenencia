@@ -1,7 +1,7 @@
 // Package subjectpositions accesses graph layout for subjects.
-// Arranging bubbles is UI state, not a research assertion. Set and Clear
-// return a subject_position change and nothing else, so the caller commits
-// without a revision. A position is held to [-MaxCell, MaxCell] on both axes:
+// Arranging bubbles is UI state, not a research assertion. Set returns a
+// subject_position change and nothing else, so the caller commits without a
+// revision. A position is held to [-MaxCell, MaxCell] on both axes:
 // a write outside it is refused and a stored row outside it reads back clamped.
 package subjectpositions
 
@@ -31,7 +31,6 @@ const (
 		INNER JOIN subjects s ON s.id = p.subject_id
 		WHERE s.graph_id = ?
 		ORDER BY p.grid_y, p.grid_x, p.subject_id`
-	sqlClear         = `DELETE FROM subject_positions WHERE subject_id = ?`
 	sqlSubjectExists = `SELECT 1 FROM subjects WHERE id = ?`
 )
 
@@ -148,34 +147,6 @@ func ListByEvidenceGraph(c *database.Catalog, graphID []byte) ([]Position, error
 		out = append(out, p)
 	}
 	return out, rows.Err()
-}
-
-// Clear removes a position (back to tray). A missing row returns no changes.
-// The caller records the returned change.
-func Clear(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
-	if tx == nil || len(subjectID) != 16 {
-		return nil, ErrInvalid
-	}
-	prev, err := GetTx(tx.Tx, subjectID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(sqlClear, subjectID); err != nil {
-		return nil, err
-	}
-	return []rowchange.Change{{
-		EntityType: "subject_position",
-		EntityID:   append([]byte(nil), subjectID...),
-		Action:     rowchange.ActionDelete,
-		Fields: rowchange.DeletedRow(map[string]any{
-			"subject_id": database.UUIDString(subjectID),
-			"grid_x":     prev.GridX,
-			"grid_y":     prev.GridY,
-		}),
-	}}, nil
 }
 
 type rowScanner interface {

@@ -1,6 +1,7 @@
 # S14-27 — Every write reaches its keys through their descriptors
 
-**Status:** Planned
+**Status:** Landed in #693 (2026-11-03)
+**Landed:** No differences from the plan except the base: the check ran against `main` @ `42eb321c` (S14-16 merged, #686), not the Planned `a5e057b`; the Session files and every §4 row were unchanged (main only moved the person-timeline tests in `CatalogQueryRegistryTests` / `WorkspaceSessionTests`). T-3's Subject-delete case (AC-2.5) checks that the graph handle is fetching and that `propertiesWorkspace` loaded once; the fake has no graph-load counter.
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes (batch 5; S13-01 ship log)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: no view draws anything different, and no reload a researcher sees changes)

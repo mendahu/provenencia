@@ -40,24 +40,7 @@ func citationFixture(t *testing.T) (projectDir, userID, sourceID, artifactID, pl
 	if err := proto.Unmarshal(aout, &art); err != nil {
 		t.Fatal(err)
 	}
-	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var types engine.ListSubjectTypesResponse
-	if err := proto.Unmarshal(typesOut, &types); err != nil {
-		t.Fatal(err)
-	}
-	placeTypeID := ""
-	for _, typ := range types.Types {
-		if typ.GetKey() == "place" {
-			placeTypeID = typ.GetId()
-			break
-		}
-	}
-	if placeTypeID == "" {
-		t.Fatal("place subject type missing")
-	}
+	placeTypeID := subjectTypeIDByKey(t, dir, "place")
 	sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 		ProjectDir:    dir,
 		UserId:        userID,
@@ -72,24 +55,7 @@ func citationFixture(t *testing.T) (projectDir, userID, sourceID, artifactID, pl
 	if err := proto.Unmarshal(sout, &subj); err != nil {
 		t.Fatal(err)
 	}
-	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var props engine.ListPropertiesResponse
-	if err := proto.Unmarshal(propsOut, &props); err != nil {
-		t.Fatal(err)
-	}
-	toponymID := ""
-	for _, p := range props.Properties {
-		if p.GetKey() == "toponym" {
-			toponymID = p.GetId()
-			break
-		}
-	}
-	if toponymID == "" {
-		t.Fatal("toponym property missing")
-	}
+	toponymID := propertyIDByKey(t, dir, "toponym")
 	return dir, userID, sourceID, art.Artifact.GetId(), subj.Subject.GetId(), toponymID
 }
 
@@ -112,24 +78,7 @@ func likenessFixture(t *testing.T) (dir, userID, sourceID, artifactID, personID,
 func depictionFixture(t *testing.T, kind, key string) (dir, userID, sourceID, artifactID, subjectID, propertyID string) {
 	t.Helper()
 	dir, userID, sourceID, _ = subjectFixture(t)
-	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var types engine.ListSubjectTypesResponse
-	if err := proto.Unmarshal(typesOut, &types); err != nil {
-		t.Fatal(err)
-	}
-	typeID := ""
-	for _, typ := range types.Types {
-		if typ.GetKey() == kind {
-			typeID = typ.GetId()
-			break
-		}
-	}
-	if typeID == "" {
-		t.Fatalf("no subject type %q", kind)
-	}
+	typeID := subjectTypeIDByKey(t, dir, kind)
 	aout, err := CreateArtifact(marshalProto(t, &engine.CreateArtifactRequest{
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Photo",
 	}))
@@ -630,21 +579,7 @@ func TestListObservationsByEvidenceGraph(t *testing.T) {
 			name: "term label is the displayed value",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, _, _ := citationFixture(t)
-				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var types engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(typesOut, &types); err != nil {
-					t.Fatal(err)
-				}
-				eventTypeID := ""
-				for _, typ := range types.Types {
-					if typ.GetKey() == "event" {
-						eventTypeID = typ.GetId()
-						break
-					}
-				}
+				eventTypeID := subjectTypeIDByKey(t, dir, "event")
 				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: eventTypeID, Label: "Birth of Ada",
 				}))
@@ -924,21 +859,7 @@ func TestGetCitation(t *testing.T) {
 			name: "term label comes from the loaded source",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, _, _ := citationFixture(t)
-				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var types engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(typesOut, &types); err != nil {
-					t.Fatal(err)
-				}
-				eventTypeID := ""
-				for _, typ := range types.Types {
-					if typ.GetKey() == "event" {
-						eventTypeID = typ.GetId()
-						break
-					}
-				}
+				eventTypeID := subjectTypeIDByKey(t, dir, "event")
 				sout, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: eventTypeID, Label: "Birth of Ada",
 				}))

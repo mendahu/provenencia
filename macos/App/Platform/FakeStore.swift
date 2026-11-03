@@ -127,8 +127,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSourcesError: Error?
     /// The graph id of each `listSubjects` call, in order.
     var listSubjectsGraphIDs: [String] = []
-    var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
+    var getPropertiesWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
     /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
     var citationCountsGraphIDs: [String] = []
@@ -207,6 +207,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectsError: Error?
     var listConnectRulesError: Error?
     var createPropertyTermError: Error?
+    /// When set for a subject type id, `assignSubjectTypeProperty` throws for that type.
+    var assignSubjectTypePropertyErrors: [String: Error] = [:]
     /// When set, `setSourceMetadata` throws (field vs page error tests).
     var setSourceMetadataError: Error?
     /// When set, `addSourceNote` throws (`pageError` surfacing).
@@ -1026,7 +1028,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         description: String,
         iconKey: String
-    ) async throws -> CatalogSourceType {
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects) {
         return try withState {
             if let createSourceTypeError { throw createSourceTypeError }
             let key = FieldSlug.kebab(label)
@@ -1053,7 +1055,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 iconKey: resolvedIcon
             )
             sourceTypesByProject[projectDir, default: []].append(type)
-            return type
+            return (type, nextWriteEffects)
         }
     }
 
@@ -1064,7 +1066,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         description: String,
         iconKey: String
-    ) async throws -> CatalogSourceType {
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects) {
         return try withState {
             var list = sourceTypesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
@@ -1078,7 +1080,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             let trimmed = iconKey.trimmingCharacters(in: .whitespacesAndNewlines)
             list[idx].iconKey = trimmed.isEmpty ? PVMarkKey.defaultTypeMark.rawValue : trimmed
             sourceTypesByProject[projectDir] = list
-            return withSuggestedFieldCount(list[idx])
+            return (withSuggestedFieldCount(list[idx]), nextWriteEffects)
         }
     }
 
@@ -1086,8 +1088,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         typeID: String
-    ) async throws {
-        try withState {
+    ) async throws -> CatalogWriteEffects {
+        return try withState {
             var list = sourceTypesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == typeID }) else {
                 throw StoreBoom.boom
@@ -1114,6 +1116,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             sourceTypesByProject[projectDir] = list
             // Suggestion joins cascade; the fields they named do not.
             suggestionsByType[typeID] = nil
+            return nextWriteEffects
         }
     }
 
@@ -1125,7 +1128,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func assignTypeField(
         projectDir: String,
-        userID _: String,
         typeID: String,
         fieldID: String
     ) async throws -> [CatalogTypeSuggestion] {
@@ -1145,7 +1147,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func removeTypeField(
         projectDir _: String,
-        userID _: String,
         typeID: String,
         fieldID: String
     ) async throws -> [CatalogTypeSuggestion] {
@@ -1169,7 +1170,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         dataType: String,
         description: String
-    ) async throws -> CatalogMetadataField {
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects) {
         return try withState {
             let key = FieldSlug.kebab(label)
             if key.isEmpty {
@@ -1192,7 +1193,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 description: description
             )
             fieldsByProject[projectDir, default: []].append(field)
-            return field
+            return (field, nextWriteEffects)
         }
     }
 
@@ -1203,7 +1204,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         label: String,
         dataType: String,
         description: String
-    ) async throws -> CatalogMetadataField {
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects) {
         return try withState {
             var list = fieldsByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == fieldID }) else {
@@ -1218,7 +1219,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list[idx].label = label
             list[idx].description = description
             fieldsByProject[projectDir] = list
-            return list[idx]
+            return (list[idx], nextWriteEffects)
         }
     }
 
@@ -1226,8 +1227,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         projectDir: String,
         userID _: String,
         fieldID: String
-    ) async throws {
-        try withState {
+    ) async throws -> CatalogWriteEffects {
+        return try withState {
             var list = fieldsByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == fieldID }) else {
                 throw StoreBoom.boom
@@ -1252,6 +1253,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             }
             list.remove(at: idx)
             fieldsByProject[projectDir] = list
+            return nextWriteEffects
         }
     }
 
@@ -1259,12 +1261,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         let counts: WorkspaceNavCounts = try withState {
             markCatalogSessionHeld(projectDir)
             if let workspaceNavCountsError { throw workspaceNavCountsError }
-            let types = sourceTypesByProject[projectDir] ?? []
-            let fields = fieldsByProject[projectDir] ?? []
             return WorkspaceNavCounts(
                 sources: (sourcesByProject[projectDir] ?? []).count,
-                sourceTypes: Self.originCounts(from: types.map(\.origin)),
-                metadataFields: Self.originCounts(from: fields.map(\.origin)),
                 persons: Self.handleCount(membershipBySubject, kind: "person"),
                 events: Self.handleCount(membershipBySubject, kind: "event"),
                 places: Self.handleCount(membershipBySubject, kind: "place")
@@ -1296,14 +1294,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             // An unknown requested kind matches nothing, as in Go.
             let wanted = Set(kinds.compactMap(CatalogSearchKind.init(rawValue:)))
             return seededSearchHits.filter { $0.searchKind.map(wanted.contains) ?? false }
-        }
-    }
-
-    func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType] {
-        return withState {
-            listSubjectTypesCalls += 1
-            markCatalogSessionHeld(projectDir)
-            return subjectTypesByProject[projectDir] ?? []
         }
     }
 
@@ -1909,13 +1899,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return position
     }
 
-    func clearSubjectPosition(projectDir: String, subjectID: String) async throws {
-        withState {
-            markCatalogSessionHeld(projectDir)
-            subjectPositionsBySubject[subjectID] = nil
-        }
-    }
-
     func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition] {
         return withState {
             markCatalogSessionHeld(projectDir)
@@ -1936,7 +1919,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         valueType: String,
         description: String,
         cardinality: String
-    ) async throws -> CatalogProperty {
+    ) async throws -> (CatalogProperty, CatalogWriteEffects) {
         return try withState {
             markCatalogSessionHeld(projectDir)
             let key = FieldSlug.kebab(label)
@@ -1957,7 +1940,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 cardinality: stored
             )
             propertiesByProject[projectDir, default: []].append(property)
-            return property
+            return (property, nextWriteEffects)
         }
     }
 
@@ -1969,7 +1952,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         valueType _: String,
         description: String,
         cardinality: String
-    ) async throws -> CatalogProperty {
+    ) async throws -> (CatalogProperty, CatalogWriteEffects) {
         return try withState {
             markCatalogSessionHeld(projectDir)
             guard var list = propertiesByProject[projectDir],
@@ -1989,12 +1972,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 list[idx].cardinality = cardinality
             }
             propertiesByProject[projectDir] = list
-            return list[idx]
+            return (list[idx], nextWriteEffects)
         }
     }
 
-    func deleteProperty(projectDir: String, userID _: String, propertyID: String) async throws {
-        try withState {
+    func deleteProperty(projectDir: String, userID _: String, propertyID: String) async throws -> CatalogWriteEffects {
+        return try withState {
             markCatalogSessionHeld(projectDir)
             guard let property = (propertiesByProject[projectDir] ?? []).first(where: { $0.id == propertyID }) else {
                 throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
@@ -2022,6 +2005,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             for (typeID, list) in subjectTypePropertiesByType {
                 subjectTypePropertiesByType[typeID] = list.filter { $0.property.id != propertyID }
             }
+            return nextWriteEffects
         }
     }
 
@@ -2038,7 +2022,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         propertyID: String,
         label: String,
         description: String
-    ) async throws -> CatalogPropertyTerm {
+    ) async throws -> (CatalogPropertyTerm, CatalogWriteEffects) {
         return try withState {
             markCatalogSessionHeld(projectDir)
             if let createPropertyTermError {
@@ -2065,7 +2049,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 description: description
             )
             propertyTermsByProperty[propertyID, default: []].append(term)
-            return term
+            return (term, nextWriteEffects)
         }
     }
 
@@ -2074,18 +2058,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         subjectTypeID: String,
         propertyID: String
-    ) async throws {
-        withState {
+    ) async throws -> CatalogWriteEffects {
+        return try withState {
             markCatalogSessionHeld(projectDir)
+            if let error = assignSubjectTypePropertyErrors[subjectTypeID] { throw error }
             let property = (propertiesByProject[projectDir] ?? []).first { $0.id == propertyID }
                 ?? CatalogProperty(
                     id: propertyID, key: "prop", origin: "user", label: "Prop",
                     description: "", valueType: "text"
                 )
             var list = subjectTypePropertiesByType[subjectTypeID] ?? []
-            guard !list.contains(where: { $0.property.id == propertyID }) else { return }
+            guard !list.contains(where: { $0.property.id == propertyID }) else { return nextWriteEffects }
             list.append(CatalogSubjectTypeProperty(property: property, sortOrder: list.count, locked: false))
             subjectTypePropertiesByType[subjectTypeID] = list
+            return nextWriteEffects
         }
     }
 
@@ -2094,8 +2080,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         subjectTypeID: String,
         propertyID: String
-    ) async throws {
-        try withState {
+    ) async throws -> CatalogWriteEffects {
+        return try withState {
             markCatalogSessionHeld(projectDir)
             if let field = subjectTypePropertiesByType[subjectTypeID]?.first(where: { $0.property.id == propertyID }),
                field.locked
@@ -2103,6 +2089,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 throw CoreInvokeError.coded(status: 1, code: "subjectvocab.locked", kind: .conflict, params: [])
             }
             subjectTypePropertiesByType[subjectTypeID]?.removeAll { $0.property.id == propertyID }
+            return nextWriteEffects
         }
     }
 
@@ -2528,6 +2515,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot {
         return withState {
+            getPropertiesWorkspaceCalls += 1
             markCatalogSessionHeld(projectDir)
             let types = subjectTypesByProject[projectDir] ?? []
             var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]] = [:]
@@ -3320,25 +3308,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
         copy.thumbnailRelPath = art.thumbnailRelPath
         return copy
-    }
-
-    private static func originCounts(from origins: [String]) -> WorkspaceNavOriginCounts {
-        var seeded = 0
-        var user = 0
-        var plugin = 0
-        for origin in origins {
-            switch origin {
-            case CatalogOrigin.provenencia: seeded += 1
-            case CatalogOrigin.user: user += 1
-            default: plugin += 1
-            }
-        }
-        return WorkspaceNavOriginCounts(
-            total: origins.count,
-            seeded: seeded,
-            user: user,
-            plugin: plugin
-        )
     }
 }
 

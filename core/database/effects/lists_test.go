@@ -33,6 +33,22 @@ func TestResolveLists(t *testing.T) {
 		EntityType: "source_type", EntityID: id(1), Action: rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{"label": "Book"}),
 	}
+	metadataField := rowchange.Change{
+		EntityType: "metadata_field", EntityID: id(9), Action: rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{"label": "Volume"}),
+	}
+	property := rowchange.Change{
+		EntityType: "property", EntityID: id(10), Action: rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{"label": "Trade"}),
+	}
+	propertyTerm := rowchange.Change{
+		EntityType: "property_term", EntityID: id(11), Action: rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{"label": "Cooper", "property_id": id(10)}),
+	}
+	binding := rowchange.Change{
+		EntityType: "subject_type_property", EntityID: id(12), Action: rowchange.ActionCreate,
+		Fields: rowchange.FullRow(map[string]any{"property_id": id(10)}),
+	}
 	graph := rowchange.Change{
 		EntityType: "evidence_graph", EntityID: id(2), Action: rowchange.ActionCreate,
 		Fields: rowchange.FullRow(map[string]any{"source_id": id(3)}),
@@ -57,10 +73,20 @@ func TestResolveLists(t *testing.T) {
 		changes []rowchange.Change
 		want    []effects.List
 	}{
-		{"graph then vocabulary", []rowchange.Change{graph, sourceType},
-			[]effects.List{effects.ListVocabulary}},
+		{"graph then source vocabulary", []rowchange.Change{graph, sourceType},
+			[]effects.List{effects.ListSourceVocabulary}},
 		{"repeated change adds one key", []rowchange.Change{sourceType, sourceType},
-			[]effects.List{effects.ListVocabulary}},
+			[]effects.List{effects.ListSourceVocabulary}},
+		{"metadata field", []rowchange.Change{metadataField},
+			[]effects.List{effects.ListSourceVocabulary}},
+		{"property", []rowchange.Change{property},
+			[]effects.List{effects.ListPropertyVocabulary}},
+		{"property term", []rowchange.Change{propertyTerm},
+			[]effects.List{effects.ListPropertyVocabulary}},
+		{"binding", []rowchange.Change{binding},
+			[]effects.List{effects.ListPropertyVocabulary}},
+		{"both families keep list order", []rowchange.Change{property, sourceType},
+			[]effects.List{effects.ListSourceVocabulary, effects.ListPropertyVocabulary}},
 		{"observation text edit", []rowchange.Change{obs(rowchange.ActionUpdate, text)}, nil},
 		{"observation property edit", []rowchange.Change{obs(rowchange.ActionUpdate, prop)},
 			[]effects.List{effects.ListPropertyUsage}},
@@ -78,7 +104,7 @@ func TestResolveLists(t *testing.T) {
 			[]effects.List{effects.ListCounts}},
 		{"source type then source keeps list order",
 			[]rowchange.Change{source(rowchange.ActionCreate, rowchange.FullRow(map[string]any{"title": "a"})), sourceType},
-			[]effects.List{effects.ListVocabulary, effects.ListCounts}},
+			[]effects.List{effects.ListSourceVocabulary, effects.ListCounts}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

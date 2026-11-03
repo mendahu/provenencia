@@ -873,7 +873,7 @@ struct SourcePageModelTests {
                 dataType: "text", description: ""
             )
         )
-        session.apply(.createdMetadataField)
+        session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]))
         session.apply(location: WorkspaceLocation(section: .sources, sourceId: sourceID))
 
         let fieldsHandle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(

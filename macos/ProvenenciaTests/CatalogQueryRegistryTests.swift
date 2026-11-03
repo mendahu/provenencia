@@ -178,7 +178,7 @@ struct CatalogQueryRegistryTests {
                 description: ""
             )
         )
-        session.apply(.createdPropertyTerm(propertyId: "p1"))
+        session.apply(CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .propertyTerms, ids: ["p1"])]))
         await waitForQuery(handle)
         #expect(handle.value?.count == 2)
     }
@@ -656,11 +656,7 @@ struct CatalogQueryRegistryTests {
         let graph2Key = CatalogQueryKey.evidenceGraph(project: project, graphId: "g-2")
         session.setQueryValue(graph1Key, value: EvidenceGraphRows(graphId: "g-1"))
         session.setQueryValue(graph2Key, value: EvidenceGraphRows(graphId: "g-2"))
-        let graph2 = CatalogQueryInvalidation.key(graph2Key)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g-2"])) == [graph2Key])
-        #expect(registry.invalidations(for: CatalogWriteEffects(evidenceGraphs: ["g-2"]), project: project).isEmpty)
-        let deleted = registry.invalidations(by: .deletedSubject, project: project)
-        #expect(!deleted.contains { $0 == .allCached(.evidenceGraph) || $0 == graph2 })
         // A Source delete names its graphs in its effects, not in its mutation.
         #expect(!registry.invalidations(by: .deletedSource(id: "src-1"), project: project)
             .contains(.allCached(.evidenceGraph)))
@@ -700,7 +696,6 @@ struct CatalogQueryRegistryTests {
         let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
         let writes: [CatalogMutation] = [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
         ]
         for mutation in writes {
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
@@ -712,15 +707,12 @@ struct CatalogQueryRegistryTests {
     @Test func blanketTriggersAreGone() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.mutatedSourceWorkspace))
-        #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.deletedSubject))
         let conclusionKeys: [CatalogQueryInvalidation] = [
             .key(.personsList(project: project)), .key(.eventsList(project: project)),
             .key(.placesList(project: project)), .allCached(.conclusionDetail),
         ]
         for mutation: CatalogMutation in [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
         ] {
             let invalidations = registry.invalidations(by: mutation, project: project)
             for key in conclusionKeys {
@@ -751,20 +743,18 @@ struct CatalogQueryRegistryTests {
             CatalogSourceType(id: "t9", key: "map", origin: "user", label: "Map", description: ""),
         ]
 
-        for mutation in [
-            CatalogMutation.createdMetadataField,
-            .updatedMetadataField(id: "f1"),
-            .deletedMetadataField(id: "f1"),
-        ] {
-            session.apply(mutation)
+        // A field write reports `source_vocabulary`; the field relabel and
+        // delete also name the Source pages through their mutation.
+        let effects = CatalogWriteEffects(lists: [.sourceVocabulary])
+        for mutation in [nil, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1")] as [CatalogMutation?] {
+            session.apply(effects, mutation)
             let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
             await waitForQuery(fieldsHandle)
             #expect(fieldsHandle.value?.first?.label == "Date")
-
-            let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
-            await Task.yield()
-            #expect(typesHandle.value?.first?.label == "Book")
         }
+        let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
+        await waitForQuery(typesHandle)
+        #expect(typesHandle.value?.first?.label == "Map")
     }
 
     @Test func applyTypeCRUDInvalidatesTypesList() async {
@@ -789,20 +779,15 @@ struct CatalogQueryRegistryTests {
             ),
         ]
 
-        for mutation in [
-            CatalogMutation.createdSourceType,
-            .updatedSourceType(id: "t1"),
-            .deletedSourceType(id: "t1"),
-        ] {
-            session.apply(mutation)
-            let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
-            await waitForQuery(typesHandle)
-            #expect(typesHandle.value?.first?.label == "Photo")
-
-            let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
-            await Task.yield()
-            #expect(fieldsHandle.value?.first?.label == "Author")
-        }
+        // A type write reports `source_vocabulary`, which both Source
+        // vocabulary lists follow; no Source page follows it.
+        session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]))
+        let _: QueryHandle<[CatalogSourceType]> = session.query(typesKey)
+        await waitForQuery(typesHandle)
+        #expect(typesHandle.value?.first?.label == "Photo")
+        let _: QueryHandle<[CatalogMetadataField]> = session.query(fieldsKey)
+        await waitForQuery(fieldsHandle)
+        #expect(fieldsHandle.value?.first?.label == "Place")
     }
 
     @Test func applySuggestionMutationsInvalidateTypeKey() async {
@@ -872,63 +857,25 @@ struct CatalogQueryRegistryTests {
             .key(.sourceTypesList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
         ])
-        // Adding vocabulary touches only the list that owns it — the Source
-        // page reads that list rather than carrying its own copy.
-        #expect(registry.invalidations(by: .createdMetadataField, project: project) == [
-            .key(.metadataFieldsList(project: project)),
-        ])
-        #expect(registry.invalidations(by: .createdSourceType, project: project) == [
-            .key(.sourceTypesList(project: project)),
-        ])
-        #expect(registry.invalidations(by: .deletedSourceType(id: "t1"), project: project) == [
-            .key(.sourceTypesList(project: project)),
-            .allCached(.typeSuggestions),
-        ])
-        // Edits that restate a *derived* row still fan out, since the mutation
-        // names no single page: metadata rows embed their field, and the row set
-        // comes from the type's suggestions.
+        // A vocabulary write names its lists through its effects, not a
+        // mutation. A field relabel or delete restates a *derived* row on every
+        // Source page, which a list cannot tell from a field create, so those
+        // two mutations still name the pages, and only the pages.
         #expect(registry.invalidations(by: .deletedMetadataField(id: "f1"), project: project) == [
-            .key(.metadataFieldsList(project: project)),
             .allCached(.sourceWorkspace),
-            .allCached(.typeSuggestions),
+        ])
+        #expect(registry.invalidations(by: .updatedMetadataField(id: "f1"), project: project) == [
+            .allCached(.sourceWorkspace),
         ])
         #expect(registry.invalidations(by: .assignedTypeSuggestion(typeId: "t1"), project: project) == [
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
-        #expect(registry.invalidations(for: CatalogWriteEffects(
-            handles: ["e1"],
-            evidenceGraphs: ["g-1"],
-            reads: [
-                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
-                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
-            ],
-            lists: [.propertyUsage],
-            summaryHandles: ["e2"]
-        ), project: project) == [
-            .key(.propertiesWorkspace(project: project)),
-        ])
-        // The effects' graphs and handles invalidate nothing here: each kind's
-        // `refreshes` follow them (`WorkspaceSession.revalidatedKeys`), and a
-        // key they and the mutation both name is revalidated once per `apply`.
-        let both = registry.invalidations(
-            for: CatalogWriteEffects(evidenceGraphs: ["g-1"]),
-            by: .updatedProperty,
-            project: project
-        )
-        #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.isEmpty)
-        // A Subject delete reports its handles and its graph in `WriteEffects`, so
-        // the lists, the details and the graph are not named here.
-        // The citation reads follow the write's `reads`, not this mutation.
-        #expect(registry.invalidations(by: .deletedSubject, project: project) == [
-            .key(.propertiesWorkspace(project: project)),
-        ])
-        let erased = registry.invalidations(by: .deletedSubject, project: project)
-        #expect(!erased.contains(.allCached(.citationCounts)) && !erased.contains(.allCached(.citationsByArtifact)))
+        // A mutation names no graph key: the graph is reached through each kind's
+        // `refreshes` (pinned by `propertyUsageAndGraphEffectsReloadEachOnce`).
+        let updated = registry.invalidations(by: .updatedMetadataField(id: "f1"), project: project)
+        #expect(!updated.contains(.key(.evidenceGraph(project: project, graphId: "g-1"))))
         // Keyed reads invalidate nothing: each kind's `refresh` follows them.
-        #expect(registry.invalidations(for: CatalogWriteEffects(
-            reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]
-        ), project: project).isEmpty)
         #expect(CatalogQueryKey.Kind.citationCounts.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
         #expect(CatalogQueryKey.Kind.citationsByArtifact.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
         #expect(
@@ -942,32 +889,27 @@ struct CatalogQueryRegistryTests {
         // The effect slots a key follows are declared on its kind.
         #expect(CatalogQueryKey.Kind.evidenceGraph.descriptor.refreshes.map(\.follows) == [.evidenceGraphs])
         for kind in [CatalogQueryKey.Kind.personsList, .eventsList, .placesList] {
-            #expect(kind.descriptor.refreshes.map(\.follows) == [.touchedHandles], "\(kind)")
+            #expect(kind.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)], "\(kind)")
         }
-        #expect(CatalogQueryKey.Kind.conclusionDetail.descriptor.refreshes.map(\.follows) == [.touchedHandles])
+        #expect(
+            CatalogQueryKey.Kind.conclusionDetail.descriptor.refreshes.map(\.follows)
+                == [.touchedHandles, .list(.propertyVocabulary)]
+        )
         #expect(
             CatalogQueryKey.Kind.personClaims.descriptor.refreshes.map(\.follows)
-                == [.touchedHandles, .evidenceGraphs]
+                == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]
         )
         // A read follows only its own entry of the effects.
         let reads = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])])
         #expect(CatalogQueryFollows.reads(.citations).ids(in: reads) == ["g-1"])
         #expect(CatalogQueryFollows.reads(.evidenceGraphProgress).ids(in: reads).isEmpty)
         #expect(registry.hiddenPolicy(.citationCounts(project: project, graphId: "g1")) == .markStale)
-        // A Property update reports no effects, so it still stales every Conclusion key.
-        #expect(registry.invalidations(by: .updatedProperty, project: project).contains(.allCached(.conclusionDetail)))
-        #expect(registry.invalidations(by: .createdPropertyTerm(propertyId: "p1"), project: project) == [
-            .key(.propertyTerms(project: project, propertyId: "p1")),
-        ])
         // Grades are seeded vocabulary with no CRUD surface, so nothing stales them.
         let everyMutation: [CatalogMutation] = [
             .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
-            .createdSourceType, .updatedSourceType(id: "t1"), .deletedSourceType(id: "t1"),
-            .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
+            .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
-            .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
@@ -979,20 +921,6 @@ struct CatalogQueryRegistryTests {
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
         ])
-        // Every Conclusion trigger stales the Person, Event, and Place lists and
-        // every cached detail; nothing else does.
-        for mutation in everyMutation {
-            let invalidations = registry.invalidations(by: mutation, project: project)
-            let isTrigger = mutation.invalidationKind.map { CatalogQueryRegistry.conclusionTriggers.contains($0) } ?? false
-            #expect(invalidations.contains(.key(.personsList(project: project))) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.key(.eventsList(project: project))) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.key(.placesList(project: project))) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.conclusionDetail)) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.personClaims)) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.personFamily)) == isTrigger, "\(mutation)")
-            #expect(invalidations.contains(.allCached(.personEvents)) == isTrigger, "\(mutation)")
-        }
-        #expect(CatalogQueryRegistry.conclusionTriggers == [.updatedProperty])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.metadataFieldsList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
@@ -1007,7 +935,6 @@ struct CatalogQueryRegistryTests {
     /// the lists or detail pages show, so it invalidates nothing; the session
     /// patches the row from the write's activity.
     @Test func handleScopesInvalidateNothing() {
-        let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let session = makeSession()
         session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonSummary]())
@@ -1017,11 +944,9 @@ struct CatalogQueryRegistryTests {
         let otherKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e2")
         session.setQueryValue(detailKey, value: CatalogConclusionDetail(entity: entity("e1"), fields: []))
         session.setQueryValue(otherKey, value: CatalogConclusionDetail(entity: entity("e2"), fields: []))
-        #expect(registry.invalidations(for: CatalogWriteEffects(handleScopes: ["e1"]), project: project).isEmpty)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handleScopes: ["e1"])).isEmpty)
         // A write that changed e1 revalidates the lists and e1's detail, not e2's.
         let effects = CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"])
-        #expect(registry.invalidations(for: effects, project: project).isEmpty)
         #expect(Set(session.revalidatedKeys(for: effects)) == Set(
             [.personsList(project: project), .eventsList(project: project), .placesList(project: project), detailKey]
         ))
@@ -1052,8 +977,7 @@ struct CatalogQueryRegistryTests {
                 id: "f2", key: "folio", origin: "user", label: "Folio", dataType: "text", description: ""
             )
         )
-        session.apply(.createdMetadataField)
-        session.apply(.createdSourceType)
+        session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]))
         await waitForQuery(fieldsHandle)
         #expect(fieldsHandle.value?.map(\.label) == ["Author", "Folio"])
         #expect(workspaceHandle.isFetching == false)
@@ -1087,7 +1011,7 @@ struct CatalogQueryRegistryTests {
 
         store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author name")]
         store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author name")]
-        session.apply(.updatedMetadataField(id: "f1"))
+        session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]), .updatedMetadataField(id: "f1"))
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(secondKey)
@@ -1108,7 +1032,7 @@ struct CatalogQueryRegistryTests {
     }
 
     /// Suggestions embed a whole field row, so a relabel reaches types the edit
-    /// never named.
+    /// never named: every cached list follows `source_vocabulary`.
     @Test func fieldRelabelInvalidatesEveryCachedSuggestionList() async {
         let store = FakeStore()
         seedStore(store)
@@ -1132,7 +1056,7 @@ struct CatalogQueryRegistryTests {
         )
         store.suggestionsByType["t1"] = [renamed]
         store.suggestionsByType["t2"] = [renamed]
-        session.apply(.updatedMetadataField(id: "f1"))
+        session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]), .updatedMetadataField(id: "f1"))
 
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(firstKey)
         let _: QueryHandle<[CatalogTypeSuggestion]> = session.query(secondKey)
@@ -1224,34 +1148,237 @@ struct CatalogQueryRegistryTests {
         #expect(workspaceHandle.value?.metadata.count == 1)
     }
 
-    private struct ListCase: CustomTestStringConvertible, Sendable {
+    /// A catalog-wide slot reports one token when the write moved it.
+    @Test func catalogWideSlotsReportOneToken() {
+        #expect(CatalogQueryFollows.list(.propertyVocabulary).ids(in: CatalogWriteEffects(lists: [.propertyVocabulary])) == ["property_vocabulary"])
+        #expect(CatalogQueryFollows.list(.propertyVocabulary).ids(in: CatalogWriteEffects(lists: [.propertyUsage])).isEmpty)
+        #expect(CatalogQueryFollows.structure.ids(in: CatalogWriteEffects(structure: true)) == ["structure"])
+        #expect(CatalogQueryFollows.structure.ids(in: CatalogWriteEffects(structure: false)).isEmpty)
+        #expect(CatalogQueryFollows.list(.propertyVocabulary).isCatalogWide)
+        #expect(CatalogQueryFollows.structure.isCatalogWide)
+        #expect(!CatalogQueryFollows.touchedHandles.isCatalogWide)
+    }
+
+    /// The Properties workspace follows the lists and structure on its own
+    /// descriptor, and revalidates when a write reports one.
+    @Test func propertiesWorkspaceFollowsListsAndStructure() {
+        #expect(
+            CatalogQueryKey.Kind.propertiesWorkspace.descriptor.refreshes.map(\.follows)
+                == [.list(.propertyVocabulary), .list(.propertyUsage), .structure]
+        )
+        let session = makeSession()
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        session.setQueryValue(key, value: PropertiesSnapshot.empty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(lists: [.propertyVocabulary])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(structure: true)) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(
+            handles: ["e1"],
+            evidenceGraphs: ["g-1"],
+            reads: [
+                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
+                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
+            ],
+            lists: [.propertyUsage],
+            summaryHandles: ["e2"]
+        )) == [key])
+    }
+
+    private struct ListsAndStructureCase: CustomTestStringConvertible, Sendable {
         let name: String
         let lists: Set<CatalogList>
         let structure: Bool
-        let propertiesInvalidations: Int
 
         var testDescription: String { name }
     }
 
-    nonisolated private static let listCases: [ListCase] = [
-        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
-        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
-        ListCase(
-            name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
-            structure: false, propertiesInvalidations: 1
-        ),
-        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
-        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
+    nonisolated private static let listsAndStructureCases: [ListsAndStructureCase] = [
+        ListsAndStructureCase(name: "property vocabulary", lists: [.propertyVocabulary], structure: false),
+        ListsAndStructureCase(name: "property usage", lists: [.propertyUsage], structure: false),
+        ListsAndStructureCase(name: "property vocabulary and usage", lists: [.propertyVocabulary, .propertyUsage], structure: false),
+        ListsAndStructureCase(name: "structure alone", lists: [], structure: true),
+        ListsAndStructureCase(name: "property vocabulary and structure", lists: [.propertyVocabulary], structure: true),
     ]
 
-    @Test(arguments: listCases)
-    private func listInvalidations(_ tc: ListCase) {
+    @Test(arguments: listsAndStructureCases)
+    private func listsAndStructureRevalidatePropertiesOnce(_ tc: ListsAndStructureCase) async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        #expect(session.visibleKeys.contains(key))
+        let handle: QueryHandle<PropertiesSnapshot> = session.query(key)
+        await waitForQuery(handle)
+        let baseline = store.getPropertiesWorkspaceCalls
+
+        session.apply(CatalogWriteEffects(lists: tc.lists, structure: tc.structure))
+        await session.settleWrites()
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
+    }
+
+    @Test func hiddenPropertiesWorkspaceIsMarkedStaleByAList() {
+        let store = FakeStore()
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        session.setQueryValue(key, value: PropertiesSnapshot.empty)
+        let baseline = store.getPropertiesWorkspaceCalls
+        session.apply(CatalogWriteEffects(lists: [.propertyVocabulary]))
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(key)
+        #expect(handle?.isStale == true)
+        #expect(store.getPropertiesWorkspaceCalls == baseline)
+    }
+
+    /// A Subject delete's effects reload the Properties `usedBy` and the graph
+    /// once each, with no mutation.
+    @Test func propertyUsageAndGraphEffectsReloadEachOnce() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        let graphKey = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g1")
+        let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
+        let graph: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
+        await waitForQuery(properties)
+        await waitForQuery(graph)
+        let baseline = store.getPropertiesWorkspaceCalls
+
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g1"], lists: [.propertyUsage]))
+        #expect(properties.isFetching && graph.isFetching)
+        await session.settleWrites()
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
+    }
+
+    /// The sidebar recount is not a cache key: no descriptor follows `counts`,
+    /// and a catalog-wide slot reaches only a `.revalidate` refresh.
+    @Test func noDescriptorFollowsCounts() {
+        for kind in CatalogQueryKey.Kind.allCases {
+            let descriptor = kind.descriptor
+            #expect(!descriptor.refreshes.contains { $0.follows == .list(.counts) }, "\(kind)")
+            for refresh in descriptor.refreshes {
+                if case .run = refresh.action {
+                    #expect(!refresh.follows.isCatalogWide, "\(kind)")
+                }
+            }
+            #expect(!descriptor.patches.contains { $0.follows?.isCatalogWide == true }, "\(kind)")
+        }
+    }
+
+    /// Warms one key of every kind a vocabulary family or the term read can
+    /// reach, and of three it must not reach.
+    private func warmedVocabularySession() -> (WorkspaceSession, [String: CatalogQueryKey]) {
+        let session = makeSession()
+        let project = session.projectKey
+        let keys: [String: CatalogQueryKey] = [
+            "sourceTypesList": .sourceTypesList(project: project),
+            "metadataFieldsList": .metadataFieldsList(project: project),
+            "typeSuggestions": .typeSuggestions(project: project, typeId: "t1"),
+            "propertiesWorkspace": .propertiesWorkspace(project: project),
+            "personsList": .personsList(project: project),
+            "eventsList": .eventsList(project: project),
+            "placesList": .placesList(project: project),
+            "conclusionDetail": .conclusionDetail(project: project, entityId: "e1"),
+            "personClaims": .personClaims(project: project, entityId: "e1"),
+            "personFamily": .personFamily(project: project, entityId: "e1"),
+            "personEvents": .personEvents(project: project, entityId: "e1"),
+            "propertyTerms(p1)": .propertyTerms(project: project, propertyId: "p1"),
+            "propertyTerms(p2)": .propertyTerms(project: project, propertyId: "p2"),
+            "sourceWorkspace": .sourceWorkspace(project: project, sourceId: "s1"),
+            "evidenceGraph": .evidenceGraph(project: project, graphId: "g1"),
+            "citationsByArtifact": .citationsByArtifact(project: project, graphId: "g1", artifactId: "a1"),
+        ]
+        session.setQueryValue(keys["sourceTypesList"]!, value: [CatalogSourceType]())
+        session.setQueryValue(keys["metadataFieldsList"]!, value: [CatalogMetadataField]())
+        session.setQueryValue(keys["typeSuggestions"]!, value: [CatalogTypeSuggestion]())
+        session.setQueryValue(keys["propertiesWorkspace"]!, value: PropertiesSnapshot.empty)
+        session.setQueryValue(keys["personsList"]!, value: [CatalogPersonSummary]())
+        session.setQueryValue(keys["eventsList"]!, value: [CatalogEventSummary]())
+        session.setQueryValue(keys["placesList"]!, value: [CatalogPlaceSummary]())
+        session.setQueryValue(keys["conclusionDetail"]!, value: CatalogConclusionDetail(entity: entity("e1"), fields: []))
+        session.setQueryValue(keys["personClaims"]!, value: [CatalogPersonClaimGroup]())
+        session.setQueryValue(keys["personFamily"]!, value: CatalogPersonFamily(units: []))
+        session.setQueryValue(keys["personEvents"]!, value: CatalogPersonTimeline())
+        session.setQueryValue(keys["propertyTerms(p1)"]!, value: [CatalogPropertyTerm]())
+        session.setQueryValue(keys["propertyTerms(p2)"]!, value: [CatalogPropertyTerm]())
+        session.setQueryValue(keys["sourceWorkspace"]!, value: CatalogSourceWorkspace(
+            source: CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+            notes: [], metadata: [], artifacts: [], credibility: nil
+        ))
+        session.setQueryValue(keys["evidenceGraph"]!, value: EvidenceGraphRows(
+            graphId: "g1"
+        ))
+        session.setQueryValue(keys["citationsByArtifact"]!, value: [CatalogListedCitation]())
+        return (session, keys)
+    }
+
+    private struct FamilyCase: CustomTestStringConvertible, Sendable {
+        let name: String
+        let effects: CatalogWriteEffects
+        let reached: Set<String>
+
+        var testDescription: String { name }
+    }
+
+    nonisolated private static let familyCases: [FamilyCase] = [
+        FamilyCase(
+            name: "source vocabulary",
+            effects: CatalogWriteEffects(lists: [.sourceVocabulary]),
+            reached: ["sourceTypesList", "metadataFieldsList", "typeSuggestions"]
+        ),
+        FamilyCase(
+            name: "property vocabulary",
+            effects: CatalogWriteEffects(lists: [.propertyVocabulary]),
+            reached: [
+                "propertiesWorkspace", "personsList", "eventsList", "placesList",
+                "conclusionDetail", "personClaims", "personFamily", "personEvents",
+            ]
+        ),
+        FamilyCase(
+            name: "the term read of one Property",
+            effects: CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .propertyTerms, ids: ["p1"])]),
+            reached: ["propertyTerms(p1)"]
+        ),
+    ]
+
+    /// T-5: each vocabulary family reaches exactly the keys that hold its
+    /// labels, and a term write only its Property's term list. No family
+    /// reaches a Source page or a canvas.
+    @Test(arguments: familyCases)
+    private func listFamiliesReachTheirKeys(_ tc: FamilyCase) {
+        let (session, keys) = warmedVocabularySession()
+        let reached = Set(session.revalidatedKeys(for: tc.effects))
+        #expect(reached == Set(tc.reached.map { keys[$0]! }))
+    }
+
+    /// T-6: no remaining mutation reaches a Conclusion key; Conclusion keys
+    /// follow their effects.
+    @Test func noMutationReachesAConclusionKey() {
+        let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        let got = CatalogQueryRegistry.standard.invalidations(
-            for: CatalogWriteEffects(lists: tc.lists, structure: tc.structure),
-            project: project
-        )
-        #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
+        let source = CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "T", description: "")
+        let conclusionKinds: Set<CatalogQueryKey.Kind> = [
+            .personsList, .eventsList, .placesList, .conclusionDetail, .personClaims, .personFamily, .personEvents,
+        ]
+        let mutations: [CatalogMutation] = [
+            .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
+            .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
+            .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
+            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+        ]
+        for mutation in mutations {
+            for invalidation in registry.invalidations(by: mutation, project: project) {
+                switch invalidation {
+                case .key(let key):
+                    #expect(!conclusionKinds.contains(key.kind), "\(mutation) \(key)")
+                case .allCached(let kind):
+                    #expect(!conclusionKinds.contains(kind), "\(mutation) \(kind)")
+                }
+            }
+        }
     }
 
     @Test func evidenceGraphsListLoadsFromStore() async throws {
@@ -1281,11 +1408,6 @@ struct CatalogQueryRegistryTests {
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(.evidenceGraphsList(project: project)) == .markStale)
     }
 
-    /// The sidebar recount is not a cache key: `counts` invalidates nothing.
-    @Test func countsListNamesNoKey() {
-        #expect(CatalogQueryRegistry.invalidations(for: .counts, project: ProjectKey(projectDir: projectDir)).isEmpty)
-    }
-
     /// A write that touches a handle revalidates the cached `personClaims` key through `touchedHandles`;
     /// the key is evicted while hidden.
     @Test func personClaimsRevalidateOnTouchedHandle() {
@@ -1294,7 +1416,6 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
         session.setQueryValue(key, value: [CatalogPersonClaimGroup]())
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personClaims)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
@@ -1330,12 +1451,11 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personFamily(project: project, entityId: "e1")
         session.setQueryValue(key, value: CatalogPersonFamily(units: []))
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personFamily)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
         #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
-        #expect(CatalogQueryKey.Kind.personFamily.descriptor.refreshes.map(\.follows) == [.touchedHandles])
+        #expect(CatalogQueryKey.Kind.personFamily.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
     /// T-7 (AC-4.1): the key loads through the store; an unseeded handle is
@@ -1377,12 +1497,11 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personEvents(project: project, entityId: "e1")
         session.setQueryValue(key, value: CatalogPersonTimeline())
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personEvents)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
         #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
-        #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles])
+        #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
     /// T-7 (AC-4.1): the key loads through the store; an unseeded handle is

@@ -122,6 +122,54 @@ func mustRPC(t *testing.T, fn func([]byte) ([]byte, error), req, resp proto.Mess
 	}
 }
 
+// propertyIDByKey is the id of the seeded Property with the key, read through
+// the Properties workspace.
+func propertyIDByKey(t *testing.T, dir, key string) string {
+	t.Helper()
+	var resp engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &resp)
+	for _, p := range resp.Properties {
+		if p.GetKey() == key {
+			return p.GetId()
+		}
+	}
+	t.Fatalf("missing property %q", key)
+	return ""
+}
+
+// subjectTypeIDByKey is the id of the seeded subject type with the key, read
+// through the Properties workspace.
+func subjectTypeIDByKey(t *testing.T, dir, key string) string {
+	t.Helper()
+	var resp engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &resp)
+	for _, typ := range resp.Types {
+		if typ.GetKey() == key {
+			return typ.GetId()
+		}
+	}
+	t.Fatalf("missing subject type %q", key)
+	return ""
+}
+
+// bindingIDsForType is the Property ids bound to the subject type, in order,
+// read through the Properties workspace.
+func bindingIDsForType(t *testing.T, dir, typeID string) []string {
+	t.Helper()
+	var resp engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &resp)
+	var ids []string
+	for _, g := range resp.Groups {
+		if g.GetSubjectTypeId() != typeID {
+			continue
+		}
+		for _, p := range g.Properties {
+			ids = append(ids, p.GetProperty().GetId())
+		}
+	}
+	return ids
+}
+
 // pngSource is a Source whose one Artifact holds an ingested PNG.
 type pngSource struct {
 	dir, userID, sourceID, artifactID, fileID string

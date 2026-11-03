@@ -10,46 +10,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func TestListProperties(t *testing.T) {
-	runRPC(t, ListProperties, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "lists seeded properties",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _ := sourceFixture(t)
-				return &engine.ListPropertiesRequest{ProjectDir: dir}
-			},
-			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var resp engine.ListPropertiesResponse
-				if err := proto.Unmarshal(out, &resp); err != nil {
-					t.Fatal(err)
-				}
-				foundName, foundToponym, foundGender, foundInterests, foundLikeness := false, false, false, false, false
-				for _, p := range resp.Properties {
-					if p.GetKey() == "name" && p.GetValueType() == "name" && p.GetCardinality() == "single" {
-						foundName = true
-					}
-					if p.GetKey() == "toponym" && p.GetCardinality() == "multiple" {
-						foundToponym = true
-					}
-					if p.GetKey() == "gender" && p.GetValueType() == "term" && p.GetCardinality() == "single" {
-						foundGender = true
-					}
-					if p.GetKey() == "interests" && p.GetValueType() == "text" && p.GetCardinality() == "multiple" {
-						foundInterests = true
-					}
-					if p.GetKey() == "likeness" && p.GetValueType() == "depiction" && p.GetCardinality() == "multiple" {
-						foundLikeness = true
-					}
-				}
-				if !foundName || !foundToponym || !foundGender || !foundInterests || !foundLikeness {
-					t.Fatalf("name=%v toponym=%v gender=%v interests=%v likeness=%v", foundName, foundToponym, foundGender, foundInterests, foundLikeness)
-				}
-			},
-		},
-	})
-}
-
 func TestCreateUpdateDeleteProperty(t *testing.T) {
 	runRPC(t, CreateProperty, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
@@ -108,21 +68,75 @@ func TestCreateUpdateDeleteProperty(t *testing.T) {
 	})
 }
 
-func TestSubjectTypePropertiesAndRegistry(t *testing.T) {
-	runRPC(t, ListSubjectTypes, []rpcTest{
+func TestGetPropertiesWorkspace(t *testing.T) {
+	runRPC(t, GetPropertiesWorkspace, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
-			name: "bindings locked placeable connect",
+			name: "loads properties types and groups",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _, _ := subjectFixture(t)
+				return &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var got engine.GetPropertiesWorkspaceResponse
+				if err := proto.Unmarshal(out, &got); err != nil {
+					t.Fatal(err)
+				}
+				if len(got.Properties) == 0 || len(got.Types) == 0 || len(got.Groups) == 0 {
+					t.Fatalf("empty workspace props=%d types=%d groups=%d", len(got.Properties), len(got.Types), len(got.Groups))
+				}
+				if len(got.Groups) != len(got.Types) {
+					t.Fatalf("groups %d types %d", len(got.Groups), len(got.Types))
+				}
+			},
+		},
+		{
+			name: "lists seeded properties",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, _ := sourceFixture(t)
-				return &engine.ListSubjectTypesRequest{ProjectDir: dir}
+				return &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}
 			},
-			after: func(t *testing.T, out []byte, req proto.Message) {
-				var types engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(out, &types); err != nil {
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.GetPropertiesWorkspaceResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				foundName, foundToponym, foundGender, foundInterests, foundLikeness := false, false, false, false, false
+				for _, p := range resp.Properties {
+					if p.GetKey() == "name" && p.GetValueType() == "name" && p.GetCardinality() == "single" {
+						foundName = true
+					}
+					if p.GetKey() == "toponym" && p.GetCardinality() == "multiple" {
+						foundToponym = true
+					}
+					if p.GetKey() == "gender" && p.GetValueType() == "term" && p.GetCardinality() == "single" {
+						foundGender = true
+					}
+					if p.GetKey() == "interests" && p.GetValueType() == "text" && p.GetCardinality() == "multiple" {
+						foundInterests = true
+					}
+					if p.GetKey() == "likeness" && p.GetValueType() == "depiction" && p.GetCardinality() == "multiple" {
+						foundLikeness = true
+					}
+				}
+				if !foundName || !foundToponym || !foundGender || !foundInterests || !foundLikeness {
+					t.Fatalf("name=%v toponym=%v gender=%v interests=%v likeness=%v", foundName, foundToponym, foundGender, foundInterests, foundLikeness)
+				}
+			},
+		},
+		{
+			name: "locked bindings and connect rules",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _ := sourceFixture(t)
+				return &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.GetPropertiesWorkspaceResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
 					t.Fatal(err)
 				}
 				var participationID string
-				for _, typ := range types.Types {
+				for _, typ := range resp.Types {
 					if typ.GetKey() == "participation" {
 						participationID = typ.GetId()
 						break
@@ -131,36 +145,28 @@ func TestSubjectTypePropertiesAndRegistry(t *testing.T) {
 				if participationID == "" {
 					t.Fatal("missing participation")
 				}
-				dir := req.(*engine.ListSubjectTypesRequest).ProjectDir
-				bout, err := ListSubjectTypeProperties(marshalProto(t, &engine.ListSubjectTypePropertiesRequest{
-					ProjectDir: dir, SubjectTypeId: participationID,
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var fields engine.ListSubjectTypePropertiesResponse
-				if err := proto.Unmarshal(bout, &fields); err != nil {
-					t.Fatal(err)
-				}
 				locked := 0
-				for _, f := range fields.Properties {
-					if f.GetLocked() {
-						locked++
+				for _, g := range resp.Groups {
+					if g.GetSubjectTypeId() != participationID {
+						continue
+					}
+					for _, f := range g.Properties {
+						if f.GetLocked() {
+							locked++
+						}
 					}
 				}
 				if locked != 3 {
 					t.Fatalf("locked=%d want 3", locked)
 				}
-				pout, err := ListPlaceableSubjectTypes(marshalProto(t, &engine.ListPlaceableSubjectTypesRequest{}))
-				if err != nil {
-					t.Fatal(err)
+				placeable := 0
+				for _, g := range resp.Groups {
+					if g.GetPresentation().GetPlaceable() {
+						placeable++
+					}
 				}
-				var placeable engine.ListPlaceableSubjectTypesResponse
-				if err := proto.Unmarshal(pout, &placeable); err != nil {
-					t.Fatal(err)
-				}
-				if len(placeable.Types) != 3 {
-					t.Fatalf("placeable=%d", len(placeable.Types))
+				if placeable != 3 {
+					t.Fatalf("placeable=%d", placeable)
 				}
 				cout, err := ListConnectRules(marshalProto(t, &engine.ListConnectRulesRequest{}))
 				if err != nil {
@@ -188,50 +194,9 @@ func TestSubjectTypePropertiesAndRegistry(t *testing.T) {
 	})
 }
 
-func TestGetPropertiesWorkspace(t *testing.T) {
-	runRPC(t, GetPropertiesWorkspace, []rpcTest{
-		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
-		{
-			name: "loads properties types and groups",
-			reqFn: func(t *testing.T) proto.Message {
-				dir, _, _, _ := subjectFixture(t)
-				return &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}
-			},
-			after: func(t *testing.T, out []byte, _ proto.Message) {
-				var got engine.GetPropertiesWorkspaceResponse
-				if err := proto.Unmarshal(out, &got); err != nil {
-					t.Fatal(err)
-				}
-				if len(got.Properties) == 0 || len(got.Types) == 0 || len(got.Groups) == 0 {
-					t.Fatalf("empty workspace props=%d types=%d groups=%d", len(got.Properties), len(got.Types), len(got.Groups))
-				}
-				if len(got.Groups) != len(got.Types) {
-					t.Fatalf("groups %d types %d", len(got.Groups), len(got.Types))
-				}
-			},
-		},
-	})
-}
-
 func TestReorderSubjectTypeProperties(t *testing.T) {
 	dir, userID, _, personID := subjectFixture(t)
-	list := func() []string {
-		out, err := ListSubjectTypeProperties(marshalProto(t, &engine.ListSubjectTypePropertiesRequest{
-			ProjectDir: dir, SubjectTypeId: personID,
-		}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		var resp engine.ListSubjectTypePropertiesResponse
-		if err := proto.Unmarshal(out, &resp); err != nil {
-			t.Fatal(err)
-		}
-		var ids []string
-		for _, p := range resp.Properties {
-			ids = append(ids, p.GetProperty().GetId())
-		}
-		return ids
-	}
+	list := func() []string { return bindingIDsForType(t, dir, personID) }
 	ids := list()
 	if len(ids) < 3 {
 		t.Fatalf("person binds %d", len(ids))
@@ -255,9 +220,6 @@ func TestReorderSubjectTypeProperties(t *testing.T) {
 	}
 	if !slices.Equal(got, reversed) {
 		t.Fatalf("response order %v, want %v", got, reversed)
-	}
-	if resp.Effects == nil {
-		t.Fatal("no write effects")
 	}
 	assertLatestAuditAction(t, dir, "reorder_subject_type_properties")
 

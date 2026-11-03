@@ -1185,22 +1185,9 @@ struct CatalogDateValueInput: Sendable, Equatable {
     var phrase: String = ""
 }
 
-/// Origin split returned by `GetWorkspaceNavCounts` for vocabulary
-/// destinations. `total` is always `seeded + user + plugin`.
-struct WorkspaceNavOriginCounts: Sendable, Equatable {
-    var total: Int
-    var seeded: Int
-    var user: Int
-    var plugin: Int
-
-    static let zero = WorkspaceNavOriginCounts(total: 0, seeded: 0, user: 0, plugin: 0)
-}
-
 /// Aggregate workspace chrome counts from one catalog open.
 struct WorkspaceNavCounts: Sendable, Equatable {
     var sources: Int
-    var sourceTypes: WorkspaceNavOriginCounts
-    var metadataFields: WorkspaceNavOriginCounts
     /// Unmerged Person, Event, and Place handles.
     var persons: Int = 0
     var events: Int = 0
@@ -1372,7 +1359,7 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String,
         iconKey: String
-    ) async throws -> CatalogSourceType
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects)
     /// Patches label, description, and icon for a `user` or `provenencia` type.
     /// The key never changes here, so a rename keeps existing sources
     /// attached. Fails for `plugin:…` rows.
@@ -1383,21 +1370,20 @@ protocol GenealogyStore: Sendable {
         label: String,
         description: String,
         iconKey: String
-    ) async throws -> CatalogSourceType
+    ) async throws -> (CatalogSourceType, CatalogWriteEffects)
     /// Deletes a type no source refers to. Suggestion joins cascade; the
     /// fields they named stay in the vocabulary.
     func deleteSourceType(
         projectDir: String,
         userID: String,
         typeID: String
-    ) async throws
+    ) async throws -> CatalogWriteEffects
     func listTypeSuggestions(projectDir: String, typeID: String) async throws -> [CatalogTypeSuggestion]
     /// Attaches an existing field to a type at the end of its order.
     /// Assigning a field the type already suggests is a no-op. Returns the
     /// type's whole suggestion list so the caller never re-derives order.
     func assignTypeField(
         projectDir: String,
-        userID: String,
         typeID: String,
         fieldID: String
     ) async throws -> [CatalogTypeSuggestion]
@@ -1405,7 +1391,6 @@ protocol GenealogyStore: Sendable {
     /// vocabulary and sources already carrying a value for it keep it.
     func removeTypeField(
         projectDir: String,
-        userID: String,
         typeID: String,
         fieldID: String
     ) async throws -> [CatalogTypeSuggestion]
@@ -1419,7 +1404,7 @@ protocol GenealogyStore: Sendable {
         label: String,
         dataType: String,
         description: String
-    ) async throws -> CatalogMetadataField
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects)
     /// Patches label, data type, and description for a `user`-origin field.
     /// The key never changes here. Fails for `provenencia`/`plugin:…` rows.
     func updateMetadataField(
@@ -1429,15 +1414,14 @@ protocol GenealogyStore: Sendable {
         label: String,
         dataType: String,
         description: String
-    ) async throws -> CatalogMetadataField
+    ) async throws -> (CatalogMetadataField, CatalogWriteEffects)
 
     func deleteMetadataField(
         projectDir: String,
         userID: String,
         fieldID: String
-    ) async throws
-    /// One catalog open: sidebar / vocabulary-header totals for sources,
-    /// types, and fields.
+    ) async throws -> CatalogWriteEffects
+    /// One catalog open: sidebar totals for Sources and unmerged handles.
     func workspaceNavCounts(projectDir: String) async throws -> WorkspaceNavCounts
     /// The project's default name-format orders. Empty lists mean the catalog
     /// has no stored profile, so display keeps stored part order.
@@ -1452,7 +1436,6 @@ protocol GenealogyStore: Sendable {
         kinds: [String]
     ) async throws -> [CatalogSearchHit]
 
-    func listSubjectTypes(projectDir: String) async throws -> [CatalogSubjectType]
     func createSubject(
         projectDir: String,
         userID: String,
@@ -1526,7 +1509,6 @@ protocol GenealogyStore: Sendable {
         gridX: Int64,
         gridY: Int64
     ) async throws -> CatalogSubjectPosition
-    func clearSubjectPosition(projectDir: String, subjectID: String) async throws
     func listSubjectPositions(projectDir: String, graphID: String) async throws -> [CatalogSubjectPosition]
 
     func createProperty(
@@ -1536,7 +1518,7 @@ protocol GenealogyStore: Sendable {
         valueType: String,
         description: String,
         cardinality: String
-    ) async throws -> CatalogProperty
+    ) async throws -> (CatalogProperty, CatalogWriteEffects)
     func updateProperty(
         projectDir: String,
         userID: String,
@@ -1545,8 +1527,8 @@ protocol GenealogyStore: Sendable {
         valueType: String,
         description: String,
         cardinality: String
-    ) async throws -> CatalogProperty
-    func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws
+    ) async throws -> (CatalogProperty, CatalogWriteEffects)
+    func deleteProperty(projectDir: String, userID: String, propertyID: String) async throws -> CatalogWriteEffects
     func listPropertyTerms(projectDir: String, propertyID: String) async throws -> [CatalogPropertyTerm]
     func createPropertyTerm(
         projectDir: String,
@@ -1554,19 +1536,19 @@ protocol GenealogyStore: Sendable {
         propertyID: String,
         label: String,
         description: String
-    ) async throws -> CatalogPropertyTerm
+    ) async throws -> (CatalogPropertyTerm, CatalogWriteEffects)
     func assignSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
         propertyID: String
-    ) async throws
+    ) async throws -> CatalogWriteEffects
     func removeSubjectTypeProperty(
         projectDir: String,
         userID: String,
         subjectTypeID: String,
         propertyID: String
-    ) async throws
+    ) async throws -> CatalogWriteEffects
     func listConnectRules() async throws -> [CatalogConnectRule]
 
     func createCitedBridge(

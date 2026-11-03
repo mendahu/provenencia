@@ -8,7 +8,6 @@ struct WorkspaceDestinationHost: View {
     let userID: String
     let sessionDisplayName: String
     let store: any GenealogyStore
-    let catalogCounts: CatalogCounts
 
     var body: some View {
         let place = Self.place(for: navigation.currentLocation, projectDir: session.projectKey.projectDir)
@@ -75,22 +74,19 @@ struct WorkspaceDestinationHost: View {
             MetadataView(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         case .sourceTypes:
             SourceTypesView(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
         case .properties:
             PropertiesView(
                 session: session,
                 userID: userID,
-                store: store,
-                catalogCounts: catalogCounts
+                store: store
             )
             .accessibilityIdentifier("workspace.destination.properties")
         case .personsList:

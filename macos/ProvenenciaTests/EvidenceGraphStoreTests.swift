@@ -48,8 +48,8 @@ struct EvidenceGraphStoreTests {
 
     @Test func writesReturnScriptedEffects() async throws {
         let store = seededStore()
-        store.nextWriteEffects = CatalogWriteEffects(lists: [.vocabulary])
-        let expected: Set<CatalogList> = [.vocabulary]
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyVocabulary])
+        let expected: Set<CatalogList> = [.propertyVocabulary]
         let (made, created) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
             name: "Jones", description: "", artifactIDs: ["a1"]
@@ -188,12 +188,12 @@ struct EvidenceGraphStoreTests {
                 description: "", valueType: "text", cardinality: "single"
             ),
         ]
-        let property = try await store.createProperty(
+        let (property, _) = try await store.createProperty(
             projectDir: projectDir, userID: userID, label: "Custom Fact",
             valueType: "text", description: "", cardinality: ""
         )
         #expect(property.key == "custom-fact")
-        let term = try await store.createPropertyTerm(
+        let (term, _) = try await store.createPropertyTerm(
             projectDir: projectDir, userID: userID, propertyID: "p1",
             label: "Grandma's album code", description: ""
         )

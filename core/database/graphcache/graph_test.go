@@ -453,7 +453,7 @@ func TestMatchIndexDrops(t *testing.T) {
 	}
 	t.Run("vocabulary commit", func(t *testing.T) {
 		g.SetMatchIndex("index")
-		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2}, Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}}}); err != nil {
 			t.Fatal(err)
 		}
 		if stored() {
@@ -623,13 +623,23 @@ func TestWarmNeeded(t *testing.T) {
 		t.Error("Drop did not set the flag")
 	}
 	g.MarkWarm()
-	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
+	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}}}); err != nil {
 		t.Fatal(err)
 	}
 	if !g.WarmNeeded() {
 		t.Error("a vocabulary commit did not set the flag")
 	}
 	g.MarkWarm()
+	g.SetMatchIndex(struct{}{})
+	if err := g.OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListSourceVocabulary}}}); err != nil {
+		t.Fatal(err)
+	}
+	if g.WarmNeeded() {
+		t.Error("a Source vocabulary commit set the flag")
+	}
+	if _, ok := g.MatchIndex(); !ok {
+		t.Error("a Source vocabulary commit dropped the match index")
+	}
 	g.SetNameFormat(struct{}{})
 	if !g.WarmNeeded() {
 		t.Error("SetNameFormat did not set the flag")

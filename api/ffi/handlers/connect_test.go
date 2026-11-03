@@ -29,23 +29,7 @@ func connectFixture(t *testing.T) (
 	if err := proto.Unmarshal(aout, &art); err != nil {
 		t.Fatal(err)
 	}
-	typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var types engine.ListSubjectTypesResponse
-	if err := proto.Unmarshal(typesOut, &types); err != nil {
-		t.Fatal(err)
-	}
-	personTypeID, eventTypeID := "", ""
-	for _, typ := range types.Types {
-		switch typ.GetKey() {
-		case "person":
-			personTypeID = typ.GetId()
-		case "event":
-			eventTypeID = typ.GetId()
-		}
-	}
+	personTypeID, eventTypeID := subjectTypeIDByKey(t, dir, "person"), subjectTypeIDByKey(t, dir, "event")
 	personOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 		ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: personTypeID, Label: "Ada",
 	}))
@@ -76,14 +60,8 @@ func connectFixture(t *testing.T) (
 	})); err != nil {
 		t.Fatal(err)
 	}
-	propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var props engine.ListPropertiesResponse
-	if err := proto.Unmarshal(propsOut, &props); err != nil {
-		t.Fatal(err)
-	}
+	var props engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &props)
 	for _, p := range props.Properties {
 		switch p.GetKey() {
 		case "person":
@@ -183,20 +161,7 @@ func TestCreateCitedBridge(t *testing.T) {
 			name: "refuses person place",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, artifactID, personID, _, personProp, _, _, _ := connectFixture(t)
-				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var types engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(typesOut, &types); err != nil {
-					t.Fatal(err)
-				}
-				placeTypeID := ""
-				for _, typ := range types.Types {
-					if typ.GetKey() == "place" {
-						placeTypeID = typ.GetId()
-					}
-				}
+				placeTypeID := subjectTypeIDByKey(t, dir, "place")
 				placeOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: placeTypeID, Label: "Leeds",
 				}))
@@ -212,20 +177,7 @@ func TestCreateCitedBridge(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				propsOut, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var props engine.ListPropertiesResponse
-				if err := proto.Unmarshal(propsOut, &props); err != nil {
-					t.Fatal(err)
-				}
-				placeProp := ""
-				for _, p := range props.Properties {
-					if p.GetKey() == "place" {
-						placeProp = p.GetId()
-					}
-				}
+				placeProp := propertyIDByKey(t, dir, "place")
 				return &engine.CreateCitedBridgeRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
@@ -244,4 +196,28 @@ func TestCreateCitedBridge(t *testing.T) {
 			wantErrIs: connect.ErrRefused,
 		},
 	})
+}
+
+// Deleting a bridge Subject releases its connection Observations, so the
+// effects report property_usage and the app reloads each Property's usedBy from
+// them, with no mutation of its own.
+func TestDeleteBridgeReportsPropertyUsage(t *testing.T) {
+	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+	var bridge engine.CreateCitedBridgeResponse
+	mustRPC(t, CreateCitedBridge, &engine.CreateCitedBridgeRequest{
+		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
+		BridgeTypeKey: "participation", ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{PropertyId: personProp, ValueSubjectId: personID},
+			{PropertyId: eventProp, ValueSubjectId: eventID},
+			{PropertyId: roleProp, ValueTermId: roleTerm},
+		},
+	}, &bridge)
+	var resp engine.DeleteSubjectResponse
+	mustRPC(t, DeleteSubject, &engine.DeleteSubjectRequest{
+		ProjectDir: dir, UserId: userID, SubjectId: bridge.GetSubject().GetId(),
+	}, &resp)
+	if !contains(resp.GetEffects().GetLists(), "property_usage") {
+		t.Fatalf("lists = %v, want property_usage", resp.GetEffects().GetLists())
+	}
 }

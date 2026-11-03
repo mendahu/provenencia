@@ -50,10 +50,9 @@ const (
 	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type, p.cardinality,
 			(SELECT COUNT(*) FROM observations o WHERE o.property_id = p.id)
 		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
-	sqlUpdate        = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
-	sqlDelete        = `DELETE FROM properties WHERE id = ?`
-	sqlUsedBy        = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
-	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM properties GROUP BY origin`
+	sqlUpdate = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
+	sqlDelete = `DELETE FROM properties WHERE id = ?`
+	sqlUsedBy = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
 )
 
 // Property is one properties row.
@@ -69,14 +68,6 @@ type Property struct {
 	// UsedBy is how many observations reference this Property. Type bindings
 	// do not count. Only List and Update populate it; other readers leave it 0.
 	UsedBy int
-}
-
-// OriginCounts is the workspace nav / vocabulary-header split.
-type OriginCounts struct {
-	Total  int
-	Seeded int
-	User   int
-	Plugin int
 }
 
 // Upsert inserts or updates by (key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -338,40 +329,6 @@ func UsedBy(c *database.Catalog, id []byte) (int, error) {
 		return 0, err
 	}
 	return n, nil
-}
-
-// CountByOrigin returns vocabulary counts for the workspace sidebar.
-func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
-	db, err := c.DB()
-	if err != nil {
-		return OriginCounts{}, err
-	}
-	rows, err := db.Query(sqlCountByOrigin)
-	if err != nil {
-		return OriginCounts{}, err
-	}
-	defer rows.Close()
-	var out OriginCounts
-	for rows.Next() {
-		var origin string
-		var n int
-		if err := rows.Scan(&origin, &n); err != nil {
-			return OriginCounts{}, err
-		}
-		switch {
-		case origin == vocabkey.OriginProvenencia:
-			out.Seeded += n
-		case origin == vocabkey.OriginUser:
-			out.User += n
-		default:
-			out.Plugin += n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return OriginCounts{}, err
-	}
-	out.Total = out.Seeded + out.User + out.Plugin
-	return out, nil
 }
 
 // Delete erases a user-origin Property when no observations or terms

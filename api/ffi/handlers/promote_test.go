@@ -132,20 +132,7 @@ func TestUnpromoteSubject(t *testing.T) {
 			name: "a bridge is unsupported",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, sourceID, _ := subjectFixture(t)
-				typesOut, err := ListSubjectTypes(marshalProto(t, &engine.ListSubjectTypesRequest{ProjectDir: dir}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var types engine.ListSubjectTypesResponse
-				if err := proto.Unmarshal(typesOut, &types); err != nil {
-					t.Fatal(err)
-				}
-				relID := ""
-				for _, typ := range types.Types {
-					if typ.GetKey() == "relationship" {
-						relID = typ.GetId()
-					}
-				}
+				relID := subjectTypeIDByKey(t, dir, "relationship")
 				out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: relID, Label: "bridge",
 				}))

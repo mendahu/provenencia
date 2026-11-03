@@ -12,29 +12,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func ListSubjectTypes(in []byte) ([]byte, error) {
-	var req engine.ListSubjectTypesRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("list_subject_types", err)
-	}
-	var out *engine.ListSubjectTypesResponse
-	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := subjecttypes.List(c)
-		if err != nil {
-			return err
-		}
-		out = &engine.ListSubjectTypesResponse{}
-		for _, t := range rows {
-			out.Types = append(out.Types, subjectTypeProto(t))
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(out)
-}
-
 func CreateSubject(in []byte) ([]byte, error) {
 	var req engine.CreateSubjectRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -199,29 +176,6 @@ func SetSubjectPosition(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
-}
-
-func ClearSubjectPosition(in []byte) ([]byte, error) {
-	var req engine.ClearSubjectPositionRequest
-	if err := proto.Unmarshal(in, &req); err != nil {
-		return nil, unmarshalErr("clear_subject_position", err)
-	}
-	subjectID, err := parseID(req.GetSubjectId())
-	if err != nil {
-		return nil, err
-	}
-	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{},
-			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := subjectpositions.Clear(tx, subjectID)
-				return struct{}{}, changes, err
-			})
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proto.Marshal(&engine.ClearSubjectPositionResponse{})
 }
 
 func ListSubjectPositions(in []byte) ([]byte, error) {

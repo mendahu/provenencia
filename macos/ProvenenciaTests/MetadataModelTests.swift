@@ -22,37 +22,33 @@ struct MetadataModelTests {
 
     private func makeModel(
         store: FakeStore = FakeStore(),
-        fields: [CatalogMetadataField] = [],
-        catalogCounts: CatalogCounts? = nil
+        fields: [CatalogMetadataField] = []
     ) -> (MetadataModel, WorkspaceSession) {
         store.fieldsByProject[projectDir] = fields
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = MetadataModel(
             session: session,
             userID: userID,
-            store: store,
-            catalogCounts: catalogCounts
+            store: store
         )
         return (model, session)
     }
 
     private func warm(_ model: MetadataModel, session: WorkspaceSession) async {
         model.warmFieldsQuery()
-        await publishSettled(model, session: session)
+        await settle(session)
     }
 
-    /// Waits out the fields list's reload, then publishes its count as the
-    /// view's `onSettled` does.
-    private func publishSettled(_ model: MetadataModel, session: WorkspaceSession) async {
+    /// Waits out the fields list's reload.
+    private func settle(_ session: WorkspaceSession) async {
         guard let fieldsHandle: QueryHandle<[CatalogMetadataField]> = session.queryHandle(
             MetadataModel.fieldsListKey(for: session)
         ) else { return }
         await waitForQuery(fieldsHandle)
         #expect(fieldsHandle.isSettled)
-        model.syncCatalogCounts()
     }
 
-    @Test func loadPopulatesFieldsAndCounts() async {
+    @Test func loadPopulatesFields() async {
         let (model, session) = makeModel(fields: [seededField(), userField()])
         await warm(model, session: session)
         #expect(model.fields.count == 2)
@@ -147,8 +143,7 @@ struct MetadataModelTests {
     }
 
     @Test func submitAddCreatesFieldAndMintsKeyFromLabel() async {
-        let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let (model, session) = makeModel(fields: [], catalogCounts: counts)
+        let (model, session) = makeModel(fields: [])
         await warm(model, session: session)
         model.openAdd()
         model.draft?.label = "Grandma's album code"
@@ -159,9 +154,6 @@ struct MetadataModelTests {
         #expect(model.fields.first?.origin == "user")
         #expect(model.toast?.title == L10n.string(L10n.Metadata.toastAddedTitle))
         #expect(model.selectedField?.key == "grandmas-album-code")
-        await publishSettled(model, session: session)
-        #expect(counts.metadata?.total == 1)
-        #expect(counts.metadata?.user == 1)
         #expect(location?.section == .metadata)
         #expect(location?.fieldId == model.fields.first?.id)
         #expect(location?.title == "Grandma's album code")
@@ -198,10 +190,8 @@ struct MetadataModelTests {
     }
 
     @Test func submitEditUpdatesFieldButKeepsKey() async {
-        let counts = CatalogCounts(projectDir: projectDir, store: FakeStore())
-        let (model, session) = makeModel(fields: [userField()], catalogCounts: counts)
+        let (model, session) = makeModel(fields: [userField()])
         await warm(model, session: session)
-        let totalBefore = counts.metadata?.total
         model.select("2")
         model.draft?.label = "Grandma's photo album code"
         model.draft?.description = "Updated."
@@ -210,7 +200,61 @@ struct MetadataModelTests {
         #expect(model.fields.first?.label == "Grandma's photo album code")
         #expect(model.fields.first?.key == "grandmas-album-code")
         #expect(model.toast?.title == L10n.string(L10n.Metadata.toastUpdatedTitle))
-        #expect(counts.metadata?.total == totalBefore)
+    }
+
+    /// T-8 (AC-1.2): a field relabel reports `source_vocabulary`; the Metadata
+    /// list and every type's suggestions reload, and the visited Source page is
+    /// marked stale through `.updatedMetadataField`.
+    @Test func renamingAFieldReloadsItsDependents() async throws {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, fields: [userField()])
+        store.suggestionsByType["t1"] = [CatalogTypeSuggestion(field: userField(), sortOrder: 0)]
+        let project = session.projectKey
+        let suggestionsKey = CatalogQueryKey.typeSuggestions(project: project, typeId: "t1")
+        let suggestions: QueryHandle<[CatalogTypeSuggestion]> = session.query(suggestionsKey)
+        await waitForQuery(suggestions)
+        let workspaceKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
+        session.setQueryValue(workspaceKey, value: CatalogSourceWorkspace(
+            source: CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+            notes: [], metadata: [], artifacts: [], credibility: nil
+        ))
+        await warm(model, session: session)
+
+        // The engine restates every suggestion that embeds the field.
+        store.suggestionsByType["t1"] = [
+            CatalogTypeSuggestion(field: userField(label: "Book"), sortOrder: 0),
+        ]
+        store.nextWriteEffects = CatalogWriteEffects(lists: [.sourceVocabulary])
+        model.select("2")
+        model.draft?.label = "Book"
+        await model.submit()
+        await settle(session)
+        await session.settleWrites()
+
+        #expect(model.fields.first?.label == "Book")
+        let reloaded: QueryHandle<[CatalogTypeSuggestion]> = try #require(session.queryHandle(suggestionsKey))
+        #expect(reloaded.value?.first?.field.label == "Book")
+        let page: QueryHandle<CatalogSourceWorkspace> = try #require(session.queryHandle(workspaceKey))
+        #expect(page.isStale)
+    }
+
+    /// T-12 (AC-4.2): the header counts the rows the page shows.
+    @Test func countLineCountsTheRowsShown() async {
+        let (model, session) = makeModel(fields: [
+            seededField(id: "1", label: "A"), seededField(id: "2", label: "B"),
+            seededField(id: "3", label: "C"), seededField(id: "4", label: "D"),
+            pluginField(id: "5"),
+        ])
+        await warm(model, session: session)
+        #expect(model.countLine == L10n.Metadata.countLineWithPlugin(total: 5, seeded: 4, user: 0, plugin: 1))
+    }
+
+    /// F-6: no count line until the list has a value.
+    @Test func countLineIsAbsentUntilTheListLoads() async {
+        let (model, session) = makeModel(fields: [seededField(id: "1", label: "A")])
+        #expect(model.countLine == nil)
+        await warm(model, session: session)
+        #expect(model.countLine != nil)
     }
 
     @Test func isDirtyTracksUnsavedEditsAndRevertClearsThem() async {
@@ -377,10 +421,8 @@ struct MetadataModelTests {
 
     @Test func confirmPendingImpactRemovesTheFieldClearsSelectionAndToasts() async {
         let store = FakeStore()
-        let counts = CatalogCounts(projectDir: projectDir, store: store)
-        let (model, session) = makeModel(store: store, fields: [seededField(), userField()], catalogCounts: counts)
+        let (model, session) = makeModel(store: store, fields: [seededField(), userField()])
         await warm(model, session: session)
-        #expect(counts.metadata?.total == 2)
         model.select("2")
         await model.askDelete()
         #expect(model.pendingImpact?.report.allowed == true)
@@ -393,10 +435,7 @@ struct MetadataModelTests {
         #expect(model.pendingDeleteField == nil)
         #expect(!model.isDeleting)
         #expect(model.toast?.title == L10n.string(L10n.Metadata.toastDeletedTitle))
-        await publishSettled(model, session: session)
-        #expect(counts.metadata?.total == 1)
-        #expect(counts.metadata?.seeded == 1)
-        #expect(counts.metadata?.user == 0)
+        await settle(session)
     }
 
     @Test func confirmPendingImpactKeepsTheSheetOpenWhenTheStoreRefuses() async {

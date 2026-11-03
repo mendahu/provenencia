@@ -115,22 +115,3 @@ func TestCreateUpdateDeletePropertyTerm(t *testing.T) {
 		},
 	})
 }
-
-func propertyIDByKey(t *testing.T, dir, key string) string {
-	t.Helper()
-	out, err := ListProperties(marshalProto(t, &engine.ListPropertiesRequest{ProjectDir: dir}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var resp engine.ListPropertiesResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
-	for _, p := range resp.Properties {
-		if p.GetKey() == key {
-			return p.GetId()
-		}
-	}
-	t.Fatalf("missing property %q", key)
-	return ""
-}

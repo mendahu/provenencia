@@ -94,7 +94,7 @@ func TestDoRewarms(t *testing.T) {
 		kinds     bool // the shortlist kinds are not loaded afterwards
 	}{
 		{"AC-2.1 vocabulary commit", func(c *database.Catalog) error {
-			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}})
+			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}}})
 		}, false, false, false, true, false},
 		{"AC-2.2 drop", func(c *database.Catalog) error { c.Graph().Drop(); return nil }, false, false, false, true, true},
 		{"AC-2.3 alias warm", func(c *database.Catalog) error { return namealiases.Warm(c) }, false, false, false, true, false},

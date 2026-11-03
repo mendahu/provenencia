@@ -316,10 +316,10 @@ func (k *Canon) Commit(ids ...[]byte) {
 	k.commit(effects.Set{Handles: ids})
 }
 
-// CommitVocabulary tells the graph that the vocabulary was written.
+// CommitVocabulary tells the graph that a Property-side vocabulary label was written.
 func (k *Canon) CommitVocabulary() {
 	k.t.Helper()
-	k.commit(effects.Set{Lists: []effects.List{effects.ListVocabulary}})
+	k.commit(effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}})
 }
 
 func (k *Canon) commit(set effects.Set) {

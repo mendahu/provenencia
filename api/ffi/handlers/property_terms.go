@@ -51,14 +51,14 @@ func CreatePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.CreatePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
 			func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 				return propertyterms.Create(tx, userID, propertyID, req.GetLabel(), req.GetDescription())
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.CreatePropertyTermResponse{Term: propertyTermProto(got)}
+		out = &engine.CreatePropertyTermResponse{Term: propertyTermProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -82,14 +82,14 @@ func UpdatePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.UpdatePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		got, _, err := writes.Run(c, writes.Op{Action: "update_property_term", UserID: userID},
+		got, wrote, err := writes.Run(c, writes.Op{Action: "update_property_term", UserID: userID},
 			func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 				return propertyterms.Update(tx, userID, termID, req.GetLabel(), req.GetDescription())
 			})
 		if err != nil {
 			return err
 		}
-		out = &engine.UpdatePropertyTermResponse{Term: propertyTermProto(got)}
+		out = &engine.UpdatePropertyTermResponse{Term: propertyTermProto(got), Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {
@@ -113,7 +113,7 @@ func DeletePropertyTerm(in []byte) ([]byte, error) {
 	}
 	var out *engine.DeletePropertyTermResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		_, _, err := writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
+		_, wrote, err := writes.Run(c, writes.Op{Action: "delete_property_term", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := propertyterms.Delete(tx, userID, termID)
 				return struct{}{}, changes, err
@@ -121,7 +121,7 @@ func DeletePropertyTerm(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DeletePropertyTermResponse{}
+		out = &engine.DeletePropertyTermResponse{Effects: writeEffectsProto(wrote)}
 		return nil
 	})
 	if err != nil {

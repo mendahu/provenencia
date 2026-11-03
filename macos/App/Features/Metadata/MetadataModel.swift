@@ -39,18 +39,15 @@ final class MetadataModel {
     private let userID: String
     private let store: any GenealogyStore
     private let session: WorkspaceSession
-    private let catalogCounts: CatalogCounts?
 
     init(
         session: WorkspaceSession,
         userID: String,
-        store: any GenealogyStore,
-        catalogCounts: CatalogCounts? = nil
+        store: any GenealogyStore
     ) {
         self.session = session
         self.userID = userID
         self.store = store
-        self.catalogCounts = catalogCounts
     }
 
     // MARK: Session handles
@@ -141,14 +138,16 @@ final class MetadataModel {
         return fields.first { $0.id == id }
     }
 
-    var countLine: String {
-        let summary = catalogCounts?.metadata ?? .from(fields)
-        if summary.plugin > 0 {
+    /// Nil until the list has a value, so the header shows no zero counts.
+    var countLine: String? {
+        let handle: QueryHandle<[CatalogMetadataField]>? = session.queryHandle(Self.fieldsListKey(for: session))
+        guard handle?.value != nil else { return nil }
+        if fields.pluginCount > 0 {
             return L10n.Metadata.countLineWithPlugin(
-                total: summary.total, seeded: summary.seeded, user: summary.user, plugin: summary.plugin
+                total: fields.count, seeded: fields.seededCount, user: fields.userCount, plugin: fields.pluginCount
             )
         }
-        return L10n.Metadata.countLine(total: summary.total, seeded: summary.seeded, user: summary.user)
+        return L10n.Metadata.countLine(total: fields.count, seeded: fields.seededCount, user: fields.userCount)
     }
 
     // MARK: Selection
@@ -243,12 +242,12 @@ final class MetadataModel {
     func confirmPendingImpact() async -> Bool {
         guard let field = pendingDeleteField else { return false }
         return await deleteImpact.confirm { target in
-            try await store.deleteMetadataField(
+            let effects = try await store.deleteMetadataField(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 fieldID: target.id
             )
-            session.apply(.deletedMetadataField(id: target.id))
+            session.apply(effects, .deletedMetadataField(id: target.id))
             patchFieldsList { rows in rows.removeAll { $0.id == target.id } }
             formError = nil
             mode = .empty
@@ -278,11 +277,11 @@ final class MetadataModel {
         do {
             switch mode {
             case .adding:
-                let created = try await store.createMetadataField(
+                let (created, effects) = try await store.createMetadataField(
                     projectDir: session.projectKey.projectDir, userID: userID,
                     label: label, dataType: draft.dataType, description: draft.description
                 )
-                session.apply(.createdMetadataField)
+                session.apply(effects)
                 patchFieldsList { rows in rows.append(created) }
                 mode = .editing(id: created.id)
                 self.draft = Draft(label: created.label, dataType: created.dataType, description: created.description)
@@ -297,11 +296,11 @@ final class MetadataModel {
                     title: created.label
                 )
             case .editing(let id):
-                let updated = try await store.updateMetadataField(
+                let (updated, effects) = try await store.updateMetadataField(
                     projectDir: session.projectKey.projectDir, userID: userID, fieldID: id,
                     label: label, dataType: draft.dataType, description: draft.description
                 )
-                session.apply(.updatedMetadataField(id: updated.id))
+                session.apply(effects, .updatedMetadataField(id: updated.id))
                 patchFieldsList { rows in
                     if let idx = rows.firstIndex(where: { $0.id == updated.id }) {
                         rows[idx] = updated
@@ -322,13 +321,6 @@ final class MetadataModel {
             formError = L10n.Errors.message(for: error)
             return nil
         }
-    }
-
-    /// Publishes the count of a settled list to the sidebar. The view calls it
-    /// through `onSettled`: a refetch keeps the cached `.ready` value, which
-    /// may be stale.
-    func syncCatalogCounts() {
-        catalogCounts?.publishMetadata(.from(fields))
     }
 
     private func patchFieldsList(_ mutate: (inout [CatalogMetadataField]) -> Void) {

@@ -21,7 +21,8 @@ extension CatalogEventSummary: CatalogLastUpdatedRow {}
 extension CatalogPlaceSummary: CatalogLastUpdatedRow {}
 extension CatalogSource: CatalogLastUpdatedRow {}
 
-/// Which ids of a write a patch or refresh follows. Each slot carries its own.
+/// Which ids of a write a patch or refresh follows: row or key ids, or one
+/// token for a catalog-wide slot. Each slot carries its own.
 enum CatalogQueryFollows: Sendable, Equatable {
     /// `CatalogWriteEffects.handleScopes`: Person, Event, and Place handles.
     case handle
@@ -34,6 +35,23 @@ enum CatalogQueryFollows: Sendable, Equatable {
     case touchedHandles
     /// `CatalogWriteEffects.evidenceGraphs`.
     case evidenceGraphs
+    /// One catalog-wide list of `CatalogWriteEffects.lists`. A catalog-wide slot
+    /// names no row, so it reports one token when the write moved it and is
+    /// used only with `applyHiddenPolicyOnAny(follows:)`.
+    case list(CatalogList)
+    /// `CatalogWriteEffects.structure`. Catalog-wide, as `list(_:)`.
+    case structure
+
+    /// Whether the slot names no row: it reports one token when the write moved
+    /// it. The constructors that read a slot as row or key ids refuse one.
+    var isCatalogWide: Bool {
+        switch self {
+        case .list, .structure:
+            return true
+        case .handle, .source, .reads, .touchedHandles, .evidenceGraphs:
+            return false
+        }
+    }
 
     /// The ids of a write that this slot follows.
     func ids(in effects: CatalogWriteEffects) -> [String] {
@@ -48,8 +66,17 @@ enum CatalogQueryFollows: Sendable, Equatable {
             return effects.touchedHandles
         case .evidenceGraphs:
             return effects.evidenceGraphs
+        case .list(let list):
+            return effects.lists.contains(list) ? [list.rawValue] : []
+        case .structure:
+            return effects.structure ? ["structure"] : []
         }
     }
+}
+
+/// Row-id slots name ids; a catalog-wide slot names none.
+fileprivate func requireRowIDs(_ follows: CatalogQueryFollows) {
+    precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
 }
 
 /// One in-place update of a warmed cache key. `follows == nil` means the patch
@@ -67,7 +94,8 @@ struct CatalogQueryPatch: Sendable {
         _: Row.Type,
         follows: CatalogQueryFollows
     ) -> Self {
-        Self(follows: follows) { session, key, ids, activity, _ in
+        requireRowIDs(follows)
+        return Self(follows: follows) { session, key, ids, activity, _ in
             session.patchCached(key, as: [Row].self) { rows in
                 var moved = false
                 for index in rows.indices
@@ -161,7 +189,8 @@ struct CatalogQueryRefresh: Sendable {
             WorkspaceSession, CatalogQueryKey, _ parts: [String: Part], _ previousRevision: Int
         ) -> Void)? = nil
     ) -> CatalogQueryRefresh {
-        CatalogQueryRefresh(follows: follows, run: { session, key, ids in
+        requireRowIDs(follows)
+        return CatalogQueryRefresh(follows: follows, run: { session, key, ids in
             await session.refreshCached(
                 key,
                 as: Value.self,
@@ -181,7 +210,8 @@ struct CatalogQueryRefresh: Sendable {
         follows: CatalogQueryFollows,
         ids: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Set<String>
     ) -> CatalogQueryRefresh {
-        CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
+        requireRowIDs(follows)
+        return CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
     }
 
     /// A refresh whose ids come from the key's cached `Value`. Until the key
@@ -191,15 +221,20 @@ struct CatalogQueryRefresh: Sendable {
         followsValue follows: CatalogQueryFollows,
         ids: @escaping @Sendable (Value) -> Set<String>
     ) -> CatalogQueryRefresh {
-        CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in
+        requireRowIDs(follows)
+        return CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in
             let value: Value? = session.queryHandle(key)?.value
             return value.map(ids)
         })
     }
 
     /// A refresh that re-applies the hidden policy to a warmed key whenever the
-    /// write names any id.
+    /// write names any id. It is the one constructor for a catalog-wide slot
+    /// (`.list(_:)`, `.structure`).
     static func applyHiddenPolicyOnAny(follows: CatalogQueryFollows) -> CatalogQueryRefresh {
         CatalogQueryRefresh(follows: follows, action: .revalidate { _, _ in nil })
     }
+
+    /// A key whose rows carry a Property, term or Subject type label.
+    static let followsPropertyLabels: CatalogQueryRefresh = .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary))
 }

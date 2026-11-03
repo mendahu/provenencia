@@ -52,10 +52,9 @@ const (
 	sqlList = `SELECT f.id, f.key, f.origin, f.label, f.data_type, COALESCE(f.description, ''),
 			(SELECT COUNT(*) FROM source_metadata m WHERE m.field_id = f.id)
 		FROM source_metadata_fields f ORDER BY f.label COLLATE NOCASE, f.origin, f.key`
-	sqlUpdate        = `UPDATE source_metadata_fields SET label = ?, description = ? WHERE id = ?`
-	sqlDelete        = `DELETE FROM source_metadata_fields WHERE id = ?`
-	sqlUsedBy        = `SELECT COUNT(*) FROM source_metadata WHERE field_id = ?`
-	sqlCountByOrigin = `SELECT origin, COUNT(*) FROM source_metadata_fields GROUP BY origin`
+	sqlUpdate = `UPDATE source_metadata_fields SET label = ?, description = ? WHERE id = ?`
+	sqlDelete = `DELETE FROM source_metadata_fields WHERE id = ?`
+	sqlUsedBy = `SELECT COUNT(*) FROM source_metadata WHERE field_id = ?`
 )
 
 // Field is one source_metadata_fields row.
@@ -69,15 +68,6 @@ type Field struct {
 	// UsedBy is how many source_metadata rows reference this field. Only
 	// List and Update populate it; the other readers leave it 0.
 	UsedBy int
-}
-
-// OriginCounts is the workspace nav / vocabulary-header split for this
-// vocabulary. Total is always Seeded + User + Plugin.
-type OriginCounts struct {
-	Total  int
-	Seeded int
-	User   int
-	Plugin int
 }
 
 // Upsert inserts or updates by (key, origin). Mints a UUIDv7 id when ID is empty on insert.
@@ -298,41 +288,6 @@ func UsedBy(c *database.Catalog, id []byte) (int, error) {
 		return 0, err
 	}
 	return n, nil
-}
-
-// CountByOrigin returns vocabulary counts for the workspace sidebar without
-// materializing every field row.
-func CountByOrigin(c *database.Catalog) (OriginCounts, error) {
-	db, err := c.DB()
-	if err != nil {
-		return OriginCounts{}, err
-	}
-	rows, err := db.Query(sqlCountByOrigin)
-	if err != nil {
-		return OriginCounts{}, err
-	}
-	defer rows.Close()
-	var out OriginCounts
-	for rows.Next() {
-		var origin string
-		var n int
-		if err := rows.Scan(&origin, &n); err != nil {
-			return OriginCounts{}, err
-		}
-		switch {
-		case origin == vocabkey.OriginProvenencia:
-			out.Seeded += n
-		case origin == vocabkey.OriginUser:
-			out.User += n
-		default:
-			out.Plugin += n
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return OriginCounts{}, err
-	}
-	out.Total = out.Seeded + out.User + out.Plugin
-	return out, nil
 }
 
 // Delete erases a field when no sources store a value for it. Suggestion

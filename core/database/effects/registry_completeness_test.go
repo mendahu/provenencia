@@ -182,7 +182,7 @@ func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 
 // TestListsValidate pins that a bad Lists declaration does not validate.
 func TestListsValidate(t *testing.T) {
-	if err := (Effect{None: true, Lists: []List{ListVocabulary}}).validate("x"); err == nil {
+	if err := (Effect{None: true, Lists: []List{ListPropertyVocabulary}}).validate("x"); err == nil {
 		t.Fatal("a None entry with Lists validated")
 	}
 	if err := (Effect{Lists: []List{"nope"}}).validate("x"); err == nil {

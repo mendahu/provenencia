@@ -615,7 +615,7 @@ final class CitationComposerModel {
                     userID: userID,
                     subjectID: target.id
                 )
-                session.apply(effects, .deletedSubject)
+                session.apply(effects)
                 await refreshCitationLines()
                 return
             }
@@ -681,14 +681,14 @@ final class CitationComposerModel {
         draft.error = nil
         show(.customTerm(draft, over: over))
         do {
-            let term = try await store.createPropertyTerm(
+            let (term, effects) = try await store.createPropertyTerm(
                 projectDir: session.projectKey.projectDir,
                 userID: userID,
                 propertyID: propertyID,
                 label: trimmed,
                 description: ""
             )
-            session.apply(.createdPropertyTerm(propertyId: propertyID))
+            session.apply(effects)
             await warmTerms(for: propertyID)
             if draft.applyToEdit, var session = editSession {
                 switch session.kind {
