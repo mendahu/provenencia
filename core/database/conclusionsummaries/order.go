@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/nameformats"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -47,6 +48,24 @@ func SortByBirth[T any](rows []T, summary func(T) PersonSummary) {
 func EventSpan(h EventSummary) (TimelineSpan, bool) {
 	d := eventDating(h.Date, h.StartDate)
 	return d.span, d.key.ok
+}
+
+// EventAge is the age a person born on birth had at h, in whole years, as a
+// range: Hi counts from the earliest birth day to the latest day of the event,
+// Lo from the latest birth day to the earliest day of the event. ok is false
+// when the event or the birth has no place, when any of the four ends is open
+// (BEF, AFT, a one-sided range), or when the event is before the birth.
+func EventAge(h EventSummary, birth *datevalue.Value) (AgeRange, bool) {
+	ev := eventDating(h.Date, h.StartDate)
+	b, ok := datePlace(birth)
+	if !ok || !ev.key.ok || ev.first.Open || ev.last.Open || b.first.Open || b.last.Open {
+		return AgeRange{}, false
+	}
+	hi := datevalue.CompletedYears(b.first.Lo, ev.last.Hi)
+	if hi < 0 {
+		return AgeRange{}, false
+	}
+	return AgeRange{Lo: max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo)), Hi: hi}, true
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,

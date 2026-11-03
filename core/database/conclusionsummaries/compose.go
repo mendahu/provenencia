@@ -977,8 +977,8 @@ type dateKey struct {
 
 // dateKeyOf is v's place in date order, with ref breaking ties.
 func dateKeyOf(v *datevalue.Value, ref string) dateKey {
-	key, _, ok := datePlace(v)
-	return dateKey{key: key, ok: ok, ref: strings.ToLower(ref)}
+	p, ok := datePlace(v)
+	return dateKey{key: p.key, ok: ok, ref: strings.ToLower(ref)}
 }
 
 // withRef is k with ref as its tie-break.
@@ -1001,6 +1001,12 @@ func dateKeyLess(a, b dateKey) bool {
 	return a.ref < b.ref
 }
 
+// AgeRange is the whole years of age a person had on a day: Lo to Hi, equal
+// when the dates leave no doubt.
+type AgeRange struct {
+	Lo, Hi int
+}
+
 // TimelineSpan is where a date sits on a line of years: From to To, with the
 // side the date leaves open flagged. A date open on one side (BEF, AFT, a range
 // with one year) spans its known end, so it can be drawn there.
@@ -1010,31 +1016,42 @@ type TimelineSpan struct {
 	OpenEnd   bool
 }
 
+// placedDate is where a date sits: its order key, its span and the two ends
+// they come from.
+type placedDate struct {
+	key         int
+	span        TimelineSpan
+	first, last valuecompare.DateEnd
+}
+
 // datePlace is the one rule for where a date sits: its order key and its span
-// from one valuecompare.DateEnds call. The key is the first day of the first
-// end, or of the last end when the first is open. ok is false when v is nil,
-// has no year to place, has both ends open, or has a closed end whose year is
-// outside datevalue.MinYear…MaxYear.
-func datePlace(v *datevalue.Value) (key int, span TimelineSpan, ok bool) {
+// from one valuecompare.DateEnds call, with the ends. The key is the first day
+// of the first end, or of the last end when the first is open. ok is false
+// when v is nil, has no year to place, has both ends open, or has a closed end
+// whose year is outside datevalue.MinYear…MaxYear.
+func datePlace(v *datevalue.Value) (placedDate, bool) {
 	if v == nil {
-		return 0, TimelineSpan{}, false
+		return placedDate{}, false
 	}
 	first, last, ok := valuecompare.DateEnds(*v)
 	if !ok || (first.Open && last.Open) {
-		return 0, TimelineSpan{}, false
+		return placedDate{}, false
 	}
 	for _, end := range []valuecompare.DateEnd{first, last} {
 		if !end.Open && !datevalue.YearInWindow(end.Year) {
-			return 0, TimelineSpan{}, false
+			return placedDate{}, false
 		}
 	}
+	p := placedDate{first: first, last: last}
 	switch {
 	case first.Open:
-		return last.Lo, TimelineSpan{From: last.From, To: last.To, OpenStart: true}, true
+		p.key, p.span = last.Lo, TimelineSpan{From: last.From, To: last.To, OpenStart: true}
 	case last.Open:
-		return first.Lo, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}, true
+		p.key, p.span = first.Lo, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}
+	default:
+		p.key, p.span = first.Lo, TimelineSpan{From: first.From, To: last.To}
 	}
-	return first.Lo, TimelineSpan{From: first.From, To: last.To}, true
+	return p, true
 }
 
 // eventDated is the date an event is placed by, with its place.
@@ -1046,17 +1063,19 @@ type eventDated struct {
 	// place.
 	key  dateKey
 	span TimelineSpan
+	// first and last are value's ends when it has a place.
+	first, last valuecompare.DateEnd
 }
 
 // eventDating chooses the date an event is placed by: date when it has a place,
 // else start when it has one, else date if present, else start. It places each
 // date once.
 func eventDating(date, start *datevalue.Value) eventDated {
-	if k, span, ok := datePlace(date); ok {
-		return eventDated{value: date, key: dateKey{key: k, ok: true}, span: span}
+	if p, ok := datePlace(date); ok {
+		return eventDated{value: date, key: dateKey{key: p.key, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
-	if k, span, ok := datePlace(start); ok {
-		return eventDated{value: start, isStart: true, key: dateKey{key: k, ok: true}, span: span}
+	if p, ok := datePlace(start); ok {
+		return eventDated{value: start, isStart: true, key: dateKey{key: p.key, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
 	if date != nil {
 		return eventDated{value: date}

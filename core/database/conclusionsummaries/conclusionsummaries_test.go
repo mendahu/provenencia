@@ -1334,3 +1334,39 @@ func TestTermLabeler(t *testing.T) {
 		t.Fatal("an unknown id was labelled")
 	}
 }
+
+func TestEventAge(t *testing.T) {
+	born := datevaluetest.YMD(1817, 3, 12)
+	age := func(lo, hi int) conclusionsummaries.AgeRange { return conclusionsummaries.AgeRange{Lo: lo, Hi: hi} }
+	ev := func(d *datevalue.Value) conclusionsummaries.EventSummary { return conclusionsummaries.EventSummary{Date: d} }
+	cases := []struct {
+		name   string
+		in     conclusionsummaries.EventSummary
+		birth  *datevalue.Value
+		want   conclusionsummaries.AgeRange
+		wantOK bool
+	}{
+		{"the birth day", ev(born), born, age(0, 0), true},
+		{"a day", ev(datevaluetest.YMD(1844, 6, 4)), born, age(27, 27), true},
+		{"a year", ev(datevaluetest.YMD(1835, 0, 0)), born, age(17, 18), true},
+		{"a range", ev(datevaluetest.Between(1844, 0, 0, 1849, 0, 0)), born, age(26, 32), true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1844, 6, 4)}, born, age(27, 27), true},
+		{"before", ev(datevaluetest.Before(1880, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"after", ev(datevaluetest.After(1880, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"an about birth", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.About(1817, 0, 0), age(26, 27), true},
+		{"a birth before a year", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.Before(1817, 0, 0), conclusionsummaries.AgeRange{}, false},
+		{"no birth", ev(datevaluetest.YMD(1844, 6, 4)), nil, conclusionsummaries.AgeRange{}, false},
+		{"no event date", conclusionsummaries.EventSummary{}, born, conclusionsummaries.AgeRange{}, false},
+		{"event before the birth", ev(datevaluetest.YMD(1800, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"year above the window", ev(datevaluetest.YMD(1<<31-1, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"birth year above the window", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.YMD(1<<31-1, 0, 0), conclusionsummaries.AgeRange{}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := conclusionsummaries.EventAge(tc.in, tc.birth)
+			if ok != tc.wantOK || got != tc.want {
+				t.Errorf("EventAge = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
+			}
+		})
+	}
+}
