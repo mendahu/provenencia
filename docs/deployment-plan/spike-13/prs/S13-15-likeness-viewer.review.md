@@ -89,3 +89,6 @@ Findings are abridged; the reviewers' full text was returned to the writer.
 The viewer shows the likeness's provenance record right under the image, drawn with the provenance sheet's `ReconciliationRecordRows` (D-9). Its Source, Citation and Observation links close the viewer and navigate (D-10). There is no Open citation button and no separate caption.
 
 These Decisions have not been through `review-plan`. They are reviewed on the refresh after the board and S13-14.
+
+## Change after review (user, 2026-11-03, later)
+Tiles get no provenance control, no one-record sheet and no context menu. A likeness's provenance is its one record row under the viewer's image (the kit's Record row, S13-D13 PSK-6). Until S13-15 ships, a tile's click opens its Citation, as today. S13-14 no longer depends on S13-36, but S13-15 does. R-13b and R-32 are updated in `person-detail.md`. This is reviewed again on the board refresh.

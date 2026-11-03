@@ -22,3 +22,6 @@ None.
 
 ## Change after review (user, 2026-11-03)
 GA-4 is now the provenance control and a one-record provenance sheet (new frame 2b). LV-4 puts the record row under the viewer's image. Open citation is dropped everywhere. The inventory gains the provenance control, the provenance sheet and the record rows.
+
+## Change after review (user, 2026-11-03, later)
+Tiles get no provenance control, no one-record sheet and no context menu. A likeness's provenance is its one record row under the viewer's image (the kit's Record row, S13-D13 PSK-6). Until S13-15 ships, a tile's click opens its Citation, as today. S13-14 no longer depends on S13-36, but S13-15 does. R-13b and R-32 are updated in `person-detail.md`. This is reviewed again on the board refresh.

@@ -86,3 +86,6 @@ The tile's Open citation control is replaced by the Vitals rows' provenance cont
 - `likenessOpenTip` is deleted. T-7 is new.
 
 These Decisions have not been through `review-plan`. They are reviewed with the rest when the board's answers are copied in.
+
+## Change after review (user, 2026-11-03, later)
+Tiles get no provenance control, no one-record sheet and no context menu. A likeness's provenance is its one record row under the viewer's image (the kit's Record row, S13-D13 PSK-6). Until S13-15 ships, a tile's click opens its Citation, as today. S13-14 no longer depends on S13-36, but S13-15 does. R-13b and R-32 are updated in `person-detail.md`. This is reviewed again on the board refresh.
