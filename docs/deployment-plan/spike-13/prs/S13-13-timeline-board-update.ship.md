@@ -1,7 +1,7 @@
 # Ship log — S13-13 Timeline section: the board's 2026-11-03 update
 
 **Plan:** [`S13-13-timeline-board-update.md`](S13-13-timeline-board-update.md) · **Branch:** `s13-13-timeline-section` · **PR:** #691
-**State:** fixing 2
+**State:** ready
 
 Base: branch @ `905d2083` (PR #691, ready for review, CI green on `d87045a1`), on `main` @ `92f87dba`. The user changed the board on 2026-11-03 and asked for the update on the same branch; plan Planned after two review rounds (user answers: age in Go, `.compact` reshaped, 29 February → 1 March). The first ship log, [`S13-13-timeline-section.ship.md`](S13-13-timeline-section.ship.md), covers the section as first built.
 
@@ -99,3 +99,9 @@ Check: the test passes; `rg -n "cardColumnGap|3 \* (rowGap|Self.gap)" macos/App/
 Files: `PersonTimelineSection.swift`, `core/database/conclusionsummaries/order.go`, `conclusionsummaries_test.go`.
 Do: `keepFocus()` also runs when `focused` turns nil while `focusedOwner` is set and that card is no longer shown, moving focus to the owner row's title. Delete `EventSpan` and `EventAge` (no production caller after F-5); `TestEventSpan` and `TestEventAge` call `EventSpanAndAge` (with `PlaceBirth`) and keep their cases.
 Check: `rg -n "func EventSpan\(|func EventAge\(" core` prints nothing; Go tests pass; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `600b1c1d`. Gate PASS (orchestrator). F-9: `narrowListStacksPeople` red first; `PersonTimelinePlacement` owns `peopleWidth`, `textWidth(itemsWidth:widthClass:)`, `textCap`, `cardColumnGap`, `stacksPeople`; `itemsWidth` measured on `PersonTimelineStack`; the view reads them. The fix plan's 863/865 were outer widths; on the items the formula gives 772 at Regular (1402 at Wide), which the test and completed.md use. MNT-10 / UX-2 **Resolved** (read by the orchestrator). F-10: the focus rider (`lastFocused`, no unit test) and `EventSpan`/`EventAge` deleted, their tests on `EventSpanAndAge` (`81558a65`).
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: — · to user: CON-1 (the manual check, incl. click-to-scroll over `PersonTimelineStack`, plan stop condition 2) · CON miss: none
