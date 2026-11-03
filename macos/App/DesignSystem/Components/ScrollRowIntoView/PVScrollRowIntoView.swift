@@ -5,6 +5,9 @@ import SwiftUI
 /// `anchor` it moves only as far as it must, so a row already on screen (the
 /// one the pointer hovers, say) does not move the list.
 ///
+/// A caller that passes `whenRequested` scrolls only when that token changes,
+/// not when `row` does; callers with no token scroll on `row` as above.
+///
 /// Apply it to the `ScrollView` or to the rows inside one. Each row carries
 /// `.id(_:)` with the value the caller passes as `row`. `PVTable`, `PVList`,
 /// `PVSelect`, `PVComboBox` and the omnibar results all scroll through it.
@@ -23,7 +26,9 @@ struct PVScrollRowIntoView<ID: Hashable>: ViewModifier {
         ScrollViewReader { proxy in
             content
                 .onChange(of: row, initial: scrollsOnAppear) { _, row in
-                    guard let row else { return }
+                    // With a request token, the token alone scrolls: a click that
+                    // changes both would scroll twice.
+                    guard let row, request == nil else { return }
                     withAnimation(animated && !reduceMotion ? PVMotion.fastStandard : nil) {
                         proxy.scrollTo(row, anchor: anchor)
                     }
@@ -69,9 +74,10 @@ extension View {
     ///   - restartTop: The id of a view at the very top of the scroll content.
     ///   - restartKey: When this changes, scrolls to `restartTop` with no
     ///     animation (`PVPageColumns` resets a page when its section changes).
-    ///   - request: When this token changes, scrolls to `row` again on the next
+    ///   - request: When this token changes, scrolls to `row` on the next
     ///     main-actor turn, even if `row` did not change (a second click on the
     ///     same point). The turn lets a row inserted in the same update exist.
+    ///     Passing a token turns off scrolling on a change of `row` alone.
     func pvScrollsRowIntoView<ID: Hashable>(
         _ row: ID?,
         anchor: UnitPoint? = nil,
