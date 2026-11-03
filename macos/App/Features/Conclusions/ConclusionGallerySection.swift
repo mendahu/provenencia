@@ -69,7 +69,8 @@ struct ConclusionGallerySection: View {
             } else {
                 PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
                     Task {
-                        if await lead.choose(tile, copy: gallery.choose) { focusedID = tile.id }
+                        _ = await lead.choose(tile, copy: gallery.choose)
+                        focusedID = tile.id
                     }
                 }
                 .disabled(lead.isSaving)
