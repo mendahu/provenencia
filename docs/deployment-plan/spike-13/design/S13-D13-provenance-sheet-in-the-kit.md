@@ -9,7 +9,7 @@
 **Related:** [`../person-detail.md`](../person-detail.md) R-8 – R-15, R-13b, R-32; [`../deployment-plan.md`](../deployment-plan.md) working rules "The provenance sheet is a kit recipe", "The person card lives in the design system; display is decoupled from content"; brief [S13-D5](S13-D5-gallery-and-viewer.md) (the Gallery's one-record sheet and the viewer's record row, which instance this recipe); [`../../../ideas/kinship-view.md`](../../../ideas/kinship-view.md) "Family trees and person pages" (a future caller).
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
-**Review:** — (not reviewed yet)
+**Review:** [`S13-D13-provenance-sheet-in-the-kit.review.md`](S13-D13-provenance-sheet-in-the-kit.review.md) — round 1 Fits with changes / Ready with changes, every finding Fixed or answered by the user
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -83,7 +83,9 @@ The provenance sheet answers "where does this come from?" for one value: the rec
 
 **What changes.** The sheet becomes a specimen in the kit: its anatomy and slot names (§ 4), its variants (many records, one record, owner groups, value groups), its states, and how a caller fills it. The one-record variant's header is decided here (PSK-4), so the Gallery board instances it.
 
-**What stays.** Everything the sheet looks like and does today (S13-D2, S13-D12): the Panel, the header, the record table and its columns, the owner and value group lines, the three links per record, the reserved "Concluded by you" place, Done, the sizes at Regular and Wide, keyboard and VoiceOver. The Vitals provenance control (the info IconButton). The Event and Place pages' Why accordion, which keeps its own look (working rule "The provenance sheet replaces the Why on the Person page only").
+**Why a recipe.** Vitals, the Gallery and the viewer all live in the Person page's feature, so a shared feature view would serve them. A recipe is right because a family tree in another feature is a known caller and the user asked for the sheet in the kit (2026-11-03); a recipe takes display-ready content, so that caller fills it without reaching into the Person page's code.
+
+**What stays.** Everything the sheet looks like and does today (S13-D2, S13-D12): the Panel, the header, the record table and its columns, the owner and value group lines, the three links per record, the reserved "Concluded by you" place, Done, the sizes at Regular and Wide, keyboard and VoiceOver. The Vitals provenance control (the info IconButton). The Event and Place pages' Why accordion keeps its own look **and its own copy of the record table** in the Person page's code until those pages are redesigned onto this sheet (user, 2026-11-03: they will be replaced soon); that copy is recorded debt (working rule "The provenance sheet is a kit recipe").
 
 ---
 
@@ -94,7 +96,7 @@ The provenance sheet answers "where does this come from?" for one value: the rec
 | A value and its records | A value (a birth date, an occupation, a likeness) is concluded from **records**: Observations on Citations. Each record has what it was **read as** ("14 May 1817"), its **citation line** ("Parish register, Vol. 3, Baptism of Ada, p. 23"), its **outcome** (kept, folded, outvoted, weak, denied, against, no usable value) with a mark, its **Observation ref** and **Subject ref**, and three destinations: the Source, the Citation, the Observation. |
 | Groups | Records sit under **owner** group lines when they come from several entities (a birth date read off two birth events, S13-D12), and under **value** group lines when they went into different values (a mixed row). Each group line is a heading. |
 | The header | A title (the value's label: "Birth date", "Likeness from Hamburger Adressbuch 1861"), the shown value or values in their face (mono for a date, italic for a place) or the empty text in italic, the state Badge (merged, mixed, multiple) when there is one, and a summary line ("merged from 3 Sources · 4 records"). |
-| The kit names no product types | A kit recipe takes **display-ready content**: strings, faces, Badges and link actions. The caller (a page) builds that content from its own data and decides what a link opens. The sheet never knows what a Person, a Source or a navigation place is. |
+| The kit names no product types | A kit recipe takes **display-ready content**: for the sheet, a title; zero or more values, each with its face (text, date in mono, place in italic) or an empty text; an optional state Badge (Merged, Mixed or Concluded, the three a Vitals row can show); an optional summary; and groups. A group has an optional owner line (title, ref, "shown"), value groups with an optional heading, and records. A record has its Read as (or a phrase such as "not …"), whether it counted, its citation line, its outcome (mark and phrase), its Observation and Subject refs, and a stable id. The sheet reports a link as "record id, and Source, Citation or Observation"; the caller maps that to a destination, closes the sheet, then navigates. The sheet never knows what a Person, a Source or a navigation place is. |
 | Callers (known) | **Vitals rows** on the Person page (today); **a Gallery likeness** (S13-14: one record, no Badge); **the viewer** (S13-15: the record table under the image, without the Panel); **a family tree** (later: a relationship or a relative's fact). The Event and Place pages adopt it with their sections. |
 | Opening and closing | A caller opens the sheet from its own control (the info IconButton on Vitals and Gallery). Escape, a click outside and Done close it; a link closes it, then the caller navigates. Focus returns to the control that opened it. |
 | Sizes | One record to 30+ (records scroll inside the sheet past a cap; the title, header and Done stay). Citation lines are long and wrap; nothing is truncated. |
@@ -113,9 +115,9 @@ The provenance sheet answers "where does this come from?" for one value: the rec
 
 | | |
 | --- | --- |
-| Ships in **S13-36** | PSK-1 … PSK-9 and PSK-W1: the sheet as a kit recipe and its record table as a kit part, filled by display-ready content; the Vitals rows moved onto it with no visible change. |
+| Ships in **S13-36** | The sheet as a kit recipe and its record table as a kit part, filled by display-ready content, with the optional slots and columns of PSK-1, PSK-4 and PSK-5; the Vitals rows moved onto it with no visible change (PSK-2, PSK-3, PSK-5, PSK-7 – PSK-9, PSK-W1). PSK-4 and PSK-6 are previews only in S13-36: they are content shapes, not code paths, and gain their callers in S13-14 and S13-15. |
 | Used by | S13-14 (the Gallery's one-record sheet, PSK-4), S13-15 (the record table under the viewer's image, PSK-6), later a family tree. |
-| Stays out | Any visible change to Vitals; the Event and Place Why accordion. |
+| Stays out | Any visible change to Vitals. The Event and Place Why accordion and its own copy of the record table (`Features/Conclusions/ReconciliationRecordRows.swift` in its Why mode, `ReconciliationReasoningView`): it stays in the Person page's code, unchanged, until those pages move onto this sheet (user, 2026-11-03). |
 
 ---
 
@@ -123,12 +125,12 @@ The provenance sheet answers "where does this come from?" for one value: the rec
 
 | ID | Requirement |
 | --- | --- |
-| PSK-1 | **Specimen page.** A kit page "Provenance sheet" (a recipe, beside the Person card) showing the sheet's anatomy with every slot named: **title**, **value** (one value, several, or the empty text), **state Badge** (optional), **summary** (optional), **reserved block** (the "Concluded by you" place, zero height), **record table** (PSK-5), **footer** (Done). Label each slot on the specimen. |
+| PSK-1 | **Specimen page.** A kit page "Provenance sheet" (a recipe; file *Provenance Sheet.dc.html* in the kit project, listed with the Person card under Recipes) showing the sheet's anatomy with every slot named: **title**, **value** (optional: one value, several, or the empty text), **state Badge** (optional), **summary** (optional), **reserved block** (the "Concluded by you" place, zero height), **record table** (PSK-5), **footer** (Done). Label each slot on the specimen. |
 | PSK-2 | **Many records (the Vitals case).** The Birth date sheet from S13-D2: two owner groups (the shown owner first, marked "· shown"), five records, one outvoted. Unchanged from the S13-D2 frames. |
 | PSK-3 | **Value groups.** A mixed Occupation sheet with two value groups and a group of records that went into no value. Unchanged from S13-D2 (PRV-6), headings only when a group has two or more buckets. |
-| PSK-4 | **One record (the Gallery case; user, 2026-11-03).** The sheet for one record: the title names the thing ("Likeness from Hamburger Adressbuch 1861"); no value line, or the value in its face if the board prefers (say which); no state Badge; the summary "1 record"; the table with one record and no group lines. Draw it at Regular and Wide. This is the frame S13-D5's Gallery tile opens (its frame 2b instances it). |
-| PSK-5 | **The record table.** Read as · Citation (the citation line, a link in ink that opens the Citation) · Outcome (mark and phrase) · Record (Observation and Subject refs, mono caption, muted) · the reserved 88pt column; the Source and Observation links under the citation line; primary ink for a counted record, secondary for the rest. As S13-D2 PRV-5, PRV-9, PRV-15 and the board's notes. Name it as the sheet's part: a caller can place it without the Panel (PSK-6). |
-| PSK-6 | **The table alone (the viewer case).** The record table with one record, no column headings, placed under an image inside another Panel, at the viewer's width (S13-D5 LV-4). Draw it as a usage frame, not a new component. |
+| PSK-4 | **One record (the Gallery case; user, 2026-11-03).** The sheet for one record: the title names the thing ("Likeness from Hamburger Adressbuch 1861"); **no value line** (a likeness has no value to read out); no state Badge; the summary "1 record"; the table with one record, no group lines, and **no Read as column** (a likeness reads only as "Likeness", which the title already says). Draw it at Regular and Wide. This is the frame S13-D5's Gallery tile opens (its frame 2b instances it). |
+| PSK-5 | **The record table.** Read as · Citation (the citation line, a link in ink that opens the Citation) · Outcome (mark and phrase) · Record (Observation and Subject refs, mono caption, muted) · the reserved 88pt column; the Source and Observation links under the citation line; primary ink for a counted record, secondary for the rest. As S13-D2 PRV-5, PRV-9, PRV-15 and the board's notes. The Read as column is optional (PSK-4). The citation line's copy button (the kit clipboard button) stays. Name it as the sheet's part: a caller can place it without the Panel (PSK-6). |
+| PSK-6 | **The table alone (the viewer case).** The record table with one record, no column headings and no Read as column, placed under an image inside another Panel. The host Panel takes the sheet's widths (880pt at Regular, 1280pt at Wide), so the table keeps its columns and width caps (PSK-W1); the viewer's sheet is that width (S13-D5 LV-1). Draw it as a usage frame, not a new component. |
 | PSK-7 | **Long.** 30 records: the table scrolls inside the sheet past its cap; title, header and Done stay. |
 | PSK-8 | **Keyboard and VoiceOver.** As S13-D2 PRV-12, PRV-13: Tab through the citation line, Source and Observation links in reading order; the title and each group line are headings; each record reads as one element. A note on the specimen. |
 | PSK-9 | **Dark mode.** PSK-2 and PSK-4 in dark. |
@@ -164,23 +166,27 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Provenance sheet | Recipe | **New** (promoted) | `DesignSystem/Recipes/ProvenanceSheet/` *(new, S13-36)*, from `Features/Conclusions/ProvenanceSheet.swift` `ProvenanceSheet` | PSK-1 – PSK-4, PSK-7. Second and third call sites are known: the Gallery (S13-14) and the viewer (S13-15); a family tree later. Takes display-ready content; names no `Features/` type. |
-| Record table | Recipe (part of the sheet) | **New** (promoted) | the same folder, from `Features/Conclusions/ReconciliationRecordRows.swift` `ReconciliationRecordRows` (sheet style) | PSK-5, PSK-6. Placeable without the Panel. |
+| Provenance sheet | Recipe | **New** (promoted) | `DesignSystem/Recipes/ProvenanceSheet/` *(new, S13-36)* `PVProvenanceSheet`, from `Features/Conclusions/ProvenanceSheet.swift` `ProvenanceSheet` | PSK-1 – PSK-4, PSK-7. Later call sites are known: the Gallery (S13-14), the viewer (S13-15), a family tree. Takes `PVProvenanceSheetContent` (§ 2); names no `Features/` type; ids from a prefix the caller passes. |
+| Record table | Recipe (part of the sheet) | **New** (promoted) | the same folder, `PVProvenanceRecordTable`, from `ReconciliationRecordRows` (sheet mode only) | PSK-5, PSK-6. Placeable without the Panel. The Why mode stays in Features (§ 3). |
+| Group lines (owner, value heading) | Recipe (part of the table) | **New** (moved) | from `ReconciliationRecordRows`'s private `ownerLine`, `valueHeading` | PSK-2, PSK-3. |
+| Citation link | Recipe (part of the table) | **New** (moved) | from the private `CitationLineButton`, `CitationLineButtonStyle` | PSK-5. A link in ink, as S13-D2's board note; it moves, it is not a new link component. |
+| Outcome mark and phrase | Recipe (part of the table) | **New** (moved) | from `Features/Conclusions/ReconciliationOutcome.swift` `ReconciliationOutcome` | PSK-5. The Why accordion's copy keeps using the Features one until it is deleted. |
+| Value faces | Recipe (part of the sheet) | **New** (moved) | from `ReconciledValueRowModel.ValueStyle` and `ReconciledValueRow.valueContent` | Text, date (mono), place (italic); the Vitals row keeps reading its own. |
+| Copy the citation | Component | Ship | `PVClipboardButton` | PSK-5. As today. |
 | Panel, footer, Done | Component | Ship | `PVPanel`, `PVButton` (primary) | As today. |
-| Sheet presenter | Component | Ship | `pvSheet(item:)` | The caller presents; Escape and a click outside close. |
-| State Badge | Component | Ship | `PVBadge` | As the Vitals row's Badge. |
-| Group lines | Component | Ship | micro caps text, mono caption | As S13-D12. |
-| Outcome mark | Recipe | Ship | the outcome marks the Why table uses today | Unchanged. |
+| Sheet presenter | Component | Ship | `pvSheet(item:)` | The caller presents; Escape and a click outside close. `ProvenanceSheetItem` and its `row(in:)` stay with the caller. |
+| State Badge | Component | Ship | `PVBadge` | Merged, Mixed, Concluded, as the Vitals row's Badge. |
 | Provenance control | Component | Ship | `PVIconButton(.info)` | The caller's; not part of the recipe. |
+| Copy | — | Ship | an `L10n.ProvenanceSheet` namespace *(new, S13-36)* for the sheet's own words (Done, column headings, link labels); the caller's words (title, values, summary) arrive in the content | As S13-35 moved the card's copy to `L10n.PersonCard`. |
 
 ### Explicit non-goals
 
 | Do not add | Why |
 | --- | --- |
 | A visible change to the sheet | Its look is S13-D2's; this board moves it into the kit. |
-| A new Panel, table or link component | `PVPanel` and the existing table cover it. |
+| A new Panel, table or link component | `PVPanel` and the moved table, group lines and citation link cover it. |
 | Product types in the kit (a Person, a Source, a navigation place) | Kit rule: a recipe takes display-ready content; the caller decides what a link opens. |
-| The Event and Place Why accordion | Working rule "The provenance sheet replaces the Why on the Person page only". |
+| Moving the Event and Place Why accordion onto the kit table | User, 2026-11-03: those pages keep their own copy until they are redesigned onto this sheet. |
 
 ---
 
