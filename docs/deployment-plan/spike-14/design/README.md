@@ -8,7 +8,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
-| [S14-D7](S14-D7-promote-notices.md) | Promote page: error notices in view, Try again on a failed load, the stale notice cleared when its proposal fails | Not drawn yet; to draw on the [Promote flow project](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) | S14-20 |
+| [S14-D7](S14-D7-promote-notices.md) | Promote page: error notices in view, Try again on a failed load, the stale notice cleared when its proposal fails | Agreed 2026-11-03 in the [Promote flow project](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) | S14-20 |
 
 ## Archived
 

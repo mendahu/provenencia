@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 14 (odds and ends), batch 5
 **View:** the Promote page: its notice area (the error callouts above the rows) and the footer
 **Implements later as:** PR **S14-20** (The Promote page recovers and speaks)
-**Board:** not drawn yet. Draw on [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), beside S13-D11's frames 27a and 27W, as a new turn "S14-D7 · Notices"
+**Board:** agreed 2026-11-03 — [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file *Promote flow.dc.html*, section "S14-D7", frames 1a, 1b, 1c, 2a, 2aW, 3 and 4. PN-1: option (a), the list scrolls to its top; option (b) is deleted. Try again is a small secondary Button. The second load message on frame 1a is a placeholder, not new copy
 **Depends on:** the agreed S13-D11 board (shipped in S13-23, [#633](https://github.com/mendahu/provenencia/pull/633)); S14-14 (landed [#675](https://github.com/mendahu/provenencia/pull/675)), which gave `PVCallout` its opt-in announcement
 **Related:** audit 2 B-12 and B-17 ([`../app-health-audit-2.md`](../app-health-audit-2.md)); working rule "Kit components announce themselves" in [`../deployment-plan.md`](../deployment-plan.md); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-20-promote-recovers-and-speaks.md`](../prs/S14-20-promote-recovers-and-speaks.md)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
