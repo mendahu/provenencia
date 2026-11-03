@@ -71,10 +71,10 @@ func TestLifespanFromEvents(t *testing.T) {
 			want: "lifespan={Between 1840 and 1972}; lifespan_span={Between 1850 and 1852}"},
 		{name: "AC-2.9 a death before a year is skipped and leaves the side undated", events: []subjectprofile.LifeEvent{ev(death, subj, &bef1840)},
 			check: empty},
-		{name: "AC-2.10 a leap day moves to the last day of February", events: []subjectprofile.LifeEvent{ev(birth, subj, datevaluetest.YMD(1904, 2, 29))},
+		{name: "AC-2.10 a leap day moves to 1 March", events: []subjectprofile.LifeEvent{ev(birth, subj, datevaluetest.YMD(1904, 2, 29))},
 			check: func(t *testing.T, p subjectcompare.Values) {
 				first, last := ends(t, p, vocabkey.PropertyLifespan)
-				if first.Year != 1894 || first.Month != 2 || first.Day != 28 || last.Year != 2024 || last.Month != 2 || last.Day != 28 {
+				if first.Year != 1894 || first.Month != 3 || first.Day != 1 || last.Year != 2024 || last.Month != 3 || last.Day != 1 {
 					t.Errorf("window ends %+v %+v", first, last)
 				}
 			}},
