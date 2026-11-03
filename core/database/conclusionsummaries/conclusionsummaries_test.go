@@ -1276,14 +1276,12 @@ func TestEventOrderAtKnownEnd(t *testing.T) {
 	bef1880 := dated(datevaluetest.Before(1880, 0, 0))
 	y1880 := dated(datevaluetest.YMD(1880, 0, 0))
 	y1879 := dated(datevaluetest.YMD(1879, 0, 0))
+	// On the same day, before sorts first and after last, whatever the refs.
+	aft2011 := dated(datevaluetest.After(2011, 3, 29))
+	day2011 := dated(datevaluetest.YMD(2011, 3, 29))
+	bef2011 := dated(datevaluetest.Before(2011, 3, 29))
 
-	var first, second []byte
-	if strings.ToLower(refOf(t, f, bef1880)) < strings.ToLower(refOf(t, f, y1880)) {
-		first, second = bef1880, y1880
-	} else {
-		first, second = y1880, bef1880
-	}
-	want := [][]byte{y1879, first, second, y1881, undated}
+	want := [][]byte{y1879, bef1880, y1880, y1881, bef2011, day2011, aft2011, undated}
 
 	check := func(name string, got []conclusionsummaries.EventSummary) {
 		t.Helper()
@@ -1297,7 +1295,7 @@ func TestEventOrderAtKnownEnd(t *testing.T) {
 		}
 	}
 	check("ListEvents", f.events())
-	byIDs, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{undated, y1881, bef1880, y1880, y1879})
+	byIDs, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{undated, aft2011, y1881, bef1880, day2011, y1880, bef2011, y1879})
 	must(t, err)
 	check("EventsByIDs", byIDs)
 }

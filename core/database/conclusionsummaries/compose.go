@@ -971,14 +971,16 @@ func finishEvent(v vocab, h EventSummary) EventSummary {
 type dateKey struct {
 	// key is the first day number of the date's place (datePlace).
 	key int
-	ok  bool
-	ref string
+	// side breaks a tie on key: before, then closed, then after (placedDate).
+	side int
+	ok   bool
+	ref  string
 }
 
 // dateKeyOf is v's place in date order, with ref breaking ties.
 func dateKeyOf(v *datevalue.Value, ref string) dateKey {
 	p, ok := datePlace(v)
-	return dateKey{key: p.key, ok: ok, ref: strings.ToLower(ref)}
+	return dateKey{key: p.key, side: p.side, ok: ok, ref: strings.ToLower(ref)}
 }
 
 // withRef is k with ref as its tie-break.
@@ -997,6 +999,9 @@ func dateKeyLess(a, b dateKey) bool {
 	}
 	if a.key != b.key {
 		return a.key < b.key
+	}
+	if a.side != b.side {
+		return a.side < b.side
 	}
 	return a.ref < b.ref
 }
@@ -1019,9 +1024,12 @@ type TimelineSpan struct {
 }
 
 // placedDate is where a date sits: its order key, its span and the two ends
-// they come from.
+// they come from. side breaks a tie on the same key day: -1 for a date open at
+// its start (BEF), 0 for a closed one, 1 for one open at its end (AFT), so
+// "bef. 29 Mar 2011" sorts before "29 Mar 2011" and "aft. 29 Mar 2011" after.
 type placedDate struct {
 	key         int
+	side        int
 	span        TimelineSpan
 	first, last valuecompare.DateEnd
 }
@@ -1047,9 +1055,9 @@ func datePlace(v *datevalue.Value) (placedDate, bool) {
 	p := placedDate{first: first, last: last}
 	switch {
 	case first.Open:
-		p.key, p.span = last.Lo, TimelineSpan{From: last.From, To: last.To, OpenStart: true}
+		p.key, p.side, p.span = last.Lo, -1, TimelineSpan{From: last.From, To: last.To, OpenStart: true}
 	case last.Open:
-		p.key, p.span = first.Lo, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}
+		p.key, p.side, p.span = first.Lo, 1, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}
 	default:
 		p.key, p.span = first.Lo, TimelineSpan{From: first.From, To: last.To}
 	}
@@ -1074,10 +1082,10 @@ type eventDated struct {
 // date once.
 func eventDating(date, start *datevalue.Value) eventDated {
 	if p, ok := datePlace(date); ok {
-		return eventDated{value: date, key: dateKey{key: p.key, ok: true}, span: p.span, first: p.first, last: p.last}
+		return eventDated{value: date, key: dateKey{key: p.key, side: p.side, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
 	if p, ok := datePlace(start); ok {
-		return eventDated{value: start, isStart: true, key: dateKey{key: p.key, ok: true}, span: p.span, first: p.first, last: p.last}
+		return eventDated{value: start, isStart: true, key: dateKey{key: p.key, side: p.side, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
 	if date != nil {
 		return eventDated{value: date}
