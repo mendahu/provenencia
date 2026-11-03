@@ -34,7 +34,7 @@ struct PVPersonCardContent: Equatable {
         self.title = title
         self.lines = lines
         years = PersonLifeDisplay.years(summary, locale: locale)
-        helpText = ([title.text] + lines.map(\.text)).joined(separator: "\n")
+        helpText = ([title.text] + lines.map(\.text) + [role].compactMap { $0 }).joined(separator: "\n")
         imageRelPath = summary.pictureImageRelPath
         colors = PVGenderTreatment.read(summary)?.thumbnailColors
         self.role = role

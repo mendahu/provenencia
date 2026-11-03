@@ -65,6 +65,8 @@ struct PVPersonCardTests {
         let card = PVPersonCardContent(summary: anna, role: nil, isFocus: false, locale: en)
         #expect(card.years == "1790 – 1851")
         #expect(card.helpText == "Anna Weber\nb. 3 May 1790 · Bremen\nd. 1851")
+        let mother = PVPersonCardContent(summary: anna, role: "Mother", isFocus: false, locale: en)
+        #expect(mother.helpText == "Anna Weber\nb. 3 May 1790 · Bremen\nd. 1851\nMother")
 
         func years(birth: CatalogDateValueInput?, death: CatalogDateValueInput?) -> String {
             PVPersonCardContent(
