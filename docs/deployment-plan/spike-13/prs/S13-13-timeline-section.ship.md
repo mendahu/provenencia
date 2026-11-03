@@ -1,7 +1,7 @@
 # Ship log — S13-13 Timeline section
 
 **Plan:** [`S13-13-timeline-section.md`](S13-13-timeline-section.md) · **Branch:** `s13-13-timeline-section` · **PR:** #691
-**State:** fixing 1
+**State:** ready
 
 Base: `main` @ `92f87dba`. The plan's Status was "Blocked — on S13-33, S13-35" with its post-round-2 scope change not re-reviewed, so the loop stopped and the plan went back to plan-pr (user, 2026-11-02). The refresh checked every § 4 row at `92f87db`; review rounds 3 and 4 fixed seven blockers; Status Planned. The refresh is the branch's first commit, `71554946` (user: "Ride on S13-13 branch").
 
@@ -85,3 +85,15 @@ Read by the orchestrator: MNT-1, MNT-2, MNT-3, PRF-2 **Resolved** (F-6's three `
 Files: `macos/App/Features/Conclusions/PersonTimelinePreviewData.swift`, `PersonTimelineLifeline.swift`, `docs/deployment-plan/spike-13/prs/S13-13-timeline-section.md` (Landed note).
 Do: the fixture's day and month literals use `core/datevalue/calendar.go` `YearLine`'s rule (the fraction over the year's own day count, 366 in a leap year) for 1848 and 1880 and any other leap year in the file. `PersonTimelineLifeline`'s `dayInYears` comment says a day is at most 1/365 of a year (1/366 in a leap year), so the threshold catches both. The Landed note names the plan's wrong "divides every year by 365" premise.
 Check: `rg -n "365, leap years too|divides every year by 365" macos/App` prints nothing; PersonTimeline tests pass; scripts/check-pr.sh PASS.
+
+## Round 1 — fix (addendum)
+Head `15c7abf4`. Gate PASS. F-9 done: leap-year day spans (1844-06-04, 1848-02-14, 1880-09-18, 1880-09-22) over 366 per `YearLine`; both comments corrected; Landed note (4) names the plan's wrong premise. MNT-4 **Resolved**.
+
+## Round 2 — review
+Reviewers: UX, SEC+PRF (each had a Fix-now major). Scope `dc2e0c86...15c7abf4`. CON and MNT had no major: their minors read above.
+- PRF-1 **Resolved**: `PersonTimelineTethers` owns `sectionFrame` and the viewport; the list's `body` reads nothing that moves on scroll; the static `Canvas` takes only `lifeline` and labels.
+- UX-1 **Resolved** (thumbnail and Badges hidden; the row speaks once). UX-2 **Resolved** in code (`@FocusState` over titles and cards; `unfold` focuses `firstRevealed`); the participant-card path carries a second focus binding inside `PVTileCard`'s Return modifier, so the manual check confirms focus lands on the 16th card.
+- New blockers: none. Outside-lens note (→ MNT, minor): card ids `"\(eventId)-\(personId)"` share the focus namespace with row ids; a crafted id could collide, the worst case focus on the wrong control → Follow-up.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: Family's "Show N more" focus gap (UX-2's Family half); `EvidenceBridgeEdgeSummary.productKey(of:)` repeats the product-term check (planning M-34); card and row ids share one focus namespace (round 2 SEC+PRF note); nits CON-2, MNT-5 – MNT-10, UX-5, UX-6 · to user: — · CON miss: none
