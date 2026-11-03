@@ -82,8 +82,10 @@ struct PromoteFlow: Equatable, Sendable {
         case waits(endID: String?, why: WaitReason)
         /// Both ends land on one record; `ref` is that record's.
         case selfLink(ref: String)
+        /// Filing it would make places loop.
+        case closesCycle
 
-        /// The Subject the connection waits for; nil when it promotes or is a self-link.
+        /// The Subject the connection waits for; nil when it promotes, is a self-link or would loop.
         var waitingEndID: String? {
             if case .waits(let endID, _) = self { return endID }
             return nil
@@ -192,9 +194,6 @@ struct PromoteFlow: Equatable, Sendable {
         var mark: PVMarkKey = .subjectRelationship
         var endA: String?
         var endB: String?
-        /// Already an accepted association. Hidden from the will-promote list;
-        /// Done does not promote it again.
-        var alreadyPromoted: Bool = false
 
         /// The name of one end, as its row reads; empty when `endID` is neither end.
         func name(of endID: String?) -> String {
@@ -209,6 +208,9 @@ struct PromoteFlow: Equatable, Sendable {
     var mappedRest = false
     var rows: [Row] = []
     var bridges: [BridgeFact] = []
+    /// What Done will do with each unfiled connection, as the last proposal said, by bridge id.
+    /// Go decides every state; a bridge with no outcome is not shown or counted.
+    private(set) var outcomes: [String: CatalogPromoteGraphAlignmentConnection] = [:]
     var revision: Int64 = 0
     var saving = false
     var staleNote: String?
@@ -246,24 +248,28 @@ struct PromoteFlow: Equatable, Sendable {
 
     private var scope: [Row] { visibleRows }
 
-    private func lined(_ bridge: BridgeFact, _ state: ConnectionState) -> Bridge {
-        Bridge(fact: bridge, state: state)
+    /// The one Subject a proposal is asked about: the page's entry, until the rest is mapped; nil
+    /// for every Subject. Done sends the same rows.
+    var onlySubjectID: String? { mappedRest ? nil : entryID }
+
+    /// Every connection Go reported as not yet promoted, with whether it promotes and, if not, why.
+    /// The page words each state and decides none.
+    var connections: [Bridge] {
+        bridges.compactMap { fact in
+            outcomes[fact.id].map { Bridge(fact: fact, state: state(of: $0, for: fact)) }
+        }
     }
 
-    /// Every connection not yet promoted, with whether it promotes and, if not, which end waits and why.
-    var connections: [Bridge] {
-        let rowByID = Dictionary(rows.map { ($0.subjectID, $0) }, uniquingKeysWith: { first, _ in first })
-        return bridges.filter { !$0.alreadyPromoted }.map { bridge in
-            let left = resolve(bridge.endA, in: rowByID)
-            let right = resolve(bridge.endB, in: rowByID)
-            switch (left, right) {
-            case (.waits(let why), _):
-                return lined(bridge, .waits(endID: bridge.endA, why: why))
-            case (_, .waits(let why)):
-                return lined(bridge, .waits(endID: bridge.endB, why: why))
-            case (.handle(let leftID, let ref), .handle(let rightID, _)):
-                return lined(bridge, leftID == rightID ? .selfLink(ref: ref) : .promotes)
-            }
+    private func state(of connection: CatalogPromoteGraphAlignmentConnection, for fact: BridgeFact) -> ConnectionState {
+        let waiting = connection.waitingSubjectID.isEmpty ? nil : connection.waitingSubjectID
+        switch connection.outcome {
+        case .files: return .promotes
+        case .skipped: return .waits(endID: waiting, why: .skipped)
+        case .unset: return .waits(endID: waiting, why: .unset)
+        case .notOnPage: return .waits(endID: waiting, why: .notOnPage)
+        case .selfLink: return .selfLink(ref: row(fact.endA)?.shownRef ?? row(fact.endB)?.shownRef ?? "")
+        case .cycle: return .closesCycle
+        case .unrecognized: return .waits(endID: nil, why: .notOnPage)
         }
     }
 
@@ -296,7 +302,7 @@ struct PromoteFlow: Equatable, Sendable {
         switch state {
         case .promotes: 0
         case .waits: 1
-        case .selfLink: 2
+        case .selfLink, .closesCycle: 2
         }
     }
 
@@ -322,27 +328,6 @@ struct PromoteFlow: Equatable, Sendable {
         return rows.first { $0.subjectID == subjectID }
     }
 
-    private enum EndResolution: Equatable {
-        case handle(id: String, ref: String)
-        case waits(WaitReason)
-    }
-
-    /// The handle a subject will be, or why it stays unpromoted. The one place that decides.
-    private func resolve(_ subjectID: String?, in rowByID: [String: Row]) -> EndResolution {
-        guard let subjectID, let row = rowByID[subjectID] else { return .waits(.notOnPage) }
-        if row.anchor {
-            guard let id = row.target.handleID, let ref = row.target.handleRef else { return .waits(.notOnPage) }
-            return .handle(id: id, ref: ref)
-        }
-        if !mappedRest && subjectID != entryID { return .waits(.notOnPage) }
-        switch row.target {
-        case .handle(let id, let ref, _): return .handle(id: id, ref: ref)
-        case .newKind: return .handle(id: "new:" + subjectID, ref: row.ref)
-        case .skip: return .waits(.skipped)
-        case .unset: return .waits(.unset)
-        }
-    }
-
     mutating func load(
         entryID: String,
         proposal: CatalogPromoteGraphAlignmentProposal,
@@ -351,6 +336,7 @@ struct PromoteFlow: Equatable, Sendable {
     ) {
         self.entryID = entryID
         self.bridges = bridges
+        outcomes = Self.outcomes(of: proposal)
         revision = proposal.revision
         let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
         rows = proposal.rows.compactMap { proposalRow in
@@ -358,6 +344,10 @@ struct PromoteFlow: Equatable, Sendable {
             return Self.makeRow(proposalRow, fact: fact, previous: nil, orders: nameOrders)
         }
         noteDuplicates()
+    }
+
+    private static func outcomes(of proposal: CatalogPromoteGraphAlignmentProposal) -> [String: CatalogPromoteGraphAlignmentConnection] {
+        Dictionary(proposal.connections.map { ($0.bridgeSubjectID, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
     mutating func mapRest() {
@@ -427,6 +417,7 @@ struct PromoteFlow: Equatable, Sendable {
 
     /// Fold a new proposal. Decided rows keep their choice.
     mutating func merge(_ proposal: CatalogPromoteGraphAlignmentProposal, subjects: [SubjectFact]) {
+        outcomes = Self.outcomes(of: proposal)
         revision = proposal.revision
         let byID = Dictionary(uniqueKeysWithValues: subjects.map { ($0.id, $0) })
         let previous = Dictionary(uniqueKeysWithValues: rows.map { ($0.subjectID, $0) })

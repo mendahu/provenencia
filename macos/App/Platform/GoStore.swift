@@ -890,12 +890,14 @@ struct GoStore: GenealogyStore {
     func proposePromoteGraphAlignment(
         projectDir: String,
         graphID: String,
-        fixed: [CatalogPromoteGraphAlignmentFixed]
+        fixed: [CatalogPromoteGraphAlignmentFixed],
+        onlySubjectID: String?
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         var req = Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest()
         req.projectDir = projectDir
         req.graphID = graphID
         req.fixed = fixed.map(Self.mapFixed)
+        req.onlySubjectID = onlySubjectID ?? ""
         let resp: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse = try await provenenciaCall(
             method: CoreMethod.proposePromoteGraphAlignment,
             request: req
@@ -923,7 +925,14 @@ struct GoStore: GenealogyStore {
                 summary: Self.mapConclusionSummary(r.summary)
             )
         }
-        return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows)
+        let connections = resp.connections.map { c in
+            CatalogPromoteGraphAlignmentConnection(
+                bridgeSubjectID: c.bridgeSubjectID,
+                outcome: PromoteConnectionOutcome(wire: c.outcome),
+                waitingSubjectID: c.waitingSubjectID
+            )
+        }
+        return CatalogPromoteGraphAlignmentProposal(revision: resp.revision, rows: rows, connections: connections)
     }
 
     private static func mapFixed(_ f: CatalogPromoteGraphAlignmentFixed) -> Provenencia_Engine_V1_PromoteGraphAlignmentFixed {

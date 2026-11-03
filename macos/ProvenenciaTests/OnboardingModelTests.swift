@@ -575,7 +575,8 @@ private struct ThrowingStore: GenealogyStore {
     func proposePromoteGraphAlignment(
         projectDir _: String,
         graphID _: String,
-        fixed _: [CatalogPromoteGraphAlignmentFixed]
+        fixed _: [CatalogPromoteGraphAlignmentFixed],
+        onlySubjectID _: String?
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         throw StoreBoom.boom
     }

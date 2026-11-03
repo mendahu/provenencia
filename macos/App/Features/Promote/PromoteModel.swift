@@ -142,7 +142,8 @@ final class PromoteModel {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 graphID: entry.graphID,
-                fixed: []
+                fixed: [],
+                onlySubjectID: flow.onlySubjectID
             )
             // Rows are built from the graph's Subjects. Without them every row
             // would drop and the page would read as empty: say so instead.
@@ -163,7 +164,11 @@ final class PromoteModel {
         }
     }
 
-    func mapRest() { flow.mapRest() }
+    /// Maps the rest of the page's Subjects. The scope is part of what Done files, so Go is asked again.
+    func mapRest() {
+        flow.mapRest()
+        proposeAfterDecision()
+    }
 
     func setTarget(subjectID: String, token: String) {
         if token == PromoteFlow.Target.findToken {
@@ -295,13 +300,14 @@ final class PromoteModel {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
                 graphID: entry.graphID,
-                fixed: fixed
+                fixed: fixed,
+                onlySubjectID: flow.onlySubjectID
             )
             let snapshot = await graphSnapshot()
             guard generation == proposeGeneration else { return }
             if let snapshot {
                 syncNameOrders()
-                // Bridges are the page's, built once at load: a proposal moves rows, not connections.
+                // Bridges are the page's, built once at load; the proposal says what Done does with each.
                 flow.merge(proposal, subjects: subjectFacts(snapshot))
                 proposeError = nil
             } else {
@@ -397,8 +403,7 @@ final class PromoteModel {
                 endBName: bridge.endpointBID.flatMap { nameByID[$0] } ?? "",
                 mark: bridge.kind.markKey,
                 endA: bridge.endpointAID,
-                endB: bridge.endpointBID,
-                alreadyPromoted: bridge.membership != nil
+                endB: bridge.endpointBID
             )
         }
     }

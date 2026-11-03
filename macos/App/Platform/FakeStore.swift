@@ -78,6 +78,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var promoteProposeDelays: [Duration] = []
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
+    /// The scope the last proposal call was sent: the one Subject the page is open on, nil for all.
+    var lastPromoteOnlySubjectID: String?
     /// The last Done the page sent, for tests.
     var lastPromoteBatch: [CatalogPromoteGraphAlignmentFixed]?
     /// Event and Place summaries as Go would compose them, seeded by tests in
@@ -1461,18 +1463,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func proposePromoteGraphAlignment(
         projectDir: String,
         graphID: String,
-        fixed: [CatalogPromoteGraphAlignmentFixed]
+        fixed: [CatalogPromoteGraphAlignmentFixed],
+        onlySubjectID: String?
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
         // Delay and scripted rows are one claim. Concurrent calls must not
         // pair this call's wait with the next call's proposal.
         let claimed: (delay: Duration?, proposal: CatalogPromoteGraphAlignmentProposal?) = withState {
             markCatalogSessionHeld(projectDir)
             lastPromoteFixed = fixed
+            lastPromoteOnlySubjectID = onlySubjectID
             recordedCalls.append("proposePromoteGraphAlignment graph=\(graphID)")
             let delay: Duration? = promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
             guard !promoteProposals.isEmpty else { return (delay, nil) }
             let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
-            let proposal = CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
+            let proposal = CatalogPromoteGraphAlignmentProposal(
+                revision: nextAuditRevision - 1, rows: next.rows, connections: next.connections
+            )
             return (delay, proposal)
         }
         if let delay = claimed.delay { try? await Task.sleep(for: delay) }
@@ -1489,7 +1495,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             if !promoteProposals.isEmpty {
                 let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
-                return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: next.rows)
+                return CatalogPromoteGraphAlignmentProposal(
+                    revision: nextAuditRevision - 1, rows: next.rows, connections: next.connections
+                )
             }
             let fixedBySubject = Dictionary(uniqueKeysWithValues: fixed.map { ($0.subjectID, $0.handleID) })
             let subjects = subjectsByGraph[graphID] ?? []
@@ -1535,7 +1543,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     possibleDuplicate: false
                 )
             }
-            return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: rows)
+            return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: rows, connections: [])
         }
     }
 
