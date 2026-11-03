@@ -107,5 +107,19 @@ Do:
 If `PVButton` cannot take `.focused`, stop and report rather than wrapping it.
 Check: `.focused` appears on both stops; `animated: false` on the scroll; scripts/check-pr.sh PASS. The Landed note still says F-3 and F-9 are unverified in the app.
 
+## Round 2 — fix
+Head `ab673c1a`. Gate PASS (orchestrator re-ran). F-9 done, unverified in the app.
+
+Verifier on UX-1 (one finding, not a review round): Use as portrait stop Refuted, no loop. Partly stands: `focused = pending` is a bare write, and `FocusClaim` records why that is unreliable for a tile inserted by the same commit; any visible non-nil clears `pendingFocus`, so a write with no taker can end the retry; `lastFocused` survives the expiry and can pull focus on a later crossing. A click within the 400ms window also takes focus back: Logged, bounded by the window. Beyond the finding: the `.adaptive` grid reflows away from the 1600 line too, Logged, unconfirmed and outside AC-4.2.
+
+### Fix plan 2, addendum
+Inside the user's "fix UX-1 now"; the verifier's first and third items are plain from the code. No further verification: § 10 step 6 decides.
+
+**F-10 — The restore claims focus the way the app does, and leaves nothing behind** (from UX-1, verifier)
+Files: `macos/App/Features/Conclusions/ConclusionGallerySection.swift`.
+Failing test first: none, view focus.
+Do: `applyPending()` goes through `FocusClaim.claim($focused, stop)` instead of a bare write. In `.onChange(of: focused)` a non-nil stop clears `pendingFocus` only when it differs from the pending stop; the pending stop itself stays until the expiry, so the tile's `.onAppear` can still claim it. At the expiry, also clear `lastFocused` when `focused` is nil. Fix the comment that says a landing ends it.
+Check: `grep -n 'focused = ' ConclusionGallerySection.swift` prints only the F-5 return; scripts/check-pr.sh PASS.
+
 ## Result
 Gate PASS (`c4bef1cf`, docs since) · CI not run (draft) · open: UX-1 · follow-ups: SEC-1 · to user: UX-1 · CON miss: UX-O1
