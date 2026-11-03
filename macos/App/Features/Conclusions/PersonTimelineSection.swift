@@ -57,14 +57,11 @@ struct PersonTimelineList: View {
     /// The title button or card with the keyboard: a row's event id or a card's id.
     @FocusState private var focused: String?
 
-    /// The gap between the line's column and the list.
-    private nonisolated static let lineGap: CGFloat = 12
-
     /// Reads no scroll state: the page's scroll moves only `PersonTimelineTethers`.
     var body: some View {
         let items = content.items
         HStack(alignment: .top, spacing: 0) {
-            Color.clear.frame(width: PersonTimelineLifeline.columnWidth + Self.lineGap)
+            Color.clear.frame(width: PersonTimelineLifeline.columnWidth + PersonTimelineLifeline.listGap)
             PersonTimelineStack(
                 tops: placement.lifeline == nil ? [] : items.map { placement.tops[$0.id] ?? 0 },
                 height: placement.height
@@ -221,7 +218,7 @@ private struct PersonTimelineEventRow: View {
     private static let cardColumnGap: CGFloat = 15
 
     private var textWidth: CGFloat {
-        PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth - PersonTimelinePlacement.gutterWidth - Self.picture - 2 * Self.gap
+        PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth - PersonTimelineLifeline.listGap - PersonTimelinePlacement.gutterWidth - Self.picture - 2 * Self.gap
     }
 
     /// 300pt at Regular; three cards and two gaps at Wide.
@@ -461,7 +458,7 @@ private struct PersonTimelineTethers: View {
     }
 
     /// Wide enough for the curve to reach the flag.
-    private static let canvasWidth = PersonTimelineLifeline.columnWidth + 12 + PersonTimelinePlacement.flagInset
+    private static let canvasWidth = PersonTimelineLifeline.flagX
 
     private func draw(_ tethers: [PersonTimelineLifeline.Tether], into context: inout GraphicsContext) {
         for tether in tethers {

@@ -12,6 +12,10 @@ struct PersonTimelineLifeline: Equatable {
     static let columnWidth: CGFloat = 80
     /// The line's x in its column.
     static let lineX: CGFloat = 56
+    /// The gap between the line's column and the list.
+    static let listGap: CGFloat = 12
+    /// The x of a row's flag: where a tether ends.
+    static var flagX: CGFloat { columnWidth + listGap + PersonTimelinePlacement.flagInset }
     /// What a birth or death with no date takes on the line, outside the scale.
     static let stubLength: CGFloat = 40
     /// The least gap between two year ticks.
@@ -205,7 +209,7 @@ struct PersonTimelineLifeline: Equatable {
             return Tether(
                 id: mark.id,
                 from: CGPoint(x: Self.lineX, y: mark.pointY),
-                to: CGPoint(x: Self.columnWidth + 12 + PersonTimelinePlacement.flagInset, y: y)
+                to: CGPoint(x: Self.flagX, y: y)
             )
         }
     }

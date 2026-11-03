@@ -120,7 +120,7 @@ struct PersonTimelineLifelineTests {
         let (cap, _) = lifeline(recorded, ppy: 43)
         if case .cap(_, let placeholder) = cap.mark("1")?.shape { #expect(!placeholder) } else { Issue.record("filled cap") }
         let capTether = cap.tethers(anchors: ["1": 100], visible: CGRect(x: 0, y: 0, width: 800, height: 200)).first
-        #expect(capTether?.id == "1" && capTether?.from.y == y(cap.mark("1")) && capTether?.to == CGPoint(x: 96, y: 100))
+        #expect(capTether?.id == "1" && capTether?.from.y == y(cap.mark("1")) && capTether?.to == CGPoint(x: PersonTimelineLifeline.flagX, y: 100))
     }
 
     @Test func tethersEndAtTheFlags() {
@@ -128,7 +128,7 @@ struct PersonTimelineLifelineTests {
         let anchors: [String: CGFloat] = ["1": 40, "2": 90, "4": 300, "12": 500]
         let tethers = johann.tethers(anchors: anchors, visible: CGRect(x: 0, y: 0, width: 800, height: 200))
         #expect(tethers.map(\.id) == ["1", "2"])
-        #expect(tethers.allSatisfy { $0.to.x == 96 && $0.from.x == PersonTimelineLifeline.lineX })
+        #expect(tethers.allSatisfy { $0.to.x == PersonTimelineLifeline.flagX && $0.from.x == PersonTimelineLifeline.lineX })
         #expect(tethers.map(\.to.y) == [40, 90])
         #expect(tethers.first?.from.y == johann.mark("1")?.pointY)
         // None for an undated row (no mark), for an anchor outside `visible`, or without a viewport.
