@@ -277,6 +277,8 @@ The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-
 5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
 6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
+A full-width section's empty, loading and error states keep the page band: apply `pvKeepsPageBand()` (`Components/PageColumns/PVPageColumns.swift`) to them, so they stay centered at `widthContentMax` instead of stretching across a Wide pane.
+
 ### Patterns to reach for
 
 | View shape | Regular | Wide |

@@ -50,8 +50,8 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
     /// between the gutters while the header keeps its measure.
     var fillsWidth: Bool {
         switch self {
-        case .timeline: return true
-        case .vitals, .family, .gallery, .sources: return false
+        case .timeline, .gallery: return true
+        case .vitals, .family, .sources: return false
         }
     }
 

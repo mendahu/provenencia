@@ -68,26 +68,26 @@ struct ConclusionDetailThumbnail: Equatable {
         gallery: ConclusionDetailGallery,
         noImage: LocalizedStringResource,
         withImage: LocalizedStringResource,
-        leadLabel: (String) -> String,
-        colors: PVThumbnail.Colors? = nil
+        leadLabel: (String) -> String
     ) -> ConclusionDetailThumbnail {
         let lead = gallery.lead
         return ConclusionDetailThumbnail(
             mark: gallery.fallbackMark,
             label: lead == nil ? noImage : withImage,
             imageRelPath: lead?.imageRelPath ?? "",
-            imageLabel: lead.map { leadLabel($0.sourceTitle) },
-            colors: colors
+            imageLabel: lead.map { leadLabel($0.citation.title) },
+            colors: gallery.fallbackColors
         )
     }
 }
 
-/// One picture tile in a page's gallery: the image, its Source's title, the composer location its
+/// One picture tile in a page's gallery: the image, its citation, the composer location its
 /// Citation opens at, and the Strings the section and the lead model speak for it (S10-35, S14-02).
 struct ConclusionDetailPicture: Equatable, Identifiable {
     var id: String
     var imageRelPath: String
-    var sourceTitle: String
+    /// Where the picture comes from, as the caption and the spoken label read it.
+    var citation: CitationLineDisplay.Parts
     var location: WorkspaceLocation
     /// The tile the header leads with wears the lead Badge; exactly one tile.
     var isLead: Bool
@@ -106,6 +106,8 @@ struct ConclusionDetailGallery: Equatable {
     var title: LocalizedStringResource
     var openTip: LocalizedStringResource
     var fallbackMark: PVMarkKey
+    /// The tint of the fallback mark (a Person's gender colors); nil for none.
+    var fallbackColors: PVThumbnail.Colors? = nil
     var tiles: [ConclusionDetailPicture]
     var choose: LeadCopy
 
@@ -164,7 +166,8 @@ struct ConclusionDetailGallery: Equatable {
             fallbackMark: fallbackMark,
             tiles: tiles(
                 from: detail,
-                tileLabel: L10n.Conclusions.pictureTileLabel,
+                tileLabel: L10n.Conclusions.pictureFrom,
+                leadTileLabel: L10n.Conclusions.pictureTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
                 chosenBody: L10n.Conclusions.toastThumbnailChosenBody
             ),
@@ -172,23 +175,26 @@ struct ConclusionDetailGallery: Equatable {
         )
     }
 
-    /// The tiles of `detail.pictures`, in wire order. Each function takes the picture's Source title
-    /// (the Observation ref when the title is empty) and returns the kind's wording.
+    /// The tiles of `detail.pictures`, in wire order. `tileLabel` and `leadTileLabel` take the
+    /// picture's citation line; `useAsLabel` and `chosenBody` its Source title (the Observation ref
+    /// when the title is empty). Each returns the kind's wording.
     static func tiles(
         from detail: CatalogConclusionDetail,
         tileLabel: (String) -> String,
+        leadTileLabel: (String) -> String,
         useAsLabel: (String) -> String,
         chosenBody: (String) -> String
     ) -> [ConclusionDetailPicture] {
         detail.pictures.map {
-            let source = ReconciliationRecord.sourceTitle(for: $0.record)
+            let citation = CitationLineDisplay.parts($0.record)
+            let source = citation.title
             return ConclusionDetailPicture(
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
-                sourceTitle: source,
+                citation: citation,
                 location: ReconciliationRecord.composerLocation(for: $0.record),
                 isLead: $0.leads,
-                accessibilityLabel: tileLabel(source),
+                accessibilityLabel: $0.leads ? leadTileLabel(citation.line) : tileLabel(citation.line),
                 useAsLabel: useAsLabel(source),
                 chosenToastBody: chosenBody(source)
             )
@@ -366,7 +372,8 @@ struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View 
             title: L10n.Conclusions.detailsSection
         )
         if !content.gallery.tiles.isEmpty {
-            ConclusionDetailGallerySection(
+            ConclusionGallerySection(
+                look: .small,
                 projectDir: context.projectDir,
                 pageIdentifier: context.pageIdentifier,
                 gallery: content.gallery,
@@ -574,85 +581,6 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     }
 }
 
-/// A page's gallery: a header with the count, then one 96pt crop per picture in a wrapping grid,
-/// each captioned with its Source. A tile opens the Citation that holds it and offers the lead
-/// choice (S10-35, S10-D12 PDP-7, PDP-8; S14-02). The section is kind-blind: its words come from
-/// `gallery`, its ids from the page's identifier.
-struct ConclusionDetailGallerySection: View {
-    let projectDir: String
-    let pageIdentifier: String
-    let gallery: ConclusionDetailGallery
-    let lead: ConclusionLeadModel
-
-    @Environment(WorkspaceNavigation.self) private var navigation
-    @FocusState private var focusedID: String?
-
-    private static let column: CGFloat = 120
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PVSectionHeader(title: gallery.title, meta: String(gallery.tiles.count))
-            LazyVGrid(
-                columns: [GridItem(
-                    .adaptive(minimum: Self.column, maximum: Self.column),
-                    spacing: PVSpacing.space6,
-                    alignment: .top
-                )],
-                alignment: .leading,
-                spacing: PVSpacing.space7
-            ) {
-                ForEach(gallery.tiles) { tile in
-                    tileView(tile)
-                }
-            }
-            .padding(.top, PVSpacing.space6)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.string(gallery.title))
-    }
-
-    private func tileView(_ tile: ConclusionDetailPicture) -> some View {
-        let tileID = "\(pageIdentifier).picture.\(tile.id)"
-        return VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            GalleryTileView(
-                projectDir: projectDir,
-                relPath: tile.imageRelPath,
-                fallbackMark: gallery.fallbackMark,
-                caption: tile.sourceTitle,
-                captionWidth: Self.column
-            ) {
-                Button {
-                    navigation.go(to: tile.location)
-                } label: {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PVFocusRingButtonStyle(cornerRadius: PVRadius.sm))
-                .focused($focusedID, equals: tile.id)
-                .help(Text(gallery.openTip))
-                .accessibilityLabel(tile.accessibilityLabel)
-                .accessibilityIdentifier(tileID)
-            }
-            if tile.isLead {
-                PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)
-                    .accessibilityIdentifier("\(tileID).leadBadge")
-            } else {
-                PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
-                    Task {
-                        if await lead.choose(tile, copy: gallery.choose) { focusedID = tile.id }
-                    }
-                }
-                .disabled(lead.isSaving)
-                .fixedSize(horizontal: true, vertical: false)
-                .accessibilityLabel(tile.useAsLabel)
-                .accessibilityIdentifier("\(tileID).useAsLead")
-            }
-        }
-        .frame(width: Self.column, alignment: .leading)
-    }
-}
-
 /// A relationship section: header, rows when present, otherwise the empty sentence.
 private struct ConclusionDetailRelationshipSection: View {
     let section: ConclusionDetailSection
@@ -765,54 +693,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
                 .accessibilityIdentifier("\(pageIdentifier).lead")
         } else {
             thumb
-        }
-    }
-}
-
-/// One picture: its crop over a muted caption of up to two lines. The gallery passes the button that
-/// opens the Citation as `overlay` (drawn over the crop only).
-private struct GalleryTileView<Overlay: View>: View {
-    let projectDir: String
-    let relPath: String
-    let fallbackMark: PVMarkKey
-    let caption: String
-    let captionWidth: CGFloat
-    private let overlay: Overlay
-
-    init(
-        projectDir: String,
-        relPath: String,
-        fallbackMark: PVMarkKey,
-        caption: String,
-        captionWidth: CGFloat,
-        @ViewBuilder overlay: () -> Overlay
-    ) {
-        self.projectDir = projectDir
-        self.relPath = relPath
-        self.fallbackMark = fallbackMark
-        self.caption = caption
-        self.captionWidth = captionWidth
-        self.overlay = overlay()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            CachedThumbnail(
-                projectDir: projectDir,
-                relPath: relPath,
-                size: CachedThumbnail.pictureCrop,
-                fallbackMark: fallbackMark
-            )
-            .accessibilityHidden(true)
-            .overlay { overlay }
-            Text(verbatim: caption)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(2)
-                .truncationMode(.tail)
-                .frame(maxWidth: captionWidth, alignment: .leading)
-                .help(Text(verbatim: caption))
-                .accessibilityHidden(true)
         }
     }
 }

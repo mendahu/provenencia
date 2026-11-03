@@ -9221,25 +9221,25 @@ enum L10n {
         static let likenessOpenTip = LocalizedStringResource(
             "conclusions.person.likenessOpen",
             defaultValue: "Open citation",
-            comment: "Help text on a likeness tile in a Person's gallery"
+            comment: "Spoken hint of a likeness tile's image button in a Person's gallery"
         )
 
-        /// "Likeness from {Source title}" — the header thumb's spoken label.
+        /// "Likeness from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.
         static func likenessLabel(_ source: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.person.likenessFrom",
                 defaultValue: "Likeness from %@",
-                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title"
+                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title (the header thumb) or citation line (a gallery tile)"
             ), source)
         }
 
-        /// "Likeness from {Source title}. Open citation" — a gallery tile's spoken label.
-        static func likenessTileLabel(_ source: String) -> String {
+        /// "Likeness from {citation line}, portrait" — the spoken label of the portrait's tile.
+        static func likenessTileLabelLead(_ citation: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.person.likenessTile",
-                defaultValue: "Likeness from %@. Open citation",
-                comment: "Accessibility label of a likeness tile in a Person's gallery; the argument is the Source title"
-            ), source)
+                "conclusions.person.likenessTile.lead",
+                defaultValue: "Likeness from %@, portrait",
+                comment: "Accessibility label of the portrait's tile in a Person's gallery; the argument is the citation line"
+            ), citation)
         }
 
         static let familyThisPerson = LocalizedStringResource(
@@ -9584,22 +9584,24 @@ enum L10n {
         static let pictureOpenTip = LocalizedStringResource(
             "conclusions.picture.open",
             defaultValue: "Open citation",
-            comment: "Help text on a picture tile in an Event's or Place's gallery"
+            comment: "Spoken hint of a picture tile's image button in an Event's or Place's gallery, and its tooltip"
         )
 
-        static func pictureTileLabel(_ source: String) -> String {
+        /// "Picture from {citation line}, thumbnail" — the spoken label of the thumbnail's tile.
+        static func pictureTileLabelLead(_ citation: String) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.picture.tile",
-                defaultValue: "Picture from %@. Open citation",
-                comment: "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the Source title"
-            ), source)
+                "conclusions.picture.tile.lead",
+                defaultValue: "Picture from %@, thumbnail",
+                comment: "Accessibility label of the thumbnail's tile in an Event's or Place's gallery; the argument is the citation line"
+            ), citation)
         }
 
+        /// "Picture from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.
         static func pictureFrom(_ source: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.picture.from",
                 defaultValue: "Picture from %@",
-                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title"
+                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title (the header thumb) or citation line (a gallery tile)"
             ), source)
         }
 

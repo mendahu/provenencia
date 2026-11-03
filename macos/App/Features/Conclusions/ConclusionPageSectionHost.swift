@@ -64,6 +64,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     private var loading: some View {
         ProgressView()
             .frame(maxWidth: .infinity)
+            .pvKeepsPageBand()
             .padding(.top, 96)
     }
 
@@ -79,10 +80,12 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
             loading
         case .failed(let message):
             PVCallout(tone: .danger, title: errorTitle, message: message)
+                .pvKeepsPageBand()
                 .accessibilityIdentifier("\(idRoot).error")
         case .content(let value, _):
             if isEmpty(value) {
                 PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
+                    .pvKeepsPageBand()
                     .accessibilityIdentifier("\(idRoot).empty")
             } else {
                 content(value)

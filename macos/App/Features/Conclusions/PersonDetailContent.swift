@@ -48,9 +48,11 @@ struct PersonDetailContent: ConclusionDetailBody {
             title: L10n.Conclusions.likenessesSection,
             openTip: L10n.Conclusions.likenessOpenTip,
             fallbackMark: .subjectPerson,
+            fallbackColors: treatment?.thumbnailColors,
             tiles: ConclusionDetailGallery.tiles(
                 from: detail,
-                tileLabel: L10n.Conclusions.likenessTileLabel,
+                tileLabel: L10n.Conclusions.likenessLabel,
+                leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsPortraitLabel,
                 chosenBody: L10n.Conclusions.toastPortraitChosenBody
             ),
@@ -60,8 +62,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             gallery: gallery,
             noImage: L10n.PersonCard.noLikeness,
             withImage: L10n.Conclusions.personLikenessThumb,
-            leadLabel: L10n.Conclusions.likenessLabel,
-            colors: treatment?.thumbnailColors
+            leadLabel: L10n.Conclusions.likenessLabel
         )
     }
 

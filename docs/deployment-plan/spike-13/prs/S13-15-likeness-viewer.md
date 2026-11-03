@@ -1,11 +1,11 @@
 # S13-15 — Likeness viewer
 
-**Status:** Blocked — on S13-14 (not landed) and on S13-36 (not planned; board S13-D13 drawn, its Record row and ClipboardButton are in the kit) (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, D-9's record table becomes one kit `PVProvenanceRecordRow` built with `PVProvenanceSheetContent.Record(outcome:in:)` from the picture's outcome and the likeness field that holds it in `detail.fields` (S13-14 no longer builds a per-tile row, so this plan adds that lookup in `ConclusionDetailGallery.tiles(from:…)`; [`../provenance-sheet.md`](../provenance-sheet.md) § 5.1), and the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
+**Status:** Blocked — on S13-36 only (S13-14 landed in #701) (not planned; board S13-D13 drawn, its Record row and ClipboardButton are in the kit) (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, D-9's record table becomes one kit `PVProvenanceRecordRow` built with `PVProvenanceSheetContent.Record(outcome:in:)` from the picture's outcome and the likeness field that holds it in `detail.fields` (S13-14 no longer builds a per-tile row, so this plan adds that lookup in `ConclusionDetailGallery.tiles(from:…)`; [`../provenance-sheet.md`](../provenance-sheet.md) § 5.1), and the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
 **Spike / slice:** Spike 13 · Slice 5 — Gallery
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D5](../design/S13-D5-gallery-and-viewer.md), board drawn 2026-11-03 (turn 13) and agreed by the user the same day
 **Board:** Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Gallery.dc.html*, turn 13, viewer frames 13f – 13k, 13o, 13p, 13t – 13x. The implementer may not be able to open it: **Design → macOS** describes the viewer in words and gives every measure
-**Depends on:** S13-36 (not landed: the kit provenance sheet), S13-14 (not landed: `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
+**Depends on:** S13-36 (not landed: the kit provenance sheet), S13-14 (landed [#701](https://github.com/mendahu/provenencia/pull/701): `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
 **Blocks:** —
 **Branch:** `s13-15-likeness-viewer`
 **Runs on:** macOS: every Step and `scripts/check-pr.sh` need Xcode. No Go code or proto change; one Go test's path constant follows the moved Swift file (STEP-2)
@@ -35,7 +35,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 
 **Why now.** The last PR of slice 5; R-30 asks for a built-in viewer, and the user chose stepping without autoplay (2026-11-03).
 
-**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the Citation to opening the viewer. Tiles have no provenance control, no Open citation and no context menu: the viewer's record row is where a likeness's provenance and its Citation link live (user, 2026-11-03). The header and its thumb menu. The Event and Place Pictures (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
+**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the Citation to opening the viewer. Tiles have no provenance control, no Open citation and no context menu: the viewer's record row is where a likeness's provenance and its Citation link live (user, 2026-11-03). The header and its thumb menu. The Event and Place Pictures, which keep the `.small` look of `ConclusionGallerySection` (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
 
 ## 2. User stories
 
@@ -105,7 +105,7 @@ Rows marked *(S13-14)* are S13-14's planned design; re-read them in the code onc
 | Area | Where | Today |
 | --- | --- | --- |
 | Gallery section *(S13-14)* | `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)* in S13-14 `ConclusionGallerySection` | Kind-blind; the tile image is a `Button` (`PVFocusRingButtonStyle`, `pvActivatesOnReturn(when:)`, hint `gallery.openTip`) → `navigation.go(to: tile.location)` (the Citation); no provenance control and no context menu; `@FocusState focusedID` |
-| Tile data *(S13-14)* | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPicture` (`citation: CitationLineDisplay.Parts` with `title`, `titleIsRef`, `line`), `ConclusionDetailGallery` (`fallbackColors`) | Every per-tile string is built by kind in `tiles(from:…)`; the slot's static words are `title`, `openTip`, `LeadCopy` |
+| Tile data *(S13-14)* | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPicture` (`citation: CitationLineDisplay.Parts` with `title`, `titleIsRef`, `detail`, `line`), `ConclusionDetailGallery` (`fallbackColors`) | Every per-tile string is built by kind in `tiles(from:…)`; the slot's static words are `title`, `openTip`, `LeadCopy` |
 | Record rows | `macos/App/Features/Conclusions/ReconciliationRecordRows.swift` `ReconciliationRecordRows(groups:style:provenance:open:widthClass:)`, `SheetHeadings` | The provenance sheet's record rows, with their Source, Citation and Observation links calling `open` |
 | Lead model | `macos/App/Features/Conclusions/ConclusionLeadModel.swift` | `choose(_:copy:)` → `Bool`, `isSaving`, `toast` |
 | Toast | `ConclusionDetailPage.swift` line 317 `.vocabularyToastOverlay($lead.toast, identifier:)` (`Features/CatalogVocabulary/VocabularyChrome.swift`) | Drawn on the page, so a sheet covers it |
@@ -161,7 +161,7 @@ The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 
 
 **Builds on.** The S13-11 sheet pattern; `pvSheet`, `PVPanel`; `ArtifactImageDecode`, `ImageHeaderDecode`, `ThumbnailDecodePolicy.allowedTypes`; `CitationLineDisplay.Parts` (S13-14); `ConclusionLeadModel`; `pvScrollRowIntoView`; `pvAnnounce`.
 **Deletes.** On the Person page, the tile image's `navigation.go(to:)` and its "Open citation" hint (D-12); `likenessOpenTip` if nothing else reads it.
-**Next adds.** The Event and Place redesign gets the viewer by adopting `ConclusionGallerySection` and setting a `ViewerCopy` (`.picture`). A zoom, if wanted, replaces the image area inside `ConclusionPictureViewer`.
+**Next adds.** S13-15 changes only the `.large` look's open action; the `.small` look (Event and Place) keeps opening the Citation. The Event and Place redesign gets the viewer by moving to the `.large` look and setting a `ViewerCopy` (`.picture`). A zoom, if wanted, replaces the image area inside `ConclusionPictureViewer`.
 
 ### Reach
 
@@ -217,7 +217,7 @@ L10n keys *(new)* in `L10n.Conclusions`, used by `ConclusionDetailGallery.Viewer
 - `likenessViewerPrevious` = "Previous likeness", `likenessViewerNext` = "Next likeness", `likenessViewerClose` = "Close the viewer"
 - `likenessViewHint` = "Opens the likeness in the viewer"
 
-Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessTileLabel` keeps S13-14's wording.
+Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessLabel` keeps S13-14's wording.
 
 ## 7. Steps
 
@@ -314,7 +314,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 ## 12. Open questions
 
-None. The board's answers are in D-4, D-6, D-9 and D-11. The plan stays `Blocked` until S13-14 lands and S13-36 is planned and lands; it is refreshed then (its § 4 rows marked *(S13-14)*, the kit names) and reviewed again.
+None. The board's answers are in D-4, D-6, D-9 and D-11. The plan stays `Blocked` until S13-36 is planned and lands; it is refreshed then (its § 4 rows marked *(S13-14)*, the kit names) and reviewed again.
 
 ## 13. PR
 

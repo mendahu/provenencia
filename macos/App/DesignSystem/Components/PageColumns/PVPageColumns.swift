@@ -426,3 +426,13 @@ private struct PVPageColumnsBandLayout: Layout {
     .frame(width: 900, height: 500)
     .background(PVColor.surfacePage)
 }
+
+extension View {
+    /// Keeps a full-width section's empty, loading or error state in the page band: centered at
+    /// `widthContentMax`, as the Regular primary column is, instead of stretching across a Wide
+    /// pane. A no-op at Regular.
+    func pvKeepsPageBand() -> some View {
+        frame(maxWidth: PVSpacing.widthContentMax)
+            .frame(maxWidth: .infinity)
+    }
+}
