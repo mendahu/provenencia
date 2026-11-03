@@ -1254,6 +1254,126 @@ struct CatalogQueryRegistryTests {
         #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
     }
 
+    /// A catalog-wide slot reports one token when the write moved it.
+    @Test func catalogWideSlotsReportOneToken() {
+        #expect(CatalogQueryFollows.list(.vocabulary).ids(in: CatalogWriteEffects(lists: [.vocabulary])) == ["vocabulary"])
+        #expect(CatalogQueryFollows.list(.vocabulary).ids(in: CatalogWriteEffects(lists: [.propertyUsage])).isEmpty)
+        #expect(CatalogQueryFollows.structure.ids(in: CatalogWriteEffects(structure: true)) == ["structure"])
+        #expect(CatalogQueryFollows.structure.ids(in: CatalogWriteEffects(structure: false)).isEmpty)
+        #expect(CatalogQueryFollows.list(.vocabulary).isCatalogWide)
+        #expect(CatalogQueryFollows.structure.isCatalogWide)
+        #expect(!CatalogQueryFollows.touchedHandles.isCatalogWide)
+    }
+
+    /// The Properties workspace follows the lists and structure on its own
+    /// descriptor, and revalidates when a write reports one.
+    @Test func propertiesWorkspaceFollowsListsAndStructure() {
+        #expect(
+            CatalogQueryKey.Kind.propertiesWorkspace.descriptor.refreshes.map(\.follows)
+                == [.list(.vocabulary), .list(.propertyUsage), .structure]
+        )
+        let session = makeSession()
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        session.setQueryValue(key, value: PropertiesSnapshot.empty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(lists: [.vocabulary])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(structure: true)) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(
+            handles: ["e1"],
+            evidenceGraphs: ["g-1"],
+            reads: [
+                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
+                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
+            ],
+            lists: [.propertyUsage],
+            summaryHandles: ["e2"]
+        )) == [key])
+    }
+
+    private struct ListsAndStructureCase: CustomTestStringConvertible, Sendable {
+        let name: String
+        let lists: Set<CatalogList>
+        let structure: Bool
+
+        var testDescription: String { name }
+    }
+
+    nonisolated private static let listsAndStructureCases: [ListsAndStructureCase] = [
+        ListsAndStructureCase(name: "vocabulary", lists: [.vocabulary], structure: false),
+        ListsAndStructureCase(name: "property usage", lists: [.propertyUsage], structure: false),
+        ListsAndStructureCase(name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage], structure: false),
+        ListsAndStructureCase(name: "structure alone", lists: [], structure: true),
+        ListsAndStructureCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true),
+    ]
+
+    @Test(arguments: listsAndStructureCases)
+    private func listsAndStructureRevalidatePropertiesOnce(_ tc: ListsAndStructureCase) async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        #expect(session.visibleKeys.contains(key))
+        let handle: QueryHandle<PropertiesSnapshot> = session.query(key)
+        await waitForQuery(handle)
+        let baseline = store.getPropertiesWorkspaceCalls
+
+        session.apply(CatalogWriteEffects(lists: tc.lists, structure: tc.structure))
+        await session.settleWrites()
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
+    }
+
+    @Test func hiddenPropertiesWorkspaceIsMarkedStaleByAList() {
+        let store = FakeStore()
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        session.setQueryValue(key, value: PropertiesSnapshot.empty)
+        let baseline = store.getPropertiesWorkspaceCalls
+        session.apply(CatalogWriteEffects(lists: [.vocabulary]))
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(key)
+        #expect(handle?.isStale == true)
+        #expect(store.getPropertiesWorkspaceCalls == baseline)
+    }
+
+    /// A Subject delete's effects reload the Properties `usedBy` and the graph
+    /// once each, with no mutation.
+    @Test func propertyUsageAndGraphEffectsReloadEachOnce() async {
+        let store = FakeStore()
+        seedStore(store)
+        let session = makeSession(store: store)
+        session.apply(location: WorkspaceLocation(
+            section: .sources, sourceId: "s1", graphId: "g1", sourceSurface: .graph, title: "Alpha"
+        ))
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        let graphKey = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g1")
+        let properties: QueryHandle<PropertiesSnapshot> = session.query(propertiesKey)
+        let graph: QueryHandle<EvidenceGraphRows> = session.query(graphKey)
+        await waitForQuery(properties)
+        await waitForQuery(graph)
+        let baseline = store.getPropertiesWorkspaceCalls
+
+        session.apply(CatalogWriteEffects(evidenceGraphs: ["g1"], lists: [.propertyUsage]))
+        #expect(properties.isFetching && graph.isFetching)
+        await session.settleWrites()
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
+    }
+
+    /// The sidebar recount is not a cache key: no descriptor follows `counts`,
+    /// and a catalog-wide slot reaches only a `.revalidate` refresh.
+    @Test func noDescriptorFollowsCounts() {
+        for kind in CatalogQueryKey.Kind.allCases {
+            let descriptor = kind.descriptor
+            #expect(!descriptor.refreshes.contains { $0.follows == .list(.counts) }, "\(kind)")
+            for refresh in descriptor.refreshes {
+                if case .run = refresh.action {
+                    #expect(!refresh.follows.isCatalogWide, "\(kind)")
+                }
+            }
+            #expect(!descriptor.patches.contains { $0.follows?.isCatalogWide == true }, "\(kind)")
+        }
+    }
+
     @Test func evidenceGraphsListLoadsFromStore() async throws {
         let store = FakeStore()
         let graph = CatalogEvidenceGraph(

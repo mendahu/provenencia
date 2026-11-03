@@ -129,6 +129,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listSubjectsGraphIDs: [String] = []
     var listSubjectTypesCalls = 0
     var getSourceWorkspaceCalls = 0
+    var getPropertiesWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
     /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
     var citationCountsGraphIDs: [String] = []
@@ -2528,6 +2529,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot {
         return withState {
+            getPropertiesWorkspaceCalls += 1
             markCatalogSessionHeld(projectDir)
             let types = subjectTypesByProject[projectDir] ?? []
             var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]] = [:]

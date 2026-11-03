@@ -374,8 +374,10 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .propertiesWorkspace:
-            // `usedBy` counts Observations per property. Observation writes
-            // report their Source in `WriteEffects`, which invalidates it.
+            // `usedBy` counts Observations per Property: a write that creates,
+            // deletes or re-points an Observation reports `property_usage`, which
+            // this key follows, as it follows a vocabulary label change and graph
+            // structure.
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
@@ -385,6 +387,11 @@ extension CatalogQueryKey.Kind {
                 ],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) },
+                refreshes: [
+                    .applyHiddenPolicyOnAny(follows: .list(.vocabulary)),
+                    .applyHiddenPolicyOnAny(follows: .list(.propertyUsage)),
+                    .applyHiddenPolicyOnAny(follows: .structure),
+                ],
                 load: { key, store in
                     guard case .propertiesWorkspace(let project) = key else {
                         mismatchedCatalogKey(key, .propertiesWorkspace)
