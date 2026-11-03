@@ -75,3 +75,27 @@ Check: `go test -tags fts5 ./core/valuecompare/...` passes.
 Files: `macos/App/DesignSystem/Recipes/PersonCard/PVPersonCard.swift`, `macos/ProvenenciaTests/PVPersonCardTests.swift`, `PersonTimelineLifeline.swift`, `PersonTimelineLifelineTests.swift`, `PersonTimelineSection.swift`.
 Do: `helpText` ends with the role when `role` is set ("Anna Weber\nb. 3 May 1790 · Bremen\nd. 1851\nMother"). `tethers(anchors:spans:visible:)`: `spans: [String: ClosedRange<CGFloat>]` (each anchored item's top to bottom, from placement); a tether is drawn while its item's range meets `visible`, its end y clamped to `visible`.
 Check: a `PVPersonCardTests` case for the role line; a `PersonTimelineLifelineTests` case: an item 2000pt tall whose anchor is above `visible` but whose range meets it → one tether, end y at `visible.minY`.
+
+## Round 1 — fix
+Head `28bd8383`. Gate PASS (orchestrator). F-1 – F-8 done. Deviations: F-2, F-3, F-4 and F-8's tests were written with the code, not run red first; one combined commit `d4c5a272`; `rowPicture` and `rowGap` moved into `PersonTimelinePlacement`.
+Read by the orchestrator: CON-3 **Resolved** (`add-date-value` lists `CompletedYears` and the 1 March rule); CON-4 **Resolved** (`TestShiftYears` "29 February moves to 1 March in a common year"). CI: run 41650651620 on `5ab59d3d` (ship log only) failed `promotealign` `TestLargeSourceBudgets/warm`, a timing budget; the same code passed CI on `ef3d0259` → runner timing, not this PR.
+
+## Round 2 — review
+Reviewers: MNT, UX (each had a Fix-now major). Scope `ef3d0259...28bd8383`.
+- MNT-1, MNT-2 **Resolved**; UX-1 **Resolved** (`chosenScale` kept across height-only changes; `aFixedScaleMovesOnlyRowsBelow`).
+- **MNT-10 · blocker** (= UX-2 Not resolved): the row's width budget is derived twice (`PersonTimelinePlacement.stacksPeople` and the view's `textWidth`/`peopleWidth`) and they disagree: `listWidth` is measured on the outer `HStack` (includes `columnWidth + listGap`, 92pt) and `stacksPeople` counts 3 row gaps where the row has 4, so titles shrink to about 172pt before the people stack; `narrowListStacksPeople` cannot tell; completed.md says 946. Verified: `PersonTimelineSection.swift` measures `listWidth` on the `HStack` whose first child is the 92pt spacer. → F-9.
+- UX-5 (minor, round 1) **Not resolved** in one case: `keepFocus()` guards on `focused`, which SwiftUI sets nil when the focused card leaves the tree. → F-10 (rides along).
+- Minor note: `conclusionsummaries.EventSpan` and `EventAge` lost their last production callers in F-5 → F-10 (rides along).
+
+### Fix plan 2
+
+**F-9 — One owner for the row's widths; the stacking threshold counts every column** (from MNT-10, UX-2)
+Files: `macos/App/Features/Conclusions/PersonTimelinePlacement.swift`, `PersonTimelineSection.swift`, `macos/ProvenenciaTests/PersonTimelinePlacementTests.swift`, `docs/deployment-plan/spike-13/completed.md`.
+Failing test first: `PersonTimelinePlacementTests/narrowListStacksPeople` — at `.regular`, a list (the items' width, after the line column) of 863 → true and 865 → false; at `.wide` the same rule with the 930pt column.
+Do: `PersonTimelinePlacement` owns the row's horizontal measures beside its vertical ones: `static func peopleWidth(_ widthClass: PVWidthClass) -> CGFloat` (one compact column at Regular; three plus two `cardColumnGap` at Wide; `cardColumnGap` moves here), `static func textWidth(itemsWidth: CGFloat, widthClass:) -> CGFloat` = itemsWidth − `gutterWidth` − `rowPicture` − `peopleWidth` − 4 × `rowGap` (gutter|picture, picture|text, text|spacer, spacer|people), and `static func textCap` = `PVSpacing.widthContentMax − columnWidth − listGap − gutterWidth − rowPicture − 2 × rowGap`; `stacksPeople(itemsWidth:widthClass:)` is `textWidth < minimumTextWidth`. The view's `textWidth`/`peopleWidth` read these; `itemsWidth` is measured on `PersonTimelineStack` (the items), not the outer `HStack`. completed.md states the real threshold (an items width under 864pt at Regular).
+Check: the test passes; `rg -n "cardColumnGap|3 \* (rowGap|Self.gap)" macos/App/Features/Conclusions` shows the measures only in `PersonTimelinePlacement.swift`; scripts/check-pr.sh PASS.
+
+**F-10 — Riders** (from UX-5, MNT note)
+Files: `PersonTimelineSection.swift`, `core/database/conclusionsummaries/order.go`, `conclusionsummaries_test.go`.
+Do: `keepFocus()` also runs when `focused` turns nil while `focusedOwner` is set and that card is no longer shown, moving focus to the owner row's title. Delete `EventSpan` and `EventAge` (no production caller after F-5); `TestEventSpan` and `TestEventAge` call `EventSpanAndAge` (with `PlaceBirth`) and keep their cases.
+Check: `rg -n "func EventSpan\(|func EventAge\(" core` prints nothing; Go tests pass; scripts/check-pr.sh PASS.
