@@ -152,6 +152,24 @@ func subjectTypeIDByKey(t *testing.T, dir, key string) string {
 	return ""
 }
 
+// bindingIDsForType is the Property ids bound to the subject type, in order,
+// read through the Properties workspace.
+func bindingIDsForType(t *testing.T, dir, typeID string) []string {
+	t.Helper()
+	var resp engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &resp)
+	var ids []string
+	for _, g := range resp.Groups {
+		if g.GetSubjectTypeId() != typeID {
+			continue
+		}
+		for _, p := range g.Properties {
+			ids = append(ids, p.GetProperty().GetId())
+		}
+	}
+	return ids
+}
+
 // pngSource is a Source whose one Artifact holds an ingested PNG.
 type pngSource struct {
 	dir, userID, sourceID, artifactID, fileID string

@@ -196,20 +196,7 @@ func TestGetPropertiesWorkspace(t *testing.T) {
 
 func TestReorderSubjectTypeProperties(t *testing.T) {
 	dir, userID, _, personID := subjectFixture(t)
-	list := func() []string {
-		var resp engine.GetPropertiesWorkspaceResponse
-		mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &resp)
-		var ids []string
-		for _, g := range resp.Groups {
-			if g.GetSubjectTypeId() != personID {
-				continue
-			}
-			for _, p := range g.Properties {
-				ids = append(ids, p.GetProperty().GetId())
-			}
-		}
-		return ids
-	}
+	list := func() []string { return bindingIDsForType(t, dir, personID) }
 	ids := list()
 	if len(ids) < 3 {
 		t.Fatalf("person binds %d", len(ids))

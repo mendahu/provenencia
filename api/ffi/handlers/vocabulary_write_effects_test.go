@@ -82,16 +82,7 @@ func TestVocabularyWritesReturnEffects(t *testing.T) {
 		mustRPC(t, AssignSubjectTypeProperty, &engine.AssignSubjectTypePropertyRequest{ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyId: textID}, &assigned)
 		want(t, assigned.GetEffects(), property)
 
-		var workspace engine.GetPropertiesWorkspaceResponse
-		mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &workspace)
-		var ids []string
-		for _, g := range workspace.Groups {
-			if g.GetSubjectTypeId() == personID {
-				for _, p := range g.Properties {
-					ids = append(ids, p.GetProperty().GetId())
-				}
-			}
-		}
+		ids := bindingIDsForType(t, dir, personID)
 		slices.Reverse(ids)
 		var reordered engine.ReorderSubjectTypePropertiesResponse
 		mustRPC(t, ReorderSubjectTypeProperties, &engine.ReorderSubjectTypePropertiesRequest{ProjectDir: dir, UserId: userID, SubjectTypeId: personID, PropertyIds: ids}, &reordered)
