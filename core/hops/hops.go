@@ -67,11 +67,11 @@ var (
 	EventsAtPlace       = PlacesOfEvent.Reverse()
 	// ParentsOfPlace: from = part, to = whole (part_of).
 	ParentsOfPlace = MustHop("place_relationship", "from", "to",
-		&TermFilter{PropertyKey: connectrules.DisambiguationPlaceRelationshipType, TermKey: "part_of"})
+		&TermFilter{PropertyKey: connectrules.DisambiguationPlaceRelationshipType, TermKey: string(vocabkey.TermPartOf)})
 	PartsOfPlace = ParentsOfPlace.Reverse()
 	// SuccessorsOfPlace: from = predecessor, to = successor (succeeded_by).
 	SuccessorsOfPlace = MustHop("place_relationship", "from", "to",
-		&TermFilter{PropertyKey: connectrules.DisambiguationPlaceRelationshipType, TermKey: "succeeded_by"})
+		&TermFilter{PropertyKey: connectrules.DisambiguationPlaceRelationshipType, TermKey: string(vocabkey.TermSucceededBy)})
 	PredecessorsOfPlace = SuccessorsOfPlace.Reverse()
 )
 
