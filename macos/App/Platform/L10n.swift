@@ -9221,7 +9221,7 @@ enum L10n {
         static let likenessOpenTip = LocalizedStringResource(
             "conclusions.person.likenessOpen",
             defaultValue: "Open citation",
-            comment: "Help text on a likeness tile in a Person's gallery"
+            comment: "Spoken hint of a likeness tile's image button in a Person's gallery"
         )
 
         /// "Likeness from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.
@@ -9584,7 +9584,7 @@ enum L10n {
         static let pictureOpenTip = LocalizedStringResource(
             "conclusions.picture.open",
             defaultValue: "Open citation",
-            comment: "Help text on a picture tile in an Event's or Place's gallery"
+            comment: "Spoken hint of a picture tile's image button in an Event's or Place's gallery, and its tooltip"
         )
 
         /// "Picture from {citation line}, thumbnail" — the spoken label of the thumbnail's tile.

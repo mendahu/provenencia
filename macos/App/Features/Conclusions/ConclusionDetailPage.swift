@@ -81,7 +81,7 @@ struct ConclusionDetailThumbnail: Equatable {
     }
 }
 
-/// One picture tile in a page's gallery: the image, its Source's title, the composer location its
+/// One picture tile in a page's gallery: the image, its citation, the composer location its
 /// Citation opens at, and the Strings the section and the lead model speak for it (S10-35, S14-02).
 struct ConclusionDetailPicture: Equatable, Identifiable {
     var id: String
