@@ -76,6 +76,8 @@ struct PersonTimelineLifeline: Equatable {
     private(set) var stubs: [ClosedRange<CGFloat>] = []
     private(set) var ticks: [Tick] = []
     private var targets: [Target] = []
+    /// Each mark by its item id.
+    private var marksByID: [String: Mark] = [:]
 
     init(content: PersonTimelineContent, itemFrames: [String: CGRect]) {
         let items = content.items
@@ -196,7 +198,8 @@ struct PersonTimelineLifeline: Equatable {
             ticks.sort { $0.y < $1.y }
         }
 
-        targets = Self.targets(items, pointY: { id in marks.first { $0.id == id }?.pointY })
+        marksByID = Dictionary(marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        targets = Self.targets(items, pointY: { marksByID[$0]?.pointY })
     }
 
     /// The tethers of the rows whose frame meets `visible`, in the section's
@@ -214,7 +217,7 @@ struct PersonTimelineLifeline: Equatable {
     }
 
     /// The marks of the rows with a point, and which of them is where.
-    func mark(_ id: String) -> Mark? { marks.first { $0.id == id } }
+    func mark(_ id: String) -> Mark? { marksByID[id] }
 
     // MARK: - Pieces
 
