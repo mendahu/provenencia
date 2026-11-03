@@ -66,3 +66,21 @@ Logged. D-11 keeps `WaitReason` as the page's three wait words.
 
 ### X-9 · nit · "1 connections" and the audit's B-23 text
 **Answer:** Fixed — two Out rows: the plural is the existing format string; the audit text stays as the record.
+
+## Round 2
+
+### X-10 · blocker · The AC-3.1 / STEP-7 / manual-check `rg` cannot return "no hit"
+`func resolve(` also matches `core/database/effects/resolve.go`, `EvidenceSubjectKindStyle.swift`, `PVField.swift`, `PlaceRegistry.swift`.
+**Answer:** Fixed — AC-3.1, STEP-7, manual check 5 and the DoD sweep use `rg "placeRelationshipWouldCycle|keysOnType" core` and `rg "EndResolution|func resolve\(_ subjectID|alreadyPromoted" macos/App/Features/Promote`.
+
+### X-11 · major · STEP-4 misses `export_test.go`; direct `Propose` calls
+**Answer:** Fixed — STEP-4 lists `export_test.go` and says which calls gain which `nil`.
+
+### X-12 · minor · T-5's parity cases have no fixture
+**Answer:** Fixed — the type-change case uses `observationstest.UpdateObservation`, with a mismatch as §11's stop. The merged-handle case is dropped with evidence: no app write sets `merged_into_id` (`rg "SET merged_into_id" core` finds only `graphcachetest`); §6 Edges says so.
+
+### X-13 · minor · D-3 moves the `property_terms` read ahead of the wait and self-link rungs
+**Answer:** Fixed — D-3: a term id with no `property_terms` row reads as no term, not an error.
+
+### X-14 · minor · Waiting-end order differs between filer and proposal
+**Answer:** Fixed — one line in §6 Edges: display only; both leave the bridge unfiled.
