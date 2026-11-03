@@ -96,7 +96,7 @@ Reviewers: UX, SEC+PRF (each had a Fix-now major). Scope `dc2e0c86...15c7abf4`. 
 - New blockers: none. Outside-lens note (→ MNT, minor): card ids `"\(eventId)-\(personId)"` share the focus namespace with row ids; a crafted id could collide, the worst case focus on the wrong control → Follow-up.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: Family's "Show N more" focus gap (UX-2's Family half); `EvidenceBridgeEdgeSummary.productKey(of:)` repeats the product-term check (planning M-34); card and row ids share one focus namespace (round 2 SEC+PRF note); nits CON-2, MNT-5 – MNT-10, UX-5, UX-6 · to user: — · CON miss: none
+Gate PASS · CI green (run 41563143394 on `d87045a1`, after one CI fix round: F-10) · open: none · follow-ups: Family's "Show N more" focus gap (UX-2's Family half); `EvidenceBridgeEdgeSummary.productKey(of:)` repeats the product-term check (planning M-34); card and row ids share one focus namespace (round 2 SEC+PRF note); nits CON-2, MNT-5 – MNT-10, UX-5, UX-6 · to user: — · CON miss: none
 
 ## CI — fix
 CI `test` FAIL on `233f1ebf` (run 41562001555): the CI compiler could not type-check `PersonTimelineLifelineTests.swift:44` (`let perYear = 2730 / (1880 + 265.0 / 365 + 1.0 / 365 - (1817 + 70.0 / 365))`) in reasonable time; the build failed. Local gate PASS (faster machine). The literal also still reads 1880 over 365, against F-9.
@@ -105,3 +105,5 @@ CI `test` FAIL on `233f1ebf` (run 41562001555): the CI compiler could not type-c
 Files: `macos/ProvenenciaTests/PersonTimelineLifelineTests.swift`.
 Do: replace the expression with typed steps read from the fixture, not re-derived: `let burialEnd: Double = 1880.7267759562842` and `let birthStart: Double = 1817.1917808219177` (the fixture's literals for events 11 and 1, as `PersonTimelinePreviewData` holds them), `let years: Double = burialEnd - birthStart`, `let perYear: Double = 2730 / years`. Scan the test files this PR adds for any other untyped multi-literal arithmetic of the same shape and type it the same way.
 Check: `rg -n "\d+\.0 / 365" macos/ProvenenciaTests/PersonTimeline*` prints nothing; scripts/check-pr.sh PASS; CI green.
+
+Head `d87045a1`. Gate PASS. F-10 done (the span named `span`: `years` is taken on the next line). CI green: `localizable`, `test` (run 41563143394).
