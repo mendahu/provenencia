@@ -1,7 +1,7 @@
 # Review — S13-15 Likeness viewer
 
-**Verdict:** Fits with changes — Not ready (round 1), every finding Fixed. The plan stays `Blocked — on board S13-D5 and on S13-14`; it is refreshed and reviewed again after both.
-**Rounds:** 1 (round 2 below). **Reviewers:** maintainability (Opus), executability (Sonnet). One reviewer per lens covered S13-D5, S13-14 and S13-15 together.
+**Verdict:** Fits with changes — Not ready (rounds 1 and 2), every finding Fixed; the next review runs on the refresh after the board and S13-14. The plan stays `Blocked — on board S13-D5 and on S13-14`; it is refreshed and reviewed again after both.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet). One reviewer per lens covered S13-D5, S13-14 and S13-15 together.
 
 ## To user
 None.
@@ -64,4 +64,23 @@ Findings are abridged; the reviewers' full text was returned to the writer.
 **Answer:** Fixed. AC-3.3 now closes the viewer, then presses Back and restores the project.
 
 ## Round 2
-Pending: see the end of this file after it runs.
+
+Findings are abridged; the reviewers' full text was returned to the writer.
+
+### X2-1 · blocker · D-11 names a symbol and a host that do not exist
+**Answer:** Fixed. D-11 uses `.pvScrollsRowIntoView(focusedID, whenRequested: AnyHashable(closeRequest))` on the `LazyVGrid`, with `.id(tile.id)` on each tile, because `PVPageColumns` owns the scroll view.
+
+### M2-4 · major · Escape and a click outside skip the focus return
+**Answer:** Fixed. D-11 runs the focus return in `.onChange(of: viewing)` when the item goes from set to nil, so every close route reaches it. D-1 and D-10 close through `PVSheetClose`; the `close()` closure is gone.
+
+### X2-2, M2-6 · blocker · `ViewerCopy.label` breaks `Equatable`
+**Answer:** Fixed. D-12: `ViewerCopy` holds only `LocalizedStringResource`s, and `label(index:count:line:)` is a method over `labelFormat`. The new key is a resource.
+
+### X2-3, M2-5 · major · The frame is fixed too late; a second header path; rotation; "one decode"
+**Answer:** Fixed. D-5 adds `ArtifactImageDecode.declaredSize(url:typeIdentifiers:)`, split from `decode`'s own sniff, header and size check, with the edges turned for orientations 5 – 8. The frame is published between two detached tasks (D-6), and T-5 *(new)* pins the turned size. D-5 now says "at most one result is shown"; § Scale gives the bound for a crafted file (64 MP).
+
+### X2-4 · major · The item has no home; T-3 has no step and passes trivially
+**Answer:** Fixed. The item lives in `ConclusionPictureViewer.swift` with `resolved(in:)`. STEP-1 builds it and runs T-3, which now tests resolution and the constant id.
+
+### X2-8 · minor · The `macos-client.mdc` edit is underspecified
+**Answer:** Fixed. STEP-2 gives the exact clause to add to line 21.

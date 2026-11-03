@@ -1,7 +1,7 @@
 # Review — S13-14 Gallery section
 
-**Verdict:** Fits with changes — Ready with changes (round 1). The plan stays `Blocked — on board S13-D5`; it is reviewed again when the board's answers are copied in.
-**Rounds:** 1 (round 2 below). **Reviewers:** maintainability (Opus), executability (Sonnet). One reviewer per lens covered S13-D5, S13-14 and S13-15 together.
+**Verdict:** Fits with changes — Ready with changes (rounds 1 and 2), every finding answered. The plan stays `Blocked — on board S13-D5`; it is reviewed again when the board's answers are copied in.
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet). One reviewer per lens covered S13-D5, S13-14 and S13-15 together.
 
 ## To user
 None.
@@ -58,4 +58,23 @@ Findings are abridged; the reviewers' full text was returned to the writer.
 **Answer:** Fixed (this file).
 
 ## Round 2
-Pending: see the end of this file after it runs.
+
+Findings are abridged; the reviewers' full text was returned to the writer.
+
+### M2-1 · major · `sourceTitle` stays beside `citation.title`
+**Answer:** Fixed. D-3 deletes `ConclusionDetailPicture.sourceTitle`. `ConclusionDetailThumbnail.leading` and the old section's caption read `citation.title`. Added to § 6 Deletes; T-4 is updated.
+
+### M2-2 · major · The picture keys keep ". Open citation" while the new section speaks it as a hint
+**Answer:** Fixed. Both picture keys and `likenessTileLabel` drop ". Open citation", and both sections put it in the image's hint (D-9, D-11). AC-1.4 and T-5 quote the new strings.
+
+### M2-3 · minor · Two keys with the same wording
+**Answer:** Fixed. Both keys stay, since their arguments differ (the citation line and the Source title); `likenessTileLabel`'s comment says so (§ Strings).
+
+### X2-5 · major · The new tile's caption text is not stated
+**Answer:** Fixed. D-9 and § 6 macOS: `caption: tile.citation.title` in both sections.
+
+### X2-6 · minor · The tile label is on two elements
+**Answer:** Fixed. D-11: only the image button carries the label; the container is unlabelled `.contain`.
+
+### X2-7 · minor · T-6 has no step; the menu's parameters; a short table row
+**Answer:** Fixed. STEP-1 lists T-6; D-5 gives `pvRightClickMenu(title: nil, accessibilityIdentifier: "\(tileID).menu", items:)`; the Tile button row has its third cell.
