@@ -17,7 +17,7 @@ enum CatalogMutation: Sendable, Equatable {
 
     /// A field was relabelled or deleted. Each Source page restates the
     /// field's derived rows, which `source_vocabulary` cannot tell from a field
-    /// create, so these two name the Source pages. They carry the field's id.
+    /// create, so these two name the Source pages.
     case updatedMetadataField(id: String)
     case deletedMetadataField(id: String)
 

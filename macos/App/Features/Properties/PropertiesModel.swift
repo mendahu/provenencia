@@ -472,8 +472,9 @@ final class PropertiesModel {
                 description: draft.description,
                 cardinality: draft.cardinality
             )
-            // Each write's effects apply as it lands: a failed bind leaves the
-            // created Property shown, with `formError` set.
+            // Each write's effects apply as it lands: a failed bind keeps the
+            // dialog open with `formError` set, and the created Property is in
+            // the list behind it.
             session.apply(createdEffects)
             for typeID in draft.bindTypeIDs {
                 let boundEffects = try await store.assignSubjectTypeProperty(

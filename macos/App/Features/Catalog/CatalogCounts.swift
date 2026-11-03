@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class CatalogCounts {
-    /// Absent until a refresh or publish succeeds for that section —
+    /// Absent until a refresh succeeds for that section —
     /// the sidebar treats absence as "no badge" rather than `0`.
     private(set) var sources: Int?
     /// Unmerged Person, Event, and Place handles.
