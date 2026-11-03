@@ -97,3 +97,11 @@ Reviewers: UX, SEC+PRF (each had a Fix-now major). Scope `dc2e0c86...15c7abf4`. 
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: Family's "Show N more" focus gap (UX-2's Family half); `EvidenceBridgeEdgeSummary.productKey(of:)` repeats the product-term check (planning M-34); card and row ids share one focus namespace (round 2 SEC+PRF note); nits CON-2, MNT-5 – MNT-10, UX-5, UX-6 · to user: — · CON miss: none
+
+## CI — fix
+CI `test` FAIL on `233f1ebf` (run 41562001555): the CI compiler could not type-check `PersonTimelineLifelineTests.swift:44` (`let perYear = 2730 / (1880 + 265.0 / 365 + 1.0 / 365 - (1817 + 70.0 / 365))`) in reasonable time; the build failed. Local gate PASS (faster machine). The literal also still reads 1880 over 365, against F-9.
+
+**F-10 — Test arithmetic the CI compiler can type-check** (CI gate failure)
+Files: `macos/ProvenenciaTests/PersonTimelineLifelineTests.swift`.
+Do: replace the expression with typed steps read from the fixture, not re-derived: `let burialEnd: Double = 1880.7267759562842` and `let birthStart: Double = 1817.1917808219177` (the fixture's literals for events 11 and 1, as `PersonTimelinePreviewData` holds them), `let years: Double = burialEnd - birthStart`, `let perYear: Double = 2730 / years`. Scan the test files this PR adds for any other untyped multi-literal arithmetic of the same shape and type it the same way.
+Check: `rg -n "\d+\.0 / 365" macos/ProvenenciaTests/PersonTimeline*` prints nothing; scripts/check-pr.sh PASS; CI green.
