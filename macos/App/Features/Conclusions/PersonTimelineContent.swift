@@ -88,7 +88,14 @@ struct PersonTimelineContent: Equatable {
 
     private(set) var items: [Item] = []
     private(set) var allSpans: [Span] = []
+    /// The first item each fold would reveal, folded or not: a row's id, or a
+    /// participant card's.
+    private var revealed: [Fold: String] = [:]
     let isEmpty: Bool
+
+    /// The id of the first item that unfolding `fold` adds, for the focus to land
+    /// on; nil when the list has nothing to fold.
+    func firstRevealed(by fold: Fold) -> String? { revealed[fold] }
 
     init(
         timeline: CatalogPersonTimeline,
@@ -111,6 +118,10 @@ struct PersonTimelineContent: Equatable {
                 row: nil,
                 spokenLabel: L10n.string(kind == .birth ? L10n.Conclusions.timelineBirthUnknown : L10n.Conclusions.timelineDeathUnknown)
             )
+        }
+        for event in timeline.events where event.participants.count > Self.participantFoldLimit {
+            revealed[.participants(eventId: event.event.id)] =
+                Self.participantLinkID(eventId: event.event.id, personId: event.participants[Self.participantFoldLimit].person.id)
         }
         let birth = marker(.birth, timeline.birth)
         let death = marker(.death, timeline.death)
@@ -150,6 +161,7 @@ struct PersonTimelineContent: Equatable {
 
         // Folds: the dated rows before the death marker, a recorded birth's row
         // among them; a birth placeholder is never folded.
+        revealed[.dated] = before.filter { $0.eventRow != nil }.dropFirst(Self.eventFoldLimit).first?.id
         if !expanded.contains(.dated) {
             var shown = 0
             var folded: [Item] = []
@@ -170,6 +182,7 @@ struct PersonTimelineContent: Equatable {
             before = folded
         }
 
+        revealed[.undated] = undated.dropFirst(Self.eventFoldLimit).first?.id
         var undatedItems: [Item] = []
         if !undated.isEmpty {
             undatedItems.append(.undatedHeader)
@@ -180,6 +193,8 @@ struct PersonTimelineContent: Equatable {
 
         items = before + undatedItems + [dated[deathAt]] + after
     }
+
+    private static func participantLinkID(eventId: String, personId: String) -> String { "\(eventId)-\(personId)" }
 
     private static func row(
         _ event: CatalogPersonEvent,
@@ -212,7 +227,7 @@ struct PersonTimelineContent: Equatable {
                     PropertyTermDisplay.name($0, propertyKey: SeededPropertyKey.role)
                 }
                 return PersonCardLink(
-                    id: "\(summary.id)-\(participant.person.id)",
+                    id: participantLinkID(eventId: summary.id, personId: participant.person.id),
                     content: PVPersonCardContent(
                         summary: participant.person,
                         role: L10n.DesignSystem.spokenJoin(names),

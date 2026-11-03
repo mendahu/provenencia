@@ -50,6 +50,8 @@ struct PersonTimelineList: View {
     @State private var lifeline = PersonTimelineLifeline(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), itemFrames: [:])
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
+    /// The title button or card with the keyboard: a row's event id or a card's id.
+    @FocusState private var focused: String?
 
     private nonisolated static let space = "persons.detail.timeline"
 
@@ -64,7 +66,8 @@ struct PersonTimelineList: View {
                         isLast: item.id == content.items.last?.id,
                         projectDir: projectDir,
                         open: open,
-                        expand: expand
+                        expand: unfold,
+                        focused: $focused
                     )
                     .id(item.id)
                     .accessibilityIdentifier("persons.detail.timeline.item.\(item.id)")
@@ -97,6 +100,14 @@ struct PersonTimelineList: View {
         if next != lifeline { lifeline = next }
     }
 
+    /// "Show N more": the button is gone once the list grows, so the keyboard
+    /// moves to the first item it added.
+    private func unfold(_ fold: PersonTimelineContent.Fold) {
+        let revealed = content.firstRevealed(by: fold)
+        expand(fold)
+        Task { @MainActor in focused = revealed }
+    }
+
     /// A click on a point or a cap: the list scrolls the item to the top, again on
     /// a second click on the same point. A folded row's point unfolds the list first.
     private func select(_ id: String) {
@@ -114,6 +125,7 @@ private struct PersonTimelineItemView: View {
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
+    let focused: FocusState<String?>.Binding
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -127,10 +139,10 @@ private struct PersonTimelineItemView: View {
     private var content: some View {
         switch item {
         case .row(let row):
-            PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand)
+            PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand, focused: focused)
         case .marker(let marker):
             if let row = marker.row {
-                PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand)
+                PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand, focused: focused)
             } else {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
@@ -159,6 +171,7 @@ private struct PersonTimelineEventRow: View {
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
+    let focused: FocusState<String?>.Binding
 
     private static let picture: CGFloat = 72
     private static let gap: CGFloat = 16
@@ -182,7 +195,8 @@ private struct PersonTimelineEventRow: View {
                             .multilineTextAlignment(.leading)
                     }
                     .buttonStyle(PVFocusRingButtonStyle())
-                    .pvActivatesOnReturn { open(row.location) }
+                    .focused(focused, equals: row.id)
+                    .pvActivatesOnReturn(when: focused.wrappedValue == row.id) { open(row.location) }
                     .accessibilityIdentifier("persons.detail.timeline.title.\(row.id)")
                     EventSecondaryLine(content: row.line, dateSize: PVTypeScale.body)
                 }
@@ -214,6 +228,7 @@ private struct PersonTimelineEventRow: View {
                                     if let location = link.location { open(location) }
                                 }
                                 .frame(height: PVTileCardSize.compact.height)
+                                .focused(focused, equals: link.id)
                                 .accessibilityIdentifier("persons.detail.timeline.tile.\(link.id)")
                             }
                         }

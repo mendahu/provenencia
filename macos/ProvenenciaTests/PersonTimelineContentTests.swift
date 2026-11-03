@@ -86,6 +86,15 @@ struct PersonTimelineContentTests {
         #expect(all.items.compactMap(\.eventRow).first?.participants.prefix(6).map(\.content.role)
             == ["Child", "Child", "Child", "Child", "Witness", "Informant"])
 
+        // The first item a fold reveals, for the focus after "Show N more".
+        let datedRows = open.items.compactMap(\.eventRow).prefix(51).map(\.id)
+        #expect(lise.firstRevealed(by: .dated) == datedRows.last)
+        #expect(open.firstRevealed(by: .dated) == datedRows.last)
+        #expect(lise.firstRevealed(by: .undated) == nil)
+        #expect(large.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[15].id)
+        #expect(all.firstRevealed(by: .participants(eventId: "big")) == large.firstRevealed(by: .participants(eventId: "big")))
+        #expect(large.firstRevealed(by: .participants(eventId: "other")) == nil)
+
         // One person on two events: distinct ids.
         let johann = content(Data.johann)
         let sophie = johann.items.compactMap(\.eventRow).flatMap(\.participants).filter { $0.content.title.text == "Sophie Brandt" }
@@ -97,6 +106,7 @@ struct PersonTimelineContentTests {
         let undated = content(timeline)
         #expect(undated.items.contains(.more(.undated, count: 2)))
         #expect(content(timeline, expanded: [.undated]).items.compactMap(\.eventRow).count == 52)
+        #expect(undated.firstRevealed(by: .undated) == "u50")
     }
 
     @Test func rolesLocationsAndSpoken() {
