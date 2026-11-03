@@ -1,7 +1,7 @@
 # Ship log — S13-14 Gallery section
 
 **Plan:** [`S13-14-gallery-section.md`](S13-14-gallery-section.md) · **Branch:** `s13-14-gallery-section` · **PR:** #701
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `564a389c`. Gate PASS (orchestrator re-ran). Report: deviations: `GalleryTileLook` is top-level, not nested in the generic `GalleryTileView` (nested forced `Overlay == EmptyView`); `EventDetailTests` and `PlaceDetailTests` updated to AC-1.4; old section gained only the image hint (D-11), not Return; T-2 loop change landed in the STEP-3 commit. Manual check, frames, VoiceOver not run (no GUI).
@@ -121,5 +121,7 @@ Failing test first: none, view focus.
 Do: `applyPending()` goes through `FocusClaim.claim($focused, stop)` instead of a bare write. In `.onChange(of: focused)` a non-nil stop clears `pendingFocus` only when it differs from the pending stop; the pending stop itself stays until the expiry, so the tile's `.onAppear` can still claim it. At the expiry, also clear `lastFocused` when `focused` is nil. Fix the comment that says a landing ends it.
 Check: `grep -n 'focused = ' ConclusionGallerySection.swift` prints only the F-5 return; scripts/check-pr.sh PASS.
 
+Head `79a7c522`. Gate PASS (orchestrator re-ran). F-10 done. UX-1: fixed in code; whether a tile off the realized set keeps the keyboard is unverified until § 10 step 6. The implementer saw one failure of `PVWidthClassTests.aFilledHostMeasuresTheSpaceNotTheChild()` that passed unchanged on the next run; the test covers nothing here. Logged as a flake.
+
 ## Result
-Gate PASS (`c4bef1cf`, docs since) · CI not run (draft) · open: UX-1 · follow-ups: SEC-1 · to user: UX-1 · CON miss: UX-O1
+Gate PASS · CI pending · open: none (UX-1 fixed, unverified in the app; § 10 step 6) · follow-ups: SEC-1, the `.adaptive` reflow away from 1600, the `PVWidthClassTests` flake, the 400ms click window · to user: UX-1 answered (fix now, 2026-11-03) · CON miss: UX-O1
