@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -186,15 +187,19 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	}
 	rows = dropUnreadEvents(rows, summaries)
 	me, haveMe := summaries.Person(entityID)
+	var birthDate *datevalue.Value
+	if haveMe {
+		birthDate = me.Birth.Date
+	}
+	placedBirth, hasBirth := conclusionsummaries.PlaceBirth(birthDate)
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
-		if span, ok := conclusionsummaries.EventSpan(h); ok {
+		span, dated, age, aged := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
+		if dated {
 			rows[i].Span = &span
 		}
-		if haveMe && me.Birth.Date != nil {
-			if age, ok := conclusionsummaries.EventAge(h, me.Birth.Date); ok {
-				rows[i].Age = &age
-			}
+		if aged {
+			rows[i].Age = &age
 		}
 	}
 	for i := range rows {

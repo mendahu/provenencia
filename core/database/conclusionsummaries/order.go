@@ -50,22 +50,43 @@ func EventSpan(h EventSummary) (TimelineSpan, bool) {
 	return d.span, d.key.ok
 }
 
+// PlacedBirth is a birth date placed once, to age many events by.
+type PlacedBirth struct{ placed placedDate }
+
+// PlaceBirth places a person's birth date; ok is false when it has no place.
+func PlaceBirth(birth *datevalue.Value) (PlacedBirth, bool) {
+	p, ok := datePlace(birth)
+	return PlacedBirth{placed: p}, ok
+}
+
+// EventSpanAndAge is EventSpan and EventAge from one placing of the event's
+// date. aged is false when hasBirth is false, and in every case EventAge gives.
+func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span TimelineSpan, dated bool, age AgeRange, aged bool) {
+	ev := eventDating(h.Date, h.StartDate)
+	span, dated = ev.span, ev.key.ok
+	if !hasBirth {
+		return span, dated, AgeRange{}, false
+	}
+	b := birth.placed
+	if !dated || ev.first.Open || ev.last.Open || b.first.Open || b.last.Open {
+		return span, dated, AgeRange{}, false
+	}
+	hi := datevalue.CompletedYears(b.first.Lo, ev.last.Hi)
+	if hi < 0 {
+		return span, dated, AgeRange{}, false
+	}
+	return span, dated, AgeRange{Lo: max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo)), Hi: hi}, true
+}
+
 // EventAge is the age a person born on birth had at h, in whole years, as a
 // range: Hi counts from the earliest birth day to the latest day of the event,
 // Lo from the latest birth day to the earliest day of the event. ok is false
 // when the event or the birth has no place, when any of the four ends is open
 // (BEF, AFT, a one-sided range), or when the event is before the birth.
 func EventAge(h EventSummary, birth *datevalue.Value) (AgeRange, bool) {
-	ev := eventDating(h.Date, h.StartDate)
-	b, ok := datePlace(birth)
-	if !ok || !ev.key.ok || ev.first.Open || ev.last.Open || b.first.Open || b.last.Open {
-		return AgeRange{}, false
-	}
-	hi := datevalue.CompletedYears(b.first.Lo, ev.last.Hi)
-	if hi < 0 {
-		return AgeRange{}, false
-	}
-	return AgeRange{Lo: max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo)), Hi: hi}, true
+	b, ok := PlaceBirth(birth)
+	_, _, age, aged := EventSpanAndAge(h, b, ok)
+	return age, aged
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,
