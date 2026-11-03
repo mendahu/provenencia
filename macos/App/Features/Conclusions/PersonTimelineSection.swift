@@ -135,7 +135,6 @@ private struct PersonTimelineItemView: View {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
                     .foregroundStyle(PVColor.textMuted)
-                    .accessibilityLabel(marker.spokenLabel)
             }
         case .undatedHeader:
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
@@ -176,6 +175,7 @@ private struct PersonTimelineEventRow: View {
                     fallbackLabel: L10n.Conclusions.eventPictureThumb,
                     colors: nil
                 )
+                .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Button { open(row.location) } label: {
                         PVTitleText(row.title, style: .display(compact: true), lineLimit: 2)
@@ -192,6 +192,7 @@ private struct PersonTimelineEventRow: View {
                         PVBadge(text: role.text, tone: .neutral, subtle: role.isSubject)
                     }
                 }
+                .accessibilityHidden(true)
             }
             .frame(maxWidth: PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth, alignment: .leading)
             if !row.participants.isEmpty {
