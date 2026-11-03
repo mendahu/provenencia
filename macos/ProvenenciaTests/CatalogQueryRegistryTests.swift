@@ -889,13 +889,10 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
-        // The effects' graphs and handles invalidate nothing here: each kind's
-        // `refreshes` follow them (`WorkspaceSession.revalidatedKeys`), and a
-        // key they and the mutation both name is revalidated once per `apply`.
+        // A mutation names no graph key: the graph is reached through each kind's
+        // `refreshes` (pinned by `propertyUsageAndGraphEffectsReloadEachOnce`).
         let updated = registry.invalidations(by: .updatedProperty, project: project)
         #expect(!updated.contains(.key(.evidenceGraph(project: project, graphId: "g-1"))))
-        // A Subject delete reports its handles, its graph and `property_usage` in
-        // `WriteEffects`, so it names no mutation.
         // Keyed reads invalidate nothing: each kind's `refresh` follows them.
         #expect(CatalogQueryKey.Kind.citationCounts.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
         #expect(CatalogQueryKey.Kind.citationsByArtifact.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
