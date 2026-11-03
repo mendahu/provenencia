@@ -15,7 +15,13 @@ struct ConclusionGallerySection: View {
     let lead: ConclusionLeadModel
 
     @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(\.pvWidthClass) private var widthClass
     @FocusState private var focusedID: String?
+    /// The last tile that had the keyboard, kept to the next main-actor turn after it goes, so a width
+    /// change in the same update still sees it while a click elsewhere clears it.
+    @State private var lastFocused: String?
+    @State private var scrollTarget: String?
+    @State private var scrollRequest = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -31,12 +37,36 @@ struct ConclusionGallerySection: View {
             ) {
                 ForEach(gallery.tiles) { tile in
                     tileView(tile)
+                        .id(tile.id)
                 }
             }
+            .pvScrollsRowIntoView(scrollTarget, whenRequested: scrollRequest)
             .padding(.top, PVSpacing.space6)
         }
+        .onChange(of: focusedID) {
+            if let id = focusedID {
+                lastFocused = id
+            } else if lastFocused != nil {
+                Task { @MainActor in
+                    if focusedID == nil { lastFocused = nil }
+                }
+            }
+        }
+        .onChange(of: widthClass) { keepFocus() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string(gallery.title))
+    }
+
+    /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile: scroll it back
+    /// into view, then give it the keyboard again once it exists.
+    private func keepFocus() {
+        guard let id = focusedID ?? lastFocused else { return }
+        scrollTarget = id
+        scrollRequest += 1
+        Task { @MainActor in
+            await Task.yield()
+            focusedID = id
+        }
     }
 
     private func tileView(_ tile: ConclusionDetailPicture) -> some View {
