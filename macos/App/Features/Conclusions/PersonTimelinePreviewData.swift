@@ -10,9 +10,9 @@ enum PersonTimelinePreviewData {
 
     /// When an event happened, with the span S13-33 gives it, written beside a
     /// day's or month's date as the Go rule returns it (`core/database/persondetail`
-    /// `TestPersonEventsLifeline`): a day is [y + d/365, y + (d+1)/365) from its
-    /// day of the year, a month runs from its first day to the next month's, a
-    /// whole year is [y, y+1), "bef." is open at its start.
+    /// `TestPersonEventsLifeline`): a day is [y + (d-1)/n, y + d/n) for day d of the
+    /// year, n the year's own days (366 in a leap year), a month runs from its
+    /// first day to the next month's, a whole year is [y, y+1), "bef." is open at its start.
     enum When {
         case day(Int32, Int32, Int32, from: Double, to: Double)
         case month(Int32, Int32, from: Double, to: Double)
@@ -165,7 +165,7 @@ enum PersonTimelinePreviewData {
                   participants: [participant(heinrich, "subject"), participant(anna, "subject"),
                                  participant(margarethe, "subject"), participant(friedrich, "subject"),
                                  participant(wilhelm, "subject")]),
-            event("4", type: "marriage", subjects: ["Johann Weber", "Maria Schulz"], when: .day(1844, 6, 4, from: 1844.4219178082192, to: 1844.4246575342465), place: "Bremen", picture: true,
+            event("4", type: "marriage", subjects: ["Johann Weber", "Maria Schulz"], when: .day(1844, 6, 4, from: 1844.4234972677596, to: 1844.4262295081967), place: "Bremen", picture: true,
                   participants: [participant(maria, "subject"), participant(friedrich, "witness")]),
             event("5", type: "baptism", subjects: ["Karl Weber"], when: .day(1845, 2, 2, from: 1845.0876712328768, to: 1845.0904109589042), place: "Hamburg", picture: true,
                   roles: ["father"], participants: [participant(karl, "subject"), participant(maria, "mother")]),
@@ -177,9 +177,9 @@ enum PersonTimelinePreviewData {
                   roles: ["witness", "informant"], participants: [participant(maria, "subject")]),
             event("9", type: "marriage", subjects: ["Johann Weber", "Sophie Brandt"], when: .year(1861), place: "Hamburg", picture: true,
                   participants: [participant(sophie, "subject")]),
-            event("10", type: "death", subjects: ["Johann Weber"], when: .day(1880, 9, 18, from: 1880.7123287671234, to: 1880.7150684931507), place: "Hamburg", picture: true,
+            event("10", type: "death", subjects: ["Johann Weber"], when: .day(1880, 9, 18, from: 1880.7131147540983, to: 1880.7158469945355), place: "Hamburg", picture: true,
                   participants: [participant(otto, "informant")]),
-            event("11", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.7232876712328, to: 1880.7260273972602), place: "Ohlsdorf, Hamburg"),
+            event("11", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.724043715847, to: 1880.7267759562842), place: "Ohlsdorf, Hamburg"),
             event("12", type: "residence", place: "Altona"),
             event("13", type: "migration", participants: [participant(sophie, "subject")]),
         ]
@@ -209,7 +209,7 @@ enum PersonTimelinePreviewData {
             events: [
                 event("e1", type: "birth", subjects: ["Ernst Weber"], when: .day(1845, 4, 3, from: 1845.2520547945205, to: 1845.2547945205479), place: "Hamburg"),
                 event("e2", type: "baptism", subjects: ["Ernst Weber"], when: .month(1845, 12, from: 1845.9150684931508, to: 1846.0), place: "Hamburg"),
-                event("e3", type: "death", subjects: ["Ernst Weber"], when: .day(1848, 2, 14, from: 1848.1205479452055, to: 1848.123287671233), place: "Hamburg"),
+                event("e3", type: "death", subjects: ["Ernst Weber"], when: .day(1848, 2, 14, from: 1848.120218579235, to: 1848.122950819672), place: "Hamburg"),
             ],
             birth: CatalogLifeMarker(eventId: "e1"),
             death: CatalogLifeMarker(eventId: "e3")
@@ -230,7 +230,7 @@ enum PersonTimelinePreviewData {
         add(1, "informant", role("informant"))
         add(6, "pallbearer", role("pallbearer"))
         add(29, "mourner", role("mourner", origin: CatalogOrigin.user))
-        let burial = event("big", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.7232876712328, to: 1880.7260273972602), place: "Ohlsdorf, Hamburg",
+        let burial = event("big", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.724043715847, to: 1880.7267759562842), place: "Ohlsdorf, Hamburg",
                            participants: people)
         return CatalogPersonTimeline(events: [burial], birth: CatalogLifeMarker(), death: CatalogLifeMarker(eventId: "big"))
     }

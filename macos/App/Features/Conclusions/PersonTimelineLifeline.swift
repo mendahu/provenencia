@@ -25,7 +25,7 @@ struct PersonTimelineLifeline: Equatable {
     /// How far below a row's top its dot sits.
     static let dotInset: CGFloat = 12
 
-    /// A day is a dot: S13-33 divides every year by 365, leap years too.
+    /// A day is a dot: at most 1/365 of a year (1/366 in a leap year), so this catches both.
     private static let dayInYears = 1.0 / 365.0 + 1e-9
 
     enum Shape: Equatable {
