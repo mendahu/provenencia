@@ -1,15 +1,14 @@
 package identityclaims
 
 import (
-	"bytes"
 	"database/sql"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // FileBridgesTx files every unfiled bridge whose ends touch subjectID, in
@@ -151,9 +150,12 @@ type endpoint struct {
 	entityID    []byte
 }
 
+// unpromoted is the wait code for a value Subject with no accepted claim.
+const unpromoted = "unpromoted"
+
 // fileBridge claims one bridge onto its association. filed is false when the
-// bridge waits (an end is unpromoted, or it is already filed) or when a
-// self-link is refused.
+// bridge waits (an end is unpromoted, or it is already filed) or when
+// connectrules.Decide refuses it (a self-link, a loop, an incomplete bridge).
 func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.Change, filed bool, err error) {
 	rule, ok := connectrules.LookupBridge(b.typeKey)
 	if !ok || len(rule.Endpoints) == 0 {
@@ -173,58 +175,45 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 	if err != nil {
 		return nil, nil, false, err
 	}
-	ends := make([]endpoint, 0, len(rule.Endpoints))
-	seenEntity := map[string]bool{}
-	for _, ep := range rule.Endpoints {
-		entityID, ready, err := resolveEndpoint(tx, obs, ep.PropertyKey)
+	values := make([][]connectrules.Value, len(rule.Endpoints))
+	for i, ep := range rule.Endpoints {
+		values[i], err = endpointValues(tx, obs[ep.PropertyKey])
 		if err != nil {
 			return nil, nil, false, err
 		}
-		if !ready {
-			return nil, nil, false, nil
-		}
-		ends = append(ends, endpoint{propertyKey: ep.PropertyKey, entityID: entityID})
-		seenEntity[string(entityID)] = true
 	}
-	// Both ends on one handle: a duplicate on the graph, or a wrong match.
-	if len(seenEntity) < len(ends) {
+	terms, err := bridgeTerms(tx, obs, rule.Disambiguation)
+	if err != nil {
+		return nil, nil, false, err
+	}
+	keys := make([]vocabkey.BridgeTerm, 0, len(terms))
+	for _, t := range terms {
+		keys = append(keys, vocabkey.BridgeTerm(t.key))
+	}
+	term := connectrules.Term(keys)
+
+	res, err := connectrules.Decide(rule, keys, values, func() ([]connectrules.Link, error) {
+		return filedLinks(tx, rule, string(term))
+	})
+	if err != nil {
+		return nil, nil, false, err
+	}
+	if res.Decision != connectrules.DecisionFiles {
 		return nil, nil, false, nil
 	}
 
+	ends := make([]endpoint, 0, len(rule.Endpoints))
+	for i, ep := range rule.Endpoints {
+		ends = append(ends, endpoint{propertyKey: ep.PropertyKey, entityID: []byte(values[i][0].Record)})
+	}
 	var termID []byte
 	directed := false
-	var termKey string
-	if keysOnType(rule) {
-		termID = firstTerm(obs, rule.Disambiguation)
-		if len(termID) != 16 {
-			return nil, nil, false, nil
-		}
-		var bit int
-		if err := tx.QueryRow(`SELECT directed, key FROM property_terms WHERE id = ?`, termID).Scan(&bit, &termKey); err != nil {
-			return nil, nil, false, err
-		}
-		directed = bit != 0
-	}
-
-	if b.typeKey == "place_relationship" &&
-		(termKey == propertyterms.KeyPartOf || termKey == propertyterms.KeySucceededBy) {
-		fromID, toID := ends[0].entityID, ends[1].entityID
-		if rule.Endpoints[0].PropertyKey != "from" {
-			for _, e := range ends {
-				if e.propertyKey == "from" {
-					fromID = e.entityID
-				}
-				if e.propertyKey == "to" {
-					toID = e.entityID
-				}
+	if rule.KeysOnType() {
+		for _, t := range terms {
+			if vocabkey.BridgeTerm(t.key) == term {
+				termID, directed = t.id, t.directed
+				break
 			}
-		}
-		closes, err := placeRelationshipWouldCycle(tx, termKey, fromID, toID)
-		if err != nil {
-			return nil, nil, false, err
-		}
-		if closes {
-			return nil, nil, false, nil
 		}
 	}
 
@@ -254,73 +243,45 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 	return assocID, changes, true, nil
 }
 
-// keysOnType reports whether the bridge's disambiguation is the association's
-// identity (relationship type, place relationship type). Role is a reconciled
-// value, not part of the key.
-func keysOnType(b connectrules.Bridge) bool {
-	return connectrules.HasDisambiguation(b.Disambiguation) && b.Disambiguation != connectrules.DisambiguationRole
-}
-
-// placeRelationshipWouldCycle reports whether adding from→to of the given
-// locked term key (part_of or succeeded_by) would close a loop among already
-// filed place relationships of that same key.
-func placeRelationshipWouldCycle(tx *sql.Tx, termKey string, fromID, toID []byte) (bool, error) {
+// filedLinks reads every filed link of the rule's bridge type and term as
+// from→to entity edges, for the loop check. The first endpoint is the from end.
+func filedLinks(tx *sql.Tx, rule connectrules.Bridge, termKey string) ([]connectrules.Link, error) {
 	rows, err := tx.Query(`
 		SELECT ic_from.entity_id, ic_to.entity_id
 		FROM identity_claims ic
 		JOIN subjects s ON s.id = ic.subject_id
 		JOIN subject_types st ON st.id = s.subject_type_id
-			AND st.key = 'place_relationship' AND st.origin = 'provenencia'
+			AND st.key = ? AND st.origin = 'provenencia'
 		JOIN observations o_type ON o_type.subject_id = s.id
 		JOIN properties p_type ON p_type.id = o_type.property_id
-			AND p_type.key = 'place_relationship_type' AND p_type.origin = 'provenencia'
+			AND p_type.key = ? AND p_type.origin = 'provenencia'
 		JOIN property_terms pt ON pt.id = o_type.value_term_id AND pt.key = ?
 		JOIN observations o_from ON o_from.subject_id = s.id
 		JOIN properties p_from ON p_from.id = o_from.property_id
-			AND p_from.key = 'from' AND p_from.origin = 'provenencia'
+			AND p_from.key = ? AND p_from.origin = 'provenencia'
 		JOIN observations o_to ON o_to.subject_id = s.id
 		JOIN properties p_to ON p_to.id = o_to.property_id
-			AND p_to.key = 'to' AND p_to.origin = 'provenencia'
+			AND p_to.key = ? AND p_to.origin = 'provenencia'
 		JOIN identity_claims ic_from ON ic_from.subject_id = o_from.value_subject_id
 			AND ic_from.status = 'accepted'
 		JOIN identity_claims ic_to ON ic_to.subject_id = o_to.value_subject_id
 			AND ic_to.status = 'accepted'
-		WHERE ic.status = 'accepted'`, termKey)
+		WHERE ic.status = 'accepted'`,
+		rule.BridgeTypeKey, rule.Disambiguation, termKey,
+		rule.Endpoints[0].PropertyKey, rule.Endpoints[1].PropertyKey)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	defer rows.Close()
-
-	adj := map[string][][]byte{}
+	var out []connectrules.Link
 	for rows.Next() {
-		var fromEnt, toEnt []byte
-		if err := rows.Scan(&fromEnt, &toEnt); err != nil {
-			return false, err
+		var from, to []byte
+		if err := rows.Scan(&from, &to); err != nil {
+			return nil, err
 		}
-		adj[string(fromEnt)] = append(adj[string(fromEnt)], append([]byte(nil), toEnt...))
+		out = append(out, connectrules.Link{From: string(from), To: string(to)})
 	}
-	if err := rows.Err(); err != nil {
-		return false, err
-	}
-
-	// Reach fromID starting at toID along existing edges?
-	seen := map[string]bool{string(toID): true}
-	queue := [][]byte{append([]byte(nil), toID...)}
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		if bytes.Equal(cur, fromID) {
-			return true, nil
-		}
-		for _, next := range adj[string(cur)] {
-			if seen[string(next)] {
-				continue
-			}
-			seen[string(next)] = true
-			queue = append(queue, next)
-		}
-	}
-	return false, nil
+	return out, rows.Err()
 }
 
 func sameEndpointType(b connectrules.Bridge) bool {
@@ -358,11 +319,12 @@ func bridgeObservations(tx *sql.Tx, bridgeID []byte) (map[string][]obsValue, err
 	return out, rows.Err()
 }
 
-// resolveEndpoint maps one endpoint property to a single accepted handle.
-// ready is false when the end is missing, unpromoted, or points at two handles.
-func resolveEndpoint(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) (entityID []byte, ready bool, err error) {
-	var resolved [][]byte
-	for _, v := range obs[propertyKey] {
+// endpointValues maps the Subjects one endpoint property names to their
+// records: the entity of the accepted claim, or the unpromoted wait. A value
+// that is not a 16-byte id is skipped.
+func endpointValues(tx *sql.Tx, vals []obsValue) ([]connectrules.Value, error) {
+	var out []connectrules.Value
+	for _, v := range vals {
 		if len(v.subjectID) != 16 {
 			continue
 		}
@@ -370,28 +332,48 @@ func resolveEndpoint(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) 
 		err := tx.QueryRow(`SELECT entity_id FROM identity_claims
 			WHERE subject_id = ? AND status = 'accepted'`, v.subjectID).Scan(&id)
 		if err == sql.ErrNoRows {
-			return nil, false, nil
+			out = append(out, connectrules.Value{Wait: unpromoted})
+			continue
 		}
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
-		if !database.ContainsBlobID(resolved, id) {
-			resolved = append(resolved, append([]byte(nil), id...))
-		}
+		out = append(out, connectrules.Value{Record: string(id)})
 	}
-	if len(resolved) != 1 {
-		return nil, false, nil
-	}
-	return append([]byte(nil), resolved[0]...), true, nil
+	return out, nil
 }
 
-func firstTerm(obs map[string][]obsValue, propertyKey string) []byte {
-	for _, v := range obs[propertyKey] {
-		if len(v.termID) == 16 {
-			return v.termID
-		}
+type bridgeTerm struct {
+	id       []byte
+	key      string
+	directed bool
+}
+
+// bridgeTerms reads every disambiguation term the bridge records, any
+// polarity, with its key and directed bit. A term id with no property_terms
+// row is skipped.
+func bridgeTerms(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) ([]bridgeTerm, error) {
+	if !connectrules.HasDisambiguation(propertyKey) {
+		return nil, nil
 	}
-	return nil
+	var out []bridgeTerm
+	for _, v := range obs[propertyKey] {
+		if len(v.termID) != 16 {
+			continue
+		}
+		t := bridgeTerm{id: v.termID}
+		var bit int
+		err := tx.QueryRow(`SELECT directed, key FROM property_terms WHERE id = ?`, v.termID).Scan(&bit, &t.key)
+		if err == sql.ErrNoRows {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
+		t.directed = bit != 0
+		out = append(out, t)
+	}
+	return out, nil
 }
 
 func findAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string, termID []byte, symmetric bool) ([]byte, error) {
