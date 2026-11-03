@@ -124,4 +124,4 @@ Check: `grep -n 'focused = ' ConclusionGallerySection.swift` prints only the F-5
 Head `79a7c522`. Gate PASS (orchestrator re-ran). F-10 done. UX-1: fixed in code; whether a tile off the realized set keeps the keyboard is unverified until § 10 step 6. The implementer saw one failure of `PVWidthClassTests.aFilledHostMeasuresTheSpaceNotTheChild()` that passed unchanged on the next run; the test covers nothing here. Logged as a flake.
 
 ## Result
-Gate PASS · CI pending · open: none (UX-1 fixed, unverified in the app; § 10 step 6) · follow-ups: SEC-1, the `.adaptive` reflow away from 1600, the `PVWidthClassTests` flake, the 400ms click window · to user: UX-1 answered (fix now, 2026-11-03) · CON miss: UX-O1
+Gate PASS · CI green (`1021a4df`) · open: none (UX-1 fixed, unverified in the app; § 10 step 6) · follow-ups: SEC-1, the `.adaptive` reflow away from 1600, the `PVWidthClassTests` flake, the 400ms click window · to user: UX-1 answered (fix now, 2026-11-03) · CON miss: UX-O1
