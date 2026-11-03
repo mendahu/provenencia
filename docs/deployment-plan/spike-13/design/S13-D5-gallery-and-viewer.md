@@ -81,7 +81,7 @@ Extend the S13-D1 frames. The header, the switcher and the other four sections s
 
 A researcher opens a Person's Gallery section and sees every likeness of the person at a size where faces can be told apart, each with where it came from. A click on a likeness opens it in a **viewer** over the page, at the size the window allows, and the researcher steps through the gallery likeness by likeness. From the gallery and from the viewer a likeness can be made the portrait, and its provenance read, with links on to its Source, Citation and Observation.
 
-**What changes.** The Gallery section's grid is redrawn: tile size, caption, where Set as portrait and the Portrait mark sit, and a visible way back to the earliest likeness. A click on a tile now opens the viewer (R-30). Tiles have **no provenance control and no Open citation**: the viewer shows the likeness's provenance record under the image, with its links to the Source, the Citation and the Observation, so one view covers it (R-13b, R-32; user, 2026-11-03). The viewer is new: the large image, the likeness's provenance record right under it, previous and next, a position counter, and Set as portrait.
+**What changes.** The Gallery section's grid is redrawn: tile size, caption, where Use as portrait and the Portrait mark sit. A click on a tile now opens the viewer (R-30). Tiles have **no provenance control and no Open citation**: the viewer shows the likeness's provenance record under the image, with its links to the Source, the Citation and the Observation, so one view covers it (R-13b, R-32; user, 2026-11-03). The viewer is new: the large image, the likeness's provenance record right under it, previous and next, a position counter, and Set as portrait.
 
 **What stays.** The header, including the thumb's right-click "Use earliest likeness" menu, which the Event and Place headers share (user, 2026-11-03). The switcher, Vitals, Family, Timeline and the Sources empty place. The gallery's order (earliest recorded first, from the engine). The gender colors on the header thumb (S10-D12). The empty Gallery's EmptyState, unless the board rewords it (GA-8). The Event and Place pages and their Pictures sections (user, 2026-11-03: Person only).
 
@@ -123,7 +123,7 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 
 | | |
 | --- | --- |
-| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W3: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Set as portrait, the visible way back to the earliest, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. Until S13-15 a click on a tile's image opens its Citation, as today. |
+| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W3: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Use as portrait, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. Until S13-15 a click on a tile's image opens its Citation, as today. |
 | Ships in **S13-15** | LV-1 … LV-9 and LV-W1: the viewer, opened by a click on a tile, with stepping, the counter, the likeness's provenance record under the image, Set as portrait, closing, keyboard and VoiceOver, light and dark, at Regular and Wide. The tile's click moves from Open Citation to the viewer. |
 | Later boards | The Event and Place pages adopt this gallery and the viewer when they get sections (R-1). |
 | Stays out | Any change to the header, switcher or other sections; the Event and Place pages. |

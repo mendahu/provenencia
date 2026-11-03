@@ -89,3 +89,25 @@ These Decisions have not been through `review-plan`. They are reviewed with the 
 
 ## Change after review (user, 2026-11-03, later)
 Tiles get no provenance control, no one-record sheet and no context menu. A likeness's provenance is its one record row under the viewer's image (the kit's Record row, S13-D13 PSK-6). Until S13-15 ships, a tile's click opens its Citation, as today. S13-14 no longer depends on S13-36, but S13-15 does. R-13b and R-32 are updated in `person-detail.md`. This is reviewed again on the board refresh.
+
+## Round 3 (after the board, 2026-11-03)
+
+**Verdicts:** maintainability Fits with changes; executability Ready with changes. Every finding is Fixed or answered by the user, and none is open.
+
+### To user (answered 2026-11-03)
+- Wording: keep the app's "Use as portrait" and today's Toast, not the board's "Set as portrait" (X3-2).
+- One rule for a full-width section's empty, loading and error states, Timeline included (M3-4): D-12 adds `pvKeepsPageBand`, and the map gains the working rule "A full-width section keeps its states in the band".
+
+### Fixed
+- **M3-1, X3-3, X3-4, X3-7:** D-9 is now `GalleryTileView.Look` (`.small`, `.large`). Every measure, font and ink is named, and the scale is 1.02 with no resting shadow, adding nothing to the kit. The button's `.help` is settled per look, and `captionWidth` goes.
+- **M3-2, X3-1:** `recordTitle` is dropped from D-4.
+- **M3-3:** named in the S13-36 scope entry: the kit's `Record` carries `CitationLineDisplay.Parts` in place of `ReconciliationRecord`'s pair.
+- **X3-5, X3-6:** the Steps are re-cut. STEP-1 builds on its own; STEP-2 is the look, the section, its labels and the heading; STEP-3 is Wide and D-12, with `PersonDetailView.swift` and the host in its Files.
+- **X3-8:**
+  - The test wording reads "add / update".
+  - Manual check 8 cites frames 13l – 13n.
+  - The map's S13-D5 design-track line is fixed.
+  - FFI and Reach say None with a reason.
+  - The Decision gaps (no D-5) are left: their IDs are cited in older review rounds.
+- **X3-9:** `Parts.title` is not trimmed; a ref title with parts shows the second line; an in-flight delete gets today's error Toast.
+- **M3-5:** the Codebase fit row, Strings, Edges, the stop condition, the Context line and the brief's scope rows are all fixed.

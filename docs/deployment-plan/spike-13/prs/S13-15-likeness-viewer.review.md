@@ -92,3 +92,6 @@ These Decisions have not been through `review-plan`. They are reviewed on the re
 
 ## Change after review (user, 2026-11-03, later)
 Tiles get no provenance control, no one-record sheet and no context menu. A likeness's provenance is its one record row under the viewer's image (the kit's Record row, S13-D13 PSK-6). Until S13-15 ships, a tile's click opens its Citation, as today. S13-14 no longer depends on S13-36, but S13-15 does. R-13b and R-32 are updated in `person-detail.md`. This is reviewed again on the board refresh.
+
+## Board refresh (2026-11-03)
+Board turn 13's viewer answers are in D-4, D-6, D-9 and D-11, and § 12 is empty. The button wording is the app's "Use as portrait" (user, 2026-11-03). The plan stays Blocked on S13-14 and S13-36 and is reviewed again on its refresh.
