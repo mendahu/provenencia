@@ -1,7 +1,7 @@
 # Review — S14-22 Promote's wire says what Go decided
 
-**Verdict:** Round 1: Fits with changes — Ready with changes. Round 2: pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (both rounds; every finding Fixed, Declined with evidence, or logged).
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -14,6 +14,7 @@
 - The subrows keep the last proposal's outcomes until the next one lands; no Swift prediction.
 - FakeStore forwards scripted connections and computes none.
 - A proposal failure after a decision leaves the last outcomes and Done enabled: Out → S14-20.
+- A bridge with two type Observations: its term is the lowest key (`connectrules.Term`), at Done and on the page. Today Done takes the first by insertion order, so such a bridge can key its association on the other term than before. Chosen over refusing it as incomplete (round 2 M-A option 2), which would change what Done files for a conflicting bridge.
 
 ## Round 1
 
@@ -84,3 +85,14 @@ Logged. D-11 keeps `WaitReason` as the page's three wait words.
 
 ### X-14 · minor · Waiting-end order differs between filer and proposal
 **Answer:** Fixed — one line in §6 Edges: display only; both leave the bridge unfiled.
+
+### M-A · blocker · D-8's term pick is a third "which term" rule and does not match the filer's
+The filer's `firstTerm` takes the first term in rowid order; `eg.Observations` is in ref order; `promotealign.observedTerms` takes the lowest positive key.
+**Answer:** Fixed — the pick moves into the shared rule: `connectrules.Term(terms)` (lowest non-empty key, order-free), and `Decide` takes `terms []vocabkey.BridgeTerm`. D-3: the filer passes every term and keys the association on `Term`'s pick; `firstTerm` goes. D-4 / D-8: `PageBridge.Terms`, no pick in `pageBridges`. T-2 adds the two-term row; T-5 adds a two-type-Observation parity case; Codebase fit names `observedTerms` and why it is not reused (positive only). Writer's call logged above.
+
+### Round 2 minors (maintainability)
+- **`RelPartOf` / `compose.go` literals.** Logged: `conclusionsummaries` display code, not part of the filing rule.
+- **D-5 lists two refusals by name.** Fixed — every decision in `connectrules.Refusals()` converts to `ConnectionOutcome(decision)`.
+- **`filedLinks` has no Codebase fit row.** Fixed — row added, with why `canonicalgraph.Walk` cannot serve it (reconciled values lag the same-transaction filing).
+- **`not_on_page` carries two meanings on the wire.** Logged: the user's call was one wording; the empty `waiting_subject_id` tells them apart if the copy ever splits.
+- **No skill describes the filing rule.** Fixed — STEP-1 updates the `connectrules` package comment and `add-seeded-vocabulary`'s `core/connectrules/` row.
