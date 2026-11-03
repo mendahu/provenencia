@@ -19,17 +19,20 @@ import (
 // Propose loads the Evidence layer of graphID, walks the catalog's canonical
 // graph from the fixed anchors and each unfixed kind's top property matches,
 // and runs graphalign.Align. The int64 is MAX(audit_transactions.revision) at
-// load time, the stamp Done sends back. An unknown or empty graphID is
-// promote.ErrInvalid. A graph read error is returned instead of a proposal.
-func Propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, error) {
-	prop, rev, _, err := propose(c, graphID, fixed)
+// load time, the stamp Done sends back. only, when set, is the one Subject
+// the page is open on: every other unpromoted Subject is off the page, as
+// Done will not send it, and the proposal's connections wait for it. An
+// unknown or empty graphID is promote.ErrInvalid. A graph read error is
+// returned instead of a proposal.
+func Propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only []byte) (graphalign.Proposal, int64, error) {
+	prop, rev, _, err := propose(c, graphID, fixed, only)
 	return prop, rev, err
 }
 
 // propose is Propose, and the profiler it used, for a test that reads which
 // handles were profiled. The profiler is nil when the graph has no Subject to
 // place.
-func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (graphalign.Proposal, int64, *profiler, error) {
+func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only []byte) (graphalign.Proposal, int64, *profiler, error) {
 	if c == nil || len(graphID) != 16 {
 		return graphalign.Proposal{}, 0, nil, promote.ErrInvalid
 	}
@@ -65,6 +68,15 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed) (gra
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, cfg)
+	eg, err := c.Graph().EvidenceGraph(in.graphID)
+	if err != nil {
+		return graphalign.Proposal{}, 0, nil, err
+	}
+	vocab, err := c.Graph().Vocabulary()
+	if err != nil {
+		return graphalign.Proposal{}, 0, nil, err
+	}
+	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(eg, in.primary, fixed, prop.Rows, only), canon.Edges)
 	return prop, rev, prof, nil
 }
 

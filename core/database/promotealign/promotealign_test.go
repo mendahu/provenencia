@@ -196,13 +196,13 @@ func (f *fixture) locate(src sources.Source, art artifacts.Artifact, event, plac
 	must(f.t, err)
 }
 
-func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) {
+func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) subjects.Subject {
 	f.t.Helper()
 	fromProp := f.prop("from").ID
 	toProp := f.prop("to").ID
 	typeProp := f.prop("place_relationship_type").ID
 	kindTerm := f.term("place_relationship_type", kind).ID
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
@@ -214,6 +214,7 @@ func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to 
 		})
 	})
 	must(f.t, err)
+	return res.Subject
 }
 
 // relationship cites "person is typ of related" on src.
@@ -261,7 +262,7 @@ func (f *fixture) graph(src sources.Source) []byte {
 
 func (f *fixture) propose(graphID []byte, fixed []graphalign.Fixed) graphalign.Proposal {
 	f.t.Helper()
-	p, _, err := promotealign.Propose(f.c, graphID, fixed)
+	p, _, err := promotealign.Propose(f.c, graphID, fixed, nil)
 	must(f.t, err)
 	return p
 }
@@ -393,7 +394,7 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 
 func TestProposeInvalidGraph(t *testing.T) {
 	f := newFixture(t)
-	_, _, err := promotealign.Propose(f.c, make([]byte, 16), nil)
+	_, _, err := promotealign.Propose(f.c, make([]byte, 16), nil, nil)
 	if err != promote.ErrInvalid {
 		t.Fatalf("err %v, want promote.ErrInvalid", err)
 	}
@@ -425,7 +426,7 @@ func TestProposeReadsOneGraph(t *testing.T) {
 	}
 	for name, id := range map[string][]byte{"no such graph": make([]byte, 16), "a short id": {1, 2, 3}} {
 		t.Run(name, func(t *testing.T) {
-			if _, _, err := promotealign.Propose(f.c, id, nil); !errors.Is(err, promote.ErrInvalid) {
+			if _, _, err := promotealign.Propose(f.c, id, nil, nil); !errors.Is(err, promote.ErrInvalid) {
 				t.Fatalf("err %v, want promote.ErrInvalid", err)
 			}
 		})
@@ -453,7 +454,7 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 			again := f.person(srcB, artB, "Gracie")
 			fixed := tt.fixed(per.Entity.ID)
 			fixed.SubjectID = again.ID
-			p, _, err := promotealign.Propose(f.c, f.graph(srcB), []graphalign.Fixed{fixed})
+			p, _, err := promotealign.Propose(f.c, f.graph(srcB), []graphalign.Fixed{fixed}, nil)
 			if tt.wantErr {
 				if err != promote.ErrInvalid {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)
@@ -487,7 +488,7 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 		}
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
-		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil)
+		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil, nil)
 		must(t, err)
 		return n
 	}
@@ -1175,11 +1176,11 @@ func TestProposeQueryCountStaysFlatWhenWarm(t *testing.T) {
 			bb := f.birth(srcB, artB)
 			f.participation(srcB, artB, pb, bb, "subject")
 		}
-		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil)
+		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil, nil)
 		must(t, err)
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
-		_, _, err = promotealign.Propose(f.c, f.graph(srcB), nil)
+		_, _, err = promotealign.Propose(f.c, f.graph(srcB), nil, nil)
 		must(t, err)
 		return n
 	}
@@ -1626,4 +1627,175 @@ func TestProposeIgnoresStoredSiblings(t *testing.T) {
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("proposal changed after siblings were stored:\n%+v\n%+v", before, after)
 	}
+}
+
+// placeRelationships is how many association handles of the place relationship
+// type the catalog holds: what Done has minted.
+func (f *fixture) placeRelationships() int {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	var n int
+	must(f.t, db.QueryRow(`SELECT COUNT(*) FROM canonical_entities ce
+		JOIN subject_types st ON st.id = ce.subject_type_id
+			AND st.key = 'place_relationship' AND st.origin = 'provenencia'`).Scan(&n))
+	return n
+}
+
+// done runs Done on the graph with every given Subject on its handle, at the
+// revision the proposal was read at.
+func (f *fixture) done(graphID []byte, rev int64, onto map[*subjects.Subject][]byte) {
+	f.t.Helper()
+	var rows []promote.BatchRow
+	for s, h := range onto {
+		rows = append(rows, promote.BatchRow{SubjectID: s.ID, Target: promote.TargetHandle, EntityID: h})
+	}
+	_, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		return promote.SaveBatch(tx, userID, promote.Batch{GraphID: graphID, SeenRevision: rev, Rows: rows})
+	})
+	must(f.t, err)
+}
+
+// proposeConnections is the proposal's connections, with the revision.
+func (f *fixture) proposeConnections(graphID []byte, fixed []graphalign.Fixed, only []byte) ([]graphalign.Connection, int64) {
+	f.t.Helper()
+	p, rev, err := promotealign.Propose(f.c, graphID, fixed, only)
+	must(f.t, err)
+	return p.Connections, rev
+}
+
+// The proposal says what Done files: a connection reads as filed exactly when
+// Done mints its association, on a loop, a different term, a scoped page, a
+// bridge already filed, a type changed after filing, and two type terms.
+func TestProposeReportsEachConnection(t *testing.T) {
+	// tree: York part_of Ontario, promoted on Source A. Source B then records
+	// Ontario `kind` York and puts both ends on the tree's records.
+	type tree struct {
+		f           *fixture
+		yorkH, ontH []byte
+		srcB        sources.Source
+		artB        artifacts.Artifact
+		york2, ont2 subjects.Subject
+		bridge      subjects.Subject
+		treeBridge  subjects.Subject
+		fixed       []graphalign.Fixed
+		bridgeGraph []byte
+	}
+	build := func(t *testing.T, kind string) tree {
+		f := newFixture(t)
+		york := f.place(f.source, f.artifact, "York")
+		ontario := f.place(f.source, f.artifact, "Ontario")
+		treeBridge := f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+		yorkH := f.promote(york).Entity.ID
+		ontH := f.promote(ontario).Entity.ID
+		if n := f.placeRelationships(); n != 1 {
+			t.Fatalf("tree filed %d place relationships, want 1", n)
+		}
+		srcB, artB := f.newSource("Gazetteer")
+		york2 := f.place(srcB, artB, "York")
+		ont2 := f.place(srcB, artB, "Ontario")
+		bridge := f.placeRel(srcB, artB, ont2, york2, kind)
+		return tree{
+			f: f, yorkH: yorkH, ontH: ontH, srcB: srcB, artB: artB, york2: york2, ont2: ont2, bridge: bridge, treeBridge: treeBridge,
+			fixed: []graphalign.Fixed{
+				{SubjectID: ont2.ID, HandleID: ontH},
+				{SubjectID: york2.ID, HandleID: yorkH},
+			},
+			bridgeGraph: f.graph(srcB),
+		}
+	}
+	// agree fails unless the one connection reads as Done files it.
+	agree := func(t *testing.T, tr tree, want graphalign.ConnectionOutcome) {
+		t.Helper()
+		conns, rev := tr.f.proposeConnections(tr.bridgeGraph, tr.fixed, nil)
+		if len(conns) != 1 || conns[0].Outcome != want || !bytes.Equal(conns[0].BridgeID, tr.bridge.ID) {
+			t.Fatalf("connections %+v, want one %q for the bridge", conns, want)
+		}
+		before := tr.f.placeRelationships()
+		tr.f.done(tr.bridgeGraph, rev, map[*subjects.Subject][]byte{&tr.ont2: tr.ontH, &tr.york2: tr.yorkH})
+		minted := tr.f.placeRelationships() - before
+		files := 0
+		if want == graphalign.ConnectionFiles {
+			files = 1
+		}
+		if minted != files {
+			t.Fatalf("Done minted %d place relationships, the proposal counted %d", minted, files)
+		}
+	}
+	typeObs := func(t *testing.T, f *fixture, bridge subjects.Subject) observations.Listed {
+		t.Helper()
+		list, err := observations.ListBySubject(f.c, bridge.ID)
+		must(t, err)
+		for _, o := range list {
+			if o.PropertyKey == "place_relationship_type" {
+				return o
+			}
+		}
+		t.Fatal("no type observation")
+		return observations.Listed{}
+	}
+
+	t.Run("a loop with a filed link is refused", func(t *testing.T) {
+		agree(t, build(t, "part_of"), graphalign.ConnectionOutcome("cycle"))
+	})
+	t.Run("another term over the same places files", func(t *testing.T) {
+		agree(t, build(t, "succeeded_by"), graphalign.ConnectionFiles)
+	})
+	t.Run("the scope puts the other end off the page", func(t *testing.T) {
+		tr := build(t, "part_of")
+		conns, _ := tr.f.proposeConnections(tr.bridgeGraph, []graphalign.Fixed{{SubjectID: tr.york2.ID, HandleID: tr.yorkH}}, tr.york2.ID)
+		if len(conns) != 1 || conns[0].Outcome != graphalign.ConnectionNotOnPage || !bytes.Equal(conns[0].Waiting, tr.ont2.ID) {
+			t.Fatalf("connections %+v, want not_on_page waiting for Ontario", conns)
+		}
+	})
+	t.Run("a filed bridge is not reported", func(t *testing.T) {
+		f := newFixture(t)
+		york := f.place(f.source, f.artifact, "York")
+		ontario := f.place(f.source, f.artifact, "Ontario")
+		f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+		f.promote(york)
+		f.promote(ontario)
+		if conns, _ := f.proposeConnections(f.graph(f.source), nil, nil); len(conns) != 0 {
+			t.Fatalf("connections %+v, want none", conns)
+		}
+	})
+	t.Run("a type changed after filing", func(t *testing.T) {
+		tr := build(t, "part_of")
+		// The tree's own bridge now says succeeded_by, though it was filed as part_of.
+		old := typeObs(t, tr.f, tr.treeBridge)
+		must(t, func() error {
+			_, err := observationstest.UpdateObservation(tr.f.c, userID, observations.Input{
+				ID: old.ID, SubjectID: tr.treeBridge.ID, PropertyID: old.PropertyID,
+				ValueTermID: tr.f.term("place_relationship_type", "succeeded_by").ID,
+			})
+			return err
+		}())
+		conns, rev := tr.f.proposeConnections(tr.bridgeGraph, tr.fixed, nil)
+		if len(conns) != 1 {
+			t.Fatalf("connections %+v", conns)
+		}
+		before := tr.f.placeRelationships()
+		tr.f.done(tr.bridgeGraph, rev, map[*subjects.Subject][]byte{&tr.ont2: tr.ontH, &tr.york2: tr.yorkH})
+		minted := tr.f.placeRelationships() - before
+		if (conns[0].Outcome == graphalign.ConnectionFiles) != (minted == 1) {
+			t.Fatalf("proposal %q, Done minted %d", conns[0].Outcome, minted)
+		}
+	})
+	t.Run("two type terms", func(t *testing.T) {
+		tr := build(t, "succeeded_by")
+		tr.f.cite(tr.artB, tr.bridge, observations.Input{
+			PropertyID:  tr.f.prop("place_relationship_type").ID,
+			ValueTermID: tr.f.term("place_relationship_type", "part_of").ID,
+		})
+		conns, rev := tr.f.proposeConnections(tr.bridgeGraph, tr.fixed, nil)
+		if len(conns) != 1 {
+			t.Fatalf("connections %+v", conns)
+		}
+		before := tr.f.placeRelationships()
+		tr.f.done(tr.bridgeGraph, rev, map[*subjects.Subject][]byte{&tr.ont2: tr.ontH, &tr.york2: tr.yorkH})
+		minted := tr.f.placeRelationships() - before
+		if (conns[0].Outcome == graphalign.ConnectionFiles) != (minted == 1) {
+			t.Fatalf("proposal %q, Done minted %d", conns[0].Outcome, minted)
+		}
+	})
 }
