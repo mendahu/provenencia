@@ -1,6 +1,6 @@
 # S13-15 — Likeness viewer
 
-**Status:** Blocked — on board S13-D5 and on S13-14, and on S13-36 (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
+**Status:** Blocked — on board S13-D5 and on S13-14, and on S13-36 (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, D-9's record table becomes one kit `PVProvenanceRecordRow` built with `PVProvenanceSheetContent.Record(outcome:in:)` ([`../provenance-sheet.md`](../provenance-sheet.md) § 5.1), and the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
 **Spike / slice:** Spike 13 · Slice 5 — Gallery
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D5](../design/S13-D5-gallery-and-viewer.md), board not drawn yet

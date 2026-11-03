@@ -15,7 +15,7 @@ A caller chooses *which* records (a field, a span of fields, a derived row's own
 | --- | --- | --- |
 | Person · Vitals rows (today, S13-11) | One field's records; a life row's records grouped by owning event or place | `CatalogConclusionDetail.fields`, `.derivedRows` |
 | Person · Gallery tile (S13-14) | One likeness record | Same detail |
-| Person · likeness viewer (S13-15) | The record table alone, one record | Same detail |
+| Person · likeness viewer (S13-15) | One record row on its own, under the image | Same detail |
 | Person · other sections (Family, Timeline, Sources) | A record or a field, when R-13b is revisited | Same detail for the person; a relative's or event's own detail for theirs |
 | Event and Place pages (their redesign) | Their fields' records, as Vitals | Their `CatalogConclusionDetail` (the same message) |
 | Family tree, other views (later) | A person's fact; possibly a relationship | A relative's detail; for a relationship, the family read's "what it rests on", which is **not** a reconciler outcome |
@@ -67,14 +67,29 @@ A spreads one rulebook across pages; it is the drift the kit is meant to stop. B
 
 | Piece | Owner | Home | Notes |
 | --- | --- | --- | --- |
-| `PVProvenanceSheet`, `PVProvenanceRecordTable` (view) | Kit recipe | `DesignSystem/Recipes/ProvenanceSheet/` | Draw `PVProvenanceSheetContent`; know nothing of wire types; ids from a prefix the caller passes |
+| `PVProvenanceRecordRow`, `PVProvenanceRecordTable`, `PVProvenanceSheet` (views, § 5.1) | Kit recipe | `DesignSystem/Recipes/ProvenanceSheet/` | Three levels a caller mixes: one record, a table of records, the whole sheet. Each draws its own piece of content; know nothing of wire types; ids from a prefix the caller passes |
 | `PVProvenanceSheetContent` and its `Group`, `OwnerLine`, `ValueGroup`, `Record` | Kit recipe | same folder | Display-ready: strings, faces, Badge, ink. Each `Record` keeps its `CatalogReconcilerOutcome`, a wire type the kit may read, so a link can hand it back |
-| The assembler: `PVProvenanceSheetContent.init(field:title:…)`, `.spanning(fields:…)`, `.derived(owners:shownOwnerID:kind:…)`, `.narrowed(to observationID:title:)` | Kit recipe | same folder | Today's `ReconciledValueRowModel` provenance logic and `ReconciliationRecord.init`, moved. Pure; tested |
+| The assembler: `PVProvenanceSheetContent.Record(outcome:in field:)` for one record; `PVProvenanceSheetContent.init(field:title:…)`, `.spanning(fields:…)`, `.derived(owners:shownOwnerID:kind:…)`, `.narrowed(to observationID:title:)` for a sheet | Kit recipe | same folder | Today's `ReconciledValueRowModel` provenance logic and `ReconciliationRecord.init`, moved. Pure; tested |
 | Record and state wording: `ReconciledValueDisplay`'s record and state functions, `CitationLineDisplay` | Platform | `Platform/` | Value formatting, as S13-34 moved names, dates and terms. Vitals rows keep calling them |
 | Owner titles: `EventTitleDisplay`, `PlaceTitleDisplay` | Platform | `Platform/` | The owner line titles an event or place as its list does; S13-34 moved `PersonTitleDisplay` the same way |
 | Link callback: `open(_ outcome: CatalogReconcilerOutcome, _ link: PVProvenanceLink)` with `.source`, `.citation`, `.observation` | Kit → caller | — | The caller maps it to a `WorkspaceLocation` (today's `composerLocation(for:)`, which stays in Features), closes the sheet and navigates. The kit names no navigation type |
 | Choosing the records and the title; presenting; following a refresh (`ProvenanceSheetItem`, `row(in:)`) | Caller | `Features/…` | A Vitals row, a Gallery tile, a tree node |
 | The provenance control (`PVIconButton(.info)`) | Caller | — | As today |
+
+### 5.1 Three levels, mixed freely (user, 2026-11-03)
+
+A caller uses whichever level it needs, and every level is built from the level below. Nothing is drawn twice.
+
+| Level | View | Takes | Typical caller |
+| --- | --- | --- | --- |
+| One record | `PVProvenanceRecordRow` | a `Record`, `PVProvenanceColumns`, the link callback | The viewer's row under the image (S13-15); any view that cites one record inline (a tree node's detail, a Timeline event) |
+| A table of records | `PVProvenanceRecordTable` | `[Group]` (owner lines, value headings, records), `PVProvenanceColumns`, an optional column-heading row, the link callback | A section that lists several records without a modal |
+| The sheet | `PVProvenanceSheet` | `PVProvenanceSheetContent` (title, values, Badge, summary, groups), the width class, the link callback, Done | Vitals, a Gallery tile, an Event or Place field |
+
+- **The row stands alone.** It draws one record's cells (Read as, citation line with its copy button, outcome, refs, links) with no Panel, heading row or group line, and it is focusable and readable by VoiceOver on its own. The table is rows plus group lines; the sheet is a Panel, a header and a table.
+- **`PVProvenanceColumns`** *(new)* is one small value shared by the row and the table: which optional columns show (Read as, the reserved action column) and the width class that sets the caps (PSK-W1). A lone row and a table built from the same value line up, so a caller can stack rows of its own beside a table.
+- **One link callback for all three:** `(CatalogReconcilerOutcome, PVProvenanceLink) -> Void`. A caller wires navigation once, whatever level it places.
+- **The assembler mirrors the levels.** `Record(outcome:in:)` builds one row's content, and the group and sheet builders are made of it. A caller that wants one row does not build a sheet and pick it apart.
 
 **Build on open.** The caller builds the content when the sheet opens, and on each redraw while it is open, from the detail it already holds. It is not built for every row on every page load. The sheet then follows a refresh for free, and a Gallery tile carries no precomputed sheet. Vitals still needs to know whether a row has records, to show its control: a count, not a sheet.
 
@@ -88,5 +103,5 @@ A spreads one rulebook across pages; it is the drift the kit is meant to stop. B
 
   The S13-36 planner decides the cut and updates the map.
 - **S13-14** builds a tile's sheet on open with `.narrowed(to:title:)` instead of storing a precomputed `provenance` on each tile (its D-5, D-12). It is refreshed after S13-36 lands.
-- **S13-15** places `PVProvenanceRecordTable` with the narrowed content under the image (its D-9). It is refreshed after S13-36.
+- **S13-15** places one `PVProvenanceRecordRow` under the image, built with `Record(outcome:in:)` from the likeness's record (its D-9). It is refreshed after S13-36.
 - **Event and Place, Family, Timeline, a family tree:** each adds one call to the assembler and one link mapping.
