@@ -1,11 +1,11 @@
 # S13-15 — Likeness viewer
 
-**Status:** Blocked — on board S13-D5 and on S13-14
+**Status:** Blocked — on board S13-D5 and on S13-14, and on S13-36 (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
 **Spike / slice:** Spike 13 · Slice 5 — Gallery
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D5](../design/S13-D5-gallery-and-viewer.md), board not drawn yet
 **Board:** not drawn yet. When agreed, the Claude Design project, file, turn and frames go here; the implementer may not be able to open it, so **Design → macOS** will describe every frame in words
-**Depends on:** S13-14 (not landed: `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
+**Depends on:** S13-36 (not landed: the kit provenance sheet), S13-14 (not landed: `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
 **Blocks:** —
 **Branch:** `s13-15-likeness-viewer`
 **Runs on:** macOS: every Step and `scripts/check-pr.sh` need Xcode. No Go code or proto change; one Go test's path constant follows the moved Swift file (STEP-2)
