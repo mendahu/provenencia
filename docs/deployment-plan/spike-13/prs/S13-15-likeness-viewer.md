@@ -217,7 +217,7 @@ L10n keys *(new)* in `L10n.Conclusions`, used by `ConclusionDetailGallery.Viewer
 - `likenessViewerPrevious` = "Previous likeness", `likenessViewerNext` = "Next likeness", `likenessViewerClose` = "Close the viewer"
 - `likenessViewHint` = "Opens the likeness in the viewer"
 
-Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessTileLabel` keeps S13-14's wording.
+Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessLabel` keeps S13-14's wording.
 
 ## 7. Steps
 

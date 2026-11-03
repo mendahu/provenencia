@@ -1,7 +1,7 @@
 # Ship log — S13-14 Gallery section
 
 **Plan:** [`S13-14-gallery-section.md`](S13-14-gallery-section.md) · **Branch:** `s13-14-gallery-section` · **PR:** #701
-**State:** fixing 1
+**State:** stopped — UX-1 Not resolved after round 2; To user
 
 ## Round 0 — implement
 Head `564a389c`. Gate PASS (orchestrator re-ran). Report: deviations: `GalleryTileLook` is top-level, not nested in the generic `GalleryTileView` (nested forced `Overlay == EmptyView`); `EventDetailTests` and `PlaceDetailTests` updated to AC-1.4; old section gained only the image hint (D-11), not Return; T-2 loop change landed in the STEP-3 commit. Manual check, frames, VoiceOver not run (no GUI).
@@ -72,3 +72,24 @@ Check: `grep -rn 'GalleryTileView.Look' macos` prints nothing.
 Files: `macos/App/DesignSystem/README.md`, `docs/deployment-plan/spike-13/deployment-plan.md`, `docs/deployment-plan/spike-13/prs/S13-15-likeness-viewer.md`, the plan's Landed note.
 Do: a clause in the README's PageColumns row for `pvKeepsPageBand()`. S13-15's map row and plan Status and Depends lines: blocked on S13-36 only, S13-14 landed. S13-15's tile-data row lists `detail` in `Parts`. The Landed note says § 6 Edges "bounded by the detail read" was wrong: `gallery.ForEntities` has no limit, a follow-up.
 Check: `python3 scripts/check-plan-docs.py` reports no errors; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `c4bef1cf`. Gate PASS (orchestrator re-ran). F-1 to F-8 done; none needed a failing test. Deviations: `completed.md` updated; likeness `openTip` comment omits "tooltip" (`.large` has none). F-3 unverified in the app. Minors read by the orchestrator: UX-2 (F-5), MNT-3 + UX-3 (F-6), MNT-4 + CON-1 (F-7), MNT-6, MNT-7 (F-8) **Resolved**. MNT-5 is covered by MNT's re-review of F-1.
+
+## Round 2 — review
+Reviewers: CON (Sonnet, for UX-O1), MNT, UX. Skipped: SEC+PRF (no Fix-now blocker or major). Scope: `564a389c...c4bef1cf`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | Round 1 | Resolved | One section, `GalleryTileLook` holds the differences; `git grep ConclusionDetailGallerySection -- macos` empty |
+| MNT-2 | MNT | major | Round 1 | Resolved | Keys gone; one stale line in S13-15's plan fixed by the orchestrator |
+| MNT-5 | MNT | minor | Round 1 | Resolved | Types moved to `ConclusionGallerySection.swift` |
+| UX-O1 | CON | major | Round 1 | Resolved | `CachedThumbnail.fallbackColors`; no raster tile takes the tint |
+| UX-1 | UX | major | Focus across 1600 | **Not resolved → To user** | F-3 covers a tile that stays realized (AC-4.2's tile 12). Off the realized set (40 likenesses, tile 30, Wide to Regular): the focus write can precede the animated scroll, a drop after the width update is not restored, and focus on Use as portrait is not tracked at all. Code reading, medium confidence; needs § 10 step 6. Not a blocker, so the cap allows no Fix plan 2 without the user |
+
+Outside-lens note, MNT: F-3 runs on both looks, so a focused Event or Place tile also scrolls and refocuses on a width change. Logged: no visible change unless a tile is focused and the pane crosses the line; those pages are not `fillsWidth`.
+
+No new blockers from CON, MNT or UX. SEC+PRF not re-run.
+
+## Result
+Gate PASS (`c4bef1cf`, docs since) · CI not run (draft) · open: UX-1 · follow-ups: SEC-1 · to user: UX-1 · CON miss: UX-O1
