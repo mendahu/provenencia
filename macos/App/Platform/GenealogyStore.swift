@@ -336,10 +336,20 @@ struct CatalogPromoteGraphAlignmentRow: Sendable, Equatable, Identifiable {
     var id: String { subjectID }
 }
 
+/// What Done will do with one unfiled connection, as Go decided it.
+struct CatalogPromoteGraphAlignmentConnection: Sendable, Equatable {
+    var bridgeSubjectID: String
+    var outcome: PromoteConnectionOutcome
+    /// The Subject a skipped, unset or not-on-page outcome waits for; empty otherwise.
+    var waitingSubjectID: String = ""
+}
+
 /// A proposal plus the audit revision it was read at. Done sends the revision back.
 struct CatalogPromoteGraphAlignmentProposal: Sendable, Equatable {
     var revision: Int64
     var rows: [CatalogPromoteGraphAlignmentRow]
+    /// Each unfiled connection's outcome. A connection Go leaves out (already filed) is not here.
+    var connections: [CatalogPromoteGraphAlignmentConnection] = []
 }
 
 struct CatalogSubjectPosition: Sendable, Equatable {
@@ -1465,11 +1475,14 @@ protocol GenealogyStore: Sendable {
         entityID: String,
         observationID: String
     ) async throws -> CatalogWriteEffects
-    /// Propose a handle, New, or Skip for every primary Subject on one Evidence graph (graph alignment).
+    /// Propose a handle, New, or Skip for every primary Subject on one Evidence graph (graph alignment),
+    /// and what Done will do with each connection. `onlySubjectID` is the one Subject the page is open
+    /// on; nil when it promotes all.
     func proposePromoteGraphAlignment(
         projectDir: String,
         graphID: String,
-        fixed: [CatalogPromoteGraphAlignmentFixed]
+        fixed: [CatalogPromoteGraphAlignmentFixed],
+        onlySubjectID: String?
     ) async throws -> CatalogPromoteGraphAlignmentProposal
     /// Apply one Done for one Evidence graph: a claim per row on a handle or New, and bridges.
     /// `seenRevision` is the proposal's revision.

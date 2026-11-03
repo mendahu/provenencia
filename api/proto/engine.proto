@@ -1719,6 +1719,9 @@ message ProposePromoteGraphAlignmentRequest {
   reserved "source_id";
   repeated PromoteGraphAlignmentFixed fixed = 3;
   string graph_id = 4;
+  // The one Subject the page is open on; empty when it promotes all. Every
+  // other unpromoted Subject is off the page, so a connection waits for it.
+  string only_subject_id = 5;
 }
 
 // A decided row Align holds as given. target is handle (handle_id set), new,
@@ -1775,10 +1778,21 @@ message PromoteGraphAlignmentRow {
   string move_neighbor_subject_id = 25;
 }
 
+// One unfiled bridge and what Done will do with it. outcome is a code: files,
+// skipped, unset, not_on_page, self_link or cycle. waiting_subject_id is the
+// Subject a skipped, unset or not_on_page outcome waits for; empty otherwise.
+message PromoteGraphAlignmentConnection {
+  string bridge_subject_id = 1;
+  string outcome = 2;
+  string waiting_subject_id = 3;
+}
+
 message ProposePromoteGraphAlignmentResponse {
   repeated PromoteGraphAlignmentRow rows = 1;
   // Audit revision the proposal was read at. Done sends it back as seen_revision.
   int64 revision = 2;
+  // Each unfiled bridge's outcome, in bridge Subject id order.
+  repeated PromoteGraphAlignmentConnection connections = 3;
 }
 
 // ApplyPromoteGraphAlignment files one Done: claims and bridges, in

@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -760,5 +761,31 @@ func TestBindingChanges(t *testing.T) {
 	}
 	if _, err := deleteBinding(t, c, userID, personID, name.ID); !errors.Is(err, ErrLocked) {
 		t.Fatalf("locked delete: %v", err)
+	}
+}
+
+// A term whose filed links may not loop is a seeded, directed term with no
+// inverse, and its bridge's first endpoint is the from end: the filing rule
+// and the proposal both read a canon edge that way.
+func TestAcyclicTermsAreSeededDirectedWithNoInverse(t *testing.T) {
+	byKey := map[string]seedTerm{}
+	for _, term := range seedTerms {
+		byKey[term.PropertyKey+"|"+term.Key] = term
+	}
+	checked := 0
+	for _, b := range connectrules.Bridges() {
+		for _, term := range b.AcyclicTerms {
+			checked++
+			seed, ok := byKey[b.Disambiguation+"|"+string(term)]
+			if !ok || !seed.Directed || seed.Inverse != "" {
+				t.Fatalf("%s %s: seeded %v directed %v inverse %q", b.BridgeTypeKey, term, ok, seed.Directed, seed.Inverse)
+			}
+			if len(b.Endpoints) != 2 || b.Endpoints[0].PropertyKey != vocabkey.PropertyFrom {
+				t.Fatalf("%s: first endpoint must be %s", b.BridgeTypeKey, vocabkey.PropertyFrom)
+			}
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no acyclic term registered")
 	}
 }

@@ -34,7 +34,7 @@ func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, err
 // ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
 // sorted, the Ref of every handle whose full profile was built.
 func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) {
-	_, _, prof, err := propose(c, graphID, nil)
+	_, _, prof, err := propose(c, graphID, nil, nil)
 	if err != nil || prof == nil {
 		return nil, err
 	}

@@ -44,7 +44,7 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 | B-20 | Composed and decomposed text is not `Same` | Medium | CON | S12-46 |
 | B-21 | Search cannot find a place by an æ, ø, ł or œ spelling | Medium | CON | S12-47 |
 | B-22 | "Jr." and "Junior" are a generation conflict | Medium | CON | S12-46 |
-| B-23 | Swift decides which connections file, and misses Go's cycle refusal | Medium | MNT, CON | S12-48 |
+| B-23 | Swift decides which connections file, and misses Go's cycle refusal | Medium | MNT, CON | S12-48 (fixed in S14-22) |
 | B-24 | Promote bands and name part types are wire words with no guard row | Medium | MNT | S12-48 |
 
 ### B-1 — The reconciler panics on folds that do not chain

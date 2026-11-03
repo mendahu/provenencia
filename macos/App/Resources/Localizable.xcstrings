@@ -19933,6 +19933,30 @@
         }
       }
     },
+    "promote.connection.spoken.cycle": {
+      "comment": "VoiceOver: a Promote connection that would make places loop",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not promoted, these places would form a loop."
+          }
+        }
+      }
+    },
+    "promote.connection.cycle": {
+      "comment": "Warning under a Promote connection that would make places loop",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not promoted · these places would form a loop"
+          }
+        }
+      }
+    },
     "promote.connection.otherEnd.promoted": {
       "comment": "Note under a Promote connection whose other end is already promoted; argument is its name",
       "extractionState": "manual",

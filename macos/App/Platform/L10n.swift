@@ -1386,7 +1386,7 @@ enum L10n {
         }
         static let reasonMoveUnknown = LocalizedStringResource("promote.reason.moveUnknown", defaultValue: "after a connected row changed", comment: "Why a row moved, when the neighbor is not on the page. Follows \"Updated · \"")
         /// The state text of a connection subrow: "Promotes on Done", or "Waits for <end>". nil for a
-        /// self-link, whose copy is the warning under the sentence. `endName` is the waiting end's
+        /// self-link or a loop, whose copy is the warning under the sentence. `endName` is the waiting end's
         /// name; empty reads "its other end".
         static func connectionState(_ state: PromoteFlow.ConnectionState, endName: String) -> String? {
             switch state {
@@ -1397,7 +1397,7 @@ enum L10n {
                     return L10n.string(LocalizedStringResource("promote.connection.waitsEnd", defaultValue: "Waits for its other end", comment: "Subrow state of a Promote connection that waits when the end has no name"))
                 }
                 return L10n.format(LocalizedStringResource("promote.connection.waits", defaultValue: "Waits for %@", comment: "Subrow state of a Promote connection that waits; argument is the name of the end it waits for"), endName)
-            case .selfLink:
+            case .selfLink, .closesCycle:
                 return nil
             }
         }
@@ -1417,18 +1417,24 @@ enum L10n {
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.skipped", defaultValue: "Waits for %@, who is skipped.", comment: "VoiceOver: a Promote connection that waits for an end that is skipped; argument is its name"), endName)
                     case .unset:
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.unset", defaultValue: "Waits for %@, who has no target yet.", comment: "VoiceOver: a Promote connection that waits for an end with no target yet; argument is its name"), endName)
-                    case .notOnPage:
+                    default:
                         part = L10n.format(LocalizedStringResource("promote.connection.spoken.notOnPage", defaultValue: "Waits for %@, who is not on this page.", comment: "VoiceOver: a Promote connection that waits for an end that is not on the page; argument is its name"), endName)
                     }
                 }
             case .selfLink(let ref):
                 part = L10n.format(LocalizedStringResource("promote.connection.spoken.selfLink", defaultValue: "Not promoted, both ends are %@.", comment: "VoiceOver: a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+            case .closesCycle:
+                part = L10n.string(LocalizedStringResource("promote.connection.spoken.cycle", defaultValue: "Not promoted, these places would form a loop.", comment: "VoiceOver: a Promote connection that would make places loop"))
             }
             return sentence + ". " + part
         }
         /// The warning under a self-link subrow; `ref` is the record both ends land on.
         static func connectionSelfLink(ref: String) -> String {
             L10n.format(LocalizedStringResource("promote.connection.selfLink", defaultValue: "Not promoted · both ends are %@", comment: "Warning under a Promote connection whose ends land on one record; argument is that record's ref"), ref)
+        }
+        /// The warning under a subrow that would make places loop.
+        static func connectionCycle() -> String {
+            L10n.string(LocalizedStringResource("promote.connection.cycle", defaultValue: "Not promoted · these places would form a loop", comment: "Warning under a Promote connection that would make places loop"))
         }
         /// The note under a subrow whose other end is not a row to work on; `name` is that end.
         static func connectionOtherEnd(name: String, promoted: Bool) -> String {

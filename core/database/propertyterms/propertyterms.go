@@ -37,10 +37,11 @@ var ErrInUse = apperr.New(apperr.CodePropertyTermsInUse, apperr.KindConflict)
 const (
 	// KeyPlaceRelationshipType is product-only: researchers cannot mint terms.
 	KeyPlaceRelationshipType = "place_relationship_type"
-	// Locked place_relationship_type keys. Walk / cycle behaviour is keyed
-	// here in Go (part_of = containment; succeeded_by = succession).
+	// Locked place_relationship_type keys (part_of = containment;
+	// succeeded_by = succession). Which of them may not loop is
+	// connectrules.Bridge.AcyclicTerms.
 	KeyPartOf      = string(vocabkey.TermPartOf)
-	KeySucceededBy = "succeeded_by"
+	KeySucceededBy = string(vocabkey.TermSucceededBy)
 
 	sqlUpsert = `INSERT INTO property_terms (id, property_id, key, origin, label, description, directed, inverse_key, neutral)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)

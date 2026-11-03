@@ -69,9 +69,9 @@ func TestMemoFollowsCommit(t *testing.T) {
 		t.Helper()
 		beforeP := w.f.propose(w.f.graph(w.srcB), nil)
 		commit()
-		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
+		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil, nil)
 		w.f.c.Graph().Drop()
-		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil)
+		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil, nil)
 		if !sameErr(warmPErr, freshPErr) {
 			t.Fatalf("errors differ: warm %v, fresh %v", warmPErr, freshPErr)
 		}

@@ -1,4 +1,5 @@
-// Package connectrules is the Interpretation connect matrix.
+// Package connectrules is the Interpretation connect matrix and the filing
+// rule that sits beside it (Decide, Bridge.AcyclicTerms in filing.go).
 //
 // This is the only product table of “this property on this bridge type is an
 // endpoint or a disambiguation.” subjectvocab Install derives bridge bindings
@@ -34,6 +35,9 @@ type Bridge struct {
 	Endpoints      []Endpoint
 	Disambiguation string // property key; "" or "none" = none
 	Pairs          [][2]string
+	// AcyclicTerms are the disambiguation terms whose filed links may not
+	// loop. The bridge's first endpoint is the from end of such a link.
+	AcyclicTerms []vocabkey.BridgeTerm
 }
 
 // Rule is one allowed (or refused) connect endpoint pair after expansion.
@@ -84,6 +88,7 @@ var productBridges = []Bridge{
 		},
 		Disambiguation: DisambiguationPlaceRelationshipType,
 		Pairs:          [][2]string{{"place", "place"}},
+		AcyclicTerms:   []vocabkey.BridgeTerm{vocabkey.TermPartOf, vocabkey.TermSucceededBy},
 	},
 }
 

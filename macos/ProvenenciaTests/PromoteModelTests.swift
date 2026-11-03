@@ -45,10 +45,11 @@ struct PromoteModelTests {
         )
     }
 
-    private func model(store: FakeStore, subjectID: String, graphID: String? = nil) -> PromoteModel {
+    private func model(store: FakeStore, subjectID: String, graphID: String? = nil, mapAll: Bool = false) -> PromoteModel {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let entry = PromoteEntry(location: .promote(
-            sourceId: sourceID, graphId: graphID ?? self.graphID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census"
+            sourceId: sourceID, graphId: graphID ?? self.graphID, subjectId: subjectID, kind: .person, ref: "CPR-1", title: "James", sourceTitle: "Census",
+            mapAll: mapAll
         ))!
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
@@ -83,13 +84,52 @@ struct PromoteModelTests {
         #expect(model.flow.visibleRows.map(\.subjectID) == ["a", "b"])
     }
 
-    @Test func reproposeKeepsBridges() async {
-        let subjects = [
-            subject("a", ref: "CPR-A", label: "Ada"),
-            subject("b", ref: "CPR-B", label: "Bea"),
-            CatalogSubject(id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-relationship", label: "Ada and Bea", description: ""),
-        ]
+    @Test func theProposalCarriesThePagesScope() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
         let store = store(subjects: subjects)
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")])]
+        let one = model(store: store, subjectID: "a")
+        await one.load()
+        #expect(store.lastPromoteOnlySubjectID == "a")
+
+        let all = model(store: store, subjectID: "a", mapAll: true)
+        await all.load()
+        #expect(store.lastPromoteOnlySubjectID == nil)
+    }
+
+    @Test func mappingTheRestProposesAgain() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = storeWithABridge(subjects)
+        func connection(_ outcome: PromoteConnectionOutcome, waiting: String = "") -> CatalogPromoteGraphAlignmentConnection {
+            CatalogPromoteGraphAlignmentConnection(bridgeSubjectID: "br", outcome: outcome, waitingSubjectID: waiting)
+        }
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(
+                revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")],
+                connections: [connection(.notOnPage, waiting: "b")]
+            ),
+            CatalogPromoteGraphAlignmentProposal(
+                revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e2")],
+                connections: [connection(.files)]
+            ),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        #expect(model.flow.bridges.map(\.id) == ["br"])
+        #expect(store.lastPromoteOnlySubjectID == "a")
+        #expect(model.flow.connections.first?.state == .waits(endID: "b", why: .notOnPage))
+        #expect(model.flow.connectionCount == 0)
+        model.mapRest()
+        let proposed = await waitUntil { model.flow.connectionCount == 1 }
+        #expect(proposed)
+        #expect(store.lastPromoteOnlySubjectID == nil)
+        #expect(model.flow.connections.first?.state == .promotes)
+    }
+
+    /// A store whose graph holds `subjects` and one relationship bridge "br" between "a" and "b".
+    private func storeWithABridge(_ people: [CatalogSubject]) -> FakeStore {
+        let bridge = CatalogSubject(id: "br", ref: "CPA-1", sourceID: sourceID, subjectTypeID: "type-relationship", label: "Ada and Bea", description: "")
+        let store = store(subjects: people + [bridge])
         store.subjectTypesByProject[projectDir]?.append(CatalogSubjectType(
             id: "type-relationship", key: "relationship", origin: "provenencia", label: "Relationship",
             description: "", refPrefix: "REL", candidateRefPrefix: "CPA"
@@ -102,6 +142,11 @@ struct PromoteModelTests {
             )
         }
         store.observationsByGraph[graphID] = [cite("person", "a"), cite("related_to", "b")]
+        return store
+    }
+
+    @Test func reproposeKeepsBridges() async {
+        let store = storeWithABridge([subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")])
         store.promoteProposals = [
             CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
             CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e1"), row("b", handleID: "e9")]),
@@ -371,6 +416,8 @@ struct PromoteModelTests {
         let model = model(store: store, subjectID: "a")
         await model.load()
         model.mapRest()
+        let settled = await waitUntil { !model.isProposing }
+        #expect(settled)
         let fixedBefore = store.lastPromoteFixed
 
         model.setTarget(subjectID: "a", token: PromoteFlow.Target.findToken)
@@ -388,6 +435,8 @@ struct PromoteModelTests {
         let model = model(store: store, subjectID: "a")
         await model.load()
         model.mapRest()
+        let settled = await waitUntil { !model.isProposing }
+        #expect(settled)
         let rowsBefore = model.flow.rows
         let fixedBefore = store.lastPromoteFixed
 

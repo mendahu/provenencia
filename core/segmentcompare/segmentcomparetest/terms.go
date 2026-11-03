@@ -37,8 +37,8 @@ func Terms() segmentcompare.Terms {
 		vocabkey.BridgeParticipation: role,
 		vocabkey.BridgeRelationship:  rel,
 		vocabkey.BridgePlaceRelationship: {
-			vocabkey.TermPartOf: {Directed: true},
-			"succeeded_by":      {Directed: true},
+			vocabkey.TermPartOf:      {Directed: true},
+			vocabkey.TermSucceededBy: {Directed: true},
 		},
 	}
 }

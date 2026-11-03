@@ -428,6 +428,9 @@ private struct PromoteConnectionSubrows: View {
             if case .selfLink(let ref) = bridge.state {
                 PVCallout(tone: .warning, message: L10n.Promote.connectionSelfLink(ref: ref), compact: true)
             }
+            if bridge.state == .closesCycle {
+                PVCallout(tone: .warning, message: L10n.Promote.connectionCycle(), compact: true)
+            }
         }
         .padding(.vertical, PVSpacing.space1)
         .accessibilityElement(children: .ignore)

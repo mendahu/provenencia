@@ -76,6 +76,37 @@ enum PromoteMoveReason: Sendable, Equatable {
     }
 }
 
+/// What Done will do with one Promote connection (`graphalign.ConnectionOutcome`). The page words
+/// the typed cases; Go decides them.
+enum PromoteConnectionOutcome: Sendable, Equatable {
+    /// Done files the connection.
+    case files
+    /// An end is set to Skip.
+    case skipped
+    /// An end has no target yet.
+    case unset
+    /// An end is not on the page, or the connection is not complete.
+    case notOnPage
+    /// Both ends land on one record.
+    case selfLink
+    /// Filing it would make places loop.
+    case cycle
+    /// A code this build doesn't know.
+    case unrecognized(String)
+
+    init(wire: String) {
+        switch wire {
+        case "files": self = .files
+        case "skipped": self = .skipped
+        case "unset": self = .unset
+        case "not_on_page": self = .notOnPage
+        case "self_link": self = .selfLink
+        case "cycle": self = .cycle
+        default: self = .unrecognized(wire)
+        }
+    }
+}
+
 /// What a Promote proposal row targets (`graphalign.Target`): a record, a held decision, or nothing.
 enum PromoteTargetCode: Sendable, Equatable {
     /// Promote suggests no record.

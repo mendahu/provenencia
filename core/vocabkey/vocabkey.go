@@ -115,6 +115,9 @@ type BridgeTerm string
 const (
 	// TermPartOf is the place relationship type of a place within a larger one.
 	TermPartOf BridgeTerm = "part_of"
+	// TermSucceededBy is the place relationship type of a place that came
+	// after another.
+	TermSucceededBy BridgeTerm = "succeeded_by"
 
 	// Relationship types of a person to related_to.
 	TermSpouse      BridgeTerm = "spouse"
