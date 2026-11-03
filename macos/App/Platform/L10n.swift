@@ -9394,7 +9394,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "conclusions.timeline.ageRange",
                 defaultValue: "%1$lld–%2$lld",
-                comment: "Age flag of a Timeline row when the age is uncertain by a year; arguments are the lowest and highest age in years"
+                comment: "Age at an event when the dates leave it uncertain; arguments are the lowest and highest possible age in years"
             ), lo, hi)
         }
 
@@ -9418,6 +9418,14 @@ enum L10n {
                 defaultValue: "age %@",
                 comment: "VoiceOver tail of a Timeline row: the person's age on the event; argument is the age as shown on the flag"
             ), age)
+        }
+
+        static func timelineAgeSpokenRange(lo: Int, hi: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageSpokenRange",
+                defaultValue: "age %1$lld to %2$lld",
+                comment: "VoiceOver tail of a Timeline row when the age on the event is uncertain; arguments are the lowest and highest possible age in years"
+            ), lo, hi)
         }
 
         static func timelineAsRole(_ roles: String) -> String {

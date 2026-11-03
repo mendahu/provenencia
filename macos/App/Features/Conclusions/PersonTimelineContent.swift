@@ -256,7 +256,10 @@ struct PersonTimelineContent: Equatable {
             spoken = L10n.DesignSystem.spokenJoin(spoken, L10n.Conclusions.timelineAsRole(joined))
         }
         if let age = event.age {
-            spoken = L10n.DesignSystem.spokenJoin(spoken, L10n.Conclusions.timelineAgeSpoken(Self.ageText(age)))
+            let tail = age.lo == age.hi
+                ? L10n.Conclusions.timelineAgeSpoken(String(age.hi))
+                : L10n.Conclusions.timelineAgeSpokenRange(lo: age.lo, hi: age.hi)
+            spoken = L10n.DesignSystem.spokenJoin(spoken, tail)
         }
         let fold = Fold.participants(eventId: summary.id)
         let shown = expanded.contains(fold) ? event.participants : Array(event.participants.prefix(limit))

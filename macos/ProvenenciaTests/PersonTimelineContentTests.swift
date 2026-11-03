@@ -157,13 +157,14 @@ struct PersonTimelineContentTests {
         let birth = row(johann, "1")
         #expect(birth?.spokenLabel == "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject, age 0")
         if case .marker(let marker) = johann.items[0] { #expect(marker.spokenLabel == birth?.spokenLabel) }
-        #expect(row(johann, "8")?.spokenLabel.hasSuffix(", as Witness, Informant, age 41–42") == true)
+        #expect(row(johann, "8")?.spokenLabel.hasSuffix(", as Witness, Informant, age 41 to 42") == true)
 
         // The age flag: a number, a range, or "?" with no age, and its tooltip and spoken tail.
         #expect(row(johann, "1")?.ageText == "0" && row(johann, "4")?.ageText == "27")
         #expect(row(johann, "3")?.ageText == "17–18" && row(johann, "12")?.ageText == "?")
         #expect(row(johann, "4")?.ageHelp == "Age 27" && row(johann, "12")?.ageHelp == "Age unknown")
         #expect(row(johann, "4")?.spokenLabel.hasSuffix(", as Subject, age 27") == true)
+        #expect(row(johann, "3")?.spokenLabel.hasSuffix("age 17 to 18") == true)
         #expect(row(johann, "12")?.spokenLabel.contains("age") == false)
 
         // The product key of a value.

@@ -18655,7 +18655,7 @@
       }
     },
     "conclusions.timeline.ageRange": {
-      "comment": "Age flag of a Timeline row when the age is uncertain by a year; arguments are the lowest and highest age in years",
+      "comment": "Age at an event when the dates leave it uncertain; arguments are the lowest and highest possible age in years",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18698,6 +18698,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "age %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageSpokenRange": {
+      "comment": "VoiceOver tail of a Timeline row when the age on the event is uncertain; arguments are the lowest and highest possible age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age %1$lld to %2$lld"
           }
         }
       }
