@@ -8,9 +8,10 @@ struct PersonTimelineContentTests {
 
     private func content(
         _ timeline: CatalogPersonTimeline,
-        expanded: Set<PersonTimelineContent.Fold> = []
+        expanded: Set<PersonTimelineContent.Fold> = [],
+        widthClass: PVWidthClass = .regular
     ) -> PersonTimelineContent {
-        PersonTimelineContent(timeline: timeline, expanded: expanded, locale: en)
+        PersonTimelineContent(timeline: timeline, expanded: expanded, locale: en, widthClass: widthClass)
     }
 
     private func ids(_ content: PersonTimelineContent) -> [String] { content.items.map(\.id) }
@@ -78,7 +79,11 @@ struct PersonTimelineContentTests {
 
         let large = content(Data.largeEvent)
         let burial = large.items.compactMap(\.eventRow).first
-        #expect(burial?.participants.count == 15 && burial?.participantsHidden == 26)
+        #expect(burial?.participants.count == 5 && burial?.participantsHidden == 36)
+        let wide = content(Data.largeEvent, widthClass: .wide)
+        #expect(wide.items.compactMap(\.eventRow).first?.participants.count == 12)
+        #expect(wide.items.compactMap(\.eventRow).first?.participantsHidden == 29)
+        #expect(PersonTimelineContent.participantFoldLimit(.regular) == 5 && PersonTimelineContent.participantFoldLimit(.wide) == 12)
         let all = content(Data.largeEvent, expanded: [.participants(eventId: "big")])
         #expect(all.items.compactMap(\.eventRow).first?.participants.count == 41)
         #expect(all.items.compactMap(\.eventRow).first?.participantsHidden == 0)
@@ -91,7 +96,8 @@ struct PersonTimelineContentTests {
         #expect(lise.firstRevealed(by: .dated) == datedRows.last)
         #expect(open.firstRevealed(by: .dated) == datedRows.last)
         #expect(lise.firstRevealed(by: .undated) == nil)
-        #expect(large.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[15].id)
+        #expect(large.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[5].id)
+        #expect(wide.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[12].id)
         #expect(all.firstRevealed(by: .participants(eventId: "big")) == large.firstRevealed(by: .participants(eventId: "big")))
         #expect(large.firstRevealed(by: .participants(eventId: "other")) == nil)
 
@@ -143,15 +149,22 @@ struct PersonTimelineContentTests {
         let changed = content(timeline)
         #expect(row(changed, "1")?.roles == [PersonTimelineContent.RoleBadge(text: "Subject", isSubject: false)])
         #expect(row(changed, "2")?.roles.isEmpty == true)
-        #expect(row(changed, "2")?.spokenLabel == "Baptism of Johann Weber, 16 Mar 1817, St. Ansgarii, Bremen")
+        #expect(row(changed, "2")?.spokenLabel == "Baptism of Johann Weber, 16 Mar 1817, St. Ansgarii, Bremen, age 0")
         let bare = row(changed, "13")?.spokenLabel ?? ""
         #expect(!bare.isEmpty && !bare.contains(", as ") && !bare.contains(",,") && !bare.hasSuffix(","))
         #expect(bare == row(changed, "13")?.title.text)
 
         let birth = row(johann, "1")
-        #expect(birth?.spokenLabel == "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject")
+        #expect(birth?.spokenLabel == "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject, age 0")
         if case .marker(let marker) = johann.items[0] { #expect(marker.spokenLabel == birth?.spokenLabel) }
-        #expect(row(johann, "8")?.spokenLabel.hasSuffix(", as Witness, Informant") == true)
+        #expect(row(johann, "8")?.spokenLabel.hasSuffix(", as Witness, Informant, age 41–42") == true)
+
+        // The age flag: a number, a range, or "?" with no age, and its tooltip and spoken tail.
+        #expect(row(johann, "1")?.ageText == "0" && row(johann, "4")?.ageText == "27")
+        #expect(row(johann, "3")?.ageText == "17–18" && row(johann, "12")?.ageText == "?")
+        #expect(row(johann, "4")?.ageHelp == "Age 27" && row(johann, "12")?.ageHelp == "Age unknown")
+        #expect(row(johann, "4")?.spokenLabel.hasSuffix(", as Subject, age 27") == true)
+        #expect(row(johann, "12")?.spokenLabel.contains("age") == false)
 
         // The product key of a value.
         #expect(Data.role("subject").productKey == "subject")

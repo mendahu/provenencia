@@ -9390,6 +9390,36 @@ enum L10n {
             comment: "Hint under the Undated heading of the Timeline: these events have no place on the lifeline"
         )
 
+        static func timelineAgeRange(lo: Int, hi: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageRange",
+                defaultValue: "%1$lld–%2$lld",
+                comment: "Age flag of a Timeline row when the age is uncertain by a year; arguments are the lowest and highest age in years"
+            ), lo, hi)
+        }
+
+        static func timelineAgeHelp(_ age: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageHelp",
+                defaultValue: "Age %@",
+                comment: "Tooltip of a Timeline row's age flag; argument is the age as shown on the flag"
+            ), age)
+        }
+
+        static let timelineAgeUnknown = LocalizedStringResource(
+            "conclusions.timeline.ageUnknown",
+            defaultValue: "Age unknown",
+            comment: "Tooltip of a Timeline row's age flag when the person's age on the event cannot be told"
+        )
+
+        static func timelineAgeSpoken(_ age: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageSpoken",
+                defaultValue: "age %@",
+                comment: "VoiceOver tail of a Timeline row: the person's age on the event; argument is the age as shown on the flag"
+            ), age)
+        }
+
         static func timelineAsRole(_ roles: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.timeline.asRole",

@@ -35,13 +35,30 @@ private struct PVTitleLineLimit: ViewModifier {
     }
 }
 
-/// A title in one of two sizes: the list row's, or the detail page's display
-/// size. Name plain, label italic, ref mono, at both. Draws a `+N` badge when
+/// A title in one of three sizes: the list row's, a heading's (an event row on
+/// the Timeline), or the detail page's display size. Name plain, label italic,
+/// ref mono, at each. Draws a `+N` badge when
 /// other names survived; the badge keeps its width and the title truncates.
 struct PVTitleText: View {
     enum Style: Equatable {
         case row
         case display(compact: Bool)
+        /// The display face at the h2 size, for a row that heads a block.
+        case heading
+    }
+
+    /// The sizes a display title takes: its name or label, and its ref.
+    private struct DisplayMetrics {
+        var titleSize: CGFloat
+        var refSize: CGFloat
+    }
+
+    private var displayMetrics: DisplayMetrics {
+        switch style {
+        case .display(compact: true): DisplayMetrics(titleSize: PVTypeScale.h3, refSize: PVTypeScale.h4)
+        case .heading: DisplayMetrics(titleSize: PVTypeScale.h2, refSize: PVTypeScale.h3)
+        case .row, .display(compact: false): DisplayMetrics(titleSize: PVTypeScale.display3, refSize: PVTypeScale.h1)
+        }
     }
 
     let source: PVTitleSource
@@ -79,8 +96,8 @@ struct PVTitleText: View {
                         .layoutPriority(1)
                 }
             }
-        case .display(let compact):
-            displayText(compact: compact)
+        case .display, .heading:
+            displayText(displayMetrics)
                 .modifier(PVTitleLineLimit(lineLimit: lineLimit))
         }
     }
@@ -104,8 +121,8 @@ struct PVTitleText: View {
     }
 
     @ViewBuilder
-    private func displayText(compact: Bool) -> some View {
-        let size = compact ? PVTypeScale.h3 : PVTypeScale.display3
+    private func displayText(_ metrics: DisplayMetrics) -> some View {
+        let size = metrics.titleSize
         let font = PVFont.display(size: size, weight: PVFontWeight.medium)
         switch source {
         case .name(let text, let styled, let spoken):
@@ -128,7 +145,7 @@ struct PVTitleText: View {
                 .accessibilityAddTraits(.isHeader)
         case .ref(let text):
             Text(verbatim: text)
-                .font(PVFont.mono(size: compact ? PVTypeScale.h4 : PVTypeScale.h1, weight: PVFontWeight.medium))
+                .font(PVFont.mono(size: metrics.refSize, weight: PVFontWeight.medium))
                 .foregroundStyle(PVColor.textDisplay)
                 .accessibilityAddTraits(.isHeader)
         }

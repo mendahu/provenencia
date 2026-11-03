@@ -18654,6 +18654,54 @@
         }
       }
     },
+    "conclusions.timeline.ageRange": {
+      "comment": "Age flag of a Timeline row when the age is uncertain by a year; arguments are the lowest and highest age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageHelp": {
+      "comment": "Tooltip of a Timeline row's age flag; argument is the age as shown on the flag",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageUnknown": {
+      "comment": "Tooltip of a Timeline row's age flag when the person's age on the event cannot be told",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageSpoken": {
+      "comment": "VoiceOver tail of a Timeline row: the person's age on the event; argument is the age as shown on the flag",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age %@"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

@@ -2,13 +2,11 @@ import CoreGraphics
 import Foundation
 
 /// The lifeline beside the Timeline's list (S13-13, board S13-D4): where each
-/// dated event sits on a vertical line drawn to scale from the first item's top
-/// to the last item's bottom, the year ticks, the dashed stubs for a birth or
-/// death with no date, and the tethers from a row in view to its point. Pure
-/// geometry on the spans Go gave (S13-33); Swift does no date arithmetic.
-///
-/// Every y is measured from the line's start, the first item's top, except a
-/// tether's, which is in the section's own space like the item frames.
+/// dated event's point sits on a vertical line drawn to scale, the year ticks,
+/// the dashed stubs for a birth or death with no date, and the tethers from a
+/// point to its row's flag. Pure geometry on the spans Go gave (S13-33); Swift
+/// does no date arithmetic. The scale is an input (`PersonTimelinePlacement`
+/// chooses it from the rows); every y is in the section's own space.
 struct PersonTimelineLifeline: Equatable {
     /// The width of the line's column.
     static let columnWidth: CGFloat = 80
@@ -19,11 +17,13 @@ struct PersonTimelineLifeline: Equatable {
     /// The least gap between two year ticks.
     static let minimumTickSpacing: CGFloat = 34
     /// The least height of a year that earns quarter ticks.
-    static let quarterTickYearHeight: CGFloat = 136
+    static let quarterTickYearHeight: CGFloat = 56
     /// The most ticks the line draws.
     static let maximumTicks = 200
-    /// How far below a row's top its dot sits.
-    static let dotInset: CGFloat = 12
+    /// Where the line starts in the section's space, and the room after its end.
+    static let pad: CGFloat = 18
+    /// The shortest span of years the line scales: a life under it is drawn as this.
+    static let minimumYears = 0.25
 
     /// A day is a dot: at most 1/365 of a year (1/366 in a leap year), so this catches both.
     private static let dayInYears = 1.0 / 365.0 + 1e-9
@@ -39,11 +39,13 @@ struct PersonTimelineLifeline: Equatable {
         var id: String
         var shape: Shape
 
-        /// Where a tether leaves it.
+        /// Where a tether leaves it: a dot or cap at its y, a closed bar at its
+        /// middle, an open bar 8pt in from its known end.
         var pointY: CGFloat {
             switch shape {
             case .dot(let y), .cap(let y, _): y
-            case .bar(let from, let to, _, _): (from + to) / 2
+            case .bar(let from, let to, let openStart, let openEnd):
+                if openStart { to - 8 } else if openEnd { from + 8 } else { (from + to) / 2 }
             }
         }
     }
@@ -59,35 +61,26 @@ struct PersonTimelineLifeline: Equatable {
         var id: String
         var from: CGPoint
         var to: CGPoint
-        /// An undated row: a dashed dot at `to` and no curve.
-        var isDashed: Bool
     }
 
-    /// An item that gets a dot at its leading edge.
-    private struct Target: Equatable {
-        var id: String
-        var pointY: CGFloat?
-    }
-
-    /// The first item's top in the section's space.
-    private(set) var origin: CGFloat = 0
     private(set) var length: CGFloat = 0
     private(set) var marks: [Mark] = []
     private(set) var stubs: [ClosedRange<CGFloat>] = []
     private(set) var ticks: [Tick] = []
-    private var targets: [Target] = []
     /// Each mark by its item id.
     private var marksByID: [String: Mark] = [:]
 
-    init(content: PersonTimelineContent, itemFrames: [String: CGRect]) {
-        let items = content.items
-        guard let first = items.first.flatMap({ itemFrames[$0.id] }),
-              let last = items.last.flatMap({ itemFrames[$0.id] }),
-              last.maxY > first.minY
-        else { return }
-        origin = first.minY
-        length = last.maxY - first.minY
+    /// The span of years the line scales: the earliest `from` to the latest `to`
+    /// of the dated rows, at least `minimumYears` long; nil with no dated row.
+    static func range(_ content: PersonTimelineContent) -> (from: Double, to: Double)? {
+        guard let earliest = content.allSpans.map(\.span.from).min(),
+              let latest = content.allSpans.map(\.span.to).max()
+        else { return nil }
+        return (earliest, max(latest, earliest + minimumYears))
+    }
 
+    init(content: PersonTimelineContent, pointsPerYear: CGFloat) {
+        let items = content.items
         let spans = content.allSpans
         let spansByID = Dictionary(spans.map { ($0.id, $0.span) }, uniquingKeysWith: { first, _ in first })
         let shown = Set(items.map(\.id))
@@ -101,18 +94,18 @@ struct PersonTimelineLifeline: Equatable {
             return Stubbed(item: item.id, kind: marker.kind, recorded: marker.row != nil)
         }
 
-        guard let earliest = spans.map(\.span.from).min(), let latest = spans.map(\.span.to).max() else {
-            // Nothing to scale (only undated events): the two caps sit at the
-            // first and last items, joined by one dashed stretch.
+        guard let range = Self.range(content) else {
+            // Nothing to scale (only undated events): the two caps and one
+            // dashed stretch between them.
+            let top = Self.pad, bottom = Self.pad + Self.stubLength
             for item in stubbed {
-                let y: CGFloat = item.kind == .birth ? 0 : length
-                marks.append(Mark(id: item.item, shape: .cap(y: y, isPlaceholder: !item.recorded)))
+                marks.append(Mark(id: item.item, shape: .cap(y: item.kind == .birth ? top : bottom, isPlaceholder: !item.recorded)))
             }
-            stubs = [0...length]
-            targets = Self.targets(items, pointY: { _ in nil })
+            stubs = [top...bottom]
+            length = bottom + Self.pad
+            marksByID = Dictionary(marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
             return
         }
-        let range = (from: earliest, to: max(latest, earliest + 1))
 
         // Where each stub is inserted on the line of years: a birth's at the
         // `from` of the row it precedes, a death's at the `to` of the row it
@@ -128,10 +121,10 @@ struct PersonTimelineLifeline: Equatable {
                 return Insertion(item: item.item, at: previous.flatMap { spansByID[$0]?.to } ?? range.to, kind: .death)
             }
         }
-        let pointsPerYear = max(0, length - Self.stubLength * CGFloat(insertions.count)) / CGFloat(range.to - range.from)
+        length = Self.pad + CGFloat(range.to - range.from) * pointsPerYear + Self.stubLength * CGFloat(insertions.count) + Self.pad
 
         func map(_ year: Double) -> CGFloat {
-            var y = CGFloat(year - range.from) * pointsPerYear
+            var y = Self.pad + CGFloat(year - range.from) * pointsPerYear
             for insertion in insertions {
                 switch insertion.kind {
                 case .birth where year >= insertion.at: y += Self.stubLength
@@ -199,20 +192,21 @@ struct PersonTimelineLifeline: Equatable {
         }
 
         marksByID = Dictionary(marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        targets = Self.targets(items, pointY: { marksByID[$0]?.pointY })
     }
 
-    /// The tethers of the rows whose frame meets `visible`, in the section's
-    /// space: a curve from the row's point on the line to a dot at the row's
-    /// leading edge, or only the dot, dashed, for a row with no date. A
-    /// zero-height `visible` (no viewport size yet) draws none.
-    func tethers(itemFrames: [String: CGRect], visible: CGRect) -> [Tether] {
+    /// The tethers of the rows whose anchor lies in `visible`'s vertical range,
+    /// in the section's space: a curve from the row's point on the line to its
+    /// flag. A row with no point of its own (an undated row) has no anchor and
+    /// no curve. A zero-height `visible` (no viewport size yet) draws none.
+    func tethers(anchors: [String: CGFloat], visible: CGRect) -> [Tether] {
         guard visible.height > 0 else { return [] }
-        return targets.compactMap { target in
-            guard let frame = itemFrames[target.id], frame.intersects(visible) else { return nil }
-            let end = CGPoint(x: Self.columnWidth, y: frame.minY + Self.dotInset)
-            guard let pointY = target.pointY else { return Tether(id: target.id, from: end, to: end, isDashed: true) }
-            return Tether(id: target.id, from: CGPoint(x: Self.lineX, y: origin + pointY), to: end, isDashed: false)
+        return marks.compactMap { mark in
+            guard let y = anchors[mark.id], y >= visible.minY, y <= visible.maxY else { return nil }
+            return Tether(
+                id: mark.id,
+                from: CGPoint(x: Self.lineX, y: mark.pointY),
+                to: CGPoint(x: Self.columnWidth + 12 + PersonTimelinePlacement.flagInset, y: y)
+            )
         }
     }
 
@@ -220,18 +214,6 @@ struct PersonTimelineLifeline: Equatable {
     func mark(_ id: String) -> Mark? { marksByID[id] }
 
     // MARK: - Pieces
-
-    /// The items that get a dot at their leading edge: every event row and recorded
-    /// marker. A tether leaves a point only when the item has one that is a row's own.
-    private static func targets(
-        _ items: [PersonTimelineContent.Item],
-        pointY: (String) -> CGFloat?
-    ) -> [Target] {
-        items.compactMap { item in
-            guard let row = item.eventRow else { return nil }
-            return Target(id: item.id, pointY: row.span == nil ? nil : pointY(item.id))
-        }
-    }
 
     /// The dated row after the item `id`, a fold standing for its first hidden row.
     private static func nextRowID(after id: String, in items: [PersonTimelineContent.Item], folded: [String]) -> String? {

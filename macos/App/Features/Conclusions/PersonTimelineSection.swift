@@ -10,6 +10,7 @@ struct PersonTimelineSection: View {
 
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(\.pvWidthClass) private var widthClass
 
     /// The lists the researcher has unfolded. Reset when the page is another person.
     @State private var expanded: Set<PersonTimelineContent.Fold> = []
@@ -17,13 +18,14 @@ struct PersonTimelineSection: View {
     var body: some View {
         let orders = session.nameFormat
         let expanded = expanded
+        let widthClass = widthClass
         ConclusionPageSectionHost<CatalogPersonTimeline, PersonTimelineContent, PersonTimelineList>(
             section: .timeline,
             entityId: entityId,
             errorTitle: L10n.Conclusions.timelineErrorTitle,
             emptyTitle: L10n.Conclusions.timelineEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.timelineEmptyMessage),
-            make: { PersonTimelineContent(timeline: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders) },
+            make: { PersonTimelineContent(timeline: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders, widthClass: widthClass) },
             isEmpty: \.isEmpty
         ) { content in
             PersonTimelineList(
@@ -37,33 +39,40 @@ struct PersonTimelineSection: View {
     }
 }
 
-/// The items beside the lifeline. A plain stack, because the line's length and
-/// scale need every item's frame; folds bound it to about 60 items until unfolded.
+/// The items beside the lifeline, each placed as near its event's point as the
+/// rows above allow (`PersonTimelinePlacement`). Folds bound it to about 60
+/// items until unfolded.
 struct PersonTimelineList: View {
     let content: PersonTimelineContent
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
 
-    /// Each item's frame in the section's own space.
-    @State private var itemFrames: [String: CGRect] = [:]
-    @State private var lifeline = PersonTimelineLifeline(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), itemFrames: [:])
+    @Environment(\.pvPageViewportSize) private var viewportSize
+    /// Each item's whole height, measured.
+    @State private var heights: [String: CGFloat] = [:]
+    @State private var placement = PersonTimelinePlacement(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), heights: [:], viewportHeight: 0)
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
     /// The title button or card with the keyboard: a row's event id or a card's id.
     @FocusState private var focused: String?
 
-    private nonisolated static let space = "persons.detail.timeline"
+    /// The gap between the line's column and the list.
+    private nonisolated static let lineGap: CGFloat = 12
 
     /// Reads no scroll state: the page's scroll moves only `PersonTimelineTethers`.
     var body: some View {
+        let items = content.items
         HStack(alignment: .top, spacing: 0) {
-            Color.clear.frame(width: PersonTimelineLifeline.columnWidth)
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(content.items) { item in
+            Color.clear.frame(width: PersonTimelineLifeline.columnWidth + Self.lineGap)
+            PersonTimelineStack(
+                tops: placement.lifeline == nil ? [] : items.map { placement.tops[$0.id] ?? 0 },
+                height: placement.height
+            ) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                     PersonTimelineItemView(
                         item: item,
-                        isLast: item.id == content.items.last?.id,
+                        previous: index > 0 ? items[index - 1] : nil,
                         projectDir: projectDir,
                         open: open,
                         expand: unfold,
@@ -71,8 +80,8 @@ struct PersonTimelineList: View {
                     )
                     .id(item.id)
                     .accessibilityIdentifier("persons.detail.timeline.item.\(item.id)")
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frame in
-                        if itemFrames[item.id] != frame { itemFrames[item.id] = frame }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
+                        if abs((heights[item.id] ?? -1) - height) > 0.01 { heights[item.id] = height }
                     }
                 }
             }
@@ -80,24 +89,26 @@ struct PersonTimelineList: View {
             .pvScrollsRowIntoView(scrollTarget, anchor: .top, whenRequested: scrollRequest)
         }
         .overlay(alignment: .topLeading) {
-            ZStack(alignment: .topLeading) {
-                PersonTimelineLine(lifeline: lifeline, labels: content.pointLabels, select: select)
-                PersonTimelineTethers(lifeline: lifeline, itemFrames: itemFrames)
+            if let lifeline = placement.lifeline {
+                ZStack(alignment: .topLeading) {
+                    PersonTimelineLine(lifeline: lifeline, height: placement.height, labels: content.pointLabels, select: select)
+                    PersonTimelineTethers(lifeline: lifeline, anchors: placement.anchors, height: placement.height)
+                }
             }
         }
-        .coordinateSpace(name: Self.space)
         .accessibilityElement(children: .contain)
-        .onChange(of: itemFrames) { rebuild() }
+        .onChange(of: heights) { rebuild() }
         .onChange(of: content) { rebuild() }
+        .onChange(of: viewportSize.height) { rebuild() }
         .onAppear { rebuild() }
     }
 
     private func rebuild() {
         let ids = Set(content.items.map(\.id))
-        let current = itemFrames.filter { ids.contains($0.key) }
-        if current.count != itemFrames.count { itemFrames = current }
-        let next = PersonTimelineLifeline(content: content, itemFrames: current)
-        if next != lifeline { lifeline = next }
+        let current = heights.filter { ids.contains($0.key) }
+        if current.count != heights.count { heights = current }
+        let next = PersonTimelinePlacement(content: content, heights: current, viewportHeight: viewportSize.height)
+        if next != placement { placement = next }
     }
 
     /// "Show N more": the button is gone once the list grows, so the keyboard
@@ -117,11 +128,37 @@ struct PersonTimelineList: View {
     }
 }
 
+/// Places each subview at the top `PersonTimelinePlacement` gave it, full width.
+/// With no tops (heights not yet measured) it stacks them.
+private struct PersonTimelineStack: Layout {
+    /// In subview order.
+    var tops: [CGFloat]
+    var height: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let width = proposal.width ?? subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        if tops.count == subviews.count { return CGSize(width: width, height: height) }
+        let stacked = subviews.reduce(CGFloat(0)) { $0 + $1.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
+        return CGSize(width: width, height: stacked)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let proposed = ProposedViewSize(width: bounds.width, height: nil)
+        var y: CGFloat = 0
+        for (index, subview) in subviews.enumerated() {
+            let top = tops.count == subviews.count ? tops[index] : y
+            subview.place(at: CGPoint(x: bounds.minX, y: bounds.minY + top), anchor: .topLeading, proposal: proposed)
+            y += subview.sizeThatFits(proposed).height
+        }
+    }
+}
+
 /// One item of the list: an event row, a placeholder marker, the Undated heading
-/// or a "Show N more" row.
+/// or a "Show N more" row. It owns the divider above and the paddings, which
+/// `PersonTimelinePlacement` also reads for its anchors.
 private struct PersonTimelineItemView: View {
     let item: PersonTimelineContent.Item
-    let isLast: Bool
+    let previous: PersonTimelineContent.Item?
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
@@ -129,9 +166,10 @@ private struct PersonTimelineItemView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if PersonTimelinePlacement.hasDivider(item, after: previous) { PVDivider() }
             content
-                .padding(.vertical, PVSpacing.space5)
-            if !isLast { PVDivider() }
+                .padding(.top, PersonTimelinePlacement.topPadding(item, after: previous))
+                .padding(.bottom, PersonTimelinePlacement.bottomPadding)
         }
     }
 
@@ -139,10 +177,10 @@ private struct PersonTimelineItemView: View {
     private var content: some View {
         switch item {
         case .row(let row):
-            PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand, focused: focused)
+            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, open: open, expand: expand, focused: focused)
         case .marker(let marker):
             if let row = marker.row {
-                PersonTimelineEventRow(row: row, projectDir: projectDir, open: open, expand: expand, focused: focused)
+                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, open: open, expand: expand, focused: focused)
             } else {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
@@ -164,87 +202,127 @@ private struct PersonTimelineItemView: View {
     }
 }
 
-/// The event row (D-16): picture, title and date line, the person's role Badges,
-/// then the other people as compact cards. A Timeline snowflake: one caller.
+/// The event row (D-6): the age flag's gutter, the picture, the title and date
+/// line with the person's role Badges, and at the right the other people as
+/// compact cards with their roles inside. A Timeline snowflake: one caller.
 private struct PersonTimelineEventRow: View {
     let row: PersonTimelineContent.Row
+    /// A row with no date: its flag is dashed.
+    let isUndated: Bool
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
     let focused: FocusState<String?>.Binding
 
+    @Environment(\.pvWidthClass) private var widthClass
+
     private static let picture: CGFloat = 72
     private static let gap: CGFloat = 16
+    private static let cardColumnGap: CGFloat = 15
+
+    private var textWidth: CGFloat {
+        PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth - PersonTimelinePlacement.gutterWidth - Self.picture - 2 * Self.gap
+    }
+
+    /// 300pt at Regular; three cards and two gaps at Wide.
+    private var peopleWidth: CGFloat {
+        let card = PVTileCardSize.compact.minimumWidth
+        return widthClass == .wide ? 3 * card + 2 * Self.cardColumnGap : card
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space4) {
-            HStack(alignment: .top, spacing: Self.gap) {
-                CachedThumbnail(
-                    projectDir: projectDir,
-                    relPath: row.imageRelPath,
-                    size: Self.picture,
-                    cornerRadius: PVRadius.sm,
-                    fallbackMark: .subjectEvent,
-                    fallbackLabel: L10n.Conclusions.eventPictureThumb,
-                    colors: nil
-                )
-                .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: 4) {
-                    Button { open(row.location) } label: {
-                        PVTitleText(row.title, style: .display(compact: true), lineLimit: 2)
-                            .multilineTextAlignment(.leading)
-                    }
-                    .buttonStyle(PVFocusRingButtonStyle())
-                    .focused(focused, equals: row.id)
-                    .pvActivatesOnReturn(when: focused.wrappedValue == row.id) { open(row.location) }
-                    .accessibilityIdentifier("persons.detail.timeline.title.\(row.id)")
-                    EventSecondaryLine(content: row.line, dateSize: PVTypeScale.body)
+        HStack(alignment: .top, spacing: Self.gap) {
+            Color.clear
+                .frame(width: PersonTimelinePlacement.gutterWidth, height: PersonTimelinePlacement.flagInset + PersonTimelinePlacement.flagHeight)
+                .overlay(alignment: .topLeading) {
+                    PersonTimelineAgeFlag(row: row, isDashed: isUndated)
+                        .padding(.leading, PersonTimelinePlacement.flagInset)
+                        .padding(.top, PersonTimelinePlacement.flagInset)
                 }
-                Spacer(minLength: Self.gap)
-                HStack(spacing: PVSpacing.space2) {
+            CachedThumbnail(
+                projectDir: projectDir,
+                relPath: row.imageRelPath,
+                size: Self.picture,
+                cornerRadius: PVRadius.sm,
+                fallbackMark: .subjectEvent,
+                fallbackLabel: L10n.Conclusions.eventPictureThumb,
+                colors: nil
+            )
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Button { open(row.location) } label: {
+                    PVTitleText(row.title, style: .heading, lineLimit: 2)
+                        .multilineTextAlignment(.leading)
+                }
+                .buttonStyle(PVFocusRingButtonStyle())
+                .focused(focused, equals: row.id)
+                .pvActivatesOnReturn(when: focused.wrappedValue == row.id) { open(row.location) }
+                .accessibilityIdentifier("persons.detail.timeline.title.\(row.id)")
+                HStack(spacing: 8) {
                     ForEach(Array(row.roles.enumerated()), id: \.offset) { _, role in
                         PVBadge(text: role.text, tone: .neutral, subtle: role.isSubject)
                     }
+                    .accessibilityHidden(true)
+                    EventSecondaryLine(content: row.line, dateSize: PVTypeScale.body)
                 }
-                .accessibilityHidden(true)
             }
-            .frame(maxWidth: PVSpacing.widthContentMax - PersonTimelineLifeline.columnWidth, alignment: .leading)
-            if !row.participants.isEmpty {
-                VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                    LazyVGrid(
-                        columns: [GridItem(.adaptive(minimum: PVTileCardSize.compact.minimumWidth), spacing: 8, alignment: .topLeading)],
-                        alignment: .leading,
-                        spacing: 8
-                    ) {
-                        ForEach(row.participants) { link in
-                            VStack(alignment: .leading, spacing: 4) {
-                                if let role = link.content.role {
-                                    Text(verbatim: role)
-                                        .pvMicroCaps()
-                                        .foregroundStyle(PVColor.textMuted)
-                                        .accessibilityHidden(true)
-                                }
-                                PVPersonCard(content: link.content, projectDir: projectDir, size: .compact) {
-                                    if let location = link.location { open(location) }
-                                }
-                                .frame(height: PVTileCardSize.compact.height)
-                                .focused(focused, equals: link.id)
-                                .accessibilityIdentifier("persons.detail.timeline.tile.\(link.id)")
-                            }
-                        }
-                    }
-                    if row.participantsHidden > 0 {
-                        ConclusionShowMoreRow(count: row.participantsHidden) {
-                            expand(.participants(eventId: row.id))
-                        }
-                        .accessibilityIdentifier("persons.detail.timeline.more.\(row.id)")
-                    }
-                }
-                .padding(.leading, Self.picture + Self.gap)
-            }
+            .frame(maxWidth: textWidth, alignment: .leading)
+            Spacer(minLength: 0)
+            if !row.participants.isEmpty { people }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(row.spokenLabel)
+    }
+
+    private var people: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if widthClass == .wide {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: Self.cardColumnGap, alignment: .topLeading), count: 3),
+                    alignment: .leading,
+                    spacing: 4
+                ) {
+                    ForEach(row.participants) { card($0) }
+                }
+            } else {
+                ForEach(row.participants) { card($0) }
+            }
+            if row.participantsHidden > 0 {
+                ConclusionShowMoreRow(count: row.participantsHidden) {
+                    expand(.participants(eventId: row.id))
+                }
+                .accessibilityIdentifier("persons.detail.timeline.more.\(row.id)")
+            }
+        }
+        .frame(width: peopleWidth, alignment: .leading)
+    }
+
+    private func card(_ link: PersonCardLink) -> some View {
+        PVPersonCard(content: link.content, projectDir: projectDir, size: .compact) {
+            if let location = link.location { open(location) }
+        }
+        .frame(height: PVTileCardSize.compact.height)
+        .focused(focused, equals: link.id)
+        .accessibilityIdentifier("persons.detail.timeline.tile.\(link.id)")
+    }
+}
+
+/// The age at the event (TL-5c) in a small flag at the end of the row's curve; a
+/// dashed one for a row with no date. A Timeline snowflake: one caller.
+private struct PersonTimelineAgeFlag: View {
+    let row: PersonTimelineContent.Row
+    let isDashed: Bool
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 3)
+        Text(verbatim: row.ageText)
+            .font(PVFont.mono(size: PVTypeScale.micro))
+            .foregroundStyle(PVColor.textSecondary)
+            .frame(width: PersonTimelinePlacement.flagWidth, height: PersonTimelinePlacement.flagHeight)
+            .background(shape.fill(PVColor.surfaceCard))
+            .overlay(shape.strokeBorder(PVColor.borderDefault, style: StrokeStyle(lineWidth: 1, dash: isDashed ? [3, 3] : [])))
+            .help(row.ageHelp)
+            .accessibilityHidden(true)
     }
 }
 
@@ -253,6 +331,7 @@ private struct PersonTimelineEventRow: View {
 /// not redraw it. Hidden from VoiceOver and the keyboard; the rows carry the meaning.
 private struct PersonTimelineLine: View {
     let lifeline: PersonTimelineLifeline
+    let height: CGFloat
     /// Each point's name, shown on hover.
     let labels: [String: String]
     let select: (String) -> Void
@@ -267,7 +346,7 @@ private struct PersonTimelineLine: View {
             }
             .frame(
                 width: PersonTimelineLifeline.columnWidth + 4,
-                height: lifeline.origin + lifeline.length + 2 * PersonTimelineDrawing.pad,
+                height: height + 2 * PersonTimelineDrawing.pad,
                 alignment: .topLeading
             )
             .offset(y: -PersonTimelineDrawing.pad)
@@ -278,7 +357,7 @@ private struct PersonTimelineLine: View {
                     .focusable(false)
                     .frame(width: PersonTimelineDrawing.hit, height: hitHeight(mark))
                     .contentShape(Rectangle())
-                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: lifeline.origin + top(mark) - 6)
+                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: top(mark) - 6)
                     .help(labels[mark.id] ?? "")
                     .accessibilityIdentifier("persons.detail.timeline.point.\(mark.id)")
             }
@@ -306,10 +385,10 @@ private struct PersonTimelineLine: View {
         let line = PVColor.borderStrong
         let dash = StrokeStyle(lineWidth: 1.5, dash: [3, 3])
         // The line, solid except over the stubs.
-        var solidFrom: CGFloat = lifeline.origin
-        let end = lifeline.origin + lifeline.length
+        var solidFrom = PersonTimelineLifeline.pad
+        let end = lifeline.length - PersonTimelineLifeline.pad
         for stub in lifeline.stubs.sorted(by: { $0.lowerBound < $1.lowerBound }) {
-            let lower = lifeline.origin + stub.lowerBound, upper = lifeline.origin + stub.upperBound
+            let lower = stub.lowerBound, upper = stub.upperBound
             if lower > solidFrom {
                 context.fill(Path(CGRect(x: lineX - 0.75, y: solidFrom, width: 1.5, height: lower - solidFrom)), with: .color(line))
             }
@@ -324,7 +403,7 @@ private struct PersonTimelineLine: View {
         }
         // Ticks and year labels.
         for tick in lifeline.ticks {
-            let y = lifeline.origin + tick.y
+            let y = tick.y
             let length: CGFloat = tick.isQuarter ? 4 : 8
             context.fill(Path(CGRect(x: lineX - length, y: y - 0.5, width: length, height: 1)), with: .color(line))
             if let year = tick.year {
@@ -336,17 +415,19 @@ private struct PersonTimelineLine: View {
         }
         // Points and caps, all at rest; the rows in view are redrawn in the accent above.
         for mark in lifeline.marks {
-            PersonTimelineDrawing.draw(mark, of: lifeline, color: PVColor.borderStrong, into: &context)
+            PersonTimelineDrawing.draw(mark, color: PVColor.borderStrong, into: &context)
         }
     }
 }
 
 /// The part of the lifeline the page's scroll moves: the points of the rows in
-/// view drawn in the accent, and a curve from each to its row. It alone reads
-/// where the viewport sits over the section, so a scroll step redraws only this.
+/// view drawn in the accent, and a curve from each to its row's flag. It alone
+/// reads where the viewport sits over the section, so a scroll step redraws only
+/// this.
 private struct PersonTimelineTethers: View {
     let lifeline: PersonTimelineLifeline
-    let itemFrames: [String: CGRect]
+    let anchors: [String: CGFloat]
+    let height: CGFloat
 
     @Environment(\.pvPageViewportSize) private var viewportSize
     /// The section's frame in the page's scroll space: where the viewport sits over it.
@@ -356,10 +437,10 @@ private struct PersonTimelineTethers: View {
         let visible = CGRect(
             x: -sectionFrame.minX, y: -sectionFrame.minY, width: viewportSize.width, height: viewportSize.height
         )
-        let tethers = lifeline.tethers(itemFrames: itemFrames, visible: visible)
+        let tethers = lifeline.tethers(anchors: anchors, visible: visible)
         Color.clear
             .frame(width: PersonTimelineLifeline.columnWidth)
-            .frame(maxHeight: .infinity)
+            .frame(height: height)
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)) } action: {
                 sectionFrame = $0
             }
@@ -369,8 +450,8 @@ private struct PersonTimelineTethers: View {
                     draw(tethers, into: &context)
                 }
                 .frame(
-                    width: PersonTimelineLifeline.columnWidth + 4,
-                    height: sectionFrame.height + 2 * PersonTimelineDrawing.pad,
+                    width: PersonTimelineTethers.canvasWidth,
+                    height: height + 2 * PersonTimelineDrawing.pad,
                     alignment: .topLeading
                 )
                 .offset(y: -PersonTimelineDrawing.pad)
@@ -379,27 +460,24 @@ private struct PersonTimelineTethers: View {
             .accessibilityHidden(true)
     }
 
+    /// Wide enough for the curve to reach the flag.
+    private static let canvasWidth = PersonTimelineLifeline.columnWidth + 12 + PersonTimelinePlacement.flagInset
+
     private func draw(_ tethers: [PersonTimelineLifeline.Tether], into context: inout GraphicsContext) {
         for tether in tethers {
             if let mark = lifeline.mark(tether.id) {
-                PersonTimelineDrawing.draw(mark, of: lifeline, color: PVColor.accent, into: &context)
+                PersonTimelineDrawing.draw(mark, color: PVColor.accent, into: &context)
             }
-            // A curve from the point to a dot at the row's edge (a dashed dot alone for an undated row).
-            let dot = CGRect(x: tether.to.x - 3, y: tether.to.y - 3, width: 6, height: 6)
-            if tether.isDashed {
-                context.stroke(Path(ellipseIn: dot), with: .color(PVColor.textMuted), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
-                continue
-            }
+            // A curve from the point to the edge of the row's flag.
             var curve = Path()
             let midX = (tether.from.x + tether.to.x) / 2
             curve.move(to: tether.from)
             curve.addCurve(
-                to: CGPoint(x: tether.to.x - 3, y: tether.to.y),
+                to: tether.to,
                 control1: CGPoint(x: midX, y: tether.from.y),
                 control2: CGPoint(x: midX, y: tether.to.y)
             )
             context.stroke(curve, with: .color(PVColor.accent), lineWidth: 1)
-            context.fill(Path(ellipseIn: dot), with: .color(PVColor.accent))
         }
     }
 }
@@ -412,17 +490,16 @@ private enum PersonTimelineDrawing {
 
     static func draw(
         _ mark: PersonTimelineLifeline.Mark,
-        of lifeline: PersonTimelineLifeline,
         color: Color,
         into context: inout GraphicsContext
     ) {
         let lineX = PersonTimelineLifeline.lineX
         switch mark.shape {
         case .dot(let y):
-            let c = CGPoint(x: lineX, y: lifeline.origin + y)
+            let c = CGPoint(x: lineX, y: y)
             context.fill(Path(ellipseIn: CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8)), with: .color(color))
         case .bar(let from, let to, let openStart, let openEnd):
-            let top = lifeline.origin + from, bottom = max(lifeline.origin + to, top + 6)
+            let top = from, bottom = max(to, top + 6)
             let rect = CGRect(x: lineX - 3, y: top, width: 6, height: bottom - top)
             let fade = min(16, rect.height)
             let shading: GraphicsContext.Shading = .linearGradient(
@@ -437,7 +514,7 @@ private enum PersonTimelineDrawing {
             )
             context.fill(Path(roundedRect: rect, cornerRadius: 3), with: shading)
         case .cap(let y, let isPlaceholder):
-            let c = CGPoint(x: lineX, y: lifeline.origin + y)
+            let c = CGPoint(x: lineX, y: y)
             let circle = Path(ellipseIn: CGRect(x: c.x - 6, y: c.y - 6, width: 12, height: 12))
             if isPlaceholder {
                 context.fill(circle, with: .color(PVColor.surfacePage))
@@ -465,7 +542,7 @@ private struct PersonTimelinePreview: View {
     var body: some View {
         PVPageColumns(primaryFill: true) {
             PersonTimelineList(
-                content: PersonTimelineContent(timeline: timeline, expanded: expanded),
+                content: PersonTimelineContent(timeline: timeline, expanded: expanded, widthClass: width >= PVSpacing.widthWideBreakpoint ? .wide : .regular),
                 projectDir: "/tmp/none",
                 open: { _ in },
                 expand: { expanded.insert($0) }

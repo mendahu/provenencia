@@ -10,8 +10,15 @@ import Foundation
 struct PersonTimelineContent: Equatable {
     /// Dated events shown before "Show N more", and likewise the undated ones.
     static let eventFoldLimit = 50
-    /// Other people shown on one event before "Show N more".
-    static let participantFoldLimit = 15
+
+    /// Other people shown on one event before "Show N more": the board's five
+    /// at Regular and twelve at Wide, so a fold is one or two rows of cards.
+    static func participantFoldLimit(_ widthClass: PVWidthClass) -> Int {
+        switch widthClass {
+        case .regular: 5
+        case .wide: 12
+        }
+    }
 
     /// A list that can be folded; a row's participant fold is drawn inside the row.
     enum Fold: Hashable {
@@ -35,11 +42,21 @@ struct PersonTimelineContent: Equatable {
         var roles: [RoleBadge]
         var location: WorkspaceLocation
         var span: CatalogTimelineSpan?
+        /// The person's age on the event, when Go could tell it.
+        var age: CatalogAgeRange?
         /// The other people shown, in the read's order (most important role first).
         var participants: [PersonCardLink]
         var participantsHidden: Int
-        /// "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject".
+        /// "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject, age 0".
         var spokenLabel: String
+
+        /// The age flag's text: "27", "17–18", or "?" with no age.
+        var ageText: String { PersonTimelineContent.ageText(age) }
+
+        /// The flag's tooltip.
+        var ageHelp: String {
+            age == nil ? L10n.string(L10n.Conclusions.timelineAgeUnknown) : L10n.Conclusions.timelineAgeHelp(PersonTimelineContent.ageText(age))
+        }
     }
 
     struct Marker: Equatable {
@@ -106,10 +123,12 @@ struct PersonTimelineContent: Equatable {
         timeline: CatalogPersonTimeline,
         expanded: Set<Fold> = [],
         locale: Locale = .autoupdatingCurrent,
-        orders: NameFormatOrders = NameFormatOrders()
+        orders: NameFormatOrders = NameFormatOrders(),
+        widthClass: PVWidthClass = .regular
     ) {
         isEmpty = timeline.events.isEmpty
-        let rows = timeline.events.map { Self.row($0, expanded: expanded, locale: locale, orders: orders) }
+        let limit = Self.participantFoldLimit(widthClass)
+        let rows = timeline.events.map { Self.row($0, expanded: expanded, limit: limit, locale: locale, orders: orders) }
         allSpans = rows.compactMap { row in row.span.map { Span(id: row.id, span: $0, spokenLabel: row.spokenLabel) } }
         guard !rows.isEmpty else { return }
         let rowsByID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -124,9 +143,9 @@ struct PersonTimelineContent: Equatable {
                 spokenLabel: L10n.string(kind == .birth ? L10n.Conclusions.timelineBirthUnknown : L10n.Conclusions.timelineDeathUnknown)
             )
         }
-        for event in timeline.events where event.participants.count > Self.participantFoldLimit {
+        for event in timeline.events where event.participants.count > limit {
             revealed[.participants(eventId: event.event.id)] =
-                Self.participantLinkID(eventId: event.event.id, personId: event.participants[Self.participantFoldLimit].person.id)
+                Self.participantLinkID(eventId: event.event.id, personId: event.participants[limit].person.id)
         }
         let birth = marker(.birth, timeline.birth)
         let death = marker(.death, timeline.death)
@@ -213,11 +232,18 @@ struct PersonTimelineContent: Equatable {
         values.compactMap { PropertyTermDisplay.name($0, propertyKey: SeededPropertyKey.role) }
     }
 
+    /// "27", "17–18", or "?" for an age Go could not tell.
+    static func ageText(_ age: CatalogAgeRange?) -> String {
+        guard let age else { return "?" }
+        return age.lo == age.hi ? String(age.hi) : L10n.Conclusions.timelineAgeRange(lo: age.lo, hi: age.hi)
+    }
+
     private static func participantLinkID(eventId: String, personId: String) -> String { "\(eventId)-\(personId)" }
 
     private static func row(
         _ event: CatalogPersonEvent,
         expanded: Set<Fold>,
+        limit: Int,
         locale: Locale,
         orders: NameFormatOrders
     ) -> Row {
@@ -229,8 +255,11 @@ struct PersonTimelineContent: Equatable {
         if let joined = L10n.DesignSystem.spokenJoin(roles.map(\.text)) {
             spoken = L10n.DesignSystem.spokenJoin(spoken, L10n.Conclusions.timelineAsRole(joined))
         }
+        if let age = event.age {
+            spoken = L10n.DesignSystem.spokenJoin(spoken, L10n.Conclusions.timelineAgeSpoken(Self.ageText(age)))
+        }
         let fold = Fold.participants(eventId: summary.id)
-        let shown = expanded.contains(fold) ? event.participants : Array(event.participants.prefix(participantFoldLimit))
+        let shown = expanded.contains(fold) ? event.participants : Array(event.participants.prefix(limit))
         return Row(
             id: summary.id,
             title: EventTitleDisplay.titleSource(summary, locale: locale, orders: orders),
@@ -239,6 +268,7 @@ struct PersonTimelineContent: Equatable {
             roles: roles,
             location: EventsList.location(summary, orders: orders),
             span: event.span,
+            age: event.age,
             participants: shown.map { participant in
                 PersonCardLink.link(
                     id: participantLinkID(eventId: summary.id, personId: participant.person.id),
