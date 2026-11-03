@@ -256,15 +256,14 @@ struct PropertiesModelTests {
         #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
     }
 
-    /// T-9 (D-7): the create flow applies each write's effects as it lands, so
-    /// a failed bind leaves the created Property shown, with `formError` set.
+    /// T-9 (D-7): the create flow applies the create's effects before the binds,
+    /// so a failed bind leaves the created Property shown, with `formError` set.
+    /// (`bindTypeIDs` is a set, so one failing bind keeps the order out of it.)
     @Test func createAppliesEachWriteAsItLands() async {
         let store = FakeStore()
-        let person = personType()
         let event = eventType()
-        let (model, session, _) = makeModel(store: store, properties: [nameProperty()], types: [person, event])
-        let handle = await showProperties(model, session: session)
-        _ = handle
+        let (model, session, _) = makeModel(store: store, properties: [nameProperty()], types: [personType(), event])
+        _ = await showProperties(model, session: session)
         store.nextWriteEffects = CatalogWriteEffects(lists: [.propertyVocabulary])
         struct BindFailed: Error {}
         store.assignSubjectTypePropertyErrors[event.id] = BindFailed()
@@ -272,7 +271,7 @@ struct PropertiesModelTests {
 
         model.openCreate()
         model.draft = PropertiesModel.Draft(
-            label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [person.id, event.id]
+            label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [event.id]
         )
         let location = await model.submitCreate()
         await session.settleWrites()
@@ -280,8 +279,7 @@ struct PropertiesModelTests {
         #expect(location == nil)
         #expect(model.formError != nil)
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" } == true)
-        #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
-        #expect(store.getPropertiesWorkspaceCalls > baseline)
+        #expect(store.getPropertiesWorkspaceCalls == baseline + 1)
     }
 
     @Test func createDefaultsToOneValueAndCanSubmitSeveral() async {
