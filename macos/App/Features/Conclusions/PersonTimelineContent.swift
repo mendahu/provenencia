@@ -84,10 +84,15 @@ struct PersonTimelineContent: Equatable {
     struct Span: Equatable {
         var id: String
         var span: CatalogTimelineSpan
+        /// The row's spoken label, the name of its point on the line.
+        var spokenLabel: String
     }
 
     private(set) var items: [Item] = []
     private(set) var allSpans: [Span] = []
+    /// What each point or cap on the lifeline is called, by item id: a row's or
+    /// marker's spoken label, including the rows a fold hides.
+    private(set) var pointLabels: [String: String] = [:]
     /// The first item each fold would reveal, folded or not: a row's id, or a
     /// participant card's.
     private var revealed: [Fold: String] = [:]
@@ -105,7 +110,7 @@ struct PersonTimelineContent: Equatable {
     ) {
         isEmpty = timeline.events.isEmpty
         let rows = timeline.events.map { Self.row($0, expanded: expanded, locale: locale, orders: orders) }
-        allSpans = rows.compactMap { row in row.span.map { Span(id: row.id, span: $0) } }
+        allSpans = rows.compactMap { row in row.span.map { Span(id: row.id, span: $0, spokenLabel: row.spokenLabel) } }
         guard !rows.isEmpty else { return }
         let rowsByID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
@@ -192,6 +197,15 @@ struct PersonTimelineContent: Equatable {
         }
 
         items = before + undatedItems + [dated[deathAt]] + after
+
+        pointLabels = Dictionary(allSpans.map { ($0.id, $0.spokenLabel) }, uniquingKeysWith: { first, _ in first })
+        for item in items {
+            if let row = item.eventRow {
+                pointLabels[item.id] = row.spokenLabel
+            } else if case .marker(let marker) = item {
+                pointLabels[item.id] = marker.spokenLabel
+            }
+        }
     }
 
     /// The names of the role terms among `values`; one that is not a term, or has no name, is skipped.

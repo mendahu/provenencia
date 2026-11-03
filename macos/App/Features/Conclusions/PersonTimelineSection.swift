@@ -81,7 +81,7 @@ struct PersonTimelineList: View {
         }
         .overlay(alignment: .topLeading) {
             ZStack(alignment: .topLeading) {
-                PersonTimelineLine(lifeline: lifeline, select: select)
+                PersonTimelineLine(lifeline: lifeline, labels: content.pointLabels, select: select)
                 PersonTimelineTethers(lifeline: lifeline, itemFrames: itemFrames)
             }
         }
@@ -253,6 +253,8 @@ private struct PersonTimelineEventRow: View {
 /// not redraw it. Hidden from VoiceOver and the keyboard; the rows carry the meaning.
 private struct PersonTimelineLine: View {
     let lifeline: PersonTimelineLifeline
+    /// Each point's name, shown on hover.
+    let labels: [String: String]
     let select: (String) -> Void
 
     private var lineX: CGFloat { PersonTimelineLifeline.lineX }
@@ -277,6 +279,7 @@ private struct PersonTimelineLine: View {
                     .frame(width: PersonTimelineDrawing.hit, height: hitHeight(mark))
                     .contentShape(Rectangle())
                     .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: lifeline.origin + top(mark) - 6)
+                    .help(labels[mark.id] ?? "")
                     .accessibilityIdentifier("persons.detail.timeline.point.\(mark.id)")
             }
         }

@@ -109,6 +109,21 @@ struct PersonTimelineContentTests {
         #expect(undated.firstRevealed(by: .undated) == "u50")
     }
 
+    @Test func pointsAreNamedByTheirRow() {
+        for timeline in [Data.johann, Data.lise, Data.unknownEnds] {
+            let all = content(timeline, expanded: [.dated, .undated])
+            #expect(!all.allSpans.isEmpty)
+            for span in all.allSpans {
+                #expect(span.spokenLabel == row(all, span.id)?.spokenLabel)
+                #expect(all.pointLabels[span.id] == span.spokenLabel)
+            }
+        }
+        // A fold hides a row but its point keeps its name; a placeholder cap is named by its text.
+        let lise = content(Data.lise)
+        #expect(lise.pointLabels["l60"] == lise.allSpans.first { $0.id == "l60" }?.spokenLabel)
+        #expect(content(Data.unknownEnds).pointLabels["birth"] == "Birth unknown")
+    }
+
     @Test func rolesLocationsAndSpoken() {
         let johann = content(Data.johann)
         #expect(row(johann, "8")?.roles.map(\.text) == ["Witness", "Informant"])
