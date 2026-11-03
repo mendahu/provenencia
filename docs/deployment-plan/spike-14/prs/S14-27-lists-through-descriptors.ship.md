@@ -40,4 +40,4 @@ Head `4b67f026`. Gate PASS (orchestrator run; xcode-test 51s). F-1 done (`02b148
 Not run: round 1 had no Fix-now blocker or major.
 
 ## Result
-Gate PASS · `main` unchanged since branch cut (`42eb321c`) · CI <pending> · open: none · follow-ups: none · to user: — · CON miss: none
+Gate PASS · `main` unchanged since branch cut (`42eb321c`) · CI green (test 3m27s, test 8m38s, localizable) · open: none · follow-ups: none · to user: — · CON miss: none
