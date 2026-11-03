@@ -735,10 +735,13 @@ struct CatalogTimelineSpan: Sendable, Equatable {
 }
 
 /// A person's age on an event in whole years, `lo` to `hi`: equal when the
-/// dates leave no doubt.
+/// dates leave no doubt. An open side (a BEF or AFT birth or event) is flagged
+/// and its bound is 0: only the other side is known.
 struct CatalogAgeRange: Sendable, Equatable {
     var lo: Int
     var hi: Int
+    var openLo = false
+    var openHi = false
 }
 
 /// Where the timeline puts a birth or a death. `eventId` is the recorded event,

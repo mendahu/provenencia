@@ -1596,10 +1596,13 @@ message TimelineSpan {
 }
 
 // AgeRange is the whole years of age a person had on an event: lo to hi, equal
-// when the dates leave no doubt.
+// when the dates leave no doubt. An open side (a BEF or AFT birth or event) is
+// flagged and its bound is 0: only the other side is known.
 message AgeRange {
   int32 lo = 1;
   int32 hi = 2;
+  bool open_lo = 3;
+  bool open_hi = 4;
 }
 
 // PersonEvent is one event of a person's timeline: the event, the person's

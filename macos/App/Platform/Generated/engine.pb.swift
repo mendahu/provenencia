@@ -5379,7 +5379,8 @@ public nonisolated struct Provenencia_Engine_V1_TimelineSpan: Sendable {
 }
 
 /// AgeRange is the whole years of age a person had on an event: lo to hi, equal
-/// when the dates leave no doubt.
+/// when the dates leave no doubt. An open side (a BEF or AFT birth or event) is
+/// flagged and its bound is 0: only the other side is known.
 public nonisolated struct Provenencia_Engine_V1_AgeRange: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5388,6 +5389,10 @@ public nonisolated struct Provenencia_Engine_V1_AgeRange: Sendable {
   public var lo: Int32 = 0
 
   public var hi: Int32 = 0
+
+  public var openLo: Bool = false
+
+  public var openHi: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -16575,7 +16580,7 @@ nonisolated extension Provenencia_Engine_V1_TimelineSpan: SwiftProtobuf.Message,
 
 nonisolated extension Provenencia_Engine_V1_AgeRange: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AgeRange"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}lo\0\u{1}hi\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}lo\0\u{1}hi\0\u{3}open_lo\0\u{3}open_hi\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16585,6 +16590,8 @@ nonisolated extension Provenencia_Engine_V1_AgeRange: SwiftProtobuf.Message, Swi
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularInt32Field(value: &self.lo) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self.hi) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.openLo) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.openHi) }()
       default: break
       }
     }
@@ -16597,12 +16604,20 @@ nonisolated extension Provenencia_Engine_V1_AgeRange: SwiftProtobuf.Message, Swi
     if self.hi != 0 {
       try visitor.visitSingularInt32Field(value: self.hi, fieldNumber: 2)
     }
+    if self.openLo != false {
+      try visitor.visitSingularBoolField(value: self.openLo, fieldNumber: 3)
+    }
+    if self.openHi != false {
+      try visitor.visitSingularBoolField(value: self.openHi, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_AgeRange, rhs: Provenencia_Engine_V1_AgeRange) -> Bool {
     if lhs.lo != rhs.lo {return false}
     if lhs.hi != rhs.hi {return false}
+    if lhs.openLo != rhs.openLo {return false}
+    if lhs.openHi != rhs.openHi {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

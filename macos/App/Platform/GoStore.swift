@@ -1242,7 +1242,7 @@ struct GoStore: GenealogyStore {
                 span: e.hasSpan
                     ? CatalogTimelineSpan(from: e.span.from, to: e.span.to, openStart: e.span.openStart, openEnd: e.span.openEnd)
                     : nil,
-                age: e.hasAge ? CatalogAgeRange(lo: Int(e.age.lo), hi: Int(e.age.hi)) : nil
+                age: e.hasAge ? CatalogAgeRange(lo: Int(e.age.lo), hi: Int(e.age.hi), openLo: e.age.openLo, openHi: e.age.openHi) : nil
             )
         }
         return CatalogPersonTimeline(

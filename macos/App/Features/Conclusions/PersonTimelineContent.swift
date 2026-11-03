@@ -50,13 +50,11 @@ struct PersonTimelineContent: Equatable {
         /// "Birth of Johann Weber, 12 Mar 1817, Bremen, as Subject, age 0".
         var spokenLabel: String
 
-        /// The age flag's text: "27", "17–18", or "?" with no age.
-        var ageText: String { PersonTimelineContent.ageText(age) }
+        /// The age flag's text: "27", "17–18", "≤ 63", "≥ 32", or "?" with no age.
+        var ageText: String { PersonTimelineContent.ageWords(age).flag }
 
         /// The flag's tooltip.
-        var ageHelp: String {
-            age == nil ? L10n.string(L10n.Conclusions.timelineAgeUnknown) : L10n.Conclusions.timelineAgeHelp(PersonTimelineContent.ageText(age))
-        }
+        var ageHelp: String { PersonTimelineContent.ageWords(age).help }
     }
 
     struct Marker: Equatable {
@@ -232,10 +230,23 @@ struct PersonTimelineContent: Equatable {
         values.compactMap { PropertyTermDisplay.name($0, propertyKey: SeededPropertyKey.role) }
     }
 
-    /// "27", "17–18", or "?" for an age Go could not tell.
-    static func ageText(_ age: CatalogAgeRange?) -> String {
-        guard let age else { return "?" }
-        return age.lo == age.hi ? String(age.hi) : L10n.Conclusions.timelineAgeRange(lo: age.lo, hi: age.hi)
+    /// What a row says of the person's age: the flag ("27", "17–18", "≤ 63",
+    /// "≥ 32", or "?" for an age Go could not tell), its tooltip, and the spoken
+    /// tail, nil when the age is unknown. Only one side of an open age is known.
+    static func ageWords(_ age: CatalogAgeRange?) -> (flag: String, help: String, spoken: String?) {
+        guard let age else { return ("?", L10n.string(L10n.Conclusions.timelineAgeUnknown), nil) }
+        if age.openLo {
+            return (L10n.Conclusions.timelineAgeAtMost(age.hi), L10n.Conclusions.timelineAgeAtMostHelp(age.hi), L10n.Conclusions.timelineAgeAtMostSpoken(age.hi))
+        }
+        if age.openHi {
+            return (L10n.Conclusions.timelineAgeAtLeast(age.lo), L10n.Conclusions.timelineAgeAtLeastHelp(age.lo), L10n.Conclusions.timelineAgeAtLeastSpoken(age.lo))
+        }
+        if age.lo == age.hi {
+            let text = String(age.hi)
+            return (text, L10n.Conclusions.timelineAgeHelp(text), L10n.Conclusions.timelineAgeSpoken(text))
+        }
+        let text = L10n.Conclusions.timelineAgeRange(lo: age.lo, hi: age.hi)
+        return (text, L10n.Conclusions.timelineAgeHelp(text), L10n.Conclusions.timelineAgeSpokenRange(lo: age.lo, hi: age.hi))
     }
 
     private static func participantLinkID(eventId: String, personId: String) -> String { "\(eventId)-\(personId)" }
@@ -255,10 +266,7 @@ struct PersonTimelineContent: Equatable {
         if let joined = L10n.DesignSystem.spokenJoin(roles.map(\.text)) {
             spoken = L10n.DesignSystem.spokenJoin(spoken, L10n.Conclusions.timelineAsRole(joined))
         }
-        if let age = event.age {
-            let tail = age.lo == age.hi
-                ? L10n.Conclusions.timelineAgeSpoken(String(age.hi))
-                : L10n.Conclusions.timelineAgeSpokenRange(lo: age.lo, hi: age.hi)
+        if let tail = ageWords(event.age).spoken {
             spoken = L10n.DesignSystem.spokenJoin(spoken, tail)
         }
         let fold = Fold.participants(eventId: summary.id)

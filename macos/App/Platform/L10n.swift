@@ -9420,6 +9420,54 @@ enum L10n {
             ), age)
         }
 
+        static func timelineAgeAtMost(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMost",
+                defaultValue: "≤ %lld",
+                comment: "Age flag of a Timeline row when only the highest possible age is known (the event or birth is dated before or after); argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeast(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeast",
+                defaultValue: "≥ %lld",
+                comment: "Age flag of a Timeline row when only the lowest possible age is known (the event or birth is dated before or after); argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtMostHelp(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMostHelp",
+                defaultValue: "Age at most %lld",
+                comment: "Tooltip of a Timeline row's age flag when only the highest possible age is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeastHelp(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeastHelp",
+                defaultValue: "Age at least %lld",
+                comment: "Tooltip of a Timeline row's age flag when only the lowest possible age is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtMostSpoken(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMostSpoken",
+                defaultValue: "age at most %lld",
+                comment: "VoiceOver tail of a Timeline row when only the highest possible age on the event is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeastSpoken(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeastSpoken",
+                defaultValue: "age at least %lld",
+                comment: "VoiceOver tail of a Timeline row when only the lowest possible age on the event is known; argument is that age in years"
+            ), age)
+        }
+
         static func timelineAgeSpokenRange(lo: Int, hi: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.timeline.ageSpokenRange",

@@ -105,3 +105,6 @@ Head `600b1c1d`. Gate PASS (orchestrator). F-9: `narrowListStacksPeople` red fir
 
 ## Result
 Gate PASS · CI green (runs 41654254260, 41654254343 on `8d6eab9c`) · open: none · follow-ups: — · to user: CON-1 (the manual check, incl. click-to-scroll over `PersonTimelineStack`, plan stop condition 2) · CON miss: none
+
+## After ready — one-sided ages (user, 2026-11-03)
+The user reviewed every date shape the timeline draws (20 cases) and asked that a before/after age show its known side, the named year included: "bef. 1880" → `≤ 63`, "aft. 1850" → `≥ 32`, the same for one-sided ranges, start dates and an open birth; `?` stays when nothing is known. The rest of the table stays as is. Done by the orchestrator directly at the user's request ("quickly make those changes"), no review round: `AgeRange.OpenLo`/`OpenHi` in `EventSpanAndAge`, proto `open_lo`/`open_hi`, `CatalogAgeRange.openLo`/`openHi`, `PersonTimelineContent.ageWords` (flag, tooltip "Age at most 63", spoken "age at most 63"); `TestEventAge` and `PersonTimelineContentTests` cases.

@@ -163,6 +163,12 @@ struct PersonTimelineContentTests {
         #expect(row(johann, "1")?.ageText == "0" && row(johann, "4")?.ageText == "27")
         #expect(row(johann, "3")?.ageText == "17–18" && row(johann, "12")?.ageText == "?")
         #expect(row(johann, "4")?.ageHelp == "Age 27" && row(johann, "12")?.ageHelp == "Age unknown")
+        // Only one side known: before or after, the year included.
+        let atMost = PersonTimelineContent.ageWords(CatalogAgeRange(lo: 0, hi: 63, openLo: true))
+        #expect(atMost.flag == "≤ 63" && atMost.help == "Age at most 63" && atMost.spoken == "age at most 63")
+        let atLeast = PersonTimelineContent.ageWords(CatalogAgeRange(lo: 32, hi: 0, openHi: true))
+        #expect(atLeast.flag == "≥ 32" && atLeast.help == "Age at least 32" && atLeast.spoken == "age at least 32")
+        #expect(PersonTimelineContent.ageWords(nil).spoken == nil)
         #expect(row(johann, "4")?.spokenLabel.hasSuffix(", as Subject, age 27") == true)
         #expect(row(johann, "3")?.spokenLabel.hasSuffix("age 17 to 18") == true)
         #expect(row(johann, "12")?.spokenLabel.contains("age") == false)

@@ -12680,11 +12680,14 @@ func (x *TimelineSpan) GetOpenEnd() bool {
 }
 
 // AgeRange is the whole years of age a person had on an event: lo to hi, equal
-// when the dates leave no doubt.
+// when the dates leave no doubt. An open side (a BEF or AFT birth or event) is
+// flagged and its bound is 0: only the other side is known.
 type AgeRange struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Lo            int32                  `protobuf:"varint,1,opt,name=lo,proto3" json:"lo,omitempty"`
 	Hi            int32                  `protobuf:"varint,2,opt,name=hi,proto3" json:"hi,omitempty"`
+	OpenLo        bool                   `protobuf:"varint,3,opt,name=open_lo,json=openLo,proto3" json:"open_lo,omitempty"`
+	OpenHi        bool                   `protobuf:"varint,4,opt,name=open_hi,json=openHi,proto3" json:"open_hi,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12731,6 +12734,20 @@ func (x *AgeRange) GetHi() int32 {
 		return x.Hi
 	}
 	return 0
+}
+
+func (x *AgeRange) GetOpenLo() bool {
+	if x != nil {
+		return x.OpenLo
+	}
+	return false
+}
+
+func (x *AgeRange) GetOpenHi() bool {
+	if x != nil {
+		return x.OpenHi
+	}
+	return false
 }
 
 // PersonEvent is one event of a person's timeline: the event, the person's
@@ -20492,10 +20509,12 @@ const file_engine_proto_rawDesc = "" +
 	"\x02to\x18\x02 \x01(\x01R\x02to\x12\x1d\n" +
 	"\n" +
 	"open_start\x18\x03 \x01(\bR\topenStart\x12\x19\n" +
-	"\bopen_end\x18\x04 \x01(\bR\aopenEnd\"*\n" +
+	"\bopen_end\x18\x04 \x01(\bR\aopenEnd\"\\\n" +
 	"\bAgeRange\x12\x0e\n" +
 	"\x02lo\x18\x01 \x01(\x05R\x02lo\x12\x0e\n" +
-	"\x02hi\x18\x02 \x01(\x05R\x02hi\"\xcb\x02\n" +
+	"\x02hi\x18\x02 \x01(\x05R\x02hi\x12\x17\n" +
+	"\aopen_lo\x18\x03 \x01(\bR\x06openLo\x12\x17\n" +
+	"\aopen_hi\x18\x04 \x01(\bR\x06openHi\"\xcb\x02\n" +
 	"\vPersonEvent\x129\n" +
 	"\x05event\x18\x01 \x01(\v2#.provenencia.engine.v1.EventSummaryR\x05event\x12;\n" +
 	"\x05roles\x18\x02 \x03(\v2%.provenencia.engine.v1.ConclusionTermR\x05roles\x12K\n" +

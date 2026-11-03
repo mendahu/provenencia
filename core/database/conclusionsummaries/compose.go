@@ -1002,9 +1002,11 @@ func dateKeyLess(a, b dateKey) bool {
 }
 
 // AgeRange is the whole years of age a person had on a day: Lo to Hi, equal
-// when the dates leave no doubt.
+// when the dates leave no doubt. A side the dates leave open (a BEF or AFT
+// birth or event) is flagged and its bound is 0: only the other side is known.
 type AgeRange struct {
-	Lo, Hi int
+	Lo, Hi         int
+	OpenLo, OpenHi bool
 }
 
 // TimelineSpan is where a date sits on a line of years: From to To, with the

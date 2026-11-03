@@ -18714,6 +18714,78 @@
         }
       }
     },
+    "conclusions.timeline.ageAtMost": {
+      "comment": "Age flag of a Timeline row when only the highest possible age is known (the event or birth is dated before or after); argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≤ %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeast": {
+      "comment": "Age flag of a Timeline row when only the lowest possible age is known (the event or birth is dated before or after); argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≥ %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtMostHelp": {
+      "comment": "Tooltip of a Timeline row's age flag when only the highest possible age is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age at most %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeastHelp": {
+      "comment": "Tooltip of a Timeline row's age flag when only the lowest possible age is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age at least %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtMostSpoken": {
+      "comment": "VoiceOver tail of a Timeline row when only the highest possible age on the event is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age at most %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeastSpoken": {
+      "comment": "VoiceOver tail of a Timeline row when only the lowest possible age on the event is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age at least %lld"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

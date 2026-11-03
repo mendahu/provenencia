@@ -66,15 +66,26 @@ func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span Tim
 	if !hasBirth {
 		return span, dated, AgeRange{}, false
 	}
+	if !dated {
+		return span, dated, AgeRange{}, false
+	}
 	b := birth.placed
-	if !dated || ev.first.Open || ev.last.Open || b.first.Open || b.last.Open {
+	// The youngest is from the latest birth to the earliest event day; the
+	// oldest from the earliest birth to the latest event day. A side is open
+	// when either date leaves its end open.
+	age = AgeRange{OpenLo: b.last.Open || ev.first.Open, OpenHi: b.first.Open || ev.last.Open}
+	if age.OpenLo && age.OpenHi {
 		return span, dated, AgeRange{}, false
 	}
-	hi := datevalue.CompletedYears(b.first.Lo, ev.last.Hi)
-	if hi < 0 {
-		return span, dated, AgeRange{}, false
+	if !age.OpenHi {
+		if age.Hi = datevalue.CompletedYears(b.first.Lo, ev.last.Hi); age.Hi < 0 {
+			return span, dated, AgeRange{}, false
+		}
 	}
-	return span, dated, AgeRange{Lo: max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo)), Hi: hi}, true
+	if !age.OpenLo {
+		age.Lo = max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo))
+	}
+	return span, dated, age, true
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,
