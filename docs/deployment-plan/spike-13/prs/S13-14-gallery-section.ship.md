@@ -1,7 +1,7 @@
 # Ship log — S13-14 Gallery section
 
 **Plan:** [`S13-14-gallery-section.md`](S13-14-gallery-section.md) · **Branch:** `s13-14-gallery-section` · **PR:** #701
-**State:** stopped — UX-1 Not resolved after round 2; To user
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `564a389c`. Gate PASS (orchestrator re-ran). Report: deviations: `GalleryTileLook` is top-level, not nested in the generic `GalleryTileView` (nested forced `Overlay == EmptyView`); `EventDetailTests` and `PlaceDetailTests` updated to AC-1.4; old section gained only the image hint (D-11), not Return; T-2 loop change landed in the STEP-3 commit. Manual check, frames, VoiceOver not run (no GUI).
@@ -90,6 +90,22 @@ Reviewers: CON (Sonnet, for UX-O1), MNT, UX. Skipped: SEC+PRF (no Fix-now blocke
 Outside-lens note, MNT: F-3 runs on both looks, so a focused Event or Place tile also scrolls and refocuses on a width change. Logged: no visible change unless a tile is focused and the pane crosses the line; those pages are not `fillsWidth`.
 
 No new blockers from CON, MNT or UX. SEC+PRF not re-run.
+
+### Fix plan 2
+The user answered UX-1: fix it now (2026-11-03), a fix plan outside the cap for a major. No third review round: one verifier on UX-1 after the gate.
+
+**F-9 — A tile's keyboard stop survives leaving the lazy grid** (from UX-1)
+Files: `macos/App/Features/Conclusions/ConclusionGallerySection.swift`, the plan's Landed note.
+Failing test first: none, view focus; § 10 step 6 is the check by hand.
+Do:
+- A private `TileFocus: Hashable` with `.image(String)` and `.useAs(String)` and an `id`. `@FocusState` and `lastFocused` hold it. Bind `.focused` on the image button and on Use as portrait, as the Timeline binds every stop in its rows; Return keeps to `.image`.
+- `@State pendingFocus: TileFocus?`. `keepFocus` sets it from `focused ?? lastFocused` and requests the scroll. Pass `animated: false` to `.pvScrollsRowIntoView`: this restores a position, it reveals nothing new.
+- One `applyPending()` writes the stop, mapped to `.image` when Use as portrait is not there to take it (the tile is now the lead, or `lead.isSaving`). Call it from the tile's `.onAppear` when `pendingFocus?.id == tile.id`, and after the scroll's turn for a tile already realized.
+- In `.onChange(of: focused)`: a stop other than the pending one, or the pending one landing, clears `pendingFocus`; nil while pending is set means the tile dropped after the width update, so request the scroll and `applyPending()` again.
+- `pendingFocus` also ends a bounded moment after `keepFocus` (one short `Task.sleep`), so a tile that never dropped does not take focus back after a later click elsewhere. Replace `Task.yield()` timing that the steps above cover.
+- F-5's focus return after Use as portrait stays `.image(tile.id)`.
+If `PVButton` cannot take `.focused`, stop and report rather than wrapping it.
+Check: `.focused` appears on both stops; `animated: false` on the scroll; scripts/check-pr.sh PASS. The Landed note still says F-3 and F-9 are unverified in the app.
 
 ## Result
 Gate PASS (`c4bef1cf`, docs since) · CI not run (draft) · open: UX-1 · follow-ups: SEC-1 · to user: UX-1 · CON miss: UX-O1
