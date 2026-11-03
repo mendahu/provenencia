@@ -43,23 +43,27 @@ const (
 	// ReadEvidenceGraphs: the graphs of a Source, with their linked Artifacts
 	// (the graph list).
 	ReadEvidenceGraphs Read = "evidence_graphs"
+	// ReadPropertyTerms: the terms of a Property (the term list).
+	ReadPropertyTerms Read = "property_terms"
 )
 
 // KeyTable is the table whose ids key the read: Evidence graphs for
-// citations and evidence_graph_progress, Sources for evidence_graphs. "" for
-// an unknown read.
+// citations and evidence_graph_progress, Sources for evidence_graphs,
+// Properties for property_terms. "" for an unknown read.
 func (r Read) KeyTable() string {
 	switch r {
 	case ReadCitations, ReadEvidenceGraphProgress:
 		return "evidence_graphs"
 	case ReadEvidenceGraphs:
 		return "sources"
+	case ReadPropertyTerms:
+		return "properties"
 	}
 	return ""
 }
 
 // Reads is every keyed read, in the order Set.Reads reports them.
-var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs}
+var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs, ReadPropertyTerms}
 
 // ReadPath is one keyed read: Read says which, Path says whose key ids (it
 // ends at Read.KeyTable()).
@@ -80,10 +84,11 @@ type ReadIDs struct {
 type List string
 
 const (
-	// ListVocabulary: a vocabulary label (source type, metadata field,
-	// subject type, Property, Property term) or a subject type's property
-	// binding changed.
-	ListVocabulary List = "vocabulary"
+	// ListSourceVocabulary: a Source type or a metadata field changed.
+	ListSourceVocabulary List = "source_vocabulary"
+	// ListPropertyVocabulary: a subject type, Property or Property term label,
+	// or a subject type's Property binding, changed.
+	ListPropertyVocabulary List = "property_vocabulary"
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
 	ListPropertyUsage List = "property_usage"
@@ -93,7 +98,7 @@ const (
 )
 
 // Lists is every catalog-wide list, in the order Set.Lists reports them.
-var Lists = []List{ListVocabulary, ListPropertyUsage, ListCounts}
+var Lists = []List{ListSourceVocabulary, ListPropertyVocabulary, ListPropertyUsage, ListCounts}
 
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
@@ -368,7 +373,7 @@ var registry = map[string]Effect{
 	"depiction_values": ownedValue("depiction_value", "value_depiction_id"),
 	"source_types": {
 		Entity: "source_type",
-		Lists:  []List{ListVocabulary},
+		Lists:  []List{ListSourceVocabulary},
 		Search: []SearchDoc{
 			{Kind: DocSourceType, Path: self()},
 			{Kind: DocSource, Path: inbound("sources", "source_type_id")},
@@ -376,18 +381,19 @@ var registry = map[string]Effect{
 	},
 	"source_metadata_fields": {
 		Entity: "metadata_field",
-		Lists:  []List{ListVocabulary},
+		Lists:  []List{ListSourceVocabulary},
 		Search: []SearchDoc{{Kind: DocMetadataField, Path: self()}},
 	},
-	"subject_types": {Lists: []List{ListVocabulary}},
+	"subject_types": {Lists: []List{ListPropertyVocabulary}},
 	"properties": {
 		Entity:  "property",
-		Lists:   []List{ListVocabulary},
+		Lists:   []List{ListPropertyVocabulary},
 		Handles: onField("cardinality", sqlPath(sqlHandlesForProperty)),
 	},
 	"property_terms": {
 		Entity: "property_term",
-		Lists:  []List{ListVocabulary},
+		Lists:  []List{ListPropertyVocabulary},
+		Reads:  []ReadPath{{ReadPropertyTerms, field("property_id")}},
 		// A neutral term reconciles differently, so the handles that observe
 		// it are recomputed.
 		Handles: onField("neutral", sqlPath(sqlHandlesForTerm)),
@@ -417,7 +423,7 @@ var registry = map[string]Effect{
 	"source_credibility_grades":   {None: true},
 	"users":                       {None: true},
 	"subject_positions":           {Entity: "subject_position", None: true},
-	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListVocabulary}},
+	"subject_type_properties":     {Entity: "subject_type_property", Lists: []List{ListPropertyVocabulary}},
 	"source_type_metadata_fields": {None: true},
 	"name_value_parts":            {None: true},
 	"name_format_profiles":        {None: true},

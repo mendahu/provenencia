@@ -74,7 +74,7 @@ func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 	})
 	t.Run("a vocabulary change", func(t *testing.T) {
 		load(t)
-		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 3}, Effects: effects.Set{Lists: []effects.List{effects.ListVocabulary}}}); err != nil {
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 3}, Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}}}); err != nil {
 			t.Fatal(err)
 		}
 		if held() {

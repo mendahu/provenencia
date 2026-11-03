@@ -74,9 +74,9 @@ func TestWriteEffectsProto(t *testing.T) {
 
 func TestWriteEffectsProtoLists(t *testing.T) {
 	got := writeEffectsProto(writes.Result{Effects: effects.Set{
-		Lists: []effects.List{effects.ListVocabulary, effects.ListPropertyUsage},
+		Lists: []effects.List{effects.ListPropertyVocabulary, effects.ListPropertyUsage},
 	}})
-	if want := []string{"vocabulary", "property_usage"}; !reflect.DeepEqual(got.GetLists(), want) {
+	if want := []string{"property_vocabulary", "property_usage"}; !reflect.DeepEqual(got.GetLists(), want) {
 		t.Fatalf("Lists = %v, want %v", got.GetLists(), want)
 	}
 	if got := writeEffectsProto(writes.Result{}); got.GetLists() != nil {
