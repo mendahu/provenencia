@@ -45,6 +45,14 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// The section opts into Page columns' full-width mode: at Wide it fills the pane
+    /// between the gutters while the header keeps its measure.
+    var fillsWidth: Bool {
+        switch self {
+        case .vitals, .family, .timeline, .gallery, .sources: return false
+        }
+    }
+
     var label: LocalizedStringResource {
         switch self {
         case .vitals: return L10n.Conclusions.pageSectionVitals

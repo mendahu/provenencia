@@ -74,6 +74,32 @@ struct PVPageColumnsTests {
         #expect(bounded.pane == 2296 && bounded.group == 1692)
     }
 
+    @Test func fullWidthModeFillsThePrimaryAtWideOnly() {
+        let gutter = PVSpacing.gutterPage
+        let fill = PVPageColumnsMetrics.columnWidths(pane: 2296, widthClass: .wide, hasSecondary: false, primaryFill: true)
+        #expect(fill.primary == 2296 - 2 * gutter && fill.group == 2296 - 2 * gutter)
+        #expect(fill.band == PVSpacing.widthContentMax && fill.secondary == nil)
+
+        let withSecondary = PVPageColumnsMetrics.columnWidths(pane: 2296, widthClass: .wide, hasSecondary: true, primaryFill: true)
+        #expect(withSecondary.primary == 1180 && withSecondary.secondary == 480 && withSecondary.group == 1692)
+        #expect(withSecondary.band == withSecondary.group)
+
+        let regular = PVPageColumnsMetrics.columnWidths(pane: 1102, widthClass: .regular, hasSecondary: false, primaryFill: true)
+        #expect(regular.primary == 1038 && regular.band == regular.group)
+
+        let off = PVPageColumnsMetrics.columnWidths(pane: 2296, widthClass: .wide, hasSecondary: false)
+        #expect(off.primary == 1180 && off.band == off.group)
+
+        let unbounded = PVPageColumnsMetrics.columnWidths(
+            proposal: ProposedViewSize(width: nil, height: nil), widthClass: .wide, hasSecondary: false, primaryFill: true
+        )
+        #expect(unbounded.primary == PVSpacing.widthContentMax && unbounded.band == unbounded.group)
+    }
+
+    @Test func viewportSizeIsZeroOutsideAPage() {
+        #expect(EnvironmentValues().pvPageViewportSize == .zero)
+    }
+
     @Test func tokensMatchTheBoard() {
         #expect(PVSpacing.widthWideBreakpoint == 1600)
         #expect(PVSpacing.widthSecondaryMax == 480)
