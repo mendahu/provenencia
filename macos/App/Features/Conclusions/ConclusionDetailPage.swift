@@ -372,7 +372,8 @@ struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View 
             title: L10n.Conclusions.detailsSection
         )
         if !content.gallery.tiles.isEmpty {
-            ConclusionDetailGallerySection(
+            ConclusionGallerySection(
+                look: .small,
                 projectDir: context.projectDir,
                 pageIdentifier: context.pageIdentifier,
                 gallery: content.gallery,
@@ -580,85 +581,6 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     }
 }
 
-/// A page's gallery: a header with the count, then one 96pt crop per picture in a wrapping grid,
-/// each captioned with its Source. A tile opens the Citation that holds it and offers the lead
-/// choice (S10-35, S10-D12 PDP-7, PDP-8; S14-02). The section is kind-blind: its words come from
-/// `gallery`, its ids from the page's identifier.
-struct ConclusionDetailGallerySection: View {
-    let projectDir: String
-    let pageIdentifier: String
-    let gallery: ConclusionDetailGallery
-    let lead: ConclusionLeadModel
-
-    @Environment(WorkspaceNavigation.self) private var navigation
-    @FocusState private var focusedID: String?
-
-    private static let column = GalleryTileLook.small.column
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            PVSectionHeader(title: gallery.title, meta: String(gallery.tiles.count))
-            LazyVGrid(
-                columns: [GridItem(
-                    .adaptive(minimum: Self.column, maximum: Self.column),
-                    spacing: PVSpacing.space6,
-                    alignment: .top
-                )],
-                alignment: .leading,
-                spacing: PVSpacing.space7
-            ) {
-                ForEach(gallery.tiles) { tile in
-                    tileView(tile)
-                }
-            }
-            .padding(.top, PVSpacing.space6)
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.string(gallery.title))
-    }
-
-    private func tileView(_ tile: ConclusionDetailPicture) -> some View {
-        let tileID = "\(pageIdentifier).picture.\(tile.id)"
-        return VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            GalleryTileView(
-                projectDir: projectDir,
-                tile: tile,
-                look: .small,
-                fallbackMark: gallery.fallbackMark
-            ) {
-                Button {
-                    navigation.go(to: tile.location)
-                } label: {
-                    Color.clear
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PVFocusRingButtonStyle(cornerRadius: PVRadius.sm))
-                .focused($focusedID, equals: tile.id)
-                .help(Text(gallery.openTip))
-                .accessibilityLabel(tile.accessibilityLabel)
-                .accessibilityHint(L10n.string(gallery.openTip))
-                .accessibilityIdentifier(tileID)
-            }
-            if tile.isLead {
-                PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)
-                    .accessibilityIdentifier("\(tileID).leadBadge")
-            } else {
-                PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
-                    Task {
-                        if await lead.choose(tile, copy: gallery.choose) { focusedID = tile.id }
-                    }
-                }
-                .disabled(lead.isSaving)
-                .fixedSize(horizontal: true, vertical: false)
-                .accessibilityLabel(tile.useAsLabel)
-                .accessibilityIdentifier("\(tileID).useAsLead")
-            }
-        }
-        .frame(width: Self.column, alignment: .leading)
-    }
-}
-
 /// A relationship section: header, rows when present, otherwise the empty sentence.
 private struct ConclusionDetailRelationshipSection: View {
     let section: ConclusionDetailSection
@@ -771,119 +693,6 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
                 .accessibilityIdentifier("\(pageIdentifier).lead")
         } else {
             thumb
-        }
-    }
-}
-
-/// Every measure of a gallery tile. `.small` is the Event and Place Pictures' tile; `.large` is
-/// the Person's Gallery tile.
-@MainActor
-enum GalleryTileLook {
-    case small
-    case large
-
-    /// The crop's side.
-    var crop: CGFloat {
-        switch self {
-        case .small: CachedThumbnail.pictureCrop
-        case .large: 160
-        }
-    }
-
-    /// The tile's column, which the caption keeps to.
-    var column: CGFloat {
-        switch self {
-        case .small: 120
-        case .large: 160
-        }
-    }
-}
-
-/// One picture: its crop over a caption of its citation. The gallery passes the button that opens
-/// the Citation as `overlay` (drawn over the crop only). `look` holds every measure of the two
-/// galleries.
-struct GalleryTileView<Overlay: View>: View {
-    let projectDir: String
-    let tile: ConclusionDetailPicture
-    let look: GalleryTileLook
-    let fallbackMark: PVMarkKey
-    var colors: PVThumbnail.Colors? = nil
-    private let overlay: Overlay
-
-    init(
-        projectDir: String,
-        tile: ConclusionDetailPicture,
-        look: GalleryTileLook,
-        fallbackMark: PVMarkKey,
-        colors: PVThumbnail.Colors? = nil,
-        @ViewBuilder overlay: () -> Overlay
-    ) {
-        self.projectDir = projectDir
-        self.tile = tile
-        self.look = look
-        self.fallbackMark = fallbackMark
-        self.colors = colors
-        self.overlay = overlay()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space3) {
-            crop
-            caption
-        }
-    }
-
-    @ViewBuilder
-    private var crop: some View {
-        let image = CachedThumbnail(
-            projectDir: projectDir,
-            relPath: tile.imageRelPath,
-            size: look.crop,
-            fallbackMark: fallbackMark,
-            colors: look == .large ? colors : nil
-        )
-        .accessibilityHidden(true)
-        .overlay { overlay }
-        switch look {
-        case .small:
-            image
-        case .large:
-            image.pvLiftHover(scale: 1.02)
-        }
-    }
-
-    @ViewBuilder
-    private var caption: some View {
-        switch look {
-        case .small:
-            Text(verbatim: tile.citation.title)
-                .font(PVFont.body(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-                .lineLimit(2)
-                .truncationMode(.tail)
-                .frame(maxWidth: look.column, alignment: .leading)
-                .help(Text(verbatim: tile.citation.title))
-                .accessibilityHidden(true)
-        case .large:
-            VStack(alignment: .leading, spacing: PVSpacing.space1) {
-                Text(verbatim: tile.citation.title)
-                    .font(tile.citation.titleIsRef
-                        ? PVFont.mono(size: PVTypeScale.caption)
-                        : PVFont.body(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textPrimary)
-                    .lineLimit(2)
-                    .truncationMode(.tail)
-                if !tile.citation.detail.isEmpty {
-                    Text(verbatim: tile.citation.detail)
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textMuted)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-            }
-            .frame(maxWidth: look.column, alignment: .leading)
-            .help(Text(verbatim: tile.citation.line))
-            .accessibilityHidden(true)
         }
     }
 }

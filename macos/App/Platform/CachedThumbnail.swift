@@ -12,7 +12,7 @@ struct CachedThumbnail: View {
         case well
     }
 
-    /// A gallery picture's stored crop in the `.small` tile look (`GalleryTileView.Look`): the Event and Place
+    /// A gallery picture's stored crop in the `.small` tile look (`GalleryTileLook.small`): the Event and Place
     /// Pictures. The Person's Gallery draws its tiles at 160.
     static let pictureCrop: CGFloat = 96
 

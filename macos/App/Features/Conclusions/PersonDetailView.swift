@@ -49,6 +49,7 @@ private struct PersonDetailSections: View {
                 .pvKeepsPageBand()
             } else {
                 ConclusionGallerySection(
+                    look: .large,
                     projectDir: context.projectDir,
                     pageIdentifier: context.pageIdentifier,
                     gallery: content.gallery,

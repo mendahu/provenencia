@@ -35,7 +35,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 
 **Why now.** The last PR of slice 5; R-30 asks for a built-in viewer, and the user chose stepping without autoplay (2026-11-03).
 
-**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the Citation to opening the viewer. Tiles have no provenance control, no Open citation and no context menu: the viewer's record row is where a likeness's provenance and its Citation link live (user, 2026-11-03). The header and its thumb menu. The Event and Place Pictures (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
+**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the Citation to opening the viewer. Tiles have no provenance control, no Open citation and no context menu: the viewer's record row is where a likeness's provenance and its Citation link live (user, 2026-11-03). The header and its thumb menu. The Event and Place Pictures, which keep the `.small` look of `ConclusionGallerySection` (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
 
 ## 2. User stories
 
@@ -161,7 +161,7 @@ The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 
 
 **Builds on.** The S13-11 sheet pattern; `pvSheet`, `PVPanel`; `ArtifactImageDecode`, `ImageHeaderDecode`, `ThumbnailDecodePolicy.allowedTypes`; `CitationLineDisplay.Parts` (S13-14); `ConclusionLeadModel`; `pvScrollRowIntoView`; `pvAnnounce`.
 **Deletes.** On the Person page, the tile image's `navigation.go(to:)` and its "Open citation" hint (D-12); `likenessOpenTip` if nothing else reads it.
-**Next adds.** The Event and Place redesign gets the viewer by adopting `ConclusionGallerySection` and setting a `ViewerCopy` (`.picture`). A zoom, if wanted, replaces the image area inside `ConclusionPictureViewer`.
+**Next adds.** S13-15 changes only the `.large` look's open action; the `.small` look (Event and Place) keeps opening the Citation. The Event and Place redesign gets the viewer by moving to the `.large` look and setting a `ViewerCopy` (`.picture`). A zoom, if wanted, replaces the image area inside `ConclusionPictureViewer`.
 
 ### Reach
 
