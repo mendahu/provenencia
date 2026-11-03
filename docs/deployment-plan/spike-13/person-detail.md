@@ -37,7 +37,7 @@ A new, reusable control that sits next to any concluded value on a page. It repl
 - **R-12. Conflicting values live here.** Vitals keeps today's "mixed" marker on a row whose records disagree; the detail behind it is in the provenance sheet.
 - **R-13. Reusable.** Built as a shared control, not Person-specific, so Event and Place pages can adopt it later (R-1).
 - **R-13a. Wherever a single value is shown, in Vitals.** Every value in Vitals gets the control, including values that belong to another entity: the birth date is a property of the birth event, and it still opens its provenance from the Person page.
-- **R-13b. Not in the other sections, for now.** Family, Timeline, Gallery and Sources are dense, and their items usually stand for more than one property, so they do not get the control this spike. Revisit as the design and the page mature.
+- **R-13b. Not in the other sections, for now.** Family, Timeline, Gallery and Sources are dense, and their items usually stand for more than one property, so they do not get the control this spike. Revisit as the design and the page mature. A Gallery likeness's provenance shows in the likeness viewer instead, as its one record under the image (user, 2026-11-03).
 
 ## 1. Vitals
 
@@ -72,7 +72,7 @@ The first quasi-family-tree visualization in the app.
 - **R-29. Every likeness of this person** lives here.
 - **R-30. A built-in viewer.** Click a likeness to expand it, and ideally step through likenesses like a slideshow. The design brief presents options.
 - **R-31. Set as portrait** stays available from the gallery (and the viewer).
-- **R-32. Open the Citation** a likeness was cropped from.
+- **R-32. Open the Citation** a likeness was cropped from, through the likeness's provenance record under the viewer's image, which links to the Source, the Citation and the Observation (user, 2026-11-03: no separate Open citation control and no provenance control on a tile). Until the viewer ships, a click on a tile opens the Citation.
 
 ## 5. Sources
 
