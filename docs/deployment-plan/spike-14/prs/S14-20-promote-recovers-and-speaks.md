@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** audit 2 B-12, B-16, B-17, B-37 ([`../app-health-audit-2.md`](../app-health-audit-2.md)); [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §3, §3.1, §6; working rules "Kit components announce themselves", "FakeStore is a seeded fake, not a second engine", "Audit items keep their IDs"
 **Planned:** 2026-11-03 against `main` @ `b2166b4` (refreshed after S14-22 landed; first drafted @ `0e20544`)
-**Review:** — (not reviewed yet; review-plan runs once the board is agreed and PN-1's pick is copied in)
+**Review:** [`S14-20-promote-recovers-and-speaks.review.md`](S14-20-promote-recovers-and-speaks.review.md) — round 2 pending
 
 ### Implementer — read this first
 
@@ -42,7 +42,7 @@ Quick row decisions on the Promote page each start a full proposal, so five pick
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | A loaded page; five `setTarget` calls while the first proposal is still running (first proposal delayed 300 ms) | The store records exactly 2 proposal calls after load: the first, and one carrying all five decisions |
+| AC-1.1 | A loaded page; five `setTarget` calls while the first proposal is still running (held on `proposePromoteGraphAlignmentHold`) | The store records exactly 2 proposal calls after load: the first, and one carrying all five decisions |
 | AC-1.2 | AC-1.1's second proposal | Its `fixed` holds the five decided rows' targets as they were after the fifth decision |
 | AC-1.3 | The first proposal of AC-1.1 returns while the second is pending | The first proposal's rows are not merged: the page merges only the proposal that answers the latest decisions |
 | AC-1.4 | A proposal is running or pending | `canFinish` is false; it is true again once the last proposal settles and every row has a target |
@@ -65,18 +65,18 @@ Quick row decisions on the Promote page each start a full proposal, so five pick
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `rg -n "Provenance" core/graphalign core/database/promotealign --type go` | No hit outside test strings (`textProp(…, "Provenance")` place names) |
+| AC-3.1 | `rg -n 'Subject\.Provenance|Provenance:|provenance float64' core` | No hit |
 | AC-3.2 | The `core/graphalign` and `core/database/promotealign` suites | Pass with no expected value changed |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| One serial, latest-wins runner for the page's proposals; `proposeGeneration` and `nextProposal` go (B-12) | STEP-2, STEP-3, AC-1.1 – AC-1.5 |
+| One proposal at a time, the latest decisions winning, private to `PromoteModel`; `proposeGeneration` and `nextProposal` go (B-12) | STEP-3, AC-1.1 – AC-1.5 |
 | A failed proposal clears the stale notice (B-13's stale half, PN-3) | STEP-3, AC-2.7, AC-2.8 |
-| Try again on a failed load (B-17, PN-2) | STEP-4, AC-2.1 – AC-2.3 |
+| Try again on a failed load, reading a failed graph again; the load message no longer says to go back (B-17, PN-2) | STEP-4, AC-2.1 – AC-2.3 |
 | Stale, save, proposal and load errors announce, and a new stale, save or proposal error scrolls the list to its top (B-17, PN-1 option (a), PN-W1) | STEP-5, AC-2.4 – AC-2.6 |
-| FakeStore error hooks for propose and apply, in the existing `…Error` shape | STEP-3 |
+| FakeStore error hooks for propose and apply, a `FakeHold` for propose; `promoteProposeDelays` goes | STEP-2 |
 | `graphalign.Subject.Provenance` and `ScoreCandidate`'s `provenance` parameter go (B-37) | STEP-1, AC-3.1, AC-3.2 |
 
 | Out | Home |
@@ -86,6 +86,8 @@ Quick row decisions on the Promote page each start a full proposal, so five pick
 | The "start as Skip" header line (B-16) | Already fixed on `main` (§4); nothing to do |
 | Announcing rows marked Updated after a proposal (named in B-17's Problem) | Not planned: no scope entry or working rule asks for it |
 | A pending sign on the connection subrows and the footer's connection count while a proposal runs (S14-22 ship log UX-1) | Dropped from S14-20 by the user, 2026-11-03: not drawn on S14-D7. Not planned |
+| The sidebar recount (`CatalogCounts.refreshAll`) on the same one-at-a-time queue | Declined by the user, 2026-11-03. Not planned |
+| A repeat key on `pvAnnounce` so a retry callout re-announces without a remount | Not planned: one call site (D-8) |
 | The proposal's own cost (B-11, B-8) | [`docs/ideas/promote-ranking.md`](../../../ideas/promote-ranking.md) |
 | Promote Done's effects | S14-16 (landed) |
 | B-37's wire half (`score`, `via_bridge_type`, `via_role`) | Reserved by S13-24 (landed) |
@@ -106,31 +108,32 @@ Quick row decisions on the Promote page each start a full proposal, so five pick
 | Fixed pairs | `core/database/promotealign/promotealign.go` `checkFixed` | Unchanged by this PR: a pair naming a Subject not on the graph, or a deleted, merged or wrong-kind handle, is `promote.ErrInvalid` |
 | Provenance | `core/graphalign/types.go` `Subject.Provenance`; `core/graphalign/score.go` `ScoreCandidate(r, edge, provenance float64)`; `core/graphalign/align.go` `(*state).score` passes `s.Provenance`; `core/graphalign/rows.go` line 150 passes `1`; `core/database/promotealign/layer.go` line 134 sets `Provenance: 1` | Always 1, so `Score = (r.Evidence + edge) * 1` |
 | Provenance tests | `core/graphalign/align_test.go` lines 778, 791, 805, 840 | Call `ScoreCandidate(…, 1)` |
-| Provenance docs | `docs/promote-graph-alignment.md` §6, line 137 | "Graph alignment's `Subject.Provenance` is 1 today (`core/database/promotealign/layer.go`)." |
-| FakeStore | `macos/App/Platform/FakeStore.swift` `proposePromoteGraphAlignment`, `promoteProposals`, `promoteProposeDelays`, `applyPromoteGraphAlignment` | Scripted proposals and delays; no error hook for either call; apply throws only `promote.stale` |
+| Provenance docs | `docs/promote-graph-alignment.md` §6 line 137, §12 line 242 | "Graph alignment's `Subject.Provenance` is 1 today (`core/database/promotealign/layer.go`)." and "Every Subject's provenance is 1; …" |
+| Load retry | `macos/App/Features/Workspace/Session/WorkspaceSession.swift` `readyValue`, `reread`; `EvidenceGraphModel.readGraphAgain()` | `readyValue` waits only for loads in flight and returns nil for a failed key; `reread` invalidates and queries it again |
+| FakeStore | `macos/App/Platform/FakeStore.swift` `proposePromoteGraphAlignment`, `promoteProposals`, `promoteProposeDelays`, `applyPromoteGraphAlignment` | Scripted proposals and delays (`promoteProposeDelays`, used only by `anOlderProposalAnsweringLastIsDropped` and `doneWaitsForAPendingProposal`); no error hook or hold for either call; apply throws only `promote.stale`. `FakeHold` exists (`workspaceNavCountsHold` and others) |
 | Tests | `macos/ProvenenciaTests/PromoteModelTests.swift` `anOlderProposalAnsweringLastIsDropped`, `doneWaitsForAPendingProposal`, `aStaleDoneReproposes`, `aPageWithoutItsGraphSaysSoInsteadOfLookingEmpty`, and S14-22's `theProposalCarriesThePagesScope`, `mappingTheRestProposesAgain`; `macos/ProvenenciaTests/QueryHandleWaiting.swift` `waitUntil` | Cover generation drop, Done waiting, stale re-proposal, the graph-missing load error, and the scope a proposal carries |
 
-**Precedent.** `CatalogSearchModel.scheduleSearch` (`macos/App/Features/Catalog/Search/CatalogSearchModel.swift`) is the nearest latest-wins shape: a generation counter, a `Task`, and `settle()` for tests. Copy its `settle()` idea for tests. Do not copy its debounce or its cancel: a proposal is not debounced, and an FFI call in flight cannot be cancelled, so the runner waits for it. S14-14 ([#675](https://github.com/mendahu/provenencia/pull/675)) is the precedent for `announces: true` on a danger callout (`SourcePageView.swift` line 99).
+**Precedent.** `CatalogSearchModel.scheduleSearch` (`macos/App/Features/Catalog/Search/CatalogSearchModel.swift`) is the nearest latest-wins shape, using a generation counter and a `Task`. Do not copy its debounce, its cancel or its overlapping calls: a proposal is not debounced, and an FFI call in flight cannot be cancelled, so the queue waits for it. `EvidenceGraphModel.readGraphAgain()` (`session.reread(graphKey)`) is the precedent for reading a failed key again. S14-14 ([#675](https://github.com/mendahu/provenencia/pull/675)) is the precedent for `announces: true` on a danger callout (`SourcePageView.swift` line 99). `FakeHold` (`FakeStore.swift`, used as `workspaceNavCountsHold` since S14-16) is the precedent for pausing a fake call in a test.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | A generic `LatestRunner<Input: Sendable, Output: Sendable>` *(new)*, `@MainActor @Observable final class`, in `macos/App/Platform/LatestRunner.swift` *(new)*. It runs `work(input)`; a `submit` while it runs replaces the one pending input; when `work` returns, it calls `deliver(output)` only if nothing is pending, then runs the pending input if there is one | One owner for "one in flight, latest wins", tested on its own without a store | Keeping the generation counter and adding a queue inside `PromoteModel` — because the counter is exactly what lets five calls run; a Go-side cancel — because `catalogsession.Do` cannot cancel a running op |
-| D-2 | The pending input is `PromoteProposalInput` *(new, a private struct in `PromoteModel.swift`)*: `fixed` and `onlySubjectID`, both taken at `submit` time from `flow.fixed(for: flow.rows.filter(\.decided))` and `flow.onlySubjectID` | The last submit carries every decision and the page's scope as they are now, so dropping earlier pending inputs loses nothing | Reading `flow` when the pending call starts — because it hides the input from the runner's tests |
-| D-3 | `PromoteModel.isProposing` becomes `proposals.isBusy` *(new: running or pending)*. `canFinish` keeps reading `isProposing` | Done must wait for the decision that is pending, not only the one in flight | — |
-| D-4 | The runner's output is `Result<(CatalogPromoteGraphAlignmentProposal, EvidenceGraphSnapshot?), Error>`; `deliver` does what `repropose` does after the call today (merge, or `graphUnavailableRepropose`, or `proposeError`) | Moves only the call into the runner; the merge rules stay as they are | — |
-| D-5 | A delivered failure (store error or missing snapshot) sets `flow.staleNote = nil` as well as `proposeError` | The stale note claims the rows were proposed again; that is false once a proposal fails. `proposeAfterDecision` already clears it on the next decision | Clearing it only for the stale re-proposal — because every failed proposal makes the claim false |
-| D-6 | The stale path in `promote()` calls `proposals.submit(…)` and returns; it no longer awaits | One path for every proposal | — |
-| D-7 | `load()` stays outside the runner. It sets `isLoading` *(new)* true for its duration. `retryLoad()` *(new)* returns at once when `isLoading`, else bumps `loadAttempt` *(new)* and starts `load()` in a `Task` | The first load also reads the graph snapshot and builds bridges; it runs once per page, plus each Try again, and Try again is disabled while it runs | Running load through the runner — because a decision cannot happen before rows exist |
-| D-8 | The load callout carries `.id(model.loadAttempt)`, so a repeated identical failure remounts and is announced again | `PVAnnounceModifier` does not repeat an unchanged text while mounted (§4) | Clearing `loadError` before retrying — because PN-2 keeps the callout during the retry |
-| D-9 | All four notices pass `announces: true` | Working rule "Kit components announce themselves"; danger tone already gets high priority in `PVCallout` | Posting `AccessibilityAnnouncement` from the model — because the rule forbids call-site posts |
-| D-10 | PN-1 is option (a), as the board agreed. The `ScrollView` gets a `ScrollViewReader`; the notice area carries `.id(PromoteView.noticesAnchor)` *(new)*, and the view scrolls to it with `anchor: .top`, animated, on a change of `model.noticeToken` *(new)*: a counter the model bumps whenever `flow.staleNote`, `saveError` or `proposeError` goes from nil to set. The notice area keeps its place and order | One notice area in one place; the stale notice's "review the updated rows" starts where the rows start (board, frame 2a) | Option (b), callouts above the footer — deleted on the board; a toast — ruled out by the brief |
-| D-11 | Try again's copy is a new `L10n.Promote.tryAgain` *(new)* = "Try again" | No shared "Try again" key exists in `L10n.swift`; the Promote namespace owns its button copy | A shared `L10n.Common` key — because none exists, and adding a namespace for one key is out of scope |
-| D-12 | `ScoreCandidate(r subjectcompare.Result, edge float64) Scored`: the `provenance` parameter and `Subject.Provenance` go. `Score = r.Evidence + edge` | Always 1 today, so every score is unchanged; the doc's "Provenance scales each comparison" stays as the rule for the future comparison, worded as not built | Keeping the parameter for a future caller — because nothing in the map adds one |
-| D-13 | FakeStore gets `var proposePromoteGraphAlignmentError: Error?` and `var applyPromoteGraphAlignmentError: Error?` *(new)*, checked first in each method, in the shape of `listSubjectsError` | Working rule "FakeStore is a seeded fake": scripted errors only | — |
+| D-1 | The proposal queue is private to `PromoteModel`: `private var proposalRunning = false` and `private var pendingProposal: PromoteProposalInput?` *(new)*. `submitProposal()` *(new)* stores the input in `pendingProposal` and, when nothing is running, starts the loop. The loop is one `Task` that takes `pendingProposal`, sets it to nil, awaits the call, merges the answer only when `pendingProposal` is still nil, and repeats until nothing is pending. Each iteration takes a strong reference to the model from `[weak self]` for that iteration only, so after the page goes the loop stops once the call in flight returns | One researcher clicking fast must not queue N proposals (B-12). One caller, so no shared type (user, 2026-11-03: no extra machinery for the Promote flow) | A generic `LatestRunner` in `Platform/` — one caller; moving `CatalogCounts.refreshAll` onto it — declined by the user, 2026-11-03; keeping the generation counter — it is what lets five calls run |
+| D-2 | `PromoteProposalInput` *(new, a private struct in `PromoteModel.swift`)* holds `fixed` and `onlySubjectID`, both taken in `submitProposal()` from `flow.fixed(for: flow.rows.filter(\.decided))` and `flow.onlySubjectID` | The last submit carries every decision and the page's scope as they are now, so dropping earlier pending inputs loses nothing | Reading `flow` when the pending call starts — the test could not see what was sent |
+| D-3 | `isProposing` stays a stored `private(set) var`. `submitProposal()` sets it true; the loop sets it false when it ends with nothing pending. `canFinish` keeps reading it | Done waits for the decision that is pending, not only the one in flight | — |
+| D-4 | The loop's call body is `repropose`'s today, without the generation: call `store.proposePromoteGraphAlignment`, read `graphSnapshot()`, then merge, or set `graphUnavailableRepropose`, or set `proposeError`. A result or error that arrives while `pendingProposal` is set is dropped | The merge rules stay as they are | — |
+| D-5 | A proposal failure the page shows (store error or missing snapshot) also sets `flow.staleNote = nil` | PN-3, frame 4: the stale note claims the rows were proposed again, which is false once that proposal fails | — |
+| D-6 | `proposeAfterDecision()` clears `flow.staleNote` and calls `submitProposal()`. The stale path in `promote()` sets `flow.staleNote` and calls `submitProposal()` directly, without awaiting | One path for every proposal; the stale path keeps its note | — |
+| D-7 | `load()` stays outside the queue. `retryLoad()` *(new)* returns at once when `isLoading` *(new)*; else it sets `isLoading = true` synchronously, calls `session.reread(graphKey)` when `session.queryHandle(graphKey)` has no value (as `EvidenceGraphModel.readGraphAgain()` does), and starts `load()` in a `Task`. `load()` sets `isLoading = false` when it ends, and bumps `loadAttempt` *(new)* on each failure | A failed graph read stays failed in the session until it is read again, so retrying only the proposal cannot recover `graphUnavailable`. Bumping on failure, not on start, announces the new failure, not the old one | Running load through the queue — no decision exists before rows do; a load-state enum — three members on one page do not earn one |
+| D-8 | The load callout carries `.id(model.loadAttempt)`, so a repeated identical failure remounts and is announced again | `PVAnnounceModifier` does not repeat an unchanged text while mounted (§4) | A repeat key on `pvAnnounce` in the kit — one call site; not this PR |
+| D-9 | All four notices pass `announces: true` | Working rule "Kit components announce themselves"; danger tone already gets high priority in `PVCallout` | Posting `AccessibilityAnnouncement` from the model — the rule forbids call-site posts |
+| D-10 | PN-1 is option (a), as the board agreed. The `ScrollView` takes `.pvScrollsRowIntoView(PromoteView.noticesAnchor, anchor: .top, whenRequested: model.noticeToken)`, and the notice area carries `.id(PromoteView.noticesAnchor)` *(new)*. `noticeToken` *(new, `private(set) var Int`)* is bumped by one helper, `showingNotices(_ change: () -> Void)` *(new)*: it records which of `flow.staleNote`, `saveError` and `proposeError` are set, runs `change`, and bumps the token once when any of them went from nil to set. Every assignment of those three in `promote()` and in the proposal loop goes through it | One scroll mechanism (the kit README forbids another `ScrollViewReader`), with Reduce Motion and the insert-then-scroll turn handled there; one place decides when a notice is new | A hand-built `ScrollViewReader` — the kit has one; option (b) — deleted on the board |
+| D-11 | Try again's copy is a new `L10n.Promote.tryAgain` *(new)* = "Try again", as the board draws it. `L10n.Promote.graphUnavailable` is reworded to "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote." | The old message told the researcher to go back and reopen, which Try again replaces (user, 2026-11-03) | "Read again", the canvas's word — the button re-runs the proposal as well as the read (user, 2026-11-03) |
+| D-12 | `ScoreCandidate(r subjectcompare.Result, edge float64) Scored`: the `provenance` parameter and `Subject.Provenance` go. `Score = r.Evidence + edge` | Always 1 today, so every score is unchanged | Keeping the parameter for a future caller — nothing in the map adds one |
+| D-13 | FakeStore gets `var proposePromoteGraphAlignmentError: Error?`, `var applyPromoteGraphAlignmentError: Error?` and `let proposePromoteGraphAlignmentHold = FakeHold()` *(new)*. Each method records its call in `recordedCalls` first, then waits on the hold (propose only), then throws the error when it is set. `promoteProposeDelays` and its delay claim go | Working rule "FakeStore is a seeded fake"; `add-swift-test` pauses a fake call with `FakeHold`, not a sleep. Once proposals never overlap, delays have no job | — |
 
-**Rules this plan bends.** `plan-pr` § 3 (a PR that changes chrome waits on a brief): not bent. The map row said "no new chrome"; the user chose a brief on 2026-11-03, and the plan waits on S14-D7.
+**Rules this plan bends.** None. The map row said "no new chrome"; the user chose a brief on 2026-11-03, and the board is agreed.
 
 ## 6. Design
 
@@ -138,35 +141,35 @@ Quick row decisions on the Promote page each start a full proposal, so five pick
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `LatestRunner` *(new)* | type | `CatalogSearchModel` generation + `Task` (searched `generation`, `coalesc`, `latest` under `macos/App`) | That model debounces and lets calls overlap; this one must never overlap. `ThumbnailCache` coalesces equal keys, not a newest input |
-| `LatestRunnerTests` *(new)* | test file | `PromoteModelTests` | The runner's rules are tested without a store |
-| `PromoteModel.isLoading`, `loadAttempt`, `retryLoad()`, `noticeToken` *(new)* | members | `CatalogSearchModel.isLoading` | Page-own state |
-| `PromoteView.noticesAnchor` *(new)* | constant | — | One scroll target |
-| `L10n.Promote.tryAgain` *(new)* | key | Messages that say "Try again." in prose (`L10n.swift` line 1288) | Those are sentences, not a button label |
-| FakeStore `proposePromoteGraphAlignmentError`, `applyPromoteGraphAlignmentError` *(new)* | hooks | `listSubjectsError` and the other `…Error` hooks | Same shape |
+| `PromoteModel` `proposalRunning`, `pendingProposal`, `submitProposal()`, `PromoteProposalInput` *(new)* | members, private struct | `CatalogSearchModel` generation + `Task`; `CatalogCounts.refreshAll` generation (searched `generation`, `coalesc`, `latest` under `macos/App`) | Both let calls overlap; this one must not. One caller, so private (D-1) |
+| `PromoteModel.isLoading`, `loadAttempt`, `retryLoad()` *(new)* | members | `EvidenceGraphModel.readGraphAgain()`; `SourceFormLoadArea` | Reuses the session's `reread`; the page's load also runs a proposal, so it keeps its own method |
+| `PromoteModel.noticeToken`, `showingNotices(_:)` *(new)* | members | `pvScrollsRowIntoView(whenRequested:)` callers pass a token the same way | The token is the page's |
+| `PromoteView.noticesAnchor` *(new)* | constant | `PVPageColumns` `restartsAt` ids | One scroll target |
+| `L10n.Promote.tryAgain` *(new)* | key | `L10n.EvidenceGraph.readAgain`, `L10n.Sources.formReadAgain` ("Read again") | The board's word; this button re-runs the proposal too (D-11) |
+| FakeStore `proposePromoteGraphAlignmentError`, `applyPromoteGraphAlignmentError`, `proposePromoteGraphAlignmentHold` *(new)* | hooks | `listSubjectsError`; `workspaceNavCountsHold` | Same shapes |
 
-**Builds on.** `PVCallout`'s `announces:` and actions row (S14-14), `PVButton`'s `loading:`, the FakeStore `…Error` hook pattern.
-**Deletes.** `PromoteModel.proposeGeneration`, `nextProposal()`, `repropose(generation:)` (its body moves into the runner's `work` and `deliver`), the generation comment on `isProposing`; `graphalign.Subject.Provenance`, `ScoreCandidate`'s `provenance` parameter and its `≤0 treated as 1` branch and doc line; `Provenance: 1` in `layer.go`; the `, 1` argument in the four `align_test.go` calls and `rows.go` line 150.
+**Builds on.** `PVCallout`'s `announces:` and actions row (S14-14), `PVButton`'s `loading:`, `pvScrollsRowIntoView(whenRequested:)`, `WorkspaceSession.reread`, `FakeHold`, the FakeStore `…Error` hooks.
+**Deletes.** `PromoteModel.proposeGeneration`, `nextProposal()`, `repropose(generation:)` (its body moves into the loop), and the generation comment on `isProposing`; FakeStore `promoteProposeDelays` and its delay claim in `proposePromoteGraphAlignment`; `graphalign.Subject.Provenance`, `ScoreCandidate`'s `provenance` parameter, its `≤0 treated as 1` branch and its doc lines (`types.go` line 18, `score.go` lines 12–15); `Provenance: 1` in `layer.go`; the `, 1` argument in the four `align_test.go` calls and in `rows.go` line 150.
 **Next adds.** None named.
 
 ### Reach
 
 | New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
 | --- | --- | --- |
-| `mapRest()` while a decision's proposal runs | `LatestRunner.submit` | The scope change is a pending input like a decision; the next proposal carries `onlySubjectID: nil` (T-13) |
-| A proposal result dropped because a newer input is pending | `PromoteFlow.merge` | Never reached for the dropped result; the newer result merges as today (AC-1.3) |
-| Try again while rows are empty | `PromoteModel.load()` | Same path as the first load; `flow.load` replaces rows; `loadError` nil on success (AC-2.2) |
-| The page leaves while a proposal runs | `LatestRunner` | `deliver` captures the model weakly; a delivered result on a gone model does nothing. The pending input is dropped with the runner |
+| `mapRest()` while a decision's proposal runs | `submitProposal()` | The scope change is a pending input like a decision; the next proposal carries `onlySubjectID: nil` (T-5) |
+| A proposal result dropped because a newer input is pending | `PromoteFlow.merge` | Never reached for the dropped result; the newer result merges as today (T-2) |
+| Try again while rows are empty | `PromoteModel.load()` | Same path as the first load; `flow.load` replaces rows; `loadError` nil on success (T-6, T-7) |
+| The page leaves while a proposal runs | the loop | D-1: the loop stops after the call in flight; a pending input is not sent |
 
 ### Scale
 
-At the map's Scale (100 new people on one Source; B-8 measured 2.8 s per proposal on the audit machine): five quick picks run 2 proposals instead of 5, and N picks during one proposal run at most 2. The runner adds no work per row. No write, list or loop in Go changes.
+At the map's Scale (100 new people on one Source; B-8 measured 2.8 s per proposal on the audit machine), five quick picks run 2 proposals instead of 5, and N picks during one proposal run at most 2. The queue adds no work per row. No write, list or loop in Go changes.
 
 ### Edges
 
-- **Assumptions.** The merge assumes the proposal answers the current decisions; D-1's "deliver only when nothing is pending" keeps that true (T-1, T-5). Done assumes no proposal is pending (D-3, T-6).
-- **Neighbors.** One decision → one call (AC-1.5, T-4). A decision made after the last proposal delivered → a new call (T-2).
-- **Removed inputs.** A pending input replaced by a newer one is dropped; the newer one is a superset of decisions (D-2, T-1).
+- **Assumptions.** The merge assumes the proposal answers the current decisions; D-4's drop-when-pending keeps that true (T-2). Done assumes no proposal is pending (D-3, T-3).
+- **Neighbors.** One decision → one call (T-1). A decision after the last proposal returned → a new call (T-1).
+- **Removed inputs.** A pending input replaced by a newer one is dropped; the newer one is a superset of decisions (D-2, T-2).
 - **Real data.** None — no table- or seed-driven rule changes.
 - **Untrusted size.** None — no data the app did not write is read.
 
@@ -189,58 +192,45 @@ None — no wire change.
 
 ### macOS
 
-`LatestRunner` sketch:
-
-```swift
-@MainActor @Observable
-final class LatestRunner<Input: Sendable, Output: Sendable> {
-    init(work: @escaping @MainActor (Input) async -> Output,
-         deliver: @escaping @MainActor (Output) -> Void)
-    private(set) var isBusy: Bool          // running, or an input pending
-    func submit(_ input: Input)            // starts now if idle, else replaces the pending input
-    func settle() async                    // returns once idle; tests await it
-}
-```
-
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Notice area | snowflake | `PromoteView.swift` `notices` | Four callouts, `announces: true` (D-9); PN-1 per D-10 |
+| Notice area | snowflake | `PromoteView.swift` `notices` | Four callouts, `announces: true` (D-9); `.id(PromoteView.noticesAnchor)`; the `ScrollView` scrolls to it on `noticeToken` (D-10) |
 | Load error | `PVCallout(tone: .danger, message:, announces: true) { … }` | `notices` | Actions: `PVButton(L10n.Promote.tryAgain, variant: .secondary, size: .sm, loading: model.isLoading) { model.retryLoad() }`, `.accessibilityIdentifier("promote.tryAgain")`; `.id(model.loadAttempt)` (D-8) |
-| Stale, proposal, save | `PVCallout(tone: .danger, …, announces: true)` | `notices` | Copy unchanged; a new one scrolls the list to its top (D-10) |
+| Stale, proposal, save | `PVCallout(tone: .danger, …, announces: true)` | `notices` | Copy unchanged |
 | Footer | snowflake | `PromoteView.swift` `footer` | Unchanged |
 
-States: load failed (callout + Try again, no rows, Done disabled); retrying (Try again loading); stale (PN-1); stale re-proposal failed (proposal error only, PN-3). Accessibility: each notice announces when it appears; Try again is a labelled button.
+States: load failed (callout + Try again, no rows, Done disabled); retrying (Try again loading, frame 1c); stale (frame 2a); save error (frame 3); stale re-proposal failed (proposal error only, frame 4). Accessibility: each notice announces when it appears; Try again is a labelled button.
 
 ### Strings
 
-L10n keys *(new)*: `L10n.Promote.tryAgain` = "Try again" (`promote.error.tryAgain`, comment "Button in the Promote load error callout that loads the page again"). Removed: none. Old-scope copy: none, since no action changes what it covers.
+L10n keys *(new)*: `L10n.Promote.tryAgain` = "Try again" (`promote.error.tryAgain`, comment "Button in the Promote load error callout that loads the page again"). Changed: `L10n.Promote.graphUnavailable` (`promote.error.graphUnavailable`) = "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote." (was "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."). Removed: none.
 
 ## 7. Steps
 
 **STEP-1 — Provenance goes**
-Files: `core/graphalign/types.go`, `score.go`, `align.go`, `rows.go`, `align_test.go`; `core/database/promotealign/layer.go`; `docs/promote-graph-alignment.md` §6. Skill: `add-match-rule`.
-Do: D-12. In §6, replace the sentence "Graph alignment's `Subject.Provenance` is 1 today (`core/database/promotealign/layer.go`)." with "Graph alignment does not scale by provenance yet: a score is the pair's evidence plus its edge support."
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/... ./core/database/promotealign/...` passes with no expected value changed; AC-3.1's `rg` has no hit.
+Files: `core/graphalign/types.go`, `score.go`, `align.go`, `rows.go`, `align_test.go`; `core/database/promotealign/layer.go`; `docs/promote-graph-alignment.md` §6 and §12. Skill: `add-match-rule`.
+Do: D-12. In §6, replace "Graph alignment's `Subject.Provenance` is 1 today (`core/database/promotealign/layer.go`)." with "Graph alignment does not scale by provenance yet: a score is the pair's evidence plus its edge support." In §12, replace "Every Subject's provenance is 1; credibility and transcription certainty don't scale comparisons yet." with "A score is the pair's evidence plus its edge support; credibility and transcription certainty don't scale comparisons yet."
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/... ./core/database/promotealign/...` passes with no expected value changed; T-9's `rg` has no hit.
 
-**STEP-2 — The runner**
-Files: `macos/App/Platform/LatestRunner.swift` *(new)*, `macos/ProvenenciaTests/LatestRunnerTests.swift` *(new)*. Skill: `add-swift-test`.
-Do: D-1 as the sketch.
-Check: T-1 – T-3 pass.
+**STEP-2 — FakeStore hooks**
+Files: `macos/App/Platform/FakeStore.swift`, `macos/ProvenenciaTests/PromoteModelTests.swift`. Skill: `add-swift-test`.
+Do: D-13. Move `anOlderProposalAnsweringLastIsDropped` and `doneWaitsForAPendingProposal` off `promoteProposeDelays` onto `proposePromoteGraphAlignmentHold` (`isOn = true`, wait for `count == 1`, act, `release()`), keeping what each asserts about the merged rows and `canFinish`. Until STEP-3, `anOlderProposalAnsweringLastIsDropped` keeps today's call count.
+Check: every `PromoteModelTests` test passes; `rg promoteProposeDelays macos` has no hit.
 
-**STEP-3 — Proposals through the runner**
-Files: `PromoteModel.swift`, `macos/App/Platform/FakeStore.swift`, `PromoteModelTests.swift`.
-Do: D-2 – D-6, D-13. `proposeAfterDecision` clears `flow.staleNote` and submits. Delete what **Deletes** lists for Swift.
-Check: T-4 – T-8 pass; every existing `PromoteModelTests` test passes. `anOlderProposalAnsweringLastIsDropped` may change only its call count expectations, as T-5 states.
+**STEP-3 — One proposal at a time**
+Files: `PromoteModel.swift`, `PromoteModelTests.swift`.
+Do: D-1 – D-6. Delete what **Deletes** lists for `PromoteModel`.
+Check: T-1 – T-5 pass; every existing `PromoteModelTests` test passes, `anOlderProposalAnsweringLastIsDropped` with T-2's call count.
 
 **STEP-4 — Try again**
 Files: `PromoteModel.swift`, `PromoteView.swift`, `L10n.swift`, `Localizable.xcstrings`. Skills: `add-localized-string`, `add-ui-component`.
 Do: D-7, D-8, D-11.
-Check: T-9, T-10 pass; `python3 scripts/check-localizable-xcstrings.py` passes.
+Check: T-6, T-7 pass; `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-5 — Notices announce and come into view**
 Files: `PromoteView.swift`, `PromoteModel.swift`. Skill: `add-ui-component`.
 Do: D-9, D-10.
-Check: T-11 passes; the manual check's steps 2 – 4.
+Check: T-8 passes; manual check steps 2 and 3.
 
 **STEP-6 — Docs**
 Files: `../completed.md`, `../deployment-plan.md` (map row), this plan (status), `../design/S14-D7-promote-notices.md` → `../design/archive/`, `../design/README.md`, `docs/promote-graph-alignment.md` §3.1.
@@ -251,23 +241,23 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 ## 8. Tests
 
+Fixtures: the "mapped page" tests open with `mapAll: true` (the `model(store:subjectID:graphID:mapAll:)` helper's `mapAll: true`), so `mapRest()` sends no extra proposal. "Held" means `store.proposePromoteGraphAlignmentHold.isOn = true` before the action, `await waitUntil { hold.count == 1 }`, then `hold.release()` per held call. Waits use `waitUntil` (`QueryHandleWaiting.swift`) on the named condition; no sleeps.
+
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `LatestRunnerTests` `submitsWhileRunningCollapseToTheLatest` *(new)* | `work` waits on a gate; submit 1, 2, 3, 4; open the gate → `work` saw [1, 4]; `deliver` saw only 4's output | D-1, D-2, AC-1.1 |
-| T-2 | Swift | `LatestRunnerTests` `anIdleRunnerRunsAtOnce` *(new)* | submit 1, settle, submit 2, settle → `work` saw [1, 2]; `deliver` saw both | D-1, AC-1.5 |
-| T-3 | Swift | `LatestRunnerTests` `busyCoversRunningAndPending` *(new)* | `isBusy` true from the first submit until `settle` returns after the pending input ran | D-3 |
-| T-4 | Swift | `PromoteModelTests` `oneDecisionProposesOnce` *(new)* | load; one `setTarget` → 2 `proposePromoteGraphAlignment` calls recorded in total (load + 1) | AC-1.5 |
-| T-5 | Swift | `PromoteModelTests` `quickDecisionsRunOneProposalAtATime` *(new)*, and `anOlderProposalAnsweringLastIsDropped` updated | first post-load proposal delayed 300 ms; five `setTarget` on five rows → 3 calls in total (load + 2); `store.lastPromoteFixed` holds all five; the rows show the last proposal's targets | AC-1.1, AC-1.2, AC-1.3 |
-| T-6 | Swift | `PromoteModelTests` `doneWaitsForAPendingProposal` (kept) | as today, plus `canFinish` false while a second decision is pending | AC-1.4 |
-| T-7 | Swift | `PromoteModelTests` `aStaleDoneWhoseProposalFailsDropsTheStaleNote` *(new)* | Done stale; `proposePromoteGraphAlignmentError` set before the re-proposal → `staleNote == nil`, `proposeError != nil` | AC-2.7, D-5 |
-| T-8 | Swift | `PromoteModelTests` `aStaleDoneReproposes` (kept) | `staleNote` set after a successful re-proposal | AC-2.8 |
-| T-9 | Swift | `PromoteModelTests` `tryAgainLoadsThePage` *(new)* | `proposePromoteGraphAlignmentError` set → load → `loadError` set; clear the error; `retryLoad()`; wait → `loadError == nil`, rows loaded, `loadAttempt == 1` | AC-2.1, AC-2.2 |
-| T-10 | Swift | `PromoteModelTests` `tryAgainThatFailsAgainCountsTheAttempt` *(new)* | error stays set → `retryLoad()` twice, waiting between → `loadAttempt == 2`, `loadError` set; a `retryLoad()` while `isLoading` does not bump it | AC-2.3, D-7 |
-| T-11 | Swift | `PromoteModelTests` `aNewErrorBumpsTheNoticeToken` *(new)* | `noticeToken` bumps on a stale Done, on a save error (`applyPromoteGraphAlignmentError`), and on a proposal error; not on a second identical proposal error while one shows | AC-2.4, AC-2.5, AC-2.6, D-10 |
-| T-12 | Go | `core/graphalign` and `core/database/promotealign` suites (existing), plus AC-3.1's `rg` in the PR description | `CGO_ENABLED=1 go test -tags fts5 ./core/graphalign/... ./core/database/promotealign/...` → pass, no expected value changed; the `rg` → no hit | AC-3.1, AC-3.2, D-12 |
-| T-13 | Swift | `PromoteModelTests` `mappingTheRestWhileProposingSendsTheWholePage` *(new)* | first post-load proposal delayed 300 ms after a `setTarget`; `mapRest()` while it runs → 3 proposal calls in total, the last with `lastPromoteOnlySubjectID == nil` and the decided row in `lastPromoteFixed` | D-2 |
+| T-1 | Swift | `PromoteModelTests` `oneDecisionProposesOnce` *(new)* | load; one `setTarget`; wait `!isProposing` → 2 `proposePromoteGraphAlignment` calls recorded in total (load + 1), merged | AC-1.5 |
+| T-2 | Swift | `PromoteModelTests` `quickDecisionsRunOneProposalAtATime` *(new)*, and `anOlderProposalAnsweringLastIsDropped` updated | mapped page of five rows; hold on; `setTarget` row 1 (held); `setTarget` rows 2–5; release; wait `!isProposing` → 3 calls in total (load + 2); `store.lastPromoteFixed` holds all five; the rows show the second scripted answer's targets, not the first's | AC-1.1, AC-1.2, AC-1.3, D-2, D-4 |
+| T-3 | Swift | `PromoteModelTests` `doneWaitsForAPendingProposal` (kept, on the hold) | hold on; `setTarget` (held); `setTarget` again → `canFinish` false; release; wait `canFinish` → true; `lastPromoteBatch == nil` | AC-1.4, D-3 |
+| T-4 | Swift | `PromoteModelTests` `aStaleDoneWhoseProposalFailsDropsTheStaleNote` *(new)* | Done stale (as `aStaleDoneReproposes`), with `proposePromoteGraphAlignmentError` set before Done; wait `!isProposing` → `staleNote == nil`, `proposeError != nil` | AC-2.7, D-5 |
+| T-5 | Swift | `PromoteModelTests` `mappingTheRestWhileProposingSendsTheWholePage` *(new)* | page opened on "a" (not `mapAll`); hold on; `setTarget` on "a" (held); `mapRest()`; release; wait `!isProposing` → 3 calls in total, the last with `lastPromoteOnlySubjectID == nil` and "a" in `lastPromoteFixed` | D-2 |
+| T-6 | Swift | `PromoteModelTests` `tryAgainLoadsThePage` *(new)* | `proposePromoteGraphAlignmentError` set → load → `loadError` set, `loadAttempt == 1`; clear the error; `retryLoad()` → `isLoading` true at once; wait `!isLoading` → `loadError == nil`, rows loaded | AC-2.1, AC-2.2, D-7 |
+| T-7 | Swift | `PromoteModelTests` `tryAgainThatFailsAgainCountsTheAttempt` *(new)* | error stays set → load (`loadAttempt == 1`); `retryLoad()` twice in a row → one load runs (one more proposal call recorded); wait `!isLoading` → `loadAttempt == 2`, `loadError` set | AC-2.3, D-7, D-8 |
+| T-8 | Swift | `PromoteModelTests` `aNewErrorBumpsTheNoticeToken` *(new)* | `noticeToken` bumps once on a stale Done, once on a save error (`applyPromoteGraphAlignmentError`), once on a proposal error; not on a second proposal error while the first still shows | AC-2.4, AC-2.5, AC-2.6, D-10 |
+| T-9 | Go | `core/graphalign` and `core/database/promotealign` suites (existing), plus `rg -n 'Subject\.Provenance|Provenance:|provenance float64' core` | suites pass with no expected value changed; the `rg` has no hit | AC-3.1, AC-3.2, D-12 |
+| T-10 | Swift | `PromoteModelTests` `tryAgainReadsAFailedGraphAgain` *(new)* | `aPageWithoutItsGraphSaysSoInsteadOfLookingEmpty`'s setup (graph read fails) → `loadError == graphUnavailable`; seed the graph; `retryLoad()`; wait `!isLoading` → `loadError == nil`, rows loaded | AC-2.2, D-7 |
+| T-11 | Swift | `PromoteModelTests` `aStaleDoneReproposes` (kept) | Done stale; the re-proposal succeeds → `staleNote` set | AC-2.8 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PromoteModelTests` (timing; S14-22's `theProposalCarriesThePagesScope` and `mappingTheRestProposesAgain` count proposals and must stay green), `core/graphalign` score tests.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PromoteModelTests` (S14-22's `theProposalCarriesThePagesScope` and `mappingTheRestProposesAgain` count proposals and must stay green), `core/graphalign` score tests.
 
 ## 9. Definition of done
 
@@ -277,14 +267,14 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
-- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left (`Subject.Provenance`, `proposeGeneration`, `repropose(generation`); `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left (`Subject.Provenance`, `provenance is 1`, `proposeGeneration`, `repropose(generation`, `promoteProposeDelays`); `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — 0.2.12
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated
-- [ ] Domain doc updated: promote-graph-alignment.md §3.1 (one proposal at a time) and §6 (no provenance scaling yet)
+- [ ] Domain doc updated: promote-graph-alignment.md §3.1 (one proposal at a time), §6 and §12 (no provenance scaling yet)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -293,22 +283,21 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 1. Open a project with a census Source of 30 people. Promote any Subject and Map the rest. Pick targets on five rows as fast as you can. Done stays disabled until the page settles, and the rows show the result of your last pick. Searching from the omnibar while you pick answers without waiting behind five proposals.
 2. Scroll to the bottom. In a second window (⌘N), rename any record. With VoiceOver on, back in the first window, press Done. The list scrolls to its top and the stale notice shows above the first section, as board frame 2a draws it, and VoiceOver reads its title and message.
 3. Resize the window across 1600 pt of pane width with the notice showing. It keeps the row list's width and centers with it (PN-W1).
-4. The save error, the stale re-proposal failure and Try again cannot be forced from the app without a debug hook. They are checked by T-7, T-9 – T-11.
+4. The save error, the stale re-proposal failure and Try again cannot be forced from the app without a debug hook. They are checked by T-4, T-6 – T-8.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| Test timing: the runner changes how many calls the delayed-proposal tests see | T-5 states the new count; `settle()` replaces sleeps where a test waits for the runner |
-| `@Observable` on a generic class | Supported by the Observation macro; if the build refuses it, stop (below) |
+| Test timing: the queue changes how many calls the held-proposal tests see | T-2 states the new count; `FakeHold` replaces the delays |
 
 **Stop and report if:**
 
 - `PromoteModel.repropose(generation:)` or `PromoteView.notices` no longer match §4 at your base.
-- The `@Observable` macro does not compile on `LatestRunner<Input, Output>`.
+- `session.reread(graphKey)` followed by `load()` still finds no graph in T-10.
 - Any `core/graphalign` or `promotealign` test needs a changed expected value after STEP-1 (D-12 says scores are unchanged).
 - The agreed board draws something D-10 does not cover (a new component, a dismiss button, a notice outside the notice area).
-- `anOlderProposalAnsweringLastIsDropped` cannot be updated to T-5's counts without changing what it asserts about the merged rows.
+- `anOlderProposalAnsweringLastIsDropped` or `doneWaitsForAPendingProposal` cannot move onto the hold without changing what it asserts about the merged rows or `canFinish`.
 
 ## 12. Open questions
 
