@@ -119,22 +119,32 @@ struct PersonTimelineLifelineTests {
         recorded.birth = CatalogLifeMarker(eventId: "1", besideEventId: "2")
         let (cap, _) = lifeline(recorded, ppy: 43)
         if case .cap(_, let placeholder) = cap.mark("1")?.shape { #expect(!placeholder) } else { Issue.record("filled cap") }
-        let capTether = cap.tethers(anchors: ["1": 100], visible: CGRect(x: 0, y: 0, width: 800, height: 200)).first
+        let capTether = cap.tethers(anchors: ["1": 100], spans: ["1": 80...180], visible: CGRect(x: 0, y: 0, width: 800, height: 200)).first
         #expect(capTether?.id == "1" && capTether?.from.y == y(cap.mark("1")) && capTether?.to == CGPoint(x: PersonTimelineLifeline.flagX, y: 100))
     }
 
     @Test func tethersEndAtTheFlags() {
         let (johann, _) = lifeline(Data.johann, ppy: 43)
         let anchors: [String: CGFloat] = ["1": 40, "2": 90, "4": 300, "12": 500]
-        let tethers = johann.tethers(anchors: anchors, visible: CGRect(x: 0, y: 0, width: 800, height: 200))
+        let spans = anchors.mapValues { ($0 - 20)...($0 + 80) }
+        let tethers = johann.tethers(anchors: anchors, spans: spans, visible: CGRect(x: 0, y: 0, width: 800, height: 200))
         #expect(tethers.map(\.id) == ["1", "2"])
         #expect(tethers.allSatisfy { $0.to.x == PersonTimelineLifeline.flagX && $0.from.x == PersonTimelineLifeline.lineX })
         #expect(tethers.map(\.to.y) == [40, 90])
         #expect(tethers.first?.from.y == johann.mark("1")?.pointY)
         // None for an undated row (no mark), for an anchor outside `visible`, or without a viewport.
-        let all = johann.tethers(anchors: anchors, visible: CGRect(x: 0, y: 0, width: 800, height: 1000))
+        let all = johann.tethers(anchors: anchors, spans: spans, visible: CGRect(x: 0, y: 0, width: 800, height: 1000))
         #expect(all.map(\.id) == ["1", "2", "4"])
-        #expect(johann.tethers(anchors: anchors, visible: CGRect(x: 0, y: 0, width: 800, height: 0)).isEmpty)
+        #expect(johann.tethers(anchors: anchors, spans: spans, visible: CGRect(x: 0, y: 0, width: 800, height: 0)).isEmpty)
+    }
+
+    @Test func aTallRowKeepsItsTetherWhileItFillsTheViewport() {
+        let (johann, _) = lifeline(Data.johann, ppy: 43)
+        // Row 2's anchor is above the viewport but its 2000pt-tall item meets it.
+        let visible = CGRect(x: 0, y: 500, width: 800, height: 400)
+        let tethers = johann.tethers(anchors: ["2": 100], spans: ["2": 80...2080], visible: visible)
+        #expect(tethers.map(\.id) == ["2"] && tethers.first?.to.y == 500)
+        #expect(johann.tethers(anchors: ["2": 100], spans: ["2": 80...300], visible: visible).isEmpty)
     }
 
     @Test func oneHundredTwentyEvents() {

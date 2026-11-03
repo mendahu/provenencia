@@ -54,12 +54,34 @@ struct PersonTimelinePlacementTests {
         #expect(placement.tops["3"]! - (placement.tops["2"]! + 120) > 100)
         #expect(placement.height >= placement.tops["11"]! + 120 && placement.height >= line.length)
 
-        // With any height missing, the items stack and there is no line.
+        // With a height missing, it takes the mean of the measured (120): every item is placed and the line exists.
         var partial = heights(johann, 120)
         partial["5"] = nil
-        let stacked = PersonTimelinePlacement(content: johann, heights: partial, viewportHeight: 900)
-        #expect(stacked.lifeline == nil && stacked.tops["1"] == 0 && stacked.tops["2"] == 120 && stacked.tops["3"] == 240)
-        #expect(stacked.anchors.isEmpty)
+        let estimated = PersonTimelinePlacement(content: johann, heights: partial, viewportHeight: 900)
+        #expect(estimated.lifeline != nil)
+        #expect(johann.items.allSatisfy { estimated.tops[$0.id] != nil })
+        #expect(estimated == placement)
+        #expect(PersonTimelinePlacement.estimatedHeight(heights: [:]) == 120)
+        #expect(PersonTimelinePlacement.estimatedHeight(heights: ["a": 100, "b": 200]) == 150)
+    }
+
+    @Test func aFixedScaleMovesOnlyRowsBelow() throws {
+        let johann = content(Data.johann)
+        var measured = heights(johann, 120)
+        let before = PersonTimelinePlacement(content: johann, heights: measured, viewportHeight: 900)
+        let row = johann.items[3].id
+        measured[row] = 720
+        let after = PersonTimelinePlacement(content: johann, heights: measured, viewportHeight: 900, pointsPerYear: before.pointsPerYear)
+        #expect(after.pointsPerYear == before.pointsPerYear)
+        for (index, item) in johann.items.enumerated() {
+            let was = before.tops[item.id]!, now = after.tops[item.id]!
+            if index <= 3 { #expect(now == was) } else { #expect(now >= was) }
+        }
+    }
+
+    @Test func narrowListStacksPeople() {
+        #expect(!PersonTimelinePlacement.stacksPeople(listWidth: 946))
+        #expect(PersonTimelinePlacement.stacksPeople(listWidth: 608))
     }
 
     @Test func aBirthdayPairSitsTogether() throws {

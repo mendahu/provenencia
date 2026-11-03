@@ -49,13 +49,29 @@ struct PersonTimelineList: View {
     let expand: (PersonTimelineContent.Fold) -> Void
 
     @Environment(\.pvPageViewportSize) private var viewportSize
+    @Environment(\.pvWidthClass) private var widthClass
     /// Each item's whole height, measured.
     @State private var heights: [String: CGFloat] = [:]
     @State private var placement = PersonTimelinePlacement(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), heights: [:], viewportHeight: 0)
+    /// The scale once every item is measured, kept while the items and the
+    /// viewport stay as they were, so an unfold moves only the rows below it.
+    @State private var chosenScale: ChosenScale?
+    /// The first item an unfold added, to scroll into view once it is placed.
+    @State private var pendingReveal: String?
+    /// The row that owns the focused card, to return to if the card is gone.
+    @State private var focusedOwner: String?
+    /// The list's measured width.
+    @State private var listWidth: CGFloat = 0
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
     /// The title button or card with the keyboard: a row's event id or a card's id.
     @FocusState private var focused: String?
+
+    private struct ChosenScale: Equatable {
+        var ids: [String]
+        var viewportHeight: CGFloat
+        var pointsPerYear: CGFloat
+    }
 
     /// Reads no scroll state: the page's scroll moves only `PersonTimelineTethers`.
     var body: some View {
@@ -63,7 +79,7 @@ struct PersonTimelineList: View {
         HStack(alignment: .top, spacing: 0) {
             Color.clear.frame(width: PersonTimelineLifeline.columnWidth + PersonTimelineLifeline.listGap)
             PersonTimelineStack(
-                tops: placement.lifeline == nil ? [] : items.map { placement.tops[$0.id] ?? 0 },
+                tops: items.map { placement.tops[$0.id] ?? 0 },
                 height: placement.height
             ) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -71,6 +87,7 @@ struct PersonTimelineList: View {
                         item: item,
                         previous: index > 0 ? items[index - 1] : nil,
                         projectDir: projectDir,
+                        stacksPeople: PersonTimelinePlacement.stacksPeople(listWidth: listWidth),
                         open: open,
                         expand: unfold,
                         focused: $focused
@@ -89,11 +106,18 @@ struct PersonTimelineList: View {
             if let lifeline = placement.lifeline {
                 ZStack(alignment: .topLeading) {
                     PersonTimelineLine(lifeline: lifeline, height: placement.height, labels: content.pointLabels, select: select)
-                    PersonTimelineTethers(lifeline: lifeline, anchors: placement.anchors, height: placement.height)
+                    PersonTimelineTethers(lifeline: lifeline, anchors: placement.anchors, spans: placement.spans, height: placement.height)
                 }
             }
         }
         .accessibilityElement(children: .contain)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
+        .onChange(of: focused) {
+            if let id = focused, let row = content.items.compactMap(\.eventRow).first(where: { $0.id == id || $0.participants.contains { $0.id == id } }) {
+                focusedOwner = row.id
+            }
+        }
+        .onChange(of: widthClass) { keepFocus() }
         .onChange(of: heights) { rebuild() }
         .onChange(of: content) { rebuild() }
         .onChange(of: viewportSize.height) { rebuild() }
@@ -101,17 +125,38 @@ struct PersonTimelineList: View {
     }
 
     private func rebuild() {
-        let ids = Set(content.items.map(\.id))
-        let current = heights.filter { ids.contains($0.key) }
+        let ids = content.items.map(\.id)
+        let idSet = Set(ids)
+        let current = heights.filter { idSet.contains($0.key) }
         if current.count != heights.count { heights = current }
-        let next = PersonTimelinePlacement(content: content, heights: current, viewportHeight: viewportSize.height)
+        let fixed = chosenScale.flatMap { $0.ids == ids && $0.viewportHeight == viewportSize.height ? $0.pointsPerYear : nil }
+        let next = PersonTimelinePlacement(content: content, heights: current, viewportHeight: viewportSize.height, pointsPerYear: fixed)
         if next != placement { placement = next }
+        // The scale is kept only once every item is measured.
+        let scale = current.count == ids.count && !ids.isEmpty
+            ? ChosenScale(ids: ids, viewportHeight: viewportSize.height, pointsPerYear: next.pointsPerYear) : nil
+        if scale != chosenScale { chosenScale = scale }
+        if let target = pendingReveal, current[target] != nil {
+            pendingReveal = nil
+            scrollTarget = target
+            scrollRequest += 1
+        }
+        keepFocus()
+    }
+
+    /// A card that a width change took away returns the keyboard to its row's title.
+    private func keepFocus() {
+        guard let id = focused, let owner = focusedOwner else { return }
+        let shown = content.items.compactMap(\.eventRow).contains { $0.id == id || $0.participants.contains { $0.id == id } }
+        if !shown { focused = owner }
     }
 
     /// "Show N more": the button is gone once the list grows, so the keyboard
-    /// moves to the first item it added.
+    /// moves to the first item it added; a fold of rows also scrolls it into view
+    /// once placed.
     private func unfold(_ fold: PersonTimelineContent.Fold) {
         let revealed = content.firstRevealed(by: fold)
+        if case .participants = fold {} else { pendingReveal = revealed }
         expand(fold)
         Task { @MainActor in focused = revealed }
     }
@@ -126,26 +171,20 @@ struct PersonTimelineList: View {
 }
 
 /// Places each subview at the top `PersonTimelinePlacement` gave it, full width.
-/// With no tops (heights not yet measured) it stacks them.
 private struct PersonTimelineStack: Layout {
     /// In subview order.
     var tops: [CGFloat]
     var height: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
-        if tops.count == subviews.count { return CGSize(width: width, height: height) }
-        let stacked = subviews.reduce(CGFloat(0)) { $0 + $1.sizeThatFits(ProposedViewSize(width: width, height: nil)).height }
-        return CGSize(width: width, height: stacked)
+        CGSize(width: proposal.width ?? subviews.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0, height: height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let proposed = ProposedViewSize(width: bounds.width, height: nil)
-        var y: CGFloat = 0
         for (index, subview) in subviews.enumerated() {
-            let top = tops.count == subviews.count ? tops[index] : y
+            let top = index < tops.count ? tops[index] : 0
             subview.place(at: CGPoint(x: bounds.minX, y: bounds.minY + top), anchor: .topLeading, proposal: proposed)
-            y += subview.sizeThatFits(proposed).height
         }
     }
 }
@@ -157,6 +196,7 @@ private struct PersonTimelineItemView: View {
     let item: PersonTimelineContent.Item
     let previous: PersonTimelineContent.Item?
     let projectDir: String
+    let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
     let focused: FocusState<String?>.Binding
@@ -174,10 +214,10 @@ private struct PersonTimelineItemView: View {
     private var content: some View {
         switch item {
         case .row(let row):
-            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, open: open, expand: expand, focused: focused)
+            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, stacksPeople: stacksPeople, open: open, expand: expand, focused: focused)
         case .marker(let marker):
             if let row = marker.row {
-                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, open: open, expand: expand, focused: focused)
+                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, stacksPeople: stacksPeople, open: open, expand: expand, focused: focused)
             } else {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
@@ -207,14 +247,16 @@ private struct PersonTimelineEventRow: View {
     /// A row with no date: its flag is dashed.
     let isUndated: Bool
     let projectDir: String
+    /// The list is too narrow for the people beside the text: they go under it.
+    let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
     let focused: FocusState<String?>.Binding
 
     @Environment(\.pvWidthClass) private var widthClass
 
-    private static let picture: CGFloat = 72
-    private static let gap: CGFloat = 16
+    private static let picture = PersonTimelinePlacement.rowPicture
+    private static let gap = PersonTimelinePlacement.rowGap
     private static let cardColumnGap: CGFloat = 15
 
     private var textWidth: CGFloat {
@@ -262,10 +304,11 @@ private struct PersonTimelineEventRow: View {
                     .accessibilityHidden(true)
                     EventSecondaryLine(content: row.line, dateSize: PVTypeScale.body)
                 }
+                if stacksPeople && !row.participants.isEmpty { people.padding(.top, 4) }
             }
             .frame(maxWidth: textWidth, alignment: .leading)
             Spacer(minLength: 0)
-            if !row.participants.isEmpty { people }
+            if !stacksPeople && !row.participants.isEmpty { people }
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(row.spokenLabel)
@@ -424,6 +467,7 @@ private struct PersonTimelineLine: View {
 private struct PersonTimelineTethers: View {
     let lifeline: PersonTimelineLifeline
     let anchors: [String: CGFloat]
+    let spans: [String: ClosedRange<CGFloat>]
     let height: CGFloat
 
     @Environment(\.pvPageViewportSize) private var viewportSize
@@ -434,7 +478,7 @@ private struct PersonTimelineTethers: View {
         let visible = CGRect(
             x: -sectionFrame.minX, y: -sectionFrame.minY, width: viewportSize.width, height: viewportSize.height
         )
-        let tethers = lifeline.tethers(anchors: anchors, visible: visible)
+        let tethers = lifeline.tethers(anchors: anchors, spans: spans, visible: visible)
         Color.clear
             .frame(width: PersonTimelineLifeline.columnWidth)
             .frame(height: height)

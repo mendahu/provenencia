@@ -59,21 +59,46 @@ struct PersonTimelinePlacement: Equatable {
 
     /// The scale: points a year on the line.
     private(set) var pointsPerYear: CGFloat = 0
-    /// The line, nil until every item has a height.
+    /// The line, nil when the content has no items.
     private(set) var lifeline: PersonTimelineLifeline?
     /// Each item's top in the section's space, by id.
     private(set) var tops: [String: CGFloat] = [:]
     /// Each anchored item's anchor in the section's space, by id.
     private(set) var anchors: [String: CGFloat] = [:]
+    /// Each anchored item's top to bottom in the section's space, by id.
+    private(set) var spans: [String: ClosedRange<CGFloat>] = [:]
     /// The section's height: the larger of the last item's bottom and the line's length.
     private(set) var height: CGFloat = 0
 
-    init(content: PersonTimelineContent, heights: [String: CGFloat], viewportHeight: CGFloat) {
+    /// The height an item with none measured yet takes: the mean of the measured
+    /// ones, 120 when none is.
+    static func estimatedHeight(heights: [String: CGFloat]) -> CGFloat {
+        guard !heights.isEmpty else { return 120 }
+        return heights.values.reduce(0, +) / CGFloat(heights.count)
+    }
+
+    /// The least the text column may be before the people go under it.
+    static let minimumTextWidth: CGFloat = 280
+
+    /// Whether the people column goes under the title: the text column would be
+    /// under `minimumTextWidth` in a list `listWidth` wide (gutter, picture,
+    /// people column and three gaps taken out).
+    static func stacksPeople(listWidth: CGFloat) -> Bool {
+        let people = PVTileCardSize.compact.minimumWidth
+        return listWidth - gutterWidth - rowPicture - people - 3 * rowGap < minimumTextWidth
+    }
+
+    /// The event row's picture and the gap between its columns.
+    static let rowPicture: CGFloat = 72
+    static let rowGap: CGFloat = 16
+
+    /// `pointsPerYear` keeps a scale already chosen; nil chooses one. An item
+    /// with no measured height takes `estimatedHeight`, so every item is placed.
+    init(content: PersonTimelineContent, heights measured: [String: CGFloat], viewportHeight: CGFloat, pointsPerYear fixed: CGFloat? = nil) {
         let items = content.items
-        guard !items.isEmpty, items.allSatisfy({ heights[$0.id] != nil }) else {
-            stack(items, heights: heights)
-            return
-        }
+        guard !items.isEmpty else { return }
+        let estimate = Self.estimatedHeight(heights: measured)
+        let heights = Dictionary(items.map { ($0.id, measured[$0.id] ?? estimate) }, uniquingKeysWith: { first, _ in first })
         guard let range = PersonTimelineLifeline.range(content) else {
             let line = PersonTimelineLifeline(content: content, pointsPerYear: 0)
             var layout = Self.layout(items, heights: heights, line: line)
@@ -82,6 +107,14 @@ struct PersonTimelinePlacement: Equatable {
             return
         }
         let years = CGFloat(range.to - range.from)
+        if let fixed {
+            let line = PersonTimelineLifeline(content: content, pointsPerYear: fixed)
+            var layout = Self.layout(items, heights: heights, line: line)
+            layout.pointsPerYear = fixed
+            layout.finish(line: line, items: items, heights: heights)
+            self = layout.placement
+            return
+        }
         let floor = max(300, viewportHeight - 320) / years
         let total = items.reduce(0) { $0 + heights[$1.id]! }
         let base = max(floor, min(total / years, Self.densestYear))
@@ -106,16 +139,6 @@ struct PersonTimelinePlacement: Equatable {
     // MARK: - Pieces
 
     private init() {}
-
-    /// Items stacked with no gaps, no line.
-    private mutating func stack(_ items: [Item], heights: [String: CGFloat]) {
-        var y: CGFloat = 0
-        for item in items {
-            tops[item.id] = y
-            y += heights[item.id] ?? 0
-        }
-        height = y
-    }
 
     /// One try's result before it is finished.
     private struct Layout {
@@ -151,6 +174,7 @@ struct PersonTimelinePlacement: Equatable {
                 top = max(bottom, want)
                 result.distances.append(top - want)
                 result.placement.anchors[item.id] = top + offset
+                result.placement.spans[item.id] = top...(top + h)
             }
             result.placement.tops[item.id] = top
             bottom = top + h

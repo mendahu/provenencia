@@ -198,18 +198,21 @@ struct PersonTimelineLifeline: Equatable {
         marksByID = Dictionary(marks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// The tethers of the rows whose anchor lies in `visible`'s vertical range,
-    /// in the section's space: a curve from the row's point on the line to its
-    /// flag. A row with no point of its own (an undated row) has no anchor and
-    /// no curve. A zero-height `visible` (no viewport size yet) draws none.
-    func tethers(anchors: [String: CGFloat], visible: CGRect) -> [Tether] {
+    /// The tethers of the rows whose span (the item's top to bottom, from
+    /// placement) meets `visible`'s vertical range, in the section's space: a
+    /// curve from the row's point on the line to its flag, its end y held within
+    /// `visible`. A row with no point of its own (an undated row) has no anchor
+    /// and no curve. A zero-height `visible` (no viewport size yet) draws none.
+    func tethers(anchors: [String: CGFloat], spans: [String: ClosedRange<CGFloat>], visible: CGRect) -> [Tether] {
         guard visible.height > 0 else { return [] }
         return marks.compactMap { mark in
-            guard let y = anchors[mark.id], y >= visible.minY, y <= visible.maxY else { return nil }
+            guard let y = anchors[mark.id], let span = spans[mark.id],
+                  span.upperBound >= visible.minY, span.lowerBound <= visible.maxY
+            else { return nil }
             return Tether(
                 id: mark.id,
                 from: CGPoint(x: Self.lineX, y: mark.pointY),
-                to: CGPoint(x: Self.flagX, y: y)
+                to: CGPoint(x: Self.flagX, y: min(max(y, visible.minY), visible.maxY))
             )
         }
     }
