@@ -25,7 +25,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 - [`provenance-on-demand.md`](provenance-on-demand.md) — load a row's records when its provenance sheet opens instead of on every Person page load (S13-06 PRF-1); measure first
 - [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change: search kind columns, canvas state enums
 - [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead; parked with [`promote-ranking.md`](promote-ranking.md)
-- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon; walk only as far as alignment can use; parked with [`promote-ranking.md`](promote-ranking.md)
+- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon and rebuilds it (about 120 MB a warm proposal); walk only as far as alignment can use, or memoize the canon; parked with [`promote-ranking.md`](promote-ranking.md)
 - [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
