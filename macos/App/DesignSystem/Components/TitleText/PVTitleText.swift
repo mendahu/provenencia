@@ -22,6 +22,19 @@ enum PVTitleSource: Equatable {
     }
 }
 
+/// Applies a line limit only when the caller gave one.
+private struct PVTitleLineLimit: ViewModifier {
+    let lineLimit: Int?
+
+    func body(content: Content) -> some View {
+        if let lineLimit {
+            content.lineLimit(lineLimit).truncationMode(.tail)
+        } else {
+            content
+        }
+    }
+}
+
 /// A title in one of two sizes: the list row's, or the detail page's display
 /// size. Name plain, label italic, ref mono, at both. Draws a `+N` badge when
 /// other names survived; the badge keeps its width and the title truncates.
@@ -34,14 +47,16 @@ struct PVTitleText: View {
     let source: PVTitleSource
     let style: Style
     let extraCount: Int
-    let lineLimit: Int
+    /// The most lines the title takes. Nil is the style's own: one line for `.row`,
+    /// and no limit for `.display`.
+    let lineLimit: Int?
     let emphasized: Bool
 
     init(
         _ source: PVTitleSource,
         style: Style = .row,
         extraCount: Int = 0,
-        lineLimit: Int = 1,
+        lineLimit: Int? = nil,
         emphasized: Bool = false
     ) {
         self.source = source
@@ -57,7 +72,7 @@ struct PVTitleText: View {
             HStack(spacing: PVSpacing.space4) {
                 rowText
                     .fontWeight(emphasized ? .semibold : nil)
-                    .lineLimit(lineLimit)
+                    .lineLimit(lineLimit ?? 1)
                     .truncationMode(.tail)
                 if extraCount > 0 {
                     PVBadge.moreCount(extraCount)
@@ -66,6 +81,7 @@ struct PVTitleText: View {
             }
         case .display(let compact):
             displayText(compact: compact)
+                .modifier(PVTitleLineLimit(lineLimit: lineLimit))
         }
     }
 

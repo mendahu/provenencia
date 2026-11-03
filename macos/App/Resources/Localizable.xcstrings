@@ -18606,6 +18606,54 @@
         }
       }
     },
+    "conclusions.timeline.emptyTitle": {
+      "comment": "Title of the empty Timeline section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events yet"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.emptyMessage": {
+      "comment": "Message of the empty Timeline section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events appear here when events this person took part in are promoted from an Evidence graph."
+          }
+        }
+      }
+    },
+    "conclusions.timeline.errorTitle": {
+      "comment": "Title of the Callout shown when a Person's Timeline section could not be read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline could not be read"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.undatedHint": {
+      "comment": "Hint under the Undated heading of the Timeline: these events have no place on the lifeline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No date, so no place on the line"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

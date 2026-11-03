@@ -9366,6 +9366,30 @@ enum L10n {
             comment: "Title of the Callout shown when a Person's Family section could not be read"
         )
 
+        static let timelineEmptyTitle = LocalizedStringResource(
+            "conclusions.timeline.emptyTitle",
+            defaultValue: "No events yet",
+            comment: "Title of the empty Timeline section of a Person page"
+        )
+
+        static let timelineEmptyMessage = LocalizedStringResource(
+            "conclusions.timeline.emptyMessage",
+            defaultValue: "Events appear here when events this person took part in are promoted from an Evidence graph.",
+            comment: "Message of the empty Timeline section of a Person page"
+        )
+
+        static let timelineErrorTitle = LocalizedStringResource(
+            "conclusions.timeline.errorTitle",
+            defaultValue: "Timeline could not be read",
+            comment: "Title of the Callout shown when a Person's Timeline section could not be read"
+        )
+
+        static let timelineUndatedHint = LocalizedStringResource(
+            "conclusions.timeline.undatedHint",
+            defaultValue: "No date, so no place on the line",
+            comment: "Hint under the Undated heading of the Timeline: these events have no place on the lifeline"
+        )
+
         static func timelineAsRole(_ roles: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.timeline.asRole",

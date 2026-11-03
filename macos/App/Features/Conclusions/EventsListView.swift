@@ -121,6 +121,9 @@ enum EventSecondaryDisplay {
 /// other kept places. The row's own label speaks it, so the line is hidden from VoiceOver.
 struct EventSecondaryLine: View {
     let content: EventSecondaryDisplay.Content
+    /// The date's size; the Events row's caption size unless a caller (the Timeline's
+    /// event row) draws the line larger.
+    var dateSize: CGFloat = PVTypeScale.caption
 
     /// Nothing when neither is recorded, so `PVList` lays out no second line.
     var body: some View {
@@ -130,6 +133,7 @@ struct EventSecondaryLine: View {
                 place: content.place.isEmpty ? nil : content.place,
                 accessibilityLabel: EventSecondaryDisplay.line(content),
                 missing: .omitted,
+                dateSize: dateSize,
                 dateTone: PVColor.textMuted,
                 extraCount: content.extraPlaces
             )

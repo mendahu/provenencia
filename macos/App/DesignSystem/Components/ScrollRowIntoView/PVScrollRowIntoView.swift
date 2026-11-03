@@ -16,6 +16,7 @@ struct PVScrollRowIntoView<ID: Hashable>: ViewModifier {
     let rows: [ID]?
     let restartTop: ID?
     let restartKey: AnyHashable?
+    let request: AnyHashable?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
@@ -25,6 +26,16 @@ struct PVScrollRowIntoView<ID: Hashable>: ViewModifier {
                     guard let row else { return }
                     withAnimation(animated && !reduceMotion ? PVMotion.fastStandard : nil) {
                         proxy.scrollTo(row, anchor: anchor)
+                    }
+                }
+                .onChange(of: request) {
+                    // The same row again: scrolls on the next main-actor turn, so a
+                    // row inserted in the same update (an unfolded list) exists.
+                    guard let row else { return }
+                    Task { @MainActor in
+                        withAnimation(animated && !reduceMotion ? PVMotion.fastStandard : nil) {
+                            proxy.scrollTo(row, anchor: anchor)
+                        }
                     }
                 }
                 .onChange(of: rows) { _, rows in
@@ -58,6 +69,9 @@ extension View {
     ///   - restartTop: The id of a view at the very top of the scroll content.
     ///   - restartKey: When this changes, scrolls to `restartTop` with no
     ///     animation (`PVPageColumns` resets a page when its section changes).
+    ///   - request: When this token changes, scrolls to `row` again on the next
+    ///     main-actor turn, even if `row` did not change (a second click on the
+    ///     same point). The turn lets a row inserted in the same update exist.
     func pvScrollsRowIntoView<ID: Hashable>(
         _ row: ID?,
         anchor: UnitPoint? = nil,
@@ -65,7 +79,8 @@ extension View {
         scrollsOnAppear: Bool = false,
         startsAtTopWhenRowsChange rows: [ID]? = nil,
         restartsAt restartTop: ID? = nil,
-        whenChanged restartKey: AnyHashable? = nil
+        whenChanged restartKey: AnyHashable? = nil,
+        whenRequested request: AnyHashable? = nil
     ) -> some View {
         modifier(PVScrollRowIntoView(
             row: row,
@@ -74,7 +89,8 @@ extension View {
             scrollsOnAppear: scrollsOnAppear,
             rows: rows,
             restartTop: restartTop,
-            restartKey: restartKey
+            restartKey: restartKey,
+            request: request
         ))
     }
 }
