@@ -104,4 +104,4 @@ Check: `rg -n "func EventSpan\(|func EventAge\(" core` prints nothing; Go tests 
 Head `600b1c1d`. Gate PASS (orchestrator). F-9: `narrowListStacksPeople` red first; `PersonTimelinePlacement` owns `peopleWidth`, `textWidth(itemsWidth:widthClass:)`, `textCap`, `cardColumnGap`, `stacksPeople`; `itemsWidth` measured on `PersonTimelineStack`; the view reads them. The fix plan's 863/865 were outer widths; on the items the formula gives 772 at Regular (1402 at Wide), which the test and completed.md use. MNT-10 / UX-2 **Resolved** (read by the orchestrator). F-10: the focus rider (`lastFocused`, no unit test) and `EventSpan`/`EventAge` deleted, their tests on `EventSpanAndAge` (`81558a65`).
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: — · to user: CON-1 (the manual check, incl. click-to-scroll over `PersonTimelineStack`, plan stop condition 2) · CON miss: none
+Gate PASS · CI green (runs 41654254260, 41654254343 on `8d6eab9c`) · open: none · follow-ups: — · to user: CON-1 (the manual check, incl. click-to-scroll over `PersonTimelineStack`, plan stop condition 2) · CON miss: none
