@@ -104,7 +104,7 @@ struct PersonTimelineLifelineTests {
 
         // A range under a year is drawn as a year: one dated event, one point.
         var one = Data.ida
-        one.events = [Data.event("d", type: "census", when: .day(1850, 6, 1))]
+        one.events = [Data.event("d", type: "census", when: .day(1850, 6, 1, from: 1850.4136986301369, to: 1850.4164383561642))]
         let (single, _) = lifeline(one, height: 500)
         #expect(single.marks.contains { $0.id == "d" } && single.length == 500)
 
