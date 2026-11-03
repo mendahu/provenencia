@@ -18534,8 +18534,8 @@
         }
       }
     },
-    "conclusions.family.showMore": {
-      "comment": "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden",
+    "conclusions.showMore": {
+      "comment": "Button under a folded list on a Conclusion page that shows the rest; argument is how many are hidden",
       "extractionState": "manual",
       "localizations": {
         "en": {

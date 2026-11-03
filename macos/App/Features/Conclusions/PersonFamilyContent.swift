@@ -33,34 +33,25 @@ struct PersonFamilyContent: Equatable {
         case children(Int)
     }
 
-    /// One person on the page. `location` opens the relative on Family; nil for
-    /// the person.
-    struct Tile: Equatable, Identifiable {
-        /// "\(column)-\(group)-\(entityId)", unique on the page.
-        var id: String
-        var content: PVPersonCardContent
-        var location: WorkspaceLocation?
-    }
-
     /// A sibling, once, with the parent sets it is a child of (indexes into
     /// `parentSets`; empty when recorded only).
     struct Sibling: Equatable {
-        var tile: Tile
+        var tile: PersonCardLink
         var sets: [Int]
     }
 
     /// One partner and the children with them, or the children with no other
     /// known parent (`partner` nil).
     struct Group: Equatable {
-        var partner: Tile?
-        var children: [Tile]
+        var partner: PersonCardLink?
+        var children: [PersonCardLink]
         /// How many children the fold hides.
         var childrenHidden: Int
         /// What VoiceOver calls the group.
         var label: String
     }
 
-    var parentSets: [[Tile]]
+    var parentSets: [[PersonCardLink]]
     /// One caption per parent set.
     var parentCaptions: [String]
     /// How many parent sets the fold hides.
@@ -80,7 +71,7 @@ struct PersonFamilyContent: Equatable {
     var rightCaption: String?
 
     /// Every tile on the page, in reading order.
-    var allTiles: [Tile] {
+    var allTiles: [PersonCardLink] {
         parentSets.flatMap { $0 } + siblings.map(\.tile)
             + groups.flatMap { ($0.partner.map { [$0] } ?? []) + $0.children }
     }
@@ -103,9 +94,9 @@ struct PersonFamilyContent: Equatable {
             expanded.contains(fold) ? list : Array(list.prefix(limit))
         }
         let focusID = family.person?.entity.id
-        func tile(_ member: CatalogFamilyMember, role: PersonFamilyRole, column: String, group: String) -> Tile {
+        func tile(_ member: CatalogFamilyMember, role: PersonFamilyRole, column: String, group: String) -> PersonCardLink {
             let summary = member.person
-            return Tile(
+            return PersonCardLink(
                 id: "\(column)-\(group)-\(summary.entity.id)",
                 content: PVPersonCardContent(summary: summary, role: role.label, isFocus: false, locale: locale, orders: orders),
                 location: PersonsList.location(summary, orders: orders).withPageSection(.family)
@@ -143,7 +134,7 @@ struct PersonFamilyContent: Equatable {
             let summary = origin.member.person
             let sets = origin.parentSets.filter { $0 < visibleSets }
             if summary.entity.id == focusID {
-                let focus = Tile(
+                let focus = PersonCardLink(
                     id: "l-s-\(summary.entity.id)",
                     content: PVPersonCardContent(summary: summary, role: nil, isFocus: true, locale: locale, orders: orders),
                     location: nil
@@ -163,7 +154,7 @@ struct PersonFamilyContent: Equatable {
         let oneParentUnits = family.units.filter { $0.kind == .oneParent }
         let allUnits = partnerUnits + oneParentUnits
         let shownUnits = folded(allUnits, .partners)
-        func children(_ unit: CatalogFamilyUnit, group index: Int) -> (tiles: [Tile], hidden: Int) {
+        func children(_ unit: CatalogFamilyUnit, group index: Int) -> (tiles: [PersonCardLink], hidden: Int) {
             let shown = folded(unit.children, .children(index))
             return (shown.map { tile($0, role: .child, column: "r", group: "\(index)") }, unit.children.count - shown.count)
         }

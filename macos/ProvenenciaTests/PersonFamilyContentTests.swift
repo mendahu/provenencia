@@ -7,7 +7,7 @@ struct PersonFamilyContentTests {
     private func content(_ family: CatalogPersonFamily, expanded: Set<PersonFamilyContent.Fold> = []) -> PersonFamilyContent {
         PersonFamilyContent(family: family, expanded: expanded, locale: en)
     }
-    private func names(_ tiles: [PersonFamilyContent.Tile]) -> [String] { tiles.map(\.content.title.text) }
+    private func names(_ tiles: [PersonCardLink]) -> [String] { tiles.map(\.content.title.text) }
 
     @Test func columnsFromFamily() {
         let full = content(PersonFamilyPreviewData.full)
