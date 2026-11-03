@@ -1,11 +1,12 @@
 # Review — S14-20 The Promote page recovers and speaks
 
-**Verdict:** (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes (every round-2 blocker Fixed or answered by the user)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
 - **M-4 · Move `CatalogCounts.refreshAll` onto the same queue?** The writer recommended logging it. User, 2026-11-03: no. Keep the Promote flow simple; the page may assume its data is static while it is open, as long as the backend refuses a stale Done with an error. The generic runner went with that answer (D-1).
+- **M-10 · One retry callout for every failed read?** The writer recommended composing Promote's callout and logging the unification. User, 2026-11-03: extract the shared piece now. D-14 adds `PVRetryCallout`, and the Evidence graph canvas and Source forms move onto it. Their looks change without a board, which the plan's **Rules this plan bends** records.
 - **M-6 · Load-error copy.** The writer recommended rewording `graphUnavailable` and keeping "Try again". User, 2026-11-03: reword, keep "Try again" (D-11).
 
 ## Writer's own calls
@@ -80,3 +81,35 @@ The S14-D7 board (exported `Promote flow.dc.html`, section "S14-D7", frames 1a �
 
 ### X-11 · nit · Minor wording
 Logged. STEP-3 was split: the FakeStore hooks are STEP-2.
+
+## Round 2
+
+### M-9 · blocker · `isProposing` and `proposalRunning` store one fact twice
+**Answer:** Fixed. D-1 and D-3 now use `isProposing` as the queue's only running flag, and `proposalRunning` is gone from D-1 and Codebase fit.
+
+### M-10 · blocker · A third hand-built "failed read, retry" callout, each with its own busy state
+**Answer:** To user, answered 2026-11-03: extract it now. D-14 adds `PVRetryCallout` in `Components/Callout/`, and STEP-4 moves `SourceFormLoadArea` and `EvidenceGraphView.readErrorCallout` onto it. T-14 checks that both copies are gone. **Rules this plan bends** records the look change on the canvas.
+
+### M-11 · blocker · `retryLoad()` decides "the graph read is not usable" with a different rule than `readyValue`
+**Answer:** Fixed. D-7 rereads the graph key unconditionally, as `readGraphAgain()` does, and T-12 covers a stale key that still holds a value. (Same as X-3.)
+
+### Note · the map's scope entry still promised a shared runner
+**Answer:** Fixed. The S14-20 row and its **Ships** entry in `deployment-plan.md` now describe the queue as private to `PromoteModel`, and name `PVRetryCallout`.
+
+### X-1 · blocker · AC-3.1 and T-9's `rg` cannot return "no hit"
+**Answer:** Fixed. The pattern is scoped to `core/graphalign core/database/promotealign`, in AC-3.1, T-9 and STEP-1.
+
+### X-2 · blocker · STEP-2 cannot move `anOlderProposalAnsweringLastIsDropped` onto `FakeHold`
+**Answer:** Fixed. STEP-2 moves only `doneWaitsForAPendingProposal`. STEP-3 deletes `anOlderProposalAnsweringLastIsDropped`, because the queue rules out the overlap it tests and T-2 replaces it. `promoteProposeDelays` goes in STEP-3 as well.
+
+### X-3 · blocker · D-7's reread condition leaves a stale graph key unrecoverable
+**Answer:** Fixed. See M-11.
+
+### X-4 · major · T-2 leaves the test setup to the implementer
+**Answer:** Fixed. T-2 now names the subjects, the three scripted answers, the tokens, both releases and their waits. STEP-2 places the hold's `wait()` after the `withState` claim.
+
+### X-5 · major · A fixture sentence is false for T-1 to T-8
+**Answer:** Fixed. The sentence now says only that T-2 opens with `mapAll: true`.
+
+### X-6 · minor · The Status and Review lines still read "Blocked" and "round 2 pending"
+**Answer:** Fixed. Status is Planned, and the Review line links this log.
