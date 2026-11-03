@@ -41,7 +41,8 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
     func queryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
         switch self {
         case .family: return .personFamily(project: project, entityId: entityId)
-        case .vitals, .timeline, .gallery, .sources: return nil
+        case .timeline: return .personEvents(project: project, entityId: entityId)
+        case .vitals, .gallery, .sources: return nil
         }
     }
 
@@ -49,7 +50,8 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
     /// between the gutters while the header keeps its measure.
     var fillsWidth: Bool {
         switch self {
-        case .vitals, .family, .timeline, .gallery, .sources: return false
+        case .timeline: return true
+        case .vitals, .family, .gallery, .sources: return false
         }
     }
 

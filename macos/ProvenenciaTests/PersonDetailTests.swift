@@ -378,8 +378,13 @@ struct PersonDetailTests {
         let project = ProjectKey(projectDir: "/tmp/section-keys.provenencia")
         #expect(ConclusionPageSection.family.queryKey(project: project, entityId: "e1")
             == .personFamily(project: project, entityId: "e1"))
-        for section in ConclusionPageSection.allCases where section != .family {
+        #expect(ConclusionPageSection.timeline.queryKey(project: project, entityId: "e1")
+            == .personEvents(project: project, entityId: "e1"))
+        for section in ConclusionPageSection.allCases where section != .family && section != .timeline {
             #expect(section.queryKey(project: project, entityId: "e1") == nil)
+        }
+        for section in ConclusionPageSection.allCases {
+            #expect(section.fillsWidth == (section == .timeline))
         }
     }
 

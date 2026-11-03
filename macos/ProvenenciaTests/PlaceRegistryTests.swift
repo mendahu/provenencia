@@ -281,6 +281,15 @@ struct PlaceRegistryTests {
         #expect(vitals?.queryKeys == [.conclusionDetail(project: project, entityId: "per-1")])
     }
 
+    @Test func personDetailOnTimelineWarmsTheTimeline() {
+        let timeline = resolve(WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna").withPageSection(.timeline))
+        #expect(timeline?.placeID == .personDetail)
+        #expect(timeline?.queryKeys == [
+            .conclusionDetail(project: project, entityId: "per-1"),
+            .personEvents(project: project, entityId: "per-1"),
+        ])
+    }
+
     @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)
