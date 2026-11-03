@@ -32,7 +32,8 @@ struct CatalogQueryDescriptor: Sendable {
     /// to cache rule 2 for lists and per-handle pages, so one trigger
     /// doesn't reload every list or page the researcher has opened.
     var whenHidden: CatalogHiddenPolicy = .revalidate
-    let invalidation: @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation
+    /// Nil when the kind names no mutation in `invalidateOn`.
+    let invalidation: (@Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation)?
     /// In-place updates run, in order, before invalidation. Empty for kinds
     /// that only reload.
     var patches: [CatalogQueryPatch] = []
@@ -51,14 +52,18 @@ extension CatalogQueryDescriptor {
     static func make<Value>(
         kind: CatalogQueryKey.Kind,
         stalePolicy: CatalogQueryStalePolicy,
-        invalidateOn: Set<CatalogMutationKind>,
+        invalidateOn: Set<CatalogMutationKind> = [],
         whenHidden: CatalogHiddenPolicy = .revalidate,
-        invalidation: @escaping @Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation,
+        invalidation: (@Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation)? = nil,
         patches: [CatalogQueryPatch] = [],
         refreshes: [CatalogQueryRefresh] = [],
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
-        CatalogQueryDescriptor(
+        precondition(
+            invalidateOn.isEmpty == (invalidation == nil),
+            "\(kind): a kind names mutations exactly when it says how they invalidate"
+        )
+        return CatalogQueryDescriptor(
             kind: kind,
             stalePolicy: stalePolicy,
             invalidateOn: invalidateOn,
@@ -89,8 +94,9 @@ struct CatalogQueryRegistry: Sendable {
         guard let mutationKind = mutation.invalidationKind else { return [] }
         return CatalogQueryKey.Kind.allCases.compactMap { kind in
             let descriptor = kind.descriptor
-            guard descriptor.invalidateOn.contains(mutationKind) else { return nil }
-            return descriptor.invalidation(project, mutation)
+            guard descriptor.invalidateOn.contains(mutationKind),
+                  let invalidation = descriptor.invalidation else { return nil }
+            return invalidation(project, mutation)
         }
     }
 
@@ -174,8 +180,6 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
-                invalidation: { project, _ in .key(.credibilityGradesList(project: project)) },
                 load: { key, store in
                     guard case .credibilityGradesList(let project) = key else {
                         mismatchedCatalogKey(key, .credibilityGradesList)
@@ -227,9 +231,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { _, _ in .allCached(.evidenceGraph) },
                 refreshes: [.applyHiddenPolicy(follows: .evidenceGraphs) { _, key in
                     guard case .evidenceGraph(_, let graphId) = key else { return [] }
                     return [graphId]
@@ -273,9 +275,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { _, _ in .allCached(.citationCounts) },
                 refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
                     guard case .citationCounts(_, let graphId) = key else { return [] }
                     return [graphId]
@@ -323,11 +323,9 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) },
                 refreshes: [
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                     .applyHiddenPolicyOnAny(follows: .list(.propertyUsage)),
                     .applyHiddenPolicyOnAny(follows: .structure),
                 ],
@@ -343,8 +341,6 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
-                invalidation: { project, _ in .key(.connectRules(project: project)) },
                 load: { key, store in
                     guard case .connectRules = key else {
                         mismatchedCatalogKey(key, .connectRules)
@@ -359,8 +355,6 @@ extension CatalogQueryKey.Kind {
                 // A term write reports the `property_terms` read for its Property.
                 // The rows hold no Property label, binding or type, so the key
                 // follows no vocabulary list.
-                invalidateOn: [],
-                invalidation: { _, _ in .allCached(.propertyTerms) },
                 refreshes: [.applyHiddenPolicy(follows: .reads(.propertyTerms)) { _, key in
                     guard case .propertyTerms(_, let propertyId) = key else { return [] }
                     return [propertyId]
@@ -380,9 +374,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { _, _ in .allCached(.citationsByArtifact) },
                 refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
                     guard case .citationsByArtifact(_, let graphId, _) = key else { return [] }
                     return [graphId]
@@ -405,8 +397,6 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
-                invalidation: { project, _ in .key(.evidenceGraphProgress(project: project)) },
                 refreshes: [.merged(
                     follows: .reads(.evidenceGraphProgress),
                     as: [String: EvidenceGraphProgress].self,
@@ -444,9 +434,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.evidenceGraphsList(project: project)) },
                 refreshes: [.merged(
                     follows: .reads(.evidenceGraphs),
                     as: [CatalogEvidenceGraph].self,
@@ -475,13 +463,11 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.personsList(project: project)) },
                 patches: [.lastUpdated(CatalogPersonSummary.self, follows: .handle)],
                 refreshes: [
                     .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .personsList(let project) = key else {
@@ -494,13 +480,11 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.eventsList(project: project)) },
                 patches: [.lastUpdated(CatalogEventSummary.self, follows: .handle)],
                 refreshes: [
                     .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .eventsList(let project) = key else {
@@ -513,13 +497,11 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .markStale,
-                invalidation: { project, _ in .key(.placesList(project: project)) },
                 patches: [.lastUpdated(CatalogPlaceSummary.self, follows: .handle)],
                 refreshes: [
                     .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .placesList(let project) = key else {
@@ -532,17 +514,13 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .evict,
-                // Any Conclusion edit can touch any handle (a merge, a member's
-                // Observation), so every cached detail is stale.
-                invalidation: { _, _ in .allCached(.conclusionDetail) },
                 refreshes: [
                     .applyHiddenPolicy(follows: .touchedHandles) { _, key in
                         guard case .conclusionDetail(_, let entityId) = key else { return [] }
                         return [entityId]
                     },
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .conclusionDetail(let project, let entityId) = key else {
@@ -559,9 +537,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .evict,
-                invalidation: { _, _ in .allCached(.personClaims) },
                 refreshes: [
                     .applyHiddenPolicy(follows: .touchedHandles) { _, key in
                         guard case .personClaims(_, let entityId) = key else { return [] }
@@ -570,7 +546,7 @@ extension CatalogQueryKey.Kind {
                     .applyHiddenPolicy(followsValue: .evidenceGraphs) { (groups: [CatalogPersonClaimGroup]) in
                         Set(groups.flatMap(\.claims).map(\.graphID))
                     },
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .personClaims(let project, let entityId) = key else {
@@ -588,12 +564,10 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .evict,
-                invalidation: { _, _ in .allCached(.personFamily) },
                 refreshes: [
                     .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .personFamily(let project, let entityId) = key else {
@@ -611,12 +585,10 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                invalidateOn: [],
                 whenHidden: .evict,
-                invalidation: { _, _ in .allCached(.personEvents) },
                 refreshes: [
                     .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary)),
+                    .followsPropertyLabels,
                 ],
                 load: { key, store in
                     guard case .personEvents(let project, let entityId) = key else {

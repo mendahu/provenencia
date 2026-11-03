@@ -99,7 +99,7 @@ Extend [`PlaceRegistryTests`](../../../macos/ProvenenciaTests/PlaceRegistryTests
 In `Session/`:
 
 - Add `CatalogQueryKey` case (project-scoped payload as needed) and a `Kind` case.
-- Add one arm on `CatalogQueryKey.Kind.descriptor` in [`CatalogQueryRegistry.swift`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): the loader (`guard case` on the key, calling `GenealogyStore`), `invalidateOn`, `whenHidden`, and `invalidation`. The switch is exhaustive, so a new kind does not compile until that arm exists.
+- Add one arm on `CatalogQueryKey.Kind.descriptor` in [`CatalogQueryRegistry.swift`](../../../macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift): the loader (`guard case` on the key, calling `GenealogyStore`), `whenHidden`, and, only when a mutation names the kind, `invalidateOn` with its `invalidation` (`make` requires both or neither). The switch is exhaustive, so a new kind does not compile until that arm exists.
 
 **One cache owns each list — do not fold a shared list into a page payload.**
 A deep page composes its own key plus the shared list keys it reads (see the
