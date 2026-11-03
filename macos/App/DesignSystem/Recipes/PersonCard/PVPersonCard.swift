@@ -53,7 +53,7 @@ struct PVPersonCardContent: Equatable {
 }
 
 /// One person as a card: likeness, name, and their *b.* and *d.* lines (the
-/// life span in years at the compact size). A relative is a button (`open`);
+/// life span in years and the role at the compact size). A relative is a button (`open`);
 /// the focus is a raised card, not a button.
 struct PVPersonCard: View {
     let content: PVPersonCardContent
@@ -107,18 +107,27 @@ struct PVPersonCard: View {
 
     private var title: some View {
         PVTitleText(content.title, lineLimit: size.titleLineLimit, emphasized: content.isFocus)
-            .font(PVListText.titleFont)
+            .font(size == .compact ? PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium) : PVListText.titleFont)
             .foregroundStyle(PVColor.textPrimary)
     }
 
     @ViewBuilder
     private var lines: some View {
         if size == .compact {
-            if !content.years.isEmpty {
-                Text(verbatim: content.years)
-                    .font(PVFont.mono(size: PVTypeScale.caption))
-                    .foregroundStyle(PVColor.textMuted)
-                    .lineLimit(size.linesLineLimit)
+            HStack(spacing: 12) {
+                if !content.years.isEmpty {
+                    Text(verbatim: content.years)
+                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(size.linesLineLimit)
+                }
+                if let role = content.role {
+                    Spacer(minLength: 0)
+                    Text(verbatim: role)
+                        .pvMicroCaps()
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineLimit(1)
+                }
             }
         } else {
             ForEach(content.lines, id: \.abbreviation) { line in

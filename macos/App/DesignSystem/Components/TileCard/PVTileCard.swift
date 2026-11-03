@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The measures of a `PVTileCard`: one place for every size. The shell applies
-/// `height`, `thumbnail` and `padding`; the title and lines slots apply
+/// `height`, `thumbnail`, `padding` and `contentSpacing`; the title and lines slots apply
 /// `titleLineLimit` and `linesLineLimit`.
 enum PVTileCardSize: Equatable {
     case regular, compact
@@ -9,7 +9,7 @@ enum PVTileCardSize: Equatable {
     nonisolated var height: CGFloat {
         switch self {
         case .regular: 92
-        case .compact: 52
+        case .compact: 38
         }
     }
 
@@ -17,7 +17,7 @@ enum PVTileCardSize: Equatable {
     nonisolated var thumbnail: CGFloat {
         switch self {
         case .regular: 70
-        case .compact: 40
+        case .compact: 28
         }
     }
 
@@ -39,14 +39,22 @@ enum PVTileCardSize: Equatable {
     nonisolated var minimumWidth: CGFloat {
         switch self {
         case .regular: 120
-        case .compact: 232
+        case .compact: 300
         }
     }
 
-    nonisolated var padding: CGFloat {
+    nonisolated var padding: EdgeInsets {
+        switch self {
+        case .regular: EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+        case .compact: EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 8)
+        }
+    }
+
+    /// The space between the thumbnail and the text.
+    nonisolated var contentSpacing: CGFloat {
         switch self {
         case .regular: 10
-        case .compact: 6
+        case .compact: 8
         }
     }
 }
@@ -112,9 +120,9 @@ struct PVTileCard<Thumbnail: View, Title: View, Lines: View, Trailing: View>: Vi
             tone: isRaised ? .raised : .card,
             cornerRadius: PVRadius.sm,
             elevated: isRaised,
-            padding: size.padding
+            insets: size.padding
         ) {
-            HStack(alignment: .center, spacing: 10) {
+            HStack(alignment: .center, spacing: size.contentSpacing) {
                 thumbnail
                 VStack(alignment: .leading, spacing: 3) {
                     if hasTrailing {
