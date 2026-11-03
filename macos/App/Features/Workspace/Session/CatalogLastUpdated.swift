@@ -234,4 +234,7 @@ struct CatalogQueryRefresh: Sendable {
     static func applyHiddenPolicyOnAny(follows: CatalogQueryFollows) -> CatalogQueryRefresh {
         CatalogQueryRefresh(follows: follows, action: .revalidate { _, _ in nil })
     }
+
+    /// A key whose rows carry a Property, term or Subject type label.
+    static let followsPropertyLabels: CatalogQueryRefresh = .applyHiddenPolicyOnAny(follows: .list(.propertyVocabulary))
 }
