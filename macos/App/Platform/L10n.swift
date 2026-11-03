@@ -9366,6 +9366,32 @@ enum L10n {
             comment: "Title of the Callout shown when a Person's Family section could not be read"
         )
 
+        static func timelineAsRole(_ roles: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.asRole",
+                defaultValue: "as %@",
+                comment: "VoiceOver tail of a Timeline row: the person's role on the event; argument is the role names"
+            ), roles)
+        }
+
+        static let timelineBirthUnknown = LocalizedStringResource(
+            "conclusions.timeline.birthUnknown",
+            defaultValue: "Birth unknown",
+            comment: "Timeline marker shown where the person's birth is not recorded"
+        )
+
+        static let timelineDeathUnknown = LocalizedStringResource(
+            "conclusions.timeline.deathUnknown",
+            defaultValue: "Death unknown",
+            comment: "Timeline marker shown where the person's death is not recorded"
+        )
+
+        static let timelineUndated = LocalizedStringResource(
+            "conclusions.timeline.undated",
+            defaultValue: "Undated",
+            comment: "Heading over the Timeline events that have no date"
+        )
+
         static func showMore(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.showMore",

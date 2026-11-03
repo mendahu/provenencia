@@ -18558,6 +18558,54 @@
         }
       }
     },
+    "conclusions.timeline.asRole": {
+      "comment": "VoiceOver tail of a Timeline row: the person's role on the event; argument is the role names",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "as %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.birthUnknown": {
+      "comment": "Timeline marker shown where the person's birth is not recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birth unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.deathUnknown": {
+      "comment": "Timeline marker shown where the person's death is not recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Death unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.undated": {
+      "comment": "Heading over the Timeline events that have no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undated"
+          }
+        }
+      }
+    },
     "conclusions.a11y.ref": {
       "comment": "VoiceOver label of a handle's ref (PER-…)",
       "extractionState": "manual",

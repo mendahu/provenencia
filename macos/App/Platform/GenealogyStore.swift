@@ -572,6 +572,14 @@ enum CatalogConclusionValue: Sendable, Equatable {
         if case .depiction = self { return true }
         return false
     }
+
+    /// A term's `key` when it is a product term, else nil (also nil for any other
+    /// value): a researcher's own term may be keyed like one, so only the product's
+    /// names a seeded term. The twin of `CatalogPropertyTerm.productKey`.
+    var productKey: String? {
+        guard case .term(_, let key, _, let origin) = self, CatalogOrigin.isProduct(origin) else { return nil }
+        return key
+    }
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;

@@ -31,16 +31,44 @@ enum EventsList: ConclusionListKind {
         accessibilityLabel(summary, orders: NameFormatOrders())
     }
 
-    static func accessibilityLabel(_ summary: CatalogEventSummary, orders: NameFormatOrders) -> String {
-        let line = EventSecondaryDisplay.content(summary)
-        var label = L10n.Workspace.eventRowAccessibility(title: titleSource(summary, orders: orders).text, date: line.date, ref: summary.entity.ref)
-        if !line.place.isEmpty {
-            label = L10n.DesignSystem.spokenJoin(label, line.place)
-        }
-        if line.extraPlaces > 0 {
-            label = L10n.DesignSystem.spokenJoin(label, L10n.Conclusions.morePlaces(count: line.extraPlaces))
-        }
-        return label
+    static func accessibilityLabel(
+        _ summary: CatalogEventSummary,
+        orders: NameFormatOrders,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let line = EventSecondaryDisplay.content(summary, locale: locale)
+        let head = L10n.Workspace.eventRowAccessibility(
+            title: EventTitleDisplay.titleSource(summary, locale: locale, orders: orders).text,
+            date: line.date,
+            ref: summary.entity.ref
+        )
+        let tail = placeTail(line)
+        return tail.isEmpty ? head : L10n.DesignSystem.spokenJoin(head, tail)
+    }
+
+    /// The event as one spoken line without its ref: title, date, place and
+    /// "+N places", each only when there is something to say. Another surface
+    /// that names the event (a Timeline row) adds its own tail.
+    static func spokenLine(
+        _ summary: CatalogEventSummary,
+        orders: NameFormatOrders,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        let line = EventSecondaryDisplay.content(summary, locale: locale)
+        let parts = [
+            EventTitleDisplay.titleSource(summary, locale: locale, orders: orders).text,
+            line.date,
+            placeTail(line),
+        ].filter { !$0.isEmpty }
+        return L10n.DesignSystem.spokenJoin(parts) ?? ""
+    }
+
+    /// The place, then "N more places", spoken; empty when there is neither.
+    private static func placeTail(_ line: EventSecondaryDisplay.Content) -> String {
+        var parts: [String] = []
+        if !line.place.isEmpty { parts.append(line.place) }
+        if line.extraPlaces > 0 { parts.append(L10n.Conclusions.morePlaces(count: line.extraPlaces)) }
+        return L10n.DesignSystem.spokenJoin(parts) ?? ""
     }
 
     static func location(_ summary: CatalogEventSummary) -> WorkspaceLocation {
