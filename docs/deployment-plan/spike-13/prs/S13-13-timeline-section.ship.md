@@ -74,3 +74,14 @@ Check: `rg -n "fraction\(|/ 365|365\.0" macos/App/Features/Conclusions/PersonTim
 Files: `PersonTimelineContent.swift` (`Span.spokenLabel` *(new)*: the row's spoken label), `PersonTimelineLifeline.swift` (carry it on `Mark` or a lookup), `PersonTimelineSection.swift`.
 Do: `.help(spokenLabel)` on each point's and cap's click button; a placeholder cap's help is its text ("Birth unknown").
 Check: a `PersonTimelineContentTests` case: every `allSpans` entry's `spokenLabel` equals its row's; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `ea6f398d`. Gate FAIL once on `PVSegmentedControlTests.selectSendsTheItemValue()` (timed out at `waitUntil { chosen.isLaidOut }`, a host-window timing test this PR does not touch; it passed at round 0), then PASS on retry. F-1 – F-8 done. Deviations: F-1's `_printChanges` scroll check not run (no scrolling preview here); F-7 keeps `y + 1` for generated year spans; F-1 draws in-view accent points over the grey ones.
+Read by the orchestrator: MNT-1, MNT-2, MNT-3, PRF-2 **Resolved** (F-6's three `rg` checks print only the allowed lines; `marksByID` in `PersonTimelineLifeline.init`). MNT-4 **Not resolved** in one respect: the implementer found that Go's `datevalue.YearLine` divides by the year's own days (366 in a leap year), so the plan's "S13-33 divides every year by 365" (D-13, X-52's premise) is false, and the fixture's 1848 and 1880 day spans and two comments say otherwise. The dot threshold still holds (a leap-year day is 1/366). → F-9.
+
+### Fix plan 1 (addendum)
+
+**F-9 — Day spans and comments follow Go's year line** (from MNT-4, found in the fix round)
+Files: `macos/App/Features/Conclusions/PersonTimelinePreviewData.swift`, `PersonTimelineLifeline.swift`, `docs/deployment-plan/spike-13/prs/S13-13-timeline-section.md` (Landed note).
+Do: the fixture's day and month literals use `core/datevalue/calendar.go` `YearLine`'s rule (the fraction over the year's own day count, 366 in a leap year) for 1848 and 1880 and any other leap year in the file. `PersonTimelineLifeline`'s `dayInYears` comment says a day is at most 1/365 of a year (1/366 in a leap year), so the threshold catches both. The Landed note names the plan's wrong "divides every year by 365" premise.
+Check: `rg -n "365, leap years too|divides every year by 365" macos/App` prints nothing; PersonTimeline tests pass; scripts/check-pr.sh PASS.
