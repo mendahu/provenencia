@@ -37,6 +37,9 @@ struct CachedThumbnail: View {
     var imageLabel: String? = nil
     /// Tint and line for the `.tile` thumb (a Person's gender treatment).
     var colors: PVThumbnail.Colors? = nil
+    /// Tint and line for the `.tile` thumb only while no raster shows (a gallery tile's gender
+    /// treatment on its fallback mark); a raster wears none.
+    var fallbackColors: PVThumbnail.Colors? = nil
 
     @State private var content: PVThumbnail.Content = .empty
 
@@ -58,12 +61,13 @@ struct CachedThumbnail: View {
         // A row with no path draws its fallback at once, not the empty dash first.
         let hasPath = !relPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let shown = hasPath ? content : fallbackContent()
+        let tint = colors ?? (shown.image == nil ? fallbackColors : nil)
         return Group {
             if let imageLabel, shown.image != nil {
-                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: colors)
+                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: tint)
                     .accessibilityLabel(Text(verbatim: imageLabel))
             } else {
-                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: colors)
+                PVThumbnail(shown, size: size, cornerRadius: cornerRadius, colors: tint)
             }
         }
     }

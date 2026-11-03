@@ -48,7 +48,7 @@ struct ConclusionGallerySection: View {
                 tile: tile,
                 look: look,
                 fallbackMark: gallery.fallbackMark,
-                colors: gallery.fallbackColors
+                fallbackColors: gallery.fallbackColors
             ) {
                 Button(action: open) {
                     Color.clear
@@ -152,7 +152,7 @@ struct GalleryTileView<Overlay: View>: View {
     let tile: ConclusionDetailPicture
     let look: GalleryTileLook
     let fallbackMark: PVMarkKey
-    var colors: PVThumbnail.Colors? = nil
+    let fallbackColors: PVThumbnail.Colors?
     private let overlay: Overlay
 
     init(
@@ -160,14 +160,14 @@ struct GalleryTileView<Overlay: View>: View {
         tile: ConclusionDetailPicture,
         look: GalleryTileLook,
         fallbackMark: PVMarkKey,
-        colors: PVThumbnail.Colors? = nil,
+        fallbackColors: PVThumbnail.Colors? = nil,
         @ViewBuilder overlay: () -> Overlay
     ) {
         self.projectDir = projectDir
         self.tile = tile
         self.look = look
         self.fallbackMark = fallbackMark
-        self.colors = colors
+        self.fallbackColors = fallbackColors
         self.overlay = overlay()
     }
 
@@ -185,7 +185,7 @@ struct GalleryTileView<Overlay: View>: View {
             relPath: tile.imageRelPath,
             size: look.crop,
             fallbackMark: fallbackMark,
-            colors: look == .large ? colors : nil
+            fallbackColors: fallbackColors
         )
         .accessibilityHidden(true)
         .overlay { overlay }
