@@ -251,37 +251,20 @@ func TestCreateCitedBridge(t *testing.T) {
 // them, with no mutation of its own.
 func TestDeleteBridgeReportsPropertyUsage(t *testing.T) {
 	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
-	bridgeOut, err := CreateCitedBridge(marshalProto(t, &engine.CreateCitedBridgeRequest{
-		ProjectDir:    dir,
-		UserId:        userID,
-		FromSubjectId: personID,
-		ToSubjectId:   eventID,
-		BridgeTypeKey: "participation",
-		ArtifactId:    artifactID,
-		LocatorJson:   validLocatorJSON,
+	var bridge engine.CreateCitedBridgeResponse
+	mustRPC(t, CreateCitedBridge, &engine.CreateCitedBridgeRequest{
+		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
+		BridgeTypeKey: "participation", ArtifactId: artifactID, LocatorJson: validLocatorJSON,
 		Observations: []*engine.ObservationDraft{
 			{PropertyId: personProp, ValueSubjectId: personID},
 			{PropertyId: eventProp, ValueSubjectId: eventID},
 			{PropertyId: roleProp, ValueTermId: roleTerm},
 		},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var bridge engine.CreateCitedBridgeResponse
-	if err := proto.Unmarshal(bridgeOut, &bridge); err != nil {
-		t.Fatal(err)
-	}
-	out, err := DeleteSubject(marshalProto(t, &engine.DeleteSubjectRequest{
-		ProjectDir: dir, UserId: userID, SubjectId: bridge.GetSubject().GetId(),
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
+	}, &bridge)
 	var resp engine.DeleteSubjectResponse
-	if err := proto.Unmarshal(out, &resp); err != nil {
-		t.Fatal(err)
-	}
+	mustRPC(t, DeleteSubject, &engine.DeleteSubjectRequest{
+		ProjectDir: dir, UserId: userID, SubjectId: bridge.GetSubject().GetId(),
+	}, &resp)
 	if !contains(resp.GetEffects().GetLists(), "property_usage") {
 		t.Fatalf("lists = %v, want property_usage", resp.GetEffects().GetLists())
 	}
