@@ -16,10 +16,12 @@ struct ConclusionGallerySection: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(\.pvWidthClass) private var widthClass
-    @FocusState private var focusedID: String?
-    /// The last tile that had the keyboard, kept to the next main-actor turn after it goes, so a width
+    @FocusState private var focused: TileFocus?
+    /// The last stop that had the keyboard, kept to the next main-actor turn after it goes, so a width
     /// change in the same update still sees it while a click elsewhere clears it.
-    @State private var lastFocused: String?
+    @State private var lastFocused: TileFocus?
+    /// The stop to give the keyboard back once its tile is realized again after the lazy grid let it go.
+    @State private var pendingFocus: TileFocus?
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
 
@@ -40,15 +42,21 @@ struct ConclusionGallerySection: View {
                         .id(tile.id)
                 }
             }
-            .pvScrollsRowIntoView(scrollTarget, whenRequested: scrollRequest)
+            .pvScrollsRowIntoView(scrollTarget, animated: false, whenRequested: scrollRequest)
             .padding(.top, PVSpacing.space6)
         }
-        .onChange(of: focusedID) {
-            if let id = focusedID {
-                lastFocused = id
+        .onChange(of: focused) {
+            if let stop = focused {
+                lastFocused = stop
+                // The pending stop landed, or the keyboard went to another one: either way it is done.
+                pendingFocus = nil
+            } else if pendingFocus != nil {
+                // The tile dropped after the width update: bring it back and try again.
+                requestScroll()
+                applyPending()
             } else if lastFocused != nil {
                 Task { @MainActor in
-                    if focusedID == nil { lastFocused = nil }
+                    if focused == nil { lastFocused = nil }
                 }
             }
         }
@@ -58,14 +66,35 @@ struct ConclusionGallerySection: View {
     }
 
     /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile: scroll it back
-    /// into view, then give it the keyboard again once it exists.
+    /// into view, then give its stop the keyboard once the tile exists. The pending stop ends a moment
+    /// later, so a tile that never dropped does not take the keyboard back after a click elsewhere.
     private func keepFocus() {
-        guard let id = focusedID ?? lastFocused else { return }
-        scrollTarget = id
-        scrollRequest += 1
+        guard let stop = focused ?? lastFocused else { return }
+        pendingFocus = stop
+        requestScroll()
         Task { @MainActor in
             await Task.yield()
-            focusedID = id
+            applyPending()
+            try? await Task.sleep(for: .milliseconds(400))
+            if pendingFocus == stop { pendingFocus = nil }
+        }
+    }
+
+    private func requestScroll() {
+        guard let id = pendingFocus?.id else { return }
+        scrollTarget = id
+        scrollRequest += 1
+    }
+
+    /// Writes the pending stop. Use as portrait is not there to take it when the tile is now the lead or
+    /// the lead is saving, so the keyboard goes to the tile's image.
+    private func applyPending() {
+        guard let pending = pendingFocus else { return }
+        let tile = gallery.tiles.first { $0.id == pending.id }
+        if case .useAs(let id) = pending, tile?.isLead == true || lead.isSaving {
+            focused = .image(id)
+        } else {
+            focused = pending
         }
     }
 
@@ -86,8 +115,8 @@ struct ConclusionGallerySection: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(PVFocusRingButtonStyle(cornerRadius: PVRadius.sm))
-                .focused($focusedID, equals: tile.id)
-                .pvActivatesOnReturn(when: look.opensOnReturn && focusedID == tile.id, open)
+                .focused($focused, equals: .image(tile.id))
+                .pvActivatesOnReturn(when: look.opensOnReturn && focused == .image(tile.id), open)
                 .help(look.hasOpenTooltip ? Text(gallery.openTip) : Text(verbatim: ""))
                 .accessibilityLabel(tile.accessibilityLabel)
                 .accessibilityHint(L10n.string(gallery.openTip))
@@ -100,9 +129,10 @@ struct ConclusionGallerySection: View {
                 PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
                     Task {
                         _ = await lead.choose(tile, copy: gallery.choose)
-                        focusedID = tile.id
+                        focused = .image(tile.id)
                     }
                 }
+                .focused($focused, equals: .useAs(tile.id))
                 .disabled(lead.isSaving)
                 .fixedSize(horizontal: true, vertical: false)
                 .accessibilityLabel(tile.useAsLabel)
@@ -111,6 +141,21 @@ struct ConclusionGallerySection: View {
         }
         .frame(width: look.column, alignment: .leading)
         .pvGroupsAccessibility(look.groupsTile)
+        .onAppear {
+            if pendingFocus?.id == tile.id { applyPending() }
+        }
+    }
+}
+
+/// A keyboard stop in a tile: its image button, or Use as portrait.
+private enum TileFocus: Hashable {
+    case image(String)
+    case useAs(String)
+
+    var id: String {
+        switch self {
+        case .image(let id), .useAs(let id): id
+        }
     }
 }
 
