@@ -368,6 +368,9 @@ func TestListPersonEvents(t *testing.T) {
 	if sp := got.Events[0].GetSpan(); sp.GetFrom() != 1820 || sp.GetTo() != 1821 || sp.GetOpenStart() || sp.GetOpenEnd() {
 		t.Errorf("birth span %+v", sp)
 	}
+	if a := got.Events[0].GetAge(); a == nil || a.GetLo() != 0 || a.GetHi() != 0 {
+		t.Errorf("birth age %+v", a)
+	}
 
 	t.Run("carries spans and markers", func(t *testing.T) {
 		created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
@@ -394,6 +397,9 @@ func TestListPersonEvents(t *testing.T) {
 		mustRPC(t, ListPersonEvents, &engine.ListPersonEventsRequest{ProjectDir: dir, EntityId: database.UUIDString(lee)}, &res)
 		if len(res.Events) != 2 || res.Events[0].GetSpan() == nil || res.Events[1].GetSpan() != nil {
 			t.Fatalf("events %+v", res.Events)
+		}
+		if a := res.Events[0].GetAge(); a == nil || a.GetLo() != 0 || a.GetHi() != 0 || res.Events[1].GetAge() != nil {
+			t.Errorf("ages %+v, %+v", res.Events[0].GetAge(), res.Events[1].GetAge())
 		}
 		if res.GetBirth().GetEventId() != database.UUIDString(born) || res.GetBirth().GetBesideEventId() != "" {
 			t.Errorf("birth %+v", res.GetBirth())

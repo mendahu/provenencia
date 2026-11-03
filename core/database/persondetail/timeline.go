@@ -14,12 +14,14 @@ import (
 
 // PersonEvent is one event a person took part in directly: the person's roles
 // on it, the other canonical participants (most important role first), and its
-// span on the line of years, nil when it is undated.
+// span on the line of years, nil when it is undated, and the person's age on
+// it, nil when no age can be told.
 type PersonEvent struct {
 	Event        []byte
 	Roles        []conclusionsummaries.Term
 	Participants []EventParticipant
 	Span         *conclusionsummaries.TimelineSpan
+	Age          *conclusionsummaries.AgeRange
 }
 
 // Timeline is the Timeline section's read: the person's events in date order
@@ -183,10 +185,16 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		rows = append(rows, row)
 	}
 	rows = dropUnreadEvents(rows, summaries)
+	me, haveMe := summaries.Person(entityID)
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
 		if span, ok := conclusionsummaries.EventSpan(h); ok {
 			rows[i].Span = &span
+		}
+		if haveMe && me.Birth.Date != nil {
+			if age, ok := conclusionsummaries.EventAge(h, me.Birth.Date); ok {
+				rows[i].Age = &age
+			}
 		}
 	}
 	for i := range rows {
@@ -194,7 +202,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	}
 
 	var birth, death []byte
-	if me, ok := summaries.Person(entityID); ok {
+	if haveMe {
 		birth, death = recorded(rows, me.Birth.Event), recorded(rows, me.Death.Event)
 	}
 	typeOf := func(event []byte) vocabkey.EventType {
@@ -225,7 +233,7 @@ func recorded(rows []PersonEvent, pick *canonicalentities.Entity) []byte {
 // dropUnreadEvents drops each event whose summary was not read and each
 // participant whose summary was not read (a node dropped mid-read: the next
 // read is right, as dropUnread does). An event whose participants are all
-// dropped stays. It neither orders nor sets Span.
+// dropped stays. It neither orders nor sets Span or Age.
 func dropUnreadEvents(events []PersonEvent, summaries conclusionsummaries.Summaries) []PersonEvent {
 	var out []PersonEvent
 	for _, e := range events {

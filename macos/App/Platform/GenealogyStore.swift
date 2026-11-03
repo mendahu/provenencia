@@ -709,12 +709,14 @@ struct CatalogPersonFamily: Sendable, Equatable {
 /// (usually one; empty when the participation has none), `participants` the
 /// other canonical people on it, the most important role first. `span` is where
 /// its date sits on the line of years, nil for an event Go's order puts last;
-/// Swift does not sort, group, title or place.
+/// Swift does not sort, group, title or place. `age` is the person's age on it
+/// in whole years, worked out in Go; nil when it cannot be told.
 struct CatalogPersonEvent: Sendable, Equatable, Identifiable {
     var event: CatalogEventSummary
     var roles: [CatalogConclusionValue]
     var participants: [CatalogEventParticipant]
     var span: CatalogTimelineSpan? = nil
+    var age: CatalogAgeRange? = nil
 
     var id: String { event.entity.id }
 
@@ -730,6 +732,13 @@ struct CatalogTimelineSpan: Sendable, Equatable {
     var to: Double
     var openStart: Bool
     var openEnd: Bool
+}
+
+/// A person's age on an event in whole years, `lo` to `hi`: equal when the
+/// dates leave no doubt.
+struct CatalogAgeRange: Sendable, Equatable {
+    var lo: Int
+    var hi: Int
 }
 
 /// Where the timeline puts a birth or a death. `eventId` is the recorded event,

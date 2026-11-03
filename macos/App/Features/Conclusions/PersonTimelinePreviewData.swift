@@ -96,6 +96,11 @@ enum PersonTimelinePreviewData {
 
     // MARK: - Events
 
+    /// A person's age on an event, `lo` to `hi`.
+    static func age(_ lo: Int, _ hi: Int? = nil) -> CatalogAgeRange {
+        CatalogAgeRange(lo: lo, hi: hi ?? lo)
+    }
+
     /// A product role term ("father" reads "Father").
     static func role(_ key: String, origin: String = CatalogOrigin.provenencia) -> CatalogConclusionValue {
         .term(id: "role-\(key)", key: key, label: key.capitalized, origin: origin)
@@ -116,7 +121,8 @@ enum PersonTimelinePreviewData {
         place: String? = nil,
         picture: Bool = false,
         roles: [String] = ["subject"],
-        participants: [CatalogEventParticipant] = []
+        participants: [CatalogEventParticipant] = [],
+        age: CatalogAgeRange? = nil
     ) -> CatalogPersonEvent {
         var title = CatalogEventTitle(
             rule: .type,
@@ -148,7 +154,8 @@ enum PersonTimelinePreviewData {
             event: summary,
             roles: roles.map { role($0) },
             participants: participants,
-            span: when?.span
+            span: when?.span,
+            age: age
         )
     }
 
@@ -158,28 +165,28 @@ enum PersonTimelinePreviewData {
     static var johannEvents: [CatalogPersonEvent] {
         [
             event("1", type: "birth", subjects: ["Johann Weber"], when: .day(1817, 3, 12, from: 1817.1917808219177, to: 1817.194520547945), place: "Bremen", picture: true,
-                  participants: [participant(heinrich, "father"), participant(anna, "mother")]),
+                  participants: [participant(heinrich, "father"), participant(anna, "mother")], age: age(0)),
             event("2", type: "baptism", subjects: ["Johann Weber"], when: .day(1817, 3, 16, from: 1817.2027397260274, to: 1817.2054794520548), place: "St. Ansgarii, Bremen", picture: true,
-                  participants: [participant(heinrich, "father"), participant(anna, "mother"), participant(kohl, "witness")]),
+                  participants: [participant(heinrich, "father"), participant(anna, "mother"), participant(kohl, "witness")], age: age(0)),
             event("3", type: "census", when: .year(1835), place: "Bremen",
                   participants: [participant(heinrich, "subject"), participant(anna, "subject"),
                                  participant(margarethe, "subject"), participant(friedrich, "subject"),
-                                 participant(wilhelm, "subject")]),
+                                 participant(wilhelm, "subject")], age: age(17, 18)),
             event("4", type: "marriage", subjects: ["Johann Weber", "Maria Schulz"], when: .day(1844, 6, 4, from: 1844.4234972677596, to: 1844.4262295081967), place: "Bremen", picture: true,
-                  participants: [participant(maria, "subject"), participant(friedrich, "witness")]),
+                  participants: [participant(maria, "subject"), participant(friedrich, "witness")], age: age(27)),
             event("5", type: "baptism", subjects: ["Karl Weber"], when: .day(1845, 2, 2, from: 1845.0876712328768, to: 1845.0904109589042), place: "Hamburg", picture: true,
-                  roles: ["father"], participants: [participant(karl, "subject"), participant(maria, "mother")]),
+                  roles: ["father"], participants: [participant(karl, "subject"), participant(maria, "mother")], age: age(27)),
             event("6", type: "census", when: .year(1846), place: "Hamburg",
-                  participants: [participant(maria, "subject"), participant(karl, "subject")]),
+                  participants: [participant(maria, "subject"), participant(karl, "subject")], age: age(28, 29)),
             event("7", type: "marriage", subjects: ["Friedrich Weber", "Clara Lenz"], when: .year(1850), place: "Bremen",
-                  roles: ["witness"], participants: [participant(friedrich, "subject"), participant(clara, "subject")]),
+                  roles: ["witness"], participants: [participant(friedrich, "subject"), participant(clara, "subject")], age: age(32, 33)),
             event("8", type: "death", subjects: ["Maria Schulz"], when: .year(1859), place: "Hamburg",
-                  roles: ["witness", "informant"], participants: [participant(maria, "subject")]),
+                  roles: ["witness", "informant"], participants: [participant(maria, "subject")], age: age(41, 42)),
             event("9", type: "marriage", subjects: ["Johann Weber", "Sophie Brandt"], when: .year(1861), place: "Hamburg", picture: true,
-                  participants: [participant(sophie, "subject")]),
+                  participants: [participant(sophie, "subject")], age: age(43, 44)),
             event("10", type: "death", subjects: ["Johann Weber"], when: .day(1880, 9, 18, from: 1880.7131147540983, to: 1880.7158469945355), place: "Hamburg", picture: true,
-                  participants: [participant(otto, "informant")]),
-            event("11", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.724043715847, to: 1880.7267759562842), place: "Ohlsdorf, Hamburg"),
+                  participants: [participant(otto, "informant")], age: age(63)),
+            event("11", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.724043715847, to: 1880.7267759562842), place: "Ohlsdorf, Hamburg", age: age(63)),
             event("12", type: "residence", place: "Altona"),
             event("13", type: "migration", participants: [participant(sophie, "subject")]),
         ]
@@ -197,7 +204,11 @@ enum PersonTimelinePreviewData {
     /// death placeholder beside the 1861 marriage.
     static var unknownEnds: CatalogPersonTimeline {
         CatalogPersonTimeline(
-            events: johannEvents.filter { $0.id != "1" && $0.id != "10" },
+            events: johannEvents.filter { $0.id != "1" && $0.id != "10" }.map { row in
+                var row = row
+                row.age = nil
+                return row
+            },
             birth: CatalogLifeMarker(besideEventId: "2"),
             death: CatalogLifeMarker(besideEventId: "9")
         )
@@ -207,9 +218,9 @@ enum PersonTimelinePreviewData {
     static var ernst: CatalogPersonTimeline {
         CatalogPersonTimeline(
             events: [
-                event("e1", type: "birth", subjects: ["Ernst Weber"], when: .day(1845, 4, 3, from: 1845.2520547945205, to: 1845.2547945205479), place: "Hamburg"),
-                event("e2", type: "baptism", subjects: ["Ernst Weber"], when: .month(1845, 12, from: 1845.9150684931508, to: 1846.0), place: "Hamburg"),
-                event("e3", type: "death", subjects: ["Ernst Weber"], when: .day(1848, 2, 14, from: 1848.120218579235, to: 1848.122950819672), place: "Hamburg"),
+                event("e1", type: "birth", subjects: ["Ernst Weber"], when: .day(1845, 4, 3, from: 1845.2520547945205, to: 1845.2547945205479), place: "Hamburg", age: age(0)),
+                event("e2", type: "baptism", subjects: ["Ernst Weber"], when: .month(1845, 12, from: 1845.9150684931508, to: 1846.0), place: "Hamburg", age: age(0)),
+                event("e3", type: "death", subjects: ["Ernst Weber"], when: .day(1848, 2, 14, from: 1848.120218579235, to: 1848.122950819672), place: "Hamburg", age: age(2)),
             ],
             birth: CatalogLifeMarker(eventId: "e1"),
             death: CatalogLifeMarker(eventId: "e3")
@@ -231,7 +242,7 @@ enum PersonTimelinePreviewData {
         add(6, "pallbearer", role("pallbearer"))
         add(29, "mourner", role("mourner", origin: CatalogOrigin.user))
         let burial = event("big", type: "burial", subjects: ["Johann Weber"], when: .day(1880, 9, 22, from: 1880.724043715847, to: 1880.7267759562842), place: "Ohlsdorf, Hamburg",
-                           participants: people)
+                           participants: people, age: age(63))
         return CatalogPersonTimeline(events: [burial], birth: CatalogLifeMarker(), death: CatalogLifeMarker(eventId: "big"))
     }
 

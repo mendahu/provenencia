@@ -5378,11 +5378,28 @@ public nonisolated struct Provenencia_Engine_V1_TimelineSpan: Sendable {
   public init() {}
 }
 
+/// AgeRange is the whole years of age a person had on an event: lo to hi, equal
+/// when the dates leave no doubt.
+public nonisolated struct Provenencia_Engine_V1_AgeRange: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var lo: Int32 = 0
+
+  public var hi: Int32 = 0
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// PersonEvent is one event of a person's timeline: the event, the person's
 /// roles on it (one per distinct role term, usually one; empty when the
 /// participation has none), the other canonical participants (most important
 /// role first, then by name), and span, absent for an undated event, which the
-/// order puts last.
+/// order puts last, and age, absent when the person's age on it cannot be told
+/// (no dated birth, an open date, an event before the birth).
 public nonisolated struct Provenencia_Engine_V1_PersonEvent: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5410,12 +5427,22 @@ public nonisolated struct Provenencia_Engine_V1_PersonEvent: Sendable {
   /// Clears the value of `span`. Subsequent reads from it will return its default value.
   public mutating func clearSpan() {self._span = nil}
 
+  public var age: Provenencia_Engine_V1_AgeRange {
+    get {_age ?? Provenencia_Engine_V1_AgeRange()}
+    set {_age = newValue}
+  }
+  /// Returns true if `age` has been explicitly set.
+  public var hasAge: Bool {self._age != nil}
+  /// Clears the value of `age`. Subsequent reads from it will return its default value.
+  public mutating func clearAge() {self._age = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _event: Provenencia_Engine_V1_EventSummary? = nil
   fileprivate var _span: Provenencia_Engine_V1_TimelineSpan? = nil
+  fileprivate var _age: Provenencia_Engine_V1_AgeRange? = nil
 }
 
 /// EventParticipant is one other canonical person on an event and their roles.
@@ -16546,9 +16573,44 @@ nonisolated extension Provenencia_Engine_V1_TimelineSpan: SwiftProtobuf.Message,
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_AgeRange: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".AgeRange"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}lo\0\u{1}hi\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.lo) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.hi) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.lo != 0 {
+      try visitor.visitSingularInt32Field(value: self.lo, fieldNumber: 1)
+    }
+    if self.hi != 0 {
+      try visitor.visitSingularInt32Field(value: self.hi, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_AgeRange, rhs: Provenencia_Engine_V1_AgeRange) -> Bool {
+    if lhs.lo != rhs.lo {return false}
+    if lhs.hi != rhs.hi {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PersonEvent"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}event\0\u{1}roles\0\u{1}participants\0\u{2}\u{2}span\0\u{b}dated\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}event\0\u{1}roles\0\u{1}participants\0\u{2}\u{2}span\0\u{1}age\0\u{b}dated\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16560,6 +16622,7 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.roles) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.participants) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._span) }()
+      case 6: try { try decoder.decodeSingularMessageField(value: &self._age) }()
       default: break
       }
     }
@@ -16582,6 +16645,9 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
     try { if let v = self._span {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     } }()
+    try { if let v = self._age {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -16590,6 +16656,7 @@ nonisolated extension Provenencia_Engine_V1_PersonEvent: SwiftProtobuf.Message, 
     if lhs.roles != rhs.roles {return false}
     if lhs.participants != rhs.participants {return false}
     if lhs._span != rhs._span {return false}
+    if lhs._age != rhs._age {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
