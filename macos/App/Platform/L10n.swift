@@ -9366,11 +9366,147 @@ enum L10n {
             comment: "Title of the Callout shown when a Person's Family section could not be read"
         )
 
-        static func familyShowMore(_ count: Int) -> String {
+        static let timelineEmptyTitle = LocalizedStringResource(
+            "conclusions.timeline.emptyTitle",
+            defaultValue: "No events yet",
+            comment: "Title of the empty Timeline section of a Person page"
+        )
+
+        static let timelineEmptyMessage = LocalizedStringResource(
+            "conclusions.timeline.emptyMessage",
+            defaultValue: "Events appear here when events this person took part in are promoted from an Evidence graph.",
+            comment: "Message of the empty Timeline section of a Person page"
+        )
+
+        static let timelineErrorTitle = LocalizedStringResource(
+            "conclusions.timeline.errorTitle",
+            defaultValue: "Timeline could not be read",
+            comment: "Title of the Callout shown when a Person's Timeline section could not be read"
+        )
+
+        static let timelineUndatedHint = LocalizedStringResource(
+            "conclusions.timeline.undatedHint",
+            defaultValue: "No date, so no place on the line",
+            comment: "Hint under the Undated heading of the Timeline: these events have no place on the lifeline"
+        )
+
+        static func timelineAgeRange(lo: Int, hi: Int) -> String {
             L10n.format(LocalizedStringResource(
-                "conclusions.family.showMore",
+                "conclusions.timeline.ageRange",
+                defaultValue: "%1$lld–%2$lld",
+                comment: "Age at an event when the dates leave it uncertain; arguments are the lowest and highest possible age in years"
+            ), lo, hi)
+        }
+
+        static func timelineAgeHelp(_ age: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageHelp",
+                defaultValue: "Age %@",
+                comment: "Tooltip of a Timeline row's age flag; argument is the age as shown on the flag"
+            ), age)
+        }
+
+        static let timelineAgeUnknown = LocalizedStringResource(
+            "conclusions.timeline.ageUnknown",
+            defaultValue: "Age unknown",
+            comment: "Tooltip of a Timeline row's age flag when the person's age on the event cannot be told"
+        )
+
+        static func timelineAgeSpoken(_ age: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageSpoken",
+                defaultValue: "age %@",
+                comment: "VoiceOver tail of a Timeline row: the person's age on the event; argument is the age as shown on the flag"
+            ), age)
+        }
+
+        static func timelineAgeAtMost(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMost",
+                defaultValue: "≤ %lld",
+                comment: "Age flag of a Timeline row when only the highest possible age is known (the event or birth is dated before or after); argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeast(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeast",
+                defaultValue: "≥ %lld",
+                comment: "Age flag of a Timeline row when only the lowest possible age is known (the event or birth is dated before or after); argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtMostHelp(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMostHelp",
+                defaultValue: "Age at most %lld",
+                comment: "Tooltip of a Timeline row's age flag when only the highest possible age is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeastHelp(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeastHelp",
+                defaultValue: "Age at least %lld",
+                comment: "Tooltip of a Timeline row's age flag when only the lowest possible age is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtMostSpoken(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtMostSpoken",
+                defaultValue: "age at most %lld",
+                comment: "VoiceOver tail of a Timeline row when only the highest possible age on the event is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeAtLeastSpoken(_ age: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageAtLeastSpoken",
+                defaultValue: "age at least %lld",
+                comment: "VoiceOver tail of a Timeline row when only the lowest possible age on the event is known; argument is that age in years"
+            ), age)
+        }
+
+        static func timelineAgeSpokenRange(lo: Int, hi: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.ageSpokenRange",
+                defaultValue: "age %1$lld to %2$lld",
+                comment: "VoiceOver tail of a Timeline row when the age on the event is uncertain; arguments are the lowest and highest possible age in years"
+            ), lo, hi)
+        }
+
+        static func timelineAsRole(_ roles: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.timeline.asRole",
+                defaultValue: "as %@",
+                comment: "VoiceOver tail of a Timeline row: the person's role on the event; argument is the role names"
+            ), roles)
+        }
+
+        static let timelineBirthUnknown = LocalizedStringResource(
+            "conclusions.timeline.birthUnknown",
+            defaultValue: "Birth unknown",
+            comment: "Timeline marker shown where the person's birth is not recorded"
+        )
+
+        static let timelineDeathUnknown = LocalizedStringResource(
+            "conclusions.timeline.deathUnknown",
+            defaultValue: "Death unknown",
+            comment: "Timeline marker shown where the person's death is not recorded"
+        )
+
+        static let timelineUndated = LocalizedStringResource(
+            "conclusions.timeline.undated",
+            defaultValue: "Undated",
+            comment: "Heading over the Timeline events that have no date"
+        )
+
+        static func showMore(_ count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.showMore",
                 defaultValue: "Show %lld more",
-                comment: "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden"
+                comment: "Button under a folded list on a Conclusion page that shows the rest; argument is how many are hidden"
             ), count)
         }
 

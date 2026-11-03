@@ -27,7 +27,7 @@ struct PVCard<Content: View>: View {
     private let border: Border
     private let cornerRadius: CGFloat
     private let elevated: Bool
-    private let padding: CGFloat?
+    private let insets: EdgeInsets?
     private let content: Content
 
     init(
@@ -42,14 +42,31 @@ struct PVCard<Content: View>: View {
         self.border = border
         self.cornerRadius = cornerRadius
         self.elevated = elevated
-        self.padding = padding
+        insets = padding.map { EdgeInsets(top: $0, leading: $0, bottom: $0, trailing: $0) }
+        self.content = content()
+    }
+
+    /// A card with its own padding on each side.
+    init(
+        tone: Tone = .card,
+        border: Border = .solid,
+        cornerRadius: CGFloat = PVRadius.md,
+        elevated: Bool = false,
+        insets: EdgeInsets,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.tone = tone
+        self.border = border
+        self.cornerRadius = cornerRadius
+        self.elevated = elevated
+        self.insets = insets
         self.content = content()
     }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         content
-            .padding(padding ?? 0)
+            .padding(insets ?? EdgeInsets())
             .background(tone.fill)
             .clipShape(shape)
             .overlay(borderOverlay(shape: shape))

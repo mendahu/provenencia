@@ -1257,7 +1257,7 @@ func TestEventSpan(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := conclusionsummaries.EventSpan(tc.in)
+			got, ok, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
 			if ok != tc.wantOK || got != tc.want {
 				t.Fatalf("EventSpan = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
 			}
@@ -1332,5 +1332,50 @@ func TestTermLabeler(t *testing.T) {
 	}
 	if _, ok := label(bytes.Repeat([]byte{0x7e}, 16), "witness"); ok {
 		t.Fatal("an unknown id was labelled")
+	}
+}
+
+func TestEventAge(t *testing.T) {
+	born := datevaluetest.YMD(1817, 3, 12)
+	age := func(lo, hi int) conclusionsummaries.AgeRange { return conclusionsummaries.AgeRange{Lo: lo, Hi: hi} }
+	ev := func(d *datevalue.Value) conclusionsummaries.EventSummary {
+		return conclusionsummaries.EventSummary{Date: d}
+	}
+	cases := []struct {
+		name   string
+		in     conclusionsummaries.EventSummary
+		birth  *datevalue.Value
+		want   conclusionsummaries.AgeRange
+		wantOK bool
+	}{
+		{"the birth day", ev(born), born, age(0, 0), true},
+		{"a day", ev(datevaluetest.YMD(1844, 6, 4)), born, age(27, 27), true},
+		{"a year", ev(datevaluetest.YMD(1835, 0, 0)), born, age(17, 18), true},
+		{"a range", ev(datevaluetest.Between(1844, 0, 0, 1849, 0, 0)), born, age(26, 32), true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1844, 6, 4)}, born, age(27, 27), true},
+		{"before: at most, the year included", ev(datevaluetest.Before(1880, 0, 0)), born, conclusionsummaries.AgeRange{Hi: 63, OpenLo: true}, true},
+		{"after: at least, the year included", ev(datevaluetest.After(1850, 0, 0)), born, conclusionsummaries.AgeRange{Lo: 32, OpenHi: true}, true},
+		{"a range with a start only", ev(datevaluetest.Between(1850, 0, 0, 0, 0, 0)), born, conclusionsummaries.AgeRange{Lo: 32, OpenHi: true}, true},
+		{"a range with an end only", ev(datevaluetest.Between(0, 0, 0, 1860, 0, 0)), born, conclusionsummaries.AgeRange{Hi: 43, OpenLo: true}, true},
+		{"a start date before a year", conclusionsummaries.EventSummary{StartDate: datevaluetest.Before(1850, 0, 0)}, born, conclusionsummaries.AgeRange{Hi: 33, OpenLo: true}, true},
+		{"before a day before the birth", ev(datevaluetest.Before(1810, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"after with a birth after: no bound", ev(datevaluetest.After(1850, 0, 0)), datevaluetest.After(1817, 0, 0), conclusionsummaries.AgeRange{}, false},
+		{"a birth after a year", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.After(1817, 0, 0), conclusionsummaries.AgeRange{Hi: 27, OpenLo: true}, true},
+		{"an about birth", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.About(1817, 0, 0), age(26, 27), true},
+		{"a birth before a year", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.Before(1817, 0, 0), conclusionsummaries.AgeRange{Lo: 26, OpenHi: true}, true},
+		{"no birth", ev(datevaluetest.YMD(1844, 6, 4)), nil, conclusionsummaries.AgeRange{}, false},
+		{"no event date", conclusionsummaries.EventSummary{}, born, conclusionsummaries.AgeRange{}, false},
+		{"event before the birth", ev(datevaluetest.YMD(1800, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"year above the window", ev(datevaluetest.YMD(1<<31-1, 0, 0)), born, conclusionsummaries.AgeRange{}, false},
+		{"birth year above the window", ev(datevaluetest.YMD(1844, 6, 4)), datevaluetest.YMD(1<<31-1, 0, 0), conclusionsummaries.AgeRange{}, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			placed, hasBirth := conclusionsummaries.PlaceBirth(tc.birth)
+			_, _, got, ok := conclusionsummaries.EventSpanAndAge(tc.in, placed, hasBirth)
+			if ok != tc.wantOK || got != tc.want {
+				t.Errorf("EventAge = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
+			}
+		})
 	}
 }

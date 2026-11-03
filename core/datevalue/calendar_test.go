@@ -95,7 +95,7 @@ func TestAddYears(t *testing.T) {
 		wantY, wantM, wantD int
 	}{
 		{"year precision back", 1850, 0, 0, -110, 1740, 0, 0},
-		{"leap day to common year", 1904, 2, 29, 110, 2014, 2, 28},
+		{"leap day to common year", 1904, 2, 29, 110, 2014, 3, 1},
 		{"leap day to leap year", 1904, 2, 29, 4, 1908, 2, 29},
 		{"full date", 1901, 5, 1, 110, 2011, 5, 1},
 		{"month precision", 1850, 3, 0, 1, 1851, 3, 0},
@@ -104,6 +104,40 @@ func TestAddYears(t *testing.T) {
 			y, m, d := datevalue.AddYears(tc.y, tc.m, tc.d, tc.n)
 			if y != tc.wantY || m != tc.wantM || d != tc.wantD {
 				t.Errorf("AddYears(%d, %d, %d, %d) = %d-%d-%d, want %d-%d-%d", tc.y, tc.m, tc.d, tc.n, y, m, d, tc.wantY, tc.wantM, tc.wantD)
+			}
+		})
+	}
+}
+
+func TestCompletedYears(t *testing.T) {
+	day := func(y, m, d int) int { return datevalue.DaysFromCivil(y, m, d) }
+	for _, tc := range []struct {
+		name     string
+		born, on int
+		want     int
+	}{
+		{"same day", day(1817, 3, 12), day(1817, 3, 12), 0},
+		{"after 27 years", day(1817, 3, 12), day(1844, 6, 4), 27},
+		{"the day before a birthday", day(1817, 3, 12), day(1844, 3, 11), 26},
+		{"the birthday", day(1817, 3, 12), day(1844, 3, 12), 27},
+		{"leap day, the day before", day(1820, 2, 29), day(1821, 2, 28), 0},
+		{"leap day, reached 1 March", day(1820, 2, 29), day(1821, 3, 1), 1},
+		{"leap day in a leap year", day(1820, 2, 29), day(1824, 2, 29), 4},
+		{"before born", day(1817, 3, 12), day(1817, 3, 11), -1},
+		{"years before born", day(1817, 3, 12), day(1800, 1, 1), -18},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := datevalue.CompletedYears(tc.born, tc.on)
+			if got != tc.want {
+				t.Fatalf("CompletedYears = %d, want %d", got, tc.want)
+			}
+			by, bm, bd := datevalue.AddDays(1970, 1, 1, tc.born)
+			at := func(n int) int {
+				y, m, d := datevalue.AddYears(by, bm, bd, n)
+				return datevalue.DaysFromCivil(y, m, d)
+			}
+			if at(got) > tc.on || at(got+1) <= tc.on {
+				t.Errorf("AddYears(born, %d) = %d and (born, %d) = %d do not bracket on %d", got, at(got), got+1, at(got+1), tc.on)
 			}
 		})
 	}

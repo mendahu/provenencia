@@ -112,11 +112,33 @@ func AddDays(year, month, day, n int) (int, int, int) {
 }
 
 // AddYears moves a date by n civil years. A month or day of 0 (not given)
-// stays 0; 29 February in a common year becomes 28 February.
+// stays 0; 29 February in a common year becomes 1 March, the day a leap-day
+// birthday is reached there.
 func AddYears(year, month, day, n int) (int, int, int) {
 	y := year + n
-	if month != 0 && day != 0 {
-		day = min(day, DaysInMonth(y, month))
+	if month == 2 && day == 29 && !isLeap(y) {
+		return y, 3, 1
 	}
 	return y, month, day
+}
+
+// CompletedYears is the whole civil years from the day born to the day on, both
+// day numbers (DaysFromCivil): the largest n with AddYears(born's date, n) on
+// or before on. It is negative when on is before born. It is AddYears' inverse,
+// so a 29 February birthday is reached on 1 March in a common year.
+func CompletedYears(born, on int) int {
+	by, bm, bd := civilFromDays(born)
+	oy, _, _ := civilFromDays(on)
+	reached := func(n int) bool {
+		y, m, d := AddYears(by, bm, bd, n)
+		return DaysFromCivil(y, m, d) <= on
+	}
+	n := oy - by
+	for !reached(n) {
+		n--
+	}
+	for reached(n + 1) {
+		n++
+	}
+	return n
 }

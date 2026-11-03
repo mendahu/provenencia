@@ -472,6 +472,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                 PVPageColumns(
                     headerPinned: !offeredPageSections.isEmpty,
                     scrollResetKey: pageSection,
+                    primaryFill: pageSection?.fillsWidth ?? false,
                     header: { isScrolled in
                         ConclusionDetailHeaderBand(
                             content: content,

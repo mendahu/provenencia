@@ -56,7 +56,9 @@ private struct PersonDetailSections: View {
             }
         case .family:
             PersonFamilySection(entityId: entityId)
-        case .timeline, .sources:
+        case .timeline:
+            PersonTimelineSection(entityId: entityId)
+        case .sources:
             PVEmptyState(
                 glyph: section.glyph,
                 title: section.label,

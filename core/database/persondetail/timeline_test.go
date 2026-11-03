@@ -297,6 +297,34 @@ func TestPersonEvents(t *testing.T) {
 		w.k.Commit(pat)
 		w.expectEvents(pat, "B1(subject;)")
 	})
+	t.Run("age", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b := w.eventOn("B", vocabkey.EventBirth, datevaluetest.YMD(1817, 3, 12))
+		m := w.eventOn("M", vocabkey.EventMarriage, datevaluetest.YMD(1844, 6, 4))
+		u := w.eventOn("U", vocabkey.EventType("residence"), nil)
+		for _, e := range [][]byte{b, m, u} {
+			w.k.Join(pat, e, "subject")
+		}
+		rows, _ := w.events(pat)
+		want := map[string]*conclusionsummaries.AgeRange{"B": {Lo: 0, Hi: 0}, "M": {Lo: 27, Hi: 27}, "U": nil}
+		for _, r := range rows {
+			got, name := r.Age, w.name(r.Event)
+			if !reflect.DeepEqual(got, want[name]) {
+				t.Errorf("%s age = %+v, want %+v", name, got, want[name])
+			}
+		}
+	})
+	t.Run("age with no birth", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		m := w.eventOn("M", vocabkey.EventMarriage, datevaluetest.YMD(1844, 6, 4))
+		w.k.Join(pat, m, "subject")
+		rows, _ := w.events(pat)
+		if len(rows) != 1 || rows[0].Age != nil {
+			t.Errorf("rows %+v", rows)
+		}
+	})
 }
 
 // located gives an event its own Place.

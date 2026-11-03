@@ -41,7 +41,17 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
     func queryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
         switch self {
         case .family: return .personFamily(project: project, entityId: entityId)
-        case .vitals, .timeline, .gallery, .sources: return nil
+        case .timeline: return .personEvents(project: project, entityId: entityId)
+        case .vitals, .gallery, .sources: return nil
+        }
+    }
+
+    /// The section opts into Page columns' full-width mode: at Wide it fills the pane
+    /// between the gutters while the header keeps its measure.
+    var fillsWidth: Bool {
+        switch self {
+        case .timeline: return true
+        case .vitals, .family, .gallery, .sources: return false
         }
     }
 

@@ -572,6 +572,14 @@ enum CatalogConclusionValue: Sendable, Equatable {
         if case .depiction = self { return true }
         return false
     }
+
+    /// A term's `key` when it is a product term, else nil (also nil for any other
+    /// value): a researcher's own term may be keyed like one, so only the product's
+    /// names a seeded term. The twin of `CatalogPropertyTerm.productKey`.
+    var productKey: String? {
+        guard case .term(_, let key, _, let origin) = self, CatalogOrigin.isProduct(origin) else { return nil }
+        return key
+    }
 }
 
 /// One auto-reconciled value of a Property (S9-14). `.kept` is displayed;
@@ -701,12 +709,14 @@ struct CatalogPersonFamily: Sendable, Equatable {
 /// (usually one; empty when the participation has none), `participants` the
 /// other canonical people on it, the most important role first. `span` is where
 /// its date sits on the line of years, nil for an event Go's order puts last;
-/// Swift does not sort, group, title or place.
+/// Swift does not sort, group, title or place. `age` is the person's age on it
+/// in whole years, worked out in Go; nil when it cannot be told.
 struct CatalogPersonEvent: Sendable, Equatable, Identifiable {
     var event: CatalogEventSummary
     var roles: [CatalogConclusionValue]
     var participants: [CatalogEventParticipant]
     var span: CatalogTimelineSpan? = nil
+    var age: CatalogAgeRange? = nil
 
     var id: String { event.entity.id }
 
@@ -722,6 +732,16 @@ struct CatalogTimelineSpan: Sendable, Equatable {
     var to: Double
     var openStart: Bool
     var openEnd: Bool
+}
+
+/// A person's age on an event in whole years, `lo` to `hi`: equal when the
+/// dates leave no doubt. An open side (a BEF or AFT birth or event) is flagged
+/// and its bound is 0: only the other side is known.
+struct CatalogAgeRange: Sendable, Equatable {
+    var lo: Int
+    var hi: Int
+    var openLo = false
+    var openHi = false
 }
 
 /// Where the timeline puts a birth or a death. `eventId` is the recorded event,

@@ -1,7 +1,7 @@
 # Review — S13-13 Timeline section (and brief S13-D4)
 
-**Verdict:** round 1 Fits with changes — Ready with changes; round 2 Fits with changes — Not ready, every finding Fixed or answered by the user; none open. After round 2 the card work moved to S13-34 and S13-35 (below); the refreshed plan has not been re-reviewed. Status `Blocked — on S13-33, S13-35`.
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet).
+**Verdict:** round 1 Fits with changes — Ready with changes; round 2 Fits with changes — Not ready; round 3 (after the scope change and the refresh against `92f87db`) Fits with changes — Not ready; round 4 Fits with changes — Ready with changes. Every finding Fixed, or Declined with evidence (X-40); none open. Status `Planned`.
+**Rounds:** 4 (two before the scope change, two after). **Reviewers:** maintainability (Opus), executability (Sonnet).
 
 ## To user
 
@@ -188,3 +188,50 @@ Reviewed the plan rewritten after the board (turn 12), S13-32's descoping and th
 - The user cut S13-35's `.row` size: D-16's event row is now a Timeline snowflake (`PersonTimelineEventRow`), a `.contain` group so its title button stays reachable; D-6's picture is a plain 72pt; the stop condition names the row's reachability instead of the shell.
 - S13-34 makes the Events list's line a call to `PVDatePlaceLine` with `dateSize` and `extraCount`: the event row reads `PVDatePlaceLine(…, dateSize: PVTypeScale.body)`; `EventSecondaryLine(dateSize:)` is gone from this plan.
 - Names follow the prep plans: `PVPersonCard(…, size: PVTileCardSize.compact, …)` (no mirror `Size`), `PVTitleText(_:style:…)`, `pvActivatesOnReturn(when:_:)`, `PVFocusRingButtonStyle(cornerRadius:)`.
+
+## Refresh after S13-33, S13-34 and S13-35 landed (2026-11-02, base `92f87db`)
+
+Every § 4 name was checked in the code and against the three Landed notes. All landed as planned except one point that changes this plan: S13-34 kept `EventSecondaryLine` as the Events row's wrapper (its Landed note (5)). That wrapper owns the "neither half, no line" guard and the empty-to-nil mapping, and `PVDatePlaceLine`'s date and place are `String?` while `EventSecondaryDisplay.Content`'s are `String`. D-16 goes back to `EventSecondaryLine` with a new `dateSize`, which reverses the carried line above. `PVDatePlaceLine` gained `dateTone` (S13-34 note (7)), and the Timeline keeps the Events row's muted date. STEP-0 is now a base check. The map row, the scope entry and the brief's inventory, Related and Ships lines now name S13-35's card (M-35).
+
+## Round 3 (re-review after the scope change and the refresh)
+
+**Reviewers:** maintainability (Opus), executability (Sonnet), fresh. **Verdict:** Fits with changes — Not ready (X-30, X-31 blockers; M-30 a blocker under the floors: a second title-size mechanism beside `PVTitleText.Style`). Each finding was answered below, and round 4 checks the fixes.
+
+- **M-30 · blocker · The event title builds a third title size outside `PVTitleText`.** Fixed. D-16 uses `.display(compact: true, lineLimit: 2)`. `Style.display` gains `lineLimit: Int? = nil`, so the header is unchanged. `.isHeader` stays, so event titles are VoiceOver headings. T-11, STEP-5.
+- **M-31 · major · `Participant.caption` repeats `card.role`.** Fixed. The caption is `content.role` (D-4). `PersonFamilyContent.Tile` is lifted to `PersonCardLink`, shared with the Timeline (D-5, STEP-2, Codebase fit, Deletes). This supersedes round 1 M-9 and round 2 M-20.
+- **M-32 · major · Repeat-click timing is patched in the feature.** Fixed. `pvScrollsRowIntoView(whenRequested:)` scrolls again when a token changes, on the next main-actor turn. The feature's `Task` hop is gone (D-13, STEP-6, README row).
+- **M-33 · major · `pvPageVisibleRect` comes from pinned-only state.** Fixed with X-30. Offset and viewport (height and a new width) are measured on both paths. The rect is in the content's coordinates, `.zero` outside a page (D-13, T-8). The README row is in STEP-1.
+- **M-34 · major · `isSubject` writes the product check inline.** Fixed. `CatalogConclusionValue.productKey` is added, and `PVGenderTreatment` moves onto it (D-4, STEP-4, T-5). `EvidenceBridgeEdgeSummary.productKey(of:)` works on observations and is a follow-up for the ship log.
+- **M-35 · major · The brief and map describe the pre-S13-35 tile.** Fixed in this refresh: the map row, Depends (adds S13-34), the scope entry, and the brief's Related, Ships, inventory and title rows. The DoD sweep adds `PersonTile`, `PersonTile.Size` and "One person tile, two sizes". The DoD binds the UI to § 6, not the brief's inventory.
+- **M-36 · minor · Place tail built twice.** Fixed: `EventsList.placeTail` is read by both builders (D-5).
+- **M-37 · nit.** Fixed: `PersonTimelineLifeline.columnWidth`.
+- **X-30 · blocker · The visible rect and the section's origin are in incompatible spaces.** Fixed. The section measures its `scrollSpace` frame on every change. Its content origin is `minY + offset`, and `visible` is the published rect shifted by that origin (D-13).
+- **X-31 · blocker · Item frames and a `LazyVStack`.** Fixed. The items are a plain `VStack`, because the scale needs every frame. D-7 bounds the first paint to about 60 items, and unfolded Lise is 120 rows (D-13, § 6, Scale).
+- **X-32 · major · The lifeline's output API.** Fixed: `length`, `marks` (`Mark`, `Shape`), `stubs`, `ticks` (`Tick`), and a `tethers(itemFrames:visible:)` method (D-13).
+- **X-33 · major · Scale and tick edges.** Fixed. With no span there is no scale: caps plus one stub. A range under a year is anchored at `from`. Ticks fall at multiples of the step, and labels are `String(year)`. A dangling `besideEventId` reads as nil, and placement runs before folding (D-5, D-13, T-10).
+- **X-34 · major · Two participant-fold representations.** Fixed. The participant fold is drawn inside the row (`participantsHidden`, id `.more.<eventId>`), and `Item.more` is `.dated` or `.undated` only (D-5, D-9, D-12).
+- **X-35 · major · Row layout choices.** Fixed. Badges sit at the measure's trailing edge. Cells align `.topLeading` with no reserved caption height (D-9, D-15).
+- **X-36 · major · Drawing measures.** Fixed with the writer's measures (D-13 **Measures**), listed below as writer's calls.
+- **X-37 · minor · Outline Badge.** Fixed: `PVBadge(text:tone: .neutral, subtle:)` (D-4).
+- **X-38 · minor · Empty spoken parts.** Fixed (D-5; T-5 event 13).
+- **X-39 · minor · Stale statements.** Fixed: the Timeline key row, the map row, Status and Review lines, and the "One sectioned detail page" bullet in STEP-8.
+- **X-40 · major · Checks that need a human.** Declined. The manual check (§ 10) is the user's by ship-pr's design ("The user does the manual check"), and the D-11 fixtures back the previews. STEP-1's check is now T-8 plus the app building, not "looks as before".
+- **X-41 · minor · STEP-5 too big; string placement.** Fixed. STEP-5 covers the rows, STEP-6 the line, tethers and clicks, STEP-7 wiring and STEP-8 docs. Strings name their step.
+- **X-42 · minor · Trip-ups.** Fixed: `Span` is a struct, the host's closure is stored as `content`, `primaryFill` applies to `.content` only, and `gutterPageWide` is an Out line.
+
+**Writer's own calls (round 3):** the lifeline's measures (line at x = 56, 1.5pt; ticks 8 / 4pt; dot 8pt; bar 6pt with a 16pt fade; caps 12pt; tether ending at x = 80 at the row's `minY + 12`). Event titles stay VoiceOver headings. The Timeline's date stays muted, as on the Events row. The item stack is a plain `VStack`. The name `PersonCardLink`.
+
+## Round 4
+
+**Reviewers:** maintainability (Opus), executability (Sonnet), fresh, with the log. Only new blockers were asked for. Each finding was answered below, and the loop stops here (cap).
+
+- **M-40 · blocker · `pvPageVisibleRect` publishes an offset that the section's own frame cancels.** Fixed. In `PVPageColumns` the scroll space sits on the `ScrollView`, so the section's frame in it already gives the viewport's position. `PVPageColumns` publishes only `pvPageViewportSize` (it changes on resize, not on scroll). `offset` stays behind `measures`, and `visible = (-frame.minX, -frame.minY, size)` (D-13, T-8).
+- **M-41 · blocker · `PVTitleText` would get a second line-limit input.** Fixed. The existing `lineLimit` becomes `Int? = nil`; `.row` reads `?? 1`, and `.display` applies it when set. `Style` is unchanged (D-16, T-11).
+- **M-42 · blocker · `spokenLine` uses the process locale.** Fixed. `spokenLine` and `accessibilityLabel` take a defaulted `locale`, which `PersonTimelineContent` passes in. T-5 runs at `en_US` (D-5).
+- Note (not raised as a finding): the caption is `.accessibilityHidden(true)`, as on Family. Fixed (D-9). The brief's line "A second person tile type" now names the new working rule.
+- **X-50 · blocker · A recorded birth or death with no span has no mark.** Fixed. It gets a filled cap on its own stub, placed as a placeholder's, is clickable, and has a dashed dot with no curve (D-13, T-7).
+- **X-51 · blocker · Where a stub sits on the year axis.** Fixed with a **Mapping** rule. A birth stub sits at the `from` of the row it precedes and a death stub at the `to` of its beside row. Later points move down by 40pt, folded spans still count, and bars are not split (D-13, T-7).
+- **X-52 · major · Dot threshold tolerance.** Fixed: `<= 1/365 + 1e-9` (D-13, T-7).
+- **X-53 · minor · `Button` trailing closures; Anna's fixture.** Fixed: `Button { action } label: { … }`, and Anna is built by hand (D-16, D-11).
+
+**Writer's own calls (round 4):** a recorded but undated birth or death draws as a filled cap on a stub, not hidden. A stub is inserted at its neighbour's span end.

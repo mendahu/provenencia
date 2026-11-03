@@ -1595,11 +1595,22 @@ message TimelineSpan {
   bool open_end = 4;
 }
 
+// AgeRange is the whole years of age a person had on an event: lo to hi, equal
+// when the dates leave no doubt. An open side (a BEF or AFT birth or event) is
+// flagged and its bound is 0: only the other side is known.
+message AgeRange {
+  int32 lo = 1;
+  int32 hi = 2;
+  bool open_lo = 3;
+  bool open_hi = 4;
+}
+
 // PersonEvent is one event of a person's timeline: the event, the person's
 // roles on it (one per distinct role term, usually one; empty when the
 // participation has none), the other canonical participants (most important
 // role first, then by name), and span, absent for an undated event, which the
-// order puts last.
+// order puts last, and age, absent when the person's age on it cannot be told
+// (no dated birth, an open date, an event before the birth).
 message PersonEvent {
   reserved 4;
   reserved "dated";
@@ -1607,6 +1618,7 @@ message PersonEvent {
   repeated ConclusionTerm roles = 2;
   repeated EventParticipant participants = 3;
   TimelineSpan span = 5;
+  AgeRange age = 6;
 }
 
 // EventParticipant is one other canonical person on an event and their roles.

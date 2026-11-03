@@ -18534,8 +18534,8 @@
         }
       }
     },
-    "conclusions.family.showMore": {
-      "comment": "Button under a Family list folded at 30 that shows the rest; argument is how many are hidden",
+    "conclusions.showMore": {
+      "comment": "Button under a folded list on a Conclusion page that shows the rest; argument is how many are hidden",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18554,6 +18554,234 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "conclusions.timeline.asRole": {
+      "comment": "VoiceOver tail of a Timeline row: the person's role on the event; argument is the role names",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "as %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.birthUnknown": {
+      "comment": "Timeline marker shown where the person's birth is not recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Birth unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.deathUnknown": {
+      "comment": "Timeline marker shown where the person's death is not recorded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Death unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.undated": {
+      "comment": "Heading over the Timeline events that have no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undated"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.emptyTitle": {
+      "comment": "Title of the empty Timeline section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events yet"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.emptyMessage": {
+      "comment": "Message of the empty Timeline section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events appear here when events this person took part in are promoted from an Evidence graph."
+          }
+        }
+      }
+    },
+    "conclusions.timeline.errorTitle": {
+      "comment": "Title of the Callout shown when a Person's Timeline section could not be read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline could not be read"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.undatedHint": {
+      "comment": "Hint under the Undated heading of the Timeline: these events have no place on the lifeline",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No date, so no place on the line"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageRange": {
+      "comment": "Age at an event when the dates leave it uncertain; arguments are the lowest and highest possible age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageHelp": {
+      "comment": "Tooltip of a Timeline row's age flag; argument is the age as shown on the flag",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageUnknown": {
+      "comment": "Tooltip of a Timeline row's age flag when the person's age on the event cannot be told",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age unknown"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageSpoken": {
+      "comment": "VoiceOver tail of a Timeline row: the person's age on the event; argument is the age as shown on the flag",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age %@"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageSpokenRange": {
+      "comment": "VoiceOver tail of a Timeline row when the age on the event is uncertain; arguments are the lowest and highest possible age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age %1$lld to %2$lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtMost": {
+      "comment": "Age flag of a Timeline row when only the highest possible age is known (the event or birth is dated before or after); argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≤ %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeast": {
+      "comment": "Age flag of a Timeline row when only the lowest possible age is known (the event or birth is dated before or after); argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≥ %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtMostHelp": {
+      "comment": "Tooltip of a Timeline row's age flag when only the highest possible age is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age at most %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeastHelp": {
+      "comment": "Tooltip of a Timeline row's age flag when only the lowest possible age is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Age at least %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtMostSpoken": {
+      "comment": "VoiceOver tail of a Timeline row when only the highest possible age on the event is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age at most %lld"
+          }
+        }
+      }
+    },
+    "conclusions.timeline.ageAtLeastSpoken": {
+      "comment": "VoiceOver tail of a Timeline row when only the lowest possible age on the event is known; argument is that age in years",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "age at least %lld"
           }
         }
       }

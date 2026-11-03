@@ -8,81 +8,33 @@ struct PersonFamilySection: View {
     let entityId: String
 
     @Environment(WorkspaceSession.self) private var session
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(\.pvWidthClass) private var widthClass
 
     /// The lists the researcher has unfolded. Reset when the page is another person.
     @State private var expanded: Set<PersonFamilyContent.Fold> = []
 
-    private var key: CatalogQueryKey {
-        .personFamily(project: session.projectKey, entityId: entityId)
-    }
-
     var body: some View {
-        Group {
-            if let handle: QueryHandle<CatalogPersonFamily> = session.queryHandle(key) {
-                PersonFamilyLoaded(
-                    handle: handle,
-                    projectDir: session.projectKey.projectDir,
-                    orders: session.nameFormat,
-                    expanded: $expanded
-                )
-            } else {
-                PersonFamilyLoading()
-            }
+        let orders = session.nameFormat
+        let expanded = expanded
+        ConclusionPageSectionHost<CatalogPersonFamily, PersonFamilyContent, PersonFamilyDiagram>(
+            section: .family,
+            entityId: entityId,
+            errorTitle: L10n.Conclusions.familyErrorTitle,
+            emptyTitle: L10n.Conclusions.familyEmptyTitle,
+            emptyMessage: L10n.string(L10n.Conclusions.familyEmptyMessage),
+            make: { PersonFamilyContent(family: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders) },
+            isEmpty: \.isEmpty
+        ) { content in
+            PersonFamilyDiagram(
+                content: content,
+                projectDir: session.projectKey.projectDir,
+                widthClass: widthClass,
+                open: { navigation.go(to: $0) },
+                expand: { self.expanded.insert($0) }
+            )
         }
-        .task {
-            let _: QueryHandle<CatalogPersonFamily> = session.query(key)
-        }
-        .onChange(of: entityId) { expanded = [] }
-    }
-}
-
-private struct PersonFamilyLoading: View {
-    var body: some View {
-        ProgressView()
-            .frame(maxWidth: .infinity)
-            .padding(.top, 96)
-    }
-}
-
-private struct PersonFamilyLoaded: View {
-    @Bindable var handle: QueryHandle<CatalogPersonFamily>
-    let projectDir: String
-    let orders: NameFormatOrders
-    @Binding var expanded: Set<PersonFamilyContent.Fold>
-
-    @Environment(WorkspaceNavigation.self) private var navigation
-    @Environment(\.pvWidthClass) private var widthClass
-
-    var body: some View {
-        let presentation = ConclusionDetailPresentation<PersonFamilyContent>(
-            handle.read,
-            isFetching: handle.isFetching
-        ) { PersonFamilyContent(family: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders) }
-        switch presentation {
-        case .loading:
-            PersonFamilyLoading()
-        case .failed(let message):
-            PVCallout(tone: .danger, title: L10n.Conclusions.familyErrorTitle, message: message)
-                .accessibilityIdentifier("persons.detail.family.error")
-        case .content(let content, _):
-            if content.isEmpty {
-                PVEmptyState(
-                    glyph: ConclusionPageSection.family.glyph,
-                    title: L10n.Conclusions.familyEmptyTitle,
-                    message: L10n.string(L10n.Conclusions.familyEmptyMessage)
-                )
-                .accessibilityIdentifier("persons.detail.family.empty")
-            } else {
-                PersonFamilyDiagram(
-                    content: content,
-                    projectDir: projectDir,
-                    widthClass: widthClass,
-                    open: { navigation.go(to: $0) },
-                    expand: { expanded.insert($0) }
-                )
-                .accessibilityIdentifier("persons.detail.family")
-            }
-        }
+        .onChange(of: entityId) { self.expanded = [] }
     }
 }
 
@@ -139,7 +91,7 @@ struct PersonFamilyDiagram: View {
                         }
                     }
                     ForEach(group.more, id: \.fold) { more in
-                        PersonFamilyMoreRow(count: more.count) { expand(more.fold) }
+                        ConclusionShowMoreRow(count: more.count) { expand(more.fold) }
                             .frame(width: more.frame.width, height: more.frame.height, alignment: .leading)
                             .offset(x: more.frame.minX, y: more.frame.minY)
                             .accessibilityIdentifier("persons.detail.family.more")
@@ -152,21 +104,6 @@ struct PersonFamilyDiagram: View {
             }
         }
         .frame(width: width, height: layout.height, alignment: .topLeading)
-    }
-}
-
-/// The "Show N more" row that ends a folded list: a plain borderless button.
-/// Return and Space activate it.
-private struct PersonFamilyMoreRow: View {
-    let count: Int
-    let expand: () -> Void
-
-    var body: some View {
-        Button(action: expand) {
-            Text(verbatim: L10n.Conclusions.familyShowMore(count))
-        }
-        .buttonStyle(.pv(.ghost, size: .sm))
-        .pvActivatesOnReturn(expand)
     }
 }
 

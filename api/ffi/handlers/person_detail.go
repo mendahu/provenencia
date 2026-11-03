@@ -214,6 +214,9 @@ func personEventProto(r persondetail.PersonEvent, summaries conclusionsummaries.
 	if r.Span != nil {
 		out.Span = &engine.TimelineSpan{From: r.Span.From, To: r.Span.To, OpenStart: r.Span.OpenStart, OpenEnd: r.Span.OpenEnd}
 	}
+	if r.Age != nil {
+		out.Age = &engine.AgeRange{Lo: int32(r.Age.Lo), Hi: int32(r.Age.Hi), OpenLo: r.Age.OpenLo, OpenHi: r.Age.OpenHi}
+	}
 	for _, p := range r.Participants {
 		ph, ok := summaries.Person(p.Person)
 		if !ok {

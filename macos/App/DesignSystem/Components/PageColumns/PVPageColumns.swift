@@ -15,22 +15,32 @@ enum PVPageColumnsMetrics {
     /// How far the content scrolls before a pinned header compacts.
     static let compactOffset: CGFloat = 8
 
-    /// The primary column, the secondary column (nil when there is none) and
-    /// the group that holds them, for a pane `pane` wide.
+    /// The primary column, the secondary column (nil when there is none), the
+    /// group that holds them and the band the header takes, for a pane `pane`
+    /// wide.
     ///
     /// Regular, or Wide with no secondary: one column up to
     /// `widthContentMax` inside `gutterPage`; a secondary stacks below at the
     /// same width. Wide with a secondary: the primary keeps `widthContentMax`
     /// while the secondary takes what is left, between `widthInspector` and
-    /// `widthSecondaryMax`.
+    /// `widthSecondaryMax`. The band is the group, except in full-width mode.
+    ///
+    /// `primaryFill` (full-width mode) lets the primary fill the pane between
+    /// the gutters at Wide when there is no secondary; the header band keeps
+    /// `widthContentMax`. Ignored at Regular and with a secondary.
     static func columnWidths(
         pane: CGFloat,
         widthClass: PVWidthClass,
-        hasSecondary: Bool
-    ) -> (primary: CGFloat, secondary: CGFloat?, group: CGFloat) {
+        hasSecondary: Bool,
+        primaryFill: Bool = false
+    ) -> (primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
+        if primaryFill && widthClass == .wide && !hasSecondary {
+            let primary = max(0, pane - 2 * PVSpacing.gutterPage)
+            return (primary, nil, primary, min(PVSpacing.widthContentMax, primary))
+        }
         if widthClass == .regular || !hasSecondary {
             let primary = max(0, min(PVSpacing.widthContentMax, pane - 2 * PVSpacing.gutterPage))
-            return (primary, hasSecondary ? primary : nil, primary)
+            return (primary, hasSecondary ? primary : nil, primary, primary)
         }
         let available = pane - 2 * PVSpacing.gutterPage - PVSpacing.space9
         let primary = max(0, min(PVSpacing.widthContentMax, available - PVSpacing.widthInspector))
@@ -38,24 +48,28 @@ enum PVPageColumnsMetrics {
             PVSpacing.widthSecondaryMax,
             max(PVSpacing.widthInspector, available - primary)
         )
-        return (primary, secondary, primary + PVSpacing.space9 + secondary)
+        let group = primary + PVSpacing.space9 + secondary
+        return (primary, secondary, group, group)
     }
 
     /// The pane and the column widths for a layout proposed `proposal`. An
     /// unspecified or infinite width is sized as if the pane were as wide as
-    /// the content and its gutters; the pane is then the group itself.
+    /// the content and its gutters; the pane is then the group itself, and
+    /// `primaryFill` is ignored.
     static func columnWidths(
         proposal: ProposedViewSize,
         widthClass: PVWidthClass,
-        hasSecondary: Bool
-    ) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat) {
+        hasSecondary: Bool,
+        primaryFill: Bool = false
+    ) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
         let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
         let widths = columnWidths(
             pane: proposed ?? (PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage),
             widthClass: widthClass,
-            hasSecondary: hasSecondary
+            hasSecondary: hasSecondary,
+            primaryFill: primaryFill && proposed != nil
         )
-        return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group)
+        return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group, widths.band)
     }
 
     /// Whether a pinned header shows compact. Hysteresis: past
@@ -83,6 +97,20 @@ enum PVPageColumnsMetrics {
     }
 }
 
+private struct PVPageViewportSizeKey: EnvironmentKey {
+    static let defaultValue: CGSize = .zero
+}
+
+extension EnvironmentValues {
+    /// The size of the page's scroll view, published by `PVPageColumns` for a
+    /// section that needs to know what is in view. `.zero` outside a
+    /// `PVPageColumns`; it changes on resize, not on scroll.
+    var pvPageViewportSize: CGSize {
+        get { self[PVPageViewportSizeKey.self] }
+        set { self[PVPageViewportSizeKey.self] = newValue }
+    }
+}
+
 /// The scaffold of a record page: a header, a primary column and an optional
 /// secondary column, centered in the pane (§ 9 of macos-client-patterns.md,
 /// brief S14-D1). At Regular the columns stack in one column up to 1180pt; at
@@ -96,9 +124,14 @@ enum PVPageColumnsMetrics {
 /// changes (another section of the same page); a width-class change is not a
 /// reset. The primary comes before the secondary in the view tree, so focus
 /// moves primary then secondary.
+///
+/// `primaryFill` is an opt-in full-width mode: at Wide, with no secondary, the
+/// primary fills the pane between the gutters while the header keeps its
+/// `widthContentMax` band. The section inside keeps its own text measure.
 struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     private let headerPinned: Bool
     private let scrollResetKey: AnyHashable?
+    private let primaryFill: Bool
     private let header: (_ isScrolled: Bool) -> Header
     private let primary: Primary
     private let secondary: Secondary
@@ -106,7 +139,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     @Environment(\.pvWidthClass) private var widthClass
     @State private var offset: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
-    @State private var viewportHeight: CGFloat = 0
+    @State private var viewportSize: CGSize = .zero
     @State private var isScrolled = false
     @State private var fullBandHeight: CGFloat = 0
     @State private var compactBandHeight: CGFloat = 0
@@ -114,12 +147,14 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     init(
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
+        primaryFill: Bool = false,
         @ViewBuilder header: @escaping (_ isScrolled: Bool) -> Header,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder secondary: () -> Secondary
     ) {
         self.headerPinned = headerPinned
         self.scrollResetKey = scrollResetKey
+        self.primaryFill = primaryFill
         self.header = header
         self.primary = primary()
         self.secondary = secondary()
@@ -131,7 +166,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     var body: some View {
         if headerPinned && hasHeader {
             VStack(spacing: 0) {
-                PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
+                PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
                     header(isScrolled)
                 }
                 .background(alignment: .top) {
@@ -150,7 +185,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
             scroll(measures: false) {
                 VStack(spacing: 0) {
                     if hasHeader {
-                        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
+                        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
                             header(false)
                         }
                         Color.clear.frame(height: PVSpacing.space9)
@@ -165,7 +200,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     // The hidden copies are measured only; .disabled keeps them from registering
     // the switcher's keyboard shortcuts.
     private func measuredBand(compact: Bool) -> some View {
-        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
+        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
             header(compact)
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -180,7 +215,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     }
 
     private var columns: some View {
-        PVPageColumnsLayout(widthClass: widthClass, hasSecondary: hasSecondary) {
+        PVPageColumnsLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
             VStack(alignment: .leading, spacing: 0) { primary }
             if hasSecondary {
                 VStack(alignment: .leading, spacing: 0) { secondary }
@@ -214,11 +249,12 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
             }
         }
         .coordinateSpace(name: PVPageColumnsMetrics.scrollSpace)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+        .onGeometryChange(for: CGSize.self) { $0.size } action: {
+            viewportSize = $0
             guard measures else { return }
-            viewportHeight = $0
             refreshScrolled()
         }
+        .environment(\.pvPageViewportSize, viewportSize)
         .pvScrollsRowIntoView(
             Optional<String>.none,
             restartsAt: PVPageColumnsMetrics.topAnchor,
@@ -229,7 +265,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     private func refreshScrolled() {
         let next = PVPageColumnsMetrics.isScrolled(
             offset: offset,
-            overflow: contentHeight - viewportHeight,
+            overflow: contentHeight - viewportSize.height,
             wasScrolled: isScrolled,
             bandShrink: max(0, fullBandHeight - compactBandHeight)
         )
@@ -241,12 +277,14 @@ extension PVPageColumns where Secondary == EmptyView {
     init(
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
+        primaryFill: Bool = false,
         @ViewBuilder header: @escaping (_ isScrolled: Bool) -> Header,
         @ViewBuilder primary: () -> Primary
     ) {
         self.init(
             headerPinned: headerPinned,
             scrollResetKey: scrollResetKey,
+            primaryFill: primaryFill,
             header: header,
             primary: primary,
             secondary: { EmptyView() }
@@ -257,11 +295,13 @@ extension PVPageColumns where Secondary == EmptyView {
 extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
     init(
         scrollResetKey: AnyHashable? = nil,
+        primaryFill: Bool = false,
         @ViewBuilder primary: () -> Primary
     ) {
         self.init(
             headerPinned: false,
             scrollResetKey: scrollResetKey,
+            primaryFill: primaryFill,
             header: { _ in EmptyView() },
             primary: primary,
             secondary: { EmptyView() }
@@ -276,9 +316,12 @@ extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
 private struct PVPageColumnsLayout: Layout {
     let widthClass: PVWidthClass
     let hasSecondary: Bool
+    let primaryFill: Bool
 
-    private func widths(_ proposal: ProposedViewSize) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat) {
-        PVPageColumnsMetrics.columnWidths(proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary)
+    private func widths(_ proposal: ProposedViewSize) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
+        PVPageColumnsMetrics.columnWidths(
+            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
+        )
     }
 
     private var sideBySide: Bool { widthClass == .wide && hasSecondary }
@@ -320,15 +363,19 @@ private struct PVPageColumnsLayout: Layout {
     }
 }
 
-/// Sizes the header to the column group's width and centers it, so the header
-/// lines up with the columns below it.
+/// Sizes the header to the band's width and centers it, so the header lines
+/// up with the columns below it (in full-width mode it keeps the Regular
+/// measure while the columns widen).
 private struct PVPageColumnsBandLayout: Layout {
     let widthClass: PVWidthClass
     let hasSecondary: Bool
+    let primaryFill: Bool
 
     private func group(_ proposal: ProposedViewSize) -> (pane: CGFloat, group: CGFloat) {
-        let widths = PVPageColumnsMetrics.columnWidths(proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary)
-        return (widths.pane, widths.group)
+        let widths = PVPageColumnsMetrics.columnWidths(
+            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
+        )
+        return (widths.pane, widths.band)
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
