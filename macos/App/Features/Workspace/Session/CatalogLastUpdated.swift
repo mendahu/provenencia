@@ -74,6 +74,11 @@ enum CatalogQueryFollows: Sendable, Equatable {
     }
 }
 
+/// Row-id slots name ids; a catalog-wide slot names none.
+fileprivate func requireRowIDs(_ follows: CatalogQueryFollows) {
+    precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
+}
+
 /// One in-place update of a warmed cache key. `follows == nil` means the patch
 /// reads the mutation (an enriched Source); otherwise the session passes the
 /// ids that `follows` names. Array order on a descriptor is composition order.
@@ -89,7 +94,7 @@ struct CatalogQueryPatch: Sendable {
         _: Row.Type,
         follows: CatalogQueryFollows
     ) -> Self {
-        precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
+        requireRowIDs(follows)
         return Self(follows: follows) { session, key, ids, activity, _ in
             session.patchCached(key, as: [Row].self) { rows in
                 var moved = false
@@ -184,7 +189,7 @@ struct CatalogQueryRefresh: Sendable {
             WorkspaceSession, CatalogQueryKey, _ parts: [String: Part], _ previousRevision: Int
         ) -> Void)? = nil
     ) -> CatalogQueryRefresh {
-        precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
+        requireRowIDs(follows)
         return CatalogQueryRefresh(follows: follows, run: { session, key, ids in
             await session.refreshCached(
                 key,
@@ -205,7 +210,7 @@ struct CatalogQueryRefresh: Sendable {
         follows: CatalogQueryFollows,
         ids: @escaping @MainActor @Sendable (WorkspaceSession, CatalogQueryKey) -> Set<String>
     ) -> CatalogQueryRefresh {
-        precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
+        requireRowIDs(follows)
         return CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
     }
 
@@ -216,7 +221,7 @@ struct CatalogQueryRefresh: Sendable {
         followsValue follows: CatalogQueryFollows,
         ids: @escaping @Sendable (Value) -> Set<String>
     ) -> CatalogQueryRefresh {
-        precondition(!follows.isCatalogWide, "a catalog-wide slot names no ids; use applyHiddenPolicyOnAny(follows:)")
+        requireRowIDs(follows)
         return CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in
             let value: Value? = session.queryHandle(key)?.value
             return value.map(ids)
