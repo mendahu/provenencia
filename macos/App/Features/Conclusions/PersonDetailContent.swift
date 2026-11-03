@@ -51,7 +51,7 @@ struct PersonDetailContent: ConclusionDetailBody {
             fallbackColors: treatment?.thumbnailColors,
             tiles: ConclusionDetailGallery.tiles(
                 from: detail,
-                tileLabel: L10n.Conclusions.likenessTileLabel,
+                tileLabel: L10n.Conclusions.likenessLabel,
                 leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsPortraitLabel,
                 chosenBody: L10n.Conclusions.toastPortraitChosenBody

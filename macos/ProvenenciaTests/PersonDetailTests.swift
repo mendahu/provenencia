@@ -141,9 +141,9 @@ struct PersonDetailTests {
         #expect(gallery.tiles.map(\.citation.title) == ["Register", "OBS-2"])
         #expect(gallery.title == L10n.Conclusions.likenessesSection)
         #expect(gallery.tiles.map(\.accessibilityLabel) == [
-            L10n.Conclusions.likenessTileLabel("Register"), L10n.Conclusions.likenessTileLabel("OBS-2"),
+            L10n.Conclusions.likenessLabel("Register"), L10n.Conclusions.likenessLabel("OBS-2"),
         ])
-        #expect(L10n.Conclusions.likenessTileLabel("X") == "Likeness from X")
+        #expect(L10n.Conclusions.likenessLabel("X") == "Likeness from X")
         #expect(gallery.choose == .personPortrait)
         let first = gallery.tiles[0].location
         #expect(first.citationId == "cit-a" && first.observationId == "a" && first.sourceSurface == .citationComposer)
@@ -163,7 +163,7 @@ struct PersonDetailTests {
         #expect(tile.citation.detail == "Volume 3, Entry 214, p. 23")
         #expect(tile.citation.line == "Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23")
         #expect(!tile.citation.titleIsRef)
-        #expect(tile.accessibilityLabel == L10n.Conclusions.likenessTileLabel(tile.citation.line))
+        #expect(tile.accessibilityLabel == L10n.Conclusions.likenessLabel(tile.citation.line))
 
         picture.leads = true
         source.pictures = [picture]
@@ -234,7 +234,7 @@ struct PersonDetailTests {
                 source.pictures = [D.picture("obs-b", path: "objects/ef/01.png", title: "Census")]
                 return source
             }(),
-            tileLabel: L10n.Conclusions.likenessTileLabel,
+            tileLabel: L10n.Conclusions.likenessLabel,
             leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
             useAsLabel: L10n.Conclusions.useAsPortraitLabel,
             chosenBody: L10n.Conclusions.toastPortraitChosenBody

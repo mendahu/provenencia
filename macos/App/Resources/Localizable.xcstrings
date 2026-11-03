@@ -16711,19 +16711,7 @@
       }
     },
     "conclusions.person.likenessFrom": {
-      "comment": "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Likeness from %@"
-          }
-        }
-      }
-    },
-    "conclusions.person.likenessTile": {
-      "comment": "Accessibility label of a likeness tile in a Person's gallery; the argument is the citation line",
+      "comment": "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title (the header thumb) or citation line (a gallery tile)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -16890,18 +16878,6 @@
         }
       }
     },
-    "conclusions.picture.tile": {
-      "comment": "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the citation line",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Picture from %@"
-          }
-        }
-      }
-    },
     "conclusions.picture.tile.lead": {
       "comment": "Accessibility label of the thumbnail's tile in an Event's or Place's gallery; the argument is the citation line",
       "extractionState": "manual",
@@ -16915,7 +16891,7 @@
       }
     },
     "conclusions.picture.from": {
-      "comment": "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title",
+      "comment": "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title (the header thumb) or citation line (a gallery tile)",
       "extractionState": "manual",
       "localizations": {
         "en": {

@@ -9224,23 +9224,13 @@ enum L10n {
             comment: "Help text on a likeness tile in a Person's gallery"
         )
 
-        /// "Likeness from {Source title}" — the header thumb's spoken label.
+        /// "Likeness from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.
         static func likenessLabel(_ source: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.person.likenessFrom",
                 defaultValue: "Likeness from %@",
-                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title"
+                comment: "Accessibility label of the Person page header thumb when it shows a likeness; the argument is that likeness's Source title (the header thumb) or citation line (a gallery tile)"
             ), source)
-        }
-
-        /// "Likeness from {citation line}" — a gallery tile's spoken label. Same wording as
-        /// `likenessLabel(_:)` (the header thumb) but its argument is the citation line, not the Source title.
-        static func likenessTileLabel(_ citation: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.person.likenessTile",
-                defaultValue: "Likeness from %@",
-                comment: "Accessibility label of a likeness tile in a Person's gallery; the argument is the citation line"
-            ), citation)
         }
 
         /// "Likeness from {citation line}, portrait" — the spoken label of the portrait's tile.
@@ -9597,15 +9587,6 @@ enum L10n {
             comment: "Help text on a picture tile in an Event's or Place's gallery"
         )
 
-        /// "Picture from {citation line}" — a gallery tile's spoken label.
-        static func pictureTileLabel(_ citation: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.picture.tile",
-                defaultValue: "Picture from %@",
-                comment: "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the citation line"
-            ), citation)
-        }
-
         /// "Picture from {citation line}, thumbnail" — the spoken label of the thumbnail's tile.
         static func pictureTileLabelLead(_ citation: String) -> String {
             L10n.format(LocalizedStringResource(
@@ -9615,11 +9596,12 @@ enum L10n {
             ), citation)
         }
 
+        /// "Picture from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.
         static func pictureFrom(_ source: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.picture.from",
                 defaultValue: "Picture from %@",
-                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title"
+                comment: "Accessibility label of the Event or Place page header thumb when it shows a picture; the argument is that picture's Source title (the header thumb) or citation line (a gallery tile)"
             ), source)
         }
 

@@ -166,7 +166,7 @@ struct ConclusionDetailGallery: Equatable {
             fallbackMark: fallbackMark,
             tiles: tiles(
                 from: detail,
-                tileLabel: L10n.Conclusions.pictureTileLabel,
+                tileLabel: L10n.Conclusions.pictureFrom,
                 leadTileLabel: L10n.Conclusions.pictureTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
                 chosenBody: L10n.Conclusions.toastThumbnailChosenBody
