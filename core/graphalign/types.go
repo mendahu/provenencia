@@ -168,9 +168,12 @@ type Row struct {
 	Move *Move
 }
 
-// Proposal is Align's full output: one row per primary Subject.
+// Proposal is Align's rows, one per primary Subject, and the caller's connections.
 type Proposal struct {
 	Rows []Row
+	// Connections is each unfiled bridge's outcome (Connections); the caller
+	// that loads the bridges fills it after Align.
+	Connections []Connection
 }
 
 // RowStart is what the page starts a row on: the wire's target, handle_id

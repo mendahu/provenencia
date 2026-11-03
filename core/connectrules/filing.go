@@ -63,7 +63,8 @@ func Term(terms []vocabkey.BridgeTerm) vocabkey.BridgeTerm {
 	return out
 }
 
-func (b Bridge) acyclic(term vocabkey.BridgeTerm) bool {
+// IsAcyclic reports whether term's filed links may not loop.
+func (b Bridge) IsAcyclic(term vocabkey.BridgeTerm) bool {
 	for _, t := range b.AcyclicTerms {
 		if t == term {
 			return true
@@ -138,7 +139,7 @@ func Decide(b Bridge, terms []vocabkey.BridgeTerm, ends [][]Value, filed func() 
 	if b.KeysOnType() && term == "" {
 		return Result{Decision: DecisionIncomplete}, nil
 	}
-	if len(records) == 2 && b.acyclic(term) {
+	if len(records) == 2 && b.IsAcyclic(term) {
 		edges, err := filed()
 		if err != nil {
 			return Result{}, err
