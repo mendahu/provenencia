@@ -33,11 +33,6 @@ enum CatalogMutation: Sendable, Equatable {
     /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
     case mutatedSourceMetadata(sourceId: String)
 
-    /// A Subject (including a bridge) was erased. Releases connection facets
-    /// so Observation `usedBy` must reload; the citation reads follow the
-    /// write's effects.
-    case deletedSubject
-
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -93,8 +88,8 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Keyed partial reads this write moved, each with the key ids it moved
     /// them for: citation counts, citations by Artifact and graph progress.
     var reads: [CatalogWriteEffectsRead] = []
-    /// Catalog-wide lists this write changed. Each is a cached read the write
-    /// cannot patch row by row; see `CatalogQueryRegistry.invalidations(for:project:)`.
+    /// Catalog-wide lists this write changed. A key that holds one follows it
+    /// through its descriptor `refreshes`.
     var lists: Set<CatalogList> = []
     var structure = false
     var summaryHandles: [String] = []
@@ -131,7 +126,6 @@ enum CatalogMutationKind: Hashable, Sendable {
     case removedTypeSuggestion
     case mutatedSourceWorkspace
     case mutatedSourceMetadata
-    case deletedSubject
     case createdProperty
     case updatedProperty
     case deletedProperty
@@ -171,8 +165,6 @@ extension CatalogMutation {
             return .mutatedSourceWorkspace
         case .mutatedSourceMetadata:
             return .mutatedSourceMetadata
-        case .deletedSubject:
-            return .deletedSubject
         case .createdProperty:
             return .createdProperty
         case .updatedProperty:

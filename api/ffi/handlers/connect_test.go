@@ -245,3 +245,44 @@ func TestCreateCitedBridge(t *testing.T) {
 		},
 	})
 }
+
+// Deleting a bridge Subject releases its connection Observations, so the
+// effects report property_usage and the app reloads each Property's usedBy from
+// them, with no mutation of its own.
+func TestDeleteBridgeReportsPropertyUsage(t *testing.T) {
+	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+	bridgeOut, err := CreateCitedBridge(marshalProto(t, &engine.CreateCitedBridgeRequest{
+		ProjectDir:    dir,
+		UserId:        userID,
+		FromSubjectId: personID,
+		ToSubjectId:   eventID,
+		BridgeTypeKey: "participation",
+		ArtifactId:    artifactID,
+		LocatorJson:   validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{PropertyId: personProp, ValueSubjectId: personID},
+			{PropertyId: eventProp, ValueSubjectId: eventID},
+			{PropertyId: roleProp, ValueTermId: roleTerm},
+		},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bridge engine.CreateCitedBridgeResponse
+	if err := proto.Unmarshal(bridgeOut, &bridge); err != nil {
+		t.Fatal(err)
+	}
+	out, err := DeleteSubject(marshalProto(t, &engine.DeleteSubjectRequest{
+		ProjectDir: dir, UserId: userID, SubjectId: bridge.GetSubject().GetId(),
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.DeleteSubjectResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !contains(resp.GetEffects().GetLists(), "property_usage") {
+		t.Fatalf("lists = %v, want property_usage", resp.GetEffects().GetLists())
+	}
+}

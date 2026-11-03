@@ -96,51 +96,6 @@ struct CatalogQueryRegistry: Sendable {
         descriptor(for: key).stalePolicy
     }
 
-    /// Cache effects of one write's reported lists and structure: the
-    /// catalog-wide lists per `lists`, and the Properties workspace on
-    /// structure. Evidence graphs, handles and keyed `reads` invalidate nothing
-    /// here: each kind's `refreshes` follow them (`WorkspaceSession.revalidatedKeys`).
-    /// Handle scopes invalidate nothing: they move through each list's `patches`.
-    func invalidations(for effects: CatalogWriteEffects, project: ProjectKey) -> [CatalogQueryInvalidation] {
-        var listed = CatalogList.allCases.filter { effects.lists.contains($0) }
-            .flatMap { Self.invalidations(for: $0, project: project) }
-        if effects.structure {
-            listed.append(.key(.propertiesWorkspace(project: project)))
-        }
-        var out: [CatalogQueryInvalidation] = []
-        for invalidation in listed where !out.contains(invalidation) {
-            out.append(invalidation)
-        }
-        return out
-    }
-
-    /// The cached reads one catalog-wide list feeds.
-    static func invalidations(for list: CatalogList, project: ProjectKey) -> [CatalogQueryInvalidation] {
-        switch list {
-        case .vocabulary, .propertyUsage:
-            return [.key(.propertiesWorkspace(project: project))]
-        case .counts:
-            // The sidebar recount is not a cache key: the session runs
-            // `onNavCountsMoved` for it.
-            return []
-        }
-    }
-
-    /// The deduped union of what a write's effects reported and what its
-    /// mutation names, in that order, so a key both name is invalidated once.
-    func invalidations(
-        for effects: CatalogWriteEffects,
-        by mutation: CatalogMutation?,
-        project: ProjectKey
-    ) -> [CatalogQueryInvalidation] {
-        var all = invalidations(for: effects, project: project)
-        if let mutation {
-            all += invalidations(by: mutation, project: project)
-        }
-        var seen = Set<CatalogQueryInvalidation>()
-        return all.filter { seen.insert($0).inserted }
-    }
-
     /// Resolves cache effects from each kind's `invalidateOn` tags + mutation payload.
     func invalidations(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
         guard let mutationKind = mutation.invalidationKind else { return [] }
@@ -383,7 +338,7 @@ extension CatalogQueryKey.Kind {
                 stalePolicy: .sessionFresh,
                 invalidateOn: [
                     .createdProperty, .updatedProperty, .deletedProperty,
-                    .mutatedSubjectTypeProperties, .deletedSubject,
+                    .mutatedSubjectTypeProperties,
                 ],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.propertiesWorkspace(project: project)) },

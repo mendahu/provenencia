@@ -1008,7 +1008,7 @@ final class EvidenceGraphModel {
                 userID: userID,
                 subjectID: target.id
             )
-            session.apply(effects, .deletedSubject)
+            session.apply(effects)
             selectedSubjectIDs.remove(target.id)
             if activatedSubjectID == target.id {
                 activatedSubjectID = nil

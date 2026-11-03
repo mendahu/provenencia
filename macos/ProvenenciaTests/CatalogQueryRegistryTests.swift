@@ -656,11 +656,7 @@ struct CatalogQueryRegistryTests {
         let graph2Key = CatalogQueryKey.evidenceGraph(project: project, graphId: "g-2")
         session.setQueryValue(graph1Key, value: EvidenceGraphRows(graphId: "g-1"))
         session.setQueryValue(graph2Key, value: EvidenceGraphRows(graphId: "g-2"))
-        let graph2 = CatalogQueryInvalidation.key(graph2Key)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g-2"])) == [graph2Key])
-        #expect(registry.invalidations(for: CatalogWriteEffects(evidenceGraphs: ["g-2"]), project: project).isEmpty)
-        let deleted = registry.invalidations(by: .deletedSubject, project: project)
-        #expect(!deleted.contains { $0 == .allCached(.evidenceGraph) || $0 == graph2 })
         // A Source delete names its graphs in its effects, not in its mutation.
         #expect(!registry.invalidations(by: .deletedSource(id: "src-1"), project: project)
             .contains(.allCached(.evidenceGraph)))
@@ -700,7 +696,6 @@ struct CatalogQueryRegistryTests {
         let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
         let writes: [CatalogMutation] = [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
         ]
         for mutation in writes {
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
@@ -713,14 +708,12 @@ struct CatalogQueryRegistryTests {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.mutatedSourceWorkspace))
-        #expect(!CatalogQueryRegistry.conclusionTriggers.contains(.deletedSubject))
         let conclusionKeys: [CatalogQueryInvalidation] = [
             .key(.personsList(project: project)), .key(.eventsList(project: project)),
             .key(.placesList(project: project)), .allCached(.conclusionDetail),
         ]
         for mutation: CatalogMutation in [
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
         ] {
             let invalidations = registry.invalidations(by: mutation, project: project)
             for key in conclusionKeys {
@@ -896,39 +889,14 @@ struct CatalogQueryRegistryTests {
             .allCached(.sourceWorkspace),
             .key(.typeSuggestions(project: project, typeId: "t1")),
         ])
-        #expect(registry.invalidations(for: CatalogWriteEffects(
-            handles: ["e1"],
-            evidenceGraphs: ["g-1"],
-            reads: [
-                CatalogWriteEffectsRead(read: .citations, ids: ["g-1"]),
-                CatalogWriteEffectsRead(read: .evidenceGraphProgress, ids: ["g-1"]),
-            ],
-            lists: [.propertyUsage],
-            summaryHandles: ["e2"]
-        ), project: project) == [
-            .key(.propertiesWorkspace(project: project)),
-        ])
         // The effects' graphs and handles invalidate nothing here: each kind's
         // `refreshes` follow them (`WorkspaceSession.revalidatedKeys`), and a
         // key they and the mutation both name is revalidated once per `apply`.
-        let both = registry.invalidations(
-            for: CatalogWriteEffects(evidenceGraphs: ["g-1"]),
-            by: .updatedProperty,
-            project: project
-        )
-        #expect(both.filter { $0 == .key(.evidenceGraph(project: project, graphId: "g-1")) }.isEmpty)
-        // A Subject delete reports its handles and its graph in `WriteEffects`, so
-        // the lists, the details and the graph are not named here.
-        // The citation reads follow the write's `reads`, not this mutation.
-        #expect(registry.invalidations(by: .deletedSubject, project: project) == [
-            .key(.propertiesWorkspace(project: project)),
-        ])
-        let erased = registry.invalidations(by: .deletedSubject, project: project)
-        #expect(!erased.contains(.allCached(.citationCounts)) && !erased.contains(.allCached(.citationsByArtifact)))
+        let updated = registry.invalidations(by: .updatedProperty, project: project)
+        #expect(!updated.contains(.key(.evidenceGraph(project: project, graphId: "g-1"))))
+        // A Subject delete reports its handles, its graph and `property_usage` in
+        // `WriteEffects`, so it names no mutation.
         // Keyed reads invalidate nothing: each kind's `refresh` follows them.
-        #expect(registry.invalidations(for: CatalogWriteEffects(
-            reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])]
-        ), project: project).isEmpty)
         #expect(CatalogQueryKey.Kind.citationCounts.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
         #expect(CatalogQueryKey.Kind.citationsByArtifact.descriptor.refreshes.map(\.follows) == [.reads(.citations)])
         #expect(
@@ -966,7 +934,6 @@ struct CatalogQueryRegistryTests {
             .createdMetadataField, .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
-            .deletedSubject,
             .createdPropertyTerm(propertyId: "p1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
@@ -1007,7 +974,6 @@ struct CatalogQueryRegistryTests {
     /// the lists or detail pages show, so it invalidates nothing; the session
     /// patches the row from the write's activity.
     @Test func handleScopesInvalidateNothing() {
-        let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
         let session = makeSession()
         session.setQueryValue(CatalogQueryKey.personsList(project: project), value: [CatalogPersonSummary]())
@@ -1017,11 +983,9 @@ struct CatalogQueryRegistryTests {
         let otherKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e2")
         session.setQueryValue(detailKey, value: CatalogConclusionDetail(entity: entity("e1"), fields: []))
         session.setQueryValue(otherKey, value: CatalogConclusionDetail(entity: entity("e2"), fields: []))
-        #expect(registry.invalidations(for: CatalogWriteEffects(handleScopes: ["e1"]), project: project).isEmpty)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handleScopes: ["e1"])).isEmpty)
         // A write that changed e1 revalidates the lists and e1's detail, not e2's.
         let effects = CatalogWriteEffects(handles: ["e1"], handleScopes: ["e1", "e2"])
-        #expect(registry.invalidations(for: effects, project: project).isEmpty)
         #expect(Set(session.revalidatedKeys(for: effects)) == Set(
             [.personsList(project: project), .eventsList(project: project), .placesList(project: project), detailKey]
         ))
@@ -1224,36 +1188,6 @@ struct CatalogQueryRegistryTests {
         #expect(workspaceHandle.value?.metadata.count == 1)
     }
 
-    private struct ListCase: CustomTestStringConvertible, Sendable {
-        let name: String
-        let lists: Set<CatalogList>
-        let structure: Bool
-        let propertiesInvalidations: Int
-
-        var testDescription: String { name }
-    }
-
-    nonisolated private static let listCases: [ListCase] = [
-        ListCase(name: "vocabulary", lists: [.vocabulary], structure: false, propertiesInvalidations: 1),
-        ListCase(name: "property usage", lists: [.propertyUsage], structure: false, propertiesInvalidations: 1),
-        ListCase(
-            name: "vocabulary and property usage", lists: [.vocabulary, .propertyUsage],
-            structure: false, propertiesInvalidations: 1
-        ),
-        ListCase(name: "structure alone", lists: [], structure: true, propertiesInvalidations: 1),
-        ListCase(name: "vocabulary and structure", lists: [.vocabulary], structure: true, propertiesInvalidations: 1),
-    ]
-
-    @Test(arguments: listCases)
-    private func listInvalidations(_ tc: ListCase) {
-        let project = ProjectKey(projectDir: projectDir)
-        let got = CatalogQueryRegistry.standard.invalidations(
-            for: CatalogWriteEffects(lists: tc.lists, structure: tc.structure),
-            project: project
-        )
-        #expect(got.filter { $0 == .key(.propertiesWorkspace(project: project)) }.count == tc.propertiesInvalidations)
-    }
-
     /// A catalog-wide slot reports one token when the write moved it.
     @Test func catalogWideSlotsReportOneToken() {
         #expect(CatalogQueryFollows.list(.vocabulary).ids(in: CatalogWriteEffects(lists: [.vocabulary])) == ["vocabulary"])
@@ -1401,11 +1335,6 @@ struct CatalogQueryRegistryTests {
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(.evidenceGraphsList(project: project)) == .markStale)
     }
 
-    /// The sidebar recount is not a cache key: `counts` invalidates nothing.
-    @Test func countsListNamesNoKey() {
-        #expect(CatalogQueryRegistry.invalidations(for: .counts, project: ProjectKey(projectDir: projectDir)).isEmpty)
-    }
-
     /// A write that touches a handle revalidates the cached `personClaims` key through `touchedHandles`;
     /// the key is evicted while hidden.
     @Test func personClaimsRevalidateOnTouchedHandle() {
@@ -1414,7 +1343,6 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personClaims(project: project, entityId: "e1")
         session.setQueryValue(key, value: [CatalogPersonClaimGroup]())
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personClaims)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
@@ -1450,7 +1378,6 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personFamily(project: project, entityId: "e1")
         session.setQueryValue(key, value: CatalogPersonFamily(units: []))
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personFamily)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
@@ -1497,7 +1424,6 @@ struct CatalogQueryRegistryTests {
         let key = CatalogQueryKey.personEvents(project: project, entityId: "e1")
         session.setQueryValue(key, value: CatalogPersonTimeline())
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: CatalogWriteEffects(handles: ["e1"]), project: project).isEmpty)
         #expect(key.kind == .personEvents)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)

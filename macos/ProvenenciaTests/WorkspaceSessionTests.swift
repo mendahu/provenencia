@@ -939,7 +939,6 @@ struct WorkspaceSessionTests {
 
         let effects = CatalogWriteEffects(handles: ["e1", "e2"])
         #expect(session.revalidatedKeys(for: effects) == [first])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: effects, project: project).isEmpty)
         session.apply(effects)
         #expect(visible.isFetching)
         await session.settleWrites()
@@ -1009,7 +1008,7 @@ struct WorkspaceSessionTests {
         let effects = CatalogWriteEffects(handles: ["e1"], evidenceGraphs: ["g1"])
 
         #expect(session.revalidatedKeys(for: effects) == [key])
-        #expect(CatalogQueryRegistry.standard.invalidations(for: effects, by: .updatedProperty, project: project)
+        #expect(CatalogQueryRegistry.standard.invalidations(by: .updatedProperty, project: project)
             .contains(.allCached(.personClaims)))
         session.apply(effects, .updatedProperty)
         await session.settleWrites()
@@ -1461,12 +1460,19 @@ struct WorkspaceSessionTests {
 
     /// The sidebar recounts once for effects that report `counts`, and for nothing else.
     @Test func countsListRecounts() async {
-        let session = makeSession()
+        let store = FakeStore()
+        let session = makeSession(store: store)
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: session.projectKey)
+        session.setQueryValue(propertiesKey, value: PropertiesSnapshot.empty)
+        let propertiesCalls = store.getPropertiesWorkspaceCalls
         var calls = 0
         session.onNavCountsMoved = { calls += 1 }
         session.apply(CatalogWriteEffects(lists: [.counts]))
         await session.settleWrites()
         #expect(calls == 1)
+        #expect(store.getPropertiesWorkspaceCalls == propertiesCalls)
+        let handle: QueryHandle<PropertiesSnapshot>? = session.queryHandle(propertiesKey)
+        #expect(handle?.isStale == false)
 
         session.apply(.empty, .createdSource(CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "", title: "New Row", description: "")))
         session.apply(CatalogWriteEffects(lists: [.vocabulary]))

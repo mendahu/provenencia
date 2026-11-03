@@ -615,7 +615,7 @@ final class CitationComposerModel {
                     userID: userID,
                     subjectID: target.id
                 )
-                session.apply(effects, .deletedSubject)
+                session.apply(effects)
                 await refreshCitationLines()
                 return
             }
