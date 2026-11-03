@@ -41,7 +41,10 @@ struct PersonTimelineLifelineTests {
         // The burial's dot ends the line, a day short of its end.
         #expect(abs(y(line.mark("11")) - 2730) < 1)
         // 63.5 years over 2730pt: about 43pt a year, so one-year ticks.
-        let perYear = 2730 / (1880 + 265.0 / 365 + 1.0 / 365 - (1817 + 70.0 / 365))
+        let burialEnd: Double = 1880.7267759562842
+        let birthStart: Double = 1817.1917808219177
+        let span: Double = burialEnd - birthStart
+        let perYear: Double = 2730 / span
         #expect(abs(perYear - 43) < 1)
         let years = line.ticks.compactMap(\.year)
         #expect(years.first == 1818 && years.last == 1880 && years.count == 63)
