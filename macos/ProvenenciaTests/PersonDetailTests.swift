@@ -117,10 +117,12 @@ struct PersonDetailTests {
         var lead = D.picture("a", path: "objects/ab/cd.png", title: "Register")
         lead.leads = true
         source.pictures = [lead]
-        let thumb = PersonDetailContent(detail: source).thumbnail
+        let content = PersonDetailContent(detail: source)
+        let thumb = content.thumbnail
         #expect(thumb.imageRelPath == "objects/ab/cd.png")
         #expect(thumb.imageLabel == "Likeness from Register")
         #expect(thumb.colors != nil)
+        #expect(thumb.colors == content.gallery.fallbackColors)
         #expect(thumb.mark == .subjectPerson)
         #expect(thumb.label == L10n.Conclusions.personLikenessThumb)
         summary.pictureImageRelPath = ""
@@ -136,16 +138,53 @@ struct PersonDetailTests {
         let content = PersonDetailContent(detail: source)
         let gallery = content.gallery
         #expect(gallery.tiles.map(\.id) == ["a", "b"])
-        #expect(gallery.tiles.map(\.sourceTitle) == ["Register", "OBS-2"])
+        #expect(gallery.tiles.map(\.citation.title) == ["Register", "OBS-2"])
         #expect(gallery.title == L10n.Conclusions.likenessesSection)
         #expect(gallery.tiles.map(\.accessibilityLabel) == [
             L10n.Conclusions.likenessTileLabel("Register"), L10n.Conclusions.likenessTileLabel("OBS-2"),
         ])
+        #expect(L10n.Conclusions.likenessTileLabel("X") == "Likeness from X")
         #expect(gallery.choose == .personPortrait)
         let first = gallery.tiles[0].location
         #expect(first.citationId == "cit-a" && first.observationId == "a" && first.sourceSurface == .citationComposer)
         #expect(PersonDetailContent(detail: detail()).gallery.tiles.isEmpty)
         #expect(EventDetailContent(detail: detail()).gallery.tiles.isEmpty)
+    }
+
+    @Test func galleryTilesCarryTheCitationParts() {
+        var picture = D.picture("a", path: "objects/ab/cd.png", title: "Hamburger Adressbuch 1861")
+        picture.record.artifactLabel = "Volume 3"
+        picture.record.citationLabel = "Entry 214"
+        picture.record.pageLabel = "23"
+        var source = detail()
+        source.pictures = [picture]
+        var tile = PersonDetailContent(detail: source).gallery.tiles[0]
+        #expect(tile.citation.title == "Hamburger Adressbuch 1861")
+        #expect(tile.citation.detail == "Volume 3, Entry 214, p. 23")
+        #expect(tile.citation.line == "Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23")
+        #expect(!tile.citation.titleIsRef)
+        #expect(tile.accessibilityLabel == L10n.Conclusions.likenessTileLabel(tile.citation.line))
+
+        picture.leads = true
+        source.pictures = [picture]
+        tile = PersonDetailContent(detail: source).gallery.tiles[0]
+        #expect(tile.accessibilityLabel == L10n.Conclusions.likenessTileLabelLead(tile.citation.line))
+
+        source.pictures = [D.picture("b", path: "objects/ef/01.png", title: "")]
+        tile = PersonDetailContent(detail: source).gallery.tiles[0]
+        #expect(tile.citation.title == "OBS-b" && tile.citation.line == "OBS-b")
+        #expect(tile.citation.detail.isEmpty)
+        #expect(tile.citation.titleIsRef)
+    }
+
+    @Test func eventPicturesKeepTheirWording() {
+        var lead = D.picture("a", path: "objects/ab/cd.png", title: "Register")
+        lead.leads = true
+        var source = detail()
+        source.pictures = [lead, D.picture("b", path: "objects/ef/01.png", title: "Register 2")]
+        let gallery = EventDetailContent(detail: source).gallery
+        #expect(gallery.tiles.map(\.accessibilityLabel) == ["Picture from Register, thumbnail", "Picture from Register 2"])
+        #expect(gallery.fallbackColors == nil)
     }
 
     @Test func portraitFlagsFollowThePreferredLikeness() {
@@ -196,6 +235,7 @@ struct PersonDetailTests {
                 return source
             }(),
             tileLabel: L10n.Conclusions.likenessTileLabel,
+            leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
             useAsLabel: L10n.Conclusions.useAsPortraitLabel,
             chosenBody: L10n.Conclusions.toastPortraitChosenBody
         )[0]

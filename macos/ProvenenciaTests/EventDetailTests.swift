@@ -245,7 +245,8 @@ struct EventDetailTests {
         #expect(gallery.tiles[0].useAsLabel == "Use the picture from Wedding photograph as thumbnail")
         #expect(gallery.tiles[1].useAsLabel == "Use the picture from Family album as thumbnail")
         #expect(gallery.tiles[1].chosenToastBody == "Using the picture from Family album as the thumbnail.")
-        #expect(gallery.tiles[0].accessibilityLabel == "Picture from Wedding photograph. Open citation")
+        #expect(gallery.tiles[0].accessibilityLabel == "Picture from Wedding photograph")
+        #expect(gallery.tiles[1].accessibilityLabel == "Picture from Family album, thumbnail")
     }
 
     @Test func twoTilesSharingAPathNameTheLeadingSource() {

@@ -68,16 +68,15 @@ struct ConclusionDetailThumbnail: Equatable {
         gallery: ConclusionDetailGallery,
         noImage: LocalizedStringResource,
         withImage: LocalizedStringResource,
-        leadLabel: (String) -> String,
-        colors: PVThumbnail.Colors? = nil
+        leadLabel: (String) -> String
     ) -> ConclusionDetailThumbnail {
         let lead = gallery.lead
         return ConclusionDetailThumbnail(
             mark: gallery.fallbackMark,
             label: lead == nil ? noImage : withImage,
             imageRelPath: lead?.imageRelPath ?? "",
-            imageLabel: lead.map { leadLabel($0.sourceTitle) },
-            colors: colors
+            imageLabel: lead.map { leadLabel($0.citation.title) },
+            colors: gallery.fallbackColors
         )
     }
 }
@@ -87,7 +86,8 @@ struct ConclusionDetailThumbnail: Equatable {
 struct ConclusionDetailPicture: Equatable, Identifiable {
     var id: String
     var imageRelPath: String
-    var sourceTitle: String
+    /// Where the picture comes from, as the caption and the spoken label read it.
+    var citation: CitationLineDisplay.Parts
     var location: WorkspaceLocation
     /// The tile the header leads with wears the lead Badge; exactly one tile.
     var isLead: Bool
@@ -106,6 +106,8 @@ struct ConclusionDetailGallery: Equatable {
     var title: LocalizedStringResource
     var openTip: LocalizedStringResource
     var fallbackMark: PVMarkKey
+    /// The tint of the fallback mark (a Person's gender colors); nil for none.
+    var fallbackColors: PVThumbnail.Colors? = nil
     var tiles: [ConclusionDetailPicture]
     var choose: LeadCopy
 
@@ -165,6 +167,7 @@ struct ConclusionDetailGallery: Equatable {
             tiles: tiles(
                 from: detail,
                 tileLabel: L10n.Conclusions.pictureTileLabel,
+                leadTileLabel: L10n.Conclusions.pictureTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsThumbnailLabel,
                 chosenBody: L10n.Conclusions.toastThumbnailChosenBody
             ),
@@ -172,23 +175,26 @@ struct ConclusionDetailGallery: Equatable {
         )
     }
 
-    /// The tiles of `detail.pictures`, in wire order. Each function takes the picture's Source title
-    /// (the Observation ref when the title is empty) and returns the kind's wording.
+    /// The tiles of `detail.pictures`, in wire order. `tileLabel` and `leadTileLabel` take the
+    /// picture's citation line; `useAsLabel` and `chosenBody` its Source title (the Observation ref
+    /// when the title is empty). Each returns the kind's wording.
     static func tiles(
         from detail: CatalogConclusionDetail,
         tileLabel: (String) -> String,
+        leadTileLabel: (String) -> String,
         useAsLabel: (String) -> String,
         chosenBody: (String) -> String
     ) -> [ConclusionDetailPicture] {
         detail.pictures.map {
-            let source = ReconciliationRecord.sourceTitle(for: $0.record)
+            let citation = CitationLineDisplay.parts($0.record)
+            let source = citation.title
             return ConclusionDetailPicture(
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
-                sourceTitle: source,
+                citation: citation,
                 location: ReconciliationRecord.composerLocation(for: $0.record),
                 isLead: $0.leads,
-                accessibilityLabel: tileLabel(source),
+                accessibilityLabel: $0.leads ? leadTileLabel(citation.line) : tileLabel(citation.line),
                 useAsLabel: useAsLabel(source),
                 chosenToastBody: chosenBody(source)
             )
@@ -618,7 +624,7 @@ struct ConclusionDetailGallerySection: View {
                 projectDir: projectDir,
                 relPath: tile.imageRelPath,
                 fallbackMark: gallery.fallbackMark,
-                caption: tile.sourceTitle,
+                caption: tile.citation.title,
                 captionWidth: Self.column
             ) {
                 Button {

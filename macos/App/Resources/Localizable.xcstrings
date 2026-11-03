@@ -16723,13 +16723,25 @@
       }
     },
     "conclusions.person.likenessTile": {
-      "comment": "Accessibility label of a likeness tile in a Person's gallery; the argument is the Source title",
+      "comment": "Accessibility label of a likeness tile in a Person's gallery; the argument is the citation line",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Likeness from %@. Open citation"
+            "value": "Likeness from %@"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessTile.lead": {
+      "comment": "Accessibility label of the portrait's tile in a Person's gallery; the argument is the citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness from %@, portrait"
           }
         }
       }
@@ -16879,13 +16891,25 @@
       }
     },
     "conclusions.picture.tile": {
-      "comment": "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the Source title",
+      "comment": "Accessibility label of a picture tile in an Event's or Place's gallery; the argument is the citation line",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Picture from %@. Open citation"
+            "value": "Picture from %@"
+          }
+        }
+      }
+    },
+    "conclusions.picture.tile.lead": {
+      "comment": "Accessibility label of the thumbnail's tile in an Event's or Place's gallery; the argument is the citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Picture from %@, thumbnail"
           }
         }
       }
