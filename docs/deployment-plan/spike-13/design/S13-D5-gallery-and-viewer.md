@@ -79,9 +79,9 @@ Extend the S13-D1 frames. The header, the switcher and the other four sections s
 
 ## 1. Objective
 
-A researcher opens a Person's Gallery section and sees every likeness of the person at a size where faces can be told apart, each with where it came from. A click on a likeness opens it in a **viewer** over the page, at the size the window allows, and the researcher steps through the gallery likeness by likeness. From the gallery and from the viewer a likeness can be made the portrait, and its Citation can be opened.
+A researcher opens a Person's Gallery section and sees every likeness of the person at a size where faces can be told apart, each with where it came from. A click on a likeness opens it in a **viewer** over the page, at the size the window allows, and the researcher steps through the gallery likeness by likeness. From the gallery and from the viewer a likeness can be made the portrait, and its provenance read, with links on to its Source, Citation and Observation.
 
-**What changes.** The Gallery section's grid is redrawn: tile size, caption, where Set as portrait, the Portrait mark and Open Citation sit, and a visible way back to the earliest likeness. A click on a tile now opens the viewer (R-30); opening the Citation becomes its own control (R-32). The viewer is new: the large image, its caption, previous and next, a position counter, and the two actions.
+**What changes.** The Gallery section's grid is redrawn: tile size, caption, where Set as portrait, the Portrait mark and the provenance control sit, and a visible way back to the earliest likeness. A click on a tile now opens the viewer (R-30). Each tile gets the **provenance control** the Vitals rows have, opening the same provenance sheet filled with that one likeness's record; the sheet's links reach the Source, the Citation and the Observation (R-32, R-13b; user, 2026-11-03). The tile has no direct Open citation. The viewer is new: the large image, the likeness's provenance record right under it, previous and next, a position counter, and Set as portrait.
 
 **What stays.** The header, including the thumb's right-click "Use earliest likeness" menu, which the Event and Place headers share (user, 2026-11-03). The switcher, Vitals, Family, Timeline and the Sources empty place. The gallery's order (earliest recorded first, from the engine). The gender colors on the header thumb (S10-D12). The empty Gallery's EmptyState, unless the board rewords it (GA-8). The Event and Place pages and their Pictures sections (user, 2026-11-03: Person only).
 
@@ -97,7 +97,7 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | What a likeness knows | Its image; its **Source** title (else the Observation's ref, in mono); the **citation line** the provenance sheet already shows ("Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23": Source, Artifact, Citation, page, each left out when empty); the Observation's ref ("OBS-7Q2KD"). No date of its own: the Source date was descoped (2026-10-31). |
 | The portrait (R-31) | Exactly one likeness leads: the one the researcher chose as the portrait, else the earliest. The header thumb shows it. The leading tile carries the Portrait mark; every other tile offers **Set as portrait**. Choosing writes at once (no confirm) and shows a Toast ("Portrait updated" · "The likeness from Hamburger Adressbuch 1861 is now the portrait."). |
 | Back to the earliest | While a chosen likeness leads and it is not the earliest, the researcher can go back to the earliest. Today that is only the header thumb's right-click menu. This board adds a **visible** control for it in the Gallery (user, 2026-11-03); the header menu stays. With no choice, or when the chosen one is the earliest, the control is absent. |
-| Open the Citation (R-32) | Opens the Citation's composer at the likeness, as a click on a tile does today: one navigation step, Back returns to the Gallery. From the viewer it closes the viewer first. |
+| Provenance of a likeness (R-13b, R-32; user, 2026-11-03) | The likeness is one record of the Person's Likeness field, the field the Vitals section lists as "Likeness" with its own provenance sheet (S13-D2). From a tile, that sheet opens with **only this likeness's record**: its citation line, what the auto-reconciler did with it (kept, weak), its Observation and Subject refs, and the sheet's links to the Source page, the Citation's composer at the likeness, and the Observation. A link closes the sheet first; Back returns to the Gallery. There is no other Open citation control on the tile, in its menu or in the viewer. |
 | The viewer (R-30; user, 2026-11-03) | Click (or Return / Space on a focused tile) opens the viewer on that likeness. It steps through the gallery in its order with previous and next and the ← → keys, and shows the position ("3 of 7"). **No autoplay**: no timer, no play button. It stops at the ends (no wrap). Escape or a click outside closes it and puts focus back on the tile of the likeness last shown. It is not a place in the navigation history: Back does not reopen it, and a restored window opens on the Gallery with the viewer closed. |
 | Image size in the viewer | The image is shown whole (fit, never cropped) at the largest size the viewer allows, but never above its own pixel size at 2× (a 300-pixel face is drawn at most 150pt wide, not blown up to fill a 1440pt pane). No zoom or pan. The board draws a small likeness and a large one. |
 | The read and refresh | The gallery arrives with the Person page's detail read; the section has no read of its own. Choosing a portrait refreshes the page; the gallery stays drawn and "Refreshing" shows at the end of the switcher row (S13-D1 PPF-8). |
@@ -110,8 +110,9 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 - Autoplay, a slideshow timer or transitions (user, 2026-11-03).
 - Zoom, pan, rotate, crop, or redrawing the region (S14-03 owns drawing).
 - Comparing two likenesses side by side.
-- Editing: no delete, reorder, caption editing or tagging, and no new context menu actions beyond the two R-31 and R-32 name.
-- The provenance control on a likeness (R-13b).
+- Editing: no delete, reorder, caption editing or tagging, and no context menu actions beyond Set as portrait and the provenance sheet.
+- A direct Open citation control (user, 2026-11-03: the provenance sheet's Citation link replaces it).
+- A redesign of the provenance sheet: it is S13-D2's sheet, with one record.
 - Grouping by Source, a filter, or a search.
 - The Event and Place Pictures sections, or a viewer for them (user, 2026-11-03: Person only; they adopt this gallery when those pages get sections).
 - A change to the header, its thumb or its right-click menu.
@@ -122,8 +123,8 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 
 | | |
 | --- | --- |
-| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W3: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Set as portrait, Open Citation, the visible way back to the earliest, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. A click on a tile does nothing new until S13-15: S13-14 keeps it opening the Citation. |
-| Ships in **S13-15** | LV-1 … LV-9 and LV-W1: the viewer, opened by a click on a tile, with stepping, the counter, the caption, Set as portrait, Open Citation, closing, keyboard and VoiceOver, light and dark, at Regular and Wide. The tile's click moves from Open Citation to the viewer. |
+| Ships in **S13-14** | GA-1 … GA-10 and GA-W1 … GA-W3: the Gallery section on the Person page, the tile, its caption, the Portrait mark, Set as portrait, the provenance control and its sheet, the visible way back to the earliest, the empty and refreshing states, keyboard and VoiceOver, light and dark, at Regular and Wide. Until S13-15 a click on a tile's image opens its provenance sheet, as the provenance control does. |
+| Ships in **S13-15** | LV-1 … LV-9 and LV-W1: the viewer, opened by a click on a tile, with stepping, the counter, the likeness's provenance record under the image, Set as portrait, closing, keyboard and VoiceOver, light and dark, at Regular and Wide. The tile's click moves from Open Citation to the viewer. |
 | Later boards | The Event and Place pages adopt this gallery and the viewer when they get sections (R-1). |
 | Stays out | Any change to the header, switcher or other sections; the Event and Place pages. |
 
@@ -138,12 +139,12 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | GA-1 | **The tile.** One tile per likeness: the image on a Thumbnail, cover-cropped into a square, with its caption (GA-2) and its actions (GA-3, GA-4). Today's tile is a 96pt crop in a 120pt column. Pick the tile's size so a face in a 300-pixel crop is recognisable (recommended: 160pt); say why. Every tile has the same size, so the grid aligns. |
 | GA-2 | **The caption.** The Source title, up to two lines then cut at its tail, with the full citation line (§ 2) in the tooltip and VoiceOver. A title that is a ref shows in mono. Decide whether the tile shows more of the citation line (the page, "p. 23") on a second muted line; say why. |
 | GA-3 | **The Portrait mark and Set as portrait (R-31).** The leading tile carries the Portrait Badge (accent, photo icon, as today); every other tile offers Set as portrait, a ghost Button. Decide where on the tile they sit (under the caption, as today; or over the image's corner); a control that only appears on hover is not enough on its own (keyboard and VoiceOver reach it). While a choice saves, every Set as portrait is disabled. |
-| GA-4 | **Open the Citation (R-32).** Each tile has its own Open Citation control, since a click on the image opens the viewer (LV-1). Recommended: a small IconButton (the `quote` glyph the composer uses for a Citation) beside the tile's other action, with the tooltip "Open citation"; the tile's context menu also offers Set as portrait and Open citation. Say why. |
+| GA-4 | **The provenance control (R-13b, R-32; user, 2026-11-03).** Each tile has the Vitals rows' provenance control: the small info IconButton with the tooltip "Provenance of Likeness from Hamburger Adressbuch 1861". It opens the S13-D2 provenance sheet with only this likeness's record (§ 2). Decide where it sits on the tile beside Set as portrait. The tile's context menu offers Set as portrait and the provenance sheet. No Open citation control. Draw the sheet open from tile 2 (frame 2b): the sheet's title and header for one likeness (recommended: the title "Likeness from Hamburger Adressbuch 1861", the header's summary "1 record"), and its one record row. |
 | GA-5 | **Back to the earliest.** While a chosen likeness leads and it is not the earliest, the Gallery shows a visible control to go back to the earliest (recommended: a ghost Button "Use earliest likeness" at the end of the section's header line); otherwise none. It writes at once with the Toast "Portrait updated" · "The earliest likeness is the portrait again." The header thumb's menu stays (§ 1). |
 | GA-6 | **The section's heading.** Today the section repeats a "Likenesses" heading and a count under the switcher. Vitals, Family and Timeline have no heading of their own. Decide whether Gallery keeps a heading line (it carries the count and GA-5's control) or drops it and moves the control elsewhere; say why. |
 | GA-7 | **The grid.** Tiles wrap in an adaptive grid at the tile's size; the grid starts at the section's leading edge. Every likeness is shown: no fold at the typical and large sizes (§ 2). |
 | GA-8 | **No likenesses.** The kit EmptyState with the Gallery glyph (photo): "No likenesses yet" and "A likeness is drawn on a Citation’s image — draw one there and it appears here." (today's copy), or the board's rewording. |
-| GA-9 | **Keyboard and VoiceOver.** Tab moves through each tile's image, then its actions, in reading order, then the next tile; Return or Space on the image opens the viewer (S13-15; until then the Citation). VoiceOver reads each tile as a group: "Likeness from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23, portrait" for the leading tile; the actions are buttons with the Source in their label ("Set the likeness from Hamburger Adressbuch 1861 as portrait"). The count is read with the heading, if GA-6 keeps one. |
+| GA-9 | **Keyboard and VoiceOver.** Tab moves through each tile's image, then its actions, in reading order, then the next tile; Return or Space on the image opens the viewer (S13-15; until then the provenance sheet). VoiceOver reads each tile as a group: "Likeness from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23, portrait" for the leading tile; the actions are buttons with the Source in their label ("Set the likeness from Hamburger Adressbuch 1861 as portrait"). The count is read with the heading, if GA-6 keeps one. |
 | GA-10 | **Dark mode.** Frames 1, 3 and 5 in dark: tiles, the sunken fallback with the Person mark in its gender colors, the Badge, the buttons. |
 | GA-W1 | **The grid at Wide.** Rule 3: the grid fills the pane between the page gutters (Page columns' full-width mode, as the Timeline section; the header keeps its band) and adds tiles per row; tiles keep their size. No secondary column: the section has nothing supporting to put in it. Captions keep their width. |
 | GA-W2 | **Crossing 1600 keeps the place (rule 5).** Resizing keeps the section, the scroll position and the focused tile. A note on the Wide frame. |
@@ -156,11 +157,11 @@ A researcher opens a Person's Gallery section and sees every likeness of the per
 | LV-1 | **Opening.** A click on a tile's image, or Return / Space with the image focused, opens the viewer on that likeness. Pick its form and say why: (A) a large kit sheet over the page (the sheet presenter every app sheet uses: a click outside and Escape close it); (B) an overlay that dims and covers the pane, with the image in its middle; (C) the tile expanding in place inside the grid. **Recommended: (A)**, the kit sheet (Panel inside the sheet presenter), which already owns Escape, a click outside and focus. (B) would need a new page-level presenter the kit does not have; draw it only as an alternative frame, marked as that cost. (C) moves every tile below it. |
 | LV-2 | **The image.** The whole likeness, fit inside the viewer's image area, centered, on the sunken surface; never above its pixel size at 2× (§ 2). While the full image loads the tile's image shows, scaled; a missing image shows the Person mark (§ 2). |
 | LV-3 | **Stepping.** Previous and next IconButtons beside the image or under it, and the ← → keys; previous is disabled on the first likeness, next on the last (no wrap). A position counter ("3 of 7") in mono. A gallery of one shows neither button nor counter. |
-| LV-4 | **The caption.** Under the image: the Source title in the body face (a ref in mono), the citation line's remaining parts (Artifact, Citation, page) in a muted line, and the Observation ref in mono. Long titles wrap; nothing is cut. |
-| LV-5 | **Actions.** Set as portrait (a Button) on a likeness that does not lead; the Portrait Badge on the one that does; a choice made here updates the header thumb and the grid behind the viewer, and the viewer stays open on the same likeness. Open citation (a Button) closes the viewer and opens the Citation's composer at the likeness. Decide their order and which is primary; say why. No "Use earliest" in the viewer: GA-5 owns it. |
+| LV-4 | **The record under the image (user, 2026-11-03).** Right under the image, the likeness's provenance record, drawn as the provenance sheet's record row (S13-D2): the citation line, the outcome, the Observation and Subject refs, and its links to the Source, the Citation and the Observation. A link closes the viewer first. This replaces a separate caption and any Open citation button: the viewer shows the citation itself. Long lines wrap; nothing is cut. |
+| LV-5 | **Actions.** Set as portrait (a Button) on a likeness that does not lead; the Portrait Badge on the one that does; a choice made here updates the header thumb and the grid behind the viewer, and the viewer stays open on the same likeness. Decide where it sits (the footer, recommended). The record's links (LV-4) are the only way on to the Citation. No "Use earliest" in the viewer: GA-5 owns it. |
 | LV-6 | **Closing.** Escape, a click outside (A, B) and a visible close IconButton. Focus returns to the tile of the likeness last shown, scrolled into view. |
 | LV-7 | **A likeness leaves while open.** As § 2: the viewer shows the likeness that took its place, else closes when none is left. Draw it as a note on frame 7. |
-| LV-8 | **Keyboard and VoiceOver.** Focus starts on the image area, which reads "Likeness 3 of 7, from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23"; ← → step and VoiceOver reads the new likeness; Tab moves through previous, next, Set as portrait, Open citation and close. |
+| LV-8 | **Keyboard and VoiceOver.** Focus starts on the image area, which reads "Likeness 3 of 7, from Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23"; ← → step and VoiceOver reads the new likeness; Tab moves through previous, next, the record's links, Set as portrait and close; the record row reads as on the provenance sheet. |
 | LV-9 | **Dark mode.** Frames 6 and 8 in dark. |
 | LV-W1 | **The viewer at Wide.** The image area grows with the pane (it is a canvas, rule 3), still capped by the image's own size (LV-2); the caption keeps its measure. Draw the Wide frame with a 2048-pixel likeness and a 300-pixel one. |
 
@@ -191,11 +192,12 @@ Sample person: **Johann Weber** (man), as on the Family and Timeline boards. Sev
 | 7 | Hamburger Nachrichten, obituary 1880 | Issue 221, p. 4 | missing image |
 
 1. **Gallery.** Johann's Gallery with the seven tiles: the Portrait Badge on 4, Set as portrait on the rest, GA-5's control, the long title on 5 cut at two lines, the ref title on 6 in mono, the fallback on 7 (GA-1 – GA-7).
+2b. **A tile's provenance.** The provenance sheet open from tile 2, with its one record (GA-4).
 2. **Tile sheet.** One tile in each state: the portrait; another with Set as portrait; hover and keyboard focus on the image and on each action; saving (buttons disabled); the context menu open (GA-1 – GA-4, GA-9).
 3. **Earliest leads.** The gallery with no chosen portrait: the Badge on 1, no GA-5 control (GA-5).
 4. **Large gallery.** 40 likenesses (GA-7).
 5. **No likenesses.** The EmptyState (GA-8).
-6. **Viewer.** The viewer open on 2 (a small likeness: drawn at its 2× size, not stretched): counter "2 of 7", previous and next, the caption, Set as portrait, Open citation, close (LV-1 – LV-6). Beside it the viewer on 4 (a large likeness filling the image area, the Portrait Badge in place of Set as portrait).
+6. **Viewer.** The viewer open on 2 (a small likeness: drawn at its 2× size, not stretched): counter "2 of 7", previous and next, the provenance record under the image, Set as portrait, close (LV-1 – LV-6). Beside it the viewer on 4 (a large likeness filling the image area, the Portrait Badge in place of Set as portrait).
 7. **Viewer ends and edges.** On 1 (previous disabled), on 7 (next disabled, missing image), a gallery of one (no stepping), and a note for a likeness that leaves while shown (LV-3, LV-7).
 8. **Viewer, keyboard.** Focus on next after a → press; the VoiceOver reading of the image area as a note (LV-8).
 9. **Dark mode.** Frames 1, 3, 5, 6 and 8 in dark (GA-10, LV-9).
@@ -216,8 +218,11 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Likeness tile | Snowflake | **Rethink** | `GalleryTileView` in `ConclusionDetailPage.swift` | GA-1, GA-2. The image on `CachedThumbnail` over `PVThumbnail`, the caption in caption type. |
 | Likeness image | Component | Ship | `CachedThumbnail` / `PVThumbnail`, fallback mark `subjectPerson` in the gender colors | GA-1, LV-2. No new placeholder artwork. |
 | Portrait mark | Component | Ship | `PVBadge` (accent, `photo` icon) | GA-3, LV-5. Today's Badge. |
-| Set as portrait, Use earliest likeness, Open citation | Component | Ship | `PVButton` (ghost, `sm`); `PVIconButton` for an icon-only Open citation | GA-3 – GA-5, LV-5. Not a new action control. |
-| Tile context menu | Component | Ship | `PVContextMenu` / `pvRightClickMenu` with `PVActionMenuItem` | GA-4. The two actions only. |
+| Set as portrait, Use earliest likeness | Component | Ship | `PVButton` (ghost, `sm`) | GA-3, GA-5, LV-5. Not a new action control. |
+| Provenance control | Component | Ship | `PVIconButton(.info)`, as `ReconciledValueRow`'s provenance slot | GA-4. The Vitals rows' control, same glyph and tooltip wording. |
+| Provenance sheet | Snowflake | Ship | `Features/Conclusions/ProvenanceSheet.swift` `ProvenanceSheet` (S13-D2, S13-11) | GA-4. Unchanged; given a row with one record. |
+| Provenance record row | Snowflake | Ship | `Features/Conclusions/ReconciliationRecordRows.swift` `ReconciliationRecordRows` | LV-4. The sheet's record row, drawn under the viewer's image. |
+| Tile context menu | Component | Ship | `PVContextMenu` / `pvRightClickMenu` with `PVActionMenuItem` | GA-4. Set as portrait and the provenance sheet only. |
 | Tile image button | Component | Ship | `PVFocusRingButtonStyle`; `pvActivatesOnReturn(when:)` (`DesignSystem/Components/ReturnActivation/`) | GA-9, LV-1. The kit focus ring, and Return opens it (a plain button does not on macOS), as the Timeline title does. |
 | Grid | Component | Ship | an adaptive `LazyVGrid` at the tile's size, as today | GA-7, GA-W1. |
 | Section heading line | Component | Ship | `PVSectionHeader` (title, meta count, trailing control) | GA-6. If the board keeps a heading. |
@@ -228,7 +233,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Likeness viewer | Snowflake | **New** | `Features/Conclusions/` *(new file, named in the S13-15 plan)* | LV-1 – LV-8. Presented through the kit sheet presenter (`pvSheet`) for form (A); (B) would be a new page-level presenter. Not the Artifact viewer (no zoom, no region tools). A feature snowflake, not a kit primitive; its known second call site is the Event and Place pages when they adopt sections (R-1). |
 | Previous, next, close | Component | Ship | `PVIconButton` (`chevronBack`, `chevronForward`, `dismiss`) | LV-3, LV-6. |
 | Position counter, Observation ref | Component | Ship | mono caption text | LV-3, LV-4. |
-| Viewer caption | Snowflake | Ship | `CitationLineDisplay` (the provenance sheet's citation line) | LV-4, GA-2's tooltip. One wording of a citation for the page. |
+| Citation line | Snowflake | Ship | `CitationLineDisplay` (the provenance sheet's citation line) | GA-2's tooltip and VoiceOver. One wording of a citation for the page. |
 
 ### Explicit non-goals
 
@@ -240,13 +245,13 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | A viewer or the new grid on the Event and Place pages | User, 2026-11-03: Person only (R-1). |
 | A change to the header thumb or its right-click menu | User, 2026-11-03: the menu stays; Event and Place share it. |
 | Delete, reorder, caption editing | This spike is view only. |
-| The provenance control on a likeness | R-13b. |
+| A direct Open citation control, or a second sheet over the viewer | User, 2026-11-03: the provenance sheet and the viewer's record row link to the Citation. |
 | A new color token or card style | Thumbnail, Badge and Button cover it. |
 
 ---
 
 ## 7. Handoff
 
-1. When the board is agreed, record on the **Board** line: the Claude Design turn and frames; the tile size and caption (GA-1, GA-2); where the Portrait mark, Set as portrait and Open citation sit (GA-3, GA-4); GA-5's control and its place; whether the heading stays (GA-6); any empty-state rewording (GA-8); the viewer's form (LV-1); its image area's size at Regular and Wide (LV-2, LV-W1); the order of its actions (LV-5); and every other change from this brief with the user's answer.
+1. When the board is agreed, record on the **Board** line: the Claude Design turn and frames; the tile size and caption (GA-1, GA-2); where the Portrait mark, Set as portrait and the provenance control sit, and the one-record sheet's title and header (GA-3, GA-4); GA-5's control and its place; whether the heading stays (GA-6); any empty-state rewording (GA-8); the viewer's form (LV-1); its image area's size at Regular and Wide (LV-2, LV-W1); how the record row sits under the image and where Set as portrait sits (LV-4, LV-5); and every other change from this brief with the user's answer.
 2. Refresh the [S13-14 plan](../prs/S13-14-gallery-section.md) and the [S13-15 plan](../prs/S13-15-likeness-viewer.md): copy the answers into their Decisions and **Design → macOS**, describe every frame in words, close their Open questions, run `review-plan` again, and set them to `Planned`.
 3. S13-15 archives this brief under `design/archive/` and records it in [`../completed.md`](../completed.md) (S13-14 lands first and leaves the brief open for S13-15).

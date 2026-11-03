@@ -19,3 +19,6 @@ None.
 
 ### X-19 · minor · Wide empty and Wide large frames; viewer inventory; viewer title
 **Answer:** Fixed. GA-W3 *(new)* covers the empty state at Wide; frame 10b adds the 40-likeness and empty frames at Wide; the § 4.3 row cites GA-W3. The viewer's inventory rows are added (M-6). The title is a plan decision (S13-15 D-9) the board may restyle, since it is inside the kit Panel's title row.
+
+## Change after review (user, 2026-11-03)
+GA-4 is now the provenance control and a one-record provenance sheet (new frame 2b). LV-4 puts the record row under the viewer's image. Open citation is dropped everywhere. The inventory gains the provenance control, the provenance sheet and the record rows.

@@ -35,7 +35,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 
 **Why now.** The last PR of slice 5; R-30 asks for a built-in viewer, and the user chose stepping without autoplay (2026-11-03).
 
-**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the Citation to opening the viewer; Open citation stays on its own control and in the tile's context menu. The header and its thumb menu. The Event and Place Pictures (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
+**What stays.** Everything S13-14 shipped except the tile image's click, which moves from opening the provenance sheet to opening the viewer; the provenance control and its context menu item still open the sheet. There is no Open citation control anywhere (user, 2026-11-03). The header and its thumb menu. The Event and Place Pictures (user, 2026-11-03: Person only). `ConclusionLeadModel` and its Toasts. No navigation place is added: the viewer is not in the history.
 
 ## 2. User stories
 
@@ -43,12 +43,12 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Johann's seven likenesses (brief § 5); click tile 2's image | The viewer opens on likeness 2: the image whole, fit, at most its pixel size ÷ 2 in points (300 × 380 pixels → at most 150 × 190pt); counter "2 of 7"; caption "Hamburger Adressbuch 1861" over "Volume 3, Entry 214, p. 23" and "OBS-…" |
+| AC-1.1 | Johann's seven likenesses (brief § 5); click tile 2's image | The viewer opens on likeness 2: the image whole, fit, at most its pixel size ÷ 2 in points (300 × 380 pixels → at most 150 × 190pt); counter "2 of 7"; the title "Hamburger Adressbuch 1861"; under the image the likeness's provenance record row: "Hamburger Adressbuch 1861, Volume 3, Entry 214, p. 23", its outcome, its refs and its Source, Citation and Observation links |
 | AC-1.2 | In the viewer on 2, press → | Likeness 3 shows, counter "3 of 7", VoiceOver reads the new likeness |
 | AC-1.3 | On 1 | Previous is disabled and ← does nothing; on 7, next is disabled and → does nothing (no wrap) |
 | AC-1.4 | A gallery of one | No previous, next or counter |
 | AC-1.5 | Likeness 4 (1400 × 2048 pixels) at Regular, then at Wide | The image fills the viewer's image area, capped at 700 × 1024pt, larger at Wide (LV-W1) |
-| AC-1.6 | Likeness 7 (missing image) | The Person mark in Johann's gender colors on the sunken surface; caption and actions stay |
+| AC-1.6 | Likeness 7 (missing image) | The Person mark in Johann's gender colors on the sunken surface; the record row and actions stay |
 | AC-1.7 | Tab to a tile's image, press Return | The viewer opens on that likeness |
 
 **US-2.** As a researcher, I act on the likeness I am viewing.
@@ -56,7 +56,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-2.1 | Viewer on 2 → Set as portrait | The header thumb and the grid behind show likeness 2 as the portrait; the viewer stays on 2 and shows the Portrait Badge in place of the button; the portrait Toast shows |
-| AC-2.2 | Viewer on 2 → Open citation | The viewer closes and the Citation composer opens at the likeness; Back returns to Johann's Gallery with the viewer closed |
+| AC-2.2 | Viewer on 2 → the record row's Citation link | The viewer closes and the Citation composer opens at the likeness; Back returns to Johann's Gallery with the viewer closed. The Source and Observation links do the same for their pages |
 | AC-2.3 | Viewer on 4 (the portrait) | The Portrait Badge, no Set as portrait |
 
 **US-3.** As a researcher, closing the viewer puts me back where I was.
@@ -82,8 +82,8 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 | The viewer in the board's form, opened from a tile's image (LV-1) | STEP-3, STEP-4, AC-1.1, AC-1.7 |
 | The image, fit and capped, the loading and missing states (LV-2) | STEP-2, STEP-3, AC-1.1, AC-1.5, AC-1.6 |
 | Stepping, the counter, the ends (LV-3) | STEP-1, STEP-3, AC-1.2 – AC-1.4 |
-| The caption (LV-4) | STEP-3, AC-1.1 |
-| Set as portrait and Open citation in the viewer (LV-5) | STEP-3, AC-2.1 – AC-2.3 |
+| The provenance record row under the image (LV-4; user, 2026-11-03) | STEP-4, AC-1.1, AC-2.2 |
+| Set as portrait in the viewer (LV-5) | STEP-4, AC-2.1, AC-2.3 |
 | Closing and focus return (LV-6) | STEP-4, AC-3.1 – AC-3.3 |
 | A likeness leaving while shown (LV-7) | STEP-1, STEP-4, AC-4.1 – AC-4.3 |
 | Keyboard and VoiceOver (LV-8), dark mode (LV-9), Wide (LV-W1) | STEP-3, STEP-5, manual check |
@@ -104,8 +104,9 @@ Rows marked *(S13-14)* are S13-14's planned design; re-read them in the code onc
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Gallery section *(S13-14)* | `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)* in S13-14 `ConclusionGallerySection` | Kind-blind; the tile image is a `Button` (`PVFocusRingButtonStyle`, `pvActivatesOnReturn(when:)`, hint `gallery.openTip`) → `navigation.go(to: tile.location)`; Open citation control and context menu; `@FocusState focusedID` |
-| Tile data *(S13-14)* | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPicture` (`citation: CitationLineDisplay.Parts` with `title`, `titleIsRef`, `detail`, `observationRef`, `line`; `openLabel`), `ConclusionDetailGallery` (`fallbackColors`) | Every per-tile string is built by kind in `tiles(from:…)`; the slot's static words are `title`, `openTip`, `LeadCopy` |
+| Gallery section *(S13-14)* | `macos/App/Features/Conclusions/ConclusionGallerySection.swift` *(new)* in S13-14 `ConclusionGallerySection` | Kind-blind; the tile image is a `Button` (`PVFocusRingButtonStyle`, `pvActivatesOnReturn(when:)`, hint `gallery.openTip`) → opens the provenance sheet; the provenance control and context menu (`provenanceItem`, `.pvSheet`); `@FocusState focusedID` |
+| Tile data *(S13-14)* | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPicture` (`citation: CitationLineDisplay.Parts` with `title`, `titleIsRef`, `line`; `provenance: ReconciledValueRowModel?`, the one-record row), `ConclusionDetailGallery` (`fallbackColors`) | Every per-tile string is built by kind in `tiles(from:…)`; the slot's static words are `title`, `openTip`, `LeadCopy` |
+| Record rows | `macos/App/Features/Conclusions/ReconciliationRecordRows.swift` `ReconciliationRecordRows(groups:style:provenance:open:widthClass:)`, `SheetHeadings` | The provenance sheet's record rows, with their Source, Citation and Observation links calling `open` |
 | Lead model | `macos/App/Features/Conclusions/ConclusionLeadModel.swift` | `choose(_:copy:)` → `Bool`, `isSaving`, `toast` |
 | Toast | `ConclusionDetailPage.swift` line 317 `.vocabularyToastOverlay($lead.toast, identifier:)` (`Features/CatalogVocabulary/VocabularyChrome.swift`) | Drawn on the page, so a sheet covers it |
 | Sheet presenter | `macos/App/DesignSystem/Components/Panel/PVSheet.swift` `pvSheet(item:…)` (wraps `sheet(item:)`: a changed `Identifiable.id` is a new sheet), `PVSheetChrome` (Escape and a click outside; no visible close) | One dismiss rule |
@@ -128,18 +129,18 @@ Rows marked *(S13-14)* are S13-14's planned design; re-read them in the code onc
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | The viewer is `ConclusionPictureViewer` *(new)* in `macos/App/Features/Conclusions/ConclusionPictureViewer.swift` *(new)*, kind-blind: it takes `projectDir`, `pageIdentifier`, `gallery: ConclusionDetailGallery`, `viewer: ConclusionDetailGallery.ViewerCopy`, `lead: ConclusionLeadModel`, `step: ConclusionPictureStep` (built by the section, D-3), `widthClass` and one closure `show(_ id: String)`. It closes through `@Environment(\.pvSheetClose)` (`PVSheetClose`), the kit's one close route, from its close button and from Open citation. Only `ConclusionGallerySection` presents it | User, 2026-11-03 (Person only); kind-blind so Event and Place adopt it with the section | A Person-named viewer — the second caller would fork |
+| D-1 | The viewer is `ConclusionPictureViewer` *(new)* in `macos/App/Features/Conclusions/ConclusionPictureViewer.swift` *(new)*, kind-blind: it takes `projectDir`, `pageIdentifier`, `gallery: ConclusionDetailGallery`, `viewer: ConclusionDetailGallery.ViewerCopy`, `lead: ConclusionLeadModel`, `step: ConclusionPictureStep` (built by the section, D-3), `widthClass` and one closure `show(_ id: String)`. It closes through `@Environment(\.pvSheetClose)` (`PVSheetClose`), the kit's one close route, from its close button and from a record link. Only `ConclusionGallerySection` presents it | User, 2026-11-03 (Person only); kind-blind so Event and Place adopt it with the section | A Person-named viewer — the second caller would fork |
 | D-2 | Stepping is a pure value, `ConclusionPictureStep` *(new, in the same file)*: `init?(tiles: [ConclusionDetailPicture], showing id: String, lastIndex: Int)`; `tile`, `index`, `count`, `hasPrevious`, `hasNext`, `previousID`, `nextID`; when `id` is no longer in `tiles` it resolves to the tile at `min(lastIndex, count − 1)`; nil for an empty gallery | LV-3, LV-7 as one testable rule | Index math in the view; wrapping (brief § 2) |
 | D-3 | `ConclusionGallerySection` holds `@State viewing: ConclusionPictureViewerItem?` *(new, in `ConclusionPictureViewer.swift`)*: `struct: Identifiable, Equatable { let id = "viewer"; var shownID: String; var lastIndex: Int; func resolved(in tiles: [ConclusionDetailPicture]) -> Self? }` — the `Identifiable.id` is constant, so stepping never re-presents the sheet; `resolved(in:)` returns the item moved to `ConclusionPictureStep`'s tile and index, or nil. The grid iterates `Array(gallery.tiles.enumerated())` (id `\.element.id`) so the image's button opens `{shownID: tile.id, lastIndex: index}`. The section builds `ConclusionPictureStep(tiles: gallery.tiles, showing: shownID, lastIndex:)` on each draw and passes it; `show(_:)` sets `shownID` and `lastIndex` together; `.onChange(of: gallery.tiles)` sets `viewing = viewing?.resolved(in: gallery.tiles)` | The S13-11 item with a fixed id (X-1, M-10); AC-4.1 – AC-4.3 | The picture id as the item's id — every step would dismiss and rebuild the sheet |
 | D-4 | The viewer is form (A): `.pvSheet(item: $viewing)` around a `PVPanel` whose `width` is the board's Regular and Wide values by `PVWidthClass`, as `ProvenanceSheet.width(_:)`. Form (B), an overlay that covers the pane, is a new page-level presenter the kit does not have; if the board picks it, stop and ask | One presenter and one dismiss rule (`PVSheetChrome`); an overlay drawn by the section cannot cover the pane (M-7) | An overlay in `ConclusionGallerySection` |
 | D-5 | The full image decodes with `ArtifactImageDecode.decode(url:typeIdentifiers: Array(ThumbnailDecodePolicy.allowedTypes))`. STEP-2 moves `ArtifactImageDecode.swift` from `Features/ArtifactViewer/` to `macos/App/Platform/` beside `ImageHeaderDecode`, and splits out `declaredSize(url:typeIdentifiers:) -> Result<(width: Int, height: Int), Refusal>` *(new)*: the type sniff, header read and size check `decode` runs today, with the edges swapped for EXIF orientations 5 – 8 as `decode`'s `pixelSize` is; `decode` keeps its signature and result (the Artifact viewer keeps calling it). The viewer's loader runs in `.task(id: step.tile.id)`: (1) `try await Task.sleep(for: .milliseconds(120))`, so a held arrow key cancels each superseded load before any file is opened; (2) `ProjectFiles.objectURL` on the main actor; (3) `Task.detached` runs `ArtifactImageDecode.declaredSize(url:typeIdentifiers:)` *(new)*; back on the main actor the frame is published (D-6); (3b) a second `Task.detached` runs `decode`; (4) after it returns, a cancelled task discards the result. At most one result is shown; a decode already started runs to its end (bounded by `maxDecodePixels`) and is dropped. Not cached | One full-size decode mechanism (M-2), bounded by its own pixel budget; the sleep is the cancellation point a detached task lacks (X-3, X-4) | Extracting a new decode out of `ThumbnailCache` — a third mechanism beside `ArtifactImageDecode`; a larger `ThumbnailCache.maxPixelSize` |
 | D-6 | The image area's size is fixed before pixels arrive: from `declaredSize`'s (already turned) `width` × `height` ÷ 2 points (the cap, LV-2), fit inside the panel's image area. While the decode runs the area draws `ThumbnailCache.shared.cachedImage(…)` (else a small `ProgressView`) `.resizable().scaledToFit()` in that frame; then the decoded image in the same frame, on the sunken surface (`PVColor.surfaceSunken`). A refused file or header shows the fallback mark (`gallery.fallbackMark`, `gallery.fallbackColors`) in a square area | No jump between the placeholder and the image (X-2); LV-2's cap | Sizing by the 512-pixel thumbnail — small crops would jump on load |
-| D-7 | The viewer is not a `WorkspaceLocation` and is not persisted; Open citation closes it before navigating | Brief § 2; S13-11's sheet is not a place either | A history step |
+| D-7 | The viewer is not a `WorkspaceLocation` and is not persisted; a record link closes it before navigating | Brief § 2; S13-11's sheet is not a place either | A history step |
 | D-8 | Focus: the image area is `.focusable()` with `@FocusState imageFocused` and `.defaultFocus($imageFocused, true)`; `.onKeyPress(.leftArrow)` / `.onKeyPress(.rightArrow)` on the panel body call `show(previousID / nextID)` and return `.ignored` at the ends; the previous and next `PVIconButton`s are disabled at the ends; the image area keeps focus across steps (its view identity does not change). The image area's label is `viewer.label(index: index + 1, count: count, line: citation.line)`, and `.pvAnnounce(that label)` speaks it on each step (the label changes with the index, so no repeat is lost) | LV-3, LV-8 (X-11) | A wrap; a hand-posted `AccessibilityNotification` |
-| D-9 | `PVPanel` title: `Text(verbatim: citation.title)` (mono when `titleIsRef`); subtitle: the counter `L10n.DesignSystem.selectOptionPosition(current: index + 1, count:)` (none for one likeness); title accessory: the close `PVIconButton(.dismiss, label: L10n.string(viewer.close))` running `sheetClose()`; footer: Set as portrait or the Portrait Badge, and Open citation (`PVButton(gallery.openTip)`), in the board's order. Body: previous, the image area, next; under the image, `citation.detail` muted (omitted when ""), then `citation.observationRef` in mono (omitted when `titleIsRef`, since the title is that ref) | LV-4, LV-5, LV-6 (X-5, X-12); one position wording (M-8) | A fixed "Likeness" title; a third "N of M" key |
-| D-10 | Set as portrait in the viewer calls `lead.choose(step.tile, copy: gallery.choose)`; the viewer stays on the same id (D-3). The viewer's panel carries its own `.vocabularyToastOverlay($lead.toast, identifier: "\(pageIdentifier).viewer.toast")`, since the page's overlay sits under the sheet. Open citation runs `sheetClose { navigation.go(to: tile.location) }` (`PVSheetClose.callAsFunction(then:)`), the kit's form of `ProvenanceSheet.open(_:)`'s close-then-go | AC-2.1, AC-2.2 (X-10); the precedent | Navigating with the sheet open |
-| D-11 | Every close (Escape, a click outside, the close button, Open citation) sets `viewing` nil through the kit, so the focus return runs in `.onChange(of: viewing) { old, new in }` when `old` is set and `new` is nil: `focusedID = old.shownID` and `closeRequest += 1` (`@State closeRequest = 0`). The page's scroll view is `PVPageColumns`'s (the section has none), so the rows scroll it: each tile view inside the `LazyVGrid` carries `.id(tile.id)`, and the grid applies `.pvScrollsRowIntoView(focusedID, whenRequested: AnyHashable(closeRequest))`, which scrolls even when the row is the one it opened from | LV-6, AC-3.1 (X-9) | Scrolling on `row` alone — no scroll when the id repeats |
-| D-12 | The viewer's static words live on the slot: `ConclusionDetailGallery.viewer: ViewerCopy?` *(new)*, a `struct: Equatable` of `LocalizedStringResource`s `previous`, `next`, `close`, `viewHint`, `labelFormat`, with a method `label(index: Int, count: Int, line: String) -> String` that returns `L10n.format(labelFormat, index, count, line)` (no stored closure, as `LeadCopy`); `PersonDetailContent` sets `.likeness` *(new static)*; Event and Place leave it nil. The section opens the viewer only when it is non-nil, else the image keeps opening the Citation. With a viewer, the tile image's hint becomes `viewer.viewHint` and its `.help` drops "Open citation" (Open citation keeps its own control) | Kind-blind words on the slot, as `LeadCopy` (M-1); no copy left naming an action the image no longer does (M-9) | Person keys inside the viewer |
+| D-9 | `PVPanel` title: `Text(verbatim: citation.title)` (mono when `titleIsRef`); subtitle: the counter `L10n.DesignSystem.selectOptionPosition(current: index + 1, count:)` (none for one likeness); title accessory: the close `PVIconButton(.dismiss, label: L10n.string(viewer.close))` running `sheetClose()`; footer: Set as portrait or the Portrait Badge. Body: previous, the image area, next; under the image, the likeness's provenance record: `ReconciliationRecordRows(groups: tile.provenance.recordGroups, style: tile.provenance.style, provenance: .sheet, open: open, widthClass: widthClass)`, the provenance sheet's rows (no `SheetHeadings`: one record), drawn only when `tile.provenance` is non-nil. `open` is `{ location in sheetClose { navigation.go(to: location) } }`. No Open citation button (user, 2026-11-03: the viewer shows the citation itself) | LV-4, LV-5, LV-6 (X-5); one position wording (M-8); the record reads and links exactly as on the sheet | A fixed "Likeness" title; a third "N of M" key; a caption of its own beside the record row |
+| D-10 | Set as portrait in the viewer calls `lead.choose(step.tile, copy: gallery.choose)`; the viewer stays on the same id (D-3). The viewer's panel carries its own `.vocabularyToastOverlay($lead.toast, identifier: "\(pageIdentifier).viewer.toast")`, since the page's overlay sits under the sheet. A record link runs `sheetClose { navigation.go(to: location) }` (`PVSheetClose.callAsFunction(then:)`), the kit's form of `ProvenanceSheet.open(_:)`'s close-then-go | AC-2.1, AC-2.2 (X-10); the precedent | Navigating with the sheet open |
+| D-11 | Every close (Escape, a click outside, the close button, a record link) sets `viewing` nil through the kit, so the focus return runs in `.onChange(of: viewing) { old, new in }` when `old` is set and `new` is nil: `focusedID = old.shownID` and `closeRequest += 1` (`@State closeRequest = 0`). The page's scroll view is `PVPageColumns`'s (the section has none), so the rows scroll it: each tile view inside the `LazyVGrid` carries `.id(tile.id)`, and the grid applies `.pvScrollsRowIntoView(focusedID, whenRequested: AnyHashable(closeRequest))`, which scrolls even when the row is the one it opened from | LV-6, AC-3.1 (X-9) | Scrolling on `row` alone — no scroll when the id repeats |
+| D-12 | The viewer's static words live on the slot: `ConclusionDetailGallery.viewer: ViewerCopy?` *(new)*, a `struct: Equatable` of `LocalizedStringResource`s `previous`, `next`, `close`, `viewHint`, `labelFormat`, with a method `label(index: Int, count: Int, line: String) -> String` that returns `L10n.format(labelFormat, index, count, line)` (no stored closure, as `LeadCopy`); `PersonDetailContent` sets `.likeness` *(new static)*; Event and Place leave it nil. The section opens the viewer only when it is non-nil, else the image keeps opening the provenance sheet. With a viewer, the tile image's hint becomes `viewer.viewHint` (the provenance control keeps opening the sheet) | Kind-blind words on the slot, as `LeadCopy` (M-1); no copy left naming an action the image no longer does (M-9) | Person keys inside the viewer |
 
 The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 lists them. They change no Decision above.
 
@@ -159,7 +160,7 @@ The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 
 | L10n keys (§ Strings) | keys | `L10n.Conclusions` likeness keys; `selectOptionPosition` reused | New wordings only |
 
 **Builds on.** The S13-11 sheet pattern; `pvSheet`, `PVPanel`; `ArtifactImageDecode`, `ImageHeaderDecode`, `ThumbnailDecodePolicy.allowedTypes`; `CitationLineDisplay.Parts` (S13-14); `ConclusionLeadModel`; `pvScrollRowIntoView`; `pvAnnounce`.
-**Deletes.** The tile image's `navigation.go(to:)` and its "Open citation" hint and help on the Person page (D-12); Open citation keeps its control and menu item.
+**Deletes.** The tile image's opening of the provenance sheet and its provenance hint on the Person page (D-12); the provenance control and menu item keep opening the sheet.
 **Next adds.** The Event and Place redesign gets the viewer by adopting `ConclusionGallerySection` and setting a `ViewerCopy` (`.picture`). A zoom, if wanted, replaces the image area inside `ConclusionPictureViewer`.
 
 ### Reach
@@ -167,7 +168,7 @@ The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 
 | New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
 | --- | --- | --- |
 | The viewer on a likeness deleted meanwhile | `ConclusionPictureStep` | D-2, D-3: replaced by its neighbour, closed when none; T-2 |
-| Open citation from the viewer | `WorkspaceNavigation.go(to:)` | The location the tile already opens; the viewer closes first (D-10) |
+| A record link from the viewer | `WorkspaceNavigation.go(to:)` | The provenance sheet's own locations (Source, Citation, Observation); the viewer closes first (D-10) |
 | A full-size decode of a likeness file | `ArtifactImageDecode.decode` | Through `ProjectFiles.objectURL` (path rule); refused type or size → fallback mark (D-6) |
 
 ### Scale
@@ -202,11 +203,11 @@ None —.
 | Image area | `Image(nsImage:)` `.resizable().scaledToFit()`; fallback `CachedThumbnail` with the mark | same | D-5, D-6 |
 | Previous, next, close | `PVIconButton(.chevronBack / .chevronForward / .dismiss, label:)` | same | D-8, D-9 |
 | Counter | `PVPanel` subtitle | same | D-9 |
-| Caption | `citation.detail` muted, `observationRef` mono | same | D-9 |
-| Set as portrait / Portrait Badge, Open citation | `PVButton(gallery.choose.useAs)` / `PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)`, `PVButton(gallery.openTip)` | `PVPanel` footer | D-10; disabled while `lead.isSaving` |
+| Provenance record | `ReconciliationRecordRows` (reused) | same | D-9 |
+| Set as portrait / Portrait Badge | `PVButton(gallery.choose.useAs)` / `PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)` | `PVPanel` footer | D-10; disabled while `lead.isSaving` |
 | Toast | `vocabularyToastOverlay` | on the panel | D-10 |
 
-States: loading (the tile's image in the final frame), missing (fallback mark), saving (Set as portrait disabled). Ids `"\(pageIdentifier).viewer"`, `.viewer.previous`, `.viewer.next`, `.viewer.close`, `.viewer.useAsLead`, `.viewer.openCitation`, `.viewer.toast`.
+States: loading (the tile's image in the final frame), missing (fallback mark), saving (Set as portrait disabled). Ids `"\(pageIdentifier).viewer"`, `.viewer.previous`, `.viewer.next`, `.viewer.close`, `.viewer.useAsLead`, `.viewer.toast`; the record row keeps its own ids.
 
 ### Strings
 
@@ -215,7 +216,7 @@ L10n keys *(new)* in `L10n.Conclusions`, used by `ConclusionDetailGallery.Viewer
 - `likenessViewerPrevious` = "Previous likeness", `likenessViewerNext` = "Next likeness", `likenessViewerClose` = "Close the viewer"
 - `likenessViewHint` = "Opens the likeness in the viewer"
 
-Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `likenessOpenTip`, `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessTileLabel` keeps S13-14's wording.
+Reused: `L10n.DesignSystem.selectOptionPosition(current:count:)` (the counter), `useAsPortrait`, `portraitBadge`, the portrait Toasts. Changed: the Person tile image's hint and help (D-12); `likenessTileLabel` keeps S13-14's wording.
 
 ## 7. Steps
 
@@ -289,9 +290,9 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 ## 10. Manual check
 
-1. Use the S13-14 manual check's Person (at least three likenesses, one with a missing image). Open the Gallery and click the second tile's image: the viewer opens on it with the counter, caption and actions; a small likeness is not blown up (AC-1.1). Tab to a tile's image and press Return: the same (AC-1.7).
+1. Use the S13-14 manual check's Person (at least three likenesses, one with a missing image). Open the Gallery and click the second tile's image: the viewer opens on it with the counter, the provenance record under the image and Set as portrait; a small likeness is not blown up (AC-1.1). Tab to a tile's image and press Return: the same (AC-1.7).
 2. Press → and ←, and the buttons: it steps; at the ends the buttons are disabled and the keys do nothing (AC-1.2, AC-1.3). On a person with one likeness there is no stepping (AC-1.4). On the missing image: the fallback mark in the person's colors (AC-1.6).
-3. Set as portrait in the viewer: the header and the grid behind change, the viewer stays, the Badge replaces the button; on the portrait itself there is only the Badge (AC-2.1, AC-2.3). Open citation: the viewer closes, the composer opens; Back returns to the Gallery, viewer closed (AC-2.2).
+3. Set as portrait in the viewer: the header and the grid behind change, the viewer stays, the Badge replaces the button; on the portrait itself there is only the Badge (AC-2.1, AC-2.3). The record row's Citation link: the viewer closes, the composer opens; Back returns to the Gallery, viewer closed (AC-2.2).
 4. Step to another likeness and press Escape; then reopen and click outside; then reopen and press close: each time focus lands on the last shown tile, scrolled into view (AC-3.1, AC-3.2). Close the viewer and press Back: it leaves the Person page; reopen the project: the Gallery shows with no viewer (AC-3.3).
 5. With the viewer open in one window, delete the shown likeness's depiction in a second window on the same project: the viewer moves to the neighbour; with the viewer on the last of several, delete it: it shows the new last; on the only one, delete it: it closes (AC-4.1, AC-4.2, AC-4.3).
 6. Stretch past 1600pt: the large likeness grows, the small one stays capped (AC-1.5). Dark mode: frames 6 and 8 match the board (LV-9). VoiceOver reads each likeness as it steps (LV-8).
@@ -316,7 +317,7 @@ The board settles these; the plan stays `Blocked — on board S13-D5 and on S13-
 
 1. LV-1: the sheet's widths and the image area's size at Regular and Wide (LV-W1); form (A) is decided (D-4).
 2. LV-3: where previous and next sit.
-3. LV-5: the order of Set as portrait and Open citation, and which is primary.
+3. LV-4, LV-5: how the record row sits under the image, and where Set as portrait sits.
 
 ## 13. PR
 

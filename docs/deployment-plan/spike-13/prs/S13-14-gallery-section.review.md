@@ -78,3 +78,11 @@ Findings are abridged; the reviewers' full text was returned to the writer.
 
 ### X2-7 · minor · T-6 has no step; the menu's parameters; a short table row
 **Answer:** Fixed. STEP-1 lists T-6; D-5 gives `pvRightClickMenu(title: nil, accessibilityIdentifier: "\(tileID).menu", items:)`; the Tile button row has its third cell.
+
+## Change after review (user, 2026-11-03)
+The tile's Open citation control is replaced by the Vitals rows' provenance control. It opens S13-11's `ProvenanceSheet` with only that likeness's record, and the record's links reach the Source, the Citation and the Observation. There is no direct Open citation anywhere on the tile (R-13b and R-32 updated in `person-detail.md`).
+- D-5 builds each tile's one-record row: `ReconciledValueRowModel.narrowed(to:title:)` over the likeness field's own row.
+- D-12 presents it with `ConclusionDetailRowsSection`'s sheet code; until S13-15, the image's click also opens it.
+- `likenessOpenTip` is deleted. T-7 is new.
+
+These Decisions have not been through `review-plan`. They are reviewed with the rest when the board's answers are copied in.

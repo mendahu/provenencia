@@ -84,3 +84,8 @@ Findings are abridged; the reviewers' full text was returned to the writer.
 
 ### X2-8 · minor · The `macos-client.mdc` edit is underspecified
 **Answer:** Fixed. STEP-2 gives the exact clause to add to line 21.
+
+## Change after review (user, 2026-11-03)
+The viewer shows the likeness's provenance record right under the image, drawn with the provenance sheet's `ReconciliationRecordRows` (D-9). Its Source, Citation and Observation links close the viewer and navigate (D-10). There is no Open citation button and no separate caption.
+
+These Decisions have not been through `review-plan`. They are reviewed on the refresh after the board and S13-14.
