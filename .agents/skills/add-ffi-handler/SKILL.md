@@ -54,7 +54,7 @@ User-visible handler failures must return `core/apperr` coded errors (sentinels 
 
 ## Catalog RPCs
 
-A handler that writes through `writes.Run` keeps the `writes.Result` it returns and puts `Effects: writeEffectsProto(wrote)` on its response, so the app patches and invalidates exactly what the write touched (`WriteEffects`, S10-22 D-22). A write that is not audited (a layout row) has no effects to return. `TestEveryAuditedWriteReturnsEffects` (`api/ffi/handlers/write_effects_test.go`) fails on a request with `user_id` whose response has no `WriteEffects`.
+A handler that writes through `writes.Run` keeps the `writes.Result` it returns and puts `Effects: writeEffectsProto(wrote)` on its response, so the app patches and invalidates exactly what the write touched (`WriteEffects`, S10-22 D-22). A write that is not audited (a layout row, the type–field join) has no effects to return and takes no `user_id`. `TestEveryAuditedWriteReturnsEffects` (`api/ffi/handlers/write_effects_test.go`) fails on a request with `user_id` whose response has no `WriteEffects`.
 
 Any handler that reads or mutates `provenencia.sqlite` must use **`withProjectCatalog`** (→ `catalogsession.Do`). Do **not** open-per-call with `database.Open` / `onboarding.OpenCatalog` / `defer Close`.
 

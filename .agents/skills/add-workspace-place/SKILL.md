@@ -38,7 +38,7 @@ Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../doc
 - [ ] CatalogQueryKey case + descriptor arm (loader, invalidateOn, whenHidden)
 - [ ] WorkspacePresentationID + WorkspaceDestinationHost switch arm
 - [ ] View: warm queries in .task; read queryHandle in body; @Bindable QueryHandle child
-- [ ] Model: warm*Queries() (and `syncCatalogCounts` only for a vocabulary badge); mutations via session.apply / setQueryValue
+- [ ] Model: warm*Queries(); mutations via session.apply / setQueryValue
 - [ ] go(to:) at row / link / omnibar call sites
 - [ ] PlaceRegistryTests (+ session tests for new keys)
 - [ ] add-searchable-kind (if omnibar-searchable)
@@ -152,9 +152,9 @@ private struct ListContent: View {
 
 - `warmListQueries()` calls `session.query(key)` — **only** from `.task`, actions, or tests.
 - Display arrays read `session.queryHandle(key)?.value ?? []`.
-- CRUD: `session.apply(CatalogMutation…)` only. Optional `setQueryValue` overlay; never `query` after `apply`.
-- Sidebar badges: a badge whose writes report `counts` (Sources, Persons, Events, Places) comes only from the recount. A vocabulary badge (source types, metadata fields, Properties) is published by its list view with `.onSettled(handle) { model.syncCatalogCounts() }` and `publish*`, until S14-17; it runs on appear and on each `revision` bump while `handle.isSettled` (`.ready`, not refetching and not stale). Never on `onChange(of: status)`: a stale refetch stays `.ready`, so its reload is `.ready → .ready`.
-- A write that changes a sidebar count reports `counts` in `WriteEffects.lists` (Go `effects.ListCounts` on its table's registry entry); `WorkspaceSession.apply` recounts, and the newest recount wins. Features never call `CatalogCounts.refreshAll()`. Publish a vocabulary badge from a list only on load, never after its own write: the list may be hidden or still reloading when a write returns.
+- CRUD: `session.apply(effects)`, with a `CatalogMutation` only where cache rule 2 keeps one. Optional `setQueryValue` overlay; never `query` after `apply`.
+- Sidebar badges: they come only from the recount (Sources, Persons, Events, Places); Configure rows have none.
+- A write that changes a sidebar count reports `counts` in `WriteEffects.lists` (Go `effects.ListCounts` on its table's registry entry); `WorkspaceSession.apply` recounts, and the newest recount wins. Features never call `CatalogCounts.refreshAll()`.
 
 **Master–detail selection** (fields/types): `reconcileSelection(for:)` on
 `onChange(of: navigation.currentLocation)` + `onChange(of: handle.status/value)` —
@@ -171,10 +171,10 @@ sync apply from history after list is ready; `fallbackToSectionRoot()` if deep i
 - Metadata values: `context.applyMetadataWrite(effects)` with the write's effects (also busts the field list's `usedBy`).
 - Other page edits (notes, artifacts, credibility): `context.applyWrite(effects)` → bust the `sourceWorkspace` key, and the effects move the lists.
 - Graph and composer writes (`createSubject`, `updateSubject`, `deleteSubject`) and Artifact ↔ graph link writes (`updateArtifact` with `graphIDs`, `updateEvidenceGraph`): `session.apply(effects)`, and a delete's `property_usage` reloads Observation `usedBy` (the citation reads follow the effects).
-- Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, each graph's rows follow `evidenceGraphs`, the keyed reads (citation counts and citations by Artifact, graph progress) follow `reads` for only the graphs named, and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the writes that still report none (Property and other vocabulary writes, until S14-17) keep their mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource(source))`, as Copy Source is.
+- Any write under a Source moves its `updated` activity (engine audit scopes). Every write under a Source returns `WriteEffects` with its activity, and `apply(effects)` patches the Sources row in place; the mutations that ride along (`mutatedSourceWorkspace`, `mutatedSourceMetadata`) never invalidate `sourcesList` or the Conclusion lists — the Sources row follows the effects' `sourceScopes`, each graph's rows follow `evidenceGraphs`, the keyed reads (citation counts and citations by Artifact, graph progress) follow `reads` for only the graphs named, and the Conclusion lists follow `handles`. A new Source child write returns `WriteEffects` (`writeEffectsProto(wrote)` in its handler); the one write that still reports none (the type–field join) keeps its mutation kinds. `createSource` returns `WriteEffects` and is applied with `apply(effects, .createdSource(source))`, as Copy Source is.
 - A new list with a last-updated cell: conform its row to `CatalogLastUpdatedRow` and add `.lastUpdated(Row.self, follows: …)` to its descriptor `patches`.
-- Vocabulary CRUD: registry `invalidateOn` + list patch where cheap. A patch is an
-  optimization on top of invalidation unless the write reported everything the patch needs (last-updated activity).
+- Vocabulary CRUD: apply the write's effects; a key that holds a vocabulary label follows its family list (`.list(.sourceVocabulary)` or `.list(.propertyVocabulary)`) through a `refreshes` entry. A list patch is an
+  optimization on top of the reload unless the write reported everything the patch needs (last-updated activity).
 
 ### 7. Tests
 

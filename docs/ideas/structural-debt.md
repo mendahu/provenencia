@@ -16,4 +16,5 @@
 | A-40 | S13-35 | `CitationLineButton`'s own focus ring (`ReconciliationRecordRows.swift:276`) is a hand-written copy of what `PVFocusRingButtonStyle` draws; move it onto the style. |
 | A-41 | S13-35 | `SourcesGraphButtonBody`'s focus ring with hover is a third bare-button ring; fold it into `PVFocusRingButtonStyle` (or a hover variant of it) and delete the body. |
 | — | S14-11 plan | `CatalogQueryStalePolicy`: no descriptor arm sets `.refetchOnRevisit` and only two tests read `stalePolicy(for:)`, beside the cache's `isStale` and `whenHidden: .markStale`. Remove or use it when the cache next changes. |
+| — | S14-17 plan | A Property rename leaves a visited Evidence graph canvas and its citations by Artifact on the old label: `evidenceGraph` and `citationsByArtifact` rows carry `propertyLabel` and follow no vocabulary list, because following `property_vocabulary` would reload the on-screen graph on every composer custom term (S14-17). |
 | — | S12-15 ship log | Swift's `SourceSurface` raw values and Go's `workspacelocation.Surface*` constants are matched only by a comment; a `swift_vocabulary_test.go` row would catch drift. |
