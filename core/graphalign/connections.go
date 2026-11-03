@@ -68,7 +68,8 @@ type Connection struct {
 func Connections(bridges []PageBridge, ends map[string]EndTarget, canon []CanonEdge) []Connection {
 	sorted := slices.Clone(bridges)
 	slices.SortStableFunc(sorted, func(a, b PageBridge) int { return bytes.Compare(a.ID, b.ID) })
-	page := map[string][]connectrules.Link{}
+	canonByKey := canonLinks(canon)
+	links := map[string]*connectrules.Links{}
 	var out []Connection
 	for _, b := range sorted {
 		rule, ok := connectrules.LookupBridge(string(b.TypeKey))
@@ -81,17 +82,20 @@ func Connections(bridges []PageBridge, ends map[string]EndTarget, canon []CanonE
 				values[i] = append(values[i], endValue(id, ends))
 			}
 		}
-		term := connectrules.Term(b.Terms)
-		key := string(b.TypeKey) + "|" + string(term)
-		res, _ := connectrules.Decide(rule, b.Terms, values, func() ([]connectrules.Link, error) {
-			return append(canonLinks(canon, rule, term), page[key]...), nil
-		})
+		key := linkKey(string(b.TypeKey), connectrules.Term(b.Terms))
+		filed := func() (*connectrules.Links, error) {
+			if links[key] == nil {
+				links[key] = connectrules.NewLinks(canonByKey[key])
+			}
+			return links[key], nil
+		}
+		res, _ := connectrules.Decide(rule, b.Terms, values, filed)
 		c := Connection{BridgeID: b.ID}
 		switch res.Decision {
 		case connectrules.DecisionFiles:
 			c.Outcome = ConnectionFiles
-			if len(values) > 1 && rule.IsAcyclic(term) {
-				page[key] = append(page[key], connectrules.Link{From: values[0][0].Record, To: values[1][0].Record})
+			if res.Link != nil {
+				links[key].Add(*res.Link)
 			}
 		case connectrules.DecisionWaits:
 			c.Outcome = ConnectionOutcome(res.Wait)
@@ -104,6 +108,11 @@ func Connections(bridges []PageBridge, ends map[string]EndTarget, canon []CanonE
 		out = append(out, c)
 	}
 	return out
+}
+
+// linkKey names one type and term's set of filed links.
+func linkKey(typeKey string, term vocabkey.BridgeTerm) string {
+	return typeKey + "|" + string(term)
 }
 
 // endValue is the record one Subject lands on, or why it has none. A handle
@@ -121,19 +130,28 @@ func endValue(id []byte, ends map[string]EndTarget) connectrules.Value {
 	return connectrules.Value{Record: "h:" + string(e.HandleID)}
 }
 
-// canonLinks reads the canon's links of the bridge's type and term as
-// directed links between records, from the end of the rule's first endpoint.
-func canonLinks(canon []CanonEdge, rule connectrules.Bridge, term vocabkey.BridgeTerm) []connectrules.Link {
-	var out []connectrules.Link
+// canonLinks reads the canon's links of registered bridge types in one pass,
+// by type and term, as directed links between records, from the end of the
+// rule's first endpoint.
+func canonLinks(canon []CanonEdge) map[string][]connectrules.Link {
+	rules := map[string]connectrules.Bridge{}
+	out := map[string][]connectrules.Link{}
 	for _, e := range canon {
-		if string(e.KeyFrom.Type) != rule.BridgeTypeKey || e.KeyFrom.Term != term {
+		typeKey := string(e.KeyFrom.Type)
+		rule, seen := rules[typeKey]
+		if !seen {
+			rule, _ = connectrules.LookupBridge(typeKey)
+			rules[typeKey] = rule
+		}
+		if len(rule.Endpoints) == 0 {
 			continue
 		}
 		from, to := "h:"+string(e.From), "h:"+string(e.To)
 		if string(e.KeyFrom.End) != rule.Endpoints[0].PropertyKey {
 			from, to = to, from
 		}
-		out = append(out, connectrules.Link{From: from, To: to})
+		key := linkKey(typeKey, e.KeyFrom.Term)
+		out[key] = append(out[key], connectrules.Link{From: from, To: to})
 	}
 	return out
 }

@@ -2,12 +2,13 @@ package connectrules
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-func TestClosesCycle(t *testing.T) {
+func TestLinksClosesCycle(t *testing.T) {
 	chain := []Link{{"a", "b"}, {"b", "c"}}
 	split := []Link{{"a", "b"}, {"a", "c"}}
 	tests := []struct {
@@ -24,11 +25,18 @@ func TestClosesCycle(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := ClosesCycle(tc.edges, tc.from, tc.to); got != tc.want {
+			if got := NewLinks(tc.edges).ClosesCycle(tc.from, tc.to); got != tc.want {
 				t.Fatalf("ClosesCycle = %v, want %v", got, tc.want)
 			}
 		})
 	}
+	t.Run("an added link counts", func(t *testing.T) {
+		s := NewLinks(nil)
+		s.Add(Link{"a", "b"})
+		if !s.ClosesCycle("b", "a") {
+			t.Fatal("a→b was added, so b→a closes a loop")
+		}
+	})
 }
 
 func TestDecide(t *testing.T) {
@@ -38,10 +46,10 @@ func TestDecide(t *testing.T) {
 	rec := func(r string) []Value { return []Value{{Record: r}} }
 	partOf := []vocabkey.BridgeTerm{vocabkey.TermPartOf}
 	boom := errors.New("boom")
-	edges := func(e ...Link) func() ([]Link, error) {
-		return func() ([]Link, error) { return e, nil }
+	edges := func(e ...Link) func() (*Links, error) {
+		return func() (*Links, error) { return NewLinks(e), nil }
 	}
-	never := func() ([]Link, error) {
+	never := func() (*Links, error) {
 		t.Fatal("filed must not be called")
 		return nil, nil
 	}
@@ -50,7 +58,7 @@ func TestDecide(t *testing.T) {
 		b     Bridge
 		terms []vocabkey.BridgeTerm
 		ends  [][]Value
-		filed func() ([]Link, error)
+		filed func() (*Links, error)
 		want  Result
 		err   error
 	}{
@@ -73,15 +81,18 @@ func TestDecide(t *testing.T) {
 		{"typed link with no term", rel, nil, [][]Value{rec("a"), rec("b")}, never,
 			Result{Decision: DecisionIncomplete}, nil},
 		{"role needs no term", part, nil, [][]Value{rec("a"), rec("b")}, never,
-			Result{Decision: DecisionFiles}, nil},
+			Result{Decision: DecisionFiles, Records: []string{"a", "b"}}, nil},
+		{"a filing carries its ends in endpoint order and the link it checked", place, partOf,
+			[][]Value{{{Record: "a"}, {Record: "a"}}, rec("b")}, edges(Link{"c", "d"}),
+			Result{Decision: DecisionFiles, Records: []string{"a", "b"}, Link: &Link{From: "a", To: "b"}}, nil},
 		{"closes part_of", place, partOf, [][]Value{rec("a"), rec("b")}, edges(Link{"b", "a"}),
 			Result{Decision: DecisionCycle}, nil},
 		{"succeeded_by beside part_of", place, []vocabkey.BridgeTerm{vocabkey.TermSucceededBy},
-			[][]Value{rec("a"), rec("b")}, edges(), Result{Decision: DecisionFiles}, nil},
+			[][]Value{rec("a"), rec("b")}, edges(), Result{Decision: DecisionFiles, Records: []string{"a", "b"}, Link: &Link{From: "a", To: "b"}}, nil},
 		{"spouse is not loop-checked", rel, []vocabkey.BridgeTerm{vocabkey.TermSpouse},
-			[][]Value{rec("a"), rec("b")}, never, Result{Decision: DecisionFiles}, nil},
+			[][]Value{rec("a"), rec("b")}, never, Result{Decision: DecisionFiles, Records: []string{"a", "b"}}, nil},
 		{"filed fails", place, partOf, [][]Value{rec("a"), rec("b")},
-			func() ([]Link, error) { return nil, boom }, Result{}, boom},
+			func() (*Links, error) { return nil, boom }, Result{}, boom},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -89,11 +100,19 @@ func TestDecide(t *testing.T) {
 			if !errors.Is(err, tc.err) {
 				t.Fatalf("err = %v, want %v", err, tc.err)
 			}
-			if got != tc.want {
+			if !sameResult(got, tc.want) {
 				t.Fatalf("Decide = %+v, want %+v", got, tc.want)
 			}
 		})
 	}
+}
+
+func sameResult(a, b Result) bool {
+	if a.Decision != b.Decision || a.Endpoint != b.Endpoint || a.Value != b.Value || a.Wait != b.Wait ||
+		!slices.Equal(a.Records, b.Records) || (a.Link == nil) != (b.Link == nil) {
+		return false
+	}
+	return a.Link == nil || *a.Link == *b.Link
 }
 
 func TestTermIsTheLowestKey(t *testing.T) {

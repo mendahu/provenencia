@@ -1,7 +1,9 @@
 package graphalign_test
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -142,5 +144,64 @@ func TestConnectionOutcomesListEveryRefusal(t *testing.T) {
 	}
 	if len(got) != 6 {
 		t.Fatalf("outcomes %v", got)
+	}
+}
+
+// TestConnectionsGrowsWithThePageNotPageTimesCanon: each place connection reads
+// the canon's links of its term, so the work must not be the page's bridges
+// times the canon's edges. At the map's Scale, four times the bridges over one
+// canon costs far less than four times the time.
+func TestConnectionsGrowsWithThePageNotPageTimesCanon(t *testing.T) {
+	const (
+		places    = 6000 // location edges on one place: the canon's bulk
+		hierarchy = 300  // part_of edges
+		bridges   = 50
+		factor    = 4
+		runs      = 5
+	)
+	key := func(typ vocabkey.SubjectType, term vocabkey.BridgeTerm, end vocabkey.PropertyKey) vocabkey.BridgeKey {
+		return vocabkey.BridgeKey{Type: typ, Term: term, End: end}
+	}
+	var canon []graphalign.CanonEdge
+	for i := 0; i < places; i++ {
+		canon = append(canon, graphalign.CanonEdge{
+			From: id(fmt.Sprintf("H-ev-%d", i)), To: id("H-place"),
+			KeyFrom: key(vocabkey.BridgeLocation, "", vocabkey.PropertyEvent),
+			KeyTo:   key(vocabkey.BridgeLocation, "", vocabkey.PropertyPlace),
+		})
+	}
+	for i := 0; i < hierarchy; i++ {
+		canon = append(canon, graphalign.CanonEdge{
+			From: id(fmt.Sprintf("H-p-%d", i)), To: id(fmt.Sprintf("H-p-%d", i+1)),
+			KeyFrom: key(vocabkey.BridgePlaceRelationship, vocabkey.TermPartOf, vocabkey.PropertyFrom),
+			KeyTo:   key(vocabkey.BridgePlaceRelationship, vocabkey.TermPartOf, vocabkey.PropertyTo),
+		})
+	}
+	elapsed := func(n int) time.Duration {
+		var bs []graphalign.PageBridge
+		ends := map[string]graphalign.EndTarget{}
+		for i := 0; i < n; i++ {
+			from, to := fmt.Sprintf("a%d", i), fmt.Sprintf("b%d", i)
+			bs = append(bs, graphalign.PageBridge{
+				ID: id(fmt.Sprintf("b%06d", i)), TypeKey: vocabkey.BridgePlaceRelationship,
+				Terms: []vocabkey.BridgeTerm{vocabkey.TermPartOf},
+				Ends:  [][][]byte{{id(from)}, {id(to)}},
+			})
+			ends[from] = graphalign.EndTarget{Target: graphalign.TargetNew}
+			ends[to] = graphalign.EndTarget{Target: graphalign.TargetNew}
+		}
+		best := time.Duration(1<<63 - 1)
+		for r := 0; r < runs; r++ {
+			start := time.Now()
+			graphalign.Connections(bs, ends, canon)
+			best = min(best, time.Since(start))
+		}
+		return best
+	}
+	small, large := elapsed(bridges), elapsed(factor*bridges)
+	// The canon is read once, so the larger page costs well under twice the
+	// factor of the smaller; reading it per bridge costs the full factor.
+	if large > small*factor*3/4 {
+		t.Fatalf("%d bridges took %v and %d took %v: the canon is read per bridge", bridges, small, factor*bridges, large)
 	}
 }

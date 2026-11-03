@@ -3,6 +3,7 @@ package promote_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -529,5 +530,35 @@ func TestSaveRefusesAnAssociationAlreadyFiledByItsBridge(t *testing.T) {
 	})
 	if !errors.Is(err, promote.ErrUnsupportedType) {
 		t.Fatalf("err %v, want promote.ErrUnsupportedType", err)
+	}
+}
+
+// TestBridgeFilingReadsDoNotGrowWithTheBridges: one Done that files N place
+// relationships of one term, with one more waiting on an unpromoted place,
+// reads the term's filed links and the term rows a number of times that does
+// not depend on N.
+func TestBridgeFilingReadsDoNotGrowWithTheBridges(t *testing.T) {
+	reads := func(n int) int {
+		w := newBridgeWorld(t)
+		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		canada := w.node("place", "Canada", 0, 0)
+		for i := 0; i < n; i++ {
+			child := w.node("place", fmt.Sprintf("Child %d", i), int64(2+2*i), 0)
+			w.placeRelationship(child, canada, partOf)
+			w.promote(child)
+		}
+		w.placeRelationship(canada, w.node("place", "Elsewhere", 0, 2), partOf)
+		var count int
+		identityclaims.SetReadCounterForTest(func() { count++ })
+		defer identityclaims.SetReadCounterForTest(nil)
+		w.promote(canada)
+		if got := w.handles("place_relationship"); len(got) != n {
+			t.Fatalf("%d bridges filed %d associations", n, len(got))
+		}
+		return count
+	}
+	few, many := reads(3), reads(12)
+	if few != many {
+		t.Fatalf("3 bridges read %d times and 12 read %d: the reads grow with the bridges", few, many)
 	}
 }

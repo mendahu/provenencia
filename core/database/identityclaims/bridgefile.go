@@ -49,8 +49,9 @@ func FileEvidenceGraphBridgesTx(tx *sql.Tx, graphID []byte) (assocIDs [][]byte, 
 
 func fileHeads(tx *sql.Tx, bridges []bridgeHead) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	seen := map[string]bool{}
+	pass := &filePass{tx: tx, links: map[string]*connectrules.Links{}, terms: map[string]*bridgeTerm{}}
 	for _, b := range bridges {
-		id, ch, filed, err := fileBridge(tx, b)
+		id, ch, filed, err := pass.fileBridge(b)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -153,10 +154,35 @@ type endpoint struct {
 // unpromoted is the wait code for a value Subject with no accepted claim.
 const unpromoted = "unpromoted"
 
+// readCount, when set, is called once for each read of filed links or term
+// rows. Tests only.
+var readCount func()
+
+// SetReadCounterForTest counts the filed-link and term reads a filing pass
+// makes. fn nil stops counting. Tests only.
+func SetReadCounterForTest(fn func()) { readCount = fn }
+
+func countRead() {
+	if readCount != nil {
+		readCount()
+	}
+}
+
+// filePass is the reads one filing pass shares: each type and term's filed
+// links, read once on first need and added to as the pass files, and each
+// term row by id.
+type filePass struct {
+	tx    *sql.Tx
+	links map[string]*connectrules.Links
+	// terms holds a term row by id; nil for an id with no row.
+	terms map[string]*bridgeTerm
+}
+
 // fileBridge claims one bridge onto its association. filed is false when the
 // bridge waits (an end is unpromoted, or it is already filed) or when
 // connectrules.Decide refuses it (a self-link, a loop, an incomplete bridge).
-func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.Change, filed bool, err error) {
+func (p *filePass) fileBridge(b bridgeHead) (assocID []byte, changes []rowchange.Change, filed bool, err error) {
+	tx := p.tx
 	rule, ok := connectrules.LookupBridge(b.typeKey)
 	if !ok || len(rule.Endpoints) == 0 {
 		return nil, nil, false, nil
@@ -182,7 +208,7 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 			return nil, nil, false, err
 		}
 	}
-	terms, err := bridgeTerms(tx, obs, rule.Disambiguation)
+	terms, err := p.bridgeTerms(obs, rule.Disambiguation)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -192,8 +218,16 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 	}
 	term := connectrules.Term(keys)
 
-	res, err := connectrules.Decide(rule, keys, values, func() ([]connectrules.Link, error) {
-		return filedLinks(tx, rule, string(term))
+	linkKey := b.typeKey + "|" + string(term)
+	res, err := connectrules.Decide(rule, keys, values, func() (*connectrules.Links, error) {
+		if p.links[linkKey] == nil {
+			filed, err := filedLinks(tx, rule, string(term))
+			if err != nil {
+				return nil, err
+			}
+			p.links[linkKey] = connectrules.NewLinks(filed)
+		}
+		return p.links[linkKey], nil
 	})
 	if err != nil {
 		return nil, nil, false, err
@@ -201,10 +235,14 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 	if res.Decision != connectrules.DecisionFiles {
 		return nil, nil, false, nil
 	}
+	if res.Link != nil {
+		// A later bridge of this pass is checked against the link filed here.
+		p.links[linkKey].Add(*res.Link)
+	}
 
 	ends := make([]endpoint, 0, len(rule.Endpoints))
 	for i, ep := range rule.Endpoints {
-		ends = append(ends, endpoint{propertyKey: ep.PropertyKey, entityID: []byte(values[i][0].Record)})
+		ends = append(ends, endpoint{propertyKey: ep.PropertyKey, entityID: []byte(res.Records[i])})
 	}
 	var termID []byte
 	directed := false
@@ -246,6 +284,7 @@ func fileBridge(tx *sql.Tx, b bridgeHead) (assocID []byte, changes []rowchange.C
 // filedLinks reads every filed link of the rule's bridge type and term as
 // from→to entity edges, for the loop check. The first endpoint is the from end.
 func filedLinks(tx *sql.Tx, rule connectrules.Bridge, termKey string) ([]connectrules.Link, error) {
+	countRead()
 	rows, err := tx.Query(`
 		SELECT ic_from.entity_id, ic_to.entity_id
 		FROM identity_claims ic
@@ -352,7 +391,7 @@ type bridgeTerm struct {
 // bridgeTerms reads every disambiguation term the bridge records, any
 // polarity, with its key and directed bit. A term id with no property_terms
 // row is skipped.
-func bridgeTerms(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) ([]bridgeTerm, error) {
+func (p *filePass) bridgeTerms(obs map[string][]obsValue, propertyKey string) ([]bridgeTerm, error) {
 	if !connectrules.HasDisambiguation(propertyKey) {
 		return nil, nil
 	}
@@ -361,19 +400,37 @@ func bridgeTerms(tx *sql.Tx, obs map[string][]obsValue, propertyKey string) ([]b
 		if len(v.termID) != 16 {
 			continue
 		}
-		t := bridgeTerm{id: v.termID}
-		var bit int
-		err := tx.QueryRow(`SELECT directed, key FROM property_terms WHERE id = ?`, v.termID).Scan(&bit, &t.key)
-		if err == sql.ErrNoRows {
-			continue
-		}
+		t, err := p.term(v.termID)
 		if err != nil {
 			return nil, err
 		}
-		t.directed = bit != 0
-		out = append(out, t)
+		if t == nil {
+			continue
+		}
+		out = append(out, *t)
 	}
 	return out, nil
+}
+
+// term reads one property_terms row once per pass; nil when the id has none.
+func (p *filePass) term(id []byte) (*bridgeTerm, error) {
+	if t, ok := p.terms[string(id)]; ok {
+		return t, nil
+	}
+	countRead()
+	t := bridgeTerm{id: id}
+	var bit int
+	err := p.tx.QueryRow(`SELECT directed, key FROM property_terms WHERE id = ?`, id).Scan(&bit, &t.key)
+	if err == sql.ErrNoRows {
+		p.terms[string(id)] = nil
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	t.directed = bit != 0
+	p.terms[string(id)] = &t
+	return &t, nil
 }
 
 func findAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string, termID []byte, symmetric bool) ([]byte, error) {
