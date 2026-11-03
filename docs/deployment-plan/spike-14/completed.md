@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-17 — Vocabulary writes return their effects; dead RPCs go
+
+**Landed 2026-11-03** in [#694](https://github.com/mendahu/provenencia/pull/694). Every vocabulary write (Source types, metadata fields, Properties, terms, bindings) returns `WriteEffects`, and the effects name one of two lists, `source_vocabulary` or `property_vocabulary`, in place of `vocabulary`; a term write also names its Property's `property_terms` read. Each label-holding key follows its family through its descriptor, so a rename reaches the pages that show the label and no others, and nine `CatalogMutation` cases and `conclusionTriggers` are gone. `TestEveryAuditedWriteReturnsEffects` runs with no allow-list, the type–field join drops its unused `user_id`, the Source types and Metadata headers count their rows, and the unused vocabulary counts go. Eight RPCs with no Swift caller (`RemoveInstallIdentity`, `EnsureFileThumbnail`, `ListSubjectTypes`, `ClearSubjectPosition`, `ListProperties`, `ListSubjectTypeProperties`, `ListPlaceableSubjectTypes`, `GetSubjectTypePresentation`) are deleted with their handlers and Swift methods, and their numbers are reserved. Version 0.2.11. Audit A-29, A-35.
+
 ## S14-27 — Every write reaches its keys through their descriptors
 
 **Landed 2026-11-03** in [#693](https://github.com/mendahu/provenencia/pull/693). A cached read now follows a catalog-wide list or graph structure through its own descriptor (`.list(…)`, `.structure` entries on `refreshes`), as it follows handles, graphs and keyed reads, so `CatalogQueryRegistry` keeps only what a mutation names. The Properties workspace declares the three entries it reloads on, the `lists` switch and the `.deletedSubject` mutation are gone (a Subject delete reloads Observation `usedBy` from its `property_usage` effect, pinned by a Go test), and the id-reading constructors refuse a catalog-wide slot. No reload a researcher sees changes.
