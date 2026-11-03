@@ -295,3 +295,44 @@ func TestProposePromoteGraphAlignment(t *testing.T) {
 		},
 	})
 }
+
+// The proposal sends each connection's outcome and the Subject it waits for:
+// a participation whose event row is set to Skip waits, skipped, for the event.
+// A scope id that does not parse is an invalid argument.
+func TestProposeSendsEachConnection(t *testing.T) {
+	dir, userID, sourceID, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+	var bridge engine.CreateCitedBridgeResponse
+	mustRPC(t, CreateCitedBridge, &engine.CreateCitedBridgeRequest{
+		ProjectDir: dir, UserId: userID, FromSubjectId: personID, ToSubjectId: eventID,
+		BridgeTypeKey: "participation", ArtifactId: artifactID, LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{
+			{PropertyId: personProp, ValueSubjectId: personID},
+			{PropertyId: eventProp, ValueSubjectId: eventID},
+			{PropertyId: roleProp, ValueTermId: roleTerm},
+		},
+	}, &bridge)
+	graphID := soleGraphID(t, dir, sourceID)
+
+	var resp engine.ProposePromoteGraphAlignmentResponse
+	mustRPC(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{
+		ProjectDir: dir, GraphId: graphID,
+		Fixed: []*engine.PromoteGraphAlignmentFixed{
+			{SubjectId: personID, Target: "new"},
+			{SubjectId: eventID, Target: "skip"},
+		},
+	}, &resp)
+	if len(resp.GetConnections()) != 1 {
+		t.Fatalf("connections %+v", resp.GetConnections())
+	}
+	got := resp.GetConnections()[0]
+	if got.GetBridgeSubjectId() != bridge.GetSubject().GetId() || got.GetOutcome() != "skipped" || got.GetWaitingSubjectId() != eventID {
+		t.Fatalf("connection %+v, want %s skipped waiting for %s", got, bridge.GetSubject().GetId(), eventID)
+	}
+
+	err := rpc(t, ProposePromoteGraphAlignment, &engine.ProposePromoteGraphAlignmentRequest{
+		ProjectDir: dir, GraphId: graphID, OnlySubjectId: "nope",
+	}, &resp)
+	if err == nil {
+		t.Fatal("a scope id that is not an id was accepted")
+	}
+}

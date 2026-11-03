@@ -24,10 +24,14 @@ func ProposePromoteGraphAlignment(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	only, err := optionalID(req.GetOnlySubjectId())
+	if err != nil {
+		return nil, err
+	}
 
 	var out *engine.ProposePromoteGraphAlignmentResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		prop, rev, err := promotealign.Propose(c, graphID, fixed)
+		prop, rev, err := promotealign.Propose(c, graphID, fixed, only)
 		if err != nil {
 			return err
 		}
@@ -107,6 +111,13 @@ func proposalProto(c *database.Catalog, prop graphalign.Proposal) (*engine.Propo
 			row.Summary = conclusionSummaryProto(summaries, r.Kind, start.HandleID, nil)
 		}
 		out.Rows = append(out.Rows, row)
+	}
+	for _, c := range prop.Connections {
+		out.Connections = append(out.Connections, &engine.PromoteGraphAlignmentConnection{
+			BridgeSubjectId:  database.UUIDString(c.BridgeID),
+			Outcome:          string(c.Outcome),
+			WaitingSubjectId: database.UUIDString(c.Waiting),
+		})
 	}
 	return out, nil
 }

@@ -5649,6 +5649,10 @@ public nonisolated struct Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequ
 
   public var graphID: String = String()
 
+  /// The one Subject the page is open on; empty when it promotes all. Every
+  /// other unpromoted Subject is off the page, so a connection waits for it.
+  public var onlySubjectID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -5752,6 +5756,25 @@ public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentRow: Sendab
   fileprivate var _summary: Provenencia_Engine_V1_ConclusionSummary? = nil
 }
 
+/// One unfiled bridge and what Done will do with it. outcome is a code: files,
+/// skipped, unset, not_on_page, self_link or cycle. waiting_subject_id is the
+/// Subject a skipped, unset or not_on_page outcome waits for; empty otherwise.
+public nonisolated struct Provenencia_Engine_V1_PromoteGraphAlignmentConnection: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var bridgeSubjectID: String = String()
+
+  public var outcome: String = String()
+
+  public var waitingSubjectID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5761,6 +5784,9 @@ public nonisolated struct Provenencia_Engine_V1_ProposePromoteGraphAlignmentResp
 
   /// Audit revision the proposal was read at. Done sends it back as seen_revision.
   public var revision: Int64 = 0
+
+  /// Each unfiled bridge's outcome, in bridge Subject id order.
+  public var connections: [Provenencia_Engine_V1_PromoteGraphAlignmentConnection] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -16954,7 +16980,7 @@ nonisolated extension Provenencia_Engine_V1_DerivedRow: SwiftProtobuf.Message, S
 
 nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProposePromoteGraphAlignmentRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{2}\u{2}fixed\0\u{3}graph_id\0\u{b}source_id\0\u{c}\u{2}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{2}\u{2}fixed\0\u{3}graph_id\0\u{3}only_subject_id\0\u{b}source_id\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -16965,6 +16991,7 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest:
       case 1: try { try decoder.decodeSingularStringField(value: &self.projectDir) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.fixed) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.graphID) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.onlySubjectID) }()
       default: break
       }
     }
@@ -16980,6 +17007,9 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest:
     if !self.graphID.isEmpty {
       try visitor.visitSingularStringField(value: self.graphID, fieldNumber: 4)
     }
+    if !self.onlySubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.onlySubjectID, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -16987,6 +17017,7 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentRequest:
     if lhs.projectDir != rhs.projectDir {return false}
     if lhs.fixed != rhs.fixed {return false}
     if lhs.graphID != rhs.graphID {return false}
+    if lhs.onlySubjectID != rhs.onlySubjectID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -17170,9 +17201,49 @@ nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentRow: SwiftProto
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_PromoteGraphAlignmentConnection: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PromoteGraphAlignmentConnection"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}bridge_subject_id\0\u{1}outcome\0\u{3}waiting_subject_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.bridgeSubjectID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.outcome) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.waitingSubjectID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.bridgeSubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.bridgeSubjectID, fieldNumber: 1)
+    }
+    if !self.outcome.isEmpty {
+      try visitor.visitSingularStringField(value: self.outcome, fieldNumber: 2)
+    }
+    if !self.waitingSubjectID.isEmpty {
+      try visitor.visitSingularStringField(value: self.waitingSubjectID, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_PromoteGraphAlignmentConnection, rhs: Provenencia_Engine_V1_PromoteGraphAlignmentConnection) -> Bool {
+    if lhs.bridgeSubjectID != rhs.bridgeSubjectID {return false}
+    if lhs.outcome != rhs.outcome {return false}
+    if lhs.waitingSubjectID != rhs.waitingSubjectID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ProposePromoteGraphAlignmentResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0\u{1}revision\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0\u{1}revision\0\u{1}connections\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17182,6 +17253,7 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
       case 2: try { try decoder.decodeSingularInt64Field(value: &self.revision) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.connections) }()
       default: break
       }
     }
@@ -17194,12 +17266,16 @@ nonisolated extension Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse
     if self.revision != 0 {
       try visitor.visitSingularInt64Field(value: self.revision, fieldNumber: 2)
     }
+    if !self.connections.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.connections, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse, rhs: Provenencia_Engine_V1_ProposePromoteGraphAlignmentResponse) -> Bool {
     if lhs.rows != rhs.rows {return false}
     if lhs.revision != rhs.revision {return false}
+    if lhs.connections != rhs.connections {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

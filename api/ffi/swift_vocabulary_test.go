@@ -417,6 +417,16 @@ func partTypeKeys() []string {
 	return out
 }
 
+// connectionOutcomes is every Promote connection outcome code; Swift's
+// PromoteConnectionOutcome decodes the proposal's connections with them.
+func connectionOutcomes() []string {
+	var out []string
+	for _, o := range graphalign.ConnectionOutcomes() {
+		out = append(out, string(o))
+	}
+	return out
+}
+
 // readStrings is every keyed read's wire key.
 func readStrings() []string {
 	var out []string
@@ -458,6 +468,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			name: "promote reasons", path: swiftVocabulary, enum: "PromoteMoveReason", re: wireCase,
 			want: sorted(string(graphalign.ReasonNeighborPlaced), string(graphalign.ReasonNeighborMoved),
 				string(graphalign.ReasonNeighborReleased)),
+		},
+		{
+			name: "promote connection outcomes", path: swiftVocabulary, enum: "PromoteConnectionOutcome", re: wireCase,
+			want: sorted(connectionOutcomes()...),
 		},
 		{
 			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
@@ -535,7 +549,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		})
 	}
 	t.Run("states and reasons tolerate a value this build doesn't know", func(t *testing.T) {
-		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteMoveReason"} {
+		for _, enum := range []string{"ReconciledState", "ReconcilerReason", "PromoteMoveReason", "PromoteConnectionOutcome"} {
 			if !unrecogniz.MatchString(swiftEnumBody(t, swiftVocabulary, enum)) {
 				t.Fatalf("%s has no unrecognized case", enum)
 			}
