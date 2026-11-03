@@ -107,4 +107,3 @@ Today `.createdPropertyTerm(propertyId:)` names one key; `CatalogPropertyTerm` h
 
 ### X-5 · nit · Status still read Blocked
 **Answer:** Fixed — Status `Planned`.
-
