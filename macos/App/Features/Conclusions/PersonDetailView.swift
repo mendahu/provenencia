@@ -46,6 +46,7 @@ private struct PersonDetailSections: View {
                     title: L10n.Conclusions.galleryEmptyTitle,
                     message: L10n.string(L10n.Conclusions.galleryEmptyMessage)
                 )
+                .pvKeepsPageBand()
             } else {
                 ConclusionGallerySection(
                     projectDir: context.projectDir,

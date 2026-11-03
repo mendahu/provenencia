@@ -424,7 +424,7 @@ struct PersonDetailTests {
             #expect(section.queryKey(project: project, entityId: "e1") == nil)
         }
         for section in ConclusionPageSection.allCases {
-            #expect(section.fillsWidth == (section == .timeline))
+            #expect(section.fillsWidth == (section == .timeline || section == .gallery))
         }
     }
 
