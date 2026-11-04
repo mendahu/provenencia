@@ -45,7 +45,7 @@ struct ProvenanceSheet: View {
                     PVDivider()
                     ScrollView {
                         ReconciliationRecordRows(
-                            groups: row.recordGroups, style: row.style, provenance: .sheet,
+                            groups: row.recordGroups, face: row.face, provenance: .sheet,
                             open: open, widthClass: widthClass
                         )
                     }

@@ -55,7 +55,7 @@ struct PlaceDetailContent: ConclusionDetailBody {
         let label = L10n.string(L10n.Conclusions.placeNames)
         let empty = L10n.string(L10n.Conclusions.emptyPlaceNames)
         guard let field, !field.outcomes.isEmpty else {
-            return .empty(id: "names", label: label, style: .text, emptyText: empty)
+            return .empty(id: "names", label: label, face: .text, emptyText: empty)
         }
         var row = ReconciledValueRowModel(field: field, locale: locale)
         row.label = label

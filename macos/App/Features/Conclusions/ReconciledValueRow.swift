@@ -49,7 +49,7 @@ struct ReconciledValueRow: View {
                 ReconciliationReasoningView(
                     title: model.whyTitle,
                     label: model.label,
-                    style: model.style,
+                    face: model.face,
                     groups: model.recordGroups
                 )
                 .padding(.leading, Self.disclosureInset)
@@ -145,7 +145,7 @@ struct ReconciledValueRow: View {
                             .foregroundStyle(PVColor.textFaint)
                             .frame(width: 24, alignment: .leading)
                         Text(other.text)
-                            .font(Self.font(for: model.style))
+                            .font(model.face.valueFont)
                             .foregroundStyle(PVColor.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(other.support)
@@ -171,12 +171,12 @@ struct ReconciledValueRow: View {
         if !model.listedValues.isEmpty {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 ForEach(model.listedValues) { value in
-                    valueLine(value, style: model.style)
+                    valueLine(value, face: model.face)
                 }
             }
         } else if let lead = model.lead {
             Text(lead)
-                .font(font(for: model.style))
+                .font(model.face.valueFont)
                 .foregroundStyle(PVColor.textPrimary)
                 .textSelection(.enabled)
         } else {
@@ -187,23 +187,15 @@ struct ReconciledValueRow: View {
     }
 
     /// One value with its Source count beside it.
-    static func valueLine(_ value: ReconciledValueRowModel.OtherValue, style: ReconciledValueRowModel.ValueStyle) -> some View {
+    static func valueLine(_ value: PVProvenanceSheetContent.Value, face: PVProvenanceFace) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
             Text(verbatim: value.text)
-                .font(font(for: style))
+                .font(face.valueFont)
                 .foregroundStyle(PVColor.textPrimary)
                 .textSelection(.enabled)
             Text(verbatim: value.support)
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    static func font(for style: ReconciledValueRowModel.ValueStyle) -> Font {
-        switch style {
-        case .text: PVFont.body(size: PVTypeScale.body)
-        case .date: PVFont.mono(size: 15)
-        case .place: PVFont.body(size: PVTypeScale.body, italic: true)
         }
     }
 

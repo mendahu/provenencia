@@ -8,7 +8,7 @@ import SwiftUI
 struct ReconciliationReasoningView: View {
     let title: String
     let label: String
-    let style: ReconciledValueRowModel.ValueStyle
+    let face: PVProvenanceFace
     let groups: [ReconciliationRecordGroup]
 
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -24,7 +24,7 @@ struct ReconciliationReasoningView: View {
                     .padding(.bottom, PVSpacing.space3)
                     .accessibilityAddTraits(.isHeader)
                 ReconciliationRecordRows(
-                    groups: groups, style: style, provenance: .why,
+                    groups: groups, face: face, provenance: .why,
                     open: { navigation.go(to: $0) }
                 )
                 .padding(.horizontal, PVSpacing.space5)

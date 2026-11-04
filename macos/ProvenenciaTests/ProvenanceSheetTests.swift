@@ -82,7 +82,7 @@ struct ProvenanceSheetTests {
             )
         }
         let row = ReconciledValueRowModel.derived(
-            id: "life.deathPlace", label: "Death place", style: .place, lead: "Toronto", emptyText: "", mixed: true,
+            id: "life.deathPlace", label: "Death place", face: .place, lead: "Toronto", emptyText: "", mixed: true,
             owners: [owner(toronto, "Toronto", "t"), owner(yorkville, "Yorkville", "y")], shownOwnerID: "pl1",
             kind: .deathPlace, locale: en
         )
@@ -105,7 +105,7 @@ struct ProvenanceSheetTests {
         }
         // York is the only Place: no group line, and the summary counts records.
         let only = ReconciledValueRowModel.derived(
-            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: false,
+            id: "life.birthPlace", label: "Birth place", face: .place, lead: "York", emptyText: "", mixed: false,
             owners: [owner("lk1", "a"), owner("lk2", "b")], shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
         #expect(only.recordGroups.count == 1 && only.recordGroups[0].owner == nil)
@@ -114,7 +114,7 @@ struct ProvenanceSheetTests {
 
         // York by two links and Leeds: one group each, York's holding both links' records in link order.
         let both = ReconciledValueRowModel.derived(
-            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            id: "life.birthPlace", label: "Birth place", face: .place, lead: "York", emptyText: "", mixed: true,
             owners: [owner("lk1", "a"), owner("lk3", "c", place: leeds, "Leeds"), owner("lk2", "b")],
             shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
@@ -141,7 +141,7 @@ struct ProvenanceSheetTests {
             )
         }
         let row = ReconciledValueRowModel.derived(
-            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            id: "life.birthPlace", label: "Birth place", face: .place, lead: "York", emptyText: "", mixed: true,
             owners: [
                 owner("lk1", [D.outcome("a", "kept", source: "s1"), D.outcome("d", "lost", rank: nil, source: "s1")]),
                 owner("lk2", [D.outcome("b", "kept", source: "s2")]),
@@ -160,7 +160,7 @@ struct ProvenanceSheetTests {
 
         // Two links whose kept records cite the same Source: one Source, not two.
         let shared = ReconciledValueRowModel.derived(
-            id: "life.birthPlace", label: "Birth place", style: .place, lead: "York", emptyText: "", mixed: true,
+            id: "life.birthPlace", label: "Birth place", face: .place, lead: "York", emptyText: "", mixed: true,
             owners: [
                 owner("lk1", [D.outcome("a", "kept", source: "s1"), D.outcome("d", "lost", rank: nil, source: "s1")]),
                 owner("lk2", [D.outcome("b", "kept", source: "s1")]),
@@ -195,16 +195,16 @@ struct ProvenanceSheetTests {
             ))
         }
         let two = ReconciledValueRowModel.derived(
-            id: "life.birthDate", label: "Birth date", style: .date, lead: "1822", emptyText: "", mixed: true,
+            id: "life.birthDate", label: "Birth date", face: .date, lead: "1822", emptyText: "", mixed: true,
             owners: [owner(first, ["a", "b", "c"]), owner(second, ["d"])], shownOwnerID: "ev1",
             kind: .birthDate, locale: en
         )
         #expect(two.provenanceSummary == "4 records from 2 birth events")
         let one = ReconciledValueRowModel.derived(
-            id: "life.birthDate", label: "Birth date", style: .date, lead: "1822", emptyText: "", mixed: false,
+            id: "life.birthDate", label: "Birth date", face: .date, lead: "1822", emptyText: "", mixed: false,
             owners: [owner(first, ["a", "b"])], shownOwnerID: "ev1", kind: .birthDate, locale: en
         )
         #expect(one.provenanceSummary == "2 records")
-        #expect(ReconciledValueRowModel.empty(id: "x", label: "X", style: .text, emptyText: "").provenanceSummary == nil)
+        #expect(ReconciledValueRowModel.empty(id: "x", label: "X", face: .text, emptyText: "").provenanceSummary == nil)
     }
 }

@@ -14,7 +14,7 @@ import SwiftUI
 /// adding it won't relayout the table (PD-8).
 struct ReconciliationRecordRows: View {
     let groups: [ReconciliationRecordGroup]
-    let style: ReconciledValueRowModel.ValueStyle
+    let face: PVProvenanceFace
     let provenance: ReconciledValueRow.Provenance
     /// Opens a record's place. The sheet closes itself first (D-5).
     let open: (WorkspaceLocation) -> Void
@@ -160,7 +160,7 @@ struct ReconciliationRecordRows: View {
 
     private func readAs(_ record: ReconciliationRecord) -> some View {
         Text(record.readAs)
-            .font(readAsFont(record))
+            .font(face.readAsFont(isPhrase: record.readAsIsPhrase))
             .foregroundStyle(record.counted ? PVColor.textPrimary : PVColor.textSecondary)
     }
 
@@ -198,7 +198,7 @@ struct ReconciliationRecordRows: View {
         Group {
             switch heading {
             case .value(let value):
-                ReconciledValueRow.valueLine(value, style: style)
+                ReconciledValueRow.valueLine(value, face: face)
                     .accessibilityElement(children: .combine)
             case .otherRecords:
                 Text(L10n.Conclusions.provenanceOtherRecords)
@@ -219,17 +219,6 @@ struct ReconciliationRecordRows: View {
             .pvMicroCaps()
             .foregroundStyle(PVColor.textMuted)
             .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func readAsFont(_ record: ReconciliationRecord) -> Font {
-        if record.readAsIsPhrase {
-            return PVFont.body(size: PVTypeScale.bodySmall, italic: true)
-        }
-        switch style {
-        case .text: return PVFont.body(size: PVTypeScale.bodySmall)
-        case .date: return PVFont.mono(size: PVTypeScale.caption)
-        case .place: return PVFont.body(size: PVTypeScale.bodySmall, italic: true)
-        }
     }
 
     /// The sheet's column headings, drawn above its scroll with the same widths as the table.

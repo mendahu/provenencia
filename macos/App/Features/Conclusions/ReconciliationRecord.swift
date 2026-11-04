@@ -97,7 +97,7 @@ struct ReconciliationRecordGroup: Equatable, Identifiable {
     struct ValueGroup: Equatable {
         enum Heading: Equatable {
             /// The displayed value the records went into.
-            case value(ReconciledValueRowModel.OtherValue)
+            case value(PVProvenanceSheetContent.Value)
             /// Records that count under no displayed value.
             case otherRecords
         }

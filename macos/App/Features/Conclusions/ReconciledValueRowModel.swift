@@ -3,15 +3,6 @@ import Foundation
 /// One field row on a Conclusion detail page (board S9-D5
 /// `ReconciledValueRow`): label · lead value · state · support · disclosures.
 struct ReconciledValueRowModel: Equatable, Identifiable {
-    enum ValueStyle: Equatable {
-        /// Names, text, terms, integers.
-        case text
-        /// Mono, like every date in the app.
-        case date
-        /// Italic, like every place.
-        case place
-    }
-
     /// The handle a derived value is read from.
     struct Opens: Equatable {
         var location: WorkspaceLocation
@@ -19,16 +10,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         var label: String
     }
 
-    struct OtherValue: Equatable, Identifiable {
-        var rank: Int
-        var text: String
-        var support: String
-        var id: Int { rank }
-    }
-
     var id: String
     var label: String
-    var style: ValueStyle
+    var face: PVProvenanceFace
     /// The lead value; nil when the field is empty.
     var lead: String?
     var emptyText: String
@@ -36,10 +20,10 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     var count: String?
     var against: String?
     var otherValuesLabel: String?
-    var otherValues: [OtherValue]
+    var otherValues: [PVProvenanceSheetContent.Value]
     /// Every displayed value when the field keeps several (`multiple`). Empty
     /// otherwise, including a mixed field, which still discloses the rest.
-    var listedValues: [OtherValue]
+    var listedValues: [PVProvenanceSheetContent.Value]
     var whyTitle: String
     /// The Why's records, grouped by the entity that owns them.
     var recordGroups: [ReconciliationRecordGroup]
@@ -63,14 +47,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
         id = field.propertyID
         label = field.label
-        style = field.valueType == .date ? .date : .text
+        face = field.valueType == .date ? .date : .text
         self.lead = lead
         emptyText = ReconciledValueDisplay.emptyText(propertyKey: field.propertyKey)
         badge = ReconciledValueDisplay.stateBadge(field)
         count = ReconciledValueDisplay.countLine(field)
         against = ReconciledValueDisplay.againstLine(field)
         otherValuesLabel = ReconciledValueDisplay.otherValuesLabel(field)
-        otherValues = ReconciledValueDisplay.otherValues(field).map { Self.otherValue($0, propertyKey: field.propertyKey, locale: locale, orders: orders) }
+        otherValues = ReconciledValueDisplay.otherValues(field).map { PVProvenanceSheetContent.value($0, propertyKey: field.propertyKey, locale: locale, orders: orders) }
         listedValues = listed
         whyTitle = listed.count > 1
             ? L10n.Conclusions.whyThese(listed.count, label: field.label)
@@ -99,20 +83,6 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         return parts.dropFirst().reduce(first) { L10n.Conclusions.provenanceSummaryJoin($0, $1) }
     }
 
-    /// A displayed value as a line: its text and its Source count.
-    static func otherValue(
-        _ value: CatalogReconciledValue,
-        propertyKey: String,
-        locale: Locale,
-        orders: NameFormatOrders
-    ) -> OtherValue {
-        OtherValue(
-            rank: value.rank,
-            text: ReconciledValueDisplay.string(for: value.value, propertyKey: propertyKey, locale: locale, orders: orders),
-            support: L10n.Conclusions.sourceCount(value.support)
-        )
-    }
-
     /// A group's records in runs of equal `groupRank`, in the order Go sent them.
     /// Headings show when the group has two or more runs, and over a group whose
     /// only run counts under no displayed value; one value run needs none.
@@ -136,7 +106,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             if !showsHeadings {
                 heading = nil
             } else if run.rank > 0, let value = field.displayedValues.first(where: { $0.rank == run.rank }) {
-                heading = .value(otherValue(value, propertyKey: field.propertyKey, locale: locale, orders: orders))
+                heading = .value(PVProvenanceSheetContent.value(value, propertyKey: field.propertyKey, locale: locale, orders: orders))
             } else {
                 heading = .otherRecords
             }
@@ -153,7 +123,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         locale: Locale,
         orders: NameFormatOrders
     ) -> [ReconciliationRecordGroup.ValueGroup] {
-        var valueRuns: [(value: OtherValue, support: Int, outcomes: [CatalogReconcilerOutcome], records: [ReconciliationRecord])] = []
+        var valueRuns: [(value: PVProvenanceSheetContent.Value, support: Int, outcomes: [CatalogReconcilerOutcome], records: [ReconciliationRecord])] = []
         var other: [ReconciliationRecord] = []
         for member in members {
             var counted: Set<String> = []
@@ -170,7 +140,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
                     other += run.records
                     continue
                 }
-                let shown = otherValue(value, propertyKey: member.field.propertyKey, locale: locale, orders: orders)
+                let shown = PVProvenanceSheetContent.value(value, propertyKey: member.field.propertyKey, locale: locale, orders: orders)
                 let outcomes = member.field.outcomes.filter { $0.groupRank == run.rank }
                 if let index = valueRuns.firstIndex(where: { $0.value.text == shown.text }) {
                     valueRuns[index].records += run.records
@@ -200,10 +170,10 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         of field: CatalogConclusionField,
         locale: Locale,
         orders: NameFormatOrders
-    ) -> [OtherValue] {
+    ) -> [PVProvenanceSheetContent.Value] {
         guard field.state == .multiple else { return [] }
         return field.displayedValues.compactMap { value in
-            let listed = Self.otherValue(value, propertyKey: field.propertyKey, locale: locale, orders: orders)
+            let listed = PVProvenanceSheetContent.value(value, propertyKey: field.propertyKey, locale: locale, orders: orders)
             return listed.text.isEmpty ? nil : listed
         }
     }
@@ -224,7 +194,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         let spoken = shown.map { L10n.DesignSystem.spokenJoin(label, $0) }
             ?? ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         return Self(
-            id: id, label: label, style: .date, lead: shown, emptyText: emptyText,
+            id: id, label: label, face: .date, lead: shown, emptyText: emptyText,
             badge: nil, count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
             listedValues: [],
             whyTitle: shown.map { L10n.Conclusions.whyTitle($0) } ?? "",
@@ -242,7 +212,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     static func derived(
         id: String,
         label: String,
-        style: ValueStyle,
+        face: PVProvenanceFace,
         lead: String,
         emptyText: String,
         mixed: Bool,
@@ -282,7 +252,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             return ReconciliationRecordGroup(
                 owner: ownerIDs.count > 1 || ownerID != shownOwnerID
                     ? Self.ownerLine(
-                        members[0], style: style, shown: ownerIDs.count > 1 && ownerID == shownOwnerID,
+                        members[0], face: face, shown: ownerIDs.count > 1 && ownerID == shownOwnerID,
                         locale: locale, orders: orders
                     )
                     : nil,
@@ -303,7 +273,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             summary = L10n.Conclusions.provenanceRecordCount(recordCount)
         }
         var row = Self(
-            id: id, label: label, style: style, lead: shown, emptyText: emptyText,
+            id: id, label: label, face: face, lead: shown, emptyText: emptyText,
             badge: mixed && shown != nil ? .mixed : nil,
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [],
             whyTitle: "", recordGroups: groups, accessibilityLabel: spoken, provenanceSummary: summary
@@ -318,7 +288,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     /// names of the Place its link names (else its label or ref).
     private static func ownerLine(
         _ owner: CatalogOwnerField,
-        style: ValueStyle,
+        face: PVProvenanceFace,
         shown: Bool,
         locale: Locale,
         orders: NameFormatOrders
@@ -356,9 +326,9 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     }
 
     /// A row with nothing behind it yet.
-    static func empty(id: String, label: String, style: ValueStyle, emptyText: String) -> Self {
+    static func empty(id: String, label: String, face: PVProvenanceFace, emptyText: String) -> Self {
         Self(
-            id: id, label: label, style: style, lead: nil, emptyText: emptyText, badge: nil, count: nil,
+            id: id, label: label, face: face, lead: nil, emptyText: emptyText, badge: nil, count: nil,
             against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [], whyTitle: "", recordGroups: [],
             accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil),
             provenanceSummary: nil
@@ -366,14 +336,14 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     }
 
     private init(
-        id: String, label: String, style: ValueStyle, lead: String?, emptyText: String,
+        id: String, label: String, face: PVProvenanceFace, lead: String?, emptyText: String,
         badge: ReconciledValueDisplay.StateBadge?, count: String?, against: String?,
-        otherValuesLabel: String?, otherValues: [OtherValue], listedValues: [OtherValue], whyTitle: String,
+        otherValuesLabel: String?, otherValues: [PVProvenanceSheetContent.Value], listedValues: [PVProvenanceSheetContent.Value], whyTitle: String,
         recordGroups: [ReconciliationRecordGroup], accessibilityLabel: String, provenanceSummary: String?
     ) {
         self.id = id
         self.label = label
-        self.style = style
+        self.face = face
         self.lead = lead
         self.emptyText = emptyText
         self.badge = badge

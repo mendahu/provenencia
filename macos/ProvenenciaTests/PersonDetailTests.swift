@@ -55,7 +55,7 @@ struct PersonDetailTests {
         #expect(content.rows.map(\.label) == [
             "Name", "Birth date", "Birth place", "Death date", "Death place", "Occupation", "Birth weight",
         ])
-        #expect(content.rows[1...4].map(\.style) == [.date, .place, .date, .place])
+        #expect(content.rows[1...4].map(\.face) == [.date, .place, .date, .place])
         #expect(content.rows[1...4].map(\.emptyText) == [
             "No birth date recorded", "No birth place recorded", "No death date recorded", "No death place recorded",
         ])
@@ -295,7 +295,7 @@ struct PersonDetailTests {
 
     @Test func aMergedNameRowCarriesItsStateAndWhy() {
         let row = PersonDetailContent(detail: detail()).rows[0]
-        #expect(row.lead == "James Robins" && row.style == .text)
+        #expect(row.lead == "James Robins" && row.face == .text)
         #expect(row.badge == .merged && row.count == "2 Sources" && row.against == nil)
         #expect(row.otherValuesLabel == nil && row.otherValues.isEmpty)
         #expect(row.whyTitle == "Why James Robins")
@@ -324,7 +324,7 @@ struct PersonDetailTests {
         #expect(row.otherValuesLabel == "1 other value")
         #expect(row.otherValues == [.init(rank: 2, text: "labourer", support: "1 Source")])
         let dated = ReconciledValueRowModel(field: D.field("single", key: "d", label: "Date", valueType: "date", [D.value(1, "kept", .date(date))]))
-        #expect(dated.style == .date)
+        #expect(dated.face == .date)
     }
 
     @Test func headerFallsBackNameLabelRef() {
@@ -368,7 +368,7 @@ struct PersonDetailTests {
         #expect(page.lifeLines.map(\.date) == ["1817", "1880"])
         #expect(page.lifeLines.map(\.place) == ["York", "Toronto"])
         #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
-        #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
+        #expect(page.rows[2].lead == "York" && page.rows[2].face == .place)
         #expect(page.rows[4].lead == "Toronto")
         // Derived rows open the Event or Place that owns their Why.
         #expect(page.rows[1].opens?.location == .eventDetail(entityId: "ev1", ref: "EVT-1", title: nil))

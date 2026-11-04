@@ -198,7 +198,7 @@ struct EventDetailTests {
             dateField("date", CatalogDateValueInput(kind: "point", startYear: 1810), id: "d"),
         ]))
         let place = page.rows[1]
-        #expect(place.label == "Place" && place.style == .place && place.lead == nil)
+        #expect(place.label == "Place" && place.face == .place && place.lead == nil)
         #expect(place.emptyText == "No place recorded")
         #expect(place.records.isEmpty)
     }
@@ -206,7 +206,7 @@ struct EventDetailTests {
     @Test func missingDateIsAnEmptyDateRow() {
         let page = content(detail(summary: dated()))
         let date = page.rows[0]
-        #expect(date.label == "Date" && date.style == .date && date.lead == nil)
+        #expect(date.label == "Date" && date.face == .date && date.lead == nil)
         #expect(date.emptyText == "No date recorded")
         #expect(date.records.isEmpty)
         #expect(page.secondaryDate == nil)
