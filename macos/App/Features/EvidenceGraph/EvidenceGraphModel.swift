@@ -167,20 +167,10 @@ final class EvidenceGraphModel {
 
     /// Reads the graph rows again after a failed read.
     func readGraphAgain() {
-        let handle: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
-        Task { await noteGraphReadFailureWhenSettled(handle: handle) }
-    }
-
-    private func noteGraphReadFailureWhenSettled(handle: QueryHandle<EvidenceGraphRows>) async {
-        let deadline = ContinuousClock.now + .seconds(2)
-        var sawFetching = handle.isFetching
-        while ContinuousClock.now < deadline {
-            if handle.isFetching { sawFetching = true }
-            if sawFetching && !handle.isFetching && handle.status != .loading {
-                graphReadFailedSettled()
-                return
-            }
-            try? await Task.sleep(for: .milliseconds(10))
+        let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
+        Task {
+            _ = await session.readyValue(graphKey) as EvidenceGraphRows?
+            graphReadFailedSettled()
         }
     }
 
