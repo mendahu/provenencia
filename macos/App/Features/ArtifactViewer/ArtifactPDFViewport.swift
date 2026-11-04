@@ -6,8 +6,9 @@ import SwiftUI
 ///
 /// - **Select:** I-beam; drag creates a `PDFSelection` (Preview).
 /// - **Pan:** `PDFView` scroll view — trackpad, mouse wheel, scrollbars.
-/// - **Zoom / page:** chrome drives `scaleFactor` and `go(to:)`. Single-page
-///   mode so 1-based locators stay authoritative.
+/// - **Zoom / page:** chrome and Find drive `scaleFactor` and `go(to:)`. Scroll
+///   and swipe report the visible page through `onPageChange`. Single-page mode
+///   so 1-based locators stay authoritative.
 ///
 /// Image Artifacts stay on ``ArtifactMediaViewport``.
 struct ArtifactPDFViewport: NSViewRepresentable {
@@ -16,6 +17,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
     var zoom: CGFloat
     var contentID: AnyHashable
     var onZoomChange: (CGFloat) -> Void
+    var onPageChange: (Int) -> Void
     var overlayEnabled: Bool = false
     var overlayInput: ArtifactRegionOverlayInput?
     var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
@@ -26,7 +28,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
     var onUserSelectionChange: ((String?, Int?) -> Void)?
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onZoomChange: onZoomChange)
+        Coordinator(onZoomChange: onZoomChange, onPageChange: onPageChange)
     }
 
     func makeNSView(context: Context) -> ArtifactPDFHostView {
@@ -56,12 +58,14 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         weak var host: ArtifactPDFHostView?
         var installedContentID: AnyHashable?
         var onZoomChange: (CGFloat) -> Void
+        var onPageChange: (Int) -> Void
         var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
         var onDisarmRegionTool: (() -> Void)?
         var onUserSelectionChange: ((String?, Int?) -> Void)?
 
-        init(onZoomChange: @escaping (CGFloat) -> Void) {
+        init(onZoomChange: @escaping (CGFloat) -> Void, onPageChange: @escaping (Int) -> Void) {
             self.onZoomChange = onZoomChange
+            self.onPageChange = onPageChange
         }
     }
 
@@ -71,6 +75,10 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         coordinator.onZoomChange = onZoomChange
         host.onZoomChange = { [weak coordinator] value in
             coordinator?.onZoomChange(value)
+        }
+        coordinator.onPageChange = onPageChange
+        host.onPageChange = { [weak coordinator] value in
+            coordinator?.onPageChange(value)
         }
         coordinator.onUserSelectionChange = onUserSelectionChange
         host.onUserSelectionChange = { [weak coordinator] text, page in
@@ -109,10 +117,12 @@ final class ArtifactPDFHostView: NSView {
     let overlayView = ArtifactRegionOverlayView(frame: .zero)
 
     var onZoomChange: ((CGFloat) -> Void)?
+    var onPageChange: ((Int) -> Void)?
     var onUserSelectionChange: ((String?, Int?) -> Void)?
 
     private var isObserving = false
     private var suppressZoomCallback = false
+    private var suppressPageCallback = false
     private var observedScrollViews: [NSView] = []
 
     override init(frame frameRect: NSRect) {
@@ -215,7 +225,9 @@ final class ArtifactPDFHostView: NSView {
         if let pdfPage = document.page(at: targetPageIndex),
            pdfView.currentPage != pdfPage || resetPage
         {
+            suppressPageCallback = true
             pdfView.go(to: pdfPage)
+            suppressPageCallback = false
         }
 
         let targetZoom = ArtifactViewerModel.clampZoom(zoom)
@@ -277,6 +289,14 @@ final class ArtifactPDFHostView: NSView {
         if notification.name == .PDFViewScaleChanged, !suppressZoomCallback {
             onZoomChange?(ArtifactViewerModel.clampZoom(pdfView.scaleFactor))
         }
+        if notification.name == .PDFViewPageChanged || notification.name == .PDFViewVisiblePagesChanged,
+           !suppressPageCallback,
+           let page = pdfView.currentPage,
+           let document = pdfView.document,
+           let number = ArtifactViewerModel.pageNumber(for: page, in: document)
+        {
+            onPageChange?(number)
+        }
     }
 
     @objc private func pdfSelectionChanged(_ notification: Notification) {
@@ -293,8 +313,7 @@ final class ArtifactPDFHostView: NSView {
             onUserSelectionChange?(nil, nil)
             return
         }
-        let index = document.index(for: pdfPage)
-        let page = index == NSNotFound ? nil : index + 1
+        let page = ArtifactViewerModel.pageNumber(for: pdfPage, in: document)
         onUserSelectionChange?(text, page)
     }
 
