@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 
 /// What a caller admits as a picture file: the sniffed type must conform to one of `typeIdentifiers`
 /// (an empty list refuses), both edges must be in `1...maxEdge`, and a file over `maxBytes`, when set,
-/// refuses before ImageIO opens it.
+/// refuses before ImageIO opens it (``ImageHeaderDecode/admit(url:limits:)``).
 struct ImageDecodeLimits: Equatable, Sendable {
     var typeIdentifiers: [String]
     var maxEdge = BoundedImageDecode.maxEdge
@@ -36,8 +36,8 @@ enum ImageHeaderDecode {
 
     /// The one admission of a picture file by its header: the sniffed type conforms to one of
     /// `limits.typeIdentifiers`, and the declared size is within `limits.maxEdge` and the depth-scaled
-    /// pixel budget. Reads the header only; no pixels decode, and `limits.maxBytes` is the caller's
-    /// (it needs the file's size, not the source).
+    /// pixel budget. Reads the header only; no pixels decode, and `limits.maxBytes` is not applied
+    /// (it needs the file's size, not the source): ``admit(url:limits:)`` is the one that opens a file.
     static func admit(_ source: CGImageSource, limits: ImageDecodeLimits) -> Result<DeclaredImage, Refusal> {
         guard let sniffed = (CGImageSourceGetType(source) as String?).flatMap({ UTType($0) }),
               limits.typeIdentifiers.contains(where: { identifier in
@@ -49,6 +49,22 @@ enum ImageHeaderDecode {
             maxEdge: limits.maxEdge, maxPixels: maxDeclaredPixels / depthFactor(declared.bitsPerComponent)
         ) else { return .failure(.tooLarge) }
         return .success(declared)
+    }
+
+    /// The one admission of a picture file by URL, for every path that opens one: the file's size
+    /// against `limits.maxBytes` (a file over it refuses before ImageIO opens it), then open, then
+    /// type, header and fit as ``admit(_:limits:)``. Returns the source and what its header declares.
+    static func admit(
+        url: URL, limits: ImageDecodeLimits
+    ) -> Result<(CGImageSource, DeclaredImage), Refusal> {
+        if let maxBytes = limits.maxBytes {
+            guard let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize else {
+                return .failure(.unreadable)
+            }
+            guard bytes <= maxBytes else { return .failure(.tooLarge) }
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return .failure(.unreadable) }
+        return admit(source, limits: limits).map { (source, $0) }
     }
 
     /// What an image's header declares: its size, resolution and EXIF orientation.

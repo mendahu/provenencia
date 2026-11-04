@@ -43,34 +43,19 @@ enum BoundedImageDecode {
     /// Why a decode refused.
     typealias Refusal = ImageHeaderDecode.Refusal
 
-    /// The byte, type, header and size check both paths share: the source and what its header
-    /// declares, or the reason it refused. A file over `limits.maxBytes` refuses before ImageIO opens it.
-    private static func admit(
-        url: URL, limits: ImageDecodeLimits
-    ) -> Result<(CGImageSource, ImageHeaderDecode.DeclaredImage), Refusal> {
-        if let maxBytes = limits.maxBytes {
-            guard let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize else {
-                return .failure(.unreadable)
-            }
-            guard bytes <= maxBytes else { return .failure(.tooLarge) }
-        }
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return .failure(.unreadable) }
-        return ImageHeaderDecode.admit(source, limits: limits).map { (source, $0) }
-    }
-
     /// The size in pixels the file declares, as the image is shown (turned for EXIF 5...8), or the
     /// reason it refused. One header read; no pixels decode. The same admission as ``decode(url:limits:)``.
     static func declaredSize(
         url: URL, limits: ImageDecodeLimits
     ) -> Result<(width: Int, height: Int), Refusal> {
-        admit(url: url, limits: limits).map { $0.1.uprightSize }
+        ImageHeaderDecode.admit(url: url, limits: limits).map { $0.1.uprightSize }
     }
 
     /// Decodes the image at `url`, or the reason it refused, under the same admission as ``declaredSize(url:limits:)``.
     static func decode(url: URL, limits: ImageDecodeLimits) -> Result<Decoded, Refusal> {
         let source: CGImageSource
         let declared: ImageHeaderDecode.DeclaredImage
-        switch admit(url: url, limits: limits) {
+        switch ImageHeaderDecode.admit(url: url, limits: limits) {
         case .success(let admitted): (source, declared) = admitted
         case .failure(let refusal): return .failure(refusal)
         }
