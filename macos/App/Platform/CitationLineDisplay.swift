@@ -23,6 +23,11 @@ enum CitationLineDisplay {
         parts(outcome).line
     }
 
+    /// The Source's title, else the Observation ref when the Source has none.
+    static func sourceTitle(for outcome: CatalogReconcilerOutcome) -> String {
+        outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
+    }
+
     /// The same citation line as `line(_:)`, split into the title and the rest.
     static func parts(_ outcome: CatalogReconcilerOutcome) -> Parts {
         let pageLabel = outcome.pageLabel.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -41,7 +46,7 @@ enum CitationLineDisplay {
                 .filter { !$0.isEmpty }
                 .joined(separator: separator)
         }
-        let title = ReconciliationRecord.sourceTitle(for: outcome)
+        let title = sourceTitle(for: outcome)
         return Parts(
             title: title,
             titleIsRef: outcome.sourceTitle.isEmpty,

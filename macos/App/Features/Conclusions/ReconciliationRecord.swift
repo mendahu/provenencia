@@ -38,7 +38,7 @@ struct ReconciliationRecord: Equatable, Identifiable {
         readAs = ReconciledValueDisplay.readAs(outcome, propertyKey: field.propertyKey, locale: locale, orders: orders)
         readAsIsPhrase = ReconciledValueDisplay.readAsIsPhrase(outcome, propertyKey: field.propertyKey)
         counted = ReconciledValueDisplay.counted(outcome, in: field)
-        sourceTitle = Self.sourceTitle(for: outcome)
+        sourceTitle = CitationLineDisplay.sourceTitle(for: outcome)
         phrase = ReconciledValueDisplay.outcomePhrase(outcome, in: field, locale: locale)
         mark = ReconciledValueDisplay.outcomeMark(outcome, in: field)
         location = Self.composerLocation(for: outcome)
@@ -55,11 +55,6 @@ struct ReconciliationRecord: Equatable, Identifiable {
     /// as separate controls.
     var spoken: String {
         L10n.DesignSystem.spokenJoin([readAs, citationLine, phrase, observationRef, subjectRef]) ?? ""
-    }
-
-    /// The Source's title, else the Observation ref when the Source has none.
-    static func sourceTitle(for outcome: CatalogReconcilerOutcome) -> String {
-        outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
     }
 
     /// The citation composer on the record's Citation, its Observation in
