@@ -1,7 +1,7 @@
 # S14-20 — The Promote page recovers and speaks
 
 **Status:** Landed in #706 (2026-11-04)
-**Landed:** Tests that pause `proposePromoteGraphAlignment` enable `proposePromoteGraphAlignmentHold` only after `load()` finishes, because the hold applies to every propose call including the initial load. `mappingTheRestWhileProposingSendsTheWholePage` turns the hold off before `release()` so one release matches the plan's single-release step while the coalesced second call can finish.
+**Landed:** Tests that pause `proposePromoteGraphAlignment` enable `proposePromoteGraphAlignmentHold` only after `load()` finishes, because the hold applies to every propose call including the initial load. `mappingTheRestWhileProposingSendsTheWholePage` turns the hold off before `release()` so one release matches the plan's single-release step while the coalesced second call can finish. T-8's "not on a second proposal error while the first still shows" clause was superseded in review: a new proposal attempt clears `proposeError` so a later failure scrolls and announces again.
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes (batch 5)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S14-D7](../design/archive/S14-D7-promote-notices.md), board agreed 2026-11-03

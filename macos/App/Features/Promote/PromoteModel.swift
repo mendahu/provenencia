@@ -241,6 +241,7 @@ final class PromoteModel {
     /// A decision changed the fixed pairs: propose again.
     private func proposeAfterDecision() {
         flow.staleNote = nil
+        proposeError = nil
         submitProposal()
     }
 
@@ -318,6 +319,7 @@ final class PromoteModel {
         flow.saving = true
         flow.staleNote = nil
         saveError = nil
+        proposeError = nil
         Task { await promote() }
     }
 

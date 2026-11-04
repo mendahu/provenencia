@@ -538,8 +538,8 @@ struct PromoteModelTests {
         let tokenAfterFirstPropose = model.noticeToken
         store.proposePromoteGraphAlignmentError = Boom()
         model.setTarget(subjectID: "a", token: "handle:other")
-        #expect(await waitUntil { !model.isProposing })
-        #expect(model.noticeToken == tokenAfterFirstPropose)
+        #expect(await waitUntil { model.proposeError != nil && !model.isProposing })
+        #expect(model.noticeToken == tokenAfterFirstPropose + 1)
     }
 
     @Test func newAndSkipDecisionsAreHeldOnTheNextProposal() async {
