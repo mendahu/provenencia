@@ -139,7 +139,7 @@ enum VocabularyDeleteDialog { static func sheet(…) }  // only Metadata uses it
 
 1. Confirm ≥2 real call sites (or an imminent second in the same change).
 2. Create **`DesignSystem/Recipes/<Name>/`** and add the primary Swift file (+ colocated docs/helpers).
-3. Keep it a thin map: domain value → existing component props.
+3. Keep chrome a thin map: domain value → existing component props. Exception: a recipe may also own assembly: pure content built from `Catalog*` types and `Platform/` formatters (`PVPersonCardContent`, `PVProvenanceSheetContent`), built when the recipe opens, tested as pure functions, and it reports a link for the caller to map to a place.
 4. Do not duplicate sunken footers, focus rings, or menu hosts — those stay in `Components/`.
 5. If only one caller exists, leave a snowflake and note “promote when reused.”
 

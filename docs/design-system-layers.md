@@ -144,7 +144,8 @@ Composites are still design-system components in Frost’s sense: maximal reuse,
 Product-specific compositions used **consistently across more than one place**. Valuable and reusable, but not agnostic enough for the portable kit.
 
 - Map Provenencia meaning → component props (icons, colors, grade, type key).
-- Thin wrappers preferred — do not reimplement badge / chip / row chrome.
+- Thin wrappers preferred for chrome — do not reimplement badge / chip / row chrome.
+- A recipe may own assembly as pure content built from `Catalog*` types and `Platform/` formatters (`PVPersonCardContent`, `PVProvenanceSheetContent`): built when the recipe opens, tested as pure functions, and it reports a link for the caller to map to a place.
 - Live under `DesignSystem/Recipes/<Name>/`.
 
 **Examples:** `PVMark`, evidence-grade / source-type badge families; a shared “delete vocabulary row” confirm shell *if* several screens share the same wiring.
