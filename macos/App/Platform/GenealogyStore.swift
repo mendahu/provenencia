@@ -1464,9 +1464,11 @@ protocol GenealogyStore: Sendable {
     ) async throws -> (CatalogSubject, CatalogWriteEffects)
     func deleteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
     /// Take a primary Subject's promotion back: its accepted claim and, in the same write, the accepted
-    /// claims of the bridges on its Source that have it as an end. No handle is deleted. A Subject with
-    /// no accepted claim writes nothing.
+    /// claims of the bridges on its Source that have it as an end. When the claim was a handle's last
+    /// accepted member, the handle is deleted too. A Subject with no accepted claim writes nothing.
     func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
+    /// Read-only: handles an Unpromote would delete; nil when every handle stays.
+    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactGroup?
     /// Choose a gallery likeness as the Person's portrait, or clear it with an empty observationID.
     /// A display choice, not evidence.
     func setPreferredLikeness(

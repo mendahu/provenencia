@@ -77,12 +77,14 @@ enum PVDeleteImpactCopy {
             let joined = rest > 0
                 ? refs.joined(separator: ", ") + L10n.DeleteImpact.summaryMore(count: rest)
                 : refs.formatted(.list(type: .and))
-            switch group.via {
-            case "identity_claims.subject_id":
+            switch DeleteImpactCascadeVia(rawValue: group.via) {
+            case .leavesHandle:
                 return L10n.DeleteImpact.leavesHandle(handleRefs: joined)
-            case "citations.graph_id":
+            case .deletesCitations:
                 return L10n.DeleteImpact.deletesCitations(count: group.total, refs: joined)
-            default:
+            case .deletesHandles:
+                return L10n.DeleteImpact.deletesHandles(count: group.total, handleRefs: joined)
+            case .unrecognized:
                 return L10n.DeleteImpact.alsoAffects(
                     noun: noun(group.kind, count: group.total),
                     refs: joined

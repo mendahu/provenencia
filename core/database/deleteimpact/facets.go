@@ -116,7 +116,7 @@ func facetReleasesFor(kind catalogmodel.Kind) []facetRelease {
 	return out
 }
 
-// cascadesFor is the Named facets of kind as non-blocking Impact edges.
+// cascadesFor is the Named facets of kind plus cascade-only edges, as non-blocking Impact edges.
 func cascadesFor(kind catalogmodel.Kind) []inboundEdge {
 	var out []inboundEdge
 	for _, f := range facetReleasesFor(kind) {
@@ -128,6 +128,11 @@ func cascadesFor(kind catalogmodel.Kind) []inboundEdge {
 			Count: f.Count, List: f.List,
 		})
 	}
+	for _, e := range cascadeEdgeList {
+		if e.Parent == kind {
+			out = append(out, e)
+		}
+	}
 	return out
 }
 
@@ -135,25 +140,27 @@ func cascadesFor(kind catalogmodel.Kind) []inboundEdge {
 // which a package-level initializer cannot reference (initialization cycle).
 var facetReleaseList []facetRelease
 
-func init() { facetReleaseList = buildFacetReleases() }
+func init() {
+	facetReleaseList = buildFacetReleases()
+	cascadeEdgeList = buildCascadeEdges()
+}
 
 func facetReleases() []facetRelease { return facetReleaseList }
 
 func buildFacetReleases() []facetRelease {
 	return []facetRelease{
 		// --- Conclusion ---------------------------------------------------
-		// A Subject leaves every handle it has a claim on (any status); the
-		// handles stay.
+		// A Subject releases every claim it has on a handle; a handle whose last
+		// accepted member goes is deleted inside releaseClaim.
 		{
-			Parent: catalogmodel.KindSubject, Via: "identity_claims.subject_id",
-			Named: true, Child: catalogmodel.KindCanonicalEntity,
-			Count: countSQLFn(`SELECT COUNT(DISTINCT entity_id) FROM identity_claims WHERE subject_id = ?`),
-			List: listSQLFn(`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
-				JOIN canonical_entities e ON e.id = ic.entity_id
-				WHERE ic.subject_id = ?
-				ORDER BY e.ref COLLATE NOCASE LIMIT ?`),
+			Parent: catalogmodel.KindSubject, Via: ViaLeavesHandle,
 			Remaining: `SELECT COUNT(*) FROM identity_claims WHERE subject_id = ?`,
 			Release:   releaseEach(`SELECT id FROM identity_claims WHERE subject_id = ? ORDER BY id`, releaseClaim),
+		},
+		{
+			Parent: catalogmodel.KindCanonicalEntity, Via: "identity_claims.entity_id",
+			Remaining: `SELECT COUNT(*) FROM identity_claims WHERE entity_id = ?`,
+			Release:   releaseEach(`SELECT id FROM identity_claims WHERE entity_id = ? ORDER BY id`, releaseClaimRowOnly),
 		},
 
 		// --- Interpretation -------------------------------------------------
@@ -175,7 +182,7 @@ func buildFacetReleases() []facetRelease {
 		// A graph's Citations go with it, each through releaseCitation (a graph
 		// with Subjects is refused first, so none has an Observation).
 		{
-			Parent: catalogmodel.KindEvidenceGraph, Via: "citations.graph_id",
+			Parent: catalogmodel.KindEvidenceGraph, Via: ViaDeletesCitations,
 			Named: true, Child: catalogmodel.KindCitation,
 			Count:     countSQLFn(`SELECT COUNT(*) FROM citations WHERE graph_id = ?`),
 			List:      listSQLFn(`SELECT id, ref FROM citations WHERE graph_id = ? ORDER BY ref COLLATE NOCASE LIMIT ?`),
@@ -260,29 +267,47 @@ func ReleaseClaim(tx *database.Tx, claimID []byte) ([]rowchange.Change, error) {
 	return r.Changes, nil
 }
 
-// releaseClaim removes one identity claim, audited: its registered facets (none
-// today), then the row, then the claim's own delete change carrying the fields
-// the effects registry resolves a ghost row from. It is the one claim removal;
-// Subject delete and Unpromote both call it. Does not commit.
+// releaseClaim removes one identity claim, audited, and deletes the handle when
+// the claim was its last accepted member. Subject delete and Unpromote both call it.
 func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
-	if tx == nil || len(claimID) != 16 {
-		return released{}, ErrInvalid
-	}
-	var (
-		id, subjectID, entityID, typeID []byte
-		status                          string
-	)
-	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status
-		FROM identity_claims WHERE id = ?`, claimID).
-		Scan(&id, &subjectID, &entityID, &typeID, &status); err != nil {
-		return released{}, err
-	}
-	out, err := releaseFacets(tx, catalogmodel.KindIdentityClaim, id)
+	subjectID, entityID, status, out, err := releaseClaimRow(tx, claimID)
 	if err != nil {
 		return released{}, err
 	}
-	if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, id); err != nil {
+	if status != claimStatusAccepted {
+		return out, nil
+	}
+	extra, err := releaseHandleIfGone(tx, entityID, subjectID)
+	if err != nil {
 		return released{}, err
+	}
+	out.merge(extra)
+	return out, nil
+}
+
+func releaseClaimRowOnly(tx *sql.Tx, claimID []byte) (released, error) {
+	_, _, _, out, err := releaseClaimRow(tx, claimID)
+	return out, err
+}
+
+// releaseClaimRow removes one identity claim row and its delete change without
+// deleting the handle (the entity facet uses this to avoid recursion).
+func releaseClaimRow(tx *sql.Tx, claimID []byte) (subjectID, entityID []byte, status string, out released, err error) {
+	if tx == nil || len(claimID) != 16 {
+		return nil, nil, "", released{}, ErrInvalid
+	}
+	var id, typeID []byte
+	if err := tx.QueryRow(`SELECT id, subject_id, entity_id, subject_type_id, status
+		FROM identity_claims WHERE id = ?`, claimID).
+		Scan(&id, &subjectID, &entityID, &typeID, &status); err != nil {
+		return nil, nil, "", released{}, err
+	}
+	out, err = releaseFacets(tx, catalogmodel.KindIdentityClaim, id)
+	if err != nil {
+		return nil, nil, "", released{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM identity_claims WHERE id = ?`, id); err != nil {
+		return nil, nil, "", released{}, err
 	}
 	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "identity_claim",
@@ -296,7 +321,7 @@ func releaseClaim(tx *sql.Tx, claimID []byte) (released, error) {
 			"status":          status,
 		}),
 	})
-	return out, nil
+	return subjectID, entityID, status, out, nil
 }
 
 // ReleaseCitation is releaseCitation on the write's Tx: it schedules the purge

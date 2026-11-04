@@ -102,11 +102,11 @@ func TestUnpromote(t *testing.T) {
 				t.Fatalf("%s lost its filing", name)
 			}
 		}
-		if len(w.handles("person")) != personHandles || len(w.handles("relationship"))+len(w.handles("participation")) != personAssoc {
-			t.Fatal("a handle was deleted")
+		if len(w.handles("person")) != personHandles-1 {
+			t.Fatalf("person handles: got %d want %d", len(w.handles("person")), personHandles-1)
 		}
-		if w.members(h.person) != 0 {
-			t.Fatalf("James's handle has %d members", w.members(h.person))
+		if len(w.handles("relationship"))+len(w.handles("participation")) >= personAssoc {
+			t.Fatal("expected an emptied association handle to be deleted")
 		}
 		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})
@@ -163,6 +163,32 @@ func TestUnpromote(t *testing.T) {
 		}
 		if w.revisions() != before {
 			t.Fatal("a revision was written")
+		}
+	})
+
+	t.Run("sole member event handle goes", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		ev := w.node("event", "Birth", 0, 0)
+		w.promote(ev)
+		before := len(w.handles("event"))
+		if err := w.unpromote(ev); err != nil {
+			t.Fatal(err)
+		}
+		if len(w.handles("event")) != before-1 {
+			t.Fatal("event handle should be deleted")
+		}
+	})
+
+	t.Run("sole member place handle goes", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		pl := w.node("place", "York", 0, 0)
+		w.promote(pl)
+		before := len(w.handles("place"))
+		if err := w.unpromote(pl); err != nil {
+			t.Fatal(err)
+		}
+		if len(w.handles("place")) != before-1 {
+			t.Fatal("place handle should be deleted")
 		}
 	})
 

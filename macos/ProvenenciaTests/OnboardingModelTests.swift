@@ -623,6 +623,9 @@ private struct ThrowingStore: GenealogyStore {
     func unpromoteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
+    func getUnpromoteImpact(projectDir _: String, subjectID _: String) async throws -> CatalogDeleteImpactGroup? {
+        nil
+    }
     func setPreferredLikeness(
         projectDir _: String,
         userID _: String,

@@ -214,9 +214,9 @@ A conflict on one Property has two possible stories. The records are about the s
 
 ## 5.2 When a member leaves
 
-Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership and does not touch any other claim. Nothing stored on the remaining claims refers to the departing subject; the entity comparison (§5.1) reads the members that are left.
+Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership and does not delete any other subject's accepted claim. Nothing stored on the remaining claims refers to the departing subject; the entity comparison (§5.1) reads the members that are left. When the removed claim was the handle's last accepted member, the handle's remaining claims on it are released with it in the same revision.
 
-Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Evidence graph that have it as an end. It does not reject, and it deletes no handle.
+Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Evidence graph that have it as an end. It does not reject. Removing a handle's last accepted member (by Unpromote or Subject delete) deletes the handle in the same revision, unless another handle is merged into it.
 
 ## 5.3 Promote
 
@@ -289,7 +289,7 @@ CREATE TABLE canonical_entities (
 
 A handle's **gallery** is its depiction values under the gallery keys (`likeness`, `event_picture`, `place_picture`) with their gallery records: each record whose own outcome is `kept` or `weak`. A negative, denied, or provisional record of the same picture is not a gallery record. The gallery is ordered by each picture's first recorded gallery record (the smallest Observation id), then by value rank; a redraw keeps its Observation, so it keeps its place. The earliest picture is the first in that order. Each tile's image is the Observation's own `depiction_values.image_file_id`, not the reconciler cache's `value_image_file_id`.
 
-There is no identity anchor and no `representative_subject_id`. Membership is not a column on this row. Creating a handle from a record inserts the entity and an accepted Identity Claim for that subject. **Adopt** (first grounding of an inferred handle) is the first accepted Identity Claim on a handle that had none. Dropping the last member does not delete the entity or change its id.
+There is no identity anchor and no `representative_subject_id`. Membership is not a column on this row. Creating a handle from a record inserts the entity and an accepted Identity Claim for that subject. **Adopt** (first grounding of an inferred handle) is the first accepted Identity Claim on a handle that had none. Dropping the last **accepted** member deletes the handle (Unpromote, Subject delete, or any write through `ReleaseClaim`), unless another handle is merged into it. Stubs with no accepted member ever (§6.1) are unchanged.
 
 ```text
 members(entity) =
@@ -551,7 +551,7 @@ These are **schema and application invariants** (see §1). Grain, gazetteer use,
 4. The subject and the entity share `subject_type_id` (composite foreign keys). “Same grain of place” is convention, not a check.
 5. Members of an entity are the subjects with an accepted Identity Claim for that entity. After merge, claims live on the survivor.
 6. Membership is not stored as an independently editable join table, and not as a column on `canonical_entities`.
-7. Dropping the last member does not delete the canonical entity or change its id.
+7. Dropping the last accepted member deletes the canonical entity unless another handle is merged into it; stubs with no accepted member are unaffected (§6.1).
 8. `subject_type_id` is immutable on the entity and on the subject.
 9. Every canonical entity has a required `ref` of the form `{ref_prefix}-{token}`.
 10. Provisional and rejected Identity Claims are not members. Absence of a claim is not a rejection.

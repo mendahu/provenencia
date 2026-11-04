@@ -1797,8 +1797,58 @@ enum L10n {
         static let unpromoteConfirmMessage = LocalizedStringResource(
             "evidenceGraph.subject.unpromoteConfirmMessage",
             defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",
-            comment: "Message of the Unpromote confirm"
+            comment: "Message of the Unpromote confirm when the handle keeps another record"
         )
+
+        static func unpromoteConfirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.person",
+                    defaultValue: "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a person"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.event",
+                    defaultValue: "The check for whether this event is deleted could not run. Confirming may still delete this event. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for an event"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.place",
+                    defaultValue: "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a place"
+                )
+            }
+            return L10n.string(key)
+        }
+
+        static func unpromoteConfirmMessageDeletes(kind: EvidencePrimaryKind, ref: String) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.person",
+                    defaultValue: "%@ has no other records, so this person is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Person handle is deleted; argument is its ref"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.event",
+                    defaultValue: "%@ has no other records, so this event is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Event handle is deleted; argument is its ref"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.place",
+                    defaultValue: "%@ has no other records, so this place is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Place handle is deleted; argument is its ref"
+                )
+            }
+            return L10n.format(key, ref)
+        }
 
         static let unpromoteConfirmBridgesHeader = LocalizedStringResource(
             "evidenceGraph.subject.unpromoteConfirmBridgesHeader",
@@ -8528,6 +8578,15 @@ enum L10n {
                 defaultValue: "The graph’s %1$lld citations are deleted with it: %2$@.",
                 comment: "Allowed graph delete confirm, appended after the consequence; arguments are how many Citations and the citation ref(s), e.g. CIT-7KD45"
             ), count, refs)
+        }
+
+        /// Allowed Subject delete: handle(s) with no other records. Arguments: count, handle refs (joined).
+        static func deletesHandles(count: Int, handleRefs: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "deleteImpact.confirm.deletesHandles",
+                defaultValue: "%2$@ %#@records@",
+                comment: "Allowed Subject delete confirm when handles are deleted; arguments are count and handle ref(s)"
+            ), count, handleRefs)
         }
 
         /// Fallback for a cascade via the Mac has no specific copy for. Arguments: kind noun, refs.

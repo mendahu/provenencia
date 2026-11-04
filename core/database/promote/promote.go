@@ -58,14 +58,8 @@ func Save(tx *database.Tx, userID []byte, in Input) (Result, []rowchange.Change,
 	}
 
 	q := tx.Tx
-	subject, err := subjects.GetTx(q, in.SubjectID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Result{}, nil, ErrInvalid
-	}
+	subject, err := loadPrimary(q, in.SubjectID)
 	if err != nil {
-		return Result{}, nil, err
-	}
-	if err := requirePrimary(q, subject); err != nil {
 		return Result{}, nil, err
 	}
 	if _, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID); err == nil {

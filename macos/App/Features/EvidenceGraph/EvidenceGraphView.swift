@@ -203,14 +203,23 @@ private struct EvidenceGraphContent: View {
         .pvConfirm(
             item: $model.pendingUnpromote,
             copy: { item in
-                PVConfirmCopy(
+                let message: String = if let group = item.deletedHandles {
+                    PVDeleteImpactCopy.cascadeLines(
+                        CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [group])
+                    ).first ?? L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
+                } else if item.impactCheckFailed {
+                    L10n.EvidenceGraph.unpromoteConfirmPreflightFailed(kind: item.kind)
+                } else {
+                    L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
+                }
+                return PVConfirmCopy(
                     title: L10n.EvidenceGraph.unpromoteConfirmTitle(name: item.name),
-                    message: L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage),
+                    message: message,
                     confirm: L10n.EvidenceGraph.unpromote,
                     cancel: L10n.EvidenceGraph.unpromoteKeep
                 )
             },
-            tone: .irreversible,
+            tone: model.pendingUnpromote?.confirmTone ?? .irreversible,
             isRunning: model.isUnpromoting,
             accessibilityIdentifierPrefix: "evidenceGraph.unpromote",
             onConfirm: { Task { await model.confirmUnpromote() } },
@@ -241,7 +250,7 @@ private struct EvidenceGraphContent: View {
                         .foregroundStyle(PVColor.textSecondary)
                 }
                 if let error = item.error {
-                    PVCallout(tone: .danger, message: error)
+                    PVCallout(tone: .danger, message: error, announces: item.impactCheckFailed)
                 }
             }
         }

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
@@ -494,11 +495,14 @@ func locationFor(d docRow) workspacelocation.Location {
 	case KindMetadataField:
 		return workspacelocation.Location{Section: workspacelocation.Metadata, FieldID: d.entityID, Title: d.displayTitle}
 	case KindPerson:
-		return workspacelocation.Location{Section: workspacelocation.Persons, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
+		loc, _ := workspacelocation.Conclusion(vocabkey.Person, d.entityID, d.displayRef, d.displayTitle)
+		return loc
 	case KindEvent:
-		return workspacelocation.Location{Section: workspacelocation.Events, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
+		loc, _ := workspacelocation.Conclusion(vocabkey.Event, d.entityID, d.displayRef, d.displayTitle)
+		return loc
 	case KindPlace:
-		return workspacelocation.Location{Section: workspacelocation.Places, EntityID: d.entityID, Ref: d.displayRef, Title: d.displayTitle}
+		loc, _ := workspacelocation.Conclusion(vocabkey.Place, d.entityID, d.displayRef, d.displayTitle)
+		return loc
 	default:
 		return workspacelocation.Location{}
 	}

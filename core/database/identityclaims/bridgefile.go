@@ -91,8 +91,47 @@ const graphCond = `s.graph_id = ?`
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
 // accepted claim of every bridge that has subjectID as an end, in
 // bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
-// per graph. The bridges' handles (their associations) are left alone. Does
-// not commit.
+// per graph. A bridge handle whose last member goes is deleted in releaseClaim.
+// Does not commit.
+
+// UnpromoteBridgeHandlesDeleted lists association handles UnfileBridges would
+// delete because the bridge Subject is their last accepted member.
+func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Listed, error) {
+	if len(subjectID) != 16 {
+		return nil, nil
+	}
+	heads, err := bridgeHeads(tx, touchesEnd, subjectID)
+	if err != nil {
+		return nil, err
+	}
+	var out []deleteimpact.Listed
+	seen := map[string]bool{}
+	for _, head := range heads {
+		if head.claimID == nil {
+			continue
+		}
+		var entityID []byte
+		if err := tx.QueryRow(`SELECT entity_id FROM identity_claims WHERE id = ?`, head.claimID).Scan(&entityID); err != nil {
+			return nil, err
+		}
+		goes, err := deleteimpact.HandleGoesWithout(tx, entityID, head.id)
+		if err != nil || !goes {
+			continue
+		}
+		var ref string
+		if err := tx.QueryRow(`SELECT ref FROM canonical_entities WHERE id = ?`, entityID).Scan(&ref); err != nil {
+			return nil, err
+		}
+		key := string(entityID)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		out = append(out, deleteimpact.Listed{ID: append([]byte(nil), entityID...), Ref: ref})
+	}
+	return out, nil
+}
+
 func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
 	if len(subjectID) != 16 {
 		return nil, nil

@@ -1,6 +1,6 @@
 # S13-08 — Unpromoting the last member
 
-**Status:** Planned
+**Status:** Landed in #707 (2026-11-04)
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Evidence graph's Unpromote confirm and the Subject delete confirm keep their layout, controls and tone; each gains one message variant, the copy the user approved 2026-11-04)
@@ -356,3 +356,11 @@ None.
 
 **Title:** S13-08 — Unpromoting the last member
 **Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-13/prs/S13-08-unpromoting-the-last-member.md`.
+
+## Landed note
+
+The code differs from the plan in these ways:
+
+- `DeleteImpactCascadeVia` is a wire-case enum in `ConclusionVocabulary.swift`, not a `String` rawValue enum, so the vocabulary test can use string-literal cases in `init(rawValue:)`.
+- Round 1 (2026-11-04): `GetUnpromoteImpact` / `UnpromoteImpact` list every handle the write deletes (primary last-member and bridge last-members); the Unpromote confirm uses `deletesHandles` copy when that list is non-empty (supersedes D-11 association omission and the Out line deferring rewording). Preflight failure uses kind-aware copy that the check failed and confirming may still delete the primary (amends AC-2.6 / D-15); danger tone and an announcing callout; not the handle-stays message.
+- Manual check (§10) not run in implementer round 0.

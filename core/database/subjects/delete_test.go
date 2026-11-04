@@ -8,10 +8,14 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -254,6 +258,233 @@ func TestSubjectDelete(t *testing.T) {
 			return struct{}{}, changes, err
 		}); !errors.Is(err, subjects.ErrInvalid) {
 			t.Fatalf("got %v", err)
+		}
+	})
+}
+
+func TestDeleteDeletesEmptiedHandles(t *testing.T) {
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+
+	t.Run("sole member person handle goes", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = c.Close() })
+		r, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := users.Upsert(c, userID, "Jake", r); err != nil {
+			t.Fatal(err)
+		}
+		if err := subjectvocab.Install(c); err != nil {
+			t.Fatal(err)
+		}
+		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
+			}, &subjects.Placement{GridX: 0, GridY: 0})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		promoted := promotetest.Save(t, c, userID, promote.Input{SubjectID: alice.ID})
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, alice.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := canonicalentities.Get(c, promoted.Entity.ID); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("handle still there: %v", err)
+		}
+	})
+
+	t.Run("person with another member stays", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = c.Close() })
+		r, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := users.Upsert(c, userID, "Jake", r); err != nil {
+			t.Fatal(err)
+		}
+		if err := subjectvocab.Install(c); err != nil {
+			t.Fatal(err)
+		}
+		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		alice, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Alice",
+			}, &subjects.Placement{GridX: 0, GridY: 0})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		bob, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "Bob",
+			}, &subjects.Placement{GridX: 2, GridY: 0})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		entity := promotetest.Save(t, c, userID, promote.Input{SubjectID: alice.ID}).Entity
+		promotetest.Save(t, c, userID, promote.Input{SubjectID: bob.ID, EntityID: entity.ID})
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, alice.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := canonicalentities.Get(c, entity.ID); err != nil {
+			t.Fatalf("handle gone: %v", err)
+		}
+	})
+
+	t.Run("bridge sole member of relationship handle goes", func(t *testing.T) {
+		c, err := database.Create(t.TempDir(), "t.provenencia")
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = c.Close() })
+		r, err := ref.Mint(ref.PrefixUser)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := users.Upsert(c, userID, "Jake", r); err != nil {
+			t.Fatal(err)
+		}
+		if err := subjectvocab.Install(c); err != nil {
+			t.Fatal(err)
+		}
+		typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+			Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+		james, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "James",
+			}, &subjects.Placement{GridX: 0, GridY: 0})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		john, err := writes.Call(c, writes.Op{Action: "create_subject", UserID: userID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+			return subjects.Create(tx, userID, subjects.CreateInput{
+				GraphID: graph, SubjectTypeID: personType.ID, Label: "John",
+			}, &subjects.Placement{GridX: 2, GridY: 0})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		personProp, err := properties.Lookup(c, "person", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		relatedProp, err := properties.Lookup(c, "related_to", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		relTypeProp, err := properties.Lookup(c, "relationship_type", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parentTerm, err := propertyterms.Lookup(c, relTypeProp.ID, "parent", vocabkey.OriginProvenencia)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rel, err := writes.Call(c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+			return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
+				FromSubjectID: james.ID, ToSubjectID: john.ID,
+				BridgeTypeKey: "relationship",
+				Citation:      citations.CreateInput{ArtifactID: art.ID, LocatorJSON: testLocator},
+				Observations: []observations.Input{
+					{PropertyID: personProp.ID, ValueSubjectID: james.ID},
+					{PropertyID: relatedProp.ID, ValueSubjectID: john.ID},
+					{PropertyID: relTypeProp.ID, ValueTermID: parentTerm.ID},
+				},
+			})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
+		promotetest.Save(t, c, userID, promote.Input{SubjectID: john.ID})
+		claim, err := identityclaims.AcceptedEntityForSubject(c, rel.Subject.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		relHandle := claim.EntityID
+		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := subjects.Delete(tx, userID, rel.Subject.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := canonicalentities.Get(c, relHandle); !errors.Is(err, sql.ErrNoRows) {
+			t.Fatalf("relationship handle still there: %v", err)
+		}
+		if _, err := subjects.Get(c, james.ID); err != nil {
+			t.Fatalf("james gone: %v", err)
+		}
+		if _, err := subjects.Get(c, john.ID); err != nil {
+			t.Fatalf("john gone: %v", err)
 		}
 	})
 }

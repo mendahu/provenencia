@@ -16,8 +16,20 @@ final class EvidenceGraphModel {
         /// The subject's id.
         let id: String
         let name: String
+        let kind: EvidencePrimaryKind
         let bridges: [String]
+        /// Handles the preflight reports this Unpromote deletes; nil when every handle stays.
+        var deletedHandles: CatalogDeleteImpactGroup?
+        /// The impact check failed; confirming may still delete the primary handle.
+        var impactCheckFailed = false
         var error: String?
+
+        var confirmTone: PVConfirmTone {
+            if deletedHandles != nil || impactCheckFailed || error != nil {
+                return .danger
+            }
+            return .irreversible
+        }
     }
 
     /// The Evidence graph this canvas shows. Its Source reads (`sourceRow`,
@@ -67,6 +79,8 @@ final class EvidenceGraphModel {
     )?
     /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
     var pendingUnpromote: PendingUnpromote?
+    @ObservationIgnored
+    private var unpromoteOpenGeneration = 0
     var isUnpromoting = false
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
@@ -578,7 +592,7 @@ final class EvidenceGraphModel {
         case EvidenceSubjectCard.openHandleActionID:
             return openHandle(subjectID: subjectID)
         case EvidenceSubjectCard.unpromoteActionID:
-            beginUnpromote(subjectID: subjectID)
+            Task { await beginUnpromote(subjectID: subjectID) }
             return nil
         default:
             guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
@@ -948,7 +962,7 @@ final class EvidenceGraphModel {
     /// the inverse of Promote's forecast, read from the same snapshot fields:
     /// filed bridges that have this subject as an end. The engine recomputes
     /// the authoritative set in the write. Does nothing otherwise.
-    func beginUnpromote(subjectID: String) {
+    func beginUnpromote(subjectID: String) async {
         guard let snapshot = currentSnapshot(),
               let placed = primary(in: snapshot, id: subjectID),
               placed.membership != nil
@@ -957,11 +971,32 @@ final class EvidenceGraphModel {
             .filter { ($0.endpointAID == subjectID || $0.endpointBID == subjectID) && $0.membership != nil }
             .sorted { $0.id < $1.id }
             .map { EvidenceBridgeEdgeSummary.sentence(for: $0, in: snapshot, orders: session.nameFormat) }
-        pendingUnpromote = PendingUnpromote(
+        let openGeneration = beginUnpromoteOpen()
+        var pending = PendingUnpromote(
             id: placed.id,
             name: placed.displayName(orders: session.nameFormat),
-            bridges: bridges
+            kind: placed.kind,
+            bridges: bridges,
+            deletedHandles: nil
         )
+        do {
+            if let group = try await store.getUnpromoteImpact(
+                projectDir: session.projectKey.projectDir,
+                subjectID: subjectID
+            ), group.total > 0 {
+                pending.deletedHandles = group
+            }
+        } catch {
+            pending.impactCheckFailed = true
+            pending.error = L10n.Errors.message(for: error)
+        }
+        guard unpromoteOpenGeneration == openGeneration else { return }
+        pendingUnpromote = pending
+    }
+
+    private func beginUnpromoteOpen() -> Int {
+        unpromoteOpenGeneration += 1
+        return unpromoteOpenGeneration
     }
 
     /// Writes the Unpromote. Success refreshes through the write's effects and

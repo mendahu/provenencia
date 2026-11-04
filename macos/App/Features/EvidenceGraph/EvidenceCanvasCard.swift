@@ -128,7 +128,7 @@ struct EvidenceCanvasCardContent {
             }
             if placed.membership != nil {
                 named.append((L10n.string(L10n.EvidenceGraph.unpromote), {
-                    model.beginUnpromote(subjectID: placed.id)
+                    Task { await model.beginUnpromote(subjectID: placed.id) }
                 }))
             }
             named.append((card.text.deleteActionName, {

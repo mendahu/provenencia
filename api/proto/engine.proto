@@ -126,6 +126,7 @@ enum Method {
   METHOD_LIST_PERSON_CLAIMS = 112;
   METHOD_GET_PERSON_FAMILY = 113;
   METHOD_LIST_PERSON_EVENTS = 114;
+  METHOD_GET_UNPROMOTE_IMPACT = 115;
 }
 
 message PingRequest {
@@ -1090,7 +1091,8 @@ message CanonicalEntity {
 
 // UnpromoteSubject deletes a primary Subject's accepted claim and, in the same
 // revision, the accepted claims of the bridges on its Evidence graph that have
-// it as an end. No handle is deleted. A Subject with no accepted claim writes nothing.
+// it as an end. A handle whose last accepted member this removes is deleted
+// (conclusion §5.2). A Subject with no accepted claim writes nothing.
 message UnpromoteSubjectRequest {
   string project_dir = 1;
   string user_id = 2;
@@ -1099,6 +1101,17 @@ message UnpromoteSubjectRequest {
 
 message UnpromoteSubjectResponse {
   WriteEffects effects = 1;
+}
+
+message GetUnpromoteImpactRequest {
+  string project_dir = 1;
+  string subject_id = 2;
+}
+
+// The handle the Unpromote deletes because the Subject is its last member;
+// unset when the handle stays.
+message GetUnpromoteImpactResponse {
+  DeleteImpactGroup deletes = 1;
 }
 
 // SetPreferredLikeness chooses a Person's portrait (S10-39): observation_id is

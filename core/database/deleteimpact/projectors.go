@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
@@ -62,6 +63,8 @@ func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, work
 		return projectVocab(tx, `SELECT label FROM source_credibility_grades WHERE id = ?`, row.ID, row.Ref, workspacelocation.Location{
 			Section: workspacelocation.Sources,
 		})
+	case catalogmodel.KindCanonicalEntity:
+		return projectCanonicalEntity(tx, row.ID, row.Ref)
 	default:
 		return row.Ref, workspacelocation.Location{Ref: row.Ref, Title: row.Ref}, nil
 	}
@@ -315,6 +318,29 @@ func titleOrRef(label, ref string) string {
 		return title
 	}
 	return ref
+}
+
+func projectCanonicalEntity(tx *sql.Tx, id []byte, ref string) (string, workspacelocation.Location, error) {
+	var label sql.NullString
+	var key, origin string
+	err := tx.QueryRow(`
+		SELECT e.ref, e.label, st.key, st.origin
+		FROM canonical_entities e
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE e.id = ?`, id).Scan(&ref, &label, &key, &origin)
+	if err == sql.ErrNoRows {
+		return ref, workspacelocation.Location{Section: workspacelocation.Persons, Ref: ref}, nil
+	}
+	if err != nil {
+		return "", workspacelocation.Location{}, err
+	}
+	title := titleOrRef(label.String, ref)
+	if vocabkey.IsPrimaryType(key, origin) {
+		if loc, ok := workspacelocation.Conclusion(key, database.UUIDString(id), ref, title); ok {
+			return title, loc, nil
+		}
+	}
+	return title, workspacelocation.Location{Section: workspacelocation.Sources, Ref: ref, Title: title}, nil
 }
 
 func projectVocab(tx *sql.Tx, q string, id []byte, ref string, loc workspacelocation.Location) (string, workspacelocation.Location, error) {
