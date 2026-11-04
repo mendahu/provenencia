@@ -381,7 +381,6 @@ struct PromoteModelTests {
     }
 
     @Test func aStaleDoneWhoseProposalFailsDropsTheStaleNote() async {
-        struct Boom: Error {}
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)
         store.promoteProposals = [
@@ -397,11 +396,11 @@ struct PromoteModelTests {
             projectDir: projectDir, userID: "user-1", graphID: graphID,
             subjectTypeID: "type-person", label: "Later", description: "", placement: nil
         )
-        store.proposePromoteGraphAlignmentError = Boom()
+        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
         model.done()
-        #expect(await waitUntil { !model.isProposing })
+        #expect(await waitUntil { model.proposeError != nil })
         #expect(model.flow.staleNote == nil)
-        #expect(model.proposeError != nil)
+        #expect(!model.isProposing)
     }
 
     @Test func mappingTheRestWhileProposingSendsTheWholePage() async {
@@ -419,6 +418,7 @@ struct PromoteModelTests {
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { hold.count == 1 })
         model.mapRest()
+        hold.isOn = false
         hold.release()
         #expect(await waitUntil { !model.isProposing })
         let calls = store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }
@@ -519,23 +519,24 @@ struct PromoteModelTests {
             subjectTypeID: "type-person", label: "Later", description: "", placement: nil
         )
         model.done()
-        #expect(await waitUntil { model.flow.staleNote != nil })
+        #expect(await waitUntil { model.flow.staleNote != nil && !model.isProposing })
         #expect(model.noticeToken == start + 1)
 
         store.applyPromoteGraphAlignmentError = Boom()
         model.setTarget(subjectID: "a", token: "handle:other")
         _ = await waitUntil { !model.isProposing }
         model.done()
-        #expect(await waitUntil { model.saveError != nil })
+        #expect(await waitUntil { model.saveError != nil && !model.isSaving })
         #expect(model.noticeToken == start + 2)
 
         store.applyPromoteGraphAlignmentError = nil
-        store.proposePromoteGraphAlignmentError = Boom()
+        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
         model.setTarget(subjectID: "a", token: "handle:e1")
-        #expect(await waitUntil { model.proposeError != nil })
+        #expect(await waitUntil { model.proposeError != nil && !model.isProposing })
         #expect(model.noticeToken == start + 3)
 
         let tokenAfterFirstPropose = model.noticeToken
+        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { !model.isProposing })
         #expect(model.noticeToken == tokenAfterFirstPropose)
