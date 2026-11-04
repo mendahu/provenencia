@@ -1,7 +1,7 @@
 # Ship log — S13-36 The provenance sheet joins the design system
 
 **Plan:** [`S13-36-provenance-sheet-in-the-kit.md`](S13-36-provenance-sheet-in-the-kit.md) · **Branch:** `s13-36-provenance-sheet-in-the-kit` · **PR:** #702
-**State:** fixing 1
+**State:** stopped — SEC-1 open after round 2; To user
 
 ## Round 0 — implement
 Head `7dd0f904`. Gate PASS (orchestrator re-ran). Report: deviations: one row of S13-15's plan edited, because `check-plan-docs.py` fails on the renamed `ProvenanceSheet.swift`; S13-15's map row reworded; `Landed in #702` per the lint; README row moved to STEP-6, which the kit check needs; `PVProvenancePreviewData` shared by the previews. Manual check, previews, VoiceOver not run (no GUI).
@@ -84,3 +84,26 @@ Check: the app builds.
 **F-11 — Measure the table** (from SEC-1). No commit.
 Do: in a temporary test, not committed, host `PVProvenanceRecordTable` in an `NSHostingView` at 880pt and time `layoutSubtreeIfNeeded` at 30, 300 and 1,200 records. Report three runs of each in your report.
 Check: the numbers are in the report; `git status` shows no test added.
+
+## Round 1 — fix
+Head `74def9fe`. Gate PASS (orchestrator re-ran); full `check-plan-docs.py` 0 errors. F-1 to F-10 done; F-3 ran red first. Deviations: commits grouped by file, not by `F-#`; S13-15's Status, Depends and closing sentence edited. Minors read by the orchestrator: UX-1 (F-6), UX-2 and MNT-4 (F-7) **Resolved**; F-6 is unverified with VoiceOver. The rest go to round 2's reviewers.
+
+F-11, `PVProvenanceRecordTable` in an `NSHostingView` at 880pt, first `layoutSubtreeIfNeeded`, Debug build, three runs: 30 records 172, 157, 155 ms; 300 records 1595, 1713, 1825 ms; 1,200 records 8704, 10693, 12155 ms. Linear, about 5 to 10 ms a row. The old `Grid` was not timed.
+
+## Round 2 — review
+Reviewers: CON (Sonnet, for CON-1), MNT, SEC+PRF. Skipped: UX (no Fix-now blocker or major). Scope: `7dd0f904...74def9fe`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major | Round 1 | Resolved | Full `check-plan-docs.py` 0 errors |
+| MNT-1, MNT-2, MNT-3 | MNT | major | Round 1 | Resolved | Guides updated; `face` defaults; seven hairlines on `PVDivider` |
+| PRF-1 + MNT-9 | PRF, MNT | minor | Round 1 | Resolved | `provenanceContent()` is called in `ReconciliationReasoningView.body` |
+| MNT-5, MNT-6, MNT-7, MNT-8, MNT-10, CON-5 | MNT | minor | Round 1 | Resolved | MNT-7 has a residual, below |
+| SEC-1 | SEC, PRF | major | Eager table, unbounded count | **Not resolved → To user** | F-11 does not clear it: 5 to 9 ms a row on the main thread on first layout, no cap, Debug only, no `Grid` baseline. Content assembly is O(n²) for negative records and unmeasured; the Why has the same input. Reverses D-7 either way, and a cap adds chrome to a "no visible change" PR |
+
+No new blockers from CON, MNT or SEC+PRF. UX not re-run.
+
+Open minors, no fix plan without the user: `MNT-7 residual · ReconciledValueRowModel.swift:102,134 · the empty-lead rule still lives in four places` · `guides · "built when the recipe opens" does not describe PVPersonCardContent` · `Landed note · omits shown: required and Shown.init(face:…); (8) says zero-size, the code is 1×1; § 6 Assembler still shows shown: Shown? = nil` · `ReconciledValueRow.swift:48-49 · padding one indent shallow` · logged: `PVPageColumns.swift:179 · hairline without Rectangle` · `PromoteView.swift:393, PVSidebarNav.swift:102 · hand-rolled vertical dividers`
+
+## Result
+Gate PASS (`74def9fe`) · CI not run (draft) · open: SEC-1 · follow-ups: — · to user: SEC-1 · CON miss: none
