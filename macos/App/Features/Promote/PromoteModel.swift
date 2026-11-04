@@ -271,18 +271,18 @@ final class PromoteModel {
                     if let snapshot {
                         syncNameOrders()
                         flow.merge(proposal, subjects: subjectFacts(snapshot))
-                        showingNotices { proposeError = nil }
+                        showingNotices { self.proposeError = nil }
                     } else {
                         showingNotices {
-                            flow.staleNote = nil
-                            proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
+                            self.flow.staleNote = nil
+                            self.proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
                         }
                     }
                 } catch {
                     if pendingProposal != nil { continue }
                     showingNotices {
-                        flow.staleNote = nil
-                        proposeError = L10n.Errors.message(for: error)
+                        self.flow.staleNote = nil
+                        self.proposeError = L10n.Errors.message(for: error)
                     }
                 }
                 if pendingProposal == nil {
