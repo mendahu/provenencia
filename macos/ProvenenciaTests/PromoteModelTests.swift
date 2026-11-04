@@ -335,9 +335,9 @@ struct PromoteModelTests {
             CatalogPromoteGraphAlignmentProposal(revision: 1, rows: answer2),
         ]
         let hold = store.proposePromoteGraphAlignmentHold
-        hold.isOn = true
         let model = model(store: store, subjectID: "a", mapAll: true)
         await model.load()
+        hold.isOn = true
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { hold.count == 1 })
         for id in ["b", "c", "d", "e"] {
@@ -363,9 +363,9 @@ struct PromoteModelTests {
             CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e9")]),
         ]
         let hold = store.proposePromoteGraphAlignmentHold
-        hold.isOn = true
         let model = model(store: store, subjectID: "a")
         await model.load()
+        hold.isOn = true
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { hold.count == 1 })
         model.setTarget(subjectID: "a", token: "handle:e1")
@@ -413,9 +413,9 @@ struct PromoteModelTests {
             CatalogPromoteGraphAlignmentProposal(revision: 3, rows: [row("a", handleID: "other"), row("b", handleID: "e2")]),
         ]
         let hold = store.proposePromoteGraphAlignmentHold
-        hold.isOn = true
         let model = model(store: store, subjectID: "a")
         await model.load()
+        hold.isOn = true
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { hold.count == 1 })
         model.mapRest()
