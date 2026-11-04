@@ -264,6 +264,20 @@ struct PersonDetailTests {
     }
 
     @MainActor
+    @Test func leavingTheSectionKeepsAPageToast() {
+        let model = leadModel(FakeStore())
+        let toast = VocabularyToast(title: "Saved", body: "", tone: .success)
+        model.toast = toast
+        model.viewerClosed()
+        #expect(model.toast == toast)
+        model.viewerOpened()
+        #expect(model.toast == nil)
+        model.toast = toast
+        model.viewerClosed()
+        #expect(model.toast == nil)
+    }
+
+    @MainActor
     @Test func choosingAPortraitWritesAndToasts() async {
         let store = FakeStore()
         let model = leadModel(store)

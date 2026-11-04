@@ -149,7 +149,7 @@ struct ConclusionPictureViewer: View {
         .onKeyPress(.rightArrow) { move(to: step.nextID) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(identifier)
-        .vocabularyToastOverlay($lead.toast, identifier: "\(identifier).toast")
+        .vocabularyToastOverlay(lead.toastInViewer ? $lead.toast : .constant(nil), identifier: "\(identifier).toast")
         .onAppear {
             lead.viewerOpened()
             FocusClaim.claim($focus, .image)

@@ -42,6 +42,20 @@ struct ThumbnailCacheTests {
         #expect(accepted == c.expected)
     }
 
+    @Test func cacheRefusesAFileOverTheByteLimit() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/aa/bb/big.png"
+        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: rel, width: 8, height: 8, fileType: .png)
+        let url = URL(fileURLWithPath: project).appendingPathComponent(rel)
+        // A real PNG with a sparse tail past IEND: it decodes, so only the byte limit can refuse it.
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(ThumbnailDecodePolicy.maxDecodeBytes) + 1)
+        try handle.close()
+        let image = await ThumbnailCache().image(projectDir: project, relPath: rel)
+        #expect(image == nil)
+    }
+
     @Test func declaredImageBounds() throws {
         func source(_ data: Data) throws -> CGImageSource {
             try #require(CGImageSourceCreateWithData(data as CFData, nil))

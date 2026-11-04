@@ -31,7 +31,10 @@ final class ConclusionLeadModel {
     }
 
     /// The viewer is gone, however it went: the page draws the Toast again, and any the viewer was showing goes.
+    /// With no viewer open (the Gallery section left, or an Event or Place page) it does nothing, so a
+    /// Toast the page is showing stays.
     func viewerClosed() {
+        guard toastInViewer else { return }
         toastInViewer = false
         toast = nil
     }
