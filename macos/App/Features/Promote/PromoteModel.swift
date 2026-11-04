@@ -92,10 +92,17 @@ final class PromoteModel {
     private(set) var loadError: String?
     private(set) var saveError: String?
     private(set) var proposeError: String?
+    private(set) var isLoading = false
+    private(set) var loadAttempt = 0
+    private(set) var noticeToken = 0
     /// A proposal after a decision is in flight; Done waits for it.
     private(set) var isProposing = false
-    /// Bumped per proposal; only the latest one's answer is merged.
-    private var proposeGeneration = 0
+    private var pendingProposal: PromoteProposalInput?
+
+    private struct PromoteProposalInput {
+        let fixed: [CatalogPromoteGraphAlignmentFixed]
+        let onlySubjectID: String?
+    }
 
     var graphKey: CatalogQueryKey { .evidenceGraph(project: session.projectKey, graphId: entry.graphID) }
     var propertiesKey: CatalogQueryKey { .propertiesWorkspace(project: session.projectKey) }
@@ -138,6 +145,7 @@ final class PromoteModel {
     }
 
     func load() async {
+        defer { isLoading = false }
         do {
             let proposal = try await store.proposePromoteGraphAlignment(
                 projectDir: session.projectKey.projectDir,
@@ -149,6 +157,7 @@ final class PromoteModel {
             // would drop and the page would read as empty: say so instead.
             guard let snapshot = await graphSnapshot() else {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
+                loadAttempt += 1
                 return
             }
             await warmSourceKeys()
@@ -161,7 +170,16 @@ final class PromoteModel {
             loadError = nil
         } catch {
             loadError = L10n.Errors.message(for: error)
+            loadAttempt += 1
         }
+    }
+
+    /// Loads the page again after a failed read or proposal on open.
+    func retryLoad() {
+        guard !isLoading else { return }
+        isLoading = true
+        let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
+        Task { await load() }
     }
 
     /// Maps the rest of the page's Subjects. The scope is part of what Done files, so Go is asked again.
@@ -223,8 +241,73 @@ final class PromoteModel {
     /// A decision changed the fixed pairs: propose again.
     private func proposeAfterDecision() {
         flow.staleNote = nil
-        let generation = nextProposal()
-        Task { await repropose(generation: generation) }
+        submitProposal()
+    }
+
+    private func submitProposal() {
+        pendingProposal = PromoteProposalInput(
+            fixed: flow.fixed(for: flow.rows.filter(\.decided)),
+            onlySubjectID: flow.onlySubjectID
+        )
+        guard !isProposing else { return }
+        isProposing = true
+        Task { [weak self] in
+            await self?.runProposalLoop()
+        }
+    }
+
+    private func runProposalLoop() async {
+        while let self {
+            guard let input = pendingProposal else {
+                isProposing = false
+                return
+            }
+            pendingProposal = nil
+            do {
+                let proposal = try await store.proposePromoteGraphAlignment(
+                    projectDir: session.projectKey.projectDir,
+                    graphID: entry.graphID,
+                    fixed: input.fixed,
+                    onlySubjectID: input.onlySubjectID
+                )
+                if pendingProposal != nil { continue }
+                let snapshot = await graphSnapshot()
+                if pendingProposal != nil { continue }
+                if let snapshot {
+                    syncNameOrders()
+                    flow.merge(proposal, subjects: subjectFacts(snapshot))
+                    showingNotices { proposeError = nil }
+                } else {
+                    showingNotices {
+                        flow.staleNote = nil
+                        proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
+                    }
+                }
+            } catch {
+                if pendingProposal != nil { continue }
+                showingNotices {
+                    flow.staleNote = nil
+                    proposeError = L10n.Errors.message(for: error)
+                }
+            }
+            if pendingProposal == nil {
+                isProposing = false
+                return
+            }
+        }
+    }
+
+    private func showingNotices(_ change: () -> Void) {
+        let hadStale = flow.staleNote != nil
+        let hadSave = saveError != nil
+        let hadPropose = proposeError != nil
+        change()
+        if (flow.staleNote != nil && !hadStale)
+            || (saveError != nil && !hadSave)
+            || (proposeError != nil && !hadPropose)
+        {
+            noticeToken += 1
+        }
     }
 
     /// The one place the page takes the researcher's name order from the session: when it loads
@@ -283,44 +366,6 @@ final class PromoteModel {
         }
     }
 
-    private func nextProposal() -> Int {
-        proposeGeneration += 1
-        isProposing = true
-        return proposeGeneration
-    }
-
-    private func repropose(generation: Int) async {
-        defer {
-            if generation == proposeGeneration {
-                isProposing = false
-            }
-        }
-        let fixed = flow.fixed(for: flow.rows.filter(\.decided))
-        do {
-            let proposal = try await store.proposePromoteGraphAlignment(
-                projectDir: session.projectKey.projectDir,
-                graphID: entry.graphID,
-                fixed: fixed,
-                onlySubjectID: flow.onlySubjectID
-            )
-            let snapshot = await graphSnapshot()
-            guard generation == proposeGeneration else { return }
-            if let snapshot {
-                syncNameOrders()
-                // Bridges are the page's, built once at load; the proposal says what Done does with each.
-                flow.merge(proposal, subjects: subjectFacts(snapshot))
-                proposeError = nil
-            } else {
-                // Merging without the graph would drop every row and its
-                // decisions. Keep the rows as they are.
-                proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
-            }
-        } catch {
-            guard generation == proposeGeneration else { return }
-            proposeError = L10n.Errors.message(for: error)
-        }
-    }
-
     private func promote() async {
         let batch = flow.batchRows()
         let seen = flow.revision
@@ -344,11 +389,11 @@ final class PromoteModel {
         } catch {
             flow.saving = false
             if case CoreInvokeError.coded(_, let code, _, _) = error, code == "promote.stale" {
-                flow.staleNote = L10n.string(L10n.Promote.stale)
-                await repropose(generation: nextProposal())
+                showingNotices { flow.staleNote = L10n.string(L10n.Promote.stale) }
+                submitProposal()
                 return
             }
-            saveError = L10n.Errors.message(for: error)
+            showingNotices { saveError = L10n.Errors.message(for: error) }
         }
     }
 
