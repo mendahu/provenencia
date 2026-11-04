@@ -11,6 +11,33 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+func GetUnpromoteImpact(in []byte) ([]byte, error) {
+	var req engine.GetUnpromoteImpactRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_unpromote_impact", err)
+	}
+	subjectID, err := parseID(req.GetSubjectId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.GetUnpromoteImpactResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		group, err := promote.UnpromoteImpact(c, subjectID)
+		if err != nil {
+			return err
+		}
+		out = &engine.GetUnpromoteImpactResponse{}
+		if group.Via != "" {
+			out.Deletes = groupToProto(group)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func UnpromoteSubject(in []byte) ([]byte, error) {
 	var req engine.UnpromoteSubjectRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

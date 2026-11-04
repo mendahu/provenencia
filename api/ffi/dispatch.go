@@ -104,6 +104,7 @@ const (
 	MethodListPersonClaims                  = int32(engine.Method_METHOD_LIST_PERSON_CLAIMS)
 	MethodGetPersonFamily                   = int32(engine.Method_METHOD_GET_PERSON_FAMILY)
 	MethodListPersonEvents                  = int32(engine.Method_METHOD_LIST_PERSON_EVENTS)
+	MethodGetUnpromoteImpact                = int32(engine.Method_METHOD_GET_UNPROMOTE_IMPACT)
 	MethodListEventSummaries                = int32(engine.Method_METHOD_LIST_EVENT_SUMMARIES)
 	MethodListPlaceSummaries                = int32(engine.Method_METHOD_LIST_PLACE_SUMMARIES)
 	MethodListEvidenceGraphEventTitles      = int32(engine.Method_METHOD_LIST_EVIDENCE_GRAPH_EVENT_TITLES)
@@ -282,6 +283,8 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.DeleteCitation(in)
 	case MethodUnpromoteSubject:
 		return handlers.UnpromoteSubject(in)
+	case MethodGetUnpromoteImpact:
+		return handlers.GetUnpromoteImpact(in)
 	case MethodSetPreferredLikeness:
 		return handlers.SetPreferredLikeness(in)
 	case MethodCopySource:

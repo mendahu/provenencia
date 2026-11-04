@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"google.golang.org/protobuf/proto"
@@ -168,9 +169,101 @@ func TestGetDeleteImpactPromotedSubject(t *testing.T) {
 		t.Fatalf("%+v", &report)
 	}
 	g := report.GetCascades()[0]
-	if g.GetVia() != "identity_claims.subject_id" || g.GetKind() != "canonical_entity" ||
+	if g.GetVia() != deleteimpact.ViaLastMember || g.GetKind() != "canonical_entity" ||
 		len(g.GetListed()) != 1 || g.GetListed()[0].GetRef() != promoted.Entity.Ref {
 		t.Fatalf("%+v", g)
+	}
+}
+
+func TestGetUnpromoteImpact(t *testing.T) {
+	dir, userID, subjectID := promotableSubject(t)
+	promoted := promoteInDir(t, dir, userID, subjectID, "")
+	runRPC(t, GetUnpromoteImpact, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+		{
+			name: "malformed subject id",
+			reqFn: func(t *testing.T) proto.Message {
+				return &engine.GetUnpromoteImpactRequest{ProjectDir: dir, SubjectId: "nope"}
+			},
+			wantErr: true,
+		},
+		{
+			name: "unknown subject",
+			reqFn: func(t *testing.T) proto.Message {
+				id, err := uuid.NewV7()
+				if err != nil {
+					t.Fatal(err)
+				}
+				return &engine.GetUnpromoteImpactRequest{
+					ProjectDir: dir,
+					SubjectId:  id.String(),
+				}
+			},
+			wantErr: true,
+		},
+	})
+	out, err := GetUnpromoteImpact(marshalProto(t, &engine.GetUnpromoteImpactRequest{
+		ProjectDir: dir, SubjectId: subjectID,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sole engine.GetUnpromoteImpactResponse
+	if err := proto.Unmarshal(out, &sole); err != nil {
+		t.Fatal(err)
+	}
+	if sole.Deletes == nil || sole.Deletes.GetVia() != deleteimpact.ViaLastMember ||
+		sole.Deletes.GetKind() != "canonical_entity" || sole.Deletes.GetTotal() != 1 ||
+		len(sole.Deletes.GetListed()) != 1 || sole.Deletes.GetListed()[0].GetRef() != promoted.Entity.Ref ||
+		sole.Deletes.GetListed()[0].GetLocation().GetSection() != "persons" ||
+		sole.Deletes.GetListed()[0].GetLocation().GetEntityId() == "" {
+		t.Fatalf("%+v", sole.Deletes)
+	}
+
+	dir2, userID2, sourceID2, typeID2 := subjectFixture(t)
+	createSubject := func(label string) string {
+		out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+			ProjectDir: dir2, UserId: userID2, GraphId: soleGraphID(t, dir2, sourceID2), SubjectTypeId: typeID2, Label: label,
+		}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var created engine.CreateSubjectResponse
+		if err := proto.Unmarshal(out, &created); err != nil {
+			t.Fatal(err)
+		}
+		return created.Subject.GetId()
+	}
+	subjectA, subjectB := createSubject("James"), createSubject("Jim")
+	res := promoteInDir(t, dir2, userID2, subjectA, "")
+	promoteInDir(t, dir2, userID2, subjectB, database.UUIDString(res.Entity.ID))
+	out, err = GetUnpromoteImpact(marshalProto(t, &engine.GetUnpromoteImpactRequest{
+		ProjectDir: dir2, SubjectId: subjectA,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var twoMember engine.GetUnpromoteImpactResponse
+	if err := proto.Unmarshal(out, &twoMember); err != nil {
+		t.Fatal(err)
+	}
+	if twoMember.Deletes != nil {
+		t.Fatalf("expected unset deletes, got %+v", twoMember.Deletes)
+	}
+
+	dir3, _, plainID := promotableSubject(t)
+	out, err = GetUnpromoteImpact(marshalProto(t, &engine.GetUnpromoteImpactRequest{
+		ProjectDir: dir3, SubjectId: plainID,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var unpromoted engine.GetUnpromoteImpactResponse
+	if err := proto.Unmarshal(out, &unpromoted); err != nil {
+		t.Fatal(err)
+	}
+	if unpromoted.Deletes != nil {
+		t.Fatalf("unpromoted: %+v", unpromoted.Deletes)
 	}
 }
 

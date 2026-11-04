@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -476,6 +477,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		{
 			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
 			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact),
+		},
+		{
+			name: "cascade vias", path: swiftVocabulary, enum: "DeleteImpactCascadeVia", re: wireCase,
+			want: sorted(deleteimpact.ViaLeavesHandle, deleteimpact.ViaDeletesCitations, deleteimpact.ViaLastMember),
 		},
 		{
 			name: "promote row targets", path: swiftVocabulary, enum: "PromoteTargetCode", re: wireCase,
