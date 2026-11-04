@@ -1,6 +1,7 @@
 # S14-26 — A folded nickname shows as a nickname
 
-**Status:** Planned
+**Status:** Landed #709 (2026-11-04)
+**Landed:** Search title hit for a folded nickname updated in `core/search/handles_test.go` because Tom is now a `nick` part of the reconciled title. Manual check §10 not run in implementer pass.
 **Spike / slice:** Spike 14 · Slice 3 — Name display
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the reconciler stores a `nick` part; S14-09 already quotes `nick` on every surface that shows a name)
