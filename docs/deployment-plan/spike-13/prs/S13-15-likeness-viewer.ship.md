@@ -1,7 +1,7 @@
 # Ship log — S13-15 Likeness viewer
 
 **Plan:** [`S13-15-likeness-viewer.md`](S13-15-likeness-viewer.md) · **Branch:** `s13-15-likeness-viewer` · **PR:** #703
-**State:** fixing 3
+**State:** ready
 
 ## Round 0 — implement
 Head `c440b2cb`. Gate PASS (orchestrator re-ran). Report: deviations: `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size and the view computes the frame on each draw; every close clears the Toast and `toastInViewer`; focus restore skipped for an empty gallery; plan § 4 row moved to the new decode path because lint failed. Manual check, frames, keys, VoiceOver not run (no GUI).
@@ -144,5 +144,10 @@ Do:
 - `BoundedImageDecode.declaredSize` loses its last caller: delete it. Move `declaredSizeTurnsRotatedImages` and `declaredSizeRefusesAnOversizedFile` onto `decode`, keeping every case.
 Check: `rg 'declaredSize|cachedImage' macos/App/Features/Conclusions/ConclusionPictureViewer.swift macos/App/Platform/BoundedImageDecode.swift` prints nothing; scripts/check-pr.sh PASS.
 
+**F-15 — Neighbouring likenesses are decoded ahead** (from the user: "unless you think there is a way to just improve the performance enough we dont need a spinner", 2026-11-04). Supersedes the plan's Out line on prefetching, D-5 and D-6, and Scale. The viewer holds the shown likeness and its neighbours, at most three decoded images; a held likeness shows at once; the next, then the previous, decode one at a time in the same task, so a step cancels any not yet started. The 120 ms wait stays for a likeness not held, and the spinner stays as the fallback past 250 ms.
+
+## Fix round 3
+Head `8def8d49`, then `origin/main` merged (35 commits, no conflicts). Gate PASS (orchestrator re-ran on the merge); full `check-plan-docs.py` 0 errors. F-14, F-15 done; `holdsTheShownTileAndItsNeighbours` passes. Read by the orchestrator: `load()` shows a held likeness at once, else waits, decodes and stores, then prefetches. Not reviewed by a reviewer. The feel of stepping and the spinner's timing are unverified in the app.
+
 ## Result
-Gate PASS · CI green (`872fe6ab`) · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
