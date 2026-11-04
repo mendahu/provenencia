@@ -1,7 +1,7 @@
 # Ship log — S13-15 Likeness viewer
 
 **Plan:** [`S13-15-likeness-viewer.md`](S13-15-likeness-viewer.md) · **Branch:** `s13-15-likeness-viewer` · **PR:** #703
-**State:** stopped — UX-5 and MNT-2 open after round 2; To user
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `c440b2cb`. Gate PASS (orchestrator re-ran). Report: deviations: `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size and the view computes the frame on each draw; every close clears the Toast and `toastInViewer`; focus restore skipped for an empty gallery; plan § 4 row moved to the new decode path because lint failed. Manual check, frames, keys, VoiceOver not run (no GUI).
@@ -107,6 +107,27 @@ Reviewers: MNT, UX, SEC+PRF. Skipped: CON (no Fix-now blocker or major). Scope: 
 No new blockers. CON not re-run.
 
 Open minors and nits, no fix plan without the user: `UX-12 · :329 · focus nil also true on close, Use as portrait, a record link, so a step moves the keyboard to the image` · `UX-14 · :230 · "Image unavailable" reaches VoiceOver only when the element is read` · `UX-15 · ConclusionGallerySection.swift:70-73 · the fallback can announce "Likeness 1 of 6" for one draw` · `UX-16 · :230 · ", portrait" changes the label after Use as portrait` · `EventsListView.swift:69 · a filter now redundant`
+
+### Fix plan 2
+The user answered: fix all three (2026-11-04), a fix plan outside the cap for majors. No third review round: the orchestrator reads the fixes.
+
+**F-11 — Leaving the Gallery keeps a page Toast** (from UX-13)
+Files: `macos/App/Features/Conclusions/ConclusionLeadModel.swift`, its tests.
+Failing test first: `leavingTheSectionKeepsAPageToast` — a model with a Toast and no viewer open: `viewerClosed()` leaves the Toast; after `viewerOpened()`, it clears it.
+Do: `viewerClosed()` returns at once unless `toastInViewer` is true.
+Check: the test ran red first and passes; scripts/check-pr.sh PASS.
+
+**F-12 — The viewer's Toast waits for the viewer** (from UX-5)
+Files: `macos/App/Features/Conclusions/ConclusionPictureViewer.swift`.
+Failing test first: none, view mount; manual check 3 covers it by hand.
+Do: `.vocabularyToastOverlay(lead.toastInViewer ? $lead.toast : .constant(nil), …)`, as the page gates its own.
+Check: scripts/check-pr.sh PASS.
+
+**F-13 — One way to open a picture file** (from MNT-2)
+Files: `macos/App/Platform/ImageHeaderDecode.swift`, `macos/App/Platform/BoundedImageDecode.swift`, `macos/App/Platform/ThumbnailCache.swift`, the thumbnail tests, the plan's Landed note.
+Failing test first: a thumbnail case: a sparse file over `maxDecodeBytes` with a valid PNG header → the cache's outcome is refused, not decoded.
+Do: `BoundedImageDecode`'s private `admit(url:limits:)` moves beside `ImageHeaderDecode.admit` as the one non-private URL admission: size, then open, then type, header and fit. `BoundedImageDecode` and `ThumbnailCache` both call it, the cache with `ThumbnailDecodePolicy.limits`. Delete `ThumbnailDecodePolicy.accepts` and move its tests to the URL admission. Correct the doc comments on `ThumbnailDecodePolicy` and `ImageDecodeLimits`. The Landed note says the thumbnail cache now has the byte limit, so a file over 128 MiB shows the fallback on both the tile and the viewer.
+Check: `rg 'accepts\(' macos/App/Platform` prints nothing; the test ran red first and passes; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS (`d3ef0f1a`) · CI not run (draft) · open: UX-5, MNT-2, UX-13 · follow-ups: — · to user: UX-5, MNT-2, UX-13 · CON miss: none
