@@ -51,16 +51,6 @@ final class ArtifactViewerModel {
         return document
     }
 
-    /// Media-box size of the current PDF page in points (y-up page space).
-    var pdfPageMediaSize: CGSize? {
-        guard let document = pdfDocument,
-              let pdfPage = document.page(at: page - 1)
-        else { return nil }
-        let bounds = pdfPage.bounds(for: .mediaBox)
-        guard bounds.width > 0, bounds.height > 0 else { return nil }
-        return bounds.size
-    }
-
     var supportsPages: Bool { kind.supportsPages }
     var supportsSpatialZoom: Bool { kind.supportsSpatialZoom }
     var locatorCapabilities: ArtifactLocatorCapabilities { kind.locatorCapabilities }
@@ -471,11 +461,15 @@ final class ArtifactViewerModel {
         }
     }
 
-    private static func pageNumber(for selection: PDFSelection, in document: PDFDocument) -> Int? {
-        guard let pdfPage = selection.pages.first else { return nil }
-        let index = document.index(for: pdfPage)
+    static func pageNumber(for page: PDFPage, in document: PDFDocument) -> Int? {
+        let index = document.index(for: page)
         guard index != NSNotFound else { return nil }
         return index + 1
+    }
+
+    private static func pageNumber(for selection: PDFSelection, in document: PDFDocument) -> Int? {
+        guard let pdfPage = selection.pages.first else { return nil }
+        return pageNumber(for: pdfPage, in: document)
     }
 
 }
