@@ -14,7 +14,7 @@ A caller chooses *which* records (a field, a span of fields, a derived row's own
 | Caller | Shows | Data it holds |
 | --- | --- | --- |
 | Person · Vitals rows (today, S13-11) | One field's records; a life row's records grouped by owning event or place | `CatalogConclusionDetail.fields`, `.derivedRows` |
-| Person · likeness viewer (S13-15) | One record row on its own, under the image | Same detail |
+| Person · likeness viewer (S13-15) | One record row on its own, under the image | `CatalogPicture.record`: a likeness has no field |
 | Person · other sections (Family, Timeline, Sources) | A record or a field, when R-13b is revisited | Same detail for the person; a relative's or event's own detail for theirs |
 | Event and Place pages (their redesign) | Their fields' records, as Vitals | Their `CatalogConclusionDetail` (the same message) |
 | Family tree, other views (later) | A person's fact; possibly a relationship | A relative's detail; for a relationship, the family read's "what it rests on", which is **not** a reconciler outcome |
@@ -102,5 +102,5 @@ A caller uses whichever level it needs, and every level is built from the level 
 
   The S13-36 planner decides the cut and updates the map.
 - **S13-14** uses no provenance piece: tiles have no provenance control (user, 2026-11-03).
-- **S13-15** places one `PVProvenanceRecordRow` under the image, built with `Record(outcome:in:)` from the likeness's record (its D-9). It is refreshed after S13-36.
+- **S13-15** places one `PVProvenanceRecordRow` under the image, built with `Record(outcome:in: nil)` from the picture's outcome, since a depiction Property has no field (its D-9). It is refreshed after S13-36.
 - **Event and Place, Family, Timeline, a family tree:** each adds one call to the assembler and one link mapping.

@@ -95,3 +95,33 @@ Tiles get no provenance control, no one-record sheet and no context menu. A like
 
 ## Board refresh (2026-11-03)
 Board turn 13's viewer answers are in D-4, D-6, D-9 and D-11, and § 12 is empty. The button wording is the app's "Use as portrait" (user, 2026-11-03). The plan stays Blocked on S13-14 and S13-36 and is reviewed again on its refresh.
+
+## Refresh after S13-14 and S13-36 landed (2026-11-03)
+Every § 4 row was re-read at `4c245957`. Writer's own calls, for the user to veto:
+- **A likeness has no field.** The plan assumed `detail.fields` held one, and it does not: `loadProperties` skips depiction Properties. `Record(outcome:in:)` takes an optional field (D-9), and the tile carries its outcome. No Go change.
+- **One focus restore.** D-11 reuses S13-14's `keepFocus()` as `restoreFocus(to:)`; no second scroll token.
+- **One hint field.** The Person's `openTip` becomes `likenessViewHint`; `likenessOpenTip` goes (D-12).
+- **AC-4.3.** The section leaves the tree when the gallery empties, so the plan no longer promises where focus lands.
+
+### Refresh round 1: maintainability Fits with changes, executability Ready with changes
+- **M-1, M-2 · blockers:** Fixed. D-5: `admit` and `uprightSize` are one admission rule. D-12: `viewerLabel` is a per-tile string, through a typed `L10n` function.
+- **X-1, X-2 · blockers:** Fixed. STEP-1 adds `outcome`, and the tests build through `tiles(from:…)`. D-6 names every state.
+- **M-3, X-8 · major:** Fixed. D-10: `toastInViewer`, one host.
+- **M-4 · major:** Fixed. D-2, D-3: no `lastIndex`.
+- **M-5, X-9, X-10 · major:** Fixed. `ConclusionPictureImage`, `frame`, T-7, AC-1.5's numbers, a Reach row.
+- **X-3 · major:** Fixed. STEP-5 to STEP-8.
+- **X-4, X-5, X-6, X-7 · major:** Fixed. D-12, D-9, D-9, D-1.
+- **M-6, M-7, M-8, M-9, X-11, X-12 · minor:** Fixed. X-13 Fixed by M-1.
+- **Nits:** M-10, M-12, M-14 Fixed. M-11, M-13, M-15 Logged.
+
+### Refresh round 2: maintainability Fits with changes, executability Ready with changes
+Rounds are capped at two, so these answers have not been re-reviewed.
+- **M-16 · blocker:** Fixed. D-10: the section's `.onDisappear` clears `toastInViewer`, and a close clears the Toast rather than remounting it.
+- **M-17 · blocker:** Fixed. The one-line title was the writer's addition, not the board's: D-9 lets a long title wrap, with no kit change.
+- **M-18 · blocker:** Fixed. D-5: a `maxEdge` parameter; the viewer passes `ThumbnailDecodePolicy.maxDeclaredEdge`; T-5, Scale, Edges.
+- **M-19 · blocker:** Fixed. D-8: `FocusClaim` on appear, no `.defaultFocus`.
+- **X-1 · major:** Fixed. D-6 gives the arithmetic; T-7 pins the width bound.
+- **X-2 to X-5:** Fixed. D-10, D-6, D-9, D-12.
+- **Outside the lens, the band on a short pane:** Fixed. `bandHeight` reads `\.pvPageViewportSize`; T-7, manual check 6.
+- **Outside the lens, one decode at a time:** Fixed. The plan now says a superseded decode finishes and is dropped; `ThumbnailCache.withDecodeSlot` is private.
+- **Outside the lens, the Toast over the close button:** Accepted in § 11.
