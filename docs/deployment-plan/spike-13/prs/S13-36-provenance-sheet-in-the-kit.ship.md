@@ -108,4 +108,4 @@ Open minors, no fix plan without the user: `MNT-7 residual · ReconciledValueRow
 **To user, answered:** SEC-1: the user accepted the risk and asked for an idea file (2026-11-03): [`provenance-record-cap.md`](../../../ideas/provenance-record-cap.md). The table stays as D-7 has it. The stated ceiling is about 300 records on one value; no Release figure was taken, and the idea file says so. The open minors above were not applied: they go to the PR body's follow-ups.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: SEC-1, the open minors above · to user: SEC-1 answered · CON miss: none
+Gate PASS · CI green (`b783ad42`) · open: none · follow-ups: SEC-1, the open minors above · to user: SEC-1 answered · CON miss: none
