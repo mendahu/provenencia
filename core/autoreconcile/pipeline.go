@@ -476,8 +476,6 @@ func groupAll(shown []*entry) []*row {
 	return []*row{r}
 }
 
-// settledUnits is, per unit name, the distinct values the row's members
-// settled on: best supported first, then best ranked.
 // nickReach reports whether nickEdge has a path from a to b.
 func nickReach(nickEdge [][]bool, from, to int) bool {
 	if from == to {
@@ -504,6 +502,8 @@ func nickReach(nickEdge [][]bool, from, to int) bool {
 	return false
 }
 
+// foldedUnits is, per unit name, every fold attach on the row's members,
+// best supported first, then best ranked.
 func (r *row) foldedUnits() map[string][]foldAttach {
 	byName := map[string][]foldAttach{}
 	for _, e := range r.members {
@@ -524,6 +524,8 @@ func (r *row) foldedUnits() map[string][]foldAttach {
 	return out
 }
 
+// settledUnits is, per unit name, the distinct values the row's members
+// settled on: best supported first, then best ranked.
 func (r *row) settledUnits() map[string][]unit {
 	byName := map[string][]*unitValue{}
 	for _, e := range r.members {

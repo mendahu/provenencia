@@ -143,8 +143,7 @@ func (m nameModule) fold(typ string, from, into unit) (folds, nickClass bool) {
 		case p.Cause == valuecompare.CausePrefix && valuecompare.PrefixRuleRole(role):
 			changed = true
 			nickClass = false
-		case p.Cause == valuecompare.CauseAlias &&
-			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
+		case m.aliasExpandsNickname(p, role):
 			changed = true
 		case p.Cause == valuecompare.CauseAbbreviation &&
 			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
@@ -176,10 +175,10 @@ func (m nameModule) nicknameParts(typ string, a foldAttach) []namevalue.Part {
 		alias := false
 		for _, w := range words {
 			for _, p := range det.Parts {
-				if p.Cause != valuecompare.CauseAlias || p.A.Text != w {
+				if p.A.Text != w {
 					continue
 				}
-				if m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role) {
+				if m.aliasExpandsNickname(p, role) {
 					alias = true
 					break
 				}
@@ -206,7 +205,7 @@ func insertNickInOrder(order []string) []string {
 	after := -1
 	if i := slices.Index(order, namevalue.PartTypeGiven); i >= 0 {
 		after = i
-	} else if i := slices.Index(order, "prefix"); i >= 0 {
+	} else if i := slices.Index(order, namevalue.PartTypePrefix); i >= 0 {
 		after = i
 	}
 	if after < 0 {
@@ -234,6 +233,11 @@ func (m nameModule) outvotes(_ string, winner, other unit) bool {
 }
 
 func (nameModule) oneValue() bool { return true }
+
+func (m nameModule) aliasExpandsNickname(p valuecompare.PartMatch, role valuecompare.NameRole) bool {
+	return p.Cause == valuecompare.CauseAlias &&
+		m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role)
+}
 
 func containsAll(have, words []string) bool {
 	for _, w := range words {
@@ -282,15 +286,35 @@ func (m nameModule) assemble(members []Candidate, settled map[string][]unit, fol
 				if containsAll(parts[typ], words) {
 					continue
 				}
+				p := nu.raw[i]
+				if !namevalue.PartValueOK(p.Value) {
+					continue
+				}
 				parts[typ] = append(parts[typ], words...)
-				raw[typ] = append(raw[typ], nu.raw[i])
+				raw[typ] = append(raw[typ], p)
 			}
 		}
 	}
 
-	for typ, attaches := range folded {
-		for _, a := range attaches {
+	foldedSeen := map[string]bool{}
+	var foldedTypes []string
+	for _, typ := range order {
+		if _, ok := folded[typ]; ok && !foldedSeen[typ] {
+			foldedTypes = append(foldedTypes, typ)
+			foldedSeen[typ] = true
+		}
+	}
+	for _, typ := range sortedKeys(folded) {
+		if !foldedSeen[typ] {
+			foldedTypes = append(foldedTypes, typ)
+		}
+	}
+	for _, typ := range foldedTypes {
+		for _, a := range folded[typ] {
 			for _, p := range m.nicknameParts(typ, a) {
+				if !namevalue.PartValueOK(p.Value) {
+					continue
+				}
 				words := valuecompare.SplitWords(p.Value, m.rules.Words)
 				if len(words) == 0 || containsAll(parts[namevalue.PartTypeNick], words) {
 					continue

@@ -28,6 +28,13 @@ const (
 	PartTypeUndetermined  = "undetermined"
 )
 
+// MaxPartBytes is the largest part value the reconciler will copy into an
+// assembled name. Insert and Validate are not bounded here yet.
+const MaxPartBytes = 1024
+
+// PartValueOK reports whether s is small enough to copy during assemble.
+func PartValueOK(s string) bool { return len(s) <= MaxPartBytes }
+
 // Part is one ordered segment of a NameValue.
 type Part struct {
 	ID    []byte

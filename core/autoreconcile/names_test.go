@@ -619,8 +619,6 @@ func specs(r Result) []string {
 	return out
 }
 
-// BenchmarkReconcileNames: one handle with 200 name candidates, the shape a
-// heavily researched Person reaches (performance-ledger.md).
 // BenchmarkReconcileNamesAliases: alias-folding corpus for S14-26 scale (200 candidates).
 func BenchmarkReconcileNamesAliases(b *testing.B) {
 	given := []string{"Bill", "William", "Jim", "James", "Chris", "Christopher"}
@@ -638,6 +636,8 @@ func BenchmarkReconcileNamesAliases(b *testing.B) {
 	}
 }
 
+// BenchmarkReconcileNames: one handle with 200 name candidates, the shape a
+// heavily researched Person reaches (performance-ledger.md).
 func BenchmarkReconcileNames(b *testing.B) {
 	given := []string{"James", "J.", "Jim", "James|given=Kenneth", "J.|given=K."}
 	surname := []string{"Robins", "Robins", "Robins", "Robbins"}
@@ -805,6 +805,46 @@ func sameResult(t *testing.T, label string, with, without valuecompare.Rules, in
 	if !reflect.DeepEqual(specs(w), specs(wo)) || w.State() != wo.State() || reasonsOf(w) != reasonsOf(wo) {
 		t.Fatalf("%s changed the result:\nwith    %v %v %q\nwithout %v %v %q",
 			label, specs(w), w.State(), reasonsOf(w), specs(wo), wo.State(), reasonsOf(wo))
+	}
+}
+
+// TestAssembleFoldedNickOrderStable: nick parts from folds on different part
+// types must appear in a fixed order, not map iteration order.
+func TestAssembleSkipsOversizedPartValues(t *testing.T) {
+	padded := "Bill" + strings.Repeat(",", 50_000)
+	in := []Candidate{
+		nm(1, "given="+padded+"|surname=Robins"),
+		nm(2, "given=William|surname=Robins"),
+	}
+	got, err := Reconcile(aliasRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "given=William|surname=Robins"
+	if len(got.Values) != 1 || spec(got.Values[0].Value.Name) != want {
+		t.Fatalf("got %v, want one value %q", specs(got), want)
+	}
+}
+
+func TestAssembleFoldedNickOrderStable(t *testing.T) {
+	in := []Candidate{
+		nm(1, "given=Bill|surname=Robins"),
+		nm(2, "given=William|surname=Robins"),
+		nm(3, "given=William|nick=Billy|surname=Robins"),
+		nm(4, "given=William|nick=William|surname=Robins"),
+	}
+	want := "given=William|nick=William|nick=Bill|nick=Billy|surname=Robins"
+	for i := 0; i < 50; i++ {
+		got, err := Reconcile(aliasRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got.Values) != 1 {
+			t.Fatalf("run %d: %d values", i, len(got.Values))
+		}
+		if s := spec(got.Values[0].Value.Name); s != want {
+			t.Fatalf("run %d: parts %q, want %q", i, s, want)
+		}
 	}
 }
 

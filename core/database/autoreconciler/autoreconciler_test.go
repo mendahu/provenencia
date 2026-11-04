@@ -1078,7 +1078,7 @@ func TestReconciledEvidence(t *testing.T) {
 }
 
 func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
-	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20, 21} {
+	for _, stale := range []int{0, 2, 3, 4, 5, 6, 7, 14, 20, 21, 22} {
 		t.Run(fmt.Sprint("version ", stale), func(t *testing.T) {
 			f := newFixture(t)
 			p := f.subject("person")
@@ -1665,16 +1665,20 @@ func TestProductAliasTablesPinCacheVersion(t *testing.T) {
 	}
 }
 
+func joinNameSpecParts(parts []namevalue.Part) string {
+	var out []string
+	for _, p := range parts {
+		out = append(out, p.Type+"="+p.Value)
+	}
+	return strings.Join(out, "|")
+}
+
 // nameSpec renders a name's parts as "type=value|…".
 func nameSpec(t *testing.T, raw []byte) string {
 	t.Helper()
 	n, err := valuecodec.UnmarshalName(raw)
 	must(t, err)
-	var parts []string
-	for _, p := range n.Parts {
-		parts = append(parts, p.Type+"="+p.Value)
-	}
-	return strings.Join(parts, "|")
+	return joinNameSpecParts(n.Parts)
 }
 
 // givenOf lists a reconciled name's given parts in order.
@@ -1742,11 +1746,7 @@ func TestValueRulesFoldChains(t *testing.T) {
 // nameSpecFromValue renders a reconciled Value's parts as "type=value|…".
 func nameSpecFromValue(t *testing.T, v autoreconcile.Value) string {
 	t.Helper()
-	var parts []string
-	for _, p := range v.Name.Parts {
-		parts = append(parts, p.Type+"="+p.Value)
-	}
-	return strings.Join(parts, "|")
+	return joinNameSpecParts(v.Name.Parts)
 }
 
 // TestValueRulesFoldedNicknameParts: product rules emit nick parts for
