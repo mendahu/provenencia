@@ -135,7 +135,8 @@ enum ReconciledValueDisplay {
 
     /// The records that went into the shown value, read in primary ink; the
     /// rest are secondary.
-    static func counted(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField) -> Bool {
+    /// A record with no field (a likeness has none) denies nothing.
+    static func counted(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField?) -> Bool {
         switch outcome.reason {
         case .kept, .folded: true
         case .against: deniedSomething(outcome, in: field)
@@ -144,25 +145,29 @@ enum ReconciledValueDisplay {
     }
 
     /// A negative record that eliminated a value in this field.
-    static func deniedSomething(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField) -> Bool {
-        field.outcomes.contains { $0.deniedByObservationID == outcome.observationID }
+    static func deniedSomething(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField?) -> Bool {
+        field?.outcomes.contains { $0.deniedByObservationID == outcome.observationID } ?? false
     }
 
     /// What happened to one record, in the field it belongs to (S9-D5):
     /// "kept", "folded into James Robins", "outvoted (2 of 3 Sources)",
     /// "weak · low-trust Source", "denied by Court deposition, 1862", and a
     /// negative is "kept" when it denied something, else "disagrees · did
-    /// not eliminate".
+    /// not eliminate". With no field (a likeness), "folded", "denied" and a
+    /// negative read their plain phrases.
     static func outcomePhrase(
         _ outcome: CatalogReconcilerOutcome,
-        in field: CatalogConclusionField,
+        in field: CatalogConclusionField?,
         locale: Locale = .autoupdatingCurrent
     ) -> String {
         switch outcome.reason {
         case .kept:
             return L10n.string(L10n.Conclusions.outcomeKept)
         case .folded:
-            let into = field.values.first { $0.rank == outcome.valueRank }.map { string(for: $0.value, propertyKey: field.propertyKey, locale: locale) } ?? ""
+            let into = field.flatMap { field in
+                field.values.first { $0.rank == outcome.valueRank }
+                    .map { string(for: $0.value, propertyKey: field.propertyKey, locale: locale) }
+            } ?? ""
             return into.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeFolded)
                 : L10n.Conclusions.outcomeFoldedInto(into)
@@ -176,7 +181,7 @@ enum ReconciledValueDisplay {
                 ? L10n.string(L10n.Conclusions.outcomeWeak)
                 : L10n.Conclusions.outcomeWeakBecause(ListFormatter.localizedString(byJoining: causes))
         case .denied:
-            let denier = field.outcomes.first { $0.observationID == outcome.deniedByObservationID }
+            let denier = field?.outcomes.first { $0.observationID == outcome.deniedByObservationID }
             let name = denier.map { CitationLineDisplay.sourceTitle(for: $0) } ?? ""
             return name.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeDenied)
@@ -196,7 +201,7 @@ enum ReconciledValueDisplay {
 
     /// The outcome's mark: one glyph per phrase, so the Why reads without
     /// colour. Decorative beside the phrase.
-    static func outcomeMark(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField) -> PVSymbol {
+    static func outcomeMark(_ outcome: CatalogReconcilerOutcome, in field: CatalogConclusionField?) -> PVSymbol {
         switch outcome.reason {
         case .kept: .check
         case .folded: .gitMerge
