@@ -124,7 +124,7 @@ func ListedGroup(tx *sql.Tx, via string, kind catalogmodel.Kind, rows []Listed) 
 		if i == listedCap {
 			break
 		}
-		listed, err := projectListed(tx, kind, ProbeRow{ID: r.ID, Ref: r.Ref})
+		listed, err := projectListed(tx, kind, probeRow{ID: r.ID, Ref: r.Ref})
 		if err != nil {
 			return Group{}, err
 		}

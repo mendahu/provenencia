@@ -43,17 +43,17 @@ func subjectResourceInbound() inboundEdge {
 			}
 			return n, nil
 		},
-		List: func(tx *sql.Tx, parentID []byte, limit int) ([]ProbeRow, error) {
+		List: func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error) {
 			rows, err := memo.list(tx, parentID)
 			if err != nil {
 				return nil, err
 			}
-			var out []ProbeRow
+			var out []probeRow
 			for _, r := range rows {
 				if isConnectionFacet(r) {
 					continue
 				}
-				out = append(out, ProbeRow{ID: r.id, Ref: r.ref})
+				out = append(out, probeRow{ID: r.id, Ref: r.ref})
 				if len(out) == limit {
 					break
 				}

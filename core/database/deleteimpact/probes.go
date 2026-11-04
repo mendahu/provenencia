@@ -44,17 +44,17 @@ func countSQLFn(q string) func(*sql.Tx, []byte) (int, error) {
 	}
 }
 
-func listSQLFn(q string) func(*sql.Tx, []byte, int) ([]ProbeRow, error) {
-	return func(tx *sql.Tx, parentID []byte, limit int) ([]ProbeRow, error) {
+func listSQLFn(q string) func(*sql.Tx, []byte, int) ([]probeRow, error) {
+	return func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error) {
 		rows, err := tx.Query(q, parentID, limit)
 		if err != nil {
 			return nil, err
 		}
 		defer rows.Close()
-		var out []ProbeRow
+		var out []probeRow
 		seen := map[string]bool{}
 		for rows.Next() {
-			var r ProbeRow
+			var r probeRow
 			if err := rows.Scan(&r.ID, &r.Ref); err != nil {
 				return nil, err
 			}

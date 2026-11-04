@@ -53,7 +53,7 @@ type facetRelease struct {
 	Named bool
 	Child catalogmodel.Kind
 	Count func(tx *sql.Tx, parentID []byte) (int, error)
-	List  func(tx *sql.Tx, parentID []byte, limit int) ([]ProbeRow, error)
+	List  func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
 	// Remaining counts rows still pointing at the parent after Release; it
 	// must be zero. Empty only for connection-facet releases, whose leftovers
 	// Impact has already refused. Required for CASCADE and optional SET NULL.

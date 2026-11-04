@@ -92,17 +92,11 @@ const graphCond = `s.graph_id = ?`
 // accepted claim of every bridge that has subjectID as an end, in
 // bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
 // per graph. A bridge handle whose last member goes is deleted in releaseClaim.
-// Does
-// not commit.
-// DeletedHandleRef is one handle row an Unpromote preflight may delete.
-type DeletedHandleRef struct {
-	ID  []byte
-	Ref string
-}
+// Does not commit.
 
 // UnpromoteBridgeHandlesDeleted lists association handles UnfileBridges would
 // delete because the bridge Subject is their last accepted member.
-func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]DeletedHandleRef, error) {
+func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Listed, error) {
 	if len(subjectID) != 16 {
 		return nil, nil
 	}
@@ -110,7 +104,7 @@ func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]DeletedHandl
 	if err != nil {
 		return nil, err
 	}
-	var out []DeletedHandleRef
+	var out []deleteimpact.Listed
 	seen := map[string]bool{}
 	for _, head := range heads {
 		if head.claimID == nil {
@@ -133,7 +127,7 @@ func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]DeletedHandl
 			continue
 		}
 		seen[key] = true
-		out = append(out, DeletedHandleRef{ID: append([]byte(nil), entityID...), Ref: ref})
+		out = append(out, deleteimpact.Listed{ID: append([]byte(nil), entityID...), Ref: ref})
 	}
 	return out, nil
 }

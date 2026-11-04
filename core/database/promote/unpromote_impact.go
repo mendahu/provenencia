@@ -34,11 +34,14 @@ func UnpromoteImpact(c *database.Catalog, subjectID []byte) (deleteimpact.Group,
 	if err != nil {
 		return deleteimpact.Group{}, err
 	}
-	return deleteimpact.GroupFromProbeRows(tx, deleteimpact.ViaLastMember, catalogmodel.KindCanonicalEntity, rows)
+	if len(rows) == 0 {
+		return deleteimpact.Group{}, nil
+	}
+	return deleteimpact.ListedGroup(tx, deleteimpact.ViaLastMember, catalogmodel.KindCanonicalEntity, rows)
 }
 
-func unpromoteDeletedHandleRows(tx *sql.Tx, subjectID []byte) ([]deleteimpact.ProbeRow, error) {
-	primary, err := lastMemberRowsForUnpromote(tx, subjectID)
+func unpromoteDeletedHandleRows(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Listed, error) {
+	primary, err := deleteimpact.LastMemberGroup(tx, subjectID)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +50,16 @@ func unpromoteDeletedHandleRows(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Pr
 		return nil, err
 	}
 	seen := map[string]bool{}
-	var rows []deleteimpact.ProbeRow
-	for _, r := range primary {
-		key := string(r.ID)
-		if seen[key] {
-			continue
+	var rows []deleteimpact.Listed
+	if primary.Via != "" {
+		for _, l := range primary.Listed {
+			key := string(l.ID)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			rows = append(rows, l)
 		}
-		seen[key] = true
-		rows = append(rows, r)
 	}
 	for _, b := range bridges {
 		key := string(b.ID)
@@ -62,20 +67,8 @@ func unpromoteDeletedHandleRows(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Pr
 			continue
 		}
 		seen[key] = true
-		rows = append(rows, deleteimpact.ProbeRow{ID: b.ID, Ref: b.Ref})
+		rows = append(rows, b)
 	}
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Ref < rows[j].Ref })
 	return rows, nil
-}
-
-func lastMemberRowsForUnpromote(tx *sql.Tx, subjectID []byte) ([]deleteimpact.ProbeRow, error) {
-	group, err := deleteimpact.LastMemberGroup(tx, subjectID)
-	if err != nil || group.Via == "" {
-		return nil, err
-	}
-	out := make([]deleteimpact.ProbeRow, len(group.Listed))
-	for i, l := range group.Listed {
-		out[i] = deleteimpact.ProbeRow{ID: l.ID, Ref: l.Ref}
-	}
-	return out, nil
 }
