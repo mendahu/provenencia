@@ -133,4 +133,4 @@ Check: `rg 'accepts\(' macos/App/Platform` prints nothing; the test ran red firs
 Head `8a9aa48e`. Gate PASS (orchestrator re-ran); full `check-plan-docs.py` 0 errors. F-11 and F-13 ran red first (`leavingTheSectionKeepsAPageToast`, `cacheRefusesAFileOverTheByteLimit`). Read by the orchestrator, no third review: `viewerClosed()` guards `toastInViewer`; the viewer's overlay is gated as the page's is; `ImageHeaderDecode.admit(url:limits:)` is the one URL admission, called by `BoundedImageDecode` and `ThumbnailCache`, and `accepts` is gone from code, guides and `completed.md`. UX-5, UX-13, MNT-2 **Resolved**; UX-5 is unverified with VoiceOver.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
+Gate PASS · CI green (`872fe6ab`) · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
