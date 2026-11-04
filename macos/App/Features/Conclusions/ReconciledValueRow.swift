@@ -76,13 +76,13 @@ struct ReconciledValueRow: View {
     }
 
     private var value: some View {
-        Self.valueContent(model)
+        PVProvenanceValueList(model.shown)
     }
 
     private var state: some View {
         HStack(spacing: PVSpacing.space4) {
             if let badge = model.shown.badge {
-                Self.badge(badge)
+                PVProvenanceStateBadge(badge)
             }
             if let count = model.count {
                 Text(count)
@@ -161,50 +161,5 @@ struct ReconciledValueRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Conclusions.otherValuesList(model.label))
-    }
-
-    /// The row's value as the row and the provenance sheet's header show it:
-    /// every kept value of a multi-valued field, else the lead, else the field's
-    /// empty text in italic.
-    @ViewBuilder
-    static func valueContent(_ model: ReconciledValueRowModel) -> some View {
-        if !model.shown.listedValues.isEmpty {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                ForEach(model.shown.listedValues) { value in
-                    valueLine(value, face: model.shown.face)
-                }
-            }
-        } else if let lead = model.shown.lead {
-            Text(lead)
-                .font(model.shown.face.valueFont)
-                .foregroundStyle(PVColor.textPrimary)
-                .textSelection(.enabled)
-        } else {
-            Text(model.shown.emptyText)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    /// One value with its Source count beside it.
-    static func valueLine(_ value: PVProvenanceSheetContent.Value, face: PVProvenanceFace) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-            Text(verbatim: value.text)
-                .font(face.valueFont)
-                .foregroundStyle(PVColor.textPrimary)
-                .textSelection(.enabled)
-            Text(verbatim: value.support)
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    @ViewBuilder
-    static func badge(_ badge: ReconciledValueDisplay.StateBadge) -> some View {
-        switch badge {
-        case .merged: PVBadge(L10n.Conclusions.badgeMerged, tone: .neutral, icon: .merge)
-        case .mixed: PVBadge(L10n.Conclusions.badgeMixed, tone: .warning, icon: .split)
-        case .concluded: PVBadge(L10n.Conclusions.badgeConcluded, tone: .success, icon: .stamp)
-        }
     }
 }

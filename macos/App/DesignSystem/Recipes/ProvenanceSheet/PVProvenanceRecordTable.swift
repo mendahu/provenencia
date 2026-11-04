@@ -49,7 +49,7 @@ struct PVProvenanceRecordTable: View {
 
 // MARK: - Previews
 
-private enum PVProvenancePreviewData {
+enum PVProvenancePreviewData {
     static func record(
         _ id: String, readAs: String, title: String, detail: String, counted: Bool = true,
         phrase: String = "Kept", mark: PVSymbol = .check

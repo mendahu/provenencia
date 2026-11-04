@@ -24,7 +24,7 @@ struct ReconciliationReasoningView: View {
                     .padding(.bottom, PVSpacing.space3)
                     .accessibilityAddTraits(.isHeader)
                 ReconciliationRecordRows(
-                    groups: groups, face: face, provenance: .why,
+                    groups: groups, face: face,
                     open: { navigation.go(to: .provenance($0, $1)) }
                 )
                 .padding(.horizontal, PVSpacing.space5)
