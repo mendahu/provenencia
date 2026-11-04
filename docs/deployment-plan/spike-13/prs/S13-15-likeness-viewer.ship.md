@@ -109,4 +109,4 @@ No new blockers. CON not re-run.
 Open minors and nits, no fix plan without the user: `UX-12 · :329 · focus nil also true on close, Use as portrait, a record link, so a step moves the keyboard to the image` · `UX-14 · :230 · "Image unavailable" reaches VoiceOver only when the element is read` · `UX-15 · ConclusionGallerySection.swift:70-73 · the fallback can announce "Likeness 1 of 6" for one draw` · `UX-16 · :230 · ", portrait" changes the label after Use as portrait` · `EventsListView.swift:69 · a filter now redundant`
 
 ## Result
-Gate PASS (`d3ef0f1a`) · CI not run (draft) · open: UX-5, MNT-2, UX-13 · follow-ups: — · to user: UX-5, MNT-2, UX-13 · CON miss: UX-13
+Gate PASS (`d3ef0f1a`) · CI not run (draft) · open: UX-5, MNT-2, UX-13 · follow-ups: — · to user: UX-5, MNT-2, UX-13 · CON miss: none
