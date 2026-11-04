@@ -16,8 +16,8 @@ struct ProvenanceSheetTests {
 
     @Test func theSheetFollowsItsRowAcrossARefresh() {
         let item = ProvenanceSheetItem(id: "life.birthDate")
-        #expect(item.row(in: [row("name", records: 1), row("life.birthDate", records: 3)])?.records.count == 3)
-        #expect(item.row(in: [row("name", records: 1), row("life.birthDate", records: 4)])?.records.count == 4)
+        #expect(item.row(in: [row("name", records: 1), row("life.birthDate", records: 3)])?.recordCount == 3)
+        #expect(item.row(in: [row("name", records: 1), row("life.birthDate", records: 4)])?.recordCount == 4)
         #expect(item.row(in: [row("name", records: 1)]) == nil)
         #expect(item.row(in: [row("life.birthDate", records: 0)]) == nil)
     }
@@ -27,6 +27,24 @@ struct ProvenanceSheetTests {
             outcome: D.outcome(id, reason, rank: rank == 0 ? nil : rank, groupRank: rank),
             in: D.field("mixed"), locale: en
         )
+    }
+
+    @Test func aRowBuildsItsContentOnCall() {
+        let row = row("life.birthDate", records: 3)
+        #expect(row.recordCount == 3)
+        let content = row.provenanceContent()
+        #expect(content.records.map(\.id) == ["life.birthDate-0", "life.birthDate-1", "life.birthDate-2"])
+        #expect(content.title == "Birth date" && content.shown == row.shown)
+        #expect(content.summary?.hasSuffix("3 records") == true)
+
+        let empty = ReconciledValueRowModel.empty(id: "x", label: "X", face: .text, emptyText: "")
+        #expect(empty.recordCount == 0)
+        #expect(empty.provenanceContent().records.isEmpty)
+
+        // A relabelled row and its sheet cannot disagree.
+        var renamed = row
+        renamed.label = "Born"
+        #expect(renamed.provenanceContent().title == "Born")
     }
 
     @Test func aRecordComesFromOneOutcome() {
@@ -114,8 +132,8 @@ struct ProvenanceSheetTests {
             owners: [owner(toronto, "Toronto", "t"), owner(yorkville, "Yorkville", "y")], shownOwnerID: "pl1",
             kind: .deathPlace, locale: en
         )
-        #expect(row.recordGroups.count == 2)
-        #expect(row.recordGroups.allSatisfy { $0.values.count == 1 && $0.values[0].heading == nil })
+        #expect(row.provenanceContent().groups.count == 2)
+        #expect(row.provenanceContent().groups.allSatisfy { $0.values.count == 1 && $0.values[0].heading == nil })
     }
 
     @Test func twoLinksToOnePlaceFormOneGroup() {
@@ -136,9 +154,9 @@ struct ProvenanceSheetTests {
             id: "life.birthPlace", label: "Birth place", face: .place, lead: "York", emptyText: "", mixed: false,
             owners: [owner("lk1", "a"), owner("lk2", "b")], shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
-        #expect(only.recordGroups.count == 1 && only.recordGroups[0].owner == nil)
-        #expect(only.recordGroups[0].records.count == 2)
-        #expect(only.provenanceSummary == "2 records")
+        #expect(only.provenanceContent().groups.count == 1 && only.provenanceContent().groups[0].owner == nil)
+        #expect(only.provenanceContent().groups[0].records.count == 2)
+        #expect(only.provenanceContent().summary == "2 records")
 
         // York by two links and Leeds: one group each, York's holding both links' records in link order.
         let both = ReconciledValueRowModel.derived(
@@ -146,10 +164,10 @@ struct ProvenanceSheetTests {
             owners: [owner("lk1", "a"), owner("lk3", "c", place: leeds, "Leeds"), owner("lk2", "b")],
             shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
-        #expect(both.recordGroups.map { $0.owner?.id } == ["pl1", "pl2"])
-        #expect(both.recordGroups.map { $0.owner?.title } == ["York", "Leeds"])
-        #expect(both.recordGroups[0].records.map(\.id) == ["a", "b"])
-        #expect(both.provenanceSummary == "3 records from 2 Places")
+        #expect(both.provenanceContent().groups.map { $0.owner?.id } == ["pl1", "pl2"])
+        #expect(both.provenanceContent().groups.map { $0.owner?.title } == ["York", "Leeds"])
+        #expect(both.provenanceContent().groups[0].records.map(\.id) == ["a", "b"])
+        #expect(both.provenanceContent().summary == "3 records from 2 Places")
     }
 
     @Test func aPooledPlaceGroupHasOneHeadingPerValue() {
@@ -177,7 +195,7 @@ struct ProvenanceSheetTests {
             ],
             shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
-        let values = row.recordGroups[0].values
+        let values = row.provenanceContent().groups[0].values
         #expect(values.map { $0.records.map(\.id) } == [["a", "b"], ["d"]])
         guard case .value(let heading)? = values[0].heading else {
             Issue.record("expected a value heading")
@@ -196,7 +214,7 @@ struct ProvenanceSheetTests {
             ],
             shownOwnerID: "pl1", kind: .birthPlace, locale: en
         )
-        guard case .value(let sharedHeading)? = shared.recordGroups[0].values[0].heading else {
+        guard case .value(let sharedHeading)? = shared.provenanceContent().groups[0].values[0].heading else {
             Issue.record("expected a value heading")
             return
         }
@@ -207,13 +225,13 @@ struct ProvenanceSheetTests {
         let merged = D.field("merged", [
             D.value(1, "kept", support: 3, against: 1, .name(D.jamesRobins)),
         ], outcomes: (0..<4).map { D.outcome("r\($0)", "kept", source: "s\($0 % 3)") })
-        #expect(ReconciledValueRowModel(field: merged, locale: en).provenanceSummary
+        #expect(ReconciledValueRowModel(field: merged, locale: en).provenanceContent().summary
             == "merged from 3 Sources · 1 record disagrees · 4 records")
 
         let single = D.field("single", [
             D.value(1, "kept", support: 1, .name(D.jamesRobins)),
         ], outcomes: [D.outcome("r0", "kept", source: "s0")])
-        #expect(ReconciledValueRowModel(field: single, locale: en).provenanceSummary?.hasPrefix("from 1 Source") == true)
+        #expect(ReconciledValueRowModel(field: single, locale: en).provenanceContent().summary?.hasPrefix("from 1 Source") == true)
 
         let first = CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: "")
         let second = CatalogCanonicalEntity(id: "ev2", ref: "EVT-2", subjectTypeID: "t", label: "")
@@ -227,12 +245,12 @@ struct ProvenanceSheetTests {
             owners: [owner(first, ["a", "b", "c"]), owner(second, ["d"])], shownOwnerID: "ev1",
             kind: .birthDate, locale: en
         )
-        #expect(two.provenanceSummary == "4 records from 2 birth events")
+        #expect(two.provenanceContent().summary == "4 records from 2 birth events")
         let one = ReconciledValueRowModel.derived(
             id: "life.birthDate", label: "Birth date", face: .date, lead: "1822", emptyText: "", mixed: false,
             owners: [owner(first, ["a", "b"])], shownOwnerID: "ev1", kind: .birthDate, locale: en
         )
-        #expect(one.provenanceSummary == "2 records")
-        #expect(ReconciledValueRowModel.empty(id: "x", label: "X", face: .text, emptyText: "").provenanceSummary == nil)
+        #expect(one.provenanceContent().summary == "2 records")
+        #expect(ReconciledValueRowModel.empty(id: "x", label: "X", face: .text, emptyText: "").provenanceContent().summary == nil)
     }
 }

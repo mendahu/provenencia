@@ -49,8 +49,8 @@ struct ReconciledValueRow: View {
                 ReconciliationReasoningView(
                     title: model.whyTitle,
                     label: model.label,
-                    face: model.face,
-                    groups: model.recordGroups
+                    face: model.shown.face,
+                    groups: model.provenanceContent().groups
                 )
                 .padding(.leading, Self.disclosureInset)
                 .padding(.bottom, PVSpacing.space5)
@@ -62,7 +62,7 @@ struct ReconciledValueRow: View {
     /// Label, value and state: one VoiceOver element with the row's spoken
     /// label; the disclosures stay separate controls.
     private var summary: some View {
-        HStack(alignment: model.listedValues.isEmpty ? .center : .firstTextBaseline, spacing: PVSpacing.space6) {
+        HStack(alignment: model.shown.listedValues.isEmpty ? .center : .firstTextBaseline, spacing: PVSpacing.space6) {
             Text(model.label)
                 .pvMicroCaps()
                 .foregroundStyle(PVColor.textMuted)
@@ -81,7 +81,7 @@ struct ReconciledValueRow: View {
 
     private var state: some View {
         HStack(spacing: PVSpacing.space4) {
-            if let badge = model.badge {
+            if let badge = model.shown.badge {
                 Self.badge(badge)
             }
             if let count = model.count {
@@ -106,7 +106,7 @@ struct ReconciledValueRow: View {
                 PVDisclosureButton(label, isExpanded: $showsOtherValues)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).others")
             }
-            if provenance == .why, !model.records.isEmpty {
+            if provenance == .why, model.recordCount > 0 {
                 PVDisclosureButton(L10n.Conclusions.whyButton, isExpanded: $showsWhy)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).why")
             }
@@ -124,7 +124,7 @@ struct ReconciledValueRow: View {
     /// records, else empty so the values line up (VoiceOver skips the empty slot).
     @ViewBuilder
     private var provenanceSlot: some View {
-        if model.records.isEmpty {
+        if model.recordCount == 0 {
             Color.clear
                 .frame(width: 28, height: 28)
                 .accessibilityHidden(true)
@@ -145,7 +145,7 @@ struct ReconciledValueRow: View {
                             .foregroundStyle(PVColor.textFaint)
                             .frame(width: 24, alignment: .leading)
                         Text(other.text)
-                            .font(model.face.valueFont)
+                            .font(model.shown.face.valueFont)
                             .foregroundStyle(PVColor.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(other.support)
@@ -168,19 +168,19 @@ struct ReconciledValueRow: View {
     /// empty text in italic.
     @ViewBuilder
     static func valueContent(_ model: ReconciledValueRowModel) -> some View {
-        if !model.listedValues.isEmpty {
+        if !model.shown.listedValues.isEmpty {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                ForEach(model.listedValues) { value in
-                    valueLine(value, face: model.face)
+                ForEach(model.shown.listedValues) { value in
+                    valueLine(value, face: model.shown.face)
                 }
             }
-        } else if let lead = model.lead {
+        } else if let lead = model.shown.lead {
             Text(lead)
-                .font(model.face.valueFont)
+                .font(model.shown.face.valueFont)
                 .foregroundStyle(PVColor.textPrimary)
                 .textSelection(.enabled)
         } else {
-            Text(model.emptyText)
+            Text(model.shown.emptyText)
                 .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
                 .foregroundStyle(PVColor.textMuted)
         }

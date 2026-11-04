@@ -10,74 +10,81 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         var label: String
     }
 
+    /// What the row's records are built from, not the records: a sheet or a
+    /// Why builds them when it opens (`provenanceContent()`).
+    private enum RecordsSource: Equatable {
+        case field(CatalogConclusionField)
+        case spanning([CatalogConclusionField])
+        case derived(owners: [CatalogOwnerField], shownOwnerID: String?, kind: CatalogDerivedRowKind?)
+    }
+
     var id: String
     var label: String
-    var face: PVProvenanceFace
-    /// The lead value; nil when the field is empty.
-    var lead: String?
-    var emptyText: String
-    var badge: ReconciledValueDisplay.StateBadge?
+    /// What the row's value line shows: the lead, every kept value of a
+    /// multi-valued field, the state and the empty text.
+    var shown: PVProvenanceSheetContent.Shown
     var count: String?
     var against: String?
     var otherValuesLabel: String?
     var otherValues: [PVProvenanceSheetContent.Value]
-    /// Every displayed value when the field keeps several (`multiple`). Empty
-    /// otherwise, including a mixed field, which still discloses the rest.
-    var listedValues: [PVProvenanceSheetContent.Value]
     var whyTitle: String
-    /// The Why's records, grouped by the entity that owns them.
-    var recordGroups: [PVProvenanceSheetContent.Group]
-    var records: [PVProvenanceSheetContent.Record] { recordGroups.flatMap(\.records) }
     var accessibilityLabel: String
-    /// The provenance sheet's summary line: what the row knows about the records
-    /// behind it. Nil when there is nothing to say.
-    var provenanceSummary: String?
     /// A derived row opens the Event or Place it is read from. Nil otherwise.
     var opens: Opens?
+    private var source: RecordsSource
+    private var locale: Locale
+    private var orders: NameFormatOrders
+
+    /// How many records sit behind the row.
+    var recordCount: Int {
+        switch source {
+        case .field(let field): field.outcomes.count
+        case .spanning(let fields): fields.reduce(0) { $0 + $1.outcomes.count }
+        case .derived(let owners, _, _): owners.reduce(0) { $0 + $1.field.outcomes.count }
+        }
+    }
 
     init(
         field: CatalogConclusionField,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let lead = field.displayedValues.first
-            .map { ReconciledValueDisplay.string(for: $0.value, propertyKey: field.propertyKey, locale: locale, orders: orders) }
-            .flatMap { $0.isEmpty ? nil : $0 }
-        let listed = Self.listedValues(of: field, locale: locale, orders: orders)
-        let spokenLead = listed.count > 1 ? listed.map(\.text).joined(separator: "; ") : lead
+        let shown = PVProvenanceSheetContent.Shown(field: field, locale: locale, orders: orders)
+        let spokenLead = shown.listedValues.count > 1 ? shown.listedValues.map(\.text).joined(separator: "; ") : shown.lead
         id = field.propertyID
         label = field.label
-        face = field.valueType == .date ? .date : .text
-        self.lead = lead
-        emptyText = ReconciledValueDisplay.emptyText(propertyKey: field.propertyKey)
-        badge = ReconciledValueDisplay.stateBadge(field)
+        self.shown = shown
         count = ReconciledValueDisplay.countLine(field)
         against = ReconciledValueDisplay.againstLine(field)
         otherValuesLabel = ReconciledValueDisplay.otherValuesLabel(field)
-        otherValues = ReconciledValueDisplay.otherValues(field).map { PVProvenanceSheetContent.value($0, propertyKey: field.propertyKey, locale: locale, orders: orders) }
-        listedValues = listed
-        whyTitle = listed.count > 1
-            ? L10n.Conclusions.whyThese(listed.count, label: field.label)
+        otherValues = ReconciledValueDisplay.otherValues(field).map {
+            PVProvenanceSheetContent.value($0, propertyKey: field.propertyKey, locale: locale, orders: orders)
+        }
+        whyTitle = shown.listedValues.count > 1
+            ? L10n.Conclusions.whyThese(shown.listedValues.count, label: field.label)
             : field.valueType == .name
-                ? L10n.Conclusions.whyTitleName(lead ?? field.label)
-                : L10n.Conclusions.whyTitle(lead ?? field.label)
-        let content = PVProvenanceSheetContent(field: field, title: field.label, locale: locale, orders: orders)
-        recordGroups = content.groups
+                ? L10n.Conclusions.whyTitleName(shown.lead ?? field.label)
+                : L10n.Conclusions.whyTitle(shown.lead ?? field.label)
         accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: field.label, lead: spokenLead, field: field)
-        provenanceSummary = content.summary
+        source = .field(field)
+        self.locale = locale
+        self.orders = orders
     }
 
-    /// Every kept value of a multi-valued field, lead included. A weak
-    /// spelling is not displayed, so it stays out of this list.
-    private static func listedValues(
-        of field: CatalogConclusionField,
-        locale: Locale,
-        orders: NameFormatOrders
-    ) -> [PVProvenanceSheetContent.Value] {
-        guard field.state == .multiple else { return [] }
-        return field.displayedValues.compactMap { value in
-            let listed = PVProvenanceSheetContent.value(value, propertyKey: field.propertyKey, locale: locale, orders: orders)
-            return listed.text.isEmpty ? nil : listed
+    /// The sheet or Why content of the row, built from its records now. The
+    /// row's label and shown value go in, so a relabelled row and its sheet
+    /// cannot disagree.
+    func provenanceContent() -> PVProvenanceSheetContent {
+        switch source {
+        case .field(let field):
+            PVProvenanceSheetContent(field: field, title: label, shown: shown, locale: locale, orders: orders)
+        case .spanning(let fields):
+            .spanning(fields: fields, title: label, shown: shown, locale: locale, orders: orders)
+        case .derived(let owners, let shownOwnerID, let kind):
+            .derived(
+                owners: owners, shownOwnerID: shownOwnerID, kind: kind,
+                title: label, shown: shown, locale: locale, orders: orders
+            )
         }
     }
 
@@ -92,18 +99,16 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         fields: [CatalogConclusionField],
         locale: Locale
     ) -> Self {
-        let shown = lead.flatMap { $0.isEmpty ? nil : $0 }
-        let content = PVProvenanceSheetContent.spanning(fields: fields, title: label, locale: locale)
-        let spoken = shown.map { L10n.DesignSystem.spokenJoin(label, $0) }
+        let lead = lead.flatMap { $0.isEmpty ? nil : $0 }
+        let spoken = lead.map { L10n.DesignSystem.spokenJoin(label, $0) }
             ?? ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         return Self(
-            id: id, label: label, face: .date, lead: shown, emptyText: emptyText,
-            badge: nil, count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
-            listedValues: [],
-            whyTitle: shown.map { L10n.Conclusions.whyTitle($0) } ?? "",
-            recordGroups: content.groups,
+            id: id, label: label,
+            shown: .init(face: .date, lead: lead, listedValues: [], emptyText: emptyText, badge: nil),
+            count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
+            whyTitle: lead.map { L10n.Conclusions.whyTitle($0) } ?? "",
             accessibilityLabel: spoken,
-            provenanceSummary: content.summary
+            source: .spanning(fields), locale: locale, orders: NameFormatOrders()
         )
     }
 
@@ -126,24 +131,26 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> Self {
-        let shown = lead.isEmpty ? nil : lead
+        let lead = lead.isEmpty ? nil : lead
         let spoken: String
-        if let shown {
-            let parts = [label, shown] + (mixed ? [L10n.string(L10n.Conclusions.badgeMixed)] : [])
+        if let lead {
+            let parts = [label, lead] + (mixed ? [L10n.string(L10n.Conclusions.badgeMixed)] : [])
             spoken = L10n.DesignSystem.spokenJoin(parts) ?? label
         } else {
             spoken = ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         }
-        let content = PVProvenanceSheetContent.derived(
-            owners: owners, shownOwnerID: shownOwnerID, kind: kind, title: label, locale: locale, orders: orders
-        )
         var row = Self(
-            id: id, label: label, face: face, lead: shown, emptyText: emptyText,
-            badge: mixed && shown != nil ? .mixed : nil,
-            count: nil, against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [],
-            whyTitle: "", recordGroups: content.groups, accessibilityLabel: spoken, provenanceSummary: content.summary
+            id: id, label: label,
+            shown: .init(
+                face: face, lead: lead, listedValues: [], emptyText: emptyText,
+                badge: mixed && lead != nil ? .mixed : nil
+            ),
+            count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
+            whyTitle: "", accessibilityLabel: spoken,
+            source: .derived(owners: owners, shownOwnerID: shownOwnerID, kind: kind),
+            locale: locale, orders: orders
         )
-        if !row.records.isEmpty { row.whyTitle = L10n.Conclusions.whyTitle(shown ?? label) }
+        if row.recordCount > 0 { row.whyTitle = L10n.Conclusions.whyTitle(lead ?? label) }
         row.opens = opens
         return row
     }
@@ -151,34 +158,31 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     /// A row with nothing behind it yet.
     static func empty(id: String, label: String, face: PVProvenanceFace, emptyText: String) -> Self {
         Self(
-            id: id, label: label, face: face, lead: nil, emptyText: emptyText, badge: nil, count: nil,
-            against: nil, otherValuesLabel: nil, otherValues: [], listedValues: [], whyTitle: "", recordGroups: [],
+            id: id, label: label,
+            shown: .init(face: face, lead: nil, listedValues: [], emptyText: emptyText, badge: nil),
+            count: nil, against: nil, otherValuesLabel: nil, otherValues: [], whyTitle: "",
             accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil),
-            provenanceSummary: nil
+            source: .spanning([]), locale: .autoupdatingCurrent, orders: NameFormatOrders()
         )
     }
 
     private init(
-        id: String, label: String, face: PVProvenanceFace, lead: String?, emptyText: String,
-        badge: ReconciledValueDisplay.StateBadge?, count: String?, against: String?,
-        otherValuesLabel: String?, otherValues: [PVProvenanceSheetContent.Value], listedValues: [PVProvenanceSheetContent.Value], whyTitle: String,
-        recordGroups: [PVProvenanceSheetContent.Group], accessibilityLabel: String, provenanceSummary: String?
+        id: String, label: String, shown: PVProvenanceSheetContent.Shown, count: String?, against: String?,
+        otherValuesLabel: String?, otherValues: [PVProvenanceSheetContent.Value], whyTitle: String,
+        accessibilityLabel: String, source: RecordsSource, locale: Locale, orders: NameFormatOrders
     ) {
         self.id = id
         self.label = label
-        self.face = face
-        self.lead = lead
-        self.emptyText = emptyText
-        self.badge = badge
+        self.shown = shown
         self.count = count
         self.against = against
         self.otherValuesLabel = otherValuesLabel
         self.otherValues = otherValues
-        self.listedValues = listedValues
         self.whyTitle = whyTitle
-        self.recordGroups = recordGroups
         self.accessibilityLabel = accessibilityLabel
-        self.provenanceSummary = provenanceSummary
+        self.source = source
+        self.locale = locale
+        self.orders = orders
     }
 }
 

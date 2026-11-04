@@ -91,8 +91,8 @@ struct EventDetailTests {
             dateField("end_date", CatalogDateValueInput(kind: "point", startYear: 1851), id: "end"),
         ], summary: dated(date: point)))
         #expect(page.rows.map(\.label) == ["Date", "Place"])
-        #expect(page.rows[0].lead == "14 May 1817")
-        #expect(page.rows[0].records.map(\.id) == ["point"])
+        #expect(page.rows[0].shown.lead == "14 May 1817")
+        #expect(page.rows[0].provenanceContent().records.map(\.id) == ["point"])
         #expect(page.secondaryDate == "14 May 1817")
     }
 
@@ -103,10 +103,10 @@ struct EventDetailTests {
             dateField("start_date", start, id: "start"),
             dateField("end_date", end, id: "end"),
         ], summary: dated(start: start, end: end)))
-        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
-        #expect(page.rows[0].records.map(\.id) == ["start", "end"])
-        #expect(page.rows[0].badge == nil)
-        #expect(page.secondaryDate == page.rows[0].lead)
+        #expect(page.rows[0].shown.lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].provenanceContent().records.map(\.id) == ["start", "end"])
+        #expect(page.rows[0].shown.badge == nil)
+        #expect(page.secondaryDate == page.rows[0].shown.lead)
     }
 
     @Test func dateRowFallsToTheSpanWhenTheDateShowsNothing() {
@@ -120,10 +120,10 @@ struct EventDetailTests {
             dateField("start_date", start, id: "start"),
             dateField("end_date", end, id: "end"),
         ], summary: dated(start: start, end: end)))
-        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
-        #expect(page.rows[0].records.map(\.id).contains("start"))
-        #expect(page.rows[0].records.map(\.id).contains("end"))
-        #expect(page.rows[0].lead == page.secondaryDate)
+        #expect(page.rows[0].shown.lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].provenanceContent().records.map(\.id).contains("start"))
+        #expect(page.rows[0].provenanceContent().records.map(\.id).contains("end"))
+        #expect(page.rows[0].shown.lead == page.secondaryDate)
     }
 
     @Test func dateRowFollowsTheSummaryWhenFieldsDisagree() {
@@ -135,8 +135,8 @@ struct EventDetailTests {
             dateField("start_date", start, id: "start"),
             dateField("end_date", end, id: "end"),
         ], summary: dated(start: start, end: end)))
-        #expect(page.rows[0].lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
-        #expect(page.rows[0].lead == page.secondaryDate)
+        #expect(page.rows[0].shown.lead == L10n.Dates.rowSpan(start: "1849", end: "1851", locale: en))
+        #expect(page.rows[0].shown.lead == page.secondaryDate)
     }
 
     @Test func bandLineReadsTheSummary() {
@@ -188,8 +188,8 @@ struct EventDetailTests {
         let page = EventDetailContent(detail: detail(summary: summary), locale: en)
         #expect(page.title == .name(L10n.EventTitle.ofOne(type: "Birth", subject: "James Robins", locale: en)))
         #expect(page.secondaryPlace == "York")
-        #expect(page.rows[1].lead == "York" && page.rows[1].badge == .mixed && page.rows[1].records.isEmpty)
-        #expect(!page.rows[1].lead!.contains(","))
+        #expect(page.rows[1].shown.lead == "York" && page.rows[1].shown.badge == .mixed && page.rows[1].provenanceContent().records.isEmpty)
+        #expect(!page.rows[1].shown.lead!.contains(","))
         #expect(page.rows[1].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
     }
 
@@ -198,17 +198,17 @@ struct EventDetailTests {
             dateField("date", CatalogDateValueInput(kind: "point", startYear: 1810), id: "d"),
         ]))
         let place = page.rows[1]
-        #expect(place.label == "Place" && place.face == .place && place.lead == nil)
-        #expect(place.emptyText == "No place recorded")
-        #expect(place.records.isEmpty)
+        #expect(place.label == "Place" && place.shown.face == .place && place.shown.lead == nil)
+        #expect(place.shown.emptyText == "No place recorded")
+        #expect(place.provenanceContent().records.isEmpty)
     }
 
     @Test func missingDateIsAnEmptyDateRow() {
         let page = content(detail(summary: dated()))
         let date = page.rows[0]
-        #expect(date.label == "Date" && date.face == .date && date.lead == nil)
-        #expect(date.emptyText == "No date recorded")
-        #expect(date.records.isEmpty)
+        #expect(date.label == "Date" && date.shown.face == .date && date.shown.lead == nil)
+        #expect(date.shown.emptyText == "No date recorded")
+        #expect(date.provenanceContent().records.isEmpty)
         #expect(page.secondaryDate == nil)
     }
 

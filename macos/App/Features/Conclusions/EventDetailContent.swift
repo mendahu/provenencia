@@ -95,7 +95,7 @@ struct EventDetailContent: ConclusionDetailBody {
     ) -> ReconciledValueRowModel {
         var row = row
         row.label = label
-        row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.lead, field: field)
+        row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.shown.lead, field: field)
         return row
     }
 }

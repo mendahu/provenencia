@@ -62,24 +62,24 @@ struct PlaceDetailTests {
         let names = page.rows[0]
         #expect(page.title == .name("Toronto"))
         #expect(names.label == "Names")
-        #expect(names.listedValues.map(\.text) == ["Toronto", "Tkaronto"])
-        #expect(names.listedValues.map(\.support) == ["3 Sources", "1 Source"])
-        #expect(names.badge == nil)
+        #expect(names.shown.listedValues.map(\.text) == ["Toronto", "Tkaronto"])
+        #expect(names.shown.listedValues.map(\.support) == ["3 Sources", "1 Source"])
+        #expect(names.shown.badge == nil)
         #expect(names.otherValuesLabel == nil)
         #expect(names.whyTitle == "Why these 2 names")
         #expect(names.accessibilityLabel == "Names, Toronto; Tkaronto, 2 values from 2 Sources")
-        #expect(names.records.map(\.id).contains("letter"))
-        #expect(!names.listedValues.map(\.text).contains("Torento"))
-        #expect(names.records.first { $0.id == "letter" }?.phrase.contains("weak") == true)
+        #expect(names.provenanceContent().records.map(\.id).contains("letter"))
+        #expect(!names.shown.listedValues.map(\.text).contains("Torento"))
+        #expect(names.provenanceContent().records.first { $0.id == "letter" }?.phrase.contains("weak") == true)
     }
 
     @Test func periodAndRelationshipsAreStatedEmpty() {
         let page = content(detail(label: "York"))
         #expect(page.rows.map(\.label) == ["Names", "Period"])
-        #expect(page.rows[0].lead == nil)
-        #expect(page.rows[0].emptyText == "No names recorded")
-        #expect(page.rows[1].lead == nil)
-        #expect(page.rows[1].emptyText == "No period recorded")
+        #expect(page.rows[0].shown.lead == nil)
+        #expect(page.rows[0].shown.emptyText == "No names recorded")
+        #expect(page.rows[1].shown.lead == nil)
+        #expect(page.rows[1].shown.emptyText == "No period recorded")
         #expect(page.chain == "No parent place recorded")
         #expect(!page.chainIsRecorded)
         #expect(page.sections.map { L10n.string($0.title) } == ["Part of", "Contains", "Succession"])
@@ -113,7 +113,7 @@ struct PlaceDetailTests {
         let page = content(detail(label: "Toronto", placeSummary: summary))
         #expect(page.chain == "Ontario, Canada")
         #expect(page.chainIsRecorded)
-        #expect(page.rows[1].lead == "1834 –")
+        #expect(page.rows[1].shown.lead == "1834 –")
         #expect(page.sections[0].relationships.map(\.relationship.title) == ["Upper Canada", "Ontario"])
         #expect(page.sections[0].relationships.map { PlacePeriodDisplay.span(
             start: $0.relationship.startDate, end: $0.relationship.endDate, locale: en

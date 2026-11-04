@@ -131,7 +131,22 @@ struct PVProvenanceSheetContent: Equatable {
         }
     }
 
+    /// What a value line shows: the lead, every kept value of a multi-valued
+    /// field, else the field's empty text in italic, and the state. The one
+    /// derivation of it, for the Vitals row and the sheet header alike.
+    struct Shown: Equatable {
+        var face: PVProvenanceFace
+        /// The lead value; nil when the field is empty.
+        var lead: String?
+        /// Every displayed value when the field keeps several (`multiple`). Empty
+        /// otherwise, including a mixed field, which still discloses the rest.
+        var listedValues: [Value]
+        var emptyText: String
+        var badge: ReconciledValueDisplay.StateBadge?
+    }
+
     var title: String
+    var shown: Shown
     /// What the content knows about the records behind it. Nil when there is nothing to say.
     var summary: String?
     var groups: [Group]
@@ -165,18 +180,47 @@ extension PVProvenanceSheetContent.Record {
     }
 }
 
+extension PVProvenanceSheetContent.Shown {
+    /// What one reconciled field shows. A weak spelling is not displayed, so it
+    /// stays out of the listed values.
+    init(
+        field: CatalogConclusionField,
+        locale: Locale = .autoupdatingCurrent,
+        orders: NameFormatOrders = NameFormatOrders()
+    ) {
+        let lead = field.displayedValues.first
+            .map { ReconciledValueDisplay.string(for: $0.value, propertyKey: field.propertyKey, locale: locale, orders: orders) }
+            .flatMap { $0.isEmpty ? nil : $0 }
+        let listed = field.state == .multiple
+            ? field.displayedValues.compactMap { value -> PVProvenanceSheetContent.Value? in
+                let listed = PVProvenanceSheetContent.value(value, propertyKey: field.propertyKey, locale: locale, orders: orders)
+                return listed.text.isEmpty ? nil : listed
+            }
+            : []
+        self.init(
+            face: field.valueType == .date ? .date : .text,
+            lead: lead,
+            listedValues: listed,
+            emptyText: ReconciledValueDisplay.emptyText(propertyKey: field.propertyKey),
+            badge: ReconciledValueDisplay.stateBadge(field)
+        )
+    }
+}
+
 extension PVProvenanceSheetContent {
     /// One field's provenance: its state line, what it counts against, and its
     /// records in runs by displayed value.
     init(
         field: CatalogConclusionField,
         title: String,
+        shown: Shown? = nil,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
         let records = Self.records([field], locale: locale, orders: orders)
         self.init(
             title: title,
+            shown: shown ?? Shown(field: field, locale: locale, orders: orders),
             summary: Self.joinSummary([
                 field.state == .single
                     ? L10n.Conclusions.provenanceStateSingle(L10n.Conclusions.sourceCount(ReconciledValueDisplay.sourceCount(field)))
@@ -196,12 +240,14 @@ extension PVProvenanceSheetContent {
     static func spanning(
         fields: [CatalogConclusionField],
         title: String,
+        shown: Shown,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> Self {
         let records = Self.records(fields, locale: locale, orders: orders)
         return Self(
             title: title,
+            shown: shown,
             summary: records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count),
             groups: [Group(owner: nil, records: records)]
         )
@@ -216,6 +262,7 @@ extension PVProvenanceSheetContent {
         shownOwnerID: String?,
         kind: CatalogDerivedRowKind?,
         title: String,
+        shown: Shown,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) -> Self {
@@ -260,7 +307,7 @@ extension PVProvenanceSheetContent {
         } else {
             summary = L10n.Conclusions.provenanceRecordCount(recordCount)
         }
-        return Self(title: title, summary: summary, groups: groups)
+        return Self(title: title, shown: shown, summary: summary, groups: groups)
     }
 
     /// A displayed value as a line: its text and its Source count. The one

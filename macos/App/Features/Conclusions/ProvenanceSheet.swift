@@ -7,7 +7,7 @@ struct ProvenanceSheetItem: Identifiable, Equatable {
 
     /// The row with this id, or nil when it is gone or has no records.
     func row(in rows: [ReconciledValueRowModel]) -> ReconciledValueRowModel? {
-        rows.first { $0.id == id && !$0.records.isEmpty }
+        rows.first { $0.id == id && $0.recordCount > 0 }
     }
 }
 
@@ -30,12 +30,13 @@ struct ProvenanceSheet: View {
     static func width(_ widthClass: PVWidthClass) -> CGFloat { widthClass == .wide ? 1280 : 880 }
 
     var body: some View {
-        PVPanel(
+        let content = row.provenanceContent()
+        return PVPanel(
             title: Text(verbatim: row.label).accessibilityHeading(.h1),
             width: Self.width(widthClass)
         ) {
             VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                header
+                header(content)
                 // Room for "Concluded by you" (Reconciliation Claims): zero height until then.
                 Color.clear
                     .frame(height: 0)
@@ -45,7 +46,7 @@ struct ProvenanceSheet: View {
                     PVDivider()
                     ScrollView {
                         ReconciliationRecordRows(
-                            groups: row.recordGroups, face: row.face, provenance: .sheet,
+                            groups: content.groups, face: row.shown.face, provenance: .sheet,
                             open: open, widthClass: widthClass
                         )
                     }
@@ -66,13 +67,13 @@ struct ProvenanceSheet: View {
 
     /// The shown value or values (stated empty in italic when there is none), its state
     /// and the summary of the records behind it.
-    private var header: some View {
+    private func header(_ content: PVProvenanceSheetContent) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
             ReconciledValueRow.valueContent(row)
-            if let badge = row.badge {
+            if let badge = row.shown.badge {
                 ReconciledValueRow.badge(badge)
             }
-            if let summary = row.provenanceSummary {
+            if let summary = content.summary {
                 Text(verbatim: summary)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textSecondary)
