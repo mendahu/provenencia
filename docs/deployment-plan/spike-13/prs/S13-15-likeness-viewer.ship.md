@@ -1,7 +1,7 @@
 # Ship log — S13-15 Likeness viewer
 
 **Plan:** [`S13-15-likeness-viewer.md`](S13-15-likeness-viewer.md) · **Branch:** `s13-15-likeness-viewer` · **PR:** #703
-**State:** fixing 1
+**State:** stopped — UX-5 and MNT-2 open after round 2; To user
 
 ## Round 0 — implement
 Head `c440b2cb`. Gate PASS (orchestrator re-ran). Report: deviations: `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size and the view computes the frame on each draw; every close clears the Toast and `toastInViewer`; focus restore skipped for an empty gallery; plan § 4 row moved to the new decode path because lint failed. Manual check, frames, keys, VoiceOver not run (no GUI).
@@ -84,3 +84,29 @@ Check: scripts/check-pr.sh PASS.
 Files: `docs/deployment-plan/spike-13/person-detail.md:75`.
 Do: the Person's tile opens the viewer; Event and Place tiles still open the Citation.
 Check: `python3 scripts/check-plan-docs.py` reports 0 errors.
+
+## Round 1 — fix
+Head `d3ef0f1a`. Gate PASS (orchestrator re-ran); full `check-plan-docs.py` 0 errors. F-1 to F-10 done. The implementer wrote the F-2, F-5 and F-8 tests beside their fixes, not red first, so the three pin behavior but did not fail first. Deviations: `ImageHeaderDecode.Refusal` and `maxDeclaredPixels` moved with `admit`; `allowedTypes` is gone for `limits`; `accepts` has no byte bound, having no file URL; `decodeTask` holds the decode's result; `.refused` carries the tile id too; `PVPanelMetrics.bodyInset`, since a generic type holds no stored static; the viewer label closure takes a fourth `leads`. Two `PVWidthClassTests` failed once and passed unchanged, the flake S13-14 logged. Minors read by the orchestrator: CON-1 (F-10), CON-2, CON-3 (F-6) **Resolved**.
+
+## Round 2 — review
+Reviewers: MNT, UX, SEC+PRF. Skipped: CON (no Fix-now blocker or major). Scope: `c440b2cb...d3ef0f1a`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-1 | SEC | major | No byte bound | Resolved | The viewer's `declaredSize` and `decode` read the file's size first; `TestSwiftVocabularyMatchesGo` holds the limit |
+| SEC-2 + PRF-1 | SEC, PRF | major | Decodes in flight | Resolved | `decodeTask` awaited after the sleep; `.userInitiated` |
+| UX-1, UX-2 | UX | major | The keyboard drops | Resolved | `FocusClaim` after `choose`; `reclaimFocusIfStranded()`. Unverified in the app |
+| MNT-1 | MNT | major | `toastInViewer` mirrored | Resolved | Only `viewerOpened()` and `viewerClosed()` write it |
+| MNT-3 | MNT | major | spokenJoin | Resolved | Three filters gone |
+| MNT-5, MNT-6, MNT-7 | MNT | minor | Round 1 | Resolved | Read by round 2's reviewer |
+| UX-3, UX-4, UX-6, UX-7, UX-8 | UX | minor, nit | Round 1 | Resolved | Read by round 2's reviewer |
+| UX-5 | UX | major | Opening the viewer during a Toast still speaks it twice | **Not resolved → To user** | The viewer's overlay is ungated, and `viewerOpened()` runs in `.onAppear`, after the first draw mounts it. AC-2.1 fails on Use as portrait then Return. Medium confidence |
+| MNT-2 | MNT | major | The byte limit applies on one of two URL paths | **Not resolved → To user** | `ThumbnailCache.swift:79` opens by URL and decodes with no byte check, though it shares `limits`; the doc comment and the F-2 deviation are wrong that it has no URL. A file over 128 MiB shows on the tile and refuses in the viewer |
+| UX-13 (with MNT's outside note) | UX, CON | major | `viewerClosed()` clears the Toast when the Gallery section leaves, with no viewer open | **To user** | Re-rated from a nit: `ConclusionGallerySection.swift:100` runs on every section switch and on Event and Place, so a tile's or the header menu's Toast, a danger Toast included, vanishes. Regression from F-4. Not a blocker, so the cap allows no Fix plan 2 without the user |
+
+No new blockers. CON not re-run.
+
+Open minors and nits, no fix plan without the user: `UX-12 · :329 · focus nil also true on close, Use as portrait, a record link, so a step moves the keyboard to the image` · `UX-14 · :230 · "Image unavailable" reaches VoiceOver only when the element is read` · `UX-15 · ConclusionGallerySection.swift:70-73 · the fallback can announce "Likeness 1 of 6" for one draw` · `UX-16 · :230 · ", portrait" changes the label after Use as portrait` · `EventsListView.swift:69 · a filter now redundant`
+
+## Result
+Gate PASS (`d3ef0f1a`) · CI not run (draft) · open: UX-5, MNT-2, UX-13 · follow-ups: — · to user: UX-5, MNT-2, UX-13 · CON miss: UX-13
