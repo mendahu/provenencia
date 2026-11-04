@@ -91,7 +91,8 @@ const graphCond = `s.graph_id = ?`
 // UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
 // accepted claim of every bridge that has subjectID as an end, in
 // bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
-// per graph. The bridges' handles (their associations) are left alone. Does
+// per graph. A bridge handle whose last member goes is deleted in releaseClaim.
+// Does
 // not commit.
 func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
 	if len(subjectID) != 16 {

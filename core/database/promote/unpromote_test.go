@@ -102,11 +102,11 @@ func TestUnpromote(t *testing.T) {
 				t.Fatalf("%s lost its filing", name)
 			}
 		}
-		if len(w.handles("person")) != personHandles || len(w.handles("relationship"))+len(w.handles("participation")) != personAssoc {
-			t.Fatal("a handle was deleted")
+		if len(w.handles("person")) != personHandles-1 {
+			t.Fatalf("person handles: got %d want %d", len(w.handles("person")), personHandles-1)
 		}
-		if w.members(h.person) != 0 {
-			t.Fatalf("James's handle has %d members", w.members(h.person))
+		if len(w.handles("relationship"))+len(w.handles("participation")) >= personAssoc {
+			t.Fatal("expected an emptied association handle to be deleted")
 		}
 		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
 	})

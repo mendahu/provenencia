@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -1130,5 +1131,41 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 				t.Fatalf("listed %q %q, want %q %q", l.Ref, l.Title, tt.ref, tt.listedTitle)
 			}
 		})
+	}
+}
+
+func TestSubjectCascadesSplitHandles(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := mustSource(t, c, userID)
+	james := mustSubject(t, c, userID, src.ID, personType.ID, "James")
+	jim := mustSubject(t, c, userID, src.ID, personType.ID, "Jim")
+	perA := mustEntity(t, c, userID, personType.ID)
+	perB := mustEntity(t, c, userID, personType.ID)
+	mustClaim(t, c, userID, james, perA)
+	mustClaim(t, c, userID, jim, perB)
+	clProv, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+			SubjectID: james.ID, EntityID: perB.ID, Status: identityclaims.StatusProvisional,
+		})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = clProv
+	report := mustImpact(t, c, catalogmodel.KindSubject, james.ID)
+	last := findCascade(t, report, deleteimpact.ViaLastMember)
+	if last.Total != 1 || last.Listed[0].Ref != perA.Ref {
+		t.Fatalf("last member %+v", last)
+	}
+	leaves := findCascade(t, report, deleteimpact.ViaLeavesHandle)
+	if leaves.Total != 1 || leaves.Listed[0].Ref != perB.Ref {
+		t.Fatalf("leaves %+v", leaves)
 	}
 }

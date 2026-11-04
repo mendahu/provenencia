@@ -195,9 +195,10 @@ func TestIdentityClaims(t *testing.T) {
 			},
 		},
 		{
-			name: "subject delete cascades its claim, handle stays",
+			name: "subject delete cascades its claim, handle stays with another member",
 			run: func(t *testing.T, f fixture) {
 				cl := mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
+				mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted)
 				if _, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := subjects.Delete(tx, userID, f.james.ID)
 					return struct{}{}, changes, err
@@ -209,6 +210,24 @@ func TestIdentityClaims(t *testing.T) {
 				}
 				if _, err := canonicalentities.Get(f.c, f.per1.ID); err != nil {
 					t.Fatalf("handle gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "subject delete deletes the sole-member handle",
+			run: func(t *testing.T, f fixture) {
+				cl := mustClaim(t, f, f.james, f.per1, identityclaims.StatusAccepted)
+				if _, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjects.Delete(tx, userID, f.james.ID)
+					return struct{}{}, changes, err
+				}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := identityclaims.Get(f.c, cl.ID); !errors.Is(err, sql.ErrNoRows) {
+					t.Fatalf("claim survived: %v", err)
+				}
+				if _, err := canonicalentities.Get(f.c, f.per1.ID); err == nil {
+					t.Fatal("handle should be gone")
 				}
 			},
 		},

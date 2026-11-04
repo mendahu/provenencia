@@ -86,6 +86,7 @@ var deletableKinds = map[catalogmodel.Kind]bool{
 	catalogmodel.KindFile:             true,
 	catalogmodel.KindUser:             true,
 	catalogmodel.KindProject:          true,
+	catalogmodel.KindCanonicalEntity:  true,
 }
 
 type kindTable struct {

@@ -28,7 +28,7 @@ const (
 	KindUser             Kind = "user"
 	KindProject          Kind = "project"
 
-	// Conclusion kinds: registered for inbound probes; no delete path yet.
+	// KindCanonicalEntity is deleted by deleteimpact when releaseClaim removes its last accepted member.
 	KindCanonicalEntity Kind = "canonical_entity"
 	// KindIdentityClaim names the identity_claims table; claims have no ref and
 	// no delete of their own (deleteimpact.ReleaseClaim removes one).
@@ -88,7 +88,7 @@ var Tables = []Table{
 	{Name: "subject_types", PK: "id", Kind: KindSubjectType, Bucket: BucketVocab},
 	{Name: "properties", PK: "id", Kind: KindProperty, Bucket: BucketVocab},
 	{Name: "property_terms", PK: "id", Kind: KindPropertyTerm, Bucket: BucketVocab},
-	{Name: "canonical_entities", Kind: KindCanonicalEntity, Bucket: BucketResource},
+	{Name: "canonical_entities", PK: "id", Kind: KindCanonicalEntity, Bucket: BucketResource},
 	{Name: "name_format_profiles", PK: "id", Bucket: BucketVocab},
 	{Name: "name_format_profile_parts", Bucket: BucketFacet},
 	{Name: "name_format_profile_roles", Bucket: BucketFacet},

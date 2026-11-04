@@ -580,6 +580,16 @@ func TestHandleScopes(t *testing.T) {
 			name: "unpromote moves the handle, not the source",
 			run: func(t *testing.T, s scopeSeed) {
 				h := s.promote(t, s.person)
+				graphB := evidencegraphstest.SoleGraph(t, s.c, s.b.ID).ID
+				other, err := writes.Call(s.c, writes.Op{Action: "create_subject", UserID: scopeUserID}, func(tx *database.Tx) (subjects.Subject, []rowchange.Change, error) {
+					return subjects.Create(tx, scopeUserID, subjects.CreateInput{
+						GraphID: graphB, SubjectTypeID: s.personTy, Label: "Bob (B)",
+					}, &subjects.Placement{GridX: 0, GridY: 0})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				promotetest.Save(t, s.c, scopeUserID, promote.Input{SubjectID: other.ID, EntityID: h})
 				a0, b0 := s.sourceRevisions(t)
 				if _, err := writes.Call(s.c, writes.Op{Action: "unpromote_subject", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := promote.Unpromote(tx, scopeUserID, s.person.ID)

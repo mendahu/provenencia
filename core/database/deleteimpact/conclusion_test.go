@@ -97,15 +97,15 @@ func TestImpactConclusion(t *testing.T) {
 		}
 	})
 
-	t.Run("blocked promoted subject reports groups and the handle it leaves", func(t *testing.T) {
+	t.Run("blocked promoted subject reports the handle it would delete", func(t *testing.T) {
 		got := mustImpact(t, c, catalogmodel.KindSubject, york.ID)
 		if got.Allowed || len(got.Groups) == 0 {
 			t.Fatalf("%+v", got)
 		}
-		assertLeaves(t, got, plc.Ref)
+		assertLastMember(t, got, plc.Ref)
 	})
 
-	t.Run("allowed promoted subject still names the handle it leaves", func(t *testing.T) {
+	t.Run("allowed promoted subject names the handle it would delete when sole member", func(t *testing.T) {
 		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
 		leeds := subjectstest.OfType(t, c, userID, graph, place.ID, "Leeds")
 		got := mustImpact(t, c, catalogmodel.KindSubject, leeds.ID)
@@ -117,7 +117,7 @@ func TestImpactConclusion(t *testing.T) {
 		if !got.Allowed || len(got.Groups) != 0 {
 			t.Fatalf("%+v", got)
 		}
-		assertLeaves(t, got, res.Entity.Ref)
+		assertLastMember(t, got, res.Entity.Ref)
 	})
 
 	t.Run("a member's observation names no handle", func(t *testing.T) {
@@ -143,7 +143,7 @@ func TestImpactConclusion(t *testing.T) {
 		}
 	})
 
-	t.Run("subject delete removes its claim explicitly and audits it; handle stays", func(t *testing.T) {
+	t.Run("subject delete removes its claim and deletes the sole-member handle", func(t *testing.T) {
 		if _, err := writes.Call(c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := subjects.Delete(tx, userID, york.ID)
 			return struct{}{}, changes, err
@@ -151,11 +151,11 @@ func TestImpactConclusion(t *testing.T) {
 			t.Fatal(err)
 		}
 		action, types := lastRevision(t, c)
-		if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,subject" {
+		if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,canonical_entity,subject" {
 			t.Fatalf("%s %v", action, types)
 		}
-		if _, err := canonicalentities.Get(c, plc.ID); err != nil {
-			t.Fatalf("handle gone: %v", err)
+		if _, err := canonicalentities.Get(c, plc.ID); err == nil {
+			t.Fatal("handle should be gone")
 		}
 	})
 }
@@ -193,7 +193,19 @@ func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {
 		t.Fatalf("cascades %+v", r.Cascades)
 	}
 	g := r.Cascades[0]
-	if g.Via != "identity_claims.subject_id" || g.Kind != catalogmodel.KindCanonicalEntity ||
+	if g.Via != deleteimpact.ViaLeavesHandle || g.Kind != catalogmodel.KindCanonicalEntity ||
+		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != handleRef {
+		t.Fatalf("%+v", g)
+	}
+}
+
+func assertLastMember(t *testing.T, r deleteimpact.Report, handleRef string) {
+	t.Helper()
+	if len(r.Cascades) != 1 {
+		t.Fatalf("cascades %+v", r.Cascades)
+	}
+	g := r.Cascades[0]
+	if g.Via != deleteimpact.ViaLastMember || g.Kind != catalogmodel.KindCanonicalEntity ||
 		g.Total != 1 || len(g.Listed) != 1 || g.Listed[0].Ref != handleRef {
 		t.Fatalf("%+v", g)
 	}
@@ -207,5 +219,16 @@ func findGroup(t *testing.T, r deleteimpact.Report, via string) deleteimpact.Gro
 		}
 	}
 	t.Fatalf("no group %s in %+v", via, r)
+	return deleteimpact.Group{}
+}
+
+func findCascade(t *testing.T, r deleteimpact.Report, via string) deleteimpact.Group {
+	t.Helper()
+	for _, g := range r.Cascades {
+		if g.Via == via {
+			return g
+		}
+	}
+	t.Fatalf("no cascade %s in %+v", via, r.Cascades)
 	return deleteimpact.Group{}
 }

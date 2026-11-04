@@ -10,7 +10,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -138,4 +141,83 @@ func TestMemberDeleteEndToEnd(t *testing.T) {
 		t.Fatalf("%v %+v", err, members)
 	}
 	autoreconcilertest.AssertCacheMatchesRebuild(t, c)
+}
+
+func TestLastMemberDeleteEndToEnd(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	james := subjectstest.OfType(t, c, userID, graph, personType.ID, "James")
+	promoted := promotetest.Save(t, c, userID, promote.Input{SubjectID: james.ID})
+	entityID := promoted.Entity.ID
+	entityUUID := database.UUIDString(entityID)
+
+	persons, err := conclusionsummaries.ListPersons(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persons) != 1 || persons[0].Entity.Ref != promoted.Entity.Ref {
+		t.Fatalf("%+v", persons)
+	}
+
+	if _, err := writes.Call(c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := promote.Unpromote(tx, userID, james.ID)
+		return struct{}{}, ch, err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var searchDocs int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE entity_id = ?`, entityUUID).Scan(&searchDocs); err != nil {
+		t.Fatal(err)
+	}
+	if searchDocs != 0 {
+		t.Fatalf("search docs %d", searchDocs)
+	}
+	node, err := c.Graph().Node(entityID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if node != nil {
+		t.Fatalf("graph node still cached: %+v", node)
+	}
+	persons, err = conclusionsummaries.ListPersons(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(persons) != 0 {
+		t.Fatalf("persons list %+v", persons)
+	}
+	var scopeCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transaction_scopes sc
+		JOIN audit_transactions t ON t.id = sc.audit_transaction_id
+		WHERE sc.scope_type = ? AND sc.scope_id = ? AND t.action_type = 'unpromote_subject'`,
+		effects.ScopeCanonicalEntity, entityID).Scan(&scopeCount); err != nil {
+		t.Fatal(err)
+	}
+	if scopeCount != 1 {
+		t.Fatalf("scope rows %d", scopeCount)
+	}
 }
