@@ -79,7 +79,8 @@ import (
 //	20: a given name that is the start of another folds into it, like an initial (S11-45).
 //	21: a claim's confidence grade no longer weakens or orders its values (S13-24).
 //	22: a fold follows chains to the formal value it reaches; a fold cycle keeps each value (S14-18).
-const CacheVersion = 22
+//	23: a nickname-class fold reappears as a nick part of the assembled name (S14-26).
+const CacheVersion = 23
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name

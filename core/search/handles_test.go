@@ -587,8 +587,8 @@ func TestNicknameFindsTheFormalName(t *testing.T) {
 		f := newHandleFixture(t)
 		thomas := f.promote(f.person("Tom Smith", "Thomas Smith"), nil)
 		hits := f.search("Tom", KindPerson)
-		if len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref || hits[0].Title != "Thomas Smith" ||
-			hits[0].MatchReason != "other" || hits[0].MatchSnippet != "" {
+		if len(hits) != 1 || hits[0].Ref != thomas.Entity.Ref || hits[0].Title != "Thomas Tom Smith" ||
+			hits[0].MatchReason != "title" || hits[0].MatchSnippet != "" {
 			t.Fatalf("got %+v", hits)
 		}
 	})

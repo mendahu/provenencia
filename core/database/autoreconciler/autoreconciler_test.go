@@ -613,7 +613,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 || names[0].Support != 2 {
 			t.Fatalf("names %+v", names)
 		}
-		if got := nameSpec(t, names[0].Name); got != "given=Christopher|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Christopher|nick=Chris|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -643,7 +643,7 @@ func TestReconciledNames(t *testing.T) {
 		if len(names) != 1 {
 			t.Fatalf("names %+v", names)
 		}
-		if got := nameSpec(t, names[0].Name); got != "given=Hannah|surname=Robins" {
+		if got := nameSpec(t, names[0].Name); got != "given=Hannah|nick=Ann|nick=Anna|surname=Robins" {
 			t.Fatalf("parts %s", got)
 		}
 	})
@@ -1631,7 +1631,7 @@ func TestValueRulesFoldNicknamesOnly(t *testing.T) {
 var productAliasPin = struct {
 	CacheVersion int
 	Hash         string
-}{CacheVersion: 22, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
+}{CacheVersion: 23, Hash: "0dee1d25e240c9acebe8007415ea16eb365565cf345d8102e4ebcf22a6771065"}
 
 // TestProductAliasTablesPinCacheVersion: the reconciler cache reads the product
 // alias seed, so a seed edit must come with a CacheVersion bump.
@@ -1695,18 +1695,18 @@ func TestValueRulesFoldChains(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		in      []string // one given spec per candidate
-		given   []string
+		want    string
 		reasons []autoreconcile.Reason // per candidate, in order
 	}{
-		{"AC-1.1", []string{"B.", "Bill", "William"}, []string{"William"}, folded3},
-		{"AC-1.2", []string{"D.", "Dick", "Richard"}, []string{"Richard"}, folded3},
-		{"AC-1.3", []string{"P.", "Peggy", "Margaret"}, []string{"Margaret"}, folded3},
-		{"AC-1.4", []string{"Mo", "Molly", "Mary"}, []string{"Mary"}, folded3},
-		{"AC-1.5", []string{"Caroline", "Chick", "Charles"}, []string{"Charles"}, folded3},
-		{"AC-1.6", []string{"Ann", "Anna", "Hannah"}, []string{"Hannah"}, folded3},
-		{"AC-1.7", []string{"Dick", "Ricky", "Rick"}, []string{"Dick", "Ricky", "Rick"},
+		{"AC-1.1", []string{"B.", "Bill", "William"}, "given=William|nick=Bill|surname=Robins", folded3},
+		{"AC-1.2", []string{"D.", "Dick", "Richard"}, "given=Richard|nick=Dick|surname=Robins", folded3},
+		{"AC-1.3", []string{"P.", "Peggy", "Margaret"}, "given=Margaret|nick=Peggy|surname=Robins", folded3},
+		{"AC-1.4", []string{"Mo", "Molly", "Mary"}, "given=Mary|nick=Molly|surname=Robins", folded3},
+		{"AC-1.5", []string{"Caroline", "Chick", "Charles"}, "given=Charles|nick=Caroline|nick=Chick|surname=Robins", folded3},
+		{"AC-1.6", []string{"Ann", "Anna", "Hannah"}, "given=Hannah|nick=Ann|nick=Anna|surname=Robins", folded3},
+		{"AC-1.7", []string{"Dick", "Ricky", "Rick"}, "given=Dick|given=Ricky|given=Rick|surname=Robins",
 			[]autoreconcile.Reason{autoreconcile.ReasonKept, autoreconcile.ReasonKept, autoreconcile.ReasonKept}},
-		{"AC-1.8", []string{"Joseph", "José", "Joseph|given=Jose"}, []string{"Joseph", "Jose"},
+		{"AC-1.8", []string{"Joseph", "José", "Joseph|given=Jose"}, "given=Joseph|given=Jose|surname=Robins",
 			[]autoreconcile.Reason{autoreconcile.ReasonFolded, autoreconcile.ReasonFolded, autoreconcile.ReasonKept}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1724,8 +1724,8 @@ func TestValueRulesFoldChains(t *testing.T) {
 			if len(res.Values) != 1 {
 				t.Fatalf("%d values", len(res.Values))
 			}
-			if got := givenOf(res.Values[0].Value); !slices.Equal(got, tc.given) {
-				t.Fatalf("given %v, want %v", got, tc.given)
+			if got := nameSpecFromValue(t, res.Values[0].Value); got != tc.want {
+				t.Fatalf("parts %q, want %q", got, tc.want)
 			}
 			if len(res.Values[0].ObservationIDs) != len(in) {
 				t.Fatalf("value holds %d candidates, want %d", len(res.Values[0].ObservationIDs), len(in))
@@ -1734,6 +1734,54 @@ func TestValueRulesFoldChains(t *testing.T) {
 				if o.Reason != tc.reasons[i] {
 					t.Fatalf("candidate %d: reason %q, want %q", i+1, o.Reason, tc.reasons[i])
 				}
+			}
+		})
+	}
+}
+
+// nameSpecFromValue renders a reconciled Value's parts as "type=value|…".
+func nameSpecFromValue(t *testing.T, v autoreconcile.Value) string {
+	t.Helper()
+	var parts []string
+	for _, p := range v.Name.Parts {
+		parts = append(parts, p.Type+"="+p.Value)
+	}
+	return strings.Join(parts, "|")
+}
+
+// TestValueRulesFoldedNicknameParts: product rules emit nick parts for
+// nickname-class folds and not for initials, abbreviations, or prefix-only pairs.
+func TestValueRulesFoldedNicknameParts(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   []string
+		want string
+	}{
+		{"Bill and William", []string{"Bill", "William"}, "given=William|nick=Bill|surname=Robins"},
+		{"Jim and James", []string{"Jim", "James"}, "given=James|nick=Jim|surname=Robins"},
+		{"J. and James", []string{"J.", "James"}, "given=James|surname=Robins"},
+		{"Wm and William", []string{"Wm", "William"}, "given=William|surname=Robins"},
+		{"one Bill and three Williams", []string{"Bill", "William", "William", "William"}, "given=William|nick=Bill|surname=Robins"},
+		{"Al and Alexandra", []string{"Al", "Alexandra"}, "given=Alexandra|surname=Robins"},
+		{"Ann and Annette", []string{"Ann", "Annette"}, "given=Annette|surname=Robins"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var in []autoreconcile.Candidate
+			for i, g := range tc.in {
+				in = append(in, autoreconcile.Candidate{
+					ObservationID: []byte{0, 0, 0, byte(i + 1)},
+					Value:         autoreconcile.Value{Name: nameValue("given=" + g + "|surname=Robins")},
+				})
+			}
+			res, err := autoreconcile.Reconcile(autoreconciler.ValueRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(res.Values) != 1 {
+				t.Fatalf("%d values", len(res.Values))
+			}
+			if got := nameSpecFromValue(t, res.Values[0].Value); got != tc.want {
+				t.Fatalf("parts %q, want %q", got, tc.want)
 			}
 		})
 	}

@@ -34,7 +34,9 @@ import (
 //     [Des] → [Desiree], [James] → [James, Kenneth]. A nickname or
 //     abbreviation folds into the formal name it stands for, as the product
 //     alias seed lists it (Chris → Christopher, Wm → William, Ebbie → Abel;
-//     decided 2026-10-19, S11-28). A name alone never folds, and a pair the
+//     decided 2026-10-19, S11-28). A nickname-class fold reappears as a nick
+//     part of the assembled name; initials, abbreviations, and prefix-only
+//     hops do not (S14-26). A name alone never folds, and a pair the
 //     list gives both ways folds only as nicknameDirections says. An alias
 //     applies only to the part roles its table allows; the product tables
 //     cover given names and nicknames, so a surname never alias-folds. An
@@ -46,8 +48,9 @@ import (
 //     each part type keeps every surviving value, best supported first,
 //     each distinct part once (given [James, Jake]). Names are never mixed.
 //   - Assemble: each value's parts come from its best-ranked carrier, in the
-//     type order of the member with the most types. A member that carries
-//     exactly the result is returned as is.
+//     type order of the member with the most types, plus nick parts from
+//     nickname-class folds. A member that carries exactly the result is
+//     returned as is.
 
 // nameModule reads names under rules.
 type nameModule struct {
@@ -120,31 +123,96 @@ func (m nameModule) split(v Value) (map[string]unit, bool) {
 // a part type whose role takes prefixes), or a nickname or abbreviation the
 // alias list pairs toward the into word. The type only says which part role an
 // alias table or a prefix must allow (compareValue strips it).
-func (m nameModule) fold(typ string, from, into unit) bool {
+func (m nameModule) fold(typ string, from, into unit) (folds, nickClass bool) {
 	res, det := valuecompare.Compare(from.data.(nameUnit).cmp, into.data.(nameUnit).cmp, m.rules)
 	switch {
 	case res.Relation == valuecompare.Contains && det.Broader == valuecompare.SideA:
 	case res.Relation == valuecompare.Equivalent:
 	default:
-		return false
+		return false, false
 	}
 	role := m.rules.Names.Western.Role(typ)
 	changed := false
+	nickClass = true
 	for _, p := range det.Parts {
 		switch {
 		case p.Relation == valuecompare.Same:
 		case p.Cause == valuecompare.CauseInitial:
 			changed = true
+			nickClass = false
 		case p.Cause == valuecompare.CausePrefix && valuecompare.PrefixRuleRole(role):
 			changed = true
-		case (p.Cause == valuecompare.CauseAlias || p.Cause == valuecompare.CauseAbbreviation) &&
+			nickClass = false
+		case p.Cause == valuecompare.CauseAlias &&
 			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
 			changed = true
+		case p.Cause == valuecompare.CauseAbbreviation &&
+			m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role):
+			changed = true
+			nickClass = false
 		default:
-			return false
+			return false, false
 		}
 	}
-	return changed || res.Relation == valuecompare.Contains
+	folds = changed || res.Relation == valuecompare.Contains
+	if !folds {
+		nickClass = false
+	}
+	return folds, nickClass
+}
+
+// nicknameParts emits nick parts from a folded attach (S14-26 D-7).
+func (m nameModule) nicknameParts(typ string, a foldAttach) []namevalue.Part {
+	from := a.from.data.(nameUnit)
+	root := a.root.data.(nameUnit)
+	role := m.rules.Names.Western.Role(typ)
+	_, det := valuecompare.Compare(from.cmp, root.cmp, m.rules)
+
+	var out []namevalue.Part
+	for i, words := range from.words {
+		if containsAll(root.parts, words) {
+			continue
+		}
+		alias := false
+		for _, w := range words {
+			for _, p := range det.Parts {
+				if p.Cause != valuecompare.CauseAlias || p.A.Text != w {
+					continue
+				}
+				if m.rules.Names.Aliases.Expands(p.A.Text, p.B.Text, role) {
+					alias = true
+					break
+				}
+			}
+			if alias {
+				break
+			}
+		}
+		if alias {
+			out = append(out, from.raw[i])
+			continue
+		}
+		if a.chainNick {
+			out = append(out, from.raw[i])
+		}
+	}
+	return out
+}
+
+func insertNickInOrder(order []string) []string {
+	if slices.Contains(order, namevalue.PartTypeNick) {
+		return order
+	}
+	after := -1
+	if i := slices.Index(order, namevalue.PartTypeGiven); i >= 0 {
+		after = i
+	} else if i := slices.Index(order, "prefix"); i >= 0 {
+		after = i
+	}
+	if after < 0 {
+		return append(order, namevalue.PartTypeNick)
+	}
+	return slices.Insert(order, after+1, namevalue.PartTypeNick)
 }
 
 // outvotes: only a spelling variant of the winner — value compare pairs the
@@ -176,7 +244,7 @@ func containsAll(have, words []string) bool {
 	return true
 }
 
-func (m nameModule) assemble(members []Candidate, settled map[string][]unit) Value {
+func (m nameModule) assemble(members []Candidate, settled map[string][]unit, folded map[string][]foldAttach) Value {
 	orders := make([][]string, len(members))
 	base := 0
 	for i, member := range members {
@@ -218,6 +286,24 @@ func (m nameModule) assemble(members []Candidate, settled map[string][]unit) Val
 				raw[typ] = append(raw[typ], nu.raw[i])
 			}
 		}
+	}
+
+	for typ, attaches := range folded {
+		for _, a := range attaches {
+			for _, p := range m.nicknameParts(typ, a) {
+				words := valuecompare.SplitWords(p.Value, m.rules.Words)
+				if len(words) == 0 || containsAll(parts[namevalue.PartTypeNick], words) {
+					continue
+				}
+				parts[namevalue.PartTypeNick] = append(parts[namevalue.PartTypeNick], words...)
+				raw[namevalue.PartTypeNick] = append(raw[namevalue.PartTypeNick], namevalue.Part{
+					Idx: p.Idx, Value: p.Value, Type: namevalue.PartTypeNick,
+				})
+			}
+		}
+	}
+	if len(raw[namevalue.PartTypeNick]) > 0 {
+		order = insertNickInOrder(order)
 	}
 
 	// A member carrying exactly these parts, in this type order, is the value.

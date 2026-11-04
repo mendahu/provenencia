@@ -497,18 +497,26 @@ func checkNameList(t *testing.T, rules valuecompare.Rules, in []Candidate, rng *
 		}
 	}
 
-	// Every reconciled part is some candidate's part of that type.
+	// Every reconciled part is some candidate's part; nick may re-tag a folded given.
 	had := map[string]bool{}
+	words := map[string]bool{}
 	for _, c := range in {
 		for _, p := range c.Value.Name.Parts {
-			had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] = true
+			norm := valuecompare.NormalizeForm(p.Value)
+			had[p.Type+"="+norm] = true
+			words[norm] = true
 		}
 	}
 	for _, c := range got.Values {
 		for _, p := range c.Value.Name.Parts {
-			if !had[p.Type+"="+valuecompare.NormalizeForm(p.Value)] {
-				t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
+			norm := valuecompare.NormalizeForm(p.Value)
+			if had[p.Type+"="+norm] {
+				continue
 			}
+			if p.Type == namevalue.PartTypeNick && words[norm] {
+				continue
+			}
+			t.Fatalf("%s: invented part %s=%s", where, p.Type, p.Value)
 		}
 	}
 
@@ -613,6 +621,23 @@ func specs(r Result) []string {
 
 // BenchmarkReconcileNames: one handle with 200 name candidates, the shape a
 // heavily researched Person reaches (performance-ledger.md).
+// BenchmarkReconcileNamesAliases: alias-folding corpus for S14-26 scale (200 candidates).
+func BenchmarkReconcileNamesAliases(b *testing.B) {
+	given := []string{"Bill", "William", "Jim", "James", "Chris", "Christopher"}
+	var in []Candidate
+	for i := 0; i < 200; i++ {
+		c := nm(0, "given="+given[i%len(given)]+"|surname=Robins")
+		c.ObservationID = []byte{0, 0, byte(i >> 8), byte(i)}
+		in = append(in, c)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := Reconcile(aliasRules, propertymeta.ValueTypeName, in, nil, propertymeta.CardinalitySingle); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func BenchmarkReconcileNames(b *testing.B) {
 	given := []string{"James", "J.", "Jim", "James|given=Kenneth", "J.|given=K."}
 	surname := []string{"Robins", "Robins", "Robins", "Robbins"}
@@ -754,6 +779,7 @@ var aliasRules = func() valuecompare.Rules {
 				// and Dick, Ricky, Rick folding into each other with Richard as the way out.
 				{"richard", "dick"}, {"ricky", "dick"}, {"rick", "ricky"}, {"dick", "rick"},
 				{"hannah", "anna"}, {"anna", "ann"},
+				{"william", "billy"},
 			},
 		},
 		{
@@ -790,22 +816,22 @@ func TestReconcileNamesAliases(t *testing.T) {
 	}{
 		{"AC-1.1 a nickname folds into the given name it stands for",
 			[]Candidate{nm(1, "given=Chris|surname=Robins"), nm(2, "given=Christopher|surname=Robins")},
-			[]cl{{[]byte{1, 2}, "given=Christopher|surname=Robins"}}},
+			[]cl{{[]byte{1, 2}, "given=Christopher|nick=Chris|surname=Robins"}}},
 		{"AC-1.2 an abbreviation folds into the name it abbreviates",
 			[]Candidate{nm(1, "given=Wm|surname=Robins"), nm(2, "given=William|surname=Robins")},
 			[]cl{{[]byte{1, 2}, "given=William|surname=Robins"}}},
 		{"AC-1.3 an alias and an initial fold together",
 			[]Candidate{nm(1, "given=Chris|given=R|surname=Robins"), nm(2, "given=Christopher|given=Robert|surname=Robins")},
-			[]cl{{[]byte{1, 2}, "given=Christopher|given=Robert|surname=Robins"}}},
+			[]cl{{[]byte{1, 2}, "given=Christopher|given=Robert|nick=Chris|surname=Robins"}}},
 		{"AC-1.4 an ambiguous alias folds into the best supported",
 			[]Candidate{nm(1, "given=Christopher|surname=Robins"), nm(2, "given=Christina|surname=Robins"), nm(3, "given=Christina|surname=Robins"), nm(4, "given=Chris|surname=Robins")},
-			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|surname=Robins"}}},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|nick=Chris|surname=Robins"}}},
 		{"AC-1.4 reversed",
 			[]Candidate{nm(4, "given=Chris|surname=Robins"), nm(3, "given=Christina|surname=Robins"), nm(2, "given=Christina|surname=Robins"), nm(1, "given=Christopher|surname=Robins")},
-			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|surname=Robins"}}},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=Christina|given=Christopher|nick=Chris|surname=Robins"}}},
 		{"AC-1.9 a nickname longer than its formal name folds",
 			[]Candidate{nm(1, "given=Ebbie|surname=Robins"), nm(2, "given=Abel|surname=Robins")},
-			[]cl{{[]byte{1, 2}, "given=Abel|surname=Robins"}}},
+			[]cl{{[]byte{1, 2}, "given=Abel|nick=Ebbie|surname=Robins"}}},
 	}
 	// Fold chains: each value reaches the formal value at the end (S14-18).
 	for _, tc := range []struct {
@@ -813,10 +839,10 @@ func TestReconcileNamesAliases(t *testing.T) {
 		names []string
 		want  string
 	}{
-		{"AC-1.1 B., Bill, William", []string{"B.", "Bill", "William"}, "given=William"},
-		{"AC-1.6 Ann, Anna, Hannah", []string{"Ann", "Anna", "Hannah"}, "given=Hannah"},
+		{"AC-1.1 B., Bill, William", []string{"B.", "Bill", "William"}, "given=William|nick=Bill"},
+		{"AC-1.6 Ann, Anna, Hannah", []string{"Ann", "Anna", "Hannah"}, "given=Hannah|nick=Ann|nick=Anna"},
 		{"AC-1.7 Dick, Ricky, Rick keep each", []string{"Dick", "Ricky", "Rick"}, "given=Dick|given=Ricky|given=Rick"},
-		{"Dick, Ricky, Rick reach Richard", []string{"Dick", "Ricky", "Rick", "Richard"}, "given=Richard"},
+		{"Dick, Ricky, Rick reach Richard", []string{"Dick", "Ricky", "Rick", "Richard"}, "given=Richard|nick=Dick|nick=Ricky|nick=Rick"},
 		{"B. folds into Bill", []string{"B.", "Bill"}, "given=Bill"},
 		{"B. and William do not chain", []string{"B.", "William"}, "given=B.|given=William"},
 	} {
@@ -842,6 +868,41 @@ func TestReconcileNamesAliases(t *testing.T) {
 		}{tc.name + " reversed", rev, want})
 	}
 	for _, tc := range folds {
+		t.Run(tc.name, func(t *testing.T) {
+			checkNames(t, aliasRules, tc.in, tc.want, StateMerged, "kept")
+		})
+	}
+
+	for _, tc := range []struct {
+		name string
+		in   []Candidate
+		want []cl
+	}{
+		{"AC-1.1 Bill and William",
+			[]Candidate{nm(1, "given=Bill|surname=Robins"), nm(2, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=William|nick=Bill|surname=Robins"}}},
+		{"AC-1.2 Jim and James",
+			[]Candidate{nm(1, "given=Jim|surname=Robins"), nm(2, "given=James|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=James|nick=Jim|surname=Robins"}}},
+		{"AC-1.3 J. and James",
+			[]Candidate{nm(1, "given=J.|surname=Robins"), nm(2, "given=James|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=James|surname=Robins"}}},
+		{"AC-1.4 Wm and William",
+			[]Candidate{nm(1, "given=Wm|surname=Robins"), nm(2, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=William|surname=Robins"}}},
+		{"AC-1.7 one Bill and three Williams",
+			[]Candidate{nm(1, "given=Bill|surname=Robins"), nm(2, "given=William|surname=Robins"), nm(3, "given=William|surname=Robins"), nm(4, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3, 4}, "given=William|nick=Bill|surname=Robins"}}},
+		{"AC-1.8 Bill, Billy, and William",
+			[]Candidate{nm(1, "given=Bill|surname=Robins"), nm(2, "given=Billy|surname=Robins"), nm(3, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2, 3}, "given=William|nick=Bill|nick=Billy|surname=Robins"}}},
+		{"AC-1.9 typed nick and formal given",
+			[]Candidate{nm(1, "nick=Bill|surname=Robins"), nm(2, "given=William|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=William|nick=Bill|surname=Robins"}}},
+		{"AC-1.10 folded given dedupes typed nick",
+			[]Candidate{nm(1, "given=Bill|surname=Robins"), nm(2, "given=William|nick=Bill|surname=Robins")},
+			[]cl{{[]byte{1, 2}, "given=William|nick=Bill|surname=Robins"}}},
+	} {
 		t.Run(tc.name, func(t *testing.T) {
 			checkNames(t, aliasRules, tc.in, tc.want, StateMerged, "kept")
 		})
