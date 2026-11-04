@@ -210,6 +210,22 @@ func TestLastMemberGroupMatchesRelease(t *testing.T) {
 			},
 			delete: true,
 		},
+		{
+			name: "provisional on handle with no accepted member stays",
+			setup: func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool) {
+				c, userID, james, per := soleMemberFixture(t)
+				cl, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: james.ID, EntityID: per.ID, Status: identityclaims.StatusProvisional,
+					})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return c, userID, cl.ID, per.ID, per.Ref, false
+			},
+			wantEmpty: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
