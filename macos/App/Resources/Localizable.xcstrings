@@ -16158,7 +16158,7 @@
         }
       }
     },
-    "conclusions.badge.merged": {
+    "provenanceSheet.badge.merged": {
       "comment": "Badge on a Conclusion field whose one value several Sources agree on",
       "extractionState": "manual",
       "localizations": {
@@ -16170,7 +16170,7 @@
         }
       }
     },
-    "conclusions.badge.mixed": {
+    "provenanceSheet.badge.mixed": {
       "comment": "Badge on a Conclusion field whose records disagree, so several values are shown",
       "extractionState": "manual",
       "localizations": {
@@ -16182,7 +16182,7 @@
         }
       }
     },
-    "conclusions.badge.concluded": {
+    "provenanceSheet.badge.concluded": {
       "comment": "Badge on a Conclusion field whose value the researcher concluded",
       "extractionState": "manual",
       "localizations": {
@@ -16338,7 +16338,7 @@
         }
       }
     },
-    "conclusions.why.readAs": {
+    "provenanceSheet.column.readAs": {
       "comment": "Why table column heading: what the record says",
       "extractionState": "manual",
       "localizations": {
@@ -16362,7 +16362,7 @@
         }
       }
     },
-    "conclusions.why.outcome": {
+    "provenanceSheet.column.outcome": {
       "comment": "Why table column heading: what the auto-reconciler did with the record",
       "extractionState": "manual",
       "localizations": {
@@ -17682,7 +17682,7 @@
         }
       }
     },
-    "conclusions.provenance.recordCount": {
+    "provenanceSheet.recordCount": {
       "comment": "Provenance sheet summary: how many records sit behind the value; argument is the count",
       "extractionState": "manual",
       "localizations": {
@@ -17706,7 +17706,7 @@
         }
       }
     },
-    "conclusions.provenance.recordsFromBirthEvents": {
+    "provenanceSheet.recordsFromBirthEvents": {
       "comment": "Provenance sheet summary of a birth date backed by several birth events; arguments are the record count and the event count",
       "extractionState": "manual",
       "localizations": {
@@ -17740,7 +17740,7 @@
         }
       }
     },
-    "conclusions.provenance.recordsFromDeathEvents": {
+    "provenanceSheet.recordsFromDeathEvents": {
       "comment": "Provenance sheet summary of a death date backed by several death events; arguments are the record count and the event count",
       "extractionState": "manual",
       "localizations": {
@@ -17774,7 +17774,7 @@
         }
       }
     },
-    "conclusions.provenance.recordsFromPlaces": {
+    "provenanceSheet.recordsFromPlaces": {
       "comment": "Provenance sheet summary of a birth or death place backed by several Places; arguments are the record count and the Place count",
       "extractionState": "manual",
       "localizations": {
@@ -17828,7 +17828,7 @@
         }
       }
     },
-    "conclusions.provenance.summaryJoin": {
+    "provenanceSheet.summaryJoin": {
       "comment": "Joins two parts of the provenance sheet summary (state, disagreement, record count)",
       "extractionState": "manual",
       "localizations": {
@@ -17840,7 +17840,7 @@
         }
       }
     },
-    "conclusions.provenance.otherRecords": {
+    "provenanceSheet.otherRecords": {
       "comment": "Provenance sheet heading over the records that count under no displayed value",
       "extractionState": "manual",
       "localizations": {
@@ -17852,7 +17852,7 @@
         }
       }
     },
-    "conclusions.provenance.ownerShown": {
+    "provenanceSheet.ownerShown": {
       "comment": "VoiceOver for the group line of the owner behind the shown value; argument is the spoken group line",
       "extractionState": "manual",
       "localizations": {
@@ -17864,7 +17864,7 @@
         }
       }
     },
-    "conclusions.provenance.ownerShownMark": {
+    "provenanceSheet.ownerShownMark": {
       "comment": "Visible mark after the group line of the owner behind the shown value",
       "extractionState": "manual",
       "localizations": {
@@ -17876,7 +17876,7 @@
         }
       }
     },
-    "conclusions.provenance.column.citation": {
+    "provenanceSheet.column.citation": {
       "comment": "Provenance sheet column heading: the record's citation line",
       "extractionState": "manual",
       "localizations": {
@@ -17888,7 +17888,7 @@
         }
       }
     },
-    "conclusions.provenance.column.record": {
+    "provenanceSheet.column.record": {
       "comment": "Provenance sheet column heading: the record's Observation and Subject refs",
       "extractionState": "manual",
       "localizations": {
@@ -17900,7 +17900,7 @@
         }
       }
     },
-    "conclusions.provenance.link.source": {
+    "provenanceSheet.link.source": {
       "comment": "Provenance sheet link that opens the record's Source",
       "extractionState": "manual",
       "localizations": {
@@ -17912,7 +17912,7 @@
         }
       }
     },
-    "conclusions.provenance.link.observation": {
+    "provenanceSheet.link.observation": {
       "comment": "Provenance sheet link that opens the record's Observation; argument is the Observation ref",
       "extractionState": "manual",
       "localizations": {
@@ -17924,7 +17924,7 @@
         }
       }
     },
-    "conclusions.provenance.link.sourceSpoken": {
+    "provenanceSheet.link.sourceSpoken": {
       "comment": "VoiceOver label of the provenance sheet link that opens the record's Source; argument is the Source title",
       "extractionState": "manual",
       "localizations": {
@@ -17936,7 +17936,7 @@
         }
       }
     },
-    "conclusions.provenance.stateSingle": {
+    "provenanceSheet.stateSingle": {
       "comment": "Provenance sheet summary state of a field with one value from one Source; argument is the Source count text",
       "extractionState": "manual",
       "localizations": {
@@ -17948,7 +17948,7 @@
         }
       }
     },
-    "conclusions.provenance.copyCitation": {
+    "provenanceSheet.copyCitation": {
       "comment": "Tooltip and VoiceOver label of the provenance sheet button that copies a record's citation line",
       "extractionState": "manual",
       "localizations": {
@@ -17960,7 +17960,7 @@
         }
       }
     },
-    "conclusions.provenance.citationCopied": {
+    "provenanceSheet.citationCopied": {
       "comment": "VoiceOver announcement after the provenance sheet's copy citation button copies the citation line",
       "extractionState": "manual",
       "localizations": {
@@ -17972,7 +17972,7 @@
         }
       }
     },
-    "conclusions.provenance.done": {
+    "provenanceSheet.done": {
       "comment": "Button that closes the provenance sheet",
       "extractionState": "manual",
       "localizations": {

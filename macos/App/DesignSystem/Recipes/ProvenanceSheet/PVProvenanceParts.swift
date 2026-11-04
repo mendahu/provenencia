@@ -39,9 +39,9 @@ struct PVProvenanceStateBadge: View {
 
     var body: some View {
         switch state {
-        case .merged: PVBadge(L10n.Conclusions.badgeMerged, tone: .neutral, icon: .merge)
-        case .mixed: PVBadge(L10n.Conclusions.badgeMixed, tone: .warning, icon: .split)
-        case .concluded: PVBadge(L10n.Conclusions.badgeConcluded, tone: .success, icon: .stamp)
+        case .merged: PVBadge(L10n.ProvenanceSheet.badgeMerged, tone: .neutral, icon: .merge)
+        case .mixed: PVBadge(L10n.ProvenanceSheet.badgeMixed, tone: .warning, icon: .split)
+        case .concluded: PVBadge(L10n.ProvenanceSheet.badgeConcluded, tone: .success, icon: .stamp)
         }
     }
 }
@@ -118,7 +118,7 @@ struct PVProvenanceOwnerLine: View {
                     .foregroundStyle(PVColor.textMuted)
             }
             if owner.shown {
-                Text(L10n.Conclusions.provenanceOwnerShownMark)
+                Text(L10n.ProvenanceSheet.ownerShownMark)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
             }
@@ -145,7 +145,7 @@ struct PVProvenanceValueHeading: View {
                 PVProvenanceValueLine(value, face: face)
                     .accessibilityElement(children: .combine)
             case .otherRecords:
-                Text(L10n.Conclusions.provenanceOtherRecords)
+                Text(L10n.ProvenanceSheet.otherRecords)
                     .pvMicroCaps()
                     .foregroundStyle(PVColor.textMuted)
             }
@@ -165,14 +165,14 @@ struct PVProvenanceColumnHeadings: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: columns.spacing) {
             if columns.showsReadAs {
-                Text(L10n.Conclusions.whyReadAs)
+                Text(L10n.ProvenanceSheet.columnReadAs)
                     .frame(width: columns.readAsWidth, alignment: .leading)
             }
-            Text(L10n.Conclusions.provenanceColumnCitation)
+            Text(L10n.ProvenanceSheet.columnCitation)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Text(L10n.Conclusions.whyOutcome)
+            Text(L10n.ProvenanceSheet.columnOutcome)
                 .frame(width: columns.outcomeWidth, alignment: .leading)
-            Text(L10n.Conclusions.provenanceColumnRecord)
+            Text(L10n.ProvenanceSheet.columnRecord)
                 .frame(width: PVProvenanceColumns.recordWidth, alignment: .leading)
             Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
         }

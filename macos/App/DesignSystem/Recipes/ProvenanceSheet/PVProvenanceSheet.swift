@@ -45,7 +45,7 @@ struct PVProvenanceSheet: View {
         } footer: {
             HStack {
                 Spacer(minLength: 0)
-                PVButton(L10n.Conclusions.provenanceDone, variant: .primary) { sheetClose() }
+                PVButton(L10n.ProvenanceSheet.done, variant: .primary) { sheetClose() }
                     .keyboardShortcut(.defaultAction)
                     .accessibilityIdentifier("\(idPrefix).done")
             }

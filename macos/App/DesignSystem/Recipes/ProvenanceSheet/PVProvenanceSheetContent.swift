@@ -223,10 +223,10 @@ extension PVProvenanceSheetContent {
             shown: shown ?? Shown(field: field, locale: locale, orders: orders),
             summary: Self.joinSummary([
                 field.state == .single
-                    ? L10n.Conclusions.provenanceStateSingle(L10n.Conclusions.sourceCount(ReconciledValueDisplay.sourceCount(field)))
+                    ? L10n.ProvenanceSheet.stateSingle(L10n.Conclusions.sourceCount(ReconciledValueDisplay.sourceCount(field)))
                     : ReconciledValueDisplay.spokenState(field),
                 ReconciledValueDisplay.againstLine(field),
-                records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count),
+                records.isEmpty ? nil : L10n.ProvenanceSheet.recordCount(records.count),
             ]),
             groups: [Group(
                 owner: nil,
@@ -248,7 +248,7 @@ extension PVProvenanceSheetContent {
         return Self(
             title: title,
             shown: shown,
-            summary: records.isEmpty ? nil : L10n.Conclusions.provenanceRecordCount(records.count),
+            summary: records.isEmpty ? nil : L10n.ProvenanceSheet.recordCount(records.count),
             groups: [Group(owner: nil, records: records)]
         )
     }
@@ -303,9 +303,9 @@ extension PVProvenanceSheetContent {
         if recordCount == 0 {
             summary = nil
         } else if groups.count > 1, let kind {
-            summary = L10n.Conclusions.provenanceRecordsFromOwners(records: recordCount, owners: groups.count, kind: kind)
+            summary = L10n.ProvenanceSheet.recordsFromOwners(records: recordCount, owners: groups.count, kind: kind)
         } else {
-            summary = L10n.Conclusions.provenanceRecordCount(recordCount)
+            summary = L10n.ProvenanceSheet.recordCount(recordCount)
         }
         return Self(title: title, shown: shown, summary: summary, groups: groups)
     }
@@ -424,7 +424,7 @@ extension PVProvenanceSheetContent {
         let identity = owner.place?.entity ?? owner.entity
         let ref = title == identity.ref ? nil : identity.ref
         let line = ref.map { L10n.DesignSystem.spokenJoin(title, $0) } ?? title
-        let spoken = shown ? L10n.Conclusions.provenanceOwnerShown(line) : line
+        let spoken = shown ? L10n.ProvenanceSheet.ownerShown(line) : line
         return .init(
             id: identity.id,
             title: title,
@@ -449,7 +449,7 @@ extension PVProvenanceSheetContent {
     private static func joinSummary(_ parts: [String?]) -> String? {
         let parts = parts.compactMap { $0 }
         guard let first = parts.first else { return nil }
-        return parts.dropFirst().reduce(first) { L10n.Conclusions.provenanceSummaryJoin($0, $1) }
+        return parts.dropFirst().reduce(first) { L10n.ProvenanceSheet.summaryJoin($0, $1) }
     }
 }
 

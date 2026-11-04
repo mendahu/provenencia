@@ -22,9 +22,9 @@ struct ReconciliationRecordRows: View {
     var body: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: PVProvenanceColumns.spacing, verticalSpacing: 0) {
             GridRow {
-                heading(L10n.Conclusions.whyReadAs)
+                heading(L10n.ProvenanceSheet.columnReadAs)
                 heading(L10n.Conclusions.whySource)
-                heading(L10n.Conclusions.whyOutcome)
+                heading(L10n.ProvenanceSheet.columnOutcome)
                 Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
             }
             .padding(.vertical, PVSpacing.space2)

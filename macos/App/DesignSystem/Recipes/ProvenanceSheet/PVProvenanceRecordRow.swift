@@ -66,20 +66,20 @@ struct PVProvenanceRecordRow: View {
                     .alignmentGuide(.citationFirstLineCenter) { $0[.firstTextBaseline] - PVTypeScale.bodySmall / 3 }
                 PVClipboardButton(
                     text: record.citation.line,
-                    label: L10n.Conclusions.provenanceCopyCitation,
-                    copiedAnnouncement: L10n.string(L10n.Conclusions.provenanceCitationCopied)
+                    label: L10n.ProvenanceSheet.copyCitation,
+                    copiedAnnouncement: L10n.string(L10n.ProvenanceSheet.citationCopied)
                 )
                 .frame(width: PVProvenanceColumns.copyTrackWidth)
                 .alignmentGuide(.citationFirstLineCenter) { $0.height / 2 }
                 .accessibilityIdentifier("\(idPrefix).\(record.id).copy")
             }
             HStack(spacing: PVSpacing.space5) {
-                PVButton(L10n.Conclusions.provenanceSourceLink, variant: .link, size: .sm) {
+                PVButton(L10n.ProvenanceSheet.sourceLink, variant: .link, size: .sm) {
                     open(record, .source)
                 }
-                .accessibilityLabel(L10n.Conclusions.provenanceSourceLinkSpoken(record.citation.title))
+                .accessibilityLabel(L10n.ProvenanceSheet.sourceLinkSpoken(record.citation.title))
                 .accessibilityIdentifier("\(idPrefix).\(record.id).source")
-                PVButton(L10n.Conclusions.provenanceObservationLink(record.observationRef), variant: .link, size: .sm) {
+                PVButton(L10n.ProvenanceSheet.observationLink(record.observationRef), variant: .link, size: .sm) {
                     open(record, .observation)
                 }
                 .accessibilityIdentifier("\(idPrefix).\(record.id).observation")
