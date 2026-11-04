@@ -1,9 +1,10 @@
 # S14-20 — The Promote page recovers and speaks
 
-**Status:** Planned
+**Status:** Landed in #706 (2026-11-04)
+**Landed:** Tests that pause `proposePromoteGraphAlignment` enable `proposePromoteGraphAlignmentHold` only after `load()` finishes, because the hold applies to every propose call including the initial load. `mappingTheRestWhileProposingSendsTheWholePage` turns the hold off before `release()` so one release matches the plan's single-release step while the coalesced second call can finish.
 **Spike / slice:** Spike 14 · Slice 5 — Audit fixes (batch 5)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D7](../design/S14-D7-promote-notices.md), board agreed 2026-11-03
+**Brief:** [S14-D7](../design/archive/S14-D7-promote-notices.md), board agreed 2026-11-03
 **Board:** [Claude Design — Promote flow](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), file *Promote flow.dc.html*, section "S14-D7", frames 1a, 1b, 1c, 2a, 2aW, 3 and 4. PN-1: option (a), the list scrolls to its top; option (b) is deleted from the board. Try again is drawn as a small (`size: .sm`) secondary Button. The board's second load message ("Provenencia still couldn't read this Evidence graph…") is a placeholder for whatever the second failure says: no new copy
 **Depends on:** S14-14 (landed [#675](https://github.com/mendahu/provenencia/pull/675)), S13-24 (landed [#639](https://github.com/mendahu/provenencia/pull/639)), S14-22 (landed [#700](https://github.com/mendahu/provenencia/pull/700)), S14-D7 (agreed 2026-11-03)
 **Blocks:** —

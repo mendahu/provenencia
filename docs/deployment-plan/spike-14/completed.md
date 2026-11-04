@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-20 — The Promote page recovers and speaks
+
+**Landed 2026-11-04** in [#706](https://github.com/mendahu/provenencia/pull/706). The Promote page runs at most one graph-alignment proposal at a time and coalesces rapid row decisions into the next call, so the catalog session is not held behind a queue of proposals (B-12). Stale, save, proposal and load errors announce and scroll into view; a failed load offers Try again through the shared `PVRetryCallout`, also wired on the Evidence graph canvas and Source form read errors (user, 2026-11-03: extract now, with the read-error spinner inside the button and announcement on appear). A failed re-proposal clears the stale notice (PN-3). `graphalign.Subject.Provenance` and the always-1 multiplier go; scores are unchanged (B-37). Version 0.2.13. Audit B-12, B-17, B-37; brief S14-D7.
+
 ## S14-22 — Promote's wire says what Go decided
 
 **Landed 2026-11-03** in [#700](https://github.com/mendahu/provenencia/pull/700). The Promote proposal reports, per unfiled connection, what Done will do with it (`files`, `skipped`, `unset`, `not_on_page`, `self_link`, `cycle`), decided by one function, `connectrules.Decide`, that the filer calls too. A place link that would close a `part_of` or `succeeded_by` loop reads "Not promoted · these places would form a loop" under its row and the footer leaves it out, as Done does. Swift's own filing rule (`resolve`, `EndResolution`) is gone: the page words Go's outcomes through the typed `PromoteConnectionOutcome` (guard row reads `graphalign.ConnectionOutcomes()`), the request carries the page's scope (`only_subject_id`), and "Map the rest" proposes again. `Bridge.AcyclicTerms` names the loop-checked terms, so the next one is one entry. Version 0.2.12.
