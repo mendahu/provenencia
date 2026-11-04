@@ -12,9 +12,9 @@ const claimStatusAccepted = "accepted"
 
 // Cascade vias shared with Swift DeleteImpactCascadeVia (swift_vocabulary_test).
 const (
-	ViaLeavesHandle      = "identity_claims.subject_id"
-	ViaDeletesCitations  = "citations.graph_id"
-	ViaLastMember        = "canonical_entities.last_member"
+	ViaLeavesHandle     = "identity_claims.subject_id"
+	ViaDeletesCitations = "citations.graph_id"
+	ViaLastMember       = "canonical_entities.last_member"
 )
 
 var (
