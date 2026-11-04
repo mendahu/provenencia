@@ -179,19 +179,22 @@ final class ThumbnailCache {
     }
 }
 
-/// What `ThumbnailCache` decodes: an image Go's `raster` package could have
-/// written. Matches `raster.MaxEdgeLimit`.
+/// What `ThumbnailCache` decodes, and what the likeness viewer decodes full size: a PNG or JPEG, an image
+/// Go's `raster` package could have written. The edge matches `raster.MaxEdgeLimit` and the byte limit
+/// `raster.MaxDecodeBytes`, both held by `TestSwiftVocabularyMatchesGo`. The cache reads a header only,
+/// so it applies the type and edge; the byte limit applies where the file is opened by URL.
 enum ThumbnailDecodePolicy {
     static let maxDeclaredEdge = 4096
-    static let allowedTypes: Set<String> = [UTType.png.identifier, UTType.jpeg.identifier]
+    static let maxDecodeBytes = 134217728
+    static let limits = ImageDecodeLimits(
+        typeIdentifiers: [UTType.png.identifier, UTType.jpeg.identifier],
+        maxEdge: maxDeclaredEdge,
+        maxBytes: maxDecodeBytes
+    )
 
-    /// True for a PNG or JPEG whose first image declares both edges within
-    /// `maxDeclaredEdge`. Reads the header only; no pixels decode.
+    /// True for a PNG or JPEG whose first image declares both edges within `maxDeclaredEdge`.
+    /// Reads the header only; no pixels decode.
     static func accepts(_ source: CGImageSource) -> Bool {
-        guard let type = CGImageSourceGetType(source) as String?, allowedTypes.contains(type) else {
-            return false
-        }
-        return ImageHeaderDecode.declaredImage(source)?
-            .fits(maxEdge: maxDeclaredEdge, maxPixels: maxDeclaredEdge * maxDeclaredEdge) == true
+        if case .success = ImageHeaderDecode.admit(source, limits: limits) { true } else { false }
     }
 }

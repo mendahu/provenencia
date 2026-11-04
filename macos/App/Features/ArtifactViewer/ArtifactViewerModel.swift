@@ -32,7 +32,7 @@ final class ArtifactViewerModel {
         return decoded.image
     }
 
-    /// The decoded pixels behind ``displayImage``, at most ``ArtifactImageDecode/maxDecodePixels``.
+    /// The decoded pixels behind ``displayImage``, at most ``BoundedImageDecode/maxDecodePixels``.
     /// Crop and OCR read these.
     var displayRaster: CGImage? {
         guard case .image(let decoded) = content else { return nil }
@@ -148,7 +148,7 @@ final class ArtifactViewerModel {
         guard let raster = raster ?? ArtifactRegionCrop.cgImage(from: image) else { return }
         kind = .image
         source = nil
-        content = .image(ArtifactImageDecode.Decoded(
+        content = .image(BoundedImageDecode.Decoded(
             raster: raster, image: image, pixelSize: (raster.width, raster.height)
         ))
         emptyReason = .idle
@@ -196,7 +196,7 @@ final class ArtifactViewerModel {
         let loaded: Result<ArtifactViewerContent, Error> = await Task.detached(priority: .userInitiated) {
             switch kind {
             case .image:
-                switch ArtifactImageDecode.decode(url: url, typeIdentifiers: source.typeIdentifiers) {
+                switch BoundedImageDecode.decode(url: url, limits: ImageDecodeLimits(typeIdentifiers: source.typeIdentifiers)) {
                 case .success(let decoded): return .success(.image(decoded))
                 case .failure(.tooLarge): return .failure(ArtifactViewerLoadError.tooLarge)
                 case .failure(.unreadable): return .failure(ArtifactViewerLoadError.decodeFailed)
