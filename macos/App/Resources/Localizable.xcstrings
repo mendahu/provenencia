@@ -19492,7 +19492,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote. Go back to the graph and open Promote again."
+            "value": "Provenencia couldn't read this Evidence graph, so it can't list the rows to promote."
+          }
+        }
+      }
+    },
+    "promote.error.tryAgain": {
+      "comment": "Button in the Promote load error callout that loads the page again",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
           }
         }
       }

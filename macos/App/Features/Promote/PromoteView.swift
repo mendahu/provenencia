@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The Promote place (S9-44): one page, laid out as the S9-D16 board.
 struct PromoteView: View {
+    static let noticesAnchor = "promote.notices"
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: PromoteModel
     @Environment(\.pvWidthClass) private var widthClass
@@ -43,6 +44,7 @@ struct PromoteView: View {
                 .frame(maxWidth: PromoteLayout.listMax(widthClass), alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+            .pvScrollsRowIntoView(PromoteView.noticesAnchor, anchor: .top, whenRequested: model.noticeToken)
             footer
         }
         .background(PVColor.surfacePage)
@@ -83,22 +85,31 @@ struct PromoteView: View {
     private var notices: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
             if let error = model.loadError {
-                PVCallout(tone: .danger, message: error)
+                PVRetryCallout(
+                    message: error,
+                    retry: L10n.Promote.tryAgain,
+                    isRetrying: model.isLoading,
+                    retryIdentifier: "promote.tryAgain",
+                    onRetry: { model.retryLoad() }
+                )
+                .id(model.loadAttempt)
             }
             if model.flow.staleNote != nil {
                 PVCallout(
                     tone: .danger,
                     title: L10n.Promote.staleTitle,
-                    message: L10n.string(L10n.Promote.stale)
+                    message: L10n.string(L10n.Promote.stale),
+                    announces: true
                 )
             }
             if let error = model.proposeError {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, message: error, announces: true)
             }
             if let error = model.saveError {
-                PVCallout(tone: .danger, message: error)
+                PVCallout(tone: .danger, message: error, announces: true)
             }
         }
+        .id(PromoteView.noticesAnchor)
     }
 
     private var openedFromNote: some View {

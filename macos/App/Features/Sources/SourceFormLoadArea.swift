@@ -31,15 +31,15 @@ struct SourceFormLoadArea<Ready: View>: View {
         case .loading:
             loading
         case .failed(let message):
-            PVCallout(
-                tone: .danger,
+            PVRetryCallout(
                 title: errorTitle,
                 message: errorMessage(message),
-                compact: true
-            ) {
-                PVButton(L10n.Sources.formReadAgain, variant: .secondary, size: .sm, action: onReadAgain)
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).readAgain")
-            }
+                retry: L10n.Sources.formReadAgain,
+                isRetrying: false,
+                compact: true,
+                retryIdentifier: "\(accessibilityIdentifierPrefix).readAgain",
+                onRetry: onReadAgain
+            )
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).loadError")
         }
     }
