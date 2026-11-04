@@ -1478,9 +1478,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
         }
         await proposePromoteGraphAlignmentHold.wait()
-        if let proposePromoteGraphAlignmentError { throw proposePromoteGraphAlignmentError }
-        if let proposal = claimed { return proposal }
-        return buildPromoteProposal(projectDir: projectDir, graphID: graphID, fixed: fixed)
+        return try withState {
+            markCatalogSessionHeld(projectDir)
+            if let proposePromoteGraphAlignmentError { throw proposePromoteGraphAlignmentError }
+            if let proposal = claimed { return proposal }
+            return buildPromoteProposal(projectDir: projectDir, graphID: graphID, fixed: fixed)
+        }
     }
 
     private func buildPromoteProposal(
@@ -1488,8 +1491,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         fixed: [CatalogPromoteGraphAlignmentFixed]
     ) -> CatalogPromoteGraphAlignmentProposal {
-        withState {
-            markCatalogSessionHeld(projectDir)
             if !promoteProposals.isEmpty {
                 let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
                 return CatalogPromoteGraphAlignmentProposal(
@@ -1541,7 +1542,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 )
             }
             return CatalogPromoteGraphAlignmentProposal(revision: nextAuditRevision - 1, rows: rows, connections: [])
-        }
     }
 
     /// Promotes what it is sent. The rules that refuse a row are Go's (`promotealign.Apply`); the fake
