@@ -1,6 +1,6 @@
 # Deployment plan — Spike 14
 
-Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. It also takes four Spike 10 likeness-audit leftovers that edit the same code: the gallery's image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03) (user, 2026-10-27, while planning Spike 12's audit fixes). Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer"). Batches 4 and 5 are what remained of Spike 12 when it closed (user, 2026-10-29): the last Evidence graph work, and the app-health audit fixes that were not descoped. The two audits moved here with them: [`app-health-audit.md`](app-health-audit.md), [`app-health-audit-2.md`](app-health-audit-2.md).
+Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. It also takes four Spike 10 likeness-audit leftovers that edit the same code: the gallery's image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03) (user, 2026-10-27, while planning Spike 12's audit fixes). Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer"). Batches 4 and 5 are what remained of Spike 12 when it closed (user, 2026-10-29): the last Evidence graph work, and the app-health audit fixes that were not descoped. The two audits moved here with them: [`app-health-audit.md`](app-health-audit.md), [`app-health-audit-2.md`](app-health-audit-2.md). **Batch 7** (user, 2026-11-04) pulls dogfood UX fixes that can run while Spike 13 continues: PDF page sync, polygon vertex edit, Evidence graph polish, Persons sort and history menu width, and a boolean Property value type. Structure shortcuts stay in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -13,6 +13,18 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 ## Goal (dogfood bar)
 
 **By spike close**, each of these is true on a real project. A batch adds its outcomes here when it is cut.
+
+**Batch 7 — Dogfood UX** (user, 2026-11-04; notes in [`ux/`](ux/)):
+
+23. **A PDF page stays put.** Scrolling a multi-page PDF updates the page indicator, and zooming keeps the page you were on; a region drawn on page 5 is stamped page 5.
+24. **A polygon can be nudged.** After drawing a freeform Citation region, dragging a vertex (or the whole shape) updates it in place, including on an already-saved Citation; no clear-and-redraw.
+25. **Multiple values are not a conflict.** Two `languages_spoken` rows on one card show no ochre conflict bracket; a single-cardinality Property with two competing values still does.
+26. **Tab reaches the description.** In every `PVInput` → `PVTextArea` form pair (new-subject card, New subject in the composer, and any other), Tab moves label → description and Shift-Tab goes back.
+27. **Place relationships read both ways.** Alberta's row for *Calgary is part of Alberta* reads "contains Calgary"; `succeeded_by` uses its inverse wording the same way.
+28. **A bridge files when both ends are already handles.** Connecting two already-promoted people (or any other bridge whose ends resolve) files the association in the same write — same outcome as promoting the second endpoint after the bridge existed.
+29. **Honorifics do not own the sort.** "Mrs. Smith" and "Mr. John Smith" sort under S / with Smith, not under M.
+30. **History jump rows stay readable.** The Back / Forward menu is wide enough that typical Source, graph, and composer titles are not truncated to identical prefixes.
+31. **Yes/no facts have a home.** A researcher Property typed boolean stores true/false, edits with a checkbox in the composer, and shows clearly on Conclusion detail.
 
 **Batch 6 — Wide layout** (user, 2026-10-29):
 
@@ -63,6 +75,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Pages jammed to one side on a large monitor, with empty space beside them (user, 2026-10-29); breakpoint and rules in [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide) | S14-24; Page columns is built by the first page redesign that uses it (S13-10) | S14-D1 |
 | Spike 12's open PRs when it closed (user, 2026-10-29): S12-52, S12-26, S12-27 (Batch 4); S12-28, S12-29 + S12-30 + S12-45, S12-31, S12-32, S12-33, S12-40, S12-43's stale-link fix, S12-44, S12-47 + S12-50, S12-48 (Batch 5); S12-39 (Batch 1). The rest were descoped ([Spike 12's note](../archive/spike-12/README.md)) | S14-10 – S14-23 | — |
 | Spike 11's S11-29, planned and never built, moved here when Spike 11 closes (user, 2026-10-29) | S14-09 | — |
+| Dogfood 2026-10-27: folded short names as nicknames (note deleted 2026-11-04; already scoped) | S14-26 | — |
 | Promote Jake + grandparent read "Little evidence" under Weak (user, 2026-10-28); raise `segment.OtherSupport` | S14-08 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Other keys of the same value type" (place and event) | S14-01, S14-02 | S14-D2 – S14-D5 |
 | Thumbnail parity for Event and Place (user, 2026-10-27) | S14-01, S14-02 | S14-D2 – S14-D5 |
@@ -72,8 +85,17 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Transparent polygon" | Refused (working rule "A depiction is drawn as a rectangle") | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Gallery image from the record" (likeness audit SEC-4) | S14-01 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) composer feedback (UX-5, UX-6, UX-7), copy (UX-12, UX-13) and cap feedback, moved from Spike 12's audit planning (user, 2026-10-27) | S14-03 | — |
+| [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md) and [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md) (same root cause) | S14-28 | — |
+| [`ux/2026-10-15-polygon-locator-drag-vertices.md`](ux/2026-10-15-polygon-locator-drag-vertices.md) | S14-29 | — |
+| [`ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md`](ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md) | S14-30 | — |
+| [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md) | S14-31 | — |
+| [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
+| [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
+| [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
+| [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) | S14-35 | — |
+| [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-37 | S14-D8 |
 
-**Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here.
+**Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here. [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): wedding / birth / residence shortcuts and paste-a-cluster (considered for Batch 7; left out 2026-11-04 as too large for this batch).
 
 ## Working rules
 
@@ -92,7 +114,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 1) Oversized JPEGs get a thumbnail from a reduced decode of our own.** A JPEG over `raster.MaxDecodePixels` is decoded at 1/8 scale from its DC coefficients only, then scaled and encoded as today; JPEGs within the budget keep the standard library, and other formats over it stay refused. It is pure Go, with no C library and no platform API, so a Windows build reuses it (user, 2026-10-27). It reads untrusted bytes, so it is bounded and fuzzed ([design](oversized-jpeg-thumbnails.md)). Binds S14-23.
 - **(Batch 4) A Citation belongs to one Evidence graph** (user, 2026-10-29). It is made in one graph, stored as `citations.graph_id`, and never moves; a graph shows only its own Citations, and two graphs that need the same reading each make their own Citation. A graph delete deletes its Citations. Binds S14-10.
 - **(Batch 4) A write names only the graphs whose loaded rows it moves, and the partial reads it moves by key.** Narrows "Effects are graph-keyed, in one step": a Citation names the graphs of its Observations, an Artifact names none, and a Source title edit names its graphs, which hold the title. Partial reads ride one keyed effect in the shape of `Set.Search`: `Effect.Reads []ReadPath{Read, Path}` → `Set.Reads` → `WriteEffects.reads` (a read name and its ids) → one Swift line per read name. It replaces `citation_sources` with citation reads per graph, carries graph progress only on writes that change counts (Subjects, Observations, Identity Claims), and carries the graph list by Source. Which write moves which read stays in Go's registry (map review K-2). Binds S12-25, S14-11.
-- **(Batch 4) A hidden graph or Source page goes stale; it does not reload.** `.evidenceGraph` and `.sourceWorkspace` take `whenHidden: .markStale`, as the lists do. A stale key is not settled: `QueryHandle.isStale`, set by `markStale` and cleared by `beginLoading`, keeps `onSettled` from publishing a cached count before the reload ([idea](../../ideas/archive/settled-list-count-publish.md), user 2026-10-27). Binds S14-11.
+- **(Batch 4) A hidden graph or Source page goes stale; it does not reload.** `.evidenceGraph` and `.sourceWorkspace` take `whenHidden: .markStale`, as the lists do. A stale key is not settled: `QueryHandle.isStale`, set by `markStale` and cleared by `beginLoading`, keeps `onSettled` from publishing a cached count before the reload (user 2026-10-27; settled-list leftover closed with this PR). Binds S14-11.
 - **(Batch 4) File work and decoding happen before the catalog session.** One staged-object type in `ingest` stages bytes from the project folder outside `catalogsession.Do` (stream, hash and sniff, and for an image decode and encode), inserts its `files` row inside the write, and discards what the write did not use. `ingest.File`, `StageImage` (through `StageDepictions`) and the thumbnail derivative all use it, and handlers stage before `withProjectCatalog` (map review K-4). Binds S14-12.
 - **(Batch 5) What the app hands to macOS to open is checked first, and Go decides the type.** The `files` read returns an object path only for a type on the ingest allowlist, so Swift checks only that the object has an extension and is not a type that could run a program or open another item, and opens it with the app for its type; a refusal shows an error naming the file. Swift keeps no second allowlist. The viewer checks only that the sniffed type conforms to one of the type identifiers Go's stored-type table gives the media type (`SourceFileRef.type_identifiers`), and a pixel budget; `ImageHeaderDecode` holds that budget check as one shared function and `ThumbnailDecodePolicy` keeps PNG and JPEG as the thumbnail cache's own list (map review K-8, K-23). A metadata link opens only through `open_href`, which Go computes with `urlshape.OpenHref` (web links only). Binds S12-23, S14-13.
 - **(Batch 5) Kit components announce themselves.** `PVToast` posts its own announcement, and `PVCallout` takes an opt-in announcement for an error, which the graph form and the Artifact card use; no call site posts its own (map review K-11). Binds S14-14.
@@ -107,6 +129,15 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 3) S14-09 is Spike 11's S11-29, refreshed.** Its plan and review moved with it and keep their decisions (the user chose the treatment on 2026-10-19: curly quotes, parentheses, italic surname on the two titles; no migration of existing catalogs). The plan is refreshed against `main` with `plan-pr` because S11-28's alias fold and S11-44 changed name display after it was written. Binds S14-09.
 - **(Batch 6) One breakpoint, 1600pt of pane width.** Regular below 1600pt, Wide at and above, measured on the page's pane (the window minus the sidebar), not the window or screen; a page with a side pane plans it in its own Wide frame and does not re-measure (user, 2026-10-29: the whole inside view is what a page designs for; an inspector is one page's own arrangement). Every brief draws each view at Regular and Wide ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md#wide-layout-binding)); the rules and patterns are [`macos-client-patterns.md` § 9](../../macos-client-patterns.md#9-window-widths-regular-and-wide). The Swift token lands before the kit's CSS (S14-24, user 2026-10-29), and the PR that builds Page columns checks they agree. Page columns has no PR of its own: each page moves onto it in its own redesign (user, 2026-10-29). Binds S14-24 and every later brief.
 - **(Batch 2) Other-link support is 0.75.** `segment.OtherSupport` is 0.75 (`OtherCredit` stays 0.25): a partial given name plus one lined-up non-birth/death link clears Weak on the 2026-10-28 Jake + grandparent dogfood shape, without a kinship-only tier or a name-curve change. Decided user 2026-10-28 (option A). Binds S14-08.
+- **(Batch 7) PDF page sync is one PR.** The stuck page indicator and the zoom jump share one root cause (`ArtifactViewerModel.page` never learns scroll-driven page changes). One PR pushes `pdfView.currentPage` back into the model on page-changed notifications and stops `sync` from snapping to a stale page. Binds S14-28.
+- **(Batch 7) Polygon edit includes a saved Citation.** Vertex drag (and whole-shape translate) works on the pending draft and on an open Citation whose locator is fed back as `committedRegion`. Hit targets stay usable when zoomed out. Binds S14-29.
+- **(Batch 7) Conflict brackets honour cardinality.** The ochre bracket, legend and a11y phrase fire only for Properties whose cardinality is single; multiple-cardinality rows with several values list plainly (`StateMultiple`, not conflict). Binds S14-30.
+- **(Batch 7) Tab into a text area is kit-wide.** The fix lives in `PVInput` / `PVTextArea` / `PVFormDialog` so every label → description (and any other Input → TextArea) pair gets Tab / Shift-Tab, not only the Evidence graph new-subject card. Binds S14-31.
+- **(Batch 7) Place relationship rows use the inverse label on the far end.** Composer place-relationship lines read `part_of` / `contains` and `succeeded_by` / `preceded by` by which end is viewed, matching the Place conclusion page. Copy from L10n (product place terms have no vocabulary `Inverse`). Binds S14-32.
+- **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
+- **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts and strip leading title-registry words from a parts-less label fallback, so "Mrs. Smith" sorts with Smith. Go owns list order. Binds S14-34.
+- **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
+- **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI (composer checkbox, Properties create, Conclusion display). Researcher-creatable like `text` and `integer`. Storage column vs reusing `value_integer` is decided in `plan-pr` (dedicated column preferred in the note). Binds S14-36, S14-37.
 
 ## PR map
 
@@ -139,11 +170,21 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-25 | Page columns in the kit | — | Folded into the page redesigns: Spike 13's S13-10 builds `PVPageColumns` with the Person page frame (user, 2026-10-29) | — | — | — | Descoped (2026-10-29) → S13-10 |
 | S14-26 | A folded nickname shows as a nickname | 3 | When the reconciler folds a nickname recorded as a given name into its formal name (S11-28), the reconciled name keeps it as a `nick` part, so S14-09's quotes show it: *James “Jake” Robins* | — | S14-09, S14-18 | — | Scoped |
 | S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-16 | [S14-27-lists-through-descriptors.md](prs/S14-27-lists-through-descriptors.md) | Landed #693 |
+| S14-28 | PDF page tracks scroll | 7a | Push `pdfView.currentPage` into `ArtifactViewerModel.page` on page-changed; zoom and region stamps stop snapping to page 1 | — | — | — | Scoped |
+| S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); feed a saved Citation's locator back as committed; usable hit targets when zoomed out | — | S14-28 | — | Scoped |
+| S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | — | Scoped |
+| S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | — | Scoped |
+| S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
+| S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
+| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
+| S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
+| S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |
+| S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties; composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. **S14-D6** (the Citation composer's depiction drawing feedback) gates S14-03: it changes how the composer looks, so it waits on a board like any other view (user, 2026-10-31), drawn on the *Citation Composer* project beside S10-D15. **S14-D7** (the Promote page's error notices and Try again) gates S14-20: the map had scoped it as no new chrome, but its notices and load callout change how the page looks, so it waits on a board (user, 2026-11-03), drawn on the *Promote flow* project beside S13-D11.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. **S14-D6** (the Citation composer's depiction drawing feedback) gates S14-03: it changes how the composer looks, so it waits on a board like any other view (user, 2026-10-31), drawn on the *Citation Composer* project beside S10-D15. **S14-D7** (the Promote page's error notices and Try again) gates S14-20: the map had scoped it as no new chrome, but its notices and load callout change how the page looks, so it waits on a board (user, 2026-11-03), drawn on the *Promote flow* project beside S13-D11. **S14-D8** (boolean value editor in the Citation composer) gates S14-37; written just before that PR. Batch 7's other PRs change behaviour without new chrome and are not gated.
 
 ## Slices
 
@@ -194,10 +235,36 @@ SLICE 3 — Name display (batch 3)
   S14-26  A folded nickname shows as a nickname   (after S14-09, S14-18)
   Check: bar outcomes 11 and 22 on a new project.
 
+SLICE 7a — PDF page sync (batch 7)
+  S14-28  PDF page tracks scroll
+  Check: bar outcome 23.
+
+SLICE 7b — Region edit (batch 7)
+  S14-29  Polygon locator vertex edit   (after S14-28)
+  Check: bar outcome 24.
+
+SLICE 7c — Evidence graph polish (batch 7)
+  S14-30  Conflict brackets honour cardinality
+  S14-31  Tab reaches a following text area
+  S14-32  Place relationship inverse labels
+  S14-33  Auto-file bridges between handles
+  Check: bar outcomes 25 – 28.
+
+SLICE 7d — List and nav polish (batch 7)
+  S14-34  Persons sort ignores honorifics
+  S14-35  Wider history jump menu
+  Check: bar outcomes 29 – 30.
+
+SLICE 7e — Boolean value type (batch 7)
+  S14-36  Boolean value type (engine)
+  ✎ S14-D8  Citation composer: boolean value editor
+  S14-37  Boolean value type (UI)
+  Check: bar outcome 31 on a new project.
+
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code.
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code. Batch 7's slices are independent of each other except 7b after 7a and 7e UI after engine; they can run beside Spike 13 and the remaining Batch 5 PRs (S14-20, S14-26).
 
 ### Dependencies at a glance
 
@@ -217,6 +284,10 @@ S14-09 ──▶ S14-26
 S14-18 ──▶ S14-26
 S14-08  (independent)
 S14-D1 ──▶ S13-D1, S13-10      (Spike 13)
+S14-28 ──▶ S14-29             (Batch 7)
+S14-36 ──▶ S14-37
+S14-D8 ──▶ S14-37
+S14-30, S14-31, S14-32, S14-33, S14-34, S14-35  (independent)
 ```
 
 ---
@@ -300,7 +371,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** A `reads` entry for the graph list by Source (graph and link rows, Source create, copy and delete) that replaces the catalog-wide `evidence_graphs` list key: `effects.ListEvidenceGraphs`, the `evidence_graphs` wire list key, `CatalogList.evidenceGraphs` with its invalidation case go (the `swift_vocabulary_test.go` rows for lists and reads stay and follow the Go change). `ListEvidenceGraphsRequest` takes an optional Source, and the session re-reads only the named Sources' graphs and merges them into the cached list through the cache layer. Add and Copy Source insert the row `CreateSource` returns into the Sources list through the same layer, not a feature write-through. `.evidenceGraph` and `.sourceWorkspace` go stale while hidden, and `QueryHandle.isStale` (set by `markStale`, cleared by `beginLoading`) keeps `isSettled` false until a stale key reloads. `SourcesModel.visibleSources` is memoized against the revisions it reads. Updates `macos-client-patterns.md` rule 4 (list membership patched from a write's own row) and `source-layer-data-model.md` (the graph list's effect).
 **Not this PR.** The descriptor itself (S12-34): the graph-list merge and the Sources-list insert are its `refresh` and `patch` entries.
 **Check.** A link write re-reads one Source's graphs; an off-screen graph reloads only when revisited; a list that reappears after its key went stale publishes its count only after the reload; typing in Add Source does not re-sort the list (model tests).
-**Context.** Audit A-9, A-10, A-25; [`ideas/archive/settled-list-count-publish.md`](../../ideas/archive/settled-list-count-publish.md) (its open question); working rules "One graph list", "A hidden graph or Source page goes stale; it does not reload"; S12-16 (why the hand-written insert went); `add-workspace-place`, `add-ffi-handler`. After S12-25, whose keyed effect it adds a read to.
+**Context.** Audit A-9, A-10, A-25; [`../../macos-client-patterns.md`](../../../macos-client-patterns.md) (its open question); working rules "One graph list", "A hidden graph or Source page goes stale; it does not reload"; S12-16 (why the hand-written insert went); `add-workspace-place`, `add-ffi-handler`. After S12-25, whose keyed effect it adds a read to.
 
 #### S14-12 — File work before the catalog session
 
@@ -406,3 +477,83 @@ One PR (user, 2026-11-01).
 **Not this PR.** Name-curve relaxation; Weak-bar change; `OtherCredit`; kinship-only tier; multi-Source corroboration.
 **Check.** `TestPartialNameWithGrandparentClearsWeak`; `TestCompare` AC-2.5 / AC-2.8; dogfood Promote row for Jake reads Weak (or stronger), not Little evidence.
 **Context.** Working rule "Other-link support is 0.75"; [`matching-model.md`](../../matching-model.md) `segment.OtherSupport`; [`add-match-rule`](../../../.agents/skills/add-match-rule/SKILL.md).
+
+### Slice 7a — PDF page sync
+
+#### S14-28 — PDF page tracks scroll
+
+**Ships.** `ArtifactPDFViewport` reports the visible page on `.PDFViewPageChanged` / `.PDFViewVisiblePagesChanged` into `ArtifactViewerModel.page` (beside zoom). `sync` no longer `go(to:)` a stale model page when only zoom changed. Region locators stamped with `viewerPage: model.page` land on the page drawn. Swift tests for scroll → model page and zoom-while-on-page-N.
+**Not this PR.** Polygon vertex edit (S14-29); preserving the exact scroll rect within a page across zoom (nice-to-have if cheap).
+**Check.** Bar outcome 23: indicator follows scroll; zoom on page 5 stays on page 5; a polygon on page 5 saves page 5.
+**Context.** Working rule "PDF page sync is one PR"; [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md), [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md); `ArtifactPDFViewport.swift`, `ArtifactViewerModel.swift`.
+
+### Slice 7b — Region edit
+
+#### S14-29 — Polygon locator vertex edit
+
+**Ships.** Freeform committed regions expose usable vertex handles (`handleHitSize` / hit test when `armedTool == nil`); `moveFreeformVertex` and a freeform translate path update the draft and call `onCommit`. An open Citation's locator is fed as `committedRegion` so edit-after-save works. Depends on S14-28 so a region drawn while scrolled is not stamped page 1 and hidden. Extend `ArtifactRegionGeometryTests`.
+**Not this PR.** Editing rectangles / other shapes beyond what already works; depiction regions (rectangle-only).
+**Check.** Bar outcome 24: nudge a corner on a draft and on a saved Citation; handles usable when zoomed out.
+**Context.** Working rule "Polygon edit includes a saved Citation"; [`ux/2026-10-15-polygon-locator-drag-vertices.md`](ux/2026-10-15-polygon-locator-drag-vertices.md); `ArtifactRegionOverlay.swift`, `CitationComposerViewerPane`.
+
+### Slice 7c — Evidence graph polish
+
+#### S14-30 — Conflict brackets honour cardinality
+
+**Ships.** `EvidenceCitedPropertyMarks` (and its legend / a11y callers) treat ≥2 observations of one key as a conflict only when that Property's cardinality is single. Cardinality from the graph's `PropertiesSnapshot` (or a denormalised wire field if `plan-pr` prefers). Swift test: two `languages_spoken` rows → no conflict; two competing single-cardinality values → conflict.
+**Not this PR.** Changing reconciliation (`StateMultiple` already correct).
+**Check.** Bar outcome 25.
+**Context.** Working rule "Conflict brackets honour cardinality"; [`ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md`](ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md); `EvidenceCitedPropertyMarks.swift`.
+
+#### S14-31 — Tab reaches a following text area
+
+**Ships.** Kit fix so Tab from `PVInput` reaches a following `PVTextArea` (and Shift-Tab returns), via shared focus / key-view loop — not a one-off on the Evidence graph card. Covers the new-subject card, the composer's New subject dialog, and any other Input → TextArea pair in `PVFormDialog` or forms. Swift UI tests or focused kit tests where practical.
+**Not this PR.** Redesigning form focus for unrelated controls.
+**Check.** Bar outcome 26 on the graph card and the composer's New subject dialog.
+**Context.** Working rule "Tab into a text area is kit-wide"; [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md); `PVTextArea`, `PVInput`, `PVFormDialog`; `add-ui-component`.
+
+#### S14-32 — Place relationship inverse labels
+
+**Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / contains, `succeeded_by` / preceded by), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. Swift test for both ends of one saved bridge.
+**Not this PR.** Inverse terms in seeded vocabulary; person relationship inverses (already handled).
+**Check.** Bar outcome 27.
+**Context.** Working rule "Place relationship rows use the inverse label on the far end"; [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md); `CitationComposerAuthoring.swift`; `add-localized-string`.
+
+#### S14-33 — Auto-file bridges between handles
+
+**Ships.** After `connect.CreateCitedBridge` completes its Observations, call `FileBridgesTx` (or equivalent) on the new bridge so every bridge kind files when both ends already resolve to handles — same soft-refuse behaviour as Promote-triggered filing. Go tests covering relationship and at least one other bridge kind; connect write still succeeds when filing soft-refuses. Updates `promote-graph-alignment.md` §9.1 if the "after any claim create" wording must name create-cited-bridge.
+**Not this PR.** Per-card Promote on bridges; changing unpromote / UnfileBridges.
+**Check.** Bar outcome 28: spouse between two promoted people shows membership without a second Promote.
+**Context.** Working rule "Creating a bridge files it when both ends are already handles"; [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md); `core/database/connect`, `identityclaims/bridgefile.go`; `add-ffi-handler`.
+
+### Slice 7d — List and nav polish
+
+#### S14-34 — Persons sort ignores honorifics
+
+**Ships.** `personSortKey` / sorted name format omits `prefix` parts for order, and the parts-less label fallback strips leading `NameTitleRegistry`-equivalent titles in Go so "Mrs. Smith" and "Mr. John Smith" sort with Smith. Tests in `conclusionheaders` / `nameformats`. Go only for order; display title unchanged unless it already shared the sorted style.
+**Not this PR.** Changing how titles display; surname-from-"Mrs. Smith" parsing in the name draft.
+**Check.** Bar outcome 29.
+**Context.** Working rule "Persons list sort omits honorific prefixes"; [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md); `conclusionheaders/order.go`, `nameformats`.
+
+#### S14-35 — Wider history jump menu
+
+**Ships.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel(width:)` (from 360) so typical Source / graph / composer titles fit without tail truncation. Swift test or snapshot of the width constant if one exists; otherwise a short comment and manual check.
+**Not this PR.** Head truncation, multi-line rows, or rebuilding labels from full `breadcrumbItems` (evaluate after dogfood).
+**Check.** Bar outcome 30 on a stack of deep composer / graph places.
+**Context.** Working rule "History jump menu is wider first"; [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md); `WorkspaceToolbar.swift`.
+
+### Slice 7e — Boolean value type
+
+#### S14-36 — Boolean value type (engine)
+
+**Ships.** `ValueTypeBoolean`; migration expanding `properties.value_type` CHECK and observation / conclusion storage (**decide in `plan-pr`:** dedicated `value_boolean` vs `value_integer` 0/1 — note prefers dedicated); researcher-creatable in Go; valuecompare / autoreconcile module; proto `ConclusionValue` bool arm and observation draft field; `swift_vocabulary_test` row for boolean. Also pins Swift's `SourceSurface` raw values to Go's `workspacelocation.Surface*` constants in the same test (structural debt from S12-15 ship log — same file, same guard pattern). Docs: `seeded-vocabulary.md` §3.2, `interpretation-layer-data-model.md`. Skills: `add-catalog-migration`, `add-catalog-model`, `add-ffi-handler`.
+**Not this PR.** Composer / Properties / Conclusion UI (S14-37); omnibar indexing of booleans (out unless cheap).
+**Check.** Handler and domain tests create, read and compare a boolean Property; existing catalogs migrate; the `SourceSurface` / `Surface*` vocabulary row fails if either side drifts.
+**Context.** Working rule "Boolean is a first-class value type in two PRs"; [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md); [`ideas/structural-debt.md`](../../ideas/structural-debt.md) SourceSurface row.
+
+#### S14-37 — Boolean value type (UI)
+
+**Ships.** `PropertyValueType.boolean` in Swift; Properties create offers it; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
+**Not this PR.** Engine path (S14-36).
+**Check.** Bar outcome 31: create a boolean Property, cite true/false on a Subject, see it on Conclusion detail.
+**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; `CitationObservationValue`, `PropertiesModel.researcherCreatable`, `ReconciledValueDisplay`.

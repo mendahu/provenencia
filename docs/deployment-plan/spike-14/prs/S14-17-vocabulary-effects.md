@@ -35,7 +35,7 @@ Every vocabulary write tells the app what it changed, the way every other audite
 
 **Why now.** S14-16 added the pin test with sixteen vocabulary writes on its allow-list (`effectsPending`) and left `.updatedProperty` in `conclusionTriggers`; this PR empties both (working rule, map review K-10). Audit A-35 lists the unclaimed RPCs. User answers, 2026-11-02: one PR; the vocabulary counts nobody draws are removed; the type–field join stays unaudited and drops its `user_id`; vocabulary splits into two lists so "One cache owns each list" stands; S14-27's descriptor slot lands first.
 
-**What stays.** What every view draws. `.assignedTypeSuggestion(typeId:)`, `.removedTypeSuggestion(typeId:)` (the join has no effects, D-2), `.updatedMetadataField(id:)` and `.deletedMetadataField(id:)` (they name the Source pages a field relabel or delete restates, which a list cannot tell from a create, D-6) stay. `.createdSource`, `.updatedSource`, `.changedSourceType`, `.deletedSource`, `.mutatedSourceWorkspace` and `.mutatedSourceMetadata` stay (S14-27 retires `.deletedSubject`). The models' list patches after a write stay. `UpdatePropertyTerm`, `DeletePropertyTerm` and `ReorderSubjectTypeProperties` stay (named by [`term-management.md`](../../../ideas/term-management.md) and [`binding-order-editing.md`](../../../ideas/binding-order-editing.md)). The sidebar recount and its `counts` trigger are unchanged.
+**What stays.** What every view draws. `.assignedTypeSuggestion(typeId:)`, `.removedTypeSuggestion(typeId:)` (the join has no effects, D-2), `.updatedMetadataField(id:)` and `.deletedMetadataField(id:)` (they name the Source pages a field relabel or delete restates, which a list cannot tell from a create, D-6) stay. `.createdSource`, `.updatedSource`, `.changedSourceType`, `.deletedSource`, `.mutatedSourceWorkspace` and `.mutatedSourceMetadata` stay (S14-27 retires `.deletedSubject`). The models' list patches after a write stay. `UpdatePropertyTerm`, `DeletePropertyTerm` and `ReorderSubjectTypeProperties` stay (named by [`properties-and-terms.md`](../../../ideas/properties-and-terms.md) and [`properties-and-terms.md`](../../../ideas/properties-and-terms.md)). The sidebar recount and its `counts` trigger are unchanged.
 
 ## 2. User stories
 
@@ -91,7 +91,7 @@ Every vocabulary write tells the app what it changed, the way every other audite
 
 | Out | Home |
 | --- | --- |
-| Deleting `UpdatePropertyTerm`, `DeletePropertyTerm`, `ReorderSubjectTypeProperties` | not planned ([`term-management.md`](../../../ideas/term-management.md), [`binding-order-editing.md`](../../../ideas/binding-order-editing.md)) |
+| Deleting `UpdatePropertyTerm`, `DeletePropertyTerm`, `ReorderSubjectTypeProperties` | not planned ([`properties-and-terms.md`](../../../ideas/properties-and-terms.md), [`properties-and-terms.md`](../../../ideas/properties-and-terms.md)) |
 | The descriptor list slot and moving today's `vocabulary` / `property_usage` / `structure` reloads onto it | S14-27 (lands first) |
 | Lists finer than two families (one per vocabulary table) | not planned (user, 2026-11-02: two lists) |
 | A visited canvas (`evidenceGraph`) and `citationsByArtifact` keep a Property's old label after a rename (their rows carry `propertyLabel`; following `property_vocabulary` would reload the on-screen graph on every composer custom term) | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md), the line STEP-8 adds |

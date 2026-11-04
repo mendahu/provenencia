@@ -1,6 +1,6 @@
 # Spike 6 — Evidence graph canvas
 
-**Done / Go.** The spatial canvas is buildable on this stack. Geometry reuse: [`macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md). Themes: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md).
+**Done / Go.** The spatial canvas is buildable on this stack. Geometry reuse: [`macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md). Themes: [`interpretation-graph-ui.md`](../../../../../interpretation-layer-data-model.md).
 
 ## Decisions
 

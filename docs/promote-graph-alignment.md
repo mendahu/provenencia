@@ -2,7 +2,7 @@
 
 ## Status
 
-**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. How we got here, and the directions we turned down: [`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md). Matching today: [`matching.md`](matching.md).
+**Agreed 2026-10-06; scheduled as Spike 9 slice 9** (§10). Renamed from “Promote alignment” to **Promote graph alignment** (2026-10-07) so the name names the graph-to-graph proposal, not property-only matching. It replaced the per-Property compare checklist and the per-Subject walk; [`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5.3–§5.4 now state its model rules. Matching today: [`matching.md`](matching.md). Learned weights / labelled fitting: [`ideas/matching-test-suite.md`](ideas/matching-test-suite.md).
 
 **Revised 2026-10-29:** Promote is a quick action. Identity Claims no longer carry Observation pins, so the row's evidence sheet, its pin toggles and the per-row claim fields are dropped ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5). Graph alignment still proposes and orders each row's targets, but the page no longer shows its band, Contested mark or reason: the score ranks, unseen. Whether a member belongs is shown on the handle's page by a separate comparison (§5.1 there).
 
@@ -14,7 +14,7 @@
 
 Promote promotes Interpretation Subjects onto canonical handles. A Subject's identity is carried mostly by its **neighbors** (its birth event, its places, its family), not by its own Properties. An Evidence graph is also much bigger than one Subject: the reference case, an obituary, has 41 Subjects. Ticking agreements Property by Property, Subject by Subject, is the wrong amount of work. Most of those agreements the machine can decide, and none of them can see the structure that actually identifies people.
 
-**The picture** ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#the-stack-how-to-picture-the-problem)):
+**The picture:**
 - every Evidence graph is a **layer**;
 - the layers stack so that Subjects about the same thing line up in **columns**;
 - a handle is a column, and an Identity Claim is a vertical link;
@@ -46,7 +46,7 @@ Promote is one workspace page; the choose-target screen and the separate claim s
 
 - **Entry:** the Promote button on any unpromoted Subject card, as today. The page opens with that Subject's row, preselected to its best match, plus **"Map the rest of this graph (N Subjects)"**. Promoting one Subject is the same page with one row.
 - **Rows:** one per primary Subject on the Evidence graph (person, event, place).
-  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment, and editing them is a separate workflow ([`ideas/identity-claim-review.md`](ideas/identity-claim-review.md)), not this page.
+  - **Already promoted:** shown read-only, with no controls. They are anchors for the graph alignment; editing a claim after Promote is not this page ([`ideas/matching-test-suite.md`](ideas/matching-test-suite.md) § Remember researcher decisions; [`ideas/provisional-identity-claims.md`](ideas/provisional-identity-claims.md)).
   - **Unpromoted:** a target dropdown with the best match preselected, the next few alternatives, **New**, and **Skip**.
 - **No assessment column** (2026-10-29). The band (§5 step 6) still orders the suggestions and decides where a row starts (`Row.Start`), but the row shows none of it; the Contested flag and the row reason are gone (S13-24). There is no evidence sheet and nothing to pin.
 - **No claim fields:** Done promotes every row as an accepted claim. Status, argument and confidence are edited on the claim afterward; Promote asks for none.
@@ -165,7 +165,7 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 - **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision. It keeps at most `maxEvidenceGraphs` Evidence graphs (`graphcache`); loading one more drops the least recently used graph with its memos, and a dropped graph loads again on its next read.
 - **The match index** (the shortlist index) is cached on the graph and dropped by any commit that names a handle, by a vocabulary commit (its keys read term keys and metas), and by a new alias index (`SetAliasIndex`) or name format (`SetNameFormat`).
 - **The candidates memo** holds each Subject's ranked candidate ids on that graph's memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
-- **Open-time warms** (`catalogsession.WarmOnOpen`, behind the open spinner) are held on the graph until the project closes: the built alias index, the default name format, then `promotealign.Warm`, which loads the shortlist kinds (every person, event and place) and builds the shortlist index, so the first proposal pays only for its own Source. `SetAliasIndex` and `SetNameFormat` drop the caches derived from them. The shortlist index is built at open only, and a failure to build it never fails the open: the next proposal builds it and reports the error. After a call that drops the warm state (a vocabulary or structure commit, `Drop`, a new alias index or name format), `catalogsession.Do` warms the alias index and name format again before it returns and leaves the shortlist index to the next proposal. A handle commit drops only the shortlist index, and the next proposal rebuilds it ([`name-index-on-commit.md`](ideas/name-index-on-commit.md)).
+- **Open-time warms** (`catalogsession.WarmOnOpen`, behind the open spinner) are held on the graph until the project closes: the built alias index, the default name format, then `promotealign.Warm`, which loads the shortlist kinds (every person, event and place) and builds the shortlist index, so the first proposal pays only for its own Source. `SetAliasIndex` and `SetNameFormat` drop the caches derived from them. The shortlist index is built at open only, and a failure to build it never fails the open: the next proposal builds it and reports the error. After a call that drops the warm state (a vocabulary or structure commit, `Drop`, a new alias index or name format), `catalogsession.Do` warms the alias index and name format again before it returns and leaves the shortlist index to the next proposal. A handle commit drops only the shortlist index, and the next proposal rebuilds it ([`promote-ranking.md`](ideas/promote-ranking.md#name-index-on-commit)).
 
 ---
 
@@ -219,7 +219,7 @@ Spike 9 was replanned around this on 2026-10-06. The close note is [`deployment-
   - S9-18, folded into S9-17 and S9-44.
 
   S9-D16 is a **rethink**: it replaces the S9-D9 / S9-D10 frames on the Promote board.
-- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/archive/promote-matching.md`](ideas/archive/promote-matching.md#directions-we-circled-none-chosen)). This is out of scope for Spike 9.
+- **Later, learned weights:** start logging the suggestions shown and the decisions made, so m and u can be fitted from real accepts and rejects ([`ideas/matching-test-suite.md`](ideas/matching-test-suite.md)). This is out of scope for Spike 9.
 
 ---
 

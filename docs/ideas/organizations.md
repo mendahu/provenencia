@@ -23,7 +23,7 @@ A new Subject type, `organization`, with its own ref prefixes, beside `person`, 
 
 1. **Building or body.** "Baptized at St. Patrick's" can mean the church building (a Place, through the event's location) or the congregation (an organization). Probably both, with a link from the body to the places it used.
 2. **Denominations: terms or organizations.** S11-48 makes a denomination a term. If organizations land, is "Roman Catholic Church" also an organization at the top of a part-of chain, and does the `religion` term point at it, or stay a plain classification? Keeping both means two paths to "all Catholics".
-3. **Term hierarchy.** Wesleyan Methodist, Primitive Methodist and Episcopal Methodist are all Methodist. A part-of chain of organizations answers that; so would a broader-than link between terms ([`term-management.md`](term-management.md)). Pick one.
+3. **Term hierarchy.** Wesleyan Methodist, Primitive Methodist and Episcopal Methodist are all Methodist. A part-of chain of organizations answers that; so would a broader-than link between terms ([`properties-and-terms.md`](properties-and-terms.md)). Pick one.
 4. **Matching.** Whether a shared organization (same congregation, same employer) counts as evidence in Promote, and how much ([`matching-model.md`](../matching-model.md)).
 5. **Gazetteer-style service.** A lookup for well-known bodies (dioceses, regiments) the way [`place-gazetteer-service.md`](place-gazetteer-service.md) proposes for places.
 

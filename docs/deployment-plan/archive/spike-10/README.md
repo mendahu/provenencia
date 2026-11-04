@@ -37,8 +37,8 @@ An adaptive choice field. A default role on a new connection. Omnibar whole-word
 | Promote compares two likenesses as pictures; place chains; concluded values first | Spike 11 |
 | Depiction leftovers, including the 2026-10-18 likeness audit items no PR took | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
 | International-name leftovers, including the collation locale | [`international-names.md`](../../../ideas/international-names.md) |
-| Daitch–Mokotoff | [`daitch-mokotoff.md`](../../../ideas/daitch-mokotoff.md) |
+| Daitch–Mokotoff | [`international-names.md`](../../../ideas/international-names.md) |
 | Matcher calibration and a labelled set | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |
 | Place a common cluster in one action | [`evidence-graph-structure-shortcuts.md`](../../../ideas/evidence-graph-structure-shortcuts.md) |
-| Reject a claim, remove a member, weak-claim review, remember researcher decisions | [`identity-claim-review.md`](../../../ideas/identity-claim-review.md) |
-| Dogfood notes still open, including census-scale layers and guided extract | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
+| Reject a claim, remove a member, weak-claim review, remember researcher decisions | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) § Remember researcher decisions |
+| Dogfood leftovers: guided extract; keyboard multi-select; depiction page-change confirm | [`evidence-graph-structure-shortcuts.md`](../../../ideas/evidence-graph-structure-shortcuts.md), [`evidence-graph-followups.md`](../../../ideas/evidence-graph-followups.md), [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |

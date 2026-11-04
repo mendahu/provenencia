@@ -8,60 +8,55 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - **Not authoritative.** Domain and stack decisions stay in the sibling docs under [`docs/`](../). Spikes live under [`deployment-plan/`](../deployment-plan/).
 - **Not scheduled.** Adding a file here does not put it on the current spike (or any spike).
-- **Prefer one file per idea.** Keep the entry short; link out to model docs when the idea depends on an existing layer.
+- **Prefer one file per domain cluster.** Keep related leftovers in one file with sections; link out to model docs when the idea depends on an existing layer.
 - **Rough is fine.** Bullets, open questions, and “maybe later” notes are enough.
-- **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder.
-- **Archive when shipped.** Move finished ideas into [`archive/`](archive/) and distill with [`archive-docs`](../../.agents/skills/archive-docs/SKILL.md).
-- **Dogfood nits stay out.** UI friction from using the app on real data goes in [`docs/dogfood/ux.md`](../dogfood/ux.md), not here.
+- **Promote out.** When an idea is pulled into a deployment-plan spike, move the file into that spike folder (or cut the section that shipped).
+- **Delete when done.** A shipped or abandoned idea does not stay here. Git and the spike / PR that shipped it are the record. Open leftovers move into another current idea, a spike note, a domain doc, or a skill — never an `ideas/archive/` folder.
+- **Dogfood first.** Fresh UI friction from using the app on real data starts as one file under [`docs/dogfood/ux/`](../dogfood/ux/). Move it here when it is parked longer-term; delete the dogfood file when this (or a spike) is the copy.
 
 ## Current ideas
 
+### Evidence graph and canvas
 
-- [`source-to-source-relationships.md`](source-to-source-relationships.md)
-- [`source-structure-later.md`](source-structure-later.md) — what Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility
+- [`evidence-graph-followups.md`](evidence-graph-followups.md) — card image memory, upward shadows, P3 color drift, keyboard multi-select
+- [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place or paste a common cluster; field hints from transcription
+- [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
-- [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas: hit targets from measured layout, a routed edge layer, selection, growable bounds, a host zoom range
-- [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on the Evidence graph scoring; the matching work parked with it when Spike 12 closed
-- [`provenance-record-cap.md`](provenance-record-cap.md) — a cap on the records a provenance table draws, which has none today (S13-36 SEC-1, risk accepted); pick up with the Event and Place redesign
-- [`provenance-on-demand.md`](provenance-on-demand.md) — load a row's records when its provenance sheet opens instead of on every Person page load (S13-06 PRF-1); measure first
-- [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change: search kind columns, canvas state enums
-- [`name-index-on-commit.md`](name-index-on-commit.md) — a handle commit throws away Promote's name index and every Source's ranked candidates; update them in place instead; parked with [`promote-ranking.md`](promote-ranking.md)
-- [`narrower-canon-walk.md`](narrower-canon-walk.md) — every proposal walks the whole connected component of the canon and rebuilds it (about 120 MB a warm proposal); walk only as far as alignment can use, or memoize the canon; parked with [`promote-ranking.md`](promote-ranking.md)
-- [`evidence-graph-card-memory.md`](evidence-graph-card-memory.md) — every card keeps its painted image after S11-21; about 585–774 MB for 110 cards on Retina. Options if it becomes a problem
-- [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place a common cluster (wedding, birth, residence) in one action, or paste a cluster already on the canvas
-- [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar to create a Source; access (logins, OAuth) is unproven
-- [`text-quote-locators.md`](text-quote-locators.md)
+
+### Citation composer and media
+
+- [`citation-composer-followups.md`](citation-composer-followups.md) — bridge-mode subject filter; cropped citation preview
+- [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — Spike 10 / 14 leftovers (signature, page-change confirm, PDF Artifact thumbnails, audit items)
 - [`audio-video-sources.md`](audio-video-sources.md)
-- [`shared-list-helpers.md`](shared-list-helpers.md) — small shared helpers: Properties' empty search state, one catalog querier, a trimmed empty-string binder, one popup dismissal and one popup list
-- [`test-subject-fixtures.md`](test-subject-fixtures.md) — test Subject helpers that place a Subject do it in a second write; let `subjectstest` take a placement
-- [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — leftovers after Spike 10 and Spike 14 batch 1 (signature, Windows PDF draw, audit items)
-- [`coverage-aware-similarity.md`](coverage-aware-similarity.md) — a match on one shared property (a surname-only record) scores similarity 1 and shows as an unbanded alternative
-- [`international-names.md`](international-names.md) — leftovers after Spike 10 (other name patterns, transliteration, calendars)
-- [`daitch-mokotoff.md`](daitch-mokotoff.md) — phonetic tier descoped from Spike 10 (S10-26)
-- [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, a simulated world, a scoreboard, and a labeler that fits the registry numbers. Its "make the algorithm graspable" part is Spike 11 (S11-01); the rest waits on the re-implementation
-- [`share-packages.md`](share-packages.md) — also holds the crafted-project hardening parked when Spike 12 closed
-- [`artifact-pdf-thumbnails.md`](artifact-pdf-thumbnails.md)
-- [`identity-claim-review.md`](identity-claim-review.md)
-- [`provisional-identity-claims.md`](provisional-identity-claims.md) — a status per Promote row, Accepted or Provisional, with the provisional row coming back preselected; the schema holds it, the UI does not (S13-30, descoped 2026-10-30)
-- [`organizations.md`](organizations.md) — Organization as a Subject type (congregations, employers, schools, regiments, lodges) with part-of and succession like places; descoped from S11-48
-- [`binding-order-editing.md`](binding-order-editing.md) — a per-type ordered list of properties on the Properties page, calling `ReorderSubjectTypeProperties` (engine side shipped in S11-32)
+- [`text-quote-locators.md`](text-quote-locators.md)
+
+### Promote, matching, names
+
+- [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on Evidence graph scoring; name index on commit, narrower canon walk, coverage-aware similarity
+- [`provisional-identity-claims.md`](provisional-identity-claims.md) — Promote Accepted / Provisional status; possible values from provisional members on conclusion pages
+- [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, simulated world, scoreboard, labeler; remember researcher decisions
+- [`international-names.md`](international-names.md) — other name patterns, transliteration, calendars, impossible dates, Daitch–Mokotoff
+- [`kinship-view.md`](kinship-view.md) — family trees reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent
+- [`organizations.md`](organizations.md) — Organization as a Subject type; descoped from S11-48
 - [`place-gazetteer-service.md`](place-gazetteer-service.md)
-- [`possible-values.md`](possible-values.md)
-- [`term-management.md`](term-management.md) — one place to manage terms, including relationship direction and inverses
-- [`kinship-view.md`](kinship-view.md) — family trees reading every kinship shape as one fact, and patterns beyond spouse, parent and grandparent (matching's part is Spike 11; the Person page's nuclear family and page-only siblings are [Spike 13](../deployment-plan/spike-13/))
 
-## Archived
+### Conclusion pages and provenance
 
-Shipped ideas keep **decisions**, not PR order. Closed spikes: [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
+- [`provenance.md`](provenance.md) — cap records drawn in a provenance table; load records when the sheet opens
+- [`wide-layout.md`](wide-layout.md) — pages still waiting for a Wide / Page columns frame
 
-- [`archive/interpretation-graph-ui.md`](archive/interpretation-graph-ui.md) — Evidence graph decisions; leftovers re-homed
-- [`archive/evidence-graph-drag-performance.md`](archive/evidence-graph-drag-performance.md) — AppKit cards; a drag moves the view; since S11-21 cards paint once into a reused image
-- [`archive/graph-focus-views.md`](archive/graph-focus-views.md) — focus views inside one large graph; not built, archived once large graphs pan and zoom smoothly (S11-21)
-- [`archive/page-navigation-performance.md`](archive/page-navigation-performance.md) — session cache / place registry
-- [`archive/catalog-access-serialization.md`](archive/catalog-access-serialization.md) — held catalog session
-- [`archive/catalog-graph-cache.md`](archive/catalog-graph-cache.md) — one write path and the in-memory catalog graph
-- [`archive/design-system-hardening.md`](archive/design-system-hardening.md) — graduated to [`docs/design-system-layers.md`](../design-system-layers.md)
-- [`archive/promote-matching.md`](archive/promote-matching.md) — what proves a join; answered by graph alignment
-- [`archive/name-matching-enhancements.md`](archive/name-matching-enhancements.md) — Spike 10 matcher leftovers, each closed or re-homed
-- [`archive/settled-list-count-publish.md`](archive/settled-list-count-publish.md) — a list publishes its count only from a settled handle (`onSettled`)
-- Also archived: nav-count RPC, ingest MIME, thumbnails, image cache (same folder)
+### Properties, vocabulary, Sources
+
+- [`properties-and-terms.md`](properties-and-terms.md) — binding order, event-type-scoped properties, Occupation seed, term management (direction / inverses)
+- [`source-to-source-relationships.md`](source-to-source-relationships.md)
+- [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar; access unproven
+- [`share-packages.md`](share-packages.md) — also holds the crafted-project hardening parked when Spike 12 closed
+
+### Kit and structural debt
+
+- [`shared-list-helpers.md`](shared-list-helpers.md) — empty search state, catalog querier, popup dismissal / list, history menu rows, type-select on disabled menus, Source section counts
+- [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change; leftover test artifact and Subject fixtures
+
+Closed spikes (decisions, not PR order): [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
+
+Pulled into [Spike 15](../deployment-plan/spike-15/): nested Sources / derivation / templates ([`source-structure-later.md`](../deployment-plan/spike-15/source-structure-later.md)); Source privacy toggle; credibility field UX; rethink of Source metadata and type suggestions.

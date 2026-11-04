@@ -108,7 +108,7 @@ Reviewers: CON (Sonnet), MNT, UX — each had a Fix-now major. Not sent back: SE
 Nits (logged): `UX-10 · ReconciliationRecordRows.swift:201 · value heading gap now space5 (was space4) via shared valueLine`
 
 ## Scope change — user, 2026-10-31
-After round 2 the user asked, for this PR, that the birth and death place rows read the event–place `location` link instead of the Place's Toponym, with each record read as its own toponym for the place. The plan records it as D-20 – D-22 and AC-1.5 (header, "Scope change"). The user asked for it on this PR, which authorizes a third review round scoped to it. Separately, the user parked loading records on demand as [`docs/ideas/provenance-on-demand.md`](../../../ideas/provenance-on-demand.md), with S13-06 PRF-1.
+After round 2 the user asked, for this PR, that the birth and death place rows read the event–place `location` link instead of the Place's Toponym, with each record read as its own toponym for the place. The plan records it as D-20 – D-22 and AC-1.5 (header, "Scope change"). The user asked for it on this PR, which authorizes a third review round scoped to it. Separately, the user parked loading records on demand as [`docs/ideas/provenance.md`](../../../ideas/provenance.md), with S13-06 PRF-1.
 
 ### Fix plan 3
 
@@ -140,7 +140,7 @@ Reviewers: CON (Sonnet), MNT, UX, SEC+PRF. Scope `ac82cae3...974d98e8` (user-aut
 | CON-2 (r3), SEC+PRF note | CON, SEC | major (re-rated) | `loadProperties` now keeps Subject-valued fields for every handle | Fix now → F-14 | re-rated: `mentions` and researcher-created Subject-valued Properties exist (`subjectvocab/registry.go:173`, `properties.go:447`); a Person with one gains an empty Vitals row via `PersonDetailContent.swift:125`; deviation (1) was not in the plan |
 | MNT-4 (r3) | MNT | minor | `lifeOwners` follows the hop three times and rebuilds names `eventPlaces` returned | Fix now → F-15 | code this PR adds |
 
-Nits (logged): `CON-3 (r3) · conclusiondetails.go:145 · NULLIF flips HasText for empty text (gone with F-12)` · `CON-4 (r3) · compose.go:752 · "unfolded" doc word (F-15)` · `MNT-6 (r3) · provenance-on-demand.md:7 · fixed by the orchestrator` · `MNT-7 (r3) · GenealogyStore.swift:586 · place/event default mismatch (F-13)` · `SEC note · subquery alias t shadows property_terms t (gone with F-12)`
+Nits (logged): `CON-3 (r3) · conclusiondetails.go:145 · NULLIF flips HasText for empty text (gone with F-12)` · `CON-4 (r3) · compose.go:752 · "unfolded" doc word (F-15)` · `MNT-6 (r3) · provenance.md:7 · fixed by the orchestrator` · `MNT-7 (r3) · GenealogyStore.swift:586 · place/event default mismatch (F-13)` · `SEC note · subquery alias t shadows property_terms t (gone with F-12)`
 
 ### Fix plan 4
 
@@ -226,4 +226,4 @@ Head `5957c006`. F-18 done: `ReconciledValueDisplay.distinctSourceCount(of:fallb
 `origin/main` moved to `6126e142` (#651, docs only). Merged as `ff8dadfd`; one conflict in `deployment-plan.md` resolved by keeping this branch's S13-11 row (archived brief link, Landed) and main's S13-01 row. Gate re-run after the merge.
 
 ## Result
-Gate PASS after merging `main` · CI green · open: none · follow-ups: CON-4 (r2), MNT-9, MNT-10 · parked: provenance on demand ([`docs/ideas/provenance-on-demand.md`](../../../ideas/provenance-on-demand.md), with S13-06 PRF-1) · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none · flakes seen outside this PR: `SourcePageModelTests.aGraphWriteMovesOnlyItsRow`, `SourcesModelTests.listReadsEachGraphsProgress`, `SourceGraphFormModelTests.editPrefillsAndLocksInUseArtifacts`
+Gate PASS after merging `main` · CI green · open: none · follow-ups: CON-4 (r2), MNT-9, MNT-10 · parked: provenance on demand ([`docs/ideas/provenance.md`](../../../ideas/provenance.md), with S13-06 PRF-1) · to user: UX-6 (manual check 1), §10 manual check not run · CON miss: none · flakes seen outside this PR: `SourcePageModelTests.aGraphWriteMovesOnlyItsRow`, `SourcesModelTests.listReadsEachGraphsProgress`, `SourceGraphFormModelTests.editPrefillsAndLocksInUseArtifacts`

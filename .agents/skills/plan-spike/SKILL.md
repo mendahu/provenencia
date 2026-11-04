@@ -35,7 +35,7 @@ Map template: [`map-template.md`](map-template.md).
 | Open a new spike | **Yes** |
 | Add a batch to an odds-and-ends (even-numbered) spike | **Yes** — as a slice |
 | Add a slice to the open spike, or re-cut one | **Yes** |
-| Pull an idea from `docs/ideas/` or notes from `docs/dogfood/ux.md` into a spike | **Yes** |
+| Pull an idea from `docs/ideas/` or notes from `docs/dogfood/ux/` into a spike | **Yes** |
 | Descope, merge, or split PRs in the map | **Yes** |
 | Write the detailed plan for one PR | No — [`plan-pr`](../plan-pr/SKILL.md) |
 | Write a Claude Design brief | No — [`add-design-brief`](../add-design-brief/SKILL.md), usually from `plan-pr` |
@@ -217,7 +217,7 @@ pattern change with no skill update. Answer each finding in
 - Spike `README.md`: status, documents table, not this spike (template in the map template).
 - [`docs/deployment-plan/README.md`](../../../docs/deployment-plan/README.md) **Current** points at the open spike.
 - `design/README.md` **Scheduled** lists each brief ID, view, and the PR it gates.
-- Remove pulled-in notes from `docs/dogfood/ux.md`; move pulled-in ideas and update [`docs/ideas/README.md`](../../../docs/ideas/README.md).
+- Remove pulled-in notes from `docs/dogfood/ux/`; move pulled-in ideas and update [`docs/ideas/README.md`](../../../docs/ideas/README.md).
 
 ## 9. Report
 

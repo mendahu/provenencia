@@ -87,12 +87,12 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 
 ## Not this spike
 
-These were weighed and parked. Their reasoning is in [`ideas/source-structure-later.md`](../../../ideas/source-structure-later.md).
+These were weighed and parked. Their reasoning is in [`source-structure-later.md`](../../spike-15/source-structure-later.md).
 
 - Nested Sources (`parent_source_id`, metadata inheritance).
 - Derivation links (`derived_from`: an index or abstract of an original) and the original / derivative / authored form.
 - Named Source templates. Copy Source covers the case for now.
 - Per-graph credibility.
 - Layered citation output (Evidence Explained style "…; citing …").
-- Canvas focus views (one connected component at a time, filter by Citation): [`ideas/archive/graph-focus-views.md`](../../../ideas/archive/graph-focus-views.md) (archived 2026-10-24).
+- Canvas focus views (one connected component at a time, filter by Citation): [`../../../../macos/App/Features/GraphCanvas/README.md`](../../../../macos/App/Features/GraphCanvas/README.md) (archived 2026-10-24).
 - `source` Subjects, `mentions` and `remark`: [`ideas/source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md). None exist yet; graph isolation will forbid cross-graph subject values when that idea is picked up, so it has to be re-thought then.

@@ -15,4 +15,4 @@ Client patterns: [`macos-client-patterns.md`](../../../macos-client-patterns.md)
 - **Omnibar** is engine-side catalog search (registry + FTS5 + ranking), not per-destination `LIKE`. Hits navigate via `go(to:)`.
 - Per-destination list search was removed in favor of the omnibar.
 
-Catalog session serialization is a separate decision: [`catalog-access-serialization.md`](../../../ideas/archive/catalog-access-serialization.md).
+Catalog session serialization is a separate decision: [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md).

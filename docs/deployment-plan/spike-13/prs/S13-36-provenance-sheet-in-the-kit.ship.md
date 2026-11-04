@@ -105,7 +105,7 @@ No new blockers from CON, MNT or SEC+PRF. UX not re-run.
 
 Open minors, no fix plan without the user: `MNT-7 residual · ReconciledValueRowModel.swift:102,134 · the empty-lead rule still lives in four places` · `guides · "built when the recipe opens" does not describe PVPersonCardContent` · `Landed note · omits shown: required and Shown.init(face:…); (8) says zero-size, the code is 1×1; § 6 Assembler still shows shown: Shown? = nil` · `ReconciledValueRow.swift:48-49 · padding one indent shallow` · logged: `PVPageColumns.swift:179 · hairline without Rectangle` · `PromoteView.swift:393, PVSidebarNav.swift:102 · hand-rolled vertical dividers`
 
-**To user, answered:** SEC-1: the user accepted the risk and asked for an idea file (2026-11-03): [`provenance-record-cap.md`](../../../ideas/provenance-record-cap.md). The table stays as D-7 has it. The stated ceiling is about 300 records on one value; no Release figure was taken, and the idea file says so. The open minors above were not applied: they go to the PR body's follow-ups.
+**To user, answered:** SEC-1: the user accepted the risk and asked for an idea file (2026-11-03): [`provenance.md`](../../../ideas/provenance.md). The table stays as D-7 has it. The stated ceiling is about 300 records on one value; no Release figure was taken, and the idea file says so. The open minors above were not applied: they go to the PR body's follow-ups.
 
 ## Result
 Gate PASS · CI green (`b783ad42`) · open: none · follow-ups: SEC-1, the open minors above · to user: SEC-1 answered · CON miss: none

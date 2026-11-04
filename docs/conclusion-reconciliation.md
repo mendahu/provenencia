@@ -73,7 +73,7 @@ Credibility is read relative to its vocabulary's default grade by **sort order**
 **Membership status:**
 
 - **Accepted** members are the evidence.
-- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees. Showing a provisional member's value as *possibly X* when nothing else survives is an idea for later: [`ideas/possible-values.md`](ideas/possible-values.md).
+- **Provisional** members are passed in but **always eliminated**: they never influence the answer and appear only in the reasoning. That is stricter than weak evidence, which can still win when nothing stronger disagrees. Showing a provisional member's value as *possibly X* when nothing else survives is an idea for later: [`ideas/provisional-identity-claims.md`](ideas/provisional-identity-claims.md).
 - **Rejected** members do not count and are not passed in.
 
 ---

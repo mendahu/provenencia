@@ -1,19 +1,21 @@
 ---
 name: archive-docs
 description: >-
-  Distills a closed Provenencia spike or shipped idea into a short decisions
-  note and deletes operational archive (PR sequences, completed checklists,
-  Claude Design briefs). Use when closing a spike, moving
-  docs/deployment-plan/spike-N to archive/, parking a shipped docs/ideas/
-  file, leftover re-home after a brainstorm, or when the user asks to
-  distill, clean, or archive documentation.
+  Distills a closed Provenencia spike into a short decisions note and deletes
+  operational archive (PR sequences, completed checklists, Claude Design
+  briefs). Use when closing a spike, moving docs/deployment-plan/spike-N to
+  archive/, deleting or re-homing a shipped docs/ideas/ file, leftover re-home
+  after a brainstorm, or when the user asks to distill, clean, or archive
+  documentation.
 ---
 
 # Archive docs (decisions, not git)
 
-Closed spikes and shipped ideas keep **themes and decisions**. PR order,
-checklists, and design briefs live in **git**. Do not duplicate them in
-`docs/`.
+Closed spikes keep **themes and decisions** under `docs/deployment-plan/archive/`.
+Shipped ideas are **deleted** from `docs/ideas/` (git and the spike / PR are the
+record). Open leftovers move to another current idea, a spike note, a domain doc,
+or a skill — there is no `ideas/archive/`. PR order, checklists, and design briefs
+live in **git**. Do not duplicate them in `docs/`.
 
 Pattern example: [`docs/deployment-plan/archive/`](../../../docs/deployment-plan/archive/)
 (Spikes 1–7). Policy one-liner: [`archive/README.md`](../../../docs/deployment-plan/archive/README.md).
@@ -30,7 +32,7 @@ etc.) — the archive **points** at those; it does not restated the schema.
 | --- | --- |
 | Close a spike (`spike-N/` → `archive/spike-N/`) | **Yes** |
 | Distill an already-archived spike that still has briefs / `completed.md` | **Yes** |
-| Move a shipped `docs/ideas/*.md` into `ideas/archive/` | **Yes** |
+| Delete or re-home a shipped / abandoned `docs/ideas/*.md` | **Yes** |
 | Authoring an **open** Claude Design brief | No — `add-design-brief` |
 | Implementing the last PR of a spike | No — finish the PR, then this skill |
 
@@ -44,7 +46,7 @@ Do **not** run this on an **open** spike (Spike 8 while it still has a plan).
 - [ ] Keep a file only if it is still a **live contract** (not “how we shipped”)
 - [ ] Delete: completed.md, deployment-plan.md, design/ (briefs + indexes), prs/ (PR plans), *.review.md (review-plan logs), *.ship.md (ship-pr logs),
       dogfood how-tos, PR-sequence diagrams, suggested-PR-title tables
-- [ ] Distill shipped ideas that this spike finished (same keep/delete rules)
+- [ ] Delete shipped ideas this spike finished; re-home any open leftovers (idea / spike / domain doc / skill)
 - [ ] Grep inbound links; retarget to the README or the live domain doc
 - [ ] Slim docs/deployment-plan/README.md completed row (one line, no file list)
 - [ ] Update docs/ideas/README.md if an idea moved
@@ -95,18 +97,19 @@ Target: **~40–80 lines**. Match [`archive/spike-7/README.md`](../../../docs/de
 Do **not** list every PR id. Do not paste the dogfood bar. “Composer is Option B”
 stays; “S7-D4 gated S7-08” goes.
 
-## Shipped idea
+## Shipped or abandoned idea
 
-When promoting `docs/ideas/foo.md` → `docs/ideas/archive/foo.md`:
+When an idea in `docs/ideas/` is finished or dropped:
 
-1. Replace the body with **what shipped + decisions** (or a stub if the idea
-   graduated to a domain doc — see `design-system-hardening.md`).
-2. Drop problem essays, PR slices, and “display ideas we did not pick.”
-3. Leftovers: one table → Spike / dogfood / another idea / descoped.
-4. Update [`docs/ideas/README.md`](../../../docs/ideas/README.md) Current vs Archived.
-
-Brainstorms that were a backlog (`interpretation-graph-ui`) become a **decisions
-table + leftover map**, not a preserved 700-line essay.
+1. **Delete** the file. Do not keep an `ideas/archive/` copy.
+2. Durable decisions that skills or code still need live in a **domain doc**, a
+   **skill**, or the **code** — graduate them there before deleting if they are
+   not already.
+3. Open leftovers: one row or short note in another current idea, the next
+   spike's map, or `structural-debt.md` / dogfood — never only in the deleted
+   file.
+4. Update [`docs/ideas/README.md`](../../../docs/ideas/README.md) and retarget
+   inbound links (spike READMEs, domain docs, skills).
 
 ## Retarget
 

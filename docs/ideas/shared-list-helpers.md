@@ -38,3 +38,11 @@ The fields are not the same, so the omnibar cannot simply become a combo box. Th
 ## The history menu on the shared rows
 
 The toolbar's Back / Forward history menu builds its own rows and presenter (`HistoryJumpMenuModel`, `PVContextMenuPanel`) instead of `PVActionMenuRows` (S12-17 ship log). Pairs with "One popup dismissal" above.
+
+## Type-select can land on a disabled menu row
+
+S12-17 ship log; dogfood 2026-10-29. Typing a letter in an action menu can highlight a disabled row (`keyboardTitles` keeps disabled titles), and Return on it closes the menu with no action. Seen on Sources list Clear and other `PVActionMenuItem` menus. Type-select and Return should skip or refuse disabled rows the same way pointer activation does.
+
+## Source page section counts differ
+
+S12-11 review M-8; dogfood 2026-10-25. Source page section counts: Notes shows a bare number, Artifacts and Evidence graphs a localized count. One count presentation for every Source page section.

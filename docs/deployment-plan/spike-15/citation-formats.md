@@ -54,7 +54,7 @@ What an *Evidence Explained* citation draws on, and what Provenencia has for eac
 | --- | --- | --- | --- |
 | Repository and its location | The National Archives, Kew | No | Source, or a shared Repository record |
 | Collection, series and call number | "HO 107/2353"; "PR/Y/MB/3" | No | Source |
-| What it is a copy of | an index entry citing an image citing the register | No ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links") | A link between Sources |
+| What it is a copy of | an index entry citing an image citing the register | No ([`source-structure-later.md`](source-structure-later.md) "Derivation links") | A link between Sources |
 
 An analysis after the citation ("informant was the deceased's son") fits the Citation's notes.
 
@@ -68,8 +68,8 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 | **Creator / author, publisher, place of publication** | Free text, if any | Published works, newspapers |
 | **Jurisdiction** (country, county, parish or town) | Free text, if any | Census, parish and civil records |
 | **Repository and its reference** (archive, call number, film or piece number) | Free text, if any | Every unpublished record |
-| **Access layer** (provider, collection, URL, accessed date) | Free text on the Source ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links" parks Artifact-level access metadata) | The "image, Ancestry, accessed …" layer |
-| **What it is a copy of** | Not modeled ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Derivation links") | The "citing …" layer |
+| **Access layer** (provider, collection, URL, accessed date) | Free text on the Source ([`source-structure-later.md`](source-structure-later.md) "Derivation links" parks Artifact-level access metadata) | The "image, Ancestry, accessed …" layer |
+| **What it is a copy of** | Not modeled ([`source-structure-later.md`](source-structure-later.md) "Derivation links") | The "citing …" layer |
 | **Source date** | Designed, not built: [`source-provenance-date.md`](source-provenance-date.md) (descoped from Spike 13 on 2026-10-31 to land with these fields) | Dates in the note, and the source list order |
 | **Printed page labels** | The locator can hold `page_label`, but the composer writes only `artifact_page` | "p. 23" instead of "image 37"; folio, entry and line numbers |
 | **Entry or line within a page** | Not modeled; a region selector marks where, not which entry | Census line numbers, register entry numbers |

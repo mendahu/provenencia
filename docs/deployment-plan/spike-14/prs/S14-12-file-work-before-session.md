@@ -90,7 +90,7 @@ Attaching a large scan, saving a depiction, setting a Source cover, or opening a
 | Decoding several thumbnails in parallel | not planned — `raster.Slot` bounds memory; one handler decodes in sequence as today |
 | A Swift change, or an `EnsureFileThumbnail` call from the app | not planned — the app reads thumbnail paths from responses, as today |
 | Moving `ingest.File` and `derivatives.Ensure` into test-helper packages | not planned — about 35 test call sites; D-5 and D-8 mark them test-and-fixture only and STEP-8 adds them to `use-catalog-session` "Do not" |
-| PDF cover thumbnails | [PDF thumbnails idea](../../../ideas/artifact-pdf-thumbnails.md) |
+| PDF cover thumbnails | [PDF thumbnails idea](../../../ideas/depictions-and-likenesses.md) |
 
 ## 4. Current state
 
@@ -163,7 +163,7 @@ Verified at `a652313`.
 
 **Builds on.** `objectstore.Temp`; `files.LookupByChecksumTx`, `insertFile`, `files.PurgeUnreferenced`; `raster.Slot`; `withProjectCatalog`; `observations.StagedFile`; the `observationstest` helper-package shape.
 **Deletes.** `StagedImage` (name), its in-memory `png` field and `WriteIfAbsent` call; `StageDepictions`'s returned closure; `derivatives.insertLinkOnly`, `errDerivedFileExists`, `Ensure`'s `WriteIfAbsent` and pre-Run `LookupByChecksum`; `thumbnailRelPath`; `requireRasterCoverArtifact`'s `EnsureThumbnail` call and error mapping, `sqlArtifactForCover`, and the `sources` → `derivatives` import; `existingThumbnailRelPath`'s own `files.Lookup` + `ReadRelPath` tail; the `"image/png"` literals in `stage.go` and `ReadableImage`; the raw `DELETE FROM file_derivatives` block in `thumbnails_test.go`.
-**Next adds.** A later derivative (a medium preview) is a `Spec` through `Plan` / `Job.Stage` / `Commit` and the pass. A later client file (an attachment on a note) is a `stage` func for `withStaged`. A PDF cover ([idea](../../../ideas/artifact-pdf-thumbnails.md)) changes only `derivatives` (a raster for a PDF); `requireRasterCoverArtifact`'s link lookup accepts it unchanged.
+**Next adds.** A later derivative (a medium preview) is a `Spec` through `Plan` / `Job.Stage` / `Commit` and the pass. A later client file (an attachment on a note) is a `stage` func for `withStaged`. A PDF cover ([idea](../../../ideas/depictions-and-likenesses.md)) changes only `derivatives` (a raster for a PDF); `requireRasterCoverArtifact`'s link lookup accepts it unchanged.
 
 ### Reach
 

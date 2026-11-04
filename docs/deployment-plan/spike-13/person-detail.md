@@ -98,7 +98,7 @@ On each claim in the Sources section.
 - **Reconciliation Claims** (manual reconciliation) in the provenance sheet: later; the sheet leaves room (R-10).
 - **Editing an identity claim's argument:** later; this spike is view only (R-40). Pins are gone ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5).
 - **How the records connect on Event and Place pages, Promote ranking with the new comparison, and a research log:** later ([`evidence-graph-comparison.md`](evidence-graph-comparison.md#later)).
-- **Weak-claim alerts and the claim review queue:** stay parked in [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md).
+- **Remember researcher decisions** (rejected handles, distinct merge hints): [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md). Pin-based weak-claim review is gone with S13-25.
 - **Event depictions beyond the lead picture:** Spike 14 batch 1 added `event_picture` and the Event page's gallery ([Spike 14](../spike-14/deployment-plan.md)); the Timeline shows each event's lead picture (R-26, 2026-11-02), and an event's gallery stays on its Event page.
 - **Unpromoted Subjects anywhere on the page:** refused (R-2).
 - **Kinship beyond the nuclear family** (grandparents, aunts and uncles, godparents, census households): stays in [`ideas/kinship-view.md`](../../ideas/kinship-view.md).
@@ -129,6 +129,6 @@ The product owner has several real people in their project ready and will test t
 ## Related material already in the repo
 
 - [`ideas/kinship-view.md`](../../ideas/kinship-view.md): family on person pages must read every kinship shape as one fact through `canonlinks.Reader.For` (S11-49). Notes that `core/kinship`'s link reading should move to its own pure package before a person page imports it (S11-38 review M-3), and that siblings from shared parents is not built yet (R-18).
-- [`ideas/identity-claim-review.md`](../../ideas/identity-claim-review.md): weak-claim alerts and re-pinning; parked.
+- [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md): remember researcher decisions; claim editing not scheduled.
 - [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): likeness leftovers after Spike 10.
 - [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5 (identity claims, pins, promote), §7 (Reconciliation Claims, Participation and Relationship associations).
