@@ -1899,6 +1899,8 @@ struct EvidenceGraphModelTests {
         #expect(names[index + 1] == "Unpromote")
         let action = try #require(content.namedActions(for: filed).first { $0.name == "Unpromote" })
         action.run()
+        let opened = await waitUntil(timeout: .seconds(5)) { model.pendingUnpromote != nil }
+        #expect(opened)
         #expect(model.pendingUnpromote?.id == "s-james")
 
         var unfiled = james
@@ -1912,12 +1914,14 @@ struct EvidenceGraphModelTests {
         let location = model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.unpromoteActionID)
         #expect(location == nil)
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
+        let opened = await waitUntil(timeout: .seconds(5)) { model.pendingUnpromote != nil }
+        #expect(opened)
         #expect(model.pendingUnpromote?.name == "James Robins")
         #expect(model.pendingUnpromote?.bridges == [sonOfSentence, participationSentence])
         #expect(model.pendingUnpromote?.error == nil)
 
         let (_, unfiledSonOf) = await householdModel(fileSonOf: false)
-        unfiledSonOf.beginUnpromote(subjectID: "s-james")
+        await unfiledSonOf.beginUnpromote(subjectID: "s-james")
         #expect(unfiledSonOf.pendingUnpromote?.bridges == [participationSentence])
     }
 
@@ -1931,21 +1935,21 @@ struct EvidenceGraphModelTests {
             return handle?.value?.memberships.first?.subjectID == "s-james"
         }
         #expect(loaded)
-        model.beginUnpromote(subjectID: "s-james")
+        await model.beginUnpromote(subjectID: "s-james")
         #expect(model.pendingUnpromote?.bridges == [])
 
         let (_, unfiled) = await promotableModel()
-        unfiled.beginUnpromote(subjectID: "s-james")
+        await unfiled.beginUnpromote(subjectID: "s-james")
         #expect(unfiled.pendingUnpromote == nil)
     }
 
     @Test func confirmUnpromoteRefreshesToPromote() async {
         let (store, model) = await householdModel()
-        model.beginUnpromote(subjectID: "s-james")
+        await model.beginUnpromote(subjectID: "s-james")
         model.pendingUnpromote = nil
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
 
-        model.beginUnpromote(subjectID: "s-james")
+        await model.beginUnpromote(subjectID: "s-james")
         let removed = ["s-james", "b1-sonof", "b2-part"].compactMap { store.membershipBySubject[$0]?.entity.id }
         store.nextWriteEffects = CatalogWriteEffects(
             handles: removed, evidenceGraphs: [graphID], handleScopes: removed
@@ -1987,13 +1991,37 @@ struct EvidenceGraphModelTests {
         let (store, model) = await householdModel()
         let failure = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
         store.unpromoteSubjectError = failure
-        model.beginUnpromote(subjectID: "s-james")
+        await model.beginUnpromote(subjectID: "s-james")
         await model.confirmUnpromote()
         #expect(model.pendingUnpromote != nil)
         #expect(model.pendingUnpromote?.error == L10n.Errors.message(for: failure))
         #expect(!model.isUnpromoting)
-        model.beginUnpromote(subjectID: "s-james")
+        await model.beginUnpromote(subjectID: "s-james")
         #expect(model.pendingUnpromote?.error == nil)
+    }
+
+    @Test func unpromoteLastRecordNamesTheDeletedHandle() async {
+        let (store, model) = await householdModel()
+        store.unpromoteImpactBySubject["s-james"] = CatalogDeleteImpactListed(
+            id: "h-james", ref: "PER-7KD45", title: "PER-7KD45",
+            location: WorkspaceLocation(section: .persons, entityId: "h-james")
+        )
+        await model.beginUnpromote(subjectID: "s-james")
+        #expect(model.pendingUnpromote?.deletedHandleRef == "PER-7KD45")
+        #expect(model.pendingUnpromote?.kind == .person)
+        #expect(model.pendingUnpromote?.error == nil)
+    }
+
+    @Test func unpromotePreflightFailureStaysInTheConfirm() async {
+        let (store, model) = await householdModel()
+        store.getUnpromoteImpactError = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        await model.beginUnpromote(subjectID: "s-james")
+        #expect(model.pendingUnpromote != nil)
+        #expect(model.pendingUnpromote?.deletedHandleRef == nil)
+        #expect(model.pendingUnpromote?.error != nil)
+        store.getUnpromoteImpactError = nil
+        await model.confirmUnpromote()
+        #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
     }
 
     /// Files s-james the way the Promote place does: write, then apply the Done's effects.

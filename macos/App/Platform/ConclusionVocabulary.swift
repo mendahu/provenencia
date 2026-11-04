@@ -282,6 +282,32 @@ enum DateQualifier {
     static let after = "AFT"
 }
 
+/// Delete-impact cascade vias the Subject delete confirm words (Go `deleteimpact.Via*`).
+enum DeleteImpactCascadeVia: Sendable, Equatable {
+    case leavesHandle
+    case deletesCitations
+    case deletesHandles
+    case unrecognized(String)
+
+    init(rawValue: String) {
+        switch rawValue {
+        case "identity_claims.subject_id": self = .leavesHandle
+        case "citations.graph_id": self = .deletesCitations
+        case "canonical_entities.last_member": self = .deletesHandles
+        default: self = .unrecognized(rawValue)
+        }
+    }
+
+    var wire: String {
+        switch self {
+        case .leavesHandle: "identity_claims.subject_id"
+        case .deletesCitations: "citations.graph_id"
+        case .deletesHandles: "canonical_entities.last_member"
+        case .unrecognized(let code): code
+        }
+    }
+}
+
 /// Why the engine refuses to unlink an Artifact from a graph (the code of the
 /// refusal: `evidencegraphs.artifact_in_use`, `.last_artifact`).
 enum EvidenceGraphUnlinkReason: Sendable, Equatable {

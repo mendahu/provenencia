@@ -16,7 +16,10 @@ final class EvidenceGraphModel {
         /// The subject's id.
         let id: String
         let name: String
+        let kind: EvidencePrimaryKind
         let bridges: [String]
+        /// When set, the confirm names the handle the Unpromote deletes.
+        var deletedHandleRef: String?
         var error: String?
     }
 
@@ -578,7 +581,7 @@ final class EvidenceGraphModel {
         case EvidenceSubjectCard.openHandleActionID:
             return openHandle(subjectID: subjectID)
         case EvidenceSubjectCard.unpromoteActionID:
-            beginUnpromote(subjectID: subjectID)
+            Task { await beginUnpromote(subjectID: subjectID) }
             return nil
         default:
             guard let observationID = EvidenceSubjectCard.observationID(fromEditPropertyAction: actionID)
@@ -948,7 +951,7 @@ final class EvidenceGraphModel {
     /// the inverse of Promote's forecast, read from the same snapshot fields:
     /// filed bridges that have this subject as an end. The engine recomputes
     /// the authoritative set in the write. Does nothing otherwise.
-    func beginUnpromote(subjectID: String) {
+    func beginUnpromote(subjectID: String) async {
         guard let snapshot = currentSnapshot(),
               let placed = primary(in: snapshot, id: subjectID),
               placed.membership != nil
@@ -957,11 +960,22 @@ final class EvidenceGraphModel {
             .filter { ($0.endpointAID == subjectID || $0.endpointBID == subjectID) && $0.membership != nil }
             .sorted { $0.id < $1.id }
             .map { EvidenceBridgeEdgeSummary.sentence(for: $0, in: snapshot, orders: session.nameFormat) }
-        pendingUnpromote = PendingUnpromote(
+        var pending = PendingUnpromote(
             id: placed.id,
             name: placed.displayName(orders: session.nameFormat),
-            bridges: bridges
+            kind: placed.kind,
+            bridges: bridges,
+            deletedHandleRef: nil
         )
+        do {
+            pending.deletedHandleRef = try await store.getUnpromoteImpact(
+                projectDir: session.projectKey.projectDir,
+                subjectID: subjectID
+            )?.ref
+        } catch {
+            pending.error = L10n.Errors.message(for: error)
+        }
+        pendingUnpromote = pending
     }
 
     /// Writes the Unpromote. Success refreshes through the write's effects and

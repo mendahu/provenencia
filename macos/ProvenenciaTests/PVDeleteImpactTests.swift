@@ -327,6 +327,39 @@ struct DeleteImpactFlowTests {
 }
 
 @Suite
+struct PVDeleteImpactCascadeCopyTests {
+    @Test func cascadeLinesNameDeletedHandles() {
+        let one = CatalogDeleteImpactGroup(
+            via: DeleteImpactCascadeVia.deletesHandles.wire,
+            kind: "canonical_entity",
+            total: 1,
+            listed: [PVDeleteImpactPreviewData.listed(ref: "PER-7KD45", title: "PER-7KD45")]
+        )
+        #expect(PVDeleteImpactCopy.cascadeLines(CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [one])) ==
+            ["PER-7KD45 has no other records, so it is deleted."])
+
+        let two = CatalogDeleteImpactGroup(
+            via: DeleteImpactCascadeVia.deletesHandles.wire,
+            kind: "canonical_entity",
+            total: 2,
+            listed: [
+                PVDeleteImpactPreviewData.listed(ref: "PER-A", title: "PER-A"),
+                PVDeleteImpactPreviewData.listed(ref: "REL-1", title: "REL-1"),
+            ]
+        )
+        #expect(PVDeleteImpactCopy.cascadeLines(CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [two])) ==
+            ["PER-A and REL-1 have no other records, so they are deleted."])
+
+        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .person, ref: "PER-7KD45") ==
+            "PER-7KD45 has no other records, so this person is deleted. The cards stay on the graph.")
+        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .event, ref: "EVT-1") ==
+            "EVT-1 has no other records, so this event is deleted. The cards stay on the graph.")
+        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .place, ref: "PLC-1") ==
+            "PLC-1 has no other records, so this place is deleted. The cards stay on the graph.")
+    }
+}
+
+@Suite
 struct PVConfirmCopyLabelTests {
     @Test func stringLabelsStoreVerbatim() {
         let copy = PVConfirmCopy(

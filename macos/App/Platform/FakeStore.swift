@@ -196,6 +196,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
     var unpromoteSubjectError: Error?
+    /// Scripted rows for `getUnpromoteImpact` by subject id.
+    var unpromoteImpactBySubject: [String: CatalogDeleteImpactListed] = [:]
+    var getUnpromoteImpactError: Error?
+    var getUnpromoteImpactCalls = 0
     /// When set, `setPreferredLikeness` throws (the portrait model shows a danger toast).
     var setPreferredLikenessError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
@@ -1414,8 +1418,17 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return (entity, claim)
     }
 
+    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactListed? {
+        try withState {
+            markCatalogSessionHeld(projectDir)
+            getUnpromoteImpactCalls += 1
+            if let getUnpromoteImpactError { throw getUnpromoteImpactError }
+            return unpromoteImpactBySubject[subjectID]
+        }
+    }
+
     /// Removes the Subject's promotion, and the promotion of every Subject on its Source that has a membership
-    /// and an Observation naming it as its value (the engine's rule for bridge ends). Handles stay.
+    /// and an Observation naming it as its value (the engine's rule for bridge ends).
     func unpromoteSubject(
         projectDir: String,
         userID _: String,

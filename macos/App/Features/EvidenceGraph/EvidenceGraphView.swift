@@ -203,9 +203,14 @@ private struct EvidenceGraphContent: View {
         .pvConfirm(
             item: $model.pendingUnpromote,
             copy: { item in
-                PVConfirmCopy(
+                let message = if let ref = item.deletedHandleRef {
+                    L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: item.kind, ref: ref)
+                } else {
+                    L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
+                }
+                return PVConfirmCopy(
                     title: L10n.EvidenceGraph.unpromoteConfirmTitle(name: item.name),
-                    message: L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage),
+                    message: message,
                     confirm: L10n.EvidenceGraph.unpromote,
                     cancel: L10n.EvidenceGraph.unpromoteKeep
                 )

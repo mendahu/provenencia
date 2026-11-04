@@ -15762,6 +15762,76 @@
         }
       }
     },
+    "deleteImpact.confirm.deletesHandles": {
+      "comment": "Allowed Subject delete confirm when handles are deleted; arguments are count and handle ref(s)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ %#@records@"
+          },
+          "substitutions": {
+            "records": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "has no other records, so it is deleted."
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "have no other records, so they are deleted."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.person": {
+      "comment": "Unpromote confirm when the Person handle is deleted; argument is its ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has no other records, so this person is deleted. The cards stay on the graph."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.event": {
+      "comment": "Unpromote confirm when the Event handle is deleted; argument is its ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has no other records, so this event is deleted. The cards stay on the graph."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.place": {
+      "comment": "Unpromote confirm when the Place handle is deleted; argument is its ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ has no other records, so this place is deleted. The cards stay on the graph."
+          }
+        }
+      }
+    },
     "deleteImpact.confirm.deletesCitations": {
       "comment": "Allowed graph delete confirm, appended after the consequence; arguments are how many Citations and the citation ref(s), e.g. CIT-7KD45",
       "extractionState": "manual",
