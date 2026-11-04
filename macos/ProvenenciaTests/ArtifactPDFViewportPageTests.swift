@@ -7,9 +7,9 @@ import Testing
 @MainActor
 struct ArtifactPDFViewportPageTests {
     @Test func pageChangedNotificationUpdatesCallback() async throws {
-        let document = blankPDFDocument(pageCount: 3)
+        let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
         var reportedPages: [Int] = []
-        let host = try bootstrapHost(document: document) { page in
+        let host = bootstrapHost(document: document) { page in
             reportedPages.append(page)
         }
 
@@ -32,8 +32,8 @@ struct ArtifactPDFViewportPageTests {
     }
 
     @Test func syncZoomOnCurrentPageDoesNotSnapToPageOne() throws {
-        let document = blankPDFDocument(pageCount: 3)
-        let host = try bootstrapHost(document: document) { _ in }
+        let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
+        let host = bootstrapHost(document: document) { _ in }
 
         let window = hostWindow(for: host)
         defer { withExtendedLifetime(window) {} }
@@ -63,9 +63,9 @@ struct ArtifactPDFViewportPageTests {
     }
 
     @Test func pageReportThenSyncZoomKeepsPage() async throws {
-        let document = blankPDFDocument(pageCount: 3)
+        let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
         var page = 1
-        let host = try bootstrapHost(document: document) { reported in
+        let host = bootstrapHost(document: document) { reported in
             page = reported
         }
 
@@ -96,18 +96,10 @@ struct ArtifactPDFViewportPageTests {
         #expect(document.index(for: currentPage) == 2)
     }
 
-    private func blankPDFDocument(pageCount: Int) -> PDFDocument {
-        let document = PDFDocument()
-        for _ in 0..<pageCount {
-            document.insert(PDFPage(), at: document.pageCount)
-        }
-        return document
-    }
-
     private func bootstrapHost(
         document: PDFDocument,
         onPageChange: @escaping (Int) -> Void
-    ) throws -> ArtifactPDFHostView {
+    ) -> ArtifactPDFHostView {
         let host = ArtifactPDFHostView()
         host.frame = NSRect(x: 0, y: 0, width: 400, height: 500)
         host.onPageChange = onPageChange

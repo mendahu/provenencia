@@ -604,14 +604,7 @@ struct ArtifactViewerModelTests {
     }
 
     private func minimalPDFData(pageCount: Int) -> Data? {
-        let document = PDFDocument()
-        for index in 0..<pageCount {
-            let page = PDFPage()
-            // Ensure non-empty media box via annotation of page size.
-            _ = index
-            document.insert(page, at: document.pageCount)
-        }
-        return document.dataRepresentation()
+        ArtifactFileFixtures.blankPDFDocument(pageCount: pageCount).dataRepresentation()
     }
 
     /// Born-digital pages with `/Tj` strings so `PDFDocument.findString` can hit.

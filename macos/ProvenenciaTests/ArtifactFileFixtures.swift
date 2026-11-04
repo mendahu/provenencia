@@ -129,12 +129,16 @@ enum ArtifactFileFixtures {
         return ~crc
     }
 
-    static func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
+    static func blankPDFDocument(pageCount: Int) -> PDFDocument {
         let document = PDFDocument()
         for _ in 0..<pageCount {
             document.insert(PDFPage(), at: document.pageCount)
         }
-        guard let data = document.dataRepresentation() else {
+        return document
+    }
+
+    static func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
+        guard let data = blankPDFDocument(pageCount: pageCount).dataRepresentation() else {
             throw ArtifactFileFixtureError.failed
         }
         try write(data, projectDir: projectDir, relPath: relPath)
