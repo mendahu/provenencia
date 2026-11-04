@@ -2,8 +2,8 @@ import AppKit
 import Foundation
 import ImageIO
 
-/// The two ImageIO steps the thumbnail cache and the Artifact viewer share: reading what an
-/// image's header declares, and a bounded decode.
+/// The two ImageIO steps the thumbnail cache, the Artifact viewer and the likeness viewer share:
+/// reading what an image's header declares, and a bounded decode.
 enum ImageHeaderDecode {
     /// What an image's header declares: its size, resolution and EXIF orientation.
     struct DeclaredImage: Equatable, Sendable {
@@ -19,6 +19,14 @@ enum ImageHeaderDecode {
         /// True when both edges are in `1...maxEdge` and `width * height <= maxPixels`.
         func fits(maxEdge: Int, maxPixels: Int) -> Bool {
             (1...maxEdge).contains(width) && (1...maxEdge).contains(height) && width * height <= maxPixels
+        }
+
+        /// EXIF orientations 5...8 turn the image a quarter, so it is shown with its edges swapped.
+        var isTurned: Bool { orientation >= 5 }
+
+        /// The size in pixels as the image is shown: the declared edges, swapped when ``isTurned``.
+        var uprightSize: (width: Int, height: Int) {
+            isTurned ? (height, width) : (width, height)
         }
     }
 

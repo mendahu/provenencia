@@ -58,7 +58,7 @@ const (
 	swiftProjectSlug         = "../../macos/App/Platform/ProjectSlug.swift"
 	swiftThumbnailCache      = "../../macos/App/Platform/ThumbnailCache.swift"
 	swiftEvidencePlacement   = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
-	swiftArtifactImageDecode = "../../macos/App/Features/ArtifactViewer/ArtifactImageDecode.swift"
+	swiftArtifactImageDecode = "../../macos/App/Platform/ArtifactImageDecode.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing

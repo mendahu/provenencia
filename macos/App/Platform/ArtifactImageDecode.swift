@@ -4,9 +4,10 @@ import Foundation
 import ImageIO
 import UniformTypeIdentifiers
 
-/// The Artifact viewer's bounded image decode: the file's sniffed type must conform to one of
-/// the type identifiers Go's stored-type table gives its media type, the declared size must be within budget, and the one
-/// decode is held to ``maxDecodePixels``. That one raster serves display, crop and OCR.
+/// The bounded full-size image decode of a project object, for the Artifact viewer and the likeness
+/// viewer: the file's sniffed type must conform to one of the type identifiers the caller gives
+/// (the Artifact viewer's come from Go's stored-type table for its media type), the declared size must be within budget, and the one
+/// decode is held to ``maxDecodePixels``. In the Artifact viewer that one raster serves display, crop and OCR.
 enum ArtifactImageDecode {
     /// An edge outside 1 to this is refused.
     static let maxEdge = 65535
@@ -56,9 +57,13 @@ enum ArtifactImageDecode {
         case unreadable
     }
 
-    /// Decodes the image at `url`, or the reason it refused. The sniffed type must conform to one
-    /// of `typeIdentifiers` (an empty list refuses); the declared size must be within budget.
-    static func decode(url: URL, typeIdentifiers: [String]) -> Result<Decoded, Refusal> {
+    /// The type sniff, header read and size check both paths share: the source and what its
+    /// header declares, or the reason it refused. The sniffed type must conform to one of
+    /// `typeIdentifiers` (an empty list refuses); the declared size must be within `maxEdge` and
+    /// the pixel budget.
+    private static func admit(
+        url: URL, typeIdentifiers: [String], maxEdge: Int
+    ) -> Result<(CGImageSource, ImageHeaderDecode.DeclaredImage), Refusal> {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let sniffed = (CGImageSourceGetType(source) as String?).flatMap({ UTType($0) }),
               typeIdentifiers.contains(where: { identifier in
@@ -68,25 +73,46 @@ enum ArtifactImageDecode {
         else { return .failure(.unreadable) }
         guard declared.fits(maxEdge: maxEdge, maxPixels: maxDeclaredPixels / depthFactor(declared.bitsPerComponent))
         else { return .failure(.tooLarge) }
+        return .success((source, declared))
+    }
+
+    /// The size in pixels the file declares, as the image is shown (turned for EXIF 5...8), or the
+    /// reason it refused. One header read; no pixels decode. The same admission as ``decode(url:typeIdentifiers:maxEdge:)``.
+    static func declaredSize(
+        url: URL, typeIdentifiers: [String], maxEdge: Int = maxEdge
+    ) -> Result<(width: Int, height: Int), Refusal> {
+        admit(url: url, typeIdentifiers: typeIdentifiers, maxEdge: maxEdge).map { $0.1.uprightSize }
+    }
+
+    /// Decodes the image at `url`, or the reason it refused. The sniffed type must conform to one
+    /// of `typeIdentifiers` (an empty list refuses); the declared size must be within budget.
+    static func decode(
+        url: URL, typeIdentifiers: [String], maxEdge: Int = maxEdge
+    ) -> Result<Decoded, Refusal> {
+        let source: CGImageSource
+        let declared: ImageHeaderDecode.DeclaredImage
+        switch admit(url: url, typeIdentifiers: typeIdentifiers, maxEdge: maxEdge) {
+        case .success(let admitted): (source, declared) = admitted
+        case .failure(let refusal): return .failure(refusal)
+        }
         guard let raster = ImageHeaderDecode.decode(
             source,
             maxPixelSize: maxPixelSize(
                 width: declared.width, height: declared.height, depth: declared.bitsPerComponent
             )
         ) else { return .failure(.unreadable) }
-        let turned = declared.orientation >= 5
-        let pixelWidth = turned ? declared.height : declared.width
-        let pixelHeight = turned ? declared.width : declared.height
+        let turned = declared.isTurned
+        let pixelSize = declared.uprightSize
         let dpiWidth = turned ? declared.dpiHeight : declared.dpiWidth
         let dpiHeight = turned ? declared.dpiWidth : declared.dpiHeight
         let size = NSSize(
-            width: CGFloat(pixelWidth) * 72 / dpiWidth,
-            height: CGFloat(pixelHeight) * 72 / dpiHeight
+            width: CGFloat(pixelSize.width) * 72 / dpiWidth,
+            height: CGFloat(pixelSize.height) * 72 / dpiHeight
         )
         return .success(Decoded(
             raster: raster,
             image: NSImage(cgImage: raster, size: size),
-            pixelSize: (pixelWidth, pixelHeight)
+            pixelSize: pixelSize
         ))
     }
 }

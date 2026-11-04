@@ -246,6 +246,40 @@ struct ArtifactViewerModelTests {
         #expect(raster.height == Int(expected.size.height.rounded()))
     }
 
+    @Test func declaredSizeTurnsRotatedImages() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let types = Array(ThumbnailDecodePolicy.allowedTypes)
+        func url(_ rel: String) -> URL { URL(fileURLWithPath: project).appendingPathComponent(rel) }
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/a.png", width: 300, height: 200, fileType: .png)
+        let plain = try ArtifactImageDecode.declaredSize(url: url("objects/ab/cd/a.png"), typeIdentifiers: types).get()
+        #expect(plain.width == 300 && plain.height == 200)
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/b.jpg", width: 300, height: 200, fileType: .jpeg,
+            orientation: 6)
+        let turned = try ArtifactImageDecode.declaredSize(url: url("objects/ab/cd/b.jpg"), typeIdentifiers: types).get()
+        #expect(turned.width == 200 && turned.height == 300)
+        let decoded = try ArtifactImageDecode.decode(url: url("objects/ab/cd/b.jpg"), typeIdentifiers: types).get()
+        #expect(decoded.pixelSize.width == turned.width && decoded.pixelSize.height == turned.height)
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/c.gif", width: 30, height: 20, fileType: .gif)
+        #expect(refusal(ArtifactImageDecode.declaredSize(url: url("objects/ab/cd/c.gif"), typeIdentifiers: types)) == .unreadable)
+
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/d.png", width: 5000, height: 10)
+        #expect(
+            refusal(ArtifactImageDecode.declaredSize(url: url("objects/ab/cd/d.png"), typeIdentifiers: types, maxEdge: 4096))
+                == .tooLarge)
+    }
+
+    private func refusal<T>(_ result: Result<T, ArtifactImageDecode.Refusal>) -> ArtifactImageDecode.Refusal? {
+        if case .failure(let refusal) = result { refusal } else { nil }
+    }
+
     @Test func maxPixelSizeAtTheBudget() {
         #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8000) == 8000)
         #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8001) == 8000)
