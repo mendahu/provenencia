@@ -162,9 +162,32 @@ final class EvidenceGraphModel {
         (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.isFetching ?? false
     }
 
+    /// Bumps when a graph read fails so the read-error callout remounts and announces again.
+    private(set) var graphReadAttempt = 0
+
     /// Reads the graph rows again after a failed read.
     func readGraphAgain() {
-        let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
+        let handle: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
+        Task { await noteGraphReadFailureWhenSettled(handle: handle) }
+    }
+
+    private func noteGraphReadFailureWhenSettled(handle: QueryHandle<EvidenceGraphRows>) async {
+        let deadline = ContinuousClock.now + .seconds(2)
+        var sawFetching = handle.isFetching
+        while ContinuousClock.now < deadline {
+            if handle.isFetching { sawFetching = true }
+            if sawFetching && !handle.isFetching && handle.status != .loading {
+                graphReadFailedSettled()
+                return
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    /// Called when a graph read settles still failed (initial load or a reread).
+    private func graphReadFailedSettled() {
+        guard graphReadError != nil else { return }
+        graphReadAttempt += 1
     }
 
     private func errorMessage<Value>(_ handle: QueryHandle<Value>?) -> String? {

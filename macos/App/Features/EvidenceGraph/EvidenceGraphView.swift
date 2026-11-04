@@ -337,6 +337,7 @@ private struct EvidenceGraphContent: View {
             retryIdentifier: "evidenceGraph.readError.readAgain",
             onRetry: { model.readGraphAgain() }
         )
+        .id(model.graphReadAttempt)
         .accessibilityIdentifier("evidenceGraph.readError.callout")
     }
 
