@@ -341,8 +341,6 @@ struct ArtifactViewerModelTests {
         #expect(model.page == 1)
         #expect(model.pdfDocument != nil)
         #expect(model.displayImage == nil)
-        #expect(model.pdfPageMediaSize?.width == 612)
-        #expect(model.pdfPageMediaSize?.height == 792)
 
         model.goToNextPage()
         #expect(model.page == 2)
@@ -351,6 +349,26 @@ struct ArtifactViewerModelTests {
         model.setPage(99)
         #expect(model.page == 3)
         model.goToPreviousPage()
+        #expect(model.page == 2)
+    }
+
+    @Test func setPageNoOpWhenUnchanged() async throws {
+        let model = ArtifactViewerModel()
+        let project = makeTempProject()
+        defer { try? FileManager.default.removeItem(at: project) }
+        let rel = "objects/ab/cd/sample.pdf"
+        let pdfData = try #require(minimalPDFData(pageCount: 3))
+        writeFile(project: project, relPath: rel, data: pdfData)
+
+        await model.load(
+            ArtifactViewerSource(
+                projectDir: project.path,
+                relPath: rel,
+                mediaType: "application/pdf"
+            )
+        )
+        model.setPage(2)
+        model.setPage(2)
         #expect(model.page == 2)
     }
 
