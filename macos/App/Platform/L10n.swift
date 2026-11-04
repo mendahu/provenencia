@@ -1800,6 +1800,31 @@ enum L10n {
             comment: "Message of the Unpromote confirm when the handle keeps another record"
         )
 
+        static func unpromoteConfirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.person",
+                    defaultValue: "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a person"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.event",
+                    defaultValue: "The check for whether this event is deleted could not run. Confirming may still delete this event. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for an event"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.place",
+                    defaultValue: "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a place"
+                )
+            }
+            return L10n.string(key)
+        }
+
         static func unpromoteConfirmMessageDeletes(kind: EvidencePrimaryKind, ref: String) -> String {
             let key: LocalizedStringResource
             switch kind {

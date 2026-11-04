@@ -203,8 +203,10 @@ private struct EvidenceGraphContent: View {
         .pvConfirm(
             item: $model.pendingUnpromote,
             copy: { item in
-                let message = if let ref = item.deletedHandleRef {
-                    L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: item.kind, ref: ref)
+                let message: String = if let group = item.deletedHandles {
+                    unpromoteDeletedHandlesMessage(group)
+                } else if item.impactCheckFailed {
+                    L10n.EvidenceGraph.unpromoteConfirmPreflightFailed(kind: item.kind)
                 } else {
                     L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
                 }
@@ -215,7 +217,7 @@ private struct EvidenceGraphContent: View {
                     cancel: L10n.EvidenceGraph.unpromoteKeep
                 )
             },
-            tone: .irreversible,
+            tone: model.pendingUnpromote?.confirmTone ?? .irreversible,
             isRunning: model.isUnpromoting,
             accessibilityIdentifierPrefix: "evidenceGraph.unpromote",
             onConfirm: { Task { await model.confirmUnpromote() } },
@@ -246,10 +248,19 @@ private struct EvidenceGraphContent: View {
                         .foregroundStyle(PVColor.textSecondary)
                 }
                 if let error = item.error {
-                    PVCallout(tone: .danger, message: error)
+                    PVCallout(tone: .danger, message: error, announces: item.impactCheckFailed)
                 }
             }
         }
+    }
+
+    private func unpromoteDeletedHandlesMessage(_ group: CatalogDeleteImpactGroup) -> String {
+        let refs = group.listed.map(\.ref)
+        let rest = group.total - refs.count
+        let joined = rest > 0
+            ? refs.joined(separator: ", ") + L10n.DeleteImpact.summaryMore(count: rest)
+            : refs.formatted(.list(type: .and))
+        return L10n.DeleteImpact.deletesHandles(count: group.total, handleRefs: joined)
     }
 
     private var header: some View {

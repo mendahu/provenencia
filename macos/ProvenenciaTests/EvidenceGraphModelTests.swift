@@ -2002,12 +2002,19 @@ struct EvidenceGraphModelTests {
 
     @Test func unpromoteLastRecordNamesTheDeletedHandle() async {
         let (store, model) = await householdModel()
-        store.unpromoteImpactBySubject["s-james"] = CatalogDeleteImpactListed(
-            id: "h-james", ref: "PER-7KD45", title: "PER-7KD45",
-            location: WorkspaceLocation(section: .persons, entityId: "h-james")
+        store.unpromoteImpactBySubject["s-james"] = CatalogDeleteImpactGroup(
+            via: DeleteImpactCascadeVia.deletesHandles.wire,
+            kind: "canonical_entity",
+            total: 1,
+            listed: [
+                CatalogDeleteImpactListed(
+                    id: "h-james", ref: "PER-7KD45", title: "PER-7KD45",
+                    location: WorkspaceLocation(section: .persons, entityId: "h-james")
+                ),
+            ]
         )
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.pendingUnpromote?.deletedHandleRef == "PER-7KD45")
+        #expect(model.pendingUnpromote?.deletedHandles?.listed.first?.ref == "PER-7KD45")
         #expect(model.pendingUnpromote?.kind == .person)
         #expect(model.pendingUnpromote?.error == nil)
     }
@@ -2017,7 +2024,9 @@ struct EvidenceGraphModelTests {
         store.getUnpromoteImpactError = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
         await model.beginUnpromote(subjectID: "s-james")
         #expect(model.pendingUnpromote != nil)
-        #expect(model.pendingUnpromote?.deletedHandleRef == nil)
+        #expect(model.pendingUnpromote?.deletedHandles == nil)
+        #expect(model.pendingUnpromote?.impactCheckFailed == true)
+        #expect(model.pendingUnpromote?.confirmTone == .danger)
         #expect(model.pendingUnpromote?.error != nil)
         store.getUnpromoteImpactError = nil
         await model.confirmUnpromote()

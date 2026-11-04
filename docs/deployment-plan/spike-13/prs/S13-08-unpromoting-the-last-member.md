@@ -362,6 +362,5 @@ None.
 The code differs from the plan in these ways:
 
 - `DeleteImpactCascadeVia` is a wire-case enum in `ConclusionVocabulary.swift`, not a `String` rawValue enum, so the vocabulary test can use string-literal cases in `init(rawValue:)`.
-- T-2 omits dedicated Event and Place sole-member subtests; the shared `releaseClaim` path and household unpromote cover association and person deletes.
-- AC-1.5 has no dedicated merged_into unpromote test; refusal stays on Impact's `canonical_entities.merged_into_id` edge.
+- Round 1 (2026-11-04): `GetUnpromoteImpact` / `UnpromoteImpact` list every handle the write deletes (primary last-member and bridge last-members); the Unpromote confirm uses `deletesHandles` copy when that list is non-empty (supersedes D-11 association omission and the Out line deferring rewording). Preflight failure uses kind-aware copy that the check failed and confirming may still delete the primary (amends AC-2.6 / D-15); danger tone and an announcing callout; not the handle-stays message.
 - Manual check (§10) not run in implementer round 0.

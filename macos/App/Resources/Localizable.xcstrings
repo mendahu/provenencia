@@ -15916,6 +15916,42 @@
         }
       }
     },
+    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.person": {
+      "comment": "Unpromote confirm when GetUnpromoteImpact fails for a person",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.event": {
+      "comment": "Unpromote confirm when GetUnpromoteImpact fails for an event",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The check for whether this event is deleted could not run. Confirming may still delete this event. The cards stay on the graph."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.place": {
+      "comment": "Unpromote confirm when GetUnpromoteImpact fails for a place",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph."
+          }
+        }
+      }
+    },
     "evidenceGraph.subject.unpromoteConfirmMessage": {
       "comment": "Message of the Unpromote confirm",
       "extractionState": "manual",

@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S13-08 — Unpromoting the last member
 
-**Landed 2026-11-04** in [#707](https://github.com/mendahu/provenencia/pull/707). Removing a handle's last accepted member deletes the canonical entity in the same revision through `deleteimpact.ReleaseClaim`, for Unpromote and Subject delete and for association handles that lose their only bridge. `GetUnpromoteImpact` preflights the Evidence graph unpromote confirm; Subject delete's Impact splits `canonical_entities.last_member` from `identity_claims.subject_id`, and both confirms say when a Person, Event, or Place has no other records.
+**Landed 2026-11-04** in [#707](https://github.com/mendahu/provenencia/pull/707). Removing a handle's last accepted member deletes the canonical entity in the same revision through `deleteimpact.ReleaseClaim`, for Unpromote and Subject delete and for association handles that lose their only bridge. `GetUnpromoteImpact` lists every handle an Unpromote would delete (including bridge last-members); the Evidence graph confirm uses `deletesHandles` copy when that list is non-empty and danger tone when the preflight fails or a delete is predicted. Subject delete's Impact splits `canonical_entities.last_member` from `identity_claims.subject_id`, and both confirms say when handles have no other records.
 
 ## S13-15 — Likeness viewer
 

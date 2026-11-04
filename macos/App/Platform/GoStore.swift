@@ -869,7 +869,7 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactListed? {
+    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactGroup? {
         var req = Provenencia_Engine_V1_GetUnpromoteImpactRequest()
         req.projectDir = projectDir
         req.subjectID = subjectID
@@ -878,7 +878,7 @@ struct GoStore: GenealogyStore {
             request: req
         )
         guard resp.hasDeletes else { return nil }
-        return Self.mapDeleteImpactGroup(resp.deletes).listed.first
+        return Self.mapDeleteImpactGroup(resp.deletes)
     }
 
     func setPreferredLikeness(
