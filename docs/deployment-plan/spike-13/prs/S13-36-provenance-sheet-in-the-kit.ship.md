@@ -1,7 +1,7 @@
 # Ship log — S13-36 The provenance sheet joins the design system
 
 **Plan:** [`S13-36-provenance-sheet-in-the-kit.md`](S13-36-provenance-sheet-in-the-kit.md) · **Branch:** `s13-36-provenance-sheet-in-the-kit` · **PR:** #702
-**State:** stopped — SEC-1 open after round 2; To user
+**State:** ready
 
 ## Round 0 — implement
 Head `7dd0f904`. Gate PASS (orchestrator re-ran). Report: deviations: one row of S13-15's plan edited, because `check-plan-docs.py` fails on the renamed `ProvenanceSheet.swift`; S13-15's map row reworded; `Landed in #702` per the lint; README row moved to STEP-6, which the kit check needs; `PVProvenancePreviewData` shared by the previews. Manual check, previews, VoiceOver not run (no GUI).
@@ -105,5 +105,7 @@ No new blockers from CON, MNT or SEC+PRF. UX not re-run.
 
 Open minors, no fix plan without the user: `MNT-7 residual · ReconciledValueRowModel.swift:102,134 · the empty-lead rule still lives in four places` · `guides · "built when the recipe opens" does not describe PVPersonCardContent` · `Landed note · omits shown: required and Shown.init(face:…); (8) says zero-size, the code is 1×1; § 6 Assembler still shows shown: Shown? = nil` · `ReconciledValueRow.swift:48-49 · padding one indent shallow` · logged: `PVPageColumns.swift:179 · hairline without Rectangle` · `PromoteView.swift:393, PVSidebarNav.swift:102 · hand-rolled vertical dividers`
 
+**To user, answered:** SEC-1: the user accepted the risk and asked for an idea file (2026-11-03): [`provenance-record-cap.md`](../../../ideas/provenance-record-cap.md). The table stays as D-7 has it. The stated ceiling is about 300 records on one value; no Release figure was taken, and the idea file says so. The open minors above were not applied: they go to the PR body's follow-ups.
+
 ## Result
-Gate PASS (`74def9fe`) · CI not run (draft) · open: SEC-1 · follow-ups: — · to user: SEC-1 · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: SEC-1, the open minors above · to user: SEC-1 answered · CON miss: none
