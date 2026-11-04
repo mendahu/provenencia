@@ -14,8 +14,7 @@ type Subject struct {
 	ID         []byte
 	Ref        string
 	Kind       string // person, event, place
-	Values     subjectcompare.Values
-	Provenance float64 // scales node scores; 1 is default, below 1 weakens
+	Values subjectcompare.Values
 }
 
 // Bridge links two primary Subjects on the layer (walked undirected).

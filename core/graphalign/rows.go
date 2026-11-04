@@ -147,7 +147,7 @@ func (st *state) alikeNew(a, b *Subject) bool {
 	if disagree {
 		return false
 	}
-	return ScoreCandidate(r, segs, 1).Score >= st.cfg.Alignment.AcceptBar
+	return ScoreCandidate(r, segs).Score >= st.cfg.Alignment.AcceptBar
 }
 
 // newPairSegments compares the layer neighbors of two subjects, whose own

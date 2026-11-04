@@ -249,7 +249,7 @@ func (st *state) score(sk string, h *Handle, c *cand) {
 	for _, l := range links {
 		edge += l.Evidence
 	}
-	sc := ScoreCandidate(r, edge, s.Provenance)
+	sc := ScoreCandidate(r, edge)
 	c.score = sc.Score
 	c.version++
 }

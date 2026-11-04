@@ -131,7 +131,7 @@ func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, nameP
 			continue
 		}
 		subjects = append(subjects, graphalign.Subject{
-			ID: ps.id, Ref: ps.ref, Kind: ps.kind, Values: built[string(s.ID)], Provenance: 1,
+			ID: ps.id, Ref: ps.ref, Kind: ps.kind, Values: built[string(s.ID)],
 		})
 	}
 	sort.Slice(subjects, func(i, j int) bool { return subjects[i].Ref < subjects[j].Ref })
