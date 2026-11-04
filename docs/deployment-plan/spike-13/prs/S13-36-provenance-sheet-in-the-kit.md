@@ -1,6 +1,7 @@
 # S13-36 — The provenance sheet joins the design system
 
-**Status:** Planned
+**Status:** Landed in #702 (2026-11-03)
+**Landed:** the code follows the plan, with these differences. (1) STEP-7 (the copy namespace) ran after STEP-6, as the plan orders them, but the README row for the recipe landed in STEP-6, which its `guidance-names` check needs. (2) `PVProvenanceSheetContent.Shown`'s derivation is `Shown(field:locale:orders:)`, and `value(...)` and the group builders are static functions on the content type. (3) `PVProvenancePreviewData`, the previews' sample records, is internal so the sheet's preview shares it. (4) The S13-15 plan's one "Sheet precedent" row names the renamed `ProvenanceSheetItem.swift`, `PVProvenanceColumns.panelWidth` and the kit sheet's close step: `check-plan-docs.py` fails a plan that names a path this PR renamed; the rest of that plan's refresh is S13-15's own. (5) `provenanceSummaryJoin` and the other summary words moved to `L10n.ProvenanceSheet` with the rest of D-12's list.
 **Spike / slice:** Spike 13 · Slice 5 — Gallery (preparatory)
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D13](../design/S13-D13-provenance-sheet-in-the-kit.md), board drawn in the kit and confirmed by the user 2026-11-03

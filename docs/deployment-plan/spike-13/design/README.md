@@ -10,7 +10,6 @@ In order.
 
 | Brief | View | Gates |
 | --- | --- | --- |
-| [S13-D13](S13-D13-provenance-sheet-in-the-kit.md) | The provenance sheet in the design system (kit) | S13-36 |
 | [S13-D5](S13-D5-gallery-and-viewer.md) | Gallery section and likeness viewer | S13-14, S13-15 |
 | S13-D6 | Sources section, Remove and the last-claim warning | S13-16, S13-17 |
 | S13-D7 | Claim review sheet | Descoped 2026-10-29 with S13-18 |
@@ -22,6 +21,7 @@ In order.
 
 | Brief | View | Board | Built by |
 | --- | --- | --- | --- |
+| [S13-D13](archive/S13-D13-provenance-sheet-in-the-kit.md) | The provenance sheet in the design system (kit) | Drawn in the kit and confirmed 2026-11-03 in the [Claude Design project](https://claude.ai/design/p/0f6c1f29-8408-4735-b114-5ae4c4c18445?via=share) | S13-36 ([#702](https://github.com/mendahu/provenencia/pull/702)) |
 | [S13-D1](archive/S13-D1-person-page-frame.md) | Person page: header, section switching, Vitals | Agreed 2026-10-29 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share) | S13-10 ([#634](https://github.com/mendahu/provenencia/pull/634)) |
 | [S13-D11](archive/S13-D11-promote-without-assessment.md) | Promote page without the evidence sheet and the assessment column; its status per row (S13-30) descoped 2026-10-30 | Agreed 2026-10-29 in the [Claude Design project](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share) | S13-23 ([#633](https://github.com/mendahu/provenencia/pull/633)) |
 | [S13-D12](archive/S13-D12-life-rows-why.md) | Person page: the Why on the four life rows | Agreed 2026-10-30 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 5 | S13-06 ([#640](https://github.com/mendahu/provenencia/pull/640)) |
