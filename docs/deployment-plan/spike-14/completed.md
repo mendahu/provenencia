@@ -93,3 +93,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 ## S14-26 — A folded nickname shows as a nickname
 
 **Landed 2026-11-04** in [#709](https://github.com/mendahu/provenencia/pull/709). A nickname-class fold reappears as a `nick` part of the assembled name (*William “Bill” Robins*, *James “Jim” Robins* on every S14-09 surface); initials, abbreviations, and prefix-only hops still vanish. The pipeline passes folded attaches into `nameModule.assemble` with `nickEdge` / `chainNick`; `CacheVersion` is 23. Product version is 0.3.0.
+
+## S14-28 — PDF page tracks scroll
+
+**Landed 2026-11-04** in [#711](https://github.com/mendahu/provenencia/pull/711). The PDF viewport reports `.PDFViewPageChanged` and `.PDFViewVisiblePagesChanged` into `ArtifactViewerModel.setPage`, with `suppressPageCallback` around intentional `go(to:)` in `sync`; `contentIdentity` no longer includes `model.page`, so scroll-driven page updates do not force a remount. Region stamps and the page field follow the page in view. Product version is 0.3.1.
