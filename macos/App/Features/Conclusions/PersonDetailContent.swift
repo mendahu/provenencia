@@ -46,7 +46,7 @@ struct PersonDetailContent: ConclusionDetailBody {
         treatment = PVGenderTreatment.read(summary)
         gallery = ConclusionDetailGallery(
             title: L10n.Conclusions.likenessesSection,
-            openTip: L10n.Conclusions.likenessOpenTip,
+            openTip: L10n.Conclusions.likenessViewHint,
             fallbackMark: .subjectPerson,
             fallbackColors: treatment?.thumbnailColors,
             tiles: ConclusionDetailGallery.tiles(
@@ -54,9 +54,11 @@ struct PersonDetailContent: ConclusionDetailBody {
                 tileLabel: L10n.Conclusions.likenessLabel,
                 leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsPortraitLabel,
-                chosenBody: L10n.Conclusions.toastPortraitChosenBody
+                chosenBody: L10n.Conclusions.toastPortraitChosenBody,
+                viewerLabel: L10n.Conclusions.likenessViewerLabel(index:count:line:)
             ),
-            choose: .personPortrait
+            choose: .personPortrait,
+            viewer: .likeness(title: L10n.Conclusions.likenessViewerTitle(title.text))
         )
         thumbnail = .leading(
             gallery: gallery,

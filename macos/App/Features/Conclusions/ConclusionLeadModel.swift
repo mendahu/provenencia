@@ -13,6 +13,9 @@ final class ConclusionLeadModel {
     private let entityId: String
 
     var toast: VocabularyToast?
+    /// The likeness viewer is open and draws the Toast itself, so the page does not draw it a second
+    /// time (S13-15 D-10). The gallery section sets it.
+    var toastInViewer = false
     private(set) var isSaving = false
 
     init(session: WorkspaceSession, userID: String, entityId: String) {

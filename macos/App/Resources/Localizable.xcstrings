@@ -16698,14 +16698,74 @@
         }
       }
     },
-    "conclusions.person.likenessOpen": {
+    "conclusions.person.likenessView": {
       "comment": "Spoken hint of a likeness tile's image button in a Person's gallery",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Open citation"
+            "value": "Opens the likeness in the viewer"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.title": {
+      "comment": "Title of the likeness viewer over a Person page; the argument is the person's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness of %@"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.label": {
+      "comment": "Accessibility label of the likeness viewer's image; arguments are the 1-based position, the count of likenesses and the citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness %1$lld of %2$lld, from %3$@"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.previous": {
+      "comment": "Label of the likeness viewer's previous button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous likeness"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.next": {
+      "comment": "Label of the likeness viewer's next button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next likeness"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.close": {
+      "comment": "Label of the likeness viewer's close button",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the viewer"
           }
         }
       }
