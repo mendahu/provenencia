@@ -1,6 +1,6 @@
 # The provenance sheet as a kit recipe: where the boundary sits
 
-Spike 13 feature note for brief [S13-D13](design/S13-D13-provenance-sheet-in-the-kit.md) and PR S13-36. Written 2026-11-03 against `main` @ `0e20544`. It answers one question (user, 2026-11-03): should a caller hand the sheet raw values for the sheet to assemble into citation rows, or hand it rows already assembled?
+Spike 13 feature note for brief [S13-D13](design/archive/S13-D13-provenance-sheet-in-the-kit.md) and PR S13-36. Written 2026-11-03 against `main` @ `0e20544`. It answers one question (user, 2026-11-03): should a caller hand the sheet raw values for the sheet to assemble into citation rows, or hand it rows already assembled?
 
 **Answer.** The sheet does the assembly. The kit ships three things:
 1. a **view** that draws display-ready content;
