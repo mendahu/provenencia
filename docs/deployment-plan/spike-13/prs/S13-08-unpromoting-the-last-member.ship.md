@@ -65,4 +65,4 @@ Merged `origin/main` → head `bbbd71a7…`. Gate PASS against `82464c6a`.
 
 ## Result
 
-Gate PASS · CI (watching) · open: none · follow-ups: nits only (DoD checkboxes, seven-field assert, comment reflow, Conclusion ok) · to user: — · CON miss: none
+Gate PASS · CI green (Go suite flaked once on `TestLargeSourceBudgets/warm` 355ms/350ms; rerun pass; macOS pass) · open: none · follow-ups: nits only (DoD checkboxes, seven-field assert, comment reflow, Conclusion ok) · to user: — · CON miss: none
