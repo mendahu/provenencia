@@ -204,7 +204,9 @@ private struct EvidenceGraphContent: View {
             item: $model.pendingUnpromote,
             copy: { item in
                 let message: String = if let group = item.deletedHandles {
-                    unpromoteDeletedHandlesMessage(group)
+                    PVDeleteImpactCopy.cascadeLines(
+                        CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [group])
+                    ).first ?? L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
                 } else if item.impactCheckFailed {
                     L10n.EvidenceGraph.unpromoteConfirmPreflightFailed(kind: item.kind)
                 } else {
@@ -252,15 +254,6 @@ private struct EvidenceGraphContent: View {
                 }
             }
         }
-    }
-
-    private func unpromoteDeletedHandlesMessage(_ group: CatalogDeleteImpactGroup) -> String {
-        let refs = group.listed.map(\.ref)
-        let rest = group.total - refs.count
-        let joined = rest > 0
-            ? refs.joined(separator: ", ") + L10n.DeleteImpact.summaryMore(count: rest)
-            : refs.formatted(.list(type: .and))
-        return L10n.DeleteImpact.deletesHandles(count: group.total, handleRefs: joined)
     }
 
     private var header: some View {
