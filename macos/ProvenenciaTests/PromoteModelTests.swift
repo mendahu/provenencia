@@ -523,20 +523,20 @@ struct PromoteModelTests {
         #expect(model.noticeToken == start + 1)
 
         store.applyPromoteGraphAlignmentError = Boom()
-        model.setTarget(subjectID: "a", token: "handle:other")
+        model.setTarget(subjectID: "a", token: "skip")
         _ = await waitUntil { !model.isProposing }
         model.done()
         #expect(await waitUntil { model.saveError != nil && !model.isSaving })
         #expect(model.noticeToken == start + 2)
 
         store.applyPromoteGraphAlignmentError = nil
-        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
-        model.setTarget(subjectID: "a", token: "handle:e1")
+        store.proposePromoteGraphAlignmentError = Boom()
+        model.setTarget(subjectID: "a", token: "new")
         #expect(await waitUntil { model.proposeError != nil && !model.isProposing })
         #expect(model.noticeToken == start + 3)
 
         let tokenAfterFirstPropose = model.noticeToken
-        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
+        store.proposePromoteGraphAlignmentError = Boom()
         model.setTarget(subjectID: "a", token: "handle:other")
         #expect(await waitUntil { !model.isProposing })
         #expect(model.noticeToken == tokenAfterFirstPropose)
