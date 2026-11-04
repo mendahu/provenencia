@@ -1,7 +1,7 @@
 # Ship log — S13-15 Likeness viewer
 
 **Plan:** [`S13-15-likeness-viewer.md`](S13-15-likeness-viewer.md) · **Branch:** `s13-15-likeness-viewer` · **PR:** #703
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `c440b2cb`. Gate PASS (orchestrator re-ran). Report: deviations: `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size and the view computes the frame on each draw; every close clears the Toast and `toastInViewer`; focus restore skipped for an empty gallery; plan § 4 row moved to the new decode path because lint failed. Manual check, frames, keys, VoiceOver not run (no GUI).
@@ -129,5 +129,8 @@ Failing test first: a thumbnail case: a sparse file over `maxDecodeBytes` with a
 Do: `BoundedImageDecode`'s private `admit(url:limits:)` moves beside `ImageHeaderDecode.admit` as the one non-private URL admission: size, then open, then type, header and fit. `BoundedImageDecode` and `ThumbnailCache` both call it, the cache with `ThumbnailDecodePolicy.limits`. Delete `ThumbnailDecodePolicy.accepts` and move its tests to the URL admission. Correct the doc comments on `ThumbnailDecodePolicy` and `ImageDecodeLimits`. The Landed note says the thumbnail cache now has the byte limit, so a file over 128 MiB shows the fallback on both the tile and the viewer.
 Check: `rg 'accepts\(' macos/App/Platform` prints nothing; the test ran red first and passes; scripts/check-pr.sh PASS.
 
+## Round 2 — fix
+Head `8a9aa48e`. Gate PASS (orchestrator re-ran); full `check-plan-docs.py` 0 errors. F-11 and F-13 ran red first (`leavingTheSectionKeepsAPageToast`, `cacheRefusesAFileOverTheByteLimit`). Read by the orchestrator, no third review: `viewerClosed()` guards `toastInViewer`; the viewer's overlay is gated as the page's is; `ImageHeaderDecode.admit(url:limits:)` is the one URL admission, called by `BoundedImageDecode` and `ThumbnailCache`, and `accepts` is gone from code, guides and `completed.md`. UX-5, UX-13, MNT-2 **Resolved**; UX-5 is unverified with VoiceOver.
+
 ## Result
-Gate PASS (`d3ef0f1a`) · CI not run (draft) · open: UX-5, MNT-2, UX-13 · follow-ups: — · to user: UX-5, MNT-2, UX-13 · CON miss: none
+Gate PASS · CI pending · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
