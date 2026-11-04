@@ -252,47 +252,43 @@ final class PromoteModel {
         guard !isProposing else { return }
         isProposing = true
         Task { [weak self] in
-            await self?.runProposalLoop()
-        }
-    }
-
-    private func runProposalLoop() async {
-        while let self {
-            guard let input = pendingProposal else {
-                isProposing = false
-                return
-            }
-            pendingProposal = nil
-            do {
-                let proposal = try await store.proposePromoteGraphAlignment(
-                    projectDir: session.projectKey.projectDir,
-                    graphID: entry.graphID,
-                    fixed: input.fixed,
-                    onlySubjectID: input.onlySubjectID
-                )
-                if pendingProposal != nil { continue }
-                let snapshot = await graphSnapshot()
-                if pendingProposal != nil { continue }
-                if let snapshot {
-                    syncNameOrders()
-                    flow.merge(proposal, subjects: subjectFacts(snapshot))
-                    showingNotices { proposeError = nil }
-                } else {
+            while let self {
+                guard let input = pendingProposal else {
+                    isProposing = false
+                    return
+                }
+                pendingProposal = nil
+                do {
+                    let proposal = try await store.proposePromoteGraphAlignment(
+                        projectDir: session.projectKey.projectDir,
+                        graphID: entry.graphID,
+                        fixed: input.fixed,
+                        onlySubjectID: input.onlySubjectID
+                    )
+                    if pendingProposal != nil { continue }
+                    let snapshot = await graphSnapshot()
+                    if pendingProposal != nil { continue }
+                    if let snapshot {
+                        syncNameOrders()
+                        flow.merge(proposal, subjects: subjectFacts(snapshot))
+                        showingNotices { proposeError = nil }
+                    } else {
+                        showingNotices {
+                            flow.staleNote = nil
+                            proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
+                        }
+                    }
+                } catch {
+                    if pendingProposal != nil { continue }
                     showingNotices {
                         flow.staleNote = nil
-                        proposeError = L10n.string(L10n.Promote.graphUnavailableRepropose)
+                        proposeError = L10n.Errors.message(for: error)
                     }
                 }
-            } catch {
-                if pendingProposal != nil { continue }
-                showingNotices {
-                    flow.staleNote = nil
-                    proposeError = L10n.Errors.message(for: error)
+                if pendingProposal == nil {
+                    isProposing = false
+                    return
                 }
-            }
-            if pendingProposal == nil {
-                isProposing = false
-                return
             }
         }
     }
