@@ -30,9 +30,7 @@ struct SourcePageIdentityHeader: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(PVColor.surfaceCard)
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
         }
     }
 

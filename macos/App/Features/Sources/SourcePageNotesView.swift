@@ -165,9 +165,7 @@ private struct SourcePageNoteRow: View {
         }
         .padding(.vertical, PVSpacing.space6)
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
         }
         .onChange(of: isEditing) { _, editing in
             if editing {
