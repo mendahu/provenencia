@@ -31,7 +31,7 @@ struct ArtifactPDFViewportPageTests {
         #expect(await waitUntil { reportedPages.last == 1 })
     }
 
-    @Test func syncZoomOnCurrentPageDoesNotSnapToPageOne() throws {
+    @Test func syncZoomOnCurrentPageDoesNotSnapToPageOne() async throws {
         let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
         let host = bootstrapHost(document: document) { _ in }
 
@@ -43,6 +43,9 @@ struct ArtifactPDFViewportPageTests {
             return
         }
         host.pdfView.go(to: pageThree)
+        #expect(await waitUntil {
+            host.pdfView.currentPage.map { document.index(for: $0) == 2 } ?? false
+        })
 
         host.sync(
             document: document,
