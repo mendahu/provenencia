@@ -1,9 +1,9 @@
 # S13-15 — Likeness viewer
 
-**Status:** Planned
+**Status:** Landed in #703 (2026-11-03)
 **Spike / slice:** Spike 13 · Slice 5 — Gallery
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D5](../design/S13-D5-gallery-and-viewer.md), board drawn 2026-11-03 (turn 13) and agreed by the user the same day
+**Brief:** [S13-D5](../design/archive/S13-D5-gallery-and-viewer.md), board drawn 2026-11-03 (turn 13) and agreed by the user the same day
 **Board:** Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Gallery.dc.html*, turn 13, viewer frames 13f – 13k, 13o, 13p, 13t – 13x. The implementer may not be able to open it: D-6, D-9 and § 6 macOS give every measure
 **Depends on:** S13-36 (landed [#702](https://github.com/mendahu/provenencia/pull/702): the kit provenance recipe), S13-14 (landed [#701](https://github.com/mendahu/provenencia/pull/701): `ConclusionGallerySection`, the tile's citation line, the tile's focus restore), S13-D5 (board)
 **Blocks:** —
@@ -12,9 +12,11 @@
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [person-detail.md § 4. Gallery](../person-detail.md#4-gallery) (R-30, R-31, R-32); brief [S13-D5](../design/S13-D5-gallery-and-viewer.md) LV-1 – LV-9, LV-W1; the [S13-14](S13-14-gallery-section.md) and [S13-36](S13-36-provenance-sheet-in-the-kit.md) **Landed** notes; working rules: "The Person's gallery is redrawn on the Person page only", "Sections are places" (the viewer is not one), "One sectioned Conclusion page, not a Person fork"
+**Context:** [person-detail.md § 4. Gallery](../person-detail.md#4-gallery) (R-30, R-31, R-32); brief [S13-D5](../design/archive/S13-D5-gallery-and-viewer.md) LV-1 – LV-9, LV-W1; the [S13-14](S13-14-gallery-section.md) and [S13-36](S13-36-provenance-sheet-in-the-kit.md) **Landed** notes; working rules: "The Person's gallery is redrawn on the Person page only", "Sections are places" (the viewer is not one), "One sectioned Conclusion page, not a Person fork"
 **Planned:** 2026-11-03; refreshed after S13-14 and S13-36 landed, against `main` @ `4c245957`, every § 4 row re-read in the code
 **Review:** [`S13-15-likeness-viewer.review.md`](S13-15-likeness-viewer.review.md) — reviewed twice before the board; refreshed after S13-14 and S13-36 and reviewed twice more: Fits with changes / Ready with changes, every finding Fixed, Declined with evidence, or Logged
+
+**Landed:** the code follows the plan; the notes below. (1) `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size, not the final frame (D-6), and the view calls `ConclusionPictureImage.frame` on each draw, so the image follows a width-class or pane-height change without a reload; `frame` and `bandHeight` are the pure functions the plan names. (2) `PVIconButton` takes the `ViewerCopy` resources directly (a `PVCopy`), with no `L10n.string`. (3) The § 4 row for `ArtifactImageDecode` names its new path, because `check-plan-docs.py` fails on a path the move deleted; the moved file's header comment also drops "Artifact viewer's". (4) The close handler clears `lead.toast` and `toastInViewer` for every close, and skips the focus restore when the gallery is empty (AC-4.3: nothing to focus). (5) The manual check (§ 10), the frames against the board, the `.refused` preview at both widths, and the stop conditions that need the running app (← and → inside the sheet, `FocusClaim` on opening, the focus return while the sheet dismisses, the sheet closing when the section is swapped for its EmptyState) were not run in the app; they are unverified.
 
 ### Implementer — read this first
 
@@ -113,7 +115,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 | Panel | `macos/App/DesignSystem/Components/Panel/PVPanel.swift` `PVPanel(title:subtitle:width:footerChrome:body:footer:titleAccessory:)` | The body every app sheet uses; a title is required; the title accessory holds a trailing control |
 | Sheet precedent | `ConclusionDetailPage.swift` `ConclusionDetailRowsSection` (`provenanceItem`, `.pvSheet(item:)`, `.onChange(of: rows)`); `macos/App/Features/Conclusions/ProvenanceSheetItem.swift` `ProvenanceSheetItem` (a fixed id while open), `PVProvenanceColumns.panelWidth` (880 / 1280), a link = `sheetClose { open(record, link) }` in the kit's `PVProvenanceSheet` | An item that holds an id, resolved against the live rows on every draw |
 | Go parity test | `api/ffi/swift_vocabulary_test.go` `swiftArtifactImageDecode` (line 61) | Reads `ArtifactImageDecode.swift` by path to check `maxDecodePixels` against Go |
-| Full-size decode | `macos/App/Features/ArtifactViewer/ArtifactImageDecode.swift` `ArtifactImageDecode.decode(url:typeIdentifiers:) -> Result<Decoded, Refusal>` (`raster`, `image`, `pixelSize`; the sniffed type must be one of the identifiers; declared size and decoded pixels bounded); called by `ArtifactViewerModel` after `ProjectFiles.objectURL` | The bounded full-size decode of a project object; synchronous |
+| Full-size decode | `macos/App/Platform/ArtifactImageDecode.swift` (moved here by STEP-2) `ArtifactImageDecode.decode(url:typeIdentifiers:) -> Result<Decoded, Refusal>` (`raster`, `image`, `pixelSize`; the sniffed type must be one of the identifiers; declared size and decoded pixels bounded); called by `ArtifactViewerModel` after `ProjectFiles.objectURL` | The bounded full-size decode of a project object; synchronous |
 | Header read | `macos/App/Platform/ImageHeaderDecode.swift` `ImageHeaderDecode.declaredImage(_:)` → `DeclaredImage` (`width`, `height`, …) | Reads the header only; no pixels decode |
 | Thumbnail cache | `macos/App/Platform/ThumbnailCache.swift` `cachedImage(projectDir:relPath:)`, `ThumbnailDecodePolicy.allowedTypes` (PNG, JPEG) | The tile's 512-pixel image, already decoded |
 | Path rule | `.cursor/rules/macos-client.mdc` line 21 | A catalog `relPath` is read only through `ProjectFiles.objectURL` (or the cache); names who may |
