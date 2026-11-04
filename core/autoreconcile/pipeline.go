@@ -41,6 +41,15 @@ import (
 // half the unit's support. Multiple cardinality skips this step.
 const MinMajoritySupport = 2
 
+// foldAttach is one unit value that folded into a kept root before step 6
+// rewrote roots. names assemble reads these to emit nickname parts.
+type foldAttach struct {
+	from, root unit
+	sources    int
+	rank       int
+	chainNick  bool
+}
+
 // entry is one candidate in the pipeline.
 type entry struct {
 	c        Candidate
@@ -52,16 +61,18 @@ type entry struct {
 	deniedBy []byte
 	vote     Vote                  // the first lost unit's vote, when outvoted
 	roots    map[string]*unitValue // unit name → the value it settled on
+	folded   map[string]foldAttach // unit name → attach, when that unit folded
 	row      *row
 }
 
 // unitValue is one distinct value of one unit.
 type unitValue struct {
-	u       unit
-	rank    int             // best-ranked carrier
-	sources map[string]bool // Sources carrying exactly this value
-	strong  bool            // some exact carrier is not weak
-	into    *unitValue      // the value it reaches through folds (a sink); nil on a root
+	u         unit
+	rank      int             // best-ranked carrier
+	sources   map[string]bool // Sources carrying exactly this value
+	strong    bool            // some exact carrier is not weak
+	into      *unitValue      // the value it reaches through folds (a sink); nil on a root
+	chainNick bool            // a nickEdge path from this value reaches into
 	// Set on roots:
 	total     map[string]bool // Sources once folded values are added
 	anyStrong bool            // some carrier, folded ones included, is not weak
@@ -173,7 +184,15 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 			v := e.roots[name]
 			if v.into != nil {
 				folded = true
-				v = root(v)
+				if e.folded == nil {
+					e.folded = map[string]foldAttach{}
+				}
+				sink := root(v)
+				e.folded[name] = foldAttach{
+					from: v.u, root: sink.u,
+					sources: len(v.sources), rank: v.rank, chainNick: v.chainNick,
+				}
+				v = sink
 				e.roots[name] = v
 			}
 			switch {
@@ -211,7 +230,7 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 		for _, e := range r.members {
 			members = append(members, e.c)
 		}
-		r.value = m.assemble(members, r.settledUnits())
+		r.value = m.assemble(members, r.settledUnits(), r.foldedUnits())
 		r.reason = ReasonKept
 		r.displayed = true
 		if units, ok := m.split(r.value); ok {
@@ -291,14 +310,23 @@ func reconcile(m module, candidates []Candidate, concluded *Value, cardinality s
 func foldValues(m module, name string, vals []*unitValue) {
 	n := len(vals)
 	edge := make([][]bool, n)
+	nickEdge := make([][]bool, n)
 	sink := make([]bool, n)
 	for a := range vals {
 		edge[a] = make([]bool, n)
+		nickEdge[a] = make([]bool, n)
 		sink[a] = true
 		for b := range vals {
-			if a != b && m.fold(name, vals[a].u, vals[b].u) {
+			if a == b {
+				continue
+			}
+			folds, nickClass := m.fold(name, vals[a].u, vals[b].u)
+			if folds {
 				edge[a][b] = true
 				sink[a] = false
+			}
+			if nickClass {
+				nickEdge[a][b] = true
 			}
 		}
 	}
@@ -330,6 +358,9 @@ func foldValues(m module, name string, vals []*unitValue) {
 			}
 		}
 		v.into = target
+		if target != nil {
+			v.chainNick = nickReach(nickEdge, a, slices.Index(vals, target))
+		}
 	}
 	for _, v := range vals {
 		if v.into == nil {
@@ -447,6 +478,52 @@ func groupAll(shown []*entry) []*row {
 
 // settledUnits is, per unit name, the distinct values the row's members
 // settled on: best supported first, then best ranked.
+// nickReach reports whether nickEdge has a path from a to b.
+func nickReach(nickEdge [][]bool, from, to int) bool {
+	if from == to {
+		return true
+	}
+	n := len(nickEdge)
+	seen := make([]bool, n)
+	stack := []int{from}
+	seen[from] = true
+	for len(stack) > 0 {
+		x := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for y := range nickEdge[x] {
+			if !nickEdge[x][y] || seen[y] {
+				continue
+			}
+			if y == to {
+				return true
+			}
+			seen[y] = true
+			stack = append(stack, y)
+		}
+	}
+	return false
+}
+
+func (r *row) foldedUnits() map[string][]foldAttach {
+	byName := map[string][]foldAttach{}
+	for _, e := range r.members {
+		for name, a := range e.folded {
+			byName[name] = append(byName[name], a)
+		}
+	}
+	out := make(map[string][]foldAttach, len(byName))
+	for name, attaches := range byName {
+		sort.SliceStable(attaches, func(i, j int) bool {
+			if attaches[i].sources != attaches[j].sources {
+				return attaches[i].sources > attaches[j].sources
+			}
+			return attaches[i].rank < attaches[j].rank
+		})
+		out[name] = attaches
+	}
+	return out
+}
+
 func (r *row) settledUnits() map[string][]unit {
 	byName := map[string][]*unitValue{}
 	for _, e := range r.members {
