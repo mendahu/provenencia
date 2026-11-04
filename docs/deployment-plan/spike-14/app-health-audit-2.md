@@ -132,6 +132,8 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 
 ### B-13 — A Subject deleted or merged elsewhere dead-ends the Promote page
 
+**Status.** Descoped by the user, 2026-11-03: it needs a second window on one project, a far edge case, and an error at Done is acceptable. Only the stale notice's false claim is fixed, in S14-20. The defect below stands as found.
+
 **Where.** `PromoteModel.swift` `repropose` (about lines 382–411, sends `flow.fixed(for: flow.rows.filter(\.decided))` unfiltered) and `file` (413–441, only `promote.stale` re-proposes); `core/database/promotealign/promotealign.go` `checkFixed` (about 175–201: a Subject missing from `primary`, or a handle `nil` or merged, → `promote.ErrInvalid`); `api/ffi/handlers/promote_batch.go` (about line 55, `ResolvePins` runs before `SaveBatch`'s revision check); `core/database/promotealign/evidence.go` `mergeFixed`.
 **Problem.** After another window deletes a Subject the page holds as a row, or merges a decided row's record, every re-proposal fails (the decided pair reaches `checkFixed`), every evidence sheet fails (each row's neighbors include that pair), and every Done fails with `promote.invalid` from `ResolvePins`, or with `promote.stale`, which re-proposes and fails again. The only text is "This subject can't be promoted", naming no row; the stale callout claims "Provenencia proposed the rows again. Rows you decided are kept" although that proposal failed; Done stays enabled (`canFinish` ignores the proposal error). S11-35's review raised it (SEC-out-1) and it was Rejected on the premise that the researcher changes the row; nothing on the page says which.
 **Evidence.** Manual: open Promote, Map the rest, set "Mary Smith" to New Person; ⌘N, open the same graph, delete Mary's Subject; back in the first window pick any target on another row → the callout, every sheet reads "The evidence could not be loaded", every Done fails.
@@ -153,6 +155,8 @@ User, 2026-10-28. They are the map's working rules under "Audit 2 fixes".
 **Fix.** A New row gets an opener in the assessment column (the S11-D1 rows board decides its look: brief S12-D8).
 
 ### B-16 — The page says unplaced rows start as Skip
+
+**Status.** Already fixed on `main` when S14-20 was planned (2026-11-03): `promote.page.openedFrom` reads "Opened from %@".
 
 **Where.** `macos/App/Platform/L10n.swift` `promote.page.openedFrom` (about line 1712: "Opened from %@ · weak and unmatched rows start as Skip"); `Localizable.xcstrings`; shown by `PromoteView.swift`.
 **Problem.** Unplaced rows open unset with a red border and block Done (`draftTarget` never returns Skip). S11-47's Strings sweep looked for "New or Skip" phrasings, not "start as Skip".
