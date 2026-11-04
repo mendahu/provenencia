@@ -41,6 +41,14 @@ struct ConclusionPictureStepTests {
         #expect(ConclusionPictureStep(tiles: all, showing: "zzz") == nil)
     }
 
+    @Test func holdsTheShownTileAndItsNeighbours() throws {
+        let all = tiles(seven)
+        #expect(try #require(ConclusionPictureStep(tiles: all, showing: "d")).heldIDs == ["c", "d", "e"])
+        #expect(try #require(ConclusionPictureStep(tiles: all, showing: "a")).heldIDs == ["a", "b"])
+        #expect(try #require(ConclusionPictureStep(tiles: all, showing: "g")).heldIDs == ["f", "g"])
+        #expect(try #require(ConclusionPictureStep(tiles: tiles(["a"]), showing: "a")).heldIDs == ["a"])
+    }
+
     @Test func followsTheGalleryWhenTheShownLikenessLeaves() {
         let all = tiles(seven)
         let withoutE = tiles(seven.filter { $0 != "e" })

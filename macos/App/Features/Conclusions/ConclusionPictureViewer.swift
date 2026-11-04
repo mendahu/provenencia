@@ -20,6 +20,8 @@ struct ConclusionPictureStep: Equatable {
     var count: Int { tiles.count }
     var previousID: String? { index > 0 ? tiles[index - 1].id : nil }
     var nextID: String? { index + 1 < tiles.count ? tiles[index + 1].id : nil }
+    /// The ids whose decoded images the viewer holds: the shown tile and its two neighbours (S13-15 F-15).
+    var heldIDs: Set<String> { Set([tile.id, previousID, nextID].compactMap { $0 }) }
 }
 
 /// Which picture the viewer shows: the picture's id, resolved against the live tiles on every draw, so the
@@ -118,6 +120,8 @@ struct ConclusionPictureViewer: View {
     @State private var image: ConclusionPictureImage = .waiting
     /// Set once a load has taken 250 ms, so a quick decode shows no spinner and stepping does not flash.
     @State private var showsSpinner = false
+    /// The decoded images of the shown tile and its neighbours, by tile id; every other id is dropped on a step.
+    @State private var decoded: [String: (image: NSImage, pixels: CGSize)] = [:]
     @State private var decodeTask: Task<Result<BoundedImageDecode.Decoded, BoundedImageDecode.Refusal>, Never>?
     @FocusState private var focus: ViewerStop?
 
@@ -318,31 +322,58 @@ struct ConclusionPictureViewer: View {
         if focus == nil || stranded { FocusClaim.claim($focus, .image) }
     }
 
-    /// Loads the shown picture: one bounded decode, which also gives the size. A step more than 120 ms
-    /// later cancels the wait before any file opens, and only the latest wanted picture decodes once the
-    /// one in flight ends (S13-15 D-5, F-3).
+    /// Loads the shown picture, then its neighbours' ahead of a step. A held image shows at once; any other
+    /// waits 120 ms, so a step more than 120 ms later cancels the wait before any file opens. One decode
+    /// is in flight (`decodeTask`), and a step cancels a prefetch not yet started (S13-15 D-5, F-3, F-15).
     private func load() async {
+        let step = step
         let id = step.tile.id
-        image = .waiting
-        do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
+        decoded = decoded.filter { step.heldIDs.contains($0.key) }
+        if let held = decoded[id] {
+            image = .decoded(id, held.image, held.pixels)
+        } else {
+            image = .waiting
+            do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
+            guard let result = await decode(step.tile) else { return }
+            switch result {
+            case .success(let done): store(done, for: id)
+            case .failure: image = .refused(id)
+            }
+        }
+        await prefetch(step)
+    }
+
+    private func prefetch(_ step: ConclusionPictureStep) async {
+        for id in [step.nextID, step.previousID].compactMap({ $0 }) where decoded[id] == nil {
+            guard let tile = step.tiles.first(where: { $0.id == id }), let result = await decode(tile),
+                case .success(let done) = result, !Task.isCancelled
+            else { continue }
+            decoded[id] = (done.image, CGSize(width: done.pixelSize.width, height: done.pixelSize.height))
+        }
+    }
+
+    /// Shows a decoded image for the tile `id` and holds it. The size is the file's pixel size as shown.
+    private func store(_ done: BoundedImageDecode.Decoded, for id: String) {
+        let pixels = CGSize(width: done.pixelSize.width, height: done.pixelSize.height)
+        decoded[id] = (done.image, pixels)
+        image = .decoded(id, done.image, pixels)
+    }
+
+    /// The bounded decode of one tile's file, after the one in flight ends; nil when this task was cancelled
+    /// before the file opened or while it decoded.
+    private func decode(_ tile: ConclusionDetailPicture) async -> Result<BoundedImageDecode.Decoded, BoundedImageDecode.Refusal>? {
         _ = await decodeTask?.value
-        guard !Task.isCancelled else { return }
-        guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: step.tile.imageRelPath) else {
-            image = .refused(id)
-            return
+        guard !Task.isCancelled else { return nil }
+        guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: tile.imageRelPath) else {
+            return .failure(.unreadable)
         }
         let limits = ThumbnailDecodePolicy.limits
         let work = Task.detached(priority: .userInitiated) {
             BoundedImageDecode.decode(url: url, limits: limits)
         }
         decodeTask = work
-        let decoded = await work.value
-        guard !Task.isCancelled else { return }
-        switch decoded {
-        case .success(let result):
-            image = .decoded(id, result.image, CGSize(width: result.pixelSize.width, height: result.pixelSize.height))
-        case .failure: image = .refused(id)
-        }
+        let result = await work.value
+        return Task.isCancelled ? nil : result
     }
 }
 
