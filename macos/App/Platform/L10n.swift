@@ -172,11 +172,12 @@ enum L10n {
             ), first, second)
         }
 
-        /// The parts spoken as one line, joined two at a time through the
-        /// catalog; nil when there are none.
+        /// The non-empty parts spoken as one line, joined two at a time through the
+        /// catalog; nil when none is left.
         static func spokenJoin(_ parts: [String]) -> String? {
-            guard let first = parts.first else { return nil }
-            return parts.dropFirst().reduce(first) { spokenJoin($0, $1) }
+            let spoken = parts.filter { !$0.isEmpty }
+            guard let first = spoken.first else { return nil }
+            return spoken.dropFirst().reduce(first) { spokenJoin($0, $1) }
         }
 
         static let reorderHandle = LocalizedStringResource(
@@ -9245,6 +9246,21 @@ enum L10n {
                 comment: "Accessibility label of the likeness viewer's image; arguments are the 1-based position, the count of likenesses and the citation line"
             ), index, count, line)
         }
+
+        /// "Likeness 1 of 7, from {citation line}, portrait" — the spoken label of the portrait's image in the viewer.
+        static func likenessViewerLabelLead(index: Int, count: Int, line: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessViewer.labelLead",
+                defaultValue: "Likeness %1$lld of %2$lld, from %3$@, portrait",
+                comment: "Accessibility label of the likeness viewer's image when it shows the portrait; arguments are the 1-based position, the count of likenesses and the citation line"
+            ), index, count, line)
+        }
+
+        static let likenessViewerImageUnavailable = LocalizedStringResource(
+            "conclusions.person.likenessViewer.imageUnavailable",
+            defaultValue: "Image unavailable",
+            comment: "Accessibility value of the likeness viewer's image when the file is missing or could not be shown"
+        )
 
         static let likenessViewerPrevious = LocalizedStringResource(
             "conclusions.person.likenessViewer.previous",

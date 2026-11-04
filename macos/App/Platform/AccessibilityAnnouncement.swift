@@ -5,12 +5,7 @@ enum AccessibilityAnnouncement {
     /// What a title and a message say together: the non-empty parts, joined
     /// through the catalog; nil when there is nothing to say.
     static func text(title: String?, message: String?) -> String? {
-        let parts = [title, message].compactMap { $0 }.filter { !$0.isEmpty }
-        switch parts.count {
-        case 0: return nil
-        case 1: return parts[0]
-        default: return L10n.DesignSystem.spokenJoin(parts[0], parts[1])
-        }
+        L10n.DesignSystem.spokenJoin([title, message].compactMap { $0 })
     }
 
     /// A failure interrupts; a result waits its turn.

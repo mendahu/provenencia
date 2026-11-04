@@ -84,7 +84,7 @@ struct PVProvenanceSheetContent: Equatable {
         /// follow as separate controls.
         var spoken: String {
             // A record with no field (a likeness) has no Read as to speak.
-            L10n.DesignSystem.spokenJoin([readAs, citation.line, phrase, observationRef, subjectRef].filter { !$0.isEmpty }) ?? ""
+            L10n.DesignSystem.spokenJoin([readAs, citation.line, phrase, observationRef, subjectRef]) ?? ""
         }
     }
 
