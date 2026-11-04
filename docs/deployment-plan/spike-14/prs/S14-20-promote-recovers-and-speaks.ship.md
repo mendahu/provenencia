@@ -76,4 +76,4 @@ Check: no poll in `EvidenceGraphModel`; scripts/check-pr.sh PASS.
 Head `11f9761b`. Gate PASS (orchestrator). F-6 done: `readGraphAgain` awaits `readyValue` then `graphReadFailedSettled()`; `rg ContinuousClock|Task.sleep|noteGraphReadFailureWhenSettled` empty. Merged `origin/main` @ `330243ad` → head `960520ce`; gate PASS again.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-3 (apply comment nit) · to user: Manual §10 · CON miss: none
+Gate PASS · CI green (Go rerun after `TestLargeSourceBudgets/warm` 360ms vs 350ms flake) · open: none · follow-ups: MNT-3 (apply comment nit) · to user: Manual §10 · CON miss: none
