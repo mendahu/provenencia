@@ -77,13 +77,44 @@ struct PVProvenanceSheet: View {
 
 #Preview("Provenance sheet") {
     PVProvenanceSheet(
-        content: PVProvenanceSheetContent(
-            title: "Birth date",
-            shown: .init(face: .date, lead: "14 May 1817", listedValues: [], emptyText: "No date recorded", badge: .merged),
-            summary: "merged from 2 Sources · 2 records",
-            groups: PVProvenancePreviewData.groups
+        content: PVProvenancePreviewData.content(groups: PVProvenancePreviewData.groups, summary: "merged from 2 Sources · 2 records"),
+        idPrefix: "preview",
+        open: { _, _ in }
+    )
+}
+
+#Preview("Thirty records") {
+    let records = (1...30).map {
+        PVProvenancePreviewData.record(
+            "r\($0)", readAs: "14 May 1817", title: "Parish register \($0)", detail: "p. \($0)", counted: $0 % 5 != 0
+        )
+    }
+    PVProvenanceSheet(
+        content: PVProvenancePreviewData.content(
+            groups: [PVProvenanceSheetContent.Group(owner: nil, records: records)], summary: "30 records"
         ),
         idPrefix: "preview",
         open: { _, _ in }
     )
+}
+
+#Preview("Dark, owner groups") {
+    PVProvenanceSheet(
+        content: PVProvenancePreviewData.content(groups: PVProvenancePreviewData.ownerGroups, summary: "merged from 3 records"),
+        idPrefix: "preview",
+        open: { _, _ in }
+    )
+    .preferredColorScheme(.dark)
+}
+
+#Preview("Dark, one record") {
+    PVProvenanceSheet(
+        content: PVProvenancePreviewData.content(
+            groups: [PVProvenanceSheetContent.Group(owner: nil, records: [PVProvenancePreviewData.census])],
+            summary: "1 record"
+        ),
+        idPrefix: "preview",
+        open: { _, _ in }
+    )
+    .preferredColorScheme(.dark)
 }

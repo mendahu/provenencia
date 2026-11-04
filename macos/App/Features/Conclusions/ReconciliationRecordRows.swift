@@ -25,31 +25,25 @@ struct ReconciliationRecordRows: View {
                 heading(L10n.ProvenanceSheet.columnReadAs)
                 heading(L10n.Conclusions.whySource)
                 heading(L10n.ProvenanceSheet.columnOutcome)
-                Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
+                PVProvenanceReservedCell()
             }
             .padding(.vertical, PVSpacing.space2)
             .accessibilityHidden(true)
             ForEach(groups) { group in
                 if let owner = group.owner {
-                    rule
+                    PVDivider()
                     PVProvenanceOwnerLine(owner)
                         .gridCellColumns(columns)
                 }
                 ForEach(Array(group.records.enumerated()), id: \.element.id) { index, record in
                     // The first record under a group line follows the line, not a rule.
                     if index > 0 || group.owner == nil {
-                        rule
+                        PVDivider()
                     }
                     whyRow(record)
                 }
             }
         }
-    }
-
-    private var rule: some View {
-        Rectangle()
-            .fill(PVColor.borderSubtle)
-            .frame(height: 1)
     }
 
     private func whyRow(_ record: PVProvenanceSheetContent.Record) -> some View {
@@ -64,8 +58,7 @@ struct ReconciliationRecordRows: View {
             .accessibilityIdentifier("conclusion.detail.why.\(record.id).source")
             PVProvenanceOutcome(mark: record.mark, phrase: record.phrase)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
-                .accessibilityHidden(true)
+            PVProvenanceReservedCell()
         }
         .padding(.vertical, PVSpacing.space3)
     }

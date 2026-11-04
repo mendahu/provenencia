@@ -104,7 +104,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
             ?? ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil)
         return Self(
             id: id, label: label,
-            shown: .init(face: .date, lead: lead, listedValues: [], emptyText: emptyText, badge: nil),
+            shown: .init(face: .date, lead: lead, emptyText: emptyText, badge: nil),
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
             whyTitle: lead.map { L10n.Conclusions.whyTitle($0) } ?? "",
             accessibilityLabel: spoken,
@@ -141,10 +141,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
         }
         var row = Self(
             id: id, label: label,
-            shown: .init(
-                face: face, lead: lead, listedValues: [], emptyText: emptyText,
-                badge: mixed && lead != nil ? .mixed : nil
-            ),
+            shown: .init(face: face, lead: lead, emptyText: emptyText, badge: mixed && lead != nil ? .mixed : nil),
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [],
             whyTitle: "", accessibilityLabel: spoken,
             source: .derived(owners: owners, shownOwnerID: shownOwnerID, kind: kind),
@@ -159,7 +156,7 @@ struct ReconciledValueRowModel: Equatable, Identifiable {
     static func empty(id: String, label: String, face: PVProvenanceFace, emptyText: String) -> Self {
         Self(
             id: id, label: label,
-            shown: .init(face: face, lead: nil, listedValues: [], emptyText: emptyText, badge: nil),
+            shown: .init(face: face, lead: nil, emptyText: emptyText, badge: nil),
             count: nil, against: nil, otherValuesLabel: nil, otherValues: [], whyTitle: "",
             accessibilityLabel: ReconciledValueDisplay.accessibilityLabel(label: label, lead: nil, field: nil),
             source: .spanning([]), locale: .autoupdatingCurrent, orders: NameFormatOrders()

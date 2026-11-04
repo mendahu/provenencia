@@ -117,7 +117,7 @@ struct PVProvenanceOwnerLine: View {
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
-            if owner.shown {
+            if owner.isShownOwner {
                 Text(L10n.ProvenanceSheet.ownerShownMark)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
@@ -174,11 +174,21 @@ struct PVProvenanceColumnHeadings: View {
                 .frame(width: columns.outcomeWidth, alignment: .leading)
             Text(L10n.ProvenanceSheet.columnRecord)
                 .frame(width: PVProvenanceColumns.recordWidth, alignment: .leading)
-            Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
+            PVProvenanceReservedCell()
         }
         .pvMicroCaps()
         .foregroundStyle(PVColor.textMuted)
         .padding(.vertical, PVSpacing.space2)
         .accessibilityHidden(true)
+    }
+}
+
+/// The reserved column beside the Outcome: no content yet, but a fixed width so
+/// a future "conclude this value" action won't relayout the table (PD-8).
+struct PVProvenanceReservedCell: View {
+    var body: some View {
+        Color.clear
+            .frame(width: PVProvenanceColumns.actionWidth, height: 1)
+            .accessibilityHidden(true)
     }
 }

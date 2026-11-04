@@ -11,7 +11,8 @@ import SwiftUI
 /// record and the link; the caller maps it to a place.
 struct PVProvenanceRecordRow: View {
     let record: PVProvenanceSheetContent.Record
-    let face: PVProvenanceFace
+    /// How the Read as cell reads; used only with Read as on.
+    var face: PVProvenanceFace = .text
     var columns = PVProvenanceColumns()
     /// The prefix of the row's accessibility ids: `<prefix>.<record id>.citation`, `.copy`, `.source`, `.observation`.
     let idPrefix: String
@@ -28,7 +29,9 @@ struct PVProvenanceRecordRow: View {
             }
             citation
                 .frame(maxWidth: .infinity, alignment: .leading)
-            outcome
+            PVProvenanceOutcome(mark: record.mark, phrase: record.phrase)
+                .frame(width: columns.outcomeWidth, alignment: .leading)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: PVSpacing.space1) {
                 Text(verbatim: record.observationRef)
                 Text(verbatim: record.subjectRef)
@@ -38,24 +41,18 @@ struct PVProvenanceRecordRow: View {
             .textSelection(.enabled)
             .frame(width: PVProvenanceColumns.recordWidth, alignment: .leading)
             .accessibilityHidden(true)
-            Color.clear.frame(width: PVProvenanceColumns.actionWidth, height: 1)
-                .accessibilityHidden(true)
+            PVProvenanceReservedCell()
+        }
+        // With no Read as cell the record's one spoken line sits at the row's
+        // leading edge, ahead of the citation and the links, and takes no room.
+        .overlay(alignment: .topLeading) {
+            if !columns.showsReadAs {
+                Color.clear.frame(width: 1, height: 1)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(record.spoken)
+            }
         }
         .padding(.vertical, PVSpacing.space3)
-    }
-
-    /// With no Read as cell the Outcome cell carries the record's one spoken line.
-    @ViewBuilder
-    private var outcome: some View {
-        let cell = PVProvenanceOutcome(mark: record.mark, phrase: record.phrase)
-            .frame(width: columns.outcomeWidth, alignment: .leading)
-        if columns.showsReadAs {
-            cell.accessibilityHidden(true)
-        } else {
-            cell
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(record.spoken)
-        }
     }
 
     private var citation: some View {

@@ -6,7 +6,7 @@ import SwiftUI
 /// `PVProvenanceColumns`.
 struct PVProvenanceColumns: Equatable {
     /// Draw the Read as cell. Off, the row drops it and the record's one spoken
-    /// line moves to its Outcome cell, so the record still reads as one element.
+    /// line moves to the row's leading edge, so the record still reads as one element.
     var showsReadAs = true
     /// At `.wide` Read as and Outcome are wider and the Citation column takes the rest.
     var widthClass: PVWidthClass = .regular

@@ -16339,7 +16339,7 @@
       }
     },
     "provenanceSheet.column.readAs": {
-      "comment": "Why table column heading: what the record says",
+      "comment": "Provenance table column heading: what the record says",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -16363,7 +16363,7 @@
       }
     },
     "provenanceSheet.column.outcome": {
-      "comment": "Why table column heading: what the auto-reconciler did with the record",
+      "comment": "Provenance table column heading: what the auto-reconciler did with the record",
       "extractionState": "manual",
       "localizations": {
         "en": {

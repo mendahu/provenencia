@@ -29,6 +29,13 @@ struct ProvenanceSheetTests {
         )
     }
 
+    @Test func aFaceComesFromTheField() {
+        let date = D.field("single", key: "date", label: "Birth date", valueType: "date", [D.value(1, "kept")], outcomes: [])
+        let text = D.field("single", key: "name", label: "Name", valueType: "text", [D.value(1, "kept")], outcomes: [])
+        #expect(PVProvenanceFace(field: date) == .date)
+        #expect(PVProvenanceFace(field: text) == .text)
+    }
+
     @Test func aRowBuildsItsContentOnCall() {
         let row = row("life.birthDate", records: 3)
         #expect(row.recordCount == 3)

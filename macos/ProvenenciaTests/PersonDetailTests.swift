@@ -655,9 +655,9 @@ struct PersonDetailTests {
         ])]
         let birth = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en).rows[1]
         #expect(birth.provenanceContent().groups.map(\.id) == ["ev1", "ev2"])
-        #expect(birth.provenanceContent().groups[0].owner?.shown == true)
+        #expect(birth.provenanceContent().groups[0].owner?.isShownOwner == true)
         #expect(birth.provenanceContent().groups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-4KX2M, shown value")
-        #expect(birth.provenanceContent().groups[1].owner?.shown == false)
+        #expect(birth.provenanceContent().groups[1].owner?.isShownOwner == false)
         #expect(birth.provenanceContent().groups[1].owner?.spoken == "Birth of Ada Lovelace, EVT-9PQ2R")
     }
 
@@ -677,7 +677,7 @@ struct PersonDetailTests {
             owner(other, key: "date", outcomes: [D.outcome("b", "kept")]),
         ])]
         let row = PersonDetailContent(detail: detail(summary: lopsided, derivedRows: others), locale: en).rows[1]
-        #expect(row.provenanceContent().groups.count == 1 && row.provenanceContent().groups[0].owner?.shown == false)
+        #expect(row.provenanceContent().groups.count == 1 && row.provenanceContent().groups[0].owner?.isShownOwner == false)
     }
 
     @Test func onlyRowsWithRecordsOfferProvenance() {

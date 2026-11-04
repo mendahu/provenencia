@@ -17,19 +17,19 @@ struct PVProvenanceRecordTable: View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(groups) { group in
                 if let owner = group.owner {
-                    rule(PVColor.borderStrong)
+                    PVDivider(color: PVColor.borderStrong)
                     PVProvenanceOwnerLine(owner)
                 }
                 ForEach(Array(group.values.enumerated()), id: \.offset) { valueIndex, run in
                     if let heading = run.heading {
-                        rule(PVColor.borderSubtle)
+                        PVDivider()
                         PVProvenanceValueHeading(heading: heading, face: face)
                     }
                     ForEach(Array(run.records.enumerated()), id: \.element.id) { index, record in
                         // The first record under a group or value line follows the line, not a rule.
                         let followsLine = run.heading != nil || (valueIndex == 0 && group.owner != nil)
                         if index > 0 || !followsLine {
-                            rule(PVColor.borderSubtle)
+                            PVDivider()
                         }
                         PVProvenanceRecordRow(
                             record: record, face: face, columns: columns, idPrefix: idPrefix, open: open
@@ -38,12 +38,6 @@ struct PVProvenanceRecordTable: View {
                 }
             }
         }
-    }
-
-    private func rule(_ color: Color) -> some View {
-        Rectangle()
-            .fill(color)
-            .frame(height: 1)
     }
 }
 
@@ -73,6 +67,28 @@ enum PVProvenancePreviewData {
         counted: false, phrase: "Outvoted by 2 Sources", mark: .scale
     )
     static let groups = [PVProvenanceSheetContent.Group(owner: nil, records: [census, baptism])]
+
+    /// A Birth date with two owners, the shown one first (PSK-2).
+    static let ownerGroups = [
+        PVProvenanceSheetContent.Group(
+            owner: .init(id: "ev1", title: "Birth of Ada Lovelace", ref: "EVT-4KX2M", spoken: "Birth of Ada Lovelace", isShownOwner: true),
+            records: [census, baptism]
+        ),
+        PVProvenanceSheetContent.Group(
+            owner: .init(id: "ev2", title: "Birth of Ada Lovelace", ref: "EVT-9PQ2R", spoken: "Birth of Ada Lovelace"),
+            records: [record("diary", readAs: "14 May 1817", title: "Family diary", detail: "p. 2", counted: false, phrase: "Another event", mark: .scale)]
+        ),
+    ]
+
+    /// A sheet's content for the previews.
+    static func content(groups: [PVProvenanceSheetContent.Group], summary: String) -> PVProvenanceSheetContent {
+        PVProvenanceSheetContent(
+            title: "Birth date",
+            shown: .init(face: .date, lead: "14 May 1817", emptyText: "No date recorded", badge: .merged),
+            summary: summary,
+            groups: groups
+        )
+    }
 }
 
 #Preview("One record, with and without Read as") {
@@ -81,7 +97,7 @@ enum PVProvenancePreviewData {
             record: PVProvenancePreviewData.census, face: .date, idPrefix: "preview", open: { _, _ in }
         )
         PVProvenanceRecordRow(
-            record: PVProvenancePreviewData.census, face: .date,
+            record: PVProvenancePreviewData.census,
             columns: PVProvenanceColumns(showsReadAs: false), idPrefix: "preview", open: { _, _ in }
         )
     }
@@ -111,7 +127,7 @@ enum PVProvenancePreviewData {
     let columns = PVProvenanceColumns(widthClass: .wide)
     let groups = [
         PVProvenanceSheetContent.Group(
-            owner: .init(id: "ev1", title: "Birth of Ada Lovelace", ref: "EVT-4KX2M", spoken: "Birth of Ada Lovelace", shown: true),
+            owner: .init(id: "ev1", title: "Birth of Ada Lovelace", ref: "EVT-4KX2M", spoken: "Birth of Ada Lovelace", isShownOwner: true),
             records: [PVProvenancePreviewData.census]
         ),
         PVProvenanceSheetContent.Group(

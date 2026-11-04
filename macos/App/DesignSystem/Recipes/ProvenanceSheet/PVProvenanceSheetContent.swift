@@ -11,6 +11,11 @@ enum PVProvenanceFace: Equatable {
     /// Italic, like every place.
     case place
 
+    /// The face of a reconciled field's values: dates in mono, everything else text.
+    init(field: CatalogConclusionField) {
+        self = field.valueType == .date ? .date : .text
+    }
+
     /// The face of a displayed value.
     var valueFont: Font {
         switch self {
@@ -94,7 +99,7 @@ struct PVProvenanceSheetContent: Equatable {
             var ref: String?
             var spoken: String
             /// The owner behind the row's shown value, when the row has several groups.
-            var shown: Bool = false
+            var isShownOwner = false
         }
 
         /// The records of one run of the group that count under the same
@@ -181,6 +186,14 @@ extension PVProvenanceSheetContent.Record {
 }
 
 extension PVProvenanceSheetContent.Shown {
+    /// A shown value with no listed values; an empty lead reads as none.
+    init(face: PVProvenanceFace, lead: String?, emptyText: String, badge: ReconciledValueDisplay.StateBadge?) {
+        self.init(
+            face: face, lead: lead.flatMap { $0.isEmpty ? nil : $0 }, listedValues: [],
+            emptyText: emptyText, badge: badge
+        )
+    }
+
     /// What one reconciled field shows. A weak spelling is not displayed, so it
     /// stays out of the listed values.
     init(
@@ -198,7 +211,7 @@ extension PVProvenanceSheetContent.Shown {
             }
             : []
         self.init(
-            face: field.valueType == .date ? .date : .text,
+            face: PVProvenanceFace(field: field),
             lead: lead,
             listedValues: listed,
             emptyText: ReconciledValueDisplay.emptyText(propertyKey: field.propertyKey),
@@ -213,17 +226,17 @@ extension PVProvenanceSheetContent {
     init(
         field: CatalogConclusionField,
         title: String,
-        shown: Shown? = nil,
+        shown: Shown,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
         let records = Self.records([field], locale: locale, orders: orders)
         self.init(
             title: title,
-            shown: shown ?? Shown(field: field, locale: locale, orders: orders),
+            shown: shown,
             summary: Self.joinSummary([
                 field.state == .single
-                    ? L10n.ProvenanceSheet.stateSingle(L10n.Conclusions.sourceCount(ReconciledValueDisplay.sourceCount(field)))
+                    ? L10n.ProvenanceSheet.stateSingle(ReconciledValueDisplay.sourceCountLine(ReconciledValueDisplay.sourceCount(field)))
                     : ReconciledValueDisplay.spokenState(field),
                 ReconciledValueDisplay.againstLine(field),
                 records.isEmpty ? nil : L10n.ProvenanceSheet.recordCount(records.count),
@@ -287,7 +300,7 @@ extension PVProvenanceSheetContent {
             return Group(
                 owner: ownerIDs.count > 1 || ownerID != shownOwnerID
                     ? Self.ownerLine(
-                        members[0], shown: ownerIDs.count > 1 && ownerID == shownOwnerID,
+                        members[0], isShownOwner: ownerIDs.count > 1 && ownerID == shownOwnerID,
                         locale: locale, orders: orders
                     )
                     : nil,
@@ -321,7 +334,7 @@ extension PVProvenanceSheetContent {
         Value(
             rank: value.rank,
             text: ReconciledValueDisplay.string(for: value.value, propertyKey: propertyKey, locale: locale, orders: orders),
-            support: L10n.Conclusions.sourceCount(value.support)
+            support: ReconciledValueDisplay.sourceCountLine(value.support)
         )
     }
 
@@ -380,22 +393,22 @@ extension PVProvenanceSheetContent {
                     other += run.records
                     continue
                 }
-                let shown = Self.value(value, propertyKey: member.field.propertyKey, locale: locale, orders: orders)
+                let displayed = Self.value(value, propertyKey: member.field.propertyKey, locale: locale, orders: orders)
                 let outcomes = member.field.outcomes.filter { $0.groupRank == run.rank }
-                if let index = valueRuns.firstIndex(where: { $0.value.text == shown.text }) {
+                if let index = valueRuns.firstIndex(where: { $0.value.text == displayed.text }) {
                     valueRuns[index].records += run.records
                     valueRuns[index].outcomes += outcomes
-                    if counted.insert(shown.text).inserted { valueRuns[index].support += value.support }
+                    if counted.insert(displayed.text).inserted { valueRuns[index].support += value.support }
                 } else {
-                    counted.insert(shown.text)
-                    valueRuns.append((shown, value.support, outcomes, run.records))
+                    counted.insert(displayed.text)
+                    valueRuns.append((displayed, value.support, outcomes, run.records))
                 }
             }
         }
         let showsHeadings = valueRuns.count + (other.isEmpty ? 0 : 1) > 1 || valueRuns.isEmpty
         var groups = valueRuns.map { run -> Group.ValueGroup in
             var value = run.value
-            value.support = L10n.Conclusions.sourceCount(
+            value.support = ReconciledValueDisplay.sourceCountLine(
                 ReconciledValueDisplay.distinctSourceCount(of: run.outcomes, fallback: run.support)
             )
             return .init(heading: showsHeadings ? .value(value) : nil, records: run.records)
@@ -409,7 +422,7 @@ extension PVProvenanceSheetContent {
     /// names of the Place its link names (else its label or ref).
     private static func ownerLine(
         _ owner: CatalogOwnerField,
-        shown: Bool,
+        isShownOwner: Bool,
         locale: Locale,
         orders: NameFormatOrders
     ) -> Group.OwnerLine {
@@ -424,13 +437,13 @@ extension PVProvenanceSheetContent {
         let identity = owner.place?.entity ?? owner.entity
         let ref = title == identity.ref ? nil : identity.ref
         let line = ref.map { L10n.DesignSystem.spokenJoin(title, $0) } ?? title
-        let spoken = shown ? L10n.ProvenanceSheet.ownerShown(line) : line
+        let spoken = isShownOwner ? L10n.ProvenanceSheet.ownerShown(line) : line
         return .init(
             id: identity.id,
             title: title,
             ref: ref,
             spoken: spoken,
-            shown: shown
+            isShownOwner: isShownOwner
         )
     }
 
