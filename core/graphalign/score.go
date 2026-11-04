@@ -10,15 +10,11 @@ type Scored struct {
 }
 
 // ScoreCandidate combines a pair's entity compare result with edge support
-// into one score. Align and any future caller share this path. provenance
-// scales the total (≤0 treated as 1). edge is the summed segment evidence of
-// the corresponding links.
-func ScoreCandidate(r subjectcompare.Result, edge, provenance float64) Scored {
-	if provenance <= 0 {
-		provenance = 1
-	}
+// into one score. Align and any future caller share this path. edge is the
+// summed segment evidence of the corresponding links.
+func ScoreCandidate(r subjectcompare.Result, edge float64) Scored {
 	return Scored{
-		Score:  (r.Evidence + edge) * provenance,
+		Score:  r.Evidence + edge,
 		Edge:   edge,
 		Result: r,
 	}

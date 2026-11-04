@@ -931,6 +931,7 @@ struct EvidenceGraphModelTests {
         #expect(failedAgain)
         #expect(!model.isRereadingGraph)
         #expect(model.graphReadError != nil)
+        #expect(await waitUntil { model.graphReadAttempt >= 2 })
     }
 
     @Test func graphPresenceFollowsTheList() async {

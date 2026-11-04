@@ -304,47 +304,242 @@ struct PromoteModelTests {
         #expect(model.isSaving == false)
     }
 
-    @Test func anOlderProposalAnsweringLastIsDropped() async {
-        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+    @Test func oneDecisionProposesOnce() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)
         store.promoteProposals = [
-            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
-            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "other"), row("b", handleID: "e-old")]),
-            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e-new")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e9")]),
         ]
-        store.promoteProposeDelays = [.zero, .milliseconds(300), .zero]
         let model = model(store: store, subjectID: "a")
         await model.load()
-        model.mapRest()
         model.setTarget(subjectID: "a", token: "handle:other")
-        // The first retarget has to claim its slow proposal before the next
-        // call takes a slot. Otherwise the newer request can sleep on the
-        // older answer and, being current, keep it.
-        let claimed = await waitUntil {
-            store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }.count >= 2
-        }
-        #expect(claimed)
-        model.setTarget(subjectID: "a", token: "handle:e1")
         let settled = await waitUntil { !model.isProposing }
         #expect(settled)
-        try? await Task.sleep(for: .milliseconds(400))
-        #expect(model.flow.rows.first { $0.subjectID == "b" }?.target.handleID == "e-new")
+        let calls = store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }
+        #expect(calls.count == 2)
+    }
+
+    @Test func quickDecisionsRunOneProposalAtATime() async {
+        let labels = ["a", "b", "c", "d", "e", "f"]
+        let subjects = labels.map { subject($0, ref: "CPR-\($0.uppercased())", label: $0) }
+        let store = store(subjects: subjects)
+        let allE1 = labels.map { row($0, handleID: "e1") }
+        var answer1 = allE1
+        answer1[5] = row("f", handleID: "f-old")
+        var answer2 = allE1
+        answer2[5] = row("f", handleID: "f-new")
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: allE1),
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: answer1),
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: answer2),
+        ]
+        let hold = store.proposePromoteGraphAlignmentHold
+        let model = model(store: store, subjectID: "a", mapAll: true)
+        await model.load()
+        hold.isOn = true
+        model.setTarget(subjectID: "a", token: "handle:other")
+        #expect(await waitUntil { hold.count == 1 })
+        for id in ["b", "c", "d", "e"] {
+            model.setTarget(subjectID: id, token: "handle:other")
+        }
+        hold.release()
+        #expect(await waitUntil { hold.count == 1 })
+        #expect(model.flow.row("f")?.target.handleID == "e1")
+        hold.release()
+        #expect(await waitUntil { !model.isProposing })
+        let calls = store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }
+        #expect(calls.count == 3)
+        #expect(store.lastPromoteFixed.map(\.subjectID).sorted() == ["a", "b", "c", "d", "e"])
+        #expect(store.lastPromoteFixed.allSatisfy { $0.handleID == "other" })
+        #expect(model.flow.row("f")?.target.handleID == "f-new")
     }
 
     @Test func doneWaitsForAPendingProposal() async {
         let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
         let store = store(subjects: subjects)
-        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
-        store.promoteProposeDelays = [.zero, .milliseconds(200)]
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e9")]),
+        ]
+        let hold = store.proposePromoteGraphAlignmentHold
         let model = model(store: store, subjectID: "a")
         await model.load()
+        hold.isOn = true
         model.setTarget(subjectID: "a", token: "handle:other")
+        #expect(await waitUntil { hold.count == 1 })
+        model.setTarget(subjectID: "a", token: "handle:e1")
         #expect(model.canFinish == false)
         model.done()
         #expect(model.isSaving == false)
+        hold.release()
+        #expect(await waitUntil { hold.count == 1 })
+        hold.release()
         let settled = await waitUntil { model.canFinish }
         #expect(settled)
         #expect(store.lastPromoteBatch == nil)
+    }
+
+    @Test func aStaleDoneWhoseProposalFailsDropsTheStaleNote() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e9")]),
+        ]
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "", title: "Census", description: ""),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        _ = try? await store.createSubject(
+            projectDir: projectDir, userID: "user-1", graphID: graphID,
+            subjectTypeID: "type-person", label: "Later", description: "", placement: nil
+        )
+        store.proposePromoteGraphAlignmentError = CoreInvokeError.coded(status: 1, code: "promote.failed", kind: .internal, params: [])
+        model.done()
+        #expect(await waitUntil { model.proposeError != nil })
+        #expect(model.flow.staleNote == nil)
+        #expect(!model.isProposing)
+    }
+
+    @Test func mappingTheRestWhileProposingSendsTheWholePage() async {
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada"), subject("b", ref: "CPR-B", label: "Bea")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1"), row("b", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "other"), row("b", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 3, rows: [row("a", handleID: "other"), row("b", handleID: "e2")]),
+        ]
+        let hold = store.proposePromoteGraphAlignmentHold
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        hold.isOn = true
+        model.setTarget(subjectID: "a", token: "handle:other")
+        #expect(await waitUntil { hold.count == 1 })
+        model.mapRest()
+        hold.isOn = false
+        hold.release()
+        #expect(await waitUntil { !model.isProposing })
+        let calls = store.recordedCalls.filter { $0 == "proposePromoteGraphAlignment graph=g-1" }
+        #expect(calls.count == 3)
+        #expect(store.lastPromoteOnlySubjectID == nil)
+        #expect(store.lastPromoteFixed.contains { $0.subjectID == "a" && $0.handleID == "other" })
+    }
+
+    @Test func tryAgainLoadsThePage() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.proposePromoteGraphAlignmentError = Boom()
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        #expect(model.loadError != nil)
+        #expect(model.loadAttempt == 1)
+        store.proposePromoteGraphAlignmentError = nil
+        model.retryLoad()
+        #expect(model.isLoading)
+        #expect(await waitUntil { !model.isLoading })
+        #expect(model.loadError == nil)
+        #expect(!model.flow.rows.isEmpty)
+    }
+
+    @Test func tryAgainThatFailsAgainCountsTheAttempt() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.proposePromoteGraphAlignmentError = Boom()
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        #expect(model.loadAttempt == 1)
+        let callsBefore = store.recordedCalls.filter { $0.hasPrefix("proposePromoteGraphAlignment") }.count
+        model.retryLoad()
+        model.retryLoad()
+        #expect(await waitUntil { !model.isLoading })
+        let callsAfter = store.recordedCalls.filter { $0.hasPrefix("proposePromoteGraphAlignment") }.count
+        #expect(callsAfter == callsBefore + 1)
+        #expect(model.loadAttempt == 2)
+        #expect(model.loadError != nil)
+    }
+
+    @Test func tryAgainReadsAFailedGraphAgain() async {
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let entry = PromoteEntry(location: .promote(
+            sourceId: sourceID, graphId: graphID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
+        ))!
+        let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
+        await model.load()
+        #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
+        let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
+        let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
+        let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
+        model.retryLoad()
+        #expect(await waitUntil { !model.isLoading })
+        #expect(model.loadError == nil)
+        #expect(!model.flow.rows.isEmpty)
+    }
+
+    @Test func tryAgainReadsAStaleGraphAgain() async {
+        struct Boom: Error {}
+        let store = store(subjects: [subject("a", ref: "CPR-A", label: "Ada")])
+        store.proposePromoteGraphAlignmentError = Boom()
+        store.promoteProposals = [CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")])]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        #expect(model.loadError != nil)
+        (model.session.queryHandle(model.graphKey) as QueryHandle<EvidenceGraphRows>?)?.markStale()
+        store.proposePromoteGraphAlignmentError = nil
+        model.retryLoad()
+        #expect(await waitUntil { !model.isLoading })
+        #expect(model.loadError == nil)
+        #expect(!model.flow.rows.isEmpty)
+    }
+
+    @Test func aNewErrorBumpsTheNoticeToken() async {
+        struct Boom: Error {}
+        let subjects = [subject("a", ref: "CPR-A", label: "Ada")]
+        let store = store(subjects: subjects)
+        store.promoteProposals = [
+            CatalogPromoteGraphAlignmentProposal(revision: 1, rows: [row("a", handleID: "e1")]),
+            CatalogPromoteGraphAlignmentProposal(revision: 2, rows: [row("a", handleID: "e9")]),
+        ]
+        store.sourcesByProject[projectDir] = [
+            CatalogSource(id: sourceID, ref: "SRC-1", sourceTypeID: "", title: "Census", description: ""),
+        ]
+        let model = model(store: store, subjectID: "a")
+        await model.load()
+        model.mapRest()
+        _ = await waitUntil { !model.isProposing }
+        let start = model.noticeToken
+
+        _ = try? await store.createSubject(
+            projectDir: projectDir, userID: "user-1", graphID: graphID,
+            subjectTypeID: "type-person", label: "Later", description: "", placement: nil
+        )
+        model.done()
+        #expect(await waitUntil { model.flow.staleNote != nil && !model.isProposing })
+        #expect(model.noticeToken == start + 1)
+
+        store.applyPromoteGraphAlignmentError = Boom()
+        model.setTarget(subjectID: "a", token: "skip")
+        _ = await waitUntil { !model.isProposing }
+        model.done()
+        #expect(await waitUntil { model.saveError != nil && !model.isSaving })
+        #expect(model.noticeToken == start + 2)
+
+        store.applyPromoteGraphAlignmentError = nil
+        store.proposePromoteGraphAlignmentError = Boom()
+        model.setTarget(subjectID: "a", token: "new")
+        #expect(await waitUntil { model.proposeError != nil && !model.isProposing })
+        #expect(model.noticeToken == start + 3)
+
+        let tokenAfterFirstPropose = model.noticeToken
+        store.proposePromoteGraphAlignmentError = Boom()
+        model.setTarget(subjectID: "a", token: "handle:other")
+        #expect(await waitUntil { model.proposeError != nil && !model.isProposing })
+        #expect(model.noticeToken == tokenAfterFirstPropose + 1)
     }
 
     @Test func newAndSkipDecisionsAreHeldOnTheNextProposal() async {

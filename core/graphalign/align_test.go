@@ -775,7 +775,7 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 	)
 	cfg := matchregistry.Default().AlignConfig()
 	r := subjectcompare.Compare(vocabkey.Person, mrs, marion, nameMetas(), cfg.Subject, cfg.Value)
-	sc := graphalign.ScoreCandidate(r, 0, 1)
+	sc := graphalign.ScoreCandidate(r, 0)
 	nameRes := propResult(t, sc.Result, vocabkey.PropertyName).Result
 	c := nameRes.Speaking.Result
 	// The title is ignored. Marion exists only on one side, so the name is a
@@ -790,7 +790,7 @@ func TestMissingGivenOrPrefixIsNotANameConflict(t *testing.T) {
 
 	differ := graphalign.ScoreCandidate(
 		subjectcompare.Compare(vocabkey.Person, nameVals("Mary", "Robins"), nameVals("James", "Robins"), nameMetas(), cfg.Subject, cfg.Value),
-		0, 1,
+		0,
 	)
 	if o := propResult(t, differ.Result, vocabkey.PropertyName).Result.Outcome; o != propertycompare.OutcomeConflict || differ.Score >= 0 {
 		t.Fatalf("different given names: outcome %s score %.3f", o, differ.Score)
@@ -802,7 +802,7 @@ func TestSexAgreementAloneStaysUnderWeak(t *testing.T) {
 	meta := metasOf(map[vocabkey.PropertyKey]string{sex: propertymeta.ValueTypeTerm})
 	male := subjectcompare.Values{sex: {propertycomparetest.Term("male")}}
 	cfg := matchregistry.Default().AlignConfig()
-	sc := graphalign.ScoreCandidate(subjectcompare.Compare(vocabkey.Person, male, male, meta, cfg.Subject, cfg.Value), 0, 1)
+	sc := graphalign.ScoreCandidate(subjectcompare.Compare(vocabkey.Person, male, male, meta, cfg.Subject, cfg.Value), 0)
 	if sc.Score < 0.59 || sc.Score > 0.61 || sc.Score >= matchregistry.Default().AlignConfig().Alignment.Bands.Weak {
 		t.Fatalf("sex alone scored %.3f", sc.Score)
 	}
@@ -837,7 +837,7 @@ func TestPartialNameWithGrandparentClearsWeak(t *testing.T) {
 	for _, placed := range []segmentcompare.Placement{segmentcompare.Together, segmentcompare.Unplaced} {
 		t.Run(string(placed), func(t *testing.T) {
 			seg := segmentcompare.Compare(segA, segB, placed, own.Evidence, metas, cfg.Segment, cfg.Subject, cfg.Value)
-			sc := graphalign.ScoreCandidate(own, seg.Evidence, 1)
+			sc := graphalign.ScoreCandidate(own, seg.Evidence)
 			if sc.Score < cfg.Alignment.Bands.Weak || sc.Score >= cfg.Alignment.Bands.Medium {
 				t.Fatalf("score %.4f, want >= Weak %v and < Medium %v (own %.4f, segment %.4f)",
 					sc.Score, cfg.Alignment.Bands.Weak, cfg.Alignment.Bands.Medium, own.Evidence, seg.Evidence)

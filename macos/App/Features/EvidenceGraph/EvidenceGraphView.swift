@@ -329,24 +329,15 @@ private struct EvidenceGraphContent: View {
     }
 
     private func readErrorCallout(_ message: String) -> some View {
-        PVCallout(
-            tone: .danger,
+        PVRetryCallout(
             title: L10n.EvidenceGraph.readErrorTitle,
-            message: message
-        ) {
-            HStack(spacing: PVSpacing.space4) {
-                PVButton(L10n.EvidenceGraph.readAgain, variant: .secondary, size: .sm) {
-                    model.readGraphAgain()
-                }
-                .disabled(model.isRereadingGraph)
-                .accessibilityIdentifier("evidenceGraph.readError.readAgain")
-                if model.isRereadingGraph {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityIdentifier("evidenceGraph.readError.reading")
-                }
-            }
-        }
+            message: message,
+            retry: L10n.EvidenceGraph.readAgain,
+            isRetrying: model.isRereadingGraph,
+            retryIdentifier: "evidenceGraph.readError.readAgain",
+            onRetry: { model.readGraphAgain() }
+        )
+        .id(model.graphReadAttempt)
         .accessibilityIdentifier("evidenceGraph.readError.callout")
     }
 
