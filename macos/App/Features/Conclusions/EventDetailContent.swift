@@ -64,7 +64,7 @@ struct EventDetailContent: ConclusionDetailBody {
         }
         let empty = L10n.string(L10n.Conclusions.emptyEventDate)
         guard !span.isEmpty else {
-            return .empty(id: "date", label: label, style: .date, emptyText: empty)
+            return .empty(id: "date", label: label, face: .date, emptyText: empty)
         }
         if span.count == 1, let only = span.first {
             return labeled(ReconciledValueRowModel(field: only, locale: locale), label, field: only)
@@ -82,7 +82,7 @@ struct EventDetailContent: ConclusionDetailBody {
         let empty = L10n.string(L10n.Conclusions.emptyEventPlace)
         let places = summary?.places ?? []
         return .derived(
-            id: "place", label: label, style: .place, lead: DerivedPlace.name(places),
+            id: "place", label: label, face: .place, lead: DerivedPlace.name(places),
             emptyText: empty, mixed: DerivedPlace.extra(places) > 0,
             opens: places.first.map(ReconciledValueRowModel.Opens.place)
         )
@@ -95,7 +95,7 @@ struct EventDetailContent: ConclusionDetailBody {
     ) -> ReconciledValueRowModel {
         var row = row
         row.label = label
-        row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.lead, field: field)
+        row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(label: label, lead: row.shown.lead, field: field)
         return row
     }
 }

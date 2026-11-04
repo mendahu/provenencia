@@ -18,7 +18,7 @@ Three layers (Brad Frost). **Stop at the highest layer you need.** Layer roots o
 | Layer | Where | Rule |
 |---|---|---|
 | **Components** | `DesignSystem/Components/<Name>/` | Content-agnostic; tokens + slots only. |
-| **Recipes** | `DesignSystem/Recipes/<Name>/` | Provenencia-specific, **≥2 call sites**. Thin map onto components. |
+| **Recipes** | `DesignSystem/Recipes/<Name>/` | Provenencia-specific, **≥2 call sites**. Thin map onto components for chrome; a recipe may also own assembly: pure content built from `Catalog*` types and `Platform/` formatters (`PVPersonCardContent`, `PVProvenanceSheetContent`), built when the recipe opens, tested as pure functions, and it reports a link for the caller to map to a place. |
 | **Snowflakes** | `Features/<Feature>/` or `DesignSystem/Snowflakes/<Name>/` | One screen. Promote on second real consumer. |
 
 Folder name = PascalCase **without** `PV` (`Button`, `SectionHeader`). Public types under `Components/` and `Recipes/` **must** use the `PV` prefix (`PVButton`, `PVSectionHeader`) so they do not collide with SwiftUI/AppKit and stay greppable as kit API. Details: [`docs/design-system-layers.md`](../../docs/design-system-layers.md) § PV type prefix.

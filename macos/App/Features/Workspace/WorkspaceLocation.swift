@@ -278,6 +278,37 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
         )
     }
 
+    /// The citation composer on the Citation of a reconciler record, its
+    /// Observation in focus unless `focusingObservation` is false. Back
+    /// returns to the page that opened it.
+    static func composer(
+        for outcome: CatalogReconcilerOutcome,
+        focusingObservation: Bool = true
+    ) -> WorkspaceLocation {
+        .citationComposer(
+            sourceId: outcome.sourceID,
+            graphId: outcome.graphID,
+            subjectId: outcome.subjectID,
+            citationId: outcome.citationID,
+            artifactId: outcome.artifactID,
+            observationId: focusingObservation ? outcome.observationID : nil,
+            ref: outcome.subjectRef,
+            sourceTitle: outcome.sourceTitle
+        )
+    }
+
+    /// Where a link of a provenance record leads: the Source page, the
+    /// Citation with no Observation in focus, or the Citation with its
+    /// Observation in focus.
+    static func provenance(_ record: PVProvenanceSheetContent.Record, _ link: PVProvenanceLink) -> WorkspaceLocation {
+        let outcome = record.outcome
+        switch link {
+        case .source: return .sourcePage(sourceId: outcome.sourceID, ref: nil, title: outcome.sourceTitle)
+        case .citation: return .composer(for: outcome, focusingObservation: false)
+        case .observation: return .composer(for: outcome)
+        }
+    }
+
     /// The citation composer on an Evidence graph.
     static func citationComposer(
         sourceId: String,

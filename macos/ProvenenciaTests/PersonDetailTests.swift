@@ -55,13 +55,13 @@ struct PersonDetailTests {
         #expect(content.rows.map(\.label) == [
             "Name", "Birth date", "Birth place", "Death date", "Death place", "Occupation", "Birth weight",
         ])
-        #expect(content.rows[1...4].map(\.style) == [.date, .place, .date, .place])
-        #expect(content.rows[1...4].map(\.emptyText) == [
+        #expect(content.rows[1...4].map(\.shown.face) == [.date, .place, .date, .place])
+        #expect(content.rows[1...4].map(\.shown.emptyText) == [
             "No birth date recorded", "No birth place recorded", "No death date recorded", "No death place recorded",
         ])
-        #expect(content.rows[1...4].allSatisfy { $0.lead == nil && $0.records.isEmpty && $0.count == nil })
+        #expect(content.rows[1...4].allSatisfy { $0.shown.lead == nil && $0.recordCount == 0 && $0.count == nil })
         // A recorded field with nothing to show says so, and keeps its Why.
-        #expect(content.rows[5].lead == nil && content.rows[5].emptyText == "Nothing recorded" && content.rows[5].records.count == 1)
+        #expect(content.rows[5].shown.lead == nil && content.rows[5].shown.emptyText == "Nothing recorded" && content.rows[5].provenanceContent().records.count == 1)
     }
 
     @Test func treatmentRidesOnContentAndRowsStay() {
@@ -295,8 +295,8 @@ struct PersonDetailTests {
 
     @Test func aMergedNameRowCarriesItsStateAndWhy() {
         let row = PersonDetailContent(detail: detail()).rows[0]
-        #expect(row.lead == "James Robins" && row.style == .text)
-        #expect(row.badge == .merged && row.count == "2 Sources" && row.against == nil)
+        #expect(row.shown.lead == "James Robins" && row.shown.face == .text)
+        #expect(row.shown.badge == .merged && row.count == "2 Sources" && row.against == nil)
         #expect(row.otherValuesLabel == nil && row.otherValues.isEmpty)
         #expect(row.whyTitle == "Why James Robins")
         let nick = CatalogNameValue(form: "unused", parts: [
@@ -307,10 +307,10 @@ struct PersonDetailTests {
         let nicked = PersonDetailContent(detail: detail(name: D.field("single", [D.value(1, "kept", .name(nick))],
             outcomes: [D.outcome("c", "kept", recorded: .name(nick))]))).rows[0]
         #expect(nicked.whyTitle == "Why James “Jake” Robins")
-        #expect(row.records.map(\.phrase) == [
+        #expect(row.provenanceContent().records.map(\.phrase) == [
             "kept", "folded into James Robins", "outvoted (2 of 3 Sources)", "weak · low-trust Source",
         ])
-        #expect(row.records.map(\.sourceTitle).first == "Census of Canada West, 1851")
+        #expect(row.provenanceContent().records.map(\.citation.title).first == "Census of Canada West, 1851")
         #expect(row.accessibilityLabel == "Name, James Robins, merged from 2 Sources")
     }
 
@@ -320,11 +320,11 @@ struct PersonDetailTests {
             D.value(1, "kept", support: 2, .text("farmer")), D.value(2, "kept", .text("labourer")),
         ])
         let row = ReconciledValueRowModel(field: mixed)
-        #expect(row.lead == "farmer" && row.badge == .mixed)
+        #expect(row.shown.lead == "farmer" && row.shown.badge == .mixed)
         #expect(row.otherValuesLabel == "1 other value")
         #expect(row.otherValues == [.init(rank: 2, text: "labourer", support: "1 Source")])
         let dated = ReconciledValueRowModel(field: D.field("single", key: "d", label: "Date", valueType: "date", [D.value(1, "kept", .date(date))]))
-        #expect(dated.style == .date)
+        #expect(dated.shown.face == .date)
     }
 
     @Test func headerFallsBackNameLabelRef() {
@@ -335,8 +335,8 @@ struct PersonDetailTests {
         let bare = PersonDetailContent(detail: detail(name: nil, members: 1))
         #expect(bare.title == .ref("PER-7KD45") && !bare.showsRef)
         // No name field at all: the Name row still shows, empty.
-        #expect(bare.rows.first?.label == "Name" && bare.rows.first?.lead == nil)
-        #expect(bare.rows.first?.emptyText == "No name recorded")
+        #expect(bare.rows.first?.label == "Name" && bare.rows.first?.shown.lead == nil)
+        #expect(bare.rows.first?.shown.emptyText == "No name recorded")
         #expect(bare.rows.first?.accessibilityLabel == "Name, empty")
     }
 
@@ -367,9 +367,9 @@ struct PersonDetailTests {
         let page = PersonDetailContent(detail: detail(summary: james), locale: en)
         #expect(page.lifeLines.map(\.date) == ["1817", "1880"])
         #expect(page.lifeLines.map(\.place) == ["York", "Toronto"])
-        #expect(page.rows[1].lead == "1817" && page.rows[1].badge == nil && page.rows[1].records.isEmpty)
-        #expect(page.rows[2].lead == "York" && page.rows[2].style == .place)
-        #expect(page.rows[4].lead == "Toronto")
+        #expect(page.rows[1].shown.lead == "1817" && page.rows[1].shown.badge == nil && page.rows[1].provenanceContent().records.isEmpty)
+        #expect(page.rows[2].shown.lead == "York" && page.rows[2].shown.face == .place)
+        #expect(page.rows[4].shown.lead == "Toronto")
         // Derived rows open the Event or Place that owns their Why.
         #expect(page.rows[1].opens?.location == .eventDetail(entityId: "ev1", ref: "EVT-1", title: nil))
         #expect(page.rows[2].opens?.location == .placeDetail(entityId: "pl1", ref: "PLC-1", title: "York"))
@@ -392,7 +392,7 @@ struct PersonDetailTests {
         #expect(PersonLifeDisplay.line(renamed, locale: en).text == "1817 – 1880 · York → Toronto")
         #expect(PersonLifeDisplay.line(renamed, locale: en).extraPlaces == 0)
         let oneplace = PersonDetailContent(detail: detail(summary: renamed), locale: en)
-        #expect(oneplace.rows[2].lead == "York" && oneplace.rows[2].badge == nil)
+        #expect(oneplace.rows[2].shown.lead == "York" && oneplace.rows[2].shown.badge == nil)
 
         // Two Places disagree: +1 and mixed, with no Why on this row.
         var twoPlaces = james
@@ -403,15 +403,15 @@ struct PersonDetailTests {
         ]
         #expect(PersonLifeDisplay.line(twoPlaces, locale: en).extraPlaces == 1)
         let mixed = PersonDetailContent(detail: detail(summary: twoPlaces), locale: en)
-        #expect(mixed.rows[2].lead == "York" && mixed.rows[2].badge == .mixed && mixed.rows[2].records.isEmpty)
-        #expect(mixed.rows[1].badge == nil, "one birth event with one date is not mixed")
+        #expect(mixed.rows[2].shown.lead == "York" && mixed.rows[2].shown.badge == .mixed && mixed.rows[2].provenanceContent().records.isEmpty)
+        #expect(mixed.rows[1].shown.badge == nil, "one birth event with one date is not mixed")
 
         // Two birth events disagree: both birth rows are mixed.
         var twoBirths = james
         twoBirths.birth.eventCount = 2
         let competing = PersonDetailContent(detail: detail(summary: twoBirths), locale: en)
-        #expect(competing.rows[1].badge == .mixed && competing.rows[2].badge == .mixed)
-        #expect(competing.rows[3].badge == nil && competing.rows[4].badge == nil)
+        #expect(competing.rows[1].shown.badge == .mixed && competing.rows[2].shown.badge == .mixed)
+        #expect(competing.rows[3].shown.badge == nil && competing.rows[4].shown.badge == nil)
     }
 
     @Test func sectionQueryKeys() {
@@ -498,7 +498,7 @@ struct PersonDetailTests {
 
     @Test func aSourceOpensTheRecordsCitationInTheComposer() throws {
         let outcome = D.outcome("bible", "outvoted", rank: 2, source: "s-bible", title: "Family Bible")
-        let location = ReconciliationRecord.composerLocation(for: outcome)
+        let location = WorkspaceLocation.composer(for: outcome)
         #expect(location.section == .sources && location.sourceSurface == .citationComposer)
         let entry = try #require(CitationComposerEntry(location: location))
         guard case let .edit(sourceID, graphID, subjectID, citationID, artifactID, observationID) = entry else {
@@ -546,18 +546,18 @@ struct PersonDetailTests {
         ])]
         let page = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en)
         let birth = page.rows[1]
-        #expect(birth.recordGroups.count == 1 && birth.recordGroups[0].owner == nil)
-        #expect(birth.records.count == 2 && birth.records.allSatisfy { $0.counted })
-        #expect(birth.whyTitle == "Why “\(birth.lead ?? "")”" && birth.lead != nil)
+        #expect(birth.provenanceContent().groups.count == 1 && birth.provenanceContent().groups[0].owner == nil)
+        #expect(birth.provenanceContent().records.count == 2 && birth.provenanceContent().records.allSatisfy { $0.counted })
+        #expect(birth.whyTitle == "Why “\(birth.shown.lead ?? "")”" && birth.shown.lead != nil)
         // No death event: no Why.
-        #expect(page.rows[3].records.isEmpty && page.rows[3].whyTitle == "")
+        #expect(page.rows[3].provenanceContent().records.isEmpty && page.rows[3].whyTitle == "")
 
         // A date whose only record is denied: stated empty, with its Why.
         let denied = [CatalogDerivedRow(kind: .birthDate, owners: [
             owner(event, key: "date", outcomes: [D.outcome("den", "denied", rank: nil)]),
         ])]
         let empty = PersonDetailContent(detail: detail(summary: lifeSummary(), derivedRows: denied), locale: en).rows[1]
-        #expect(empty.lead == nil && empty.records.count == 1)
+        #expect(empty.shown.lead == nil && empty.provenanceContent().records.count == 1)
         #expect(empty.whyTitle == "Why “Birth date”")
     }
 
@@ -571,9 +571,9 @@ struct PersonDetailTests {
                   place: CatalogChainedPlace(entity: york, names: ["York"])),
         ])]
         let birth = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en).rows[2]
-        #expect(birth.recordGroups.count == 1)
-        #expect(birth.recordGroups[0].owner?.title == "York")
-        #expect(birth.recordGroups[0].records.allSatisfy { !$0.counted })
+        #expect(birth.provenanceContent().groups.count == 1)
+        #expect(birth.provenanceContent().groups[0].owner?.title == "York")
+        #expect(birth.provenanceContent().groups[0].records.allSatisfy { !$0.counted })
     }
 
     @Test func competingOwnersAreGroupedAndSecondary() {
@@ -595,19 +595,19 @@ struct PersonDetailTests {
         ])]
         let birth = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en).rows[1]
         // The summary's lead event (the second) is shown, so it comes first.
-        #expect(birth.recordGroups.map(\.id) == ["ev2", "ev1"])
-        #expect(birth.recordGroups[0].records.allSatisfy { $0.counted })
-        #expect(birth.recordGroups[1].records.allSatisfy { !$0.counted })
-        #expect(birth.recordGroups[0].owner?.title == "Birth of Ada Lovelace")
-        #expect(birth.recordGroups[0].owner?.ref == "EVT-9RW7P")
-        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-9RW7P, shown value")
+        #expect(birth.provenanceContent().groups.map(\.id) == ["ev2", "ev1"])
+        #expect(birth.provenanceContent().groups[0].records.allSatisfy { $0.counted })
+        #expect(birth.provenanceContent().groups[1].records.allSatisfy { !$0.counted })
+        #expect(birth.provenanceContent().groups[0].owner?.title == "Birth of Ada Lovelace")
+        #expect(birth.provenanceContent().groups[0].owner?.ref == "EVT-9RW7P")
+        #expect(birth.provenanceContent().groups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-9RW7P, shown value")
 
         // An owner with no summary and no label is titled by its ref, once.
         let bare = [CatalogDerivedRow(kind: .birthDate, owners: [
             owner(first, key: "date", outcomes: [D.outcome("a", "kept")]),
             owner(second, key: "date", outcomes: [D.outcome("b", "kept")]),
         ])]
-        let line = PersonDetailContent(detail: detail(summary: summary, derivedRows: bare), locale: en).rows[1].recordGroups[1].owner
+        let line = PersonDetailContent(detail: detail(summary: summary, derivedRows: bare), locale: en).rows[1].provenanceContent().groups[1].owner
         #expect(line?.title == "EVT-4KX2M" && line?.ref == nil && line?.spoken == "EVT-4KX2M")
 
         // Two Places are titled as the Places list titles them.
@@ -623,29 +623,19 @@ struct PersonDetailTests {
             CatalogChainedPlace(entity: toronto, names: ["Toronto"]), CatalogChainedPlace(entity: yorkville, names: ["Yorkville"]),
         ]))
         let row = PersonDetailContent(detail: detail(summary: death, derivedRows: places), locale: en).rows[4]
-        #expect(row.recordGroups.compactMap { $0.owner?.title } == ["Toronto", "Yorkville"])
-        #expect(row.recordGroups[1].records.allSatisfy { !$0.counted })
+        #expect(row.provenanceContent().groups.compactMap { $0.owner?.title } == ["Toronto", "Yorkville"])
+        #expect(row.provenanceContent().groups[1].records.allSatisfy { !$0.counted })
 
         // A nameless first Place is not the shown one: the second leads the Why.
         let nameless = CatalogChainedPlace(entity: toronto, names: [])
         let paris = CatalogChainedPlace(entity: yorkville, names: ["Paris"])
         let lopsided = lifeSummary(death: CatalogLifeFacts(places: [nameless, paris]))
         let shown = PersonDetailContent(detail: detail(summary: lopsided, derivedRows: places), locale: en).rows[4]
-        #expect(shown.lead == "Paris" && shown.recordGroups.first?.owner?.id == "pl2")
+        #expect(shown.shown.lead == "Paris" && shown.provenanceContent().groups.first?.owner?.id == "pl2")
         #expect(shown.opens?.location == .placeDetail(entityId: "pl2", ref: "PLC-2", title: "Paris"))
     }
 
     // MARK: The provenance sheet (S13-11)
-
-    @Test func aRecordOpensItsSourceCitationAndObservation() {
-        let outcome = D.outcome("bible", "kept", source: "S1", title: "Family Bible")
-        let record = ReconciliationRecord(outcome: outcome, in: D.field("single"), locale: en)
-        #expect(record.sourceLocation == .sourcePage(sourceId: "S1", ref: nil, title: "Family Bible"))
-        #expect(record.citationLocation.sourceSurface == .citationComposer)
-        #expect(record.citationLocation.citationId == "cit-bible" && record.citationLocation.observationId == nil)
-        #expect(record.location.citationId == "cit-bible" && record.location.observationId == "bible")
-        #expect(record.observationRef == "OBS-bible" && record.subjectRef == "CPR-bible")
-    }
 
     @Test func theShownOwnerIsSpokenAsShown() {
         let first = entity("ev1", "EVT-4KX2M"), second = entity("ev2", "EVT-9PQ2R")
@@ -664,11 +654,11 @@ struct PersonDetailTests {
             owner(first, key: "date", outcomes: [D.outcome("a", "kept")], event: eventSummary(first)),
         ])]
         let birth = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en).rows[1]
-        #expect(birth.recordGroups.map(\.id) == ["ev1", "ev2"])
-        #expect(birth.recordGroups[0].owner?.shown == true)
-        #expect(birth.recordGroups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-4KX2M, shown value")
-        #expect(birth.recordGroups[1].owner?.shown == false)
-        #expect(birth.recordGroups[1].owner?.spoken == "Birth of Ada Lovelace, EVT-9PQ2R")
+        #expect(birth.provenanceContent().groups.map(\.id) == ["ev1", "ev2"])
+        #expect(birth.provenanceContent().groups[0].owner?.isShownOwner == true)
+        #expect(birth.provenanceContent().groups[0].owner?.spoken == "Birth of Ada Lovelace, EVT-4KX2M, shown value")
+        #expect(birth.provenanceContent().groups[1].owner?.isShownOwner == false)
+        #expect(birth.provenanceContent().groups[1].owner?.spoken == "Birth of Ada Lovelace, EVT-9PQ2R")
     }
 
     @Test func oneOwnerHasNoGroupLine() {
@@ -678,7 +668,7 @@ struct PersonDetailTests {
             owner(event, key: "date", outcomes: [D.outcome("a", "kept")]),
         ])]
         let birth = PersonDetailContent(detail: detail(summary: summary, derivedRows: rows), locale: en).rows[1]
-        #expect(birth.recordGroups.count == 1 && birth.recordGroups[0].owner == nil)
+        #expect(birth.provenanceContent().groups.count == 1 && birth.provenanceContent().groups[0].owner == nil)
 
         // The shown owner has no records; the one other owner is not the shown one.
         let other = entity("ev2", "EVT-2")
@@ -687,19 +677,19 @@ struct PersonDetailTests {
             owner(other, key: "date", outcomes: [D.outcome("b", "kept")]),
         ])]
         let row = PersonDetailContent(detail: detail(summary: lopsided, derivedRows: others), locale: en).rows[1]
-        #expect(row.recordGroups.count == 1 && row.recordGroups[0].owner?.shown == false)
+        #expect(row.provenanceContent().groups.count == 1 && row.provenanceContent().groups[0].owner?.isShownOwner == false)
     }
 
     @Test func onlyRowsWithRecordsOfferProvenance() {
         let page = PersonDetailContent(detail: detail(summary: lifeSummary()), locale: en)
-        #expect(page.rows[1].records.isEmpty)
+        #expect(page.rows[1].provenanceContent().records.isEmpty)
 
         let event = entity("ev1", "EVT-1")
         let denied = [CatalogDerivedRow(kind: .birthDate, owners: [
             owner(event, key: "date", outcomes: [D.outcome("den", "denied", rank: nil)]),
         ])]
         let birth = PersonDetailContent(detail: detail(summary: lifeSummary(), derivedRows: denied), locale: en).rows[1]
-        #expect(birth.lead == nil && birth.records.count == 1)
+        #expect(birth.shown.lead == nil && birth.provenanceContent().records.count == 1)
         #expect(ProvenanceSheetItem(id: birth.id).row(in: [birth]) == birth)
     }
 
@@ -708,15 +698,15 @@ struct PersonDetailTests {
         outcome.artifactLabel = "Vol. 3"
         outcome.citationLabel = "Baptism of Ada"
         outcome.artifactPage = 37
-        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, image 37")
+        #expect(CitationLineDisplay.parts(outcome).line == "Register of Baptisms, Vol. 3, Baptism of Ada, image 37")
         outcome.pageLabel = " 23 "
-        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, p. 23")
+        #expect(CitationLineDisplay.parts(outcome).line == "Register of Baptisms, Vol. 3, Baptism of Ada, p. 23")
         let bare = D.outcome("reg", "kept", title: "Register of Baptisms")
-        #expect(CitationLineDisplay.line(bare) == "Register of Baptisms")
+        #expect(CitationLineDisplay.parts(bare).line == "Register of Baptisms")
         let untitled = D.outcome("reg", "kept", title: "")
-        #expect(CitationLineDisplay.line(untitled) == "OBS-reg")
+        #expect(CitationLineDisplay.parts(untitled).line == "OBS-reg")
         var labelled = untitled
         labelled.artifactLabel = "Vol. 3"
-        #expect(CitationLineDisplay.line(labelled) == "OBS-reg, Vol. 3")
+        #expect(CitationLineDisplay.parts(labelled).line == "OBS-reg, Vol. 3")
     }
 }

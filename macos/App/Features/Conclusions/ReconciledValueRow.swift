@@ -28,9 +28,7 @@ struct ReconciledValueRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
             HStack(alignment: .center, spacing: PVSpacing.space6) {
                 summary
                 disclosures
@@ -46,12 +44,7 @@ struct ReconciledValueRow: View {
                     .padding(.bottom, PVSpacing.space5)
             }
             if provenance == .why, showsWhy {
-                ReconciliationReasoningView(
-                    title: model.whyTitle,
-                    label: model.label,
-                    style: model.style,
-                    groups: model.recordGroups
-                )
+                ReconciliationReasoningView(model: model)
                 .padding(.leading, Self.disclosureInset)
                 .padding(.bottom, PVSpacing.space5)
             }
@@ -62,7 +55,7 @@ struct ReconciledValueRow: View {
     /// Label, value and state: one VoiceOver element with the row's spoken
     /// label; the disclosures stay separate controls.
     private var summary: some View {
-        HStack(alignment: model.listedValues.isEmpty ? .center : .firstTextBaseline, spacing: PVSpacing.space6) {
+        HStack(alignment: model.shown.listedValues.isEmpty ? .center : .firstTextBaseline, spacing: PVSpacing.space6) {
             Text(model.label)
                 .pvMicroCaps()
                 .foregroundStyle(PVColor.textMuted)
@@ -76,13 +69,13 @@ struct ReconciledValueRow: View {
     }
 
     private var value: some View {
-        Self.valueContent(model)
+        PVProvenanceValueList(model.shown)
     }
 
     private var state: some View {
         HStack(spacing: PVSpacing.space4) {
-            if let badge = model.badge {
-                Self.badge(badge)
+            if let badge = model.shown.badge {
+                PVProvenanceStateBadge(badge)
             }
             if let count = model.count {
                 Text(count)
@@ -106,7 +99,7 @@ struct ReconciledValueRow: View {
                 PVDisclosureButton(label, isExpanded: $showsOtherValues)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).others")
             }
-            if provenance == .why, !model.records.isEmpty {
+            if provenance == .why, model.recordCount > 0 {
                 PVDisclosureButton(L10n.Conclusions.whyButton, isExpanded: $showsWhy)
                     .accessibilityIdentifier("conclusion.detail.row.\(model.id).why")
             }
@@ -124,7 +117,7 @@ struct ReconciledValueRow: View {
     /// records, else empty so the values line up (VoiceOver skips the empty slot).
     @ViewBuilder
     private var provenanceSlot: some View {
-        if model.records.isEmpty {
+        if model.recordCount == 0 {
             Color.clear
                 .frame(width: 28, height: 28)
                 .accessibilityHidden(true)
@@ -145,7 +138,7 @@ struct ReconciledValueRow: View {
                             .foregroundStyle(PVColor.textFaint)
                             .frame(width: 24, alignment: .leading)
                         Text(other.text)
-                            .font(Self.font(for: model.style))
+                            .font(model.shown.face.valueFont)
                             .foregroundStyle(PVColor.textPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         Text(other.support)
@@ -161,58 +154,5 @@ struct ReconciledValueRow: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.Conclusions.otherValuesList(model.label))
-    }
-
-    /// The row's value as the row and the provenance sheet's header show it:
-    /// every kept value of a multi-valued field, else the lead, else the field's
-    /// empty text in italic.
-    @ViewBuilder
-    static func valueContent(_ model: ReconciledValueRowModel) -> some View {
-        if !model.listedValues.isEmpty {
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                ForEach(model.listedValues) { value in
-                    valueLine(value, style: model.style)
-                }
-            }
-        } else if let lead = model.lead {
-            Text(lead)
-                .font(font(for: model.style))
-                .foregroundStyle(PVColor.textPrimary)
-                .textSelection(.enabled)
-        } else {
-            Text(model.emptyText)
-                .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
-                .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    /// One value with its Source count beside it.
-    static func valueLine(_ value: ReconciledValueRowModel.OtherValue, style: ReconciledValueRowModel.ValueStyle) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space5) {
-            Text(verbatim: value.text)
-                .font(font(for: style))
-                .foregroundStyle(PVColor.textPrimary)
-                .textSelection(.enabled)
-            Text(verbatim: value.support)
-                .font(PVFont.mono(size: PVTypeScale.caption))
-                .foregroundStyle(PVColor.textMuted)
-        }
-    }
-
-    static func font(for style: ReconciledValueRowModel.ValueStyle) -> Font {
-        switch style {
-        case .text: PVFont.body(size: PVTypeScale.body)
-        case .date: PVFont.mono(size: 15)
-        case .place: PVFont.body(size: PVTypeScale.body, italic: true)
-        }
-    }
-
-    @ViewBuilder
-    static func badge(_ badge: ReconciledValueDisplay.StateBadge) -> some View {
-        switch badge {
-        case .merged: PVBadge(L10n.Conclusions.badgeMerged, tone: .neutral, icon: .merge)
-        case .mixed: PVBadge(L10n.Conclusions.badgeMixed, tone: .warning, icon: .split)
-        case .concluded: PVBadge(L10n.Conclusions.badgeConcluded, tone: .success, icon: .stamp)
-        }
     }
 }

@@ -33,6 +33,11 @@ enum ReconciledValueDisplay {
         )
     }
 
+    /// "1 Source", "3 Sources": the count as the recipe and the rows word it.
+    static func sourceCountLine(_ count: Int) -> String {
+        L10n.Conclusions.sourceCount(count)
+    }
+
     /// The distinct Sources among these outcomes; `fallback` (summed support)
     /// when none carries a Source id.
     static func distinctSourceCount(of outcomes: [CatalogReconcilerOutcome], fallback: Int) -> Int {
@@ -45,7 +50,7 @@ enum ReconciledValueDisplay {
         switch field.state {
         case .empty: nil
         case .concluded: L10n.string(L10n.Conclusions.countConcluded)
-        default: L10n.Conclusions.sourceCount(sourceCount(field))
+        default: sourceCountLine(sourceCount(field))
         }
     }
 
@@ -163,7 +168,7 @@ enum ReconciledValueDisplay {
                 : L10n.Conclusions.outcomeFoldedInto(into)
         case .outvoted:
             return outcome.voteTotal > 0
-                ? L10n.Conclusions.outcomeOutvotedBy(outcome.voteSupport, sources: L10n.Conclusions.sourceCount(outcome.voteTotal))
+                ? L10n.Conclusions.outcomeOutvotedBy(outcome.voteSupport, sources: sourceCountLine(outcome.voteTotal))
                 : L10n.string(L10n.Conclusions.outcomeOutvoted)
         case .weak:
             let causes = weakCauses(outcome)
@@ -172,7 +177,7 @@ enum ReconciledValueDisplay {
                 : L10n.Conclusions.outcomeWeakBecause(ListFormatter.localizedString(byJoining: causes))
         case .denied:
             let denier = field.outcomes.first { $0.observationID == outcome.deniedByObservationID }
-            let name = denier.map { $0.sourceTitle.isEmpty ? $0.observationRef : $0.sourceTitle } ?? ""
+            let name = denier.map { CitationLineDisplay.sourceTitle(for: $0) } ?? ""
             return name.isEmpty
                 ? L10n.string(L10n.Conclusions.outcomeDenied)
                 : L10n.Conclusions.outcomeDeniedBy(name)
@@ -216,7 +221,7 @@ enum ReconciledValueDisplay {
     /// The spoken state: "merged from 2 Sources", "single, 1 Source", …;
     /// nil for an empty field.
     static func spokenState(_ field: CatalogConclusionField) -> String? {
-        let sources = L10n.Conclusions.sourceCount(sourceCount(field))
+        let sources = sourceCountLine(sourceCount(field))
         switch field.state {
         case .single: return L10n.Conclusions.a11ySingle(sources)
         case .merged: return L10n.Conclusions.a11yMerged(sources)

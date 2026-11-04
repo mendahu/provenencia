@@ -192,7 +192,7 @@ struct ConclusionDetailGallery: Equatable {
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
                 citation: citation,
-                location: ReconciliationRecord.composerLocation(for: $0.record),
+                location: .composer(for: $0.record),
                 isLead: $0.leads,
                 accessibilityLabel: $0.leads ? leadTileLabel(citation.line) : tileLabel(citation.line),
                 useAsLabel: useAsLabel(source),
@@ -418,8 +418,13 @@ struct ConclusionDetailRowsSection: View {
         }
         .pvSheet(item: $provenanceItem) { item in
             if let row = item.row(in: rows) {
-                ProvenanceSheet(row: row, widthClass: widthClass, close: { provenanceItem = nil })
-                    .environment(navigation)
+                PVProvenanceSheet(
+                    content: row.provenanceContent(),
+                    columns: PVProvenanceColumns(widthClass: widthClass),
+                    idPrefix: "conclusion.detail.provenance",
+                    open: { navigation.go(to: .provenance($0, $1)) }
+                )
+                .accessibilityIdentifier("conclusion.detail.provenance.\(row.id)")
             }
         }
         // A row that leaves the page closes its sheet.

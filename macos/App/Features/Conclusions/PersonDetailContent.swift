@@ -83,11 +83,11 @@ struct PersonDetailContent: ConclusionDetailBody {
             rows.append(ReconciledValueRowModel(field: name, locale: locale, orders: orders))
         } else {
             rows.append(.empty(
-                id: "name", label: L10n.string(L10n.Conclusions.personName), style: .text,
+                id: "name", label: L10n.string(L10n.Conclusions.personName), face: .text,
                 emptyText: L10n.string(L10n.Conclusions.emptyName)
             ))
         }
-        let life: [(String, LocalizedStringResource, LocalizedStringResource, ReconciledValueRowModel.ValueStyle, CatalogDerivedRowKind)] = [
+        let life: [(String, LocalizedStringResource, LocalizedStringResource, PVProvenanceFace, CatalogDerivedRowKind)] = [
             ("life.birthDate", L10n.Conclusions.personBirthDate, L10n.Conclusions.emptyBirthDate, .date, .birthDate),
             ("life.birthPlace", L10n.Conclusions.personBirthPlace, L10n.Conclusions.emptyBirthPlace, .place, .birthPlace),
             ("life.deathDate", L10n.Conclusions.personDeathDate, L10n.Conclusions.emptyDeathDate, .date, .deathDate),
@@ -95,14 +95,14 @@ struct PersonDetailContent: ConclusionDetailBody {
         ]
         let facts: [CatalogLifeFacts?] = [summary?.birth, summary?.birth, summary?.death, summary?.death]
         for (index, entry) in life.enumerated() {
-            let (id, label, empty, style, kind) = entry
+            let (id, label, empty, face, kind) = entry
             let side = facts[index]
             let lead: String
             let mixed: Bool
             let opens: ReconciledValueRowModel.Opens?
             let shownOwnerID: String?
             let competing = (side?.eventCount ?? 0) > 1
-            if style == .date {
+            if face == .date {
                 lead = PersonLifeDisplay.dateText(side?.date, locale: locale)
                 mixed = competing || (side?.dateCount ?? 0) > 1
                 opens = side?.event.map(ReconciledValueRowModel.Opens.event)
@@ -115,7 +115,7 @@ struct PersonDetailContent: ConclusionDetailBody {
                 shownOwnerID = shown?.entity.id
             }
             rows.append(.derived(
-                id: id, label: L10n.string(label), style: style, lead: lead,
+                id: id, label: L10n.string(label), face: face, lead: lead,
                 emptyText: L10n.string(empty), mixed: mixed, opens: opens,
                 owners: derivedRows.first { $0.kind == kind }?.owners ?? [],
                 shownOwnerID: shownOwnerID, kind: kind, locale: locale, orders: orders

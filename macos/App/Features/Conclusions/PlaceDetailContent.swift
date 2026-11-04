@@ -55,19 +55,19 @@ struct PlaceDetailContent: ConclusionDetailBody {
         let label = L10n.string(L10n.Conclusions.placeNames)
         let empty = L10n.string(L10n.Conclusions.emptyPlaceNames)
         guard let field, !field.outcomes.isEmpty else {
-            return .empty(id: "names", label: label, style: .text, emptyText: empty)
+            return .empty(id: "names", label: label, face: .text, emptyText: empty)
         }
         var row = ReconciledValueRowModel(field: field, locale: locale)
         row.label = label
-        row.emptyText = empty
-        guard row.listedValues.count > 1 else {
+        row.shown.emptyText = empty
+        guard row.shown.listedValues.count > 1 else {
             row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(
-                label: label, lead: row.lead, field: field
+                label: label, lead: row.shown.lead, field: field
             )
             return row
         }
-        let names = row.listedValues.map(\.text).joined(separator: "; ")
-        row.whyTitle = L10n.Conclusions.whyThese(row.listedValues.count, label: label)
+        let names = row.shown.listedValues.map(\.text).joined(separator: "; ")
+        row.whyTitle = L10n.Conclusions.whyThese(row.shown.listedValues.count, label: label)
         row.accessibilityLabel = ReconciledValueDisplay.accessibilityLabel(
             label: label, lead: names, field: field
         )

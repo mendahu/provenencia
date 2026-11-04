@@ -192,9 +192,7 @@ struct SourcePageArtifactsView: View {
         .background(PVColor.surfaceInset)
         .clipped()
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
                 .allowsHitTesting(false)
         }
         .overlay {

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-36 — The provenance sheet joins the design system
+
+**Landed 2026-11-03** in [#702](https://github.com/mendahu/provenencia/pull/702). The Vitals provenance sheet looks and behaves as before but is a design-system recipe (`Recipes/ProvenanceSheet/`): one record row, a record table and the sheet, each placeable alone and lined up by `PVProvenanceColumns`. `PVProvenanceSheetContent` assembles their content from the wire records a caller already holds, so the wording of provenance lives once; a row builds it when its sheet or Why opens, not when the page loads. A link reports `(Record, PVProvenanceLink)` and the caller maps it with `WorkspaceLocation.provenance(_:_:)`; the sheet closes itself first. Record and state wording and the Event and Place titles moved to `Platform/`, and the sheet's copy to `L10n.ProvenanceSheet`. The Event and Place Why keeps its own table and draws the recipe's parts. S13-15 places one record row under the viewer's image.
+
 ## S13-14 — Gallery section
 
 **Landed 2026-11-03** in [#701](https://github.com/mendahu/provenencia/pull/701). A Person's Gallery shows every likeness in a 160pt tile, captioned with its Source title (two lines, mono for an Observation ref) over the rest of the citation line, with the Portrait Badge on the portrait and Use as portrait on the others; VoiceOver reads the citation line, and the portrait's tile adds "portrait". A click or Return on the image opens its Citation, as before, until the viewer (S13-15); tiles have no provenance control, no Open citation and no Use earliest likeness (the header thumb's menu keeps it). At Wide the grid fills the pane, and every full-width section's empty, loading and error states stay centered at 1180pt (`pvKeepsPageBand`). The Event and Place Pictures keep their 96pt tiles, drawn by the same `ConclusionGallerySection` in its `.small` look; only their VoiceOver wording changed. A person's gender colors tint a tile's fallback mark only, never a picture. `CitationLineDisplay.parts` gives the caption its two halves.

@@ -49,9 +49,7 @@ struct PVSectionHeader<Title: PVCopy, Aside: View, Actions: View>: View {
         }
         .padding(.bottom, PVSpacing.space4)
         .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(PVColor.borderDefault)
-                .frame(height: 1)
+            PVDivider(color: PVColor.borderDefault)
         }
     }
 }
