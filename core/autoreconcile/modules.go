@@ -23,8 +23,9 @@ type module interface {
 	// carries nothing to compare (no evidence).
 	split(v Value) (units map[string]unit, ok bool)
 	// fold reports whether from, a less specific value, folds into into, a
-	// fuller one, both units of name. Simple modules never fold.
-	fold(name string, from, into unit) bool
+	// fuller one, both units of name. nickClass is true when the fold is
+	// nickname-class (names only); other modules always return false.
+	fold(name string, from, into unit) (folds, nickClass bool)
 	// outvotes reports whether majority may crowd other out when winner wins
 	// unit name. Simple modules let majority outvote anything; names only
 	// outvote spelling variants of the winner.
@@ -35,8 +36,10 @@ type module interface {
 	oneValue() bool
 	// assemble builds a value's displayed form from its supporting members
 	// in rank order and, per unit name, the values it settled on (best
-	// supported first). A module without oneValue gets one value per name.
-	assemble(members []Candidate, settled map[string][]unit) Value
+	// supported first). folded holds each unit's folded attaches for modules
+	// that re-tag folded values (names). A module without oneValue gets one
+	// value per name.
+	assemble(members []Candidate, settled map[string][]unit, folded map[string][]foldAttach) Value
 }
 
 // wholeValue is the unit name of a module with one unit per value.
@@ -86,13 +89,13 @@ func (m keyModule) split(v Value) (map[string]unit, bool) {
 	return map[string]unit{wholeValue: {key: k}}, true
 }
 
-func (keyModule) fold(string, unit, unit) bool { return false }
+func (keyModule) fold(string, unit, unit) (bool, bool) { return false, false }
 
 func (keyModule) outvotes(string, unit, unit) bool { return true }
 
 func (keyModule) oneValue() bool { return false }
 
-func (keyModule) assemble(members []Candidate, _ map[string][]unit) Value {
+func (keyModule) assemble(members []Candidate, _ map[string][]unit, _ map[string][]foldAttach) Value {
 	return members[0].Value
 }
 

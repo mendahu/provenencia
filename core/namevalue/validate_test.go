@@ -2,11 +2,21 @@ package namevalue_test
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 )
+
+func TestPartValueOK(t *testing.T) {
+	if !namevalue.PartValueOK(strings.Repeat("a", namevalue.MaxPartBytes)) {
+		t.Fatal("at limit should be ok")
+	}
+	if namevalue.PartValueOK(strings.Repeat("a", namevalue.MaxPartBytes+1)) {
+		t.Fatal("over limit should not be ok")
+	}
+}
 
 func TestValidate(t *testing.T) {
 	tests := []struct {

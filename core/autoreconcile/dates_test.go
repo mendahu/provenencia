@@ -161,7 +161,7 @@ func TestDateFold(t *testing.T) {
 	m := dateModule{rules: testRules}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := m.fold("", dateUnitOf(t, tc.from), dateUnitOf(t, tc.to))
+			got, _ := m.fold("", dateUnitOf(t, tc.from), dateUnitOf(t, tc.to))
 			if got != tc.fold {
 				t.Fatalf("fold = %v, want %v", got, tc.fold)
 			}

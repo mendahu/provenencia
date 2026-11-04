@@ -89,3 +89,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 ## S14-18 — Name folds never crash
 
 **Landed 2026-11-01** in [#677](https://github.com/mendahu/provenencia/pull/677). The reconciler resolves each name value through the fold graph to the best supported, then best ranked, value that folds into nothing, so a person recorded as B., Bill and William (or Ann, Anna and Hannah) files, reopens and shows the formal name instead of writing to a nil map (audit 2 B-1). A fold cycle with no way out keeps each value. Which pairs fold is unchanged; `CacheVersion` is 22, so every catalog rebuilds once on open.
+
+## S14-26 — A folded nickname shows as a nickname
+
+**Landed 2026-11-04** in [#709](https://github.com/mendahu/provenencia/pull/709). A nickname-class fold reappears as a `nick` part of the assembled name (*William “Bill” Robins*, *James “Jim” Robins* on every S14-09 surface); initials, abbreviations, and prefix-only hops still vanish. The pipeline passes folded attaches into `nameModule.assemble` with `nickEdge` / `chainNick`; `CacheVersion` is 23. Product version is 0.3.0.
