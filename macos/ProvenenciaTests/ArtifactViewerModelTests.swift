@@ -246,7 +246,7 @@ struct ArtifactViewerModelTests {
         #expect(raster.height == Int(expected.size.height.rounded()))
     }
 
-    @Test func declaredSizeTurnsRotatedImages() throws {
+    @Test func decodeTurnsRotatedImages() throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
         let limits = ThumbnailDecodePolicy.limits
@@ -254,29 +254,27 @@ struct ArtifactViewerModelTests {
 
         try ArtifactFileFixtures.writeImage(
             projectDir: project, relPath: "objects/ab/cd/a.png", width: 300, height: 200, fileType: .png)
-        let plain = try BoundedImageDecode.declaredSize(url: url("objects/ab/cd/a.png"), limits: limits).get()
+        let plain = try BoundedImageDecode.decode(url: url("objects/ab/cd/a.png"), limits: limits).get().pixelSize
         #expect(plain.width == 300 && plain.height == 200)
 
         try ArtifactFileFixtures.writeImage(
             projectDir: project, relPath: "objects/ab/cd/b.jpg", width: 300, height: 200, fileType: .jpeg,
             orientation: 6)
-        let turned = try BoundedImageDecode.declaredSize(url: url("objects/ab/cd/b.jpg"), limits: limits).get()
+        let turned = try BoundedImageDecode.decode(url: url("objects/ab/cd/b.jpg"), limits: limits).get().pixelSize
         #expect(turned.width == 200 && turned.height == 300)
-        let decoded = try BoundedImageDecode.decode(url: url("objects/ab/cd/b.jpg"), limits: limits).get()
-        #expect(decoded.pixelSize.width == turned.width && decoded.pixelSize.height == turned.height)
 
         try ArtifactFileFixtures.writeImage(
             projectDir: project, relPath: "objects/ab/cd/c.gif", width: 30, height: 20, fileType: .gif)
-        #expect(refusal(BoundedImageDecode.declaredSize(url: url("objects/ab/cd/c.gif"), limits: limits)) == .unreadable)
+        #expect(refusal(BoundedImageDecode.decode(url: url("objects/ab/cd/c.gif"), limits: limits)) == .unreadable)
 
         try ArtifactFileFixtures.writeDeclaredPNGHeader(
             projectDir: project, relPath: "objects/ab/cd/d.png", width: 5000, height: 10)
         #expect(
-            refusal(BoundedImageDecode.declaredSize(url: url("objects/ab/cd/d.png"), limits: limits))
+            refusal(BoundedImageDecode.decode(url: url("objects/ab/cd/d.png"), limits: limits))
                 == .tooLarge)
     }
 
-    @Test func declaredSizeRefusesAnOversizedFile() throws {
+    @Test func decodeRefusesAnOversizedFile() throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
         try ArtifactFileFixtures.writeDeclaredPNGHeader(
@@ -286,11 +284,10 @@ struct ArtifactViewerModelTests {
         try handle.truncate(atOffset: UInt64(ThumbnailDecodePolicy.maxDecodeBytes) + 1)
         try handle.close()
 
-        #expect(refusal(BoundedImageDecode.declaredSize(url: url, limits: ThumbnailDecodePolicy.limits)) == .tooLarge)
         #expect(refusal(BoundedImageDecode.decode(url: url, limits: ThumbnailDecodePolicy.limits)) == .tooLarge)
         var unbounded = ThumbnailDecodePolicy.limits
         unbounded.maxBytes = nil
-        #expect(refusal(BoundedImageDecode.declaredSize(url: url, limits: unbounded)) != .tooLarge)
+        #expect(refusal(BoundedImageDecode.decode(url: url, limits: unbounded)) != .tooLarge)
     }
 
     private func refusal<T>(_ result: Result<T, BoundedImageDecode.Refusal>) -> BoundedImageDecode.Refusal? {

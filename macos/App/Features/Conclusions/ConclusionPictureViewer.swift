@@ -45,10 +45,8 @@ struct ConclusionPictureViewerItem: Identifiable, Equatable {
 /// EXIF), so the frame follows the panel's width and the pane's height. Each state past `waiting` carries
 /// the id of the tile it was loaded for, so a stale one never draws under another tile's counter.
 enum ConclusionPictureImage {
-    /// A load is starting: the tile's own image, else a spinner.
+    /// A load is starting or running: an empty band, with a spinner once the load is slow.
     case waiting
-    /// The header is read: the tile's image in the final frame while the full image decodes.
-    case sized(String, CGSize)
     /// The full image.
     case decoded(String, NSImage, CGSize)
     /// No file, or one the decode refused: the kind's mark.
@@ -58,7 +56,7 @@ enum ConclusionPictureImage {
     func shown(for id: String) -> Self {
         switch self {
         case .waiting: self
-        case .sized(let owner, _), .decoded(let owner, _, _), .refused(let owner):
+        case .decoded(let owner, _, _), .refused(let owner):
             owner == id ? self : .waiting
         }
     }
@@ -118,6 +116,8 @@ struct ConclusionPictureViewer: View {
 
     @Environment(\.pvSheetClose) private var sheetClose
     @State private var image: ConclusionPictureImage = .waiting
+    /// Set once a load has taken 250 ms, so a quick decode shows no spinner and stepping does not flash.
+    @State private var showsSpinner = false
     @State private var decodeTask: Task<Result<BoundedImageDecode.Decoded, BoundedImageDecode.Refusal>, Never>?
     @FocusState private var focus: ViewerStop?
 
@@ -157,6 +157,11 @@ struct ConclusionPictureViewer: View {
         .onDisappear { lead.viewerClosed() }
         .onChange(of: step) { reclaimFocusIfStranded() }
         .task(id: step.tile.id) { await load() }
+        .task(id: step.tile.id) {
+            showsSpinner = false
+            do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
+            showsSpinner = true
+        }
     }
 
     // MARK: Title row
@@ -239,9 +244,7 @@ struct ConclusionPictureViewer: View {
     private var imageContent: some View {
         switch image.shown(for: step.tile.id) {
         case .waiting:
-            placeholder(frame: nil)
-        case .sized(_, let pixels):
-            placeholder(frame: fitted(pixels))
+            if showsSpinner { ProgressView().controlSize(.small) }
         case .decoded(_, let decoded, let pixels):
             let frame = fitted(pixels)
             Image(nsImage: decoded)
@@ -263,20 +266,6 @@ struct ConclusionPictureViewer: View {
         ConclusionPictureImage.frame(
             pixelWidth: pixels.width, pixelHeight: pixels.height, widthClass: widthClass, bandHeight: bandHeight
         )
-    }
-
-    /// The tile's own image while the full one loads, in the final frame once it is known (at most 256pt before).
-    @ViewBuilder
-    private func placeholder(frame: CGSize?) -> some View {
-        if let cached = ThumbnailCache.shared.cachedImage(projectDir: projectDir, relPath: step.tile.imageRelPath) {
-            if let frame {
-                Image(nsImage: cached).resizable().scaledToFit().frame(width: frame.width, height: frame.height)
-            } else {
-                Image(nsImage: cached).resizable().scaledToFit().frame(maxWidth: 256, maxHeight: 256)
-            }
-        } else {
-            ProgressView().controlSize(.small)
-        }
     }
 
     // MARK: Record and footer
@@ -329,9 +318,9 @@ struct ConclusionPictureViewer: View {
         if focus == nil || stranded { FocusClaim.claim($focus, .image) }
     }
 
-    /// Loads the shown picture: the tile's image first, then the file's declared size, then the full decode.
-    /// A step more than 120 ms later cancels the wait before any file opens, and only the latest wanted
-    /// picture decodes once the one in flight ends (S13-15 D-5, F-3).
+    /// Loads the shown picture: one bounded decode, which also gives the size. A step more than 120 ms
+    /// later cancels the wait before any file opens, and only the latest wanted picture decodes once the
+    /// one in flight ends (S13-15 D-5, F-3).
     private func load() async {
         let id = step.tile.id
         image = .waiting
@@ -343,16 +332,6 @@ struct ConclusionPictureViewer: View {
             return
         }
         let limits = ThumbnailDecodePolicy.limits
-        let declared = await Task.detached(priority: .userInitiated) {
-            BoundedImageDecode.declaredSize(url: url, limits: limits)
-        }.value
-        guard !Task.isCancelled else { return }
-        guard case .success(let pixels) = declared else {
-            image = .refused(id)
-            return
-        }
-        let size = CGSize(width: pixels.width, height: pixels.height)
-        image = .sized(id, size)
         let work = Task.detached(priority: .userInitiated) {
             BoundedImageDecode.decode(url: url, limits: limits)
         }
@@ -360,7 +339,8 @@ struct ConclusionPictureViewer: View {
         let decoded = await work.value
         guard !Task.isCancelled else { return }
         switch decoded {
-        case .success(let result): image = .decoded(id, result.image, size)
+        case .success(let result):
+            image = .decoded(id, result.image, CGSize(width: result.pixelSize.width, height: result.pixelSize.height))
         case .failure: image = .refused(id)
         }
     }

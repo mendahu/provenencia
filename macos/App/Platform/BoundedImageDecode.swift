@@ -43,15 +43,7 @@ enum BoundedImageDecode {
     /// Why a decode refused.
     typealias Refusal = ImageHeaderDecode.Refusal
 
-    /// The size in pixels the file declares, as the image is shown (turned for EXIF 5...8), or the
-    /// reason it refused. One header read; no pixels decode. The same admission as ``decode(url:limits:)``.
-    static func declaredSize(
-        url: URL, limits: ImageDecodeLimits
-    ) -> Result<(width: Int, height: Int), Refusal> {
-        ImageHeaderDecode.admit(url: url, limits: limits).map { $0.1.uprightSize }
-    }
-
-    /// Decodes the image at `url`, or the reason it refused, under the same admission as ``declaredSize(url:limits:)``.
+    /// Decodes the image at `url`, or the reason it refused.
     static func decode(url: URL, limits: ImageDecodeLimits) -> Result<Decoded, Refusal> {
         let source: CGImageSource
         let declared: ImageHeaderDecode.DeclaredImage
