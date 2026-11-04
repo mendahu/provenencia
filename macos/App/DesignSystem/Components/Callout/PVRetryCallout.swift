@@ -9,6 +9,7 @@ struct PVRetryCallout: View {
     private let compact: Bool
     private let retryIdentifier: String
     private let onRetry: () -> Void
+    private let retryFocused: FocusState<Bool>.Binding?
 
     init(
         title: (any PVCopy)? = nil,
@@ -17,6 +18,7 @@ struct PVRetryCallout: View {
         isRetrying: Bool,
         compact: Bool = false,
         retryIdentifier: String,
+        retryFocused: FocusState<Bool>.Binding? = nil,
         onRetry: @escaping () -> Void
     ) {
         self.title = title
@@ -25,13 +27,23 @@ struct PVRetryCallout: View {
         self.isRetrying = isRetrying
         self.compact = compact
         self.retryIdentifier = retryIdentifier
+        self.retryFocused = retryFocused
         self.onRetry = onRetry
     }
 
     var body: some View {
         PVCallout(tone: .danger, title: title, message: message, compact: compact, announces: true) {
-            PVButton(retry, variant: .secondary, size: .sm, loading: isRetrying, action: onRetry)
-                .accessibilityIdentifier(retryIdentifier)
+            retryButton
+        }
+    }
+
+    @ViewBuilder private var retryButton: some View {
+        let button = PVButton(retry, variant: .secondary, size: .sm, loading: isRetrying, action: onRetry)
+            .accessibilityIdentifier(retryIdentifier)
+        if let retryFocused {
+            button.focused(retryFocused)
+        } else {
+            button
         }
     }
 }

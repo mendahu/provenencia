@@ -5,6 +5,7 @@ struct PromoteView: View {
     static let noticesAnchor = "promote.notices"
     @Environment(WorkspaceNavigation.self) private var navigation
     @State private var model: PromoteModel
+    @FocusState private var loadRetryFocused: Bool
     @Environment(\.pvWidthClass) private var widthClass
 
     init(
@@ -90,9 +91,11 @@ struct PromoteView: View {
                     retry: L10n.Promote.tryAgain,
                     isRetrying: model.isLoading,
                     retryIdentifier: "promote.tryAgain",
+                    retryFocused: $loadRetryFocused,
                     onRetry: { model.retryLoad() }
                 )
                 .id(model.loadAttempt)
+                .onAppear { loadRetryFocused = true }
             }
             if model.flow.staleNote != nil {
                 PVCallout(
