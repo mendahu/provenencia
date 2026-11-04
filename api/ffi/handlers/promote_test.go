@@ -118,6 +118,15 @@ func TestUnpromoteSubject(t *testing.T) {
 				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
 				}
+				hasCounts := false
+				for _, list := range e.GetLists() {
+					if list == "counts" {
+						hasCounts = true
+					}
+				}
+				if !hasCounts {
+					t.Fatalf("lists %+v want counts", e.GetLists())
+				}
 				in := req.(*engine.UnpromoteSubjectRequest)
 				if n := memberships(t, in.GetProjectDir(), in.GetSubjectId()); n != 0 {
 					t.Fatalf("still a member %d times", n)
@@ -265,6 +274,71 @@ func TestGetUnpromoteImpact(t *testing.T) {
 	if unpromoted.Deletes != nil {
 		t.Fatalf("unpromoted: %+v", unpromoted.Deletes)
 	}
+
+	dir4, userID4, sourceID4, typeID4 := subjectFixture(t)
+	createPerson := func(label string) string {
+		createdOut, createErr := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+			ProjectDir: dir4, UserId: userID4, GraphId: soleGraphID(t, dir4, sourceID4), SubjectTypeId: typeID4, Label: label,
+		}))
+		if createErr != nil {
+			t.Fatal(createErr)
+		}
+		var created engine.CreateSubjectResponse
+		if err := proto.Unmarshal(createdOut, &created); err != nil {
+			t.Fatal(err)
+		}
+		return created.Subject.GetId()
+	}
+	jamesID := createPerson("James")
+	promotedA := promoteInDir(t, dir4, userID4, jamesID, "")
+	promotedC := promoteInDir(t, dir4, userID4, createPerson("Jim"), "")
+	if err := withProjectCatalog(dir4, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`,
+			promotedA.Entity.ID, promotedC.Entity.ID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out, err = GetUnpromoteImpact(marshalProto(t, &engine.GetUnpromoteImpactRequest{
+		ProjectDir: dir4, SubjectId: jamesID,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mergedInto engine.GetUnpromoteImpactResponse
+	if err := proto.Unmarshal(out, &mergedInto); err != nil {
+		t.Fatal(err)
+	}
+	if mergedInto.Deletes != nil {
+		t.Fatalf("merged into: %+v", mergedInto.Deletes)
+	}
+
+	runRPC(t, GetUnpromoteImpact, []rpcTest{
+		{
+			name: "bridge Subject",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, user, sourceID, _ := subjectFixture(t)
+				relID := subjectTypeIDByKey(t, dir, "relationship")
+				out, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
+					ProjectDir: dir, UserId: user, GraphId: soleGraphID(t, dir, sourceID), SubjectTypeId: relID, Label: "bridge",
+				}))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var created engine.CreateSubjectResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.GetUnpromoteImpactRequest{ProjectDir: dir, SubjectId: created.Subject.GetId()}
+			},
+			wantErr:   true,
+			wantErrIs: promote.ErrUnsupportedType,
+		},
+	})
 }
 
 func TestListSubjectMemberships(t *testing.T) {

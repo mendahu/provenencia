@@ -16,7 +16,7 @@ type inboundEdge struct {
 	Child  catalogmodel.Kind
 	Bucket catalogmodel.Bucket
 	Count  func(tx *sql.Tx, parentID []byte) (int, error)
-	List   func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
+	List   func(tx *sql.Tx, parentID []byte, limit int) ([]ProbeRow, error)
 }
 
 // ownedPlan is what a delete needs to know about owned children, read from the
@@ -61,7 +61,8 @@ type originRule struct {
 	SeededLocked bool
 }
 
-type probeRow struct {
+// ProbeRow is one id/ref pair from an Impact count or list query.
+type ProbeRow struct {
 	ID  []byte
 	Ref string
 }

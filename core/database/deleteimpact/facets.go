@@ -53,7 +53,7 @@ type facetRelease struct {
 	Named bool
 	Child catalogmodel.Kind
 	Count func(tx *sql.Tx, parentID []byte) (int, error)
-	List  func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
+	List  func(tx *sql.Tx, parentID []byte, limit int) ([]ProbeRow, error)
 	// Remaining counts rows still pointing at the parent after Release; it
 	// must be zero. Empty only for connection-facet releases, whose leftovers
 	// Impact has already refused. Required for CASCADE and optional SET NULL.
@@ -182,7 +182,7 @@ func buildFacetReleases() []facetRelease {
 		// A graph's Citations go with it, each through releaseCitation (a graph
 		// with Subjects is refused first, so none has an Observation).
 		{
-			Parent: catalogmodel.KindEvidenceGraph, Via: "citations.graph_id",
+			Parent: catalogmodel.KindEvidenceGraph, Via: ViaDeletesCitations,
 			Named: true, Child: catalogmodel.KindCitation,
 			Count:     countSQLFn(`SELECT COUNT(*) FROM citations WHERE graph_id = ?`),
 			List:      listSQLFn(`SELECT id, ref FROM citations WHERE graph_id = ? ORDER BY ref COLLATE NOCASE LIMIT ?`),

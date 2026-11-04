@@ -214,7 +214,7 @@ A conflict on one Property has two possible stories. The records are about the s
 
 ## 5.2 When a member leaves
 
-Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership and does not touch any other claim. Nothing stored on the remaining claims refers to the departing subject; the entity comparison (§5.1) reads the members that are left.
+Rejecting, deleting, or moving an accepted Identity Claim does not change any other subject's membership and does not delete any other subject's accepted claim. Nothing stored on the remaining claims refers to the departing subject; the entity comparison (§5.1) reads the members that are left. When the removed claim was the handle's last accepted member, the handle's remaining claims on it are released with it in the same revision.
 
 Unpromote on the Evidence graph deletes a primary Subject's accepted claim and, in the same revision, the accepted claims of the bridges on that Evidence graph that have it as an end. It does not reject. Removing a handle's last accepted member (by Unpromote or Subject delete) deletes the handle in the same revision, unless another handle is merged into it.
 

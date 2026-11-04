@@ -80,7 +80,7 @@ func TestPragmaHonestyProjectors(t *testing.T) {
 		case catalogmodel.BucketInfra, catalogmodel.BucketSkip, catalogmodel.BucketPool:
 			continue
 		}
-		_, loc, err := projectKind(tx, spec.Kind, probeRow{ID: id, Ref: "REF-TEST"})
+		_, loc, err := projectKind(tx, spec.Kind, ProbeRow{ID: id, Ref: "REF-TEST"})
 		if err != nil {
 			t.Errorf("%s project %v", spec.Kind, err)
 			continue

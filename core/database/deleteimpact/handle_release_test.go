@@ -59,6 +59,46 @@ func TestReleaseClaimDeletesEmptiedHandle(t *testing.T) {
 		}
 	})
 
+	t.Run("merged into → stays, no error", func(t *testing.T) {
+		c, userID, _, typeID, james, _ := personFixture(t)
+		perA := mustEntity(t, c, userID, typeID)
+		perC := mustEntity(t, c, userID, typeID)
+		cl := mustClaim(t, c, userID, james, perA)
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, perA.ID, perC.ID); err != nil {
+			t.Fatal(err)
+		}
+		changes, err := releaseClaim(t, c, userID, cl.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ch := range changes {
+			if ch.EntityType == "canonical_entity" && ch.Action == rowchange.ActionDelete {
+				t.Fatalf("handle deleted: %+v", changes)
+			}
+		}
+		if _, err := canonicalentities.Get(c, perA.ID); err != nil {
+			t.Fatalf("PER-A gone: %v", err)
+		}
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		group, err := deleteimpact.LastMemberGroup(tx, james.ID)
+		if err := tx.Rollback(); err != nil {
+			t.Fatal(err)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if group.Via != "" {
+			t.Fatalf("LastMemberGroup should be empty: %+v", group)
+		}
+	})
+
 	t.Run("provisional on handle with no accepted member stays", func(t *testing.T) {
 		c, userID, james, per := soleMemberFixture(t)
 		cl, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
@@ -109,38 +149,116 @@ func twoMemberFixture(t *testing.T) (*database.Catalog, []byte, subjects.Subject
 }
 
 func TestLastMemberGroupMatchesRelease(t *testing.T) {
-	c, userID := testCatalog(t)
-	if err := subjectvocab.Install(c); err != nil {
-		t.Fatal(err)
+	type fixture struct {
+		name      string
+		setup     func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool)
+		wantEmpty bool
+		delete    bool
 	}
-	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
+	tests := []fixture{
+		{
+			name: "sole accepted member",
+			setup: func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool) {
+				c, userID, james, per := soleMemberFixture(t)
+				cl := mustClaim(t, c, userID, james, per)
+				return c, userID, cl.ID, per.ID, per.Ref, true
+			},
+			delete: true,
+		},
+		{
+			name: "another accepted member",
+			setup: func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool) {
+				c, userID, james, jim, per := twoMemberFixture(t)
+				mustClaim(t, c, userID, jim, per)
+				cl := mustClaim(t, c, userID, james, per)
+				return c, userID, cl.ID, per.ID, per.Ref, false
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "merged into",
+			setup: func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool) {
+				c, userID, _, typeID, james, _ := personFixture(t)
+				perA := mustEntity(t, c, userID, typeID)
+				perC := mustEntity(t, c, userID, typeID)
+				cl := mustClaim(t, c, userID, james, perA)
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, perA.ID, perC.ID); err != nil {
+					t.Fatal(err)
+				}
+				return c, userID, cl.ID, perA.ID, perA.Ref, false
+			},
+			wantEmpty: true,
+		},
+		{
+			name: "provisional from another subject goes with handle",
+			setup: func(t *testing.T) (*database.Catalog, []byte, []byte, []byte, string, bool) {
+				c, userID, james, jim, per := twoMemberFixture(t)
+				clA := mustClaim(t, c, userID, james, per)
+				_, err := writes.Call(c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
+						SubjectID: jim.ID, EntityID: per.ID, Status: identityclaims.StatusProvisional,
+					})
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return c, userID, clA.ID, per.ID, per.Ref, true
+			},
+			delete: true,
+		},
 	}
-	src := mustSource(t, c, userID)
-	james := mustSubject(t, c, userID, src.ID, personType.ID, "James")
-	per := mustEntity(t, c, userID, personType.ID)
-	cl := mustClaim(t, c, userID, james, per)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, userID, claimID, entityID, wantRef, _ := tt.setup(t)
+			subjectID := claimSubjectID(t, c, claimID)
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			group, err := deleteimpact.LastMemberGroup(tx, subjectID)
+			if err := tx.Rollback(); err != nil {
+				t.Fatal(err)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.wantEmpty {
+				if group.Via != "" {
+					t.Fatalf("want empty group, got %+v", group)
+				}
+			} else if group.Via != deleteimpact.ViaLastMember || group.Total != 1 || group.Listed[0].Ref != wantRef {
+				t.Fatalf("group %+v", group)
+			}
+			if tt.delete {
+				releaseAndAssertHandleGone(t, c, userID, claimID, entityID)
+			} else if _, err := releaseClaim(t, c, userID, claimID); err != nil {
+				t.Fatal(err)
+			} else if _, err := canonicalentities.Get(c, entityID); err != nil {
+				t.Fatalf("handle should remain: %v", err)
+			}
+		})
+	}
+}
+
+func claimSubjectID(t *testing.T, c *database.Catalog, claimID []byte) []byte {
+	t.Helper()
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx, err := db.Begin()
-	if err != nil {
+	var subjectID []byte
+	if err := db.QueryRow(`SELECT subject_id FROM identity_claims WHERE id = ?`, claimID).Scan(&subjectID); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback() }()
-	group, err := deleteimpact.LastMemberGroup(tx, james.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := tx.Rollback(); err != nil {
-		t.Fatal(err)
-	}
-	if group.Via != deleteimpact.ViaLastMember || group.Total != 1 || group.Listed[0].Ref != per.Ref {
-		t.Fatalf("%+v", group)
-	}
-	releaseAndAssertHandleGone(t, c, userID, cl.ID, per.ID)
+	return append([]byte(nil), subjectID...)
 }
 
 func releaseClaim(t *testing.T, c *database.Catalog, userID, claimID []byte) ([]rowchange.Change, error) {

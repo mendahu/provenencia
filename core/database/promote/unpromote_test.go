@@ -166,6 +166,32 @@ func TestUnpromote(t *testing.T) {
 		}
 	})
 
+	t.Run("sole member event handle goes", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		ev := w.node("event", "Birth", 0, 0)
+		w.promote(ev)
+		before := len(w.handles("event"))
+		if err := w.unpromote(ev); err != nil {
+			t.Fatal(err)
+		}
+		if len(w.handles("event")) != before-1 {
+			t.Fatal("event handle should be deleted")
+		}
+	})
+
+	t.Run("sole member place handle goes", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		pl := w.node("place", "York", 0, 0)
+		w.promote(pl)
+		before := len(w.handles("place"))
+		if err := w.unpromote(pl); err != nil {
+			t.Fatal(err)
+		}
+		if len(w.handles("place")) != before-1 {
+			t.Fatal("place handle should be deleted")
+		}
+	})
+
 	t.Run("an unknown id and no user are invalid", func(t *testing.T) {
 		w := newBridgeWorld(t)
 		bad := subjects.Subject{ID: bytes.Repeat([]byte{9}, 16)}

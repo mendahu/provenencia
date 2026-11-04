@@ -32,7 +32,7 @@ func buildCascadeEdges() []inboundEdge {
 			rows, err := lastMemberRows(tx, subjectID)
 			return len(rows), err
 		},
-		List: func(tx *sql.Tx, subjectID []byte, limit int) ([]probeRow, error) {
+		List: func(tx *sql.Tx, subjectID []byte, limit int) ([]ProbeRow, error) {
 			rows, err := lastMemberRows(tx, subjectID)
 			if err != nil || len(rows) <= limit {
 				return rows, err
@@ -46,21 +46,16 @@ func buildCascadeEdges() []inboundEdge {
 		Child:  catalogmodel.KindCanonicalEntity,
 		Bucket: catalogmodel.BucketFacet,
 		Count: func(tx *sql.Tx, subjectID []byte) (int, error) {
-			rows, err := subjectHandleCascadeRows(tx, subjectID)
-			return len(rows), err
+			return subjectHandleCascadeCount(tx, subjectID)
 		},
-		List: func(tx *sql.Tx, subjectID []byte, limit int) ([]probeRow, error) {
-			rows, err := subjectHandleCascadeRows(tx, subjectID)
-			if err != nil || len(rows) <= limit {
-				return rows, err
-			}
-			return rows[:limit], nil
+		List: func(tx *sql.Tx, subjectID []byte, limit int) ([]ProbeRow, error) {
+			return subjectHandleCascadeList(tx, subjectID, limit)
 		},
 	}
 	return []inboundEdge{lastMemberEdge, leavesHandle}
 }
 
-func lastMemberRows(tx *sql.Tx, subjectID []byte) ([]probeRow, error) {
+func lastMemberRows(tx *sql.Tx, subjectID []byte) ([]ProbeRow, error) {
 	var entityID []byte
 	err := tx.QueryRow(`SELECT entity_id FROM identity_claims WHERE subject_id = ? AND status = ?`,
 		subjectID, claimStatusAccepted).Scan(&entityID)
@@ -78,37 +73,64 @@ func lastMemberRows(tx *sql.Tx, subjectID []byte) ([]probeRow, error) {
 	if err := tx.QueryRow(`SELECT ref FROM canonical_entities WHERE id = ?`, entityID).Scan(&ref); err != nil {
 		return nil, err
 	}
-	return []probeRow{{ID: append([]byte(nil), entityID...), Ref: ref}}, nil
+	return []ProbeRow{{ID: append([]byte(nil), entityID...), Ref: ref}}, nil
 }
 
-func subjectHandleCascadeRows(tx *sql.Tx, subjectID []byte) ([]probeRow, error) {
+func subjectHandleCascadeExclude(tx *sql.Tx, subjectID []byte) ([]byte, error) {
 	last, err := lastMemberRows(tx, subjectID)
+	if err != nil || len(last) != 1 {
+		return nil, err
+	}
+	return last[0].ID, nil
+}
+
+func subjectHandleCascadeCount(tx *sql.Tx, subjectID []byte) (int, error) {
+	exclude, err := subjectHandleCascadeExclude(tx, subjectID)
+	if err != nil {
+		return 0, err
+	}
+	var n int
+	if len(exclude) == 16 {
+		err = tx.QueryRow(`SELECT COUNT(DISTINCT e.id) FROM identity_claims ic
+			JOIN canonical_entities e ON e.id = ic.entity_id
+			WHERE ic.subject_id = ? AND e.id != ?`, subjectID, exclude).Scan(&n)
+	} else {
+		err = tx.QueryRow(`SELECT COUNT(DISTINCT e.id) FROM identity_claims ic
+			JOIN canonical_entities e ON e.id = ic.entity_id
+			WHERE ic.subject_id = ?`, subjectID).Scan(&n)
+	}
+	return n, err
+}
+
+func subjectHandleCascadeList(tx *sql.Tx, subjectID []byte, limit int) ([]ProbeRow, error) {
+	exclude, err := subjectHandleCascadeExclude(tx, subjectID)
 	if err != nil {
 		return nil, err
 	}
-	lastID := ""
-	if len(last) == 1 {
-		lastID = string(last[0].ID)
+	var rows *sql.Rows
+	if len(exclude) == 16 {
+		rows, err = tx.Query(`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
+			JOIN canonical_entities e ON e.id = ic.entity_id
+			WHERE ic.subject_id = ? AND e.id != ?
+			ORDER BY e.ref COLLATE NOCASE LIMIT ?`, subjectID, exclude, limit)
+	} else {
+		rows, err = tx.Query(`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
+			JOIN canonical_entities e ON e.id = ic.entity_id
+			WHERE ic.subject_id = ?
+			ORDER BY e.ref COLLATE NOCASE LIMIT ?`, subjectID, limit)
 	}
-	rows, err := tx.Query(`SELECT DISTINCT e.id, e.ref FROM identity_claims ic
-		JOIN canonical_entities e ON e.id = ic.entity_id
-		WHERE ic.subject_id = ?
-		ORDER BY e.ref COLLATE NOCASE`, subjectID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []probeRow
+	var out []ProbeRow
 	for rows.Next() {
 		var id []byte
 		var ref string
 		if err := rows.Scan(&id, &ref); err != nil {
 			return nil, err
 		}
-		if lastID != "" && string(id) == lastID {
-			continue
-		}
-		out = append(out, probeRow{ID: append([]byte(nil), id...), Ref: ref})
+		out = append(out, ProbeRow{ID: append([]byte(nil), id...), Ref: ref})
 	}
 	return out, rows.Err()
 }
@@ -187,4 +209,29 @@ func LastMemberGroup(tx *sql.Tx, subjectID []byte) (Group, error) {
 		return Group{}, err
 	}
 	return groups[0], nil
+}
+
+// HandleGoesWithout reports whether entityID would be deleted when subjectID's
+// claim on it is removed.
+func HandleGoesWithout(tx *sql.Tx, entityID, subjectID []byte) (bool, error) {
+	return handleGoesWithout(tx, entityID, subjectID)
+}
+
+// GroupFromProbeRows builds one Impact group from probe rows (total is len(rows)).
+func GroupFromProbeRows(tx *sql.Tx, via string, kind catalogmodel.Kind, rows []ProbeRow) (Group, error) {
+	if len(rows) == 0 {
+		return Group{}, nil
+	}
+	g := Group{Via: via, Kind: kind, Total: len(rows)}
+	for i, row := range rows {
+		if i == listedCap {
+			break
+		}
+		listed, err := projectListed(tx, kind, row)
+		if err != nil {
+			return Group{}, err
+		}
+		g.Listed = append(g.Listed, listed)
+	}
+	return g, nil
 }

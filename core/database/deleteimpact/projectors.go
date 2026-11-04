@@ -12,7 +12,7 @@ import (
 
 const listedSnippetMaxRunes = 80
 
-func projectListed(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (Listed, error) {
+func projectListed(tx *sql.Tx, kind catalogmodel.Kind, row ProbeRow) (Listed, error) {
 	out := Listed{ID: row.ID, Ref: row.Ref}
 	title, loc, err := projectKind(tx, kind, row)
 	if err != nil {
@@ -29,7 +29,7 @@ func projectListed(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (Listed, er
 	return out, nil
 }
 
-func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row probeRow) (string, workspacelocation.Location, error) {
+func projectKind(tx *sql.Tx, kind catalogmodel.Kind, row ProbeRow) (string, workspacelocation.Location, error) {
 	switch kind {
 	case catalogmodel.KindObservation:
 		return projectObservation(tx, row.ID, row.Ref)
