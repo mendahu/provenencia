@@ -8249,7 +8249,7 @@ enum L10n {
         static let columnReadAs = LocalizedStringResource(
             "provenanceSheet.column.readAs",
             defaultValue: "Read as",
-            comment: "Why table column heading: what the record says"
+            comment: "Provenance table column heading: what the record says"
         )
 
         static let columnCitation = LocalizedStringResource(
@@ -8261,7 +8261,7 @@ enum L10n {
         static let columnOutcome = LocalizedStringResource(
             "provenanceSheet.column.outcome",
             defaultValue: "Outcome",
-            comment: "Why table column heading: what the auto-reconciler did with the record"
+            comment: "Provenance table column heading: what the auto-reconciler did with the record"
         )
 
         static let columnRecord = LocalizedStringResource(
