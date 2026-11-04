@@ -1,11 +1,11 @@
 # S13-15 — Likeness viewer
 
-**Status:** Blocked — on S13-36 only (S13-14 landed in #701) ([planned](S13-36-provenance-sheet-in-the-kit.md); board S13-D13 drawn, its Record row and ClipboardButton are in the kit) (the provenance sheet joins the design system; brief S13-D13). Once S13-36 lands, D-9's record table becomes one kit `PVProvenanceRecordRow` built with `PVProvenanceSheetContent.Record(outcome:in:)` from the picture's outcome and the likeness field that holds it in `detail.fields` (S13-14 no longer builds a per-tile row, so this plan adds that lookup in `ConclusionDetailGallery.tiles(from:…)`; [`../provenance-sheet.md`](../provenance-sheet.md) § 5.1), and the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
+**Status:** Blocked — until this plan is refreshed to the kit names; S13-36 landed in [#702](https://github.com/mendahu/provenencia/pull/702) and S13-14 in #701 ([S13-36](S13-36-provenance-sheet-in-the-kit.md); board S13-D13 drawn, its Record row and ClipboardButton are in the kit) (the provenance sheet joins the design system; brief S13-D13). D-9's record table becomes one kit `PVProvenanceRecordRow` built with `PVProvenanceSheetContent.Record(outcome:in:)` from the picture's outcome and the likeness field that holds it in `detail.fields` (S13-14 no longer builds a per-tile row, so this plan adds that lookup in `ConclusionDetailGallery.tiles(from:…)`; [`../provenance-sheet.md`](../provenance-sheet.md) § 5.1), and the plan's `ProvenanceSheet` and `ReconciliationRecordRows` references are refreshed to the kit recipe's names (working rule "The provenance sheet is a kit recipe")
 **Spike / slice:** Spike 13 · Slice 5 — Gallery
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D5](../design/S13-D5-gallery-and-viewer.md), board drawn 2026-11-03 (turn 13) and agreed by the user the same day
 **Board:** Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Gallery.dc.html*, turn 13, viewer frames 13f – 13k, 13o, 13p, 13t – 13x. The implementer may not be able to open it: **Design → macOS** describes the viewer in words and gives every measure
-**Depends on:** S13-36 ([planned](S13-36-provenance-sheet-in-the-kit.md), not landed: the kit provenance sheet), S13-14 (landed [#701](https://github.com/mendahu/provenencia/pull/701): `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
+**Depends on:** S13-36 ([landed](S13-36-provenance-sheet-in-the-kit.md) in [#702](https://github.com/mendahu/provenencia/pull/702): the kit provenance sheet), S13-14 (landed [#701](https://github.com/mendahu/provenencia/pull/701): `ConclusionGallerySection`, the tile's citation line), S13-D5 (board)
 **Blocks:** —
 **Branch:** `s13-15-likeness-viewer`
 **Runs on:** macOS: every Step and `scripts/check-pr.sh` need Xcode. No Go code or proto change; one Go test's path constant follows the moved Swift file (STEP-2)
@@ -314,7 +314,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 ## 12. Open questions
 
-None. The board's answers are in D-4, D-6, D-9 and D-11. The plan stays `Blocked` until S13-36 is planned and lands; it is refreshed then (its § 4 rows marked *(S13-14)*, the kit names) and reviewed again.
+None. The board's answers are in D-4, D-6, D-9 and D-11. The plan stays `Blocked` until it is refreshed to the kit names, now that S13-36 has landed; it is refreshed then (its § 4 rows marked *(S13-14)*, the kit names) and reviewed again.
 
 ## 13. PR
 
