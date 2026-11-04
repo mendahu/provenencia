@@ -73,9 +73,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var membershipBySubject: [String: CatalogSubjectMembership] = [:]
     /// Queued graph-alignment proposals. The first is consumed; the last repeats.
     var promoteProposals: [CatalogPromoteGraphAlignmentProposal] = []
-    /// Per-call delay before a proposal returns, consumed in call order, so
-    /// tests can answer an earlier call after a later one.
-    var promoteProposeDelays: [Duration] = []
+    var proposePromoteGraphAlignmentError: Error?
+    var applyPromoteGraphAlignmentError: Error?
+    let proposePromoteGraphAlignmentHold = FakeHold()
     /// The decided rows the last proposal call held.
     var lastPromoteFixed: [CatalogPromoteGraphAlignmentFixed] = []
     /// The scope the last proposal call was sent: the one Subject the page is open on, nil for all.
@@ -1466,23 +1466,20 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fixed: [CatalogPromoteGraphAlignmentFixed],
         onlySubjectID: String?
     ) async throws -> CatalogPromoteGraphAlignmentProposal {
-        // Delay and scripted rows are one claim. Concurrent calls must not
-        // pair this call's wait with the next call's proposal.
-        let claimed: (delay: Duration?, proposal: CatalogPromoteGraphAlignmentProposal?) = withState {
+        let claimed: CatalogPromoteGraphAlignmentProposal? = withState {
             markCatalogSessionHeld(projectDir)
             lastPromoteFixed = fixed
             lastPromoteOnlySubjectID = onlySubjectID
             recordedCalls.append("proposePromoteGraphAlignment graph=\(graphID)")
-            let delay: Duration? = promoteProposeDelays.isEmpty ? nil : promoteProposeDelays.removeFirst()
-            guard !promoteProposals.isEmpty else { return (delay, nil) }
+            guard !promoteProposals.isEmpty else { return nil }
             let next = promoteProposals.count > 1 ? promoteProposals.removeFirst() : promoteProposals[0]
-            let proposal = CatalogPromoteGraphAlignmentProposal(
+            return CatalogPromoteGraphAlignmentProposal(
                 revision: nextAuditRevision - 1, rows: next.rows, connections: next.connections
             )
-            return (delay, proposal)
         }
-        if let delay = claimed.delay { try? await Task.sleep(for: delay) }
-        if let proposal = claimed.proposal { return proposal }
+        await proposePromoteGraphAlignmentHold.wait()
+        if let proposePromoteGraphAlignmentError { throw proposePromoteGraphAlignmentError }
+        if let proposal = claimed { return proposal }
         return buildPromoteProposal(projectDir: projectDir, graphID: graphID, fixed: fixed)
     }
 
@@ -1560,6 +1557,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("applyPromoteGraphAlignment graph=\(graphID) rows=\(rows.count)")
             lastPromoteBatch = rows
+            if let applyPromoteGraphAlignmentError { throw applyPromoteGraphAlignmentError }
             guard seenRevision == nextAuditRevision - 1 else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .conflict, params: [])
             }
