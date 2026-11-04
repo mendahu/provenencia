@@ -42,25 +42,40 @@ struct ConclusionPictureViewerItem: Identifiable, Equatable {
 }
 
 /// What the viewer's image area shows (S13-15 D-6). The sizes are the file's pixel sizes as shown (turned for
-/// EXIF), so the frame follows the panel's width and the pane's height.
+/// EXIF), so the frame follows the panel's width and the pane's height. Each state past `waiting` carries
+/// the id of the tile it was loaded for, so a stale one never draws under another tile's counter.
 enum ConclusionPictureImage {
     /// A load is starting: the tile's own image, else a spinner.
     case waiting
     /// The header is read: the tile's image in the final frame while the full image decodes.
-    case sized(CGSize)
+    case sized(String, CGSize)
     /// The full image.
-    case decoded(NSImage, CGSize)
+    case decoded(String, NSImage, CGSize)
     /// No file, or one the decode refused: the kind's mark.
-    case refused
+    case refused(String)
+
+    /// This state for the tile `id`; `waiting` while it belongs to another tile.
+    func shown(for id: String) -> Self {
+        switch self {
+        case .waiting: self
+        case .sized(let owner, _), .decoded(let owner, _, _), .refused(let owner):
+            owner == id ? self : .waiting
+        }
+    }
 
     /// Height of the image band on the board, at Regular and at Wide.
     private static func boardHeight(_ widthClass: PVWidthClass) -> CGFloat {
         widthClass == .wide ? 950 : 440
     }
 
-    /// The image band's height: the board's, less what a short pane lacks (the panel's chrome is about 280pt).
+    /// The least the image band is drawn.
+    static let minBandHeight: CGFloat = 320
+    /// What the panel's other rows (title, record, footer) are allowed of the pane's height.
+    static let chromeAllowance: CGFloat = 320
+
+    /// The image band's height: the board's, less what a short pane lacks after the chrome's allowance.
     static func bandHeight(widthClass: PVWidthClass, paneHeight: CGFloat) -> CGFloat {
-        min(boardHeight(widthClass), max(320, paneHeight - 320))
+        min(boardHeight(widthClass), max(minBandHeight, paneHeight - chromeAllowance))
     }
 
     /// The image's frame: half its pixels in points (a small crop is not blown up), fitted inside the
@@ -68,7 +83,7 @@ enum ConclusionPictureImage {
     static func frame(pixelWidth: CGFloat, pixelHeight: CGFloat, widthClass: PVWidthClass, bandHeight: CGFloat) -> CGSize {
         guard pixelWidth > 0, pixelHeight > 0 else { return .zero }
         let panelWidth = PVProvenanceColumns(widthClass: widthClass).panelWidth
-        let availableWidth = panelWidth - 2 * PVSpacing.space7 - 2 * stepColumn
+        let availableWidth = panelWidth - 2 * PVPanelMetrics.bodyInset - 2 * stepColumn
         let availableHeight = bandHeight - 2 * PVSpacing.space7
         let wanted = CGSize(width: pixelWidth / 2, height: pixelHeight / 2)
         let scale = min(1, availableWidth / wanted.width, availableHeight / wanted.height)
@@ -77,6 +92,13 @@ enum ConclusionPictureImage {
 
     /// Width of the previous and next columns on either side of the image.
     static let stepColumn: CGFloat = 56
+}
+
+/// A keyboard stop in the viewer: the image band, or one of the two step buttons.
+private enum ViewerStop: Hashable {
+    case image
+    case previous
+    case next
 }
 
 /// The likeness viewer: one picture large, stepping through the gallery, with its provenance record, Use as
@@ -96,7 +118,8 @@ struct ConclusionPictureViewer: View {
 
     @Environment(\.pvSheetClose) private var sheetClose
     @State private var image: ConclusionPictureImage = .waiting
-    @FocusState private var imageFocused: Bool
+    @State private var decodeTask: Task<Result<BoundedImageDecode.Decoded, BoundedImageDecode.Refusal>, Never>?
+    @FocusState private var focus: ViewerStop?
 
     private var columns: PVProvenanceColumns {
         PVProvenanceColumns(showsReadAs: false, widthClass: widthClass)
@@ -117,17 +140,22 @@ struct ConclusionPictureViewer: View {
                 band
                 record
             }
-            .onKeyPress(.leftArrow) { move(to: step.previousID) }
-            .onKeyPress(.rightArrow) { move(to: step.nextID) }
         } footer: {
             footer
         } titleAccessory: {
             titleAccessory
         }
+        .onKeyPress(.leftArrow) { move(to: step.previousID) }
+        .onKeyPress(.rightArrow) { move(to: step.nextID) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(identifier)
         .vocabularyToastOverlay($lead.toast, identifier: "\(identifier).toast")
-        .onAppear { FocusClaim.claim($imageFocused, true) }
+        .onAppear {
+            lead.viewerOpened()
+            FocusClaim.claim($focus, .image)
+        }
+        .onDisappear { lead.viewerClosed() }
+        .onChange(of: step) { reclaimFocusIfStranded() }
         .task(id: step.tile.id) { await load() }
     }
 
@@ -156,6 +184,7 @@ struct ConclusionPictureViewer: View {
                 PVIconButton(.chevronBack, label: viewer.previous, size: .lg) {
                     if let id = step.previousID { show(id) }
                 }
+                .focused($focus, equals: .previous)
                 .disabled(step.previousID == nil)
                 .accessibilityIdentifier("\(identifier).previous")
             }
@@ -164,6 +193,7 @@ struct ConclusionPictureViewer: View {
                 PVIconButton(.chevronForward, label: viewer.next, size: .lg) {
                     if let id = step.nextID { show(id) }
                 }
+                .focused($focus, equals: .next)
                 .disabled(step.nextID == nil)
                 .accessibilityIdentifier("\(identifier).next")
             }
@@ -192,22 +222,27 @@ struct ConclusionPictureViewer: View {
             .padding(.vertical, PVSpacing.space7)
             .contentShape(Rectangle())
             .focusable()
-            .focused($imageFocused)
+            .focused($focus, equals: .image)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(Text(verbatim: step.tile.viewerLabel))
+            .accessibilityValue(isRefused ? Text(L10n.Conclusions.likenessViewerImageUnavailable) : Text(verbatim: ""))
             .accessibilityAddTraits(.isImage)
             .pvAnnounce(step.tile.viewerLabel)
             .accessibilityIdentifier("\(identifier).image")
     }
 
+    private var isRefused: Bool {
+        if case .refused = image.shown(for: step.tile.id) { true } else { false }
+    }
+
     @ViewBuilder
     private var imageContent: some View {
-        switch image {
+        switch image.shown(for: step.tile.id) {
         case .waiting:
             placeholder(frame: nil)
-        case .sized(let pixels):
+        case .sized(_, let pixels):
             placeholder(frame: fitted(pixels))
-        case .decoded(let decoded, let pixels):
+        case .decoded(_, let decoded, let pixels):
             let frame = fitted(pixels)
             Image(nsImage: decoded)
                 .resizable()
@@ -268,9 +303,13 @@ struct ConclusionPictureViewer: View {
                     .accessibilityIdentifier("\(identifier).leadBadge")
             } else {
                 PVButton(gallery.choose.useAs, variant: .primary) {
-                    Task { _ = await lead.choose(step.tile, copy: gallery.choose) }
+                    Task {
+                        _ = await lead.choose(step.tile, copy: gallery.choose)
+                        FocusClaim.claim($focus, .image)
+                    }
                 }
                 .disabled(lead.isSaving)
+                .accessibilityLabel(step.tile.useAsLabel)
                 .accessibilityIdentifier("\(identifier).useAsLead")
             }
         }
@@ -279,41 +318,50 @@ struct ConclusionPictureViewer: View {
     // MARK: Behavior
 
     private func move(to id: String?) -> KeyPress.Result {
-        guard let id else { return .ignored }
-        show(id)
+        if let id { show(id) }
         return .handled
     }
 
+    /// After a step, or a change of the gallery's size, the keyboard stays in the viewer: a focused step
+    /// button that is now disabled or gone, or no focus at all, hands it to the image.
+    private func reclaimFocusIfStranded() {
+        let stranded = (focus == .previous && step.previousID == nil) || (focus == .next && step.nextID == nil)
+        if focus == nil || stranded { FocusClaim.claim($focus, .image) }
+    }
+
     /// Loads the shown picture: the tile's image first, then the file's declared size, then the full decode.
-    /// A step more than 120 ms later cancels the wait before any file opens; a decode already started
-    /// runs to its end and is dropped (S13-15 D-5).
+    /// A step more than 120 ms later cancels the wait before any file opens, and only the latest wanted
+    /// picture decodes once the one in flight ends (S13-15 D-5, F-3).
     private func load() async {
+        let id = step.tile.id
         image = .waiting
         do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
-        let relPath = step.tile.imageRelPath
-        guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: relPath) else {
-            image = .refused
+        _ = await decodeTask?.value
+        guard !Task.isCancelled else { return }
+        guard let url = ProjectFiles.objectURL(projectDir: projectDir, relPath: step.tile.imageRelPath) else {
+            image = .refused(id)
             return
         }
-        let types = Array(ThumbnailDecodePolicy.allowedTypes)
-        let maxEdge = ThumbnailDecodePolicy.maxDeclaredEdge
-        let declared = await Task.detached {
-            ArtifactImageDecode.declaredSize(url: url, typeIdentifiers: types, maxEdge: maxEdge)
+        let limits = ThumbnailDecodePolicy.limits
+        let declared = await Task.detached(priority: .userInitiated) {
+            BoundedImageDecode.declaredSize(url: url, limits: limits)
         }.value
         guard !Task.isCancelled else { return }
         guard case .success(let pixels) = declared else {
-            image = .refused
+            image = .refused(id)
             return
         }
         let size = CGSize(width: pixels.width, height: pixels.height)
-        image = .sized(size)
-        let decoded = await Task.detached {
-            ArtifactImageDecode.decode(url: url, typeIdentifiers: types, maxEdge: maxEdge)
-        }.value
+        image = .sized(id, size)
+        let work = Task.detached(priority: .userInitiated) {
+            BoundedImageDecode.decode(url: url, limits: limits)
+        }
+        decodeTask = work
+        let decoded = await work.value
         guard !Task.isCancelled else { return }
         switch decoded {
-        case .success(let result): image = .decoded(result.image, size)
-        case .failure: image = .refused
+        case .success(let result): image = .decoded(id, result.image, size)
+        case .failure: image = .refused(id)
         }
     }
 }
@@ -325,12 +373,11 @@ struct ConclusionPictureViewer: View {
         sourceTitle: "Hamburger Adressbuch 1861", credibilityKey: "", transcriptionUncertain: false,
         artifactLabel: "Volume 3", citationLabel: "Entry 214", artifactPage: 23, pageLabel: "23"
     )
-    let citation = CitationLineDisplay.parts(outcome)
     let tiles = (1...3).map { number in
         var tile = ConclusionDetailPicture(
-            imageRelPath: "", outcome: outcome, citation: citation, isLead: number == 1,
+            imageRelPath: "", outcome: outcome, isLead: number == 1,
             accessibilityLabel: "Likeness", useAsLabel: "Use as portrait", chosenToastBody: "",
-            viewerLabel: L10n.Conclusions.likenessViewerLabel(index: number, count: 3, line: citation.line)
+            viewerLabel: L10n.Conclusions.likenessViewerLabel(index: number, count: 3, line: CitationLineDisplay.parts(outcome).line)
         )
         tile.outcome.observationID = "o\(number)"
         return tile

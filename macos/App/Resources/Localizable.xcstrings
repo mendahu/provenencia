@@ -16734,6 +16734,30 @@
         }
       }
     },
+    "conclusions.person.likenessViewer.imageUnavailable": {
+      "comment": "Accessibility value of the likeness viewer's image when the file is missing or could not be shown",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image unavailable"
+          }
+        }
+      }
+    },
+    "conclusions.person.likenessViewer.labelLead": {
+      "comment": "Accessibility label of the likeness viewer's image when it shows the portrait; arguments are the 1-based position, the count of likenesses and the citation line",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Likeness %1$lld of %2$lld, from %3$@, portrait"
+          }
+        }
+      }
+    },
     "conclusions.person.likenessViewer.previous": {
       "comment": "Label of the likeness viewer's previous button",
       "extractionState": "manual",

@@ -55,7 +55,11 @@ struct PersonDetailContent: ConclusionDetailBody {
                 leadTileLabel: L10n.Conclusions.likenessTileLabelLead,
                 useAsLabel: L10n.Conclusions.useAsPortraitLabel,
                 chosenBody: L10n.Conclusions.toastPortraitChosenBody,
-                viewerLabel: L10n.Conclusions.likenessViewerLabel(index:count:line:)
+                viewerLabel: { index, count, line, leads in
+                    leads
+                        ? L10n.Conclusions.likenessViewerLabelLead(index: index, count: count, line: line)
+                        : L10n.Conclusions.likenessViewerLabel(index: index, count: count, line: line)
+                }
             ),
             choose: .personPortrait,
             viewer: .likeness(title: L10n.Conclusions.likenessViewerTitle(title.text))

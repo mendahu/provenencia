@@ -153,7 +153,9 @@ struct PersonDetailTests {
 
     @Test func personGalleryOffersTheViewer() throws {
         var source = detail()
-        source.pictures = (1...7).map { D.picture("p\($0)", path: "objects/ab/\($0).png", title: "Register \($0)") }
+        source.pictures = (1...7).map {
+            D.picture("p\($0)", path: "objects/ab/\($0).png", title: "Register \($0)", leads: $0 == 1)
+        }
         let person = PersonDetailContent(detail: source)
         let title = person.title.text
         let gallery = person.gallery
@@ -162,6 +164,10 @@ struct PersonDetailTests {
         let second = gallery.tiles[1]
         #expect(second.viewerLabel == L10n.Conclusions.likenessViewerLabel(index: 2, count: 7, line: second.citation.line))
         #expect(second.viewerLabel.hasPrefix("Likeness 2 of 7, from "))
+        let lead = gallery.tiles[0]
+        #expect(lead.isLead)
+        #expect(lead.viewerLabel == L10n.Conclusions.likenessViewerLabelLead(index: 1, count: 7, line: lead.citation.line))
+        #expect(lead.viewerLabel.hasSuffix(", portrait"))
         #expect(gallery.openTip == L10n.Conclusions.likenessViewHint)
         #expect(EventDetailContent(detail: source).gallery.viewer == nil)
         #expect(PlaceDetailContent(detail: source).gallery.viewer == nil)

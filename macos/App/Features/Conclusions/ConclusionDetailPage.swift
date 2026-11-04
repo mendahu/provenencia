@@ -88,8 +88,6 @@ struct ConclusionDetailPicture: Equatable, Identifiable {
     /// The picture's record: its earliest gallery Observation, `kept` or `weak`. The viewer reads its
     /// provenance from it; the id and the Citation location follow from it.
     var outcome: CatalogReconcilerOutcome
-    /// Where the picture comes from, as the caption and the spoken label read it.
-    var citation: CitationLineDisplay.Parts
     /// The tile the header leads with wears the lead Badge; exactly one tile.
     var isLead: Bool
     /// Spoken label of the tile.
@@ -98,10 +96,12 @@ struct ConclusionDetailPicture: Equatable, Identifiable {
     var useAsLabel: String
     /// Toast body after this tile is chosen as the lead.
     var chosenToastBody: String
-    /// Spoken label of the viewer's image: the tile's position, how many there are and its citation
-    /// line; the citation line alone for a kind with no viewer.
+    /// Spoken label of the viewer's image: the tile's position, how many there are, its citation
+    /// line and whether it leads; the citation line alone for a kind with no viewer.
     var viewerLabel: String = ""
 
+    /// Where the picture comes from, as the caption and the spoken label read it.
+    var citation: CitationLineDisplay.Parts { CitationLineDisplay.parts(outcome) }
     /// The Observation id.
     var id: String { outcome.observationID }
     /// The composer location of the Citation the picture was cut from.
@@ -207,7 +207,7 @@ struct ConclusionDetailGallery: Equatable {
 
     /// The tiles of `detail.pictures`, in wire order. `tileLabel` and `leadTileLabel` take the
     /// picture's citation line; `useAsLabel` and `chosenBody` its Source title (the Observation ref
-    /// when the title is empty); `viewerLabel` its position, the count and its citation line. Each
+    /// when the title is empty); `viewerLabel` its position, the count, its citation line and whether it leads. Each
     /// returns the kind's wording.
     static func tiles(
         from detail: CatalogConclusionDetail,
@@ -215,7 +215,7 @@ struct ConclusionDetailGallery: Equatable {
         leadTileLabel: (String) -> String,
         useAsLabel: (String) -> String,
         chosenBody: (String) -> String,
-        viewerLabel: (_ position: Int, _ count: Int, _ citationLine: String) -> String = { _, _, line in line }
+        viewerLabel: (_ position: Int, _ count: Int, _ citationLine: String, _ leads: Bool) -> String = { _, _, line, _ in line }
     ) -> [ConclusionDetailPicture] {
         detail.pictures.enumerated().map { index, picture in
             let citation = CitationLineDisplay.parts(picture.record)
@@ -223,12 +223,11 @@ struct ConclusionDetailGallery: Equatable {
             return ConclusionDetailPicture(
                 imageRelPath: picture.imageRelPath,
                 outcome: picture.record,
-                citation: citation,
                 isLead: picture.leads,
                 accessibilityLabel: picture.leads ? leadTileLabel(citation.line) : tileLabel(citation.line),
                 useAsLabel: useAsLabel(source),
                 chosenToastBody: chosenBody(source),
-                viewerLabel: viewerLabel(index + 1, detail.pictures.count, citation.line)
+                viewerLabel: viewerLabel(index + 1, detail.pictures.count, citation.line, picture.leads)
             )
         }
     }

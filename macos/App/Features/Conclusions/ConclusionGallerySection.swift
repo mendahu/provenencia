@@ -68,8 +68,10 @@ struct ConclusionGallerySection: View {
             if let stop = focused ?? lastFocused { restoreFocus(to: stop) }
         }
         .pvSheet(item: $viewing) { item in
+            // The shown picture has just left the gallery: draw its first tile until the item catches up.
             if let viewer = gallery.viewer,
-               let step = ConclusionPictureStep(tiles: gallery.tiles, showing: item.shownID) {
+               let step = ConclusionPictureStep(tiles: gallery.tiles, showing: item.shownID)
+                   ?? gallery.tiles.first.flatMap({ ConclusionPictureStep(tiles: gallery.tiles, showing: $0.id) }) {
                 ConclusionPictureViewer(
                     projectDir: projectDir,
                     pageIdentifier: pageIdentifier,
@@ -90,14 +92,12 @@ struct ConclusionGallerySection: View {
         }
         // A close puts the keyboard back on the tile last shown, scrolled into view.
         .onChange(of: viewing) { old, new in
-            lead.toastInViewer = new != nil
             if let old, new == nil {
-                lead.toast = nil
                 // An emptied gallery swaps this section for its EmptyState: there is no tile to focus.
                 if !gallery.tiles.isEmpty { restoreFocus(to: .image(old.shownID)) }
             }
         }
-        .onDisappear { lead.toastInViewer = false }
+        .onDisappear { lead.viewerClosed() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string(gallery.title))
     }
