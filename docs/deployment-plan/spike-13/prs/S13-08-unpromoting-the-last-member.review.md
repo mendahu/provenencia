@@ -1,7 +1,7 @@
 # Review — S13-08 Unpromoting the last member
 
-**Verdict:** round 1: Fits with changes — Not ready. Round 2: pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 1: Not ready; round 2: every blocker Fixed)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -14,6 +14,8 @@ None. The product calls were asked before the plan was written (2026-11-04): ass
 - Subject delete copy: "%@ has no other records, so it is deleted." / "…they are deleted." (D-17), in the form of the approved Unpromote copy.
 - The Unpromote confirm waits for the preflight before it opens; on a preflight error it opens with today's message and the error (D-15).
 - `GetDeleteImpact(canonical_entity)` becomes valid; the app does not call it (D-9).
+- The batch Promote path keeps its inline Subject load so its refusal order is unchanged (D-12).
+- Old-rule fixtures that fail because a sole-member handle is now deleted get a second member, not a changed assertion (STEP-2).
 
 ## Round 1
 
@@ -37,7 +39,7 @@ The preflight used a SQL predicate with a merged clause while the write also ran
 **Answer:** Fixed — D-15, D-16: `EvidencePrimaryKind`, a `switch` with no `default`, keys `….person|event|place` like `openHandlePage`.
 
 ### M-7 · major · `LastMemberHandles` signature fits neither caller
-**Answer:** Fixed — D-10, D-11: one `canonical_entities.last_member` `inboundEdge` in `extraCascadeList`; `LastMemberGroup` runs `collectGroups` over it.
+**Answer:** Fixed — D-10, D-11: one `canonical_entities.last_member` `inboundEdge` (`lastMemberEdge`, in `cascadeEdgeList` since round 2); `LastMemberGroup` runs `collectGroups` over it.
 
 ### M-8 · major · D-9 broke the `Named` contract
 **Answer:** Fixed — D-10 option (a): the Subject facet is no longer `Named`; both groups are cascade-only edges.
@@ -80,3 +82,38 @@ The preflight used a SQL predicate with a merged clause while the write also ran
 
 ### X-9 · minor · Associations not named in the Unpromote confirm
 **Answer:** Declined — the confirm already lists the bridges under "Also unpromoted" (`EvidenceGraphView.unpromoteDetail`); an association handle has no page a researcher visits, so naming its ref adds nothing. Recorded in D-11.
+
+## Round 2
+
+Both reviewers checked the round-1 answers against the code and found them sound, except as below.
+
+### M-13 · blocker · `extraCascadeList` as `sync.OnceValue` is an initialization cycle
+Its edge calls `Impact` → `cascadesFor` → the list.
+**Answer:** Fixed — D-10: `cascadeEdgeList`, a plain slice built in the `init()` that builds `facetReleaseList` (the precedent for the same cycle), plus `lastMemberEdge`; Codebase fit row cites `facetReleaseList`.
+
+### M-14 · blocker · A new invented via crosses to Swift as a raw string with a fallback and no parity test
+**Answer:** Fixed — D-10 exports `ViaLeavesHandle`, `ViaDeletesCitations`, `ViaLastMember`; D-17 adds `DeleteImpactCascadeVia` in `ConclusionVocabulary.swift`, switched on by `cascadeLines`, with a `TestSwiftVocabularyMatchesGo` row.
+
+### M-15 · major · `loadPrimary` leaves copies in `Save` and `batch.go`
+**Answer:** Fixed in part — `Save` uses it (D-12). Declined for `batch.go`: it checks the graph id between the load and `requirePrimary` (`batch.go` lines 113–125), so moving it would turn a foreign-graph non-primary row from `ErrInvalid` into `ErrUnsupportedType`; D-12 records why.
+
+### M-16 · major · The un-Named facet keeps dead Count/List and its SQL is copied
+**Answer:** Fixed — D-10 and Deletes: the facet keeps `Parent`, `Via`, `Remaining`, `Release`; its List SQL moves into edge (b).
+
+### M-17 · minor · An accepted-members query exists
+**Answer:** Fixed — Codebase fit names `identityclaims.AcceptedMembersTx` and the import cycle that rules it out.
+
+### X-10 · blocker · A fourth Swift test calls `beginUnpromote` synchronously
+**Answer:** Fixed — STEP-6 names all four tests and says every direct call gets `await`, the `performCardAction` one waits with `waitUntil`, and why the expectations hold.
+
+### X-11 · blocker · Old-rule Go tests not listed
+**Answer:** Fixed — STEP-2 lists the candidates and gives one rule (second accepted member in the fixture, assertion unchanged; any other cause stops); STEP-3 rewrites `TestGetDeleteImpactPromotedSubject`.
+
+### X-12 · major · Wrong path for `EvidenceGraphSnapshot.swift`
+**Answer:** Fixed — §4.
+
+### X-13 · major · `completed.md` without a path
+**Answer:** Fixed — STEP-7 and the DoD give `docs/deployment-plan/spike-13/completed.md`.
+
+### X-14 · major · Small open choices
+**Answer:** Fixed — T-4 names `catalog_search_docs.entity_id`; `LastMemberGroup` reads `lastMemberEdge`; D-10 says refused reports still carry cascades; the GoStore row says `.listed.first` when `hasDeletes`; a Stop condition covers the Subject type list's new locations.
