@@ -1,7 +1,7 @@
 # Ship log — S13-15 Likeness viewer
 
 **Plan:** [`S13-15-likeness-viewer.md`](S13-15-likeness-viewer.md) · **Branch:** `s13-15-likeness-viewer` · **PR:** #703
-**State:** ready
+**State:** fixing 3
 
 ## Round 0 — implement
 Head `c440b2cb`. Gate PASS (orchestrator re-ran). Report: deviations: `ConclusionPictureImage.sized` and `.decoded` hold the file's pixel size and the view computes the frame on each draw; every close clears the Toast and `toastInViewer`; focus restore skipped for an empty gallery; plan § 4 row moved to the new decode path because lint failed. Manual check, frames, keys, VoiceOver not run (no GUI).
@@ -131,6 +131,18 @@ Check: `rg 'accepts\(' macos/App/Platform` prints nothing; the test ran red firs
 
 ## Round 2 — fix
 Head `8a9aa48e`. Gate PASS (orchestrator re-ran); full `check-plan-docs.py` 0 errors. F-11 and F-13 ran red first (`leavingTheSectionKeepsAPageToast`, `cacheRefusesAFileOverTheByteLimit`). Read by the orchestrator, no third review: `viewerClosed()` guards `toastInViewer`; the viewer's overlay is gated as the page's is; `ImageHeaderDecode.admit(url:limits:)` is the one URL admission, called by `BoundedImageDecode` and `ThumbnailCache`, and `accepts` is gone from code, guides and `completed.md`. UX-5, UX-13, MNT-2 **Resolved**; UX-5 is unverified with VoiceOver.
+
+### Fix plan 3
+From the user's manual check (2026-11-04): stepping jitters, because the tile's thumbnail shows, then the full image replaces it. The viewer should not show the thumbnail; a loading spinner instead. This supersedes D-6's thumbnail placeholder, the user's call. No review round: the orchestrator reads the fix.
+
+**F-14 — The viewer shows a spinner, never the thumbnail** (from the user)
+Files: `macos/App/Features/Conclusions/ConclusionPictureViewer.swift`, `macos/App/Platform/BoundedImageDecode.swift`, `macos/ProvenenciaTests/ArtifactViewerModelTests.swift`, the plan's D-5, D-6 and Landed note, `completed.md` if it names the placeholder.
+Failing test first: none, view state.
+Do:
+- Delete the viewer's `ThumbnailCache` read. `ConclusionPictureImage` loses `.sized`: `.waiting`, `.decoded`, `.refused`. With no frame to publish, the loader runs one `decode` and takes its size from `result.pixelSize`.
+- `.waiting` draws an empty band, with a small `ProgressView` centered in it only once the load has taken 250 ms, so an image that decodes quickly shows no spinner at all and stepping does not flash. A `@State showsSpinner`, reset on `.task(id:)`, is enough. Keep the 120 ms wait, `decodeTask`, and the tile-id check that keeps the last likeness from lingering.
+- `BoundedImageDecode.declaredSize` loses its last caller: delete it. Move `declaredSizeTurnsRotatedImages` and `declaredSizeRefusesAnOversizedFile` onto `decode`, keeping every case.
+Check: `rg 'declaredSize|cachedImage' macos/App/Features/Conclusions/ConclusionPictureViewer.swift macos/App/Platform/BoundedImageDecode.swift` prints nothing; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS · CI green (`872fe6ab`) · open: none · follow-ups: UX-12, UX-14, UX-15, UX-16, the `PVWidthClassTests` flake, `EventsListView.swift:69` · to user: UX-5, MNT-2, UX-13 answered (fix all three, 2026-11-04) · CON miss: none
