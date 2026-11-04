@@ -1,0 +1,23 @@
+# Lock event properties to specific event types
+
+- **Date:** 2026-10-25
+- **Type:** Feature request
+- **Where:** Event types / properties
+- **Annoyance (verbatim):** "The ability to add properties to event types needs to have the option to lock it to certain types."
+- **Interpretation (ours, not Jake's wording):** today a Property bound to `event` is offered on *every* event, whatever its `event_type`. When associating a Property with events there should be an option to restrict it so it is only offered for specific event types (e.g. `cause_of_death` only on `death`, `officiant` only on `marriage` / `baptism`), rather than appearing for all of them.
+- **Wanted:** Per-event-type scoping of a Property's availability, with the citation composer's Property menu (and anywhere else the type's bindings drive a picker) honoring it.
+
+## Open question on the reading
+
+Two words in the sentence are overloaded in the codebase, so the reading above should be confirmed:
+
+- **"types"** — the app has *subject* types (`person`, `event`, `place`, bridges) and *event* types (`event_type` terms: `birth`, `death`, …). Properties are already bound per **subject** type. The interpretation above assumes Jake means **event types** (terms), because binding to subject types already exists. If he means "lock the Property so it can only be bound to the `event` subject type and not, say, `person`", that is a different, smaller feature (a per-Property allowed-subject-types list).
+- **"lock"** — in the Properties page, "locked" today means *registry-held: the researcher cannot unbind it* (the `registry` micro-label next to `event_type`, `date`, `start_date`, `end_date` on `event`). Jake's "lock it to certain types" reads as *restrict*, not *make immutable*; the entry treats it that way, but the UI copy would need to avoid colliding with the existing meaning.
+
+## How properties reach event types today (observed, not implemented)
+
+- **Storage.** `subject_type_properties` (`core/database/migrations/000023.sql` as `subject_type_fields`, renamed in `000035.sql`): `(subject_type_id, property_id, sort_order)`. It keys on **subject type**, not on `event_type` term — there is no column or table that scopes a binding to a term, and `properties` itself has no notion of applicable types. `event_type` is just a locked term-valued Property on `event` (`core/database/subjectvocab/registry.go` `seedBindings`), so the kind of an event is one Observation among others, not a type in the schema.
+- **Go.** `core/database/subjectvocab/subjectvocab.go` — `AppendBinding`, `DeleteBinding`, `ReorderBindings`, `ListBindings` (returns `Locked` from the compiled registry via `LockedBinding(typeKey, propertyKey)`), `EnsureBinding`; `ErrLocked` refuses unbinding registry-held seeds. FFI: `METHOD_LIST_SUBJECT_TYPE_PROPERTIES`, `METHOD_ASSIGN_SUBJECT_TYPE_PROPERTY`, `METHOD_REMOVE_SUBJECT_TYPE_PROPERTY`, `METHOD_REORDER_SUBJECT_TYPE_PROPERTIES`. A term-scoped binding would need a new column or join (`subject_type_property_terms`?) plus the catalogmodel / migration work, and `ListBindings` / the proto `Binding` would carry the allowed term ids.
+- **UI where you add them.** The Properties page (`macos/App/Features/Properties/PropertiesView.swift`, `PropertiesModel.swift`): the inspector's **"Bound to"** section is a checkbox per subject type (`toggleBinding(to:)`, `toggleFocusedTypeBinding`), with a `registry` micro-label and `lockedBindingReason` callout for registry-held rows. There is no per-event-type control; the natural slot is a secondary picker under the `event` checkbox that lists `event_type` terms (all / selected).
+- **Where they are offered.** `macos/App/Features/CitationComposer/CitationComposerVocabulary.swift` — `propertiesByTypeID[subject.typeID]` is built from the bindings snapshot, and `propertyOptions(forSubjectID:capabilities:)` → `listedProperties(typeKey:properties:rules:capabilities:)` filters only by subject type, connect rules (bridge edges), and locator capabilities. Scoping by event type means this filter also needs the event's current `event_type` observation, which the composer has in the graph snapshot but does not consult here. Same for `propertyOptions(forSubjectID:keeping:…)` which keeps a held Property even when the list lacks it.
+- **Other readers of bindings.** Conclusion detail pages and reconciliation list a Person / Event / Place's values by the Properties actually observed, not by bindings, so they would be unaffected; a scoped-out Property that already has values would still display. `docs/seeded-vocabulary.md` §3.3 (`subject_type_properties`) and the lock rationale paragraph after §3.2 describe the current model and would need the new concept.
