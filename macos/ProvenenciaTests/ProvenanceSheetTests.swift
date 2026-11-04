@@ -22,16 +22,44 @@ struct ProvenanceSheetTests {
         #expect(item.row(in: [row("life.birthDate", records: 0)]) == nil)
     }
 
-    private func record(_ id: String, rank: Int, reason: String = "kept") -> ReconciliationRecord {
-        ReconciliationRecord(
+    private func record(_ id: String, rank: Int, reason: String = "kept") -> PVProvenanceSheetContent.Record {
+        PVProvenanceSheetContent.Record(
             outcome: D.outcome(id, reason, rank: rank == 0 ? nil : rank, groupRank: rank),
             in: D.field("mixed"), locale: en
         )
     }
 
+    @Test func aRecordComesFromOneOutcome() {
+        let outcome = D.outcome("bible", "outvoted", rank: 2, source: "S1", title: "Family Bible", groupRank: 1)
+        let field = D.field("merged", [
+            D.value(1, "kept", support: 2, .name(D.jamesRobins)),
+            D.value(2, "kept", .name(CatalogNameValue(form: "James Robbins"))),
+        ], outcomes: [outcome])
+        let record = PVProvenanceSheetContent.Record(outcome: outcome, in: field, locale: en)
+        #expect(record.id == "bible" && record.outcome == outcome)
+        #expect(record.readAs == ReconciledValueDisplay.readAs(outcome, propertyKey: field.propertyKey, locale: en, orders: NameFormatOrders()))
+        #expect(record.readAsIsPhrase == ReconciledValueDisplay.readAsIsPhrase(outcome, propertyKey: field.propertyKey))
+        #expect(!record.counted)
+        #expect(record.phrase == ReconciledValueDisplay.outcomePhrase(outcome, in: field, locale: en))
+        #expect(record.mark == ReconciledValueDisplay.outcomeMark(outcome, in: field))
+        #expect(record.citation == CitationLineDisplay.parts(outcome))
+        #expect(record.observationRef == "OBS-bible" && record.subjectRef == "CPR-bible")
+    }
+
+    @Test func linksReachTheirPlaces() {
+        let outcome = D.outcome("bible", "kept", source: "S1", title: "Family Bible")
+        let record = PVProvenanceSheetContent.Record(outcome: outcome, in: D.field("single"), locale: en)
+        #expect(WorkspaceLocation.provenance(record, .source) == .sourcePage(sourceId: "S1", ref: nil, title: "Family Bible"))
+        let citation = WorkspaceLocation.provenance(record, .citation)
+        #expect(citation.sourceSurface == .citationComposer)
+        #expect(citation.citationId == "cit-bible" && citation.observationId == nil)
+        let observation = WorkspaceLocation.provenance(record, .observation)
+        #expect(observation.citationId == "cit-bible" && observation.observationId == "bible")
+    }
+
     @Test func aRecordSpeaksAsOneLine() {
         let r = record("r0", rank: 1)
-        let parts = [r.readAs, r.citationLine, r.phrase, r.observationRef, r.subjectRef]
+        let parts = [r.readAs, r.citation.line, r.phrase, r.observationRef, r.subjectRef]
         #expect(r.spoken == parts.joined(separator: ", "))
     }
 
@@ -40,9 +68,9 @@ struct ProvenanceSheetTests {
             D.value(1, "kept", support: 2, .name(D.jamesRobins)),
             D.value(2, "kept", .name(CatalogNameValue(form: "James Robbins"))),
         ])
-        func groups(_ ranks: [Int], in field: CatalogConclusionField) -> [ReconciliationRecordGroup.ValueGroup] {
+        func groups(_ ranks: [Int], in field: CatalogConclusionField) -> [PVProvenanceSheetContent.Group.ValueGroup] {
             let records = ranks.enumerated().map { record("r\($0.offset)", rank: $0.element) }
-            return ReconciledValueRowModel.valueGroups(records, field: field, locale: en, orders: NameFormatOrders())
+            return PVProvenanceSheetContent.valueGroups(records, field: field, locale: en, orders: NameFormatOrders())
         }
 
         let mixed = groups([1, 1, 2, 0], in: field)

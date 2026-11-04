@@ -80,8 +80,8 @@ struct ProvenanceSheet: View {
         }
     }
 
-    private func open(_ location: WorkspaceLocation) {
+    private func open(_ record: PVProvenanceSheetContent.Record, _ link: PVProvenanceLink) {
         close()
-        navigation.go(to: location)
+        navigation.go(to: .provenance(record, link))
     }
 }

@@ -16,19 +16,12 @@ enum CitationLineDisplay {
         var line: String
     }
 
-    /// The Source's title (else the Observation ref), the Artifact label, the
-    /// Citation label and the page, each trimmed and dropped when empty. The
-    /// page is the printed label ("p. 23") else the image number ("image 37").
-    static func line(_ outcome: CatalogReconcilerOutcome) -> String {
-        parts(outcome).line
-    }
-
     /// The Source's title, else the Observation ref when the Source has none.
     static func sourceTitle(for outcome: CatalogReconcilerOutcome) -> String {
         outcome.sourceTitle.isEmpty ? outcome.observationRef : outcome.sourceTitle
     }
 
-    /// The same citation line as `line(_:)`, split into the title and the rest.
+    /// A record's citation line, split into the title and the rest. The Source's title (else the Observation ref), the Artifact label, the Citation label and the page, each trimmed and dropped when empty. The page is the printed label ("p. 23") else the image number ("image 37").
     static func parts(_ outcome: CatalogReconcilerOutcome) -> Parts {
         let pageLabel = outcome.pageLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         let page: String

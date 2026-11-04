@@ -310,7 +310,7 @@ struct PersonDetailTests {
         #expect(row.records.map(\.phrase) == [
             "kept", "folded into James Robins", "outvoted (2 of 3 Sources)", "weak · low-trust Source",
         ])
-        #expect(row.records.map(\.sourceTitle).first == "Census of Canada West, 1851")
+        #expect(row.records.map(\.citation.title).first == "Census of Canada West, 1851")
         #expect(row.accessibilityLabel == "Name, James Robins, merged from 2 Sources")
     }
 
@@ -498,7 +498,7 @@ struct PersonDetailTests {
 
     @Test func aSourceOpensTheRecordsCitationInTheComposer() throws {
         let outcome = D.outcome("bible", "outvoted", rank: 2, source: "s-bible", title: "Family Bible")
-        let location = ReconciliationRecord.composerLocation(for: outcome)
+        let location = WorkspaceLocation.composer(for: outcome)
         #expect(location.section == .sources && location.sourceSurface == .citationComposer)
         let entry = try #require(CitationComposerEntry(location: location))
         guard case let .edit(sourceID, graphID, subjectID, citationID, artifactID, observationID) = entry else {
@@ -637,16 +637,6 @@ struct PersonDetailTests {
 
     // MARK: The provenance sheet (S13-11)
 
-    @Test func aRecordOpensItsSourceCitationAndObservation() {
-        let outcome = D.outcome("bible", "kept", source: "S1", title: "Family Bible")
-        let record = ReconciliationRecord(outcome: outcome, in: D.field("single"), locale: en)
-        #expect(record.sourceLocation == .sourcePage(sourceId: "S1", ref: nil, title: "Family Bible"))
-        #expect(record.citationLocation.sourceSurface == .citationComposer)
-        #expect(record.citationLocation.citationId == "cit-bible" && record.citationLocation.observationId == nil)
-        #expect(record.location.citationId == "cit-bible" && record.location.observationId == "bible")
-        #expect(record.observationRef == "OBS-bible" && record.subjectRef == "CPR-bible")
-    }
-
     @Test func theShownOwnerIsSpokenAsShown() {
         let first = entity("ev1", "EVT-4KX2M"), second = entity("ev2", "EVT-9PQ2R")
         let summary = lifeSummary(birth: CatalogLifeFacts(event: first, eventCount: 2))
@@ -708,15 +698,15 @@ struct PersonDetailTests {
         outcome.artifactLabel = "Vol. 3"
         outcome.citationLabel = "Baptism of Ada"
         outcome.artifactPage = 37
-        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, image 37")
+        #expect(CitationLineDisplay.parts(outcome).line == "Register of Baptisms, Vol. 3, Baptism of Ada, image 37")
         outcome.pageLabel = " 23 "
-        #expect(CitationLineDisplay.line(outcome) == "Register of Baptisms, Vol. 3, Baptism of Ada, p. 23")
+        #expect(CitationLineDisplay.parts(outcome).line == "Register of Baptisms, Vol. 3, Baptism of Ada, p. 23")
         let bare = D.outcome("reg", "kept", title: "Register of Baptisms")
-        #expect(CitationLineDisplay.line(bare) == "Register of Baptisms")
+        #expect(CitationLineDisplay.parts(bare).line == "Register of Baptisms")
         let untitled = D.outcome("reg", "kept", title: "")
-        #expect(CitationLineDisplay.line(untitled) == "OBS-reg")
+        #expect(CitationLineDisplay.parts(untitled).line == "OBS-reg")
         var labelled = untitled
         labelled.artifactLabel = "Vol. 3"
-        #expect(CitationLineDisplay.line(labelled) == "OBS-reg, Vol. 3")
+        #expect(CitationLineDisplay.parts(labelled).line == "OBS-reg, Vol. 3")
     }
 }

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The records of a field as one table, shared by the Why accordion and the
 /// provenance sheet (S13-11). Both draw owner group lines where
-/// `ReconciliationRecordGroup.owner` is set.
+/// `PVProvenanceSheetContent.Group.owner` is set.
 ///
 /// - `.why`: Read as · Source · Outcome · reserved column (S9-D5). The Source
 ///   opens the record's Citation with its Observation in focus.
@@ -13,11 +13,11 @@ import SwiftUI
 /// The last column is reserved for a future "conclude this value" action, so
 /// adding it won't relayout the table (PD-8).
 struct ReconciliationRecordRows: View {
-    let groups: [ReconciliationRecordGroup]
+    let groups: [PVProvenanceSheetContent.Group]
     let face: PVProvenanceFace
     let provenance: ReconciledValueRow.Provenance
     /// Opens a record's place. The sheet closes itself first (D-5).
-    let open: (WorkspaceLocation) -> Void
+    let open: (PVProvenanceSheetContent.Record, PVProvenanceLink) -> Void
     /// The sheet at Wide: Read as and Outcome are capped, the Citation column takes the rest.
     var widthClass: PVWidthClass = .regular
 
@@ -83,20 +83,20 @@ struct ReconciliationRecordRows: View {
     }
 
     /// The runs a group draws: its value groups in the sheet, one run in the Why.
-    private func segments(of group: ReconciliationRecordGroup) -> [ReconciliationRecordGroup.ValueGroup] {
+    private func segments(of group: PVProvenanceSheetContent.Group) -> [PVProvenanceSheetContent.Group.ValueGroup] {
         if isSheet { return group.values }
         return group.records.isEmpty ? [] : [.init(heading: nil, records: group.records)]
     }
 
-    private func whyRow(_ record: ReconciliationRecord) -> some View {
+    private func whyRow(_ record: PVProvenanceSheetContent.Record) -> some View {
         GridRow {
             readAs(record)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            PVButton(record.sourceTitle, variant: .link, size: .sm) {
-                open(record.location)
+            PVButton(record.citation.title, variant: .link, size: .sm) {
+                open(record, .observation)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .help(record.sourceTitle)
+            .help(record.citation.title)
             .accessibilityIdentifier("conclusion.detail.why.\(record.id).source")
             ReconciliationOutcome(mark: record.mark, phrase: record.phrase)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -106,7 +106,7 @@ struct ReconciliationRecordRows: View {
         .padding(.vertical, PVSpacing.space3)
     }
 
-    private func sheetRow(_ record: ReconciliationRecord) -> some View {
+    private func sheetRow(_ record: PVProvenanceSheetContent.Record) -> some View {
         GridRow {
             readAs(record)
                 .frame(width: Self.readAsWidth(widthClass), alignment: .leading)
@@ -115,11 +115,11 @@ struct ReconciliationRecordRows: View {
                 .accessibilityLabel(record.spoken)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 HStack(alignment: .citationFirstLineCenter, spacing: Self.copyTrackSpacing) {
-                    CitationLineButton(record: record) { open(record.citationLocation) }
+                    CitationLineButton(record: record) { open(record, .citation) }
                         // The first line's centre sits about a third of the type size above its baseline.
                         .alignmentGuide(.citationFirstLineCenter) { $0[.firstTextBaseline] - PVTypeScale.bodySmall / 3 }
                     PVClipboardButton(
-                        text: record.citationLine,
+                        text: record.citation.line,
                         label: L10n.Conclusions.provenanceCopyCitation,
                         copiedAnnouncement: L10n.string(L10n.Conclusions.provenanceCitationCopied)
                     )
@@ -129,12 +129,12 @@ struct ReconciliationRecordRows: View {
                 }
                 HStack(spacing: PVSpacing.space5) {
                     PVButton(L10n.Conclusions.provenanceSourceLink, variant: .link, size: .sm) {
-                        open(record.sourceLocation)
+                        open(record, .source)
                     }
-                    .accessibilityLabel(L10n.Conclusions.provenanceSourceLinkSpoken(record.sourceTitle))
+                    .accessibilityLabel(L10n.Conclusions.provenanceSourceLinkSpoken(record.citation.title))
                     .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).source")
                     PVButton(L10n.Conclusions.provenanceObservationLink(record.observationRef), variant: .link, size: .sm) {
-                        open(record.location)
+                        open(record, .observation)
                     }
                     .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).observation")
                 }
@@ -158,7 +158,7 @@ struct ReconciliationRecordRows: View {
         .padding(.vertical, PVSpacing.space3)
     }
 
-    private func readAs(_ record: ReconciliationRecord) -> some View {
+    private func readAs(_ record: PVProvenanceSheetContent.Record) -> some View {
         Text(record.readAs)
             .font(face.readAsFont(isPhrase: record.readAsIsPhrase))
             .foregroundStyle(record.counted ? PVColor.textPrimary : PVColor.textSecondary)
@@ -166,7 +166,7 @@ struct ReconciliationRecordRows: View {
 
     /// A group's heading: the owning entity as its list titles it, then its
     /// ref, then "· shown" on the owner behind the shown value. Text, never a link.
-    private func ownerLine(_ owner: ReconciliationRecordGroup.OwnerLine) -> some View {
+    private func ownerLine(_ owner: PVProvenanceSheetContent.Group.OwnerLine) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space4) {
             Text(verbatim: owner.title)
                 .pvMicroCaps()
@@ -194,7 +194,7 @@ struct ReconciliationRecordRows: View {
 
     /// Over a run of records that count under one displayed value, or under none.
     @ViewBuilder
-    private func valueHeading(_ heading: ReconciliationRecordGroup.ValueGroup.Heading) -> some View {
+    private func valueHeading(_ heading: PVProvenanceSheetContent.Group.ValueGroup.Heading) -> some View {
         Group {
             switch heading {
             case .value(let value):
@@ -248,14 +248,14 @@ struct ReconciliationRecordRows: View {
 /// A record's citation line as a link: ink by whether the record counted (so the
 /// table still reads by ink), underlined at 35%, wrapping, never truncated (D-18).
 private struct CitationLineButton: View {
-    let record: ReconciliationRecord
+    let record: PVProvenanceSheetContent.Record
     let action: () -> Void
 
     @FocusState private var focused: Bool
 
     var body: some View {
         Button(action: action) {
-            Text(verbatim: record.citationLine)
+            Text(verbatim: record.citation.line)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -263,7 +263,7 @@ private struct CitationLineButton: View {
         .buttonStyle(CitationLineButtonStyle(counted: record.counted))
         .focused($focused)
         .pvFocusRing(focused, cornerRadius: PVRadius.xs)
-        .accessibilityLabel(Text(verbatim: record.citationLine))
+        .accessibilityLabel(Text(verbatim: record.citation.line))
         .accessibilityIdentifier("conclusion.detail.provenance.\(record.id).citation")
     }
 }

@@ -9,7 +9,7 @@ struct ReconciliationReasoningView: View {
     let title: String
     let label: String
     let face: PVProvenanceFace
-    let groups: [ReconciliationRecordGroup]
+    let groups: [PVProvenanceSheetContent.Group]
 
     @Environment(WorkspaceNavigation.self) private var navigation
 
@@ -25,7 +25,7 @@ struct ReconciliationReasoningView: View {
                     .accessibilityAddTraits(.isHeader)
                 ReconciliationRecordRows(
                     groups: groups, face: face, provenance: .why,
-                    open: { navigation.go(to: $0) }
+                    open: { navigation.go(to: .provenance($0, $1)) }
                 )
                 .padding(.horizontal, PVSpacing.space5)
                 .padding(.bottom, PVSpacing.space2)

@@ -192,7 +192,7 @@ struct ConclusionDetailGallery: Equatable {
                 id: $0.record.observationID,
                 imageRelPath: $0.imageRelPath,
                 citation: citation,
-                location: ReconciliationRecord.composerLocation(for: $0.record),
+                location: .composer(for: $0.record),
                 isLead: $0.leads,
                 accessibilityLabel: $0.leads ? leadTileLabel(citation.line) : tileLabel(citation.line),
                 useAsLabel: useAsLabel(source),
