@@ -98,7 +98,7 @@ A click on a likeness in a Person's Gallery opens it large in a viewer over the 
 | Use earliest likeness in the viewer | not planned (brief LV-5: GA-5 owns it, S13-14) |
 | The viewer as a navigation place or restored state | not planned (D-7) |
 | An overlay presenter (form B) | not planned; a new kit presenter, asked of the user if the board picks it (D-4) |
-| Prefetching beyond the shown likeness's two neighbours | not planned (Landed 14: the neighbours' full images decode ahead, three held) |
+| Prefetching beyond the shown likeness's two neighbours | not planned (Landed note 15: the neighbours' full images decode ahead, three held) |
 
 ## 4. Current state
 
@@ -182,7 +182,7 @@ The board settles LV-1's sizes, LV-3's button placement and LV-5's order; § 12 
 
 ### Scale
 
-At the brief's sizes (40 likenesses at most): one decode per likeness that stays shown for 120 ms — ≤ 2048 × 2048 (16 MB) for crops the app wrote (`ArtifactRegionCrop.maxLongEdge`, `core/ingest/stage.go` `stageMaxEdge`), ≤ 4096 × 4096 (`ThumbnailDecodePolicy.maxDeclaredEdge`, 64 MB) for a crafted file —, released when the viewer moves on; one is shown, and a superseded one finishes and is dropped (D-5). Landed 15 holds the shown likeness's two neighbours as well: three decodes at most, a gallery-size bound. No write is added.
+At the brief's sizes (40 likenesses at most): one decode per likeness that stays shown for 120 ms — ≤ 2048 × 2048 (16 MB) for crops the app wrote (`ArtifactRegionCrop.maxLongEdge`, `core/ingest/stage.go` `stageMaxEdge`), ≤ 4096 × 4096 (`ThumbnailDecodePolicy.maxDeclaredEdge`, 64 MB) for a crafted file —, released when the viewer moves on; one is shown, and a superseded one finishes and is dropped (D-5). Landed note 15 holds the shown likeness's two neighbours as well: three decodes at most, a gallery-size bound. No write is added.
 
 ### Edges
 
