@@ -26,7 +26,7 @@ fileprivate let decodePolicyCases: [DecodePolicyCase] = [
 @MainActor
 struct ThumbnailCacheTests {
     @Test(arguments: decodePolicyCases)
-    fileprivate func decodePolicyAcceptsOnlyGoImages(_ c: DecodePolicyCase) throws {
+    fileprivate func urlAdmissionAcceptsOnlyGoImages(_ c: DecodePolicyCase) throws {
         let project = ArtifactFileFixtures.uniqueProjectDir()
         defer { try? FileManager.default.removeItem(atPath: project) }
         let rel = "objects/aa/bb/x.png"
@@ -38,8 +38,41 @@ struct ThumbnailCacheTests {
             try ArtifactFileFixtures.write(bytes, projectDir: project, relPath: rel)
         }
         let url = URL(fileURLWithPath: project).appendingPathComponent(rel)
-        let accepted = CGImageSourceCreateWithURL(url as CFURL, nil).map(ThumbnailDecodePolicy.accepts) ?? false
+        let accepted: Bool
+        if case .success = ImageHeaderDecode.admit(url: url, limits: ThumbnailDecodePolicy.limits) { accepted = true } else { accepted = false }
         #expect(accepted == c.expected)
+    }
+
+    @Test func cacheRefusesAFileOverTheByteLimit() async throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let rel = "objects/aa/bb/big.png"
+        try ArtifactFileFixtures.writeImage(projectDir: project, relPath: rel, width: 8, height: 8, fileType: .png)
+        let url = URL(fileURLWithPath: project).appendingPathComponent(rel)
+        // A real PNG with a sparse tail past IEND: it decodes, so only the byte limit can refuse it.
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(ThumbnailDecodePolicy.maxDecodeBytes) + 1)
+        try handle.close()
+        let image = await ThumbnailCache().image(projectDir: project, relPath: rel)
+        #expect(image == nil)
+    }
+
+    @Test func urlAdmissionRefusesByBytesThenType() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "ok.png", width: 8, height: 8, fileType: .png)
+        let url = URL(fileURLWithPath: project).appendingPathComponent("ok.png")
+        guard case .success = ImageHeaderDecode.admit(url: url, limits: ThumbnailDecodePolicy.limits) else {
+            Issue.record("a small PNG is admitted")
+            return
+        }
+        var tiny = ThumbnailDecodePolicy.limits
+        tiny.maxBytes = 1
+        guard case .failure(.tooLarge) = ImageHeaderDecode.admit(url: url, limits: tiny) else {
+            Issue.record("a file over maxBytes refuses before it opens")
+            return
+        }
     }
 
     @Test func declaredImageBounds() throws {

@@ -50,15 +50,15 @@ const (
 	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
 	swiftNamePartType = "../../macos/App/Platform/NamePartType.swift"
 
-	swiftRegionGeometry      = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
-	swiftProjectFiles        = "../../macos/App/Platform/ProjectFiles.swift"
-	swiftTextMatch           = "../../macos/App/Platform/TextMatch.swift"
-	swiftFakeStore           = "../../macos/App/Platform/FakeStore.swift"
-	swiftFieldSlug           = "../../macos/App/Platform/FieldSlug.swift"
-	swiftProjectSlug         = "../../macos/App/Platform/ProjectSlug.swift"
-	swiftThumbnailCache      = "../../macos/App/Platform/ThumbnailCache.swift"
-	swiftEvidencePlacement   = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
-	swiftArtifactImageDecode = "../../macos/App/Features/ArtifactViewer/ArtifactImageDecode.swift"
+	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
+	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
+	swiftTextMatch          = "../../macos/App/Platform/TextMatch.swift"
+	swiftFakeStore          = "../../macos/App/Platform/FakeStore.swift"
+	swiftFieldSlug          = "../../macos/App/Platform/FieldSlug.swift"
+	swiftProjectSlug        = "../../macos/App/Platform/ProjectSlug.swift"
+	swiftThumbnailCache     = "../../macos/App/Platform/ThumbnailCache.swift"
+	swiftEvidencePlacement  = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
+	swiftBoundedImageDecode = "../../macos/App/Platform/BoundedImageDecode.swift"
 )
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
@@ -530,12 +530,17 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: []string{strconv.Itoa(raster.MaxEdgeLimit)},
 		},
 		{
+			name: "thumbnail decode bytes", path: swiftThumbnailCache, enum: "ThumbnailDecodePolicy",
+			re:   regexp.MustCompile(`static let maxDecodeBytes = (\d+)`),
+			want: []string{strconv.Itoa(raster.MaxDecodeBytes)},
+		},
+		{
 			name: "evidence grid cell limit", path: swiftEvidencePlacement, enum: "EvidenceGraphPlacement",
 			re:   regexp.MustCompile(`static let cellLimit: Int64 = (\d+)`),
 			want: []string{strconv.FormatInt(subjectpositions.MaxCell, 10)},
 		},
 		{
-			name: "viewer decode pixels", path: swiftArtifactImageDecode, enum: "ArtifactImageDecode",
+			name: "viewer decode pixels", path: swiftBoundedImageDecode, enum: "BoundedImageDecode",
 			re:   regexp.MustCompile(`static let maxDecodePixels = (\d+)`),
 			want: []string{strconv.Itoa(raster.MaxDecodePixels)},
 		},

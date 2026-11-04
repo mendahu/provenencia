@@ -2,8 +2,8 @@ import SwiftUI
 
 /// A page's Gallery section: the heading with the count, then one 160pt tile per picture in a
 /// wrapping grid, each captioned with its citation (S13-14, S13-D5). Kind-blind: its words come
-/// from `gallery`, its ids from the page's identifier. A click on a tile's image opens the Citation
-/// it was cut from, until the likeness viewer takes the click (S13-15).
+/// from `gallery`, its ids from the page's identifier. A click on a tile's image opens the likeness
+/// viewer when the kind has one (`gallery.viewer`, the Person's), else the Citation it was cut from (S13-15).
 ///
 /// One section for every kind: `look` holds the measures and the few behaviors that differ. The
 /// Person's Gallery draws `.large`; the Event and Place Pictures keep `.small` until their redesign.
@@ -16,6 +16,7 @@ struct ConclusionGallerySection: View {
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(\.pvWidthClass) private var widthClass
+    @Environment(\.pvPageViewportSize) private var viewportSize
     @FocusState private var focused: TileFocus?
     /// The last stop that had the keyboard, kept to the next main-actor turn after it goes, so a width
     /// change in the same update still sees it while a click elsewhere clears it.
@@ -24,6 +25,8 @@ struct ConclusionGallerySection: View {
     @State private var pendingFocus: TileFocus?
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
+    /// The picture the likeness viewer shows; nil while it is closed. Not a navigation place.
+    @State private var viewing: ConclusionPictureViewerItem?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -61,17 +64,49 @@ struct ConclusionGallerySection: View {
                 }
             }
         }
-        .onChange(of: widthClass) { keepFocus() }
+        .onChange(of: widthClass) {
+            if let stop = focused ?? lastFocused { restoreFocus(to: stop) }
+        }
+        .pvSheet(item: $viewing) { item in
+            // The shown picture has just left the gallery: draw its first tile until the item catches up.
+            if let viewer = gallery.viewer,
+               let step = ConclusionPictureStep(tiles: gallery.tiles, showing: item.shownID)
+                   ?? gallery.tiles.first.flatMap({ ConclusionPictureStep(tiles: gallery.tiles, showing: $0.id) }) {
+                ConclusionPictureViewer(
+                    projectDir: projectDir,
+                    pageIdentifier: pageIdentifier,
+                    gallery: gallery,
+                    viewer: viewer,
+                    lead: lead,
+                    step: step,
+                    widthClass: widthClass,
+                    paneHeight: viewportSize.height,
+                    show: { viewing?.shownID = $0 },
+                    open: { navigation.go(to: .provenance($0, $1)) }
+                )
+            }
+        }
+        // The viewer follows its gallery: the picture that leaves is replaced by its neighbour.
+        .onChange(of: gallery.tiles) { old, new in
+            viewing = viewing?.resolved(from: old, in: new)
+        }
+        // A close puts the keyboard back on the tile last shown, scrolled into view.
+        .onChange(of: viewing) { old, new in
+            if let old, new == nil {
+                // An emptied gallery swaps this section for its EmptyState: there is no tile to focus.
+                if !gallery.tiles.isEmpty { restoreFocus(to: .image(old.shownID)) }
+            }
+        }
+        .onDisappear { lead.viewerClosed() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.string(gallery.title))
     }
 
-    /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile: scroll it back
-    /// into view, then give its stop the keyboard once the tile exists. The pending stop ends at the
+    /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile, and closing the
+    /// viewer leaves none focused: scroll the stop's tile into view, then give the stop the keyboard once the tile exists. The pending stop ends at the
     /// expiry a moment later (a landing does not end it), so a tile that never dropped does not take the
     /// keyboard back after a click elsewhere.
-    private func keepFocus() {
-        guard let stop = focused ?? lastFocused else { return }
+    private func restoreFocus(to stop: TileFocus) {
         pendingFocus = stop
         requestScroll()
         Task { @MainActor in
@@ -103,7 +138,13 @@ struct ConclusionGallerySection: View {
 
     private func tileView(_ tile: ConclusionDetailPicture) -> some View {
         let tileID = "\(pageIdentifier).picture.\(tile.id)"
-        let open = { navigation.go(to: tile.location) }
+        let open = {
+            if gallery.viewer != nil {
+                viewing = ConclusionPictureViewerItem(shownID: tile.id)
+            } else {
+                navigation.go(to: tile.location)
+            }
+        }
         return VStack(alignment: .leading, spacing: PVSpacing.space3) {
             GalleryTileView(
                 projectDir: projectDir,
@@ -212,7 +253,7 @@ enum GalleryTileLook {
         }
     }
 
-    /// Return opens the focused tile's Citation (the Person's Gallery).
+    /// Return opens the focused tile's image (the Person's Gallery).
     var opensOnReturn: Bool { self == .large }
 
     /// The image button carries the open tooltip (the Event and Place Pictures).
@@ -223,7 +264,7 @@ enum GalleryTileLook {
 }
 
 /// One picture: its crop over a caption of its citation. The gallery passes the button that opens
-/// the Citation as `overlay` (drawn over the crop only). `look` holds every measure of the two
+/// the picture (the viewer or its Citation) as `overlay` (drawn over the crop only). `look` holds every measure of the two
 /// galleries.
 struct GalleryTileView<Overlay: View>: View {
     let projectDir: String

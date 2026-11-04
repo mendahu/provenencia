@@ -59,7 +59,7 @@ enum EventsList: ConclusionListKind {
             EventTitleDisplay.titleSource(summary, locale: locale, orders: orders).text,
             line.date,
             placeTail(line),
-        ].filter { !$0.isEmpty }
+        ]
         return L10n.DesignSystem.spokenJoin(parts) ?? ""
     }
 

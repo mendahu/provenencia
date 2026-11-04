@@ -72,7 +72,7 @@ The first quasi-family-tree visualization in the app.
 - **R-29. Every likeness of this person** lives here.
 - **R-30. A built-in viewer.** Click a likeness to expand it, and ideally step through likenesses like a slideshow. The design brief presents options.
 - **R-31. Set as portrait** stays available from the gallery (and the viewer).
-- **R-32. Open the Citation** a likeness was cropped from, through the likeness's provenance record under the viewer's image, which links to the Source, the Citation and the Observation (user, 2026-11-03: no separate Open citation control and no provenance control on a tile). Until the viewer ships, a click on a tile opens the Citation.
+- **R-32. Open the Citation** a likeness was cropped from, through the likeness's provenance record under the viewer's image, which links to the Source, the Citation and the Observation (user, 2026-11-03: no separate Open citation control and no provenance control on a tile). A Person's tile opens the viewer; the Event and Place tiles still open the Citation.
 
 ## 5. Sources
 

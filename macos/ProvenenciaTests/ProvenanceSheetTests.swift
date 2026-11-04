@@ -88,6 +88,24 @@ struct ProvenanceSheetTests {
         #expect(r.spoken == parts.joined(separator: ", "))
     }
 
+    @Test func aGalleryRecordNeedsNoField() {
+        let kept = PVProvenanceSheetContent.Record(outcome: D.outcome("k", "kept", title: "Register"), in: nil, locale: en)
+        #expect(ReconciledValueDisplay.counted(kept.outcome, in: nil))
+        #expect(kept.counted && kept.phrase == "kept" && kept.mark == .check)
+        #expect(kept.readAs.isEmpty && !kept.readAsIsPhrase)
+        let expected = [kept.citation.line, kept.phrase, kept.observationRef, kept.subjectRef]
+        #expect(kept.spoken == L10n.DesignSystem.spokenJoin(expected))
+        #expect(kept.spoken.hasPrefix(kept.citation.line))
+
+        let weak = PVProvenanceSheetContent.Record(
+            outcome: D.outcome("w", "weak", credibilityOffset: -2), in: nil, locale: en)
+        #expect(!weak.counted)
+        #expect(weak.phrase == "weak · low-trust Source" && weak.mark == .signalLow)
+
+        let against = PVProvenanceSheetContent.Record(outcome: D.outcome("a", "against"), in: nil, locale: en)
+        #expect(!against.counted && against.phrase == L10n.string(L10n.Conclusions.outcomeAgainst))
+    }
+
     @Test func valuesGroupTheirRecordsAndTheRestComeLast() {
         let field = D.field("mixed", [
             D.value(1, "kept", support: 2, .name(D.jamesRobins)),

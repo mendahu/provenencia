@@ -205,7 +205,7 @@ struct ArtifactViewerModelTests {
         await loadImage(model, project: project, relPath: "objects/ab/cd/x.jpg", mediaType: "image/jpeg")
         #expect(model.emptyReason == .idle)
         let raster = try #require(model.displayRaster)
-        #expect(raster.width * raster.height <= ArtifactImageDecode.maxDecodePixels)
+        #expect(raster.width * raster.height <= BoundedImageDecode.maxDecodePixels)
         #expect(abs(raster.width - 2 * raster.height) <= 2)
         #expect(model.imagePixelSize?.width == 12000)
         #expect(model.imagePixelSize?.height == 6000)
@@ -246,13 +246,61 @@ struct ArtifactViewerModelTests {
         #expect(raster.height == Int(expected.size.height.rounded()))
     }
 
+    @Test func decodeTurnsRotatedImages() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        let limits = ThumbnailDecodePolicy.limits
+        func url(_ rel: String) -> URL { URL(fileURLWithPath: project).appendingPathComponent(rel) }
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/a.png", width: 300, height: 200, fileType: .png)
+        let plain = try BoundedImageDecode.decode(url: url("objects/ab/cd/a.png"), limits: limits).get().pixelSize
+        #expect(plain.width == 300 && plain.height == 200)
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/b.jpg", width: 300, height: 200, fileType: .jpeg,
+            orientation: 6)
+        let turned = try BoundedImageDecode.decode(url: url("objects/ab/cd/b.jpg"), limits: limits).get().pixelSize
+        #expect(turned.width == 200 && turned.height == 300)
+
+        try ArtifactFileFixtures.writeImage(
+            projectDir: project, relPath: "objects/ab/cd/c.gif", width: 30, height: 20, fileType: .gif)
+        #expect(refusal(BoundedImageDecode.decode(url: url("objects/ab/cd/c.gif"), limits: limits)) == .unreadable)
+
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/d.png", width: 5000, height: 10)
+        #expect(
+            refusal(BoundedImageDecode.decode(url: url("objects/ab/cd/d.png"), limits: limits))
+                == .tooLarge)
+    }
+
+    @Test func decodeRefusesAnOversizedFile() throws {
+        let project = ArtifactFileFixtures.uniqueProjectDir()
+        defer { try? FileManager.default.removeItem(atPath: project) }
+        try ArtifactFileFixtures.writeDeclaredPNGHeader(
+            projectDir: project, relPath: "objects/ab/cd/big.png", width: 30, height: 20)
+        let url = URL(fileURLWithPath: project).appendingPathComponent("objects/ab/cd/big.png")
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.truncate(atOffset: UInt64(ThumbnailDecodePolicy.maxDecodeBytes) + 1)
+        try handle.close()
+
+        #expect(refusal(BoundedImageDecode.decode(url: url, limits: ThumbnailDecodePolicy.limits)) == .tooLarge)
+        var unbounded = ThumbnailDecodePolicy.limits
+        unbounded.maxBytes = nil
+        #expect(refusal(BoundedImageDecode.decode(url: url, limits: unbounded)) != .tooLarge)
+    }
+
+    private func refusal<T>(_ result: Result<T, BoundedImageDecode.Refusal>) -> BoundedImageDecode.Refusal? {
+        if case .failure(let refusal) = result { refusal } else { nil }
+    }
+
     @Test func maxPixelSizeAtTheBudget() {
-        #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8000) == 8000)
-        #expect(ArtifactImageDecode.maxPixelSize(width: 8000, height: 8001) == 8000)
-        #expect(ArtifactImageDecode.maxPixelSize(width: 3000, height: 2000) == 3000)
-        #expect(ArtifactImageDecode.maxPixelSize(width: 12000, height: 6000) == 11313)
-        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 16) == 5656)
-        #expect(ArtifactImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 8) == 8000)
+        #expect(BoundedImageDecode.maxPixelSize(width: 8000, height: 8000) == 8000)
+        #expect(BoundedImageDecode.maxPixelSize(width: 8000, height: 8001) == 8000)
+        #expect(BoundedImageDecode.maxPixelSize(width: 3000, height: 2000) == 3000)
+        #expect(BoundedImageDecode.maxPixelSize(width: 12000, height: 6000) == 11313)
+        #expect(BoundedImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 16) == 5656)
+        #expect(BoundedImageDecode.maxPixelSize(width: 10000, height: 10000, depth: 8) == 8000)
     }
 
     /// Every image type on Go's allowlist that ImageIO writes opens under the media type

@@ -1,10 +1,72 @@
 import AppKit
 import Foundation
 import ImageIO
+import UniformTypeIdentifiers
 
-/// The two ImageIO steps the thumbnail cache and the Artifact viewer share: reading what an
-/// image's header declares, and a bounded decode.
+/// What a caller admits as a picture file: the sniffed type must conform to one of `typeIdentifiers`
+/// (an empty list refuses), both edges must be in `1...maxEdge`, and a file over `maxBytes`, when set,
+/// refuses before ImageIO opens it (``ImageHeaderDecode/admit(url:limits:)``).
+struct ImageDecodeLimits: Equatable, Sendable {
+    var typeIdentifiers: [String]
+    var maxEdge = BoundedImageDecode.maxEdge
+    var maxBytes: Int?
+}
+
+/// The ImageIO steps the thumbnail cache, the Artifact viewer and the likeness viewer share:
+/// admitting an image by its header, and a bounded decode.
 enum ImageHeaderDecode {
+    /// An image declaring more 8-bit pixels than this is refused before any pixel decodes;
+    /// the count is divided by the bytes per color component.
+    static let maxDeclaredPixels = 256000000
+
+    /// Why an image is refused.
+    enum Refusal: Error, Equatable, Sendable {
+        /// The header declares a size outside the edge or depth-scaled pixel budget, or the file is
+        /// over the byte limit.
+        case tooLarge
+        /// Anything else: a sniffed type that conforms to none of the identifiers, an unreadable
+        /// header, or a failed decode.
+        case unreadable
+    }
+
+    /// Bytes per color component, at least 1: a 16-bit image counts twice, a 32-bit float image four times.
+    static func depthFactor(_ bitsPerComponent: Int) -> Int {
+        max(1, bitsPerComponent / 8)
+    }
+
+    /// The one admission of a picture file by its header: the sniffed type conforms to one of
+    /// `limits.typeIdentifiers`, and the declared size is within `limits.maxEdge` and the depth-scaled
+    /// pixel budget. Reads the header only; no pixels decode, and `limits.maxBytes` is not applied
+    /// (it needs the file's size, not the source): ``admit(url:limits:)`` is the one that opens a file.
+    static func admit(_ source: CGImageSource, limits: ImageDecodeLimits) -> Result<DeclaredImage, Refusal> {
+        guard let sniffed = (CGImageSourceGetType(source) as String?).flatMap({ UTType($0) }),
+              limits.typeIdentifiers.contains(where: { identifier in
+                  UTType(identifier).map { sniffed.conforms(to: $0) } ?? false
+              }),
+              let declared = declaredImage(source)
+        else { return .failure(.unreadable) }
+        guard declared.fits(
+            maxEdge: limits.maxEdge, maxPixels: maxDeclaredPixels / depthFactor(declared.bitsPerComponent)
+        ) else { return .failure(.tooLarge) }
+        return .success(declared)
+    }
+
+    /// The one admission of a picture file by URL, for every path that opens one: the file's size
+    /// against `limits.maxBytes` (a file over it refuses before ImageIO opens it), then open, then
+    /// type, header and fit as ``admit(_:limits:)``. Returns the source and what its header declares.
+    static func admit(
+        url: URL, limits: ImageDecodeLimits
+    ) -> Result<(CGImageSource, DeclaredImage), Refusal> {
+        if let maxBytes = limits.maxBytes {
+            guard let bytes = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize else {
+                return .failure(.unreadable)
+            }
+            guard bytes <= maxBytes else { return .failure(.tooLarge) }
+        }
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return .failure(.unreadable) }
+        return admit(source, limits: limits).map { (source, $0) }
+    }
+
     /// What an image's header declares: its size, resolution and EXIF orientation.
     struct DeclaredImage: Equatable, Sendable {
         var width: Int
@@ -19,6 +81,14 @@ enum ImageHeaderDecode {
         /// True when both edges are in `1...maxEdge` and `width * height <= maxPixels`.
         func fits(maxEdge: Int, maxPixels: Int) -> Bool {
             (1...maxEdge).contains(width) && (1...maxEdge).contains(height) && width * height <= maxPixels
+        }
+
+        /// EXIF orientations 5...8 turn the image a quarter, so it is shown with its edges swapped.
+        var isTurned: Bool { orientation >= 5 }
+
+        /// The size in pixels as the image is shown: the declared edges, swapped when ``isTurned``.
+        var uprightSize: (width: Int, height: Int) {
+            isTurned ? (height, width) : (width, height)
         }
     }
 

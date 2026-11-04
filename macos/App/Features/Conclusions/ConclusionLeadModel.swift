@@ -13,12 +13,30 @@ final class ConclusionLeadModel {
     private let entityId: String
 
     var toast: VocabularyToast?
+    /// The likeness viewer is open and draws the Toast itself, so the page does not draw it a second
+    /// time (S13-15 D-10). Only ``viewerOpened()`` and ``viewerClosed()`` write it.
+    private(set) var toastInViewer = false
     private(set) var isSaving = false
 
     init(session: WorkspaceSession, userID: String, entityId: String) {
         self.session = session
         self.userID = userID
         self.entityId = entityId
+    }
+
+    /// The viewer is on screen: it draws the Toast, and any the page was showing goes.
+    func viewerOpened() {
+        toastInViewer = true
+        toast = nil
+    }
+
+    /// The viewer is gone, however it went: the page draws the Toast again, and any the viewer was showing goes.
+    /// With no viewer open (the Gallery section left, or an Event or Place page) it does nothing, so a
+    /// Toast the page is showing stays.
+    func viewerClosed() {
+        guard toastInViewer else { return }
+        toastInViewer = false
+        toast = nil
     }
 
     /// Makes `picture` the lead. Returns whether the save worked.

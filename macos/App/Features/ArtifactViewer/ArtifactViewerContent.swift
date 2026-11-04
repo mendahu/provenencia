@@ -7,7 +7,7 @@ import PDFKit
 /// `@unchecked Sendable`: `PDFDocument` and the decoded `NSImage` are not Sendable, but we only
 /// hand the value from a one-shot load task onto the main actor.
 enum ArtifactViewerContent: Equatable, @unchecked Sendable {
-    case image(ArtifactImageDecode.Decoded)
+    case image(BoundedImageDecode.Decoded)
     case pdf(PDFDocument)
 
     static func == (lhs: ArtifactViewerContent, rhs: ArtifactViewerContent) -> Bool {

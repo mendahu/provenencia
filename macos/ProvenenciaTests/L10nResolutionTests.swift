@@ -22,6 +22,11 @@ struct L10nResolutionTests {
             == L10n.DesignSystem.spokenJoin(L10n.DesignSystem.spokenJoin("a", "b"), "c"))
     }
 
+    @Test func spokenJoinDropsEmptyParts() {
+        #expect(L10n.DesignSystem.spokenJoin(["a", "", "b"]) == L10n.DesignSystem.spokenJoin("a", "b"))
+        #expect(L10n.DesignSystem.spokenJoin(["", ""]) == nil)
+    }
+
     @Test func formatFillsCatalogFormat() {
         #expect(
             L10n.EvidenceGraph.deleteAccessibility(kind: "Person", label: "Ada Lovelace", ref: "PER-1")

@@ -83,6 +83,7 @@ struct PVProvenanceSheetContent: Equatable {
         /// line, the outcome, then its Observation and Subject refs. The links
         /// follow as separate controls.
         var spoken: String {
+            // A record with no field (a likeness) has no Read as to speak.
             L10n.DesignSystem.spokenJoin([readAs, citation.line, phrase, observationRef, subjectRef]) ?? ""
         }
     }
@@ -163,17 +164,23 @@ struct PVProvenanceSheetContent: Equatable {
 // MARK: - Assembler
 
 extension PVProvenanceSheetContent.Record {
+    /// A record read from its field. A record with no field (a likeness: a depiction Property has
+    /// none) passes nil: nothing is denied, and it reads no value, so `readAs` is "".
     init(
         outcome: CatalogReconcilerOutcome,
-        in field: CatalogConclusionField,
+        in field: CatalogConclusionField?,
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
         let citation = CitationLineDisplay.parts(outcome)
         self.init(
             id: outcome.observationID,
-            readAs: ReconciledValueDisplay.readAs(outcome, propertyKey: field.propertyKey, locale: locale, orders: orders),
-            readAsIsPhrase: ReconciledValueDisplay.readAsIsPhrase(outcome, propertyKey: field.propertyKey),
+            readAs: field.map {
+                ReconciledValueDisplay.readAs(outcome, propertyKey: $0.propertyKey, locale: locale, orders: orders)
+            } ?? "",
+            readAsIsPhrase: field.map {
+                ReconciledValueDisplay.readAsIsPhrase(outcome, propertyKey: $0.propertyKey)
+            } ?? false,
             counted: ReconciledValueDisplay.counted(outcome, in: field),
             phrase: ReconciledValueDisplay.outcomePhrase(outcome, in: field, locale: locale),
             mark: ReconciledValueDisplay.outcomeMark(outcome, in: field),

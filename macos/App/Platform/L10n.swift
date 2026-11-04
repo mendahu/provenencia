@@ -172,11 +172,12 @@ enum L10n {
             ), first, second)
         }
 
-        /// The parts spoken as one line, joined two at a time through the
-        /// catalog; nil when there are none.
+        /// The non-empty parts spoken as one line, joined two at a time through the
+        /// catalog; nil when none is left.
         static func spokenJoin(_ parts: [String]) -> String? {
-            guard let first = parts.first else { return nil }
-            return parts.dropFirst().reduce(first) { spokenJoin($0, $1) }
+            let spoken = parts.filter { !$0.isEmpty }
+            guard let first = spoken.first else { return nil }
+            return spoken.dropFirst().reduce(first) { spokenJoin($0, $1) }
         }
 
         static let reorderHandle = LocalizedStringResource(
@@ -9222,10 +9223,61 @@ enum L10n {
             comment: "Label of the Person page header thumb when it shows a likeness no gallery tile matches"
         )
 
-        static let likenessOpenTip = LocalizedStringResource(
-            "conclusions.person.likenessOpen",
-            defaultValue: "Open citation",
+        static let likenessViewHint = LocalizedStringResource(
+            "conclusions.person.likenessView",
+            defaultValue: "Opens the likeness in the viewer",
             comment: "Spoken hint of a likeness tile's image button in a Person's gallery"
+        )
+
+        /// "Likeness of {person}" — the title of the likeness viewer.
+        static func likenessViewerTitle(_ person: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessViewer.title",
+                defaultValue: "Likeness of %@",
+                comment: "Title of the likeness viewer over a Person page; the argument is the person's title"
+            ), person)
+        }
+
+        /// "Likeness 2 of 7, from {citation line}" — the spoken label of the viewer's image.
+        static func likenessViewerLabel(index: Int, count: Int, line: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessViewer.label",
+                defaultValue: "Likeness %1$lld of %2$lld, from %3$@",
+                comment: "Accessibility label of the likeness viewer's image; arguments are the 1-based position, the count of likenesses and the citation line"
+            ), index, count, line)
+        }
+
+        /// "Likeness 1 of 7, from {citation line}, portrait" — the spoken label of the portrait's image in the viewer.
+        static func likenessViewerLabelLead(index: Int, count: Int, line: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.person.likenessViewer.labelLead",
+                defaultValue: "Likeness %1$lld of %2$lld, from %3$@, portrait",
+                comment: "Accessibility label of the likeness viewer's image when it shows the portrait; arguments are the 1-based position, the count of likenesses and the citation line"
+            ), index, count, line)
+        }
+
+        static let likenessViewerImageUnavailable = LocalizedStringResource(
+            "conclusions.person.likenessViewer.imageUnavailable",
+            defaultValue: "Image unavailable",
+            comment: "Accessibility value of the likeness viewer's image when the file is missing or could not be shown"
+        )
+
+        static let likenessViewerPrevious = LocalizedStringResource(
+            "conclusions.person.likenessViewer.previous",
+            defaultValue: "Previous likeness",
+            comment: "Label of the likeness viewer's previous button"
+        )
+
+        static let likenessViewerNext = LocalizedStringResource(
+            "conclusions.person.likenessViewer.next",
+            defaultValue: "Next likeness",
+            comment: "Label of the likeness viewer's next button"
+        )
+
+        static let likenessViewerClose = LocalizedStringResource(
+            "conclusions.person.likenessViewer.close",
+            defaultValue: "Close the viewer",
+            comment: "Label of the likeness viewer's close button"
         )
 
         /// "Likeness from {Source title or citation line}" — the header thumb's and a gallery tile's spoken label.

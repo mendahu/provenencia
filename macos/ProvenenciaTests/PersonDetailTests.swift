@@ -151,6 +151,28 @@ struct PersonDetailTests {
         #expect(EventDetailContent(detail: detail()).gallery.tiles.isEmpty)
     }
 
+    @Test func personGalleryOffersTheViewer() throws {
+        var source = detail()
+        source.pictures = (1...7).map {
+            D.picture("p\($0)", path: "objects/ab/\($0).png", title: "Register \($0)", leads: $0 == 1)
+        }
+        let person = PersonDetailContent(detail: source)
+        let title = person.title.text
+        let gallery = person.gallery
+        #expect(gallery.viewer?.title == L10n.Conclusions.likenessViewerTitle(title))
+        #expect(gallery.viewer?.title.hasPrefix("Likeness of ") == true)
+        let second = gallery.tiles[1]
+        #expect(second.viewerLabel == L10n.Conclusions.likenessViewerLabel(index: 2, count: 7, line: second.citation.line))
+        #expect(second.viewerLabel.hasPrefix("Likeness 2 of 7, from "))
+        let lead = gallery.tiles[0]
+        #expect(lead.isLead)
+        #expect(lead.viewerLabel == L10n.Conclusions.likenessViewerLabelLead(index: 1, count: 7, line: lead.citation.line))
+        #expect(lead.viewerLabel.hasSuffix(", portrait"))
+        #expect(gallery.openTip == L10n.Conclusions.likenessViewHint)
+        #expect(EventDetailContent(detail: source).gallery.viewer == nil)
+        #expect(PlaceDetailContent(detail: source).gallery.viewer == nil)
+    }
+
     @Test func galleryTilesCarryTheCitationParts() {
         var picture = D.picture("a", path: "objects/ab/cd.png", title: "Hamburger Adressbuch 1861")
         picture.record.artifactLabel = "Volume 3"
@@ -239,6 +261,20 @@ struct PersonDetailTests {
             useAsLabel: L10n.Conclusions.useAsPortraitLabel,
             chosenBody: L10n.Conclusions.toastPortraitChosenBody
         )[0]
+    }
+
+    @MainActor
+    @Test func leavingTheSectionKeepsAPageToast() {
+        let model = leadModel(FakeStore())
+        let toast = VocabularyToast(title: "Saved", body: "", tone: .success)
+        model.toast = toast
+        model.viewerClosed()
+        #expect(model.toast == toast)
+        model.viewerOpened()
+        #expect(model.toast == nil)
+        model.toast = toast
+        model.viewerClosed()
+        #expect(model.toast == nil)
     }
 
     @MainActor

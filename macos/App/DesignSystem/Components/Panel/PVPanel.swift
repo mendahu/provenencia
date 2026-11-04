@@ -9,6 +9,12 @@ enum PVPanelFooterChrome {
     case plain
 }
 
+/// Measures of ``PVPanel`` that content laid out inside it needs to know.
+enum PVPanelMetrics {
+    /// The panel body's padding on each side.
+    static let bodyInset = PVSpacing.space7
+}
+
 /// Content-agnostic sheet **panel** primitive: title, optional subtitle, body
 /// slot, optional footer. Draws the warm ``PVColor/surfaceCard`` fill so sheet
 /// content matches the design kit; **does not** redraw corner radius, shadow,
@@ -86,7 +92,7 @@ struct PVPanel<Body: View, Footer: View, TitleAccessory: View>: View {
             panelBody()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, PVSpacing.space7)
+        .padding(.horizontal, PVPanelMetrics.bodyInset)
         .padding(.vertical, PVSpacing.space9)
     }
 
