@@ -11,9 +11,9 @@ import (
 
 // Subject is one primary Subject on the Evidence layer.
 type Subject struct {
-	ID         []byte
-	Ref        string
-	Kind       string // person, event, place
+	ID     []byte
+	Ref    string
+	Kind   string // person, event, place
 	Values subjectcompare.Values
 }
 
