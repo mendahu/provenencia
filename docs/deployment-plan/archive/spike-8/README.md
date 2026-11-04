@@ -1,6 +1,6 @@
 # Spike 8 — Pause and refine (data entry)
 
-**Done.** Pause-and-refine made Source → Evidence graph entry cheaper: composer rethink + row commits, image OCR, PDF Find/paste, graph/page/list chrome, and named delete. Live models: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`catalog-deletes.md`](../../../catalog-deletes.md). Dogfood leftovers: [`docs/dogfood/ux.md`](../../../dogfood/ux.md).
+**Done.** Pause-and-refine made Source → Evidence graph entry cheaper: composer rethink + row commits, image OCR, PDF Find/paste, graph/page/list chrome, and named delete. Live models: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md), [`catalog-deletes.md`](../../../catalog-deletes.md). Dogfood leftovers: [`docs/dogfood/ux/`](../../../dogfood/ux/), [`evidence-graph-structure-shortcuts.md`](../../../ideas/evidence-graph-structure-shortcuts.md).
 
 ## Decisions
 
@@ -24,10 +24,10 @@ PDF Artifact thumbnails, `text_quote` locators, Source-page Find, Change type, a
 
 | Item | Home |
 | --- | --- |
-| Census-scale graph density | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
-| Extract structure from transcription | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
+| Census-scale graph density | [`evidence-graph-followups.md`](../../../ideas/evidence-graph-followups.md) |
+| Extract structure from transcription | [`evidence-graph-structure-shortcuts.md`](../../../ideas/evidence-graph-structure-shortcuts.md) |
 | `text_quote` locators | [`text-quote-locators.md`](../../../ideas/text-quote-locators.md) |
-| PDF Artifact thumbnails | [`artifact-pdf-thumbnails.md`](../../../ideas/artifact-pdf-thumbnails.md) |
+| PDF Artifact thumbnails | [`depictions-and-likenesses.md`](../../../ideas/depictions-and-likenesses.md) |
 | First-class Source provenance date | [`source-provenance-date.md`](../../spike-15/source-provenance-date.md) |
 | Source-to-source commentary | [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md) |
 | Audio / video Sources | [`audio-video-sources.md`](../../../ideas/audio-video-sources.md) |

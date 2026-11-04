@@ -114,7 +114,7 @@ Promote becomes a quick filing action: the researcher picks a target per row and
 ### 2.1 What this board is not
 
 - Confidence or argument. Identity Claims no longer carry either (decided 2026-10-29).
-- A Rejected status, or any way to see or edit a claim after Done other than reopening Promote ([identity-claim-review idea](../../../../ideas/identity-claim-review.md)).
+- A Rejected status, or any way to see or edit a claim after Done other than reopening Promote ([identity-claim-review idea](../../../../../ideas/matching-test-suite.md)).
 - Any other signal of match quality on the row or in the target menu (a dot, a percentage, a tint). The score ranks unseen.
 - Changes to the target menu items, the record search, the connection subrows or the footer.
 - The Person page's comparison of a person's records (S13-D10).

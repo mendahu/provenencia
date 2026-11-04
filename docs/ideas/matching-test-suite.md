@@ -1,6 +1,6 @@
 # Matching test suite and labelled calibration
 
-**Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation. It expands the **Calibration** bullet and the open question in [`name-matching-enhancements.md`](archive/name-matching-enhancements.md). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
+**Status:** idea, not scheduled; likely the core of **Spike 11**, a large-scale matching refinement. Captured 2026-10-16 from a design conversation (Calibration leftover from Spike 10's matcher). Model: [`promote-graph-alignment.md`](../promote-graph-alignment.md), [`matching.md`](../matching.md).
 
 "Make the algorithm graspable" is in Spike 11: the design is [`deployment-plan/spike-11/comparison-layers.md`](../deployment-plan/archive/spike-11/comparison-layers.md), and S11-01 writes the one-page model, glossary and knob inventory. Pieces 1–7 and the labeler wait until the re-implementation lands; whether they join Spike 11 is decided then.
 
@@ -23,7 +23,7 @@ This is a refinement pass. It may be only documentation and renames, or it may n
 - **A knob inventory.** Every tunable, its default, what it changes, and which tests pin it, across `core/match/registry.go`, `core/match/profiles.go`, `core/graphalign/registry.go` and `core/autoreconcile`. Find magic numbers living outside the registries and move them in.
 - **Are the levers right?** Check that the knobs are independent and cover the behaviors we actually want to tune. The learning step needs each row's score to break down cleanly into parts, each one a weight times an observed feature. If a stage can't be expressed that way, decide whether to restructure it or tune it by search.
 - **Researcher-defined properties.** Default profiles list product properties only. A user property (occupation, residence text) could join matching at a modest weight, or a project could opt it in. In Spike 11 that would be a subject registry entry, but the registry is checked against seeded properties. (Moved from the archived name-matching note.)
-- **Known gaps.** List where the algorithm is "not quite there" today, from dogfood and from [`name-matching-enhancements.md`](archive/name-matching-enhancements.md), so the refinement and the test suite aim at the same problems. One known: `neighborTypeProperty` (`core/database/promotealign/layer.go`) names the Property whose term types an event on a bridge key in the loader; it belongs in the registry's segment section, beside the keys it types (S11-19 review M-6).
+- **Known gaps.** List where the algorithm is "not quite there" today, from dogfood, so the refinement and the test suite aim at the same problems. One known: `neighborTypeProperty` (`core/database/promotealign/layer.go`) names the Property whose term types an event on a bridge key in the loader; it belongs in the registry's segment section, beside the keys it types (S11-19 review M-6).
 
 Pieces 1 and 2 below can start alongside this, since goldens and invariants protect the refactor. Pieces 3–7 wait until the model and the knobs settle.
 
@@ -202,7 +202,13 @@ Each phase is usable on its own. Rough sizes, not commitments.
 6. **Fitting** (one PR). A script (Go, or Python if the stats libraries earn it) that reads the labels, fits ordered logistic regression with uneven costs and regularization, prints a registry diff, and reports the leftover misses clustered by feature and noise tag. Add active sampling to the labeler once a first fit exists.
 7. **Dogfood export** (one PR, any time after phase 1). Debug export of a Promote session as a scenario, plus adapter equivalence tests in `promotealign`.
 
-Later: once claim editing ships ([`identity-claim-review.md`](identity-claim-review.md)), real accepts and rejects become labels in the same shape.
+Later: once the app remembers researcher match decisions (below), real accepts and rejects become labels in the same shape.
+
+## Remember researcher decisions
+
+Still open (was parked with the old Identity Claim review idea). A handle the researcher rejected for a Subject is suggested again, and merge hints have no memory of "not the same person". Matching should exclude or flag rejected handles, and merge hints need a stored "distinct" decision. When that ships, the labeler above can read those decisions as labels.
+
+Claim editing after Promote (confidence, argument, reject) is not scheduled; Promote files Accepted only ([`provisional-identity-claims.md`](provisional-identity-claims.md)).
 
 ## Open
 
@@ -210,3 +216,4 @@ Later: once claim editing ships ([`identity-claim-review.md`](identity-claim-rev
 - Whether the fit runs in Go or Python. Go keeps one toolchain; Python has ordinal regression ready-made.
 - How much of the simulator should model real record types (census columns, obituary phrasing) versus abstract noise.
 - Whether pairwise `Rank` tuning ([`matching.md`](../matching.md) registry) uses the same labels, or only the promote scale.
+- An age converted to a birth year as a matching signal (dropped from Spike 10; rethink later if dogfood needs it).

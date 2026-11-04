@@ -13,7 +13,7 @@ description: >-
 
 Researcher catalog access is a **held exclusive session** plus a **serial queue**, not open → work → close per RPC.
 
-Authoritative product note: [`docs/ideas/archive/catalog-access-serialization.md`](../../../docs/ideas/archive/catalog-access-serialization.md). Stack: [`docs/application-stack.md`](../../../docs/application-stack.md) §10 / §12.
+This skill is the product rule. Stack: [`docs/application-stack.md`](../../../docs/application-stack.md) §10 / §12; client lifecycle: [`docs/macos-client-patterns.md`](../../../docs/macos-client-patterns.md) § Catalog session.
 
 ## Doorways
 

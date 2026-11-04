@@ -8,7 +8,7 @@
 
 ## Related
 
-Almost certainly the same root cause as [PDF page indicator stays on page 1 while scrolling](2026-10-15-pdf-page-indicator-stuck-on-page-1.md): `ArtifactViewerModel.page` never learns about scroll-driven page changes, so anything that re-syncs the viewer from the model snaps back to the stale page. Fixing the indicator bug (push `pdfView.currentPage` back into the model on `.PDFViewPageChanged`) should resolve this one as well; it is worth re-testing zoom when that lands.
+Almost certainly the same root cause as [PDF page indicator stays on page 1 while scrolling](2026-10-15-pdf-page-indicator-stuck-on-page-1.md) (both → S14-28): `ArtifactViewerModel.page` never learns about scroll-driven page changes, so anything that re-syncs the viewer from the model snaps back to the stale page. Fixing the indicator bug (push `pdfView.currentPage` back into the model on `.PDFViewPageChanged`) should resolve this one as well; it is worth re-testing zoom when that lands.
 
 ## Code notes (observed, not fixed)
 

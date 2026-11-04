@@ -49,7 +49,7 @@ Check: the new test passes; scripts/check-pr.sh PASS.
 
 **F-3 — Finish the living-doc rename** (from MNT-1)
 Files: `docs/macos-client-patterns.md:101` ("per-entity summary key"), `docs/catalog-deletes.md:46` ("summary dependents", each occurrence), `docs/ideas/promote-ranking.md:16` ("summary display rows").
-Check: `git grep -niP 'header (dependents|rows?|display|read|key|composer|walk)' -- ':(glob)docs/*.md' docs/ideas ':!docs/ideas/archive' .agents .cursor` prints nothing.
+Check: `git grep -niP 'header (dependents|rows?|display|read|key|composer|walk)' -- ':(glob)docs/*.md' docs/ideas ':!docs/ideas' .agents .cursor` prints nothing.
 
 **F-4 — Delete the dead `*FromQuerier` readers** (from MNT-2)
 Files: `core/database/conclusionsummaries/compose.go`.

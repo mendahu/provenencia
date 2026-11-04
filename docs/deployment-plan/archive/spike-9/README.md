@@ -18,7 +18,7 @@ Reconciliation Claims and `name_format`. Editing or removing an Identity Claim, 
 
 | Item | Home |
 | --- | --- |
-| Remove a member, edit a claim, weak-claim review | [`identity-claim-review.md`](../../../ideas/identity-claim-review.md) |
+| Remove a member, edit a claim, weak-claim review | [`identity-claim-review.md`](../../../../ideas/matching-test-suite.md) |
 | Gazetteer writes the same place evidence | [`place-gazetteer-service.md`](../../../ideas/place-gazetteer-service.md) |
 | Name display styles | [`structured-name-model.md`](../../../structured-name-model.md) §4.5 |
 | Deep-fixture timings | [`performance-ledger.md`](performance-ledger.md) — not taken; reserve tiers unused |

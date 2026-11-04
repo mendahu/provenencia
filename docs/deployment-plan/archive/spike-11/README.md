@@ -31,12 +31,12 @@ Name frequency weighting. A `spouse` participation role. Damped multi-hop credit
 | Quote nicknames and add former surnames (S11-29, planned, never built) | Spike 14, S14-09 |
 | The claim evidence sheet, pins and evidence query; a related person's lines and the evidence button's hover (S11-52, S11-34, descoped) | Removed by [Spike 13 slice 0](../../spike-13/deployment-plan.md); membership comparison in [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.1 |
 | The rest of the matching test suite; matcher calibration | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |
-| Merge hints and weak-claim review views | [`identity-claim-review.md`](../../../ideas/identity-claim-review.md) |
-| Term affinity, Daitch–Mokotoff, the place gazetteer | [`daitch-mokotoff.md`](../../../ideas/daitch-mokotoff.md), [`place-gazetteer-service.md`](../../../ideas/place-gazetteer-service.md) |
-| Coverage-aware similarity; a narrower canon walk; the name index kept on commit | [`coverage-aware-similarity.md`](../../../ideas/coverage-aware-similarity.md), Spike 12 S12-51, S12-43 |
+| Merge hints and weak-claim review views | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) § Remember researcher decisions |
+| Term affinity, Daitch–Mokotoff, the place gazetteer | [`international-names.md`](../../../ideas/international-names.md), [`place-gazetteer-service.md`](../../../ideas/place-gazetteer-service.md) |
+| Coverage-aware similarity; a narrower canon walk; the name index kept on commit | [`promote-ranking.md`](../../../ideas/promote-ranking.md), Spike 12 S12-51, S12-43 |
 | Ship-log follow-ups: stale graph-cache link after a merge (verify mode), one keyed warm slot, display rows on memo slots | Spike 12 S12-43 |
 | Ship-log follow-ups: a term key shared across origins; kinship shapes bounded per link; nickname search; guard lists read from Go; focus after the Source type editor | Spike 12 S12-42, S12-49, S12-47, S12-48, S12-30 |
 | Ship-log follow-ups: a typed Promote batch target; `PromoteFlow.item`'s header | Spike 13 S13-23 |
-| Ship-log follow-ups: duplicate-term shortcut; hand-kept seeded term lists | [`term-management.md`](../../../ideas/term-management.md) items 5–6 |
-| Ship-log follow-ups: impossible dates saved; upward card shadows; P3 colors | [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
+| Ship-log follow-ups: duplicate-term shortcut; hand-kept seeded term lists | [`properties-and-terms.md`](../../../ideas/properties-and-terms.md) items 5–6 |
+| Ship-log follow-ups: impossible dates saved; upward card shadows; P3 colors | [`international-names.md`](../../../ideas/international-names.md), [`evidence-graph-followups.md`](../../../ideas/evidence-graph-followups.md) |
 | Dropped: hand-listed key lists and value-type literals, test-side date builder copies, a duplicated `period` loop, per-call allocations with no measured cost, an untested guard failure branch, a negative integer tolerance (code-only registry), an unwrapped profile error that fires only on a broken loader | Small and guarded by tests; not worth a PR (2026-10-29) |

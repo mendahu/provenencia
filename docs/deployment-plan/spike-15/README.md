@@ -2,9 +2,9 @@
 
 ## Status
 
-**Not yet planned.** Three ideas were pulled out of [`ideas/`](../../ideas/) on 2026-11-01 so they sit together until the spike is scoped with [`plan-spike`](../../../.agents/skills/plan-spike/SKILL.md). There is no PR map (`deployment-plan.md`) yet, and nothing here is a commitment to a PR cut.
+**Not yet planned.** Design inputs sit here until the spike is scoped with [`plan-spike`](../../../.agents/skills/plan-spike/SKILL.md). There is no PR map (`deployment-plan.md`) yet, and nothing here is a commitment to a PR cut.
 
-The theme: give Sources the fields a standard genealogical citation needs, starting with a first-class Source date, and let researchers re-file Artifacts between Sources as those Sources take shape. One Source schema pass (one migration) and one Source page design should cover the date and the first citation fields together.
+The theme: give Sources the fields a standard genealogical citation needs, starting with a first-class Source date, and let researchers re-file Artifacts between Sources as those Sources take shape. One Source schema pass (one migration) and one Source page design should cover the date and the first citation fields together. Parked beside that (2026-11-04): Source privacy, credibility-field UX, a rethink of Source metadata / type suggestions, and Spike 12's longer Source-structure leftovers.
 
 ## Documents
 
@@ -13,10 +13,14 @@ The theme: give Sources the fields a standard genealogical citation needs, start
 | [**Source provenance date**](source-provenance-date.md) | The first-class Source publication date, descoped from Spike 13 (S13-20 – S13-22). Its meaning, storage, backfill and where it shows are settled |
 | [**Citation formats**](citation-formats.md) | What an *Evidence Explained* citation needs, layer by layer, against what the catalog has; a six-step path from Source fields to a Go formatter and Copy citation |
 | [**Move an Artifact to another Source**](move-artifact-between-sources.md) | Move an Artifact, with the Evidence graphs built on it, to another Source; the schema change, which graphs move, side effects |
+| [**Source structure later**](source-structure-later.md) | What Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility |
+| [**Source privacy toggle**](2026-10-27-source-privacy-toggle.md) | Per-Source "not public" switch; persist and toggle only; no share behaviour yet (dogfood 2026-10-27) |
+| [**Credibility field UX**](2026-10-18-credibility-field-truncates-and-ignores-enter.md) | Credibility argument truncates and ignores Enter (dogfood 2026-10-18) |
+| [**Rethink Source metadata**](2026-10-25-rethink-source-metadata-and-type-suggestions.md) | Whether Source metadata and type→field suggestions stay, shrink, or go; footprint map (dogfood 2026-10-25) |
 
 ## Open questions
 
-Gathered from the three docs; each doc keeps its own context.
+Gathered from the three core docs; each doc keeps its own context.
 
 **Source date** ([`source-provenance-date.md`](source-provenance-date.md))
 
@@ -39,6 +43,10 @@ Gathered from the three docs; each doc keeps its own context.
 - Undo: rely on moving it back, or offer an undo right after the move.
 - How the Subjects' composite key follows a moved graph: `PRAGMA defer_foreign_keys` inside the transaction, or a migration adding `ON UPDATE CASCADE`.
 
+**Metadata rethink** ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md))
+
+- Stay, shrink, or remove Source metadata and type suggestions before citation formats lean on them.
+
 ## Not this spike
 
-Still in [`ideas/`](../../ideas/): nested Sources, derivation links ("citing …" as a link between Sources), named Source templates and per-graph credibility ([`source-structure-later.md`](../../ideas/source-structure-later.md)); relationships between Sources ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); pasting a registry URL to create a Source ([`registry-source-import.md`](../../ideas/registry-source-import.md)). Pull any of them in when the spike is scoped.
+Still in [`ideas/`](../../ideas/): relationships between Sources ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); pasting a registry URL to create a Source ([`registry-source-import.md`](../../ideas/registry-source-import.md)). Pull any of them in when the spike is scoped.

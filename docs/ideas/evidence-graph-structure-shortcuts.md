@@ -1,6 +1,10 @@
-# Shortcuts for common Evidence graph structures
+# Evidence authoring shortcuts
 
-**Status:** idea, 2026-10-12. Not scheduled.
+**Status:** idea, 2026-10-12 (structure clusters) / 2026-09-23 (field hints). Structure shortcuts considered for Spike 14 Batch 7 (2026-11-04) and left here — too large for an odds-and-ends batch (modal patterns, composer handoff, paste). Not scheduled.
+
+Two ways to cut retyping when building an Evidence graph: place a common cluster in one action (or paste one already on the canvas), and cheap field hints from transcription after the Artifact has text.
+
+## Structure shortcuts
 
 Captured while dogfooding the Evidence graph. Spike 10's observation-default PR (S10-10) was descoped for this: prefilling `subject` on a new person–event, or `part_of` on a new place–place, fills one field. The repeated work is the whole cluster.
 
@@ -32,3 +36,11 @@ A wedding shortcut invents a shape from a form. Paste repeats a shape already on
 4. **Paste and the Citation.** Duplicate the Observations onto the Citation that was copied, or open a new Citation that starts from the same text?
 5. **What is selected.** Subjects alone, or the connections between them? A residence pasted without its place is the wrong copy.
 6. **Where the copy lands.** Offset from the original so the two clusters can be told apart.
+
+## Automatic structure from the Artifact (beyond transcription)
+
+Even after transcription is filled, the researcher still retypes names, dates, and roles onto cards. Spike 8 only dumps text into **transcription**. Spike 10 took the two cheap slices: date prefill from the transcription, and splitting a full name line into parts. The rest stays here.
+
+**Wanted:** Cheap field hints after there is a string (`NSDataDetector`, name/date patterns) and, later, guided extract. Not catalog writes.
+
+**Still out:** PDF OCR / Vision on page rasters; Live Text / VisionKit; Foundation Models (`macOS 26+`, raise-the-floor). Pipeline if we ever did it: string → suggestions the researcher accepts → real Citation + Observations. Experiment: "obituary → draft cards," not "obituary → catalog writes."

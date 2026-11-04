@@ -279,7 +279,7 @@ The findings behind slices 5–7 of the [map](deployment-plan.md). An area audit
 
 ### A-35 — Dead FFI surface
 
-**Where.** RPCs with no Swift caller and no idea file: `EnsureFileThumbnail`, `GetSubjectTypePresentation`, `ListPlaceableSubjectTypes`, `ListProperties`, `ListSubjectTypeProperties`, `RemoveInstallIdentity`. Store methods only tests call: `promoteSubject` (with its handler and the `GenealogyStore` overload), `listSubjectTypes`, `clearSubjectPosition`. `CatalogMutation.swift` comment "The S9-04 card dispatches it after `promoteSubject`". Kept: `UpdatePropertyTerm`, `DeletePropertyTerm` ([`term-management.md`](../../ideas/term-management.md)), `ReorderSubjectTypeProperties` ([`binding-order-editing.md`](../../ideas/binding-order-editing.md)).
+**Where.** RPCs with no Swift caller and no idea file: `EnsureFileThumbnail`, `GetSubjectTypePresentation`, `ListPlaceableSubjectTypes`, `ListProperties`, `ListSubjectTypeProperties`, `RemoveInstallIdentity`. Store methods only tests call: `promoteSubject` (with its handler and the `GenealogyStore` overload), `listSubjectTypes`, `clearSubjectPosition`. `CatalogMutation.swift` comment "The S9-04 card dispatches it after `promoteSubject`". Kept: `UpdatePropertyTerm`, `DeletePropertyTerm` ([`properties-and-terms.md`](../../ideas/properties-and-terms.md)), `ReorderSubjectTypeProperties` ([`properties-and-terms.md`](../../ideas/properties-and-terms.md)).
 **Fix.** Delete them with their handlers, tests and FakeStore code; reserve the proto method numbers. Confirm `RemoveInstallIdentity` is not planned first. The Promote path goes in S12-32, the rest in S12-33.
 
 ## Not scheduled

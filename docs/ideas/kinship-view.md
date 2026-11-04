@@ -10,5 +10,5 @@
 - **Other patterns.** Aunts and uncles (`pibling` / `nibling`); godparents at a baptism; a baptism's or christening's parents; divorce; census households; great-grandparents and deeper.
 - **Link reading below the layers.** `core/kinship` reads links through `segmentcompare.Keys`, so it imports the whole compare stack (`segmentcompare` imports `propertycompare`, `subjectcompare`, `valuecompare`). Before a tree or person page imports `core/kinship`, move `core/segmentcompare/key.go`'s link reading (`Link`, `Terms`, `Key`, `LinkOf`, `Keys`, `EventEndpoint`) to its own pure package and point `segmentcompare`, `core/kinship` and the loaders at it (S11-38 review M-3).
 - **Conflicts between shapes.** A direct `A sibling B` and a shared marriage as spouses. Flag it, or stay silent?
-- **A project's own patterns**, beside its own terms ([`term-management.md`](term-management.md)).
+- **A project's own patterns**, beside its own terms ([`properties-and-terms.md`](properties-and-terms.md)).
 - **Citing an implied fact on a tree** ("spouses: both in the 1842 marriage, EVT-…").

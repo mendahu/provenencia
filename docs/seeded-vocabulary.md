@@ -415,6 +415,7 @@ burial
 funeral
 census
 residence
+occupation
 migration
 travel
 ```

@@ -8,7 +8,8 @@ Friction found while using Provenencia on **real research**, not a planned featu
 
 | Doc | Use |
 | --- | --- |
-| [**UX notes**](ux.md) | Living list of UI / workflow nits. Add here first. |
-| [**UX feedback entries**](ux/) | One file per dogfood finding (`ux/YYYY-MM-DD-<slug>.md`), same stub as `ux.md` plus a **Type** line (Bug / Friction / Idea). Use when an entry needs its own room or code notes. |
+| [**UX entries**](ux/) | One file per finding (`ux/YYYY-MM-DD-<slug>.md`). Add here first. |
 
-When a note is big enough to be its own product idea, move it to `ideas/` and delete it here. When you decide to fix a cluster, pull those rows into a spike or a small PR and delete them from this log.
+When a note is big enough to park longer-term, or when you decide to fix a cluster, move it to `ideas/` or into a spike and delete it here.
+
+Batch 7 dogfood that was pulled into Spike 14 lives under [`deployment-plan/spike-14/ux/`](../deployment-plan/spike-14/ux/).

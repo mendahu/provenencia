@@ -36,4 +36,4 @@ Much of this content sits behind a login, so a pasted URL can't just be fetched.
 
 ## Related
 
-- [`source-structure-later.md`](source-structure-later.md): nested Sources and derivation links (parked by Spike 12). A registry record often belongs to a larger collection; for now its details go in the Source metadata.
+- [`source-structure-later.md`](../deployment-plan/spike-15/source-structure-later.md): nested Sources and derivation links (parked by Spike 12; now with Spike 15). A registry record often belongs to a larger collection; for now its details go in the Source metadata.

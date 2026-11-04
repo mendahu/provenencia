@@ -19,7 +19,7 @@ Verdicts: CON Clean, MNT Clean, UX Clean, SEC+PRF Clean (no findings).
 | UX-3 | UX | minor | Dead `leaveTitle(name:)` reworded instead of deleted | Fix now → F-4 | verified: `git grep leaveTitle` finds only its definition at `L10n.swift:1509`; D-11 keeps only keys Swift names |
 | MNT-2 (+ CON-1) | MNT | minor | Promote domain docs still say "file" for the Promote process | Fix now → F-5 | verified: `promote-graph-alignment.md` 7, 15, 31, 35, 52-54 (PR edits this file); `conclusion-layer-data-model.md` 243, 247, 254. §9.1 bridge filing stays |
 | UX-6 | UX | nit → minor | Stale "filing page" comment at `L10n.swift:1836` | Fix now → F-6 | stale comment in a file this PR changes |
-| MNT-8 | MNT | nit → minor | `binding-order-editing.md:7` still points at the deleted sheet | Fix now → F-6 | stale line in a file this PR changes |
+| MNT-8 | MNT | nit → minor | `properties-and-terms.md:7` still points at the deleted sheet | Fix now → F-6 | stale line in a file this PR changes |
 | UX-2 | UX | minor | Duplicate-warning titles say "is also promoted" before Done | To user → Fix now → F-7 | the wording was D-20's §6 Strings table (plan lines 266-267). User, 2026-10-29: "Past tense probably makes more sense if you change it to \"selected\" rather than \"promoted.\" Something like \"Gracie has also been selected to be promoted,\" etc." |
 | UX outside-lens | UX→CON | — | D-19 vs `PromoteView` reading `pvWidthClass` for `listMax` | Rejected | D-19 itself says PromoteView reads the width class; "only reader" is about the target width (CON round 1 checked the same) |
 | UX outside-lens | UX→CON | — | Manual check §10 not run | Logged | the user runs §10; the PR body says so |
@@ -58,7 +58,7 @@ Do: where "file / files / filed / filing" names the Promote process, say promote
 Check: `rg -n -i '\b(un)?fil(e|ed|es|ing)\b' docs/promote-graph-alignment.md` prints only §9.1 bridge-filing lines; scripts/check-pr.sh PASS.
 
 **F-6 — Stale lines in files this PR changes** (from UX-6, MNT-8, MNT-7)
-Files: `macos/App/Platform/L10n.swift:1836` comment "this Source's filing page" → "this Source's page"; `docs/ideas/binding-order-editing.md:7` drop or reword "so the next evidence open follows it" so it no longer points at the deleted sheet; `docs/interpretation-layer-data-model.md:693` add the missing "and" as STEP-7's text has it.
+Files: `macos/App/Platform/L10n.swift:1836` comment "this Source's filing page" → "this Source's page"; `docs/ideas/properties-and-terms.md:7` drop or reword "so the next evidence open follows it" so it no longer points at the deleted sheet; `docs/interpretation-layer-data-model.md:693` add the missing "and" as STEP-7's text has it.
 Check: scripts/check-pr.sh PASS.
 
 **F-7 — Duplicate warnings say "selected to be promoted"** (from UX-2; user, 2026-10-29)

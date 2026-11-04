@@ -4,6 +4,12 @@
 
 Briefs are written one at a time, just before the PR they gate. Design track and gating: [`../deployment-plan.md`](../deployment-plan.md#design-track). A brief covers one view.
 
+## Scheduled
+
+| Brief | View | Gates |
+| --- | --- | --- |
+| S14-D7 | Citation composer: boolean Property value editor (checkbox / toggle) | S14-37 |
+
 ## Archived
 
 | Brief | View | Board | Built by |

@@ -2,7 +2,7 @@
 
 Working notes for implementation milestones. These are stopping points, not a full product roadmap.
 
-Authoritative domain and stack decisions remain in the sibling docs under [`docs/`](../). Unscheduled product ideas live in [`ideas/`](../ideas/) — a parking lot, not a spike queue. UX friction from dogfooding lives in [`docs/dogfood/ux.md`](../dogfood/ux.md) until something is pulled into a spike, and then it leaves that log.
+Authoritative domain and stack decisions remain in the sibling docs under [`docs/`](../). Unscheduled product ideas live in [`ideas/`](../ideas/) — a parking lot, not a spike queue. Fresh UX friction from dogfooding lives as one file under [`docs/dogfood/ux/`](../dogfood/ux/) until it is pulled into a spike or parked in ideas, and then it leaves that folder.
 
 Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR order, checklists, Claude Design briefs, and PR plans are git history — not duplicated here.
 
@@ -51,9 +51,9 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 13 — Person detail page](spike-13/) is open. Plan: [`spike-13/deployment-plan.md`](spike-13/deployment-plan.md). Slice 0 comes first: it removes Identity Claim Observation pins and Promote's evidence sheet (2026-10-29). Each brief is designed, then implemented, before the next.
 
-[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md).
+[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md). Batch 7 (2026-11-04) is dogfood UX (PDF page sync, polygon edit, graph polish, boolean value type) while Spike 13 continues.
 
-[Spike 15 — Sources and citations](spike-15/) is not yet planned: its three design docs (the Source date, citation formats, moving an Artifact to another Source) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
+[Spike 15 — Sources and citations](spike-15/) is not yet planned: its design docs (the Source date, citation formats, moving an Artifact, Source structure leftovers, privacy, credibility UX, metadata rethink) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
 
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 

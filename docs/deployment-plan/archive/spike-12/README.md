@@ -30,8 +30,8 @@ Nested Sources and derivation links; per-graph credibility; moving Subjects betw
 | Crafted name keys, alias tables and kinship fan-out | [`share-packages.md`](../../../ideas/share-packages.md) "Harden before sharing" |
 | Search kind columns, canvas state enums | [`structural-debt.md`](../../../ideas/structural-debt.md) |
 | The evidence sheet's New-row opener, the sheet's pins, the typed band | Removed with Identity Claim pins ([Spike 13 slice 0](../../spike-13/deployment-plan.md)) |
-| Nested Sources, derivation links, templates, per-graph credibility, layered citations | [`source-structure-later.md`](../../../ideas/source-structure-later.md) |
+| Nested Sources, derivation links, templates, per-graph credibility, layered citations | [`source-structure-later.md`](../../spike-15/source-structure-later.md) |
 | `source` Subjects, `mentions` and `remark` | [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md) |
 | Ship-log follow-ups: composer load error placement, a silent Open failure, a card edit dropped without asking; a thumbnails test fixture; recount order | Spike 14 S14-14, S14-12, S14-16 |
-| Ship-log follow-ups: a shared tiny-PNG test writer, the history menu on shared rows; a `SourceSurface` guard row; type-select on a disabled menu row | [`shared-list-helpers.md`](../../../ideas/shared-list-helpers.md), [`structural-debt.md`](../../../ideas/structural-debt.md), [`docs/dogfood/ux.md`](../../../dogfood/ux.md) |
+| Ship-log follow-ups: a shared tiny-PNG test writer, the history menu on shared rows; a `SourceSurface` guard row; type-select on a disabled menu row | [`shared-list-helpers.md`](../../../ideas/shared-list-helpers.md), [`structural-debt.md`](../../../ideas/structural-debt.md), [`shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) |
 | Dropped: a doubled `hasFile` check, one unreproduced flaky canvas test, logged nits | Not worth a PR (2026-10-29) |

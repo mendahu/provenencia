@@ -1,6 +1,6 @@
 # Spike 5 — Interpretation foundation (up to the canvas)
 
-**Done.** Subjects, layout, vocabulary seed, FFI, and a Sources-family graph **stub**. No Subject UI — the first visible subject is a Spike 6 bubble. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md). Themes: [`interpretation-graph-ui.md`](../../../ideas/archive/interpretation-graph-ui.md).
+**Done.** Subjects, layout, vocabulary seed, FFI, and a Sources-family graph **stub**. No Subject UI — the first visible subject is a Spike 6 bubble. Schema: [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md). Themes: [`interpretation-graph-ui.md`](../../../../../interpretation-layer-data-model.md).
 
 ## Decisions
 

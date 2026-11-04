@@ -45,7 +45,7 @@ Splitting a shared graph (moving only the part built on one Artifact) is out of 
 
 ## Side effects to name in the confirm
 
-- **Credibility.** Assessments are per Source ([`source-structure-later.md`](../../ideas/source-structure-later.md) "Per-graph credibility"), so the moved Observations are scored with the target Source's credibility from then on, and Conclusions that rest on them can re-rank. The confirm says so when the two Sources' assessments differ.
+- **Credibility.** Assessments are per Source ([`source-structure-later.md`](source-structure-later.md) "Per-graph credibility"), so the moved Observations are scored with the target Source's credibility from then on, and Conclusions that rest on them can re-rank. The confirm says so when the two Sources' assessments differ.
 - **Citation line.** The provenance sheet's citation line, and later the formatter, read the new Source's title and fields.
 - **Empty Source.** If the old Source is left with no Artifacts, say so; do not delete it.
 

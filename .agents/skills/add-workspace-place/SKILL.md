@@ -16,8 +16,7 @@ presentation it needs. Spike 4 centralizes this in `Features/Workspace/Session/`
 `WorkspaceDestinationHost` — do **not** copy per-view `.task { load() }` /
 `reconcileNavigation` from pre-S4 patterns.
 
-Authoritative design: [`docs/ideas/archive/page-navigation-performance.md`](../../../docs/ideas/archive/page-navigation-performance.md).
-Spike decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../docs/deployment-plan/archive/spike-4/README.md).
+Authoritative patterns: [`docs/macos-client-patterns.md`](../../../docs/macos-client-patterns.md) § Workspace session & place registry (this skill is the how-to). Spike 4 decisions: [`docs/deployment-plan/archive/spike-4/README.md`](../../../docs/deployment-plan/archive/spike-4/README.md).
 
 ## When this applies
 
