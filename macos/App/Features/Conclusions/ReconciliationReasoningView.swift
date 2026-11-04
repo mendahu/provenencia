@@ -6,17 +6,14 @@ import SwiftUI
 /// composer. The Event and Place pages draw it; the Person page opens the
 /// provenance sheet instead.
 struct ReconciliationReasoningView: View {
-    let title: String
-    let label: String
-    let face: PVProvenanceFace
-    let groups: [PVProvenanceSheetContent.Group]
+    let model: ReconciledValueRowModel
 
     @Environment(WorkspaceNavigation.self) private var navigation
 
     var body: some View {
         PVCard(tone: .sunken, cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: 0) {
-                Text(title)
+                Text(model.whyTitle)
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold))
                     .foregroundStyle(PVColor.textPrimary)
                     .padding(.horizontal, PVSpacing.space5)
@@ -24,7 +21,7 @@ struct ReconciliationReasoningView: View {
                     .padding(.bottom, PVSpacing.space3)
                     .accessibilityAddTraits(.isHeader)
                 ReconciliationRecordRows(
-                    groups: groups, face: face,
+                    groups: model.provenanceContent().groups, face: model.shown.face,
                     open: { navigation.go(to: .provenance($0, $1)) }
                 )
                 .padding(.horizontal, PVSpacing.space5)
@@ -32,6 +29,6 @@ struct ReconciliationReasoningView: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(L10n.Conclusions.whyRecords(label))
+        .accessibilityLabel(L10n.Conclusions.whyRecords(model.label))
     }
 }

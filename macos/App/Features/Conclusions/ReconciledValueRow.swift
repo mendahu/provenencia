@@ -28,9 +28,7 @@ struct ReconciledValueRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Rectangle()
-                .fill(PVColor.borderSubtle)
-                .frame(height: 1)
+            PVDivider()
             HStack(alignment: .center, spacing: PVSpacing.space6) {
                 summary
                 disclosures
@@ -46,12 +44,7 @@ struct ReconciledValueRow: View {
                     .padding(.bottom, PVSpacing.space5)
             }
             if provenance == .why, showsWhy {
-                ReconciliationReasoningView(
-                    title: model.whyTitle,
-                    label: model.label,
-                    face: model.shown.face,
-                    groups: model.provenanceContent().groups
-                )
+                ReconciliationReasoningView(model: model)
                 .padding(.leading, Self.disclosureInset)
                 .padding(.bottom, PVSpacing.space5)
             }
