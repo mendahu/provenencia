@@ -20,7 +20,7 @@ final class PropertiesModel {
         var valueType: String
         var description: String
         /// `single` or `multiple`. Create defaults to one value.
-        var cardinality: String = "single"
+        var cardinality: String = PropertyCardinality.single.rawValue
         var bindTypeIDs: Set<String>
     }
 
@@ -297,7 +297,7 @@ final class PropertiesModel {
             label: label,
             valueType: "text",
             description: "",
-            cardinality: "single",
+            cardinality: PropertyCardinality.single.rawValue,
             bindTypeIDs: bind
         )
     }
@@ -366,7 +366,8 @@ final class PropertiesModel {
     @discardableResult
     func setCardinality(_ cardinality: String) async -> Bool {
         guard canEditCardinality, let property = selectedProperty, !isSaving else { return false }
-        guard cardinality == "single" || cardinality == "multiple" else { return false }
+        guard cardinality == PropertyCardinality.single.rawValue
+            || cardinality == PropertyCardinality.multiple.rawValue else { return false }
         guard cardinality != property.cardinality else { return false }
         isSaving = true
         formError = nil

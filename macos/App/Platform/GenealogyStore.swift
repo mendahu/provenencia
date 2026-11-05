@@ -940,7 +940,7 @@ struct CatalogProperty: Sendable, Equatable, Identifiable {
     /// text | integer | date | name | subject | term | depiction
     var valueType: String
     /// single | multiple. Empty input is treated as single.
-    var cardinality: String = "single"
+    var cardinality: String = PropertyCardinality.single.rawValue
     /// Observation count (`observations.property_id`). Display only; not a delete gate.
     var usedBy: Int = 0
 }
