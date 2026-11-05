@@ -1,7 +1,7 @@
 # S14-32 — Place relationship rows read from the far end
 
 **Status:** Landed in #720 (2026-11-05)
-**Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5.
+**Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5. A second subtest, "every composer-worded term has a connection sentence", also requires a `ConnectionSentenceRegistry.sentences` row for each term (extends D-9; review round 1).
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: rows, cards and the authoring box keep their layout; only words change — the far-end row label, and "is" → "was" in the `succeeded_by` card sentence)
