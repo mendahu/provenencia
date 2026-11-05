@@ -15,6 +15,8 @@
 **Planned:** 2026-11-05 against `main` @ `124d492` (draft: refreshed when S13-37 and S13-16 land and the board is agreed)
 **Review:** [`S13-17-remove-a-claim.review.md`](S13-17-remove-a-claim.review.md) — round 1: Reshape / Not ready; reshaped with the user's answers (2026-11-05); round 2 runs when S13-37 is planned and the board is agreed
 
+**Re-plan pending (2026-11-05).** The brief was rewritten (revision 2): Remove sits at the end of each Evidence graph link under a Source row, not in a card's footer slot. D-9's placement (`pageSlotActionID`) and D-10's reading order are rewritten when the new board is agreed; the flow, the confirm, S13-37 and the leave rule (D-1 – D-8) carry over.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.

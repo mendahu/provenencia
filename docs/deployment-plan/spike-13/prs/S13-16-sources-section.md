@@ -15,6 +15,8 @@
 **Planned:** 2026-11-05 against `main` @ `124d492` (draft: refreshed on board agreement)
 **Review:** [`S13-16-sources-section.review.md`](S13-16-sources-section.review.md) — round 1: Fits with changes / Not ready; every finding Fixed on the draft; round 2 runs when the board is agreed
 
+**Re-plan pending (2026-11-05).** The user rejected the board's first draft and the brief was rewritten (revision 2): Source rows like the provenance sheet's, with secondary Evidence graph links, a reserved date column and a reserved place for how the records connect; no Subject cards. Every Decision about the card (D-2 – D-5, D-7's `Card`, D-10, D-11, T-3 – T-5, STEP-2, STEP-5, STEP-6) is void and is rewritten when the new board is agreed. D-1, D-6, D-8, D-9 (host), D-13 (a graph opens on the Subject) and their tests carry over.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
