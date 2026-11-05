@@ -42,15 +42,16 @@ import (
 // limit on either side fails here, not as a silently missing badge, row or
 // match, or a wrongly refused input.
 const (
-	swiftVocabulary                = "../../macos/App/Platform/ConclusionVocabulary.swift"
-	swiftL10n                      = "../../macos/App/Platform/L10n.swift"
-	swiftCitationComposerAuthoring = "../../macos/App/Features/CitationComposer/CitationComposerAuthoring.swift"
-	swiftValueKinds                = "../../macos/App/Platform/InterpretationValueKinds.swift"
-	swiftMarks                     = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds                = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
-	swiftCatalogMut                = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
-	swiftSearchKind                = "../../macos/App/Platform/CatalogSearchKind.swift"
-	swiftNamePartType              = "../../macos/App/Platform/NamePartType.swift"
+	swiftVocabulary                 = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n                       = "../../macos/App/Platform/L10n.swift"
+	swiftCitationComposerAuthoring  = "../../macos/App/Features/CitationComposer/CitationComposerAuthoring.swift"
+	swiftConnectionSentenceRegistry = "../../macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift"
+	swiftValueKinds                 = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks                      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds                 = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
+	swiftCatalogMut                 = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind                 = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftNamePartType               = "../../macos/App/Platform/NamePartType.swift"
 
 	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
@@ -379,8 +380,10 @@ var (
 	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
-	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`.
+	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`
+	// and `return .placePartOf`; sentenceRow reads `Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.partOf, …`.
 	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return \.?(\w+)`)
+	sentenceRow = regexp.MustCompile(`Sentence\(kind: [^,]+, term: (Seeded\w+Term)\.(\w+),`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
@@ -671,6 +674,27 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
 				if !named[tc.enum+"."+m[1]] {
 					t.Errorf("Swift %s.%s (%s term %q) has no CitationComposerAuthoring.termWording case", tc.enum, m[1], tc.property, m[2])
+				}
+			}
+		}
+	})
+	t.Run("every composer-worded term has a connection sentence", func(t *testing.T) {
+		b, err := os.ReadFile(swiftConnectionSentenceRegistry)
+		if err != nil {
+			t.Fatal(err)
+		}
+		named := map[string]bool{}
+		for _, m := range sentenceRow.FindAllStringSubmatch(string(b), -1) {
+			named[m[1]+"."+m[2]] = true
+		}
+		if len(named) == 0 {
+			t.Fatal("ConnectionSentenceRegistry: no sentence rows read")
+		}
+		for _, tc := range composerWordedTermEnums {
+			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+				if !named[tc.enum+"."+m[1]] {
+					t.Errorf("Swift %s.%s (%s term %q) has no ConnectionSentenceRegistry.sentences row", tc.enum, m[1], tc.property, m[2])
 				}
 			}
 		}
