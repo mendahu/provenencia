@@ -196,6 +196,7 @@ struct ArtifactViewer: View {
                     zoom: model.zoom,
                     contentID: contentIdentity,
                     onZoomChange: { model.setZoom($0) },
+                    onPageChange: { model.setPage($0) },
                     overlayEnabled: model.locatorCapabilities.supportsRegionLocator,
                     overlayInput: regionOverlayInput,
                     onCommitRegion: onCommitRegion,
@@ -270,7 +271,7 @@ struct ArtifactViewer: View {
     }
 
     private var contentIdentity: AnyHashable {
-        "\(model.kind.rawValue)-\(model.page)-\(model.pageCount)-\(model.displayImage?.size.width ?? model.pdfPageMediaSize?.width ?? 0)"
+        "\(model.kind.rawValue)-\(model.pageCount)-\(model.displayImage?.size.width ?? 0)"
     }
 
     private var regionOverlayInput: ArtifactRegionOverlayInput {

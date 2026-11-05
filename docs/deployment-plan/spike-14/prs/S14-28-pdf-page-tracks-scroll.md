@@ -1,6 +1,7 @@
 # S14-28 — PDF page tracks scroll
 
-**Status:** Planned
+**Status:** Landed in #711 (2026-11-04)
+**Landed:** Product version is 0.3.1 (patch on 0.3.0 at implement time, not 0.2.14 from the planning base). Manual check §10 not run in implementer pass.
 **Spike / slice:** Spike 14 · Slice 7a — PDF page sync
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the page field and zoom chrome already exist; this PR only keeps `model.page` honest when PDFKit changes the visible page)
