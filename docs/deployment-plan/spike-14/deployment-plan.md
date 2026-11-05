@@ -89,7 +89,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-10-15: polygon locator drag vertices (note deleted 2026-11-05; landed #715) | S14-29 | — |
 | Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
 | Dogfood 2026-10-15: new-subject card Tab skips the description (note deleted 2026-11-05; landed #718) | S14-31 | — |
-| [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
+| Dogfood 2026-10-15: place relationship rows lack the inverse label (note deleted 2026-11-05; landed #720) | S14-32 | — |
 | [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
 | [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
 | [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) | S14-35 | — |
@@ -175,7 +175,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Landed #715 |
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
-| S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Planned |
+| S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
@@ -517,7 +517,7 @@ One PR (user, 2026-11-01).
 **Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / Contains, `succeeded_by` / Succeeded), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. The composer's place-term switches become one wording lookup keyed by property and term, held by a Go test; the place sentences move into `ConnectionSentenceRegistry`, so the graph card reads "was succeeded by" like the composer (user, 2026-11-05, plan review). Swift test for both ends of one saved bridge.
 **Not this PR.** Inverse terms in seeded vocabulary; person relationship inverses (already handled).
 **Check.** Bar outcome 27.
-**Context.** Working rule "Place relationship rows use the inverse label on the far end"; [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md); `CitationComposerAuthoring.swift`; `add-localized-string`.
+**Context.** Working rule "Place relationship rows use the inverse label on the far end"; dogfood note 2026-10-15 (deleted on land); `CitationComposerAuthoring.swift`; `add-localized-string`.
 
 #### S14-33 — Auto-file bridges between handles
 

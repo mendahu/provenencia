@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-32 — Place relationship rows read from the far end
+
+**Landed 2026-11-05** in [#720](https://github.com/mendahu/provenencia/pull/720). In the Citation composer a saved place relationship now reads from each place's side: Alberta's row is "Contains Calgary" and New Town's is "Succeeded Old Town", matching the Place page. The composer's three place-term switches became one `termWording` table keyed by property and term, which a Go test holds to every seeded place term, and the draft reading takes its sentence from `ConnectionSentenceRegistry`. Card copy changed: the `succeeded_by` card reads "Old Town was succeeded by New Town" (was "is succeeded by").
+
 ## S14-31 — Tab reaches a following text area
 
 **Landed 2026-11-05** in [#718](https://github.com/mendahu/provenencia/pull/718). Tab in a label field moves into the description text area beside it, and Shift-Tab moves back, in all eight Input / TextArea pairs: the Evidence graph card, the composer's New subject dialog and its transcription / label pair at both widths, New property, the Property identity edit, the Source graph form, and the Artifact card. One kit handle, `PVFieldFocus`, replaces the input, combo and select handles and can carry a Tab neighbour; `PVTabPair` owns focus for a pair. A text area's Tab routing skips the shared field editor of the text field beside it. Version 0.3.4.
