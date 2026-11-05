@@ -55,8 +55,10 @@ struct CitationComposerEvidenceColumn: View {
                 citationLoadErrorLine
             }
             PVDivider(axis: .horizontal, color: PVColor.borderSubtle)
-            labelField
-            transcriptionColumn(rows: 8...40)
+            PVTabPair { first, second in
+                labelField(focus: first)
+                transcriptionColumn(rows: 8...40, focus: second)
+            }
             footer
         }
     }
@@ -70,12 +72,14 @@ struct CitationComposerEvidenceColumn: View {
                     .frame(maxWidth: .infinity)
             }
             citationLoadErrorLine
-            WeightedColumns(weights: [1.5, 1], spacing: PVSpacing.space6) {
-                VStack(alignment: .leading, spacing: 10) {
-                    transcriptionColumn(rows: 6...40)
-                    footer
+            PVTabPair { first, second in
+                WeightedColumns(weights: [1.5, 1], spacing: PVSpacing.space6) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        transcriptionColumn(rows: 6...40, focus: first)
+                        footer
+                    }
+                    labelField(focus: second)
                 }
-                labelField
             }
         }
     }
@@ -274,24 +278,26 @@ struct CitationComposerEvidenceColumn: View {
         return PVThumbnail(content, size: 48)
     }
 
-    private var labelField: some View {
+    private func labelField(focus: PVFieldFocus?) -> some View {
         PVField(label: L10n.CitationComposer.descriptionLabel) {
             PVInput(
                 text: $model.citationDescription,
                 size: .sm,
-                prompt: L10n.CitationComposer.descriptionPrompt
+                prompt: L10n.CitationComposer.descriptionPrompt,
+                focus: focus
             )
             .accessibilityIdentifier("citationComposer.label")
         }
     }
 
-    private func transcriptionColumn(rows: ClosedRange<Int>) -> some View {
+    private func transcriptionColumn(rows: ClosedRange<Int>, focus: PVFieldFocus?) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space4) {
             PVField(label: L10n.CitationComposer.transcriptionLabel, error: model.fields.error) {
                 PVTextArea(
                     text: $model.transcription,
                     lineLimit: rows,
-                    prompt: L10n.CitationComposer.transcriptionPrompt
+                    prompt: L10n.CitationComposer.transcriptionPrompt,
+                    focus: focus
                 )
                 .accessibilityIdentifier("citationComposer.transcription")
             }

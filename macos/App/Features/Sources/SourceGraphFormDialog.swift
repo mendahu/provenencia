@@ -90,29 +90,32 @@ private struct SourceGraphForm: View {
 
     private var fields: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            PVField(
-                label: L10n.Sources.graphFormName,
-                error: model.nameError,
-                marker: .required
-            ) {
-                PVInput(
-                    text: $model.draft.name,
-                    prompt: L10n.Sources.graphFormNamePlaceholder,
-                    isInvalid: model.nameError != nil,
-                    activateOnAppear: true
-                )
-                .accessibilityIdentifier("sources.graphForm.name")
-                .onChange(of: model.draft.name) { _, _ in
-                    if model.nameError != nil { model.nameError = nil }
+            PVTabPair { name, description in
+                PVField(
+                    label: L10n.Sources.graphFormName,
+                    error: model.nameError,
+                    marker: .required
+                ) {
+                    PVInput(
+                        text: $model.draft.name,
+                        prompt: L10n.Sources.graphFormNamePlaceholder,
+                        isInvalid: model.nameError != nil,
+                        focus: name,
+                        activateOnAppear: true
+                    )
+                    .accessibilityIdentifier("sources.graphForm.name")
+                    .onChange(of: model.draft.name) { _, _ in
+                        if model.nameError != nil { model.nameError = nil }
+                    }
                 }
-            }
-            PVField(
-                label: L10n.Sources.graphFormDescription,
-                hint: L10n.Sources.graphFormDescriptionHint,
-                marker: .optional
-            ) {
-                PVTextArea(text: $model.draft.description, lineLimit: 3...3)
-                    .accessibilityIdentifier("sources.graphForm.description")
+                PVField(
+                    label: L10n.Sources.graphFormDescription,
+                    hint: L10n.Sources.graphFormDescriptionHint,
+                    marker: .optional
+                ) {
+                    PVTextArea(text: $model.draft.description, lineLimit: 3...3, focus: description)
+                        .accessibilityIdentifier("sources.graphForm.description")
+                }
             }
         }
     }

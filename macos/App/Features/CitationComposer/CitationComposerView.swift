@@ -136,13 +136,15 @@ struct CitationComposerView: View {
             onConfirm: { Task { await model.confirmNewSubject() } }
         ) {
             VStack(alignment: .leading, spacing: PVSpacing.space5) {
-                PVField(label: L10n.CitationComposer.newSubjectLabel, error: model.newSubjectDraft?.error) {
-                    PVInput(text: newSubjectLabelBinding, size: .sm)
-                        .accessibilityIdentifier("citationComposer.newSubject.label")
-                }
-                PVField(label: L10n.CitationComposer.descriptionLabel) {
-                    PVTextArea(text: newSubjectDescriptionBinding, lineLimit: 1...3)
-                        .accessibilityIdentifier("citationComposer.newSubject.description")
+                PVTabPair { label, description in
+                    PVField(label: L10n.CitationComposer.newSubjectLabel, error: model.newSubjectDraft?.error) {
+                        PVInput(text: newSubjectLabelBinding, size: .sm, focus: label)
+                            .accessibilityIdentifier("citationComposer.newSubject.label")
+                    }
+                    PVField(label: L10n.CitationComposer.descriptionLabel) {
+                        PVTextArea(text: newSubjectDescriptionBinding, lineLimit: 1...3, focus: description)
+                            .accessibilityIdentifier("citationComposer.newSubject.description")
+                    }
                 }
             }
         }
