@@ -1,7 +1,7 @@
 # Ship log — S14-32 Place relationship rows read from the far end
 
 **Plan:** [`S14-32-place-relationship-inverse-labels.md`](S14-32-place-relationship-inverse-labels.md) · **Branch:** `s14-32-place-relationship-inverse-labels` · **PR:** #720
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Base `c8a8bdb1`. Head `5067b8c6`. Gate PASS (orchestrator run, all nine checks, xcode-test 49s). Report deviations: `wordingCase` takes an optional leading dot, because D-6 writes `return .placePartOf` (in the Landed note); code and tests are one behavior commit, because the registry rows, keys and composer changes break the build apart; manual check not run. The report said the ship log was never staged, but `48166fc1` committed it: no harm, the log belongs on this branch.
@@ -66,3 +66,11 @@ Files: `api/ffi/swift_vocabulary_test.go`.
 Failing test first: none, a refactor. Prove the helper still fails: with the `succeededBy` row removed from `ConnectionSentenceRegistry.sentences`, the subtest fails naming that term, then restore the row.
 Do: add two file-level helpers beside `swiftFuncBody`, one that collects `enum.name` from a regexp's first two groups and one that takes the term enum list, the `named` set and the "has no …" text and reports each `swiftNamedKey` name missing. Move the subtests `every seeded term has wording`, `every composer-worded term has composer wording` and `every composer-worded term has a connection sentence` onto them. Keep each error message's words and each subtest name unchanged, and keep the two `t.Fatal` guards. Touch no other subtest.
 Check: `grep -n 'swiftNamedKey.FindAllStringSubmatch' api/ffi/swift_vocabulary_test.go` prints one line in the helper, plus any line outside those three subtests that was there before; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `d3f0e885`. Gate PASS (orchestrator run, all nine checks). F-5 done: `namedTerms` and `reportUnnamedTerms` in `api/ffi/swift_vocabulary_test.go`; the three subtests use them, with names, message words and both `t.Fatal` guards unchanged. Proof: with the `succeededBy` row's term renamed, the sentence subtest failed naming the term; restored. Orchestrator read the commit: Resolved. No third review round.
+
+`main` still at `c8a8bdb1` by the GitHub API, because `git fetch` failed on DNS: no merge needed.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: three dogfood notes (`docs/dogfood/ux/2026-11-05-place-card-fallback-phrase.md`, `2026-11-05-relationship-reading-beside-registry.md`, `2026-11-05-raw-term-label-bypass.md`) · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
