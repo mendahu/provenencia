@@ -514,7 +514,7 @@ One PR (user, 2026-11-01).
 
 #### S14-32 — Place relationship inverse labels
 
-**Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / Contains, `succeeded_by` / Succeeded), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. Swift test for both ends of one saved bridge.
+**Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / Contains, `succeeded_by` / Succeeded), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. The composer's place-term switches become one wording lookup keyed by property and term, held by a Go test; the place sentences move into `ConnectionSentenceRegistry`, so the graph card reads "was succeeded by" like the composer (user, 2026-11-05, plan review). Swift test for both ends of one saved bridge.
 **Not this PR.** Inverse terms in seeded vocabulary; person relationship inverses (already handled).
 **Check.** Bar outcome 27.
 **Context.** Working rule "Place relationship rows use the inverse label on the far end"; [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md); `CitationComposerAuthoring.swift`; `add-localized-string`.
