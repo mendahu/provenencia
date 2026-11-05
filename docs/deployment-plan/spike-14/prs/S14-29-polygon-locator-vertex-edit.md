@@ -1,6 +1,7 @@
 # S14-29 — Polygon locator vertex edit
 
-**Status:** Planned
+**Status:** Landed in #715 (2026-11-05)
+**Landed:** Product version is 0.3.3. `ArtifactRegionTarget` is a `typealias` for the planned tuple. `ArtifactFileFixtures.pdfHost` defaults `onPageChange` to a no-op. Manual check §10 not run in implementer pass. Review round 1 amendments (user, 2026-11-05): D-2's anchor reach `radius + 1` becomes `moveAnchorHitRadius`, one screen point past a handle (8 screen points at any zoom), passed to `hitHandle` as `anchorRadius:`. D-5's rejected "a new L10n announcement" is superseded: every refused region edit (invalid, or refused by the composer) reverts, beeps and posts `L10n.ArtifactViewer.regionEditRefused`, and `onCommit` and `onCommitRegion` return `Bool`. §6 Strings "None" is superseded: that string is new, and `citationComposer.freeformDeleteVertex` now reads "Drag a vertex to reshape, or the outline to move. Right-click a vertex to delete it. At least three points remain, and a shape that crosses itself is put back." Also from review: a press edits nothing until it passes the drag threshold, and a vertex keeps its grab offset. Polygon close distance (user, 2026-11-05): a freeform polygon closes when a click lands within `handleHitRadius` of its first point, measured in document space, not within 3% of the page, so a large or zoomed image no longer closes a triangle on the fourth click.
 **Spike / slice:** Spike 14 · Slice 7b — Region edit
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: handles, the move diamond and the stroke already draw today; on a PDF they already draw at a fixed screen size, and this PR gives image Artifacts the same size — user, 2026-11-05, "Fixed size, no brief")
@@ -11,7 +12,7 @@
 **Version bump:** patch — researcher-visible fix to region editing ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md) (classification only: `ArtifactRegionOverlayView` stays a feature snowflake)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Polygon edit includes a saved Citation"; bar outcome 24; [`ux/2026-10-15-polygon-locator-drag-vertices.md`](../ux/2026-10-15-polygon-locator-drag-vertices.md) (deleted on landing, STEP-7); S14-28's Landed note
+**Context:** working rule "(Batch 7) Polygon edit includes a saved Citation"; bar outcome 24; dogfood note `2026-10-15-polygon-locator-drag-vertices` (deleted on land); S14-28's Landed note
 **Planned:** 2026-11-05 against `main` @ `124d492`
 **Review:** [`S14-29-polygon-locator-vertex-edit.review.md`](S14-29-polygon-locator-vertex-edit.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blockers; To user none
 

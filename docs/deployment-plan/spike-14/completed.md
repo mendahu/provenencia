@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-29 — Polygon locator vertex edit
+
+**Landed 2026-11-05** in [#715](https://github.com/mendahu/provenencia/pull/715). A committed polygon region can be edited on a PDF as well as an image: the overlay's `hitTest` converts its superview point, so handle clicks on a PDF no longer miss. One target list and hit rule in `ArtifactRegionGeometry` picks the nearest vertex, and dragging the outline or the centre diamond moves the shape. Handles and their hit radius stay 7 screen points at any image zoom through an overlay `magnification` input. An edit that would cross the shape, or that the composer refuses, reverts with a beep and a VoiceOver announcement. A press that never travels past the drag threshold edits nothing, and a dragged vertex keeps the offset it was grabbed at. Version 0.3.3.
+
 ## S14-30 — Conflict brackets honour cardinality
 
 **Landed 2026-11-04** in [#713](https://github.com/mendahu/provenencia/pull/713). Evidence graph conflict brackets, the canvas legend, and the cited-row "one of N values" accessibility phrase fire only when a Property's catalog cardinality is single; several rows of a multiple Property (`languages_spoken`, `likeness`, researcher "several values") list without ochre conflict chrome. Cardinality comes from the cached `PropertiesSnapshot.cardinalityByKey` map threaded into `EvidenceCitedPropertyMarks` and each `EvidenceCanvasCard`; `PropertyCardinality` is pinned beside `PropertyValueType`. Version 0.3.2.

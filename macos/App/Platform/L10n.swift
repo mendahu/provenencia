@@ -3268,6 +3268,12 @@ enum L10n {
             ), count)
         }
 
+        static let regionEditRefused = LocalizedStringResource(
+            "artifactViewer.regionEditRefused",
+            defaultValue: "The region can't be changed that way, so it was put back.",
+            comment: "VoiceOver announcement when an edit to a saved region is refused and the region is put back"
+        )
+
         static let findToggle = LocalizedStringResource(
             "artifactViewer.findToggle",
             defaultValue: "Find in PDF",
@@ -4460,7 +4466,7 @@ enum L10n {
 
         static let freeformDeleteVertex = LocalizedStringResource(
             "citationComposer.freeformDeleteVertex",
-            defaultValue: "Right-click a vertex to delete it. At least three points remain.",
+            defaultValue: "Drag a vertex to reshape, or the outline to move. Right-click a vertex to delete it. At least three points remain, and a shape that crosses itself is put back.",
             comment: "Tooltip while a freeform region is committed"
         )
 

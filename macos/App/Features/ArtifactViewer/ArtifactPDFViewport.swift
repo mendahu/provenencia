@@ -20,7 +20,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
     var onPageChange: (Int) -> Void
     var overlayEnabled: Bool = false
     var overlayInput: ArtifactRegionOverlayInput?
-    var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+    var onCommitRegion: ((ArtifactRegionDraft) -> Bool)?
     var onDisarmRegionTool: (() -> Void)?
     var freeformDeleteTooltip: String = ""
     var findSelection: PDFSelection?
@@ -59,7 +59,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         var installedContentID: AnyHashable?
         var onZoomChange: (CGFloat) -> Void
         var onPageChange: (Int) -> Void
-        var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+        var onCommitRegion: ((ArtifactRegionDraft) -> Bool)?
         var onDisarmRegionTool: (() -> Void)?
         var onUserSelectionChange: ((String?, Int?) -> Void)?
 
@@ -92,7 +92,7 @@ struct ArtifactPDFViewport: NSViewRepresentable {
         host.overlayView.committed = overlayInput?.committed
         host.overlayView.toolTip = freeformDeleteTooltip
         host.overlayView.onCommit = { [weak coordinator] draft in
-            coordinator?.onCommitRegion?(draft)
+            coordinator?.onCommitRegion?(draft) ?? false
         }
         host.overlayView.onDisarm = { [weak coordinator] in
             coordinator?.onDisarmRegionTool?()

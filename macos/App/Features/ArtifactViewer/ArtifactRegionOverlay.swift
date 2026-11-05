@@ -44,7 +44,19 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
-    var onCommit: ((ArtifactRegionDraft) -> Void)?
+    /// The scroll view's zoom (image viewport). Handles keep one screen-point size at any zoom;
+    /// the PDF host never magnifies the overlay and leaves this at 1.
+    var magnification: CGFloat = 1 {
+        didSet {
+            if oldValue != magnification {
+                needsDisplay = true
+                window?.invalidateCursorRects(for: self)
+            }
+        }
+    }
+
+    /// Returns whether the host accepted the region; a refused edit is put back.
+    var onCommit: ((ArtifactRegionDraft) -> Bool)?
     var onDisarm: (() -> Void)?
 
     private var dragStart: CGPoint?
@@ -56,11 +68,13 @@ final class ArtifactRegionOverlayView: NSView {
     }
     /// VoiceOver has heard the freehand cap for this shape; re-armed when the shape shrinks or restarts.
     private var capAnnounced = false
-    private var activeHandle: ArtifactRegionHandle?
-    private var isEditingCommitted = false
-    private var moveDragOrigin: CGPoint?
-    private var moveDragPoints: [CGPoint]?
+    /// The drag in flight on the committed region: what is grabbed, where the pointer went down,
+    /// and the region as it was, so an invalid result can put it back. `moved` latches once the
+    /// pointer travels past the drag threshold; a press that never does edits nothing.
+    private var edit: (handle: ArtifactRegionHandle, origin: CGPoint, start: ArtifactRegionDraft, moved: Bool)?
     private var tracking: NSTrackingArea?
+    /// A cursor from `applyCursor` is showing, so leaving the hit gives the arrow back.
+    private var didSetCursor = false
 
     override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { armedTool != nil || committed != nil }
@@ -92,16 +106,12 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
         guard let committed else { return }
-        let pad: CGFloat = 8
-        if let anchor = ArtifactRegionGeometry.moveAnchor(for: committed) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: imageRect)
-            addCursorRect(cursorRect(around: point, pad: pad), cursor: .openHand)
-        }
-        let centroid = ArtifactRegionGeometry.moveAnchor(for: committed) ?? CGPoint(x: 0.5, y: 0.5)
-        for handle in ArtifactRegionGeometry.handlePoints(for: committed, imageRect: imageRect) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: handle, imageRect: imageRect)
-            let kind = ArtifactRegionGeometry.resizeCursorKind(handle: handle, centroid: centroid)
-            addCursorRect(cursorRect(around: point, pad: pad), cursor: ArtifactRegionCursor.resize(kind))
+        let centroid = cursorCentroid(for: committed)
+        for target in ArtifactRegionGeometry.handleTargets(for: committed, imageRect: imageRect) {
+            addCursorRect(
+                cursorRect(around: target.document, pad: handleHitRadius),
+                cursor: cursor(for: target, centroid: centroid)
+            )
         }
     }
 
@@ -115,9 +125,9 @@ final class ArtifactRegionOverlayView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         if armedTool != nil { return self }
-        if hitHandle(at: point) != nil { return self }
-        if committed != nil, isNearCommittedStroke(point) { return self }
-        return nil
+        // AppKit hands `hitTest` a point in the superview's coordinates.
+        let local = convert(point, from: superview)
+        return hitHandle(at: local) != nil ? self : nil
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -127,7 +137,7 @@ final class ArtifactRegionOverlayView: NSView {
         let media = imageRect
         guard media.width > 0, media.height > 0 else { return }
 
-        if let committed, armedTool == nil || isEditingCommitted {
+        if let committed, armedTool == nil || edit != nil {
             drawCommitted(committed, imageRect: media)
         }
 
@@ -153,12 +163,9 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if let handle = hitHandle(at: document) {
-            activeHandle = handle
-            isEditingCommitted = true
-            if handle == .move, let committed {
-                moveDragOrigin = normalized
-                moveDragPoints = committed.points
+        if let handle = hitHandle(at: document), let committed {
+            edit = (handle, normalized, committed, false)
+            if handle == .move {
                 NSCursor.closedHand.set()
             }
             window?.makeFirstResponder(self)
@@ -176,17 +183,30 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if let handle = activeHandle, var draft = committed {
-            switch handle {
+        if var current = edit, var draft = committed {
+            if !current.moved {
+                let press = ArtifactRegionGeometry.documentPoint(normalized: current.origin, imageRect: imageRect)
+                guard GraphCanvasPointerHitTesting.isDrag(
+                    from: press,
+                    to: document,
+                    threshold: GraphCanvasPointerHitTesting.dragThreshold * screenPoint
+                ) else { return }
+                current.moved = true
+                edit = current
+            }
+            let delta = CGPoint(x: normalized.x - current.origin.x, y: normalized.y - current.origin.y)
+            switch current.handle {
             case .move:
-                if let origin = moveDragOrigin, let start = moveDragPoints {
-                    draft.points = ArtifactRegionGeometry.translate(
-                        start,
-                        by: CGPoint(x: normalized.x - origin.x, y: normalized.y - origin.y)
-                    )
-                }
+                draft.points = ArtifactRegionGeometry.translate(current.start.points, by: delta)
             case .resize(let index):
-                draft.points = moveHandle(draft: draft, handle: index, to: normalized)
+                // The vertex keeps the offset it was grabbed at instead of jumping to the pointer.
+                let grabbed = ArtifactRegionGeometry.handlePoints(for: current.start, imageRect: imageRect)
+                guard grabbed.indices.contains(index) else { return }
+                let target = CGPoint(
+                    x: min(max(grabbed[index].x + delta.x, 0), 1),
+                    y: min(max(grabbed[index].y + delta.y, 0), 1)
+                )
+                draft.points = moveHandle(draft: draft, handle: index, to: target)
             }
             committed = draft
             needsDisplay = true
@@ -205,33 +225,24 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if isEditingCommitted, let draft = committed, draft.isValid {
-            onCommit?(draft)
+        if let edit, let draft = committed {
+            finishEdit(draft, start: edit.start)
         }
-        activeHandle = nil
-        isEditingCommitted = false
-        moveDragOrigin = nil
-        moveDragPoints = nil
+        edit = nil
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        guard committed?.kind == .freeform else {
+        guard let committed, committed.kind == .freeform else {
             super.rightMouseDown(with: event)
             return
         }
         let document = convert(event.locationInWindow, from: nil)
         guard let index = freeformVertexIndex(at: document),
-              let points = ArtifactRegionGeometry.deleteFreeformVertex(
-                points: committed?.points ?? [],
-                index: index
-              )
+              let points = ArtifactRegionGeometry.deleteFreeformVertex(points: committed.points, index: index)
         else { return }
         var next = committed
-        next?.points = points
-        committed = next
-        if let next, next.isValid {
-            onCommit?(next)
-        }
+        next.points = points
+        finishEdit(next, start: committed)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -267,7 +278,9 @@ final class ArtifactRegionOverlayView: NSView {
     private func handleFreeformClick(_ normalized: CGPoint) {
         if let first = inProgressPoints.first,
            inProgressPoints.count >= ArtifactRegionGeometry.freeformMinimumVertices,
-           ArtifactRegionGeometry.closeEnoughToOrigin(normalized, origin: first)
+           ArtifactRegionGeometry.closeEnoughToOrigin(
+               normalized, origin: first, imageRect: imageRect, radius: handleHitRadius
+           )
         {
             let draft = ArtifactRegionDraft(kind: .freeform, points: inProgressPoints)
             if draft.isValid {
@@ -318,13 +331,31 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
+    /// Ends an edit of the committed region: unchanged does nothing, a valid region the host
+    /// accepts is kept, anything else puts `start` back, beeps and announces.
+    private func finishEdit(_ draft: ArtifactRegionDraft, start: ArtifactRegionDraft) {
+        if draft == start { return }
+        if draft.isValid, onCommit?(draft) == true {
+            committed = draft
+        } else {
+            committed = start
+            refuseEdit()
+        }
+    }
+
+    private func refuseEdit() {
+        NSSound.beep()
+        AccessibilityAnnouncement.post(L10n.string(L10n.ArtifactViewer.regionEditRefused))
+    }
+
     private func commitAndDisarm(_ draft: ArtifactRegionDraft) {
         committed = draft
         dragStart = nil
         dragCurrent = nil
         inProgressPoints = []
         armedTool = nil
-        onCommit?(draft)
+        // The host's model update runs through `onDisarm` and corrects a refused region.
+        _ = onCommit?(draft)
         onDisarm?()
         needsDisplay = true
     }
@@ -361,54 +392,37 @@ final class ArtifactRegionOverlayView: NSView {
 
     private func hitHandle(at documentPoint: CGPoint) -> ArtifactRegionHandle? {
         guard let committed else { return nil }
-        let threshold = handleHitSize
-        if let anchor = ArtifactRegionGeometry.moveAnchor(for: committed) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold + 1 {
-                return .move
-            }
-        }
-        let handles = ArtifactRegionGeometry.handlePoints(for: committed, imageRect: imageRect)
-        for (index, normalized) in handles.enumerated() {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: normalized, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold {
-                return .resize(index)
-            }
-        }
-        return nil
+        return ArtifactRegionGeometry.hitHandle(
+            at: documentPoint,
+            draft: committed,
+            imageRect: imageRect,
+            radius: handleHitRadius,
+            anchorRadius: moveAnchorHitRadius
+        )
     }
 
     private func freeformVertexIndex(at documentPoint: CGPoint) -> Int? {
         guard let committed, committed.kind == .freeform else { return nil }
-        let threshold = handleHitSize
-        for (index, normalized) in committed.points.enumerated() {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: normalized, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold {
-                return index
-            }
-        }
-        return nil
+        let targets = ArtifactRegionGeometry.handleTargets(for: committed, imageRect: imageRect)
+        guard case .resize(let index)? = ArtifactRegionGeometry.nearestHandle(
+            at: documentPoint, in: targets, radius: handleHitRadius
+        ) else { return nil }
+        return index
     }
 
-    private func isNearCommittedStroke(_ documentPoint: CGPoint) -> Bool {
-        guard let committed else { return false }
-        let media = imageRect
-        let docs = ArtifactRegionGeometry.documentPoints(normalized: committed.points, imageRect: media)
-        guard docs.count >= 2 else { return false }
-        let threshold = handleHitSize
-        for i in 0..<docs.count {
-            let a = docs[i]
-            let b = docs[(i + 1) % docs.count]
-            if distance(documentPoint, segmentFrom: a, to: b) <= threshold {
-                return true
-            }
-        }
-        return false
+    /// One screen point in overlay coordinates.
+    private var screenPoint: CGFloat {
+        GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: magnification)
     }
 
-    private var handleHitSize: CGFloat {
-        7
-    }
+    /// Hit radius in overlay points: 7 screen points at any zoom.
+    var handleHitRadius: CGFloat { 7 * screenPoint }
+
+    /// The move anchor reaches one screen point past a handle so it wins where they overlap.
+    var moveAnchorHitRadius: CGFloat { 8 * screenPoint }
+
+    /// Handle diameter in overlay points: 7 screen points at any zoom.
+    var handleDrawSize: CGFloat { 7 * screenPoint }
 
     private func drawCommitted(_ draft: ArtifactRegionDraft, imageRect media: CGRect) {
         guard let path = shapePath(draft, imageRect: media) else { return }
@@ -424,13 +438,13 @@ final class ArtifactRegionOverlayView: NSView {
         path.lineJoinStyle = .round
         path.stroke()
 
-        for handle in ArtifactRegionGeometry.handlePoints(for: draft, imageRect: media) {
-            drawHandle(at: ArtifactRegionGeometry.documentPoint(normalized: handle, imageRect: media))
+        // Resize handles first, the move anchor last so it stays on top.
+        let targets = ArtifactRegionGeometry.handleTargets(for: draft, imageRect: media)
+        for target in targets where target.handle != .move {
+            drawHandle(at: target.document)
         }
-        if let anchor = ArtifactRegionGeometry.moveAnchor(for: draft) {
-            drawMoveAnchor(
-                at: ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: media)
-            )
+        for target in targets where target.handle == .move {
+            drawMoveAnchor(at: target.document)
         }
     }
 
@@ -501,18 +515,18 @@ final class ArtifactRegionOverlayView: NSView {
     }
 
     private func drawHandle(at point: CGPoint) {
-        let size: CGFloat = 7
+        let size = handleDrawSize
         let rect = CGRect(x: point.x - size / 2, y: point.y - size / 2, width: size, height: size)
         let path = NSBezierPath(ovalIn: rect)
         NSColor(PVColor.surfaceRaised).setFill()
         NSColor(PVColor.accent).setStroke()
         path.fill()
-        path.lineWidth = 1.5
+        path.lineWidth = 1.5 * screenPoint
         path.stroke()
     }
 
     private func drawMoveAnchor(at point: CGPoint) {
-        let size: CGFloat = 9
+        let size = 9 * screenPoint
         let path = NSBezierPath()
         path.move(to: CGPoint(x: point.x, y: point.y - size / 2))
         path.line(to: CGPoint(x: point.x + size / 2, y: point.y))
@@ -522,7 +536,7 @@ final class ArtifactRegionOverlayView: NSView {
         NSColor(PVColor.accent).setFill()
         NSColor(PVColor.surfaceRaised).setStroke()
         path.fill()
-        path.lineWidth = 1.25
+        path.lineWidth = 1.25 * screenPoint
         path.stroke()
     }
 
@@ -532,38 +546,42 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
         guard let committed else { return }
-        switch hitHandle(at: documentPoint) {
-        case .move:
+        guard let handle = hitHandle(at: documentPoint) else {
+            // Give back only a cursor this overlay set; the pan hand and I-beam are not ours.
+            if didSetCursor {
+                NSCursor.arrow.set()
+                didSetCursor = false
+            }
+            return
+        }
+        let targets = ArtifactRegionGeometry.handleTargets(for: committed, imageRect: imageRect)
+        if let target = targets.first(where: { $0.handle == handle }) {
+            cursor(for: target, centroid: cursorCentroid(for: committed)).set()
+        } else {
+            // The outline, which moves the shape and has no target of its own.
             NSCursor.openHand.set()
+        }
+        didSetCursor = true
+    }
+
+    private func cursorCentroid(for draft: ArtifactRegionDraft) -> CGPoint {
+        ArtifactRegionGeometry.moveAnchor(for: draft) ?? CGPoint(x: 0.5, y: 0.5)
+    }
+
+    private func cursor(for target: ArtifactRegionTarget, centroid: CGPoint) -> NSCursor {
+        switch target.handle {
+        case .move:
+            .openHand
         case .resize:
-            let centroid = ArtifactRegionGeometry.moveAnchor(for: committed) ?? CGPoint(x: 0.5, y: 0.5)
-            let handle = ArtifactRegionGeometry.normalize(documentPoint: documentPoint, imageRect: imageRect)
             ArtifactRegionCursor.resize(
-                ArtifactRegionGeometry.resizeCursorKind(handle: handle, centroid: centroid)
-            ).set()
-        case nil:
-            break
+                ArtifactRegionGeometry.resizeCursorKind(handle: target.normalized, centroid: centroid)
+            )
         }
     }
 
     private func cursorRect(around point: CGPoint, pad: CGFloat) -> CGRect {
         CGRect(x: point.x - pad, y: point.y - pad, width: pad * 2, height: pad * 2)
     }
-
-    private func distance(_ point: CGPoint, segmentFrom a: CGPoint, to b: CGPoint) -> CGFloat {
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-        let length2 = dx * dx + dy * dy
-        guard length2 > 0 else { return hypot(point.x - a.x, point.y - a.y) }
-        let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length2))
-        let proj = CGPoint(x: a.x + t * dx, y: a.y + t * dy)
-        return hypot(point.x - proj.x, point.y - proj.y)
-    }
-}
-
-enum ArtifactRegionHandle: Equatable {
-    case resize(Int)
-    case move
 }
 
 enum ArtifactRegionCursor {

@@ -86,7 +86,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) "Gallery image from the record" (likeness audit SEC-4) | S14-01 | — |
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) composer feedback (UX-5, UX-6, UX-7), copy (UX-12, UX-13) and cap feedback, moved from Spike 12's audit planning (user, 2026-10-27) | S14-03 | — |
 | [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md) and [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md) (same root cause) | S14-28 | — |
-| [`ux/2026-10-15-polygon-locator-drag-vertices.md`](ux/2026-10-15-polygon-locator-drag-vertices.md) | S14-29 | — |
+| Dogfood 2026-10-15: polygon locator drag vertices (note deleted 2026-11-05; landed #715) | S14-29 | — |
 | Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
 | [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md) | S14-31 | — |
 | [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
@@ -172,7 +172,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-26 | A folded nickname shows as a nickname | 3 | When the reconciler folds a nickname recorded as a given name into its formal name (S11-28), the reconciled name keeps it as a `nick` part, so S14-09's quotes show it: *James “Jim” Robins* / *William “Bill” Robins* | — | S14-09, S14-18 | [S14-26-folded-nickname-as-nick.md](prs/S14-26-folded-nickname-as-nick.md) | Landed #709 |
 | S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-16 | [S14-27-lists-through-descriptors.md](prs/S14-27-lists-through-descriptors.md) | Landed #693 |
 | S14-28 | PDF page tracks scroll | 7a | Push `pdfView.currentPage` into `ArtifactViewerModel.page` on page-changed; zoom and region stamps stop snapping to page 1 | — | — | [S14-28-pdf-page-tracks-scroll.md](prs/S14-28-pdf-page-tracks-scroll.md) | Landed #711 |
-| S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Planned |
+| S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Landed #715 |
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Planned |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
@@ -494,7 +494,7 @@ One PR (user, 2026-11-01).
 **Ships.** The overlay's `hitTest` converts its superview point, so PDF handles are reachable (the PDF host is not flipped, the overlay is). One target list and hit rule in `ArtifactRegionGeometry` (nearest vertex wins; the outline moves the shape); handles and hit radius a fixed screen size through an overlay `magnification` input; an edit that would leave an invalid shape reverts. An open Citation's locator already reaches the overlay as `committedRegion`; a test pins edit-after-save (planning, 2026-11-05). Depends on S14-28 so a region drawn while scrolled is not stamped page 1 and hidden. Extend `ArtifactRegionGeometryTests`.
 **Not this PR.** Editing rectangles / other shapes beyond what already works; depiction regions (rectangle-only).
 **Check.** Bar outcome 24: nudge a corner on a draft and on a saved Citation; handles usable when zoomed out.
-**Context.** Working rule "Polygon edit includes a saved Citation"; [`ux/2026-10-15-polygon-locator-drag-vertices.md`](ux/2026-10-15-polygon-locator-drag-vertices.md); `ArtifactRegionOverlay.swift`, `CitationComposerViewerPane`.
+**Context.** Working rule "Polygon edit includes a saved Citation"; dogfood note deleted on land (#715); `ArtifactRegionOverlay.swift`, `CitationComposerViewerPane`.
 
 ### Slice 7c — Evidence graph polish
 

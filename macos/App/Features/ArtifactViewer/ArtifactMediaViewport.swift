@@ -18,7 +18,7 @@ struct ArtifactMediaViewport: NSViewRepresentable {
     var onZoomChange: (CGFloat) -> Void
     var overlayEnabled: Bool = false
     var overlayInput: ArtifactRegionOverlayInput?
-    var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+    var onCommitRegion: ((ArtifactRegionDraft) -> Bool)?
     var onDisarmRegionTool: (() -> Void)?
     var freeformDeleteTooltip: String = ""
 
@@ -112,7 +112,7 @@ struct ArtifactMediaViewport: NSViewRepresentable {
         var onZoomChange: (CGFloat) -> Void
         var suppressZoomCallback = false
 
-        var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+        var onCommitRegion: ((ArtifactRegionDraft) -> Bool)?
         var onDisarmRegionTool: (() -> Void)?
 
         init(onZoomChange: @escaping (CGFloat) -> Void) {
@@ -130,7 +130,7 @@ struct ArtifactMediaViewport: NSViewRepresentable {
         document.overlayView.committed = overlayInput?.committed
         document.overlayView.toolTip = freeformDeleteTooltip
         document.overlayView.onCommit = { [weak coordinator] draft in
-            coordinator?.onCommitRegion?(draft)
+            coordinator?.onCommitRegion?(draft) ?? false
         }
         document.overlayView.onDisarm = { [weak coordinator] in
             coordinator?.onDisarmRegionTool?()
@@ -286,6 +286,7 @@ final class ArtifactMediaNSScrollView: NSScrollView {
     func layoutDocumentCentered(resetScroll: Bool = false, allowScrollAdjust: Bool = true) {
         guard !isLayingOut else { return }
         guard let document = documentView as? ArtifactMediaDocumentView else { return }
+        document.overlayView.magnification = magnification
         isLayingOut = true
         defer { isLayingOut = false }
 

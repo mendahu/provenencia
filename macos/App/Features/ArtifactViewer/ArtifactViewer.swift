@@ -172,7 +172,7 @@ struct ArtifactViewer: View {
     var locatorPage: Int?
     var armedRegionTool: ArtifactRegionTool?
     var committedRegion: ArtifactRegionDraft?
-    var onCommitRegion: ((ArtifactRegionDraft) -> Void)?
+    var onCommitRegion: ((ArtifactRegionDraft) -> Bool)?
     var onDisarmRegionTool: (() -> Void)?
     var freeformDeleteTooltip: String = ""
 

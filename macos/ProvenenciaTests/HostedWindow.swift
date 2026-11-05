@@ -13,14 +13,29 @@ func hostInBorderlessWindow<V: View>(
     orderFront: Bool = true
 ) -> (NSWindow, NSHostingView<V>) {
     let host = NSHostingView(rootView: view)
-    let window = NSWindow(
-        contentRect: NSRect(origin: .zero, size: windowSize),
-        styleMask: .borderless,
-        backing: .buffered,
-        defer: false
-    )
+    let window = borderlessWindow(size: windowSize)
     window.contentView = host
     host.frame = NSRect(origin: .zero, size: hostSize ?? windowSize)
     if orderFront { window.orderFrontRegardless() }
     return (window, host)
+}
+
+/// Hosts an AppKit `view` as the content view of a borderless window of `size`.
+/// The caller holds the returned window for the test's length.
+@MainActor
+func hostInBorderlessWindow(nsView view: NSView, size: CGSize) -> NSWindow {
+    let window = borderlessWindow(size: size)
+    window.contentView = view
+    window.orderFrontRegardless()
+    return window
+}
+
+@MainActor
+private func borderlessWindow(size: CGSize) -> NSWindow {
+    NSWindow(
+        contentRect: NSRect(origin: .zero, size: size),
+        styleMask: .borderless,
+        backing: .buffered,
+        defer: false
+    )
 }
