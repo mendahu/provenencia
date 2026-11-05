@@ -702,11 +702,16 @@ struct PVComboBox<Row: View, Empty: View>: View {
             // takes the key whenever another field follows this one.
             if isOpen, visibleOptions.indices.contains(activeIndex) {
                 let option = visibleOptions[activeIndex]
-                let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
-                if claim { return .handled }
+                if commit(option, via: .tab) { return .handled }
             }
             isOpen = false
-            return focus?.claimTab(shift: press.modifiers.contains(.shift)) ?? .ignored
+            return focus?.claimTab(shift: false) ?? .ignored
+        case .backTab:
+            // Shift-Tab leaves the list alone unless the form has a previous
+            // field to take the key.
+            guard focus?.previous != nil else { return .ignored }
+            isOpen = false
+            return focus?.claimTab(shift: true) ?? .ignored
         default:
             return .ignored
         }

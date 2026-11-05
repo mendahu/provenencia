@@ -73,8 +73,8 @@ private struct PVInputTabClaim: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if let focus, focus.hasNeighbour {
-            content.onKeyPress(.tab, phases: .down) { press in
-                focus.claimTab(shift: press.modifiers.contains(.shift))
+            content.onKeyPress(keys: [.tab, .backTab], phases: .down) { press in
+                focus.claimTab(shift: press.key == .backTab)
             }
         } else {
             content

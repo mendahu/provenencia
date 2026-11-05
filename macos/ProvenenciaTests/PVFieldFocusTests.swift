@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -88,5 +89,9 @@ struct PVFieldFocusTests {
         #expect(none.claimTab(shift: false) == .ignored)
         #expect(none.claimTab(shift: true) == .ignored)
         #expect(!none.hasNeighbour)
+    }
+
+    @Test func backTabIsTheShiftTabKey() {
+        #expect(KeyEquivalent.backTab.character == "\u{19}")
     }
 }

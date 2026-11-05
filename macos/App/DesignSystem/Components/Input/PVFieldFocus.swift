@@ -86,6 +86,12 @@ struct PVFieldFocus {
     }
 }
 
+extension KeyEquivalent {
+    /// AppKit reports Shift-Tab as this character (U+0019), not as `.tab` with
+    /// Shift, so `.onKeyPress(.tab)` never sees it.
+    static let backTab = KeyEquivalent("\u{19}")
+}
+
 /// Applies a host's `PVFieldFocus` to a field, or the field's own focus when
 /// it has no host.
 struct PVFieldFocusModifier: ViewModifier {

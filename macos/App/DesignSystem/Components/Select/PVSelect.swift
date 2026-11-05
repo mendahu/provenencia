@@ -311,7 +311,9 @@ struct PVSelect<Row: View>: View {
             // `onMoveCommand` already applied ↑/↓.
             return .ignored
         case .tab:
-            return focus?.claimTab(shift: press.modifiers.contains(.shift)) ?? .ignored
+            return focus?.claimTab(shift: false) ?? .ignored
+        case .backTab:
+            return focus?.claimTab(shift: true) ?? .ignored
         case .home: key = .home
         case .end: key = .end
         case .escape: key = .escape
