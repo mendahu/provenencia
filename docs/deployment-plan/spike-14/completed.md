@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S14-31 — Tab reaches a following text area
 
-**Landed 2026-11-05** in [#718](https://github.com/mendahu/provenencia/pull/718). Tab in a label field moves into the description text area beside it, and Shift-Tab moves back, in all eight Input / TextArea pairs: the Evidence graph card, the composer's New subject dialog and its transcription / label pair at both widths, New property, the Property identity edit, the Source graph form, and the Artifact card. One kit handle, `PVFieldFocus`, replaces the input, combo and select handles and can carry a Tab neighbour; `PVTabPair` owns focus for a pair. Version 0.3.4.
+**Landed 2026-11-05** in [#718](https://github.com/mendahu/provenencia/pull/718). Tab in a label field moves into the description text area beside it, and Shift-Tab moves back, in all eight Input / TextArea pairs: the Evidence graph card, the composer's New subject dialog and its transcription / label pair at both widths, New property, the Property identity edit, the Source graph form, and the Artifact card. One kit handle, `PVFieldFocus`, replaces the input, combo and select handles and can carry a Tab neighbour; `PVTabPair` owns focus for a pair. A text area's Tab routing skips the shared field editor of the text field beside it. Version 0.3.4.
 
 ## S14-29 — Polygon locator vertex edit
 
