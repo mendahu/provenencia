@@ -1,0 +1,67 @@
+# Ship log — S14-31 Tab reaches a following text area
+
+**Plan:** [`S14-31-tab-reaches-text-area.md`](S14-31-tab-reaches-text-area.md) · **Branch:** `s14-31-tab-reaches-text-area` · **PR:** #718
+**State:** fixing 1
+
+## Round 0 — implement
+Head `b485ad89`. Gate PASS (orchestrator run: xcode-test 57s, all nine checks). Report deviations: version goes 0.3.3 → 0.3.4 (`main` was already 0.3.3; the plan allows it); `PVFieldFocus`'s binding init and `neighbours` are `@MainActor` (strict-concurrency warnings otherwise); plan header edited so `check-plan-docs` passes; `focus:` sits before `activateOnAppear:` at P6–P8. **The STEP-4 probe and §10 manual check were not run**: the implementer had no way to drive a window, so three §11 stop conditions are untested (Shift-Tab reaching `.onKeyPress`, `FocusClaim` landing in a `PVTextArea`, a `PVTabPair` `FocusState` moving focus in a sheet).
+
+## Round 1 — review
+Base `b6cac73d`, head `b485ad89`. Reviewers: CON (Sonnet), MNT, UX (`macos/App/**`). Skipped: SEC+PRF: no listed security path, no catalog data, no loop or count; the diff moves keyboard focus between two fields, and the `macos/App/Features/**` changes are views, not models.
+
+CON: no code defect; every AC traced, call sites unchanged. Sweep and 8-site count re-checked by CON and MNT.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1, UX-3, UX-1 | CON, UX | major | Stop-condition probes never run; Shift-Tab may not reach `.onKeyPress(.tab)` (P4 is the only input with `previous`) | Fix now → F-1; remainder To user | Verified: Landed note says not run. `NSBackTabCharacter` is a separate character and no repo code handles it. The probe is STEP-4, so running it is in plan. A kept hosted Tab test is an Out line, so F-1 is a throwaway. A failed stop condition goes to the user. §10 stays the user's |
+| UX-2 | UX | major | Text area's router can attach to the Label's field editor | Fix now → F-2 | Verified: `firstDescendantTextView` has no `isFieldEditor` guard; `clearInsets` writes insets and `tabRouter.attach` to whatever it finds; the clearer now holds closures, so `updateNSView` reruns each body. Hierarchy unobserved, F-1 logs it. One condition either way |
+| MNT-1 | MNT | major | "Handle or own focus" decided per field, a new copy in `PVTextArea` | Fix now → F-3 | Same-pass cleanup. Verified at all named lines. Takes the reviewer's smaller fix: D-5 and STEP-3 keep the owned path, so no `AnyView` on it |
+| MNT-2 | MNT | major | Tab claim written three times | Fix now → F-4 | Same-pass cleanup. Verified `PVInput`, `PVComboBox`, `PVSelect` |
+| MNT-5 | MNT | minor | Router test setup copied further | Fix now → F-5 | Same-pass cleanup |
+| MNT-3 | MNT | minor | Clearer and router comments no longer true | Fix now → F-6 | Stale comments in a changed file. Comments only: D-5 names `PVTextEditorInsetClearer`, so the rename is not taken |
+| MNT-4 | MNT | minor | `PVTabPair` has no `#Preview` | Fix now → F-6 | `add-ui-component` checklist |
+| CON-2 | CON | minor | Landed note omits `focus:` argument order | Fix now → F-7 | Verified |
+| UX-4 | UX | minor | P6 Tab skips Save and Cancel with Full Keyboard Access | Fix now → F-7 | Docs only: Landed note records the skip beside P4's; surfaced in the report |
+
+Nits (logged): `CON-3, MNT-9 · plan Context · "dogfood note dogfood note" (F-7 fixes it)` · `MNT-6 · CitationComposerEvidenceColumn.swift:281,293 · make the handle non-optional` · `MNT-7 · PVInput.swift:104 · equalsFocus could be focus` · `MNT-8 · PVFieldFocus.swift · neighbours could use map`
+
+### Fix plan 1
+
+**F-1 — Prove Tab in a real window (throwaway)** (from CON-1, UX-1, UX-3; STEP-4 probe)
+Files: a temporary test file only, never committed; save a copy to `/private/tmp/claude-501/-Users-jakerobins-Repos-provenencia/77219f8d-4d51-431f-acec-cf28dc2ae686/scratchpad/PVTabPairProbeTests.swift`, and remove it from the tree (and any project entry) before committing.
+Do: host a `PVTabPair` with a `PVInput` and a `PVTextArea` in a titled, key-capable window (not the borderless helper; activate the app and `makeKeyAndOrderFront`), once directly and once inside a SwiftUI `.sheet`. Deliver real `NSEvent.keyEvent` keyDowns through `NSApp.sendEvent` or `window.sendEvent`: Tab (`"\t"`, keyCode 48) and Shift-Tab (`"\u{19}"`, keyCode 48, `.shift`). Also a pair with order swapped (text area first, input second) for P4: Shift-Tab from the input. Log `press.key`, `press.characters` and `press.modifiers` from `.onKeyPress`, and after each key the window's `firstResponder` and `isFieldEditor`. Type into the text area after the move and check its binding updates. Also log `nearestTextView()`'s type and `isFieldEditor` while the Label holds focus.
+Report the four results: (a) does `.onKeyPress(.tab)` fire for Shift-Tab, (b) does `FocusClaim` land in the `TextEditor`, (c) the same inside a sheet, (d) does the router ever reach a field editor. If a result is inconclusive (the window cannot become key), say so. **Do not change D-6's filter** and do not stop the round on a failed result: report it and carry on with F-2 to F-7.
+Check: the probe ran and the tree has no probe file.
+
+**F-2 — The text area's router never takes a field editor** (from UX-2)
+Files: `PVTextArea.swift`, `PVTextAreaTests.swift`.
+Failing test first: `PVTextAreaTests/textViewSearchSkipsAFieldEditor` — a view holding an `NSTextView` with `isFieldEditor = true` before a plain `NSTextView`: the search returns the plain one; with only the field editor it returns nil.
+Do: `firstDescendantTextView()` skips `isFieldEditor` text views and keeps searching. Widen the extension from `private` only as far as the test needs.
+Check: the test passes; scripts/check-pr.sh PASS.
+
+**F-3 — One resolution of handle or own focus** (from MNT-1)
+Files: `PVFieldFocus.swift`, `PVInput.swift`, `PVComboBox.swift`, `PVSelect.swift`, `PVTextArea.swift`, `PVFieldFocusTests.swift`.
+Failing test first: `PVFieldFocusTests/optionalHandleFallsBackToOwn` — nil handle answers with the own value; a handle answers with its own `isActive`.
+Do: add `extension Optional where Wrapped == PVFieldFocus` with `isActive(own: Bool) -> Bool`, `focus(own: FocusState<Bool>.Binding)` and `resign(own: FocusState<Bool>.Binding)`. Every field uses them. `PVComboBox.fieldText` and `PVInput` apply focus through `PVFieldFocusModifier`, so each builds one `TextField`. `PVInput`'s own binding is `externalFocus ?? $ownedFocus`. No handle keeps today's `.focused` path; no `AnyView` on that path.
+Check: `rg -n "if let (focus|equalsFocus) \{|focus != nil|focus\?\.isActive\(\) \?\?" macos/App/DesignSystem/Components` prints no focus-resolution line in the four field files (`if let` for an unrelated value is fine; list what it prints); `rg -c "TextField\(text:" PVInput.swift PVComboBox.swift` prints 1 each; scripts/check-pr.sh PASS.
+
+**F-4 — One Tab claim on the handle** (from MNT-2)
+Files: `PVFieldFocus.swift`, `PVInput.swift`, `PVComboBox.swift`, `PVSelect.swift`, `PVFieldFocusTests.swift`.
+Failing test first: `PVFieldFocusTests/claimTabRunsTheNeighbourAndReportsHandled` — with a neighbour returns `.handled` and runs it once; with none returns `.ignored`.
+Do: add `@MainActor func claimTab(shift: Bool) -> KeyPress.Result` on `PVFieldFocus`, built on `tabClaim(shift:)` (`KeyPress` has no test init, so it takes the Bool), and `var hasNeighbour: Bool`. All three fields call it. `PVInputTabClaim` keeps D-6's "no neighbour, no modifier" through `hasNeighbour`. `PVComboBox` sets `isOpen = false` before the claim as today.
+Check: `rg -n "tabClaim\(shift" macos/App` prints only `PVFieldFocus.swift`; scripts/check-pr.sh PASS.
+
+**F-5 — One router fixture in the text area tests** (from MNT-5)
+Files: `PVTextAreaTests.swift`.
+Do: a private fixture holding the text view, spy and router, with `send(_ selector:)`. All router tests use it, F-2's excepted. No assertion changes.
+Check: `rg -c "doCommandBy: #selector" PVTextAreaTests.swift` prints 1; scripts/check-pr.sh PASS.
+
+**F-6 — Comments and preview** (from MNT-3, MNT-4)
+Files: `PVTextArea.swift`, `PVTabPair.swift`.
+Do: the clearer's doc says it clears insets and carries the Tab neighbours to the router; the router's doc says Tab goes to the neighbour when set, else the key loop. Keep the type names. Add a `#Preview` to `PVTabPair` with a `PVInput` and a `PVTextArea`.
+Check: scripts/check-pr.sh PASS.
+
+**F-7 — Landed note** (from CON-2, UX-4, CON-3)
+Files: `S14-31-tab-reaches-text-area.md`.
+Do: Landed note adds that `focus:` sits before `activateOnAppear:` at P6–P8, and that P6's Tab skips the inline Save and Cancel when Full Keyboard Access is on, as P4 does. Fix the doubled "dogfood note dogfood note". Add the F-1 results and replace "were not run" with what was and was not run. Note F-3 and F-4 add handle helpers beyond D-2 (same-pass cleanup).
+Check: scripts/check-pr.sh PASS.
