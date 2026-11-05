@@ -92,16 +92,18 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
         guard let committed else { return }
-        let pad: CGFloat = 8
-        if let anchor = ArtifactRegionGeometry.moveAnchor(for: committed) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: imageRect)
-            addCursorRect(cursorRect(around: point, pad: pad), cursor: .openHand)
-        }
         let centroid = ArtifactRegionGeometry.moveAnchor(for: committed) ?? CGPoint(x: 0.5, y: 0.5)
-        for handle in ArtifactRegionGeometry.handlePoints(for: committed, imageRect: imageRect) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: handle, imageRect: imageRect)
-            let kind = ArtifactRegionGeometry.resizeCursorKind(handle: handle, centroid: centroid)
-            addCursorRect(cursorRect(around: point, pad: pad), cursor: ArtifactRegionCursor.resize(kind))
+        for target in ArtifactRegionGeometry.handleTargets(for: committed, imageRect: imageRect) {
+            let cursor: NSCursor
+            switch target.handle {
+            case .move:
+                cursor = .openHand
+            case .resize:
+                cursor = ArtifactRegionCursor.resize(
+                    ArtifactRegionGeometry.resizeCursorKind(handle: target.normalized, centroid: centroid)
+                )
+            }
+            addCursorRect(cursorRect(around: target.document, pad: handleHitRadius), cursor: cursor)
         }
     }
 
@@ -117,9 +119,7 @@ final class ArtifactRegionOverlayView: NSView {
         if armedTool != nil { return self }
         // AppKit hands `hitTest` a point in the superview's coordinates.
         let local = convert(point, from: superview)
-        if hitHandle(at: local) != nil { return self }
-        if committed != nil, isNearCommittedStroke(local) { return self }
-        return nil
+        return hitHandle(at: local) != nil ? self : nil
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -363,52 +363,25 @@ final class ArtifactRegionOverlayView: NSView {
 
     private func hitHandle(at documentPoint: CGPoint) -> ArtifactRegionHandle? {
         guard let committed else { return nil }
-        let threshold = handleHitSize
-        if let anchor = ArtifactRegionGeometry.moveAnchor(for: committed) {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold + 1 {
-                return .move
-            }
-        }
-        let handles = ArtifactRegionGeometry.handlePoints(for: committed, imageRect: imageRect)
-        for (index, normalized) in handles.enumerated() {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: normalized, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold {
-                return .resize(index)
-            }
-        }
-        return nil
+        return ArtifactRegionGeometry.hitHandle(
+            at: documentPoint,
+            draft: committed,
+            imageRect: imageRect,
+            radius: handleHitRadius
+        )
     }
 
     private func freeformVertexIndex(at documentPoint: CGPoint) -> Int? {
         guard let committed, committed.kind == .freeform else { return nil }
-        let threshold = handleHitSize
-        for (index, normalized) in committed.points.enumerated() {
-            let point = ArtifactRegionGeometry.documentPoint(normalized: normalized, imageRect: imageRect)
-            if hypot(point.x - documentPoint.x, point.y - documentPoint.y) <= threshold {
-                return index
-            }
-        }
-        return nil
+        let targets = ArtifactRegionGeometry.handleTargets(for: committed, imageRect: imageRect)
+        guard case .resize(let index)? = ArtifactRegionGeometry.nearestHandle(
+            at: documentPoint, in: targets, radius: handleHitRadius
+        ) else { return nil }
+        return index
     }
 
-    private func isNearCommittedStroke(_ documentPoint: CGPoint) -> Bool {
-        guard let committed else { return false }
-        let media = imageRect
-        let docs = ArtifactRegionGeometry.documentPoints(normalized: committed.points, imageRect: media)
-        guard docs.count >= 2 else { return false }
-        let threshold = handleHitSize
-        for i in 0..<docs.count {
-            let a = docs[i]
-            let b = docs[(i + 1) % docs.count]
-            if distance(documentPoint, segmentFrom: a, to: b) <= threshold {
-                return true
-            }
-        }
-        return false
-    }
-
-    private var handleHitSize: CGFloat {
+    /// Hit radius in document points (7 screen points at any zoom, once D-4 lands).
+    private var handleHitRadius: CGFloat {
         7
     }
 
@@ -551,21 +524,6 @@ final class ArtifactRegionOverlayView: NSView {
     private func cursorRect(around point: CGPoint, pad: CGFloat) -> CGRect {
         CGRect(x: point.x - pad, y: point.y - pad, width: pad * 2, height: pad * 2)
     }
-
-    private func distance(_ point: CGPoint, segmentFrom a: CGPoint, to b: CGPoint) -> CGFloat {
-        let dx = b.x - a.x
-        let dy = b.y - a.y
-        let length2 = dx * dx + dy * dy
-        guard length2 > 0 else { return hypot(point.x - a.x, point.y - a.y) }
-        let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length2))
-        let proj = CGPoint(x: a.x + t * dx, y: a.y + t * dy)
-        return hypot(point.x - proj.x, point.y - proj.y)
-    }
-}
-
-enum ArtifactRegionHandle: Equatable {
-    case resize(Int)
-    case move
 }
 
 enum ArtifactRegionCursor {

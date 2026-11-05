@@ -214,4 +214,84 @@ struct ArtifactRegionGeometryTests {
         ]))
         #expect(wideBox.isValid)
     }
+
+    // MARK: Hit rule
+
+    private static let hitRect = CGRect(x: 0, y: 0, width: 100, height: 100)
+    private static let hitSquare = ArtifactRegionDraft(
+        kind: .freeform,
+        points: [
+            CGPoint(x: 0.2, y: 0.2), CGPoint(x: 0.4, y: 0.2),
+            CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.2, y: 0.4),
+        ]
+    )
+
+    @Test func hitHandleOutlineMovesShape() {
+        let rect = Self.hitRect
+        let square = Self.hitSquare
+        func hit(_ x: CGFloat, _ y: CGFloat) -> ArtifactRegionHandle? {
+            ArtifactRegionGeometry.hitHandle(
+                at: CGPoint(x: x, y: y), draft: square, imageRect: rect, radius: 3
+            )
+        }
+        #expect(hit(30, 20) == .move)
+        #expect(hit(30, 30) == .move)
+        #expect(hit(20, 20) == .resize(0))
+        #expect(hit(60, 60) == nil)
+
+        let targets = ArtifactRegionGeometry.handleTargets(for: square, imageRect: rect)
+        #expect(targets.map(\.handle) == [.move, .resize(0), .resize(1), .resize(2), .resize(3)])
+    }
+
+    @Test func hitHandleCircleHandleBeatsOutline() {
+        let rect = Self.hitRect
+        let circle = ArtifactRegionDraft(
+            kind: .circle,
+            points: ArtifactRegionGeometry.circleRing(center: CGPoint(x: 0.5, y: 0.5), radius: 0.2)
+        )
+        let handle = ArtifactRegionGeometry.handlePoints(for: circle, imageRect: rect)[0]
+        let onHandle = ArtifactRegionGeometry.documentPoint(normalized: handle, imageRect: rect)
+        #expect(
+            ArtifactRegionGeometry.hitHandle(at: onHandle, draft: circle, imageRect: rect, radius: 3)
+                == .resize(0)
+        )
+        let quarterTurn = ArtifactRegionGeometry.documentPoint(normalized: circle.points[8], imageRect: rect)
+        #expect(
+            ArtifactRegionGeometry.hitHandle(at: quarterTurn, draft: circle, imageRect: rect, radius: 3)
+                == .move
+        )
+    }
+
+    private static let tinyTriangle = ArtifactRegionDraft(
+        kind: .freeform,
+        points: [CGPoint(x: 0.50, y: 0.50), CGPoint(x: 0.52, y: 0.50), CGPoint(x: 0.51, y: 0.52)]
+    )
+
+    @Test func hitHandleAnchorWinsOverNearVertex() {
+        let anchor = ArtifactRegionGeometry.moveAnchor(for: Self.tinyTriangle)!
+        let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: Self.hitRect)
+        #expect(
+            ArtifactRegionGeometry.hitHandle(
+                at: point, draft: Self.tinyTriangle, imageRect: Self.hitRect, radius: 3
+            ) == .move
+        )
+    }
+
+    @Test func hitHandlePicksNearestVertex() {
+        let rect = CGRect(x: 0, y: 0, width: 500, height: 500)
+        let ring = ArtifactRegionDraft(kind: .freeform, points: RegionFixtures.ring(count: 256))
+        let point = ArtifactRegionGeometry.documentPoint(normalized: ring.points[10], imageRect: rect)
+        #expect(
+            ArtifactRegionGeometry.hitHandle(at: point, draft: ring, imageRect: rect, radius: 7)
+                == .resize(10)
+        )
+    }
+
+    @Test func nearestHandleIgnoresAnchor() {
+        let targets = ArtifactRegionGeometry.handleTargets(for: Self.tinyTriangle, imageRect: Self.hitRect)
+        let vertex = ArtifactRegionGeometry.documentPoint(
+            normalized: Self.tinyTriangle.points[0], imageRect: Self.hitRect
+        )
+        #expect(ArtifactRegionGeometry.nearestHandle(at: vertex, in: targets, radius: 3) == .resize(0))
+    }
 }

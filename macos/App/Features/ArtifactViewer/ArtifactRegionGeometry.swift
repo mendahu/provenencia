@@ -516,6 +516,66 @@ enum ArtifactRegionGeometry {
         circleCenter(draft.points)
     }
 
+    /// Every grabbable point of a committed region: the move anchor first as `.move`, then the
+    /// resize handles as `.resize(i)`. Hit math reads `document`; the cursor kind reads `normalized`.
+    static func handleTargets(
+        for draft: ArtifactRegionDraft,
+        imageRect: CGRect
+    ) -> [ArtifactRegionTarget] {
+        var targets: [ArtifactRegionTarget] = []
+        if let anchor = moveAnchor(for: draft) {
+            targets.append((.move, anchor, documentPoint(normalized: anchor, imageRect: imageRect)))
+        }
+        for (index, normalized) in handlePoints(for: draft, imageRect: imageRect).enumerated() {
+            targets.append((.resize(index), normalized, documentPoint(normalized: normalized, imageRect: imageRect)))
+        }
+        return targets
+    }
+
+    /// The `.resize` target nearest `documentPoint` within `radius`; ties keep the earlier index.
+    static func nearestHandle(
+        at documentPoint: CGPoint,
+        in targets: [ArtifactRegionTarget],
+        radius: CGFloat
+    ) -> ArtifactRegionHandle? {
+        var best: (handle: ArtifactRegionHandle, distance: CGFloat)?
+        for target in targets {
+            guard case .resize = target.handle else { continue }
+            let d = hypot(target.document.x - documentPoint.x, target.document.y - documentPoint.y)
+            if d <= radius, d < (best?.distance ?? .greatestFiniteMagnitude) {
+                best = (target.handle, d)
+            }
+        }
+        return best?.handle
+    }
+
+    /// What a pointer at `documentPoint` grabs: the move anchor, else the nearest handle, else
+    /// the outline (which moves the shape), else nothing.
+    static func hitHandle(
+        at documentPoint: CGPoint,
+        draft: ArtifactRegionDraft,
+        imageRect: CGRect,
+        radius: CGFloat
+    ) -> ArtifactRegionHandle? {
+        let targets = handleTargets(for: draft, imageRect: imageRect)
+        if let anchor = targets.first(where: { $0.handle == .move }),
+           hypot(anchor.document.x - documentPoint.x, anchor.document.y - documentPoint.y) <= radius + 1
+        {
+            return .move
+        }
+        if let handle = nearestHandle(at: documentPoint, in: targets, radius: radius) {
+            return handle
+        }
+        let outline = documentPoints(normalized: draft.points, imageRect: imageRect)
+        guard outline.count >= 2 else { return nil }
+        for i in 0..<outline.count {
+            if distanceToSegment(documentPoint, from: outline[i], to: outline[(i + 1) % outline.count]) <= radius {
+                return .move
+            }
+        }
+        return nil
+    }
+
     /// Eight-way resize cursor. Overlay y increases downward (flipped).
     static func resizeCursorKind(handle: CGPoint, centroid: CGPoint) -> ArtifactResizeCursorKind {
         let dx = handle.x - centroid.x
@@ -628,6 +688,15 @@ enum ArtifactRegionGeometry {
         params.clamp()
     }
 
+    private static func distanceToSegment(_ point: CGPoint, from a: CGPoint, to b: CGPoint) -> CGFloat {
+        let dx = b.x - a.x
+        let dy = b.y - a.y
+        let length2 = dx * dx + dy * dy
+        guard length2 > 0 else { return hypot(point.x - a.x, point.y - a.y) }
+        let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length2))
+        return hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy))
+    }
+
     private static func rounded(_ value: CGFloat) -> Int {
         Int((value * 10_000).rounded())
     }
@@ -637,6 +706,15 @@ enum ArtifactRegionGeometry {
         return zip(a, b).reduce(0) { $0 + hypot($1.0.x - $1.1.x, $1.0.y - $1.1.y) }
     }
 }
+
+/// What a pointer grabs on a committed region.
+enum ArtifactRegionHandle: Equatable {
+    case resize(Int)
+    case move
+}
+
+/// One grabbable point: its handle, its normalized place and its document place.
+typealias ArtifactRegionTarget = (handle: ArtifactRegionHandle, normalized: CGPoint, document: CGPoint)
 
 enum ArtifactResizeCursorKind: Equatable {
     case east, southEast, south, southWest, west, northWest, north, northEast
