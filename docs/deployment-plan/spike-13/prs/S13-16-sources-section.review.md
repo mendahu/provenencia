@@ -88,3 +88,30 @@
 
 ### X-11 · minor · Check quality and test order
 **Answer:** Fixed. T-4 compares the painted output, T-8 covers the opening focus, and the test IDs are in order.
+
+## Round 2 — the agreed board (Source rows), 2026-11-05
+
+The plan was rewritten after the board was agreed, and fresh reviewers checked all of it. **Verdict:** Fits with changes / Ready with changes. Every finding is Fixed, except X-26, which is Declined with evidence. No blocker is open, and the plan is `Planned`.
+
+### Maintainability
+
+- **M-21 · blocker · The link style stays buried in a recipe's row file.** Fixed. The provenance row's link moves into a kit component, `PVInkLink` (`DesignSystem/Components/InkLink/`). The record row and the Sources title both use it (D-7, STEP-5).
+- **M-22 · blocker · The title cell re-derives `PVTitleText`'s face.** Fixed. A titled Source is `.name`, an untitled one `.ref`, drawn with `PVTitleText(.row)` (D-3, D-7). A `PVTitleText` that fixes its own ink is a Stop condition.
+- **M-23 · major · A fake placed Subject and a warmed key, only to compute a constant.** Fixed. A static `displayName(subject:kind:observations:eventTitle:orders:)` replaces it (D-2). `.propertiesWorkspace` and the `properties:` input are gone.
+- **M-24 · major · A third hand-written fold.** Fixed. One `ConclusionFold.shown`; Family and Timeline move onto it (D-10, T-9).
+- **M-25 · major · `queryKeys` with an unwritten "first is own" rule.** Fixed. `queryKey` stays as it is, and `supportingQueryKeys` is added (D-1).
+- **M-26 · minor · The closest column precedent is missing.** Fixed. D-4 copies `SourcesListColumns`' per-column cell modifiers.
+- **M-27 · minor · The page location is built inline.** Fixed. A `pageLocation(sourceId:ref:title:)` overload is added (D-5).
+- **M-28 · minor · The `subjectId` doc comment becomes untrue.** Fixed (D-11, STEP-7).
+
+### Executability
+
+- **X-21 · major · A test file name is wrong.** Fixed: it is `ProvenanceSheetTests.swift`.
+- **X-22 · major · Where the init goes.** Moot: there is no new initializer (M-23).
+- **X-23 · major · Who owns `openingFocus`, and in which space.** Fixed. The model's grid-space value uses the constant frame. The view converts it with `documentPoint(_:origin:)` (D-11).
+- **X-24 · major · Call sites and model reuse.** Fixed. Both `applyOpeningCamera` call sites pass the focus, and the model is per mount (D-11, Reach).
+- **X-25 · major · T-8 has no harness.** Fixed. The offset is now the pure function `GraphCanvasCoordinates.contentOffset(centering:…)`, tested in `GraphCanvasCoordinatesTests`.
+- **X-26 · major · `PVButton(.link, .sm)` breaks caption size.** Declined. `PVButton.swift`'s `.link` branch drops the padding, the fixed height and the chrome, and draws `size.buttonFont` (caption medium at `.sm`) underlined in link ink. That is the board's graph link.
+- **X-27 · major · Nil lists, duplicates, `Equatable`.** Fixed in D-3.
+- **X-28 · major · Strings and ids.** Fixed. The catalog key names are given (D-12, Strings), and the accessibility label uses `sourcesDateNotRecorded`.
+- **X-29 · major · Checks that cannot run here.** Fixed where the plan can fix it. The FakeStore error case is named (manual item 3). `xcodebuild` and `check-pr.sh` run on a Mac, as for every Swift PR.

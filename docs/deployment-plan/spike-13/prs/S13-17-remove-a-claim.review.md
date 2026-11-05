@@ -77,3 +77,14 @@
 
 ### X-12 · minor · `add-workspace-location` is listed but unused
 **Answer:** Fixed. It is dropped from the skills to load.
+
+## Round 2 — the agreed board, 2026-11-05
+
+A fresh reviewer checked the refresh against S13-16's types and the board. **Verdict:** Ready with changes. Every finding is Fixed. The plan stays at `Blocked — on S13-37, S13-16`: it is refreshed and set to `Planned` once both have landed.
+
+- **R-1 · blocker · D-9 reads fields `Line` does not have.** Fixed. S13-16's `Line` gains `graphID`, and D-9 reads `line.graphID`, `line.subjectID` and `line.subjectName`.
+- **R-2 · major · The fallback name contradicts S13-16 D-2.** Fixed. The confirm title is `Line.subjectName` (D-4, D-9).
+- **R-3 · major · Stale card wording.** Fixed. The plan now says "record line", and STEP-5 updates the `evidenceGraph.subject.unpromote` key's comment.
+- **R-4 · major · The list has no input for the control or its focus.** Fixed. `PersonSourcesList` gets `unpromote:`, `unpromoteDisabled:` and a `FocusState<PersonSourcesFocus?>` binding (D-10).
+- **R-5 · major · T-8's signature cannot compute the focus.** Fixed. `outcome(effects:entityId:removed:in:)` takes the removed claim and the content, and gains two more cases.
+- **R-6 · major · The brief's inventory still names the IconButton.** Fixed. The brief's RC-1 and its Remove inventory row now give the agreed ghost Button with the glyph and the word.
