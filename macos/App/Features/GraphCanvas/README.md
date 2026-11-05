@@ -134,7 +134,7 @@ Deliberate zoom-*in* past ~125% is capped in the default camera so layer-scaled
 SwiftUI content does not go soft. Items re-render once the zoom has held still for 0.15 s (a magnification change or the end of a live pinch restarts the timer; the scroll
 view sets `GraphCanvasItemLayer.contentsScale`); the cap protects the base SwiftUI layer.
 
-`GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth`.
+`GraphCanvasViewportController.magnification` is the live zoom. The grid fades as a whole when a cell would be under about a screen point; product strokes that should stay one screen point wide use `GraphCanvasCoordinates.screenPixelDocumentWidth` (the evidence graph and the Artifact region overlay both do).
 
 Changing `contentID` restores `restoredCamera`, or centers at 1× when the host has none. A content-size change leaves the camera where it is.
 `contentOrigin` is the grid-space point the document's top-left stands on. When a host moves it, the scroll offset shifts by the same delta so the viewport stays on the same content, including during an item drag.
