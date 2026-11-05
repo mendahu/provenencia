@@ -115,8 +115,10 @@ final class ArtifactRegionOverlayView: NSView {
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         if armedTool != nil { return self }
-        if hitHandle(at: point) != nil { return self }
-        if committed != nil, isNearCommittedStroke(point) { return self }
+        // AppKit hands `hitTest` a point in the superview's coordinates.
+        let local = convert(point, from: superview)
+        if hitHandle(at: local) != nil { return self }
+        if committed != nil, isNearCommittedStroke(local) { return self }
         return nil
     }
 

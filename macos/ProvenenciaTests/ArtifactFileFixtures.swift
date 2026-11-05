@@ -137,6 +137,37 @@ enum ArtifactFileFixtures {
         return document
     }
 
+    /// One blank page whose media box is `size`.
+    static func sizedPDFDocument(size: CGSize) -> PDFDocument {
+        let document = PDFDocument()
+        let page = PDFPage()
+        page.setBounds(CGRect(origin: .zero, size: size), for: .mediaBox)
+        document.insert(page, at: 0)
+        return document
+    }
+
+    /// A PDF host sized 400×500, synced to page 1 of `document` and observing page changes.
+    @MainActor
+    static func pdfHost(
+        document: PDFDocument,
+        onPageChange: @escaping (Int) -> Void = { _ in }
+    ) -> ArtifactPDFHostView {
+        let host = ArtifactPDFHostView()
+        host.frame = NSRect(x: 0, y: 0, width: 400, height: 500)
+        host.onPageChange = onPageChange
+        host.sync(
+            document: document,
+            page: 1,
+            zoom: 1,
+            resetPage: true,
+            selectionEnabled: true,
+            findSelection: nil,
+            findActivationID: 0
+        )
+        host.startObserving()
+        return host
+    }
+
     static func writeBlankPDF(projectDir: String, relPath: String, pageCount: Int) throws {
         guard let data = blankPDFDocument(pageCount: pageCount).dataRepresentation() else {
             throw ArtifactFileFixtureError.failed
