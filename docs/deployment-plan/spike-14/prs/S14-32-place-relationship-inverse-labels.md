@@ -1,7 +1,7 @@
 # S14-32 — Place relationship rows read from the far end
 
 **Status:** Landed in #720 (2026-11-05)
-**Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5. A second subtest, "every composer-worded term has a connection sentence", also requires a `ConnectionSentenceRegistry.sentences` row for each term (extends D-9; review round 1).
+**Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5. A second subtest, "every composer-worded term has a connection sentence", also requires a `ConnectionSentenceRegistry.sentences` row for each term (extends D-9; review round 1). Fix plan 3 (user, 2026-11-05) took the three Out lines above into this PR (F-6 to F-9): the warm promote-align budget is 375 ms; a place card with a missing end reads the term's own name ("Part of · …", "Succeeded by · …") instead of "Is part of of"; the relationship draft reading comes from `ConnectionSentenceRegistry` (spouse and sibling got registry rows, so those cards now read "A and B are spouses" / "are siblings", and other terms in the draft use the card's wording); and the composer's `listedLine` and `endTitles` read a product term's localized name through `PropertyTermDisplay`. `areSpouses`, `areSiblings` and `isATermOf` were deleted.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: rows, cards and the authoring box keep their layout; only words change — the far-end row label, and "is" → "was" in the `succeeded_by` card sentence)
@@ -86,9 +86,9 @@ The composer words the two product place terms in three separate switches today,
 | Out | Home |
 | --- | --- |
 | Inverse terms in the seeded `place_relationship_type` vocabulary | not planned (working rule: copy from L10n; Go `TestAcyclicTermsAreSeededDirectedWithNoInverse` forbids them) |
-| The registry's place card phrase reads "Is part of of" / "Is succeeded by of" for a product term (`bridgeSummaryPlaceRelationshipTypeOnly` "Is %@ of") | dogfood log — a copy fix the user has not decided; the new `Sentence` rows leave `phrase` nil |
-| The `relationship` case of `readingSentence` (`areSpouses` / `areSiblings` / `isATermOf`) beside the registry's relationship sentences | dogfood log — same drift as M-7, person terms (review round 2) |
-| Routing the `relationship` and `participation` cases of `listedLine`, and `endTitles`' relationship case, through `PropertyTermDisplay` | dogfood log — raw-`term.label` bypass, older than this PR (review M-2) |
+| The registry's place card phrase reads "Is part of of" / "Is succeeded by of" for a product term (`bridgeSummaryPlaceRelationshipTypeOnly` "Is %@ of") | this PR (user, 2026-11-05) |
+| The `relationship` case of `readingSentence` (`areSpouses` / `areSiblings` / `isATermOf`) beside the registry's relationship sentences | this PR (user, 2026-11-05) |
+| Routing the `relationship` and `participation` cases of `listedLine`, and `endTitles`' relationship case, through `PropertyTermDisplay` | this PR (user, 2026-11-05) |
 | Moving older `ConnectionRow(...)` literals onto the `savedRow` helper | not planned (review M-4: new tests only) |
 | Organization relationship wording | [`docs/ideas/organizations.md`](../../../ideas/organizations.md) — gets one row in D-9's list and cases in `termWording` |
 | Changing the Place page's wording | not planned |
