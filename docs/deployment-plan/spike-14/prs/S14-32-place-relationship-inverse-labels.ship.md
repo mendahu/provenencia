@@ -1,7 +1,7 @@
 # Ship log — S14-32 Place relationship rows read from the far end
 
 **Plan:** [`S14-32-place-relationship-inverse-labels.md`](S14-32-place-relationship-inverse-labels.md) · **Branch:** `s14-32-place-relationship-inverse-labels` · **PR:** #720
-**State:** fixing 1
+**State:** fixing 2
 
 ## Round 0 — implement
 Base `c8a8bdb1`. Head `5067b8c6`. Gate PASS (orchestrator run, all nine checks, xcode-test 49s). Report deviations: `wordingCase` takes an optional leading dot, because D-6 writes `return .placePartOf` (in the Landed note); code and tests are one behavior commit, because the registry rows, keys and composer changes break the build apart; manual check not run. The report said the ship log was never staged, but `48166fc1` committed it: no harm, the log belongs on this branch.
@@ -48,3 +48,21 @@ Do: move `citationComposer.containsWord` and `citationComposer.succeededWord` to
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; `git diff --stat 5067b8c6 -- macos/App/Resources/Localizable.xcstrings` shows equal insertions and deletions; scripts/check-pr.sh PASS.
 
 Also add F-1's guard to the plan's Landed note as a difference from D-9. Change no Decision, Scope line or AC.
+
+## Round 1 — fix
+Head `2212ebf6`. Gate PASS (orchestrator run, all nine checks). F-1 to F-4 done. F-1's "see it pass first" step was vacuous, so the gap was confirmed by the new check failing with the `succeededBy` row removed, naming the term; row restored. `sentenceRow` matches any `Sentence(kind:` row, not only place rows. Orchestrator read F-3 and F-4: Resolved (three notes in the README's template; the four catalog entries follow `siteOfWord` and `burialSubject`, 48 insertions, 48 deletions).
+
+## Round 2 — review
+Reviewers: MNT only (the only lens with a Fix-now major). Scope `5067b8c6...2212ebf6`. MNT-1 Resolved. MNT-2 Resolved. No new blocker.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-10 | MNT | below the round-2 bar | F-1 made a third copy of the enum check loop | Fix now → F-5 | verified: `swift_vocabulary_test.go` lines 651, 673, 694 repeat the loop, and lines 646, 667, 688 repeat the `named` collection; this PR added two of the three. Same-pass cleanup, whatever its severity; test-only, so the same-pass rule wins (S12-18). The "Fix plan 2 only for blockers" cap is stretched for this one test helper, with no third review round |
+
+### Fix plan 2
+
+**F-5 — Fold the term-coverage loops into helpers** (from MNT-10)
+Files: `api/ffi/swift_vocabulary_test.go`.
+Failing test first: none, a refactor. Prove the helper still fails: with the `succeededBy` row removed from `ConnectionSentenceRegistry.sentences`, the subtest fails naming that term, then restore the row.
+Do: add two file-level helpers beside `swiftFuncBody`, one that collects `enum.name` from a regexp's first two groups and one that takes the term enum list, the `named` set and the "has no …" text and reports each `swiftNamedKey` name missing. Move the subtests `every seeded term has wording`, `every composer-worded term has composer wording` and `every composer-worded term has a connection sentence` onto them. Keep each error message's words and each subtest name unchanged, and keep the two `t.Fatal` guards. Touch no other subtest.
+Check: `grep -n 'swiftNamedKey.FindAllStringSubmatch' api/ffi/swift_vocabulary_test.go` prints one line in the helper, plus any line outside those three subtests that was there before; scripts/check-pr.sh PASS.
