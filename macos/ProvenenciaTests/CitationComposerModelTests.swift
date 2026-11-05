@@ -731,6 +731,31 @@ struct CitationComposerModelTests {
         #expect(model.shouldHoldNavigation(.back) == false)
     }
 
+    @Test func editSavedCitationRegionMarksDirty() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let locatorJSON = """
+        {"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
+        """
+        seedCitation(store, locatorJSON: locatorJSON)
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.fields.isDirty == false)
+
+        let moved = ArtifactRegionDraft(
+            kind: .freeform,
+            points: [
+                CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.45, y: 0.1),
+                CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.1, y: 0.4),
+            ]
+        )
+        #expect(model.commitViewerRegion(moved))
+        #expect(model.fields.locator.page == 1)
+        #expect(model.fields.locator.region?.points[1] == CGPoint(x: 0.45, y: 0.1))
+        #expect(model.fields.isDirty)
+        #expect(model.canSaveCitation)
+    }
+
     @Test func newCitationClearsThePreviousLocator() async {
         let store = makeStore()
         seedArtifact(store)
