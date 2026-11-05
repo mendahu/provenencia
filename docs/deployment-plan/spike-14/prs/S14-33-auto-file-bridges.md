@@ -45,7 +45,7 @@ A researcher who connects two people who are already promoted (spouse, parent, s
 | AC-1.1 | Alice and Bob are promoted Persons; connect Alice → Bob as `relationship` with `relationship_type` = spouse | The bridge Subject has an accepted claim onto a new `relationship` handle; the handle has 1 member; its cached `person` / `related_to` ends are Alice's and Bob's handles; the auto-reconciler cache matches a rebuild |
 | AC-1.2 | James (Person) and Birth (Event) are promoted; connect them as `participation` with role subject | The bridge has an accepted claim onto a `participation` handle with James's and Birth's handles as ends |
 | AC-1.3 | Alice–Bob spouse is filed (association A, 1 member). Alice2 is joined to Alice's handle and Bob2 to Bob's on a second record; connect Alice2 → Bob2 spouse | The new bridge joins A (A has 2 members); no second `relationship` handle is minted |
-| AC-1.4 | Same as AC-1.1, through the FFI `CreateCitedBridge` handler | The response's `effects.handles` contains the new association handle's id |
+| AC-1.4 | Same as AC-1.2, through the FFI `CreateCitedBridge` handler | The response's `effects.handles` contains the new association handle's id |
 
 **US-2.** As a researcher, when the bridge cannot file yet or must not file, the connect still saves and nothing else changes.
 
@@ -118,7 +118,8 @@ A researcher who connects two people who are already promoted (spouse, parent, s
 | Call to `identityclaims.AppendFiling` in `connect.CreateCitedBridge` | call | `promote.Save`'s identical call | Reused as is |
 | `TestBridgeFilesWhenDrawnBetweenHandles` *(new)* | test | `TestBridgeFiling` in the same file | A separate top-level test keeps "drawn after the ends" apart from `TestBridgeFiling`'s "drawn before"; it reuses every `bridgeWorld` helper |
 | `(*batchFixture).claimWithoutFiling` *(new)* | test helper | `promotetest.Save` (files bridges); `(*batchFixture).save` | Both file bridges, which is the state the batch tests must avoid; searched `rg "InsertTx\(" core/database/promote` and `promotetest` for a non-filing claim helper — none |
-| Handler case "files a relationship between two promoted people" *(new)* in `TestCreateCitedBridge` | test case | the "creates participation" case; `promoteInDir` | Reuses `connectFixture` and `promoteInDir` |
+| Handler case "files a participation between two promoted subjects" *(new)* in `TestCreateCitedBridge` | test case | the "creates participation" case; `promoteInDir` | Reuses `connectFixture` and `promoteInDir` |
+| `(*bridgeWorld).revision` *(new)* | test helper | `(*batchFixture).revision` in `batch_test.go` | Different fixture type in the same package; a one-query method. Sharing would mean merging the two fixtures, which this PR does not touch |
 
 **Builds on.** `identityclaims.AppendFiling` / `FileBridgesTx`, `connectrules.Decide`, the `effects` registry entries for `identity_claims` and `canonical_entities`, `writes.Run`'s handle recompute.
 **Deletes.** None — nothing becomes dead. `FileEvidenceGraphBridgesTx` stays: batch Done still back-fills older bridges.
@@ -173,26 +174,26 @@ None — no copy; the write's scope (what one connect covers) gains the filing, 
 **STEP-1 — File the bridge on create**
 Files: `core/database/connect/connect.go`.
 Do: the Go core change above (D-1, D-2, D-4).
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/connect/... ./core/database/identityclaims/...` passes; `CGO_ENABLED=1 go test -tags fts5 ./core/database/promote/...` fails only `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted` and `TestSaveBatchFilesOnlyItsGraph`.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/... ./api/...` fails only `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted` and `TestSaveBatchFilesOnlyItsGraph` (the result at the planning base).
 
 **STEP-2 — Re-seed the two batch tests**
 Files: `core/database/promote/batch_test.go`.
-Do: add `func (f *batchFixture) claimWithoutFiling(s subjects.Subject) []byte` *(new)*: in one `writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, …)` look up the Subject's type id, `canonicalentities.InsertTx(tx.Tx, canonicalentities.CreateInput{SubjectTypeID: s.SubjectTypeID})`, then `identityclaims.InsertTx(tx.Tx, identityclaims.CreateInput{SubjectID: s.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted})`, return both changes; the helper returns the entity id. Its doc comment says it claims without filing, as a catalog written before S14-33 left it. In both tests, move `f.participation(person, event)` before the ends are claimed and replace the two `promotetest.Save` calls with `claimWithoutFiling` (D-6). In `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted`, the batch rows' `EntityID` take the returned ids. Keep every assertion.
+Do: add `func (f *batchFixture) claimWithoutFiling(s subjects.Subject) []byte` *(new)*: in one `writes.Call[[]byte](f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, …)` call `canonicalentities.InsertTx(tx.Tx, canonicalentities.CreateInput{SubjectTypeID: s.SubjectTypeID})` (the Subject already carries its type id), then `identityclaims.InsertTx(tx.Tx, identityclaims.CreateInput{SubjectID: s.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted})`, return both changes; the helper returns the entity id. Its doc comment says it claims without filing, as a catalog written before S14-33 left it. In both tests, move `f.participation(person, event)` before the ends are claimed and replace the two `promotetest.Save` calls with `claimWithoutFiling` (D-6). In `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted`, the batch rows' `EntityID` take the returned ids. `per` and `evt` go; the rows use the helper's return values. Add the `github.com/mendahu/provenencia/core/database/canonicalentities` and `github.com/mendahu/provenencia/core/database/identityclaims` imports to `batch_test.go` if they are missing. Keep every assertion.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promote/...` passes.
 
 **STEP-3 — Filing-on-create tests**
 Files: `core/database/promote/bridges_test.go`.
-Do: add `TestBridgeFilesWhenDrawnBetweenHandles` *(new)* with subtests T-1 – T-6 from §8, using `bridgeWorld` (`node`, `promote`, `join`, `relationship`, `participation`, `placeRelationship`, `term`, `prop`, `handles`, `members`, `cachedEntity`, `relationships`) and `identityclaims.AcceptedEntityForSubject` for "has a claim". End T-1 and T-3 with `autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)`.
+Do: add `func (w *bridgeWorld) revision() int64` *(new)* to `bridges_test.go`, the same query as `(*batchFixture).revision` in `batch_test.go`. Add `TestBridgeFilesWhenDrawnBetweenHandles` *(new)* with subtests T-1 – T-6 from §8, using `bridgeWorld` (`node`, `promote`, `join`, `relationship`, `participation`, `placeRelationship`, `term`, `prop`, `handles`, `members`, `cachedEntity`, `relationships`) and `identityclaims.AcceptedEntityForSubject` for "has a claim". End T-1 and T-3 with `autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)`.
 Check: `CGO_ENABLED=1 go test -tags fts5 -run TestBridgeFilesWhenDrawnBetweenHandles ./core/database/promote/` passes.
 
 **STEP-4 — Handler test**
 Files: `api/ffi/handlers/connect_test.go`. Skill: `add-ffi-handler`.
-Do: add T-7 as a `rpcTest` case in `TestCreateCitedBridge`: build a person–person relationship request (`connectFixture` gives one Person; create the second Person with `CreateSubject` as `connectFixture` does, look up the `related_to` and `relationship_type` properties and the spouse term with the helpers the handler tests already use for relationship requests — `rg -n "relationship_type" api/ffi/handlers/*_test.go`), call `promoteInDir` on both Persons in `reqFn`, and in `after` assert `created.GetEffects().GetHandles()` holds an id that is neither Person's handle.
+Do: add T-7 as a `rpcTest` case in `TestCreateCitedBridge`, the same participation request as the "creates participation" case (`connectFixture`'s Person, Event, properties and role term; both already have positions). Declare `var dir string` in the test function above the table; `reqFn` sets it from `connectFixture`, calls `promoteInDir(t, dir, userID, personID, "")` and `promoteInDir(t, dir, userID, eventID, "")`, then returns the request. `after` unmarshals the response, reads the bridge's accepted claim inside `withProjectCatalog(dir, …)` with `identityclaims.AcceptedEntityForSubject(c, <bridge id bytes from uuid.MustParse(created.GetSubject().GetId())>)`, and asserts `created.GetEffects().GetHandles()` contains `database.UUIDString(claim.EntityID)`.
 Check: `CGO_ENABLED=1 go test -tags fts5 -run TestCreateCitedBridge ./api/ffi/handlers/` passes.
 
 **STEP-5 — Domain doc**
 Files: `docs/promote-graph-alignment.md`.
-Do: §9.1 "When:" becomes "after **any** claim create, and when a bridge is created between two Subjects that are already handles (`connect.CreateCitedBridge`), every bridge Subject whose ends are now both handles is filed in the same transaction." The §5.1 "Promoted / Promoted" row keeps its meaning and adds: "Since S14-33 a bridge drawn between two handles files when it is made, so this row appears for a bridge from an older catalog or one whose filing was refused when it was made."
+Do: in §9.1 "When:", the first sentence becomes "after **any** claim create, and when a bridge is created between two Subjects that are already handles (`connect.CreateCitedBridge`), every bridge Subject whose ends are now both handles is filed in the same transaction." The bullet's other sentences stay. The §5.1 "Promoted / Promoted" row keeps its meaning and adds: "Since S14-33 a bridge drawn between two handles files when it is made, so this row appears for a bridge from an older catalog or one whose filing was refused when it was made."
 Check: `rg -n "CreateCitedBridge" docs/promote-graph-alignment.md` prints the §9.1 line.
 
 **STEP-6 — Version bump**
@@ -201,7 +202,7 @@ Do: raise PATCH by one from what `main` holds when you branch (0.3.4 → 0.3.5 a
 Check: `rg -n "<old version>" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing.
 
 **STEP-7 — Docs**
-Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status; "Where the notes went" row for the dogfood note becomes "Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted YYYY-MM-DD; landed #N)"), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md` (delete), this plan.
+Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status → `Landed in #N`, Plan column keeps this file's link; "Where the notes went" row for the dogfood note becomes "Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted YYYY-MM-DD; landed #N)"), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md` (delete), this plan.
 Do: per the Definition of done.
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-33-auto-file-bridges.md` passes.
 
@@ -212,12 +213,12 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
 | T-1 | Go | `core/database/promote/bridges_test.go` `TestBridgeFilesWhenDrawnBetweenHandles` / "relationship between two handles files" *(new)* | promote Alice, promote Bob, `relationship(alice, bob, spouse)` → `handles("relationship")` has 1; `members` = 1; bridge has an accepted claim onto it; `cachedEntity(assoc, "person")` = Alice's handle, `cachedEntity(assoc, "related_to")` = Bob's; cache matches rebuild | AC-1.1, D-1, D-2 |
-| T-2 | Go | same / "participation, location and place relationship file" *(new)* | promote James and Birth, `participation(james, birth, subjectRole)` → 1 `participation` handle; promote Birth2 and York, `location(birth2, york)` → 1 `location` handle; promote two places, `placeRelationship(a, b, part_of)` → 1 `place_relationship` handle | AC-1.2, D-3 |
+| T-2 | Go | same / "participation, location and place relationship file" *(new)* | promote James and Birth, `participation(james, birth, subjectRole)` → 1 `participation` handle; promote Birth2 and York, `location(birth2, york)` → 1 `location` handle; promote two places, `placeRelationship(a, b, partOf)` with `partOf := w.term(w.prop("place_relationship_type"), "part_of")` → 1 `place_relationship` handle | AC-1.2, D-3 |
 | T-3 | Go | same / "a second record joins the association" *(new)* | after T-1's setup, `alice2` joined to Alice's handle, `bob2` to Bob's, `relationship(alice2, bob2, spouse)` → `handles("relationship")` still 1, `members` = 2; cache matches rebuild | AC-1.3 |
 | T-4 | Go | same / "one end unpromoted waits" *(new)* | promote Alice only, `relationship(alice, bob, spouse)` → no error, bridge has no claim, 0 handles; then promote Bob → 1 handle, 1 member | AC-2.1 |
 | T-5 | Go | same / "a refused filing does not fail the connect" *(new)* | (a) promote Alice, join "Alice again" to her handle, `relationship(alice, dup, spouse)` → no error, 0 `relationship` handles, both end claims stand. (b) promote York, Upper Canada, Canada; `placeRelationship(york, uc, part_of)`, `placeRelationship(uc, canada, part_of)` file; `placeRelationship(canada, york, part_of)` → no error, that bridge has no claim, `handles("place_relationship")` = 2 | AC-2.2, AC-2.3, D-4 |
-| T-6 | Go | same / "a later Done does not file it twice" *(new)* | after T-1's setup, `writes.Call(… "promote_batch" …, promote.SaveBatch(tx, userID, promote.Batch{GraphID: w.graph, SeenRevision: <current revision>}))` → the bridge still has one accepted claim; `handles("relationship")` = 1 | AC-2.4 |
-| T-7 | Go (FFI) | `api/ffi/handlers/connect_test.go` `TestCreateCitedBridge` / "files a relationship between two promoted people" *(new)* | both Persons promoted with `promoteInDir`; spouse request → `effects.handles` holds an id other than the two Person handles | AC-1.4, D-5 |
+| T-6 | Go | same / "a later Done does not file it twice" *(new)* | after T-1's setup, `writes.Call(w.c, writes.Op{Action: "promote_batch", UserID: userID}, …)` running `promote.SaveBatch(tx, userID, promote.Batch{GraphID: w.graph, SeenRevision: w.revision()})` → the bridge still has one accepted claim; `handles("relationship")` = 1 | AC-2.4 |
+| T-7 | Go (FFI) | `api/ffi/handlers/connect_test.go` `TestCreateCitedBridge` / "files a participation between two promoted subjects" *(new)* | Person and Event promoted with `promoteInDir`; participation request → the bridge has an accepted claim, and `effects.handles` contains that claim's entity id | AC-1.4, D-5 |
 | T-8 | Go | `core/database/promote/batch_test.go` `TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted`, `TestSaveBatchFilesOnlyItsGraph` (re-seeded) | ends claimed with `claimWithoutFiling` after the bridge → unfiled before the batch; filed by the batch as today | D-6 |
 
 T-6's empty batch is the shape `TestSaveBatchFilesOnlyItsGraph` already uses (`promote.Batch{GraphID: f.graph, SeenRevision: f.revision()}`).
@@ -229,7 +230,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks); off macOS the script skips `xcode-test`: report it as not run (this PR changes no Swift)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left — none added
 - [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it) — nothing renamed
@@ -261,7 +262,7 @@ Run on a Mac; off macOS, report the manual check as **not run** in the PR descri
 
 **Stop and report if:**
 
-- STEP-1's check shows a failing test other than the two named, outside `core/database/promote/batch_test.go`.
+- STEP-1's check shows any failing test other than the two named. Do not re-seed it yourself: report the test and its failure line.
 - `go build ./...` reports an import cycle after `connect` imports `identityclaims`.
 - `AppendFiling` or `FileBridgesTx` no longer has the signature in §4.
 - A test in `core/database/effects` fails because `create_cited_bridge` is pinned to a fixed set of entity types (that would need a registry change this plan does not name).
