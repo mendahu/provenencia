@@ -82,10 +82,10 @@ struct PVSelect<Row: View>: View {
     @State private var menuScreen = CGRect.zero
     @FocusState private var ownFocus: Bool
 
-    private var isFocused: Bool { focus?.isActive() ?? ownFocus }
+    private var isFocused: Bool { focus.isActive(own: ownFocus) }
 
     private func focusTrigger() {
-        if let focus { focus.focus() } else { ownFocus = true }
+        focus.focus(own: $ownFocus)
     }
 
     init(
@@ -311,9 +311,7 @@ struct PVSelect<Row: View>: View {
             // `onMoveCommand` already applied ↑/↓.
             return .ignored
         case .tab:
-            guard let claim = focus?.tabClaim(shift: press.modifiers.contains(.shift)) else { return .ignored }
-            claim()
-            return .handled
+            return focus?.claimTab(shift: press.modifiers.contains(.shift)) ?? .ignored
         case .home: key = .home
         case .end: key = .end
         case .escape: key = .escape

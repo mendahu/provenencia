@@ -398,10 +398,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
     }
 
     /// Host focus when the form bound one; otherwise the field's own.
-    private var fieldIsFocused: Bool {
-        if focus != nil { return focus?.isActive() ?? false }
-        return isFocused
-    }
+    private var fieldIsFocused: Bool { focus.isActive(own: isFocused) }
 
     // MARK: Field
 
@@ -431,18 +428,10 @@ struct PVComboBox<Row: View, Empty: View>: View {
             .accessibilityIdentifier(accessibilityIdentifierPrefix ?? "")
     }
 
-    @ViewBuilder
     private var fieldText: some View {
-        if let focus {
-            focus.apply(AnyView(
-                TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
-                    .textFieldStyle(.plain)
-            ))
-        } else {
-            TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
-                .textFieldStyle(.plain)
-                .focused($isFocused)
-        }
+        TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
+            .textFieldStyle(.plain)
+            .modifier(PVFieldFocusModifier(host: focus, own: $isFocused))
     }
 
     /// The text binding the field edits. Only the *setter* marks the text as
@@ -670,11 +659,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// that read as a bug.
     private func dismissAndBlur() {
         closeAndRestore()
-        if let focus {
-            focus.resign()
-        } else {
-            isFocused = false
-        }
+        focus.resign(own: $isFocused)
     }
 
     private func handleKey(_ press: KeyPress) -> KeyPress.Result {
@@ -720,13 +705,8 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
                 if claim { return .handled }
             }
-            if let claim = focus?.tabClaim(shift: press.modifiers.contains(.shift)) {
-                isOpen = false
-                claim()
-                return .handled
-            }
             isOpen = false
-            return .ignored
+            return focus?.claimTab(shift: press.modifiers.contains(.shift)) ?? .ignored
         default:
             return .ignored
         }

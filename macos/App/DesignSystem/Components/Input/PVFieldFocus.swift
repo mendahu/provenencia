@@ -57,6 +57,19 @@ struct PVFieldFocus {
         shift ? previous : next
     }
 
+    /// True when Tab or Shift-Tab has somewhere to go on this handle.
+    var hasNeighbour: Bool { next != nil || previous != nil }
+
+    /// Takes a Tab press for the neighbour it names: runs the claim and reports
+    /// the key handled. With no neighbour the key is left to the key loop.
+    /// `KeyPress` has no test initialiser, so the caller passes the Shift state.
+    @MainActor
+    func claimTab(shift: Bool) -> KeyPress.Result {
+        guard let claim = tabClaim(shift: shift) else { return .ignored }
+        claim()
+        return .handled
+    }
+
     /// Turns a neighbour value into the claim that moves focus to it; a nil
     /// neighbour stays nil.
     @MainActor
@@ -86,5 +99,21 @@ struct PVFieldFocusModifier: ViewModifier {
         } else {
             content.focused(own)
         }
+    }
+}
+
+/// The one resolution of "the host's handle, else the field's own focus", so
+/// no field repeats it.
+extension Optional where Wrapped == PVFieldFocus {
+    func isActive(own: Bool) -> Bool {
+        self?.isActive() ?? own
+    }
+
+    func focus(own: FocusState<Bool>.Binding) {
+        if let self { self.focus() } else { own.wrappedValue = true }
+    }
+
+    func resign(own: FocusState<Bool>.Binding) {
+        if let self { self.resign() } else { own.wrappedValue = false }
     }
 }

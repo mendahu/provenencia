@@ -55,4 +55,38 @@ struct PVFieldFocusTests {
         neighbours.next?()
         #expect(claimed == [.second])
     }
+
+    @Test func optionalHandleFallsBackToOwn() {
+        let none: PVFieldFocus? = nil
+        #expect(none.isActive(own: true))
+        #expect(!none.isActive(own: false))
+
+        let active = PVFieldFocus(
+            isActive: { true }, focus: {}, resign: {}, apply: { $0 }
+        )
+        let idle = PVFieldFocus(
+            isActive: { false }, focus: {}, resign: {}, apply: { $0 }
+        )
+        let someActive: PVFieldFocus? = active
+        let someIdle: PVFieldFocus? = idle
+        #expect(someActive.isActive(own: false))
+        #expect(!someIdle.isActive(own: true))
+    }
+
+    @Test func claimTabRunsTheNeighbourAndReportsHandled() {
+        var nextCalls = 0
+        var previousCalls = 0
+        let both = handle(next: { nextCalls += 1 }, previous: { previousCalls += 1 })
+        #expect(both.claimTab(shift: false) == .handled)
+        #expect(nextCalls == 1)
+        #expect(previousCalls == 0)
+        #expect(both.claimTab(shift: true) == .handled)
+        #expect(previousCalls == 1)
+        #expect(both.hasNeighbour)
+
+        let none = handle(next: nil, previous: nil)
+        #expect(none.claimTab(shift: false) == .ignored)
+        #expect(none.claimTab(shift: true) == .ignored)
+        #expect(!none.hasNeighbour)
+    }
 }
