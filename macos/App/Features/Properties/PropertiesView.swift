@@ -524,19 +524,19 @@ private struct PropertiesContent: View {
                 PVRadio(
                     L10n.Properties.holdsOne,
                     description: L10n.Properties.holdsOneDescription,
-                    isSelected: property.cardinality != "multiple",
+                    isSelected: property.cardinality != PropertyCardinality.multiple.rawValue,
                     isDisabled: model.isSaving
                 ) {
-                    Task { await model.setCardinality("single") }
+                    Task { await model.setCardinality(PropertyCardinality.single.rawValue) }
                 }
                 .accessibilityIdentifier("properties.holds.single")
                 PVRadio(
                     L10n.Properties.holdsSeveral,
                     description: L10n.Properties.holdsSeveralDescription,
-                    isSelected: property.cardinality == "multiple",
+                    isSelected: property.cardinality == PropertyCardinality.multiple.rawValue,
                     isDisabled: model.isSaving
                 ) {
-                    Task { await model.setCardinality("multiple") }
+                    Task { await model.setCardinality(PropertyCardinality.multiple.rawValue) }
                 }
                 .accessibilityIdentifier("properties.holds.multiple")
                 if model.cardinalityNotice {
@@ -556,7 +556,7 @@ private struct PropertiesContent: View {
         } else {
             inspectorMetaRow(label: L10n.Properties.holds) {
                 HStack(spacing: 6) {
-                    Text(property.cardinality == "multiple" ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne)
+                    Text(property.cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textPrimary)
                     Image(systemName: "lock.fill")
@@ -840,17 +840,17 @@ private struct PropertiesCreateHost: View {
                     PVRadio(
                         L10n.Properties.holdsOne,
                         description: L10n.Properties.holdsOneDescription,
-                        isSelected: (draft?.cardinality ?? "single") != "multiple"
+                        isSelected: (draft?.cardinality ?? PropertyCardinality.single.rawValue) != PropertyCardinality.multiple.rawValue
                     ) {
-                        draft?.cardinality = "single"
+                        draft?.cardinality = PropertyCardinality.single.rawValue
                     }
                     .accessibilityIdentifier("properties.create.holds.single")
                     PVRadio(
                         L10n.Properties.holdsSeveral,
                         description: L10n.Properties.holdsSeveralDescription,
-                        isSelected: draft?.cardinality == "multiple"
+                        isSelected: draft?.cardinality == PropertyCardinality.multiple.rawValue
                     ) {
-                        draft?.cardinality = "multiple"
+                        draft?.cardinality = PropertyCardinality.multiple.rawValue
                     }
                     .accessibilityIdentifier("properties.create.holds.multiple")
                 }

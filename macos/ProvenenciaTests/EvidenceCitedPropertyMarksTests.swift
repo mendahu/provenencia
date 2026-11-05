@@ -8,7 +8,8 @@ struct EvidenceCitedPropertyMarksTests {
         id: String,
         key: String,
         value: String,
-        polarity: ObservationPolarity = .positive
+        polarity: ObservationPolarity = .positive,
+        valueType: PropertyValueType = .text
     ) -> CatalogObservation {
         CatalogObservation(
             id: id,
@@ -25,8 +26,129 @@ struct EvidenceCitedPropertyMarksTests {
             valueTermID: "",
             propertyKey: key,
             propertyLabel: key,
-            propertyValueType: PropertyValueType.text.rawValue
+            propertyValueType: valueType.rawValue
         )
+    }
+
+    @Test func twoLanguagesSpokenAreNotConflicted() {
+        let rows = [
+            observation(id: "a", key: "languages_spoken", value: "English", valueType: .term),
+            observation(id: "b", key: "languages_spoken", value: "French", valueType: .term),
+        ]
+        let map = ["languages_spoken": PropertyCardinality.multiple]
+        let counts = EvidenceCitedPropertyMarks.conflictCounts(in: rows, cardinalityByKey: map)
+        #expect(counts["languages_spoken"] == nil)
+        #expect(!EvidenceCitedPropertyMarks.cardHasConflict(in: rows, cardinalityByKey: map))
+        #expect(EvidenceCitedPropertyMarks.conflictRuns(in: rows, cardinalityByKey: map).isEmpty)
+        #expect(!EvidenceCitedPropertyMarks.isConflicted(rows[0], counts: counts))
+        #expect(!EvidenceCitedPropertyMarks.isConflicted(rows[1], counts: counts))
+    }
+
+    @Test func twoLikenessesAreNotConflicted() {
+        let rows = [
+            observation(id: "a", key: "likeness", value: "img-a", valueType: .depiction),
+            observation(id: "b", key: "likeness", value: "img-b", valueType: .depiction),
+        ]
+        let map = ["likeness": PropertyCardinality.multiple]
+        #expect(!EvidenceCitedPropertyMarks.cardHasConflict(in: rows, cardinalityByKey: map))
+        #expect(EvidenceCitedPropertyMarks.conflictRuns(in: rows, cardinalityByKey: map).isEmpty)
+    }
+
+    @Test func graphHasConflictIgnoresMultipleCardinality() {
+        let subject = EvidenceGraphPlacedSubject(
+            subject: CatalogSubject(
+                id: "s1",
+                ref: "CPR-1",
+                sourceID: "src",
+                subjectTypeID: "t",
+                label: "A",
+                description: ""
+            ),
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [
+                observation(id: "a", key: "languages_spoken", value: "English", valueType: .term),
+                observation(id: "b", key: "languages_spoken", value: "French", valueType: .term),
+            ]
+        )
+        let multipleMap = ["languages_spoken": PropertyCardinality.multiple]
+        #expect(!EvidenceCitedPropertyMarks.graphHasConflict(subjects: [subject], bridges: [], cardinalityByKey: multipleMap))
+
+        let conflicted = EvidenceGraphPlacedSubject(
+            subject: subject.subject,
+            kind: .person,
+            typeLabel: "Person",
+            gridX: 0,
+            gridY: 0,
+            isCited: true,
+            observations: [
+                observation(id: "a", key: "name", value: "Wm Robins", valueType: .name),
+                observation(id: "b", key: "name", value: "William Robins", valueType: .name),
+            ]
+        )
+        #expect(EvidenceCitedPropertyMarks.graphHasConflict(subjects: [conflicted], bridges: []))
+        #expect(EvidenceCitedPropertyMarks.graphHasConflict(
+            subjects: [conflicted],
+            bridges: [],
+            cardinalityByKey: ["name": PropertyCardinality.single]
+        ))
+    }
+
+    @Test func mixedMultipleAndSingleOnlyMarksSingle() {
+        let rows = [
+            observation(id: "a", key: "name", value: "Wm Robins", valueType: .name),
+            observation(id: "b", key: "name", value: "William Robins", valueType: .name),
+            observation(id: "c", key: "languages_spoken", value: "English", valueType: .term),
+            observation(id: "d", key: "languages_spoken", value: "French", valueType: .term),
+        ]
+        let map = [
+            "name": PropertyCardinality.single,
+            "languages_spoken": PropertyCardinality.multiple,
+        ]
+        #expect(EvidenceCitedPropertyMarks.conflictRuns(in: rows, cardinalityByKey: map) == [0..<2])
+    }
+
+    @Test func missingCardinalityStillConflicts() {
+        let rows = [
+            observation(id: "a", key: "name", value: "Wm Robins", valueType: .name),
+            observation(id: "b", key: "name", value: "William Robins", valueType: .name),
+        ]
+        #expect(EvidenceCitedPropertyMarks.cardHasConflict(in: rows, cardinalityByKey: [:]))
+        #expect(EvidenceCitedPropertyMarks.conflictRuns(in: rows, cardinalityByKey: [:]) == [0..<2])
+    }
+
+    @Test func accessibilityOmitsConflictForMultipleCounts() {
+        let rows = [
+            observation(id: "a", key: "languages_spoken", value: "English", valueType: .term),
+            observation(id: "b", key: "languages_spoken", value: "French", valueType: .term),
+        ]
+        let multipleCounts = EvidenceCitedPropertyMarks.conflictCounts(
+            in: rows,
+            cardinalityByKey: ["languages_spoken": PropertyCardinality.multiple]
+        )
+        let multipleLabel = EvidenceCitedPropertyMarks.accessibilityLabel(
+            propertyLabel: "Languages spoken",
+            spokenValue: "English",
+            conflictCount: multipleCounts["languages_spoken"],
+            isNegated: false
+        )
+        #expect(!multipleLabel.contains(L10n.EvidenceGraph.conflictOneOf(count: 2)))
+
+        let nameRows = [
+            observation(id: "a", key: "name", value: "Wm Robins", valueType: .name),
+            observation(id: "b", key: "name", value: "William Robins", valueType: .name),
+        ]
+        let nameCounts = EvidenceCitedPropertyMarks.conflictCounts(in: nameRows, cardinalityByKey: ["name": .single])
+        let nameLabel = EvidenceCitedPropertyMarks.accessibilityLabel(
+            propertyLabel: "Name",
+            spokenValue: "Wm Robins",
+            conflictCount: nameCounts["name"],
+            isNegated: false
+        )
+        #expect(nameLabel.contains(L10n.EvidenceGraph.conflictOneOf(count: 2)))
     }
 
     @Test func citedRowInsetAlwaysReservesGutter() {

@@ -1,6 +1,7 @@
 # S14-30 — Conflict brackets honour cardinality
 
-**Status:** Planned
+**Status:** Landed in #713 (2026-11-04)
+**Landed:** Product version is 0.3.2 (patch on 0.3.1 at implement time). Manual check §10 not run in implementer pass.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the ochre bracket, legend strip, and a11y conflict phrase already exist; this PR only changes when they fire)
@@ -11,7 +12,7 @@
 **Version bump:** patch — researcher-visible bug fix for false conflict marks on multiple-cardinality Properties ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Conflict brackets honour cardinality"; bar outcome 25; [`ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md`](../ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md); [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md#8-cardinality) §8; `core/propertymeta` empty→single
+**Context:** working rule "(Batch 7) Conflict brackets honour cardinality"; bar outcome 25; dogfood note `2026-10-26-conflict-brackets-ignore-multi-cardinality` (deleted on land); [`docs/conclusion-reconciliation.md`](../../../conclusion-reconciliation.md#8-cardinality) §8; `core/propertymeta` empty→single
 **Planned:** 2026-11-04 against `main` @ `4cf944ca`
 **Review:** [`S14-30-conflict-brackets-honour-cardinality.review.md`](S14-30-conflict-brackets-honour-cardinality.review.md) — Fits — Ready, 2 rounds; no open blockers; To user none
 

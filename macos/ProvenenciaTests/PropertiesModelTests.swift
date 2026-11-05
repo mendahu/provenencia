@@ -152,6 +152,52 @@ struct PropertiesModelTests {
         #expect(snapshot.typesInPaletteOrder.map(\.key) == ["participation", "relationship"])
     }
 
+    @Test func cardinalityByKeyNormalizesEmptyAndPrefersMultiple() {
+        let emptyCardinality = CatalogProperty(
+            id: "prop-empty-cardinality",
+            key: "custom_field",
+            origin: "user",
+            label: "Custom",
+            description: "",
+            valueType: "text",
+            cardinality: ""
+        )
+        let emptySnapshot = PropertiesSnapshot(
+            properties: [emptyCardinality],
+            types: [],
+            propertiesByTypeID: [:],
+            presentationsByKey: [:]
+        )
+        #expect(emptySnapshot.cardinalityByKey["custom_field"] == .single)
+
+        let seededSingle = CatalogProperty(
+            id: "prop-languages-seed",
+            key: "languages_spoken",
+            origin: "provenencia",
+            label: "Languages spoken",
+            description: "",
+            valueType: "text",
+            cardinality: PropertyCardinality.single.rawValue
+        )
+        let userMultiple = CatalogProperty(
+            id: "prop-languages-user",
+            key: "languages_spoken",
+            origin: "user",
+            label: "Languages spoken",
+            description: "",
+            valueType: "text",
+            cardinality: PropertyCardinality.multiple.rawValue
+        )
+        let duplicateKeySnapshot = PropertiesSnapshot(
+            properties: [seededSingle, userMultiple],
+            types: [],
+            propertiesByTypeID: [:],
+            presentationsByKey: [:]
+        )
+        #expect(duplicateKeySnapshot.cardinalityByKey["languages_spoken"] == .multiple)
+        #expect(duplicateKeySnapshot.cardinalityByKey.count == 1)
+    }
+
     @Test func bridgeLabelFollowsPresentationRole() {
         #expect(PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("relationship", role: "bridge", sort: 3)))
         #expect(!PropertiesTypeChrome.showsBridgeLabel(presentation: presentation("source", role: "reification", sort: 7)))

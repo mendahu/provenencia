@@ -1945,8 +1945,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if key.isEmpty {
                 throw StoreBoom.boom
             }
-            let stored = cardinality.isEmpty ? "single" : cardinality
-            guard stored == "single" || stored == "multiple" else {
+            let stored = cardinality.isEmpty ? PropertyCardinality.single.rawValue : cardinality
+            guard stored == PropertyCardinality.single.rawValue
+                || stored == PropertyCardinality.multiple.rawValue else {
                 throw CoreInvokeError.coded(status: 1, code: "properties.invalid", kind: .user, params: [])
             }
             let property = CatalogProperty(

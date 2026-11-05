@@ -218,7 +218,7 @@ private extension EvidenceCardView {
                 style.line
             )
         }
-        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, painter: painter)
+        paintRows(rowRects, tint: style.tint, chip: style.chip, ink: style.ink, hovered: state.hoveredActionID, width: width, valueWidth: subjectValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceSubjectCard.shellPaddingX), trailing: EvidenceSubjectCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, cardinalityByKey: card.cardinalityByKey, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: style.tint, chip: style.chip, ink: style.ink, paddingX: EvidenceSubjectCard.shellPaddingX, painter: painter)
         if !placed.isCited {
             painter?.fill(
@@ -319,7 +319,7 @@ private extension EvidenceCardView {
         if let first = rowRects.first, let last = rowRects.last {
             painter?.fill(CGRect(x: 0, y: first.1.minY - 1, width: width, height: last.1.maxY - first.1.minY + 1), PVColor.borderSubtle)
         }
-        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, painter: painter)
+        paintRows(rowRects, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, hovered: state.hoveredActionID, width: width, valueWidth: bridgeValueWidth, leading: EvidenceCitedPropertyMarks.leadingInset(shell: EvidenceBridgeCard.shellPaddingX), trailing: EvidenceBridgeCard.shellPaddingX, orders: card.nameOrders, projectDir: card.projectDir, cardinalityByKey: card.cardinalityByKey, painter: painter)
         paintAdd(addRect, quiet: !placed.isCited, canCite: state.canCite, hovered: state.hoveredActionID == EvidenceSubjectCard.addPropertyActionID, tint: PVColor.surfaceCard, chip: PVColor.surfaceHover, ink: PVColor.textMuted, paddingX: EvidenceBridgeCard.shellPaddingX, painter: painter)
         strokeCard(
             rect,
@@ -447,6 +447,7 @@ private extension EvidenceCardView {
         trailing: CGFloat,
         orders: NameFormatOrders,
         projectDir: String,
+        cardinalityByKey: [String: PropertyCardinality],
         painter: PVPainter?
     ) {
         guard let painter else { return }
@@ -486,7 +487,7 @@ private extension EvidenceCardView {
             painter.symbol(PVSymbol.penLine, in: CGRect(x: width - trailing - 12, y: rect.midY - 6, width: 12, height: 12), PVColor.textFaint)
         }
         let observations = rows.map(\.0)
-        for run in EvidenceCitedPropertyMarks.conflictRuns(in: observations) {
+        for run in EvidenceCitedPropertyMarks.conflictRuns(in: observations, cardinalityByKey: cardinalityByKey) {
             guard rows.indices.contains(run.lowerBound), rows.indices.contains(run.upperBound - 1) else { continue }
             let start = rows[run.lowerBound].1
             let end = rows[run.upperBound - 1].1

@@ -5,6 +5,11 @@ enum ObservationPolarity: String, Sendable {
     case negative
 }
 
+enum PropertyCardinality: String, Sendable {
+    case single
+    case multiple
+}
+
 enum PropertyValueType: String, Sendable {
     case text
     case integer

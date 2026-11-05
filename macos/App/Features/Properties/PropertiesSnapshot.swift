@@ -42,6 +42,18 @@ struct PropertiesSnapshot: Sendable, Equatable {
     func propertyCount(forTypeID typeID: String) -> Int {
         propertiesByTypeID[typeID]?.count ?? 0
     }
+
+    /// Property key → holds rule for Evidence graph conflict marks.
+    var cardinalityByKey: [String: PropertyCardinality] {
+        Dictionary(
+            properties.map { property in
+                (property.key, PropertyCardinality(rawValue: property.cardinality) ?? .single)
+            },
+            uniquingKeysWith: { lhs, rhs in
+                lhs == .multiple || rhs == .multiple ? .multiple : .single
+            }
+        )
+    }
 }
 
 struct PropertiesValueTypePill: View {

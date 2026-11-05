@@ -322,7 +322,11 @@ private struct EvidenceGraphContent: View {
             .padding(.horizontal, PVSpacing.space5)
             .padding(.top, PVSpacing.space5)
 
-            if EvidenceCitedPropertyMarks.graphHasConflict(subjects: subjects, bridges: bridges) {
+            if EvidenceCitedPropertyMarks.graphHasConflict(
+                subjects: subjects,
+                bridges: bridges,
+                cardinalityByKey: fieldsHandle.value?.cardinalityByKey ?? [:]
+            ) {
                 VStack {
                     Spacer(minLength: 0)
                     HStack {
@@ -1045,12 +1049,14 @@ private struct EvidenceGraphDocumentBody: View {
                 pressedActionID: pressed?.itemID == id ? pressed?.actionID : nil
             )
         }
+        let cardinalityByKey = fieldsHandle.value?.cardinalityByKey ?? [:]
         return bridges.map { placed in
             EvidenceCanvasCard(
                 placed: .bridge(placed),
                 text: text[bridge: placed, in: snapshot],
                 state: state(placed.id),
-                projectDir: model.session.projectKey.projectDir
+                projectDir: model.session.projectKey.projectDir,
+                cardinalityByKey: cardinalityByKey
             )
         } + subjects.map { placed in
             EvidenceCanvasCard(
@@ -1058,7 +1064,8 @@ private struct EvidenceGraphDocumentBody: View {
                 text: text[subject: placed],
                 state: state(placed.id),
                 nameOrders: model.session.nameFormat,
-                projectDir: model.session.projectKey.projectDir
+                projectDir: model.session.projectKey.projectDir,
+                cardinalityByKey: cardinalityByKey
             )
         }
     }

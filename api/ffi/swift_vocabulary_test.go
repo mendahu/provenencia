@@ -496,6 +496,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
 		},
 		{
+			name: "cardinality", path: swiftValueKinds, enum: "PropertyCardinality", re: rawCase,
+			want: sorted(propertymeta.CardinalitySingle, propertymeta.CardinalityMultiple),
+		},
+		{
 			name: "name part types", path: swiftNamePartType, enum: "NamePartType", re: listCase,
 			want: sorted(partTypeKeys()...),
 		},
