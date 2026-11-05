@@ -1,6 +1,6 @@
 # S14-29 — Polygon locator vertex edit
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 7b — Region edit
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: handles, the move diamond and the stroke already draw today; on a PDF they already draw at a fixed screen size, and this PR gives image Artifacts the same size — user, 2026-11-05, "Fixed size, no brief")
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rule "(Batch 7) Polygon edit includes a saved Citation"; bar outcome 24; [`ux/2026-10-15-polygon-locator-drag-vertices.md`](../ux/2026-10-15-polygon-locator-drag-vertices.md) (deleted on landing, STEP-7); S14-28's Landed note
 **Planned:** 2026-11-05 against `main` @ `124d492`
-**Review:** [`S14-29-polygon-locator-vertex-edit.review.md`](S14-29-polygon-locator-vertex-edit.review.md) — Fits with changes — Ready with changes, 1 round; no open blockers; To user none
+**Review:** [`S14-29-polygon-locator-vertex-edit.review.md`](S14-29-polygon-locator-vertex-edit.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blockers; To user none
 
 ### Implementer — read this first
 
@@ -34,7 +34,7 @@ After a freeform polygon Citation region is drawn, the researcher can grab a ver
 
 **Why now.** Batch 7 dogfood note (2026-10-15). S14-28 made `model.page` honest, so a region drawn on a later PDF page is no longer stamped page 1 and hidden.
 
-**What stays.** The look of handles, the move diamond and the stroke at 1×, and on every PDF. Right-click deletes a freeform vertex. A click on a handle with no drag still calls `onCommit` with the unchanged draft, as today. The armed-tool drawing paths. The locator model (`CitationLocatorDraft.setRegion` restamps the viewer page). Depiction regions stay rectangle-only (S14-03). Go accepts the same regions.
+**What stays.** The look of handles, the move diamond and the stroke at 1×, and on every PDF. Right-click deletes a freeform vertex; a delete refused by `deleteFreeformVertex` (3 points left) stays silent, as today. The armed-tool drawing paths. The locator model (`CitationLocatorDraft.setRegion` restamps the viewer page). Depiction regions stay rectangle-only (S14-03). Go accepts the same regions.
 
 ## 2. User stories
 
@@ -69,7 +69,8 @@ After a freeform polygon Citation region is drawn, the researcher can grab a ver
 | --- | --- | --- |
 | AC-4.1 | Composer opened on `cit-1` with a 4-point region locator; `commitViewerRegion` with one vertex moved | returns true; `fields.locator.region` equals the moved region; `fields.isDirty`; `canSaveCitation` |
 | AC-4.2 | Square (0.2,0.2),(0.4,0.2),(0.4,0.4),(0.2,0.4); vertex 0 dragged to (0.5, 0.3) (a self-crossing shape) and released | `onCommit` is not called; `committed` equals the start square; the system beep plays (manual check 5) |
-| AC-4.3 | Right-click deletes a vertex and the result is not a valid polygon | `committed` keeps the old shape; beep; no `onCommit` |
+| AC-4.3 | Right-click on vertex 0 of (0.1,0.1),(0.9,0.1),(0.9,0.9),(0.5,0.2),(0.1,0.9); the remaining four points cross (edge (0.1,0.9)→(0.9,0.1) meets (0.9,0.9)→(0.5,0.2)) | `committed` keeps the five points; beep; no `onCommit` |
+| AC-4.4 | A click on a handle or the outline with no drag | no `onCommit` (today a handle click commits the unchanged draft; with the outline now a target, a stray click must not touch a saved Citation) |
 
 ## 3. Scope
 
@@ -78,8 +79,8 @@ After a freeform polygon Citation region is drawn, the researcher can grab a ver
 | `hitTest` converts its superview point into overlay coordinates | STEP-1, AC-1.1, AC-1.2, D-1 |
 | One target list and one hit rule in `ArtifactRegionGeometry`, used by `hitTest`, `mouseDown`, cursor rects, `applyCursor` and right-click | STEP-2, AC-2.1, AC-2.2, AC-2.4, AC-3.3, D-2, D-3, D-7 |
 | Outline drag translates the shape | STEP-2, AC-2.3, D-3 |
-| Overlay `magnification` input; sizes in screen points | STEP-3, AC-3.1, AC-3.2, D-4 |
-| One edit state; invalid edit reverts and beeps (drag and right-click) | STEP-4, AC-4.2, AC-4.3, D-5 |
+| Overlay `magnification` input (one writer); sizes in screen points | STEP-3, AC-3.1, AC-3.2, D-4 |
+| One edit state; invalid edit reverts and beeps (drag and right-click); unchanged edit does not commit | STEP-4, AC-4.2, AC-4.3, AC-4.4, D-5 |
 | Shared AppKit-host test helpers | STEP-1, D-8 |
 | Saved-Citation edit pinned by a model test | STEP-5, AC-4.1, D-6 |
 | Patch bump | STEP-6 |
@@ -123,15 +124,15 @@ After a freeform polygon Citation region is drawn, the researcher can grab a ver
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | `hitTest(_ point:)` first does `let local = convert(point, from: superview)` and uses `local` | AppKit's contract; fixes the PDF host, no-op for the image host | Flipping the PDF host (changes PDFKit layout and `layoutPageOverlay`); special-casing the PDF path |
-| D-2 | Move `enum ArtifactRegionHandle` into `ArtifactRegionGeometry.swift`. Add to `ArtifactRegionGeometry` *(new)*: `handleTargets(for draft:, imageRect:) -> [(handle: ArtifactRegionHandle, point: CGPoint)]` (document points: the move anchor first as `.move`, then `handlePoints` as `.resize(i)`); `nearestHandle(at:in targets:, radius:) -> ArtifactRegionHandle?` (the nearest `.resize` target within `radius`); `hitHandle(at documentPoint:, draft:, imageRect:, radius:) -> ArtifactRegionHandle?`: anchor within `radius + 1` → `.move`; else `nearestHandle`; else the polygon of `documentPoints(normalized: draft.points…)` within `radius` of any edge → `.move`; else nil. The segment helper moves in as `private static func distanceToSegment(_:from:to:)` (geometry already has a `distance` with another meaning) | One list of targets and one rule; nearest-wins for dense freehand rings; each caller takes the part it means | Three loops in the view; first-in-range |
+| D-2 | Move `enum ArtifactRegionHandle` into `ArtifactRegionGeometry.swift`. Add to `ArtifactRegionGeometry` *(new)*: `handleTargets(for draft:, imageRect:) -> [(handle: ArtifactRegionHandle, normalized: CGPoint, document: CGPoint)]` (the move anchor first as `.move`, then `handlePoints` as `.resize(i)`; hit math uses `document`, the cursor kind uses `normalized`); `nearestHandle(at:in targets:, radius:) -> ArtifactRegionHandle?` (the nearest `.resize` target within `radius`); `hitHandle(at documentPoint:, draft:, imageRect:, radius:) -> ArtifactRegionHandle?`: anchor within `radius + 1` → `.move`; else `nearestHandle`; else the polygon of `documentPoints(normalized: draft.points…)` within `radius` of any edge → `.move`; else nil. The segment helper moves in as `private static func distanceToSegment(_:from:to:)` (geometry already has a `distance` with another meaning) | One list of targets and one rule; nearest-wins for dense freehand rings; each caller takes the part it means | Three loops in the view; first-in-range |
 | D-3 | An outline hit is `.move` for every kind (user, 2026-11-05). It reuses the `.move` drag. For a circle the outline is its stored 32-point ring, which lies on the drawn oval; a handle beats the outline it sits on (D-2 order) | The outline is a larger target than the diamond; nothing new is drawn; the stroke claim already swallowed those clicks | A new `.translate` case; restricting it to freeform |
-| D-4 | `ArtifactRegionOverlayView` gets a declared input `var magnification: CGFloat = 1` *(new)* with the same `didSet` as `imageSize` (`needsDisplay`, `invalidateCursorRects`). `ArtifactMediaNSScrollView.magnification`'s `didSet` and `ArtifactMediaViewport.configureOverlay` set `document.overlayView.magnification = magnification`; the PDF host leaves it at 1. Let `pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: magnification)`; internal `handleHitRadius = 7 * pixel` (replaces `handleHitSize`), internal `handleDrawSize = 7 * pixel`, diamond `9 * pixel`, handle line `1.5 * pixel`, diamond line `1.25 * pixel`. The stroke width (2) is unchanged | Explicit and testable like the overlay's other inputs; one screen-point formula in the app; on a PDF nothing changes; on images it matches the PDF look (user, 2026-11-05) | Reading scale from `convert(_:to: nil)` (implicit, needs a window, second formula); hit radius only; 44 pt `PVSpacing.hitMin` (swallows PDF clicks) |
-| D-5 | One private edit state replaces `activeHandle`, `isEditingCommitted`, `moveDragOrigin`, `moveDragPoints`: `private var edit: (handle: ArtifactRegionHandle, origin: CGPoint, start: ArtifactRegionDraft)?`. `.move` translates `edit.start.points` by (pointer − `origin`). Add `private func finishEdit(_ draft: ArtifactRegionDraft, start: ArtifactRegionDraft)`: valid → `committed = draft`, `onCommit(draft)`; invalid → `committed = start`, `NSSound.beep()`, no `onCommit`. `mouseUp` calls it when `edit != nil`, then sets `edit = nil`; `rightMouseDown` computes the next points and calls it with the current draft as `start`. `draw` uses `edit != nil` where it read `isEditingCommitted` | One revert rule, no impossible combinations; beep is the overlay's existing refusal (cap reached) | A fifth `editStartDraft` field; committing invalid shapes; a new L10n announcement |
+| D-4 | `ArtifactRegionOverlayView` gets a declared input `var magnification: CGFloat = 1` *(new)* with the same `didSet` as `imageSize` (`needsDisplay`, `invalidateCursorRects`). One writer: `ArtifactMediaNSScrollView.layoutDocumentCentered(resetScroll:allowScrollAdjust:)` sets `document.overlayView.magnification = magnification` right after its `guard let document` (every zoom path ends there: the setter's `didSet`, wheel zoom, pinch through `clipBoundsDidChange`, `updateNSView`); the PDF host leaves it at 1. Let `pixel = GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: magnification)`; internal `handleHitRadius = 7 * pixel` (replaces `handleHitSize`), internal `handleDrawSize = 7 * pixel` (used by `drawHandle`, so committed and in-progress handles both follow), diamond `9 * pixel`, handle line `1.5 * pixel`, diamond line `1.25 * pixel`. The stroke width (2) is unchanged | Explicit and testable like the overlay's other inputs; one screen-point formula in the app; on a PDF nothing changes; on images it matches the PDF look (user, 2026-11-05) | Reading scale from `convert(_:to: nil)` (implicit, needs a window, second formula); hit radius only; 44 pt `PVSpacing.hitMin` (swallows PDF clicks) |
+| D-5 | One private edit state replaces `activeHandle`, `isEditingCommitted`, `moveDragOrigin`, `moveDragPoints`: `private var edit: (handle: ArtifactRegionHandle, origin: CGPoint, start: ArtifactRegionDraft)?`. `.move` translates `edit.start.points` by (pointer − `origin`). Add `private func finishEdit(_ draft: ArtifactRegionDraft, start: ArtifactRegionDraft)`: `draft == start` → nothing; valid → `committed = draft`, `onCommit(draft)`; invalid → `committed = start`, `NSSound.beep()`, no `onCommit`. `mouseUp` calls `finishEdit(committed, start: edit.start)` when `edit != nil` and `committed` is non-nil, then sets `edit = nil`; `rightMouseDown` computes the next points; nil from `deleteFreeformVertex` returns silently (as today); otherwise it calls `finishEdit` with the current draft as `start`. `draw` uses `edit != nil` where it read `isEditingCommitted` | One revert rule, no impossible combinations; beep is the overlay's existing refusal (cap reached); skipping an unchanged commit keeps a stray click from dirtying a saved Citation | A fifth `editStartDraft` field; committing invalid shapes; a new L10n announcement |
 | D-6 | No composer model change. Edit-after-save is pinned by T-8 only | §4: `viewerRegion` already returns the loaded locator | A parallel `committedRegion` path in the model |
-| D-7 | `resetCursorRects` iterates `handleTargets` with pad `handleHitRadius` (`.move` → open hand; `.resize` → `resizeCursorKind` as today) and drops the `pad` 8 constant. `freeformVertexIndex(at:)` calls `nearestHandle` over the `.resize` targets (no anchor, no outline, as today). `applyCursor` keeps calling `hitHandle`, so the outline shows the open hand on mouse-move | Cursor and hit read one list; right-click can still delete a vertex near the centroid of a small shape | Keeping a second loop |
-| D-8 | Test helpers: add `hostInBorderlessWindow(nsView: NSView, size: CGSize) -> NSWindow` *(new overload)* to `HostedWindow.swift`; move `bootstrapHost` out of `ArtifactPDFViewportPageTests` to `ArtifactFileFixtures.pdfHost(document:onPageChange:) -> ArtifactPDFHostView` *(new, @MainActor)*; `ArtifactPDFViewportPageTests` uses both and deletes its private copies | A third hand-rolled window bootstrap is due for extraction | Copying `hostWindow` into the new file |
+| D-7 | `resetCursorRects` iterates `handleTargets` with pad `handleHitRadius` (`.move` → open hand; `.resize` → `resizeCursorKind(handle: target.normalized, centroid:)` as today) and drops the `pad` 8 constant. `freeformVertexIndex(at:)` calls `nearestHandle` over the `.resize` targets (no anchor, no outline, as today). `applyCursor` keeps calling `hitHandle`, so the outline shows the open hand on mouse-move | Cursor and hit read one list; right-click can still delete a vertex near the centroid of a small shape | Keeping a second loop |
+| D-8 | Test helpers: add `hostInBorderlessWindow(nsView: NSView, size: CGSize) -> NSWindow` *(new overload)* to `HostedWindow.swift`; move `bootstrapHost` out of `ArtifactPDFViewportPageTests` to `ArtifactFileFixtures.pdfHost(document:onPageChange:) -> ArtifactPDFHostView` *(new, @MainActor)*; add `ArtifactFileFixtures.sizedPDFDocument(size:) -> PDFDocument` *(new)* (one `PDFPage()` with `setBounds(CGRect(origin: .zero, size: size), for: .mediaBox)`); `ArtifactPDFViewportPageTests` uses both and deletes its private copies | A third hand-rolled window bootstrap is due for extraction | Copying `hostWindow` into the new file |
 
-**Rules this plan bends.** None. The working rule says "an open Citation whose locator is fed back as `committedRegion`"; D-6 records that it already is, T-8 holds it, and STEP-7 corrects the map's scope entry.
+**Rules this plan bends.** None. The working rule says "an open Citation whose locator is fed back as `committedRegion`"; D-6 records that it already is, T-8 holds it, and the map's scope entry says so.
 
 ## 6. Design
 
@@ -142,7 +143,7 @@ After a freeform polygon Citation region is drawn, the researcher can grab a ver
 | `ArtifactRegionGeometry.handleTargets`, `nearestHandle`, `hitHandle` *(new)* | func | `ArtifactRegionOverlayView.hitHandle(at:)`, `freeformVertexIndex(at:)`, `isNearCommittedStroke(_:)`, the loop in `resetCursorRects` | Replaces those four loops with one pure list and rule beside `handlePoints` and `moveAnchor` |
 | `ArtifactRegionOverlayView.magnification` *(new input)* | property | `imageSize`, `mediaRectOverride` inputs; `GraphCanvasCoordinates.screenPixelDocumentWidth` | Same input pattern; sizes reuse the graph's formula |
 | `edit` state, `finishEdit` *(new private)* | property / func | `activeHandle`, `isEditingCommitted`, `moveDragOrigin`, `moveDragPoints` | Replaces the four fields |
-| `hostInBorderlessWindow(nsView:size:)`, `ArtifactFileFixtures.pdfHost` *(new)* | helper | `hostInBorderlessWindow` (SwiftUI), private `bootstrapHost` / `hostWindow` | Extends the shared helper file; moves the private copy |
+| `hostInBorderlessWindow(nsView:size:)`, `ArtifactFileFixtures.pdfHost`, `ArtifactFileFixtures.sizedPDFDocument` *(new)* | helper | `hostInBorderlessWindow` (SwiftUI), private `bootstrapHost` / `hostWindow` | Extends the shared helper file; moves the private copy |
 | `ArtifactRegionOverlayTests.swift` *(new)* | file | `ArtifactPDFViewportPageTests.swift` | That file is about page feedback; overlay hits are a separate suite |
 
 **Builds on.** `ArtifactRegionGeometry`; `GraphCanvasCoordinates.screenPixelDocumentWidth`; `af433b89`'s edit path; S14-28's host bootstrap; `RegionFixtures.ring(count:)`.
@@ -186,7 +187,7 @@ None — no RPC.
 | --- | --- | --- | --- |
 | Region overlay | `ArtifactRegionOverlayView` (feature snowflake) | `macos/App/Features/ArtifactViewer/ArtifactRegionOverlay.swift` | D-1, D-3 – D-5, D-7 |
 | Targets and hit rule | `ArtifactRegionGeometry` | `macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift` | D-2 |
-| Zoom input | `ArtifactMediaNSScrollView`, `ArtifactMediaViewport.configureOverlay` | `macos/App/Features/ArtifactViewer/ArtifactMediaViewport.swift` | D-4 |
+| Zoom input | `ArtifactMediaNSScrollView.layoutDocumentCentered` | `macos/App/Features/ArtifactViewer/ArtifactMediaViewport.swift` | D-4 |
 
 States: no region → `hitTest` nil (unchanged). Accessibility: unchanged; the overlay has no per-vertex elements (Out).
 
@@ -202,23 +203,23 @@ Do: D-8 helpers; switch `ArtifactPDFViewportPageTests` to them. Write T-4 and ru
 Check: T-4 fails before D-1 and passes after; `ArtifactPDFViewportPageTests` still passes.
 
 **STEP-2 — One target list and hit rule in geometry; outline moves the shape**
-Files: `ArtifactRegionGeometry.swift`, `ArtifactRegionOverlay.swift`.
-Do: D-2, D-3, D-7. `hitTest` returns self when `hitHandle` is non-nil (drop the separate stroke check). Delete `isNearCommittedStroke` and the view's `distance`.
-Check: builds; `rg 'isNearCommittedStroke|segmentFrom' macos/` has no hits; `rg 'enum ArtifactRegionHandle' macos/App` hits only `ArtifactRegionGeometry.swift`.
+Files: `ArtifactRegionGeometry.swift`, `ArtifactRegionOverlay.swift`, `macos/ProvenenciaTests/ArtifactRegionGeometryTests.swift`. Skill: `add-swift-test`.
+Do: D-2, D-3, D-7. `hitTest` returns self when `hitHandle` is non-nil (drop the separate stroke check). Delete `isNearCommittedStroke` and the view's `distance`. Write T-1 – T-3b.
+Check: T-1 – T-3b and T-4 pass; `rg 'isNearCommittedStroke|segmentFrom' macos/` has no hits; `rg 'enum ArtifactRegionHandle' macos/App` hits only `ArtifactRegionGeometry.swift`.
 
 **STEP-3 — Magnification input and screen-point sizes**
-Files: `ArtifactRegionOverlay.swift`, `ArtifactMediaViewport.swift`.
-Do: D-4.
-Check: `rg 'handleHitSize' macos/` has no hits; `rg 'overlayView.magnification' macos/App` hits the `didSet` and `configureOverlay`.
+Files: `ArtifactRegionOverlay.swift`, `ArtifactMediaViewport.swift`, `macos/ProvenenciaTests/ArtifactRegionOverlayTests.swift` *(new)*.
+Do: D-4. Write T-7.
+Check: T-7 passes; `rg 'handleHitSize' macos/` has no hits; `rg 'overlayView.magnification' macos/App` hits exactly once, in `layoutDocumentCentered`.
 
 **STEP-4 — One edit state; revert an invalid edit**
-Files: `ArtifactRegionOverlay.swift`.
-Do: D-5 in `mouseDown`, `mouseDragged`, `mouseUp`, `rightMouseDown`, `draw`.
-Check: `rg 'moveDragPoints|moveDragOrigin|isEditingCommitted|activeHandle' macos/App` has no hits.
+Files: `ArtifactRegionOverlay.swift`, `macos/ProvenenciaTests/ArtifactRegionOverlayTests.swift` *(new)*.
+Do: D-5 in `mouseDown`, `mouseDragged`, `mouseUp`, `rightMouseDown`, `draw`. Write T-5 and T-6.
+Check: T-5 and T-6 pass; `rg 'moveDragPoints|moveDragOrigin|isEditingCommitted|activeHandle' macos/App` has no hits.
 
-**STEP-5 — Remaining tests**
-Files: `macos/ProvenenciaTests/ArtifactRegionGeometryTests.swift`, `macos/ProvenenciaTests/ArtifactRegionOverlayTests.swift` *(new)*, `macos/ProvenenciaTests/CitationComposerModelTests.swift`. Skill: `add-swift-test`.
-Do: T-1 – T-3b and T-5 – T-8 per §8.
+**STEP-5 — Saved-Citation test and the full suites**
+Files: `macos/ProvenenciaTests/CitationComposerModelTests.swift`. Skill: `add-swift-test`.
+Do: T-8.
 Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' -only-testing:ProvenenciaTests/ArtifactRegionGeometryTests -only-testing:ProvenenciaTests/ArtifactRegionOverlayTests -only-testing:ProvenenciaTests/ArtifactPDFViewportPageTests -only-testing:ProvenenciaTests/CitationComposerModelTests` passes.
 
 **STEP-6 — Version bump**
@@ -228,12 +229,14 @@ Check: `rg 'MARKETING_VERSION' macos/Provenencia.xcodeproj/project.pbxproj` show
 
 **STEP-7 — Docs**
 Files: this plan (status, Landed note), `docs/deployment-plan/spike-14/deployment-plan.md`, `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-polygon-locator-drag-vertices.md`.
-Do: per the Definition of done. In the map: the row status; the S14-29 row scope and the **Ships** line say the saved locator was already fed and is now pinned by a test, and name `handleHitRadius` instead of `handleHitSize`. Delete the UX note and replace its links as `7e69154a` did for S14-30 (the map's dogfood table row becomes plain text with "note deleted YYYY-MM-DD; landed #N"; the scope **Context** and this plan's **Context** drop the link).
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-29-polygon-locator-vertex-edit.md` passes; `rg 'polygon-locator-drag-vertices' docs/` hits nothing but this plan's plain-text mention.
+Do: per the Definition of done. In the map: the row status (the scope entry was corrected when this plan was written). Delete the UX note and replace its links as `7e69154a` did for S14-30 (the map's dogfood table row becomes plain text with "note deleted YYYY-MM-DD; landed #N"; the scope **Context** and this plan's **Context** drop the link).
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-29-polygon-locator-vertex-edit.md` passes; `rg 'polygon-locator-drag-vertices' docs/` hits nothing but this plan's plain-text mention and its review log.
 
-Commits: one per behavior. Suggested: "Let clicks on a PDF region reach its handles."; "Move a region by dragging its outline and pick the nearest vertex."; "Keep region handles the same size on screen at any zoom."; "Put a region back when an edit would make it invalid."; "Cover region hits, handle size and editing a saved Citation's region."; "Bump version to 0.3.3."
+Commits: one per behavior. Suggested: "Let clicks on a PDF region reach its handles."; "Move a region by dragging its outline and pick the nearest vertex."; "Keep region handles the same size on screen at any zoom."; "Put a region back when an edit would make it invalid."; "Cover editing a saved Citation's region."; "Bump version to 0.3.3."
 
 ## 8. Tests
+
+Overlay tests drive the handlers through one private helper in `ArtifactRegionOverlayTests.swift`: `event(_ type: NSEvent.EventType, at normalized: CGPoint, in host: ArtifactPDFHostView, window: NSWindow) -> NSEvent` = `NSEvent.mouseEvent(with: type, location: host.overlayView.convert(ArtifactRegionGeometry.documentPoint(normalized: normalized, imageRect: media), to: nil), modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1)!`, where `media` is `host.overlayView.mediaRectOverride`. A drag is one `.leftMouseDown` at the start, one `.leftMouseDragged` at the end, one `.leftMouseUp` at the end, each passed to the overlay's `mouseDown(with:)` / `mouseDragged(with:)` / `mouseUp(with:)` directly. A right-click is one `.rightMouseDown` passed to `rightMouseDown(with:)`. The host is `pdfHost(document: sizedPDFDocument(size: CGSize(width: 300, height: 400)))` in `hostInBorderlessWindow(nsView:size: CGSize(width: 400, height: 500))`, then `layoutSubtreeIfNeeded()`.
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
@@ -242,11 +245,11 @@ Commits: one per behavior. Suggested: "Let clicks on a PDF region reach its hand
 | T-2 | Swift | same `hitHandleAnchorWinsOverNearVertex` *(new)* | triangle (0.50,0.50),(0.52,0.50),(0.51,0.52) in a 100×100 rect, radius 3; point at the centroid → `.move` | D-2 |
 | T-3 | Swift | same `hitHandlePicksNearestVertex` *(new)* | `RegionFixtures.ring(count: 256)` in a 500×500 rect, radius 7; point on vertex 10 → `.resize(10)` | AC-3.3 |
 | T-3b | Swift | same `nearestHandleIgnoresAnchor` *(new)* | T-2's triangle; `nearestHandle` over its `.resize` targets at vertex 0 → `.resize(0)` | D-7 |
-| T-4 | Swift | `ArtifactRegionOverlayTests.swift` `pdfHostHitTestFindsVertex` *(new, @MainActor)* | `ArtifactFileFixtures.pdfHost(document: blankPDFDocument(pageCount: 1))` in `hostInBorderlessWindow(nsView:size: 400×500)`; `host.layoutSubtreeIfNeeded()`; read `media = overlayView.mediaRectOverride` (record an issue and return if its height < 200); set `committed` = AC-1.1 triangle; for vertex 0 and vertex 2, `p = host.convert(ArtifactRegionGeometry.documentPoint(normalized: v, imageRect: media), from: overlayView)` → `overlayView.hitTest(p) === overlayView`; normalized (0.5, 0.02) converted the same way → nil | AC-1.1, AC-1.2, D-1 |
-| T-5 | Swift | same `vertexDragCommitsOnce` *(new)* | T-4's host; `onCommit` appends to a local array; call `overlayView.mouseDown(with:)`, `mouseDragged(with:)`, `mouseUp(with:)` directly with `NSEvent.mouseEvent(with: .leftMouseDown / .leftMouseDragged / .leftMouseUp, location: overlayView.convert(docPoint, to: nil), …, windowNumber: window.windowNumber, …)`; vertex 2 → (0.6,0.7) → one commit with that point | AC-1.3, AC-2.3 (second case: drag from the top edge midpoint by (+0.1,+0.05) → every point moved) |
-| T-6 | Swift | same `invalidEditRevertsAndDoesNotCommit` *(new)* | AC-4.2 square and drag → `committed` equals the start square, zero commits. Right-click (`rightMouseDown`) on a vertex of a 4-point shape whose deletion leaves a valid triangle → one commit; on a shape where deletion leaves fewer than 3 points → no change (existing `deleteFreeformVertex` nil) | AC-4.2, AC-4.3, D-5 |
+| T-4 | Swift | `ArtifactRegionOverlayTests.swift` `pdfHostHitTestFindsVertex` *(new, @MainActor)* | the host above; `committed` = AC-1.1 triangle; for vertex 0 and vertex 2, `p = host.convert(ArtifactRegionGeometry.documentPoint(normalized: v, imageRect: media), from: host.overlayView)` → `host.overlayView.hitTest(p) === host.overlayView`; normalized (0.5, 0.02) converted the same way → nil | AC-1.1, AC-1.2, D-1 |
+| T-5 | Swift | same `vertexDragCommitsOnce` *(new)* | `onCommit` appends to a local array. Triangle; drag (0.5,0.9) → (0.6,0.7) → one commit, index 2 == (0.6,0.7). Square (0.2,0.2)…(0.4,0.4); drag (0.3,0.2) → (0.4,0.25) → one commit, every point moved by (+0.1,+0.05). Click with no drag at (0.2,0.2) (down and up at the same point) → no commit | AC-1.3, AC-2.3, AC-4.4 |
+| T-6 | Swift | same `invalidEditRevertsAndDoesNotCommit` *(new)* | AC-4.2 square, drag (0.2,0.2) → (0.5,0.3) → `committed` equals the start square, zero commits. AC-4.3 five-point shape, right-click at (0.1,0.1) → `committed` keeps the five points, zero commits. (0.2,0.2),(0.4,0.2),(0.4,0.4),(0.2,0.4),(0.1,0.3), right-click at (0.1,0.3) → one commit with the square | AC-4.2, AC-4.3, D-5 |
 | T-7 | Swift | same `handleSizesAreInScreenPoints` *(new)* | bare `ArtifactRegionOverlayView`; `magnification = 0.5` → `handleHitRadius == 14`, `handleDrawSize == 14`; `magnification = 1` → 7, 7 | AC-3.1, AC-3.2, D-4 |
-| T-8 | Swift | `CitationComposerModelTests.swift` `editSavedCitationRegionMarksDirty` *(new)* | `seedArtifact`; `seedCitation(locatorJSON: regionLocatorJSON)`; `prepare()`; `commitViewerRegion(ArtifactRegionDraft(kind: .freeform, points: [(0.1,0.1),(0.45,0.1),(0.4,0.4),(0.1,0.4)]))` → true; `fields.locator.region?.points[1] == (0.45,0.1)`; `fields.isDirty`; `canSaveCitation` | AC-4.1, D-6 |
+| T-8 | Swift | `CitationComposerModelTests.swift` `editSavedCitationRegionMarksDirty` *(new)* | `seedArtifact`; `seedCitation(locatorJSON:)` with `regionLocatorJSON`'s selectors plus `{"type":"page","artifact_page":1}`; `prepare()`; `fields.isDirty == false`; `commitViewerRegion(ArtifactRegionDraft(kind: .freeform, points: [CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.45, y: 0.1), CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.1, y: 0.4)]))` → true; `fields.locator.page == 1` (the page did not change); `fields.locator.region?.points[1] == CGPoint(x: 0.45, y: 0.1)`; `fields.isDirty`; `canSaveCitation` | AC-4.1, D-6 |
 
 The beep (AC-4.2, AC-4.3) is checked by hand (manual check 5). Must stay green: everything `scripts/check-pr.sh` runs; `ArtifactPDFViewportPageTests` (helpers moved), `CitationLocatorDraftTests`, `CitationComposerDepictionTests` (rectangle-only depiction drawing shares the overlay).
 
@@ -258,12 +261,12 @@ The beep (AC-4.2, AC-4.3) is checked by hand (manual check 5). Must stay green: 
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none expected)
-- [ ] Sweep: `handleHitSize`, `isNearCommittedStroke`, `moveDragPoints`, `isEditingCommitted` `rg`'d across `.agents/`, `.cursor/rules/`, `docs/` (spike folders included) and `L10n.swift` with no hit left outside this plan; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Sweep: `handleHitSize`, `isNearCommittedStroke`, `moveDragPoints`, `isEditingCommitted` `rg`'d across `.agents/`, `.cursor/rules/`, `docs/` (spike folders included) and `L10n.swift` with no hit left outside this plan and its review log; `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none)
 - [ ] UI matches the brief inventory; no new kit primitive (no brief: handles look as on a PDF today)
 - [ ] Version bump as the header says (VERSION, core/version.go, all four MARKETING_VERSION lines together)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status, S14-29 scope entry corrected; completed.md: one short paragraph of what shipped; UX note deleted and its links replaced (STEP-7)
+- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped; UX note deleted and its links replaced (STEP-7)
 - [ ] Brief moved to design/archive/ and design/README.md updated (not gated)
 - [ ] Domain doc updated if a rule in docs/*.md changed: none owed
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
@@ -275,9 +278,10 @@ The beep (AC-4.2, AC-4.3) is checked by hand (manual check 5). Must stay green: 
 2. Drag a vertex near the top of the page and one near the bottom (AC-1.1). Each follows the pointer; the locator chip still reads five points.
 3. Drag the outline between two vertices (AC-2.3): the whole shape moves. Drag the centre diamond: it moves too.
 4. Click well away from the shape: PDF text selection still works (AC-1.2).
-5. Drag a vertex across the opposite edge so the shape crosses itself; release (AC-4.2): beep, and the shape returns.
+5. Drag a vertex across the opposite edge so the shape crosses itself; release (AC-4.2): beep, and the shape returns. Draw a concave shape and right-click the vertex whose removal would make it cross itself (AC-4.3): beep, and the shape stays.
 6. Save. Leave and reopen that Citation; nudge a vertex; Save is enabled; save, reopen, the change is kept (AC-4.1).
-7. Open an image Artifact, zoom to the minimum (50%), and grab a vertex (AC-3.1): handles look the same size as at 100% and are easy to hit.
+7. Open an image Artifact, zoom to the minimum (50%) with the chrome, then by pinch, then by mouse wheel, and grab a vertex each time (AC-3.1): handles look the same size as at 100% and are easy to hit.
+8. Click once on a saved Citation's outline without dragging (AC-4.4): Save stays disabled.
 
 ## 11. Risks and stop conditions
 
@@ -285,14 +289,14 @@ The beep (AC-4.2, AC-4.3) is checked by hand (manual check 5). Must stay green: 
 | --- | --- |
 | PDFKit's `PDFView` takes the mouse-down before the overlay even after D-1 | The overlay is the later sibling, so the host's `hitTest` asks it first; T-4 and manual check 2 confirm |
 | Synthesized `NSEvent`s in T-5 do not reach the overlay | T-5 calls the overlay's `mouseDown(with:)` / `mouseDragged(with:)` / `mouseUp(with:)` directly |
-| `blankPDFDocument`'s `PDFPage()` has an empty media box, so `mediaRectOverride` is too small for T-4 | T-4 records an issue when the height is under 200; then stop (below) |
+| A blank `PDFPage()` has no useful media box | D-8's `sizedPDFDocument` sets a 300×400 media box |
 
 **Stop and report if:**
 
 - T-4 passes before D-1 in STEP-1 (then the y-mirror is not the PDF cause; report what does block handle clicks).
-- T-4's `mediaRectOverride` height is under 200 with the one-page blank PDF (report its value; the fixture needs a sized page, which is a Decision change).
+- `mediaRectOverride` is not 300×400 (± 1) after layout in T-4 at zoom 1 (report its value).
 - `viewerRegion` does not return a loaded Citation's region (T-8 fails with no model change): D-6 is wrong.
-- `commitViewerRegion` returns false in T-8 because the fake PDF Artifact refuses a region (`locatorCapabilities`); report the capability values.
+- `commitViewerRegion` returns false, or `fields.locator.page` is not 1, in T-8 because the fake PDF Artifact refuses a region (`locatorCapabilities`); report the capability values.
 - Keeping PDF clicks working needs the outline claim dropped (AC-1.2 against D-3).
 
 ## 12. Open questions

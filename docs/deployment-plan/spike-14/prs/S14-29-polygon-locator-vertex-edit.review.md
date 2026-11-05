@@ -1,7 +1,7 @@
 # Review — S14-29 Polygon locator vertex edit
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 None.
@@ -13,6 +13,8 @@ None.
 - ArtifactViewer calls `GraphCanvasCoordinates.screenPixelDocumentWidth` directly (M-1) rather than adding a copy in `ArtifactRegionGeometry`; it is a pure function in the same app target.
 - Rectangle, L and circle outlines also move their shape, because the hit rule is shared (D-3).
 - The UX note is deleted on landing, as S14-30 did in `7e69154a`.
+- A click with no drag no longer commits (round 2 X-9): today a handle click re-commits the unchanged draft; with the outline now a large target, skipping unchanged commits keeps a stray click from dirtying a saved Citation.
+- The map's S14-29 row and Ships line were corrected at planning time, not on landing.
 
 ## Round 1
 
@@ -80,3 +82,40 @@ None.
 
 ### X-13 · minor · Helper reuse for T-4; `layout()` overwrites `mediaRectOverride`
 **Answer:** Fixed — T-4 mounts a one-page PDF through `pdfHost`, lays out, and reads `mediaRectOverride` instead of setting it; a stop condition covers an empty media box.
+
+## Round 2
+
+### M-9 · blocker · D-4 has two writers for the overlay's zoom, neither on every zoom path
+**Plan:** D-4 set `overlayView.magnification` from the scroll view's `didSet` and from `configureOverlay`.
+**Codebase:** `ArtifactMediaNSScrollView.layoutDocumentCentered` is where the setter, wheel zoom, pinch (`clipBoundsDidChange`) and `updateNSView` all end; `configureOverlay` runs before the magnification is applied.
+**Answer:** Fixed — D-4 has one writer in `layoutDocumentCentered` after `guard let document`; STEP-3 checks exactly one hit; manual check 7 zooms by chrome, pinch and wheel. Also answers round-2 X-3.
+
+### X-1 · major · AC-4.3 has no automated test; beep contradiction
+**Answer:** Fixed — AC-4.3 names a five-point shape whose delete crosses; T-6 covers it; the nil path stays silent (§1, D-5); manual check 5 adds the right-click beep.
+
+### X-2 · major · `handleTargets` returns document points; cursor kind needs normalized
+**Answer:** Fixed — targets carry `normalized` and `document` (D-2); D-7 names `target.normalized`.
+
+### X-3 · major · D-4 access path
+**Answer:** Fixed — by M-9.
+
+### X-4 · minor · T-8 dirty from the page stamp alone; tuple vs CGPoint
+**Answer:** Fixed — T-8 seeds a page-1 selector, asserts the page is unchanged and not dirty after load, and compares `CGPoint`s.
+
+### X-5 · minor · T-5 / T-6 event construction
+**Answer:** Fixed — §8 names one `event(_:at:in:window:)` helper with every argument and the down / dragged / up sequence.
+
+### X-6 · minor · DoD sweep hits the review log
+**Answer:** Fixed — "outside this plan and its review log".
+
+### X-7 · minor · STEP-2 / STEP-4 checks are greps only
+**Answer:** Fixed — tests move into the steps they cover (T-1 – T-3b in STEP-2, T-7 in STEP-3, T-5 – T-6 in STEP-4).
+
+### X-8 · minor · T-4 depends on an unverified PDF fixture
+**Answer:** Fixed — D-8 adds `sizedPDFDocument(size:)` (300×400 media box); the stop condition checks the media rect.
+
+### X-9 · minor · An outline click now dirties a Citation
+**Answer:** Fixed — D-5 `finishEdit` skips an unchanged draft; AC-4.4, T-5, manual check 8.
+
+### X-10 · nit · Smaller choices
+**Answer:** Fixed — T-6 coordinates; `finishEdit(committed, start: edit.start)`; `drawHandle` uses `handleDrawSize` for committed and in-progress handles.
