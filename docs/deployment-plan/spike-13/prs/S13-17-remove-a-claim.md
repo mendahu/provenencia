@@ -1,21 +1,19 @@
 # S13-17 — Remove a claim
 
-**Status:** Blocked — on S13-37, S13-16 and board S13-D6
+**Status:** Blocked — on S13-37, S13-16
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D6](../design/S13-D6-sources-section.md), board not drawn yet
-**Board:** — (not drawn yet; on agreement this line names the Claude Design turn and frames, and **Design → macOS** describes every frame in words)
-**Depends on:** S13-08 (landed [#707](https://github.com/mendahu/provenencia/pull/707)), S13-37 (the engine reports what Unpromote removes), S13-16, S13-D6 (board)
+**Brief:** [S13-D6](../design/S13-D6-sources-section.md) (revision 2), board agreed 2026-11-05
+**Board:** Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Sources.dc.html*, turn "S13-D6 rev 2 · Sources as Source rows, Remove and the last-record warning", frames 14n – 14u, 14y (this PR). **Design → macOS** describes them in words
+**Depends on:** S13-08 (landed [#707](https://github.com/mendahu/provenencia/pull/707)), S13-37 (the engine reports what Unpromote removes), S13-16, S13-D6 (board agreed 2026-11-05)
 **Blocks:** —
 **Branch:** `s13-17-remove-a-claim`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`../person-detail.md` § Identity claim controls](../person-detail.md#identity-claim-controls) (R-38, R-39); working rules "One Unpromote, deletes through the registry", "Sections are places"; brief [S13-D6](../design/S13-D6-sources-section.md) RC-1 – RC-7; the S13-08 plan (D-14: `getUnpromoteImpact`; D-16: the per-kind deletes copy) and the S13-16 plan
-**Planned:** 2026-11-05 against `main` @ `124d492` (draft: refreshed when S13-37 and S13-16 land and the board is agreed)
+**Planned:** 2026-11-05 against `main` @ `124d492` (board agreed; refreshed when S13-37 and S13-16 land, then `Planned`)
 **Review:** [`S13-17-remove-a-claim.review.md`](S13-17-remove-a-claim.review.md) — round 1: Reshape / Not ready; reshaped with the user's answers (2026-11-05); round 2 runs when S13-37 is planned and the board is agreed
-
-**Re-plan pending (2026-11-05).** The brief was rewritten (revision 2): Remove sits at the end of each Evidence graph link under a Source row, not in a card's footer slot. D-9's placement (`pageSlotActionID`) and D-10's reading order are rewritten when the new board is agreed; the flow, the confirm, S13-37 and the leave rule (D-1 – D-8) carry over.
 
 ### Implementer — read this first
 
@@ -32,9 +30,9 @@
 
 ## 1. Objective
 
-A researcher can take a record out of a person from the Person page: Unpromote on a claim card in the Sources section unpromotes that Subject, exactly as Unpromote on the Evidence graph does (R-38), through the same confirm and the same flow (user, 2026-11-05). Removing the last claim deletes the person; the confirm says so first, and on proceeding the app lands on the Persons list (R-39).
+A researcher can take a record out of a person from the Person page: Unpromote on a record's line under its Source in the Sources section unpromotes that Subject, exactly as Unpromote on the Evidence graph does (R-38), through the same confirm and the same flow (user, 2026-11-05). Removing the last claim deletes the person; the confirm says so first, and on proceeding the app lands on the Persons list (R-39).
 
-**Why now.** S13-08 made the engine delete a handle whose last member leaves and gave Unpromote its preflight; S13-37 makes the engine report the connections Unpromote takes back and the handles a write deletes, so neither page re-derives them; S13-16 draws the claim cards with the footer square for the control. This PR closes slice 6 (bar 7, removal half).
+**Why now.** S13-08 made the engine delete a handle whose last member leaves and gave Unpromote its preflight; S13-37 makes the engine report the connections Unpromote takes back and the handles a write deletes, so neither page re-derives them; S13-16 draws the Sources rows and a line per record, which this PR ends with the control. This PR closes slice 6 (bar 7, removal half).
 
 **What stays.** The engine (S13-37 is its change). The Evidence graph's Unpromote confirm keeps its title, buttons, list, tone and placement; its open, write and error handling move into one shared flow both pages hold, as both hold a `DeleteImpactFlow` for deletes. Its single-handle deletes message becomes the per-kind sentence the user approved for S13-08 (2026-11-04, S13-08 D-16), which the landed code defines but does not show (D-5).
 
@@ -44,8 +42,8 @@ A researcher can take a record out of a person from the Person page: Unpromote o
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Johann Weber (PER-3HK9W) with seven claims; Unpromote on the Household 388 card (Subject "J. Weber", CPR-2M8XF; the preflight names one relationship and one participation) | The confirm opens: title "Unpromote J. Weber?", message "This promotion is removed. The cards stay on the graph, and the handle stays.", "Also unpromoted" with the two connection sentences worded from the claim's graph and "The other end of each stays promoted.", buttons "Unpromote" (irreversible) and "Keep promotion" (RC-1, RC-2) |
-| AC-1.2 | Confirm | `unpromoteSubject` runs once for CPR-2M8XF; the confirm closes; the card leaves after the reload; the page stays on Sources; focus is on the next card's Unpromote (RC-6) |
+| AC-1.1 | Johann Weber (PER-3HK9W) with seven claims; Unpromote on the Household 388 line (Subject "J. Weber", CPR-2M8XF; the preflight names one relationship and one participation) | The confirm opens: title "Unpromote J. Weber?", message "This promotion is removed. The cards stay on the graph, and the handle stays.", "Also unpromoted" with the two connection sentences worded from the claim's graph and "The other end of each stays promoted.", buttons "Unpromote" (irreversible) and "Keep promotion" (RC-1, RC-2) |
+| AC-1.2 | Confirm | `unpromoteSubject` runs once for CPR-2M8XF; the confirm closes; the line leaves after the reload (an emptied Source row leaves too); the page stays on Sources, scroll unchanged; focus is on the next line's Unpromote (Volume 3) (RC-6) |
 | AC-1.3 | Keep promotion | No write; the confirm closes |
 | AC-1.4 | The write fails (`promote.stale`) | The confirm stays open with the error under the list; "Unpromote" is enabled to retry (RC-5) |
 | AC-1.5 | While an Unpromote opens or writes | Every Unpromote control in the section is disabled (RC-1) |
@@ -65,7 +63,7 @@ A researcher can take a record out of a person from the Person page: Unpromote o
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | Unpromote on a graph card whose handle keeps a member | The same confirm and list as today (the list now from the preflight's bridge ids); the graph stays |
+| AC-3.1 | Unpromote on an Evidence graph card whose handle keeps a member | The same confirm and list as today (the list now from the preflight's bridge ids); the graph stays |
 | AC-3.2 | Unpromote of a person's last member on the graph | The per-kind sentence of AC-2.1; danger tone; the graph stays (working rule "One Unpromote") |
 
 ## 3. Scope
@@ -76,7 +74,7 @@ A researcher can take a record out of a person from the Person page: Unpromote o
 | The list from the preflight's bridge ids; the Swift copy of the engine's bridge rule goes (S13-37) | STEP-2, AC-1.1, AC-3.1 |
 | The single-handle deletes sentence approved for S13-08 (RC-3) | STEP-2, AC-2.1, AC-3.2 |
 | One session read of a graph's snapshot, shared with Promote | STEP-3, AC-1.1, AC-1.6 |
-| Unpromote on each claim card, disabled while busy; focus after a kept Unpromote; landing on the Persons list (RC-1, RC-6, RC-7) | STEP-5, AC-1.2, AC-1.5, AC-2.4 |
+| Unpromote at the end of each record's line, disabled while busy; focus after a kept Unpromote; landing on the Persons list (RC-1, RC-6, RC-7) | STEP-5, AC-1.2, AC-1.5, AC-2.4 |
 | `userID` reaches page sections | STEP-4 |
 | Strings | each step that adds a key; STEP-6 checks the catalog |
 | Docs, brief archive | STEP-7 |
@@ -107,7 +105,7 @@ Rows marked *(S13-37)* or *(S13-16)* describe what those PRs add; the implemente
 | Not-found error | `core/database/conclusiondetails/conclusiondetails.go` `ErrNotFound` (`apperr.KindUser`) | Not used by this plan (D-6 reads the effects) |
 | Leaving a page | `macos/App/Features/Workspace/WorkspaceNavigation.swift` `fallbackToSectionRoot()`; `macos/App/Features/Sources/SourcePageView.swift` (`if await model.confirmResourceDelete() { navigation.fallbackToSectionRoot() }`) | Replaces the current entry with the list |
 | Page sections | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPageSectionsContext{projectDir, refreshing, pageIdentifier, lead, pageSection}`; `ConclusionLeadModel(session:userID:entityId:)` built by the page from its `userID`, writing through `session.store` | Sections get no `userID` |
-| Sources section *(S13-16)* | `PersonSourcesSection.swift` in `Features/Conclusions/` | Each card in `EvidenceCardViewHost` with `EvidenceSubjectCard.pageSlotActionID` empty; `PersonSourcesContent.Card{id, subjectID, …}` |
+| Sources section *(S13-16)* | `PersonSourcesSection.swift` in `Features/Conclusions/` | `PersonSourcesList` draws each row's `PersonSourcesContent.Line{id (claimID), subjectID, graphTitle, graphRef, subjectName, subjectRef, location}` as one caption line ending with the Subject ref; folds past six lines (S13-16 D-3, D-7, D-10) |
 | Tests | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` `unpromoteActionOpensConfirmNamingBridges`, `unpromoteWithNoBridgesHasEmptyDetail`, `confirmUnpromoteRefreshesToPromote`, `unpromoteFailureStaysInConfirm`, `unpromoteLastRecordNamesTheDeletedHandle` (asserts `deletedHandles?.listed.first?.ref`), `unpromotePreflightFailureStaysInTheConfirm` | Cover the graph's flow |
 
 **Precedent.** `DeleteImpactFlow`: one observable flow object a model holds and a view modifier binds, shared by the Evidence graph and the Source page; copy its shape for `UnpromoteFlow`. The Source page's resource delete: a successful write that removes the page's entity, then `fallbackToSectionRoot()`; copy that.
@@ -124,8 +122,8 @@ Rows marked *(S13-37)* or *(S13-16)* describe what those PRs add; the implemente
 | D-6 | The person is gone when the write's `effects.deletedHandles` *(S13-37)* contains the page's entity id. No preflight or detail read decides it | One fact, one source: what the write did (round 1 M-2; user, 2026-11-05) | Inferring from the preflight; a detail read keyed to an error code |
 | D-7 | On "gone" the section calls `navigation.fallbackToSectionRoot()`, which replaces the Person page's entry with the Persons list. It calls it right after `confirm` returns, before the view reads the refreshed detail, so the not-found Callout is not shown: `session.apply` marks `.conclusionDetail` stale and its reload is async, and the navigation unmounts the page first | The Source page precedent; Back does not return to a deleted page (RC-7; round 1 X-6) | `go(to: .sectionRoot(.persons))` |
 | D-8 | `ConclusionDetailPageSectionsContext` gains `userID: String` *(new field)*, set by `ConclusionDetailPage` from its `userID`. `PersonDetailSections` passes `context.userID` to `PersonSourcesSection(entityId:userID:)`. The section holds `@State private var unpromote = UnpromoteFlow()` and resets it (`cancel()`) in `.onChange(of: entityId)`; it reads `@Environment(WorkspaceNavigation.self)` | Every section can write without threading props (round 1 M-7); writes use `session.store` | Adding `userID` to one section's initializer from the view |
-| D-9 | In `pageSlotActionID`: `PVIconButton(.unpromote, label: L10n.EvidenceGraph.unpromote, accessibilityLabel: L10n.Conclusions.sourcesUnpromoteAccessibility(name:) (a `String`, which is `PVCopy`), size: .sm)`, id `persons.detail.sources.unpromote.<claimID>`, disabled while `unpromote.isOpening || unpromote.isRunning`. Its action: `Task { let snapshot = await session.evidenceGraphSnapshot(graphID: claim.graphID); await unpromote.open(subjectID: claim.subject.id, name: claim.subject.trimmedLabel ?? claim.subject.ref, kind: .person, handleID: entityId, snapshot: snapshot, orders: session.nameFormat, session: session) }`; when the snapshot holds the Subject, `open` takes the name from `displayName(orders:)` as the graph does. The section's modifier: `unpromoteConfirm(flow: unpromote, accessibilityIdentifierPrefix: "persons.detail.sources.unpromote", onConfirm: …)`; `onConfirm` awaits `confirm`, then D-6 / D-7, else D-10 | The action is called Unpromote everywhere in code (round 1 M-6) | "Remove" names in code |
-| D-10 | After a kept Unpromote, focus goes to the next card's Unpromote in reading order (groups in order, cards in order, flattened), else the previous one's, else the first group's title. The section records the removed claim's index before the write and applies `@FocusState` (keyed by claim id) when the reloaded content no longer holds that claim. **Refreshed from the board's RC-6 answer** | Brief RC-6; focus never lands on a removed control (round 1 X-8) | Moving focus at confirm time (the card is still there) |
+| D-9 | At the end of each record's line, 6pt after its Subject ref: `PVButton(L10n.EvidenceGraph.unpromote, variant: .ghost, size: .sm, icon: .unpromote)` (the glyph and the word, board 14a: an icon alone at the far right read as detached, user 2026-11-05), its VoiceOver label `L10n.Conclusions.sourcesUnpromoteAccessibility(name:)` ("Unpromote J. Weber"), id `persons.detail.sources.unpromote.<claimID>`, part of the line (the lines' Removes do not align in a column), disabled while `unpromote.isOpening || unpromote.isRunning`. Its action: `Task { let snapshot = await session.evidenceGraphSnapshot(graphID: claim.graphID); await unpromote.open(subjectID: claim.subject.id, name: claim.subject.trimmedLabel ?? claim.subject.ref, kind: .person, handleID: entityId, snapshot: snapshot, orders: session.nameFormat, session: session) }`; when the snapshot holds the Subject, `open` takes the name from `displayName(orders:)` as the graph does. The section's modifier: `unpromoteConfirm(flow: unpromote, accessibilityIdentifierPrefix: "persons.detail.sources.unpromote", onConfirm: …)`; `onConfirm` awaits `confirm`, then D-6 / D-7, else D-10 | The action is called Unpromote everywhere in code (round 1 M-6) | "Remove" names in code |
+| D-10 | After a kept Unpromote, focus goes to the next line's Unpromote in reading order (Source rows in order, their visible lines in order, flattened), else the previous one's, else the first Source title. The section records the removed claim's index before the write and applies `@FocusState` (keyed by claim id) when the reloaded content no longer holds that claim. No Toast (board 14t) | Brief RC-6, board 14t; focus never lands on a removed control (round 1 X-8) | Moving focus at confirm time (the line is still there) |
 
 **Rules this plan bends.** None.
 
@@ -164,7 +162,7 @@ One Unpromote: one `evidenceGraphSnapshot` (warm when the researcher came from t
 
 - **Assumptions.** The preflight's bridge ids are exactly what the write unfiles (S13-37's contract, tested there). `listed` is capped but lists the Subject's own handle first; `deletesOwnHandle` needs only `total == 1`, so the cap never hides it. The gone decision reads the effects, not `listed` (D-6).
 - **Neighbors.** Two claims: one removed keeps the person; the last deletes. A single deleted row that is an association handle (the person keeps a member): `deletesOwnHandle` is false (id ≠ `handleID`), so the `cascadeLines` line shows (T-2).
-- **Removed inputs.** The claim already removed elsewhere: the preflight or the write fails with the engine's error in the confirm (AC-1.4); the reload drops the card. A bridge id not in the cached snapshot: skipped (T-3).
+- **Removed inputs.** The claim already removed elsewhere: the preflight or the write fails with the engine's error in the confirm (AC-1.4); the reload drops the line. A bridge id not in the cached snapshot: skipped (T-3).
 - **Real data.** None — no table-driven rule.
 - **Untrusted size.** The bridge list is the Subject's filed bridges on one graph (today's bound).
 
@@ -184,7 +182,7 @@ None — S13-37 adds the fields.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Unpromote control | `PVIconButton` (`PVSymbol.unpromote`, `.sm`) in `pageSlotActionID` | `PersonSourcesSection.swift` (S13-16's file) | D-9, RC-1 |
+| Unpromote control | `PVButton` (ghost, `.sm`, `PVSymbol.unpromote` and the word) at the end of the line | `PersonSourcesSection.swift` (S13-16's file) | D-9, RC-1 |
 | Flow and confirm | `UnpromoteFlow`, `unpromoteConfirm` over `PVConfirm` | `macos/App/Features/EvidenceGraph/UnpromoteFlow.swift` *(new)* | D-1 – D-5, RC-2 – RC-5 |
 | Deletes line | `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes`, `PVDeleteImpactCopy` | as today | D-5, RC-3 |
 | Landing | `WorkspaceNavigation.fallbackToSectionRoot()` | — | D-7, RC-7 |
@@ -217,7 +215,7 @@ Files: `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `PersonDetai
 Do: D-8's context field.
 Check: the build has no warning; `PersonDetailTests` pass.
 
-**STEP-5 — Unpromote on the claim cards**
+**STEP-5 — Unpromote on the record lines**
 Files: `PersonSourcesSection.swift` (S13-16's file in `Features/Conclusions/`), `PersonDetailView.swift`, `L10n.swift`, `Localizable.xcstrings`. Skill: `add-ui-component`, `add-localized-string`.
 Do: D-6 – D-10, with `sourcesUnpromoteAccessibility(name:)`.
 Check: T-8 passes; manual check items 1 – 4.
@@ -270,8 +268,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `E
 
 ## 10. Manual check
 
-1. Dogfood project, a Person with three claims, one of whose Subjects has a filed relationship. Sources → Unpromote on that card: the confirm names the relationship under "Also unpromoted"; Keep promotion: nothing changes (AC-1.1, AC-1.3). While it opens, the other Unpromote controls are disabled (AC-1.5).
-2. Unpromote again and confirm: the card leaves, the page stays on Sources, focus is on the next Unpromote; open that graph: the Subject is unpromoted and its card stays (AC-1.2).
+1. Dogfood project, a Person with three claims, one of whose Subjects has a filed relationship. Sources → Unpromote on that record's line: the confirm names the relationship under "Also unpromoted"; Keep promotion: nothing changes (AC-1.1, AC-1.3). While it opens, the other Unpromote controls are disabled (AC-1.5).
+2. Unpromote again and confirm: the line leaves, the page stays on Sources, focus is on the next Unpromote; open that graph: the Subject is unpromoted and its card stays on the graph (AC-1.2).
 3. A Person with one claim: Unpromote shows "PER-… has no other records, so this person is deleted. …" in the danger tone; confirm: the Persons list, without the person, no not-found Callout seen; Back does not show the deleted page (AC-2.1, AC-2.4).
 4. On an Evidence graph, Unpromote a person's last member: the same sentence; the graph stays (AC-3.2). Dark mode for the confirm.
 
@@ -285,14 +283,14 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `E
 **Stop and report if:**
 
 - S13-37 has not landed, or lands without the preflight's bridge ids or `CatalogWriteEffects.deletedHandles` (D-3, D-6).
-- S13-16 has not landed, or its card has no `pageSlotActionID` (D-9).
-- The board is not agreed, or it moves the control out of the card's footer slot (brief SS-4, RC-1).
+- S13-16 has not landed, or its `Line` view has no end to append the control to (D-9).
+- The board's frames 14n – 14u and this plan disagree.
 - `EvidenceGraphSnapshot.build` needs more than the three cached reads (D-4).
 - The approved per-kind sentence is no longer what the user wants on the Evidence graph (D-5 changes that confirm's copy).
 
 ## 12. Open questions
 
-1. **The board's answers** to RC-3 (the name beside the ref), RC-6 (Toast, focus) and any change to RC-1's placement. Recommended: the brief's recommendations; D-5, D-9 and D-10 are written for them.
+None. (The board answered RC-1, RC-3 and RC-6 on 2026-11-05: Unpromote as a ghost Button with the glyph and the word at the end of the line; no name beside the ref; no Toast.)
 
 ## 13. PR
 
