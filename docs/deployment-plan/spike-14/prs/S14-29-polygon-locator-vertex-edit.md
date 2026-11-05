@@ -1,6 +1,7 @@
 # S14-29 — Polygon locator vertex edit
 
-**Status:** Planned
+**Status:** Landed in #715 (2026-11-05)
+**Landed:** Product version is 0.3.3. `ArtifactRegionTarget` is a `typealias` for the planned tuple. `ArtifactFileFixtures.pdfHost` defaults `onPageChange` to a no-op. Manual check §10 not run in implementer pass.
 **Spike / slice:** Spike 14 · Slice 7b — Region edit
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: handles, the move diamond and the stroke already draw today; on a PDF they already draw at a fixed screen size, and this PR gives image Artifacts the same size — user, 2026-11-05, "Fixed size, no brief")
@@ -11,7 +12,7 @@
 **Version bump:** patch — researcher-visible fix to region editing ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md) (classification only: `ArtifactRegionOverlayView` stays a feature snowflake)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Polygon edit includes a saved Citation"; bar outcome 24; [`ux/2026-10-15-polygon-locator-drag-vertices.md`](../ux/2026-10-15-polygon-locator-drag-vertices.md) (deleted on landing, STEP-7); S14-28's Landed note
+**Context:** working rule "(Batch 7) Polygon edit includes a saved Citation"; bar outcome 24; dogfood note `2026-10-15-polygon-locator-drag-vertices` (deleted on land); S14-28's Landed note
 **Planned:** 2026-11-05 against `main` @ `124d492`
 **Review:** [`S14-29-polygon-locator-vertex-edit.review.md`](S14-29-polygon-locator-vertex-edit.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blockers; To user none
 
