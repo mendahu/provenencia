@@ -1,6 +1,6 @@
 # S14-32 — Place relationship rows read from the far end
 
-**Status:** Landed #720 (2026-11-05)
+**Status:** Landed in #720 (2026-11-05)
 **Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
@@ -12,7 +12,7 @@
 **Version bump:** patch — a researcher-visible labelling bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note [`ux/2026-10-15-place-relationship-inverse-label.md`](../ux/2026-10-15-place-relationship-inverse-label.md) (deleted on land); [`docs/ideas/organizations.md`](../../../ideas/organizations.md) ("Structure like places": an `organization_relationship` bridge copies `part_of` / `succeeded_by`)
+**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note 2026-10-15 (deleted on land); [`docs/ideas/organizations.md`](../../../ideas/organizations.md) ("Structure like places": an `organization_relationship` bridge copies `part_of` / `succeeded_by`)
 **Planned:** 2026-11-05 against `main` @ `c77f7392` (re-checked after S14-31 landed in #718; the files in §4 are unchanged since `b6cac73d`)
 **Review:** [`S14-32-place-relationship-inverse-labels.review.md`](S14-32-place-relationship-inverse-labels.review.md) — Fits with changes — Ready with changes, 2 rounds; M-1 and M-7 answered by the user 2026-11-05; no open blocker
 
@@ -236,7 +236,7 @@ Do: raise PATCH by one from what `main` holds when you branch (0.3.4 → 0.3.5 a
 Check: `rg -n "0\.3\.4" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing (old number substituted if `main` moved).
 
 **STEP-7 — Docs**
-Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-place-relationship-inverse-label.md` (delete), this plan.
+Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, the 2026-10-15 place-relationship dogfood note under `ux/` (delete), this plan.
 Do: per the Definition of done. Check the working rule, bar outcome 27 and the scope entry say "Succeeded".
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-32-place-relationship-inverse-labels.md` passes.
 
