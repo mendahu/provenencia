@@ -12900,6 +12900,18 @@
         }
       }
     },
+    "artifactViewer.regionEditRefused": {
+      "comment": "VoiceOver announcement when an edit to a saved region is refused and the region is put back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The region can't be changed that way, so it was put back."
+          }
+        }
+      }
+    },
     "artifactViewer.findToggle": {
       "comment": "Opens PDF Find on the citation composer tool strip; also the find field prompt",
       "extractionState": "manual",
@@ -13207,7 +13219,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Right-click a vertex to delete it. At least three points remain."
+            "value": "Drag a vertex to reshape, or the outline to move. Right-click a vertex to delete it. At least three points remain, and a shape that crosses itself is put back."
           }
         }
       }

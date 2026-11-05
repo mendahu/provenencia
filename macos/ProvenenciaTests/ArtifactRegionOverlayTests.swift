@@ -67,18 +67,16 @@ struct ArtifactRegionOverlayTests {
         overlay.magnification = 0.5
         #expect(overlay.handleHitRadius == 14)
         #expect(overlay.handleDrawSize == 14)
+        #expect(overlay.moveAnchorHitRadius == 16)
         overlay.magnification = 1
         #expect(overlay.handleHitRadius == 7)
         #expect(overlay.handleDrawSize == 7)
+        #expect(overlay.moveAnchorHitRadius == 8)
     }
 
     private static let square = [
         CGPoint(x: 0.2, y: 0.2), CGPoint(x: 0.4, y: 0.2), CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.2, y: 0.4),
     ]
-
-    private func near(_ a: CGPoint, _ b: CGPoint) -> Bool {
-        abs(a.x - b.x) < 1e-4 && abs(a.y - b.y) < 1e-4
-    }
 
     /// One drag: down at `from`, dragged and released at `to`.
     private func drag(
@@ -97,19 +95,22 @@ struct ArtifactRegionOverlayTests {
         let (host, window, _) = makeHost(committed: Self.triangle)
         defer { withExtendedLifetime(window) {} }
         var commits: [ArtifactRegionDraft] = []
-        host.overlayView.onCommit = { commits.append($0) }
+        host.overlayView.onCommit = { commits.append($0); return true }
 
         drag(from: CGPoint(x: 0.5, y: 0.9), to: CGPoint(x: 0.6, y: 0.7), in: host, window: window)
         #expect(commits.count == 1)
-        #expect(commits.last.map { near($0.points[2], CGPoint(x: 0.6, y: 0.7)) } == true)
-        #expect(commits.last.map { near($0.points[0], Self.triangle[0]) && near($0.points[1], Self.triangle[1]) } == true)
+        #expect(commits.last.map { ArtifactRegionGeometry.nearlyEqual($0.points[2], CGPoint(x: 0.6, y: 0.7), epsilon: 1e-4) } == true)
+        #expect(commits.last.map { ArtifactRegionGeometry.nearlyEqual($0.points[0], Self.triangle[0], epsilon: 1e-4)
+                && ArtifactRegionGeometry.nearlyEqual($0.points[1], Self.triangle[1], epsilon: 1e-4) } == true)
 
         host.overlayView.committed = ArtifactRegionDraft(kind: .freeform, points: Self.square)
         commits = []
         drag(from: CGPoint(x: 0.3, y: 0.2), to: CGPoint(x: 0.4, y: 0.25), in: host, window: window)
         #expect(commits.count == 1)
         for (moved, original) in zip(commits.last?.points ?? [], Self.square) {
-            #expect(near(moved, CGPoint(x: original.x + 0.1, y: original.y + 0.05)))
+            #expect(ArtifactRegionGeometry.nearlyEqual(
+                moved, CGPoint(x: original.x + 0.1, y: original.y + 0.05), epsilon: 1e-4
+            ))
         }
 
         host.overlayView.committed = ArtifactRegionDraft(kind: .freeform, points: Self.square)
@@ -123,7 +124,7 @@ struct ArtifactRegionOverlayTests {
         defer { withExtendedLifetime(window) {} }
         let overlay = host.overlayView
         var commits: [ArtifactRegionDraft] = []
-        overlay.onCommit = { commits.append($0) }
+        overlay.onCommit = { commits.append($0); return true }
 
         drag(from: CGPoint(x: 0.2, y: 0.2), to: CGPoint(x: 0.5, y: 0.3), in: host, window: window)
         #expect(overlay.committed?.points == Self.square)
@@ -143,5 +144,61 @@ struct ArtifactRegionOverlayTests {
         overlay.rightMouseDown(with: event(.rightMouseDown, at: squareWithSpur[4], in: host, window: window))
         #expect(commits.count == 1)
         #expect(commits.last?.points == Self.square)
+    }
+
+    @Test func refusedCommitRevertsEdit() {
+        let (host, window, _) = makeHost(committed: Self.triangle)
+        defer { withExtendedLifetime(window) {} }
+        let overlay = host.overlayView
+        var commits: [ArtifactRegionDraft] = []
+        overlay.onCommit = { commits.append($0); return false }
+
+        drag(from: CGPoint(x: 0.5, y: 0.9), to: CGPoint(x: 0.6, y: 0.7), in: host, window: window)
+        #expect(commits.count == 1)
+        #expect(overlay.committed?.points == Self.triangle)
+
+        let five = [
+            CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.9, y: 0.1), CGPoint(x: 0.9, y: 0.9),
+            CGPoint(x: 0.5, y: 0.9), CGPoint(x: 0.1, y: 0.9),
+        ]
+        overlay.committed = ArtifactRegionDraft(kind: .freeform, points: five)
+        commits = []
+        overlay.rightMouseDown(with: event(.rightMouseDown, at: five[3], in: host, window: window))
+        #expect(commits.count == 1)
+        #expect(overlay.committed?.points == five)
+    }
+
+    @Test func subThresholdDragDoesNotEdit() {
+        let (host, window, media) = makeHost(committed: Self.triangle)
+        defer { withExtendedLifetime(window) {} }
+        let overlay = host.overlayView
+        var commits: [ArtifactRegionDraft] = []
+        overlay.onCommit = { commits.append($0); return true }
+        let jitter = 2 / media.width
+
+        drag(from: Self.triangle[2], to: CGPoint(x: Self.triangle[2].x + jitter, y: Self.triangle[2].y), in: host, window: window)
+        #expect(commits.isEmpty)
+        #expect(overlay.committed?.points == Self.triangle)
+
+        let onEdge = CGPoint(x: 0.5, y: 0.1)
+        drag(from: onEdge, to: CGPoint(x: onEdge.x + jitter, y: onEdge.y), in: host, window: window)
+        #expect(commits.isEmpty)
+        #expect(overlay.committed?.points == Self.triangle)
+    }
+
+    @Test func vertexKeepsGrabOffset() {
+        let (host, window, media) = makeHost(committed: Self.triangle)
+        defer { withExtendedLifetime(window) {} }
+        let overlay = host.overlayView
+        overlay.onCommit = { _ in true }
+        let vertex = Self.triangle[2]
+        let grab = CGPoint(x: vertex.x + 5 / media.width, y: vertex.y)
+        let release = CGPoint(x: grab.x + 20 / media.width, y: grab.y)
+
+        drag(from: grab, to: release, in: host, window: window)
+        let moved = overlay.committed?.points[2] ?? .zero
+        #expect(ArtifactRegionGeometry.nearlyEqual(
+            moved, CGPoint(x: vertex.x + 20 / media.width, y: vertex.y), epsilon: 1e-4
+        ))
     }
 }

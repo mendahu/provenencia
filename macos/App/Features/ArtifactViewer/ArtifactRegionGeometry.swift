@@ -524,10 +524,15 @@ enum ArtifactRegionGeometry {
     ) -> [ArtifactRegionTarget] {
         var targets: [ArtifactRegionTarget] = []
         if let anchor = moveAnchor(for: draft) {
-            targets.append((.move, anchor, documentPoint(normalized: anchor, imageRect: imageRect)))
+            targets.append((
+                handle: .move, normalized: anchor, document: documentPoint(normalized: anchor, imageRect: imageRect)
+            ))
         }
         for (index, normalized) in handlePoints(for: draft, imageRect: imageRect).enumerated() {
-            targets.append((.resize(index), normalized, documentPoint(normalized: normalized, imageRect: imageRect)))
+            targets.append((
+                handle: .resize(index), normalized: normalized,
+                document: documentPoint(normalized: normalized, imageRect: imageRect)
+            ))
         }
         return targets
     }
@@ -549,17 +554,18 @@ enum ArtifactRegionGeometry {
         return best?.handle
     }
 
-    /// What a pointer at `documentPoint` grabs: the move anchor, else the nearest handle, else
+    /// What a pointer at `documentPoint` grabs: the move anchor (within `anchorRadius`), else the nearest handle, else
     /// the outline (which moves the shape), else nothing.
     static func hitHandle(
         at documentPoint: CGPoint,
         draft: ArtifactRegionDraft,
         imageRect: CGRect,
-        radius: CGFloat
+        radius: CGFloat,
+        anchorRadius: CGFloat
     ) -> ArtifactRegionHandle? {
         let targets = handleTargets(for: draft, imageRect: imageRect)
         if let anchor = targets.first(where: { $0.handle == .move }),
-           hypot(anchor.document.x - documentPoint.x, anchor.document.y - documentPoint.y) <= radius + 1
+           hypot(anchor.document.x - documentPoint.x, anchor.document.y - documentPoint.y) <= anchorRadius
         {
             return .move
         }

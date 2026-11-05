@@ -231,7 +231,7 @@ struct ArtifactRegionGeometryTests {
         let square = Self.hitSquare
         func hit(_ x: CGFloat, _ y: CGFloat) -> ArtifactRegionHandle? {
             ArtifactRegionGeometry.hitHandle(
-                at: CGPoint(x: x, y: y), draft: square, imageRect: rect, radius: 3
+                at: CGPoint(x: x, y: y), draft: square, imageRect: rect, radius: 3, anchorRadius: 4
             )
         }
         #expect(hit(30, 20) == .move)
@@ -252,12 +252,12 @@ struct ArtifactRegionGeometryTests {
         let handle = ArtifactRegionGeometry.handlePoints(for: circle, imageRect: rect)[0]
         let onHandle = ArtifactRegionGeometry.documentPoint(normalized: handle, imageRect: rect)
         #expect(
-            ArtifactRegionGeometry.hitHandle(at: onHandle, draft: circle, imageRect: rect, radius: 3)
+            ArtifactRegionGeometry.hitHandle(at: onHandle, draft: circle, imageRect: rect, radius: 3, anchorRadius: 4)
                 == .resize(0)
         )
         let quarterTurn = ArtifactRegionGeometry.documentPoint(normalized: circle.points[8], imageRect: rect)
         #expect(
-            ArtifactRegionGeometry.hitHandle(at: quarterTurn, draft: circle, imageRect: rect, radius: 3)
+            ArtifactRegionGeometry.hitHandle(at: quarterTurn, draft: circle, imageRect: rect, radius: 3, anchorRadius: 4)
                 == .move
         )
     }
@@ -272,7 +272,7 @@ struct ArtifactRegionGeometryTests {
         let point = ArtifactRegionGeometry.documentPoint(normalized: anchor, imageRect: Self.hitRect)
         #expect(
             ArtifactRegionGeometry.hitHandle(
-                at: point, draft: Self.tinyTriangle, imageRect: Self.hitRect, radius: 3
+                at: point, draft: Self.tinyTriangle, imageRect: Self.hitRect, radius: 3, anchorRadius: 4
             ) == .move
         )
     }
@@ -282,7 +282,7 @@ struct ArtifactRegionGeometryTests {
         let ring = ArtifactRegionDraft(kind: .freeform, points: RegionFixtures.ring(count: 256))
         let point = ArtifactRegionGeometry.documentPoint(normalized: ring.points[10], imageRect: rect)
         #expect(
-            ArtifactRegionGeometry.hitHandle(at: point, draft: ring, imageRect: rect, radius: 7)
+            ArtifactRegionGeometry.hitHandle(at: point, draft: ring, imageRect: rect, radius: 7, anchorRadius: 8)
                 == .resize(10)
         )
     }
