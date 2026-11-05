@@ -1,6 +1,9 @@
 import Foundation
 
 /// Conflict / negated marks and extra-row filtering for cited graph cards (S8-06).
+///
+/// Conflict counts treat a missing `cardinalityByKey` entry and any non-`.multiple`
+/// value as conflict-eligible; only `.multiple` suppresses the ochre bracket.
 enum EvidenceCitedPropertyMarks {
     /// Reserved leading gutter on every cited property row so values align
     /// whether a bracket is painted or not (board: 13px shell + 11px = 24px).
@@ -13,11 +16,15 @@ enum EvidenceCitedPropertyMarks {
     }
 
     /// How many times each `propertyKey` appears on this card.
-    static func conflictCounts(in observations: [CatalogObservation]) -> [String: Int] {
+    static func conflictCounts(
+        in observations: [CatalogObservation],
+        cardinalityByKey: [String: PropertyCardinality] = [:]
+    ) -> [String: Int] {
         var counts: [String: Int] = [:]
         for observation in observations {
             let key = observation.propertyKey
             guard !key.isEmpty else { continue }
+            if cardinalityByKey[key] == .multiple { continue }
             counts[key, default: 0] += 1
         }
         return counts
@@ -27,8 +34,11 @@ enum EvidenceCitedPropertyMarks {
         counts[observation.propertyKey, default: 0] >= 2
     }
 
-    static func cardHasConflict(in observations: [CatalogObservation]) -> Bool {
-        conflictCounts(in: observations).values.contains { $0 >= 2 }
+    static func cardHasConflict(
+        in observations: [CatalogObservation],
+        cardinalityByKey: [String: PropertyCardinality] = [:]
+    ) -> Bool {
+        conflictCounts(in: observations, cardinalityByKey: cardinalityByKey).values.contains { $0 >= 2 }
     }
 
     static func isNegated(_ observation: CatalogObservation) -> Bool {
@@ -38,8 +48,11 @@ enum EvidenceCitedPropertyMarks {
     }
 
     /// Consecutive runs whose `propertyKey` appears ≥ 2 times on the card.
-    static func conflictRuns(in observations: [CatalogObservation]) -> [Range<Int>] {
-        let counts = conflictCounts(in: observations)
+    static func conflictRuns(
+        in observations: [CatalogObservation],
+        cardinalityByKey: [String: PropertyCardinality] = [:]
+    ) -> [Range<Int>] {
+        let counts = conflictCounts(in: observations, cardinalityByKey: cardinalityByKey)
         var runs: [Range<Int>] = []
         var index = 0
         while index < observations.count {
@@ -58,12 +71,15 @@ enum EvidenceCitedPropertyMarks {
 
     static func graphHasConflict(
         subjects: [EvidenceGraphPlacedSubject],
-        bridges: [EvidenceGraphPlacedBridge]
+        bridges: [EvidenceGraphPlacedBridge],
+        cardinalityByKey: [String: PropertyCardinality] = [:]
     ) -> Bool {
-        if subjects.contains(where: { cardHasConflict(in: $0.observations) }) {
+        if subjects.contains(where: { cardHasConflict(in: $0.observations, cardinalityByKey: cardinalityByKey) }) {
             return true
         }
-        return bridges.contains { cardHasConflict(in: extraObservations(in: $0.observations)) }
+        return bridges.contains {
+            cardHasConflict(in: extraObservations(in: $0.observations), cardinalityByKey: cardinalityByKey)
+        }
     }
 
     /// Observations that are not the connect sentence (edges + role / type).
