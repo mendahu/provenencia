@@ -1,7 +1,7 @@
 # Ship log — S14-31 Tab reaches a following text area
 
 **Plan:** [`S14-31-tab-reaches-text-area.md`](S14-31-tab-reaches-text-area.md) · **Branch:** `s14-31-tab-reaches-text-area` · **PR:** #718
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `b485ad89`. Gate PASS (orchestrator run: xcode-test 57s, all nine checks). Report deviations: version goes 0.3.3 → 0.3.4 (`main` was already 0.3.3; the plan allows it); `PVFieldFocus`'s binding init and `neighbours` are `@MainActor` (strict-concurrency warnings otherwise); plan header edited so `check-plan-docs` passes; `focus:` sits before `activateOnAppear:` at P6–P8. **The STEP-4 probe and §10 manual check were not run**: the implementer had no way to drive a window, so three §11 stop conditions are untested (Shift-Tab reaching `.onKeyPress`, `FocusClaim` landing in a `PVTextArea`, a `PVTabPair` `FocusState` moving focus in a sheet).
@@ -92,3 +92,8 @@ Do: add `extension KeyEquivalent { static let backTab = KeyEquivalent("\u{19}") 
 - `PVSelect.handleTriggerKey`: `case .tab` claims with `shift: false`; new `case .backTab` claims with `shift: true`.
 - Update the Landed note: result (a) is now fixed, with the probe's re-run result.
 Check: re-run the saved probe `/private/tmp/claude-501/-Users-jakerobins-Repos-provenencia/77219f8d-4d51-431f-acec-cf28dc2ae686/scratchpad/PVTabPairProbeTests.swift`, again uncommitted and removed afterwards: the P4 layout logs `CLAIM previous from second`. `rg -n "modifiers.contains\(.shift\)" macos/App/DesignSystem/Components/ComboBox macos/App/DesignSystem/Components/Select macos/App/DesignSystem/Components/Input` prints nothing. scripts/check-pr.sh PASS.
+
+Head `ebd6ada4`. Gate PASS (orchestrator run). F-8 done; the re-run probe logged `CLAIM previous from second -> first` in the P4 layout.
+
+## Round 2 — review
+Scope `b485ad89...ebd6ada4`. Reviewers: CON (CON-1), MNT (MNT-1, MNT-2), UX (UX-1, UX-2, UX-3), each from a Fix-now major. Minors (MNT-3 to MNT-5, CON-2, UX-4): read by the orchestrator below.
