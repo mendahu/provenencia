@@ -1,6 +1,6 @@
 # S14-33 — A bridge between two handles files when it is made
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the bridge card already shows membership when its bridge is filed; this PR only makes the engine file it sooner)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-audit.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rule "(Batch 7) Creating a bridge files it when both ends are already handles"; bar outcome 28; dogfood note [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](../ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) (deleted on land); [`docs/promote-graph-alignment.md` §9.1](../../../promote-graph-alignment.md#91-bridge-filing)
 **Planned:** 2026-11-05 against `main` @ `c8a8bdb`
-**Review:** [`S14-33-auto-file-bridges.review.md`](S14-33-auto-file-bridges.review.md) — round 1 answered; round 2 pending
+**Review:** [`S14-33-auto-file-bridges.review.md`](S14-33-auto-file-bridges.review.md) — Fits — Ready with changes, 2 rounds; no open blocker; nothing to user
 
 ### Implementer — read this first
 
@@ -75,7 +75,7 @@ A researcher who connects two people who are already promoted (spouse, parent, s
 | Filing when a bridge's Observations are edited later (a changed `relationship_type`) | not planned; no dogfood report |
 | A toast or other notice that the bridge filed (note open question 6) | not planned: bar outcome 28 asks only that membership shows; a notice is chrome and needs a brief |
 | Any Swift change (FakeStore, `EvidenceGraphModel`, `PromoteModel`) | not planned: see D-5 |
-| Moving `core/database/effects/conclusion_handles_test.go`'s mint-and-claim copies onto `promotetest.ClaimWithoutFiling` | not planned: a later test tidy may; this PR does not touch that file |
+| An in-transaction mint-and-claim step shared by `promotetest.ClaimWithoutFiling` and the copies in `core/database/effects/conclusion_handles_test.go` (which run inside an open `*sql.Tx` and so cannot call the `writes.Call` helper) | not planned: a later test tidy; this PR does not touch that file |
 
 ## 4. Current state
 
@@ -185,7 +185,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promote/...` passes.
 
 **STEP-3 — Filing-on-create tests**
 Files: `core/database/promote/bridges_test.go`.
-Do: add `TestBridgeFilesWhenDrawnBetweenHandles` *(new)* with subtests T-1 – T-5 from §8 (each `w.node` takes any distinct grid position, with the 0 / 2 / 4 spacing `TestBridgeFiling` uses; "the bridge" is the `connect.Result.Subject` the helper returns), using `bridgeWorld` (`node`, `promote`, `join`, `relationship`, `participation`, `location`, `placeRelationship`, `term`, `prop`, `handles`, `members`, `cachedEntity`, `relationships`) and `identityclaims.AcceptedEntityForSubject` for "has a claim". End T-1 and T-3 with `autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)`. Add `TestSaveBatchKeepsABridgeFiledOnCreate` *(new)* (T-6) to `batch_test.go`.
+Do: add `TestBridgeFilesWhenDrawnBetweenHandles` *(new)* with subtests T-1 – T-5 from §8 (each `w.node` takes any distinct grid position, with the 0 / 2 / 4 spacing `TestBridgeFiling` uses; "the bridge" is the `connect.Result.Subject` the helper returns), using `bridgeWorld` (`node`, `promote`, `join`, `relationship`, `participation`, `location`, `placeRelationship`, `term`, `prop`, `handles`, `members`, `cachedEntity`, `relationships`) and `w.filed(s)` (`core/database/promote/unpromote_test.go`) for "has a claim". End T-1 and T-3 with `autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)`. Add `TestSaveBatchKeepsABridgeFiledOnCreate` *(new)* (T-6) to `batch_test.go`.
 Check: `CGO_ENABLED=1 go test -tags fts5 -run TestBridgeFilesWhenDrawnBetweenHandles ./core/database/promote/` passes.
 
 **STEP-4 — Handler test**
@@ -195,7 +195,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 -run TestCreateCitedBridge ./api/ffi/ha
 
 **STEP-5 — Domain doc**
 Files: `docs/promote-graph-alignment.md`, `docs/conclusion-layer-data-model.md`, `docs/audit-revision-history.md`.
-Do: in §9.1 "When:", the first sentence becomes "after **any** claim create, and when a bridge is created between two Subjects that are already handles (`connect.CreateCitedBridge`), every bridge Subject whose ends are now both handles is filed in the same transaction." The bullet's other sentences stay. The bullet title "**Refused filings don't fail the claim.**" becomes "**Refused filings don't fail the claim or the connect.**" The §5.1 "Promoted / Promoted" row keeps its meaning and adds: "Since S14-33 a bridge drawn between two handles files when it is made, so this row appears for a bridge from an older catalog or one whose filing was refused when it was made." In `conclusion-layer-data-model.md` §5.4 (the paragraph that starts "**Bridge Subjects**"), "That happens on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member." becomes "That happens when the bridge is drawn between two handles, on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member."; in the refusal bullet, "never fails the claim that triggered it" becomes "never fails the write that triggered it". In `audit-revision-history.md`'s action table, the `create_cited_bridge` row becomes "Atomic Connect: bridge subject + Citation + edge Observations, and, when both ends are handles, the bridge's identity claim (and a minted association)".
+Do: in §9.1 "When:", the first sentence becomes "after **any** claim create, every bridge Subject whose ends are now both handles is filed in the same transaction; and when a bridge is drawn between two Subjects that are already handles (`connect.CreateCitedBridge`), that bridge is filed in the same transaction." The bullet's other sentences stay. The bullet title "**Refused filings don't fail the claim.**" becomes "**Refused filings don't fail the claim or the connect.**" The §5.1 "Promoted / Promoted" row keeps its meaning and adds: "Since S14-33 a bridge drawn between two handles files when it is made, so this row appears for a bridge from an older catalog or one whose filing was refused when it was made." In `conclusion-layer-data-model.md` §5.4 (the paragraph that starts "**Bridge Subjects**"), "That happens on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member." becomes "That happens when the bridge is drawn between two handles, on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member."; in the refusal bullet, "never fails the claim that triggered it" becomes "never fails the write that triggered it". In `audit-revision-history.md`'s action table, the `create_cited_bridge` row becomes "Atomic Connect: bridge subject + Citation + edge Observations, and, when both ends are handles, the bridge's identity claim (and a minted association)".
 Check: `rg -n "CreateCitedBridge" docs/promote-graph-alignment.md` prints the §9.1 line; `rg -n "drawn between two handles" docs/conclusion-layer-data-model.md` and `rg -n "identity claim" docs/audit-revision-history.md` each print the edited line.
 
 **STEP-6 — Version bump**
