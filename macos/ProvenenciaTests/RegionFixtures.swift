@@ -12,17 +12,26 @@ enum RegionFixtures {
         }
     }
 
+    /// A small square in the top-left quarter of the unit square.
+    static let smallSquare = [
+        CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.4, y: 0.1), CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.1, y: 0.4),
+    ]
+
     /// A locator document: an artifact selector plus one region selector of `ringCount` points.
     static func locatorJSON(ringCount: Int) -> String {
-        let points = ring(count: ringCount).map { ["x": Double($0.x), "y": Double($0.y)] }
-        let document: [String: Any] = [
-            "version": 1,
-            "selectors": [
-                ["type": "artifact"],
-                ["type": "region", "unit": "normalized", "points": points],
-            ],
-        ]
-        let data = try! JSONSerialization.data(withJSONObject: document)
+        locatorJSON(points: ring(count: ringCount))
+    }
+
+    /// A locator document: an artifact selector, a page selector when `page` is set, and one
+    /// region selector of `points`.
+    static func locatorJSON(points: [CGPoint], page: Int? = nil) -> String {
+        var selectors: [[String: Any]] = [["type": "artifact"]]
+        if let page { selectors.append(["type": "page", "artifact_page": page]) }
+        selectors.append([
+            "type": "region", "unit": "normalized",
+            "points": points.map { ["x": Double($0.x), "y": Double($0.y)] },
+        ])
+        let data = try! JSONSerialization.data(withJSONObject: ["version": 1, "selectors": selectors])
         return String(decoding: data, as: UTF8.self)
     }
 }

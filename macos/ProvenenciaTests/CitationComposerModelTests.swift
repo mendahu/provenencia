@@ -25,9 +25,6 @@ struct CitationComposerModelTests {
     private let relatedToPropertyID = "prop-related-to"
     private let rolePropertyID = "prop-role"
     private let relationshipTypePropertyID = "prop-relationship-type"
-    private let regionLocatorJSON = """
-    {"version":1,"selectors":[{"type":"artifact"},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
-    """
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
@@ -714,9 +711,7 @@ struct CitationComposerModelTests {
     @Test func editPrepareKeepsRegionLocatorAndIsNotDirty() async {
         let store = makeStore()
         seedArtifact(store)
-        let locatorJSON = """
-        {"version":1,"selectors":[{"type":"artifact"},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
-        """
+        let locatorJSON = RegionFixtures.locatorJSON(points: RegionFixtures.smallSquare)
         seedCitation(
             store,
             locatorJSON: locatorJSON,
@@ -734,9 +729,7 @@ struct CitationComposerModelTests {
     @Test func editSavedCitationRegionMarksDirty() async {
         let store = makeStore()
         seedArtifact(store)
-        let locatorJSON = """
-        {"version":1,"selectors":[{"type":"artifact"},{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.1,"y":0.1},{"x":0.4,"y":0.1},{"x":0.4,"y":0.4},{"x":0.1,"y":0.4}]}]}
-        """
+        let locatorJSON = RegionFixtures.locatorJSON(points: RegionFixtures.smallSquare, page: 1)
         seedCitation(store, locatorJSON: locatorJSON)
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
@@ -759,7 +752,7 @@ struct CitationComposerModelTests {
     @Test func newCitationClearsThePreviousLocator() async {
         let store = makeStore()
         seedArtifact(store)
-        seedCitation(store, locatorJSON: regionLocatorJSON)
+        seedCitation(store, locatorJSON: RegionFixtures.locatorJSON(points: RegionFixtures.smallSquare))
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         #expect(model.fields.locator.hasRegion)
@@ -773,7 +766,7 @@ struct CitationComposerModelTests {
     @Test func newCitationFromTheObservationDialogClearsTheLocator() async {
         let store = makeStore()
         seedArtifact(store)
-        seedCitation(store, locatorJSON: regionLocatorJSON)
+        seedCitation(store, locatorJSON: RegionFixtures.locatorJSON(points: RegionFixtures.smallSquare))
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         model.beginPropertyDraft(subjectID: subjectID)
