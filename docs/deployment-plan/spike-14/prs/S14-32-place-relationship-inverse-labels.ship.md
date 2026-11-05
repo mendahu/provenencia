@@ -72,5 +72,11 @@ Head `d3f0e885`. Gate PASS (orchestrator run, all nine checks). F-5 done: `named
 
 `main` still at `c8a8bdb1` by the GitHub API, because `git fetch` failed on DNS: no merge needed.
 
+## CI — round 1
+Go tests red on `9ac1ebbb`: `TestLargeSourceBudgets/warm` 350.57 ms against the 350 ms budget, in `core/database/promotealign`, which this PR does not change. macOS tests and localizable green. The same budget flaked in S14-16 (373 ms) and S14-20 (360 ms). The next push reruns it.
+
+## User direction after ready (2026-11-05)
+`docs/dogfood/` is only for feedback from people using the app, so F-3's three notes are removed and their words stay in Fix plan 1 above. `ship-pr`, `plan-pr` (skill and template) and `archive-docs` no longer offer it as a home, the two dogfood READMEs say so, and follow-ups go to the user for a home. The plan's three Out homes are decided by the user.
+
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: three dogfood notes (`docs/dogfood/ux/2026-11-05-place-card-fallback-phrase.md`, `2026-11-05-relationship-reading-beside-registry.md`, `2026-11-05-raw-term-label-bypass.md`) · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
+Gate PASS · CI pending · open: homes for the three F-3 follow-ups · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none

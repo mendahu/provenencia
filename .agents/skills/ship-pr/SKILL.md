@@ -174,7 +174,7 @@ Every finding gets exactly one decision, written in the ship log.
 | --- | --- |
 | **Fix now** | Verified blocker or major whose Fit is this PR. A defect in code this PR adds or changes, whatever later PR would first reach it. A **same-pass cleanup** (below), whatever its severity and whatever Fit the reviewer wrote. A minor or a stale comment in a file this PR adds or changes |
 | **Later PR** | The finding belongs to a PR already on the map (copy for a code that S#-NN surfaces, a check S#-NN's DoD needs). Write it into that PR's plan now (its Scope, Strings or DoD), or into its map scope entry when it has no plan yet, and name where in the ship log. No user approval needed |
-| **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list and the ship log's, and to `docs/ideas/` or the map if the user agrees. Spike close (S#-99) triages every ship log's list, so none is lost with the logs |
+| **Follow-up** | Fit is an idea, for code this PR does not add, change, or make worse; a Reshape. Goes to the PR body's follow-up list and the ship log's. Ask the user where each one goes before you finish (step 8); nothing lands in `docs/ideas/` or the map until they say. Never `docs/dogfood/`, which holds feedback from people using the app. Spike close (S#-99) triages every ship log's list, so none is lost with the logs |
 | **Rejected** | Refuted, out of the plan's scope with no harm, or contradicted by a Decision or working rule. One line of evidence. A rejection that rests on a premise (how users will behave, how rare a case is, "inside budget") needs evidence for the premise: a test, a count, or a measurement at the map's **Scale**. Without it the finding is **To user**, not Rejected |
 | **To user** | Contradicts a plan Decision, an AC, or a working rule but looks right; a product call; two lenses that disagree and the code cannot settle it. Pauses the loop |
 | **Logged** | Nits. Copy each reviewer's one-line **Nits** list into the ship log under the round's table, as is: no row each, no evidence |
@@ -307,7 +307,7 @@ Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: —
 - Shipped: one line per user story.
 - Review: round count; per lens, findings fixed / follow-up / rejected.
 - Needs you: To user items, each with your recommendation. "Nothing."
-- Follow-ups: one line each, with a suggested home.
+- Follow-ups: one line each, with a suggested home (an idea file, a row on the map, or dropped; never `docs/dogfood/`). Ask the user where each goes, and write it there only once they answer.
 - Manual check: the plan's §10 steps.
 - Build: open this checkout's Xcode project, then ⌘R:
 ```
@@ -330,3 +330,4 @@ If the loop stopped early, say where, why, and what you need.
 - Let a reviewer see the implementer's report or reasoning.
 - Fix a finding by changing the plan's Decisions, Scope, or ACs.
 - Run a third review round, mark the PR ready with a blocker open, or merge.
+- Put a follow-up, review finding or Out line in `docs/dogfood/`, or choose a follow-up's home without asking the user.

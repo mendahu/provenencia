@@ -67,7 +67,7 @@ planner; delete it from the finished plan.
 
 | Out | Home |
 | --- | --- |
-| … | S#-NN / [`ideas/…`](../../../ideas/….md) / dogfood log / not planned |
+| … | S#-NN / [`ideas/…`](../../../ideas/….md) / not planned |
 
 ## 4. Current state
 

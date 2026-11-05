@@ -206,7 +206,9 @@ Writing rules:
 - **Short code sketches are allowed** in Design for signatures, DDL, and proto
   messages. Do not write the implementation in the plan.
 - **Out has a home.** Every Out line says where it goes: a later PR id, an idea
-  file, the dogfood log, or "not planned".
+  file, or "not planned". When none of those is clearly right, ask the user. The
+  dogfood log is never a home: `docs/dogfood/` holds feedback from people using
+  the app, not what a plan or review leaves over.
 
 ### Size
 
