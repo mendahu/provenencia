@@ -1,7 +1,7 @@
 # Review — S14-31 Tab reaches a following text area
 
-**Verdict:** Round 1: Reshape — Not ready. Plan rewritten on the reshaped design (user, 2026-11-05). Round 2 pending.
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2). Round 1 was Reshape — Not ready; the user accepted the reshape on 2026-11-05.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -13,7 +13,7 @@
 
 - `PVTabPair` and `PVFieldFocus` live in `Components/Input/` (M-7): the pair is a field-focus helper, not a control, so it has no README row of its own; the Input and TextArea rows carry the contract.
 - The opening caret is left as it is today (D-10); the manual check clicks into the first field.
-- `PVComboBox` does not read `next` / `previous`; it keeps its `onCommit` Tab claim (Out).
+- P4 (`panelForm`): the pair's Tab jumps over the Uncertain checkbox, reading action and Save between Transcription and the label. They are Tab stops only with Full Keyboard Access; accepted (§6 Edges).
 - `PVInput.focusField()` keeps its existing one-turn write for `activateOnAppear` (Out): it is unchanged code; the new moves all go through `FocusClaim`.
 
 ## Round 1
@@ -80,3 +80,38 @@
 
 ### X-14 · minor · Stale wording
 **Answer:** Fixed — §10 items cite AC-2.2; the sweep line names the three old types.
+
+## Round 2
+
+### M-2-1 · blocker · Tab-neighbour decision on PVInput; combo and select drop the handle's neighbours
+**Answer:** Fixed — D-3: `PVFieldFocus.tabClaim(shift:)` on the handle; D-6: `PVInput`, `PVComboBox.handleKey` (after `onCommit` declines) and `PVSelect.handleTriggerKey` all claim through it. `PVInput.tabClaim` is gone; T-3 tests the handle.
+
+### M-2-2 · blocker · PVTabPair's order not held by a test
+**Answer:** Fixed — D-4: `PVTabPairField.next` / `.previous` hold the order; D-3: `PVFieldFocus.neighbours(next:previous:claim:)` is the pure mapping the binding init calls with `FocusClaim`. T-4 tests both without a window.
+
+### Round 2 note · P4 fields jumped over; sweep of map line 398
+**Answer:** Fixed — §6 Edges "Neighbors" lists them and accepts it; STEP-8 rewords the S14-14 line naming `PVComboFocus`.
+
+### X-2-1 · major · Strict-concurrency isolation of `next` / `previous`
+**Answer:** Fixed — D-2: closures are `@MainActor () -> Void`; the struct stays non-isolated; `tabClaim` and the router callbacks use the same type.
+
+### X-2-2 · major · Shift-Tab via `.onKeyPress` not shown in production
+**Answer:** Fixed — §6 Edges says so; STEP-4 opens with a probe of Tab and Shift-Tab, and §11 stops on it before any wiring.
+
+### X-2-3 · minor · Where `apply` goes in PVTextArea's chain
+**Answer:** Fixed — D-5: `PVSelectFocusModifier` moves to `PVFieldFocus.swift` as `PVFieldFocusModifier(host:own:)` and replaces `.focused($isFocused)` in place.
+
+### X-2-4 · minor · Handing callbacks to the router
+**Answer:** Fixed — D-5: `PVTextEditorInsetView.setTabCallbacks(onTab:onBacktab:)` *(new)*, called in `updateNSView` before `clearInsets()`.
+
+### X-2-5 · minor · Test-only init only in §8
+**Answer:** Fixed — D-2 and the §6 sketch give the memberwise init; the binding init delegates to it.
+
+### X-2-6 · minor · `first` / `second` undefined in the sketch
+**Answer:** Fixed — the sketch defines `handle(_:)`.
+
+### X-2-7 · minor · P6 wording
+**Answer:** Fixed — D-9 and §6: P6 follows the general rule; P4 is the one exception.
+
+### X-2-8 · nit · Version target
+**Answer:** Fixed — STEP-8: 0.3.2 → 0.3.3, or the next patch on `main` at land.
