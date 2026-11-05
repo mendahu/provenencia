@@ -1716,19 +1716,73 @@ struct CitationComposerModelTests {
         #expect(readyBridge(product, termID: "term-provenencia-parent")?.endBTitle == "Child")
     }
 
-    @Test func aResearchersSpouseTermGetsNoSpouseSentence() {
-        let user = termVocabulary(
-            propertyKey: "relationship_type",
-            terms: [(key: "spouse", label: "Partner", origin: CatalogOrigin.user)],
-            endTypeKey: "person"
+    @Test func relationshipReadingMatchesTheCard() {
+        func reading(_ key: String, _ origin: String, _ label: String) -> String? {
+            let vocabulary = termVocabulary(
+                propertyKey: "relationship_type",
+                terms: [(key: key, label: label, origin: origin)],
+                endTypeKey: "person"
+            )
+            return readyBridge(vocabulary, termID: "term-\(origin)-\(key)")?.reading
+        }
+        func card(_ key: String, _ term: String) -> String {
+            ConnectionSentenceRegistry.sentence(
+                kind: .relationship, endpointA: "a", endpointB: "b", term: term, termKey: key
+            )
+        }
+        let spouse = L10n.string(L10n.PropertyTerm.relationshipSpouse)
+        #expect(reading("spouse", CatalogOrigin.provenencia, "Spouse") == card("spouse", spouse))
+        let parent = L10n.string(L10n.PropertyTerm.relationshipParent)
+        #expect(reading("parent", CatalogOrigin.provenencia, "Parent") == card("parent", parent))
+        #expect(reading("spouse", CatalogOrigin.user, "Partner") == L10n.EvidenceGraph.bridgeSummaryRelationship(
+            person: "a", type: "partner", related: "b"
+        ))
+    }
+
+    @Test func productTermsReadTheirLocalizedNameOnEveryRow() {
+        let parentName = L10n.string(L10n.PropertyTerm.relationshipParent)
+        let childName = L10n.string(L10n.PropertyTerm.relationshipChild)
+        let witnessName = L10n.string(L10n.PropertyTerm.roleWitness)
+        func vocabulary(
+            _ propertyKey: String, _ terms: [(key: String, label: String, origin: String)], b: String
+        ) -> CitationComposerVocabulary {
+            var vocabulary = termVocabulary(propertyKey: propertyKey, terms: terms, endTypeKey: "person")
+            vocabulary.subjectsByID["b"] = .init(id: "b", label: "b", ref: "b", typeID: "t", typeKey: b)
+            return vocabulary
+        }
+        let relationship = vocabulary(
+            "relationship_type",
+            [(key: "parent", label: "Catalog words", origin: CatalogOrigin.provenencia),
+             (key: "child", label: "Kid words", origin: CatalogOrigin.provenencia)],
+            b: "person"
         )
-        #expect(readyBridge(user, termID: "term-user-spouse")?.reading == L10n.CitationComposer.isATermOf("a", "partner", "b"))
-        let product = termVocabulary(
-            propertyKey: "relationship_type",
-            terms: [(key: "spouse", label: "Spouse", origin: CatalogOrigin.provenencia)],
-            endTypeKey: "person"
+        let ready = readyBridge(relationship, termID: "term-provenencia-parent")
+        #expect(ready?.endATitle == parentName && ready?.endBTitle == childName)
+        let row = savedRow(
+            termProperty: relationship.propertiesByID["p-relationship_type"],
+            termID: "term-provenencia-parent", bridgeTypeKey: EvidenceBridgeKind.relationship.rawValue
         )
-        #expect(readyBridge(product, termID: "term-provenencia-spouse")?.reading == L10n.CitationComposer.areSpouses("a", "b"))
+        let groups = CitationComposerAuthoring.groups(observations: [], connections: [row], vocabulary: relationship)
+        func line(_ id: String) -> CitationSavedLine? { groups.first { $0.subjectID == id }?.lines.first }
+        #expect(line("a")?.label == L10n.CitationComposer.termOf(parentName))
+        #expect(line("b")?.label == L10n.CitationComposer.termOf(childName))
+        let participation = vocabulary(
+            "role", [(key: "witness", label: "Catalog words", origin: CatalogOrigin.provenencia)], b: "event"
+        )
+        let role = savedRow(
+            termProperty: participation.propertiesByID["p-role"],
+            termID: "term-provenencia-witness", bridgeTypeKey: EvidenceBridgeKind.participation.rawValue
+        )
+        let roleGroups = CitationComposerAuthoring.groups(observations: [], connections: [role], vocabulary: participation)
+        func roleLine(_ id: String) -> CitationSavedLine? { roleGroups.first { $0.subjectID == id }?.lines.first }
+        #expect(roleLine("a")?.label == L10n.CitationComposer.roleIn(witnessName))
+        #expect(roleLine("b")?.label == witnessName)
+        let theirs = vocabulary(
+            "relationship_type",
+            [(key: "parent", label: "Mine", origin: CatalogOrigin.user)],
+            b: "person"
+        )
+        #expect(readyBridge(theirs, termID: "term-user-parent")?.endATitle == "Mine")
     }
 
     @Test func aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel() {

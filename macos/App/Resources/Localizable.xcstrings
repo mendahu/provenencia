@@ -4276,6 +4276,30 @@
         }
       }
     },
+    "evidenceGraph.bridge.sentence.spouse": {
+      "comment": "Connection sentence for spouses; arguments are the two people",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are spouses"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.sibling": {
+      "comment": "Connection sentence for siblings; arguments are the two people",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are siblings"
+          }
+        }
+      }
+    },
     "evidenceGraph.bridge.summary.participationBare": {
       "comment": "Participation edge summary when role and endpoint labels are missing",
       "extractionState": "manual",
@@ -20771,30 +20795,6 @@
         }
       }
     },
-    "citationComposer.areSiblings": {
-      "comment": "Relationship reading for siblings",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ and %2$@ are siblings"
-          }
-        }
-      }
-    },
-    "citationComposer.areSpouses": {
-      "comment": "Relationship reading for spouses",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ and %2$@ are spouses"
-          }
-        }
-      }
-    },
     "citationComposer.artifactCitationCount": {
       "comment": "Artifact card count; argument is how many citations",
       "extractionState": "manual",
@@ -21319,18 +21319,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · saves on its own. The citation is not resaved"
-          }
-        }
-      }
-    },
-    "citationComposer.isATermOf": {
-      "comment": "Relationship reading; arguments are the first person, the type, and the second person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ is a %2$@ of %3$@"
           }
         }
       }

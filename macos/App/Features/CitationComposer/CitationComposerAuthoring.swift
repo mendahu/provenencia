@@ -542,7 +542,11 @@ enum CitationComposerAuthoring {
         case EvidenceBridgeKind.relationship.rawValue:
             if let term {
                 let inverse = inverseTerm(of: term, property: property, vocabulary: vocabulary)
-                return (term.label, inverse?.label ?? term.label, true)
+                let name = PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType)
+                let inverseName = inverse.map {
+                    PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.relationshipType)
+                }
+                return (name, inverseName ?? name, true)
             }
             return (
                 L10n.string(L10n.CitationComposer.firstPerson),
@@ -611,18 +615,21 @@ enum CitationComposerAuthoring {
             let spoken = viewing == to.id
                 ? inverseTerm(of: term, property: termProperty, vocabulary: vocabulary) ?? term
                 : term
-            let label = spoken.map { L10n.CitationComposer.termOf($0.label) }
+            let label = spoken.map {
+                L10n.CitationComposer.termOf(PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.relationshipType))
+            }
                 ?? L10n.string(L10n.CitationComposer.bridgeKindRelationship)
             return (label, other.label)
         case EvidenceBridgeKind.participation.rawValue:
             let person = from.typeKey == "person" ? from : to
             let event = from.typeKey == "event" ? from : to
+            let roleName = term.map { PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.role) }
             if viewing == person.id {
-                let label = term.map { L10n.CitationComposer.roleIn($0.label) }
+                let label = roleName.map { L10n.CitationComposer.roleIn($0) }
                     ?? L10n.string(L10n.CitationComposer.takesPart)
                 return (label, event.label)
             }
-            return (term?.label ?? L10n.string(L10n.CitationComposer.takesPart), person.label)
+            return (roleName ?? L10n.string(L10n.CitationComposer.takesPart), person.label)
         case EvidenceBridgeKind.location.rawValue:
             let event = from.typeKey == "event" ? from : to
             let place = from.typeKey == "place" ? from : to
@@ -651,13 +658,13 @@ enum CitationComposerAuthoring {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             guard let term else { return nil }
-            if term.productKey == SeededRelationshipTypeTerm.spouse {
-                return L10n.CitationComposer.areSpouses(from.label, to.label)
-            }
-            if term.productKey == SeededRelationshipTypeTerm.sibling {
-                return L10n.CitationComposer.areSiblings(from.label, to.label)
-            }
-            return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
+            return ConnectionSentenceRegistry.sentence(
+                kind: .relationship,
+                endpointA: from.label,
+                endpointB: to.label,
+                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType),
+                termKey: term.productKey
+            )
         case EvidenceBridgeKind.participation.rawValue:
             guard let term else { return nil }
             let person = from.typeKey == "person" ? from : to

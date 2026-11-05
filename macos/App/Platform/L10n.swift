@@ -2383,6 +2383,24 @@ enum L10n {
             ), earlier, later)
         }
 
+        /// "%1$@ and %2$@ are spouses"; arguments are the two people.
+        static func bridgeSentenceSpouse(a: String, b: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.spouse",
+                defaultValue: "%1$@ and %2$@ are spouses",
+                comment: "Connection sentence for spouses; arguments are the two people"
+            ), a, b)
+        }
+
+        /// "%1$@ and %2$@ are siblings"; arguments are the two people.
+        static func bridgeSentenceSibling(a: String, b: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.sibling",
+                defaultValue: "%1$@ and %2$@ are siblings",
+                comment: "Connection sentence for siblings; arguments are the two people"
+            ), a, b)
+        }
+
         static let linksRotor = LocalizedStringResource(
             "evidenceGraph.rotor.links",
             defaultValue: "Links",
@@ -4983,30 +5001,6 @@ enum L10n {
                 defaultValue: "%1$@ in",
                 comment: "Participation line label on the person; argument is the role"
             ), role)
-        }
-
-        static func isATermOf(_ subject: String, _ term: String, _ other: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.isATermOf",
-                defaultValue: "%1$@ is a %2$@ of %3$@",
-                comment: "Relationship reading; arguments are the first person, the type, and the second person"
-            ), subject, term, other)
-        }
-
-        static func areSpouses(_ a: String, _ b: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.areSpouses",
-                defaultValue: "%1$@ and %2$@ are spouses",
-                comment: "Relationship reading for spouses"
-            ), a, b)
-        }
-
-        static func areSiblings(_ a: String, _ b: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.areSiblings",
-                defaultValue: "%1$@ and %2$@ are siblings",
-                comment: "Relationship reading for siblings"
-            ), a, b)
         }
 
         static func roleInTheEvent(_ person: String, _ role: String, _ event: String) -> String {

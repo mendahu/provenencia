@@ -73,6 +73,27 @@ struct ConnectionSentenceRegistryTests {
         )
     }
 
+    @Test func placeTermsHaveTheirOwnPhrase() {
+        func card(_ term: String, _ termKey: String?) -> String {
+            ConnectionSentenceRegistry.sentence(
+                kind: .placeRelationship, endpointA: nil, endpointB: nil, term: term, termKey: termKey
+            )
+        }
+        #expect(card("Part of", SeededPlaceRelationshipTypeTerm.partOf) == "Part of")
+        #expect(card("Succeeded by", SeededPlaceRelationshipTypeTerm.succeededBy) == "Succeeded by")
+        #expect(card("capital", nil) == "Is capital of")
+    }
+
+    @Test func spouseAndSiblingHaveTheirOwnSentence() {
+        func person(_ term: String, _ termKey: String) -> String {
+            ConnectionSentenceRegistry.sentence(
+                kind: .relationship, endpointA: "Ann", endpointB: "Bo", term: term, termKey: termKey
+            )
+        }
+        #expect(person("Spouse", SeededRelationshipTypeTerm.spouse) == "Ann and Bo are spouses")
+        #expect(person("Sibling", SeededRelationshipTypeTerm.sibling) == "Ann and Bo are siblings")
+    }
+
     @Test func aTermReadsLowercaseInsideEverySentenceAndPhrase() {
         func whole(_ kind: EvidenceBridgeKind, _ a: String, _ b: String, _ term: String) -> String {
             ConnectionSentenceRegistry.sentence(kind: kind, endpointA: a, endpointB: b, term: term)

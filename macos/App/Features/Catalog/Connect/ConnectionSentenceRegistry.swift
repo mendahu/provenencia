@@ -114,11 +114,26 @@ enum ConnectionSentenceRegistry {
         subjectSentence(SeededEventTypeTerm.burial) { Text.bridgeSentenceBurialSubject(person: $0.a) },
         Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.partOf, eventType: nil, sentence: {
             Text.bridgeSentencePlacePartOf(part: $0.a, whole: $0.b)
-        }),
+        }, phrase: termName(SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.partOf)),
         Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.succeededBy, eventType: nil, sentence: {
             Text.bridgeSentencePlaceSucceededBy(earlier: $0.a, later: $0.b)
+        }, phrase: termName(SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.succeededBy)),
+        Sentence(kind: .relationship, term: SeededRelationshipTypeTerm.spouse, eventType: nil, sentence: {
+            Text.bridgeSentenceSpouse(a: $0.a, b: $0.b)
+        }),
+        Sentence(kind: .relationship, term: SeededRelationshipTypeTerm.sibling, eventType: nil, sentence: {
+            Text.bridgeSentenceSibling(a: $0.a, b: $0.b)
         }),
     ]
+
+    /// A card phrase that is the product term's own name ("Part of"), not the
+    /// kind's "Is … of" around a label; the label reads when the product does
+    /// not word the term.
+    private static func termName(_ propertyKey: String, _ termKey: String) -> @Sendable (String?) -> String {
+        { label in
+            L10n.PropertyTerm.resource(propertyKey: propertyKey, termKey: termKey).map { L10n.string($0) } ?? label ?? ""
+        }
+    }
 
     private static func subjectSentence(
         _ eventType: String,
