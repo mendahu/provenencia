@@ -79,7 +79,7 @@ Go tests red on `9ac1ebbb`: `TestLargeSourceBudgets/warm` 350.57 ms against the 
 `docs/dogfood/` is only for feedback from people using the app, so F-3's three notes are removed and their words stay in Fix plan 1 above. `ship-pr`, `plan-pr` (skill and template) and `archive-docs` no longer offer it as a home, the two dogfood READMEs say so, and follow-ups go to the user for a home. The plan's three Out homes are decided by the user.
 
 ## Scope added by the user (2026-11-05)
-Asked where the follow-ups go, the user put all of them on this PR and set the warm budget to 375 ms. This supersedes the plan's three "dogfood log" Out lines and its "What stays" line for person relationship wording. The S14-29 vertex items are held for the user's design answers (Fix plan 4).
+Asked where the follow-ups go, the user put all of them on this PR and set the warm budget to 375 ms. This supersedes the plan's three "dogfood log" Out lines and its "What stays" line for person relationship wording. The S14-29 vertex items were put to the user for design answers.
 
 ### Fix plan 3
 
@@ -109,5 +109,11 @@ Check: `rg -n '\$0\.label|term\?\.label|term\.label|inverse\?\.label' macos/App/
 
 **Docs for Fix plan 3.** In the plan: change the three Out lines' homes to "this PR (user, 2026-11-05)", and extend the Landed note with F-6 to F-9, naming the card and draft copy changes. Add the same copy changes to the S14-32 paragraph in `spike-14/completed.md`. Change no AC or Decision.
 
+## Round 3 — fix
+Head `119d6641`. Gate PASS (orchestrator run below). F-6 to F-9 and the docs line done, in `fe8f5117`, `1f18d0b3`, `119d6641`. Deviations: F-7 to F-9's tests were written first but not run red against the unfixed code; the two place rows keep `Sentence(kind: …, term: X.y` on one line so the Go subtest reads them; `term.label` remains outside `listedLine` and `endTitles` (the place fallback for researcher terms at line 560, and `readingSentence`'s participation and place arguments).
+
+## Vertex items (user, 2026-11-05)
+Adding a vertex: dropped, a researcher can clear and redraw. Keyboard nudging: descoped for now. `docs/dogfood/ux/2026-11-05-region-vertex-editing.md` is removed, as agent-written and not user feedback. Its third item, VoiceOver per vertex, and the region kind reload bug found while scoping (a 6-point polygon reloads as an L, a 32-point one as a circle, a 4-point axis-aligned one as a rectangle; read from the code, not reproduced) go to the user for a home.
+
 ## Result
-Gate PASS · CI pending · open: homes for the three F-3 follow-ups · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
+Gate PASS · CI pending · open: homes for VoiceOver per vertex and the reload bug; F-6 to F-9 reviewed by nobody · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
