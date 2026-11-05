@@ -356,7 +356,7 @@ private struct PromoteAlignmentRow: View {
             isInvalid: row.target == .unset,
             accessibilitySpokenLabel: L10n.Promote.promotesTo(name: row.name),
             accessibilityIdentifier: "promote.row.\(row.ref).target",
-            focus: PVSelectFocus($targetFocus, equals: true)
+            focus: PVFieldFocus($targetFocus, equals: true)
         ) { option in
             PromoteTargetMenuRow(option: option, row: row)
         }
@@ -509,7 +509,7 @@ private struct PromoteRecordSearch: View {
                     placeholder: L10n.Promote.searchPlaceholder(row.kind),
                     label: L10n.Promote.searchLabel(name: row.name),
                     accessibilityIdentifierPrefix: "promote.row.\(row.ref).search",
-                    focus: PVComboFocus($focus, equals: .query),
+                    focus: PVFieldFocus($focus, equals: .query),
                     onCommit: { id, _ in
                         model.pickSearchHit(id: id)
                         return false

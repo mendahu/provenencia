@@ -8,7 +8,7 @@ struct NameValueEditorForm: View {
     var accessibilityIdentifierPrefix: String = "nameValue"
     var showStoredAs: Bool = true
     /// Host focus for the form field. The editor does not take focus on its own.
-    var formFocus: PVInputFocus? = nil
+    var formFocus: PVFieldFocus? = nil
     @State private var partValueToFocus: UUID?
     @State private var pendingSplit: PendingNameSplit?
 

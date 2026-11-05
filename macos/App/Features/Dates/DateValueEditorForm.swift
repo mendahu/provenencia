@@ -6,7 +6,7 @@ struct DateValueEditorForm: View {
     /// Prefix for control identifiers (default matches the Source page date dialog).
     var accessibilityIdentifierPrefix: String = "sources.page.date"
     /// Host focus for the year field. The form does not take focus on its own.
-    var yearFocus: PVInputFocus? = nil
+    var yearFocus: PVFieldFocus? = nil
 
     @FocusState private var startHourFocused: Bool
     @FocusState private var endHourFocused: Bool
@@ -281,7 +281,7 @@ struct DateValueEditorForm: View {
         isInvalid: Bool = false,
         accessibilityIdentifier: String? = nil,
         focused: FocusState<Bool>.Binding? = nil,
-        equalsFocus: PVInputFocus? = nil,
+        equalsFocus: PVFieldFocus? = nil,
         activateOnAppear: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {

@@ -265,30 +265,6 @@ enum PVComboCommitVia: Equatable {
 /// **Not ported** (add here on demand, the way `PVSidebarNav` was): the
 /// multi-select token field and the "use what you typed" create row. No call
 /// site needs them yet.
-///
-/// Optional host focus. The text field applies `.focused($binding, equals:)`
-/// itself, so a write to that `FocusState` lands in the field. Without this,
-/// the box keeps its own focus.
-struct PVComboFocus {
-    fileprivate let isActive: () -> Bool
-    fileprivate let resign: () -> Void
-    fileprivate let install: (Binding<String>, Text?) -> AnyView
-
-    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
-        isActive = { binding.wrappedValue == value }
-        resign = {
-            if binding.wrappedValue == value { binding.wrappedValue = nil }
-        }
-        install = { text, prompt in
-            AnyView(
-                TextField(text: text, prompt: prompt) { EmptyView() }
-                    .textFieldStyle(.plain)
-                    .focused(binding, equals: value)
-            )
-        }
-    }
-}
-
 struct PVComboBox<Row: View, Empty: View>: View {
     /// The committed option's `value`; empty means nothing is chosen.
     @Binding var selection: String
@@ -305,7 +281,7 @@ struct PVComboBox<Row: View, Empty: View>: View {
     /// whether to take the key. Return true to move focus inside the form.
     var onCommit: ((String, PVComboCommitVia) -> Bool)? = nil
     /// When set, the text field is bound to the host's `FocusState`.
-    var focus: PVComboFocus? = nil
+    var focus: PVFieldFocus? = nil
     /// Remote results: called with each typed query; the caller filters and
     /// passes the results as `options`. Nil filters locally.
     var onQueryChange: ((String) -> Void)?
@@ -458,7 +434,10 @@ struct PVComboBox<Row: View, Empty: View>: View {
     @ViewBuilder
     private var fieldText: some View {
         if let focus {
-            focus.install(typedText, placeholder?.pvText)
+            focus.apply(AnyView(
+                TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
+                    .textFieldStyle(.plain)
+            ))
         } else {
             TextField(text: typedText, prompt: placeholder?.pvText) { EmptyView() }
                 .textFieldStyle(.plain)
@@ -741,6 +720,11 @@ struct PVComboBox<Row: View, Empty: View>: View {
                 let claim = !press.modifiers.contains(.shift) && commit(option, via: .tab)
                 if claim { return .handled }
             }
+            if let claim = focus?.tabClaim(shift: press.modifiers.contains(.shift)) {
+                isOpen = false
+                claim()
+                return .handled
+            }
             isOpen = false
             return .ignored
         default:
@@ -769,7 +753,7 @@ extension PVComboBox {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        focus: PVComboFocus? = nil,
+        focus: PVFieldFocus? = nil,
         onCommit: ((String, PVComboCommitVia) -> Bool)? = nil,
         onQueryChange: ((String) -> Void)? = nil,
         isLoading: Bool = false,
@@ -807,7 +791,7 @@ extension PVComboBox where Empty == Text {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        focus: PVComboFocus? = nil,
+        focus: PVFieldFocus? = nil,
         onCommit: ((String, PVComboCommitVia) -> Bool)? = nil,
         onQueryChange: ((String) -> Void)? = nil,
         isLoading: Bool = false,
@@ -845,7 +829,7 @@ extension PVComboBox where Row == PVComboBoxPlainRow, Empty == Text {
         maxListHeight: CGFloat = 288,
         label: any PVCopy,
         accessibilityIdentifierPrefix: String? = nil,
-        focus: PVComboFocus? = nil,
+        focus: PVFieldFocus? = nil,
         onCommit: ((String, PVComboCommitVia) -> Bool)? = nil
     ) {
         self.init(

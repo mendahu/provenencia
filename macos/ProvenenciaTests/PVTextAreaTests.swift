@@ -37,6 +37,55 @@ struct PVTextAreaTests {
         ])
     }
 
+    @Test func tabAndBacktabCallTheNeighbourWhenSet() {
+        let textView = NSTextView()
+        let spy = TextViewCommandSpy()
+        textView.delegate = spy
+        let router = PVTextAreaTabRouter()
+        var tabs = 0
+        var backtabs = 0
+        router.onTab = { tabs += 1 }
+        router.onBacktab = { backtabs += 1 }
+        router.attach(to: textView)
+
+        let tab = textView.delegate?.textView?(textView, doCommandBy: #selector(NSResponder.insertTab(_:)))
+        #expect(tab == true)
+        #expect(tabs == 1)
+        #expect(backtabs == 0)
+
+        let backtab = textView.delegate?.textView?(textView, doCommandBy: #selector(NSResponder.insertBacktab(_:)))
+        #expect(backtab == true)
+        #expect(tabs == 1)
+        #expect(backtabs == 1)
+        #expect(spy.commands.isEmpty)
+    }
+
+    @Test func noNeighbourKeepsTodaysRouting() {
+        let textView = NSTextView()
+        let spy = TextViewCommandSpy()
+        textView.delegate = spy
+        let router = PVTextAreaTabRouter()
+        var backtabs = 0
+        router.onBacktab = { backtabs += 1 }
+        router.attach(to: textView)
+
+        let tab = textView.delegate?.textView?(textView, doCommandBy: #selector(NSResponder.insertTab(_:)))
+        let optionTab = textView.delegate?.textView?(
+            textView,
+            doCommandBy: #selector(NSResponder.insertTabIgnoringFieldEditor(_:))
+        )
+        let newline = textView.delegate?.textView?(textView, doCommandBy: #selector(NSResponder.insertNewline(_:)))
+
+        #expect(tab == true)
+        #expect(backtabs == 0)
+        #expect(optionTab == false)
+        #expect(newline == false)
+        #expect(spy.commands == [
+            #selector(NSResponder.insertTabIgnoringFieldEditor(_:)),
+            #selector(NSResponder.insertNewline(_:)),
+        ])
+    }
+
     @Test func routerStillForwardsEditsToTheOriginalDelegate() {
         let textView = NSTextView()
         let spy = TextViewCommandSpy()

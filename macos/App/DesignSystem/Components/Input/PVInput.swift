@@ -65,22 +65,23 @@ struct PVInputChrome: ViewModifier {
     }
 }
 
-/// Host focus for a field that shares a `FocusState` with its siblings.
-/// The text field applies `.focused($binding, equals:)` itself.
-struct PVInputFocus {
-    fileprivate let isActive: () -> Bool
-    fileprivate let focus: () -> Void
-    fileprivate let install: (Binding<String>, Text?) -> AnyView
+/// Claims Tab and Shift-Tab for the neighbour a field's handle names. With no
+/// neighbour the field adds nothing, so the key loop keeps the key.
+private struct PVInputTabClaim: ViewModifier {
+    let focus: PVFieldFocus
 
-    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
-        isActive = { binding.wrappedValue == value }
-        focus = { binding.wrappedValue = value }
-        install = { text, prompt in
-            AnyView(
-                TextField(text: text, prompt: prompt) { EmptyView() }
-                    .textFieldStyle(.plain)
-                    .focused(binding, equals: value)
-            )
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if focus.next != nil || focus.previous != nil {
+            content.onKeyPress(.tab, phases: .down) { press in
+                guard let claim = focus.tabClaim(shift: press.modifiers.contains(.shift)) else {
+                    return .ignored
+                }
+                claim()
+                return .handled
+            }
+        } else {
+            content
         }
     }
 }
@@ -100,7 +101,7 @@ struct PVInput: View {
     private let isInvalid: Bool
     private let activateOnAppear: Bool
     private let externalFocus: FocusState<Bool>.Binding?
-    private let equalsFocus: PVInputFocus?
+    private let equalsFocus: PVFieldFocus?
     private let onBlur: (() -> Void)?
 
     @FocusState private var ownedFocus: Bool
@@ -115,7 +116,7 @@ struct PVInput: View {
         suffix: String? = nil,
         isInvalid: Bool = false,
         focused: FocusState<Bool>.Binding? = nil,
-        focus: PVInputFocus? = nil,
+        focus: PVFieldFocus? = nil,
         activateOnAppear: Bool = false,
         onBlur: (() -> Void)? = nil
     ) {
@@ -141,7 +142,11 @@ struct PVInput: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
             } else if let equalsFocus {
-                equalsFocus.install($text, prompt.map { Text($0) })
+                equalsFocus.apply(AnyView(
+                    TextField(text: $text, prompt: prompt.map { Text($0) }) { EmptyView() }
+                        .textFieldStyle(.plain)
+                        .modifier(PVInputTabClaim(focus: equalsFocus))
+                ))
                     .modifier(chrome(isFocused: equalsFocus.isActive()))
             } else if let externalFocus {
                 TextField(text: $text, prompt: prompt.map { Text($0) }) {

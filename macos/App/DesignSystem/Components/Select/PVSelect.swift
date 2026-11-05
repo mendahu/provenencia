@@ -28,35 +28,6 @@ struct PVSelectOption: Identifiable, Equatable {
     }
 }
 
-/// Optional host focus, the same contract as `PVComboFocus`: the trigger
-/// applies `.focused($binding, equals:)` itself, so a write to that
-/// `FocusState` lands on the select. Without it the select keeps its own focus.
-struct PVSelectFocus {
-    fileprivate let isActive: () -> Bool
-    fileprivate let activate: () -> Void
-    fileprivate let apply: (AnyView) -> AnyView
-
-    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
-        isActive = { binding.wrappedValue == value }
-        activate = { binding.wrappedValue = value }
-        apply = { view in AnyView(view.focused(binding, equals: value)) }
-    }
-}
-
-private struct PVSelectFocusModifier: ViewModifier {
-    let host: PVSelectFocus?
-    var own: FocusState<Bool>.Binding
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if let host {
-            host.apply(AnyView(content))
-        } else {
-            content.focused(own)
-        }
-    }
-}
-
 /// Default one-line option label. Marks, a second line, or other rich
 /// row chrome go through `PVSelect`'s `row:` builder — same slot as
 /// `PVComboBox`.
@@ -100,7 +71,7 @@ struct PVSelect<Row: View>: View {
     private let accessibilitySpokenLabel: String?
     private let accessibilityIdentifier: String?
     private let closedHelp: String?
-    private let focus: PVSelectFocus?
+    private let focus: PVFieldFocus?
     private let row: (PVSelectOption) -> Row
 
     @State private var session: PVSelectSession
@@ -114,7 +85,7 @@ struct PVSelect<Row: View>: View {
     private var isFocused: Bool { focus?.isActive() ?? ownFocus }
 
     private func focusTrigger() {
-        if let focus { focus.activate() } else { ownFocus = true }
+        if let focus { focus.focus() } else { ownFocus = true }
     }
 
     init(
@@ -135,7 +106,7 @@ struct PVSelect<Row: View>: View {
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
         closedHelp: String? = nil,
-        focus: PVSelectFocus? = nil,
+        focus: PVFieldFocus? = nil,
         @ViewBuilder row: @escaping (PVSelectOption) -> Row
     ) {
         self._selection = selection
@@ -191,7 +162,7 @@ struct PVSelect<Row: View>: View {
             }
             .opacity(isDisabled ? 0.45 : 1)
             .focusable(!isDisabled)
-            .modifier(PVSelectFocusModifier(host: focus, own: $ownFocus))
+            .modifier(PVFieldFocusModifier(host: focus, own: $ownFocus))
             .disabled(isDisabled)
             .onMoveCommand(perform: handleMoveCommand)
             .onKeyPress(action: handleTriggerKey)
@@ -339,6 +310,10 @@ struct PVSelect<Row: View>: View {
         case .upArrow, .downArrow:
             // `onMoveCommand` already applied ↑/↓.
             return .ignored
+        case .tab:
+            guard let claim = focus?.tabClaim(shift: press.modifiers.contains(.shift)) else { return .ignored }
+            claim()
+            return .handled
         case .home: key = .home
         case .end: key = .end
         case .escape: key = .escape
@@ -469,7 +444,7 @@ extension PVSelect where Row == PVSelectPlainRow {
         accessibilitySpokenLabel: String? = nil,
         accessibilityIdentifier: String? = nil,
         closedHelp: String? = nil,
-        focus: PVSelectFocus? = nil
+        focus: PVFieldFocus? = nil
     ) {
         self.init(
             selection: selection,

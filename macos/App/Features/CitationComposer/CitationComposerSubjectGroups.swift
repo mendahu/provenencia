@@ -440,7 +440,7 @@ struct CitationComposerEditSheet: View {
                             model.beginAddCustomTerm(propertyID: property.id, applyToEdit: true)
                         }
                     },
-                    termFocus: PVComboFocus($focus, equals: .term),
+                    termFocus: PVFieldFocus($focus, equals: .term),
                     termIdentifierPrefix: "citationComposer.edit.bridgeTerm"
                 )
             }
