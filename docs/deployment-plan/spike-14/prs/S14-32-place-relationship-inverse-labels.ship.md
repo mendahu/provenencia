@@ -78,5 +78,36 @@ Go tests red on `9ac1ebbb`: `TestLargeSourceBudgets/warm` 350.57 ms against the 
 ## User direction after ready (2026-11-05)
 `docs/dogfood/` is only for feedback from people using the app, so F-3's three notes are removed and their words stay in Fix plan 1 above. `ship-pr`, `plan-pr` (skill and template) and `archive-docs` no longer offer it as a home, the two dogfood READMEs say so, and follow-ups go to the user for a home. The plan's three Out homes are decided by the user.
 
+## Scope added by the user (2026-11-05)
+Asked where the follow-ups go, the user put all of them on this PR and set the warm budget to 375 ms. This supersedes the plan's three "dogfood log" Out lines and its "What stays" line for person relationship wording. The S14-29 vertex items are held for the user's design answers (Fix plan 4).
+
+### Fix plan 3
+
+**F-6 — Raise the warm budget to 375 ms** (user; CI round 1)
+Files: `core/database/promotealign/perf_test.go`.
+Do: `budgetWarm = 375 * time.Millisecond`. In the comment above the const block add: raised from 350 ms by the user on 2026-11-05, when the CI runner measured 350.57 ms (S14-32).
+Check: `go test -tags fts5 ./core/database/promotealign/ -run TestLargeSourceBudgets` passes.
+
+**F-7 — Place cards with a missing endpoint read the term, not "Is … of"** (from UX-1)
+Files: `macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift`, `macos/ProvenenciaTests/ConnectionSentenceRegistryTests.swift`.
+Failing test first: `placeTermsHaveTheirOwnPhrase`: `ConnectionSentenceRegistry.sentence(kind: .placeRelationship, endpointA: nil, endpointB: nil, term: "Part of", termKey: SeededPlaceRelationshipTypeTerm.partOf)` is "Part of"; `succeededBy` gives "Succeeded by"; a researcher term "capital", with no term key, still gives "Is capital of".
+Do: give the two place `Sentence` rows a `phrase` that returns the term's own `L10n.PropertyTerm` wording through `L10n.PropertyTerm.resource(propertyKey:termKey:)`. The card fallback then reads "Part of · <ref>" and "Succeeded by · <ref>". Keep `bridgeSummaryPlaceRelationshipTypeOnly` for researcher terms. Add no new key.
+Check: the test passes.
+
+**F-8 — The relationship reading reads the registry** (from the plan's Out line, same shape as D-5)
+Files: `ConnectionSentenceRegistry.swift`, `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `ConnectionSentenceRegistryTests.swift`, `macos/ProvenenciaTests/CitationComposerModelTests.swift`. Skill: `add-localized-string`.
+Failing test first: `spouseAndSiblingHaveTheirOwnSentence` in the registry tests: with term keys, `sentence(kind: .relationship, endpointA: "Ann", endpointB: "Bo", term: "Spouse", termKey: SeededRelationshipTypeTerm.spouse)` is "Ann and Bo are spouses", and `sibling` is "Ann and Bo are siblings". `relationshipReadingMatchesTheCard` in the model tests: the draft reading equals the registry sentence for spouse, for parent, and for a researcher's term.
+Do: add `L10n.EvidenceGraph.bridgeSentenceSpouse(a:b:)` (`evidenceGraph.bridge.sentence.spouse`, "%1$@ and %2$@ are spouses") and `bridgeSentenceSibling(a:b:)` (`evidenceGraph.bridge.sentence.sibling`, "%1$@ and %2$@ are siblings"), each after `bridgeSentencePlaceSucceededBy` in `L10n.swift` and the catalog. Add two `.relationship` `Sentence` rows with `phrase` nil. `readingSentence`'s relationship case: `guard let term else { return nil }`, then `ConnectionSentenceRegistry.sentence(kind: .relationship, endpointA: from.label, endpointB: to.label, term: <the F-9 display name>, termKey: term.productKey)`. Delete `L10n.CitationComposer.areSpouses`, `areSiblings`, `isATermOf` and their catalog keys. Do not add `SeededRelationshipTypeTerm` to `composerWordedTermEnums`: nine of its terms use the kind's sentence.
+Researcher-visible: the draft reading moves to the card's generic wording for other terms, and the spouse and sibling cards move to the draft's wording.
+Check: `rg -n 'areSpouses|areSiblings|isATermOf' macos` prints nothing; tests pass.
+
+**F-9 — Composer rows read a term's display name** (from the plan's Out line)
+Files: `CitationComposerAuthoring.swift`, `CitationComposerModelTests.swift`.
+Failing test first: `productTermsReadTheirLocalizedNameOnEveryRow`: a product term with catalog label "Catalog words", for a relationship and a participation, reads the `L10n.PropertyTerm` name on the `listedLine` rows and the `endTitles` titles; a researcher's term keeps its label.
+Do: in `listedLine`'s relationship and participation cases and `endTitles`' relationship case, replace raw `.label` with `PropertyTermDisplay.name(term:propertyKey:)`, using `SeededPropertyKey.relationshipType` and `SeededPropertyKey.role`, including the inverse term. Add one small private helper only if the three sites would otherwise repeat it.
+Check: `rg -n '\$0\.label|term\?\.label|term\.label|inverse\?\.label' macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` prints no term reader in those two functions; scripts/check-pr.sh PASS.
+
+**Docs for Fix plan 3.** In the plan: change the three Out lines' homes to "this PR (user, 2026-11-05)", and extend the Landed note with F-6 to F-9, naming the card and draft copy changes. Add the same copy changes to the S14-32 paragraph in `spike-14/completed.md`. Change no AC or Decision.
+
 ## Result
 Gate PASS · CI pending · open: homes for the three F-3 follow-ups · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
