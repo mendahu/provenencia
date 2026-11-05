@@ -87,6 +87,29 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 	return src[start : start+end]
 }
 
+// namedTerms collects "Enum.name" from the first two groups of each match of re in src.
+func namedTerms(re *regexp.Regexp, src string) map[string]bool {
+	named := map[string]bool{}
+	for _, m := range re.FindAllStringSubmatch(src, -1) {
+		named[m[1]+"."+m[2]] = true
+	}
+	return named
+}
+
+// reportUnnamedTerms fails once for each constant of the term enums in
+// swiftVocabulary that named lacks; missing is the "has no …" text.
+func reportUnnamedTerms(t *testing.T, enums []struct{ enum, property string }, named map[string]bool, missing string) {
+	t.Helper()
+	for _, tc := range enums {
+		enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+		for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+			if !named[tc.enum+"."+m[1]] {
+				t.Errorf("Swift %s.%s (%s term %q) %s", tc.enum, m[1], tc.property, m[2], missing)
+			}
+		}
+	}
+}
+
 // swiftFuncBody returns the source from `signature` to the brace that closes
 // its body.
 func swiftFuncBody(t *testing.T, path, signature string) string {
@@ -643,18 +666,8 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	})
 	t.Run("every seeded term has wording", func(t *testing.T) {
 		body := swiftFuncBody(t, swiftL10n, "static func resource(propertyKey")
-		named := map[string]bool{}
-		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
-			named[m[1]+"."+m[2]] = true
-		}
-		for _, tc := range seededTermEnums {
-			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
-			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
-				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
-				}
-			}
-		}
+		named := namedTerms(wordingCase, body)
+		reportUnnamedTerms(t, seededTermEnums, named, "has no L10n.PropertyTerm resource")
 	})
 	// The terms whose wording the Citation composer holds in CitationComposerAuthoring.termWording.
 	composerWordedTermEnums := []struct{ enum, property string }{
@@ -662,42 +675,22 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	}
 	t.Run("every composer-worded term has composer wording", func(t *testing.T) {
 		body := swiftFuncBody(t, swiftCitationComposerAuthoring, "static func termWording(propertyKey")
-		named := map[string]bool{}
-		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
-			named[m[1]+"."+m[2]] = true
-		}
+		named := namedTerms(wordingCase, body)
 		if len(named) == 0 {
 			t.Fatal("termWording(propertyKey:termKey:): no wording cases read")
 		}
-		for _, tc := range composerWordedTermEnums {
-			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
-			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
-				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no CitationComposerAuthoring.termWording case", tc.enum, m[1], tc.property, m[2])
-				}
-			}
-		}
+		reportUnnamedTerms(t, composerWordedTermEnums, named, "has no CitationComposerAuthoring.termWording case")
 	})
 	t.Run("every composer-worded term has a connection sentence", func(t *testing.T) {
 		b, err := os.ReadFile(swiftConnectionSentenceRegistry)
 		if err != nil {
 			t.Fatal(err)
 		}
-		named := map[string]bool{}
-		for _, m := range sentenceRow.FindAllStringSubmatch(string(b), -1) {
-			named[m[1]+"."+m[2]] = true
-		}
+		named := namedTerms(sentenceRow, string(b))
 		if len(named) == 0 {
 			t.Fatal("ConnectionSentenceRegistry: no sentence rows read")
 		}
-		for _, tc := range composerWordedTermEnums {
-			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
-			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
-				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no ConnectionSentenceRegistry.sentences row", tc.enum, m[1], tc.property, m[2])
-				}
-			}
-		}
+		reportUnnamedTerms(t, composerWordedTermEnums, named, "has no ConnectionSentenceRegistry.sentences row")
 	})
 	t.Run("every delete-impact kind has a noun", func(t *testing.T) {
 		want := map[string]bool{"item": true}
