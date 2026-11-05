@@ -166,7 +166,7 @@ struct PVTextArea: View {
             .modifier(
                 PVTextAreaChrome(
                     typography: typography,
-                    isFocused: focus?.isActive() ?? isFocused,
+                    isFocused: focus.isActive(own: isFocused),
                     isInvalid: isInvalid
                 )
             )
@@ -176,11 +176,7 @@ struct PVTextArea: View {
             guard activateOnAppear else { return }
             // Defer past the resting→editing view swap; same-cycle focus is dropped.
             DispatchQueue.main.async {
-                if let focus {
-                    focus.focus()
-                } else {
-                    isFocused = true
-                }
+                focus.focus(own: $isFocused)
             }
         }
         .pvFieldNamed()
@@ -244,7 +240,8 @@ private struct PVTextAreaContentHeightKey: PreferenceKey {
 
 /// `TextEditor` insets its glyphs past the chrome padding, so a Source title
 /// would jump between resting text and edit mode. SwiftUI has no inset
-/// modifier for that padding; this clears the text container only.
+/// modifier for that padding; this clears the text container's insets, and
+/// carries the area's Tab neighbours to the router it attaches to that text view.
 private struct PVTextEditorInsetClearer: NSViewRepresentable {
     var onTab: (@MainActor () -> Void)?
     var onBacktab: (@MainActor () -> Void)?
@@ -333,7 +330,8 @@ enum PVTextAreaTabRouting {
 }
 
 /// Sits in front of the text view's existing delegate so SwiftUI still hears
-/// edits. Tab moves through the key loop; every other command is passed on.
+/// edits. Tab goes to the neighbour when one is set, else through the key loop;
+/// every other command is passed on.
 final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     private weak var wrapped: NSTextViewDelegate?
     /// Where Tab goes instead of the key loop, when the area has a neighbour.

@@ -29,3 +29,19 @@ struct PVTabPair<Content: View>: View {
         content(handle(.first), handle(.second))
     }
 }
+
+#Preview {
+    PVTabPair { first, second in
+        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+            PVInput(text: .constant("Family album, Norfolk"), prompt: "Title", focus: first)
+            PVTextArea(
+                text: .constant("Held by Mary; consulted at the NRO."),
+                prompt: "Description",
+                focus: second
+            )
+        }
+    }
+    .padding(PVSpacing.space9)
+    .frame(width: 420)
+    .background(PVColor.surfacePage)
+}
