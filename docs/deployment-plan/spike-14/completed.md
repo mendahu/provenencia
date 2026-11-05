@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-30 — Conflict brackets honour cardinality
+
+**Landed 2026-11-04** in [#713](https://github.com/mendahu/provenencia/pull/713). Evidence graph conflict brackets, the canvas legend, and the cited-row "one of N values" accessibility phrase fire only when a Property's catalog cardinality is single; several rows of a multiple Property (`languages_spoken`, `likeness`, researcher "several values") list without ochre conflict chrome. Cardinality comes from the cached `PropertiesSnapshot.cardinalityByKey` map threaded into `EvidenceCitedPropertyMarks` and each `EvidenceCanvasCard`; `PropertyCardinality` is pinned beside `PropertyValueType`. Version 0.3.2.
+
 ## S14-20 — The Promote page recovers and speaks
 
 **Landed 2026-11-04** in [#706](https://github.com/mendahu/provenencia/pull/706). The Promote page runs at most one graph-alignment proposal at a time and coalesces rapid row decisions into the next call, so the catalog session is not held behind a queue of proposals (B-12). Stale, save, proposal and load errors announce and scroll into view; a failed load offers Try again through the shared `PVRetryCallout`, also wired on the Evidence graph canvas and Source form read errors (user, 2026-11-03: extract now, with the read-error spinner inside the button and announcement on appear). A failed re-proposal clears the stale notice (PN-3). `graphalign.Subject.Provenance` and the always-1 multiplier go; scores are unchanged (B-37). Version 0.2.13. Audit B-12, B-17, B-37; brief S14-D7.

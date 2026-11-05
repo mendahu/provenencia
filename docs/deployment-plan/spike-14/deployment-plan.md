@@ -87,7 +87,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | [`depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md) composer feedback (UX-5, UX-6, UX-7), copy (UX-12, UX-13) and cap feedback, moved from Spike 12's audit planning (user, 2026-10-27) | S14-03 | — |
 | [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md) and [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md) (same root cause) | S14-28 | — |
 | [`ux/2026-10-15-polygon-locator-drag-vertices.md`](ux/2026-10-15-polygon-locator-drag-vertices.md) | S14-29 | — |
-| [`ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md`](ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md) | S14-30 | — |
+| Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
 | [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md) | S14-31 | — |
 | [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
 | [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
@@ -173,7 +173,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-27 | Every write reaches its keys through their descriptors | 5 | The `lists` and `structure` effects reload keys through each kind's descriptor, as the other effect slots do; the hand-written `CatalogQueryRegistry.invalidations(for list:)` switch goes (S13-01 ship log) | — | S14-16 | [S14-27-lists-through-descriptors.md](prs/S14-27-lists-through-descriptors.md) | Landed #693 |
 | S14-28 | PDF page tracks scroll | 7a | Push `pdfView.currentPage` into `ArtifactViewerModel.page` on page-changed; zoom and region stamps stop snapping to page 1 | — | — | [S14-28-pdf-page-tracks-scroll.md](prs/S14-28-pdf-page-tracks-scroll.md) | Landed #711 |
 | S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); feed a saved Citation's locator back as committed; usable hit targets when zoomed out | — | S14-28 | — | Scoped |
-| S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Planned |
+| S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | — | Scoped |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
@@ -503,7 +503,7 @@ One PR (user, 2026-11-01).
 **Ships.** `EvidenceCitedPropertyMarks` (and its legend / a11y callers) treat ≥2 observations of one key as a conflict only when that Property's cardinality is single. Cardinality from the graph's `PropertiesSnapshot` (or a denormalised wire field if `plan-pr` prefers). Swift test: two `languages_spoken` rows → no conflict; two competing single-cardinality values → conflict.
 **Not this PR.** Changing reconciliation (`StateMultiple` already correct).
 **Check.** Bar outcome 25.
-**Context.** Working rule "Conflict brackets honour cardinality"; [`ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md`](ux/2026-10-26-conflict-brackets-ignore-multi-cardinality.md); `EvidenceCitedPropertyMarks.swift`.
+**Context.** Working rule "Conflict brackets honour cardinality"; dogfood note deleted on land (#713); `EvidenceCitedPropertyMarks.swift`.
 
 #### S14-31 — Tab reaches a following text area
 
