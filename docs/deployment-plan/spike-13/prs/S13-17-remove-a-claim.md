@@ -1,19 +1,19 @@
 # S13-17 — Remove a claim
 
-**Status:** Blocked — on board S13-D6
+**Status:** Blocked — on S13-37, S13-16 and board S13-D6
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D6](../design/S13-D6-sources-section.md), board not drawn yet
 **Board:** — (not drawn yet; on agreement this line names the Claude Design turn and frames, and **Design → macOS** describes every frame in words)
-**Depends on:** S13-08 (landed [#707](https://github.com/mendahu/provenencia/pull/707)), S13-16, S13-D6 (board)
+**Depends on:** S13-08 (landed [#707](https://github.com/mendahu/provenencia/pull/707)), S13-37 (the engine reports what Unpromote removes), S13-16, S13-D6 (board)
 **Blocks:** —
 **Branch:** `s13-17-remove-a-claim`
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut ([`docs/versioning.md`](../../../versioning.md))
-**Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md) (leaving a page whose entity is gone), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
+**Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`../person-detail.md` § Identity claim controls](../person-detail.md#identity-claim-controls) (R-38, R-39); working rules "One Unpromote, deletes through the registry", "Sections are places"; brief [S13-D6](../design/S13-D6-sources-section.md) RC-1 – RC-7; the S13-08 plan (D-14: `getUnpromoteImpact`; D-16: the per-kind deletes copy) and the S13-16 plan
-**Planned:** 2026-11-05 against `main` @ `124d492` (draft: refreshed when S13-16 lands and the board is agreed)
-**Review:** [`S13-17-remove-a-claim.review.md`](S13-17-remove-a-claim.review.md) — round 1 on the draft
+**Planned:** 2026-11-05 against `main` @ `124d492` (draft: refreshed when S13-37 and S13-16 land and the board is agreed)
+**Review:** [`S13-17-remove-a-claim.review.md`](S13-17-remove-a-claim.review.md) — round 1: Reshape / Not ready; reshaped with the user's answers (2026-11-05); round 2 runs when S13-37 is planned and the board is agreed
 
 ### Implementer — read this first
 
@@ -30,97 +30,100 @@
 
 ## 1. Objective
 
-A researcher can take a record out of a person from the Person page: Remove on a claim card in the Sources section unpromotes that Subject, exactly as Unpromote on the Evidence graph does (R-38), through the same confirm (user, 2026-11-05). Removing the last claim deletes the person; the confirm says so first, and on proceeding the app lands on the Persons list (R-39).
+A researcher can take a record out of a person from the Person page: Unpromote on a claim card in the Sources section unpromotes that Subject, exactly as Unpromote on the Evidence graph does (R-38), through the same confirm and the same flow (user, 2026-11-05). Removing the last claim deletes the person; the confirm says so first, and on proceeding the app lands on the Persons list (R-39).
 
-**Why now.** S13-08 made the engine delete a handle whose last member leaves and gave Unpromote its preflight (`GetUnpromoteImpact`); S13-16 draws the claim cards with a footer slot for Remove. This PR closes slice 6 (bar 7, removal half).
+**Why now.** S13-08 made the engine delete a handle whose last member leaves and gave Unpromote its preflight; S13-37 makes the engine report the connections Unpromote takes back and the handles a write deletes, so neither page re-derives them; S13-16 draws the claim cards with the footer square for the control. This PR closes slice 6 (bar 7, removal half).
 
-**What stays.** The engine: `UnpromoteSubject` and `GetUnpromoteImpact` are called as they are; no Go or proto change. The Evidence graph's Unpromote confirm keeps its title, buttons, list, tone and placement; it moves into one shared confirm both pages use, and its single-handle deletes message becomes the per-kind sentence the user approved for S13-08 (2026-11-04, S13-08 D-16), which the landed code defined but does not show (D-6).
+**What stays.** The engine (S13-37 is its change). The Evidence graph's Unpromote confirm keeps its title, buttons, list, tone and placement; its open, write and error handling move into one shared flow both pages hold, as both hold a `DeleteImpactFlow` for deletes. Its single-handle deletes message becomes the per-kind sentence the user approved for S13-08 (2026-11-04, S13-08 D-16), which the landed code defines but does not show (D-5).
 
 ## 2. User stories
 
-**US-1.** As a researcher, when a Subject was promoted into the wrong person, I remove it from the Person page, so that I do not have to find its Evidence graph first.
+**US-1.** As a researcher, when a Subject was promoted into the wrong person, I unpromote it from the Person page, so that I do not have to find its Evidence graph first.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Johann Weber (PER-3HK9W) with seven claims; click Remove on the Household 388 card (Subject "J. Weber", CPR-2M8XF, with one relationship and one participation filed) | The confirm opens (`UnpromoteConfirmItem` with `handleID` PER-3HK9W's id): title "Unpromote J. Weber?", message "This promotion is removed. The cards stay on the graph, and the handle stays.", "Also unpromoted" with the two connection sentences and "The other end of each stays promoted.", buttons "Unpromote" (irreversible tone) and "Keep promotion" (RC-1, RC-2) |
-| AC-1.2 | Confirm | `unpromoteSubject` runs once for CPR-2M8XF; the confirm closes; the card leaves the section after the reload; the Person page stays on Sources (RC-6) |
-| AC-1.3 | Keep promotion | No write; the confirm closes; nothing changes |
+| AC-1.1 | Johann Weber (PER-3HK9W) with seven claims; Unpromote on the Household 388 card (Subject "J. Weber", CPR-2M8XF; the preflight names one relationship and one participation) | The confirm opens: title "Unpromote J. Weber?", message "This promotion is removed. The cards stay on the graph, and the handle stays.", "Also unpromoted" with the two connection sentences worded from the claim's graph and "The other end of each stays promoted.", buttons "Unpromote" (irreversible) and "Keep promotion" (RC-1, RC-2) |
+| AC-1.2 | Confirm | `unpromoteSubject` runs once for CPR-2M8XF; the confirm closes; the card leaves after the reload; the page stays on Sources; focus is on the next card's Unpromote (RC-6) |
+| AC-1.3 | Keep promotion | No write; the confirm closes |
 | AC-1.4 | The write fails (`promote.stale`) | The confirm stays open with the error under the list; "Unpromote" is enabled to retry (RC-5) |
-| AC-1.5 | While a Remove is writing | Every Remove control in the section is disabled (RC-1) |
+| AC-1.5 | While an Unpromote opens or writes | Every Unpromote control in the section is disabled (RC-1) |
+| AC-1.6 | The claim's graph rows cannot be read | The confirm opens with the preflight's message and, in place of the list, "The connections that come off with it could not be listed. The other end of each stays promoted." (D-4) |
 
-**US-2.** As a researcher, when I remove a person's last record, I am told the person is deleted before it happens, and land on the Persons list after.
+**US-2.** As a researcher, when I remove a person's last record, I am told the person is deleted first, and land on the Persons list after.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | Maria Weber (PER-8JD2L) with one claim; click Remove | The preflight lists PER-8JD2L only; the confirm is in the danger tone with "PER-8JD2L has no other records, so this person is deleted. The cards stay on the graph." (RC-3; D-6) |
-| AC-2.2 | The preflight lists PER-8JD2L and two association handles | The message is the DeleteImpact line naming all three (`PVDeleteImpactCopy.cascadeLines`), danger tone (RC-3; D-6) |
+| AC-2.1 | Maria Weber (PER-8JD2L) with one claim; Unpromote | The preflight's deletes group lists PER-8JD2L only; danger tone; "PER-8JD2L has no other records, so this person is deleted. The cards stay on the graph." (RC-3; D-5) |
+| AC-2.2 | The preflight lists PER-8JD2L and two association handles | The message is the DeleteImpact line naming all three, danger tone (RC-3; D-5) |
 | AC-2.3 | The preflight fails | Danger tone, "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph.", the error under it; Unpromote enabled (RC-4) |
-| AC-2.4 | Confirm on AC-2.1 | The write runs; the app shows the Persons list (`navigation.fallbackToSectionRoot()`), which no longer lists Maria; Back does not return to her page (RC-7; D-8) |
-| AC-2.5 | Confirm on AC-2.3 when the write did delete the person | Same as AC-2.4 (D-7) |
-| AC-2.6 | Confirm on AC-2.3 when the person kept another record | The page stays on Sources (D-7) |
+| AC-2.4 | Confirm on AC-2.1 | The write's effects list PER-8JD2L's id in `deletedHandles`; the app shows the Persons list (`navigation.fallbackToSectionRoot()`) without Maria; Back does not return to her page (RC-7; D-6, D-7) |
+| AC-2.5 | Confirm on AC-2.3 | Lands on the Persons list exactly when the write's `deletedHandles` holds the person; otherwise stays on Sources (D-6) |
 
 **US-3.** As a researcher on the Evidence graph, Unpromote behaves as before.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | Unpromote on a graph card whose handle keeps a member | The same confirm, copy and list as today; the graph stays where it is |
-| AC-3.2 | Unpromote of a person's last member on the graph | The per-kind sentence of AC-2.1 (the S13-08 copy), danger tone; the graph stays where it is (working rule "One Unpromote") |
+| AC-3.1 | Unpromote on a graph card whose handle keeps a member | The same confirm and list as today (the list now from the preflight's bridge ids); the graph stays |
+| AC-3.2 | Unpromote of a person's last member on the graph | The per-kind sentence of AC-2.1; danger tone; the graph stays (working rule "One Unpromote") |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| One Unpromote confirm for both pages: its item, its builder (connections + preflight) and its modifier, lifted from the Evidence graph (RC-2 – RC-5) | STEP-1, STEP-2, AC-3.1, AC-3.2 |
-| The single-handle deletes message the user approved for S13-08 (RC-3) | STEP-1, AC-2.1, AC-3.2 |
-| `PersonClaimRemoval`: begin from a claim (reads the claim's graph from the session), confirm, the person-gone check (RC-1, RC-3, RC-7) | STEP-3, AC-1.1 – AC-1.5, AC-2.1 – AC-2.6 |
-| Remove on each claim card, disabled while writing; focus after a kept Remove (RC-1, RC-6) | STEP-4, AC-1.2, AC-1.5 |
-| Landing on the Persons list (RC-7) | STEP-4, AC-2.4 |
-| Strings | STEP-5 |
-| Docs, brief archive | STEP-6 |
+| One Unpromote flow and confirm for both pages, lifted from the Evidence graph: `UnpromoteFlow`, `UnpromoteConfirmItem`, its message, the `unpromoteConfirm(flow:…)` modifier (RC-2 – RC-5) | STEP-1, STEP-2, AC-3.1, AC-3.2 |
+| The list from the preflight's bridge ids; the Swift copy of the engine's bridge rule goes (S13-37) | STEP-2, AC-1.1, AC-3.1 |
+| The single-handle deletes sentence approved for S13-08 (RC-3) | STEP-2, AC-2.1, AC-3.2 |
+| One session read of a graph's snapshot, shared with Promote | STEP-3, AC-1.1, AC-1.6 |
+| Unpromote on each claim card, disabled while busy; focus after a kept Unpromote; landing on the Persons list (RC-1, RC-6, RC-7) | STEP-5, AC-1.2, AC-1.5, AC-2.4 |
+| `userID` reaches page sections | STEP-4 |
+| Strings | each step that adds a key; STEP-6 checks the catalog |
+| Docs, brief archive | STEP-7 |
 
 | Out | Home |
 | --- | --- |
-| Any Go, proto or store change | not planned: S13-08's RPCs carry it |
-| A Toast after Remove | not planned (brief RC-6), unless the board adds one |
-| A general "deleted entity → list" rule for every Conclusion page (Event, Place, a page left open while another window unpromotes) | their redesign (R-1); this PR navigates only after its own write (D-8) |
-| Bulk Remove, Reject, Provisional | not planned (brief § 2.1) |
+| Engine fields for the bridges and the deleted handles | S13-37 |
+| A Toast after Unpromote | not planned (brief RC-6), unless the board adds one |
+| Leaving a Conclusion page whose entity another write deleted (Event, Place, another window) | their redesign (R-1); S13-37's `deletedHandles` gives it the fact |
+| Bulk Unpromote, Reject, Provisional | not planned (brief § 2.1) |
 | How the records connect | S13-28 |
 
 ## 4. Current state
 
+Rows marked *(S13-37)* or *(S13-16)* describe what those PRs add; the implementer checks them against their Landed notes.
+
 | Area | Where | Today |
 | --- | --- | --- |
-| Unpromote item | `macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift` `PendingUnpromote{id, name, kind, bridges, deletedHandles, impactCheckFailed, error}`, `confirmTone` | Nested in the graph model; `confirmTone` is `.danger` when a handle is deleted, the check failed or there is an error |
-| Unpromote begin | `EvidenceGraphModel.beginUnpromote(subjectID:)` | From the graph's snapshot: the bridges that have the Subject as an end and are promoted, sorted by id, worded by `EvidenceBridgeEdgeSummary.sentence(for:in:orders:)`; then `store.getUnpromoteImpact`; a generation guard drops a stale open |
+| Unpromote state | `macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift` `PendingUnpromote{id, name, kind, bridges, deletedHandles, impactCheckFailed, error}` and `confirmTone`; `pendingUnpromote`, `isUnpromoting`, `unpromoteOpenGeneration`, `beginUnpromoteOpen()` | The graph model owns the item, the busy flag and the stale-open guard |
+| Unpromote begin | `EvidenceGraphModel.beginUnpromote(subjectID:)` | From the graph's snapshot: bridges with the Subject as an end and a membership, sorted by id, worded by `EvidenceBridgeEdgeSummary.sentence(for:in:orders:)` (a Swift copy of `identityclaims.UnfileBridges`); then `store.getUnpromoteImpact` (`total > 0` → `deletedHandles`; a throw → `impactCheckFailed`, `error`) |
 | Unpromote write | `EvidenceGraphModel.confirmUnpromote()` | `store.unpromoteSubject`, `session.apply(effects)`, closes; a failure stays as `error` |
-| Unpromote confirm | `macos/App/Features/EvidenceGraph/EvidenceGraphView.swift` `.pvConfirm(item: $model.pendingUnpromote, …)` and `unpromoteDetail(_:)` | Message: `PVDeleteImpactCopy.cascadeLines` of the deleted group (first line), else the preflight-failed copy, else `unpromoteConfirmMessage`; the detail lists the bridges with `unpromoteConfirmBridgesHeader` / `Note` and the error Callout |
-| The approved deletes copy | `macos/App/Platform/L10n.swift` `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind:ref:)` | Defined by S13-08 (D-16) with person, event and place keys; `rg unpromoteConfirmMessageDeletes macos/App` finds no caller: the confirm shows the generic `cascadeLines` sentence instead |
-| Store | `macos/App/Platform/GenealogyStore.swift` `unpromoteSubject(projectDir:userID:subjectID:) -> CatalogWriteEffects`, `getUnpromoteImpact(projectDir:subjectID:) -> CatalogDeleteImpactGroup?`; `CatalogDeleteImpactGroup{via, kind, total, listed: [CatalogDeleteImpactListed{id, ref, title}]}` | The preflight's listed rows carry each deleted handle's id |
-| FakeStore | `macos/App/Platform/FakeStore.swift` `unpromoteImpactBySubject`, `getUnpromoteImpactError`, `getUnpromoteImpactCalls`, `unpromoteSubject` | Scripted |
-| Effects | `macos/App/Features/Workspace/Session/CatalogMutation.swift` `CatalogWriteEffects` | No "deleted" flag: a deleted handle shows only as a touched handle |
-| Reading a session value | `macos/App/Features/Workspace/Session/WorkspaceSession.swift` `readyValue(_:)` | Waits out an in-flight load and returns the cached value, nil when never warmed, stale or failed; `CitationComposerModel` reads `.evidenceGraph`, `.propertiesWorkspace` with it |
-| Snapshot | `macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift` `EvidenceGraphSnapshot.build(rows:types:rules:)` | Builds the graph's placed subjects and bridges from the three cached reads (`.evidenceGraph`, `.propertiesWorkspace` types, `.connectRules`) |
-| Leaving a page | `macos/App/Features/Workspace/WorkspaceNavigation.swift` `fallbackToSectionRoot()` | Replaces the current entry with the section's list; `SourcePageView`'s resource delete uses it after a successful delete |
-| Error kind | `macos/App/Platform/CoreInvoke.swift` `CoreErrorKind.notFound`, `CoreInvokeError.coded(status:code:kind:params:)` | A missing handle's detail read throws `conclusiondetails.not_found` with kind `notFound` |
-| Sources section | `PersonSourcesSection.swift` (in `Features/Conclusions/`, added by S13-16) | Draws each claim card with a footer graph control and no Remove (S13-16 D-10) |
-| Tests | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` `unpromoteActionOpensConfirmNamingBridges`, `unpromoteWithNoBridgesHasEmptyDetail`, `confirmUnpromoteRefreshesToPromote`, `unpromoteFailureStaysInConfirm`, `unpromoteLastRecordNamesTheDeletedHandle`, `unpromotePreflightFailureStaysInTheConfirm` | Cover the graph's flow; they keep passing on the shared item |
+| Unpromote confirm | `macos/App/Features/EvidenceGraph/EvidenceGraphView.swift` `.pvConfirm(item: $model.pendingUnpromote, copy: …)` and `unpromoteDetail(_:)` | The message is built in the `copy:` closure: `PVDeleteImpactCopy.cascadeLines` first line, else the preflight-failed copy, else `unpromoteConfirmMessage` |
+| The approved deletes copy | `macos/App/Platform/L10n.swift` `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind:ref:)` | No caller in `macos/App`; only `macos/ProvenenciaTests/PVDeleteImpactTests.swift` reads it |
+| Flow precedent | `macos/App/DesignSystem/Recipes/DeleteImpact/DeleteImpactFlow.swift` `DeleteImpactFlow` (`request`, `isRunning`, `error`, `confirm(perform:) -> Bool`); held by `EvidenceGraphModel.deleteImpact` and `SourcePageModel.deleteImpact`, bound with `.pvDeleteImpact(flow:…)` | The shape `UnpromoteFlow` copies |
+| Snapshot read | `macos/App/Features/Promote/PromoteModel.swift` `graphSnapshot()` | `readyValue` on the graph, properties and rules keys, then `EvidenceGraphSnapshot.build(rows:types:rules:)`; nil when the rows are nil |
+| Preflight | `GetUnpromoteImpactResponse{deletes}`; `GenealogyStore.getUnpromoteImpact(projectDir:subjectID:) -> CatalogDeleteImpactGroup?` | The listed rows carry each deleted handle's id; `deleteimpact.ListedGroup` caps `listed` (`listedCap`), the subject's own handle first. *(S13-37)* adds the bridge Subject ids the write will unpromote |
+| Effects | `macos/App/Features/Workspace/Session/CatalogMutation.swift` `CatalogWriteEffects` | No deleted-handles field. *(S13-37)* adds `deletedHandles: [String]` |
+| Not-found error | `core/database/conclusiondetails/conclusiondetails.go` `ErrNotFound` (`apperr.KindUser`) | Not used by this plan (D-6 reads the effects) |
+| Leaving a page | `macos/App/Features/Workspace/WorkspaceNavigation.swift` `fallbackToSectionRoot()`; `macos/App/Features/Sources/SourcePageView.swift` (`if await model.confirmResourceDelete() { navigation.fallbackToSectionRoot() }`) | Replaces the current entry with the list |
+| Page sections | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` `ConclusionDetailPageSectionsContext{projectDir, refreshing, pageIdentifier, lead, pageSection}`; `ConclusionLeadModel(session:userID:entityId:)` built by the page from its `userID`, writing through `session.store` | Sections get no `userID` |
+| Sources section *(S13-16)* | `PersonSourcesSection.swift` in `Features/Conclusions/` | Each card in `EvidenceCardViewHost` with `EvidenceSubjectCard.pageSlotActionID` empty; `PersonSourcesContent.Card{id, subjectID, …}` |
+| Tests | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` `unpromoteActionOpensConfirmNamingBridges`, `unpromoteWithNoBridgesHasEmptyDetail`, `confirmUnpromoteRefreshesToPromote`, `unpromoteFailureStaysInConfirm`, `unpromoteLastRecordNamesTheDeletedHandle` (asserts `deletedHandles?.listed.first?.ref`), `unpromotePreflightFailureStaysInTheConfirm` | Cover the graph's flow |
 
-**Precedent.** The Source page's resource delete (`macos/App/Features/Sources/SourcePageView.swift`, `.pvDeleteImpact(... onConfirm: { if await model.confirmResourceDelete() { navigation.fallbackToSectionRoot() } })`): a write that removes the page's own entity reports success, and the view leaves with `fallbackToSectionRoot`. Copy that. `CitationComposerModel` reads the graph's three cached inputs with `session.readyValue`; copy that for the claim's graph.
+**Precedent.** `DeleteImpactFlow`: one observable flow object a model holds and a view modifier binds, shared by the Evidence graph and the Source page; copy its shape for `UnpromoteFlow`. The Source page's resource delete: a successful write that removes the page's entity, then `fallbackToSectionRoot()`; copy that.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | One confirm. `PendingUnpromote` moves out of `EvidenceGraphModel` as `UnpromoteConfirmItem` *(new)* in `macos/App/Features/EvidenceGraph/UnpromoteConfirm.swift` *(new)*, same fields and `confirmTone`. `EvidenceGraphModel.pendingUnpromote` becomes `UnpromoteConfirmItem?` | User, 2026-11-05: the same confirm; R-38 "the same behavior" | A Person-page copy of the item and copy |
-| D-2 | One builder: `UnpromoteConfirmItem.open(subject: EvidenceGraphPlacedSubject, in snapshot: EvidenceGraphSnapshot, orders: NameFormatOrders, store: any GenealogyStore, projectDir: String) async -> UnpromoteConfirmItem` *(new)*: the bridge sentences exactly as `beginUnpromote` builds them today, then the preflight (a group with `total > 0` → `deletedHandles`; a throw → `impactCheckFailed` and `error`). `beginUnpromote` keeps its guards and generation check and calls it | The graph and the page must list the same connections; one place | A second bridge query |
-| D-3 | One modifier: `View.unpromoteConfirm(item: Binding<UnpromoteConfirmItem?>, isRunning: Bool, accessibilityIdentifierPrefix: String, onConfirm: @escaping () -> Void)` *(new)* in the same file, holding today's `pvConfirm` copy closure and `unpromoteDetail` view. `EvidenceGraphView` calls it with `"evidenceGraph.unpromote"`; the Sources section with `"persons.detail.sources.unpromote"` | The copy and the detail live once | Two `pvConfirm` call sites |
-| D-4 | The file stays in `Features/EvidenceGraph/`: the confirm unpromotes a Subject of an Evidence graph, and its strings stay in `L10n.EvidenceGraph` (no key renamed) | It is the graph's domain; the Person page is a second caller in another feature. Not a kit recipe: Unpromote is Provenencia meaning with two callers in features | A `DesignSystem/Recipes/` piece (it would import `EvidenceBridgeEdgeSummary`, a feature type: the kit check fails) |
-| D-5 | `PersonClaimRemoval` *(new)*, `@MainActor @Observable`, in `macos/App/Features/Conclusions/PersonClaimRemoval.swift` *(new)*: `init(entityId:session:store:userID:)`; `pending: UnpromoteConfirmItem?`; `isWriting`; `begin(_ claim: CatalogPersonClaim) async`: starts and awaits `.evidenceGraph(graphID)`, `.propertiesWorkspace` and `.connectRules` with `session.query` then `session.readyValue`, builds the snapshot with `EvidenceGraphSnapshot.build(rows:types:rules:)`, finds the claim's Subject in it, and calls `UnpromoteConfirmItem.open`; a generation counter drops a stale open (as the graph's). When the graph rows are nil (the read failed) or the Subject is not on the graph, it opens with no bridges and `bridgesUnlisted = true` *(new field on the item)* | Reads the claim's graph from the session cache (user, 2026-11-05); the precedent is `CitationComposerModel` | Calling the store for the graph directly (bypasses the cache and its invalidation) |
-| D-6 | The item gains `handleID: String?` *(new)*, the Subject's own handle (the graph: `placed.membership?.entity.id`; the page: the Person's entity id). The message: a deleted group with `total == 1` whose one listed row's id is `handleID` → `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind:ref: listed[0].ref)`; a larger group → `PVDeleteImpactCopy.cascadeLines(...)`'s first line (today's); the check failed → the preflight-failed copy; else `unpromoteConfirmMessage`. `bridgesUnlisted` adds `L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted` *(new)* in the detail in place of the list | The single-handle sentence is the copy the user approved on 2026-11-04 (S13-08 D-16), which the landed confirm defines and does not call; the many-handle case keeps today's wording, as the brief says | New Person-page copy; leaving `unpromoteConfirmMessageDeletes` dead |
-| D-7 | The person-gone check after a successful write: gone when `pending.deletedHandles?.listed` contains the person's entity id; when the check had failed, `PersonClaimRemoval` calls `store.getConclusionDetail(projectDir:entityID:)` once and treats a `CoreInvokeError.coded` with kind `.notFound` as gone; any other result or error is "kept". `confirm() async -> Outcome` *(new enum `Outcome { case kept, personDeleted, failed }`)* | The effects carry no deleted flag (§ 4); the preflight is the engine's own forecast, and a failed one needs one direct read | Waiting for the `.conclusionDetail` key to fail (indirect, depends on refresh timing); reading the detail after every write (a query per Remove) |
-| D-8 | On `.personDeleted` the section calls `navigation.fallbackToSectionRoot()`, which replaces the Person page's history entry with the Persons list | The Source page delete precedent; Back does not return to a deleted page (brief RC-7) | `go(to: .sectionRoot(.persons))` (leaves the dead entry on Back) |
-| D-9 | `PersonSourcesSection` owns one `PersonClaimRemoval` in `@State`, built on first appearance with the page's `entityId` and the session's user id (passed in by `PersonDetailSections` from `PersonDetailView.userID`; `PersonSourcesSection(entityId:userID:)`), reset when `entityId` changes. The card footer gains `PVIconButton(.unpromote, label: L10n.EvidenceGraph.unpromote, accessibilityLabel: L10n.Conclusions.sourcesRemoveAccessibility(name:), size: .sm)` at its end with help and label `L10n.EvidenceGraph.unpromote` / `L10n.Conclusions.sourcesRemoveAccessibility(name:)` *(new)*, id `persons.detail.sources.remove.<claimID>`, disabled while `PersonClaimRemoval.canBegin` *(new)* is false (a write, or a `begin` in flight) | The page's flow lives in the page's feature; the Remove control is the graph's glyph (brief SS-4) | A model on the section's content value |
-| D-10 | After a kept Remove the section moves focus with `@FocusState` keyed by claim id: the next card's Remove in reading order, else the previous, else none (the section). **Refreshed from the board's RC-6 answer** | Brief RC-6 | Leaving focus on a removed control |
+| D-1 | One flow: `@MainActor @Observable final class UnpromoteFlow` *(new)* in `macos/App/Features/EvidenceGraph/UnpromoteFlow.swift` *(new)* owns `pending: UnpromoteConfirmItem?`, `isRunning`, `isOpening`, the open generation, `open(subjectID:name:kind:handleID:snapshot: EvidenceGraphSnapshot?, orders:session:) async` (it calls the preflight through `session.store`), `confirm(session:userID:) async -> UnpromoteResult?` (write, `session.apply(effects)`, close; a failure stays as `pending.error` and returns nil) and `cancel()`. `UnpromoteResult` *(new)* holds the `CatalogWriteEffects`. `EvidenceGraphModel` holds `let unpromote = UnpromoteFlow()` (as it holds `deleteImpact`); its `pendingUnpromote`, `isUnpromoting`, `unpromoteOpenGeneration`, `beginUnpromoteOpen` and `confirmUnpromote` go; `beginUnpromote(subjectID:)` keeps its guards and calls `unpromote.open` | One place for the guard, the generation and the error rule; the `DeleteImpactFlow` precedent (round 1 M-1) | A second state machine in a Person-page model |
+| D-2 | `UnpromoteConfirmItem` *(new, same file)* = today's `PendingUnpromote` fields plus `handleID: String?` (the Subject's own handle) and `bridgesUnlisted: Bool`; computed `deletesOwnHandle` (`deletedHandles` non-nil, `total == 1`, its one listed row's id == `handleID`), `confirmTone` (today's rule), and `message: String` (D-5). The modifier `View.unpromoteConfirm(flow: UnpromoteFlow, accessibilityIdentifierPrefix: String, onConfirm: @escaping () -> Void)` *(new, same file)* holds today's `pvConfirm` call and `unpromoteDetail` view, reading `item.message`. `EvidenceGraphView` calls it with `"evidenceGraph.unpromote"` | The copy is testable on the item (round 1 X-3); one rule for "deletes its own handle" (round 1 M-5) | Message logic in a view closure |
+| D-3 | The list comes from the engine: `open` takes the preflight's bridge Subject ids *(S13-37)* and words each with `EvidenceBridgeEdgeSummary.sentence(for:in:orders:)` from the snapshot, in the preflight's order; an id not in the snapshot is skipped. The Swift filter in `beginUnpromote` goes | The engine's rule in one layer (round 1 M-3; user, 2026-11-05: preparatory PR S13-37) | Keeping the Swift filter |
+| D-4 | One snapshot read: `WorkspaceSession.evidenceGraphSnapshot(graphID:) async -> EvidenceGraphSnapshot?` *(new)* in `macos/App/Features/Workspace/Session/WorkspaceSession+EvidenceGraphs.swift`: `session.query` then `readyValue` on `.evidenceGraph(project: projectKey, graphId:)`, `.propertiesWorkspace(project:)` and `.connectRules(project:)`; nil when the rows are nil; missing types or rules → `[]` (Promote's rule). `PromoteModel.graphSnapshot()` moves onto it. When it is nil, or the Subject is not in it, `open` sets `bridgesUnlisted` and builds the title from the claim (`CatalogSubject.trimmedLabel ?? ref`, as S13-16's card names it) | One place decides a snapshot's keys (round 1 M-4); a missing list never hides the confirm | A third copy of the three reads |
+| D-5 | `UnpromoteConfirmItem.message`: `deletesOwnHandle` → `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind:ref:)` with the listed row's ref; another non-empty deletes group → `PVDeleteImpactCopy.cascadeLines(...)`'s first line (today's); `impactCheckFailed` → the preflight-failed copy; else `unpromoteConfirmMessage`. `bridgesUnlisted` shows `L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted` *(new)* in the detail in place of the list and its note | The copy the user approved on 2026-11-04 (S13-08 D-16), defined and never called; the many-handle case keeps today's wording, as the brief says | New Person-page copy; leaving the key dead |
+| D-6 | The person is gone when the write's `effects.deletedHandles` *(S13-37)* contains the page's entity id. No preflight or detail read decides it | One fact, one source: what the write did (round 1 M-2; user, 2026-11-05) | Inferring from the preflight; a detail read keyed to an error code |
+| D-7 | On "gone" the section calls `navigation.fallbackToSectionRoot()`, which replaces the Person page's entry with the Persons list. It calls it right after `confirm` returns, before the view reads the refreshed detail, so the not-found Callout is not shown: `session.apply` marks `.conclusionDetail` stale and its reload is async, and the navigation unmounts the page first | The Source page precedent; Back does not return to a deleted page (RC-7; round 1 X-6) | `go(to: .sectionRoot(.persons))` |
+| D-8 | `ConclusionDetailPageSectionsContext` gains `userID: String` *(new field)*, set by `ConclusionDetailPage` from its `userID`. `PersonDetailSections` passes `context.userID` to `PersonSourcesSection(entityId:userID:)`. The section holds `@State private var unpromote = UnpromoteFlow()` and resets it (`cancel()`) in `.onChange(of: entityId)`; it reads `@Environment(WorkspaceNavigation.self)` | Every section can write without threading props (round 1 M-7); writes use `session.store` | Adding `userID` to one section's initializer from the view |
+| D-9 | In `pageSlotActionID`: `PVIconButton(.unpromote, label: L10n.EvidenceGraph.unpromote, accessibilityLabel: L10n.Conclusions.sourcesUnpromoteAccessibility(name:) (a `String`, which is `PVCopy`), size: .sm)`, id `persons.detail.sources.unpromote.<claimID>`, disabled while `unpromote.isOpening || unpromote.isRunning`. Its action: `Task { let snapshot = await session.evidenceGraphSnapshot(graphID: claim.graphID); await unpromote.open(subjectID: claim.subject.id, name: claim.subject.trimmedLabel ?? claim.subject.ref, kind: .person, handleID: entityId, snapshot: snapshot, orders: session.nameFormat, session: session) }`; when the snapshot holds the Subject, `open` takes the name from `displayName(orders:)` as the graph does. The section's modifier: `unpromoteConfirm(flow: unpromote, accessibilityIdentifierPrefix: "persons.detail.sources.unpromote", onConfirm: …)`; `onConfirm` awaits `confirm`, then D-6 / D-7, else D-10 | The action is called Unpromote everywhere in code (round 1 M-6) | "Remove" names in code |
+| D-10 | After a kept Unpromote, focus goes to the next card's Unpromote in reading order (groups in order, cards in order, flattened), else the previous one's, else the first group's title. The section records the removed claim's index before the write and applies `@FocusState` (keyed by claim id) when the reloaded content no longer holds that claim. **Refreshed from the board's RC-6 answer** | Brief RC-6; focus never lands on a removed control (round 1 X-8) | Moving focus at confirm time (the card is still there) |
 
 **Rules this plan bends.** None.
 
@@ -130,94 +133,99 @@ A researcher can take a record out of a person from the Person page: Remove on a
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `UnpromoteConfirmItem` *(new)* | type | `EvidenceGraphModel.PendingUnpromote` | It is that type, moved so a second caller can hold it |
-| `UnpromoteConfirmItem.open(...)` *(new)* | func | `EvidenceGraphModel.beginUnpromote` | Its body, lifted; the guards stay in the model |
-| `View.unpromoteConfirm(...)` *(new)* | modifier | `EvidenceGraphView`'s `.pvConfirm` block and `unpromoteDetail` | Moved, not copied |
-| `PersonClaimRemoval` *(new)* | model | `EvidenceGraphModel`'s Unpromote part; `SourcePageModel.confirmResourceDelete()` | The page has no graph model; the outcome tells the view to leave |
-| `bridgesUnlisted` *(new field)*, `unpromoteConfirmBridgesUnlisted` *(new key)* | field, key | `impactCheckFailed`, `unpromoteConfirmPreflightFailed` | One more honest state of the same confirm |
-| `sourcesRemoveAccessibility(name:)` *(new key)* | key | `L10n.EvidenceGraph.unpromote` | The page names the Subject in VoiceOver ("Unpromote J. Weber") |
-| `PersonClaimRemovalTests` *(new)* | test file | `EvidenceGraphModelTests`' Unpromote cases | One file per model |
+| `UnpromoteFlow`, `UnpromoteResult` *(new)* | type | `DeleteImpactFlow`; `EvidenceGraphModel`'s Unpromote state | Replaces the model's state; same shape as the delete flow |
+| `UnpromoteConfirmItem` *(new)* | type | `EvidenceGraphModel.PendingUnpromote` | It is that type, moved, with `handleID`, `bridgesUnlisted`, `message` |
+| `View.unpromoteConfirm(flow:…)` *(new)* | modifier | `.pvDeleteImpact(flow:…)`; `EvidenceGraphView`'s inline `.pvConfirm` | Moved |
+| `WorkspaceSession.evidenceGraphSnapshot(graphID:)` *(new)* | func | `PromoteModel.graphSnapshot()` | Its body, moved to the session |
+| `ConclusionDetailPageSectionsContext.userID` *(new)* | field | `lead` (built from `userID`) | Sections that write need it |
+| `unpromoteConfirmBridgesUnlisted`, `sourcesUnpromoteAccessibility(name:)` *(new keys)* | keys | `unpromoteConfirmPreflightFailed`, `L10n.EvidenceGraph.unpromote` | New sentences |
+| `UnpromoteFlowTests` *(new)* | test file | `EvidenceGraphModelTests`' Unpromote cases | The flow is tested once; the callers test their calls |
 
-**Builds on.** S13-08's `getUnpromoteImpact` and `unpromoteSubject`; `EvidenceGraphSnapshot.build`; `session.readyValue`; `fallbackToSectionRoot`; `PVConfirm`; S13-16's card footer.
-**Deletes.** `EvidenceGraphModel.PendingUnpromote` (moved); `EvidenceGraphView`'s inline `.pvConfirm` for Unpromote and `unpromoteDetail` (moved). `unpromoteConfirmMessageDeletes` gains its first caller, so nothing in it is dead after this PR.
-**Next adds.** An Event or Place page with sections calls the same modifier with its own Remove; a family tree's "remove from person" (if ever) calls `PersonClaimRemoval`.
+**Builds on.** S13-37's preflight bridge ids and `deletedHandles`; S13-08's `getUnpromoteImpact` and `unpromoteSubject`; `DeleteImpactFlow`'s shape; `EvidenceGraphSnapshot.build`; `fallbackToSectionRoot`; `PVConfirm`; S13-16's card footer.
+**Deletes.** `EvidenceGraphModel.PendingUnpromote`, `pendingUnpromote`, `isUnpromoting`, `unpromoteOpenGeneration`, `beginUnpromoteOpen`, `confirmUnpromote`; the Swift bridge filter in `beginUnpromote`; `EvidenceGraphView`'s inline Unpromote `.pvConfirm` and `unpromoteDetail`; `PromoteModel.graphSnapshot()` (moved). `unpromoteConfirmMessageDeletes` gains its first caller.
+**Next adds.** An Event or Place page with sections holds an `UnpromoteFlow`; S13-28 reads graphs through `evidenceGraphSnapshot`; any page that leaves when its entity is deleted reads `deletedHandles`.
 
 ### Reach
 
 | New path or state | Destination | Checked: resets on the new id · handles a missing referent · shows the state |
 | --- | --- | --- |
-| Remove on a Person page → the Unpromote confirm | `UnpromoteConfirm.swift` | New caller; the item is built fresh per open, so `error` starts nil (as today) |
-| A claim whose graph read fails, or whose Subject is gone from the graph | `PersonClaimRemoval.begin` | Opens with `bridgesUnlisted` (D-5); the write is the engine's, which re-checks |
-| The person deleted while the page shows it | `PersonDetailView` | After this PR's own write: the Persons list (D-8). A delete from elsewhere still shows today's not-found Callout (Out) |
-| Another Person page opened on Sources while a Remove is open | `PersonSourcesSection` | `PersonClaimRemoval` resets on `entityId` change (D-9); a stale `begin` is dropped by its generation |
+| Unpromote on a Person page → the shared confirm | `UnpromoteFlow.swift` *(new)* | The item is built fresh per open; a stale open is dropped by the generation (T-4) |
+| A claim whose graph rows cannot be read, or whose Subject is gone from it | `UnpromoteFlow.open` | Opens with `bridgesUnlisted` (AC-1.6); the engine re-checks in the write |
+| The person deleted by this page's write | `PersonDetailView` | Persons list before the detail reload paints (D-7) |
+| Another person's page while a confirm is open | `PersonSourcesSection` | `cancel()` on `entityId` change (D-8) |
 
 ### Scale
 
-One Remove reads the claim's graph from the cache (warm when the researcher came from it; else one `.evidenceGraph` load, the cost of opening that graph), the properties workspace and the connect rules (both usually warm), one preflight and one write. The write's effects refresh `.personClaims` and the other per-person keys as Unpromote on the graph does today (S13-01 `refreshes`). No list or loop grows with the person's claims.
+One Unpromote: one `evidenceGraphSnapshot` (warm when the researcher came from that graph; else one `.evidenceGraph` load, the cost of opening it; the two lists are warm, S13-16 warms them), one preflight, one write. The effects refresh the per-person keys as Unpromote on the graph does today. Nothing grows with the person's claim count.
 
 ### Edges
 
-- **Assumptions.** The preflight's `listed` names the subject's own handle when it is deleted (S13-08: `UnpromoteImpact` lists the primary first); D-7 checks membership by id, not position. The bridge list is informational: the engine computes the set it removes in the write (today's comment on `beginUnpromote`).
-- **Neighbors.** A person with two claims: removing one keeps the person (AC-1.2); removing the last of the remaining one deletes (AC-2.1). A group of one row that is not the Subject's handle (an emptied association handle while the person keeps a member): D-6 compares the row's id with `handleID`, so it gets the `cascadeLines` line, not "this person is deleted" (T-2 pins it).
-- **Removed inputs.** The claim already removed elsewhere (another window): the preflight or the write fails with the engine's error, shown in the confirm (AC-1.4); the reload drops the card.
+- **Assumptions.** The preflight's bridge ids are exactly what the write unfiles (S13-37's contract, tested there). `listed` is capped but lists the Subject's own handle first; `deletesOwnHandle` needs only `total == 1`, so the cap never hides it. The gone decision reads the effects, not `listed` (D-6).
+- **Neighbors.** Two claims: one removed keeps the person; the last deletes. A single deleted row that is an association handle (the person keeps a member): `deletesOwnHandle` is false (id ≠ `handleID`), so the `cascadeLines` line shows (T-2).
+- **Removed inputs.** The claim already removed elsewhere: the preflight or the write fails with the engine's error in the confirm (AC-1.4); the reload drops the card. A bridge id not in the cached snapshot: skipped (T-3).
 - **Real data.** None — no table-driven rule.
-- **Untrusted size.** The bridge list is the Subject's filed bridges on one graph (today's bound on the graph's confirm).
+- **Untrusted size.** The bridge list is the Subject's filed bridges on one graph (today's bound).
 
 ### Schema
 
-None — no catalog change.
+None — no catalog change (S13-37 has none either).
 
 ### Go core
 
-None — S13-08's RPCs.
+None — S13-37.
 
 ### FFI
 
-None —
+None — S13-37 adds the fields.
 
 ### macOS
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Remove | `PVIconButton` (`PVSymbol.unpromote`, `.sm`) | `PersonSourcesSection.swift` (S13-16's file) | D-9, RC-1 |
-| Confirm | `PVConfirm` through `unpromoteConfirm` | `macos/App/Features/EvidenceGraph/UnpromoteConfirm.swift` *(new)* | D-1 – D-3, D-6, RC-2 – RC-5 |
-| Deletes line | `PVDeleteImpactCopy`, `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes` | as today | D-6, RC-3 |
-| Landing | `WorkspaceNavigation.fallbackToSectionRoot()` | — | D-8, RC-7 |
+| Unpromote control | `PVIconButton` (`PVSymbol.unpromote`, `.sm`) in `pageSlotActionID` | `PersonSourcesSection.swift` (S13-16's file) | D-9, RC-1 |
+| Flow and confirm | `UnpromoteFlow`, `unpromoteConfirm` over `PVConfirm` | `macos/App/Features/EvidenceGraph/UnpromoteFlow.swift` *(new)* | D-1 – D-5, RC-2 – RC-5 |
+| Deletes line | `L10n.EvidenceGraph.unpromoteConfirmMessageDeletes`, `PVDeleteImpactCopy` | as today | D-5, RC-3 |
+| Landing | `WorkspaceNavigation.fallbackToSectionRoot()` | — | D-7, RC-7 |
 
-States: confirm opening (Remove disabled), writing (`isRunning`), failed (error under the list), preflight failed (danger copy), graph unread (`bridgesUnlisted`). Accessibility: Remove reads "Unpromote J. Weber"; the confirm reads as today; after a kept Remove focus moves per D-10. The board's frames are described here in words on agreement.
+States: opening (controls disabled), writing (`isRunning`), failed (error under the list), preflight failed, list unavailable. Accessibility: the control reads "Unpromote J. Weber"; the confirm reads as today; focus per D-10. The board's frames are described here in words on agreement.
 
 ### Strings
 
-L10n keys *(new)*: `L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted` = "The connections that come off with it could not be listed. The other end of each stays promoted."; `L10n.Conclusions.sourcesRemoveAccessibility(name:)` = "Unpromote %@". Existing copy that names the action's scope and is now shown on a second page: `evidenceGraph.subject.unpromoteConfirmMessage` ("This promotion is removed. The cards stay on the graph, and the handle stays."), `unpromoteConfirmPreflightFailed.*`, `unpromoteConfirmMessageDeletes.*` — each still reads true from the Person page (the cards are on the claim's graph), so none changes. Removed: none.
+L10n keys *(new)*: `L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted` = "The connections that come off with it could not be listed. The other end of each stays promoted."; `L10n.Conclusions.sourcesUnpromoteAccessibility(name:)` = "Unpromote %@". Existing copy now also shown from the Person page, each still true there (the cards are on the claim's graph): `evidenceGraph.subject.unpromoteConfirmMessage` ("This promotion is removed. The cards stay on the graph, and the handle stays."), `unpromoteConfirmPreflightFailed.*`, `unpromoteConfirmMessageDeletes.*`. Removed: none.
 
 ## 7. Steps
 
-**STEP-1 — Lift the Unpromote confirm**
-Files: `macos/App/Features/EvidenceGraph/UnpromoteConfirm.swift` *(new)*, `EvidenceGraphModel.swift`, `EvidenceGraphView.swift`, `macos/ProvenenciaTests/EvidenceGraphModelTests.swift`. Skill: `add-ui-component`.
-Do: D-1 – D-4, and D-6's message rule.
-Check: every `EvidenceGraphModelTests` Unpromote case passes; `unpromoteLastRecordNamesTheDeletedHandle` now expects the per-kind sentence (T-2).
+**STEP-1 — One Unpromote flow**
+Files: `macos/App/Features/EvidenceGraph/UnpromoteFlow.swift` *(new)*, `EvidenceGraphModel.swift`, `macos/ProvenenciaTests/UnpromoteFlowTests.swift` *(new)*, `macos/ProvenenciaTests/EvidenceGraphModelTests.swift`.
+Do: D-1, and D-2's item without the message rule; the graph model moves onto the flow.
+Check: T-1, T-4, T-5, T-6 pass.
 
-**STEP-2 — The confirm can say the list is missing**
-Files: `UnpromoteConfirm.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
-Do: `bridgesUnlisted` and its line (D-5, D-6).
-Check: T-3 passes.
+**STEP-2 — One confirm, its message and its list**
+Files: `UnpromoteFlow.swift`, `EvidenceGraphView.swift`, `EvidenceGraphModel.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/UnpromoteFlowTests.swift` *(new)* (created in STEP-1). Skill: `add-localized-string`.
+Do: D-2's modifier and message, D-3, D-5 (with `unpromoteConfirmBridgesUnlisted`).
+Check: T-2, T-3 pass; `rg 'endpointAID == subjectID' macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift` finds nothing.
 
-**STEP-3 — The Person page's removal**
-Files: `macos/App/Features/Conclusions/PersonClaimRemoval.swift` *(new)*, `macos/ProvenenciaTests/PersonClaimRemovalTests.swift` *(new)*.
-Do: D-5, D-7.
-Check: T-4 – T-8 pass.
+**STEP-3 — One snapshot read**
+Files: `macos/App/Features/Workspace/Session/WorkspaceSession+EvidenceGraphs.swift`, `macos/App/Features/Promote/PromoteModel.swift`, `UnpromoteFlow.swift`.
+Do: D-4.
+Check: T-7 passes; `PromoteModelTests` pass unchanged.
 
-**STEP-4 — Remove on the claim cards**
-Files: `PersonSourcesSection.swift` (S13-16's file in `Features/Conclusions/`), `macos/App/Features/Conclusions/PersonDetailView.swift`. Skill: `add-ui-component`, `add-workspace-location`.
-Do: D-8 – D-10.
-Check: T-9 passes; manual check items 1 – 4.
+**STEP-4 — Sections get the user id**
+Files: `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `PersonDetailView.swift`.
+Do: D-8's context field.
+Check: the build has no warning; `PersonDetailTests` pass.
 
-**STEP-5 — Strings**
-Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
-Do: `sourcesRemoveAccessibility(name:)`.
+**STEP-5 — Unpromote on the claim cards**
+Files: `PersonSourcesSection.swift` (S13-16's file in `Features/Conclusions/`), `PersonDetailView.swift`, `L10n.swift`, `Localizable.xcstrings`. Skill: `add-ui-component`, `add-localized-string`.
+Do: D-6 – D-10, with `sourcesUnpromoteAccessibility(name:)`.
+Check: T-8 passes; manual check items 1 – 4.
+
+**STEP-6 — Strings check**
+Files: `macos/App/Resources/Localizable.xcstrings`.
+Do: confirm both new keys have entries and comments.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes.
 
-**STEP-6 — Docs**
+**STEP-7 — Docs**
 Files: `docs/deployment-plan/spike-13/completed.md`, `deployment-plan.md` (map row), this plan (status, Landed note), `docs/deployment-plan/spike-13/design/S13-D6-sources-section.md` → `design/archive/`, `design/README.md`.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-17-remove-a-claim.md` reports no errors.
@@ -228,18 +236,16 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` existing Unpromote cases | Unchanged behavior on the shared item | AC-3.1, D-1 – D-3 |
-| T-2 | Swift | `EvidenceGraphModelTests.swift` `unpromoteLastRecordNamesTheDeletedHandle` (changed) and `unpromoteMessageForSeveralHandles` *(new)* | A group of one listed PER-… of kind `canonical_entity` for a person subject → "PER-… has no other records, so this person is deleted. The cards stay on the graph."; a group of three → the `cascadeLines` first line; a group of one association handle → the `cascadeLines` line | AC-2.1, AC-2.2, AC-3.2, D-6 |
-| T-3 | Swift | `macos/ProvenenciaTests/PersonClaimRemovalTests.swift` `graphUnreadOpensWithoutTheList` *(new)* | `.evidenceGraph` load throws → item with `bridges` empty, `bridgesUnlisted` true; the preflight still read | D-5, D-6 |
-| T-4 | Swift | same · `beginNamesTheClaimsConnections` *(new)* | FakeStore graph with J. Weber and two filed bridges → item title "J. Weber", two sentences equal to what `EvidenceGraphModel.beginUnpromote` builds for the same Subject | AC-1.1, D-2, D-5 |
-| T-5 | Swift | same · `confirmKeepsThePerson` *(new)* | No deleted group; confirm → `unpromoteSubject` called once with CPR-2M8XF; outcome `.kept`; `pending` nil | AC-1.2, D-7 |
-| T-6 | Swift | same · `confirmFailureStaysOpen` *(new)* | `unpromoteSubject` throws → outcome `.failed`; `pending.error` set; `isWriting` false | AC-1.4 |
-| T-7 | Swift | same · `lastClaimDeletesThePerson` *(new)* | Deleted group lists PER-8JD2L (the entity id) → outcome `.personDeleted`; no detail read | AC-2.1, AC-2.4, D-7 |
-| T-8 | Swift | same · `failedCheckReadsTheDetailOnce` *(new)* | `getUnpromoteImpactError` set; after the write `getConclusionDetail` throws `conclusiondetails.not_found` → `.personDeleted`; it returns a detail → `.kept`; one detail read each | AC-2.3, AC-2.5, AC-2.6, D-7 |
-| T-9 | Swift | same · `staleBeginIsDropped` *(new)* | `begin` for claim A, then for claim B before A's preflight returns → `pending` is B's | D-5, D-9 |
-| T-10 | Swift | same · `writingDisablesRemove` *(new)* | During `confirm()` (FakeStore write suspended) `isWriting` true and `canBegin` *(new computed)* false; after → true | AC-1.5, D-9 |
+| T-1 | Swift | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` existing Unpromote cases (moved onto `model.unpromote`) | Unchanged behavior; `unpromoteLastRecordNamesTheDeletedHandle` also asserts `item.message` is the per-kind sentence | AC-3.1, AC-3.2, D-1 |
+| T-2 | Swift | `macos/ProvenenciaTests/UnpromoteFlowTests.swift` `messageFollowsThePreflight` *(new)* | `handleID` "h-maria", group of one listed "h-maria" (PER-8JD2L) → "PER-8JD2L has no other records, so this person is deleted. The cards stay on the graph."; group of three → the `cascadeLines` first line; group of one listed "h-rel" → the `cascadeLines` line; `impactCheckFailed` → the preflight-failed copy; none → `unpromoteConfirmMessage`; tone `.danger` for the first four | AC-2.1, AC-2.2, AC-2.3, AC-3.2, D-2, D-5 |
+| T-3 | Swift | same · `listComesFromThePreflight` *(new)* | Preflight bridge ids [b2, b1] with both in the snapshot → two sentences in that order; [b2, gone] → one; snapshot nil → `bridgesUnlisted` true and no sentences | AC-1.1, AC-1.6, D-3, D-4 |
+| T-4 | Swift | same · `staleOpenIsDropped` *(new)* | `open` for A, then for B before A's preflight returns → `pending` is B's | D-1 |
+| T-5 | Swift | same · `confirmReportsTheEffects` *(new)* | Write succeeds with `deletedHandles` ["h-maria"] → result's effects hold it, `pending` nil, `isRunning` false; `isRunning` true while the scripted write is suspended | AC-1.2, AC-1.5, AC-2.4, D-1, D-6 |
+| T-6 | Swift | same · `confirmFailureStaysOpen` *(new)* | Write throws → result nil, `pending.error` set, retry allowed | AC-1.4 |
+| T-7 | Swift | `macos/ProvenenciaTests/WorkspaceSessionTests.swift` `evidenceGraphSnapshotReadsTheThreeKeys` *(new)* | Seeded graph rows, properties and rules → a snapshot with the Subject; rows load fails → nil | AC-1.6, D-4 |
+| T-8 | Swift | `macos/ProvenenciaTests/PersonSourcesContentTests.swift` `unpromoteOutcome` *(new)* | `PersonSourcesSection.outcome(effects:entityId:)` *(new, static)*: `deletedHandles` holds the entity → `.leave`; else `.stay(focusAfter:)` with the next claim id in reading order, else the previous, else nil | AC-2.4, AC-2.5, D-6, D-10 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `EvidenceGraphModelTests` (the lifted confirm).
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `EvidenceGraphModelTests`, `PromoteModelTests`.
 
 ## 9. Definition of done
 
@@ -262,30 +268,29 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `E
 
 ## 10. Manual check
 
-1. Dogfood project, a Person with three claims, one of whose Subjects has a filed relationship. Sources → Remove on that card: the confirm names the relationship under "Also unpromoted"; Keep promotion: nothing changes (AC-1.1, AC-1.3).
-2. Remove again and Unpromote: the card leaves, the page stays on Sources, focus is on the next Remove; open that Evidence graph: the Subject is unpromoted and its card stays (AC-1.2).
-3. A Person with one claim: Remove shows the danger confirm "PER-… has no other records, so this person is deleted. …"; Unpromote: the Persons list, without the person; Back does not show the deleted page (AC-2.1, AC-2.4).
+1. Dogfood project, a Person with three claims, one of whose Subjects has a filed relationship. Sources → Unpromote on that card: the confirm names the relationship under "Also unpromoted"; Keep promotion: nothing changes (AC-1.1, AC-1.3). While it opens, the other Unpromote controls are disabled (AC-1.5).
+2. Unpromote again and confirm: the card leaves, the page stays on Sources, focus is on the next Unpromote; open that graph: the Subject is unpromoted and its card stays (AC-1.2).
+3. A Person with one claim: Unpromote shows "PER-… has no other records, so this person is deleted. …" in the danger tone; confirm: the Persons list, without the person, no not-found Callout seen; Back does not show the deleted page (AC-2.1, AC-2.4).
 4. On an Evidence graph, Unpromote a person's last member: the same sentence; the graph stays (AC-3.2). Dark mode for the confirm.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| Lifting the confirm changes the graph's behavior | T-1 runs every existing graph Unpromote test unchanged except the approved message (T-2) |
-| The Persons list shows the deleted person for a moment | The write's effects refresh the list before the view leaves (`session.apply` runs before the outcome returns) |
+| Lifting the flow changes the graph's behavior | T-1 runs every graph Unpromote test on the flow |
+| The not-found Callout flashes before leaving | D-7 leaves before the detail reload paints; manual item 3 |
 
 **Stop and report if:**
 
-- S13-16 has not landed, or its card footer has no slot for Remove (S13-16 D-10): this plan stays Blocked.
-- The board is not agreed, or it moves Remove out of the card's footer (brief SS-4, RC-1).
-- `GetUnpromoteImpact`'s listed rows do not carry the person's entity id for a last-member Unpromote (D-7).
-- `EvidenceGraphSnapshot.build` cannot be called with only the three cached reads (D-5).
-- The approved per-kind sentence is no longer what the user wants on the Evidence graph (D-6 changes that confirm's visible copy).
+- S13-37 has not landed, or lands without the preflight's bridge ids or `CatalogWriteEffects.deletedHandles` (D-3, D-6).
+- S13-16 has not landed, or its card has no `pageSlotActionID` (D-9).
+- The board is not agreed, or it moves the control out of the card's footer slot (brief SS-4, RC-1).
+- `EvidenceGraphSnapshot.build` needs more than the three cached reads (D-4).
+- The approved per-kind sentence is no longer what the user wants on the Evidence graph (D-5 changes that confirm's copy).
 
 ## 12. Open questions
 
-1. **The board's answers** to RC-3 (the person's name beside its ref), RC-6 (Toast, focus) and any change to RC-1's placement. Recommended: the brief's recommendations; D-9, D-10 and D-6 are written for them.
-2. **The Evidence graph's deletes sentence** (D-6): the landed confirm shows the generic DeleteImpact line, not the per-kind sentence approved for S13-08 on 2026-11-04. Recommended: show the approved sentence on both pages, as D-6 says.
+1. **The board's answers** to RC-3 (the name beside the ref), RC-6 (Toast, focus) and any change to RC-1's placement. Recommended: the brief's recommendations; D-5, D-9 and D-10 are written for them.
 
 ## 13. PR
 

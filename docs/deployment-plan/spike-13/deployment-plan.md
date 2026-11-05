@@ -46,7 +46,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | R-29 – R-32 Gallery and viewer | S13-14, S13-15 | S13-D5 |
 | R-33 – R-37 Sources | S13-01, S13-16 | S13-D6 |
 | R-35 Source date | Descoped 2026-10-31 (S13-20 – S13-22): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 | Descoped (S13-D8, S13-D9) |
-| R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-17 | S13-D6 |
+| R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-37, S13-17 | S13-D6 |
 | R-40 claim review, replaced 2026-10-29 by how a person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md)) | S13-26, S13-27, S13-28 (S13-07, S13-18 descoped) | S13-D10 (S13-D7 descoped) |
 
 **Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`spike-15/citation-formats.md`](../spike-15/citation-formats.md) keeps standard genealogical citations beyond the provenance sheet's citation line, and [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) the first-class Source date; both are planned for Spike 15 (user, 2026-10-31). Remember-researcher-decisions leftovers live in [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md). The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
@@ -147,8 +147,9 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait; a tile's click opens its Citation until the viewer | [S13-D5](design/archive/S13-D5-gallery-and-viewer.md) | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | [S13-14](prs/S13-14-gallery-section.md) | Landed [#701](https://github.com/mendahu/provenencia/pull/701) |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery, with its provenance record row under the image | [S13-D5](design/archive/S13-D5-gallery-and-viewer.md) | S13-14, S13-36 | [S13-15](prs/S13-15-likeness-viewer.md) | Landed [#703](https://github.com/mendahu/provenencia/pull/703) |
 | S13-08 | Unpromoting the last member | 6 | Removing a handle's last accepted member deletes the handle through `deleteimpact`, wherever Unpromote runs and on Subject delete, associations included; an unpromote Impact preflight for both confirms, and Subject delete's report names the handles it deletes | — | S13-25 | [S13-08](prs/S13-08-unpromoting-the-last-member.md) | Landed [#707](https://github.com/mendahu/provenencia/pull/707) |
-| S13-16 | Sources section | 6 | Claims grouped by Source (title, type) with the Evidence graph's Subject card drawn read-only, each Source opening its page and each card its Evidence graph with the Subject selected | [S13-D6](design/S13-D6-sources-section.md) | S13-01, S13-10, S13-D6 | [S13-16](prs/S13-16-sources-section.md) | Blocked — on board S13-D6 |
-| S13-17 | Remove a claim | 6 | Remove on a claim through the Evidence graph's Unpromote confirm, lifted so both pages share it; the last-claim warning; landing on the Persons list | [S13-D6](design/S13-D6-sources-section.md) | S13-08, S13-16, S13-D6 | [S13-17](prs/S13-17-remove-a-claim.md) | Blocked — on board S13-D6 |
+| S13-16 | Sources section | 6 | Claims grouped by Source (title, type) with the Evidence graph's Subject card drawn read-only, each Source opening its page and each card its Evidence graph with the Subject selected | [S13-D6](design/S13-D6-sources-section.md) | S13-01, S13-10, S13-13, S13-D6 | [S13-16](prs/S13-16-sources-section.md) | Blocked — on board S13-D6 |
+| S13-37 | Unpromote reports what it removes | 6 | Preparatory, engine: `GetUnpromoteImpact` returns the bridge Subject ids the write will unpromote, and `WriteEffects` carries the handles a write deleted (`deleted_handles`, from its `rowchange` deletes); Swift decodes both | — (no chrome change) | S13-08 | — | Scoped |
+| S13-17 | Remove a claim | 6 | Unpromote on a claim through one Unpromote flow and confirm, lifted out of the Evidence graph so both pages share it, its list and the person-gone fact from the engine (S13-37); the last-claim warning; landing on the Persons list | [S13-D6](design/S13-D6-sources-section.md) | S13-08, S13-37, S13-16, S13-D6 | [S13-17](prs/S13-17-remove-a-claim.md) | Blocked — on S13-37, S13-16 and board S13-D6 |
 | S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
 | S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
@@ -227,6 +228,7 @@ SLICE 5 — Gallery
 
 SLICE 6 — Sources
   S13-08  Unpromoting the last member
+  S13-37  Unpromote reports what it removes   (preparatory)
   ✎ S13-D6 ──▶ S13-16  Sources section
                S13-17  Remove a claim
   Check: bar 6 and the removal half of 7
@@ -261,7 +263,7 @@ S13-01 ──┬─────────────────────�
 S13-09 ──▶ S13-10 ──┬──▶ S13-11 ◀── S13-06
                     ├──▶ S13-12
                     ├──▶ S13-14 ──▶ S13-15   (S13-11 ──▶ S13-36 ──▶ S13-15)
-                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-08
+                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-37 ◀── S13-08
                                   └──▶ S13-28 ◀── S13-27 ◀── S13-26, S13-29, S13-01
 S13-24 ──▶ S13-26, S13-29
 each brief S13-Dn ──▶ the PR(s) it gates; slice n's chrome ──▶ slice n+1's brief (1 … 7)
@@ -487,6 +489,13 @@ Go, plus deleting Swift's draft rule.
 **Context.** Working rule "One Unpromote, deletes through the registry"; R-38, R-39; `promote.Unpromote`, `deleteimpact.ReleaseClaim`; `add-catalog-delete`, `add-audit-scope`; `EvidenceGraphModel.beginUnpromote` / `confirmUnpromote` (the confirm copy "the handle stays" changes).
 
 ### Slice 2 — Page frame and Vitals
+
+#### S13-37 — Unpromote reports what it removes
+
+**Ships.** A preparatory engine PR (user, 2026-11-05, from the S13-17 plan review). (1) `GetUnpromoteImpactResponse` gains the Subject ids of the bridges whose accepted claims the write will take back, from the same rule the write runs (`identityclaims.UnfileBridges`), so the confirm's "Also unpromoted" list is the engine's and the Swift copy of that rule goes (S13-17). (2) `WriteEffects` gains `deleted_handles`: the canonical entities the write deleted, from its `rowchange` delete changes, for every write that goes through `deleteimpact` (Unpromote, Subject delete); `CatalogWriteEffects.deletedHandles` decodes it. Swift maps both; nothing draws them until S13-17.
+**Not this PR.** Any confirm or page change (S13-17); a general "the page's entity was deleted" rule (later, for Event and Place).
+**Check.** Handler tests: unpromoting a Subject with two filed bridges returns both ids in the preflight and the write unfiles exactly those; the last member's Unpromote reports the handle in `deleted_handles`; a Subject delete that empties a handle reports it; a write that deletes nothing reports none.
+**Context.** Working rule "One Unpromote, deletes through the registry"; S13-08; `core/database/promote/unpromote.go`, `unpromote_impact.go`; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md).
 
 #### S13-16 — Sources section
 
