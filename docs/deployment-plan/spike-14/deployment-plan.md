@@ -88,7 +88,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md) and [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md) (same root cause) | S14-28 | — |
 | Dogfood 2026-10-15: polygon locator drag vertices (note deleted 2026-11-05; landed #715) | S14-29 | — |
 | Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
-| [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md) | S14-31 | — |
+| Dogfood 2026-10-15: new-subject card Tab skips the description (note deleted 2026-11-05; landed #718) | S14-31 | — |
 | [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
 | [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
 | [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
@@ -174,7 +174,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-28 | PDF page tracks scroll | 7a | Push `pdfView.currentPage` into `ArtifactViewerModel.page` on page-changed; zoom and region stamps stop snapping to page 1 | — | — | [S14-28-pdf-page-tracks-scroll.md](prs/S14-28-pdf-page-tracks-scroll.md) | Landed #711 |
 | S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Landed #715 |
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
-| S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Planned |
+| S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
@@ -510,7 +510,7 @@ One PR (user, 2026-11-01).
 **Ships.** Kit fix so Tab from `PVInput` reaches a following `PVTextArea` (and Shift-Tab returns), via `PVTabPair` — not a one-off on the Evidence graph card. Covers the new-subject card, the composer's New subject dialog, and any other Input → TextArea pair in `PVFormDialog` or forms. Swift UI tests or focused kit tests where practical.
 **Not this PR.** Redesigning form focus for unrelated controls.
 **Check.** Bar outcome 26 on the graph card and the composer's New subject dialog.
-**Context.** Working rule "Tab into a text area is kit-wide"; [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md); `PVTextArea`, `PVInput`, `PVFormDialog`; `add-ui-component`.
+**Context.** Working rule "Tab into a text area is kit-wide"; dogfood note 2026-10-15 (deleted on land); `PVTextArea`, `PVInput`, `PVFormDialog`; `add-ui-component`.
 
 #### S14-32 — Place relationship inverse labels
 

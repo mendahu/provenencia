@@ -1,6 +1,7 @@
 # S14-31 — Tab reaches a following text area
 
-**Status:** Planned
+**Status:** Landed #718 (2026-11-05)
+**Landed:** Version bumped 0.3.3 → 0.3.4, because main was already at 0.3.3. `PVFieldFocus`'s binding init and `neighbours` are `@MainActor` (the plan left them non-isolated) so the focus claim compiles without Swift 6 sendability warnings. The STEP-4 probe and the §10 manual check were not run by the implementer.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: every field, focus ring and dialog looks the same; only where Tab sends focus changes)
