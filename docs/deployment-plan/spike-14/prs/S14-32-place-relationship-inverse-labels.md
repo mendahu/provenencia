@@ -1,6 +1,6 @@
 # S14-32 — Place relationship rows read from the far end
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the saved-line row keeps its layout, mark and type; only the label word on the far end changes)
@@ -10,10 +10,10 @@
 **Branch:** `s14-32-place-relationship-inverse-labels`
 **Version bump:** patch — a researcher-visible labelling bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
-**Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note [`ux/2026-10-15-place-relationship-inverse-label.md`](../ux/2026-10-15-place-relationship-inverse-label.md) (deleted on land)
+**Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
+**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note [`ux/2026-10-15-place-relationship-inverse-label.md`](../ux/2026-10-15-place-relationship-inverse-label.md) (deleted on land); [`docs/ideas/properties-and-terms.md`](../../../ideas/properties-and-terms.md) ("`place_relationship_type` takes no new terms at all")
 **Planned:** 2026-11-05 against `main` @ `b6cac73d`
-**Review:** — (not reviewed yet)
+**Review:** [`S14-32-place-relationship-inverse-labels.review.md`](S14-32-place-relationship-inverse-labels.review.md) — Fits with changes — Ready with changes, 1 round; M-1 answered by the user 2026-11-05; no open blocker
 
 ### Implementer — read this first
 
@@ -30,11 +30,13 @@
 
 ## 1. Objective
 
-The Citation composer lists a saved place-relationship bridge under both of its places. Today both rows use the forward term: with *Calgary is part of Alberta*, Alberta's row reads "Part of Calgary", which is wrong. After this PR the far end reads the relationship from its own side: Alberta's row reads "Contains Calgary", and for *Old Town was succeeded by New Town* New Town's row reads "Succeeded Old Town". This is the same wording the Place conclusion page uses for those two ends.
+The Citation composer lists a saved place-relationship bridge under both of its places. Today both rows use the forward term: with *Calgary is part of Alberta*, Alberta's row reads "Part of Calgary", which is wrong. After this PR the far end reads the relationship from its own side: Alberta's row reads "Contains Calgary", and for *Old Town was succeeded by New Town* New Town's row reads "Succeeded Old Town" — the Place conclusion page's wording for those ends.
+
+The composer words the two product place terms in three separate switches today, and this bug is what a missed case looks like. This PR puts every composer wording of a place term into one table, read by all four places that word one, and a Go test fails when a seeded place term has no entry (user, 2026-11-05, review M-1).
 
 **Why now.** Batch 7 dogfood fix (note 2026-10-15, bar outcome 27).
 
-**What stays.** The near end (the bridge's `from` place) reads as today: "Part of Alberta", "Succeeded by New Town". The reading sentence, the end titles in the authoring box, the Evidence graph cards, the Place page, and person relationship rows are unchanged. Place relationship terms stay product-only with no vocabulary `Inverse`.
+**What stays.** Every string the composer shows today for a place relationship stays the same, except the far-end row label and the near-end row label's source (now `PropertyTermDisplay`, same English). Evidence graph cards, the Place page, and person relationship rows are unchanged. Place relationship terms stay product-only with no vocabulary `Inverse`.
 
 ## 2. User stories
 
@@ -42,77 +44,97 @@ The Citation composer lists a saved place-relationship bridge under both of its 
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Saved bridge `part_of`, from Calgary to Alberta; Calgary's group | Row label "Part of", value "Alberta" → body "Part of Alberta" (unchanged) |
-| AC-1.2 | Same bridge; Alberta's group | Row label "Contains", value "Calgary" → body "Contains Calgary" |
-| AC-1.3 | Saved bridge `succeeded_by`, from Old Town to New Town; Old Town's group | Body "Succeeded by New Town" (unchanged) |
-| AC-1.4 | Same bridge; New Town's group | Body "Succeeded Old Town" |
-| AC-1.5 | A researcher-origin term keyed `part_of` labelled "Inside of" (origin `user`), from a to b | Both rows read "Inside of" + the other place: a non-product term keeps its own label on both ends |
-| AC-1.6 | A place-relationship bridge whose term cannot be found (empty `roleTermID`) | Both rows read "Place relationship" + the other place (unchanged) |
+| AC-1.1 | Saved bridge `part_of`, from Calgary to Alberta; Calgary's group | Label "Part of", value "Alberta" → "Part of Alberta" (unchanged in English) |
+| AC-1.2 | Same bridge; Alberta's group | Label "Contains", value "Calgary" → "Contains Calgary" |
+| AC-1.3 | Saved bridge `succeeded_by`, from Old Town to New Town; Old Town's group | "Succeeded by New Town" (unchanged in English) |
+| AC-1.4 | Same bridge; New Town's group | "Succeeded Old Town" |
+| AC-1.5 | A researcher-origin term keyed `part_of` labelled "Inside of", from a to b | Both rows read "Inside of" + the other place |
+| AC-1.6 | A place-relationship bridge with no term (`roleTermID` empty) | Both rows read "Place relationship" + the other place (unchanged) |
+
+**US-2.** As a contributor, when a product place term is added to the Go seed, a test names every composer wording it lacks, so the composer cannot fall back to the forward label without failing CI.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-2.1 | `SeededPlaceRelationshipTypeTerm` gains a constant with no entry in `CitationComposerAuthoring.placeTermWordings` | `TestSwiftVocabularyMatchesGo/every_seeded_place_term_has_composer_wording` fails naming the constant |
+| AC-2.2 | The authoring box for a product `part_of` / `succeeded_by` bridge | End titles "Part" / "Whole" and "Earlier place" / "Later place", sentence verb "is part of" / "was succeeded by", reading "A is part of B" / "A was succeeded by B" — the same strings as today, now read from the table |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| `listedLine`'s `placeRelationship` case picks the far-end label when `viewing == to.id` for the two product terms | STEP-2, AC-1.1 – AC-1.6 |
-| Two L10n keys for the far-end labels, in `L10n.CitationComposer` beside `atWord` / `siteOfWord`, with String Catalog entries | STEP-1, AC-1.2, AC-1.4 |
-| Swift test over `CitationComposerAuthoring.groups` for both ends of both terms, a researcher's term, and a missing term | STEP-3, T-1 – T-3 |
-| Map: working rule, bar outcome 27 and S14-32 scope entry say "Succeeded" for the far end of `succeeded_by` (user, 2026-11-05) | STEP-4 |
+| `CitationPlaceTermWording` *(new)* and one table `CitationComposerAuthoring.placeTermWordings` keyed by product term key, with a lookup `placeWording(_:)` | STEP-2, D-4 |
+| `endTitles`, `readingSentence`, `listedLine` and `CitationBridgeSentence.displayLabel` read the table; their place-term switches go | STEP-2, AC-2.2, D-5 |
+| `listedLine` picks the far-end label when `viewing == to.id`; the near end reads `PropertyTermDisplay` | STEP-2, AC-1.1 – AC-1.6, D-6, D-7 |
+| Two L10n keys for the far-end labels, with String Catalog entries | STEP-1, AC-1.2, AC-1.4 |
+| Go subtest: every seeded place term constant has a table entry | STEP-3, AC-2.1 |
+| Swift tests over `CitationComposerAuthoring.groups` and the extended researcher-term test; `termVocabulary` gains `endLabels`; a `savedRow` helper | STEP-4, T-1 – T-4 |
+| Map: working rule, bar outcome 27 and S14-32 scope entry say "Succeeded" for the far end of `succeeded_by` (user, 2026-11-05) | STEP-6 (done by the planning commit; check) |
 
 | Out | Home |
 | --- | --- |
-| Inverse terms in the seeded `place_relationship_type` vocabulary | not planned (working rule: copy from L10n) |
-| Person relationship inverses | not planned — already handled by `inverseTerm` |
-| Localizing the near-end label (`term.label` from the catalog) through `PropertyTermDisplay` | not planned — the relationship and participation rows read `term.label` the same way; one change for every kind if it is ever wanted |
-| End titles in the authoring box (`endTitles`) and the reading sentence (`readingSentence`) | not planned — they already word each end ("Part" / "Whole", "Earlier" / "Later") |
+| Inverse terms in the seeded `place_relationship_type` vocabulary | not planned (working rule: copy from L10n; Go `TestAcyclicTermsAreSeededDirectedWithNoInverse` forbids them) |
+| Person relationship inverses | not planned — `inverseTerm` and its Go guard already handle them |
+| Routing the `relationship` and `participation` cases of `listedLine`, and `endTitles`' relationship case, through `PropertyTermDisplay` | dogfood log — same raw-`term.label` bypass, older than this PR (review M-2) |
+| Moving older `ConnectionRow(...)` literals in `CitationComposerModelTests` onto the new `savedRow` helper | not planned (review M-4: new tests only) |
 | Evidence graph bridge cards, `ConnectionSentenceRegistry` | not planned — they word the whole sentence, not one end |
-| Changing the Place page's "Succeeded" / "Succeeded by" wording | not planned |
+| Changing the Place page's "Succeeded" / "Succeeded by" / "Contains" wording | not planned |
 
 ## 4. Current state
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Saved-line grouping | `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` `CitationComposerAuthoring.groups(observations:connections:vocabulary:nameOrders:)` | For each saved connection, adds one `CitationSavedLine` per end (`fromSubjectID`, `toSubjectID`), calling `listedLine(…, viewing: subjectID)` for `label` and `valueText`; `body` joins them |
-| Per-end label | same file, `private static func listedLine(from:to:rule:termID:termProperty:vocabulary:viewing:)` | `relationship` flips through `inverseTerm` when `viewing == to.id`; `location` picks `atWord` / `siteOfWord` by end; **`placeRelationship` returns `term?.label ?? bridgeKindPlace` on both ends** — the bug |
-| Person inverse | same file, `private static func inverseTerm(of:property:vocabulary:)` | Looks up `SeededRelationshipTypeTerm.inverse` (person terms only); has no place keys. Not touched |
-| Place term keys | `macos/App/Platform/ConclusionVocabulary.swift` `SeededPlaceRelationshipTypeTerm.partOf` (`"part_of"`), `.succeededBy` (`"succeeded_by"`) | Constants used by `endTitles`, `readingSentence`, `CitationBridgeSentence.displayLabel` |
-| Product key | `macos/App/Platform/GenealogyStore.swift` `CatalogPropertyTerm.productKey` | `key` when origin is product, else nil — a researcher's term keyed `part_of` gets nil |
-| Direction | `CitationComposerAuthoring.readingSentence`; `core/database/subjectvocab/registry.go` seed rows for `place_relationship_type` | `part_of`: `isPartOf(from, to)`, seed description "From is part of to" → from is the part, to the whole. `succeeded_by`: `wasSucceededBy(from, to)`, seed description "From was succeeded by to" → from is earlier, to later. Neither seed row has an `Inverse` |
-| Line-label copy | `macos/App/Platform/L10n.swift` `L10n.CitationComposer.atWord` ("At"), `.siteOfWord` ("Site of"), `.bridgeKindPlace` ("Place relationship") | Per-end location labels; precedent for the new keys |
-| Place page wording | `macos/App/Features/Conclusions/PlaceDetailContent.swift` `relationshipSections(summary:)`; `L10n.Conclusions.placeContains` ("Contains", section heading), `.placeSucceeded` ("Succeeded", role on the later place's row) | The far-end wording this PR matches |
-| Same-place link | `CitationComposerAuthoring.resolvePair` | Refuses `endA == endB` (`sameSubjectTitle`), so `from.id == to.id` does not reach `groups` |
-| Tests | `macos/ProvenenciaTests/CitationComposerModelTests.swift` `savedBridgeIsListedUnderBothEnds`, `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel`; helper `termVocabulary(propertyKey:terms:endTypeKey:)` | Participation bridge listed under both ends; no test covers a place-relationship row's label |
+| Saved-line grouping | `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` `CitationComposerAuthoring.groups(observations:connections:vocabulary:nameOrders:)` | One `CitationSavedLine` per end of each saved connection, labelled by `listedLine(…, viewing: subjectID)`; `body` joins label and value |
+| Per-end label | same file, `private static func listedLine(from:to:rule:termID:termProperty:vocabulary:viewing:)` | `relationship` flips through `inverseTerm` when `viewing == to.id`; `location` picks `atWord` / `siteOfWord`; **`placeRelationship` returns `term?.label ?? bridgeKindPlace` on both ends** — the bug, and it bypasses `PropertyTermDisplay` |
+| Place switch 1 | same file, `private static func endTitles(subjectA:subjectB:rule:term:vocabulary:property:)`, `placeRelationship` case | `switch term?.productKey`: `partOf` → `partEnd` / `wholeEnd`; `succeededBy` → `earlierPlace` / `laterPlace`; `default` → term label both ends, or `firstPlace` / `secondPlace` |
+| Place switch 2 | same file, `private static func readingSentence(from:to:rule:term:)`, `placeRelationship` case | `partOf` → `isPartOf(from, to)`; `succeededBy` → `wasSucceededBy(from, to)`; else nil |
+| Place switch 3 | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` `CitationBridgeSentence.displayLabel(_:)` | `partOf` → `placeTermPartOf`; `succeededBy` → `placeTermSucceededBy`; default `term.label.localizedLowercase` (used for every bridge kind's term combo) |
+| Person inverse | `CitationComposerAuthoring.inverseTerm(of:property:vocabulary:)` | `SeededRelationshipTypeTerm.inverse`; person terms only. Not touched |
+| Term display | `macos/App/Platform/PropertyTermDisplay.swift` `PropertyTermDisplay.name(term:propertyKey:)` | Product term → `L10n.PropertyTerm.resource` (`placeRelationshipPartOf` "Part of", `placeRelationshipSucceededBy` "Succeeded by"); other → catalog label |
+| Place term keys | `macos/App/Platform/ConclusionVocabulary.swift` `SeededPlaceRelationshipTypeTerm.partOf`, `.succeededBy`; `SeededPropertyKey.placeRelationshipType` | Constants |
+| Direction | `core/database/subjectvocab/registry.go` seed rows | `part_of` "From is part of to"; `succeeded_by` "From was succeeded by to"; no `Inverse` on either |
+| Product key | `macos/App/Platform/GenealogyStore.swift` `CatalogPropertyTerm.productKey` | `key` for a product term, nil otherwise |
+| Line-label copy | `macos/App/Platform/L10n.swift` `L10n.CitationComposer.atWord`, `.siteOfWord`, `.bridgeKindPlace` | Precedent for the new keys |
+| Place page | `macos/App/Features/Conclusions/PlaceDetailContent.swift` `relationshipSections(summary:)`; `L10n.Conclusions.placeContains` (`conclusions.place.contains`), `.placeSucceeded` (`conclusions.place.succeeded`) | The far-end wording this PR matches |
+| Same-place link | `CitationComposerAuthoring.resolvePair` | Refuses `endA == endB`, so `from.id == to.id` never reaches `groups` |
+| Go guard | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo`: `seededTermEnums` (includes `SeededPlaceRelationshipTypeTerm`), subtests "every seeded term is in Swift", "every seeded term has wording" (`wordingCase` over `L10n.PropertyTerm.resource`); path vars `swiftVocabulary`, `swiftL10n` | Every seeded place term has a Swift constant and a `PropertyTerm` resource; nothing checks the composer's place switches |
+| Tests | `macos/ProvenenciaTests/CitationComposerModelTests.swift` `savedBridgeIsListedUnderBothEnds`, `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel`, helpers `termVocabulary(propertyKey:terms:endTypeKey:)` (labels each end with its id), `readyBridge(_:termID:)` | No test covers a place-relationship saved line |
 
-**Precedent.** `4745bcb7` added `atWord` / `siteOfWord` and the `location` case of `listedLine`: a per-end label word chosen by `viewing`, copy in `L10n.CitationComposer`. Copy that shape. `inverseTerm` is the other per-end precedent, but it needs a vocabulary row to look up and place terms have none, so do not copy it.
+**Precedent.** `4745bcb7` added `atWord` / `siteOfWord` and the `location` case of `listedLine`: a per-end label chosen by `viewing`, copy in `L10n.CitationComposer`. The "every seeded term has wording" subtest is the shape for the new Go guard: read a Swift table with a regexp and check it against the constants in `SeededPlaceRelationshipTypeTerm`.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | The far end of `succeeded_by` reads **"Succeeded"** ("Succeeded Old Town") | User, 2026-11-05: match the Place page's `placeSucceeded` | "Preceded by" (the map's first wording and the dogfood note) — the user chose consistency with the Place page |
-| D-2 | The far end of `part_of` reads **"Contains"** | Matches the Place page's `placeContains` section and the working rule | — |
-| D-3 | Two new keys in `L10n.CitationComposer`: `containsWord` (`citationComposer.containsWord`, "Contains") and `succeededWord` (`citationComposer.succeededWord`, "Succeeded"), placed right after `siteOfWord` | The composer's line labels live in its namespace (`atWord`, `siteOfWord`); a translator sees a line-label comment, not a section heading | Reusing `L10n.Conclusions.placeContains` / `placeSucceeded` — their comments describe a Place page heading and role, and a later change to the Place page would silently change the composer |
-| D-4 | A private static `placeFarEndLabel(_ term: CatalogPropertyTerm?) -> String?` *(new)* in `CitationComposerAuthoring`, switching on `term?.productKey`: `partOf` → `containsWord`, `succeededBy` → `succeededWord`, anything else → nil | One switch beside `listedLine`; a third product place term adds one case | An entry in `SeededRelationshipTypeTerm.inverse` — that map returns a term key looked up in vocabulary, and no inverse place term row exists; a place map in `ConclusionVocabulary.swift` — it holds keys, not copy |
-| D-5 | `listedLine`'s `placeRelationship` case uses `placeFarEndLabel(term)` only when `viewing == to.id`; otherwise, and when it returns nil, it keeps `term?.label ?? bridgeKindPlace` | `from` is the part / earlier place (see §4 Direction), so its row already reads right; a researcher's term (`productKey` nil) has no known inverse and keeps its label on both ends | Lowercasing or re-wording the near end — Out |
-| D-6 | Test at the `CitationComposerAuthoring.groups` level with a hand-built `CitationComposerVocabulary` (extend the `termVocabulary` helper's shape), not through `CitationComposerModel` + FakeStore | `groups` is a pure static function; no store call is involved | A model test — needs place types, properties and terms seeded in `makeStore()` for no extra coverage |
+| D-1 | The far end of `succeeded_by` reads **"Succeeded"** | User, 2026-11-05: match the Place page's `placeSucceeded` | "Preceded by" (the map's first wording, the dogfood note) |
+| D-2 | The far end of `part_of` reads **"Contains"** | Matches the Place page's `placeContains` and the working rule | — |
+| D-3 | Two keys in `L10n.CitationComposer`, right after `siteOfWord`: `containsWord` (`citationComposer.containsWord`, "Contains") and `succeededWord` (`citationComposer.succeededWord`, "Succeeded"). Each comment names the Place page key it must match | Composer line labels live in its namespace; a translator sees a row-label comment; the cross-reference keeps the two in step (review M-5) | Reusing `L10n.Conclusions.placeContains` / `placeSucceeded` — their comments describe a page heading and role |
+| D-4 | One table *(new)*, in `CitationComposerAuthoring.swift`: `struct CitationPlaceTermWording { fromEnd, toEnd, sentenceTerm, farEnd: LocalizedStringResource; reading: @Sendable (String, String) -> String }`, and `static let placeTermWordings: [String: CitationPlaceTermWording]` on `CitationComposerAuthoring`, keyed by `SeededPlaceRelationshipTypeTerm` constants, each entry written `SeededPlaceRelationshipTypeTerm.<name>: CitationPlaceTermWording(` on one line. Lookup `static func placeWording(_ term: CatalogPropertyTerm?) -> CitationPlaceTermWording?` returns `term?.productKey.flatMap { placeTermWordings[$0] }` | User, 2026-11-05 (review M-1): one table replaces three switches and the proposed fourth; "from is the part / earlier place" is written once; a researcher's term (`productKey` nil) gets no entry | A fourth switch (`placeFarEndLabel`) — the set is closed, but four unguarded switches is how this bug happened; a map in `ConclusionVocabulary.swift` — it holds keys, not copy |
+| D-5 | `placeTermWordings` is internal (not private) so `CitationBridgeSentence.displayLabel` in `CitationComposerAuthoringBox.swift` reads it; `displayLabel` keeps its default for every other term | Both files are the composer feature; one table | A copy of the two cases in the box |
+| D-6 | `listedLine`'s `placeRelationship` case: when `viewing == to.id` and `placeWording(term)` is non-nil, label = `L10n.string(wording.farEnd)`; otherwise label = `term.map { PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.placeRelationshipType) } ?? L10n.string(L10n.CitationComposer.bridgeKindPlace)`. Value stays `other.label` | `from` is the part / earlier place (§4 Direction); the near end now localizes like the far end, so one row never mixes languages (review M-2) | Raw `term.label` on the near end — catalog English beside L10n copy |
+| D-7 | No entry for a researcher's term: both ends read its own label | No known inverse; matches `endTitles`' default | Guessing an inverse from the key |
+| D-8 | The Go guard is a new subtest of `TestSwiftVocabularyMatchesGo`, `every seeded place term has composer wording`, with a path var `swiftCitationComposerAuthoring` *(new)* = `"../../macos/App/Features/CitationComposer/CitationComposerAuthoring.swift"` and a regexp `placeWordingEntry` *(new)* = `` `SeededPlaceRelationshipTypeTerm\.(\w+): CitationPlaceTermWording\(` ``. It fails for each `swiftNamedKey` name in `SeededPlaceRelationshipTypeTerm` with no entry | Same shape as "every seeded term has wording"; runs off a Mac; already reads the constants Go pins to the seed | A Swift test over a hand-kept `all` list — a new constant can miss the list as easily as the table |
+| D-9 | Swift tests call `CitationComposerAuthoring.groups` with a hand-built vocabulary. `termVocabulary` gains `endLabels: (a: String, b: String) = ("a", "b")`; a private `savedRow(termProperty:termID:bridgeTypeKey:)` *(new)* builds the saved `ConnectionRow` (review M-4). The researcher-term case extends `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel` (review M-3) | `groups` is pure; one test per behavior | A model test through FakeStore |
 
-**Rules this plan bends.** Working rule "(Batch 7) Place relationship rows use the inverse label on the far end" names "preceded by" for `succeeded_by`. The rule also says "matching the Place conclusion page", which reads "Succeeded". User answer 2026-11-05: "Succeeded". STEP-4 rewords the rule, bar outcome 27 and the S14-32 scope entry.
+**Rules this plan bends.** Working rule "(Batch 7) Place relationship rows use the inverse label on the far end" named "preceded by" for `succeeded_by` while also saying "matching the Place conclusion page" ("Succeeded"). User answer 2026-11-05: "Succeeded". The planning commit rewords the rule, bar outcome 27 and the S14-32 scope entry; STEP-6 checks them.
 
 ## 6. Design
 
 ### Codebase fit
 
-Searched: `inverse`, `SeededPlaceRelationshipTypeTerm`, `Contains`, `Succeeded`, `atWord`, `siteOfWord`, `viewing` in `macos/App`.
+Searched: `inverse`, `SeededPlaceRelationshipTypeTerm`, `productKey`, `PropertyTermDisplay`, `Contains`, `Succeeded`, `atWord`, `siteOfWord`, `viewing` in `macos/App`; `seededTermEnums`, `wordingCase` in `api/ffi`.
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `CitationComposerAuthoring.placeFarEndLabel(_:)` *(new)* | func | `CitationComposerAuthoring.inverseTerm(of:property:vocabulary:)` | `inverseTerm` resolves a vocabulary row; place terms have no inverse row (product-only, no `Inverse` in `core/database/subjectvocab/registry.go`) |
-| `L10n.CitationComposer.containsWord` *(new)* | key | `L10n.Conclusions.placeContains` | D-3 |
-| `L10n.CitationComposer.succeededWord` *(new)* | key | `L10n.Conclusions.placeSucceeded` | D-3 |
-| `placeRelationshipRowsReadFromEachEnd` *(new)* | test | `savedBridgeIsListedUnderBothEnds` | That test drives the model for a participation bridge; this one checks labels for a place bridge (D-6) |
+| `CitationPlaceTermWording` *(new)*, `CitationComposerAuthoring.placeTermWordings` *(new)*, `.placeWording(_:)` *(new)* | type / table / func | the three switches in §4; `SeededRelationshipTypeTerm.inverse` | Replaces the switches (D-4); `inverse` returns a key to look up in vocabulary, and place terms have no inverse row |
+| `L10n.CitationComposer.containsWord`, `.succeededWord` *(new)* | key | `L10n.Conclusions.placeContains`, `.placeSucceeded` | D-3 |
+| `swiftCitationComposerAuthoring`, `placeWordingEntry` *(new)*, subtest `every seeded place term has composer wording` *(new)* | test | subtest "every seeded term has wording" | Different table; same shape |
+| `savedRow(termProperty:termID:bridgeTypeKey:)` *(new)*, `termVocabulary(… endLabels:)` | test helper | five `ConnectionRow(...)` literals in `CitationComposerModelTests`; `termVocabulary` | Extends `termVocabulary`; `savedRow` serves the new tests (D-9) |
+| `placeRelationshipRowsReadFromEachEnd` *(new)* | test | `savedBridgeIsListedUnderBothEnds` | That one drives the model for a participation bridge |
+| `placeTermWordingKeepsTheBoxWording` *(new)* | test | `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel` | That one covers a researcher's term; this pins AC-2.2 for both product terms |
 
-**Builds on.** `listedLine`'s per-end switch (`location` case, `4745bcb7`); `SeededPlaceRelationshipTypeTerm`; `CatalogPropertyTerm.productKey`; the `termVocabulary` test helper.
-**Deletes.** None — nothing becomes dead.
-**Next adds.** A new product place term (for example a "merged into" term) adds one constant in `SeededPlaceRelationshipTypeTerm`, one case in `placeFarEndLabel`, and one key.
+**Builds on.** `listedLine`'s per-end switch (`4745bcb7`); `PropertyTermDisplay`; `SeededPlaceRelationshipTypeTerm`; `TestSwiftVocabularyMatchesGo`'s Swift-table checks.
+**Deletes.** The `switch term?.productKey` place cases in `endTitles`, `readingSentence` and `CitationBridgeSentence.displayLabel` (replaced by `placeWording`); the raw `term?.label` read in `listedLine`'s place case.
+**Next adds.** The term set is closed (`docs/ideas/properties-and-terms.md`). If it ever opens, a product place term is one constant (Go guard: "every seeded term is in Swift"), one `PropertyTerm` resource (guard: "every seeded term has wording"), and one table entry with its keys (guard: this PR's subtest).
 
 ### Reach
 
@@ -120,15 +142,15 @@ None — no new path into existing code, no new state reachable.
 
 ### Scale
 
-None — no write, list or loop changes; the label is chosen per line already built.
+None — no write, list or loop changes; a dictionary lookup replaces a switch.
 
 ### Edges
 
-- **Assumptions.** `from` is the part / earlier place. Held by `readingSentence` (`isPartOf(from, to)`, `wasSucceededBy(from, to)`) and the Place page; T-1 and T-2 pin both ends.
-- **Neighbors.** The near end of each product term (unchanged, T-1/T-2); a researcher's term keyed like a product term (no flip, T-3); a missing term (fallback, T-3); person relationship rows (unchanged, covered by existing tests).
-- **Removed inputs.** None — a label choice; nothing is decided, excluded or deleted.
-- **Real data.** `place_relationship_type` seeds exactly `part_of` and `succeeded_by` (`SeededPlaceRelationshipTypeTerm`); both are cased.
-- **Untrusted size.** None — no list is read beyond what `groups` already walks.
+- **Assumptions.** `from` is the part / earlier place: the Go seed descriptions (§4). Held for both ends of both terms by T-1, and for the box by T-3.
+- **Neighbors.** Near end of each product term (T-1); a researcher's term keyed like a product term — no entry, label on both ends, box titles unchanged (T-2); no term (T-1); person relationship and participation rows unchanged (existing tests); `displayLabel` for non-place terms keeps `localizedLowercase` (T-3 checks a role term).
+- **Removed inputs.** None — a label choice.
+- **Real data.** `place_relationship_type` seeds exactly `part_of` and `succeeded_by`; both have entries; the Go subtest runs over the live Swift constants.
+- **Untrusted size.** None.
 
 ### Schema
 
@@ -136,67 +158,77 @@ None — no catalog change.
 
 ### Go core
 
-None — Swift only.
+None — Swift only; the one Go change is a test (STEP-3).
 
 ### FFI
 
-None — no wire change.
+None — no wire change. `api/ffi/swift_vocabulary_test.go` gains the subtest in D-8.
 
 ### macOS
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Saved-line label | existing `CitationSavedLine.label` | `CitationComposerAuthoring.listedLine` | Only the string changes |
+| Place-term wording table | `CitationPlaceTermWording`, `placeTermWordings`, `placeWording(_:)` | `CitationComposerAuthoring.swift`, beside `inverseTerm` | Entries: `partOf` → `fromEnd: partEnd`, `toEnd: wholeEnd`, `sentenceTerm: placeTermPartOf`, `farEnd: containsWord`, `reading: L10n.CitationComposer.isPartOf`; `succeededBy` → `earlierPlace`, `laterPlace`, `placeTermSucceededBy`, `succeededWord`, `wasSucceededBy` |
+| End titles | `endTitles` place case | same file | `if let w = placeWording(term)` → `(L10n.string(w.fromEnd), L10n.string(w.toEnd), true)`; else today's `default` branch unchanged |
+| Reading | `readingSentence` place case | same file | `placeWording(term).map { $0.reading(from.label, to.label) }` |
+| Saved line | `listedLine` place case | same file | D-6 |
+| Term combo label | `CitationBridgeSentence.displayLabel` | `CitationComposerAuthoringBox.swift` | `CitationComposerAuthoring.placeWording(term).map { L10n.string($0.sentenceTerm) } ?? term.label.localizedLowercase` |
 
-States: unchanged. Accessibility: `body` (read by VoiceOver) is built from the same `label`, so it reads "Contains Calgary" too.
+States: unchanged. Accessibility: `CitationSavedLine.body` (VoiceOver) is built from the same label.
 
 ### Strings
 
-L10n keys *(new)*, in `L10n.CitationComposer` after `siteOfWord`, with matching `Localizable.xcstrings` entries (`extractionState: manual`, en `translated`):
+L10n keys *(new)*, in `L10n.CitationComposer` after `siteOfWord`; catalog entries right after `citationComposer.siteOfWord`, same shape (`comment`, `extractionState: manual`, `en` `stringUnit` `state: translated`):
 
-- `containsWord` → `citationComposer.containsWord` = "Contains"; comment "Place-relationship line label on the whole place, read from its side of part of".
-- `succeededWord` → `citationComposer.succeededWord` = "Succeeded"; comment "Place-relationship line label on the later place, read from its side of succeeded by".
+- `containsWord` → `citationComposer.containsWord` = "Contains"; comment "Place-relationship line label on the whole place, read from its side of part of. Matches conclusions.place.contains".
+- `succeededWord` → `citationComposer.succeededWord` = "Succeeded"; comment "Place-relationship line label on the later place, read from its side of succeeded by. Matches conclusions.place.succeeded".
 
-Removed: none.
+Removed: none. Every existing place-term key stays in use through the table.
 
 ## 7. Steps
 
 **STEP-1 — Add the two line-label keys**
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-localized-string`.
-Do: add `containsWord` then `succeededWord` as `LocalizedStringResource` immediately after `siteOfWord`, as §6 Strings says. In the catalog, insert `citationComposer.containsWord` then `citationComposer.succeededWord` immediately after the `citationComposer.siteOfWord` entry, in its exact shape (`comment`, `extractionState: manual`, `en` `stringUnit` `state: translated`).
+Do: add `containsWord` then `succeededWord` immediately after `siteOfWord`, and the two catalog entries immediately after `citationComposer.siteOfWord`, as §6 Strings says.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes.
 
-**STEP-2 — Word the far end**
-Files: `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`.
-Do: add `private static func placeFarEndLabel(_ term: CatalogPropertyTerm?) -> String?` (D-4) beside `inverseTerm`. In `listedLine`, `case EvidenceBridgeKind.placeRelationship.rawValue:` becomes: when `viewing == to.id` and `placeFarEndLabel(term)` is non-nil, use it; otherwise `term?.label ?? L10n.string(L10n.CitationComposer.bridgeKindPlace)` (D-5). Value stays `other.label`.
-Check: the app target builds (`xcodebuild build` through `scripts/check-pr.sh`, or Xcode) with no new warning.
+**STEP-2 — One wording table, four readers**
+Files: `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift`, `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift`.
+Do: add `CitationPlaceTermWording` (file scope, internal) and `placeTermWordings` / `placeWording(_:)` on `CitationComposerAuthoring` (D-4, D-5), with the two entries in §6 macOS, each entry starting `SeededPlaceRelationshipTypeTerm.<name>: CitationPlaceTermWording(` on one line. Rewrite the place cases of `endTitles`, `readingSentence`, `listedLine` (D-6) and `CitationBridgeSentence.displayLabel` to read it, as §6 macOS says. No other case changes.
+Check: the app target builds with no new warning (`scripts/check-pr.sh` on macOS); `rg -n "SeededPlaceRelationshipTypeTerm\.(partOf|succeededBy)" macos/App/Features/CitationComposer` prints only the two table lines.
 
-**STEP-3 — Test both ends**
+**STEP-3 — Go guard**
+Files: `api/ffi/swift_vocabulary_test.go`. Rule: `.cursor/rules/go-tests.mdc`.
+Do: add the path var, the regexp and the subtest in D-8 after "every seeded term has wording". Read the file with `os.ReadFile`; collect `placeWordingEntry` names; for each `swiftNamedKey` match in `swiftEnumBody(t, swiftVocabulary, "SeededPlaceRelationshipTypeTerm")`, `t.Errorf` when the name has no entry; `t.Fatal` when no entry is read.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/ -run 'TestSwiftVocabularyMatchesGo'` passes; deleting the `succeededBy` entry locally makes it fail naming `succeededBy` (revert after).
+
+**STEP-4 — Swift tests**
 Files: `macos/ProvenenciaTests/CitationComposerModelTests.swift`. Skill: `add-swift-test`.
-Do: add T-1 – T-3 (§8) as methods of `CitationComposerModelTests` in the "term keys honour the term's origin" MARK section (the helper is a private instance method). Build one vocabulary per case with `termVocabulary(propertyKey: "place_relationship_type", terms: …, endTypeKey: "place")`: T-1 `[(key: "part_of", label: "Part of", origin: CatalogOrigin.provenencia)]`, T-2 `[(key: "succeeded_by", label: "Succeeded by", origin: CatalogOrigin.provenencia)]`, T-3 `[(key: "part_of", label: "Inside of", origin: CatalogOrigin.user)]`. The helper names term ids `term-<origin>-<key>` (`term-provenencia-part_of`, `term-user-part_of`); then overwrite `vocabulary.subjectsByID["a"]` and `["b"]` with `CitationComposerModel.GraphSubjectOption(id:label:ref:typeID:typeKey:)` values whose labels are "Calgary" / "Alberta" (T-1) and "Old Town" / "New Town" (T-2), `typeKey: "place"` (the helper uses the id as the label). Pass one saved `ConnectionRow` to `CitationComposerAuthoring.groups(observations: [], connections: […], vocabulary:)`, with arguments in declaration order: `id: UUID()`, `isPending: false`, `fromSubjectID: "a"`, `toSubjectID: "b"`, `fromLabel`/`toLabel` the place labels, `bridgeTypeKey: "place_relationship"`, `bridgeID: "bridge-place"`, `sentence: ""`, `termProperty: vocabulary.propertiesByID["p-place_relationship_type"]`, `roleTermID:` the term id (`""` for AC-1.6), `termTouched: false`, `isSaving: false`. Find each group by `subjectID` (`"a"`, `"b"`), never by index: `groups` sorts by type, then line `sortKey`, then name. Each group holds one line. Compare the far-end labels with `L10n.string(L10n.CitationComposer.containsWord)` / `succeededWord` and the fallback with `L10n.string(L10n.CitationComposer.bridgeKindPlace)`, not English literals; the near-end labels are the term labels given above.
-Check: `xcodebuild test` for `CitationComposerModelTests` passes (the command `scripts/check-pr.sh` runs). On a host without Xcode (`scripts/check-pr.sh` skips `xcode-test` off macOS), run the Python checks only, report the Swift build and T-1 – T-3 as **not run**, and name them in the PR description so they are run on a Mac before merge.
+Do: in the "term keys honour the term's origin" MARK section, give `termVocabulary` the `endLabels` parameter (subjects keep ids `"a"` / `"b"`, labels from `endLabels`) and add `savedRow(termProperty:termID:bridgeTypeKey:)`, which returns `ConnectionRow(id: UUID(), isPending: false, fromSubjectID: "a", toSubjectID: "b", fromLabel: "", toLabel: "", bridgeTypeKey:, bridgeID: "bridge-1", sentence: "", termProperty:, roleTermID: termID, termTouched: false, isSaving: false)` (declaration order). Term ids from the helper are `term-<origin>-<key>`; the property is `vocabulary.propertiesByID["p-place_relationship_type"]`. Add T-1 and T-3; extend `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel` for T-2. Find groups by `subjectID`, never by index. Compare with `L10n.string(…)` of the keys named in §8, not English literals.
+Check: `CitationComposerModelTests` passes in `xcodebuild test` (`scripts/check-pr.sh`). On a host without Xcode (`check-pr.sh` skips `xcode-test` off macOS), report the Swift build and T-1 – T-3 as **not run** and name them in the PR description to be run on a Mac before merge.
 
-**STEP-4 — Version bump**
+**STEP-5 — Version bump**
 Files: `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj`. Rule: `.cursor/rules/versioning.mdc`.
-Do: raise PATCH by one from what `main` holds when you branch (0.3.3 → 0.3.4 at the planning base). If `main` moves past your number before merge (S14-31 is also a patch), rebase and take the next PATCH again; all three places always agree.
-Check: `rg -n "0\.3\.3" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing after the bump (with the old number substituted if `main` moved).
+Do: raise PATCH by one from what `main` holds when you branch (0.3.3 → 0.3.4 at the planning base). If `main` moves past your number before merge (S14-31 is also a patch), rebase and take the next PATCH; all three places always agree.
+Check: `rg -n "0\.3\.3" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing (with the old number substituted if `main` moved).
 
-**STEP-5 — Docs**
-Files: `docs/deployment-plan/spike-14/deployment-plan.md` (working rule "(Batch 7) Place relationship rows use the inverse label on the far end", bar outcome 27, S14-32 scope entry and map row), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-place-relationship-inverse-label.md` (delete), "Where the notes went" row, this plan.
-Do: per the Definition of done. The working rule, bar 27 and scope entry are already reworded to "Succeeded" by the planning commit; check they still say so.
+**STEP-6 — Docs**
+Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-place-relationship-inverse-label.md` (delete), this plan.
+Do: per the Definition of done. Check the working rule, bar outcome 27 and the S14-32 scope entry say "Succeeded".
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-32-place-relationship-inverse-labels.md` passes.
 
-Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Read a place relationship from the far place's side in the composer's saved lines.").
+Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period ("Read a place relationship from the far place's side in the composer's saved lines.").
 
 ## 8. Tests
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `macos/ProvenenciaTests/CitationComposerModelTests.swift` `placeRelationshipRowsReadFromEachEnd` *(new)* | product `part_of`, Calgary → Alberta: Calgary's line label "Part of" (the term's label), value "Alberta"; Alberta's line label `containsWord`, value "Calgary", body "Contains Calgary" | AC-1.1, AC-1.2, D-2, D-5 |
-| T-2 | Swift | same test | product `succeeded_by`, Old Town → New Town: Old Town's label "Succeeded by", value "New Town"; New Town's label `succeededWord`, value "Old Town" | AC-1.3, AC-1.4, D-1 |
-| T-3 | Swift | `aResearchersPlaceTermKeepsItsLabelOnBothEnds` *(new)* | user-origin `part_of` "Inside of": both lines labelled "Inside of"; and a bridge with `roleTermID: ""`: both lines labelled `bridgeKindPlace` | AC-1.5, AC-1.6, D-5 |
+| T-1 | Swift | `macos/ProvenenciaTests/CitationComposerModelTests.swift` `placeRelationshipRowsReadFromEachEnd` *(new)* | (a) product `part_of` "Part of", ends Calgary → Alberta: `a` label `L10n.string(L10n.PropertyTerm.placeRelationshipPartOf)`, value "Alberta"; `b` label `L10n.string(L10n.CitationComposer.containsWord)`, value "Calgary". (b) product `succeeded_by`, Old Town → New Town: `a` label `PropertyTerm.placeRelationshipSucceededBy`, value "New Town"; `b` label `succeededWord`, value "Old Town". (c) `roleTermID: ""`: both labels `bridgeKindPlace` | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.6, D-1, D-2, D-6 |
+| T-2 | Swift | `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel` (extended) | user-origin `part_of` "Inside of": `groups` lines for `a` and `b` both labelled "Inside of" | AC-1.5, D-7 |
+| T-3 | Swift | `placeTermWordingKeepsTheBoxWording` *(new)* | via `readyBridge`: product `part_of` → `endATitle` `partEnd`, `endBTitle` `wholeEnd`, `reading` `L10n.CitationComposer.isPartOf("a", "b")`; product `succeeded_by` → `earlierPlace` / `laterPlace`, `wasSucceededBy("a", "b")`; `CitationBridgeSentence.displayLabel` → `placeTermPartOf` / `placeTermSucceededBy`, and a role term "Witness" → "witness" | AC-2.2, D-4, D-5 |
+| T-4 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo/every_seeded_place_term_has_composer_wording` *(new)* | live Swift constants → every one has a table entry | AC-2.1, D-8 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (`savedBridgeIsListedUnderBothEnds`, `aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel`), `scripts/check-localizable-xcstrings.py`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (`savedBridgeIsListedUnderBothEnds`, `aProductTermsInverseIsNeverAResearchersTerm`, `aResearchersSpouseTermGetsNoSpouseSentence`), `TestSwiftVocabularyMatchesGo`, `scripts/check-localizable-xcstrings.py`.
 
 ## 9. Definition of done
 
@@ -221,7 +253,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `C
 ## 10. Manual check
 
 1. Open a project with a Source and an Evidence graph holding two places, Calgary and Alberta.
-2. In the Citation composer, connect Calgary → Alberta with Part of and save. Calgary's group reads "Part of Alberta"; Alberta's group reads "Contains Calgary".
+2. In the Citation composer, connect Calgary → Alberta with Part of. The box shows Part / Whole and "Calgary is part of Alberta" as before. Save. Calgary's group reads "Part of Alberta"; Alberta's group reads "Contains Calgary".
 3. Add Old Town and New Town; connect Old Town → New Town with Succeeded by and save. Old Town reads "Succeeded by New Town"; New Town reads "Succeeded Old Town".
 4. Open Alberta's and New Town's Place pages after Promote: their "Contains" and "Succeeded" rows use the same words.
 
@@ -229,15 +261,16 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `C
 
 | Risk | Mitigation |
 | --- | --- |
-| The near end's `term.label` is a catalog string ("Part of") while the far end comes from L10n | Accepted for English; Out line names the shared fix |
-| A translator renders "Succeeded" without context | The catalog comment names the later place and the term |
+| Moving three switches changes a string the box shows today | T-3 pins each one against its existing key |
+| `CitationPlaceTermWording` holds a closure, so it is not `Equatable` | Nothing compares it; tests compare the strings it produces |
 
 **Stop and report if:**
 
 - `listedLine`'s `placeRelationship` case no longer returns `term?.label` on both ends (someone fixed it first).
-- `readingSentence` no longer treats `from` as the part / earlier place, or Go writes `part_of` with the whole as `from` (then D-5 flips the wrong end).
-- `place_relationship_type` gains a product term beyond `part_of` and `succeeded_by` at the base you build on.
-- `CitationComposerAuthoring.groups` is no longer callable from tests (`private` or renamed).
+- The Go seed descriptions for `part_of` / `succeeded_by` no longer say "From is part of to" / "From was succeeded by to".
+- `place_relationship_type` gains a product term beyond `part_of` and `succeeded_by` at your base.
+- `CitationComposerAuthoring.groups` or `resolvePair` is no longer callable from tests.
+- Swift 6 strict concurrency refuses a `@Sendable` closure in a `static let` dictionary (then report the compiler error; do not switch to a `switch`).
 
 ## 12. Open questions
 
@@ -246,4 +279,4 @@ None.
 ## 13. PR
 
 **Title:** S14-32 — Place relationship rows read from the far end
-**Body:** objective in one sentence; what shipped against US-1; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-14/prs/S14-32-place-relationship-inverse-labels.md`.
+**Body:** objective in one sentence; what shipped against US-1 and US-2; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-14/prs/S14-32-place-relationship-inverse-labels.md`.
