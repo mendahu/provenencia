@@ -101,4 +101,18 @@ No new blockers. No Fix plan 2.
 Nits (logged): `MNT-16 · ArtifactRegionOverlay.swift:205 · inline min(max()) repeats clampNormalized; the move functions already clamp` · `UX note · ArtifactRegionOverlay.swift mouseDragged · threshold is measured from a clamped origin, so a press outside the media rect on an edge vertex can pass it early; read from code, not reproduced`
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: add a vertex by clicking an edge, keyboard nudging, VoiceOver per-vertex elements (`docs/dogfood/ux/2026-11-05-region-vertex-editing.md`) · to user: UX-1, UX-6, MNT-5 answered 2026-11-05 · CON miss: none · Manual check §10 not run (needs a GUI session)
+Gate PASS · CI green on `16056f18` · open: none · follow-ups: add a vertex by clicking an edge, keyboard nudging, VoiceOver per-vertex elements (`docs/dogfood/ux/2026-11-05-region-vertex-editing.md`) · to user: UX-1, UX-6, MNT-5 answered 2026-11-05 · CON miss: none · Manual check §10 not run (needs a GUI session)
+
+## User-reported defect, 2026-11-05
+From the user's testing on a very high-resolution image, zoomed in: a polygon closed as a triangle on the fourth click. User confirmed the cause and asked for the fix on this PR. `closeEnoughToOrigin` uses 3% of the page in normalized coordinates, so the close zone scales with image size and zoom. No review round: this is one item the user asked for, outside the two-round loop.
+
+### Fix plan 3
+
+**F-9 — The polygon close distance is in screen points** (user, 2026-11-05)
+Files: `ArtifactRegionGeometry.swift`, `ArtifactRegionOverlay.swift`, `ArtifactRegionGeometryTests.swift`, `ArtifactRegionOverlayTests.swift`.
+Failing test first: `ArtifactRegionOverlayTests/freeformFourthClickNearFirstAddsVertex` — an armed freeform overlay with a 3000×4000 image and `magnification = 1`; three clicks, then a fourth 60 points from the first: four in-progress points, no commit (fails today, closes as a triangle). A fifth click within `handleHitRadius` of the first closes with one commit of the four points; a click on the first point at `magnification = 4` with a pointer 6 screen points away also closes and one 8 screen points away adds a vertex. Add `closeEnoughToOriginUsesDocumentRadius` to the geometry tests.
+Do: `closeEnoughToOrigin` becomes `closeEnoughToOrigin(_ point: CGPoint, origin: CGPoint, imageRect: CGRect, radius: CGFloat) -> Bool`, both points normalized, the distance measured between their `documentPoint(normalized:imageRect:)` values; delete the `threshold` default. `handleFreeformClick` passes `imageRect` and `handleHitRadius`, so the close zone equals a handle's grab radius at any zoom, on images and on a PDF (where magnification stays 1 and the overlay is already at screen scale). Nothing else about closing changes: three-point minimum, `isValid`, the armed-tool drawing paths.
+Check: the tests pass; `rg closeEnoughToOrigin macos` shows only the new signature; add one sentence to the plan's Landed note, marked "user, 2026-11-05"; `scripts/check-pr.sh` PASS.
+
+## Round 3 — fix (F-9)
+Head `c5a68fb1`. Gate PASS (orchestrator run). `freeformFourthClickNearFirstAddsVertex`, `freeformCloseZoneIsHandleRadiusAtAnyZoom` and `closeEnoughToOriginUsesDocumentRadius` added; the two overlay tests failed before the fix. The planned overlay test was split into those two. No reviewer dispatched: one user-requested item, outside the review loop.
