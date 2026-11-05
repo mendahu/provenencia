@@ -44,6 +44,17 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
+    /// The scroll view's zoom (image viewport). Handles keep one screen-point size at any zoom;
+    /// the PDF host never magnifies the overlay and leaves this at 1.
+    var magnification: CGFloat = 1 {
+        didSet {
+            if oldValue != magnification {
+                needsDisplay = true
+                window?.invalidateCursorRects(for: self)
+            }
+        }
+    }
+
     var onCommit: ((ArtifactRegionDraft) -> Void)?
     var onDisarm: (() -> Void)?
 
@@ -56,10 +67,9 @@ final class ArtifactRegionOverlayView: NSView {
     }
     /// VoiceOver has heard the freehand cap for this shape; re-armed when the shape shrinks or restarts.
     private var capAnnounced = false
-    private var activeHandle: ArtifactRegionHandle?
-    private var isEditingCommitted = false
-    private var moveDragOrigin: CGPoint?
-    private var moveDragPoints: [CGPoint]?
+    /// The drag in flight on the committed region: what is grabbed, where the pointer went down,
+    /// and the region as it was, so an invalid result can put it back.
+    private var edit: (handle: ArtifactRegionHandle, origin: CGPoint, start: ArtifactRegionDraft)?
     private var tracking: NSTrackingArea?
 
     override var isFlipped: Bool { true }
@@ -129,7 +139,7 @@ final class ArtifactRegionOverlayView: NSView {
         let media = imageRect
         guard media.width > 0, media.height > 0 else { return }
 
-        if let committed, armedTool == nil || isEditingCommitted {
+        if let committed, armedTool == nil || edit != nil {
             drawCommitted(committed, imageRect: media)
         }
 
@@ -155,12 +165,9 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if let handle = hitHandle(at: document) {
-            activeHandle = handle
-            isEditingCommitted = true
-            if handle == .move, let committed {
-                moveDragOrigin = normalized
-                moveDragPoints = committed.points
+        if let handle = hitHandle(at: document), let committed {
+            edit = (handle, normalized, committed)
+            if handle == .move {
                 NSCursor.closedHand.set()
             }
             window?.makeFirstResponder(self)
@@ -178,15 +185,13 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if let handle = activeHandle, var draft = committed {
-            switch handle {
+        if let edit, var draft = committed {
+            switch edit.handle {
             case .move:
-                if let origin = moveDragOrigin, let start = moveDragPoints {
-                    draft.points = ArtifactRegionGeometry.translate(
-                        start,
-                        by: CGPoint(x: normalized.x - origin.x, y: normalized.y - origin.y)
-                    )
-                }
+                draft.points = ArtifactRegionGeometry.translate(
+                    edit.start.points,
+                    by: CGPoint(x: normalized.x - edit.origin.x, y: normalized.y - edit.origin.y)
+                )
             case .resize(let index):
                 draft.points = moveHandle(draft: draft, handle: index, to: normalized)
             }
@@ -207,33 +212,24 @@ final class ArtifactRegionOverlayView: NSView {
             return
         }
 
-        if isEditingCommitted, let draft = committed, draft.isValid {
-            onCommit?(draft)
+        if let edit, let draft = committed {
+            finishEdit(draft, start: edit.start)
         }
-        activeHandle = nil
-        isEditingCommitted = false
-        moveDragOrigin = nil
-        moveDragPoints = nil
+        edit = nil
     }
 
     override func rightMouseDown(with event: NSEvent) {
-        guard committed?.kind == .freeform else {
+        guard let committed, committed.kind == .freeform else {
             super.rightMouseDown(with: event)
             return
         }
         let document = convert(event.locationInWindow, from: nil)
         guard let index = freeformVertexIndex(at: document),
-              let points = ArtifactRegionGeometry.deleteFreeformVertex(
-                points: committed?.points ?? [],
-                index: index
-              )
+              let points = ArtifactRegionGeometry.deleteFreeformVertex(points: committed.points, index: index)
         else { return }
         var next = committed
-        next?.points = points
-        committed = next
-        if let next, next.isValid {
-            onCommit?(next)
-        }
+        next.points = points
+        finishEdit(next, start: committed)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -320,6 +316,19 @@ final class ArtifactRegionOverlayView: NSView {
         }
     }
 
+    /// Ends an edit of the committed region: unchanged does nothing, valid commits, invalid
+    /// puts `start` back and beeps.
+    private func finishEdit(_ draft: ArtifactRegionDraft, start: ArtifactRegionDraft) {
+        if draft == start { return }
+        if draft.isValid {
+            committed = draft
+            onCommit?(draft)
+        } else {
+            committed = start
+            NSSound.beep()
+        }
+    }
+
     private func commitAndDisarm(_ draft: ArtifactRegionDraft) {
         committed = draft
         dragStart = nil
@@ -380,10 +389,16 @@ final class ArtifactRegionOverlayView: NSView {
         return index
     }
 
-    /// Hit radius in document points (7 screen points at any zoom, once D-4 lands).
-    private var handleHitRadius: CGFloat {
-        7
+    /// One screen point in overlay coordinates.
+    private var screenPoint: CGFloat {
+        GraphCanvasCoordinates.screenPixelDocumentWidth(magnification: magnification)
     }
+
+    /// Hit radius in overlay points: 7 screen points at any zoom.
+    var handleHitRadius: CGFloat { 7 * screenPoint }
+
+    /// Handle diameter in overlay points: 7 screen points at any zoom.
+    var handleDrawSize: CGFloat { 7 * screenPoint }
 
     private func drawCommitted(_ draft: ArtifactRegionDraft, imageRect media: CGRect) {
         guard let path = shapePath(draft, imageRect: media) else { return }
@@ -476,18 +491,18 @@ final class ArtifactRegionOverlayView: NSView {
     }
 
     private func drawHandle(at point: CGPoint) {
-        let size: CGFloat = 7
+        let size = handleDrawSize
         let rect = CGRect(x: point.x - size / 2, y: point.y - size / 2, width: size, height: size)
         let path = NSBezierPath(ovalIn: rect)
         NSColor(PVColor.surfaceRaised).setFill()
         NSColor(PVColor.accent).setStroke()
         path.fill()
-        path.lineWidth = 1.5
+        path.lineWidth = 1.5 * screenPoint
         path.stroke()
     }
 
     private func drawMoveAnchor(at point: CGPoint) {
-        let size: CGFloat = 9
+        let size = 9 * screenPoint
         let path = NSBezierPath()
         path.move(to: CGPoint(x: point.x, y: point.y - size / 2))
         path.line(to: CGPoint(x: point.x + size / 2, y: point.y))
@@ -497,7 +512,7 @@ final class ArtifactRegionOverlayView: NSView {
         NSColor(PVColor.accent).setFill()
         NSColor(PVColor.surfaceRaised).setStroke()
         path.fill()
-        path.lineWidth = 1.25
+        path.lineWidth = 1.25 * screenPoint
         path.stroke()
     }
 

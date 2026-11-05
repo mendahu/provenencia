@@ -286,6 +286,7 @@ final class ArtifactMediaNSScrollView: NSScrollView {
     func layoutDocumentCentered(resetScroll: Bool = false, allowScrollAdjust: Bool = true) {
         guard !isLayingOut else { return }
         guard let document = documentView as? ArtifactMediaDocumentView else { return }
+        document.overlayView.magnification = magnification
         isLayingOut = true
         defer { isLayingOut = false }
 
