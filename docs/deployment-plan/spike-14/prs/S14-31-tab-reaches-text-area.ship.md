@@ -65,3 +65,30 @@ Check: scripts/check-pr.sh PASS.
 Files: `S14-31-tab-reaches-text-area.md`.
 Do: Landed note adds that `focus:` sits before `activateOnAppear:` at P6–P8, and that P6's Tab skips the inline Save and Cancel when Full Keyboard Access is on, as P4 does. Fix the doubled "dogfood note dogfood note". Add the F-1 results and replace "were not run" with what was and was not run. Note F-3 and F-4 add handle helpers beyond D-2 (same-pass cleanup).
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `12b1668f`. Gate PASS (orchestrator run). F-1 to F-7 done. F-5's Check printed nothing rather than 1: the one call left passes `selector` as a parameter (`rg -c "doCommandBy:"` prints 1). F-3 and F-4 share one commit.
+
+**F-1 probe** (`NSEvent` key-downs in a hosted titled window; window reported key by subclass, sheet window not key, so the sheet run is weaker):
+- (a) **§11 stop tripped.** Shift-Tab arrives as `KeyEquivalent("\u{19}")`, so `.onKeyPress(.tab)` never fires for it (`probe.log` line 16). P4's `previous` claim is dead code; the same holds for the `.tab` cases in `PVComboBox.handleKey` and `PVSelect.handleTriggerKey`. In the probe the key loop still moved focus back.
+- (b) `FocusClaim` lands in the `TextEditor`: Tab and Shift-Tab from the area both landed. Typing after Tab updates the binding.
+- (c) Same inside a `.sheet`.
+- (d) UX-2 confirmed: before F-2 the router sat on the Label's field editor, and typing after Tab raised `unrecognized selector undoManagerForTextView:` and hung. A blocker in the real sense; F-2 cleared it.
+
+**To user:** D-6's `.onKeyPress(.tab)` filter cannot see Shift-Tab, so AC-3.2 rests on the key loop.
+
+**To user, answered 2026-11-05.** "Widen the claim": the kit claims the back-tab key too; this amends D-6. Fix now → F-8.
+
+### Fix plan 1 (continued)
+
+Record the D-6 amendment in the plan's Landed note, marked "user, 2026-11-05". Do not rewrite the Decision row.
+
+**F-8 — The Tab claim sees Shift-Tab** (from UX-1, CON-1; F-1 result (a))
+Files: `PVFieldFocus.swift`, `PVInput.swift`, `PVComboBox.swift`, `PVSelect.swift`, `PVFieldFocusTests.swift`, the plan's Landed note.
+Failing test first: `PVFieldFocusTests/backTabIsTheShiftTabKey` — `KeyEquivalent.backTab.character == "\u{19}"`, which is what the probe logged for Shift-Tab.
+Do: add `extension KeyEquivalent { static let backTab = KeyEquivalent("\u{19}") }` in `PVFieldFocus.swift`, with a comment that AppKit reports Shift-Tab as this character, not as `.tab` with Shift.
+- `PVInputTabClaim`: `.onKeyPress(keys: [.tab, .backTab], phases: .down)`, `focus.claimTab(shift: press.key == .backTab)`.
+- `PVComboBox.handleKey`: `case .tab` is forward only: drop its two now-dead `press.modifiers.contains(.shift)` reads and claim with `shift: false`. New `case .backTab`: with a `previous` neighbour, close the list and claim; otherwise `.ignored` and leave `isOpen` alone, which is what Shift-Tab does today.
+- `PVSelect.handleTriggerKey`: `case .tab` claims with `shift: false`; new `case .backTab` claims with `shift: true`.
+- Update the Landed note: result (a) is now fixed, with the probe's re-run result.
+Check: re-run the saved probe `/private/tmp/claude-501/-Users-jakerobins-Repos-provenencia/77219f8d-4d51-431f-acec-cf28dc2ae686/scratchpad/PVTabPairProbeTests.swift`, again uncommitted and removed afterwards: the P4 layout logs `CLAIM previous from second`. `rg -n "modifiers.contains\(.shift\)" macos/App/DesignSystem/Components/ComboBox macos/App/DesignSystem/Components/Select macos/App/DesignSystem/Components/Input` prints nothing. scripts/check-pr.sh PASS.
