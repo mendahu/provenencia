@@ -734,7 +734,7 @@ struct CitationBridgeSentence: View {
 
     private var termOptions: [PVComboBoxOption] {
         terms.map { term in
-            PVComboBoxOption(value: term.id, label: Self.displayLabel(term))
+            PVComboBoxOption(value: term.id, label: Self.displayLabel(term, property: ready.termProperty))
         }
     }
 
@@ -806,15 +806,9 @@ struct CitationBridgeSentence: View {
         }
     }
 
-    static func displayLabel(_ term: CatalogPropertyTerm) -> String {
-        switch term.productKey {
-        case SeededPlaceRelationshipTypeTerm.partOf:
-            return L10n.string(L10n.CitationComposer.placeTermPartOf)
-        case SeededPlaceRelationshipTypeTerm.succeededBy:
-            return L10n.string(L10n.CitationComposer.placeTermSucceededBy)
-        default:
-            return term.label.localizedLowercase
-        }
+    static func displayLabel(_ term: CatalogPropertyTerm, property: CatalogProperty?) -> String {
+        CitationComposerAuthoring.termWording(term, property: property).map { L10n.string($0.comboWord) }
+            ?? term.label.localizedLowercase
     }
 
     private enum Piece: Identifiable {

@@ -2365,6 +2365,24 @@ enum L10n {
             ), person)
         }
 
+        /// "%1$@ is part of %2$@"; arguments are the part, then the whole.
+        static func bridgeSentencePlacePartOf(part: String, whole: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.placePartOf",
+                defaultValue: "%1$@ is part of %2$@",
+                comment: "Connection sentence for part of; arguments are the part, then the whole"
+            ), part, whole)
+        }
+
+        /// "%1$@ was succeeded by %2$@"; arguments are the earlier place, then the later.
+        static func bridgeSentencePlaceSucceededBy(earlier: String, later: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.placeSucceededBy",
+                defaultValue: "%1$@ was succeeded by %2$@",
+                comment: "Connection sentence for succeeded by; arguments are the earlier place, then the later"
+            ), earlier, later)
+        }
+
         static let linksRotor = LocalizedStringResource(
             "evidenceGraph.rotor.links",
             defaultValue: "Links",
@@ -4892,6 +4910,20 @@ enum L10n {
             comment: "Location line label on the place"
         )
 
+        /// Far-end label of part of; matches `L10n.Conclusions.placeContains` on the Place page.
+        static let containsWord = LocalizedStringResource(
+            "citationComposer.containsWord",
+            defaultValue: "Contains",
+            comment: "Place-relationship line label on the whole place, read from its side of part of. Matches conclusions.place.contains"
+        )
+
+        /// Far-end label of succeeded by; matches `L10n.Conclusions.placeSucceeded` on the Place page.
+        static let succeededWord = LocalizedStringResource(
+            "citationComposer.succeededWord",
+            defaultValue: "Succeeded",
+            comment: "Place-relationship line label on the later place, read from its side of succeeded by. Matches conclusions.place.succeeded"
+        )
+
         static let takesPart = LocalizedStringResource(
             "citationComposer.takesPart",
             defaultValue: "Takes part",
@@ -4991,22 +5023,6 @@ enum L10n {
                 defaultValue: "The %1$@ took place at %2$@",
                 comment: "Location reading; arguments are the event and the place"
             ), event, place)
-        }
-
-        static func isPartOf(_ part: String, _ whole: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.isPartOf",
-                defaultValue: "%1$@ is part of %2$@",
-                comment: "Place-relationship reading for part of"
-            ), part, whole)
-        }
-
-        static func wasSucceededBy(_ earlier: String, _ later: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.wasSucceededBy",
-                defaultValue: "%1$@ was succeeded by %2$@",
-                comment: "Place-relationship reading for succeeded by"
-            ), earlier, later)
         }
 
         static func addForNamedSubject(_ name: String) -> String {

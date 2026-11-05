@@ -1573,18 +1573,19 @@ struct CitationComposerModelTests {
     // MARK: term keys honour the term's origin
 
     private func termVocabulary(
-        propertyKey: String, terms: [(key: String, label: String, origin: String)], endTypeKey: String
+        propertyKey: String, terms: [(key: String, label: String, origin: String)], endTypeKey: String,
+        endLabels: (a: String, b: String) = ("a", "b")
     ) -> CitationComposerVocabulary {
         let property = CatalogProperty(
             id: "p-\(propertyKey)", key: propertyKey, origin: CatalogOrigin.provenencia, label: propertyKey,
             description: "", valueType: "term"
         )
-        func end(_ id: String) -> CitationComposerModel.GraphSubjectOption {
-            .init(id: id, label: id, ref: id, typeID: "t", typeKey: endTypeKey)
+        func end(_ id: String, _ label: String) -> CitationComposerModel.GraphSubjectOption {
+            .init(id: id, label: label, ref: id, typeID: "t", typeKey: endTypeKey)
         }
         var vocabulary = CitationComposerVocabulary.empty
         vocabulary.propertiesByID = [property.id: property]
-        vocabulary.subjectsByID = ["a": end("a"), "b": end("b")]
+        vocabulary.subjectsByID = ["a": end("a", endLabels.a), "b": end("b", endLabels.b)]
         vocabulary.connectRules = CatalogConnectRule.productMatrix
         vocabulary.termsByPropertyID[property.id] = terms.map {
             CatalogPropertyTerm(
@@ -1593,6 +1594,88 @@ struct CitationComposerModelTests {
             )
         }
         return vocabulary
+    }
+
+    private func savedRow(
+        termProperty: CatalogProperty?, termID: String, bridgeTypeKey: String
+    ) -> ConnectionRow {
+        ConnectionRow(
+            id: UUID(), isPending: false, fromSubjectID: "a", toSubjectID: "b", fromLabel: "", toLabel: "",
+            bridgeTypeKey: bridgeTypeKey, bridgeID: "bridge-1", sentence: "", termProperty: termProperty,
+            roleTermID: termID, termTouched: false, isSaving: false
+        )
+    }
+
+    private func placeLines(
+        key: String, label: String, ends: (a: String, b: String), termID: String? = nil
+    ) -> (a: CitationSavedLine?, b: CitationSavedLine?) {
+        let vocabulary = termVocabulary(
+            propertyKey: "place_relationship_type",
+            terms: [(key: key, label: label, origin: CatalogOrigin.provenencia)],
+            endTypeKey: "place", endLabels: ends
+        )
+        let row = savedRow(
+            termProperty: vocabulary.propertiesByID["p-place_relationship_type"],
+            termID: termID ?? "term-provenencia-\(key)",
+            bridgeTypeKey: EvidenceBridgeKind.placeRelationship.rawValue
+        )
+        let groups = CitationComposerAuthoring.groups(observations: [], connections: [row], vocabulary: vocabulary)
+        func line(_ id: String) -> CitationSavedLine? { groups.first { $0.subjectID == id }?.lines.first }
+        return (line("a"), line("b"))
+    }
+
+    @Test func placeRelationshipRowsReadFromEachEnd() {
+        let partOf = placeLines(key: "part_of", label: "Part of", ends: ("Calgary", "Alberta"))
+        #expect(partOf.a?.label == L10n.string(L10n.PropertyTerm.placeRelationshipPartOf))
+        #expect(partOf.a?.valueText == "Alberta")
+        #expect(partOf.b?.label == L10n.string(L10n.CitationComposer.containsWord))
+        #expect(partOf.b?.valueText == "Calgary")
+        let succeeded = placeLines(key: "succeeded_by", label: "Succeeded by", ends: ("Old Town", "New Town"))
+        #expect(succeeded.a?.label == L10n.string(L10n.PropertyTerm.placeRelationshipSucceededBy))
+        #expect(succeeded.a?.valueText == "New Town")
+        #expect(succeeded.b?.label == L10n.string(L10n.CitationComposer.succeededWord))
+        #expect(succeeded.b?.valueText == "Old Town")
+        let bare = placeLines(key: "part_of", label: "Part of", ends: ("Calgary", "Alberta"), termID: "")
+        #expect(bare.a?.label == L10n.string(L10n.CitationComposer.bridgeKindPlace))
+        #expect(bare.b?.label == L10n.string(L10n.CitationComposer.bridgeKindPlace))
+    }
+
+    @Test func placeTermWordingKeepsTheBoxWording() {
+        func ready(_ key: String, _ label: String) -> CitationReadyBridge? {
+            readyBridge(
+                termVocabulary(
+                    propertyKey: "place_relationship_type",
+                    terms: [(key: key, label: label, origin: CatalogOrigin.provenencia)],
+                    endTypeKey: "place"
+                ),
+                termID: "term-provenencia-\(key)"
+            )
+        }
+        let partOf = ready("part_of", "Part of")
+        #expect(partOf?.endATitle == L10n.string(L10n.CitationComposer.partEnd))
+        #expect(partOf?.endBTitle == L10n.string(L10n.CitationComposer.wholeEnd))
+        #expect(partOf?.reading == L10n.EvidenceGraph.bridgeSentencePlacePartOf(part: "a", whole: "b"))
+        let succeeded = ready("succeeded_by", "Succeeded by")
+        #expect(succeeded?.endATitle == L10n.string(L10n.CitationComposer.earlierPlace))
+        #expect(succeeded?.endBTitle == L10n.string(L10n.CitationComposer.laterPlace))
+        #expect(succeeded?.reading == L10n.EvidenceGraph.bridgeSentencePlaceSucceededBy(earlier: "a", later: "b"))
+        func term(_ key: String, _ label: String) -> CatalogPropertyTerm {
+            CatalogPropertyTerm(
+                id: "t", propertyID: "p", key: key, origin: CatalogOrigin.provenencia, label: label, description: ""
+            )
+        }
+        let place = CatalogProperty(
+            id: "p", key: "place_relationship_type", origin: CatalogOrigin.provenencia, label: "", description: "",
+            valueType: "term"
+        )
+        let role = CatalogProperty(
+            id: "p", key: "role", origin: CatalogOrigin.provenencia, label: "", description: "", valueType: "term"
+        )
+        #expect(CitationBridgeSentence.displayLabel(term("part_of", "Part of"), property: place)
+            == L10n.string(L10n.CitationComposer.placeTermPartOf))
+        #expect(CitationBridgeSentence.displayLabel(term("succeeded_by", "Succeeded by"), property: place)
+            == L10n.string(L10n.CitationComposer.placeTermSucceededBy))
+        #expect(CitationBridgeSentence.displayLabel(term("child", "Child"), property: role) == "child")
     }
 
     private func readyBridge(_ vocabulary: CitationComposerVocabulary, termID: String) -> CitationReadyBridge? {
@@ -1652,17 +1735,29 @@ struct CitationComposerModelTests {
         let theirs = CatalogPropertyTerm(
             id: "t", propertyID: "p", key: "part_of", origin: CatalogOrigin.user, label: "Inside of", description: ""
         )
-        #expect(CitationBridgeSentence.displayLabel(theirs) == "inside of")
-        var product = theirs
-        product.origin = CatalogOrigin.provenencia
-        #expect(CitationBridgeSentence.displayLabel(product) == L10n.string(L10n.CitationComposer.placeTermPartOf))
         let vocabulary = termVocabulary(
             propertyKey: "place_relationship_type",
             terms: [(key: "part_of", label: "Inside of", origin: CatalogOrigin.user)],
             endTypeKey: "place"
         )
+        let property = vocabulary.propertiesByID["p-place_relationship_type"]
+        #expect(CitationBridgeSentence.displayLabel(theirs, property: nil) == "inside of")
+        #expect(CitationBridgeSentence.displayLabel(theirs, property: property) == "inside of")
+        var product = theirs
+        product.origin = CatalogOrigin.provenencia
+        #expect(
+            CitationBridgeSentence.displayLabel(product, property: property)
+                == L10n.string(L10n.CitationComposer.placeTermPartOf)
+        )
         let ready = readyBridge(vocabulary, termID: "term-user-part_of")
         #expect(ready?.endATitle == "Inside of" && ready?.reading == nil)
+        let row = savedRow(
+            termProperty: property, termID: "term-user-part_of",
+            bridgeTypeKey: EvidenceBridgeKind.placeRelationship.rawValue
+        )
+        let groups = CitationComposerAuthoring.groups(observations: [], connections: [row], vocabulary: vocabulary)
+        #expect(groups.count == 2)
+        for group in groups { #expect(group.lines.first?.label == "Inside of") }
     }
 
     @Test func citationPreviewFallsBack() {

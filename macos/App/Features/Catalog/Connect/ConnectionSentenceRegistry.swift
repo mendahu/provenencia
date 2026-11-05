@@ -112,6 +112,12 @@ enum ConnectionSentenceRegistry {
             Text.bridgeSentenceFuneralSubject(person: $0.a, event: $0.b)
         },
         subjectSentence(SeededEventTypeTerm.burial) { Text.bridgeSentenceBurialSubject(person: $0.a) },
+        Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.partOf, eventType: nil, sentence: {
+            Text.bridgeSentencePlacePartOf(part: $0.a, whole: $0.b)
+        }),
+        Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.succeededBy, eventType: nil, sentence: {
+            Text.bridgeSentencePlaceSucceededBy(earlier: $0.a, later: $0.b)
+        }),
     ]
 
     private static func subjectSentence(

@@ -1,6 +1,30 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "citationComposer.containsWord": {
+      "comment": "Place-relationship line label on the whole place, read from its side of part of. Matches conclusions.place.contains",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contains"
+          }
+        }
+      }
+    },
+    "citationComposer.succeededWord": {
+      "comment": "Place-relationship line label on the later place, read from its side of succeeded by. Matches conclusions.place.succeeded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succeeded"
+          }
+        }
+      }
+    },
     "designSystem.field.requiredMarker": {
       "comment": "Marks a required PVField as required, shown beside its label",
       "extractionState": "manual",
@@ -4068,6 +4092,30 @@
           "stringUnit": {
             "state": "translated",
             "value": "Prototype link, not cited evidence"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.placePartOf": {
+      "comment": "Connection sentence for part of; arguments are the part, then the whole",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is part of %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.placeSucceededBy": {
+      "comment": "Connection sentence for succeeded by; arguments are the earlier place, then the later",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was succeeded by %2$@"
           }
         }
       }
@@ -21311,18 +21359,6 @@
         }
       }
     },
-    "citationComposer.isPartOf": {
-      "comment": "Place-relationship reading for part of",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ is part of %2$@"
-          }
-        }
-      }
-    },
     "citationComposer.laterPlace": {
       "comment": "Second end when one place was succeeded by another",
       "extractionState": "manual",
@@ -21619,18 +21655,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "As written on the record"
-          }
-        }
-      }
-    },
-    "citationComposer.wasSucceededBy": {
-      "comment": "Place-relationship reading for succeeded by",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ was succeeded by %2$@"
           }
         }
       }

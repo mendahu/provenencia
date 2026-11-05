@@ -42,14 +42,15 @@ import (
 // limit on either side fails here, not as a silently missing badge, row or
 // match, or a wrongly refused input.
 const (
-	swiftVocabulary   = "../../macos/App/Platform/ConclusionVocabulary.swift"
-	swiftL10n         = "../../macos/App/Platform/L10n.swift"
-	swiftValueKinds   = "../../macos/App/Platform/InterpretationValueKinds.swift"
-	swiftMarks        = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds   = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
-	swiftCatalogMut   = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
-	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
-	swiftNamePartType = "../../macos/App/Platform/NamePartType.swift"
+	swiftVocabulary                = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n                      = "../../macos/App/Platform/L10n.swift"
+	swiftCitationComposerAuthoring = "../../macos/App/Features/CitationComposer/CitationComposerAuthoring.swift"
+	swiftValueKinds                = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks                     = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds                = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
+	swiftCatalogMut                = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind                = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftNamePartType              = "../../macos/App/Platform/NamePartType.swift"
 
 	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
@@ -379,7 +380,7 @@ var (
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
 	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`.
-	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return (\w+)`)
+	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return \.?(\w+)`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
@@ -648,6 +649,28 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
 				if !named[tc.enum+"."+m[1]] {
 					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
+				}
+			}
+		}
+	})
+	// The terms whose wording the Citation composer holds in CitationComposerAuthoring.termWording.
+	composerWordedTermEnums := []struct{ enum, property string }{
+		{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
+	}
+	t.Run("every composer-worded term has composer wording", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftCitationComposerAuthoring, "static func termWording(propertyKey")
+		named := map[string]bool{}
+		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
+			named[m[1]+"."+m[2]] = true
+		}
+		if len(named) == 0 {
+			t.Fatal("termWording(propertyKey:termKey:): no wording cases read")
+		}
+		for _, tc := range composerWordedTermEnums {
+			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+				if !named[tc.enum+"."+m[1]] {
+					t.Errorf("Swift %s.%s (%s term %q) has no CitationComposerAuthoring.termWording case", tc.enum, m[1], tc.property, m[2])
 				}
 			}
 		}

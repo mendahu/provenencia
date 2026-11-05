@@ -53,6 +53,26 @@ struct ConnectionSentenceRegistryTests {
         #expect(sentence == "John Smith participated as witness at Baptism of Don Smith")
     }
 
+    @Test func placeTermsHaveTheirOwnSentence() {
+        func place(_ a: String, _ b: String, _ term: String, _ termKey: String?) -> String {
+            ConnectionSentenceRegistry.sentence(
+                kind: .placeRelationship, endpointA: a, endpointB: b, term: term, termKey: termKey
+            )
+        }
+        #expect(
+            place("Old Town", "New Town", "Succeeded by", "succeeded_by")
+                == L10n.EvidenceGraph.bridgeSentencePlaceSucceededBy(earlier: "Old Town", later: "New Town")
+        )
+        #expect(
+            place("Leeds", "Yorkshire", "Part of", "part_of")
+                == L10n.EvidenceGraph.bridgeSentencePlacePartOf(part: "Leeds", whole: "Yorkshire")
+        )
+        #expect(
+            place("A", "B", "within", nil)
+                == L10n.EvidenceGraph.bridgeSummaryPlaceRelationship(from: "A", type: "within", to: "B")
+        )
+    }
+
     @Test func aTermReadsLowercaseInsideEverySentenceAndPhrase() {
         func whole(_ kind: EvidenceBridgeKind, _ a: String, _ b: String, _ term: String) -> String {
             ConnectionSentenceRegistry.sentence(kind: kind, endpointA: a, endpointB: b, term: term)
