@@ -1,7 +1,7 @@
 # Ship log — S14-31 Tab reaches a following text area
 
 **Plan:** [`S14-31-tab-reaches-text-area.md`](S14-31-tab-reaches-text-area.md) · **Branch:** `s14-31-tab-reaches-text-area` · **PR:** #718
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Head `b485ad89`. Gate PASS (orchestrator run: xcode-test 57s, all nine checks). Report deviations: version goes 0.3.3 → 0.3.4 (`main` was already 0.3.3; the plan allows it); `PVFieldFocus`'s binding init and `neighbours` are `@MainActor` (strict-concurrency warnings otherwise); plan header edited so `check-plan-docs` passes; `focus:` sits before `activateOnAppear:` at P6–P8. **The STEP-4 probe and §10 manual check were not run**: the implementer had no way to drive a window, so three §11 stop conditions are untested (Shift-Tab reaching `.onKeyPress`, `FocusClaim` landing in a `PVTextArea`, a `PVTabPair` `FocusState` moving focus in a sheet).
@@ -97,3 +97,23 @@ Head `ebd6ada4`. Gate PASS (orchestrator run). F-8 done; the re-run probe logged
 
 ## Round 2 — review
 Scope `b485ad89...ebd6ada4`. Reviewers: CON (CON-1), MNT (MNT-1, MNT-2), UX (UX-1, UX-2, UX-3), each from a Fix-now major. Minors (MNT-3 to MNT-5, CON-2, UX-4): read by the orchestrator below.
+
+Prompts also carried a stray `Round: 1` line; each reviewer kept to the round-2 scope.
+
+| ID | Lens | Severity | Status | Evidence |
+| --- | --- | --- | --- | --- |
+| CON-1 | CON | major | Resolved | Probe ran, F-8 in code; §10 stays the user's |
+| MNT-1 | MNT | major | Resolved | One resolution in `PVFieldFocus.swift`; no `.focused(` left in the four field files |
+| MNT-2 | MNT | major | Resolved | `tabClaim(` called only in `PVFieldFocus.swift` |
+| UX-1 | UX | major | Resolved | `KeyEquivalent.backTab` in all three fields; probe logs the P4 claim |
+| UX-2 | UX | major | Resolved | Field editors skipped; `probe.log` shows `router=false` on all seven |
+| UX-3 | UX | major | Resolved for the probes | §10 stays the user's |
+| MNT-3 | MNT | minor | Resolved (orchestrator) | Clearer and router docs updated; names kept per D-5 |
+| MNT-4 | MNT | minor | Resolved (orchestrator) | `PVTabPair.swift:33` |
+| MNT-5 | MNT | minor | Resolved (orchestrator) | `RouterFixture` |
+| CON-2, UX-4 | CON, UX | minor | Resolved (orchestrator) | Landed note |
+
+No new findings. CON, MNT and UX all Clean. MNT's outside-my-lens note (F-8's "user, 2026-11-05" mark missing from the Landed note): orchestrator added it. UX residual risk, not raised: at P4 with Full Keyboard Access, the controls between Transcription and the label depend on the label's forward Tab; added to the manual check.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: answered (Shift-Tab, D-6) · CON miss: UX-1 and UX-2 were caught by another lens; UX-2 (`CON miss: UX-2`) is a regression round-1 CON's call-site sweep did not reach, UX-1 is the plan's untested assumption and CON-1 named it · Manual check §10 not run.
