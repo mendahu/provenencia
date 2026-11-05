@@ -278,7 +278,9 @@ final class ArtifactRegionOverlayView: NSView {
     private func handleFreeformClick(_ normalized: CGPoint) {
         if let first = inProgressPoints.first,
            inProgressPoints.count >= ArtifactRegionGeometry.freeformMinimumVertices,
-           ArtifactRegionGeometry.closeEnoughToOrigin(normalized, origin: first)
+           ArtifactRegionGeometry.closeEnoughToOrigin(
+               normalized, origin: first, imageRect: imageRect, radius: handleHitRadius
+           )
         {
             let draft = ArtifactRegionDraft(kind: .freeform, points: inProgressPoints)
             if draft.isValid {

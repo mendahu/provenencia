@@ -74,6 +74,72 @@ struct ArtifactRegionOverlayTests {
         #expect(overlay.moveAnchorHitRadius == 8)
     }
 
+    // MARK: Freeform close distance
+
+    /// A 3000×4000 image drawn at 1:1 on an armed freeform overlay, at `magnification`.
+    private func makeArmedFreeform(
+        magnification: CGFloat = 1
+    ) -> (overlay: ArtifactRegionOverlayView, window: NSWindow, media: CGRect) {
+        let overlay = ArtifactRegionOverlayView(frame: CGRect(x: 0, y: 0, width: 400, height: 500))
+        let media = CGRect(x: 0, y: 0, width: 3000, height: 4000)
+        overlay.mediaRectOverride = media
+        overlay.magnification = magnification
+        let window = hostInBorderlessWindow(nsView: overlay, size: CGSize(width: 400, height: 500))
+        overlay.armedTool = .freeform
+        return (overlay, window, media)
+    }
+
+    /// A click at `document` (image pixels, overlay space).
+    private func click(_ document: CGPoint, on overlay: ArtifactRegionOverlayView, window: NSWindow) {
+        overlay.mouseDown(with: NSEvent.mouseEvent(
+            with: .leftMouseDown,
+            location: overlay.convert(document, to: nil),
+            modifierFlags: [],
+            timestamp: 0,
+            windowNumber: window.windowNumber,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 1,
+            pressure: 1
+        )!)
+    }
+
+    private static let fourDocumentPoints = [
+        CGPoint(x: 300, y: 300), CGPoint(x: 900, y: 300), CGPoint(x: 900, y: 900), CGPoint(x: 300, y: 360),
+    ]
+
+    @Test func freeformFourthClickNearFirstAddsVertex() {
+        let (overlay, window, media) = makeArmedFreeform()
+        defer { withExtendedLifetime(window) {} }
+        var commits: [ArtifactRegionDraft] = []
+        overlay.onCommit = { commits.append($0); return true }
+
+        for point in Self.fourDocumentPoints { click(point, on: overlay, window: window) }
+        #expect(commits.isEmpty)
+
+        // A fifth click within a handle's grab radius of the first closes the four points.
+        click(CGPoint(x: 303, y: 300), on: overlay, window: window)
+        #expect(commits.count == 1)
+        #expect(commits.first?.points.count == 4)
+        #expect(commits.first?.points.first
+            == ArtifactRegionGeometry.normalize(documentPoint: Self.fourDocumentPoints[0], imageRect: media))
+    }
+
+    @Test func freeformCloseZoneIsHandleRadiusAtAnyZoom() {
+        for (offset, closes) in [(CGFloat(1.5), true), (CGFloat(2), false)] {
+            let (overlay, window, _) = makeArmedFreeform(magnification: 4)
+            defer { withExtendedLifetime(window) {} }
+            var commits: [ArtifactRegionDraft] = []
+            overlay.onCommit = { commits.append($0); return true }
+
+            for point in Self.fourDocumentPoints.prefix(3) { click(point, on: overlay, window: window) }
+            click(CGPoint(x: 300 + offset, y: 300), on: overlay, window: window)
+            // 6 screen points away closes the triangle; 8 adds a fourth vertex.
+            #expect(commits.count == (closes ? 1 : 0))
+            #expect(commits.first?.points.count == (closes ? 3 : nil))
+        }
+    }
+
     private static let square = [
         CGPoint(x: 0.2, y: 0.2), CGPoint(x: 0.4, y: 0.2), CGPoint(x: 0.4, y: 0.4), CGPoint(x: 0.2, y: 0.4),
     ]

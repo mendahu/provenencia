@@ -226,6 +226,16 @@ struct ArtifactRegionGeometryTests {
         ]
     )
 
+    @Test func closeEnoughToOriginUsesDocumentRadius() {
+        let rect = CGRect(x: 0, y: 0, width: 3000, height: 4000)
+        let origin = CGPoint(x: 0.1, y: 0.1)
+        let near = CGPoint(x: 0.1 + 6.0 / 3000, y: 0.1)
+        let far = CGPoint(x: 0.1 + 60.0 / 3000, y: 0.1)
+        #expect(ArtifactRegionGeometry.closeEnoughToOrigin(near, origin: origin, imageRect: rect, radius: 7))
+        #expect(!ArtifactRegionGeometry.closeEnoughToOrigin(far, origin: origin, imageRect: rect, radius: 7))
+        #expect(ArtifactRegionGeometry.closeEnoughToOrigin(far, origin: origin, imageRect: rect, radius: 60.5))
+    }
+
     @Test func hitHandleOutlineMovesShape() {
         let rect = Self.hitRect
         let square = Self.hitSquare

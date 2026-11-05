@@ -471,8 +471,17 @@ enum ArtifactRegionGeometry {
         abs(a.x - b.x) < epsilon && abs(a.y - b.y) < epsilon
     }
 
-    static func closeEnoughToOrigin(_ point: CGPoint, origin: CGPoint, threshold: CGFloat = 0.03) -> Bool {
-        hypot(point.x - origin.x, point.y - origin.y) <= threshold
+    /// Both points normalized; the distance is measured in document space so `radius` is
+    /// a screen-scale grab radius at any image size.
+    static func closeEnoughToOrigin(
+        _ point: CGPoint,
+        origin: CGPoint,
+        imageRect: CGRect,
+        radius: CGFloat
+    ) -> Bool {
+        let a = documentPoint(normalized: point, imageRect: imageRect)
+        let b = documentPoint(normalized: origin, imageRect: imageRect)
+        return hypot(a.x - b.x, a.y - b.y) <= radius
     }
 
     // MARK: Handles (normalized)
