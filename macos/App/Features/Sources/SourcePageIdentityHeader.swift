@@ -201,7 +201,7 @@ struct SourcePageIdentityHeader: View {
                             emptyLabel: L10n.Sources.typeNoMatch,
                             label: L10n.Sources.pageFormType,
                             accessibilityIdentifierPrefix: "sources.page.type",
-                            focus: PVComboFocus($typeFieldFocused, equals: .combo)
+                            focus: PVFieldFocus($typeFieldFocused, equals: .combo)
                         ) { option, query in
                             SourceTypeComboRow(
                                 type: model.identity.types.first { $0.id == option.value },

@@ -185,7 +185,7 @@ struct CitationComposerAuthoringBox: View {
                 emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                 label: label,
                 accessibilityIdentifierPrefix: prefix,
-                focus: PVComboFocus($focus, equals: field),
+                focus: PVFieldFocus($focus, equals: field),
                 onCommit: { value, via in
                     let hasTerm = field == .endB
                         ? self.bridgeHasTerm(endA: endA, endB: value, termID: termID)
@@ -224,7 +224,7 @@ struct CitationComposerAuthoringBox: View {
                         model.beginAddCustomTerm(propertyID: property.id)
                     }
                 },
-                termFocus: PVComboFocus($focus, equals: .term)
+                termFocus: PVFieldFocus($focus, equals: .term)
             )
         }
     }
@@ -323,7 +323,7 @@ struct CitationPropertyFields: View {
                         emptyLabel: L10n.CitationComposer.subjectPlaceholder,
                         label: L10n.CitationComposer.subjectLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).subject",
-                        focus: PVComboFocus(focus, equals: .subject),
+                        focus: PVFieldFocus(focus, equals: .subject),
                         onCommit: { value, via in
                             self.claimTab(from: .subject, committed: value, via: via)
                         }
@@ -341,7 +341,7 @@ struct CitationPropertyFields: View {
                             : L10n.CitationComposer.propertyPlaceholder,
                         label: L10n.CitationComposer.propertyLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).property",
-                        focus: PVComboFocus(focus, equals: .property),
+                        focus: PVFieldFocus(focus, equals: .property),
                         onCommit: { value, via in
                             self.claimTab(from: .property, committed: value, via: via)
                         }
@@ -372,7 +372,7 @@ struct CitationPropertyFields: View {
                     text: textBinding,
                     size: .sm,
                     prompt: L10n.CitationComposer.valueAsWritten,
-                    focus: PVInputFocus(focus, equals: .value)
+                    focus: PVFieldFocus(focus, equals: .value)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).text")
             case PropertyValueType.integer.rawValue:
@@ -381,7 +381,7 @@ struct CitationPropertyFields: View {
                     size: .sm,
                     mono: true,
                     suffix: property?.key == "age" ? L10n.string(L10n.CitationComposer.yearsSuffix) : nil,
-                    focus: PVInputFocus(focus, equals: .value)
+                    focus: PVFieldFocus(focus, equals: .value)
                 )
             case PropertyValueType.term.rawValue:
                 HStack(spacing: PVSpacing.space4) {
@@ -393,7 +393,7 @@ struct CitationPropertyFields: View {
                         emptyLabel: L10n.CitationComposer.termEmpty,
                         label: L10n.CitationComposer.valueLabel,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).valueTerm",
-                        focus: PVComboFocus(focus, equals: .value)
+                        focus: PVFieldFocus(focus, equals: .value)
                     )
                     PVButton(L10n.CitationComposer.addCustomTerm, variant: .ghost, size: .sm, icon: .plus) {
                         model.beginAddCustomTerm(
@@ -407,7 +407,7 @@ struct CitationPropertyFields: View {
                     NameValueEditorForm(
                         draft: nameBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).name",
-                        formFocus: PVInputFocus(focus, equals: .value)
+                        formFocus: PVFieldFocus(focus, equals: .value)
                     )
                 }
             case PropertyValueType.date.rawValue:
@@ -415,7 +415,7 @@ struct CitationPropertyFields: View {
                     DateValueEditorForm(
                         draft: dateBinding,
                         accessibilityIdentifierPrefix: "\(identifierPrefix).date",
-                        yearFocus: PVInputFocus(focus, equals: .value)
+                        yearFocus: PVFieldFocus(focus, equals: .value)
                     )
                 }
             case PropertyValueType.depiction.rawValue:
@@ -666,7 +666,7 @@ struct CitationBridgeSentence: View {
     var canSwap: Bool
     var onSwap: () -> Void
     var onAddTerm: () -> Void
-    var termFocus: PVComboFocus? = nil
+    var termFocus: PVFieldFocus? = nil
     var termIdentifierPrefix: String = "citationComposer.draft.term"
 
     var body: some View {

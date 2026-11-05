@@ -65,22 +65,19 @@ struct PVInputChrome: ViewModifier {
     }
 }
 
-/// Host focus for a field that shares a `FocusState` with its siblings.
-/// The text field applies `.focused($binding, equals:)` itself.
-struct PVInputFocus {
-    fileprivate let isActive: () -> Bool
-    fileprivate let focus: () -> Void
-    fileprivate let install: (Binding<String>, Text?) -> AnyView
+/// Claims Tab and Shift-Tab for the neighbour a field's handle names. With no
+/// neighbour the field adds nothing, so the key loop keeps the key.
+private struct PVInputTabClaim: ViewModifier {
+    let focus: PVFieldFocus?
 
-    init<Value: Hashable>(_ binding: FocusState<Value?>.Binding, equals value: Value) {
-        isActive = { binding.wrappedValue == value }
-        focus = { binding.wrappedValue = value }
-        install = { text, prompt in
-            AnyView(
-                TextField(text: text, prompt: prompt) { EmptyView() }
-                    .textFieldStyle(.plain)
-                    .focused(binding, equals: value)
-            )
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let focus, focus.hasNeighbour {
+            content.onKeyPress(keys: [.tab, .backTab], phases: .down) { press in
+                focus.claimTab(shift: press.key == .backTab)
+            }
+        } else {
+            content
         }
     }
 }
@@ -100,7 +97,7 @@ struct PVInput: View {
     private let isInvalid: Bool
     private let activateOnAppear: Bool
     private let externalFocus: FocusState<Bool>.Binding?
-    private let equalsFocus: PVInputFocus?
+    private let equalsFocus: PVFieldFocus?
     private let onBlur: (() -> Void)?
 
     @FocusState private var ownedFocus: Bool
@@ -115,7 +112,7 @@ struct PVInput: View {
         suffix: String? = nil,
         isInvalid: Bool = false,
         focused: FocusState<Bool>.Binding? = nil,
-        focus: PVInputFocus? = nil,
+        focus: PVFieldFocus? = nil,
         activateOnAppear: Bool = false,
         onBlur: (() -> Void)? = nil
     ) {
@@ -140,23 +137,12 @@ struct PVInput: View {
                     .accessibilityValue(Text(text))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .modifier(chrome(isFocused: false))
-            } else if let equalsFocus {
-                equalsFocus.install($text, prompt.map { Text($0) })
-                    .modifier(chrome(isFocused: equalsFocus.isActive()))
-            } else if let externalFocus {
-                TextField(text: $text, prompt: prompt.map { Text($0) }) {
-                    EmptyView()
-                }
-                    .textFieldStyle(.plain)
-                    .focused(externalFocus)
-                    .modifier(chrome(isFocused: externalFocus.wrappedValue))
             } else {
-                TextField(text: $text, prompt: prompt.map { Text($0) }) {
-                    EmptyView()
-                }
+                TextField(text: $text, prompt: prompt.map { Text($0) }) { EmptyView() }
                     .textFieldStyle(.plain)
-                    .focused($ownedFocus)
-                    .modifier(chrome(isFocused: ownedFocus))
+                    .modifier(PVInputTabClaim(focus: equalsFocus))
+                    .modifier(PVFieldFocusModifier(host: equalsFocus, own: ownBinding))
+                    .modifier(chrome(isFocused: equalsFocus.isActive(own: ownBinding.wrappedValue)))
             }
         }
         .overlay(alignment: .leading) {
@@ -189,11 +175,12 @@ struct PVInput: View {
         .pvFieldNamed()
     }
 
+    /// The binding the field owns when no handle drives it: the caller's, else its own.
+    private var ownBinding: FocusState<Bool>.Binding { externalFocus ?? $ownedFocus }
+
     private var isFieldFocused: Bool {
         if isReadOnly { return false }
-        if let equalsFocus { return equalsFocus.isActive() }
-        if let externalFocus { return externalFocus.wrappedValue }
-        return ownedFocus
+        return equalsFocus.isActive(own: ownBinding.wrappedValue)
     }
 
     /// Same-cycle focus is dropped while the field is inserted; the next turn
@@ -201,13 +188,7 @@ struct PVInput: View {
     /// into the new value.
     private func focusField() {
         DispatchQueue.main.async {
-            if let equalsFocus {
-                equalsFocus.focus()
-            } else if let externalFocus {
-                externalFocus.wrappedValue = true
-            } else {
-                ownedFocus = true
-            }
+            equalsFocus.focus(own: ownBinding)
         }
     }
 

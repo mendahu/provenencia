@@ -88,7 +88,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | [`ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md`](ux/2026-10-15-pdf-page-indicator-stuck-on-page-1.md) and [`ux/2026-10-15-pdf-zoom-jumps-to-page-1.md`](ux/2026-10-15-pdf-zoom-jumps-to-page-1.md) (same root cause) | S14-28 | — |
 | Dogfood 2026-10-15: polygon locator drag vertices (note deleted 2026-11-05; landed #715) | S14-29 | — |
 | Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
-| [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md) | S14-31 | — |
+| Dogfood 2026-10-15: new-subject card Tab skips the description (note deleted 2026-11-05; landed #718) | S14-31 | — |
 | [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md) | S14-32 | — |
 | [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
 | [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
@@ -133,7 +133,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) PDF page sync is one PR.** The stuck page indicator and the zoom jump share one root cause (`ArtifactViewerModel.page` never learns scroll-driven page changes). One PR pushes `pdfView.currentPage` back into the model on page-changed notifications and stops `sync` from snapping to a stale page. Binds S14-28.
 - **(Batch 7) Polygon edit includes a saved Citation.** Vertex drag (and whole-shape translate) works on the pending draft and on an open Citation whose locator is fed back as `committedRegion`. Hit targets stay usable when zoomed out. Binds S14-29.
 - **(Batch 7) Conflict brackets honour cardinality.** The ochre bracket, legend and a11y phrase fire only for Properties whose cardinality is single; multiple-cardinality rows with several values list plainly (`StateMultiple`, not conflict). Binds S14-30.
-- **(Batch 7) Tab into a text area is kit-wide.** The fix lives in `PVInput` / `PVTextArea` / `PVFormDialog` so every label → description (and any other Input → TextArea) pair gets Tab / Shift-Tab, not only the Evidence graph new-subject card. Binds S14-31.
+- **(Batch 7) Tab into a text area is kit-wide.** The kit gives the mechanism: a `PVInput` and a `PVTextArea` in one form are wrapped in `PVTabPair`, so Tab and Shift-Tab move between them. S14-31 wires every pair in the app; a new pair is wrapped the same way (user, 2026-11-05). Binds S14-31.
 - **(Batch 7) Place relationship rows use the inverse label on the far end.** Composer place-relationship lines read `part_of` / `contains` and `succeeded_by` / `preceded by` by which end is viewed, matching the Place conclusion page. Copy from L10n (product place terms have no vocabulary `Inverse`). Binds S14-32.
 - **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
 - **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts and strip leading title-registry words from a parts-less label fallback, so "Mrs. Smith" sorts with Smith. Go owns list order. Binds S14-34.
@@ -174,7 +174,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-28 | PDF page tracks scroll | 7a | Push `pdfView.currentPage` into `ArtifactViewerModel.page` on page-changed; zoom and region stamps stop snapping to page 1 | — | — | [S14-28-pdf-page-tracks-scroll.md](prs/S14-28-pdf-page-tracks-scroll.md) | Landed #711 |
 | S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Landed #715 |
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
-| S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Planned |
+| S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
@@ -395,7 +395,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 - **Name the Evidence graph; counts take plurals** (A-12, A-14, A-20): One function gives a location's label from the session's names; the breadcrumbs, the Back / Forward history rows (graph, composer and Promote) and the canvas's VoiceOver label all read it. The A-14 strings name the Evidence graph. The A-20 strings get plural variations, `DeleteImpact.noun` reads plural keys, and `check-localizable-xcstrings.py` fails on a `%lld` noun with no variations.
 - **Dialogs and VoiceOver behave safely** (A-13, A-17, A-18, A-21): In `PVConfirm` the danger tone makes Cancel the default action and drops Return from the destructive button. The graph form's Kept-linked Citation rows ask "Discard changes?" when the form is dirty and are disabled while it saves. `PVToast` posts its own announcement, and `PVCallout` takes an opt-in announcement for an error, which the graph form's and the Artifact card's save errors use, and so do the Source page error (`sources.page.error`) and the canvas file-open callout (`evidenceGraph.fileOpen.callout`), which show S12-23's Open refusal (S12-23 review UX-3). `PVSectionHeader` titles are headings. Updates `macos/App/DesignSystem/README.md`.
 - **Form fields are named** (B-18): `PVField` ties its label to its content in the kit (the Promote evidence sheet B-18 named went in S13-23), which gives every form's fields their spoken names, and the hand-made label in `CitationComposerEvidenceColumn.labelField` goes (B-18). Updates `macos/App/DesignSystem/README.md` (the Field row). Swift only.
-- **Focus after the Source type editor** (a Spike 11 leftover): closing it returns keyboard focus to the Type control, as Promote's record search does with `PVComboFocus`.
+- **Focus after the Source type editor** (a Spike 11 leftover): closing it returns keyboard focus to the Type control, as Promote's record search does with `PVFieldFocus`.
 
 One PR (user, 2026-11-01).
 **Not this PR.** A graph name in the canvas header (refused); tooltips on truncated names; holding toasts longer while VoiceOver runs.
@@ -507,10 +507,10 @@ One PR (user, 2026-11-01).
 
 #### S14-31 — Tab reaches a following text area
 
-**Ships.** Kit fix so Tab from `PVInput` reaches a following `PVTextArea` (and Shift-Tab returns), via shared focus / key-view loop — not a one-off on the Evidence graph card. Covers the new-subject card, the composer's New subject dialog, and any other Input → TextArea pair in `PVFormDialog` or forms. Swift UI tests or focused kit tests where practical.
+**Ships.** Kit fix so Tab from `PVInput` reaches a following `PVTextArea` (and Shift-Tab returns), via `PVTabPair` — not a one-off on the Evidence graph card. Covers the new-subject card, the composer's New subject dialog, and any other Input → TextArea pair in `PVFormDialog` or forms. Swift UI tests or focused kit tests where practical.
 **Not this PR.** Redesigning form focus for unrelated controls.
 **Check.** Bar outcome 26 on the graph card and the composer's New subject dialog.
-**Context.** Working rule "Tab into a text area is kit-wide"; [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](ux/2026-10-15-new-subject-card-tab-skips-description.md); `PVTextArea`, `PVInput`, `PVFormDialog`; `add-ui-component`.
+**Context.** Working rule "Tab into a text area is kit-wide"; dogfood note 2026-10-15 (deleted on land); `PVTextArea`, `PVInput`, `PVFormDialog`; `add-ui-component`.
 
 #### S14-32 — Place relationship inverse labels
 

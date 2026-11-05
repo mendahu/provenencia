@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-31 — Tab reaches a following text area
+
+**Landed 2026-11-05** in [#718](https://github.com/mendahu/provenencia/pull/718). Tab in a label field moves into the description text area beside it, and Shift-Tab moves back, in all eight Input / TextArea pairs: the Evidence graph card, the composer's New subject dialog and its transcription / label pair at both widths, New property, the Property identity edit, the Source graph form, and the Artifact card. One kit handle, `PVFieldFocus`, replaces the input, combo and select handles and can carry a Tab neighbour; `PVTabPair` owns focus for a pair. A text area's Tab routing skips the shared field editor of the text field beside it. Version 0.3.4.
+
 ## S14-29 — Polygon locator vertex edit
 
 **Landed 2026-11-05** in [#715](https://github.com/mendahu/provenencia/pull/715). A committed polygon region can be edited on a PDF as well as an image: the overlay's `hitTest` converts its superview point, so handle clicks on a PDF no longer miss. One target list and hit rule in `ArtifactRegionGeometry` picks the nearest vertex, and dragging the outline or the centre diamond moves the shape. Handles and their hit radius stay 7 screen points at any image zoom through an overlay `magnification` input. An edit that would cross the shape, or that the composer refuses, reverts with a beep and a VoiceOver announcement. A press that never travels past the drag threshold edits nothing, and a dragged vertex keeps the offset it was grabbed at. Version 0.3.3.
