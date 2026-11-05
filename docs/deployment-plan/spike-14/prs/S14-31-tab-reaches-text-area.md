@@ -1,6 +1,6 @@
 # S14-31 — Tab reaches a following text area
 
-**Status:** Landed #718 (2026-11-05)
+**Status:** Landed in #718 (2026-11-05)
 **Landed:** Version bumped 0.3.3 → 0.3.4, because main was already at 0.3.3. `PVFieldFocus`'s binding init and `neighbours` are `@MainActor` (the plan left them non-isolated) so the focus claim compiles without Swift 6 sendability warnings. The STEP-4 probe and the §10 manual check were not run by the implementer.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
@@ -12,7 +12,7 @@
 **Version bump:** patch — a researcher-visible keyboard bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Tab into a text area is kit-wide" (reworded by this PR, see §5); bar outcome 26; dogfood note [`ux/2026-10-15-new-subject-card-tab-skips-description.md`](../ux/2026-10-15-new-subject-card-tab-skips-description.md) (deleted on land); [`macos/App/DesignSystem/README.md`](../../../../macos/App/DesignSystem/README.md) built-components table (Input, TextArea rows)
+**Context:** working rule "(Batch 7) Tab into a text area is kit-wide" (reworded by this PR, see §5); bar outcome 26; dogfood note dogfood note 2026-10-15 new-subject card Tab skips description (deleted on land); [`macos/App/DesignSystem/README.md`](../../../../macos/App/DesignSystem/README.md) built-components table (Input, TextArea rows)
 **Planned:** 2026-11-05 against `main` @ `5d53a09c`
 **Review:** [`S14-31-tab-reaches-text-area.review.md`](S14-31-tab-reaches-text-area.review.md) — Fits with changes — Ready with changes, 2 rounds (round 1 Reshape, accepted by the user 2026-11-05); no open blocker; To user answered
 
