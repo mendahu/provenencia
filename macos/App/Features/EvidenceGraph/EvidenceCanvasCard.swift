@@ -50,6 +50,8 @@ struct EvidenceCanvasCard: Equatable {
     /// The open project's folder, where a likeness row's image lives. Empty
     /// paints the placeholder (the ghost).
     var projectDir: String = ""
+    /// Holds rule per Property key for conflict bracket paint.
+    var cardinalityByKey: [String: PropertyCardinality] = [:]
 
     var id: String {
         switch placed {
