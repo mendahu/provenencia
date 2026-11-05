@@ -115,5 +115,21 @@ Head `119d6641`. Gate PASS (orchestrator run below). F-6 to F-9 and the docs lin
 ## Vertex items (user, 2026-11-05)
 Adding a vertex: dropped, a researcher can clear and redraw. Keyboard nudging: descoped for now. `docs/dogfood/ux/2026-11-05-region-vertex-editing.md` is removed, as agent-written and not user feedback. Its third item, VoiceOver per vertex, and the region kind reload bug found while scoping (a 6-point polygon reloads as an L, a 32-point one as a circle, a 4-point axis-aligned one as a rectangle; read from the code, not reproduced) go to the user for a home.
 
+User answers: VoiceOver per vertex dropped for now. The reload bug goes on this PR. A third review round runs on everything after round 2 (the user lifted the cap for this PR).
+
+### Fix plan 4
+
+**F-10 — A polygon reloads as a circle or L only when it is one** (user; found while scoping)
+Files: `macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift`, `macos/ProvenenciaTests/ArtifactRegionGeometryTests.swift`, `macos/ProvenenciaTests/CitationLocatorDraftTests.swift`.
+Failing test first, run red and report the output, before any change to `ArtifactRegionGeometry.swift`: `aBumpyThirtyTwoPointPolygonIsNotACircle`, `aSixPointPolygonIsNotAnL`, `aSixPointAxisAlignedPolygonFromAnotherStartIsNotAnL` in the geometry tests (each `ArtifactRegionKind.infer` == `.freeform`), and `freeformKindsSurviveAReload` in the locator tests, through `RegionFixtures.locatorJSON(points:)` and the locator decode. If one is green on the unfixed code, say which: that claim about the bug was wrong.
+Keep green: `aCircleRingOnAWideImageIsStillACircle` *(new)*, a `circleRing(centerNormalized:throughNormalized:imageRect:)` ring on a 400×200 `imageRect`, an ellipse in normalized space; the existing L test, including the L whose notch `moveLHandle` moved.
+Do:
+- `looksLikeCircleRing`: also require each point to be where `circleRing` puts it. From the mean centre, take `rx` from point 0 and `ry` from point 8 (angles 0 and π/2), and compare every point to `centre + (rx cos θ, ry sin θ)` at `θ = i / circleRingCount * 2π`, within 0.001. `rx` and `ry` may differ. Both must be positive.
+- `inferredLOpen`: return nil unless every edge, wrapping last to first, is axis-aligned at `rounded` precision. Then return a kind only if it reproduces the points: read the corners and notch into `LParams` the way `moveLHandle` does, and require `lShapePoints(kind:params:)` to match within `nearlyEqual`. Reuse what `moveLHandle` uses; do not assume the notch sits at the midpoint.
+- Leave `isAxisAlignedRectangle` and the 4-point case alone: an axis-aligned quadrilateral is a rectangle and reloads with the same shape. Change no stored format. Touch no overlay file.
+Check: the new tests pass; `rg -n 'looksLikeCircleRing|inferredLOpen' macos/App` shows no caller newly depends on them returning non-nil; scripts/check-pr.sh PASS.
+
+**Docs for Fix plan 4.** Extend the plan's Landed note with F-10, and the S14-32 paragraph in `spike-14/completed.md`. Change no AC or Decision.
+
 ## Result
-Gate PASS · CI pending · open: homes for VoiceOver per vertex and the reload bug; F-6 to F-9 reviewed by nobody · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
+Gate PASS · CI pending · open: F-10; round 3 review · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
