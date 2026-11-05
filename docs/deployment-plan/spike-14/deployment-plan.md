@@ -20,7 +20,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 24. **A polygon can be nudged.** After drawing a freeform Citation region, dragging a vertex (or the whole shape) updates it in place, including on an already-saved Citation; no clear-and-redraw.
 25. **Multiple values are not a conflict.** Two `languages_spoken` rows on one card show no ochre conflict bracket; a single-cardinality Property with two competing values still does.
 26. **Tab reaches the description.** In every `PVInput` → `PVTextArea` form pair (new-subject card, New subject in the composer, and any other), Tab moves label → description and Shift-Tab goes back.
-27. **Place relationships read both ways.** Alberta's row for *Calgary is part of Alberta* reads "contains Calgary"; `succeeded_by` uses its inverse wording the same way.
+27. **Place relationships read both ways.** Alberta's row for *Calgary is part of Alberta* reads "Contains Calgary"; New Town's row for *Old Town was succeeded by New Town* reads "Succeeded Old Town", as on the Place page (user, 2026-11-05).
 28. **A bridge files when both ends are already handles.** Connecting two already-promoted people (or any other bridge whose ends resolve) files the association in the same write — same outcome as promoting the second endpoint after the bridge existed.
 29. **Honorifics do not own the sort.** "Mrs. Smith" and "Mr. John Smith" sort under S / with Smith, not under M.
 30. **History jump rows stay readable.** The Back / Forward menu is wide enough that typical Source, graph, and composer titles are not truncated to identical prefixes.
@@ -134,7 +134,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) Polygon edit includes a saved Citation.** Vertex drag (and whole-shape translate) works on the pending draft and on an open Citation whose locator is fed back as `committedRegion`. Hit targets stay usable when zoomed out. Binds S14-29.
 - **(Batch 7) Conflict brackets honour cardinality.** The ochre bracket, legend and a11y phrase fire only for Properties whose cardinality is single; multiple-cardinality rows with several values list plainly (`StateMultiple`, not conflict). Binds S14-30.
 - **(Batch 7) Tab into a text area is kit-wide.** The fix lives in `PVInput` / `PVTextArea` / `PVFormDialog` so every label → description (and any other Input → TextArea) pair gets Tab / Shift-Tab, not only the Evidence graph new-subject card. Binds S14-31.
-- **(Batch 7) Place relationship rows use the inverse label on the far end.** Composer place-relationship lines read `part_of` / `contains` and `succeeded_by` / `preceded by` by which end is viewed, matching the Place conclusion page. Copy from L10n (product place terms have no vocabulary `Inverse`). Binds S14-32.
+- **(Batch 7) Place relationship rows use the inverse label on the far end.** Composer place-relationship lines read `part_of` / Contains and `succeeded_by` / Succeeded by which end is viewed, matching the Place conclusion page ("Succeeded", not "preceded by": user, 2026-11-05). Copy from L10n (product place terms have no vocabulary `Inverse`). Binds S14-32.
 - **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
 - **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts and strip leading title-registry words from a parts-less label fallback, so "Mrs. Smith" sorts with Smith. Go owns list order. Binds S14-34.
 - **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
@@ -175,7 +175,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-29 | Polygon locator vertex edit | 7b | Drag freeform vertices (and translate the shape); fix the PDF overlay's hit-test coordinates; outline drag moves the shape; pin edit-after-save (a saved Citation's locator already reaches the overlay); handles a fixed screen size at any zoom | — | S14-28 | [S14-29-polygon-locator-vertex-edit.md](prs/S14-29-polygon-locator-vertex-edit.md) | Landed #715 |
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Planned |
-| S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use contains / preceded by on the far end | — | — | — | Scoped |
+| S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Planned |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
@@ -514,7 +514,7 @@ One PR (user, 2026-11-01).
 
 #### S14-32 — Place relationship inverse labels
 
-**Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / contains, `succeeded_by` / preceded by), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. Swift test for both ends of one saved bridge.
+**Ships.** `listedLine` for `placeRelationship` picks forward vs inverse copy by which end is viewed (`part_of` / Contains, `succeeded_by` / Succeeded), matching the Place conclusion page. L10n keys; no vocabulary `Inverse` rows. Swift test for both ends of one saved bridge.
 **Not this PR.** Inverse terms in seeded vocabulary; person relationship inverses (already handled).
 **Check.** Bar outcome 27.
 **Context.** Working rule "Place relationship rows use the inverse label on the far end"; [`ux/2026-10-15-place-relationship-inverse-label.md`](ux/2026-10-15-place-relationship-inverse-label.md); `CitationComposerAuthoring.swift`; `add-localized-string`.
