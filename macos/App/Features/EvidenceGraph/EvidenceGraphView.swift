@@ -441,29 +441,33 @@ private struct EvidenceGraphContent: View {
             if let createError = model.createError {
                 PVErrorText(createError, size: .caption)
             }
-            if !model.isEditingBridge {
-                PVField(
-                    label: L10n.EvidenceGraph.labelField,
-                    hint: L10n.EvidenceGraph.workingLabelHint,
-                    error: model.labelError,
-                    marker: .required
-                ) {
-                    PVInput(
+            PVTabPair { label, description in
+                if !model.isEditingBridge {
+                    PVField(
+                        label: L10n.EvidenceGraph.labelField,
+                        hint: L10n.EvidenceGraph.workingLabelHint,
+                        error: model.labelError,
+                        marker: .required
+                    ) {
+                        PVInput(
+                            text: Binding(
+                                get: { model.draft.label },
+                                set: { model.draft.label = $0 }
+                            ),
+                            isInvalid: model.labelError != nil,
+                            focus: label
+                        )
+                    }
+                }
+                PVField(label: L10n.EvidenceGraph.descriptionField) {
+                    PVTextArea(
                         text: Binding(
-                            get: { model.draft.label },
-                            set: { model.draft.label = $0 }
+                            get: { model.draft.description },
+                            set: { model.draft.description = $0 }
                         ),
-                        isInvalid: model.labelError != nil
+                        focus: model.isEditingBridge ? nil : description
                     )
                 }
-            }
-            PVField(label: L10n.EvidenceGraph.descriptionField) {
-                PVTextArea(
-                    text: Binding(
-                        get: { model.draft.description },
-                        set: { model.draft.description = $0 }
-                    )
-                )
             }
         }
     }

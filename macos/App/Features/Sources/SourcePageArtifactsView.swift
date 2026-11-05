@@ -392,29 +392,33 @@ struct SourcePageArtifactsView: View {
                 )
                 .accessibilityIdentifier("sources.page.artifact.\(art.id).saveError")
             }
-            PVField(
-                label: L10n.Sources.artifactLabel,
-                error: model.artifacts.cardLabelError(id: art.id),
-                marker: .required
-            ) {
-                PVInput(
-                    text: labelBinding(art),
-                    size: .sm,
-                    isInvalid: model.artifacts.cardLabelError(id: art.id) != nil,
-                    activateOnAppear: true
-                )
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).label")
-                .onSubmit { commitEdit(art) }
-            }
-            PVField(
-                label: L10n.Sources.artifactDescription,
-                hint: L10n.Sources.artifactDescriptionHint
-            ) {
-                PVTextArea(
-                    text: descriptionBinding(art),
-                    lineLimit: 3...8
-                )
-                .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
+            PVTabPair { label, description in
+                PVField(
+                    label: L10n.Sources.artifactLabel,
+                    error: model.artifacts.cardLabelError(id: art.id),
+                    marker: .required
+                ) {
+                    PVInput(
+                        text: labelBinding(art),
+                        size: .sm,
+                        isInvalid: model.artifacts.cardLabelError(id: art.id) != nil,
+                        focus: label,
+                        activateOnAppear: true
+                    )
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).label")
+                    .onSubmit { commitEdit(art) }
+                }
+                PVField(
+                    label: L10n.Sources.artifactDescription,
+                    hint: L10n.Sources.artifactDescriptionHint
+                ) {
+                    PVTextArea(
+                        text: descriptionBinding(art),
+                        lineLimit: 3...8,
+                        focus: description
+                    )
+                    .accessibilityIdentifier("sources.page.artifact.\(art.id).description")
+                }
             }
             graphLinks(art)
             HStack(spacing: PVSpacing.space3) {

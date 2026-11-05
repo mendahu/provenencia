@@ -43,7 +43,8 @@ struct PVTextAreaChrome: ViewModifier {
 /// Multiline sibling of `PVInput`. Replaces hand-rolled styled `TextField`s
 /// (title / description / metadata / artifact description / notes).
 ///
-/// These are form fields, so Tab and Shift-Tab move to the next control.
+/// These are form fields, so Tab and Shift-Tab move to the next control
+/// (or to the neighbour its `focus` handle names).
 /// Option-Tab still inserts a tab character. The text view underneath
 /// would otherwise take Tab as a character.
 ///
@@ -100,6 +101,9 @@ struct PVTextArea: View {
     /// When true, the field takes the height its container offers (never less than `lineLimit`'s
     /// lower bound) instead of sizing to its text; the text scrolls inside it.
     private let fillsHeight: Bool
+    /// Shared focus host. Its `next` / `previous` neighbours take Tab and
+    /// Shift-Tab; without a handle the area keeps its own focus.
+    private let focus: PVFieldFocus?
 
     init(
         text: Binding<String>,
@@ -108,7 +112,8 @@ struct PVTextArea: View {
         typography: Typography = .body,
         isInvalid: Bool = false,
         activateOnAppear: Bool = false,
-        fillsHeight: Bool = false
+        fillsHeight: Bool = false,
+        focus: PVFieldFocus? = nil
     ) {
         self._text = text
         self.lineLimit = lineLimit
@@ -117,6 +122,7 @@ struct PVTextArea: View {
         self.isInvalid = isInvalid
         self.activateOnAppear = activateOnAppear
         self.fillsHeight = fillsHeight
+        self.focus = focus
     }
 
     @FocusState private var isFocused: Bool
@@ -141,7 +147,7 @@ struct PVTextArea: View {
         TextEditor(text: $text)
             .scrollContentBackground(.hidden)
             .focusEffectDisabled()
-            .focused($isFocused)
+            .modifier(PVFieldFocusModifier(host: focus, own: $isFocused))
             .frame(
                 minHeight: fillsHeight ? minEditorHeight : editorHeight,
                 maxHeight: fillsHeight ? .infinity : editorHeight
@@ -155,12 +161,12 @@ struct PVTextArea: View {
                         .accessibilityHidden(true)
                 }
                 PVTextAreaMeasure(text: text, font: typography.font)
-                PVTextEditorInsetClearer()
+                PVTextEditorInsetClearer(onTab: focus?.next, onBacktab: focus?.previous)
             }
             .modifier(
                 PVTextAreaChrome(
                     typography: typography,
-                    isFocused: isFocused,
+                    isFocused: focus.isActive(own: isFocused),
                     isInvalid: isInvalid
                 )
             )
@@ -170,7 +176,7 @@ struct PVTextArea: View {
             guard activateOnAppear else { return }
             // Defer past the resting→editing view swap; same-cycle focus is dropped.
             DispatchQueue.main.async {
-                isFocused = true
+                focus.focus(own: $isFocused)
             }
         }
         .pvFieldNamed()
@@ -234,13 +240,18 @@ private struct PVTextAreaContentHeightKey: PreferenceKey {
 
 /// `TextEditor` insets its glyphs past the chrome padding, so a Source title
 /// would jump between resting text and edit mode. SwiftUI has no inset
-/// modifier for that padding; this clears the text container only.
+/// modifier for that padding; this clears the text container's insets, and
+/// carries the area's Tab neighbours to the router it attaches to that text view.
 private struct PVTextEditorInsetClearer: NSViewRepresentable {
+    var onTab: (@MainActor () -> Void)?
+    var onBacktab: (@MainActor () -> Void)?
+
     func makeNSView(context: Context) -> PVTextEditorInsetView {
         PVTextEditorInsetView()
     }
 
     func updateNSView(_ nsView: PVTextEditorInsetView, context: Context) {
+        nsView.setTabCallbacks(onTab: onTab, onBacktab: onBacktab)
         nsView.clearInsets()
     }
 }
@@ -256,6 +267,11 @@ private final class PVTextEditorInsetView: NSView {
     override func layout() {
         super.layout()
         clearInsets()
+    }
+
+    func setTabCallbacks(onTab: (@MainActor () -> Void)?, onBacktab: (@MainActor () -> Void)?) {
+        tabRouter.onTab = onTab
+        tabRouter.onBacktab = onBacktab
     }
 
     func clearInsets() {
@@ -314,9 +330,14 @@ enum PVTextAreaTabRouting {
 }
 
 /// Sits in front of the text view's existing delegate so SwiftUI still hears
-/// edits. Tab moves through the key loop; every other command is passed on.
+/// edits. Tab goes to the neighbour when one is set, else through the key loop;
+/// every other command is passed on.
 final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     private weak var wrapped: NSTextViewDelegate?
+    /// Where Tab goes instead of the key loop, when the area has a neighbour.
+    var onTab: (@MainActor () -> Void)?
+    /// Where Shift-Tab goes instead of the key loop.
+    var onBacktab: (@MainActor () -> Void)?
 
     @MainActor
     func attach(to textView: NSTextView) {
@@ -329,7 +350,10 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
         guard PVTextAreaTabRouting.movesFocus(commandSelector) else {
             return wrapped?.textView?(textView, doCommandBy: commandSelector) ?? false
         }
-        if commandSelector == #selector(NSResponder.insertBacktab(_:)) {
+        let backtab = commandSelector == #selector(NSResponder.insertBacktab(_:))
+        if let claim = backtab ? onBacktab : onTab {
+            MainActor.assumeIsolated { claim() }
+        } else if backtab {
             textView.window?.selectPreviousKeyView(nil)
         } else {
             textView.window?.selectNextKeyView(nil)
@@ -348,9 +372,12 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     }
 }
 
-private extension NSView {
+extension NSView {
+    /// The first text view below this view that is not a field editor: the
+    /// shared field editor of a neighbouring `TextField` is an `NSTextView`
+    /// too, and the area's router must never attach to it.
     func firstDescendantTextView() -> NSTextView? {
-        if let textView = self as? NSTextView { return textView }
+        if let textView = self as? NSTextView, !textView.isFieldEditor { return textView }
         for subview in subviews {
             if let found = subview.firstDescendantTextView() { return found }
         }

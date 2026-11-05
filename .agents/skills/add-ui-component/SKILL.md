@@ -71,6 +71,7 @@ Prefer extending a composite with slots over a new root `PV*` for a slight varia
 - [ ] #Preview with static sample data for new DesignSystem types
 - [ ] File saved under `macos/App/DesignSystem/` or `macos/App/Features/` (synchronized folders; no `project.pbxproj` edit)
 - [ ] Second call site? Snowflake → Recipes/<Name>/ (or Components/<Name>/ if agnostic)
+- [ ] A `PVInput` and a `PVTextArea` in one form are wrapped in `PVTabPair`; every kit field takes a `PVFieldFocus` (README Input, Field focus and TextArea rows)
 - [ ] Each behavior the README promises for it (Return, Escape, dismissal, focus, VoiceOver announcement) is in its code and held by a test. `PVConfirm` promised that Return could not confirm a delete while its Delete button kept the default-action shortcut
 ```
 

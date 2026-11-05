@@ -12,7 +12,7 @@
 **Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note [`ux/2026-10-15-place-relationship-inverse-label.md`](../ux/2026-10-15-place-relationship-inverse-label.md) (deleted on land); [`docs/ideas/organizations.md`](../../../ideas/organizations.md) ("Structure like places": an `organization_relationship` bridge copies `part_of` / `succeeded_by`)
-**Planned:** 2026-11-05 against `main` @ `b6cac73d`
+**Planned:** 2026-11-05 against `main` @ `c77f7392` (re-checked after S14-31 landed in #718; the files in §4 are unchanged since `b6cac73d`)
 **Review:** [`S14-32-place-relationship-inverse-labels.review.md`](S14-32-place-relationship-inverse-labels.review.md) — Fits with changes — Ready with changes, 2 rounds; M-1 and M-7 answered by the user 2026-11-05; no open blocker
 
 ### Implementer — read this first
@@ -231,8 +231,8 @@ Check: `CitationComposerModelTests` and `ConnectionSentenceRegistryTests` pass i
 
 **STEP-6 — Version bump**
 Files: `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj`. Rule: `.cursor/rules/versioning.mdc`.
-Do: raise PATCH by one from what `main` holds when you branch (0.3.3 → 0.3.4 at the planning base). If `main` moves past your number before merge (S14-31 is also a patch), rebase and take the next PATCH; all three places always agree.
-Check: `rg -n "0\.3\.3" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing (old number substituted if `main` moved).
+Do: raise PATCH by one from what `main` holds when you branch (0.3.4 → 0.3.5 at the planning base). If `main` moves past your number before merge, rebase and take the next PATCH; all three places always agree.
+Check: `rg -n "0\.3\.4" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing (old number substituted if `main` moved).
 
 **STEP-7 — Docs**
 Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-place-relationship-inverse-label.md` (delete), this plan.
