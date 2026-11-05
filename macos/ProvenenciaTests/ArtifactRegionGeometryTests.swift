@@ -117,6 +117,44 @@ struct ArtifactRegionGeometryTests {
         #expect(ArtifactRegionGeometry.looksLikeCircleRing(resized))
     }
 
+    @Test func aBumpyThirtyTwoPointPolygonIsNotACircle() {
+        let bumpy = (0..<ArtifactRegionGeometry.circleRingCount).map { index -> CGPoint in
+            let angle = 2 * Double.pi * Double(index) / Double(ArtifactRegionGeometry.circleRingCount)
+            let radius = index.isMultiple(of: 2) ? 0.4 : 0.25
+            return CGPoint(x: 0.5 + radius * cos(angle), y: 0.5 + radius * sin(angle))
+        }
+        #expect(ArtifactRegionKind.infer(fromNormalized: bumpy) == .freeform)
+    }
+
+    @Test func aCircleRingOnAWideImageIsStillACircle() {
+        let image = CGRect(x: 0, y: 0, width: 400, height: 200)
+        let ring = ArtifactRegionGeometry.circleRing(
+            centerNormalized: CGPoint(x: 0.5, y: 0.5),
+            throughNormalized: CGPoint(x: 0.7, y: 0.5),
+            imageRect: image
+        )
+        #expect(ring.count == 32)
+        #expect(ArtifactRegionKind.infer(fromNormalized: ring) == .circle)
+    }
+
+    @Test func aSixPointPolygonIsNotAnL() {
+        let hexagon = [
+            CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.5, y: 0.1), CGPoint(x: 0.6, y: 0.3),
+            CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.1, y: 0.5), CGPoint(x: 0.05, y: 0.3),
+        ]
+        #expect(ArtifactRegionKind.infer(fromNormalized: hexagon) == .freeform)
+    }
+
+    @Test func aSixPointAxisAlignedPolygonFromAnotherStartIsNotAnL() {
+        let l = ArtifactRegionGeometry.lShapePoints(
+            kind: .lOpenTopRight,
+            from: CGPoint(x: 0.1, y: 0.1),
+            to: CGPoint(x: 0.7, y: 0.7)
+        )
+        let shifted = Array(l.dropFirst()) + [l[0]]
+        #expect(ArtifactRegionKind.infer(fromNormalized: shifted) == .freeform)
+    }
+
     @Test func resizeCursorFollowsEightDirections() {
         let center = CGPoint(x: 0.5, y: 0.5)
         #expect(ArtifactRegionGeometry.resizeCursorKind(handle: CGPoint(x: 0.9, y: 0.5), centroid: center) == .east)

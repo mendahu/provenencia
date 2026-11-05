@@ -9,6 +9,22 @@ struct CitationLocatorDraftTests {
         #expect(CitationLocatorDraft.decode(RegionFixtures.locatorJSON(ringCount: 256)).region != nil)
     }
 
+    @Test func freeformKindsSurviveAReload() {
+        let bumpy = (0..<32).map { index -> CGPoint in
+            let angle = 2 * Double.pi * Double(index) / 32
+            let radius = index.isMultiple(of: 2) ? 0.4 : 0.25
+            return CGPoint(x: 0.5 + radius * cos(angle), y: 0.5 + radius * sin(angle))
+        }
+        let hexagon = [
+            CGPoint(x: 0.1, y: 0.1), CGPoint(x: 0.5, y: 0.1), CGPoint(x: 0.6, y: 0.3),
+            CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.1, y: 0.5), CGPoint(x: 0.05, y: 0.3),
+        ]
+        for points in [bumpy, hexagon] {
+            let region = CitationLocatorDraft.decode(RegionFixtures.locatorJSON(points: points)).region
+            #expect(region?.kind == .freeform)
+        }
+    }
+
     @Test func pdfRegionStampsPageWhenMissing() {
         var draft = CitationLocatorDraft.artifactOnly()
         let stamped = draft.setRegion(Self.rectangle, capabilities: Self.pdf, viewerPage: 3)
