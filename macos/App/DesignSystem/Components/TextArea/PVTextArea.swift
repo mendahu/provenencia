@@ -374,9 +374,12 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     }
 }
 
-private extension NSView {
+extension NSView {
+    /// The first text view below this view that is not a field editor: the
+    /// shared field editor of a neighbouring `TextField` is an `NSTextView`
+    /// too, and the area's router must never attach to it.
     func firstDescendantTextView() -> NSTextView? {
-        if let textView = self as? NSTextView { return textView }
+        if let textView = self as? NSTextView, !textView.isFieldEditor { return textView }
         for subview in subviews {
             if let found = subview.firstDescendantTextView() { return found }
         }

@@ -86,6 +86,22 @@ struct PVTextAreaTests {
         ])
     }
 
+    @Test func textViewSearchSkipsAFieldEditor() {
+        let fieldEditor = NSTextView()
+        fieldEditor.isFieldEditor = true
+        let plain = NSTextView()
+        let both = NSView()
+        both.addSubview(fieldEditor)
+        both.addSubview(plain)
+        #expect(both.firstDescendantTextView() === plain)
+
+        let only = NSView()
+        let editor = NSTextView()
+        editor.isFieldEditor = true
+        only.addSubview(editor)
+        #expect(only.firstDescendantTextView() == nil)
+    }
+
     @Test func routerStillForwardsEditsToTheOriginalDelegate() {
         let textView = NSTextView()
         let spy = TextViewCommandSpy()
