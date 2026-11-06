@@ -1,7 +1,7 @@
 # Ship log — S13-16 Sources section
 
 **Plan:** [`S13-16-sources-section.md`](S13-16-sources-section.md) · **Branch:** `s13-16-sources-section` · **PR:** #722
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Stopped before STEP-7. No commit, no push, no PR, no gate. STEP-1 to STEP-6 and the STEP-8 strings sit uncommitted and unbuilt in the main checkout on `s13-16-sources-section` (cut from `4c642497`).
@@ -137,3 +137,9 @@ Check: T-13; manual item 3 gains "a Person with more than 50 Sources".
 Files: `macos/App/DesignSystem/Components/Button/PVButton.swift`, `PersonSourcesSection.swift`, `macos/App/DesignSystem/README.md` if it states the rule.
 Do: `PVButtonBody`'s `.link` branch draws `.pvFocusRing(isFocused, cornerRadius: PVRadius.xs)`, always applied and outset by `PVElevation.focusRingWidth` so it clears the glyphs and takes no layout (pad out, ring, pad back). Rewrite the comment at `PVButton.swift:288`. Delete the `.pvFocusRing` on the graph link; `.pvActivatesOnReturn(when:)` stays. The plan's Landed note says every `.link` button gains the ring, by the user's choice.
 Check: `rg 'pvFocusRing' macos/App/Features/Conclusions/PersonSourcesSection.swift` finds nothing; scripts/check-pr.sh PASS. Manual item 4 gains a `.link` button on the provenance sheet.
+
+## Round 2 — fix
+Head `b8786eec`. Gate PASS (orchestrator re-ran). F-12 and F-13 done; read by the orchestrator, no round 3. Deviations: a 60-Source fixture and a "Many Sources" preview added. Orchestrator corrected the stale InkLink row in `DesignSystem/README.md`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: UX-2, PRF-2 · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5 answered · CON miss: none
