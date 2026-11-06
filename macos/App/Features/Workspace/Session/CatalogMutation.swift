@@ -97,6 +97,9 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Sources whose last-updated time this write moved. The session patches
     /// those rows in the cached Sources list with `activity`; it reloads nothing.
     var sourceScopes: [String] = []
+    /// Handles (Person, Event, Place and bridge handles) this write deleted. The
+    /// session ignores it until a page that shows one leaves on it.
+    var deletedHandles: [String] = []
     /// The write's own audit revision and time; revision 0 when it recorded none.
     var activity = CatalogActivity()
 

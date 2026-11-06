@@ -2066,7 +2066,7 @@ struct EvidenceGraphModelTests {
 
     @Test func unpromoteLastRecordNamesTheDeletedHandle() async {
         let (store, model) = await householdModel()
-        store.unpromoteImpactBySubject["s-james"] = CatalogDeleteImpactGroup(
+        let group = CatalogDeleteImpactGroup(
             via: DeleteImpactCascadeVia.deletesHandles.wire,
             kind: "canonical_entity",
             total: 1,
@@ -2076,6 +2076,9 @@ struct EvidenceGraphModelTests {
                     location: WorkspaceLocation(section: .persons, entityId: "h-james")
                 ),
             ]
+        )
+        store.unpromoteImpactBySubject["s-james"] = CatalogUnpromoteImpact(
+            deletes: group, unpromotedBridgeSubjectIDs: []
         )
         await model.beginUnpromote(subjectID: "s-james")
         #expect(model.pendingUnpromote?.deletedHandles?.listed.first?.ref == "PER-7KD45")

@@ -208,6 +208,13 @@ struct CatalogDeleteImpact: Sendable, Equatable {
     var cascades: [CatalogDeleteImpactGroup] = []
 }
 
+/// What `getUnpromoteImpact` reports: the handles an Unpromote deletes and the
+/// bridge Subjects whose accepted claims it takes back, in bridge Subject id order.
+struct CatalogUnpromoteImpact: Sendable, Equatable {
+    var deletes: CatalogDeleteImpactGroup?
+    var unpromotedBridgeSubjectIDs: [String]
+}
+
 struct CatalogDeleteImpactGroup: Sendable, Equatable {
     var via: String
     var kind: String
@@ -1472,8 +1479,9 @@ protocol GenealogyStore: Sendable {
     /// claims of the bridges on its Source that have it as an end. When the claim was a handle's last
     /// accepted member, the handle is deleted too. A Subject with no accepted claim writes nothing.
     func unpromoteSubject(projectDir: String, userID: String, subjectID: String) async throws -> CatalogWriteEffects
-    /// Read-only: handles an Unpromote would delete; nil when every handle stays.
-    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactGroup?
+    /// Read-only: what an Unpromote would remove. `deletes` holds the handles it would delete, nil when
+    /// every handle stays; `unpromotedBridgeSubjectIDs` the filed bridges it takes back.
+    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogUnpromoteImpact
     /// Choose a gallery likeness as the Person's portrait, or clear it with an empty observationID.
     /// A display choice, not evidence.
     func setPreferredLikeness(
