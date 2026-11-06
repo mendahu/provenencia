@@ -98,6 +98,8 @@ In the destination view (pattern: `SourcesListView`, `MetadataView`):
    - Deep id present + found → apply selection/open (model `syncSelection(from:)`).
    - Deep id present + missing after handle ready → `navigation.fallbackToSectionRoot()`.
    - Deep id nil → clear to list root (no second `go(to:)`).
+   - A page whose read reports its entity gone applies `.leavesForSectionRoot(when:)` (a Conclusion page, the Evidence graph, the Source page).
+   - A write that deletes the shown entity applies its effects with `session.apply(_:leavingPage:)`, which leaves the page before the reload, so nothing reads the deleted id.
 
 Catalog reads come from `WorkspaceSession` query handles (Spike 4) — see
 [`add-workspace-place`](../add-workspace-place/SKILL.md). Do **not** add `.task {
