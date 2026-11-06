@@ -286,3 +286,45 @@ func TestLoadFor(t *testing.T) {
 		})
 	}
 }
+
+func TestSortKey(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	if err := Install(c); err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	western := loaded.Profile.Sorted
+	p := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }
+	cases := []struct {
+		name  string
+		value namevalue.Value
+		order []PartOrder
+		want  string
+	}{
+		{"prefix then given", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Mrs."), p("given", "Smith")}}, western, "Smith"},
+		{"prefix dropped", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Mr."), p("given", "John"), p("surname", "Smith")}}, western, "Smith, John"},
+		{"stored order", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Dr."), p("given", "Ann"), p("surname", "Bell")}}, nil, "Ann Bell"},
+		{"prefix only", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Rev.")}}, western, "Rev."},
+		{"surname prefix stays", namevalue.Value{Parts: []namevalue.Part{p("surname_prefix", "van"), p("surname", "Gogh"), p("given", "Vincent")}}, western, "van Gogh, Vincent"},
+		{"suffix stays", namevalue.Value{Parts: []namevalue.Part{p("given", "John"), p("surname", "Smith"), p("suffix", "Jr.")}}, western, "Smith, John Jr."},
+		{"no parts ignores form", namevalue.Value{Form: "Rev. Brown"}, western, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SortKey(tc.value, tc.order); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

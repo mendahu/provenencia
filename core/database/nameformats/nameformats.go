@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -73,8 +74,8 @@ func (p Profile) Format(name namevalue.Value, style string) string {
 
 // Format joins name's parts by order. An empty order keeps stored order,
 // spaces between parts. No parts returns form. The same order and separators
-// as Swift NameValueDisplay; only Swift decorates (quotes, parentheses). This
-// string is a sort key.
+// as Swift NameValueDisplay; only Swift decorates (quotes, parentheses). The
+// list sort key is SortKey.
 func Format(name namevalue.Value, order []PartOrder) string {
 	if len(name.Parts) == 0 {
 		return strings.TrimSpace(name.Form)
@@ -317,4 +318,25 @@ func LoadID(q Querier, id []byte) (Profile, error) {
 
 func builtinLoaded() Loaded {
 	return Loaded{Key: valuecompare.WesternPattern, Builtin: true}
+}
+
+// sortKeyOmits are the part types a name's list sort key leaves out.
+var sortKeyOmits = []string{namevalue.PartTypePrefix}
+
+// SortKey is a name's list sort key: its parts joined in order, without
+// honorific prefixes unless nothing else remains. form is never a sort key.
+func SortKey(name namevalue.Value, order []PartOrder) string {
+	if len(name.Parts) == 0 {
+		return ""
+	}
+	var kept []namevalue.Part // a new slice; name.Parts is never changed
+	for _, part := range name.Parts {
+		if !slices.Contains(sortKeyOmits, part.Type) {
+			kept = append(kept, part)
+		}
+	}
+	if len(kept) == 0 {
+		kept = name.Parts
+	}
+	return strings.TrimSpace(Format(namevalue.Value{Parts: kept}, order))
 }
