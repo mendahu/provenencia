@@ -90,7 +90,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-10-26: conflict brackets ignore multi-cardinality (note deleted 2026-11-04; landed #713) | S14-30 | — |
 | Dogfood 2026-10-15: new-subject card Tab skips the description (note deleted 2026-11-05; landed #718) | S14-31 | — |
 | Dogfood 2026-10-15: place relationship rows lack the inverse label (note deleted 2026-11-05; landed #720) | S14-32 | — |
-| [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) | S14-33 | — |
+| Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted 2026-11-06; landed #723) | S14-33 | — |
 | [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
 | [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) | S14-35 | — |
 | [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-37 | S14-D8 |
@@ -176,7 +176,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-30 | Conflict brackets honour cardinality | 7c | Ochre conflict marks only for single-cardinality Properties; multiple rows of a multiple Property are not a conflict | — | — | [S14-30-conflict-brackets-honour-cardinality.md](prs/S14-30-conflict-brackets-honour-cardinality.md) | Landed #713 |
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
-| S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Planned |
+| S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |

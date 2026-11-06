@@ -1,6 +1,6 @@
 # S14-33 — A bridge between two handles files when it is made
 
-**Status:** Planned
+**Status:** Landed #723 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the bridge card already shows membership when its bridge is filed; this PR only makes the engine file it sooner)
