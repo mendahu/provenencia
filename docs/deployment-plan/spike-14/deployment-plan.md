@@ -136,7 +136,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) Tab into a text area is kit-wide.** The kit gives the mechanism: a `PVInput` and a `PVTextArea` in one form are wrapped in `PVTabPair`, so Tab and Shift-Tab move between them. S14-31 wires every pair in the app; a new pair is wrapped the same way (user, 2026-11-05). Binds S14-31.
 - **(Batch 7) Place relationship rows use the inverse label on the far end.** Composer place-relationship lines read `part_of` / Contains and `succeeded_by` / Succeeded by which end is viewed, matching the Place conclusion page ("Succeeded", not "preceded by": user, 2026-11-05). Copy from L10n (product place terms have no vocabulary `Inverse`). Binds S14-32.
 - **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
-- **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts and strip leading title-registry words from a parts-less label fallback, so "Mrs. Smith" sorts with Smith. Go owns list order. Binds S14-34.
+- **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts, so "Mrs. Smith" sorts with Smith. Go owns list order. The working-label fallback is not stripped of titles: no code path writes a Person label (descoped by the user, 2026-11-06). Binds S14-34.
 - **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
 - **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI (composer checkbox, Properties create, Conclusion display). Researcher-creatable like `text` and `integer`. Storage column vs reusing `value_integer` is decided in `plan-pr` (dedicated column preferred in the note). Binds S14-36, S14-37.
 
@@ -178,7 +178,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
 | S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
-| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix parts and leading title words on the label fallback | — | — | — | Scoped |
+| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Draft |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |
 | S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties; composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
@@ -539,10 +539,10 @@ One PR (user, 2026-11-01).
 
 #### S14-34 — Persons sort ignores honorifics
 
-**Ships.** `personSortKey` / sorted name format omits `prefix` parts for order, and the parts-less label fallback strips leading `NameTitleRegistry`-equivalent titles in Go so "Mrs. Smith" and "Mr. John Smith" sort with Smith. Tests in `conclusionheaders` / `nameformats`. Go only for order; display title unchanged unless it already shared the sorted style.
-**Not this PR.** Changing how titles display; surname-from-"Mrs. Smith" parsing in the name draft.
+**Ships.** `personSortKey` leaves `prefix` parts out of the Persons list key, so "Mrs. Smith" and "Mr. John Smith" sort with Smith; a name of only prefix parts keeps them. Tests in `conclusionsummaries`. Go only; display title unchanged.
+**Not this PR.** Changing how titles display; surname-from-"Mrs. Smith" parsing in the name draft. Stripping titles from the working-label fallback (descoped 2026-11-06).
 **Check.** Bar outcome 29.
-**Context.** Working rule "Persons list sort omits honorific prefixes"; [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md); `conclusionheaders/order.go`, `nameformats`.
+**Context.** Working rule "Persons list sort omits honorific prefixes"; [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md); `core/database/conclusionsummaries/order.go`.
 
 #### S14-35 — Wider history jump menu
 
