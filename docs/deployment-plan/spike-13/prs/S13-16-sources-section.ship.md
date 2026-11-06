@@ -125,6 +125,8 @@ Round-1 Fix-now blockers and majors: MNT-1 to MNT-6 and UX-1 Resolved by their r
 
 **To user, answered (2026-11-05):** SEC-2: fold Source rows at 50. MNT-17: the ring goes in the kit, on every `.link` button. UX-2: keep as planned, Follow-up. UX-3, UX-5: dropped, no record.
 
+**Follow-ups, answered (2026-11-06):** UX-2: dropped, no record. PRF-2: Later PR, written into S13-27's map scope entry as a batch read, `Graph.EvidenceGraphs`, with timings at 50 and 65 graphs. This PR is the first screen on the claims read, and no timing was taken here; S13-27's check takes it.
+
 ### Fix plan 2
 
 **F-12 — Fold the Source rows at 50** (from SEC-2, SEC-1)
@@ -152,4 +154,4 @@ Check: test passes locally; scripts/check-pr.sh PASS; CI green.
 Head `a5bd4ab5`. Gate PASS (orchestrator re-ran). F-14 done; no product change.
 
 ## Result
-Gate PASS · CI green on `b5cd9f33` · open: none · follow-ups: UX-2, PRF-2 · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5 answered · CON miss: none
+Gate PASS · CI green on `b5cd9f33` · open: none · follow-ups: none (UX-2 dropped; PRF-2 to S13-27) · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5, PRF-2 answered · CON miss: none
