@@ -9554,12 +9554,20 @@ enum L10n {
             ), title)
         }
 
-        static func sourcesUnpromoteAccessibility(name: String) -> String {
+        static func sourcesUnpromoteAccessibility(graph: String, subject: String, ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.sources.unpromoteAccessibility",
-                defaultValue: "Unpromote %@",
-                comment: "Spoken label of the Unpromote button on a record's line on a Person's Sources section; the argument is the record's name"
-            ), name)
+                defaultValue: "Unpromote %1$@, record %2$@, %3$@",
+                comment: "Spoken label of the Unpromote button on a record's line on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref"
+            ), graph, subject, ref)
+        }
+
+        static func sourcesPersonDeletedAnnouncement(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.personDeletedAnnouncement",
+                defaultValue: "%@ deleted.",
+                comment: "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref"
+            ), ref)
         }
 
         static func sourcesOpenGraph(graph: String, subject: String, ref: String) -> String {

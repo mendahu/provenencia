@@ -72,11 +72,17 @@ struct PersonSourcesSection: View {
     /// Writes the Unpromote. When the write deleted this person, the app leaves for the Persons
     /// list before the session applies the effects, so nothing reloads a handle that is gone.
     private func confirm() async -> Bool {
-        await unpromote.confirm(
+        // The ref is read before the write closes the confirm; it is the person's own row of the preflight.
+        let deletedRef = unpromote.pending?.deletedHandles?.listed.first { $0.id == entityId }?.ref
+        return await unpromote.confirm(
             session: session,
             userID: userID,
             beforeApply: { effects in
-                if effects.deletedHandles.contains(entityId) { navigation.fallbackToSectionRoot() }
+                guard effects.deletedHandles.contains(entityId) else { return }
+                navigation.fallbackToSectionRoot()
+                if let deletedRef {
+                    AccessibilityAnnouncement.post(L10n.Conclusions.sourcesPersonDeletedAnnouncement(ref: deletedRef))
+                }
             }
         ) != nil
     }
@@ -338,7 +344,7 @@ private struct PersonSourcesLineView: View {
             .pvActivatesOnReturn(
                 when: focused.wrappedValue == .unpromote(claimID: line.id) && !unpromoteDisabled
             ) { beginUnpromote(line) }
-            .accessibilityLabel(L10n.Conclusions.sourcesUnpromoteAccessibility(name: line.subjectName))
+            .accessibilityLabel(line.unpromoteAccessibilityLabel)
             .accessibilityIdentifier("persons.detail.sources.unpromote.\(line.id)")
         }
         .accessibilityElement(children: .contain)

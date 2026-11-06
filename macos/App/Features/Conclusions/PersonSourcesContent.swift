@@ -48,6 +48,8 @@ struct PersonSourcesContent: Equatable {
         var subjectRef: String
         /// "Open Household 214, record Johann Weber, CPR-7Q2KD".
         var accessibilityLabel: String
+        /// "Unpromote Household 214, record Johann Weber, CPR-7Q2KD".
+        var unpromoteAccessibilityLabel: String
         var location: WorkspaceLocation
     }
 
@@ -89,6 +91,9 @@ struct PersonSourcesContent: Equatable {
                     subjectName: subjectName,
                     subjectRef: claim.subject.ref,
                     accessibilityLabel: L10n.Conclusions.sourcesOpenGraph(
+                        graph: title, subject: subjectName, ref: claim.subject.ref
+                    ),
+                    unpromoteAccessibilityLabel: L10n.Conclusions.sourcesUnpromoteAccessibility(
                         graph: title, subject: subjectName, ref: claim.subject.ref
                     ),
                     location: SourcesListNavigation.canvasLocation(

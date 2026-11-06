@@ -74,6 +74,10 @@ struct PersonSourcesContentTests {
         #expect(first.title == .name("Hamburg census 1867"))
         #expect(first.location == SourcesListNavigation.pageLocation(sourceId: "src-1", ref: "SRC-9TQ2M", title: "Hamburg census 1867"))
         #expect(first.accessibilityLabel == "Hamburg census 1867, Census, date not recorded, SRC-9TQ2M")
+        #expect(
+            first.lines[0].unpromoteAccessibilityLabel
+                == "Unpromote Household 214, record jw, CPR-7Q2KD"
+        )
         #expect(first.lines[1].graphRef == "EVG-5MD8R")
         #expect(first.lines[1].graphID == "g-388")
         #expect(first.lines[1].location == SourcesListNavigation.canvasLocation(

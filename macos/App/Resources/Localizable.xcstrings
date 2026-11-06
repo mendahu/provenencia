@@ -133,14 +133,26 @@
         }
       }
     },
-    "conclusions.sources.unpromoteAccessibility": {
-      "comment": "Spoken label of the Unpromote button on a record's line on a Person's Sources section; the argument is the record's name",
+    "conclusions.sources.personDeletedAnnouncement": {
+      "comment": "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unpromote %@"
+            "value": "%@ deleted."
+          }
+        }
+      }
+    },
+    "conclusions.sources.unpromoteAccessibility": {
+      "comment": "Spoken label of the Unpromote button on a record's line on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote %1$@, record %2$@, %3$@"
           }
         }
       }
