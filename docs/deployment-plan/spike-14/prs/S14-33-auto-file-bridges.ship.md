@@ -110,4 +110,4 @@ Check: `scripts/check-plan-docs.py` clean; scripts/check-pr.sh PASS.
 Head `10e34e8f`, then `main` merged (`1f5b38ab`; only S13-37's plan docs had landed). Gate PASS on the merged head. F-5 done: `TestLargeSourceBudgets/second_part_of_from_the_city` 2.87 s red, 144 ms green; `TestFiledPartOfReprojectsEventsOnlyWhenARowMoved` pins that a part_of that moves a row still rewrites its event's document, and ran red on its second half. F-6 done: the new map row is S14-38. PRF-5 Resolved by the orchestrator's read of the diff; there is no round 3, so no reviewer has seen F-5. MNT-3 Resolved.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: S14-38 (FU-1), `promote-ranking.md` (PRF-3, PRF-6), `structural-debt.md` (PRF-4, FU-3, FU-4) · to user: PRF-3, PRF-6, MNT-4, all answered 2026-11-06 · CON miss: CON-4
+Gate PASS · CI green (Go tests, macOS tests, localizable on `2bc45987`) · open: none · follow-ups: S14-38 (FU-1), `promote-ranking.md` (PRF-3, PRF-6), `structural-debt.md` (PRF-4, FU-3, FU-4) · to user: PRF-3, PRF-6, MNT-4, all answered 2026-11-06 · CON miss: CON-4
