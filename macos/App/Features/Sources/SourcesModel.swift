@@ -206,7 +206,7 @@ final class SourcesModel {
     // MARK: Derived
 
     func typeLabel(for source: CatalogSource) -> String {
-        types.first { $0.id == source.sourceTypeID }?.label ?? ""
+        types.label(forTypeID: source.sourceTypeID) ?? ""
     }
 
     func typeIconKey(for source: CatalogSource) -> String? {

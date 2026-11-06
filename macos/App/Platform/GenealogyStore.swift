@@ -1120,6 +1120,11 @@ extension [CatalogSourceType] {
     func iconKey(forTypeID typeID: String?) -> String? {
         first { $0.id == typeID }?.iconKey
     }
+
+    /// The `label` of the type with this id; nil when the id is nil or unlisted.
+    func label(forTypeID typeID: String?) -> String? {
+        first { $0.id == typeID }?.label
+    }
 }
 
 /// One `source_type_metadata_fields` join row: a field a type suggests, in

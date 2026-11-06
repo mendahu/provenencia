@@ -42,7 +42,18 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         switch self {
         case .family: return .personFamily(project: project, entityId: entityId)
         case .timeline: return .personEvents(project: project, entityId: entityId)
-        case .vitals, .gallery, .sources: return nil
+        case .sources: return .personClaims(project: project, entityId: entityId)
+        case .vitals, .gallery: return nil
+        }
+    }
+
+    /// Lists the section reads beside its own query (a catalog-wide vocabulary the
+    /// rows label themselves with). Only the place warms them; the section reads
+    /// each with `session.queryHandle`.
+    func supportingQueryKeys(project: ProjectKey, entityId: String) -> [CatalogQueryKey] {
+        switch self {
+        case .sources: return [.sourceTypesList(project: project)]
+        case .vitals, .family, .timeline, .gallery: return []
         }
     }
 
@@ -98,7 +109,8 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     var graphId: String?
     var fieldId: String?
     var typeId: String?
-    /// Subject scoped into the citation composer when `sourceSurface == .citationComposer`.
+    /// The Subject a graph or the citation composer opens on: a graph selects and
+    /// centers it, the composer scopes to it (`sourceSurface == .citationComposer`).
     var subjectId: String?
     /// Existing Citation when editing from a property row; nil for create.
     var citationId: String?

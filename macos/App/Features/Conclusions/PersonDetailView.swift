@@ -61,11 +61,7 @@ private struct PersonDetailSections: View {
         case .timeline:
             PersonTimelineSection(entityId: entityId)
         case .sources:
-            PVEmptyState(
-                glyph: section.glyph,
-                title: section.label,
-                message: L10n.Conclusions.pageSectionLater(L10n.string(section.label))
-            )
+            PersonSourcesSection(entityId: entityId)
         }
     }
 }

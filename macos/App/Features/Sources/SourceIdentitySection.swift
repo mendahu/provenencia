@@ -39,7 +39,7 @@ final class SourceIdentitySection {
 
     /// Resting type label from committed `sourceTypeID`.
     var typeLabel: String {
-        types.first { $0.id == sourceTypeID }?.label ?? ""
+        types.label(forTypeID: sourceTypeID) ?? ""
     }
 
     var typeComboOptions: [PVComboBoxOption] {

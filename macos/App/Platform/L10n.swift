@@ -9249,14 +9249,6 @@ enum L10n {
             comment: "Shown beside a small spinner while a record page re-reads its data"
         )
 
-        static func pageSectionLater(_ section: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.section.later",
-                defaultValue: "%@ arrives in a later version of Provenencia.",
-                comment: "Message of a Person page section that is not built yet; argument is the section name"
-            ), section)
-        }
-
         static func pageSectionLeaf(_ title: String, _ section: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.section.leaf",
@@ -9493,6 +9485,92 @@ enum L10n {
             defaultValue: "No events yet",
             comment: "Title of the empty Timeline section of a Person page"
         )
+
+        static let sourcesColumnSource = LocalizedStringResource(
+            "conclusions.sources.columnSource",
+            defaultValue: "Source",
+            comment: "Column heading over the title of each Source on a Person's Sources section"
+        )
+
+        static let sourcesColumnType = LocalizedStringResource(
+            "conclusions.sources.columnType",
+            defaultValue: "Type",
+            comment: "Column heading over the type of each Source on a Person's Sources section"
+        )
+
+        static let sourcesColumnDate = LocalizedStringResource(
+            "conclusions.sources.columnDate",
+            defaultValue: "Date",
+            comment: "Column heading over the publication date of each Source on a Person's Sources section"
+        )
+
+        static let sourcesColumnRef = LocalizedStringResource(
+            "conclusions.sources.columnRef",
+            defaultValue: "Ref",
+            comment: "Column heading over the ref of each Source on a Person's Sources section"
+        )
+
+        static let sourcesDateNone = LocalizedStringResource(
+            "conclusions.sources.dateNone",
+            defaultValue: "—",
+            comment: "Date cell of a Source row on a Person's Sources section while Sources have no publication date"
+        )
+
+        static let sourcesDateNotRecorded = LocalizedStringResource(
+            "conclusions.sources.dateNotRecorded",
+            defaultValue: "date not recorded",
+            comment: "Spoken in place of the date of a Source row on a Person's Sources section"
+        )
+
+        static let sourcesEmptyMessage = LocalizedStringResource(
+            "conclusions.sources.emptyMessage",
+            defaultValue: "This person has no promoted records.",
+            comment: "Message of the empty Sources section of a Person page"
+        )
+
+        static let sourcesEmptyTitle = LocalizedStringResource(
+            "conclusions.sources.emptyTitle",
+            defaultValue: "No records",
+            comment: "Title of the empty Sources section of a Person page"
+        )
+
+        static let sourcesErrorTitle = LocalizedStringResource(
+            "conclusions.sources.errorTitle",
+            defaultValue: "Sources could not be read",
+            comment: "Title of the Callout shown when a Person's Sources section could not be read"
+        )
+
+        static func sourcesOpenSource(_ title: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.openSource",
+                defaultValue: "Open %@",
+                comment: "Spoken label of a Source's title link on a Person's Sources section; argument is the Source title"
+            ), title)
+        }
+
+        static func sourcesOpenGraph(graph: String, subject: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.openGraph",
+                defaultValue: "Open %1$@, record %2$@, %3$@",
+                comment: "Spoken label of a record's Evidence graph link on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref"
+            ), graph, subject, ref)
+        }
+
+        static func sourcesRowAccessibility(title: String, type: String, date: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.rowAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@, %4$@",
+                comment: "Spoken label of a Source row on a Person's Sources section; arguments are the title, the type, the date and the ref"
+            ), title, type, date, ref)
+        }
+
+        static func sourcesRowAccessibilityUntyped(title: String, date: String, ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.rowAccessibilityUntyped",
+                defaultValue: "%1$@, %2$@, %3$@",
+                comment: "Spoken label of a Source row with no known type on a Person's Sources section; arguments are the title, the date and the ref"
+            ), title, date, ref)
+        }
 
         static let timelineEmptyMessage = LocalizedStringResource(
             "conclusions.timeline.emptyMessage",

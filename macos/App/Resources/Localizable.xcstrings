@@ -1,6 +1,162 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "conclusions.sources.columnDate": {
+      "comment": "Column heading over the publication date of each Source on a Person's Sources section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date"
+          }
+        }
+      }
+    },
+    "conclusions.sources.columnRef": {
+      "comment": "Column heading over the ref of each Source on a Person's Sources section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ref"
+          }
+        }
+      }
+    },
+    "conclusions.sources.columnSource": {
+      "comment": "Column heading over the title of each Source on a Person's Sources section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "conclusions.sources.columnType": {
+      "comment": "Column heading over the type of each Source on a Person's Sources section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type"
+          }
+        }
+      }
+    },
+    "conclusions.sources.dateNone": {
+      "comment": "Date cell of a Source row on a Person's Sources section while Sources have no publication date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "—"
+          }
+        }
+      }
+    },
+    "conclusions.sources.dateNotRecorded": {
+      "comment": "Spoken in place of the date of a Source row on a Person's Sources section",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "date not recorded"
+          }
+        }
+      }
+    },
+    "conclusions.sources.emptyMessage": {
+      "comment": "Message of the empty Sources section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person has no promoted records."
+          }
+        }
+      }
+    },
+    "conclusions.sources.emptyTitle": {
+      "comment": "Title of the empty Sources section of a Person page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No records"
+          }
+        }
+      }
+    },
+    "conclusions.sources.errorTitle": {
+      "comment": "Title of the Callout shown when a Person's Sources section could not be read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources could not be read"
+          }
+        }
+      }
+    },
+    "conclusions.sources.openGraph": {
+      "comment": "Spoken label of a record's Evidence graph link on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %1$@, record %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "conclusions.sources.openSource": {
+      "comment": "Spoken label of a Source's title link on a Person's Sources section; argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open %@"
+          }
+        }
+      }
+    },
+    "conclusions.sources.rowAccessibility": {
+      "comment": "Spoken label of a Source row on a Person's Sources section; arguments are the title, the type, the date and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@, %4$@"
+          }
+        }
+      }
+    },
+    "conclusions.sources.rowAccessibilityUntyped": {
+      "comment": "Spoken label of a Source row with no known type on a Person's Sources section; arguments are the title, the date and the ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
     "designSystem.field.requiredMarker": {
       "comment": "Marks a required PVField as required, shown beside its label",
       "extractionState": "manual",
@@ -16800,18 +16956,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refreshing"
-          }
-        }
-      }
-    },
-    "conclusions.section.later": {
-      "comment": "Message of a Person page section that is not built yet; argument is the section name",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ arrives in a later version of Provenencia."
           }
         }
       }
