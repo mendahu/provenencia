@@ -1,7 +1,7 @@
 # Ship log — S13-16 Sources section
 
 **Plan:** [`S13-16-sources-section.md`](S13-16-sources-section.md) · **Branch:** `s13-16-sources-section` · **PR:** #722
-**State:** fixing 3 — manual check
+**State:** ready
 
 ## Round 0 — implement
 Stopped before STEP-7. No commit, no push, no PR, no gate. STEP-1 to STEP-6 and the STEP-8 strings sit uncommitted and unbuilt in the main checkout on `s13-16-sources-section` (cut from `4c642497`).
@@ -172,6 +172,10 @@ Do:
 - `docs/macos-client-patterns.md:267`: the header slot is scrolling or pinned, no flag. Remove any other line that says the header compacts in `docs/macos-client-patterns.md` and the `DesignSystem` READMEs.
 - The S13-16 plan's Landed note gains one line: the compact header was removed at the user's call during the manual check, reversing S13-10 D-17. Do not edit archived briefs, `completed.md`, or S13-10's or other landed plans.
 Check: `rg -n 'isScrolled|compactOffset|compactMinOverflow|HeaderCompact|display\(compact|measuredBand' macos/App macos/ProvenenciaTests` prints nothing; scripts/check-pr.sh PASS.
+
+## Manual check — result
+
+Head `0cce9135`. Gate PASS (orchestrator re-ran). F-15 done. `PVPageColumnsMetrics.scrollSpace` stays: `PersonTimelineSection.swift:483` measures its rows in it. No review round: the user asked for the removal, and it only deletes code. The app was not run.
 
 ## Result
 Gate PASS · CI green on `b5cd9f33` · open: none · follow-ups: none (UX-2 dropped; PRF-2 to S13-27) · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5, PRF-2 answered · CON miss: none
