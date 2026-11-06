@@ -398,15 +398,7 @@ final class PromoteModel {
     /// The Source graph as a snapshot. Nil
     /// when the graph read isn't ready (never loaded, or failed with nothing cached).
     private func graphSnapshot() async -> EvidenceGraphSnapshot? {
-        let rows: EvidenceGraphRows? = await session.readyValue(graphKey)
-        let properties: PropertiesSnapshot? = await session.readyValue(propertiesKey)
-        let rules: [CatalogConnectRule]? = await session.readyValue(rulesKey)
-        guard let rows else { return nil }
-        return EvidenceGraphSnapshot.build(
-            rows: rows,
-            types: properties?.types ?? [],
-            rules: rules ?? []
-        )
+        await session.evidenceGraphSnapshot(graphID: entry.graphID)
     }
 
     /// The snapshot's Subjects as rows read them.

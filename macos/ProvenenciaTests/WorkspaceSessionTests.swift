@@ -47,6 +47,42 @@ struct WorkspaceSessionTests {
         #expect(session.evidenceGraphsBySource.keys.sorted() == ["s1"])
     }
 
+    @Test func evidenceGraphSnapshotReadsTheThreeKeys() async throws {
+        let store = FakeStore()
+        store.subjectTypesByProject[projectDir] = [
+            CatalogSubjectType(
+                id: "t-person", key: "person", origin: "provenencia", label: "Person", description: "",
+                refPrefix: "PER", candidateRefPrefix: "CPR"
+            ),
+        ]
+        store.subjectsByGraph["g1"] = [
+            CatalogSubject(id: "s1", ref: "CPR-1", sourceID: "src", subjectTypeID: "t-person", label: "Ada", description: ""),
+        ]
+        for (index, id) in ["s1", "s2"].enumerated() {
+            store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: Int64(index * 3), gridY: 0)
+        }
+        let session = makeSession(store: store)
+
+        let snapshot = try #require(await session.evidenceGraphSnapshot(graphID: "g1"))
+        #expect(snapshot.subjects.map(\.id) == ["s1"])
+
+        // A stale graph key is read again.
+        store.subjectsByGraph["g1"] = [
+            CatalogSubject(id: "s1", ref: "CPR-1", sourceID: "src", subjectTypeID: "t-person", label: "Ada", description: ""),
+            CatalogSubject(id: "s2", ref: "CPR-2", sourceID: "src", subjectTypeID: "t-person", label: "Bea", description: ""),
+        ]
+        let graphKey = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g1")
+        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.markStale()
+        let reloaded = try #require(await session.evidenceGraphSnapshot(graphID: "g1"))
+        #expect(Set(reloaded.subjects.map(\.id)) == ["s1", "s2"])
+
+        // Rows that cannot be read give nothing.
+        struct Boom: Error {}
+        let failing = FakeStore()
+        failing.listSubjectsError = Boom()
+        #expect(await makeSession(store: failing).evidenceGraphSnapshot(graphID: "g1") == nil)
+    }
+
     @Test func evidenceGraphsReadFollowsTheHandle() async {
         struct TestFailure: Error {}
         let session = makeSession()
