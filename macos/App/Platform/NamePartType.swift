@@ -34,7 +34,7 @@ enum NamePartType: String, CaseIterable, Sendable {
     }
 
     /// How a displayed name decorates a word of this type; nil shows it as typed.
-    /// Display only: Go's `nameformats.Format` sort key never decorates.
+    /// Display only: Go's `nameformats.Profile.SortKey` never decorates.
     var decoration: NamePartDecoration? {
         switch self {
         case .nick: NamePartDecoration(format: L10n.NameValue.displayNick, emphasized: false, spoken: L10n.NameValue.a11yNick)
