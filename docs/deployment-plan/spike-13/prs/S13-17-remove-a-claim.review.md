@@ -1,6 +1,6 @@
 # Review — S13-17 Remove a claim
 
-**Verdict:** Reshape — Not ready (round 1, on the draft). Reshaped with the user's answer of 2026-11-05; every finding Fixed.
+**Verdict:** Ready after the refresh rounds below (2026-11-06); no blocker open. Earlier: Reshape — Not ready (round 1, on the draft). Reshaped with the user's answer of 2026-11-05; every finding Fixed.
 **Rounds:** 1 (round 2 runs when S13-37 is planned, S13-16 has landed and board S13-D6 is agreed). **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -88,3 +88,50 @@ A fresh reviewer checked the refresh against S13-16's types and the board. **Ver
 - **R-4 · major · The list has no input for the control or its focus.** Fixed. `PersonSourcesList` gets `unpromote:`, `unpromoteDisabled:` and a `FocusState<PersonSourcesFocus?>` binding (D-10).
 - **R-5 · major · T-8's signature cannot compute the focus.** Fixed. `outcome(effects:entityId:removed:in:)` takes the removed claim and the content, and gains two more cases.
 - **R-6 · major · The brief's inventory still names the IconButton.** Fixed. The brief's RC-1 and its Remove inventory row now give the agreed ghost Button with the glyph and the word.
+
+## Refresh round 1 — S13-37 and S13-16 landed, 2026-11-06
+
+The plan was refreshed against `main` @ `f48846c3`: every Current state row re-read, and the Decisions rechecked. The refresh itself added D-11 (section switches push history entries, so RC-7's "Back does not return" needed more than D-7) and the failed-preflight rule in D-3.
+
+**Verdicts:** maintainability (Opus) Fits with changes; executability (Sonnet) Not ready.
+
+### To user
+
+- **M-3 · Where the shared Unpromote confirm lives.** **Answered 2026-11-06: split into a recipe.** D-2 adds `Recipes/UnpromoteConfirm/PVUnpromoteConfirm.swift` with neutral props, and the flow sits in `Features/Catalog/Unpromote/`. No rule is bent.
+
+### Maintainability
+
+- **M-1 · blocker · Fourth hand-rolled code match, no parity.** Fixed. D-11 adds `CoreInvokeError.code` and `ConclusionDetailsError`; the three code-only matches move on; T-10 is the parity row. `apperr.KindNotFound` is rejected in D-11: an engine change this PR does not need.
+- **M-2 · blocker · The session reloads a deleted handle's keys.** Fixed. D-7 leaves before `apply` through `confirm`'s `beforeApply`, so `.evict` drops the keys and nothing reloads. `onLocationCommit` runs `session.apply(location:)` in the same call. T-5 proves it.
+- **M-4 · major · Third hand-written leave.** Fixed. D-11 adds `leavesForSectionRoot(when:)`; the graph and the Source page move on; the `.failed` branch draws the loading page.
+- **M-5 · major · `open`'s closure and `orders:`.** Fixed. D-1 takes `graphID:`; the flow reads the snapshot and `session.nameFormat`. D-4's `query` covers a stale key (T-7).
+- **M-6 · major · `UnpromoteResult`, `leaves(...)`.** Fixed. `confirm` returns `CatalogWriteEffects?`; both wrappers go.
+- **M-7 · major · Focus after a sheet closes.** Fixed. D-10 uses `FocusClaim.claim`.
+- **M-8 · minor · Focus state and the walk.** Fixed. The list keeps its focus; the walk is `PersonSourcesContent.lineAfterRemoving(claimID:)`.
+- **M-9 · minor · `isOpening || isRunning`.** Fixed. D-1 has `isBusy` over a private open count.
+- **M-10 · minor · `userID` on the shared context.** Fixed. D-8 passes it through `PersonDetailSections`, which supersedes round 1 M-7.
+- **M-11 · minor · Next adds and skills.** Fixed. The S13-28 clause goes; `add-workspace-location` is back.
+
+### Executability
+
+- **X-1 · blocker · No route for `userID`.** Fixed by M-10: the route no longer goes through the private page body.
+- **X-2 · blocker · The focus hook cannot see its state.** Fixed by M-8: `pendingFocus`, `.onChange` and the confirm are all on `PersonSourcesList`.
+- **X-3 · major · Fixture and write path.** Fixed. STEP-1 names the session, seeds, `nextWriteEffects`, the two `withState` blocks and the `graphRows` move.
+- **X-4 · major · L10n shapes and comments.** Fixed. Strings gives keys, types, values and comments.
+- **X-5 · major · Focus signatures.** Fixed. D-10 opens with them. A removed line is never the only visible one of a folded Source: a fold shows five.
+- **X-6 · major · Undecided edges.** Fixed. A Reach row accepts the unmount, and the walk's fold case is in T-8.
+- **X-7 · minor · `readyValue` and Promote.** Fixed. D-4 says Promote keeps its `reread` and its keys.
+- **X-8 · minor · Stale doc.** Fixed. STEP-8 and the DoD name `docs/macos-client-patterns.md` and `CatalogWriteEffects.deleted`'s comment.
+- **X-9 · minor · Smaller choices.** Fixed for the preview (D-10). The AC-2.6 transition stays a manual check: T-9 tests the predicate, and the modifier is two lines.
+
+## Refresh round 2 — 2026-11-06
+
+**Verdicts:** maintainability (Opus) Fits with changes; executability (Sonnet) Ready with changes. The refresh-round-1 answers held, except that two left new blockers. Every finding is Fixed, and the two-round cap is reached.
+
+- **M-1 · blocker · D-4's warming read turns two Promote tests red.** Fixed. D-4 says Promote's read now warms, a real visit is unchanged because the place warms the keys, and T-11 rewrites both tests onto a failed rows load. The Stop clause goes.
+- **M-2 / X-1 · blocker · Steps ran before what they depend on.** Fixed. The order is now snapshot read, flow with D-3, then recipe and message; T-1's `item.message` assertion moves to STEP-3.
+- **X-2 · major · The Source page's `model.sync`.** Fixed. D-11 keeps it in its own `.onChange`.
+- **X-3 · major · STEP-6's `rg` output.** Fixed. D-11 gives the accessor's form, and the check prints that one line.
+- **X-4 · major · `beforeApply` isolation.** Fixed. D-1 types it `@MainActor`.
+- **X-5 · minor · Row and line inputs.** Fixed in D-10; D-9 adds `.fixedSize()`.
+- **X-6 · minor · Small gaps.** Fixed. The leave modifier's form, "visible line", STEP-2's files and T-5's call are named.
