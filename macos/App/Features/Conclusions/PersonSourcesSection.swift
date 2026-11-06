@@ -131,9 +131,10 @@ struct PersonSourcesList: View {
     @FocusState private var focus: PersonSourcesFocus?
     /// The line to focus once the Unpromote's reload drops the removed one: captured before the
     /// write, so a reload that beats the write's return cannot miss it.
-    @State private var pendingFocus: (claimID: String, target: String?)?
-    /// The record whose Unpromote is open.
-    @State private var unpromotingClaimID: String?
+    @State private var pendingFocus: (subjectID: String, target: String?)?
+    /// The Unpromote button that had the keyboard when its confirm opened, so Keep gives it back.
+    /// Nil after a mouse click, which draws no focus ring.
+    @State private var returnFocus: PersonSourcesFocus?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -145,7 +146,7 @@ struct PersonSourcesList: View {
                     row: row, open: open, expand: { unfold(row) }, focused: $focus,
                     unpromoteDisabled: unpromote.isBusy,
                     beginUnpromote: { line in
-                        unpromotingClaimID = line.id
+                        returnFocus = focus == .unpromote(claimID: line.id) ? focus : nil
                         beginUnpromote(line)
                     }
                 )
@@ -165,20 +166,33 @@ struct PersonSourcesList: View {
             onConfirm: confirmAndTrackFocus
         )
         .onChange(of: content) { _, new in applyPendingFocus(in: new) }
+        .onChange(of: unpromote.pending?.id) { _, id in
+            if id == nil { restoreFocusAfterKeep() }
+        }
     }
 
     /// Notes where focus goes after the removed line, then writes.
     private func confirmAndTrackFocus() {
-        if let claimID = unpromotingClaimID {
-            pendingFocus = (claimID, content.lineAfterRemoving(claimID: claimID))
-        }
+        guard !unpromote.isRunning, let subjectID = unpromote.pending?.id else { return }
+        pendingFocus = (subjectID, content.lineAfterRemoving(subjectID: subjectID))
         Task { if await !confirmUnpromote() { pendingFocus = nil } }
+    }
+
+    /// The confirm closed: after Keep promotion, focus returns to the button that opened it. After a
+    /// write, `applyPendingFocus` places it.
+    private func restoreFocusAfterKeep() {
+        defer { returnFocus = nil }
+        guard pendingFocus == nil, let returnFocus,
+              case .unpromote(let claimID) = returnFocus,
+              content.rows.contains(where: { $0.lines.contains { $0.id == claimID } })
+        else { return }
+        FocusClaim.claim($focus, returnFocus)
     }
 
     /// Moves focus to the next line's Unpromote once the content no longer holds the removed line.
     private func applyPendingFocus(in new: PersonSourcesContent) {
         guard let pending = pendingFocus,
-              !new.rows.contains(where: { $0.lines.contains { $0.id == pending.claimID } })
+              !new.rows.contains(where: { $0.lines.contains { $0.subjectID == pending.subjectID } })
         else { return }
         pendingFocus = nil
         if let target = pending.target {
@@ -321,7 +335,9 @@ private struct PersonSourcesLineView: View {
             .padding(.leading, PVSpacing.space3)
             .disabled(unpromoteDisabled)
             .focused(focused, equals: .unpromote(claimID: line.id))
-            .pvActivatesOnReturn(when: focused.wrappedValue == .unpromote(claimID: line.id)) { beginUnpromote(line) }
+            .pvActivatesOnReturn(
+                when: focused.wrappedValue == .unpromote(claimID: line.id) && !unpromoteDisabled
+            ) { beginUnpromote(line) }
             .accessibilityLabel(L10n.Conclusions.sourcesUnpromoteAccessibility(name: line.subjectName))
             .accessibilityIdentifier("persons.detail.sources.unpromote.\(line.id)")
         }

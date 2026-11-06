@@ -136,13 +136,14 @@ struct PersonSourcesContent: Equatable {
         firstRevealedRowLineID = ConclusionFold.firstRevealed(all, limit: Self.rowFoldLimit, minimumHidden: 1)?.lines.first?.id
     }
 
-    /// The claim id of the line to focus once `claimID`'s line is gone: the next visible line in
-    /// reading order (Sources in order, their visible lines in order), else the previous one, else nil.
-    /// A line folded away is never returned.
-    func lineAfterRemoving(claimID: String) -> String? {
-        let ids = rows.flatMap { $0.lines.map(\.id) }
-        guard let index = ids.firstIndex(of: claimID) else { return nil }
-        if index + 1 < ids.count { return ids[index + 1] }
-        return index > 0 ? ids[index - 1] : nil
+    /// The claim id of the line to focus once the line of Subject `subjectID` is gone: the next
+    /// visible line in reading order (Sources in order, their visible lines in order), else the
+    /// previous one, else nil. A line folded away is never returned. A Subject has one accepted
+    /// claim, so its id names one line.
+    func lineAfterRemoving(subjectID: String) -> String? {
+        let lines = rows.flatMap(\.lines)
+        guard let index = lines.firstIndex(where: { $0.subjectID == subjectID }) else { return nil }
+        if index + 1 < lines.count { return lines[index + 1].id }
+        return index > 0 ? lines[index - 1].id : nil
     }
 }

@@ -117,22 +117,22 @@ struct PersonSourcesContentTests {
     @Test func lineAfterRemoving() {
         let page = content(groups)
         // A middle line: the next one.
-        #expect(page.lineAfterRemoving(claimID: "c1") == "c2")
+        #expect(page.lineAfterRemoving(subjectID: "s1") == "c2")
         // A Source's last line: the first line of the next Source.
-        #expect(page.lineAfterRemoving(claimID: "c2") == "c3")
+        #expect(page.lineAfterRemoving(subjectID: "s2") == "c3")
         // The page's last line: the previous one.
-        #expect(page.lineAfterRemoving(claimID: "c4") == "c3")
+        #expect(page.lineAfterRemoving(subjectID: "s4") == "c3")
         // The only line of the only Source: nothing.
         let only = content([groups[2]])
-        #expect(only.lineAfterRemoving(claimID: "c4") == nil)
-        #expect(page.lineAfterRemoving(claimID: "missing") == nil)
+        #expect(only.lineAfterRemoving(subjectID: "s4") == nil)
+        #expect(page.lineAfterRemoving(subjectID: "missing") == nil)
         // A line folded away is never returned.
         let folded = content([CatalogPersonClaimGroup(
             sourceID: "src", sourceRef: "SRC-1", title: "Adressbuch", sourceTypeID: "type-census",
             claims: (1...9).map { claim("c\($0)", graph: "g\($0)", graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)")) }
         )])
-        #expect(folded.lineAfterRemoving(claimID: "c5") == "c4")
-        #expect(folded.lineAfterRemoving(claimID: "c4") == "c5")
+        #expect(folded.lineAfterRemoving(subjectID: "s5") == "c4")
+        #expect(folded.lineAfterRemoving(subjectID: "s4") == "c5")
     }
 
     @Test func foldPastFiftySources() {
