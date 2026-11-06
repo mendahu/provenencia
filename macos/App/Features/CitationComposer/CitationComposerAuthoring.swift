@@ -672,15 +672,20 @@ enum CitationComposerAuthoring {
             guard let term else { return nil }
             let person = from.typeKey == "person" ? from : to
             let event = from.typeKey == "event" ? from : to
-            return L10n.CitationComposer.roleInTheEvent(
-                person.label,
-                PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.role),
-                event.label
+            return ConnectionSentenceRegistry.sentence(
+                kind: .participation,
+                endpointA: person.label,
+                endpointB: event.label,
+                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.role),
+                termKey: term.productKey,
+                eventType: event.eventTypeKey
             )
         case EvidenceBridgeKind.location.rawValue:
             let event = from.typeKey == "event" ? from : to
             let place = from.typeKey == "place" ? from : to
-            return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
+            return ConnectionSentenceRegistry.sentence(
+                kind: .location, endpointA: event.label, endpointB: place.label, term: nil
+            )
         case EvidenceBridgeKind.placeRelationship.rawValue:
             guard let term, let key = term.productKey,
                   ConnectionSentenceRegistry.lookup(kind: .placeRelationship, term: key, eventType: nil) != nil

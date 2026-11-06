@@ -1796,6 +1796,37 @@ struct CitationComposerModelTests {
         #expect(readyBridge(theirs, termID: "term-user-parent")?.endATitle == "Mine")
     }
 
+    @Test func everyReadingMatchesTheCard() {
+        var participation = termVocabulary(
+            propertyKey: "role", terms: [(key: "witness", label: "Witness", origin: CatalogOrigin.provenencia)],
+            endTypeKey: "person", endLabels: (a: "Alice", b: "The wedding")
+        )
+        participation.subjectsByID["b"] = .init(
+            id: "b", label: "The wedding", ref: "b", typeID: "t", typeKey: "event", eventTypeKey: "marriage"
+        )
+        #expect(
+            readyBridge(participation, termID: "term-provenencia-witness")?.reading
+                == ConnectionSentenceRegistry.sentence(
+                    kind: .participation,
+                    endpointA: "Alice",
+                    endpointB: "The wedding",
+                    term: L10n.string(L10n.PropertyTerm.roleWitness),
+                    termKey: "witness",
+                    eventType: "marriage"
+                )
+        )
+        var location = termVocabulary(
+            propertyKey: "role", terms: [], endTypeKey: "event", endLabels: (a: "The wedding", b: "Leeds")
+        )
+        location.subjectsByID["b"] = .init(id: "b", label: "Leeds", ref: "b", typeID: "t", typeKey: "place")
+        #expect(
+            readyBridge(location, termID: "")?.reading
+                == ConnectionSentenceRegistry.sentence(
+                    kind: .location, endpointA: "The wedding", endpointB: "Leeds", term: nil
+                )
+        )
+    }
+
     @Test func aResearchersPlaceTermKeyedPartOfKeepsItsOwnLabel() {
         let theirs = CatalogPropertyTerm(
             id: "t", propertyID: "p", key: "part_of", origin: CatalogOrigin.user, label: "Inside of", description: ""

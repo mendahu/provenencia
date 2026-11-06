@@ -68,7 +68,8 @@ struct CitationComposerVocabulary: Equatable {
                     label: placed.subject.label,
                     ref: placed.subject.ref,
                     typeID: placed.subject.subjectTypeID,
-                    typeKey: placed.kind.rawValue
+                    typeKey: placed.kind.rawValue,
+                    eventTypeKey: EvidenceBridgeEdgeSummary.eventTypeKey(of: placed)
                 )
             )
         }

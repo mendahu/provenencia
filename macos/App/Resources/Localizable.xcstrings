@@ -21503,18 +21503,6 @@
         }
       }
     },
-    "citationComposer.roleInTheEvent": {
-      "comment": "Participation reading; arguments are the person, the role, and the event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@ in the %3$@"
-          }
-        }
-      }
-    },
     "citationComposer.saveObservation": {
       "comment": "Writes the property draft, and confirms the observation edit sheet",
       "extractionState": "manual",
@@ -21583,18 +21571,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ of"
-          }
-        }
-      }
-    },
-    "citationComposer.tookPlaceAt": {
-      "comment": "Location reading; arguments are the event and the place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The %1$@ took place at %2$@"
           }
         }
       }

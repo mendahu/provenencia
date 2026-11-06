@@ -215,6 +215,21 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
     }
 
+    @Test func anEventsTypeKeyIsItsProductTermKeyOnly() {
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
+        let event = primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType])
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: event) == "birth")
+        eventType.valueTermOrigin = CatalogOrigin.user
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: primary(
+            id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]
+        )) == nil)
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: primary(
+            id: "p1", kind: .person, label: "Alice", ref: "CPR-1", observations: [eventType]
+        )) == nil)
+    }
+
     @Test func aRelabelledProductRoleReadsWithTheAppsName() {
         var role = observation(propertyKey: "role", valueText: "Witness at the ceremony", valueType: "term")
         role.valueTermKey = "witness"

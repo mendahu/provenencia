@@ -5003,22 +5003,6 @@ enum L10n {
             ), role)
         }
 
-        static func roleInTheEvent(_ person: String, _ role: String, _ event: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.roleInTheEvent",
-                defaultValue: "%1$@, %2$@ in the %3$@",
-                comment: "Participation reading; arguments are the person, the role, and the event"
-            ), person, role, event)
-        }
-
-        static func tookPlaceAt(_ event: String, _ place: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.tookPlaceAt",
-                defaultValue: "The %1$@ took place at %2$@",
-                comment: "Location reading; arguments are the event and the place"
-            ), event, place)
-        }
-
         static func addForNamedSubject(_ name: String) -> String {
             L10n.format(LocalizedStringResource(
                 "citationComposer.addForNamedSubject",

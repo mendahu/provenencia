@@ -80,6 +80,8 @@ final class CitationComposerModel {
         var ref: String
         var typeID: String
         var typeKey: String
+        /// An event's type as a product key (the sentence registry's event type); nil for any other Subject.
+        var eventTypeKey: String?
     }
 
     nonisolated static let newSubjectPrefix = "__new__."
