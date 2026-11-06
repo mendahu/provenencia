@@ -2,7 +2,6 @@ package promote
 
 import (
 	"database/sql"
-	"errors"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -38,24 +37,20 @@ func UnpromoteImpact(c *database.Catalog, subjectID []byte) (UnpromoteReport, er
 		return UnpromoteReport{}, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err := loadPrimary(tx, subjectID); err != nil {
+	subject, _, filed, err := loadFiledPrimary(tx, subjectID)
+	if err != nil || !filed {
 		return UnpromoteReport{}, err
 	}
-	if _, err := identityclaims.AcceptedEntityForSubjectTx(tx, subjectID); errors.Is(err, sql.ErrNoRows) {
-		return UnpromoteReport{}, nil
-	} else if err != nil {
-		return UnpromoteReport{}, err
-	}
-	filed, err := identityclaims.FiledBridgesOf(tx, subjectID)
+	bridges, err := identityclaims.FiledBridgesOf(tx, subject.ID)
 	if err != nil {
 		return UnpromoteReport{}, err
 	}
-	rows, err := unpromoteDeletedHandleRows(tx, subjectID, filed)
+	rows, err := unpromoteDeletedHandleRows(tx, subject.ID, bridges)
 	if err != nil {
 		return UnpromoteReport{}, err
 	}
 	report := UnpromoteReport{}
-	for _, f := range filed {
+	for _, f := range bridges {
 		report.UnpromotedBridgeSubjects = append(report.UnpromotedBridgeSubjects, f.SubjectID)
 	}
 	if len(rows) == 0 {
