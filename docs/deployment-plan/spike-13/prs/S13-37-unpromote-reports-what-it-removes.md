@@ -1,6 +1,6 @@
 # S13-37 — Unpromote reports what it removes
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: two wire fields and their Swift mapping; nothing draws them until S13-17)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-deletes.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`../person-detail.md`](../person-detail.md) R-38, R-39; working rule "One Unpromote, deletes through the registry"; the S13-17 plan (D-3, D-6: its consumers) and its review log (round 1 M-2, M-3, the reason for this PR); the S13-08 plan
 **Planned:** 2026-11-06 against `main` @ `d5cefe5`
-**Review:** [`S13-37-unpromote-reports-what-it-removes.review.md`](S13-37-unpromote-reports-what-it-removes.review.md) — round 1 in the log
+**Review:** [`S13-37-unpromote-reports-what-it-removes.review.md`](S13-37-unpromote-reports-what-it-removes.review.md) — round 1 Fits with changes / Not ready; every finding Fixed
 
 ### Implementer — read this first
 
@@ -81,11 +81,12 @@ The Unpromote confirm and the page that runs it should be told by the engine wha
 | --- | --- | --- |
 | Unpromote | `core/database/promote/unpromote.go` `Unpromote(tx, userID, subjectID)` | Releases the Subject's accepted claim (`deleteimpact.ReleaseClaim`), then `identityclaims.UnfileBridges`; a Subject with no accepted claim returns no changes |
 | Preflight | `core/database/promote/unpromote_impact.go` `UnpromoteImpact(c, subjectID) (deleteimpact.Group, error)`, `unpromoteDeletedHandleRows` | A read snapshot: the primary handle when last member (`deleteimpact.LastMemberGroup`) plus `identityclaims.UnpromoteBridgeHandlesDeleted`, deduped, sorted by ref, as a `ListedGroup` (`listedCap`) |
-| Bridge rule | `core/database/identityclaims/bridgefile.go` `UnfileBridges(tx, subjectID)` and `UnpromoteBridgeHandlesDeleted(tx, subjectID)` | Both call `bridgeHeads(tx, touchesEnd, subjectID)` (ordered by bridge Subject id) and skip a head with `claimID == nil`: the same filter written twice |
+| Bridge rule | `core/database/identityclaims/bridgefile.go` `UnfileBridges(tx, subjectID)`, `UnpromoteBridgeHandlesDeleted(tx, subjectID)`, `bridgeHeads`, `bridgeHeadsSQL` | Both call `bridgeHeads(tx, touchesEnd, subjectID)` (ordered by bridge Subject id; the SQL LEFT JOINs the accepted claim) and skip a head with `claimID == nil`: the same filter twice; `UnpromoteBridgeHandlesDeleted` then queries each head's `entity_id`. `UnfileBridges`' doc comment sits above `UnpromoteBridgeHandlesDeleted` |
 | Handle release | `core/database/deleteimpact/handle_gone.go` `releaseHandleIfGone` | The only place that emits `rowchange.Change{EntityType: "canonical_entity", Action: rowchange.ActionDelete}`; reached from `ReleaseClaim` by Unpromote, `UnfileBridges` and Subject delete |
-| Effects | `core/database/effects/registry.go` `Set`, `Effect`, registry entry `"canonical_entities"`; `core/database/effects/resolve.go` `Resolve(tx, changes)` | `Resolve` walks each change's registry entry into the set's fields; no field names deletes |
+| Effects | `core/database/effects/registry.go` `Set` (`Handles`, `EvidenceGraphs`, `Reads`, `SourceScopes`, `HandleScopes`, `Lists`, `Structure`, …), `Effect` (`Handles`, `HandleScope`, `SourceScope`, `EvidenceGraph`, `Reads[].Path`, `Structure`), `paths()`, `validate`, registry entry `"canonical_entities"`; `core/database/effects/path.go` `onField`, `onStatus`; `core/database/effects/resolve.go` `Resolve(tx, changes)` (`appendPath` per id set) | Every id set is a `Path`; guards narrow by a change's shape; `validate` checks where a path ends. No set names deletes |
 | Writes | `core/writes/run.go` `Run` | Calls `effects.Resolve` once and returns the set in its `Result` |
-| Wire | `api/proto/engine.proto` `WriteEffects` (fields 1, 5 – 10, 13; reserved 2, 3, 4, 11, 12), `GetUnpromoteImpactResponse{deletes = 1}`; `api/ffi/handlers/write_effects.go` `writeEffectsProto`; `api/ffi/handlers/promote.go` `GetUnpromoteImpact`, `UnpromoteSubject` | `writeEffectsProto` maps every `Set` field the app reads |
+| Wire | `api/proto/engine.proto` `WriteEffects` (fields 1, 5 – 10, 13 – 15: 14 is `evidence_graphs`, 15 `reads`; reserved 2, 3, 4, 11, 12), `GetUnpromoteImpactResponse{deletes = 1}`; `api/ffi/handlers/write_effects.go` `writeEffectsProto`; `api/ffi/handlers/promote.go` `GetUnpromoteImpact`, `UnpromoteSubject` | `writeEffectsProto` maps every `Set` field the app reads |
+| Client doc | `docs/macos-client-patterns.md` (the `apply(effects)` paragraph) | Lists the `WriteEffects` fields the session applies |
 | Swift | `macos/App/Platform/GoStore.swift` `mapWriteEffects`, `getUnpromoteImpact -> CatalogDeleteImpactGroup?`; `macos/App/Features/Workspace/Session/CatalogMutation.swift` `CatalogWriteEffects`; `macos/App/Platform/GenealogyStore.swift` (protocol); `macos/App/Platform/FakeStore.swift` `unpromoteImpactBySubject`, `getUnpromoteImpact`, `nextWriteEffects`; `macos/ProvenenciaTests/OnboardingModelTests.swift` (`ThrowingStore`) | One caller of `getUnpromoteImpact`: `EvidenceGraphModel.beginUnpromote` |
 | Tests | `core/database/promote/unpromote_impact_test.go` `TestUnpromoteImpactListsBridgeHandles`, `TestUnpromoteImpactEmptyWhenHandleStays`; `core/database/promote/unpromote_test.go` `TestUnpromote`; `api/ffi/handlers/promote_test.go` `TestUnpromoteSubject`, `TestGetUnpromoteImpact`; `api/ffi/handlers/subjects_test.go` `TestDeleteSubject`; `api/ffi/handlers/write_effects_test.go` `TestWriteEffectsProto`; `core/database/effects/registry_completeness_test.go`; `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` Unpromote cases | — |
 
@@ -95,13 +96,13 @@ The Unpromote confirm and the page that runs it should be told by the engine wha
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | One rule: `identityclaims.FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error)` *(new)*, `FiledBridge{SubjectID, ClaimID []byte}` *(new)*: `bridgeHeads(tx, touchesEnd, subjectID)` keeping heads with a claim, in bridge Subject id order. `UnfileBridges` and `UnpromoteBridgeHandlesDeleted` call it instead of filtering themselves | The write, the deletes forecast and the new list read one filter, so they cannot disagree | A third copy of the filter in the preflight |
-| D-2 | The preflight returns both: `promote.UnpromoteImpact` returns `Impact{Deletes deleteimpact.Group, UnpromotedBridgeSubjects [][]byte}` *(new type; the function keeps its name)*, from one read transaction; `UnpromotedBridgeSubjects` are `FiledBridgesOf`'s Subject ids. A Subject with no accepted claim returns an empty `Impact` (AC-1.4) | One snapshot for the confirm; the write also does nothing in that case | A second RPC for the bridges |
+| D-1 | One read of the filed bridges: `identityclaims.FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error)` *(new)*, `FiledBridge{SubjectID, ClaimID, EntityID []byte}` *(new; `ClaimID` and `EntityID` non-nil copies)*: `bridgeHeads(tx, touchesEnd, subjectID)` keeping the heads with an accepted claim, in bridge Subject id order, with `bridgeHeadsSQL` also selecting `ic.entity_id` from the claim it already LEFT JOINs. `UnpromoteBridgeHandlesDeleted(tx, filed []FiledBridge)` *(signature change)* takes that list and drops its per-head `SELECT entity_id` query; `UnfileBridges` calls `FiledBridgesOf` itself. STEP-1 moves `UnfileBridges`' detached doc comment back above it | One read feeds the write, the deletes forecast and the new list, so they cannot disagree; one query fewer per bridge (round 1 M-3) | A third copy of the filter; two reads in the preflight |
+| D-2 | The preflight returns both: `promote.UnpromoteImpact` returns `UnpromoteReport{Deletes deleteimpact.Group, UnpromotedBridgeSubjects [][]byte}` *(new type; the function keeps its name)*, from one read transaction. After `loadPrimary`, it checks `identityclaims.AcceptedEntityForSubjectTx` as `Unpromote` does: `sql.ErrNoRows` → an empty report (the write changes nothing, AC-1.4). Otherwise it calls `FiledBridgesOf` once, passes the list to `UnpromoteBridgeHandlesDeleted`, and returns its Subject ids | The same guard as the write, in the same order; one snapshot | A second RPC; a report that lists bridges the write would not touch (round 1 X-3); `promote.Impact` (reads as a Promote's impact beside `deleteimpact.Impact`, round 1 M-5) |
 | D-3 | Wire: `GetUnpromoteImpactResponse` gains `repeated string unpromoted_bridge_subject_ids = 2` *(new)*; the handler fills it with `idStrings` | Field 2 is free | — |
-| D-4 | Deleted handles through the registry: `Effect.ReportsDelete bool` *(new)*, true only on the `"canonical_entities"` entry; `Resolve` appends `ch.EntityID` to `Set.DeletedHandles [][]byte` *(new)* for a change whose entry has `ReportsDelete` and whose `Action == rowchange.ActionDelete`, once per id in change order. The registry's `validate` refuses `ReportsDelete` on an entry whose `Entity` is not `canonical_entity` (the field's name says handles) | Every write that deletes a handle reports it, with no per-write code (Subject delete gets it free); the registry already decides what each table's change means | Collecting deletes in `releaseHandleIfGone` and threading them out (a side channel beside the effects); a field per write |
-| D-5 | Wire: `WriteEffects` gains `repeated string deleted_handles = 14` *(new)*, mapped in `writeEffectsProto` with `idStrings(set.DeletedHandles)`. A merge is not a delete (it updates `merged_into_id`), so a merged handle is not listed | The next free field; `idStrings` drops an empty id | Reusing `handles` with a flag |
+| D-4 | Deleted handles are a registry path: `onDelete(inner Path) Path` *(new guard in `core/database/effects/path.go`, beside `onStatus`)* runs `inner` only when `w.ch.Action == rowchange.ActionDelete`; `Effect.DeletedHandles Path` *(new)*; the `"canonical_entities"` entry sets `DeletedHandles: onDelete(self())`; `Resolve` fills `Set.DeletedHandles [][]byte` *(new)* with one more `appendPath` (deduped, in change order); `paths()` includes it, and `validate` checks that a non-zero `DeletedHandles` path ends at `canonical_entities`, as it checks a read's `KeyTable()` | One grammar for "which ids a change yields": every id set is a `Path` (round 1 M-2) | A `ReportsDelete bool` flag with an Entity-name rule; collecting deletes in `releaseHandleIfGone` |
+| D-5 | Wire: `WriteEffects` gains `repeated string deleted_handles = 16` *(new; 14 and 15 are `evidence_graphs` and `reads`)*, mapped in `writeEffectsProto` with `idStrings(set.DeletedHandles)`. A merge updates `merged_into_id` and is not a delete, so a merged handle is not listed | The next free number | — |
 | D-6 | Swift: `CatalogWriteEffects.deletedHandles: [String] = []` *(new)*, mapped in `GoStore.mapWriteEffects`. `CatalogUnpromoteImpact{deletes: CatalogDeleteImpactGroup?, unpromotedBridgeSubjectIDs: [String]}` *(new, `Sendable, Equatable`)* in `GenealogyStore.swift`; `getUnpromoteImpact(projectDir:subjectID:) -> CatalogUnpromoteImpact` (non-optional; `deletes` nil when the response has none, as today's `nil`). `EvidenceGraphModel.beginUnpromote` reads `impact.deletes` with today's `total > 0` rule. `session.apply(effects)` ignores `deletedHandles` in this PR | The store keeps one call per RPC; S13-17 reads both new fields | A second store method |
-| D-7 | FakeStore stays scripted (`swift-tests.mdc`): `unpromoteImpactBySubject` keeps its `CatalogDeleteImpactGroup` value; `unpromotedBridgesBySubject: [String: [String]]` *(new)* scripts the ids; `getUnpromoteImpact` returns `CatalogUnpromoteImpact(deletes: unpromoteImpactBySubject[id], unpromotedBridgeSubjectIDs: unpromotedBridgesBySubject[id] ?? [])`. Its `unpromoteSubject` keeps returning `nextWriteEffects`, so a test scripts `deletedHandles` there. `ThrowingStore` throws, like its neighbours | No derived engine rule in Swift | FakeStore computing the bridges from its graph |
+| D-7 | FakeStore stays scripted (`swift-tests.mdc`), one dict for the whole return: `unpromoteImpactBySubject: [String: CatalogUnpromoteImpact]` *(retyped)*; `getUnpromoteImpact` returns `unpromoteImpactBySubject[id] ?? CatalogUnpromoteImpact(deletes: nil, unpromotedBridgeSubjectIDs: [])`. Its one test use (`EvidenceGraphModelTests` `unpromoteLastRecordNamesTheDeletedHandle`) wraps its group in `CatalogUnpromoteImpact`. `unpromoteSubject` keeps returning `nextWriteEffects`. `ThrowingStore` throws, like its neighbours | `deleteImpactByID` scripts the whole report the same way (round 1 M-4) | Two dicts keyed by the same Subject id |
 
 **Rules this plan bends.** None.
 
@@ -111,16 +112,16 @@ The Unpromote confirm and the page that runs it should be told by the engine wha
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `identityclaims.FiledBridgesOf`, `FiledBridge` *(new)* | func, type | `bridgeHeads` + the two copies of its filter | Replaces the copies; `bridgeHeads` stays private |
-| `promote.Impact` *(new)* | type | `deleteimpact.Group` (today's return) | Holds the group and the ids |
-| `Effect.ReportsDelete`, `Set.DeletedHandles` *(new)* | fields | `Effect.Lists`, `Set.Handles` | One more registry fact; `Handles` is the recompute set and survives the delete's ghost walk differently |
+| `identityclaims.FiledBridgesOf`, `FiledBridge` *(new)* | func, type | `bridgeHeads` + the two copies of its filter, the per-head `entity_id` query | Replaces the copies and the query; `bridgeHeads` stays private |
+| `promote.UnpromoteReport` *(new)* | type | `deleteimpact.Group` (today's return), `deleteimpact.Report` | Holds the group and the ids |
+| `onDelete`, `Effect.DeletedHandles`, `Set.DeletedHandles` *(new)* | guard, fields | `onStatus`, `Effect.HandleScope` / `Set.HandleScopes` | One more id set in the registry's own grammar; `Handles` is the recompute set, not the deleted ones |
 | `GetUnpromoteImpactResponse.unpromoted_bridge_subject_ids`, `WriteEffects.deleted_handles` *(new)* | proto fields | — | New facts |
-| `CatalogUnpromoteImpact`, `CatalogWriteEffects.deletedHandles`, `FakeStore.unpromotedBridgesBySubject` *(new)* | Swift type, fields | `CatalogDeleteImpactGroup`, `unpromoteImpactBySubject` | Mirror the wire |
+| `CatalogUnpromoteImpact`, `CatalogWriteEffects.deletedHandles` *(new)* | Swift type, field | `CatalogDeleteImpactGroup` | Mirror the wire; FakeStore's dict is retyped, not doubled |
 | `effects` test `deleted_handles_test.go` *(new)* | test file | `reads_resolve_test.go` | One file per resolved field |
 
 **Builds on.** The effects registry and `Resolve`; `deleteimpact.ReleaseClaim` (the one handle release); S13-08's preflight and handler.
-**Deletes.** The duplicated `claimID == nil` filters in `UnfileBridges` and `UnpromoteBridgeHandlesDeleted`.
-**Next adds.** S13-17 words the list from `unpromotedBridgeSubjectIDs` and leaves on `deletedHandles`; a later "the page's entity was deleted" rule for Event and Place reads `deletedHandles`; a researcher-facing handle delete reports through `ReportsDelete` with no new code.
+**Deletes.** The duplicated `claimID == nil` filters in `UnfileBridges` and `UnpromoteBridgeHandlesDeleted`; `UnpromoteBridgeHandlesDeleted`'s per-head `entity_id` query.
+**Next adds.** S13-17 words the list from `unpromotedBridgeSubjectIDs` and leaves on `deletedHandles`; a later "the page's entity was deleted" rule for Event and Place reads `deletedHandles`; a researcher-facing handle delete reports through the path with no new code; a later deleted-Sources set is one more `onDelete` path (and replaces the client-asserted `.deletedSource(id:)` mutation then: logged in `docs/ideas/structural-debt.md`).
 
 ### Reach
 
@@ -128,7 +129,7 @@ None — no new navigation path or view state; the two fields have no Swift read
 
 ### Scale
 
-Map Scale (slice 0: a Source of 100 people on one Promote page; the 41-Subject obituary). The preflight's extra work is `FiledBridgesOf`, the query `UnpromoteBridgeHandlesDeleted` already runs, now shared: no extra query. `Resolve` checks one bool per change; a Promote Done of 100 rows with their bridges (hundreds of changes) gains one comparison each and no query. `deleted_handles` is empty for every write but an Unpromote or a Subject delete.
+Map Scale (slice 0: a Source of 100 people on one Promote page; the 41-Subject obituary). The preflight runs `bridgeHeads` once, as today, and drops one `entity_id` query per filed bridge. `Resolve` runs one more path per change, which returns at once unless the change deletes a handle; a Promote Done of 100 rows with their bridges (hundreds of changes) gains one comparison each and no query. `deleted_handles` is empty for every write but an Unpromote or a Subject delete.
 
 ### Edges
 
@@ -146,13 +147,13 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/database/identityclaims` | `func FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error)` *(new)*; `UnfileBridges`, `UnpromoteBridgeHandlesDeleted` call it |
-| `core/database/promote` | `type Impact struct { Deletes deleteimpact.Group; UnpromotedBridgeSubjects [][]byte }` *(new)*; `UnpromoteImpact(c, subjectID) (Impact, error)` |
-| `core/database/effects` | `Effect.ReportsDelete bool`, `Set.DeletedHandles [][]byte` *(new)*; `Resolve` fills it; `validate` refuses the flag off handles; the README's `Set` paragraph names it |
+| `core/database/identityclaims` | `func FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error)` *(new)*; `UnpromoteBridgeHandlesDeleted(tx *sql.Tx, filed []FiledBridge)`; `UnfileBridges` calls `FiledBridgesOf` |
+| `core/database/promote` | `type UnpromoteReport struct { Deletes deleteimpact.Group; UnpromotedBridgeSubjects [][]byte }` *(new)*; `UnpromoteImpact(c, subjectID) (UnpromoteReport, error)` |
+| `core/database/effects` | `func onDelete(inner Path) Path`, `Effect.DeletedHandles Path`, `Set.DeletedHandles [][]byte` *(new)*; `Resolve` fills it; `validate` checks its end; the README's `Set` paragraph names it |
 
 ### FFI
 
-`api/proto/engine.proto`: `GetUnpromoteImpactResponse.unpromoted_bridge_subject_ids = 2`, `WriteEffects.deleted_handles = 14` *(new)*. Handlers: `api/ffi/handlers/promote.go` `GetUnpromoteImpact`; `api/ffi/handlers/write_effects.go` `writeEffectsProto`. Regenerate with `./scripts/generate-proto.sh`.
+`api/proto/engine.proto`: `GetUnpromoteImpactResponse.unpromoted_bridge_subject_ids = 2`, `WriteEffects.deleted_handles = 16` *(new)*. Handlers: `api/ffi/handlers/promote.go` `GetUnpromoteImpact`; `api/ffi/handlers/write_effects.go` `writeEffectsProto`. Regenerate with `./scripts/generate-proto.sh`.
 
 ### macOS
 
@@ -165,32 +166,32 @@ None — no copy.
 ## 7. Steps
 
 **STEP-1 — One rule for the filed bridges**
-Files: `core/database/identityclaims/bridgefile.go`, `core/database/identityclaims/identityclaims_test.go`.
+Files: `core/database/identityclaims/bridgefile.go`.
 Do: D-1.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/identityclaims/... ./core/database/promote/...` passes (T-1, and the existing Unpromote tests unchanged).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/identityclaims/... ./core/database/promote/...` passes (the existing Unpromote tests unchanged).
 
 **STEP-2 — The preflight returns the bridges**
-Files: `core/database/promote/unpromote_impact.go`, `core/database/promote/unpromote_impact_test.go`. Skill: `add-catalog-delete` (read).
+Files: `core/database/promote/unpromote_impact.go`, `core/database/promote/unpromote_impact_test.go`, `api/ffi/handlers/promote.go` (read `.Deletes`, so the tree builds). Skill: `add-catalog-delete` (read).
 Do: D-2.
-Check: T-2 passes; `TestUnpromoteImpactListsBridgeHandles` and `TestUnpromoteImpactEmptyWhenHandleStays` pass on `impact.Deletes`.
+Check: `go build ./...` succeeds; T-1, T-2 pass; `TestUnpromoteImpactListsBridgeHandles` and `TestUnpromoteImpactEmptyWhenHandleStays` pass on `impact.Deletes`.
 
 **STEP-3 — Effects name deleted handles**
-Files: `core/database/effects/registry.go`, `core/database/effects/resolve.go`, `core/database/effects/deleted_handles_test.go` *(new)*, `core/database/effects/README.md`.
+Files: `core/database/effects/path.go`, `core/database/effects/registry.go`, `core/database/effects/resolve.go`, `core/database/effects/deleted_handles_test.go` *(new)*, `core/database/effects/README.md`, `core/database/promote/unpromote_test.go`.
 Do: D-4.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/effects/... ./core/writes/...` passes (T-3, T-4).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/effects/... ./core/writes/... ./core/database/promote/...` passes (T-3, T-4, T-6).
 
 **STEP-4 — The wire**
 Files: `api/proto/engine.proto`, `api/ffi/handlers/promote.go`, `api/ffi/handlers/write_effects.go`, `api/ffi/handlers/promote_test.go`, `api/ffi/handlers/subjects_test.go`, `api/ffi/handlers/write_effects_test.go`, generated files. Skill: `add-ffi-handler`, `use-catalog-session`.
 Do: D-3, D-5; `./scripts/generate-proto.sh`.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes (T-5 – T-8).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes (T-5, T-7, T-8, T-11). `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go` and `protoc-gen-swift` (a Mac with the repo's toolchain); on a host without them, commit the `.proto` change and leave regeneration to that host before STEP-5.
 
 **STEP-5 — Swift store**
-Files: `macos/App/Features/Workspace/Session/CatalogMutation.swift`, `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift`, `macos/ProvenenciaTests/OnboardingModelTests.swift`, `macos/ProvenenciaTests/EvidenceGraphModelTests.swift`, `macos/ProvenenciaTests/FakeStoreUnpromoteTests.swift` *(new)*. Skill: `add-swift-test`.
+Files: `macos/App/Features/Workspace/Session/CatalogMutation.swift`, `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `macos/App/Features/EvidenceGraph/EvidenceGraphModel.swift`, `macos/ProvenenciaTests/OnboardingModelTests.swift`, `macos/ProvenenciaTests/EvidenceGraphModelTests.swift`. Skill: `add-swift-test`.
 Do: D-6, D-7.
-Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` passes (T-9, T-10). On a host without Xcode, STEP-4's proto generation and this step's checks are run by `scripts/check-pr.sh` on a Mac, as S13-01 did.
+Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS'` passes (T-9). On a host without Xcode, STEP-4's proto generation and this step's checks are run by `scripts/check-pr.sh` on a Mac, as S13-01 did.
 
 **STEP-6 — Docs**
-Files: `docs/deployment-plan/spike-13/completed.md`, `deployment-plan.md` (map row), this plan (status, Landed note), `core/database/effects/README.md` (STEP-3), `docs/catalog-deletes.md` if it lists what a delete reports.
+Files: `docs/deployment-plan/spike-13/completed.md`, `deployment-plan.md` (map row), this plan (status, Landed note), `core/database/effects/README.md` (STEP-3), `docs/macos-client-patterns.md` (add `deleted_handles` to the applied fields: "`apply` ignores it until S13-17"), `docs/catalog-deletes.md` if it lists what a delete reports, `docs/ideas/structural-debt.md` (one line: the client-asserted `.deletedSource(id:)` and the engine-reported `deleted_handles` are two ways to learn a delete; the Event and Place "entity was deleted" rule picks the engine's).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-37-unpromote-reports-what-it-removes.md` reports no errors.
 
@@ -200,18 +201,18 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/identityclaims/identityclaims_test.go` `TestFiledBridgesOf` *(new)*, table-driven | P with filed R, Q and unfiled U → [R, Q] with their claim ids, in Subject id order; no bridges → empty; a bridge Subject itself as `subjectID` → its own filed bridges only | AC-1.1, AC-1.3, D-1 |
-| T-2 | Go | `core/database/promote/unpromote_impact_test.go` `TestUnpromoteImpactListsUnpromotedBridges` *(new)* | P as T-1 → `UnpromotedBridgeSubjects` [R, Q]; then `Unpromote` → its changes delete exactly R's and Q's accepted claims (and P's); a Subject with no claim → empty `Impact` | AC-1.1, AC-1.2, AC-1.4, D-2 |
+| T-1 | Go | `core/database/promote/unpromote_impact_test.go` `TestFiledBridgesOf` *(new)*, table-driven, on `newBridgeWorld` / `newHousehold` | P with filed R then Q (created in that order, so R's UUIDv7 sorts first) and unfiled U → [R, Q] with their claim and entity ids; no bridges → empty; a bridge Subject's own id → empty (`touchesEnd` matches bridges with the id as a value end) | AC-1.1, AC-1.3, D-1 |
+| T-2 | Go | same · `TestUnpromoteImpactListsUnpromotedBridges` *(new)* | P as T-1 → `UnpromotedBridgeSubjects` [R, Q]; then `Unpromote` → its changes delete exactly R's and Q's accepted claims (and P's); a Subject with no accepted claim but filed bridges on its graph → empty report | AC-1.1, AC-1.2, AC-1.4, D-1, D-2 |
 | T-3 | Go | `core/database/effects/deleted_handles_test.go` `TestResolveReportsDeletedHandles` *(new)*, table-driven | changes [canonical_entity delete h1, identity_claim delete, canonical_entity update h2] → `DeletedHandles` [h1]; two deletes h1, h3 → [h1, h3]; no handle delete → empty | AC-2.1, AC-2.5, D-4 |
-| T-4 | Go | same · `TestReportsDeleteOnlyOnHandles` *(new)* | `validate` of an entry with `ReportsDelete` and `Entity` "source" → error; the shipped registry → `"canonical_entities"` is the only entry with it | D-4 |
-| T-5 | Go | `api/ffi/handlers/promote_test.go` `TestGetUnpromoteImpact` (extended) | The AC-1.1 graph → `unpromoted_bridge_subject_ids` [R, Q]; no bridges → empty | AC-1.1, AC-1.3, D-3 |
-| T-6 | Go | same · `TestUnpromoteReportsDeletedHandles` *(new)* | Last member → `effects.deleted_handles` [person id]; the AC-2.2 case → [person, relationship handle]; the person keeps a member → empty | AC-2.1 – AC-2.3, D-5 |
-| T-7 | Go | `api/ffi/handlers/subjects_test.go` `TestDeleteSubject` (extended) | Deleting a handle's last member → `deleted_handles` [that handle] | AC-2.4 |
-| T-8 | Go | `api/ffi/handlers/write_effects_test.go` `TestWriteEffectsProto` (extended) | A `Set` with `DeletedHandles` [h1] → proto `deleted_handles` ["<h1 uuid>"]; empty → nil | AC-2.5, D-5 |
-| T-9 | Swift | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` Unpromote cases (moved onto `CatalogUnpromoteImpact`) | Unchanged behavior: `unpromoteLastRecordNamesTheDeletedHandle` and `unpromotePreflightFailureStaysInTheConfirm` pass with the scripted `deletes` | AC-2.6, D-6, D-7 |
-| T-10 | Swift | `macos/ProvenenciaTests/FakeStoreUnpromoteTests.swift` *(new)* `fakeStoreScriptsUnpromoteImpact` | `unpromotedBridgesBySubject["s1"] = ["b1"]` → `getUnpromoteImpact` returns them with the scripted deletes; `nextWriteEffects.deletedHandles` round-trips through `unpromoteSubject` | AC-2.6, D-7 |
+| T-4 | Go | same · `TestDeletedHandlesPathEndsAtHandles` *(new)* | `validate` of an entry whose `DeletedHandles` path ends at `sources` → error; the shipped registry → only `"canonical_entities"` sets it | D-4 |
+| T-5 | Go | `api/ffi/handlers/promote_test.go` `TestGetUnpromoteImpact` (extended) | A promoted Subject with no bridges (`promotableSubject`, `promoteInDir`) → `unpromoted_bridge_subject_ids` empty and `deletes` as today; the bridge contents are T-2's (the handler only maps) | AC-1.3, D-3 |
+| T-6 | Go | `core/database/promote/unpromote_test.go` `TestUnpromoteReportsDeletedHandles` *(new)*: `writes.Run` over `Unpromote` on `newBridgeWorld` | Last member → `Result.Effects.DeletedHandles` [person id]; a household whose spouse relationship's last bridge member goes with it → [person, relationship handle]; the person keeps a member → empty | AC-2.1, AC-2.2, AC-2.3, D-4 |
+| T-7 | Go | `api/ffi/handlers/subjects_test.go` `TestDeleteSubjectReportsDeletedHandle` *(new case, beside `TestDeleteSubject`)* | A Subject promoted with `promoteInDir` as its handle's only member, deleted → `effects.deleted_handles` [that handle] | AC-2.4 |
+| T-8 | Go | `api/ffi/handlers/write_effects_test.go` `TestWriteEffectsProto` (extended) | A `Set` with `DeletedHandles` [h1] → proto `deleted_handles` (field 16) ["<h1 uuid>"]; empty → nil | AC-2.5, D-5 |
+| T-9 | Swift | `macos/ProvenenciaTests/EvidenceGraphModelTests.swift` Unpromote cases | `unpromoteLastRecordNamesTheDeletedHandle` scripts `CatalogUnpromoteImpact(deletes: group, unpromotedBridgeSubjectIDs: [])`; it and `unpromotePreflightFailureStaysInTheConfirm` pass with today's behavior | AC-2.6, D-6, D-7 |
+| T-11 | Go | `api/ffi/handlers/promote_test.go` `TestUnpromoteSubject` (extended) | Last member → `effects.deleted_handles` [that handle] through the handler | AC-2.1, D-5 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/database/effects` (the registry's validation), `api/ffi/swift_vocabulary_test.go` if it checks `WriteEffects` field parity, `EvidenceGraphModelTests`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/database/effects` (the registry's validation), `core/database/promote` (the shared bridge read), `EvidenceGraphModelTests`.
 
 ## 9. Definition of done
 
@@ -235,13 +236,13 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 ## 10. Manual check
 
 1. Open the dogfood project. On an Evidence graph, Unpromote a person's last member: the confirm looks and reads as before, and the person is deleted (AC-2.6). On a graph, Unpromote a member whose person keeps another: as before.
-2. The reviewer runs `CGO_ENABLED=1 go test -tags fts5 ./core/database/identityclaims/... ./core/database/promote/... ./core/database/effects/... ./api/ffi/handlers/ -run 'FiledBridgesOf|UnpromoteImpact|ReportsDelete|DeletedHandles|Unpromote|DeleteSubject|WriteEffectsProto'` and sees them pass.
+2. The reviewer runs `CGO_ENABLED=1 go test -tags fts5 ./core/database/identityclaims/... ./core/database/promote/... ./core/database/effects/... ./api/ffi/handlers/ -run 'FiledBridgesOf|UnpromoteImpact|DeletedHandles|Unpromote|DeleteSubject|WriteEffectsProto'` and sees them pass.
 
 ## 11. Risks and stop conditions
 
 | Risk | Mitigation |
 | --- | --- |
-| The registry flag reports a delete the app did not mean (a merge) | A merge is an update (D-5); T-3's update case |
+| The path reports a change the app did not mean (a merge) | A merge is an update (D-5); T-3's update case |
 | The preflight and the write drift | One function (D-1); T-2 compares them |
 
 **Stop and report if:**
@@ -249,7 +250,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - A second emitter of a `canonical_entity` delete exists at the base (the `rg` in Edges finds more than `handle_gone.go`).
 - `UnfileBridges` and `UnpromoteBridgeHandlesDeleted` cannot share `FiledBridgesOf` without changing which claims `UnfileBridges` releases (T-2 or `TestUnpromote` fails).
 - `effects.Resolve`'s ghost walk drops a deleted handle's change before the flag is read.
-- `api/ffi/swift_vocabulary_test.go` requires a Swift reader for every `WriteEffects` field and `deletedHandles`' mapping does not satisfy it.
+- `core/database/promote`'s tests cannot import `core/writes` (an import cycle) for T-6: move T-6 to `core/writes` with the same fixture.
 
 ## 12. Open questions
 
