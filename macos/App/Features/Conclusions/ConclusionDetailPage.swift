@@ -273,19 +273,6 @@ struct ConclusionDetailPageSectionsContext {
     var pageSection: ConclusionPageSection? = nil
 }
 
-private struct ConclusionDetailHeaderCompactKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
-extension EnvironmentValues {
-    /// True while a pinned page header is compact (the page scrolled). The header sets it
-    /// for the kind's `secondary`, which may lay itself out more tightly.
-    var conclusionDetailHeaderCompact: Bool {
-        get { self[ConclusionDetailHeaderCompactKey.self] }
-        set { self[ConclusionDetailHeaderCompactKey.self] = newValue }
-    }
-}
-
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
 /// names the entity, and the place registry warms `conclusionDetail` for
 /// that id. Person, Event, and Place stay separate history entries.
@@ -517,7 +504,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                     headerPinned: !offeredPageSections.isEmpty,
                     scrollResetKey: pageSection,
                     primaryFill: pageSection?.fillsWidth ?? false,
-                    header: { isScrolled in
+                    header: {
                         ConclusionDetailHeaderBand(
                             content: content,
                             projectDir: projectDir,
@@ -527,7 +514,6 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             offeredPageSections: offeredPageSections,
                             pageSection: pageSection,
                             refreshing: refreshing || sectionRefreshing,
-                            isScrolled: isScrolled,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
                     },
@@ -552,7 +538,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
 }
 
 /// The header and, on a page with sections, the section switcher under it. Pinned pages
-/// supply the band's own padding, full or compact; an unpinned page has none.
+/// supply the band's own padding; an unpinned page has none.
 private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Secondary: View>: View {
     let content: Content
     let projectDir: String
@@ -562,13 +548,12 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let offeredPageSections: [ConclusionPageSection]
     let pageSection: ConclusionPageSection?
     let refreshing: Bool
-    let isScrolled: Bool
     let select: (ConclusionPageSection) -> Void
 
     /// A page with page sections pins its header; one without scrolls it away.
     private var pinned: Bool { pageSection != nil }
 
-    private var bar: CGFloat { isScrolled ? PVSpacing.space5 : PVSpacing.space7 }
+    private var bar: CGFloat { PVSpacing.space7 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: bar) {
@@ -577,14 +562,13 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
                 projectDir: projectDir,
                 secondary: secondary,
                 lead: lead,
-                pageIdentifier: pageIdentifier,
-                compact: isScrolled
+                pageIdentifier: pageIdentifier
             )
             if let pageSection {
                 switcher(selection: pageSection)
             }
         }
-        .padding(.top, pinned ? (isScrolled ? PVSpacing.space5 : PVSpacing.space9) : 0)
+        .padding(.top, pinned ? PVSpacing.space9 : 0)
         .padding(.bottom, pinned ? bar : 0)
     }
 
@@ -657,32 +641,29 @@ private struct ConclusionDetailRelationshipSection: View {
     }
 }
 
-/// Thumbnail slot · badge, title and the kind's secondary · ref and member count. Compact
-/// (a pinned page that has scrolled): a 40pt thumb, no Badge, the title one size down.
+/// Thumbnail slot · badge, title and the kind's secondary · ref and member count.
 private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: View>: View {
     let content: Content
     let projectDir: String
     let secondary: (Content) -> Secondary
     let lead: ConclusionLeadModel
     let pageIdentifier: String
-    var compact = false
 
     /// PDP-11: the menu exists only while the lead is not the earliest.
     private var showsLeadMenu: Bool { content.gallery.offersEarliest }
 
     var body: some View {
-        HStack(alignment: compact ? .center : .top, spacing: compact ? PVSpacing.space5 : PVSpacing.space7) {
+        HStack(alignment: .top, spacing: PVSpacing.space7) {
             thumbnail
-            VStack(alignment: .leading, spacing: compact ? PVSpacing.space1 : PVSpacing.space4) {
-                if !compact, let badge = content.badge {
+            VStack(alignment: .leading, spacing: PVSpacing.space4) {
+                if let badge = content.badge {
                     PVBadge(text: badge.text, tone: .neutral, subtle: false, foreground: badge.ink)
                         .accessibilityLabel(badge.accessibilityLabel)
                 }
-                PVTitleText(content.title, style: .display(compact: compact))
+                PVTitleText(content.title, style: .display)
                 secondary(content)
-                    .environment(\.conclusionDetailHeaderCompact, compact)
             }
-            .padding(.top, compact ? 0 : PVSpacing.space3)
+            .padding(.top, PVSpacing.space3)
             .frame(maxWidth: .infinity, alignment: .leading)
             VStack(alignment: .trailing, spacing: PVSpacing.space2) {
                 if content.showsRef {
@@ -695,7 +676,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
                     .font(PVFont.mono(size: PVTypeScale.caption))
                     .foregroundStyle(PVColor.textMuted)
             }
-            .padding(.top, compact ? 0 : PVSpacing.space6)
+            .padding(.top, PVSpacing.space6)
         }
     }
 
@@ -704,7 +685,7 @@ private struct ConclusionDetailHeader<Content: ConclusionDetailBody, Secondary: 
         let thumb = CachedThumbnail(
             projectDir: projectDir,
             relPath: content.thumbnail.imageRelPath,
-            size: compact ? 40 : 120,
+            size: 120,
             fallbackMark: content.thumbnail.mark,
             fallbackLabel: content.thumbnail.label,
             imageLabel: content.thumbnail.imageLabel,

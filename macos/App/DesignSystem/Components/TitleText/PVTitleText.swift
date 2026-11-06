@@ -45,7 +45,7 @@ struct PVTitleText: View {
         /// The `.row` face for a title inside a link: the link owns the ink, so a ref
         /// keeps its mono font and sets no ink of its own.
         case rowLink
-        case display(compact: Bool)
+        case display
         /// The display face at the h2 size, for a row that heads a block.
         case heading
     }
@@ -58,9 +58,8 @@ struct PVTitleText: View {
 
     private var displayMetrics: DisplayMetrics {
         switch style {
-        case .display(compact: true): DisplayMetrics(titleSize: PVTypeScale.h3, refSize: PVTypeScale.h4)
         case .heading: DisplayMetrics(titleSize: PVTypeScale.h2, refSize: PVTypeScale.h3)
-        case .row, .rowLink, .display(compact: false): DisplayMetrics(titleSize: PVTypeScale.display3, refSize: PVTypeScale.h1)
+        case .row, .rowLink, .display: DisplayMetrics(titleSize: PVTypeScale.display3, refSize: PVTypeScale.h1)
         }
     }
 

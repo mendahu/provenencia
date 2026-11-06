@@ -1,7 +1,7 @@
 # Ship log — S13-16 Sources section
 
 **Plan:** [`S13-16-sources-section.md`](S13-16-sources-section.md) · **Branch:** `s13-16-sources-section` · **PR:** #722
-**State:** ready
+**State:** fixing 3 — manual check
 
 ## Round 0 — implement
 Stopped before STEP-7. No commit, no push, no PR, no gate. STEP-1 to STEP-6 and the STEP-8 strings sit uncommitted and unbuilt in the main checkout on `s13-16-sources-section` (cut from `4c642497`).
@@ -152,6 +152,26 @@ Do: the test's scroll view sets `hasVerticalScroller = false` and `hasHorizontal
 Check: test passes locally; scripts/check-pr.sh PASS; CI green.
 
 Head `a5bd4ab5`. Gate PASS (orchestrator re-ran). F-14 done; no product change.
+
+## Manual check — fix
+
+The user, testing 2026-11-06: the pinned header compacting on scroll changes the scroll bar's scale and reads as strange scroll behavior. The user descopes the compact header on all five Person sections. This reverses S13-10 D-17, D-21 and AC-1.7, AC-1.10, AC-3.5, from board S13-D1 PPF-3. The header and switcher stay pinned, in the full form, at every scroll position. The user finds the board frames.
+
+### Fix plan 3
+
+**F-15 — Remove the compact header** (user, manual check)
+Files: `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift`, `macos/App/DesignSystem/Components/TitleText/PVTitleText.swift`, `macos/App/Features/Conclusions/ConclusionDetailPage.swift`, `macos/App/Features/Conclusions/PersonDetailView.swift`, `macos/ProvenenciaTests/PVPageColumnsTests.swift`, `macos/ProvenenciaTests/PersonTitleDisplayTests.swift`, `docs/macos-client-patterns.md`, this PR's plan. Skill: `add-ui-component`.
+Failing test first: none; the removal leaves no input to test. T-9's manual check covers it.
+Do:
+- `PVPageColumnsMetrics`: delete `compactMinOverflow`, `compactOffset` and `isScrolled`.
+- `PVPageColumns`: the `header` builder takes no argument, and every initializer and preview follows. Delete `offset`, `contentHeight`, `isScrolled`, `fullBandHeight`, `compactBandHeight`, `measuredBand`, `refreshScrolled`, the hidden band background, the `measures` parameter, the sentinel's and content's `onGeometryChange`. Keep `headerPinned`, the rule under the band, the top anchor, `viewportSize` and `pvPageViewportSize`, the scroll reset. Update the type's doc comment.
+- `ConclusionDetailPage.swift`: delete `ConclusionDetailHeaderBand.isScrolled`, `ConclusionDetailHeader.compact`, `ConclusionDetailHeaderCompactKey`, `conclusionDetailHeaderCompact`; each ternary keeps its full arm (`bar` is `PVSpacing.space7`, band top is `PVSpacing.space9`, thumb 120, `alignment: .top`). The Badge always shows. Update the comments that say compact.
+- `PersonDetailLifeLines`: always the `VStackLayout` form, with no environment read and no `AnyLayout`.
+- `PVTitleText.Style.display(compact:)` becomes `.display`, the full metrics. Delete what only the compact arm used, and update the test at `PersonTitleDisplayTests.swift:143`.
+- Delete `scrolledFollowsTheBoard` and `compactingDoesNotUndoItself`.
+- `docs/macos-client-patterns.md:267`: the header slot is scrolling or pinned, no flag. Remove any other line that says the header compacts in `docs/macos-client-patterns.md` and the `DesignSystem` READMEs.
+- The S13-16 plan's Landed note gains one line: the compact header was removed at the user's call during the manual check, reversing S13-10 D-17. Do not edit archived briefs, `completed.md`, or S13-10's or other landed plans.
+Check: `rg -n 'isScrolled|compactOffset|compactMinOverflow|HeaderCompact|display\(compact|measuredBand' macos/App macos/ProvenenciaTests` prints nothing; scripts/check-pr.sh PASS.
 
 ## Result
 Gate PASS · CI green on `b5cd9f33` · open: none · follow-ups: none (UX-2 dropped; PRF-2 to S13-27) · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5, PRF-2 answered · CON miss: none
