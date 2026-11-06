@@ -34,7 +34,7 @@ A `generation` weight slot, and one declared slot list read by both `nameformats
 - **Typed forms with decoration.** `NameFormSplit` does not recognise a quoted nickname or a parenthesized former surname when it splits a typed form; if it learns to, `NamePartType.decoration` is the table to read.
 - **The unused `Sort` field.** `namevalue.PartTypeInfo.Sort` orders the registry and nothing else reads it.
 - **Seed roles from `matchregistry`.** The Western seed's roles in `nameformats` repeat `matchregistry`'s Western `PartRoles`; deriving one from the other would retire `TestSeedMatchesRegistryWestern`.
-- **A fixture pin of the undecorated join.** A Go and Swift fixture that pins `nameformats.Format` against `NameValueDisplay` would catch drift in order and separators.
+- **A fixture pin of the undecorated join.** A Go and Swift fixture that pins `nameformats.Profile.Format` against `NameValueDisplay` would catch drift in order and separators.
 
 ## Format and sort, beyond the project default
 
