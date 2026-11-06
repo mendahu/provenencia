@@ -1,7 +1,7 @@
 # Ship log — S13-16 Sources section
 
 **Plan:** [`S13-16-sources-section.md`](S13-16-sources-section.md) · **Branch:** `s13-16-sources-section` · **PR:** #722
-**State:** review 2
+**State:** fixing 2
 
 ## Round 0 — implement
 Stopped before STEP-7. No commit, no push, no PR, no gate. STEP-1 to STEP-6 and the STEP-8 strings sit uncommitted and unbuilt in the main checkout on `s13-16-sources-section` (cut from `4c642497`).
@@ -115,3 +115,25 @@ F-6, `PersonSourcesList` in an `NSHostingView` at 880pt, six lines a Source, fir
 
 ## Round 2 — review
 Reviewers: MNT, UX, SEC+PRF. CON skipped: it had no Fix-now blocker or major.
+
+Round-1 Fix-now blockers and majors: MNT-1 to MNT-6 and UX-1 Resolved by their reviewers. Minors read by the orchestrator from the reviewers' checks: UX-4, UX-6, PRF-1, MNT-14 Resolved. SEC-1 Not resolved, raised to SEC-2.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-2 | SEC, PRF | blocker | Unbounded Source rows crash SwiftUI, and restore reopens the section | To user | Verified: `pageSection` is persisted in the location. F-6's crash is one Debug run in a throwaway test; no Release figure. A fold adds a state the board lacks; lazy rows risk Tab order |
+| MNT-17 | MNT | blocker | The graph link's ring is added by the feature, against `PVButton`'s `.link` rule | To user | Verified: `PVButton.swift:287`. The fix changes every `.link` button's focus look, which a researcher can see, and reverses the kit's written rule |
+
+**To user, answered (2026-11-05):** SEC-2: fold Source rows at 50. MNT-17: the ring goes in the kit, on every `.link` button. UX-2: keep as planned, Follow-up. UX-3, UX-5: dropped, no record.
+
+### Fix plan 2
+
+**F-12 — Fold the Source rows at 50** (from SEC-2, SEC-1)
+Files: `PersonSourcesContent.swift`, `PersonSourcesSection.swift`, `PersonSourcesContentTests.swift`, `PersonSourcesPreviewData.swift`, the plan (D-10, Edges, Scale, T-13, manual item 3, Landed note).
+Failing test first: T-13 `foldPastFiftySources` *(new)* — 60 Source groups → 50 rows, `hiddenRowCount` 10, `firstRevealedRowLineID` the first line of the 51st; 51 → 50, 1; 50 → 50, 0; `rowsExpanded: true` → 60, 0.
+Do: `PersonSourcesContent.rowFoldLimit = 50`. A `rowsExpanded: Bool` input folds `rows` through `ConclusionFold.shown(limit: 50, minimumHidden: 1, expanded:)`, with `hiddenRowCount` and `firstRevealedRowLineID` from `ConclusionFold.firstRevealed`. `PersonSourcesSection` holds `rowsExpanded` as `@State`, so it resets on each mount and a restored section always opens folded. `PersonSourcesList` draws `ConclusionShowMoreRow(count:expand:)` after the last row, with the unfold focus move of F-8. The existing "Show N more" string; no new string. The section's header line counts every Source and record, not the folded ones.
+Check: T-13; manual item 3 gains "a Person with more than 50 Sources".
+
+**F-13 — A link button's focus ring lives in the kit** (from MNT-17)
+Files: `macos/App/DesignSystem/Components/Button/PVButton.swift`, `PersonSourcesSection.swift`, `macos/App/DesignSystem/README.md` if it states the rule.
+Do: `PVButtonBody`'s `.link` branch draws `.pvFocusRing(isFocused, cornerRadius: PVRadius.xs)`, always applied and outset by `PVElevation.focusRingWidth` so it clears the glyphs and takes no layout (pad out, ring, pad back). Rewrite the comment at `PVButton.swift:288`. Delete the `.pvFocusRing` on the graph link; `.pvActivatesOnReturn(when:)` stays. The plan's Landed note says every `.link` button gains the ring, by the user's choice.
+Check: `rg 'pvFocusRing' macos/App/Features/Conclusions/PersonSourcesSection.swift` finds nothing; scripts/check-pr.sh PASS. Manual item 4 gains a `.link` button on the provenance sheet.
