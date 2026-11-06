@@ -26,6 +26,10 @@ const summaryChainDepth = 8
 // because a place changed. Succession, one hop both ways, is included so a
 // later place detail is covered. Association handles are not returned. ids
 // themselves are not returned; the caller already rewrites those.
+//
+// A place's parents are returned but their events are not: an event's row
+// reads its own place and that place's parents, never a place's children, so
+// a change at a place does not move the events at its parent.
 func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	ids = database.UniqueBlobIDs(ids)
 	if len(ids) == 0 {
@@ -47,7 +51,7 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	located, err := walkDepth(q, hops.EventsAtPlace, append(append(append([][]byte(nil), ids...), places...), parents...), 1)
+	located, err := walkDepth(q, hops.EventsAtPlace, append(append([][]byte(nil), ids...), places...), 1)
 	if err != nil {
 		return nil, err
 	}
@@ -86,17 +90,24 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 }
 
 // AssociationEndpoints reads the kept entity values of the association handles
-// in ids. A save calls it before rewriting those rows and again after, and
-// both sets are roots of Dependents. The cache's link index is empty until
-// something has loaded the association, so the rows are the source.
-func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
+// in ids: every end of those links, and the ends to walk from. A save calls it
+// before rewriting those rows and again after. Both walk sets are roots of
+// Dependents; every end is also reported to the client, so a cached page of
+// either end reloads. The cache's link index is empty until something has
+// loaded the association, so the rows are the source.
+//
+// An end to walk is every end except location.place and
+// place_relationship.to. No row reads a link through those ends, and a place
+// can hold thousands of events, so walking from them reprojects rows the link
+// did not move.
+func AssociationEndpoints(q Querier, ids [][]byte) (ends, walk [][]byte, err error) {
 	ids = database.UniqueBlobIDs(ids)
 	if len(ids) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	bridges := connectrules.Bridges()
 	if len(bridges) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	var where string
 	args := make([]any, 0, len(bridges)*2)
@@ -111,26 +122,37 @@ func AssociationEndpoints(q Querier, ids [][]byte) ([][]byte, error) {
 		where += "(st.origin = ? AND st.key = ?)"
 		args = append(args, origin, b.BridgeTypeKey)
 	}
-	query := `SELECT DISTINCT r.value_entity_id
+	query := `SELECT DISTINCT r.value_entity_id, st.key, p.key
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN subject_types st ON st.id = e.subject_type_id
+		JOIN properties p ON p.id = r.property_id
 		WHERE r.rank = 1 AND r.reason = 'kept' AND r.value_entity_id IS NOT NULL
 			AND (` + where + `)
 			AND r.entity_id IN (`
-	var out [][]byte
-	err := sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
+	err = sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
 		var id []byte
-		if err := rows.Scan(&id); err != nil {
+		var bridge, end string
+		if err := rows.Scan(&id, &bridge, &end); err != nil {
 			return err
 		}
-		out = append(out, append([]byte(nil), id...))
+		id = append([]byte(nil), id...)
+		ends = append(ends, id)
+		if linkEnds[bridge] != end {
+			walk = append(walk, id)
+		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return database.UniqueBlobIDs(out), nil
+	return database.UniqueBlobIDs(ends), database.UniqueBlobIDs(walk), nil
+}
+
+// linkEnds names, by bridge type key, the end no row reads a link through.
+var linkEnds = map[string]string{
+	hops.PlacesOfEvent.Bridge():  hops.PlacesOfEvent.To(),
+	hops.ParentsOfPlace.Bridge(): hops.ParentsOfPlace.To(),
 }
 
 func walkDepth(q Querier, hop hops.Hop, roots [][]byte, depth int) ([][]byte, error) {

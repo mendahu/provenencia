@@ -38,6 +38,10 @@ const (
 	// shown value, so only the city's document is reprojected, not its 6,000
 	// events and their people. B-10 measured 6.06 s before S14-21.
 	budgetJoinOntoCity = 1 * time.Second
+	// budgetLocateAtCity: filing a location between a new event and the city
+	// moves no row of the city's other 6,000 events, so none is reprojected.
+	// S14-33 measured 3.2 s before it walked from the event alone.
+	budgetLocateAtCity = 500 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -49,10 +53,13 @@ type largeFixture struct {
 	// onePlace is the Source whose 30 births are all located at one place, the
 	// city, which has 6,000 filed events.
 	onePlace sources.Source
-	other    sources.Source
-	otherA   artifacts.Artifact
-	// city is the city's handle id.
-	city []byte
+	// pageArt is the artifact the one-place Source's births are cited on.
+	pageArt artifacts.Artifact
+	other   sources.Source
+	otherA  artifacts.Artifact
+	// city is the city's handle id and citySubject the Subject it was made from.
+	city        []byte
+	citySubject subjects.Subject
 }
 
 func newLargeFixture(t *testing.T) *largeFixture {
@@ -109,7 +116,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	}
 
 	otherSrc, otherArt := f.newSource("Other")
-	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, other: otherSrc, otherA: otherArt, city: cityID}
+	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, pageArt: pageArt, other: otherSrc, otherA: otherArt, city: cityID, citySubject: city}
 }
 
 // fastest is the least of n timed runs of run; each run's own setup stays
@@ -269,5 +276,21 @@ func TestLargeSourceBudgets(t *testing.T) {
 			return since(func() { f.join(s, lf.city) })
 		})
 		over(t, "join a place onto the city", d, budgetJoinOntoCity)
+	})
+
+	t.Run("locate an event at the city", func(t *testing.T) {
+		var events []subjects.Subject
+		for i := 0; i < 3; i++ {
+			e := f.birth(lf.onePlace, lf.pageArt)
+			f.promote(e)
+			events = append(events, e)
+		}
+		i := 0
+		d := fastest(3, func() time.Duration {
+			e := events[i]
+			i++
+			return since(func() { f.locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
+		})
+		over(t, "file one location at the city", d, budgetLocateAtCity)
 	})
 }
