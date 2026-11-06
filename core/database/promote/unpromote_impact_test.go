@@ -200,16 +200,16 @@ func TestUnpromoteImpactListsSharedBridgeHandle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if report.Deletes.Total != 2 || len(report.Deletes.Listed) != 2 || len(res.Effects.DeletedHandles) != 2 {
-		t.Fatalf("forecast %+v, write deleted %x, want 2 each", report.Deletes, res.Effects.DeletedHandles)
+	if report.Deletes.Total != 2 || len(report.Deletes.Listed) != 2 || len(deletedHandleIDs(res.Effects)) != 2 {
+		t.Fatalf("forecast %+v, write deleted %x, want 2 each", report.Deletes, deletedHandleIDs(res.Effects))
 	}
 	for _, l := range report.Deletes.Listed {
 		found := false
-		for _, id := range res.Effects.DeletedHandles {
+		for _, id := range deletedHandleIDs(res.Effects) {
 			found = found || bytes.Equal(id, l.ID)
 		}
 		if !found {
-			t.Fatalf("forecast lists %x, which the write did not delete (%x)", l.ID, res.Effects.DeletedHandles)
+			t.Fatalf("forecast lists %x, which the write did not delete (%x)", l.ID, deletedHandleIDs(res.Effects))
 		}
 	}
 }

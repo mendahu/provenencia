@@ -75,6 +75,13 @@ struct CatalogWriteEffectsRead: Sendable, Equatable {
     var ids: [String]
 }
 
+/// The ids of one entity (`canonical_entity`: Person, Event, Place and bridge
+/// handles) a write deleted.
+struct CatalogWriteEffectsDeleted: Sendable, Equatable {
+    var entity: String
+    var ids: [String]
+}
+
 /// Handles and Sources a write reported. The session drops those cached
 /// reads and patches the rows whose last activity it moved.
 struct CatalogWriteEffects: Sendable, Equatable {
@@ -97,13 +104,18 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Sources whose last-updated time this write moved. The session patches
     /// those rows in the cached Sources list with `activity`; it reloads nothing.
     var sourceScopes: [String] = []
-    /// Handles (Person, Event, Place and bridge handles) this write deleted. The
-    /// session ignores it until a page that shows one leaves on it.
-    var deletedHandles: [String] = []
+    /// Ids this write deleted, by entity. The session ignores it until a page
+    /// that shows one leaves on it.
+    var deleted: [CatalogWriteEffectsDeleted] = []
     /// The write's own audit revision and time; revision 0 when it recorded none.
     var activity = CatalogActivity()
 
     static let empty = CatalogWriteEffects()
+
+    /// The handles this write deleted: the `canonical_entity` entry of `deleted`.
+    var deletedHandles: [String] {
+        deleted.first { $0.entity == "canonical_entity" }?.ids ?? []
+    }
 
     var touchedHandles: [String] {
         var seen = Set<String>()

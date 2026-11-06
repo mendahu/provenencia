@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -218,7 +219,7 @@ func TestUnpromoteReportsDeletedHandles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return res.Effects.DeletedHandles
+		return deletedHandleIDs(res.Effects)
 	}
 	sameIDs := func(t *testing.T, got, want [][]byte) {
 		t.Helper()
@@ -260,4 +261,14 @@ func TestUnpromoteReportsDeletedHandles(t *testing.T) {
 		w.join(jim, w.promote(james).Entity.ID)
 		sameIDs(t, unpromote(w, james), nil)
 	})
+}
+
+// deletedHandleIDs is the handles a write's effects report as deleted.
+func deletedHandleIDs(set effects.Set) [][]byte {
+	for _, d := range set.Deleted {
+		if d.Entity == "canonical_entity" {
+			return d.IDs
+		}
+	}
+	return nil
 }

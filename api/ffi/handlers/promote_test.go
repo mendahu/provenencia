@@ -119,8 +119,8 @@ func TestUnpromoteSubject(t *testing.T) {
 				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
 				}
-				if got := e.GetDeletedHandles(); len(got) != 1 || got[0] != handle {
-					t.Fatalf("deleted_handles %v, want [%s]", got, handle)
+				if got := deletedIDs(e, "canonical_entity"); len(got) != 1 || got[0] != handle {
+					t.Fatalf("deleted canonical_entity ids %v, want [%s]", got, handle)
 				}
 				hasCounts := false
 				for _, list := range e.GetLists() {

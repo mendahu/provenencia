@@ -2,6 +2,7 @@ package effects_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -18,7 +19,7 @@ func handleDelete(id []byte) rowchange.Change {
 	}
 }
 
-func TestResolveReportsDeletedHandles(t *testing.T) {
+func TestResolveReportsDeleted(t *testing.T) {
 	h1, h2, h3 := id16(1), id16(2), id16(3)
 	claimDelete := rowchange.Change{
 		EntityType: "identity_claim", EntityID: id16(9), Action: rowchange.ActionDelete,
@@ -62,13 +63,12 @@ func TestResolveReportsDeletedHandles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if len(set.DeletedHandles) != len(tt.want) {
-				t.Fatalf("deleted handles %x, want %x", set.DeletedHandles, tt.want)
+			var want []effects.DeletedIDs
+			if len(tt.want) > 0 {
+				want = []effects.DeletedIDs{{Entity: "canonical_entity", IDs: tt.want}}
 			}
-			for i, id := range tt.want {
-				if !bytes.Equal(set.DeletedHandles[i], id) {
-					t.Fatalf("deleted handles %x, want %x", set.DeletedHandles, tt.want)
-				}
+			if !reflect.DeepEqual(set.Deleted, want) {
+				t.Fatalf("deleted %x, want %x", set.Deleted, want)
 			}
 		})
 	}

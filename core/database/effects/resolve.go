@@ -77,6 +77,8 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 	var searchOrder []string
 	listed := map[List]bool{}
 	reads := map[Read][][]byte{}
+	deleted := map[string][][]byte{}
+	var deletedOrder []string
 	for _, ch := range changes {
 		table, ok := entityTable[ch.EntityType]
 		if !ok {
@@ -106,9 +108,15 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if err != nil {
 			return Set{}, err
 		}
-		set.DeletedHandles, err = appendPath(w, table, eff.DeletedHandles, set.DeletedHandles)
+		ids, err := runPath(w, table, eff.Deleted)
 		if err != nil {
 			return Set{}, err
+		}
+		if len(ids) > 0 {
+			if _, ok := deleted[eff.Entity]; !ok {
+				deletedOrder = append(deletedOrder, eff.Entity)
+			}
+			deleted[eff.Entity] = appendIDs(deleted[eff.Entity], ids)
 		}
 		if !eff.Structure.zero() {
 			ids, err := runPath(w, table, eff.Structure)
@@ -151,6 +159,9 @@ func Resolve(tx *sql.Tx, changes []rowchange.Change) (Set, error) {
 		if ids := reads[r]; len(ids) > 0 {
 			set.Reads = append(set.Reads, ReadIDs{Read: r, IDs: ids})
 		}
+	}
+	for _, entity := range deletedOrder {
+		set.Deleted = append(set.Deleted, DeletedIDs{Entity: entity, IDs: deleted[entity]})
 	}
 	for _, kind := range searchOrder {
 		set.Search = append(set.Search, SearchIDs{Kind: kind, IDs: search[kind]})

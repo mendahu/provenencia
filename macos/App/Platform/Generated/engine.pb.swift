@@ -2737,9 +2737,23 @@ public nonisolated struct Provenencia_Engine_V1_WriteEffects: Sendable {
   /// those keys' reads.
   public var reads: [Provenencia_Engine_V1_WriteEffectsRead] = []
 
-  /// Handles (canonical entities) this write deleted: effects.Set.DeletedHandles.
-  /// A merge updates a handle and is not listed.
-  public var deletedHandles: [String] = []
+  /// Ids this write deleted, by entity (effects.Set.Deleted): "canonical_entity"
+  /// lists the handles. A merge updates a handle and is not listed.
+  public var deleted: [Provenencia_Engine_V1_WriteEffectsDeleted] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_WriteEffectsDeleted: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var entity: String = String()
+
+  public var ids: [String] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -3881,13 +3895,15 @@ public nonisolated struct Provenencia_Engine_V1_GetUnpromoteImpactRequest: Senda
   public init() {}
 }
 
-/// The handle the Unpromote deletes because the Subject is its last member;
-/// unset when the handle stays.
+/// What an Unpromote takes away, so the researcher can confirm it.
 public nonisolated struct Provenencia_Engine_V1_GetUnpromoteImpactResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// Every handle the Unpromote deletes: the Subject's own when it is the last
+  /// member, and the association handles whose last member a bridge was; unset
+  /// when none goes.
   public var deletes: Provenencia_Engine_V1_DeleteImpactGroup {
     get {_deletes ?? Provenencia_Engine_V1_DeleteImpactGroup()}
     set {_deletes = newValue}
@@ -11725,7 +11741,7 @@ nonisolated extension Provenencia_Engine_V1_DeleteCitationResponse: SwiftProtobu
 
 nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WriteEffects"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{2}\u{4}structure\0\u{3}summary_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{2}\u{3}lists\0\u{3}evidence_graphs\0\u{1}reads\0\u{3}deleted_handles\0\u{b}sources\0\u{b}citation_sources\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}\u{c}\u{b}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}handles\0\u{2}\u{4}structure\0\u{3}summary_handles\0\u{3}handle_scopes\0\u{1}revision\0\u{3}revision_at\0\u{3}source_scopes\0\u{2}\u{3}lists\0\u{3}evidence_graphs\0\u{1}reads\0\u{1}deleted\0\u{b}sources\0\u{b}citation_sources\0\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}\u{c}\u{c}\u{1}\u{c}\u{b}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -11743,7 +11759,7 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
       case 13: try { try decoder.decodeRepeatedStringField(value: &self.lists) }()
       case 14: try { try decoder.decodeRepeatedStringField(value: &self.evidenceGraphs) }()
       case 15: try { try decoder.decodeRepeatedMessageField(value: &self.reads) }()
-      case 16: try { try decoder.decodeRepeatedStringField(value: &self.deletedHandles) }()
+      case 16: try { try decoder.decodeRepeatedMessageField(value: &self.deleted) }()
       default: break
       }
     }
@@ -11780,8 +11796,8 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if !self.reads.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.reads, fieldNumber: 15)
     }
-    if !self.deletedHandles.isEmpty {
-      try visitor.visitRepeatedStringField(value: self.deletedHandles, fieldNumber: 16)
+    if !self.deleted.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.deleted, fieldNumber: 16)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -11797,7 +11813,42 @@ nonisolated extension Provenencia_Engine_V1_WriteEffects: SwiftProtobuf.Message,
     if lhs.lists != rhs.lists {return false}
     if lhs.evidenceGraphs != rhs.evidenceGraphs {return false}
     if lhs.reads != rhs.reads {return false}
-    if lhs.deletedHandles != rhs.deletedHandles {return false}
+    if lhs.deleted != rhs.deleted {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_WriteEffectsDeleted: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".WriteEffectsDeleted"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entity\0\u{1}ids\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.entity) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.ids) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.entity.isEmpty {
+      try visitor.visitSingularStringField(value: self.entity, fieldNumber: 1)
+    }
+    if !self.ids.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.ids, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_WriteEffectsDeleted, rhs: Provenencia_Engine_V1_WriteEffectsDeleted) -> Bool {
+    if lhs.entity != rhs.entity {return false}
+    if lhs.ids != rhs.ids {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

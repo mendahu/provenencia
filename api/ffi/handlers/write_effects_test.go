@@ -35,7 +35,7 @@ func TestWriteEffectsProto(t *testing.T) {
 		handles        []string
 		summaryHandles []string
 		handleScopes   []string
-		deletedHandles []string
+		deleted        []*engine.WriteEffectsDeleted
 		revision       int64
 		revisionAt     string
 	}{
@@ -54,9 +54,9 @@ func TestWriteEffectsProto(t *testing.T) {
 			summaryHandles: []string{bStr},
 		},
 		{
-			name:           "deleted handles",
-			res:            writes.Result{Effects: effects.Set{DeletedHandles: [][]byte{a}}},
-			deletedHandles: []string{aStr},
+			name:    "deleted handles",
+			res:     writes.Result{Effects: effects.Set{Deleted: []effects.DeletedIDs{{Entity: "canonical_entity", IDs: [][]byte{a}}}}},
+			deleted: []*engine.WriteEffectsDeleted{{Entity: "canonical_entity", Ids: []string{aStr}}},
 		},
 	}
 	for _, tt := range tests {
@@ -71,8 +71,13 @@ func TestWriteEffectsProto(t *testing.T) {
 			if !reflect.DeepEqual(got.GetHandleScopes(), tt.handleScopes) {
 				t.Fatalf("HandleScopes = %v, want %v", got.GetHandleScopes(), tt.handleScopes)
 			}
-			if !reflect.DeepEqual(got.GetDeletedHandles(), tt.deletedHandles) {
-				t.Fatalf("DeletedHandles = %v, want %v", got.GetDeletedHandles(), tt.deletedHandles)
+			if len(got.GetDeleted()) != len(tt.deleted) {
+				t.Fatalf("Deleted = %v, want %v", got.GetDeleted(), tt.deleted)
+			}
+			for i, d := range tt.deleted {
+				if g := got.GetDeleted()[i]; g.GetEntity() != d.GetEntity() || !reflect.DeepEqual(g.GetIds(), d.GetIds()) {
+					t.Fatalf("Deleted = %v, want %v", got.GetDeleted(), tt.deleted)
+				}
 			}
 			if got.GetRevision() != tt.revision || got.GetRevisionAt() != tt.revisionAt {
 				t.Fatalf("Revision = %d %q, want %d %q", got.GetRevision(), got.GetRevisionAt(), tt.revision, tt.revisionAt)
@@ -266,4 +271,14 @@ func TestEveryAuditedWriteReturnsEffects(t *testing.T) {
 			t.Fatalf("got %v", got)
 		}
 	})
+}
+
+// deletedIDs is the ids an effects message reports as deleted for one entity.
+func deletedIDs(e *engine.WriteEffects, entity string) []string {
+	for _, d := range e.GetDeleted() {
+		if d.GetEntity() == entity {
+			return d.GetIds()
+		}
+	}
+	return nil
 }

@@ -190,8 +190,8 @@ func TestDeleteSubjectReportsDeletedHandle(t *testing.T) {
 			if err := proto.Unmarshal(out, &resp); err != nil {
 				t.Fatal(err)
 			}
-			if got := resp.GetEffects().GetDeletedHandles(); len(got) != 1 || got[0] != handle {
-				t.Fatalf("deleted_handles %v, want [%s]", got, handle)
+			if got := deletedIDs(resp.GetEffects(), "canonical_entity"); len(got) != 1 || got[0] != handle {
+				t.Fatalf("deleted canonical_entity ids %v, want [%s]", got, handle)
 			}
 		},
 	}})
