@@ -241,12 +241,12 @@ A skipped row is not stored. Opening Promote again proposes it afresh.
 
 Promoting one Subject does not promote its neighbors. The page proposes them, and nothing is created for a row the researcher skips. A primary handle (Person, Event, Place) is created only by an accepted row.
 
-**Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member.
+**Bridge Subjects** (participation, location, relationship, place relationship) have no identity of their own. Once both ends are members of handles, a bridge is **filed automatically**, joining the association the two handles already share, or a new one. That happens when the bridge is drawn between two handles, on Done for the bridge's Evidence graph, or later, when a claim makes its second end a member.
 
 - **Participation and location** are keyed by their ends. The role is a reconciled value on the association, not part of its identity.
 - **Relationship and place relationship** are keyed by their ends and type: spouse *and* cousin are two relationships; `part_of` *and* `succeeded_by` are two place relationships.
 - **Direction** is kept for directed types ("parent of", "part of"); symmetric types (spouse) ignore order.
-- **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the claim that triggered it.
+- **A bridge whose ends are one handle is refused.** A refused filing (that one, or a place-hierarchy cycle) leaves the bridge unfiled, with its reason, and never fails the write that triggered it.
 - **The Promote page has no per-bridge switch.** A connection the researcher disputes is fixed on the Evidence graph (delete it, or change its type or role).
 - **A bridge with an unpromoted end** stays on the Evidence graph until that end is promoted. An end with only a provisional claim is unpromoted: the bridge stays unfiled until that claim is accepted, and is filed then.
 
