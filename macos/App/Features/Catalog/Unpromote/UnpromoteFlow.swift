@@ -140,6 +140,7 @@ final class UnpromoteFlow {
         guard let item = pending, !isRunning else { return nil }
         isRunning = true
         defer { isRunning = false }
+        pending?.error = nil
         do {
             let effects = try await session.store.unpromoteSubject(
                 projectDir: session.projectKey.projectDir,

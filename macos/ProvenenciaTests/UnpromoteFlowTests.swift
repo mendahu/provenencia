@@ -262,7 +262,14 @@ struct UnpromoteFlowTests {
         #expect(result == nil)
         #expect(flow.pending?.error == L10n.Errors.message(for: failure))
         store.unpromoteSubjectError = nil
-        #expect(await flow.confirm(session: session, userID: "user-1") != nil)
+        // A retry clears the error before the write returns.
+        store.unpromoteSubjectHold.isOn = true
+        let retry = Task { await flow.confirm(session: session, userID: "user-1") }
+        #expect(await waitUntil { store.unpromoteSubjectHold.count == 1 })
+        #expect(flow.pending?.error == nil)
+        store.unpromoteSubjectHold.isOn = false
+        store.unpromoteSubjectHold.release()
+        #expect(await retry.value != nil)
         #expect(flow.pending == nil)
     }
 }
