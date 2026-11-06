@@ -141,7 +141,7 @@ struct PersonTimelineContent: Equatable {
                 spokenLabel: L10n.string(kind == .birth ? L10n.Conclusions.timelineBirthUnknown : L10n.Conclusions.timelineDeathUnknown)
             )
         }
-        for event in timeline.events where event.participants.count > limit {
+        for event in timeline.events {
             revealed[.participants(eventId: event.event.id)] =
                 ConclusionFold.firstRevealed(event.participants, limit: limit, minimumHidden: 1).map {
                     Self.participantLinkID(eventId: event.event.id, personId: $0.person.id)
@@ -185,19 +185,20 @@ struct PersonTimelineContent: Equatable {
 
         // Folds: the dated rows before the death marker, a recorded birth's row
         // among them; a placeholder ahead of the hidden run is never folded.
-        // Only event rows count toward the limit; a marker inside the hidden run is hidden with it.
+        // Only event rows count toward the limit; a marker or placeholder among the hidden
+        // rows stays where it is, after the one "Show N more" for them.
         let counted = before.filter { $0.eventRow != nil }
         revealed[.dated] = ConclusionFold.firstRevealed(counted, limit: Self.eventFoldLimit, minimumHidden: 1)?.id
         if !expanded.contains(.dated) {
             let fold = ConclusionFold.shown(counted, limit: Self.eventFoldLimit, minimumHidden: 1, expanded: false)
             if fold.hidden > 0 {
-                // The hidden run, from its first event row to its last, takes any marker
-                // between them; one "Show N more" stands for it.
                 let hiddenIDs = Set(counted.dropFirst(fold.shown.count).map(\.id))
-                if let first = before.firstIndex(where: { hiddenIDs.contains($0.id) }),
-                   let last = before.lastIndex(where: { hiddenIDs.contains($0.id) })
-                {
-                    before.replaceSubrange(first...last, with: [.more(.dated, count: fold.hidden)])
+                var placed = false
+                before = before.compactMap { item in
+                    guard item.eventRow != nil, hiddenIDs.contains(item.id) else { return item }
+                    if placed { return nil }
+                    placed = true
+                    return .more(.dated, count: fold.hidden)
                 }
             }
         }
