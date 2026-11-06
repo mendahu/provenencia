@@ -486,30 +486,7 @@ func findAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string
 }
 
 func queryAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey string, termID []byte) ([]byte, error) {
-	q := `SELECT ic.entity_id
-		FROM identity_claims ic
-		JOIN subjects s ON s.id = ic.subject_id
-		JOIN subject_types st ON st.id = s.subject_type_id
-			AND st.key = ? AND st.origin = 'provenencia'
-		WHERE ic.status = 'accepted'`
-	args := []any{typeKey}
-	for _, e := range ends {
-		q += ` AND EXISTS (
-			SELECT 1 FROM observations o
-			JOIN properties p ON p.id = o.property_id AND p.key = ? AND p.origin = 'provenencia'
-			JOIN identity_claims ec ON ec.subject_id = o.value_subject_id
-				AND ec.status = 'accepted' AND ec.entity_id = ?
-			WHERE o.subject_id = s.id)`
-		args = append(args, e.propertyKey, e.entityID)
-	}
-	if len(termID) == 16 {
-		q += ` AND EXISTS (
-			SELECT 1 FROM observations o
-			JOIN properties p ON p.id = o.property_id AND p.key = ? AND p.origin = 'provenencia'
-			WHERE o.subject_id = s.id AND o.value_term_id = ?)`
-		args = append(args, termKey, termID)
-	}
-	q += ` LIMIT 1`
+	q, args := associationSQL(typeKey, ends, termKey, termID)
 	var id []byte
 	err := tx.QueryRow(q, args...).Scan(&id)
 	if err == sql.ErrNoRows {
@@ -519,6 +496,45 @@ func queryAssociation(tx *sql.Tx, typeKey string, ends []endpoint, termKey strin
 		return nil, err
 	}
 	return append([]byte(nil), id...), nil
+}
+
+// associationSQL is the queryAssociation query and its arguments. It seeks
+// from ends[0], the from end of every bridge (the event of a location, the
+// child of a part_of), through the Observations that name its Subjects, to
+// the bridge Subject. CROSS JOIN pins that order: left to choose, SQLite
+// starts at the subject type index and tests every bridge of the type, and a
+// place can be the other end of thousands of links. The other ends and the
+// term stay EXISTS tests on the bridge's own observations; the unary plus
+// keeps those on observations_subject_id_idx.
+func associationSQL(typeKey string, ends []endpoint, termKey string, termID []byte) (string, []any) {
+	q := `SELECT ic.entity_id
+		FROM identity_claims ec0
+		CROSS JOIN observations o0 ON o0.value_subject_id = ec0.subject_id
+		CROSS JOIN properties p0 ON p0.id = o0.property_id AND p0.key = ? AND p0.origin = 'provenencia'
+		CROSS JOIN subjects s ON s.id = o0.subject_id
+		CROSS JOIN subject_types st ON st.id = s.subject_type_id
+			AND st.key = ? AND st.origin = 'provenencia'
+		CROSS JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'
+		WHERE ec0.entity_id = ? AND ec0.status = 'accepted'`
+	args := []any{ends[0].propertyKey, typeKey, ends[0].entityID}
+	for _, e := range ends[1:] {
+		q += ` AND EXISTS (
+			SELECT 1 FROM observations o
+			JOIN properties p ON p.id = +o.property_id AND p.key = ? AND p.origin = 'provenencia'
+			JOIN identity_claims ec ON ec.subject_id = o.value_subject_id
+				AND ec.status = 'accepted' AND ec.entity_id = ?
+			WHERE o.subject_id = s.id)`
+		args = append(args, e.propertyKey, e.entityID)
+	}
+	if len(termID) == 16 {
+		q += ` AND EXISTS (
+			SELECT 1 FROM observations o
+			JOIN properties p ON p.id = +o.property_id AND p.key = ? AND p.origin = 'provenencia'
+			WHERE o.subject_id = s.id AND +o.value_term_id = ?)`
+		args = append(args, termKey, termID)
+	}
+	q += ` LIMIT 1`
+	return q, args
 }
 
 // bridgeHeadsSQL is the bridgeHeads query for nKeys bridge type keys. CROSS
