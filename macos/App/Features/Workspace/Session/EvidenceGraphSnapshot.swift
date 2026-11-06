@@ -55,7 +55,7 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
 
     /// The name rule behind ``displayName(orders:)`` for a Subject that is not placed on a
     /// graph (a Person handle's member listed on the Sources section). The Observations are
-    /// sorted into the card's order first, so the first naming one is the card's.
+    /// ranked in the card's order among those that name it, so the first is the card's.
     static func displayName(
         subject: CatalogSubject,
         kind: EvidencePrimaryKind,
@@ -66,10 +66,11 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
         if kind == .event, let eventTitle {
             return EventTitleDisplay.title(eventTitle, orders: orders)
         }
-        let sorted = observations.sorted(by: EvidenceGraphSnapshot.observationDisplayOrder)
-        if let named = sorted.lazy.compactMap(Self.namingValue(for: kind, orders: orders)).first {
-            return named
-        }
+        let naming = Self.namingValue(for: kind, orders: orders)
+        let named = observations.lazy
+            .compactMap { observation in naming(observation).map { (observation, $0) } }
+            .min { EvidenceGraphSnapshot.observationDisplayOrder($0.0, $1.0) }
+        if let named { return named.1 }
         return subject.trimmedLabel ?? subject.ref
     }
 
