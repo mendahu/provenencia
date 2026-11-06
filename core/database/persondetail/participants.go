@@ -17,7 +17,7 @@ var participantRoleOrder = []vocabkey.Role{
 }
 
 // sortParticipants orders one event's participants by rank, then by index (their
-// place in the title order of PersonsByIDs). A participant's rank is the best
+// place in the list order of PersonsByIDs). A participant's rank is the best
 // rank of its roles: a listed (product) role ranks by its place in
 // participantRoleOrder; a role the researcher defined ranks after every listed
 // one, the event's own such roles ordered by label; a participant with no role
