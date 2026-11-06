@@ -46,11 +46,12 @@ type Result struct {
 	Observations []observations.Observation
 }
 
-// CreateCitedBridge writes a bridge Subject, position, Citation, and Observations
-// on tx, and files the bridge when both ends are already handles (§9.1). A wait
-// or a refused filing is not an error. Nothing persists if citation insert fails. The caller records the
-// returned changes. The position is one of them; Run stores it and does not
-// record it.
+// CreateCitedBridge writes a bridge Subject, position, Citation, and
+// Observations on tx, and files the bridge when both ends are already handles
+// (promote-graph-alignment.md §9.1). A wait or a refused filing is not an
+// error. A database error while filing, or while inserting the Citation, rolls
+// the whole write back. The caller records the returned changes. The position
+// is one of them; Run stores it and does not record it.
 func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, []rowchange.Change, error) {
 	if tx == nil {
 		return Result{}, nil, ErrInvalid

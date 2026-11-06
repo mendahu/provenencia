@@ -524,7 +524,7 @@ One PR (user, 2026-11-01).
 **Ships.** After `connect.CreateCitedBridge` completes its Observations, call `FileBridgesTx` (or equivalent) on the new bridge so every bridge kind files when both ends already resolve to handles — same soft-refuse behaviour as Promote-triggered filing. Go tests covering relationship and at least one other bridge kind; connect write still succeeds when filing soft-refuses. Updates `promote-graph-alignment.md` §9.1 if the "after any claim create" wording must name create-cited-bridge.
 **Not this PR.** Per-card Promote on bridges; changing unpromote / UnfileBridges.
 **Check.** Bar outcome 28: spouse between two promoted people shows membership without a second Promote.
-**Context.** Working rule "Creating a bridge files it when both ends are already handles"; [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md); `core/database/connect`, `identityclaims/bridgefile.go`; `add-ffi-handler`.
+**Context.** Working rule "Creating a bridge files it when both ends are already handles"; dogfood note 2026-11-02 (deleted on land); `core/database/connect`, `identityclaims/bridgefile.go`; `add-ffi-handler`.
 
 ### Slice 7d — List and nav polish
 

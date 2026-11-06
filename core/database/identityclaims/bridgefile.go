@@ -15,13 +15,13 @@ import (
 // this transaction. A bridge whose ends are both handles joins the association
 // those ends already share, or a new one is minted and the bridge is claimed
 // onto it. An unpromoted end is left for a later claim. A self-link is not
-// filed and is not an error: the claim that triggered filing still stands.
+// filed and is not an error: the write that triggered filing still stands.
 // Role stays off the key (it is reconciled on the association). A relationship
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
 //
-// Returned association ids are the handles whose cache the caller recomputes.
-// Changes belong on the caller's revision. Does not commit. subjectID is a new
+// Returned association ids are the handles filing touched; writes.Run
+// recomputes the handles of the changes. Changes belong on the caller's revision. Does not commit. subjectID is a new
 // member (the bridges touching it file) or a new bridge (it files itself).
 func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {

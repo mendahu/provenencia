@@ -99,21 +99,30 @@ func connectFixture(t *testing.T) (
 		personPropID, eventPropID, rolePropID, roleTermID
 }
 
-// requireEndsNamed fails unless the effects name every end handle, in handles
-// or in summary_handles, so a cached detail page of either end reloads.
-func requireEndsNamed(t *testing.T, e *engine.WriteEffects, ends [][]byte) {
+// requireEndsNamed fails unless the effects name the handle of each end of the
+// bridge req drew, in handles or in summary_handles, so a cached detail page
+// of either end reloads.
+func requireEndsNamed(t *testing.T, req *engine.CreateCitedBridgeRequest, e *engine.WriteEffects) {
 	t.Helper()
 	named := append(slices.Clone(e.GetHandles()), e.GetSummaryHandles()...)
-	for _, end := range ends {
-		if !slices.Contains(named, database.UUIDString(end)) {
-			t.Errorf("effects handles %v and summary_handles %v lack the end %x", e.GetHandles(), e.GetSummaryHandles(), end)
+	for _, subjectID := range []string{req.GetFromSubjectId(), req.GetToSubjectId()} {
+		subject := uuid.MustParse(subjectID)
+		if err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+			claim, err := identityclaims.AcceptedEntityForSubject(c, subject[:])
+			if err != nil {
+				return err
+			}
+			if !slices.Contains(named, database.UUIDString(claim.EntityID)) {
+				t.Errorf("effects handles %v and summary_handles %v lack the end %x", e.GetHandles(), e.GetSummaryHandles(), claim.EntityID)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
 		}
 	}
 }
 
 func TestCreateCitedBridge(t *testing.T) {
-	var dir string
-	var ends [][]byte
 	runRPC(t, CreateCitedBridge, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
@@ -151,12 +160,9 @@ func TestCreateCitedBridge(t *testing.T) {
 		{
 			name: "files a participation between two promoted subjects",
 			reqFn: func(t *testing.T) proto.Message {
-				d, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
-				dir = d
-				ends = [][]byte{
-					promoteInDir(t, dir, userID, personID, "").Entity.ID,
-					promoteInDir(t, dir, userID, eventID, "").Entity.ID,
-				}
+				dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+				promoteInDir(t, dir, userID, personID, "")
+				promoteInDir(t, dir, userID, eventID, "")
 				return &engine.CreateCitedBridgeRequest{
 					ProjectDir:    dir,
 					UserId:        userID,
@@ -172,7 +178,8 @@ func TestCreateCitedBridge(t *testing.T) {
 					},
 				}
 			},
-			after: func(t *testing.T, out []byte, _ proto.Message) {
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				dir := req.(*engine.CreateCitedBridgeRequest).GetProjectDir()
 				var created engine.CreateCitedBridgeResponse
 				if err := proto.Unmarshal(out, &created); err != nil {
 					t.Fatal(err)
@@ -190,14 +197,13 @@ func TestCreateCitedBridge(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				requireEndsNamed(t, created.GetEffects(), ends)
+				requireEndsNamed(t, req.(*engine.CreateCitedBridgeRequest), created.GetEffects())
 			},
 		},
 		{
 			name: "files a relationship between two promoted people",
 			reqFn: func(t *testing.T) proto.Message {
-				d, userID, sourceID, artifactID, personID, _, personProp, _, _, _ := connectFixture(t)
-				dir = d
+				dir, userID, sourceID, artifactID, personID, _, personProp, _, _, _ := connectFixture(t)
 				personOut, err := CreateSubject(marshalProto(t, &engine.CreateSubjectRequest{
 					ProjectDir: dir, UserId: userID, GraphId: soleGraphID(t, dir, sourceID),
 					SubjectTypeId: subjectTypeIDByKey(t, dir, "person"), Label: "Bea",
@@ -215,10 +221,8 @@ func TestCreateCitedBridge(t *testing.T) {
 				})); err != nil {
 					t.Fatal(err)
 				}
-				ends = [][]byte{
-					promoteInDir(t, dir, userID, personID, "").Entity.ID,
-					promoteInDir(t, dir, userID, otherID, "").Entity.ID,
-				}
+				promoteInDir(t, dir, userID, personID, "")
+				promoteInDir(t, dir, userID, otherID, "")
 				typeProp := propertyIDByKey(t, dir, "relationship_type")
 				var terms engine.ListPropertyTermsResponse
 				mustRPC(t, ListPropertyTerms, &engine.ListPropertyTermsRequest{ProjectDir: dir, PropertyId: typeProp}, &terms)
@@ -237,12 +241,12 @@ func TestCreateCitedBridge(t *testing.T) {
 					},
 				}
 			},
-			after: func(t *testing.T, out []byte, _ proto.Message) {
+			after: func(t *testing.T, out []byte, req proto.Message) {
 				var created engine.CreateCitedBridgeResponse
 				if err := proto.Unmarshal(out, &created); err != nil {
 					t.Fatal(err)
 				}
-				requireEndsNamed(t, created.GetEffects(), ends)
+				requireEndsNamed(t, req.(*engine.CreateCitedBridgeRequest), created.GetEffects())
 			},
 		},
 		{

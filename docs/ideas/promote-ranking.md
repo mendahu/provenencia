@@ -27,6 +27,8 @@ Promote's name index (`promotealign`'s shortlist, built over every person, event
 
 S11-50 moves the first build behind the open spinner. It does not help after a commit.
 
+A filed connect (S14-33) is now a handle commit too. At 18,233 handles the first same-graph proposal after one is about 0.78 s, against 0.57 s after an unfiled connect; at 36,977 handles about 1.35 s, against 0.95 s. Skipping the drops for bridges is not safe: a participation changes a Person's profile, and a relationship changes `canonlinks`. A location and a place_relationship could skip both. The user accepted the cost on 2026-11-06.
+
 S11-46 (#602) widened the rebuild: prefix keys file about 46% more index keys. On S11-21's large fixture a proposal after a handle commit went from about 424 to 512 ms. On a 20,000-person catalog with short shared given-name stems ("Jo", "Al", "Ed", "Ann"), a proposal after a handle commit took about 1.94 s with prefix keys and 1.82 s without, both over the 1.5 s budget. The user kept prefix keys uncapped (2026-10-28); this is the fix for that cost.
 
 ### Shape
