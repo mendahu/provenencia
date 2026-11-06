@@ -1,6 +1,6 @@
 # S14-34 — Persons sort ignores honorifics
 
-**Status:** Planned
+**Status:** Landed in #727 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7d — List and nav polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Persons list rows look the same; only their order changes)

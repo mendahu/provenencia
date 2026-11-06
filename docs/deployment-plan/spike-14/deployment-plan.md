@@ -91,7 +91,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-10-15: new-subject card Tab skips the description (note deleted 2026-11-05; landed #718) | S14-31 | — |
 | Dogfood 2026-10-15: place relationship rows lack the inverse label (note deleted 2026-11-05; landed #720) | S14-32 | — |
 | Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted 2026-11-06; landed #723) | S14-33 | — |
-| [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md) | S14-34 | — |
+| Dogfood 2026-10-15: Persons sort ignores honorifics (note deleted 2026-11-06; landed #727) | S14-34 | — |
 | [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) | S14-35 | — |
 | [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-37 | S14-D8 |
 
@@ -178,7 +178,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
 | S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
-| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Planned |
+| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |
 | S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties; composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
@@ -542,7 +542,7 @@ One PR (user, 2026-11-01).
 **Ships.** `personSortKey` leaves `prefix` parts out of the Persons list key, so "Mrs. Smith" and "Mr. John Smith" sort with Smith; a name of only prefix parts keeps them. Tests in `conclusionsummaries`. Go only; display title unchanged.
 **Not this PR.** Changing how titles display; surname-from-"Mrs. Smith" parsing in the name draft. Stripping titles from the working-label fallback (descoped 2026-11-06).
 **Check.** Bar outcome 29.
-**Context.** Working rule "Persons list sort omits honorific prefixes"; [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](ux/2026-10-15-persons-sort-ignores-honorifics.md); `core/database/conclusionsummaries/order.go`.
+**Context.** Working rule "Persons list sort omits honorific prefixes"; dogfood note 2026-10-15 (deleted on land); `core/database/conclusionsummaries/order.go`.
 
 #### S14-35 — Wider history jump menu
 
