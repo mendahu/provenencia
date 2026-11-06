@@ -5,7 +5,7 @@ import Testing
 @Suite
 @MainActor
 struct SourcePageModelTests {
-    private let projectDir = "/tmp/source-page.provenencia"
+    private let projectDir = ArtifactFileFixtures.uniqueProjectDir()
     private let userID = "00000000-0000-7000-8000-000000000001"
     private let sourceID = "src-1"
 
