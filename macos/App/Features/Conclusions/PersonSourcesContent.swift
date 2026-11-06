@@ -62,8 +62,8 @@ struct PersonSourcesContent: Equatable {
     ) {
         rows = groups.map { group in
             let lines = group.claims.map { claim -> Line in
-                let name = Self.nonEmpty(claim.graphName)
-                let ref = Self.nonEmpty(claim.graphRef)
+                let name = claim.graphName.trimmedNonEmpty
+                let ref = claim.graphRef.trimmedNonEmpty
                 let title = name ?? ref ?? ""
                 let subjectName = EvidenceGraphPlacedSubject.displayName(
                     subject: claim.subject,
@@ -98,7 +98,7 @@ struct PersonSourcesContent: Equatable {
                 minimumHidden: Self.lineFoldMinimumHidden,
                 expanded: expanded.contains(group.sourceID)
             )
-            let title: PVTitleSource = Self.nonEmpty(group.title).map { .name($0) } ?? .ref(group.sourceRef)
+            let title: PVTitleSource = group.title.trimmedNonEmpty.map { .name($0) } ?? .ref(group.sourceRef)
             let typeLabel = sourceTypes.label(forTypeID: group.sourceTypeID)
             let date = L10n.string(L10n.Conclusions.sourcesDateNotRecorded)
             return Row(
@@ -108,9 +108,10 @@ struct PersonSourcesContent: Equatable {
                 typeLabel: typeLabel,
                 typeIconKey: sourceTypes.iconKey(forTypeID: group.sourceTypeID),
                 ref: group.sourceRef,
-                accessibilityLabel: typeLabel.map {
-                    L10n.Conclusions.sourcesRowAccessibility(title: title.text, type: $0, date: date, ref: group.sourceRef)
-                } ?? L10n.Conclusions.sourcesRowAccessibilityUntyped(title: title.text, date: date, ref: group.sourceRef),
+                // An untitled Source's title is its ref, which is not spoken twice.
+                accessibilityLabel: L10n.DesignSystem.spokenJoin([
+                    title.text, typeLabel ?? "", date, title == .ref(group.sourceRef) ? "" : group.sourceRef,
+                ]) ?? "",
                 location: SourcesListNavigation.pageLocation(
                     sourceId: group.sourceID, ref: group.sourceRef, title: group.title
                 ),
@@ -121,10 +122,5 @@ struct PersonSourcesContent: Equatable {
                 )?.id
             )
         }
-    }
-
-    private static func nonEmpty(_ text: String) -> String? {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
     }
 }

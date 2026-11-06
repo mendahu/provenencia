@@ -133,30 +133,6 @@
         }
       }
     },
-    "conclusions.sources.rowAccessibility": {
-      "comment": "Spoken label of a Source row on a Person's Sources section; arguments are the title, the type, the date and the ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@, %3$@, %4$@"
-          }
-        }
-      }
-    },
-    "conclusions.sources.rowAccessibilityUntyped": {
-      "comment": "Spoken label of a Source row with no known type on a Person's Sources section; arguments are the title, the date and the ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@, %3$@"
-          }
-        }
-      }
-    },
     "designSystem.field.requiredMarker": {
       "comment": "Marks a required PVField as required, shown beside its label",
       "extractionState": "manual",

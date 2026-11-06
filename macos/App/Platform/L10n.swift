@@ -9556,22 +9556,6 @@ enum L10n {
             ), graph, subject, ref)
         }
 
-        static func sourcesRowAccessibility(title: String, type: String, date: String, ref: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.sources.rowAccessibility",
-                defaultValue: "%1$@, %2$@, %3$@, %4$@",
-                comment: "Spoken label of a Source row on a Person's Sources section; arguments are the title, the type, the date and the ref"
-            ), title, type, date, ref)
-        }
-
-        static func sourcesRowAccessibilityUntyped(title: String, date: String, ref: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.sources.rowAccessibilityUntyped",
-                defaultValue: "%1$@, %2$@, %3$@",
-                comment: "Spoken label of a Source row with no known type on a Person's Sources section; arguments are the title, the date and the ref"
-            ), title, date, ref)
-        }
-
         static let timelineEmptyMessage = LocalizedStringResource(
             "conclusions.timeline.emptyMessage",
             defaultValue: "Events appear here when events this person took part in are promoted from an Evidence graph.",

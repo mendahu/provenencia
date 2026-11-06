@@ -76,10 +76,10 @@ struct PersonSourcesContentTests {
             sourceId: "src-1", sourceRef: "SRC-9TQ2M", sourceTitle: "Hamburg census 1867", graphId: "g-388", subjectId: "s2"
         ))
 
-        // An unknown type id: no type cell; the untyped spoken label.
+        // An unknown type id: no type cell; the untyped spoken label, and an untitled Source's ref once.
         let letter = rows[2]
         #expect(letter.typeLabel == nil && letter.typeIconKey == nil)
-        #expect(letter.accessibilityLabel == "SRC-4KQ7M, date not recorded, SRC-4KQ7M")
+        #expect(letter.accessibilityLabel == "SRC-4KQ7M, date not recorded")
 
         // A graph with no ref, and one with no name.
         let noRef = content([CatalogPersonClaimGroup(
