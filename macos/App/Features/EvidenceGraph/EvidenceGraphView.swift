@@ -29,7 +29,8 @@ struct EvidenceGraphView: View {
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        openingSubjectID: String? = nil
     ) {
         self.graphID = graphID
         self.sourceID = sourceID
@@ -42,7 +43,8 @@ struct EvidenceGraphView: View {
                 sourceID: sourceID,
                 session: session,
                 store: store,
-                userID: userID
+                userID: userID,
+                openingSubjectID: openingSubjectID
             )
         )
     }
@@ -820,6 +822,7 @@ private struct EvidenceGraphDocumentBody: View {
     let items: GraphCanvasItemLayer
     /// Painted card layouts; hit targets and edges follow these, not constants.
     @State private var cardLayouts = EvidenceCardLayoutStore()
+    @Environment(\.graphCanvasViewport) private var viewport
 
     private var snapshot: EvidenceGraphSnapshot {
         model.displaySnapshot(rows: graphHandle.value, types: fieldsHandle.value?.types ?? [])
@@ -886,6 +889,11 @@ private struct EvidenceGraphDocumentBody: View {
         }
         .frame(width: contentSize.width, height: contentSize.height)
         .onAppear { wirePointer() }
+        // The opening location named a Subject: scroll to its card once the reads have
+        // placed it. Set once, so this fires once.
+        .onChange(of: model.openingFocus, initial: true) { _, focus in
+            if let focus { viewport?.center(onGridPoint: focus) }
+        }
         .onChange(of: inputMode) { _, _ in
             syncPointerMode()
         }

@@ -426,6 +426,28 @@ final class GraphCanvasViewportController {
         clip.scroll(to: origin)
         scrollView.reflectScrolledClipView(clip)
     }
+
+    /// Scrolls so the grid point is at the center of the visible area, keeping the
+    /// magnification. Deferred one main-queue turn, so it runs after the mount's deferred
+    /// opening camera and once the view has a frame.
+    func center(onGridPoint grid: CGPoint) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.centerNow(onGridPoint: grid) }
+        }
+    }
+
+    private func centerNow(onGridPoint grid: CGPoint) {
+        guard let scrollView, let document = scrollView.documentView as? GraphCanvasDocumentView else { return }
+        let clip = scrollView.contentView
+        let origin = GraphCanvasCoordinates.contentOffset(
+            centering: GraphCanvasCoordinates.documentPoint(grid, origin: document.contentOrigin),
+            visibleSize: clip.frame.size,
+            contentSize: document.frame.size,
+            magnification: scrollView.magnification
+        )
+        clip.scroll(to: origin)
+        scrollView.reflectScrolledClipView(clip)
+    }
 }
 
 private struct GraphCanvasViewportKey: EnvironmentKey {
