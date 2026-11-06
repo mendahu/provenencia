@@ -1,6 +1,6 @@
 # Review — S13-16 Sources section
 
-**Verdict:** Fits with changes — Not ready (round 1, on the draft; every finding Fixed)
+**Verdict:** Fits with changes — Ready (D-11 refresh, round 2; no blocker open)
 **Rounds:** 1 (round 2 runs when board S13-D6 is agreed and the plan is refreshed). **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -115,3 +115,38 @@ The plan was rewritten after the board was agreed, and fresh reviewers checked a
 - **X-27 · major · Nil lists, duplicates, `Equatable`.** Fixed in D-3.
 - **X-28 · major · Strings and ids.** Fixed. The catalog key names are given (D-12, Strings), and the accessibility label uses `sourcesDateNotRecorded`.
 - **X-29 · major · Checks that cannot run here.** Fixed where the plan can fix it. The FakeStore error case is named (manual item 3). `xcodebuild` and `check-pr.sh` run on a Mac, as for every Swift PR.
+
+## Refresh after the implementer's stop (2026-11-05)
+
+The implementer stopped on D-11: the canvas mounts before `prepare()` finishes, so the focus was nil when the camera was applied. The user chose to apply the focus after mount, not to hold the mount. Reviewers read only the changed parts. Maintainability (Opus): Fits with changes. Executability (Sonnet): Not ready.
+
+**Writer's own calls.** M-32 moves the user's choice from `updateNSView` into `GraphCanvasViewportController`: same behavior, a later pass over the mounted canvas, no representable change. M-35 widens D-11 to bridges and delete-impact rows. X-8 keeps Return activation on the record row.
+
+### Round 1
+
+- **M-31 · blocker · `viewIdentity` does not declare `subjectId`.** Fixed: D-11, T-12. Same as X-7.
+- **M-32 · major · A second camera path through the representable.** Fixed: `center(onGridPoint:)`. Closes X-1 (the live magnification is kept) and M-37.
+- **M-33 · major · A one-caller Bool on `PVTitleText`.** Fixed: `Style.rowLink`.
+- **M-34 · major · The fold rule has no slot for what it reveals.** Fixed: `ConclusionFold.firstRevealed`, T-3, T-9, T-11.
+- **M-35 · major · Delete-impact locations and bridges.** Fixed: D-11, Reach, T-7. Closes X-5 with `replacePrimarySelection` and `currentSnapshot()`.
+- **M-36 · major · The GraphCanvas README.** Fixed: STEP-7, DoD.
+- **M-37 · minor · The `contentID` branch.** Moot after M-32.
+- **M-38 · minor · The new D-7 stop condition.** Fixed: removed.
+- **M-39 · nit · §8's table.** Fixed.
+- **X-1 · blocker · Which camera.** Fixed by M-32.
+- **X-2 · blocker · `visibleSize` and magnification.** Fixed: D-11 states the frame size and who divides.
+- **X-3 · blocker · T-10 cannot be written deterministically.** Fixed: T-10 drives AppKit directly and names its wait. Mount order stays a manual check and a Stop condition.
+- **X-4 · major · `prepare()` running twice.** Fixed: the model takes `openingSubjectID` once; T-7.
+- **X-5 · major · Model-side choices.** Fixed by M-35.
+- **X-6 · major · Which view passes the camera.** Fixed: the Current state row; D-11 no longer passes a focus through it.
+- **X-7 · major · Same-graph entries.** Fixed by M-31.
+- **X-8 · major · Return activation on the record row.** Fixed: marked intended, defaults stated.
+- **X-9 · minor.** Fixed by M-38.
+- **X-10 · minor · "Their limits".** Fixed: D-10 names `eventFoldLimit`.
+- **X-11 · minor · A vacuous `rg`.** Fixed: STEP-7 checks the comment.
+- **X-12 · minor · A stop condition on the board.** Declined: outside the refresh; **Design → macOS** is the implementer's copy.
+- **X-13 · nit.** Fixed with M-39.
+
+### Round 2
+
+Fresh dry run on the answers, read against the code: Ready, no new blocker. Its notes were fixed in the text: T-11 joins STEP-5, its fixture uses the birth marker, D-10 says a marker counts as it does today, STEP-5 lists `DesignSystem/README.md`. Mount order is runtime behavior that T-10 does not prove; manual item 2 and the first Stop condition cover it. `PVInkLink` is a promotion the brief's inventory does not mark New; the Landed note records it.

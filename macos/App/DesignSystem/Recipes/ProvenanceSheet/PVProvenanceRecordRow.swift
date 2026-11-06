@@ -58,7 +58,14 @@ struct PVProvenanceRecordRow: View {
     private var citation: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             HStack(alignment: .citationFirstLineCenter, spacing: PVProvenanceColumns.copyTrackSpacing) {
-                CitationLineButton(record: record, idPrefix: idPrefix) { open(record, .citation) }
+                PVInkLink(
+                    ink: record.counted ? .primary : .secondary,
+                    accessibilityLabel: record.citation.line,
+                    identifier: "\(idPrefix).\(record.id).citation",
+                    action: { open(record, .citation) }
+                ) {
+                    Text(verbatim: record.citation.line)
+                }
                     // The first line's centre sits about a third of the type size above its baseline.
                     .alignmentGuide(.citationFirstLineCenter) { $0[.firstTextBaseline] - PVTypeScale.bodySmall / 3 }
                 PVClipboardButton(
@@ -81,47 +88,6 @@ struct PVProvenanceRecordRow: View {
                 }
                 .accessibilityIdentifier("\(idPrefix).\(record.id).observation")
             }
-        }
-    }
-}
-
-/// A record's citation line as a link: ink by whether the record counted (so the
-/// table still reads by ink), underlined at 35%, wrapping, never truncated (D-18).
-private struct CitationLineButton: View {
-    let record: PVProvenanceSheetContent.Record
-    let idPrefix: String
-    let action: () -> Void
-
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        Button(action: action) {
-            Text(verbatim: record.citation.line)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .buttonStyle(CitationLineButtonStyle(counted: record.counted))
-        .focused($focused)
-        .pvFocusRing(focused, cornerRadius: PVRadius.xs)
-        .accessibilityLabel(Text(verbatim: record.citation.line))
-        .accessibilityIdentifier("\(idPrefix).\(record.id).citation")
-    }
-}
-
-/// Kit hover and press on the citation line: link ink on hover, else primary when
-/// the record counted, secondary when it did not.
-private struct CitationLineButtonStyle: ButtonStyle {
-    let counted: Bool
-
-    func makeBody(configuration: Configuration) -> some View {
-        PVHoverEffect(isPressed: configuration.isPressed, hoverAnimation: PVMotion.fastStandard) { showHover in
-            let base = counted ? PVColor.textPrimary : PVColor.textSecondary
-            let ink = showHover || configuration.isPressed ? PVColor.textLinkHover : base
-            configuration.label
-                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                .foregroundStyle(ink)
-                .underline(true, color: ink.opacity(0.35))
         }
     }
 }

@@ -91,7 +91,7 @@ struct PersonFamilyContent: Equatable {
         let limit = Self.foldLimit
         /// The first `limit` of a list, or all of it once `fold` is expanded.
         func folded<T>(_ list: [T], _ fold: Fold) -> [T] {
-            expanded.contains(fold) ? list : Array(list.prefix(limit))
+            ConclusionFold.shown(list, limit: limit, minimumHidden: 1, expanded: expanded.contains(fold)).shown
         }
         let focusID = family.person?.entity.id
         func tile(_ member: CatalogFamilyMember, role: PersonFamilyRole, column: String, group: String) -> PersonCardLink {

@@ -143,7 +143,9 @@ struct PersonTimelineContent: Equatable {
         }
         for event in timeline.events where event.participants.count > limit {
             revealed[.participants(eventId: event.event.id)] =
-                Self.participantLinkID(eventId: event.event.id, personId: event.participants[limit].person.id)
+                ConclusionFold.firstRevealed(event.participants, limit: limit, minimumHidden: 1).map {
+                    Self.participantLinkID(eventId: event.event.id, personId: $0.person.id)
+                }
         }
         let birth = marker(.birth, timeline.birth)
         let death = marker(.death, timeline.death)
@@ -182,35 +184,33 @@ struct PersonTimelineContent: Equatable {
         let after = Array(dated[(deathAt + 1)...])
 
         // Folds: the dated rows before the death marker, a recorded birth's row
-        // among them; a birth placeholder is never folded.
-        revealed[.dated] = before.filter { $0.eventRow != nil }.dropFirst(Self.eventFoldLimit).first?.id
+        // among them; a placeholder ahead of the hidden run is never folded.
+        // Only event rows count toward the limit; a marker inside the hidden run is hidden with it.
+        let counted = before.filter { $0.eventRow != nil }
+        revealed[.dated] = ConclusionFold.firstRevealed(counted, limit: Self.eventFoldLimit, minimumHidden: 1)?.id
         if !expanded.contains(.dated) {
-            var shown = 0
-            var folded: [Item] = []
-            var hidden = 0
-            for item in before {
-                let counts = item.eventRow != nil
-                if counts && shown >= Self.eventFoldLimit {
-                    if hidden == 0 { folded.append(.more(.dated, count: 0)) }
-                    hidden += 1
-                } else {
-                    if counts { shown += 1 }
-                    folded.append(item)
+            let fold = ConclusionFold.shown(counted, limit: Self.eventFoldLimit, minimumHidden: 1, expanded: false)
+            if fold.hidden > 0 {
+                // The hidden run, from its first event row to its last, takes any marker
+                // between them; one "Show N more" stands for it.
+                let hiddenIDs = Set(counted.dropFirst(fold.shown.count).map(\.id))
+                if let first = before.firstIndex(where: { hiddenIDs.contains($0.id) }),
+                   let last = before.lastIndex(where: { hiddenIDs.contains($0.id) })
+                {
+                    before.replaceSubrange(first...last, with: [.more(.dated, count: fold.hidden)])
                 }
             }
-            if hidden > 0, let at = folded.firstIndex(where: { $0.id == "more.dated" }) {
-                folded[at] = .more(.dated, count: hidden)
-            }
-            before = folded
         }
 
-        revealed[.undated] = undated.dropFirst(Self.eventFoldLimit).first?.id
+        revealed[.undated] = ConclusionFold.firstRevealed(undated, limit: Self.eventFoldLimit, minimumHidden: 1)?.id
         var undatedItems: [Item] = []
         if !undated.isEmpty {
             undatedItems.append(.undatedHeader)
-            let limit = expanded.contains(.undated) ? undated.count : Self.eventFoldLimit
-            undatedItems += undated.prefix(limit).map { .row($0) }
-            if undated.count > limit { undatedItems.append(.more(.undated, count: undated.count - limit)) }
+            let fold = ConclusionFold.shown(
+                undated, limit: Self.eventFoldLimit, minimumHidden: 1, expanded: expanded.contains(.undated)
+            )
+            undatedItems += fold.shown.map { .row($0) }
+            if fold.hidden > 0 { undatedItems.append(.more(.undated, count: fold.hidden)) }
         }
 
         items = before + undatedItems + [dated[deathAt]] + after
@@ -270,7 +270,9 @@ struct PersonTimelineContent: Equatable {
             spoken = L10n.DesignSystem.spokenJoin(spoken, tail)
         }
         let fold = Fold.participants(eventId: summary.id)
-        let shown = expanded.contains(fold) ? event.participants : Array(event.participants.prefix(limit))
+        let shown = ConclusionFold.shown(
+            event.participants, limit: limit, minimumHidden: 1, expanded: expanded.contains(fold)
+        ).shown
         return Row(
             id: summary.id,
             title: EventTitleDisplay.titleSource(summary, locale: locale, orders: orders),

@@ -42,6 +42,9 @@ private struct PVTitleLineLimit: ViewModifier {
 struct PVTitleText: View {
     enum Style: Equatable {
         case row
+        /// The `.row` face for a title inside a link: the link owns the ink, so a ref
+        /// keeps its mono font and sets no ink of its own.
+        case rowLink
         case display(compact: Bool)
         /// The display face at the h2 size, for a row that heads a block.
         case heading
@@ -57,7 +60,7 @@ struct PVTitleText: View {
         switch style {
         case .display(compact: true): DisplayMetrics(titleSize: PVTypeScale.h3, refSize: PVTypeScale.h4)
         case .heading: DisplayMetrics(titleSize: PVTypeScale.h2, refSize: PVTypeScale.h3)
-        case .row, .display(compact: false): DisplayMetrics(titleSize: PVTypeScale.display3, refSize: PVTypeScale.h1)
+        case .row, .rowLink, .display(compact: false): DisplayMetrics(titleSize: PVTypeScale.display3, refSize: PVTypeScale.h1)
         }
     }
 
@@ -85,7 +88,7 @@ struct PVTitleText: View {
 
     var body: some View {
         switch style {
-        case .row:
+        case .row, .rowLink:
             HStack(spacing: PVSpacing.space4) {
                 rowText
                     .fontWeight(emphasized ? .semibold : nil)
@@ -114,9 +117,13 @@ struct PVTitleText: View {
         case .label(let text):
             Text(verbatim: text).italic()
         case .ref(let text):
-            Text(verbatim: text)
-                .font(PVFont.mono(size: PVTypeScale.bodySmall))
-                .foregroundStyle(PVColor.textSecondary)
+            if style == .rowLink {
+                Text(verbatim: text).font(PVFont.mono(size: PVTypeScale.bodySmall))
+            } else {
+                Text(verbatim: text)
+                    .font(PVFont.mono(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textSecondary)
+            }
         }
     }
 
