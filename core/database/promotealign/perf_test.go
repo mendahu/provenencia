@@ -22,8 +22,9 @@ import (
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
 // four cores, as scripts/check-pr.sh and CI do. The warm figure was raised from
 // 250 ms by the user on 2026-10-26 when the fixture gained the 12-generation
-// tree and matching read kinship links (S11-39), then from 350 ms to 375 ms by the user on 2026-11-05, when the CI
-// runner measured 350.57 ms (S14-32). The after-commit figure was
+// tree and matching read kinship links (S11-39), then from 350 ms to 375 ms by
+// the user on 2026-11-05, when the CI runner measured 350.57 ms (S14-32) and
+// S14-20 had measured 360 ms as a best of five. The after-commit figure was
 // raised from 1.5 s by the user on 2026-11-01: the CI runner measured 1.6–2.05 s
 // where a Mac measures 0.6 s (S13-02, S13-03).
 const (
@@ -194,7 +195,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// garbage, not for what the subtests before it left; five runs take the
 	// noise of a loaded CI runner (2026-11-03, a best of three measured 388 ms
 	// there against 110 – 190 ms on a Mac). The cost itself is
-	// docs/ideas/narrower-canon-walk.md.
+	// docs/ideas/promote-ranking.md#narrower-canon-walk.
 	t.Run("warm", func(t *testing.T) {
 		propose()
 		d := fastest(5, func() time.Duration {
