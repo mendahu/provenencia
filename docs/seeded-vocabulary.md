@@ -566,7 +566,7 @@ idx   part_type
 6     suffix
 ```
 
-Sorted style (list order; separator `", "` after the surname group — *Robins, James*). Proposed, to be settled with the name-format work ([`structured-name-model.md`](structured-name-model.md) §4.5):
+Sorted style (how a list row reads; the list key is this order without `prefix` parts unless the name has nothing else, `nameformats.Profile.SortKey`, [`structured-name-model.md`](structured-name-model.md) §4.5; separator `", "` after the surname group — *Robins, James*). Proposed, to be settled with the name-format work ([`structured-name-model.md`](structured-name-model.md) §4.5):
 
 ```text
 idx   part_type
