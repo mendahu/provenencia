@@ -96,4 +96,4 @@ Check: `grep -n 'notIn' core/database/deleteimpact/handle_gone.go` prints nothin
 Head `371d7e52`. F-7 and F-8 done, in one commit. F-7's vocabulary row was written with the code, as it would not compile before `DeletedEntities`; the Swift tests are in `CatalogQueryRegistryTests.swift`. Read by the orchestrator: both match the fix plan. Final gate result below.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: MNT-10's private copies of the `IN` placeholder helper (`core/database/graphcache/sql.go:13`, `core/search/fts.go:292`), untouched by this PR · to user: MNT-2, answered (keyed list)
+Gate PASS · CI pending · open: none · follow-ups: MNT-10's private copies of the `IN` placeholder helper (`core/database/graphcache/sql.go:13`, `core/search/fts.go:292`), untouched by this PR, home `docs/ideas/structural-debt.md` (user, 2026-11-06) · to user: MNT-2, answered (keyed list)
