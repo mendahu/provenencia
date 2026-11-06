@@ -10393,8 +10393,8 @@ func (x *PersonSummary) GetSexAtBirth() *TermFacts {
 	return nil
 }
 
-// ListPersonSummaries returns every unmerged Person in list order: by the title
-// the row shows (auto-reconciled name, else label), ignoring case and
+// ListPersonSummaries returns every unmerged Person in list order: by the name
+// without honorifics (auto-reconciled name, else label), ignoring case and
 // diacritics, then ref-only rows by ref. The app shows rows as given.
 type ListPersonSummariesRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`

@@ -1512,7 +1512,7 @@ protocol GenealogyStore: Sendable {
     func listSubjectMemberships(projectDir: String, graphID: String) async throws -> [CatalogSubjectMembership]
     /// The title of every Event Subject on one Evidence graph, keyed by Subject id.
     func listEvidenceGraphEventTitles(projectDir: String, graphID: String) async throws -> [String: CatalogEventTitle]
-    /// Every unmerged Person as a row summary, in Go's list order (by shown title, then ref-only by ref).
+    /// Every unmerged Person as a row summary, in Go's list order by sort name, which leaves honorifics out, then ref-only by ref.
     func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary]
     func listEventSummaries(projectDir: String) async throws -> [CatalogEventSummary]
     func listPlaceSummaries(projectDir: String) async throws -> [CatalogPlaceSummary]
