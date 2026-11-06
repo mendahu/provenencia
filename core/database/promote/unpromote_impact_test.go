@@ -157,8 +157,18 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 	t.Run("a Subject with no accepted claim reports nothing", func(t *testing.T) {
 		w := newBridgeWorld(t)
 		f := newBridgeFixture(w)
-		if err := w.unpromote(f.p); err != nil {
+		claim, err := identityclaims.AcceptedEntityForSubject(w.c, f.p.ID)
+		if err != nil {
 			t.Fatal(err)
+		}
+		if _, err := writes.Call(w.c, writes.Op{Action: "release_claim", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := deleteimpact.ReleaseClaim(tx, claim.ID)
+			return struct{}{}, ch, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if !w.filed(f.r) || !w.filed(f.q) {
+			t.Fatal("the bridges should stay filed with only P's claim released")
 		}
 		report, err := promote.UnpromoteImpact(w.c, f.p.ID)
 		if err != nil {
