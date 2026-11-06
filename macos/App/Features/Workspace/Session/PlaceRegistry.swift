@@ -87,7 +87,12 @@ struct PlaceRegistry: Sendable {
                     .evidenceGraphsList(project: project),
                 ]
             },
-            viewIdentity: { $0.graphId }
+            // The view is built from the Subject the location opens on, so each one is a fresh mount.
+            viewIdentity: { location in
+                guard let graphId = location.graphId else { return nil }
+                guard let subjectId = location.subjectId, !subjectId.isEmpty else { return graphId }
+                return "\(graphId)#\(subjectId)"
+            }
         ),
         Spec(
             id: .sourceDetail,
@@ -192,6 +197,7 @@ struct PlaceRegistry: Sendable {
                 guard let entityId = location.entityId else { return [] }
                 return [.conclusionDetail(project: project, entityId: entityId)]
                     + (location.pageSection?.queryKey(project: project, entityId: entityId).map { [$0] } ?? [])
+                    + (location.pageSection?.supportingQueryKeys(project: project, entityId: entityId) ?? [])
             },
             viewIdentity: { $0.entityId }
         ),

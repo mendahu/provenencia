@@ -115,6 +115,31 @@ struct PersonTimelineContentTests {
         #expect(undated.firstRevealed(by: .undated) == "u50")
     }
 
+    @Test func markerInsideHiddenRunStaysShown() {
+        var timeline = Data.ida
+        timeline.events = (1...60).map { Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0))) }
+        // A birth with no recorded event, placed beside the 55th row: past the 50th.
+        timeline.birth = CatalogLifeMarker(besideEventId: "d55")
+        timeline.death = CatalogLifeMarker()
+
+        let folded = content(timeline)
+        let rows = folded.items.compactMap(\.eventRow)
+        #expect(rows.count == 50 && rows.first?.id == "d1" && rows.last?.id == "d50")
+        #expect(folded.items.contains(.more(.dated, count: 10)))
+
+        // The marker stays after "Show N more", where it was before the fold moved to the shared rule.
+        let foldedOrder = folded.items.map(\.id)
+        #expect(foldedOrder.contains("birth"))
+        #expect(foldedOrder.firstIndex(of: "more.dated").map { $0 + 1 } == foldedOrder.firstIndex(of: "birth"))
+
+        let open = content(timeline, expanded: [.dated])
+        let order = open.items.map(\.id)
+        let birthAt = order.firstIndex(of: "birth")
+        #expect(birthAt != nil && birthAt == order.firstIndex(of: "d55").map { $0 - 1 })
+
+        #expect(folded.firstRevealed(by: .dated) == "d51")
+    }
+
     @Test func pointsAreNamedByTheirRow() {
         for timeline in [Data.johann, Data.lise, Data.unknownEnds] {
             let all = content(timeline, expanded: [.dated, .undated])

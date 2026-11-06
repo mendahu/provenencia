@@ -61,11 +61,7 @@ private struct PersonDetailSections: View {
         case .timeline:
             PersonTimelineSection(entityId: entityId)
         case .sources:
-            PVEmptyState(
-                glyph: section.glyph,
-                title: section.label,
-                message: L10n.Conclusions.pageSectionLater(L10n.string(section.label))
-            )
+            PersonSourcesSection(entityId: entityId)
         }
     }
 }
@@ -73,14 +69,9 @@ private struct PersonDetailSections: View {
 /// The two life lines under a Person's name.
 private struct PersonDetailLifeLines: View {
     let lines: [PersonLifeDisplay.LifeLine]
-    @Environment(\.conclusionDetailHeaderCompact) private var compact
 
     var body: some View {
-        // Compact (the pinned header after a scroll) puts the two lines side by side.
-        let layout = compact
-            ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: PVSpacing.space6))
-            : AnyLayout(VStackLayout(alignment: .leading, spacing: PVSpacing.space1))
-        layout {
+        VStackLayout(alignment: .leading, spacing: PVSpacing.space1) {
             ForEach(lines, id: \.abbreviation) { line in
                 PVDatePlaceLine(
                     leading: line.abbreviation,

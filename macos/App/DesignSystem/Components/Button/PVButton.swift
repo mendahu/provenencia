@@ -267,6 +267,12 @@ private struct PVButtonBody: View {
                     .font(size.buttonFont)
                     .foregroundStyle(showHover ? PVColor.textLinkHover : palette.foreground)
                     .underline()
+                    // Pad out by the ring's width, ring, pad back: the ring sits
+                    // outside the glyphs and the button's layout does not change.
+                    // Always applied; focus only changes opacity.
+                    .padding(PVElevation.focusRingWidth)
+                    .pvFocusRing(isFocused, cornerRadius: PVRadius.xs)
+                    .padding(-PVElevation.focusRingWidth)
             }
         } else {
             PVHoverEffect(isPressed: configuration.isPressed, hoverAnimation: PVMotion.fastStandard) { showHover in
@@ -285,8 +291,8 @@ private struct PVButtonBody: View {
                     )
                     // Always applied; focus only changes opacity — never wrap
                     // this in `if isFocused` (README § "Interaction state").
-                    // `link` skips it: a 3pt inner ring on bare underlined
-                    // text would sit on the glyphs.
+                    // `link` draws its own, outset (above): a 3pt inner ring on
+                    // bare underlined text would sit on the glyphs.
                     .pvFocusRing(isFocused, cornerRadius: PVRadius.sm)
             }
         }

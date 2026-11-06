@@ -82,6 +82,25 @@ enum GraphCanvasCoordinates {
         )
     }
 
+    /// The content-view scroll origin that puts `point` (document space) at the center of
+    /// the visible area. `visibleSize` is the clip view's `frame.size` in view points, which
+    /// shows `visibleSize / magnification` of the document; the result is clamped to the
+    /// document like every other scroll origin.
+    static func contentOffset(
+        centering point: CGPoint,
+        visibleSize: CGSize,
+        contentSize: CGSize,
+        magnification: CGFloat
+    ) -> CGPoint {
+        let mag = max(magnification, minimumMagnification)
+        let visible = CGSize(width: visibleSize.width / mag, height: visibleSize.height / mag)
+        return clampedContentOrigin(
+            proposed: CGPoint(x: point.x - visible.width / 2, y: point.y - visible.height / 2),
+            documentSize: contentSize,
+            visibleSize: visible
+        )
+    }
+
     /// A grid-space rectangle in document space: the document's top-left stands
     /// on grid point `origin`.
     static func documentRect(_ grid: CGRect, origin: CGPoint) -> CGRect {

@@ -49,7 +49,8 @@ struct WorkspaceDestinationHost: View {
                     sourceID: sourceID,
                     session: session,
                     store: store,
-                    userID: userID
+                    userID: userID,
+                    openingSubjectID: navigation.currentLocation.subjectId
                 )
             }
         case .sourceCitationComposer:

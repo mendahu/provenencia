@@ -6,14 +6,8 @@ import SwiftUI
 enum PVPageColumnsMetrics {
     /// The id of the zero-height view at the very top of the scroll content.
     static let topAnchor = "pv.pageColumns.top"
-    /// The scroll view's coordinate space, in which the top sentinel is measured.
+    /// The scroll view's coordinate space, for a section that measures its rows in it.
     static let scrollSpace = "pv.pageColumns.scroll"
-    /// A pinned header starts to compact only when the content overflows its
-    /// viewport by at least this much (or by its measured shrink plus
-    /// `compactOffset`, when that is more), measured under the full header.
-    static let compactMinOverflow: CGFloat = 120
-    /// How far the content scrolls before a pinned header compacts.
-    static let compactOffset: CGFloat = 8
 
     /// The primary column, the secondary column (nil when there is none), the
     /// group that holds them and the band the header takes, for a pane `pane`
@@ -71,30 +65,6 @@ enum PVPageColumnsMetrics {
         )
         return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group, widths.band)
     }
-
-    /// Whether a pinned header shows compact. Hysteresis: past
-    /// `compactOffset` it compacts, back at the top it expands, and in
-    /// between it keeps its state.
-    ///
-    /// Compacting hands the viewport back `bandShrink`, the height the header
-    /// loses (a wrapped name makes it more than `compactMinOverflow`). So it
-    /// starts to compact only when the overflow, measured under the full
-    /// header, still leaves `compactOffset` of scroll under the compact one;
-    /// a smaller overflow would be gone once compact and the header would
-    /// flip back. Once compact it stays so while any overflow is left, the
-    /// overflow then being measured under the shorter header.
-    static func isScrolled(
-        offset: CGFloat,
-        overflow: CGFloat,
-        wasScrolled: Bool,
-        bandShrink: CGFloat
-    ) -> Bool {
-        if !wasScrolled && overflow < max(compactMinOverflow, bandShrink + compactOffset) { return false }
-        if wasScrolled && overflow <= 0 { return false }
-        if offset > compactOffset { return true }
-        if offset <= 0 { return false }
-        return wasScrolled
-    }
 }
 
 private struct PVPageViewportSizeKey: EnvironmentKey {
@@ -119,8 +89,8 @@ extension EnvironmentValues {
 /// `WorkspaceDestinationHost`) and sets no background: the page owns that.
 ///
 /// The header scrolls with the page by default. `headerPinned` holds it above
-/// the scroll with a rule under it, and hands the builder `isScrolled` so it
-/// can compact. `scrollResetKey` sends the scroll back to the top when it
+/// the scroll with a rule under it, in its full form at every scroll
+/// position. `scrollResetKey` sends the scroll back to the top when it
 /// changes (another section of the same page); a width-class change is not a
 /// reset. The primary comes before the secondary in the view tree, so focus
 /// moves primary then secondary.
@@ -132,23 +102,18 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     private let headerPinned: Bool
     private let scrollResetKey: AnyHashable?
     private let primaryFill: Bool
-    private let header: (_ isScrolled: Bool) -> Header
+    private let header: () -> Header
     private let primary: Primary
     private let secondary: Secondary
 
     @Environment(\.pvWidthClass) private var widthClass
-    @State private var offset: CGFloat = 0
-    @State private var contentHeight: CGFloat = 0
     @State private var viewportSize: CGSize = .zero
-    @State private var isScrolled = false
-    @State private var fullBandHeight: CGFloat = 0
-    @State private var compactBandHeight: CGFloat = 0
 
     init(
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
         primaryFill: Bool = false,
-        @ViewBuilder header: @escaping (_ isScrolled: Bool) -> Header,
+        @ViewBuilder header: @escaping () -> Header,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder secondary: () -> Secondary
     ) {
@@ -167,26 +132,19 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         if headerPinned && hasHeader {
             VStack(spacing: 0) {
                 PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
-                    header(isScrolled)
-                }
-                .background(alignment: .top) {
-                    // Both forms are drawn hidden at the band's width, so the
-                    // height the header loses on compacting is known before it
-                    // compacts.
-                    measuredBand(compact: false)
-                    measuredBand(compact: true)
+                    header()
                 }
                 PVColor.borderDefault.frame(height: 1)
-                scroll(measures: true) {
+                scroll {
                     columns.padding(.vertical, PVSpacing.space8)
                 }
             }
         } else {
-            scroll(measures: false) {
+            scroll {
                 VStack(spacing: 0) {
                     if hasHeader {
                         PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
-                            header(false)
+                            header()
                         }
                         Color.clear.frame(height: PVSpacing.space9)
                     }
@@ -194,23 +152,6 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                 }
                 .padding(.vertical, PVSpacing.space8)
             }
-        }
-    }
-
-    // The hidden copies are measured only; .disabled keeps them from registering
-    // the switcher's keyboard shortcuts.
-    private func measuredBand(compact: Bool) -> some View {
-        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
-            header(compact)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .hidden()
-        .accessibilityHidden(true)
-        .allowsHitTesting(false)
-        .disabled(true)
-        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-            if compact { compactBandHeight = $0 } else { fullBandHeight = $0 }
-            refreshScrolled()
         }
     }
 
@@ -224,7 +165,6 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     }
 
     private func scroll<Content: View>(
-        measures: Bool,
         @ViewBuilder content: () -> Content
     ) -> some View {
         ScrollView {
@@ -232,27 +172,13 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                 Color.clear
                     .frame(height: 0)
                     .id(PVPageColumnsMetrics.topAnchor)
-                    .onGeometryChange(for: CGFloat.self) {
-                        -$0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)).minY
-                    } action: {
-                        guard measures else { return }
-                        offset = $0
-                        refreshScrolled()
-                    }
                 content()
             }
             .frame(maxWidth: .infinity)
-            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
-                guard measures else { return }
-                contentHeight = $0
-                refreshScrolled()
-            }
         }
         .coordinateSpace(name: PVPageColumnsMetrics.scrollSpace)
         .onGeometryChange(for: CGSize.self) { $0.size } action: {
             viewportSize = $0
-            guard measures else { return }
-            refreshScrolled()
         }
         .environment(\.pvPageViewportSize, viewportSize)
         .pvScrollsRowIntoView(
@@ -261,16 +187,6 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
             whenChanged: scrollResetKey
         )
     }
-
-    private func refreshScrolled() {
-        let next = PVPageColumnsMetrics.isScrolled(
-            offset: offset,
-            overflow: contentHeight - viewportSize.height,
-            wasScrolled: isScrolled,
-            bandShrink: max(0, fullBandHeight - compactBandHeight)
-        )
-        if next != isScrolled { isScrolled = next }
-    }
 }
 
 extension PVPageColumns where Secondary == EmptyView {
@@ -278,7 +194,7 @@ extension PVPageColumns where Secondary == EmptyView {
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
         primaryFill: Bool = false,
-        @ViewBuilder header: @escaping (_ isScrolled: Bool) -> Header,
+        @ViewBuilder header: @escaping () -> Header,
         @ViewBuilder primary: () -> Primary
     ) {
         self.init(
@@ -302,7 +218,7 @@ extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
             headerPinned: false,
             scrollResetKey: scrollResetKey,
             primaryFill: primaryFill,
-            header: { _ in EmptyView() },
+            header: { EmptyView() },
             primary: primary,
             secondary: { EmptyView() }
         )
@@ -399,7 +315,7 @@ private struct PVPageColumnsBandLayout: Layout {
 
 #Preview("Page columns, header scrolls") {
     PVPageColumns(
-        header: { _ in Text(verbatim: "Header").font(PVFont.display(size: PVTypeScale.h2)) },
+        header: { Text(verbatim: "Header").font(PVFont.display(size: PVTypeScale.h2)) },
         primary: {
             VStack(alignment: .leading) {
                 ForEach(0..<30, id: \.self) { Text(verbatim: "Row \($0)") }
@@ -413,9 +329,8 @@ private struct PVPageColumnsBandLayout: Layout {
 #Preview("Page columns, header pinned") {
     PVPageColumns(
         headerPinned: true,
-        header: { isScrolled in
-            Text(verbatim: isScrolled ? "Compact" : "Header")
-                .padding(.vertical, isScrolled ? PVSpacing.space5 : PVSpacing.space9)
+        header: {
+            Text(verbatim: "Header").padding(.vertical, PVSpacing.space9)
         },
         primary: {
             VStack(alignment: .leading) {

@@ -34,7 +34,6 @@ struct PersonFamilySection: View {
                 expand: { self.expanded.insert($0) }
             )
         }
-        .onChange(of: entityId) { self.expanded = [] }
     }
 }
 

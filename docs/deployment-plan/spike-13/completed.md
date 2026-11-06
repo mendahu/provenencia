@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-16 — Sources section
+
+**Landed 2026-11-05** in [#722](https://github.com/mendahu/provenencia/pull/722). A Person's Sources section lists the Sources behind the person, one row per Source like a provenance sheet row (its title linking to the Source page, its type pill, a date column that reads "—" until Spike 15, its ref), and under each a small line per record: the graph's name (opening the graph with that Subject selected and in view), the graph's ref, the record's name and ref; a Source folds past six lines and the list of Sources past fifty. A graph location's `subjectId` now selects the Subject or bridge and scrolls to it once the reads place it (`GraphCanvasViewportController.center(onGridPoint:)`), which also serves the delete-impact rows; the unused pending-selection hook is gone. A page section declares `supportingQueryKeys` beside its own `queryKey`. The provenance row's citation button became the kit's `PVInkLink`, `PVTitleText` gained `.rowLink`, every `.link` button now shows a focus ring outside its text, and Family, Timeline and Sources fold by one `ConclusionFold`. Not yet run in the app: the cold and warm graph open, dark mode and Wide.
+
 ## S13-08 — Unpromoting the last member
 
 **Landed 2026-11-04** in [#707](https://github.com/mendahu/provenencia/pull/707). Removing a handle's last accepted member deletes the canonical entity in the same revision through `deleteimpact.ReleaseClaim`, for Unpromote and Subject delete and for association handles that lose their only bridge. `GetUnpromoteImpact` lists every handle an Unpromote would delete (including bridge last-members); the Evidence graph confirm uses `deletesHandles` copy when that list is non-empty and danger tone when the preflight fails or a delete is predicted. Subject delete's Impact splits `canonical_entities.last_member` from `identity_claims.subject_id`, and both confirms say when handles have no other records.

@@ -140,7 +140,7 @@ struct PersonTitleDisplayTests {
 
     @MainActor @Test func titleLineLimitIsTheStylesOwnUnlessGiven() {
         #expect(PVTitleText(.name("x")).lineLimit == nil)
-        #expect(PVTitleText(.name("x"), style: .display(compact: true), lineLimit: 2).lineLimit == 2)
+        #expect(PVTitleText(.name("x"), style: .display, lineLimit: 2).lineLimit == 2)
         #expect(PVTitleText(.name("x"), lineLimit: 3).lineLimit == 3)
     }
 }

@@ -5,7 +5,12 @@ import Foundation
 enum SourcesListNavigation {
     /// Opens the Source filing page.
     static func pageLocation(for source: CatalogSource) -> WorkspaceLocation {
-        .sourcePage(sourceId: source.id, ref: source.ref, title: source.title)
+        pageLocation(sourceId: source.id, ref: source.ref, title: source.title)
+    }
+
+    /// Opens the Source filing page from the fields of a Source a read carries.
+    static func pageLocation(sourceId: String, ref: String, title: String) -> WorkspaceLocation {
+        .sourcePage(sourceId: sourceId, ref: ref, title: title)
     }
 
     /// Why one graph's Open is blocked: it links no Artifact. Nil when it opens.
@@ -24,12 +29,31 @@ enum SourcesListNavigation {
     /// list's graph button and an omnibar graph hit both open. The location
     /// carries the Source's ref and title, as Go's `deleteimpact.graphLocation` does.
     static func canvasLocation(for source: CatalogSource, graph: CatalogEvidenceGraph) -> WorkspaceLocation {
-        .evidenceGraph(
+        canvasLocation(
             sourceId: source.id,
+            sourceRef: source.ref,
+            sourceTitle: source.title,
             graphId: graph.id,
-            ref: source.ref,
-            title: source.title,
-            sourceTitle: source.title
+            subjectId: nil
+        )
+    }
+
+    /// One graph's canvas from the fields a read carries; a `subjectId` opens it with that
+    /// Subject selected and in view.
+    static func canvasLocation(
+        sourceId: String,
+        sourceRef: String,
+        sourceTitle: String,
+        graphId: String,
+        subjectId: String?
+    ) -> WorkspaceLocation {
+        .evidenceGraph(
+            sourceId: sourceId,
+            graphId: graphId,
+            subjectId: subjectId,
+            ref: sourceRef,
+            title: sourceTitle,
+            sourceTitle: sourceTitle
         )
     }
 }

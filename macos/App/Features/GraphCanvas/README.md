@@ -11,7 +11,7 @@ catalog types so geometry stays extractable (design note §13).
 | Type | Role |
 | --- | --- |
 | `GraphCanvasCamera` | Magnification + content offset (value type) |
-| `GraphCanvasCoordinates` | Pure math: magnification clamp and thresholds (`magnificationTolerance`, `minimumMagnification`), the zoom that fills a viewport, the item contents scale, one-screen-point stroke width, grid fade, scroll-origin clamp, grid ↔ document conversion (`documentRect`, `documentPoint(_:origin:)`) and view ↔ document conversion for a camera |
+| `GraphCanvasCoordinates` | Pure math: magnification clamp and thresholds (`magnificationTolerance`, `minimumMagnification`), the zoom that fills a viewport, the item contents scale, one-screen-point stroke width, grid fade, scroll-origin clamp, the scroll origin that centers a point (`contentOffset(centering:visibleSize:contentSize:magnification:)`), grid ↔ document conversion (`documentRect`, `documentPoint(_:origin:)`) and view ↔ document conversion for a camera |
 | `GraphCanvasScrollInput` | Trackpad-vs-wheel classification (pure) |
 | `GraphCanvasGridMapping` | Grid cell ↔ grid point (snap unit) |
 | `GraphCanvasScrollView` | AppKit magnification bridge |
@@ -20,7 +20,7 @@ catalog types so geometry stays extractable (design note §13).
 | `GraphCanvasItemLayer` / `GraphCanvasItem` / `GraphCanvasPreview` | One `GraphCanvasItemView` per item, built by the host (`makeView`, a `GraphCanvasItemView`), positioned by AppKit; rebuilt only when the item's `Equatable` model changes; owns each item's layer and its scale, their stack order (host order, raised items last; `stackIndex(of:)`), and the placement `preview` |
 | `GraphCanvasPointerController` | Hit-test, select, drag (one item, or a group of peers that move with the anchor), empty-canvas pan, selection rectangle (marquee), Shift tracking, Shift-click toggle, place, connect |
 | `GraphCanvasHitTarget` / `GraphCanvasPointerHitTesting` | Grid-space rects + pure helpers; a click hits the item drawn on top |
-| `GraphCanvasViewportController` | Pan deltas + the live magnification |
+| `GraphCanvasViewportController` | Pan deltas, the live magnification, and `center(onGridPoint:)` (scrolls a grid point to the middle of the view, deferred one main-queue turn so it runs after the mount's opening camera) |
 | `GraphCanvasGridView` | Optional grid underlay: one repeated cell, not a document-sized bitmap |
 | `GraphCanvasEdgeGeometry` | Cubic edges + tuck-under endpoints |
 

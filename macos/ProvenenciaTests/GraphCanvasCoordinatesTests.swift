@@ -4,6 +4,21 @@ import Testing
 
 @Suite
 struct GraphCanvasCoordinatesTests {
+    @Test func contentOffsetCentersAFocus() {
+        let visible = CGSize(width: 1_000, height: 800)
+        let content = CGSize(width: 4_000, height: 4_000)
+        func offset(_ x: CGFloat, _ y: CGFloat, magnification: CGFloat = 1) -> CGPoint {
+            GraphCanvasCoordinates.contentOffset(
+                centering: CGPoint(x: x, y: y), visibleSize: visible, contentSize: content, magnification: magnification
+            )
+        }
+        #expect(offset(3_000, 1_200) == CGPoint(x: 2_500, y: 800))
+        // At 2x the visible rect is 500x400 of the document.
+        #expect(offset(3_000, 1_200, magnification: 2) == CGPoint(x: 2_750, y: 1_000))
+        #expect(offset(100, 100) == .zero)
+        #expect(offset(3_950, 3_950) == CGPoint(x: 3_000, y: 3_200))
+    }
+
     @Test func clampMagnificationRespectsBounds() {
         #expect(GraphCanvasCoordinates.clampMagnification(0.1) == GraphCanvasCamera.minMagnification)
         #expect(GraphCanvasCoordinates.clampMagnification(10) == GraphCanvasCamera.maxMagnification)

@@ -456,8 +456,15 @@ struct PersonDetailTests {
             == .personFamily(project: project, entityId: "e1"))
         #expect(ConclusionPageSection.timeline.queryKey(project: project, entityId: "e1")
             == .personEvents(project: project, entityId: "e1"))
-        for section in ConclusionPageSection.allCases where section != .family && section != .timeline {
+        #expect(ConclusionPageSection.sources.queryKey(project: project, entityId: "e1")
+            == .personClaims(project: project, entityId: "e1"))
+        for section in ConclusionPageSection.allCases
+        where section != .family && section != .timeline && section != .sources {
             #expect(section.queryKey(project: project, entityId: "e1") == nil)
+        }
+        for section in ConclusionPageSection.allCases {
+            #expect(section.supportingQueryKeys(project: project, entityId: "e1")
+                == (section == .sources ? [.sourceTypesList(project: project)] : []))
         }
         for section in ConclusionPageSection.allCases {
             #expect(section.fillsWidth == (section == .timeline || section == .gallery))

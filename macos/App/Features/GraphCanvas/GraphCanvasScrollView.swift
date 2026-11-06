@@ -159,8 +159,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             documentSize: contentSize,
             visibleSize: clip.bounds.size
         )
-        clip.scroll(to: origin)
-        scrollView.reflectScrolledClipView(clip)
+        scrollView.scrollClip(to: origin)
     }
 
     final class Coordinator {
@@ -237,8 +236,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             documentSize: contentSize,
             visibleSize: visible
         )
-        contentView.scroll(to: origin)
-        reflectScrolledClipView(contentView)
+        scrollClip(to: origin)
     }
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {
@@ -383,8 +381,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             visibleSize: visible
         )
 
-        clip.scroll(to: origin)
-        reflectScrolledClipView(clip)
+        scrollClip(to: origin)
     }
 
     static func isTrackpadOrMagicMouseScroll(_ event: NSEvent) -> Bool {
@@ -423,8 +420,28 @@ final class GraphCanvasViewportController {
             visibleSize: clip.bounds.size
         )
 
-        clip.scroll(to: origin)
-        scrollView.reflectScrolledClipView(clip)
+        scrollView.scrollClip(to: origin)
+    }
+
+    /// Scrolls so the grid point is at the center of the visible area, keeping the
+    /// magnification. Deferred one main-queue turn, so it runs after the mount's deferred
+    /// opening camera and once the view has a frame.
+    func center(onGridPoint grid: CGPoint) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated { self?.centerNow(onGridPoint: grid) }
+        }
+    }
+
+    private func centerNow(onGridPoint grid: CGPoint) {
+        guard let scrollView, let document = scrollView.documentView as? GraphCanvasDocumentView else { return }
+        let clip = scrollView.contentView
+        let origin = GraphCanvasCoordinates.contentOffset(
+            centering: GraphCanvasCoordinates.documentPoint(grid, origin: document.contentOrigin),
+            visibleSize: clip.frame.size,
+            contentSize: document.frame.size,
+            magnification: scrollView.magnification
+        )
+        scrollView.scrollClip(to: origin)
     }
 }
 
@@ -467,5 +484,13 @@ extension EnvironmentValues {
     var graphCanvasItems: GraphCanvasItemLayer? {
         get { self[GraphCanvasItemsKey.self] }
         set { self[GraphCanvasItemsKey.self] = newValue }
+    }
+}
+
+private extension NSScrollView {
+    /// Scrolls the clip to `origin` and reflects it, so the scrollers and the reported camera follow.
+    func scrollClip(to origin: CGPoint) {
+        contentView.scroll(to: origin)
+        reflectScrolledClipView(contentView)
     }
 }

@@ -36,8 +36,6 @@ final class WorkspaceSession {
     /// re-read splices instead).
     @ObservationIgnored
     var evidenceGraphIndexBuildCount = 0
-    /// Bridge to select the next time that graph appears. Consumed once.
-    private var pendingGraphSelections: [String: String] = [:]
 
     init(
         projectKey: ProjectKey,
@@ -64,16 +62,6 @@ final class WorkspaceSession {
     func setGraphCamera(_ camera: GraphCanvasCamera, for graphID: String) {
         guard graphCameras[graphID] != camera else { return }
         graphCameras[graphID] = camera
-    }
-
-    func setPendingGraphSelection(subjectID: String, graphID: String) {
-        pendingGraphSelections[graphID] = subjectID
-    }
-
-    func consumePendingGraphSelection(graphID: String) -> String? {
-        let id = pendingGraphSelections[graphID]
-        pendingGraphSelections[graphID] = nil
-        return id
     }
 
     /// Returns an existing handle without starting a load.

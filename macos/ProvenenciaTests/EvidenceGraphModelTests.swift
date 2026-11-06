@@ -146,7 +146,7 @@ struct EvidenceGraphModelTests {
         )
     }
 
-    private func makeModel(store: FakeStore) -> EvidenceGraphModel {
+    private func makeModel(store: FakeStore, openingSubjectID: String? = nil) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
             store: store
@@ -160,7 +160,8 @@ struct EvidenceGraphModelTests {
             sourceID: sourceID,
             session: session,
             store: store,
-            userID: "user-1"
+            userID: "user-1",
+            openingSubjectID: openingSubjectID
         )
     }
 
@@ -354,6 +355,69 @@ struct EvidenceGraphModelTests {
         #expect(handle?.value?.positions.first?.gridY == 2)
         #expect(model.toast?.tone == .danger)
         #expect(model.toast?.title == L10n.string(L10n.EvidenceGraph.positionPersistFailedTitle))
+    }
+
+    /// A location that names a Subject or a bridge selects it on open and records where its
+    /// card stands; an id the graph lacks selects nothing; a second `prepare()` does not reselect.
+    @Test func openingSubjectIsSelected() async {
+        func seeded() -> (FakeStore, [CatalogSubject]) {
+            let store = makeStore()
+            let subjects = [
+                CatalogSubject(id: "s1", ref: "CPR-1", sourceID: sourceID, subjectTypeID: personTypeID, label: "A", description: ""),
+                CatalogSubject(id: "s2", ref: "CPR-2", sourceID: sourceID, subjectTypeID: personTypeID, label: "B", description: ""),
+                CatalogSubject(id: "b1", ref: "LOC-1", sourceID: sourceID, subjectTypeID: "type-location", label: "L", description: ""),
+            ]
+            store.subjectsByGraph[graphID] = subjects
+            store.subjectPositionsBySubject["s1"] = CatalogSubjectPosition(subjectID: "s1", gridX: 1, gridY: 2)
+            store.subjectPositionsBySubject["s2"] = CatalogSubjectPosition(subjectID: "s2", gridX: 20, gridY: 30)
+            store.subjectPositionsBySubject["b1"] = CatalogSubjectPosition(subjectID: "b1", gridX: 8, gridY: 9)
+            return (store, subjects)
+        }
+
+        let (store, _) = seeded()
+        let model = makeModel(store: store, openingSubjectID: "s2")
+        await model.prepare()
+        #expect(model.selectedSubjectID == "s2")
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        let types = model.session.queryHandle(CatalogQueryKey.propertiesWorkspace(project: model.session.projectKey)) as QueryHandle<PropertiesSnapshot>?
+        let snapshot = EvidenceGraphSnapshot.build(
+            rows: handle?.value ?? EvidenceGraphRows(graphId: graphID), types: types?.value?.types ?? [], rules: []
+        )
+        let s2 = snapshot.subjects.first { $0.id == "s2" }
+        let expected = s2.map { EvidenceSubjectCard.edgeFrame(for: $0) }
+        #expect(expected != nil)
+        #expect(model.openingFocus == expected.map { CGPoint(x: $0.midX, y: $0.midY) })
+
+        // The user selects s1; running prepare() again leaves it.
+        model.selectSubject(id: "s1")
+        await model.prepare()
+        #expect(model.selectedSubjectID == "s1")
+
+        let (bridgeStore, _) = seeded()
+        let bridgeModel = makeModel(store: bridgeStore, openingSubjectID: "b1")
+        await bridgeModel.prepare()
+        #expect(bridgeModel.selectedSubjectID == "b1")
+        let bridgeHandle: QueryHandle<EvidenceGraphRows>? = bridgeModel.session.queryHandle(key)
+        let bridgeSnapshot = EvidenceGraphSnapshot.build(
+            rows: bridgeHandle?.value ?? EvidenceGraphRows(graphId: graphID), types: types?.value?.types ?? [], rules: []
+        )
+        let bridge = bridgeSnapshot.bridges.first { $0.id == "b1" }
+        let bridgeFrame = bridge.map { EvidenceBridgeCard.contentFrame(for: $0, in: bridgeSnapshot) }
+        #expect(bridgeFrame != nil)
+        #expect(bridgeModel.openingFocus == bridgeFrame.map { CGPoint(x: $0.midX, y: $0.midY) })
+
+        let (goneStore, _) = seeded()
+        let goneModel = makeModel(store: goneStore, openingSubjectID: "gone")
+        await goneModel.prepare()
+        #expect(goneModel.selectedSubjectID == nil)
+        #expect(goneModel.openingFocus == nil)
+
+        let (plainStore, _) = seeded()
+        let plainModel = makeModel(store: plainStore)
+        await plainModel.prepare()
+        #expect(plainModel.selectedSubjectID == nil)
+        #expect(plainModel.openingFocus == nil)
     }
 
     @Test func arrowAtTheGridEdgeStays() async {

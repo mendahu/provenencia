@@ -44,12 +44,33 @@ struct EvidenceGraphPlacedSubject: Identifiable, Sendable, Equatable {
     }
 
     func displayName(orders: NameFormatOrders) -> String {
+        Self.displayName(
+            subject: subject,
+            kind: kind,
+            observations: observations,
+            eventTitle: eventTitle,
+            orders: orders
+        )
+    }
+
+    /// The name rule behind ``displayName(orders:)`` for a Subject that is not placed on a
+    /// graph (a Person handle's member listed on the Sources section). The Observations are
+    /// ranked in the card's order among those that name it, so the first is the card's.
+    static func displayName(
+        subject: CatalogSubject,
+        kind: EvidencePrimaryKind,
+        observations: [CatalogObservation],
+        eventTitle: CatalogEventTitle?,
+        orders: NameFormatOrders
+    ) -> String {
         if kind == .event, let eventTitle {
             return EventTitleDisplay.title(eventTitle, orders: orders)
         }
-        if let named = observations.lazy.compactMap(Self.namingValue(for: kind, orders: orders)).first {
-            return named
-        }
+        let naming = Self.namingValue(for: kind, orders: orders)
+        let named = observations.lazy
+            .compactMap { observation in naming(observation).map { (observation, $0) } }
+            .min { EvidenceGraphSnapshot.observationDisplayOrder($0.0, $1.0) }
+        if let named { return named.1 }
         return subject.trimmedLabel ?? subject.ref
     }
 
@@ -304,7 +325,7 @@ struct EvidenceGraphSnapshot: Sendable, Equatable {
     /// Card row order: property label A→Z, then key, then Observation ref.
     /// Same-key rows must stay adjacent so `EvidenceCitedPropertyMarks.conflictRuns`
     /// can paint one bracket per competing Property.
-    private static func observationDisplayOrder(
+    fileprivate static func observationDisplayOrder(
         _ lhs: CatalogObservation,
         _ rhs: CatalogObservation
     ) -> Bool {

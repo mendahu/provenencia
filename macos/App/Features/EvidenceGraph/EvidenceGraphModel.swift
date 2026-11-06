@@ -249,13 +249,21 @@ final class EvidenceGraphModel {
         }
     }
 
+    /// The Subject or bridge the opening location names, until `prepare()` takes it once.
+    private var openingSubjectID: String?
+    /// The grid-space center of the opening Subject's or bridge's card, once `prepare()` has
+    /// found it on the graph. Set at most once and never cleared; the canvas centers on it.
+    private(set) var openingFocus: CGPoint?
+
     init(
         graphID: String,
         sourceID: String,
         session: WorkspaceSession,
         store: any GenealogyStore,
-        userID: String
+        userID: String,
+        openingSubjectID: String? = nil
     ) {
+        self.openingSubjectID = openingSubjectID
         self.graphID = graphID
         self.sourceID = sourceID
         self.session = session
@@ -316,9 +324,26 @@ final class EvidenceGraphModel {
         if !canCite {
             disarmCiteTools()
         }
-        if let id = session.consumePendingGraphSelection(graphID: graphID) {
-            selectedSubjectIDs = [id]
+        takeOpeningSubject()
+    }
+
+    /// Selects the Subject or bridge the location named and records where its card stands.
+    /// Once: a re-run `prepare()` must not reselect over the researcher. An id the graph does
+    /// not hold selects nothing.
+    private func takeOpeningSubject() {
+        guard let id = openingSubjectID else { return }
+        openingSubjectID = nil
+        guard let snapshot = currentSnapshot() else { return }
+        let frame: CGRect
+        if let placed = snapshot.subjects.first(where: { $0.id == id }) {
+            frame = EvidenceSubjectCard.edgeFrame(for: placed)
+        } else if let bridge = snapshot.bridges.first(where: { $0.id == id }) {
+            frame = EvidenceBridgeCard.contentFrame(for: bridge, in: snapshot)
+        } else {
+            return
         }
+        replacePrimarySelection([id])
+        openingFocus = CGPoint(x: frame.midX, y: frame.midY)
     }
 
     // MARK: Files (S10-20)
