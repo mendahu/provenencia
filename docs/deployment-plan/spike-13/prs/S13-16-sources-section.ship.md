@@ -1,7 +1,7 @@
 # Ship log — S13-16 Sources section
 
 **Plan:** [`S13-16-sources-section.md`](S13-16-sources-section.md) · **Branch:** `s13-16-sources-section` · **PR:** #722
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Stopped before STEP-7. No commit, no push, no PR, no gate. STEP-1 to STEP-6 and the STEP-8 strings sit uncommitted and unbuilt in the main checkout on `s13-16-sources-section` (cut from `4c642497`).
@@ -107,3 +107,11 @@ Check: `grep -n 'reflectScrolledClipView' macos/App/Features/GraphCanvas/GraphCa
 Files: `docs/macos-client-patterns.md`, `PersonSourcesSection.swift`, `macos/App/Features/Conclusions/PersonSourcesPreviewData.swift` *(new)*.
 Do: line 104 names Sources and `supportingQueryKeys`. `#Preview`s over `PersonSourcesList` with static content, as `PersonTimelineSection.swift:614` does: regular, untitled Source, folded.
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `0b62ae9c`. Gate PASS (orchestrator re-ran). F-1 to F-5 and F-7 to F-11 done. Deviations: F-10's `reflectScrolledClipView` grep also prints the override and its `super` call, and five sites now share `scrollClip(to:)`; D-10's marker wording rewritten to match the corrected T-11; STEP-5's `PVInkLink` signature text left as written, superseded by F-1.
+
+F-6, `PersonSourcesList` in an `NSHostingView` at 880pt, six lines a Source, first `layoutSubtreeIfNeeded`, Debug build, three runs. 14 Sources: 226, 215, 202 ms. 300 Sources: 4,611, 5,597, 6,330 ms. 1,200 Sources: crashed in SwiftUI, "precondition failure: exhausted data space". `PersonSourcesContent.init`: 1.5 to 1.8 ms at 14, 27 to 28 ms at 300. Layout is the cost, 15 to 21 ms a Source. No Release figure. SEC-1 → To user.
+
+## Round 2 — review
+Reviewers: MNT, UX, SEC+PRF. CON skipped: it had no Fix-now blocker or major.
