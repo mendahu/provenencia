@@ -50,8 +50,12 @@ struct PersonSourcesContentTests {
         ]
     }
 
-    private func content(_ groups: [CatalogPersonClaimGroup], expanded: Set<String> = []) -> PersonSourcesContent {
-        PersonSourcesContent(groups: groups, sourceTypes: [census], orders: NameFormatOrders(), expanded: expanded)
+    private func content(
+        _ groups: [CatalogPersonClaimGroup], expanded: Set<String> = [], rowsExpanded: Bool = false
+    ) -> PersonSourcesContent {
+        PersonSourcesContent(
+            groups: groups, sourceTypes: [census], orders: NameFormatOrders(), expanded: expanded, rowsExpanded: rowsExpanded
+        )
     }
 
     @Test func rowsKeepTheReadsOrder() {
@@ -108,6 +112,25 @@ struct PersonSourcesContentTests {
         #expect(seven.lines.count == 5 && seven.hiddenCount == 2)
         let open = content(group(9), expanded: ["src"]).rows[0]
         #expect(open.lines.count == 9 && open.hiddenCount == 0 && open.firstRevealedLineID == "c6")
+    }
+
+    @Test func foldPastFiftySources() {
+        func many(_ count: Int) -> [CatalogPersonClaimGroup] {
+            (1...count).map {
+                CatalogPersonClaimGroup(
+                    sourceID: "src-\($0)", sourceRef: "SRC-\($0)", title: "Source \($0)", sourceTypeID: "type-census",
+                    claims: [claim("c\($0)", graph: "g\($0)", graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)"))]
+                )
+            }
+        }
+        let sixty = content(many(60))
+        #expect(sixty.rows.count == 50 && sixty.hiddenRowCount == 10 && sixty.firstRevealedRowLineID == "c51")
+        let fiftyOne = content(many(51))
+        #expect(fiftyOne.rows.count == 50 && fiftyOne.hiddenRowCount == 1)
+        let fifty = content(many(50))
+        #expect(fifty.rows.count == 50 && fifty.hiddenRowCount == 0 && fifty.firstRevealedRowLineID == nil)
+        let open = content(many(60), rowsExpanded: true)
+        #expect(open.rows.count == 60 && open.hiddenRowCount == 0)
     }
 
     @Test func lineNamesTheRecordAsItsCard() throws {

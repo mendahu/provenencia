@@ -12,6 +12,8 @@ struct PersonSourcesContent: Equatable {
     /// six lines show whole; seven show five and "Show 2 more".
     static let lineFoldLimit = 5
     static let lineFoldMinimumHidden = 2
+    /// Source rows shown before "Show N more": fifty show whole; fifty-one show fifty and "Show 1 more".
+    static let rowFoldLimit = 50
 
     struct Row: Equatable, Identifiable {
         /// The Source id.
@@ -49,18 +51,24 @@ struct PersonSourcesContent: Equatable {
         var location: WorkspaceLocation
     }
 
+    /// The rows shown: every Source, or the first `rowFoldLimit` until unfolded.
     let rows: [Row]
+    /// The Sources the row fold leaves out.
+    let hiddenRowCount: Int
+    /// The first line of the first Source an unfold adds, whether or not the rows are unfolded; nil when the rows do not fold.
+    let firstRevealedRowLineID: String?
 
     var isEmpty: Bool { rows.isEmpty }
 
-    /// `expanded` holds the ids of the Sources whose lines are unfolded.
+    /// `expanded` holds the ids of the Sources whose lines are unfolded; `rowsExpanded` unfolds the Sources past the fold.
     init(
         groups: [CatalogPersonClaimGroup],
         sourceTypes: [CatalogSourceType],
         orders: NameFormatOrders,
-        expanded: Set<String>
+        expanded: Set<String>,
+        rowsExpanded: Bool = false
     ) {
-        rows = groups.map { group in
+        let all = groups.map { group in
             let lines = group.claims.map { claim -> Line in
                 let name = claim.graphName.trimmedNonEmpty
                 let ref = claim.graphRef.trimmedNonEmpty
@@ -122,5 +130,9 @@ struct PersonSourcesContent: Equatable {
                 )?.id
             )
         }
+        let fold = ConclusionFold.shown(all, limit: Self.rowFoldLimit, minimumHidden: 1, expanded: rowsExpanded)
+        rows = fold.shown
+        hiddenRowCount = fold.hidden
+        firstRevealedRowLineID = ConclusionFold.firstRevealed(all, limit: Self.rowFoldLimit, minimumHidden: 1)?.lines.first?.id
     }
 }

@@ -54,5 +54,13 @@ enum PersonSourcesPreviewData {
             }
         ),
     ]
+
+    /// Sixty Sources: fifty shown and "Show 10 more".
+    static let manySources = (1...60).map {
+        CatalogPersonClaimGroup(
+            sourceID: "src-m\($0)", sourceRef: "SRC-M\($0)", title: "Adressbuch \(1800 + $0)", sourceTypeID: "type-census",
+            claims: [claim("m\($0)", graph: "g-m\($0)", ref: "EVG-M\($0)", name: "Page \($0)", subject: johann)]
+        )
+    }
 }
 #endif

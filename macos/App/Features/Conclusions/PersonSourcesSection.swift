@@ -13,10 +13,13 @@ struct PersonSourcesSection: View {
 
     /// The Sources whose lines the researcher has unfolded; another person's page is another view.
     @State private var expanded: Set<String> = []
+    /// Whether the Sources past the fold are shown. Starts folded on every mount, so a restored section opens folded.
+    @State private var rowsExpanded = false
 
     var body: some View {
         let orders = session.nameFormat
         let expanded = expanded
+        let rowsExpanded = rowsExpanded
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
             CatalogQueryKey.sourceTypesList(project: session.projectKey)
         )
@@ -31,7 +34,8 @@ struct PersonSourcesSection: View {
                     groups: $0,
                     sourceTypes: typesHandle?.value ?? [],
                     orders: orders,
-                    expanded: expanded
+                    expanded: expanded,
+                    rowsExpanded: rowsExpanded
                 )
             },
             isEmpty: \.isEmpty
@@ -39,7 +43,8 @@ struct PersonSourcesSection: View {
             PersonSourcesList(
                 content: content,
                 open: { navigation.go(to: $0) },
-                expand: { self.expanded.insert($0) }
+                expand: { self.expanded.insert($0) },
+                expandRows: { self.rowsExpanded = true }
             )
         }
     }
@@ -79,6 +84,7 @@ struct PersonSourcesList: View {
     let content: PersonSourcesContent
     let open: (WorkspaceLocation) -> Void
     let expand: (String) -> Void
+    let expandRows: () -> Void
 
     /// The graph link with the keyboard.
     @FocusState private var focusedLine: String?
@@ -90,6 +96,14 @@ struct PersonSourcesList: View {
             ForEach(Array(content.rows.enumerated()), id: \.element.id) { index, row in
                 if index > 0 { PVDivider() }
                 PersonSourcesRowView(row: row, open: open, expand: { unfold(row) }, focused: $focusedLine)
+            }
+            if content.hiddenRowCount > 0 {
+                ConclusionShowMoreRow(count: content.hiddenRowCount) {
+                    expandRows()
+                    Task { @MainActor in focusedLine = content.firstRevealedRowLineID }
+                }
+                .padding(.vertical, PVSpacing.space3)
+                .accessibilityIdentifier("persons.detail.sources.more")
             }
         }
     }
@@ -193,7 +207,6 @@ private struct PersonSourcesLineView: View {
                 .truncationMode(.tail)
                 .help(line.graphTitle)
                 .focused(focused, equals: line.id)
-                .pvFocusRing(focused.wrappedValue == line.id, cornerRadius: PVRadius.xs)
                 .pvActivatesOnReturn(when: focused.wrappedValue == line.id) { open(line.location) }
                 .accessibilityLabel(line.accessibilityLabel)
                 .accessibilityIdentifier("persons.detail.sources.graph.\(line.id)")
@@ -229,6 +242,7 @@ private struct PersonSourcesPreview: View {
     var expandedAtStart: Set<String> = []
 
     @State private var expanded: Set<String> = []
+    @State private var rowsExpanded = false
 
     var body: some View {
         PVPageColumns(primaryFill: true) {
@@ -237,10 +251,12 @@ private struct PersonSourcesPreview: View {
                     groups: groups,
                     sourceTypes: PersonSourcesPreviewData.types,
                     orders: NameFormatOrders(),
-                    expanded: expanded
+                    expanded: expanded,
+                    rowsExpanded: rowsExpanded
                 ),
                 open: { _ in },
-                expand: { expanded.insert($0) }
+                expand: { expanded.insert($0) },
+                expandRows: { rowsExpanded = true }
             )
         }
         .frame(width: 1102, height: 700)
@@ -252,4 +268,5 @@ private struct PersonSourcesPreview: View {
 #Preview("Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular) }
 #Preview("Untitled Source") { PersonSourcesPreview(groups: PersonSourcesPreviewData.untitled) }
 #Preview("Folded") { PersonSourcesPreview(groups: PersonSourcesPreviewData.folded) }
+#Preview("Many Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.manySources) }
 #endif
