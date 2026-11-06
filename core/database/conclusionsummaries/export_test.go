@@ -34,7 +34,8 @@ func ListPlacesQueryCount(c *database.Catalog) (int, error) {
 	})
 }
 
-// SortPlaces applies the list order to Place rows.
-func SortPlaces(rows []PlaceSummary) {
-	SortByTitle(rows, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
-}
+// SortPersons and SortPlaces apply the list orders to rows.
+var (
+	SortPersons = sortPersons
+	SortPlaces  = sortPlaces
+)

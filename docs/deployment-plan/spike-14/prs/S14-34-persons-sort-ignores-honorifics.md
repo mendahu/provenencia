@@ -1,6 +1,6 @@
 # S14-34 — Persons sort ignores honorifics
 
-**Status:** Planned
+**Status:** Landed in #727 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7d — List and nav polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Persons list rows look the same; only their order changes)
@@ -11,7 +11,8 @@
 **Version bump:** patch — a researcher-visible bug fix in list order ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-name-value`](../../../../.agents/skills/add-name-value/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Persons list sort omits honorific prefixes"; bar outcome 29; dogfood note [`ux/2026-10-15-persons-sort-ignores-honorifics.md`](../ux/2026-10-15-persons-sort-ignores-honorifics.md) (deleted on land); [`structured-name-model.md`](../../../structured-name-model.md) § name display, requirements 2 and 3
+**Context:** working rule "(Batch 7) Persons list sort omits honorific prefixes"; bar outcome 29; dogfood note `ux/2026-10-15-persons-sort-ignores-honorifics.md` (deleted on land); [`structured-name-model.md`](../../../structured-name-model.md) § name display, requirements 2 and 3
+**Landed:** [#727](https://github.com/mendahu/provenencia/pull/727), 2026-11-06. Differences from the plan: (1) The Status line reads "Landed in #727 (2026-11-06)" and the dogfood note's link in Context is plain text, because `check-plan-docs` rejects the shorter form and a dead link. (2) `SortKey` is the method `nameformats.Profile.SortKey`, superseding the D-1 and D-5 signatures, and the free `Format` is private (`format`), with comment-only Swift edits against D-6; both by the user, 2026-11-06. Decisions and Scope text stand as written.
 **Planned:** 2026-11-06 against `main` @ `91e58c9`
 **Review:** [`S14-34-persons-sort-ignores-honorifics.review.md`](S14-34-persons-sort-ignores-honorifics.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blockers; To user none
 

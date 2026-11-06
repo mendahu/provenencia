@@ -1,6 +1,7 @@
 package nameformats
 
 import (
+	"database/sql"
 	"math"
 	"reflect"
 	"testing"
@@ -48,7 +49,9 @@ func TestMissingDefaultUsesWestern(t *testing.T) {
 	}
 }
 
-func TestInstallLoadsWesternAndFormats(t *testing.T) {
+// installedCatalog is a new catalog with the product name formats installed.
+func installedCatalog(t *testing.T) (*database.Catalog, *sql.DB) {
+	t.Helper()
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
 		t.Fatal(err)
@@ -61,6 +64,11 @@ func TestInstallLoadsWesternAndFormats(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	return c, db
+}
+
+func TestInstallLoadsWesternAndFormats(t *testing.T) {
+	_, db := installedCatalog(t)
 	loaded, err := Load(db)
 	if err != nil {
 		t.Fatal(err)
@@ -234,18 +242,7 @@ func TestSeedMatchesRegistryWestern(t *testing.T) {
 // LoadFor reads the graph's warm copy without a query, and the catalog when the
 // graph is nil or cold; both give Load's answer.
 func TestLoadFor(t *testing.T) {
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	if err := Install(c); err != nil {
-		t.Fatal(err)
-	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	c, db := installedCatalog(t)
 	want, err := Load(db)
 	if err != nil {
 		t.Fatal(err)
@@ -282,6 +279,37 @@ func TestLoadFor(t *testing.T) {
 			}
 			if n := selects.N(); (n > 0) != tt.selects {
 				t.Fatalf("LoadFor issued %d SELECTs", n)
+			}
+		})
+	}
+}
+
+func TestSortKey(t *testing.T) {
+	_, db := installedCatalog(t)
+	loaded, err := Load(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	western := loaded.Profile
+	p := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }
+	cases := []struct {
+		name    string
+		value   namevalue.Value
+		profile Profile
+		want    string
+	}{
+		{"prefix then given", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Mrs."), p("given", "Smith")}}, western, "Smith"},
+		{"prefix dropped", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Mr."), p("given", "John"), p("surname", "Smith")}}, western, "Smith, John"},
+		{"stored order", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Dr."), p("given", "Ann"), p("surname", "Bell")}}, Profile{}, "Ann Bell"},
+		{"prefix only", namevalue.Value{Parts: []namevalue.Part{p("prefix", "Rev.")}}, western, "Rev."},
+		{"surname prefix stays", namevalue.Value{Parts: []namevalue.Part{p("surname_prefix", "van"), p("surname", "Gogh"), p("given", "Vincent")}}, western, "van Gogh, Vincent"},
+		{"suffix stays", namevalue.Value{Parts: []namevalue.Part{p("given", "John"), p("surname", "Smith"), p("suffix", "Jr.")}}, western, "Smith, John Jr."},
+		{"no parts ignores form", namevalue.Value{Form: "Rev. Brown"}, western, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := tc.profile.SortKey(tc.value); got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
 			}
 		})
 	}

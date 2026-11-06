@@ -1288,8 +1288,8 @@ message PersonSummary {
   TermFacts sex_at_birth = 10;
 }
 
-// ListPersonSummaries returns every unmerged Person in list order: by the title
-// the row shows (auto-reconciled name, else label), ignoring case and
+// ListPersonSummaries returns every unmerged Person in list order: by the name
+// without honorifics (auto-reconciled name, else label), ignoring case and
 // diacritics, then ref-only rows by ref. The app shows rows as given.
 message ListPersonSummariesRequest {
   string project_dir = 1;

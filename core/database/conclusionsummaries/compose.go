@@ -376,8 +376,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummar
 	if err != nil {
 		return nil, err
 	}
-	order := loaded.Profile.Sorted
-	SortByTitle(out, func(h PersonSummary) string { return personSortKey(h, order) }, func(h PersonSummary) string { return h.Entity.Ref })
+	sortPersons(out, loaded.Profile)
 	return out, nil
 }
 
@@ -486,7 +485,7 @@ func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceSummary,
 	if err != nil {
 		return nil, err
 	}
-	SortByTitle(out, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
+	sortPlaces(out)
 	return out, nil
 }
 

@@ -3,6 +3,7 @@ package conclusionsummaries_test
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -896,6 +897,128 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPersonListOrder(t *testing.T) {
+	f := newFixture(t)
+	must(t, nameformats.Install(f.c))
+	db, err := f.c.DB()
+	must(t, err)
+	loaded, err := nameformats.LoadFor(f.c.Graph(), db)
+	must(t, err)
+	western := loaded.Profile
+	part := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }
+	row := func(ref string, parts ...namevalue.Part) conclusionsummaries.PersonSummary {
+		return conclusionsummaries.PersonSummary{Entity: canonicalentities.Entity{Ref: ref}, Name: &namevalue.Value{Parts: parts}}
+	}
+	tests := []struct {
+		name    string
+		profile nameformats.Profile
+		in      []conclusionsummaries.PersonSummary
+		want    []string
+	}{
+		{"a prefix does not file a name", western, []conclusionsummaries.PersonSummary{
+			row("Smith", part("prefix", "Mrs."), part("given", "Smith")),
+			row("Adams", part("given", "Zachary"), part("surname", "Adams")),
+			row("Nolan", part("given", "Pat"), part("surname", "Nolan")),
+		}, []string{"Adams", "Nolan", "Smith"}},
+		{"within a surname by given name", western, []conclusionsummaries.PersonSummary{
+			row("Zed", part("prefix", "Dr."), part("given", "Zed"), part("surname", "Smith")),
+			row("Jane", part("given", "Jane"), part("surname", "Smith")),
+			row("John", part("prefix", "Mr."), part("given", "John"), part("surname", "Smith")),
+		}, []string{"Jane", "John", "Zed"}},
+		{"stored order", nameformats.Profile{}, []conclusionsummaries.PersonSummary{
+			row("Bell", part("prefix", "Dr."), part("given", "Ann"), part("surname", "Bell")),
+			row("Ames", part("given", "Carl"), part("surname", "Ames")),
+		}, []string{"Bell", "Ames"}},
+		{"a prefix-only name keeps its key", western, []conclusionsummaries.PersonSummary{
+			row("Rev", part("prefix", "Rev.")),
+			row("Quinn", part("given", "Zoe"), part("surname", "Quinn")),
+			row("Aaa"),
+		}, []string{"Quinn", "Rev", "Aaa"}},
+		{"a surname prefix stays in the key", western, []conclusionsummaries.PersonSummary{
+			row("Young", part("given", "Ada"), part("surname", "Young")),
+			row("Gogh", part("surname_prefix", "van"), part("surname", "Gogh"), part("given", "Vincent")),
+		}, []string{"Gogh", "Young"}},
+		{"names differing only by prefix tie by ref", western, []conclusionsummaries.PersonSummary{
+			row("P2", part("prefix", "Dr."), part("given", "John"), part("surname", "Smith")),
+			row("P1", part("prefix", "Mr."), part("given", "John"), part("surname", "Smith")),
+		}, []string{"P1", "P2"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rows := append([]conclusionsummaries.PersonSummary(nil), tt.in...)
+			conclusionsummaries.SortPersons(rows, tt.profile)
+			var got []string
+			for _, r := range rows {
+				got = append(got, r.Entity.Ref)
+			}
+			if strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("got %v want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// A person typed "Mrs. Smith" files with the Smiths; the listed name still
+// holds its prefix.
+func TestListPersonsSortIgnoresHonorifics(t *testing.T) {
+	f := newFixture(t)
+	must(t, nameformats.Install(f.c))
+	add := func(parts ...namevalue.Part) {
+		var words []string
+		for i := range parts {
+			parts[i].Idx = i
+			words = append(words, parts[i].Value)
+		}
+		s := subjectstest.OfType(t, f.c, userID, f.graph, f.typeID("person"), "")
+		_, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, locator, observations.Input{
+			SubjectID: s.ID, PropertyID: f.name.ID,
+			Name: &namevalue.Value{Form: strings.Join(words, " "), Parts: parts},
+		})
+		must(t, err)
+		promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID})
+	}
+	add(namevalue.Part{Type: "prefix", Value: "Mrs."}, namevalue.Part{Type: "given", Value: "Smith"})
+	add(namevalue.Part{Type: "given", Value: "Zachary"}, namevalue.Part{Type: "surname", Value: "Adams"})
+	add(namevalue.Part{Type: "given", Value: "Pat"}, namevalue.Part{Type: "surname", Value: "Nolan"})
+	got := f.list()
+	var forms []string
+	for _, h := range got {
+		forms = append(forms, h.Name.Form)
+	}
+	if want := "Zachary Adams,Pat Nolan,Mrs. Smith"; strings.Join(forms, ",") != want {
+		t.Fatalf("got %v want %s", forms, want)
+	}
+	if n := got[2].Name; len(n.Parts) == 0 || n.Parts[0].Type != "prefix" {
+		t.Fatalf("listed name lost its prefix: %+v", n)
+	}
+}
+
+// SortByTitle asks for each row's title once, not once per comparison.
+func TestSortByTitleKeysOnce(t *testing.T) {
+	var rows []conclusionsummaries.PlaceSummary
+	for i := 0; i < 50; i++ {
+		rows = append(rows, conclusionsummaries.PlaceSummary{
+			Entity: canonicalentities.Entity{Ref: fmt.Sprintf("P%02d", i)},
+			Names:  []string{fmt.Sprintf("Town %02d", (i*17)%50)},
+		})
+	}
+	want := append([]conclusionsummaries.PlaceSummary(nil), rows...)
+	sort.SliceStable(want, func(i, j int) bool { return want[i].Names[0] < want[j].Names[0] })
+	calls := 0
+	conclusionsummaries.SortByTitle(rows, func(h conclusionsummaries.PlaceSummary) string {
+		calls++
+		return h.Names[0]
+	}, func(h conclusionsummaries.PlaceSummary) string { return h.Entity.Ref })
+	if calls != 50 {
+		t.Fatalf("title called %d times, want 50", calls)
+	}
+	for i := range rows {
+		if rows[i].Entity.Ref != want[i].Entity.Ref {
+			t.Fatalf("row %d is %s, want %s", i, rows[i].Entity.Ref, want[i].Entity.Ref)
+		}
 	}
 }
 

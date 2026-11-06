@@ -14,25 +14,34 @@ import (
 // table, which is most of a list's time when every call makes a new one.
 var titleCollator = collate.New(language.Und, collate.IgnoreCase, collate.IgnoreDiacritics)
 
-// SortByTitle orders any titled row by the title it shows (a Person or Place
-// row by its name or toponym, else its working label; a Source group by its
-// title), ignoring case and diacritics (Montréal beside Montreal), by the
+// SortByTitle orders any titled row by the title the caller supplies (a Place
+// row by its toponym, else its working label; a Source group by its title; a
+// Person row by its sort title, which leaves honorifics out), ignoring case and diacritics (Montréal beside Montreal), by the
 // Unicode root collation so the order is the same in every locale. A row
 // titled only by its ref sorts last, by ref. Ties break by ref. This is the
 // one owner of title order; the app shows rows as given.
 func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
-	sort.SliceStable(rows, func(i, j int) bool {
-		ti, tj := strings.TrimSpace(title(rows[i])), strings.TrimSpace(title(rows[j]))
-		if (ti == "") != (tj == "") {
-			return tj == ""
+	sortByKey(rows, func(row T) titleKey {
+		return titleKey{title: strings.TrimSpace(title(row)), ref: strings.ToLower(ref(row))}
+	}, titleKeyLess)
+}
+
+// titleKey is a row's title and ref, each prepared once: the trimmed title and
+// the lowercased ref.
+type titleKey struct{ title, ref string }
+
+// titleKeyLess is title order: a row with no title last, then the root
+// collation of the titles, then the refs.
+func titleKeyLess(a, b titleKey) bool {
+	if (a.title == "") != (b.title == "") {
+		return b.title == ""
+	}
+	if a.title != "" {
+		if o := titleCollator.CompareString(a.title, b.title); o != 0 {
+			return o < 0
 		}
-		if ti != "" {
-			if o := titleCollator.CompareString(ti, tj); o != 0 {
-				return o < 0
-			}
-		}
-		return strings.ToLower(ref(rows[i])) < strings.ToLower(ref(rows[j]))
-	})
+	}
+	return a.ref < b.ref
 }
 
 // SortByBirth orders people by birth date: dated first, earliest first, then by
@@ -92,29 +101,46 @@ func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span Tim
 // then by ref. Each key is computed once, and rows with equal keys keep their
 // order.
 func sortByDateKey[T any](rows []T, key func(T) dateKey) {
+	sortByKey(rows, key, dateKeyLess)
+}
+
+// sortByKey computes each row's key once, sorts stably by less, and writes the
+// rows back. Rows with equal keys keep their order.
+func sortByKey[T, K any](rows []T, key func(T) K, less func(a, b K) bool) {
 	type keyed struct {
 		row T
-		key dateKey
+		key K
 	}
 	keyedRows := make([]keyed, len(rows))
 	for i := range rows {
 		keyedRows[i] = keyed{row: rows[i], key: key(rows[i])}
 	}
 	sort.SliceStable(keyedRows, func(i, j int) bool {
-		return dateKeyLess(keyedRows[i].key, keyedRows[j].key)
+		return less(keyedRows[i].key, keyedRows[j].key)
 	})
 	for i := range rows {
 		rows[i] = keyedRows[i].row
 	}
 }
 
-// personSortKey is the People list order. A name with parts sorts by the
-// profile's sorted order, undecorated; the row may add quotes and parentheses. A catalog with no
+// sortPersons is the Persons list order.
+func sortPersons(rows []PersonSummary, profile nameformats.Profile) {
+	SortByTitle(rows, func(h PersonSummary) string { return personSortKey(h, profile) }, func(h PersonSummary) string { return h.Entity.Ref })
+}
+
+// sortPlaces is the Places list order.
+func sortPlaces(rows []PlaceSummary) {
+	SortByTitle(rows, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
+}
+
+// personSortKey is the Persons list order. A name with parts sorts by the
+// profile's sorted order, undecorated (the row may add quotes and parentheses),
+// without honorific prefixes: see nameformats.Profile.SortKey. A catalog with no
 // default profile joins those parts in stored order. form is the transcription
 // and is not a sort input: a name with no parts sorts by its working label.
-func personSortKey(h PersonSummary, order []nameformats.PartOrder) string {
-	if h.Name != nil && len(h.Name.Parts) > 0 {
-		if key := strings.TrimSpace(nameformats.Format(*h.Name, order)); key != "" {
+func personSortKey(h PersonSummary, profile nameformats.Profile) string {
+	if h.Name != nil {
+		if key := profile.SortKey(*h.Name); key != "" {
 			return key
 		}
 	}

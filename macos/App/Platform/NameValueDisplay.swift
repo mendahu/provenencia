@@ -78,7 +78,7 @@ enum NameValueDisplay {
         return NameDisplay(text: text, styled: styled, spoken: spoken)
     }
 
-    /// The same order and separators as Go `nameformats.Format`; only this side decorates.
+    /// The same order and separators as Go `nameformats.Profile.Format`; only this side decorates.
     /// One run per part word, one undecorated run for each space between words and each
     /// separator between groups. An empty separator is a run of one space.
     private static func runs(_ parts: [CatalogNameValuePart], order: [NameFormatPart]) -> [NameDisplayRun] {

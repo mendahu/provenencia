@@ -5,7 +5,7 @@ import Testing
 @Suite(.serialized)
 @MainActor
 struct EvidenceGraphModelTests {
-    private let projectDir = "/tmp/evidence-graph-model.provenencia"
+    private let projectDir = ArtifactFileFixtures.uniqueProjectDir()
     private let sourceID = "src-1"
     private let graphID = "g-1"
     private let personTypeID = "type-person"

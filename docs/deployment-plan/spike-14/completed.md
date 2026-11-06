@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-34 — Persons sort ignores honorifics
+
+**Landed 2026-11-06** in [#727](https://github.com/mendahu/provenencia/pull/727). The Persons list files a person by their name without its honorific: "Mrs. Smith" sorts with Smith, and within one surname rows order by given name, not title. `nameformats.Profile.SortKey` is the one list sort key: the sorted order minus `prefix` parts (kept when nothing else remains; `surname_prefix` and `suffix` stay; `form` is never read). `nameformats.Profile.Format` and the row's displayed title are unchanged. `SortByTitle` now computes each row's key once through a shared `sortByKey` (37,000 Persons: 1.25 s to 0.37 s), and `sortPersons` / `sortPlaces` own the two list sort lines. A working label is not stripped of titles (no code path writes a Person label). Version 0.3.7.
+
 ## S14-33 — A bridge between two handles files when it is made
 
 **Landed 2026-11-06** in [#723](https://github.com/mendahu/provenencia/pull/723). Connecting two Subjects that are already promoted (spouse, parent, participation, location, place relationship) now files the bridge onto its association in the same save, so the Conclusion layer shows the link with no second Promote. `connect.CreateCitedBridge` ends with `identityclaims.AppendFiling` on the new bridge; a wait (one end unpromoted) or a refusal (self-link, place loop) leaves the bridge unfiled and the connect still succeeds. Promote batch Done still back-files older bridges. Two batch tests now seed an unfiled bridge through `promotetest.ClaimWithoutFiling`. Finding the association a bridge joins seeks from the link's from end, and the write names both ends of the link to the app without reprojecting every event at a place the link touches (a location filed at a 6,000-event city takes about 0.1 s). Filing a bridge still drops Promote's name index, as any handle commit does; the cost is recorded in `docs/ideas/promote-ranking.md`. Version 0.3.6.

@@ -4377,8 +4377,8 @@ public nonisolated struct Provenencia_Engine_V1_PersonSummary: @unchecked Sendab
   fileprivate var _storage = _StorageClass.defaultInstance
 }
 
-/// ListPersonSummaries returns every unmerged Person in list order: by the title
-/// the row shows (auto-reconciled name, else label), ignoring case and
+/// ListPersonSummaries returns every unmerged Person in list order: by the name
+/// without honorifics (auto-reconciled name, else label), ignoring case and
 /// diacritics, then ref-only rows by ref. The app shows rows as given.
 public nonisolated struct Provenencia_Engine_V1_ListPersonSummariesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
