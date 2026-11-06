@@ -141,5 +141,15 @@ Check: `rg 'pvFocusRing' macos/App/Features/Conclusions/PersonSourcesSection.swi
 ## Round 2 — fix
 Head `b8786eec`. Gate PASS (orchestrator re-ran). F-12 and F-13 done; read by the orchestrator, no round 3. Deviations: a 60-Source fixture and a "Many Sources" preview added. Orchestrator corrected the stale InkLink row in `DesignSystem/README.md`.
 
+## CI — fix round
+CI run 42154834585 on `29247ec6`: `test` failed, `centerOnGridPoint` with 3 issues, `(2753.75, 1003.75)` for `(2750, 1000)`. Local gate passed. The 7.5pt gap at 2× is a 15pt legacy scroller on the CI host, so the test depends on the machine's scroller setting; `center(onGridPoint:)` itself centers in the clip it has.
+
+**F-14 — T-10 does not depend on the host's scrollers** (from CI)
+Files: `macos/ProvenenciaTests/GraphCanvasViewportControllerTests.swift`.
+Do: the test's scroll view sets `hasVerticalScroller = false` and `hasHorizontalScroller = false`, so the clip is the full 1000×800 on any host. No product change.
+Check: test passes locally; scripts/check-pr.sh PASS; CI green.
+
+Head `a5bd4ab5`. Gate PASS (orchestrator re-ran). F-14 done; no product change.
+
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: UX-2, PRF-2 · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5 answered · CON miss: none
