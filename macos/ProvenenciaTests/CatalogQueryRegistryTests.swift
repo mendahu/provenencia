@@ -1547,3 +1547,15 @@ struct CatalogQueryRegistryTests {
         }
     }
 }
+
+@Suite
+struct CatalogWriteEffectsDeletedTests {
+    @Test func deletedHandlesReadsTheHandleEntry() {
+        let effects = CatalogWriteEffects(deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["a", "b"])])
+        #expect(effects.deletedHandles == ["a", "b"])
+    }
+
+    @Test func deletedHandlesIsEmptyWithoutAnEntry() {
+        #expect(CatalogWriteEffects().deletedHandles.isEmpty)
+    }
+}

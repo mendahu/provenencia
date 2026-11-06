@@ -65,6 +65,19 @@ func (r Read) KeyTable() string {
 // Reads is every keyed read, in the order Set.Reads reports them.
 var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs, ReadPropertyTerms}
 
+// DeletedEntities is every Entity that reports deleted ids (an entry with a
+// non-zero Effect.Deleted), sorted: the wire keys of Set.Deleted.
+func DeletedEntities() []string {
+	var out []string
+	for _, e := range registry {
+		if !e.Deleted.zero() && !slices.Contains(out, e.Entity) {
+			out = append(out, e.Entity)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
 // ReadPath is one keyed read: Read says which, Path says whose key ids (it
 // ends at Read.KeyTable()).
 type ReadPath struct {

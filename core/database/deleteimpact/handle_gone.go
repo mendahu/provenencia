@@ -147,18 +147,11 @@ func handleGoesWithout(tx *sql.Tx, entityID []byte, leaving [][]byte) (bool, err
 	if err != nil {
 		return false, err
 	}
-	args := []any{entityID, claimStatusAccepted}
-	notIn := ""
-	for _, id := range leaving {
-		notIn += ", ?"
-		args = append(args, id)
-	}
+	args := append([]any{entityID, claimStatusAccepted}, database.BlobArgs(leaving)...)
 	var n int
-	query := `SELECT COUNT(*) FROM identity_claims WHERE entity_id = ? AND status = ?`
-	if notIn != "" {
-		query += ` AND subject_id NOT IN (` + notIn[2:] + `)`
-	}
-	if err := tx.QueryRow(query, args...).Scan(&n); err != nil {
+	if err := tx.QueryRow(`SELECT COUNT(*) FROM identity_claims
+		WHERE entity_id = ? AND status = ? AND subject_id NOT IN (`+database.SQLInPlaceholders(len(leaving))+`)`,
+		args...).Scan(&n); err != nil {
 		return false, err
 	}
 	if n > 0 {

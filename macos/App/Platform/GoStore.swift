@@ -1908,7 +1908,9 @@ struct GoStore: GenealogyStore {
             summaryHandles: effects.summaryHandles,
             handleScopes: effects.handleScopes,
             sourceScopes: effects.sourceScopes,
-            deleted: effects.deleted.map { CatalogWriteEffectsDeleted(entity: $0.entity, ids: $0.ids) },
+            deleted: effects.deleted.compactMap { entry in
+                CatalogDeletedEntity(rawValue: entry.entity).map { CatalogWriteEffectsDeleted(entity: $0, ids: entry.ids) }
+            },
             activity: CatalogActivity(revision: effects.revision, at: effects.revisionAt)
         )
     }

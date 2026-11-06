@@ -75,10 +75,17 @@ struct CatalogWriteEffectsRead: Sendable, Equatable {
     var ids: [String]
 }
 
-/// The ids of one entity (`canonical_entity`: Person, Event, Place and bridge
-/// handles) a write deleted.
+/// An entity whose deleted ids a write reports. The raw values are Go's
+/// `effects.DeletedEntities` wire keys (`WriteEffects.deleted`); a key this
+/// build does not know is dropped when the effects are decoded.
+enum CatalogDeletedEntity: String, Sendable, CaseIterable {
+    /// Person, Event, Place and bridge handles.
+    case handle = "canonical_entity"
+}
+
+/// The ids of one entity a write deleted.
 struct CatalogWriteEffectsDeleted: Sendable, Equatable {
-    var entity: String
+    var entity: CatalogDeletedEntity
     var ids: [String]
 }
 
@@ -114,7 +121,7 @@ struct CatalogWriteEffects: Sendable, Equatable {
 
     /// The handles this write deleted: the `canonical_entity` entry of `deleted`.
     var deletedHandles: [String] {
-        deleted.first { $0.entity == "canonical_entity" }?.ids ?? []
+        deleted.first { $0.entity == .handle }?.ids ?? []
     }
 
     var touchedHandles: [String] {
