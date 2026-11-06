@@ -46,7 +46,7 @@ Map review: [`deployment-plan.review.md`](deployment-plan.review.md).
 | R-29 – R-32 Gallery and viewer | S13-14, S13-15 | S13-D5 |
 | R-33 – R-37 Sources | S13-01, S13-16 | S13-D6 |
 | R-35 Source date | Descoped 2026-10-31 (S13-20 – S13-22): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 | Descoped (S13-D8, S13-D9) |
-| R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-17 | S13-D6 |
+| R-38, R-39 remove a claim, last claim deletes the person | S13-08, S13-37, S13-17 | S13-D6 |
 | R-40 claim review, replaced 2026-10-29 by how a person's records connect ([`evidence-graph-comparison.md`](evidence-graph-comparison.md)) | S13-26, S13-27, S13-28 (S13-07, S13-18 descoped) | S13-D10 (S13-D7 descoped) |
 
 **Back in the ideas folder** — [`ideas/kinship-view.md`](../../ideas/kinship-view.md) keeps kinship beyond the nuclear family, conflicts between shapes, a project's own patterns, citing an implied fact on a tree, and sibling evidence for matching (R-18a). [`spike-15/citation-formats.md`](../spike-15/citation-formats.md) keeps standard genealogical citations beyond the provenance sheet's citation line, and [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) the first-class Source date; both are planned for Spike 15 (user, 2026-10-31). Remember-researcher-decisions leftovers live in [`ideas/matching-test-suite.md`](../../ideas/matching-test-suite.md). The rest of [person-detail.md § Not this spike](person-detail.md#not-this-spike).
@@ -98,7 +98,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 - **Timeline is direct participation, any role** (R-23). S13-05 adds an unfiltered participation hop to `core/hops` (beside `EventsOfSubject`, which is `subject` role only) and returns, per event, `EventSummary` (title, date, folded places), the person's roles (every distinct role term of their participations in it, usually one; user, 2026-11-02), and the other participants as {roles, `PersonSummary`}, ordered by `conclusionsummaries.sortEvents` (undated last; since S13-33 an event is dated when it has a span, `PersonEvent.Span`, and `HasEventDate` is gone). Swift titles events with `EventTitleDisplay` and groups the undated ones (R-24). Binds S13-05.
 - **A derived row carries its owning entity's records.** `ConclusionDetail` already carries `ReconcilerOutcomeDetail` records per field. S13-06 adds, for each derived row, the records of the field on the entity that owns it (every surviving birth or death event's date, the lead first; each of those events' Places' names, not their parent chain or the location link; user, 2026-10-30), keyed by that entity on `ConclusionDetail`, not on `LifeFacts` (which lists and tiles also carry). Event's derived place row can take the same path later. No new provenance RPC. Binds S13-06, S13-11.
 - **Claims are read per person from the graph cache, grouped by Source in Go.** S13-01 reads the person's accepted members from `graphcache` (`Member` has Subject, Source and graph ids; `EvidenceGraph` has the Source title), returns the Source type as its id (the Sources section labels it from the cached source types list, as `SourcesModel` does; user, 2026-10-31), and returns groups ordered by Source title (R-36). Each claim carries the existing `CatalogSubject` and Observation wire messages the Evidence graph's Subject card already renders. Binds S13-01.
-- **The Source date is descoped** (user, 2026-10-31). S13-20, S13-21 and S13-22 and briefs S13-D8 and S13-D9 leave the spike before any was planned: the Source date is one of the fields an *Evidence Explained* citation needs, so it lands in Spike 15 with the rest of the Source schema ([`spike-15/citation-formats.md`](../spike-15/citation-formats.md)). Its settled decisions (one Source-level attribute, not a metadata key; the original publication date as a structured `date_values` reference; optional, no backfill; the Sources list shows and sorts by it, undated last) moved with it to [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md). The Sources section shows each Source's title and type.
+- **The Source date is descoped** (user, 2026-10-31). S13-20, S13-21 and S13-22 and briefs S13-D8 and S13-D9 leave the spike before any was planned: the Source date is one of the fields an *Evidence Explained* citation needs, so it lands in Spike 15 with the rest of the Source schema ([`spike-15/citation-formats.md`](../spike-15/citation-formats.md)). Its settled decisions (one Source-level attribute, not a metadata key; the original publication date as a structured `date_values` reference; optional, no backfill; the Sources list shows and sorts by it, undated last) moved with it to [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md). The Sources section shows each Source's title and type, and reserves a date column for it (user, 2026-11-05).
 - **One Unpromote, deletes through the registry.** The Person page's Remove calls the same `UnpromoteSubject` as the Evidence graph (R-38). Removing a canonical entity's last accepted member deletes the entity **wherever** Unpromote runs, the Evidence graph included (user, 2026-10-26; R-39). Subject delete deletes a handle whose last member it removes the same way, and so do the association handles either write empties (user, 2026-11-04). Both confirms warn first. After a delete the Person page lands on the Persons list; the Evidence graph stays where it is. S13-08 deletes the canonical entity through `core/database/deleteimpact` ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), [`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)), and the confirm reads an Impact report through an unpromote preflight, as `GetDeleteImpact` and `GetEvidenceGraphUnlinkImpact` do, not a one-off flag. Binds S13-08, S13-17.
 
 ### Client
@@ -147,8 +147,9 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-14 | Gallery section | 5 | The gallery as a section, with set as portrait; a tile's click opens its Citation until the viewer | [S13-D5](design/archive/S13-D5-gallery-and-viewer.md) | S13-10, S14-02 (Spike 14: the `gallery` slot and lead model) | [S13-14](prs/S13-14-gallery-section.md) | Landed [#701](https://github.com/mendahu/provenencia/pull/701) |
 | S13-15 | Likeness viewer | 5 | Expand a likeness and step through the gallery, with its provenance record row under the image | [S13-D5](design/archive/S13-D5-gallery-and-viewer.md) | S13-14, S13-36 | [S13-15](prs/S13-15-likeness-viewer.md) | Landed [#703](https://github.com/mendahu/provenencia/pull/703) |
 | S13-08 | Unpromoting the last member | 6 | Removing a handle's last accepted member deletes the handle through `deleteimpact`, wherever Unpromote runs and on Subject delete, associations included; an unpromote Impact preflight for both confirms, and Subject delete's report names the handles it deletes | — | S13-25 | [S13-08](prs/S13-08-unpromoting-the-last-member.md) | Landed [#707](https://github.com/mendahu/provenencia/pull/707) |
-| S13-16 | Sources section | 6 | Claims grouped by Source (title, type) with Subject cards, each Source opening its page | S13-D6 | S13-01, S13-10 | — | Scoped |
-| S13-17 | Remove a claim | 6 | Remove on a claim, the last-claim warning, and landing on the Persons list | S13-D6 | S13-08, S13-16 | — | Scoped |
+| S13-16 | Sources section | 6 | One row per Source like a provenance sheet row (citation's Source part, Source link, type, a date column reserved for Spike 15, ref), and under it a compact link per Evidence graph holding the person's record (graph and record refs) that opens the graph on the Subject; a reserved place for how the records connect | [S13-D6](design/S13-D6-sources-section.md) | S13-01, S13-10, S13-13, S13-D6 | [S13-16](prs/S13-16-sources-section.md) | Planned |
+| S13-37 | Unpromote reports what it removes | 6 | Preparatory, engine: `GetUnpromoteImpact` returns the bridge Subject ids the write will unpromote, and `WriteEffects` carries the handles a write deleted (`deleted_handles`, from its `rowchange` deletes); Swift decodes both | — (no chrome change) | S13-08 | — | Scoped |
+| S13-17 | Remove a claim | 6 | Unpromote on a claim through one Unpromote flow and confirm, lifted out of the Evidence graph so both pages share it, its list and the person-gone fact from the engine (S13-37); the last-claim warning; landing on the Persons list | [S13-D6](design/S13-D6-sources-section.md) | S13-08, S13-37, S13-16, S13-D6 | [S13-17](prs/S13-17-remove-a-claim.md) | Blocked — on S13-37, S13-16 |
 | S13-20 | Source date engine | 6 | An optional publication date on `sources` as a `date_values` reference (migration, model, read and write RPCs); `ListPersonClaims` groups carry it | — | S13-01 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
 | S13-07 | Stored claim read | 7 | Identity Claims have no stored pins to read back (conclusion §5) | — | — | — | Descoped (2026-10-29) → open question 9 |
 | S13-18 | Claim review | 7 | Replaced by slice 7's view of how the records connect | — | — | — | Descoped (2026-10-29) → S13-26 – S13-28 |
@@ -174,7 +175,7 @@ Each brief is written just before the PR it gates, its board agreed, and that PR
 | [S13-D4](design/archive/S13-D4-timeline-section.md) | Timeline section | **S13-13** | The person card at its compact size (S13-35); the event's lead picture, else the Event mark (R-26, updated 2026-11-02); undated events before the death marker; folds; full width at Wide, no secondary column (user, 2026-11-02). Board drawn 2026-11-02 in the [Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn 12: compact participant cards, a vertical lifeline, full width at Wide |
 | S13-D5 | Gallery section and likeness viewer | **S13-14**, **S13-15** | [Brief](design/archive/S13-D5-gallery-and-viewer.md); board agreed 2026-11-03 (turn 13). Person only; the viewer steps with no autoplay; no visible Use earliest likeness (the header thumb's menu keeps it); the viewer shows the likeness's record row (user, 2026-11-03) |
 | [S13-D13](design/archive/S13-D13-provenance-sheet-in-the-kit.md) | The provenance sheet in the design system | **S13-36** | Board drawn in the design-system kit, confirmed 2026-11-03; the app wins where they differ (S13-36 D-11). A kit specimen of today's sheet (no visible change), its slots, the one-record variant the Gallery opens, and the table alone for the viewer (user, 2026-11-03) |
-| S13-D6 | Sources section | **S13-16**, **S13-17** | Source groups, claim cards, Remove and the last-claim warning |
+| [S13-D6](design/S13-D6-sources-section.md) | Sources section, Remove and the last-claim warning | **S13-16**, **S13-17** | Board agreed 2026-11-05 ([Claude Design project](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), turn "S13-D6 rev 2", frames 14a – 14y) after the first draft (Subject cards) was rejected the same day: Source rows like the provenance sheet's, Evidence graph links secondary, the date column reserved for Spike 15, a reserved place for how the records connect (S13-D10), Remove through the graph's own Unpromote confirm (user, 2026-11-05) |
 | S13-D7 | Claim review sheet | — | **Descoped (2026-10-29)** with S13-18 |
 | S13-D10 | Person page: how the records connect | **S13-28** | The person's Evidence graphs as nodes and their links, a link's agreements and conflicts, a record that stands apart, two groups that do not connect. Where it sits (inside Sources or beside it) is the board's call |
 | S13-D8 | Source page: the Source date | — | **Descoped (2026-10-31)** with the Source date: [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md) |
@@ -227,6 +228,7 @@ SLICE 5 — Gallery
 
 SLICE 6 — Sources
   S13-08  Unpromoting the last member
+  S13-37  Unpromote reports what it removes   (preparatory)
   ✎ S13-D6 ──▶ S13-16  Sources section
                S13-17  Remove a claim
   Check: bar 6 and the removal half of 7
@@ -261,7 +263,7 @@ S13-01 ──┬─────────────────────�
 S13-09 ──▶ S13-10 ──┬──▶ S13-11 ◀── S13-06
                     ├──▶ S13-12
                     ├──▶ S13-14 ──▶ S13-15   (S13-11 ──▶ S13-36 ──▶ S13-15)
-                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-08
+                    └──▶ S13-16 ──┬──▶ S13-17 ◀── S13-37 ◀── S13-08
                                   └──▶ S13-28 ◀── S13-27 ◀── S13-26, S13-29, S13-01
 S13-24 ──▶ S13-26, S13-29
 each brief S13-Dn ──▶ the PR(s) it gates; slice n's chrome ──▶ slice n+1's brief (1 … 7)
@@ -488,15 +490,22 @@ Go, plus deleting Swift's draft rule.
 
 ### Slice 2 — Page frame and Vitals
 
+#### S13-37 — Unpromote reports what it removes
+
+**Ships.** A preparatory engine PR (user, 2026-11-05, from the S13-17 plan review). (1) `GetUnpromoteImpactResponse` gains the Subject ids of the bridges whose accepted claims the write will take back, from the same rule the write runs (`identityclaims.UnfileBridges`), so the confirm's "Also unpromoted" list is the engine's and the Swift copy of that rule goes (S13-17). (2) `WriteEffects` gains `deleted_handles`: the canonical entities the write deleted, from its `rowchange` delete changes, for every write that goes through `deleteimpact` (Unpromote, Subject delete); `CatalogWriteEffects.deletedHandles` decodes it. Swift maps both; nothing draws them until S13-17.
+**Not this PR.** Any confirm or page change (S13-17); a general "the page's entity was deleted" rule (later, for Event and Place).
+**Check.** Handler tests: unpromoting a Subject with two filed bridges returns both ids in the preflight and the write unfiles exactly those; the last member's Unpromote reports the handle in `deleted_handles`; a Subject delete that empties a handle reports it; a write that deletes nothing reports none.
+**Context.** Working rule "One Unpromote, deletes through the registry"; S13-08; `core/database/promote/unpromote.go`, `unpromote_impact.go`; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md).
+
 #### S13-16 — Sources section
 
-**Ships.** The Sources section from S13-D6, read from S13-01: Source groups with Subject cards, each Source opening its page.
+**Ships.** The Sources section from S13-D6, read from S13-01 (user, 2026-11-05, replacing Subject cards): one row per Source shaped like a provenance sheet row, with the Source part of its citation linking to the Source page and its key data in columns (type; a publication date column that shows "—" until Spike 15; ref); under each, a compact secondary link per Evidence graph holding the person's record, with the graph's and the record's refs, opening the graph with the Subject selected and in view (which the graph gains from its location's `subjectId`). The section keeps a place for how the records connect (S13-28): the Wide secondary column, and a band above the rows at Regular.
 **Check.** Bar 6.
 **Context.** R-33 – R-37.
 
 #### S13-17 — Remove a claim
 
-**Ships.** Remove on each claim through `UnpromoteSubject`, the last-claim warning, and navigation to the Persons list when the person is gone.
+**Ships.** Remove on each claim through `UnpromoteSubject`, the last-claim warning, and navigation to the Persons list when the person is gone. The confirm is the Evidence graph's Unpromote confirm, connections list included (user, 2026-11-05), lifted out of the graph so both pages show one; its single-handle deletes sentence becomes the per-kind copy approved for S13-08 (2026-11-04), which the landed confirm defines but does not show.
 **Check.** Bar 7, removal half.
 **Context.** R-38, R-39; working rule "One Unpromote"; [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md) for leaving a page whose entity is gone.
 
