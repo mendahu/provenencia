@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S13-37 — Unpromote reports what it removes
 
-**Landed 2026-11-06** in [#725](https://github.com/mendahu/provenencia/pull/725). The Unpromote preflight now returns the bridge Subjects whose accepted claims the write will take back (`unpromoted_bridge_subject_ids`), read by the one function the write itself releases from (`identityclaims.FiledBridgesOf`), and every write's effects name the handles it deleted (`deleted_handles`, from a new `onDelete` path on the effects registry). Swift decodes both (`CatalogUnpromoteImpact`, `CatalogWriteEffects.deletedHandles`); no view reads them until S13-17 words the confirm's list from the ids and leaves the Person page on a deleted person.
+**Landed 2026-11-06** in [#725](https://github.com/mendahu/provenencia/pull/725). The Unpromote preflight now returns the bridge Subjects whose accepted claims the write will take back (`unpromoted_bridge_subject_ids`), read by the one function the write itself releases from (`identityclaims.FiledBridgesOf`), and every write's effects name the ids it deleted, by entity (`WriteEffects.deleted`, from an `onDelete` path on the effects registry; `canonical_entity` lists the handles). The preflight's list of deleted handles counts every bridge the write takes back, so a handle shared by several of them is listed. Swift decodes both (`CatalogUnpromoteImpact`, `CatalogWriteEffects.deleted` with `deletedHandles` reading its `canonical_entity` entry); no view reads them until S13-17 words the confirm's list from the ids and leaves the Person page on a deleted person. Not yet run in the app: §10 step 1, an Unpromote on an Evidence graph.
 
 ## S13-16 — Sources section
 
