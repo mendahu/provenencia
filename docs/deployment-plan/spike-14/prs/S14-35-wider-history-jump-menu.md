@@ -90,7 +90,7 @@ Long-pressing or right-clicking Back or Forward opens a menu of the places in hi
 | D-2 | The width is `min(600, contentWidth − anchorMinX − 16)` when `contentWidth > 0`, else 600. Computed by `HistoryJumpMenuModel.panelWidth(contentWidth:anchorMinX:)` *(new)*, a `static` pure function. | At the 700pt minimum window a fixed 600pt panel opened from Forward would run off the window's right edge. A pure function is testable without a view. 16pt is `PVSpacing.space6`. | A fixed 600pt — overflows on small windows; `GeometryReader` inside `HistoryJumpMenuHost` — the overlay fills the column and a reader there is a second layout pass for one number |
 | D-3 | `WorkspaceContent` writes its width into `HistoryJumpMenuModel.contentWidth` *(new, `CGFloat`, default 0)* with `.onGeometryChange`. | The model already owns the anchors in the same coordinate space; the width belongs beside them. | Passing the width as a new `HistoryJumpMenuHost` init argument — `WorkspaceContent` would need its own `@State` for it |
 | D-4 | `PVContextMenuPanel` is not changed. `HistoryJumpMenuPanel` takes `width: CGFloat` and passes it on. | The kit already takes a width; only this caller needs more. | A kit `minWidth` or intrinsic sizing — touches every menu for one caller |
-| D-5 | No floor below the cap. | The narrowest column with the sidebar is 436pt, so the cap gives at least 408pt from Back, already wider than today's 360pt; from Forward (about 32pt further right) it gives about 376pt. With the sidebar hidden the column is wider. | A floor of 360 — would bring back the overflow it exists to avoid |
+| D-5 | No floor below the cap, and no `max(0, …)` either. | The narrowest column with the sidebar is 436pt, so the cap gives at least 408pt from Back, already wider than today's 360pt; from Forward (about 32pt further right) it gives about 376pt. With the sidebar hidden the column is wider. | A floor of 360 — would bring back the overflow it exists to avoid |
 | D-6 | Truncation stays `.tail`, one line. | Working rule "History jump menu is wider first": truncation changes wait for dogfood. | `.middle` / `.head` — Out |
 
 **Rules this plan bends.** None.
@@ -145,7 +145,7 @@ None — no RPC changes.
 | History jump panel | `PVContextMenuPanel` (unchanged) | `macos/App/Features/Workspace/WorkspaceToolbar.swift` `HistoryJumpMenuPanel` | Takes `width: CGFloat` *(new parameter)*; passes it as `PVContextMenuPanel(width:)` |
 | Width rule | — | `WorkspaceToolbar.swift` `HistoryJumpMenuModel` | `static let panelWidth: CGFloat = 600`; `static func panelWidth(contentWidth: CGFloat, anchorMinX: CGFloat) -> CGFloat`; `var contentWidth: CGFloat = 0` |
 | Host | — | `WorkspaceToolbar.swift` `HistoryJumpMenuHost.body` | Passes `HistoryJumpMenuModel.panelWidth(contentWidth: jumpMenu.contentWidth, anchorMinX: anchor.minX)` |
-| Measure | — | `macos/App/Features/Workspace/WorkspaceContent.swift` `WorkspaceContent.body` | `.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { jumpMenu.contentWidth = $0 }` on the `VStack`, before `.coordinateSpace(name:)` |
+| Measure | — | `macos/App/Features/Workspace/WorkspaceContent.swift` `WorkspaceContent.body` | `.onGeometryChange(for: CGFloat.self) { $0.size.width } action: { jumpMenu.contentWidth = $0 }` after `.frame(maxWidth: .infinity, maxHeight: .infinity)` and `.background(PVColor.surfacePage)`, immediately before `.coordinateSpace(name:)`, so it reads the full column width |
 
 Sketch:
 
@@ -153,8 +153,8 @@ Sketch:
 static let panelWidth: CGFloat = 600
 
 static func panelWidth(contentWidth: CGFloat, anchorMinX: CGFloat) -> CGFloat {
-    guard contentWidth > 0 else { return panelWidth }
-    return min(panelWidth, contentWidth - anchorMinX - PVSpacing.space6)
+    guard contentWidth > 0 else { return Self.panelWidth }
+    return min(Self.panelWidth, contentWidth - anchorMinX - PVSpacing.space6)
 }
 ```
 
@@ -173,7 +173,7 @@ Check: `xcodebuild test -project macos/Provenencia.xcodeproj -scheme Provenencia
 
 **STEP-2 — Measure the content column**
 Files: `macos/App/Features/Workspace/WorkspaceContent.swift`.
-Do: add the `.onGeometryChange` per §6.
+Do: add the `.onGeometryChange` per §6 (after `.frame(maxWidth:maxHeight:)` and `.background`, immediately before `.coordinateSpace(name:)`; not on the bare `VStack`, which can be narrower than the column).
 Check: the app builds with no new warning.
 
 **STEP-3 — Panel reads the width**
@@ -182,13 +182,13 @@ Do: give `HistoryJumpMenuPanel` a `width: CGFloat` property and pass it to `PVCo
 Check: `rg -n "width: 360" macos/App/Features/Workspace` prints nothing; manual check §10 steps 1–3.
 
 **STEP-4 — Version bump**
-Files: `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj` (`MARKETING_VERSION`).
-Do: next patch from `main` at the time of the PR (0.3.7 → 0.3.8 at the planning base).
-Check: the three agree.
+Files: `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj` (all four `MARKETING_VERSION` lines).
+Do: read `VERSION` on `main` when the branch is cut and add one to its patch number (`.cursor/rules/versioning.mdc`): 0.3.7 → 0.3.8 at the planning base.
+Check: `VERSION`, `core.Version` and all four `MARKETING_VERSION` lines show the same string.
 
 **STEP-5 — Docs**
 Files: `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md` (map row), this plan (status), `docs/deployment-plan/spike-14/ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md` (delete, as S14-30 did with its note in #713).
-Do: per the Definition of done. In the map's "Where the notes went", replace the S14-35 row's link with plain text in the shape of the S14-30 row: "Dogfood 2026-10-29: history jump menu truncates breadcrumb tails (note deleted YYYY-MM-DD; landed #N)". Remove the note's link from the S14-35 scope entry's **Context.**
+Do: per the Definition of done. This step's commit comes after the PR exists, because it needs `#N` and the date. Map PR table row: Plan column links this file, Status `Landed #N`. `completed.md`: a new section at the top, `## S14-35 — Wider history jump menu`, then `**Landed YYYY-MM-DD** in [#N](https://github.com/mendahu/provenencia/pull/N).` and two or three sentences on what shipped, ending with the version, in the shape of the S14-34 entry. Scope entry `#### S14-35`: replace the **Ships.** clause about a test or snapshot with "Swift test of the width rule." In the map's "Where the notes went", replace the S14-35 row's link with plain text in the shape of the S14-30 row: "Dogfood 2026-10-29: history jump menu truncates breadcrumb tails (note deleted YYYY-MM-DD; landed #N)". Remove the note's link from the S14-35 scope entry's **Context.**
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-35-wider-history-jump-menu.md` reports no errors; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -197,14 +197,14 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `macos/ProvenenciaTests/HistoryJumpMenuWidthTests.swift` *(new)* `panelWidthFitsTheColumn` *(new, parameterized)* | (1102, 12) → 600; (436, 12) → 408; (0, 12) → 600; exact fit (628, 12) → 600; (627, 12) → 599 | AC-1.1, AC-1.3, AC-1.4, D-1, D-2 |
+| T-1 | Swift | `macos/ProvenenciaTests/HistoryJumpMenuWidthTests.swift` *(new)* `panelWidthFitsTheColumn` *(new, parameterized)* | `@Suite struct HistoryJumpMenuWidthTests` (no `@MainActor`: the function is a static pure function); `@Test(arguments: [(CGFloat, CGFloat, CGFloat)])` over (contentWidth, anchorMinX, expected); `#expect(HistoryJumpMenuModel.panelWidth(contentWidth:anchorMinX:) == expected)`. Cases: (1102, 12) → 600; (436, 12) → 408; (0, 12) → 600; exact fit (628, 12) → 600; (627, 12) → 599 | AC-1.1, AC-1.3, AC-1.4, D-1, D-2 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `WorkspaceToolbarBreadcrumbTests` (same file under test).
 
 ## 9. Definition of done
 
 ```
-- [ ] Every AC in §2 is true: T-1 for AC-1.1, AC-1.3, AC-1.4; manual check for AC-1.2, AC-1.5
+- [ ] Every AC in §2 is true: T-1 for AC-1.1, AC-1.3, AC-1.4; manual check for AC-1.2, AC-1.5 (run by the user or orchestrator, §10)
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
@@ -221,6 +221,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `W
 ```
 
 ## 10. Manual check
+
+The user or the `ship-pr` orchestrator runs these steps on a Mac; the implementing agent does not, and reports them as not run. The PR description carries two screenshots of the open Back menu: one at 1366pt (step 1) and one at the minimum width (step 3).
 
 1. Open a project with one Source that has two Evidence graphs, each with a long name ("Smith family 1871 census", "Smith family 1881 census"). In each graph, open the Citation composer on a Citation titled "Smith household, p. 4", then return to the canvas. Window at its default size (1366pt). Long-press Back. Each composer row reads its graph name and "Citation for Smith household, p. 4" in full; the two rows differ (AC-1.2, bar outcome 30).
 2. Right-click Forward after going Back twice. The panel opens under Forward, 600pt wide, and its rows read in full.
