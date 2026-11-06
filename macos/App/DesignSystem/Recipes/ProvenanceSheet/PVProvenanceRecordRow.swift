@@ -58,14 +58,11 @@ struct PVProvenanceRecordRow: View {
     private var citation: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
             HStack(alignment: .citationFirstLineCenter, spacing: PVProvenanceColumns.copyTrackSpacing) {
-                PVInkLink(
-                    ink: record.counted ? .primary : .secondary,
-                    accessibilityLabel: record.citation.line,
-                    identifier: "\(idPrefix).\(record.id).citation",
-                    action: { open(record, .citation) }
-                ) {
+                PVInkLink(ink: record.counted ? .primary : .secondary, action: { open(record, .citation) }) {
                     Text(verbatim: record.citation.line)
                 }
+                    .accessibilityLabel(Text(verbatim: record.citation.line))
+                    .accessibilityIdentifier("\(idPrefix).\(record.id).citation")
                     // The first line's centre sits about a third of the type size above its baseline.
                     .alignmentGuide(.citationFirstLineCenter) { $0[.firstTextBaseline] - PVTypeScale.bodySmall / 3 }
                 PVClipboardButton(

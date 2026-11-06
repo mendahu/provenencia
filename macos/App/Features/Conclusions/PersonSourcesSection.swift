@@ -158,14 +158,11 @@ private struct PersonSourcesRowView: View {
 
     private var citation: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            PVInkLink(
-                ink: .primary,
-                accessibilityLabel: L10n.Conclusions.sourcesOpenSource(row.helpTitle),
-                identifier: "persons.detail.sources.title.\(row.id)",
-                action: { open(row.location) }
-            ) {
+            PVInkLink(ink: .primary, action: { open(row.location) }) {
                 PVTitleText(row.title, style: .rowLink, lineLimit: 2)
             }
+            .accessibilityLabel(Text(verbatim: L10n.Conclusions.sourcesOpenSource(row.helpTitle)))
+            .accessibilityIdentifier("persons.detail.sources.title.\(row.id)")
             .help(row.helpTitle)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 ForEach(row.lines) { line in
