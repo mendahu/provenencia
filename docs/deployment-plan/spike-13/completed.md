@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-17 — Remove a claim
+
+**Landed 2026-11-06** in [#729](https://github.com/mendahu/provenencia/pull/729). A Person's Sources section has an Unpromote button at the end of each record's line, through the same confirm as the Evidence graph's: its connection list now comes from the engine's preflight, and the single-handle deletes sentence approved for S13-08 is shown (on the graph too). Removing a person's last record says first that the person is deleted, and the app lands on the Persons list before the effects apply. `UnpromoteFlow` and the `PVUnpromoteConfirm` recipe replace the graph model's Unpromote state; a Conclusion page whose read reports `conclusiondetails.not_found` leaves for its list (`leavesForSectionRoot`, also used by the Source page and the graph), so Back to a deleted person does not stop on a Callout. `WorkspaceSession.evidenceGraphSnapshot(graphID:)` is the one snapshot read Promote shares, and `CoreInvokeError.code` is the one read of a coded error. Not yet run in the app: §10 items 1 – 4.
+
 ## S13-37 — Unpromote reports what it removes
 
 **Landed 2026-11-06** in [#725](https://github.com/mendahu/provenencia/pull/725). The Unpromote preflight now returns the bridge Subjects whose accepted claims the write will take back (`unpromoted_bridge_subject_ids`), read by the one function the write itself releases from (`identityclaims.FiledBridgesOf`), and every write's effects name the ids it deleted, by entity (`WriteEffects.deleted`, from an `onDelete` path on the effects registry; `canonical_entity` lists the handles). The preflight's list of deleted handles counts every bridge the write takes back, so a handle shared by several of them is listed. Swift decodes both (`CatalogUnpromoteImpact`, `CatalogWriteEffects.deleted` with `deletedHandles` reading its `canonical_entity` entry); no view reads them until S13-17 words the confirm's list from the ids and leaves the Person page on a deleted person. Not yet run in the app: §10 step 1, an Unpromote on an Evidence graph.

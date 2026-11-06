@@ -1,9 +1,9 @@
 # S13-17 — Remove a claim
 
-**Status:** Planned
+**Status:** Landed in #729 (2026-11-06)
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D6](../design/S13-D6-sources-section.md) (revision 2), board agreed 2026-11-05
+**Brief:** [S13-D6](../design/archive/S13-D6-sources-section.md) (revision 2), board agreed 2026-11-05
 **Board:** Claude Design project [*Person Detail*](https://claude.ai/design/p/c8660cdb-2c61-4c30-bc39-b2411036e6c0?via=share), file *Person Detail - Sources.dc.html*, turn "S13-D6 rev 2 · Sources as Source rows, Remove and the last-record warning", frames 14n – 14u, 14y (this PR). **Design → macOS** describes them in words
 **Depends on:** S13-08 (landed [#707](https://github.com/mendahu/provenencia/pull/707)), S13-37 (landed [#725](https://github.com/mendahu/provenencia/pull/725)), S13-16 (landed [#722](https://github.com/mendahu/provenencia/pull/722)), S13-D6 (board agreed 2026-11-05)
 **Blocks:** —
@@ -11,8 +11,9 @@
 **Version bump:** none — Spike 11–14 PRs leave `VERSION` alone until a release is cut ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md) (a page that leaves when its entity is gone)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
-**Context:** [`../person-detail.md` § Identity claim controls](../person-detail.md#identity-claim-controls) (R-38, R-39); working rules "One Unpromote, deletes through the registry", "Sections are places"; brief [S13-D6](../design/S13-D6-sources-section.md) RC-1 – RC-7; the S13-08 plan (D-14: `getUnpromoteImpact`; D-16: the per-kind deletes copy) and the S13-16 plan
+**Context:** [`../person-detail.md` § Identity claim controls](../person-detail.md#identity-claim-controls) (R-38, R-39); working rules "One Unpromote, deletes through the registry", "Sections are places"; brief [S13-D6](../design/archive/S13-D6-sources-section.md) RC-1 – RC-7; the S13-08 plan (D-14: `getUnpromoteImpact`; D-16: the per-kind deletes copy) and the S13-16 plan
 **Planned:** 2026-11-06 against `main` @ `f48846c3` (refreshed after S13-37 and S13-16 landed)
+**Landed:** the code follows the plan; five notes. (1) `UnpromoteFlowTests` and `evidenceGraphSnapshotReadsTheThreeKeys` seed their graph through `FakeStore` (`subjectsByGraph`, `observationsByGraph`, positions) and let the session load it, so `graphRows(…)` moved to `EvidenceGraphRowsFixture.swift` for `EvidenceGraphModelTests` alone. (2) `unpromoteLastRecordNamesTheDeletedHandle` lists the Subject's own handle id (`ent-s-james`) so `deletesOwnHandle` holds, which its `message` assertion needs. (3) `PersonSourcesList` keeps `@State unpromotingClaimID`, set when a line's Unpromote opens, to know which claim `lineAfterRemoving` starts from; D-10 left the source of that id open. (4) The Source page's `.onChange(of: workspaceHandle.status)` keeps `model.sync(from:)`; only its leave rule moved onto `leavesForSectionRoot`. (5) Manual check §10 items 1 – 4 were not run in the app.
 **Review:** [`S13-17-remove-a-claim.review.md`](S13-17-remove-a-claim.review.md) — refresh rounds 1 and 2 (2026-11-06): every finding Fixed, no blocker open
 
 ### Implementer — read this first
