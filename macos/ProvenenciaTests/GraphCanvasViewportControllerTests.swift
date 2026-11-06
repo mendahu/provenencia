@@ -15,8 +15,8 @@ struct GraphCanvasViewportControllerTests {
     private func rig() -> Rig {
         let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 1_000, height: 800))
         scrollView.scrollerStyle = .overlay
-        scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = true
+        scrollView.hasVerticalScroller = false
+        scrollView.hasHorizontalScroller = false
         scrollView.allowsMagnification = true
         scrollView.minMagnification = 0.1
         scrollView.maxMagnification = 4
