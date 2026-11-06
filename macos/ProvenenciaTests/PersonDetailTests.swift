@@ -23,33 +23,25 @@ struct PersonDetailTests {
         )
     }
 
-    @Test func conclusionNotFoundIsReadFromTheFailure() {
-        let notFound: QueryRead<CatalogConclusionDetail> = .failed(
-            CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
-        )
-        #expect(notFound.isConclusionNotFound)
-        let other: QueryRead<CatalogConclusionDetail> = .failed(
-            CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
-        )
-        #expect(!other.isConclusionNotFound)
-        let uncoded: QueryRead<CatalogConclusionDetail> = .failed(CoreInvokeError.failed(status: 1))
-        #expect(!uncoded.isConclusionNotFound)
-        let loading: QueryRead<CatalogConclusionDetail> = .loading
-        #expect(!loading.isConclusionNotFound)
-        let loaded: QueryRead<CatalogConclusionDetail> = .loaded(detail())
-        #expect(!loaded.isConclusionNotFound)
-    }
-
     @Test func presentationFollowsTheHandle() {
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
             .loading, isFetching: true, content: { PersonDetailContent(detail: $0) }
         ) == .loading)
-        let failed = ConclusionDetailPresentation<PersonDetailContent>(
+        // A handle that is gone, deleted or merged.
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
             .failed(CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])),
             isFetching: false,
             content: { PersonDetailContent(detail: $0) }
-        )
-        #expect(failed == .failed("This record no longer exists. It may have been merged into another."))
+        ) == .gone)
+        // Any other failure keeps its message, coded or not.
+        let other = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
+            .failed(other), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .failed(L10n.Errors.message(for: other)))
+        let uncoded = CoreInvokeError.failed(status: 1)
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
+            .failed(uncoded), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .failed(L10n.Errors.message(for: uncoded)))
         let content = PersonDetailContent(detail: detail())
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
             .loaded(detail()), isFetching: false, content: { PersonDetailContent(detail: $0) }

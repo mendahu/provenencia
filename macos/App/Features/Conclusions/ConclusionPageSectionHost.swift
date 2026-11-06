@@ -76,7 +76,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
             content: make
         )
         switch presentation {
-        case .loading:
+        case .loading, .gone:
             loading
         case .failed(let message):
             PVCallout(tone: .danger, title: errorTitle, message: message)
