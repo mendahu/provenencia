@@ -1,7 +1,7 @@
 # Ship log — S14-33 A bridge between two handles files when it is made
 
 **Plan:** [`S14-33-auto-file-bridges.md`](S14-33-auto-file-bridges.md) · **Branch:** `s14-33-auto-file-bridges` · **PR:** #723
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `b6996e68`. Gate PASS (run by the orchestrator on the pushed head, base `d5cefe54`). Report: Status line reads "Landed in #723 (2026-11-06)" because `check-plan-docs` rejects the shorter form; the deleted dogfood note was unlinked in the plan's Context line and STEP-7 (text only) so the link check passes; manual check not run (needs the Mac app).
@@ -105,3 +105,9 @@ Do:
 - `deployment-plan.md`: take the next free S14 number and add a row in Slice 7c's table plus a short scope entry, status Scoped, no plan yet: after Unpromote or a bridge delete, search documents and stored summary rows go stale. Probe: 234 stale documents over 451 unpromotes, 45 stale display rows. Likely cause: `AssociationEndpoints` joins `canonical_entities`, so a deleted association has no ends. Bug, predates S14-33.
 - Plan's Landed note: add `movedRoots` gated by F-5, PRF-6 accepted, and the new map row.
 Check: `scripts/check-plan-docs.py` clean; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `10e34e8f`, then `main` merged (`1f5b38ab`; only S13-37's plan docs had landed). Gate PASS on the merged head. F-5 done: `TestLargeSourceBudgets/second_part_of_from_the_city` 2.87 s red, 144 ms green; `TestFiledPartOfReprojectsEventsOnlyWhenARowMoved` pins that a part_of that moves a row still rewrites its event's document, and ran red on its second half. F-6 done: the new map row is S14-38. PRF-5 Resolved by the orchestrator's read of the diff; there is no round 3, so no reviewer has seen F-5. MNT-3 Resolved.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: S14-38 (FU-1), `promote-ranking.md` (PRF-3, PRF-6), `structural-debt.md` (PRF-4, FU-3, FU-4) · to user: PRF-3, PRF-6, MNT-4, all answered 2026-11-06 · CON miss: CON-4
