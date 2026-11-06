@@ -20,9 +20,10 @@ import (
 // type, and any later non-role disambiguation such as place_relationship_type,
 // is part of the key; a directed term keeps order and a symmetric one does not.
 //
-// Returned association ids are the handles filing touched; writes.Run
-// recomputes the handles of the changes. Changes belong on the caller's revision. Does not commit. subjectID is a new
-// member (the bridges touching it file) or a new bridge (it files itself).
+// The returned ids are the handles filing touched. The caller discards them:
+// writes.Run recomputes every handle the changes name. Changes belong on the
+// caller's revision. Does not commit. subjectID is a new member (the bridges
+// touching it file) or a new bridge (it files itself).
 func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil

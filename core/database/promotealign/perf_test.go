@@ -42,6 +42,11 @@ const (
 	// moves no row of the city's other 6,000 events, so none is reprojected.
 	// S14-33 measured 3.2 s before it walked from the event alone.
 	budgetLocateAtCity = 500 * time.Millisecond
+	// budgetSecondPartOfAtCity: a second record's part_of from the city joins
+	// the association already filed, which moves no row, so the city's 6,000
+	// events are not reprojected. S14-33 measured 2.75 s before movedRoots
+	// followed only the associations that moved.
+	budgetSecondPartOfAtCity = 500 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -292,5 +297,29 @@ func TestLargeSourceBudgets(t *testing.T) {
 			return since(func() { f.locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
 		})
 		over(t, "file one location at the city", d, budgetLocateAtCity)
+	})
+	t.Run("second part_of from the city", func(t *testing.T) {
+		region := f.place(lf.other, lf.otherA, "Region")
+		regionID := f.promote(region).Entity.ID
+		// The first part_of mints the association; it moves rows and is not timed.
+		first := f.place(lf.other, lf.otherA, "City")
+		f.join(first, lf.city)
+		f.placeRel(lf.other, lf.otherA, first, region, "part_of")
+		type pair struct{ from, to subjects.Subject }
+		var pairs []pair
+		for i := 0; i < 3; i++ {
+			from := f.place(lf.other, lf.otherA, "City")
+			f.join(from, lf.city)
+			to := f.place(lf.other, lf.otherA, "Region")
+			f.join(to, regionID)
+			pairs = append(pairs, pair{from, to})
+		}
+		i := 0
+		d := fastest(3, func() time.Duration {
+			p := pairs[i]
+			i++
+			return since(func() { f.placeRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
+		})
+		over(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
 	})
 }

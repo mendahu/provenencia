@@ -6,6 +6,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
@@ -105,5 +107,54 @@ func TestFiledPartOfWalksFromThePart(t *testing.T) {
 	}
 	if countIn(deps, hWhole[0], hWhole[1]) != 0 {
 		t.Fatalf("deps reach the events at the whole")
+	}
+}
+
+// staleEventDocs marks every event search document, so a later write shows
+// whether it rewrote one: a rewrite replaces the mark.
+func (f *fixture) staleEventDocs() {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	_, err = db.Exec(`UPDATE catalog_search_docs SET display_subtitle = 'stale' WHERE kind = 'event'`)
+	must(f.t, err)
+}
+
+func (f *fixture) eventDocsStale() bool {
+	f.t.Helper()
+	db, err := f.c.DB()
+	must(f.t, err)
+	var n int
+	must(f.t, db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'event' AND display_subtitle = 'stale'`).Scan(&n))
+	return n > 0
+}
+
+// The first part_of filed from a place moves the rows that read the place's
+// parents, so the search document of an event at that place is rewritten. A
+// second record of the same link joins the association and moves nothing, so
+// that document is left alone.
+func TestFiledPartOfReprojectsEventsOnlyWhenARowMoved(t *testing.T) {
+	f := newFixture(t)
+	whole := f.placeSubject("Ontario", nil, nil, 4, 0)
+	part := f.placeSubject("Toronto", nil, nil, 2, 0)
+	wholeID, partID := f.promoteSubject(whole), f.promoteSubject(part)
+	f.promotedBirth(part)
+
+	f.staleEventDocs()
+	f.placeRel(part, whole, propertyterms.KeyPartOf, nil, nil)
+	if f.eventDocsStale() {
+		t.Fatal("the first part_of from a place left its event's search document unwritten")
+	}
+
+	join := func(name string, entityID []byte) subjects.Subject {
+		s := f.placeSubject(name, nil, nil, 0, 0)
+		promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+		return s
+	}
+	part2, whole2 := join("Toronto", partID), join("Ontario", wholeID)
+	f.staleEventDocs()
+	f.placeRel(part2, whole2, propertyterms.KeyPartOf, nil, nil)
+	if !f.eventDocsStale() {
+		t.Fatal("a second record of the same part_of rewrote its event's search document")
 	}
 }

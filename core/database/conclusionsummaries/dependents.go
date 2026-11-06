@@ -90,17 +90,17 @@ func Dependents(q Querier, ids [][]byte) ([][]byte, error) {
 }
 
 // AssociationEndpoints reads the kept entity values of the association handles
-// in ids: every end of those links, and the ends to walk from. A save calls it
-// before rewriting those rows and again after. Both walk sets are roots of
-// Dependents; every end is also reported to the client, so a cached page of
-// either end reloads. The cache's link index is empty until something has
-// loaded the association, so the rows are the source.
+// in ids: every end of those links, and the ends to walk from, by association
+// handle id. A save calls it before rewriting those rows and again after. The
+// walk ends are roots of Dependents; every end is also reported to the client,
+// so a cached page of either end reloads. The cache's link index is empty until
+// something has loaded the association, so the rows are the source.
 //
 // An end to walk is every end except location.place and
 // place_relationship.to. No row reads a link through those ends, and a place
 // can hold thousands of events, so walking from them reprojects rows the link
 // did not move.
-func AssociationEndpoints(q Querier, ids [][]byte) (ends, walk [][]byte, err error) {
+func AssociationEndpoints(q Querier, ids [][]byte) (ends [][]byte, walk map[string][][]byte, err error) {
 	ids = database.UniqueBlobIDs(ids)
 	if len(ids) == 0 {
 		return nil, nil, nil
@@ -122,7 +122,7 @@ func AssociationEndpoints(q Querier, ids [][]byte) (ends, walk [][]byte, err err
 		where += "(st.origin = ? AND st.key = ?)"
 		args = append(args, origin, b.BridgeTypeKey)
 	}
-	query := `SELECT DISTINCT r.value_entity_id, st.key, p.key
+	query := `SELECT DISTINCT r.entity_id, r.value_entity_id, st.key, p.key
 		FROM auto_reconciler_values r
 		JOIN canonical_entities e ON e.id = r.entity_id
 		JOIN subject_types st ON st.id = e.subject_type_id
@@ -131,22 +131,25 @@ func AssociationEndpoints(q Querier, ids [][]byte) (ends, walk [][]byte, err err
 			AND (` + where + `)
 			AND r.entity_id IN (`
 	err = sqlbatch.Query(q, query, `)`, args, ids, func(rows *sql.Rows) error {
-		var id []byte
+		var assoc, id []byte
 		var bridge, end string
-		if err := rows.Scan(&id, &bridge, &end); err != nil {
+		if err := rows.Scan(&assoc, &id, &bridge, &end); err != nil {
 			return err
 		}
 		id = append([]byte(nil), id...)
 		ends = append(ends, id)
 		if linkEnds[bridge] != end {
-			walk = append(walk, id)
+			if walk == nil {
+				walk = map[string][][]byte{}
+			}
+			walk[string(assoc)] = append(walk[string(assoc)], id)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, nil, err
 	}
-	return database.UniqueBlobIDs(ends), database.UniqueBlobIDs(walk), nil
+	return database.UniqueBlobIDs(ends), walk, nil
 }
 
 // linkEnds names, by bridge type key, the end no row reads a link through.
