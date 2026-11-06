@@ -35,6 +35,7 @@ func TestWriteEffectsProto(t *testing.T) {
 		handles        []string
 		summaryHandles []string
 		handleScopes   []string
+		deletedHandles []string
 		revision       int64
 		revisionAt     string
 	}{
@@ -52,6 +53,11 @@ func TestWriteEffectsProto(t *testing.T) {
 			handles:        []string{aStr},
 			summaryHandles: []string{bStr},
 		},
+		{
+			name:           "deleted handles",
+			res:            writes.Result{Effects: effects.Set{DeletedHandles: [][]byte{a}}},
+			deletedHandles: []string{aStr},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,6 +70,9 @@ func TestWriteEffectsProto(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.GetHandleScopes(), tt.handleScopes) {
 				t.Fatalf("HandleScopes = %v, want %v", got.GetHandleScopes(), tt.handleScopes)
+			}
+			if !reflect.DeepEqual(got.GetDeletedHandles(), tt.deletedHandles) {
+				t.Fatalf("DeletedHandles = %v, want %v", got.GetDeletedHandles(), tt.deletedHandles)
 			}
 			if got.GetRevision() != tt.revision || got.GetRevisionAt() != tt.revisionAt {
 				t.Fatalf("Revision = %d %q, want %d %q", got.GetRevision(), got.GetRevisionAt(), tt.revision, tt.revisionAt)

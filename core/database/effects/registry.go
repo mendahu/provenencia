@@ -116,7 +116,10 @@ type Set struct {
 	// HandleScopes are the handles whose canonical_entity audit scope the
 	// batch moves (Effect.HandleScope); Handles is the recompute set.
 	HandleScopes [][]byte
-	Search       []SearchIDs
+	// DeletedHandles are the handles the batch deleted (Effect.DeletedHandles),
+	// in change order. A merge updates a handle and is not listed.
+	DeletedHandles [][]byte
+	Search         []SearchIDs
 	// Lists are the catalog-wide lists the batch changed, deduped, in the
 	// order of Lists.
 	Lists []List
@@ -149,7 +152,11 @@ type Effect struct {
 	// HandleScope is the handles whose canonical_entity audit scope this
 	// change moves; Handles is the recompute set.
 	HandleScope Path
-	Search      []SearchDoc
+	// DeletedHandles is the handles this change deleted (a Path that ends at
+	// canonical_entities, guarded by onDelete): the app learns from a write's
+	// effects which handles are gone.
+	DeletedHandles Path
+	Search         []SearchDoc
 	// Lists are the catalog-wide lists a change to the table moves. Which
 	// updates move them is one choice: all (the default), those writing
 	// ListsOnField, or none (ListsOnCreateDelete). Creates and deletes always
@@ -405,6 +412,7 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {
 		Entity: "canonical_entity", Handles: self(), HandleScope: self(),
+		DeletedHandles: onDelete(self()),
 		// The sidebar counts filter merged_into_id IS NULL, so a merge moves
 		// them; a preferred-picture update does not.
 		Lists: []List{ListCounts}, ListsOnField: "merged_into_id",
@@ -475,7 +483,7 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	out := []Path{e.EvidenceGraph, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	out := []Path{e.EvidenceGraph, e.SourceScope, e.Handles, e.HandleScope, e.DeletedHandles, e.Structure}
 	for _, r := range e.Reads {
 		out = append(out, r.Path)
 	}
@@ -503,6 +511,11 @@ func (e Effect) validate(table string) error {
 		}
 		if end, err := r.Path.check(table); err == nil && end != "" && end != r.Read.KeyTable() {
 			return errf("%s: read %q ends at %s, want %s", table, r.Read, end, r.Read.KeyTable())
+		}
+	}
+	if !e.DeletedHandles.zero() {
+		if end, err := e.DeletedHandles.check(table); err == nil && end != "canonical_entities" {
+			return errf("%s: deleted handles end at %s, want canonical_entities", table, end)
 		}
 	}
 	for _, l := range e.Lists {

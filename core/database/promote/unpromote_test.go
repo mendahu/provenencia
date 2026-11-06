@@ -207,3 +207,57 @@ func TestUnpromote(t *testing.T) {
 		}
 	})
 }
+
+func TestUnpromoteReportsDeletedHandles(t *testing.T) {
+	unpromote := func(w *bridgeWorld, s subjects.Subject) [][]byte {
+		t.Helper()
+		_, res, err := writes.Run(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := promote.Unpromote(tx, userID, s.ID)
+			return struct{}{}, ch, err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res.Effects.DeletedHandles
+	}
+	sameIDs := func(t *testing.T, got, want [][]byte) {
+		t.Helper()
+		if len(got) != len(want) {
+			t.Fatalf("deleted handles %x, want %x", got, want)
+		}
+		for i := range want {
+			if !bytes.Equal(got[i], want[i]) {
+				t.Fatalf("deleted handles %x, want %x", got, want)
+			}
+		}
+	}
+
+	t.Run("a person's last member names the person", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		james := w.node("person", "James", 0, 0)
+		person := w.promote(james).Entity.ID
+		sameIDs(t, unpromote(w, james), [][]byte{person})
+	})
+
+	t.Run("a relationship handle emptied by the unfiling is named too", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		james := w.node("person", "James", 0, 0)
+		john := w.node("person", "John", 2, 0)
+		w.relationship(james, john, w.spouse)
+		w.promote(john)
+		person := w.promote(james).Entity.ID
+		rel := w.handles("relationship")
+		if len(rel) != 1 {
+			t.Fatalf("relationship handles %d, want 1", len(rel))
+		}
+		sameIDs(t, unpromote(w, james), [][]byte{person, rel[0]})
+	})
+
+	t.Run("a person that keeps another member names nothing", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		james := w.node("person", "James", 0, 0)
+		jim := w.node("person", "Jim", 2, 0)
+		w.join(jim, w.promote(james).Entity.ID)
+		sameIDs(t, unpromote(w, james), nil)
+	})
+}

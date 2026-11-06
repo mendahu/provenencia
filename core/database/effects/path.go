@@ -341,6 +341,20 @@ func onStatus(want string, inner Path) Path {
 	}
 }
 
+// onDelete runs inner only for a change that deletes its row. A create or an
+// update (a merge, a preferred-picture write) yields nothing.
+func onDelete(inner Path) Path {
+	return Path{
+		run: func(w *walk, in [][]byte, fromChange bool) ([][]byte, error) {
+			if w.ch.Action != rowchange.ActionDelete {
+				return nil, nil
+			}
+			return inner.run(w, in, fromChange)
+		},
+		check: func(start string) (string, error) { return inner.check(start) },
+	}
+}
+
 func sqlPath(query string) Path {
 	return Path{
 		run: func(w *walk, in [][]byte, fromChange bool) ([][]byte, error) {

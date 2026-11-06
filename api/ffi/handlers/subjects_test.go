@@ -176,6 +176,27 @@ func TestUpdateSubject(t *testing.T) {
 	})
 }
 
+func TestDeleteSubjectReportsDeletedHandle(t *testing.T) {
+	var handle string
+	runRPC(t, DeleteSubject, []rpcTest{{
+		name: "a handle's only member names the handle",
+		reqFn: func(t *testing.T) proto.Message {
+			dir, userID, subjectID := promotableSubject(t)
+			handle = database.UUIDString(promoteInDir(t, dir, userID, subjectID, "").Entity.ID)
+			return &engine.DeleteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID}
+		},
+		after: func(t *testing.T, out []byte, _ proto.Message) {
+			var resp engine.DeleteSubjectResponse
+			if err := proto.Unmarshal(out, &resp); err != nil {
+				t.Fatal(err)
+			}
+			if got := resp.GetEffects().GetDeletedHandles(); len(got) != 1 || got[0] != handle {
+				t.Fatalf("deleted_handles %v, want [%s]", got, handle)
+			}
+		},
+	}})
+}
+
 func TestDeleteSubject(t *testing.T) {
 	runRPC(t, DeleteSubject, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},

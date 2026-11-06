@@ -18,6 +18,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 		Structure:      set.Structure,
 		SummaryHandles: idStrings(set.SummaryDeps),
 		HandleScopes:   idStrings(set.HandleScopes),
+		DeletedHandles: idStrings(set.DeletedHandles),
 		Revision:       res.Revision,
 		RevisionAt:     res.At,
 	}

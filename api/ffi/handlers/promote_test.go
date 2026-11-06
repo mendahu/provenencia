@@ -51,10 +51,11 @@ func promoteInDir(t *testing.T, dir, userID, subjectID, entityID string) promote
 }
 
 func TestUnpromoteSubject(t *testing.T) {
+	var handle string // the handle the last promoted() filed the Subject onto
 	promoted := func(t *testing.T) *engine.UnpromoteSubjectRequest {
 		t.Helper()
 		dir, userID, subjectID := promotableSubject(t)
-		promoteInDir(t, dir, userID, subjectID, "")
+		handle = database.UUIDString(promoteInDir(t, dir, userID, subjectID, "").Entity.ID)
 		return &engine.UnpromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID}
 	}
 	memberships := func(t *testing.T, dir, subjectID string) int {
@@ -117,6 +118,9 @@ func TestUnpromoteSubject(t *testing.T) {
 				e := resp.GetEffects()
 				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
+				}
+				if got := e.GetDeletedHandles(); len(got) != 1 || got[0] != handle {
+					t.Fatalf("deleted_handles %v, want [%s]", got, handle)
 				}
 				hasCounts := false
 				for _, list := range e.GetLists() {
