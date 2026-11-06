@@ -907,16 +907,16 @@ func TestPersonListOrder(t *testing.T) {
 	must(t, err)
 	loaded, err := nameformats.LoadFor(f.c.Graph(), db)
 	must(t, err)
-	western := loaded.Profile.Sorted
+	western := loaded.Profile
 	part := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }
 	row := func(ref string, parts ...namevalue.Part) conclusionsummaries.PersonSummary {
 		return conclusionsummaries.PersonSummary{Entity: canonicalentities.Entity{Ref: ref}, Name: &namevalue.Value{Parts: parts}}
 	}
 	tests := []struct {
-		name  string
-		order []nameformats.PartOrder
-		in    []conclusionsummaries.PersonSummary
-		want  []string
+		name    string
+		profile nameformats.Profile
+		in      []conclusionsummaries.PersonSummary
+		want    []string
 	}{
 		{"a prefix does not file a name", western, []conclusionsummaries.PersonSummary{
 			row("Smith", part("prefix", "Mrs."), part("given", "Smith")),
@@ -928,14 +928,15 @@ func TestPersonListOrder(t *testing.T) {
 			row("Jane", part("given", "Jane"), part("surname", "Smith")),
 			row("John", part("prefix", "Mr."), part("given", "John"), part("surname", "Smith")),
 		}, []string{"Jane", "John", "Zed"}},
-		{"stored order", nil, []conclusionsummaries.PersonSummary{
+		{"stored order", nameformats.Profile{}, []conclusionsummaries.PersonSummary{
 			row("Bell", part("prefix", "Dr."), part("given", "Ann"), part("surname", "Bell")),
 			row("Ames", part("given", "Carl"), part("surname", "Ames")),
 		}, []string{"Bell", "Ames"}},
 		{"a prefix-only name keeps its key", western, []conclusionsummaries.PersonSummary{
 			row("Rev", part("prefix", "Rev.")),
 			row("Quinn", part("given", "Zoe"), part("surname", "Quinn")),
-		}, []string{"Quinn", "Rev"}},
+			row("Aaa"),
+		}, []string{"Quinn", "Rev", "Aaa"}},
 		{"a surname prefix stays in the key", western, []conclusionsummaries.PersonSummary{
 			row("Young", part("given", "Ada"), part("surname", "Young")),
 			row("Gogh", part("surname_prefix", "van"), part("surname", "Gogh"), part("given", "Vincent")),
@@ -948,7 +949,7 @@ func TestPersonListOrder(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rows := append([]conclusionsummaries.PersonSummary(nil), tt.in...)
-			conclusionsummaries.SortPersons(rows, tt.order)
+			conclusionsummaries.SortPersons(rows, tt.profile)
 			var got []string
 			for _, r := range rows {
 				got = append(got, r.Entity.Ref)

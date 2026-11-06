@@ -14,9 +14,9 @@ import (
 // table, which is most of a list's time when every call makes a new one.
 var titleCollator = collate.New(language.Und, collate.IgnoreCase, collate.IgnoreDiacritics)
 
-// SortByTitle orders any titled row by the title it shows (a Person or Place
-// row by its name or toponym, else its working label; a Source group by its
-// title), ignoring case and diacritics (Montréal beside Montreal), by the
+// SortByTitle orders any titled row by the title the caller supplies (a Place
+// row by its toponym, else its working label; a Source group by its title; a
+// Person row by its sort title, which leaves honorifics out), ignoring case and diacritics (Montréal beside Montreal), by the
 // Unicode root collation so the order is the same in every locale. A row
 // titled only by its ref sorts last, by ref. Ties break by ref. This is the
 // one owner of title order; the app shows rows as given.
@@ -124,8 +124,8 @@ func sortByKey[T, K any](rows []T, key func(T) K, less func(a, b K) bool) {
 }
 
 // sortPersons is the Persons list order.
-func sortPersons(rows []PersonSummary, order []nameformats.PartOrder) {
-	SortByTitle(rows, func(h PersonSummary) string { return personSortKey(h, order) }, func(h PersonSummary) string { return h.Entity.Ref })
+func sortPersons(rows []PersonSummary, profile nameformats.Profile) {
+	SortByTitle(rows, func(h PersonSummary) string { return personSortKey(h, profile) }, func(h PersonSummary) string { return h.Entity.Ref })
 }
 
 // sortPlaces is the Places list order.
@@ -133,14 +133,14 @@ func sortPlaces(rows []PlaceSummary) {
 	SortByTitle(rows, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
 }
 
-// personSortKey is the People list order. A name with parts sorts by the
+// personSortKey is the Persons list order. A name with parts sorts by the
 // profile's sorted order, undecorated (the row may add quotes and parentheses),
-// without honorific prefixes: see nameformats.SortKey. A catalog with no
+// without honorific prefixes: see nameformats.Profile.SortKey. A catalog with no
 // default profile joins those parts in stored order. form is the transcription
 // and is not a sort input: a name with no parts sorts by its working label.
-func personSortKey(h PersonSummary, order []nameformats.PartOrder) string {
+func personSortKey(h PersonSummary, profile nameformats.Profile) string {
 	if h.Name != nil {
-		if key := nameformats.SortKey(*h.Name, order); key != "" {
+		if key := profile.SortKey(*h.Name); key != "" {
 			return key
 		}
 	}

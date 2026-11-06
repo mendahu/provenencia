@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S14-34 — Persons sort ignores honorifics
 
-**Landed 2026-11-06** in [#727](https://github.com/mendahu/provenencia/pull/727). The Persons list files a person by their name without its honorific: "Mrs. Smith" sorts with Smith, and within one surname rows order by given name, not title. `nameformats.SortKey` is the one list sort key: the sorted order minus `prefix` parts (kept when nothing else remains; `surname_prefix` and `suffix` stay; `form` is never read). `nameformats.Format` and the row's displayed title are unchanged. `SortByTitle` now computes each row's key once through a shared `sortByKey` (37,000 Persons: 1.25 s to 0.37 s), and `sortPersons` / `sortPlaces` own the two list sort lines. A working label is not stripped of titles (no code path writes a Person label). Version 0.3.7.
+**Landed 2026-11-06** in [#727](https://github.com/mendahu/provenencia/pull/727). The Persons list files a person by their name without its honorific: "Mrs. Smith" sorts with Smith, and within one surname rows order by given name, not title. `nameformats.Profile.SortKey` is the one list sort key: the sorted order minus `prefix` parts (kept when nothing else remains; `surname_prefix` and `suffix` stay; `form` is never read). `nameformats.Profile.Format` and the row's displayed title are unchanged. `SortByTitle` now computes each row's key once through a shared `sortByKey` (37,000 Persons: 1.25 s to 0.37 s), and `sortPersons` / `sortPlaces` own the two list sort lines. A working label is not stripped of titles (no code path writes a Person label). Version 0.3.7.
 
 ## S14-33 — A bridge between two handles files when it is made
 

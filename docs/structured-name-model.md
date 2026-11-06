@@ -208,7 +208,7 @@ Every profile therefore defines **both** styles:
 Requirements for the implementation:
 
 1. **One name display entry point** with a style parameter (`natural` / `sorted`). Call sites choose the style; they never assemble parts themselves.
-2. **The People list orders by the sorted style.** The key is that part order, undecorated: the row may add quotes and parentheses, the key never does. `prefix` parts (honorifics) are left out of the key unless the name has nothing else (`nameformats.SortKey`). The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
+2. **The People list orders by the sorted style.** The key is that part order, undecorated: the row may add quotes and parentheses, the key never does. `prefix` parts (honorifics) are left out of the key unless the name has nothing else (`nameformats.Profile.SortKey`). The auto-reconciler cache `sort_key` is still the normalized form; it is not the list order. Changing that column is a cache version bump.
 3. **A name with no parts does not sort by `form`.** `form` is the transcription. The list uses the working label, then the ref. Display may still show `form` when there are no parts.
 4. **`form` is never rewritten.** Styles are presentation over typed parts; the recorded full form stays authoritative.
 5. Each profile stores its sorted order and the separator (for Western, `", "` after the surname group). Open details for that work: where `prefix` / `suffix` sit in the sorted Western order when displayed (*Robins, Rev. James, Jr.*; the list key already leaves `prefix` out), and whether `surname_prefix` leads the sort (*van Gogh* under V or G varies by culture — a per-profile rule).

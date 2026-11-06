@@ -69,14 +69,14 @@ func (p Profile) Order(style string) []PartOrder {
 // the style does not list follows, in stored order. No parts returns form.
 // form is never rewritten.
 func (p Profile) Format(name namevalue.Value, style string) string {
-	return Format(name, p.Order(style))
+	return format(name, p.Order(style))
 }
 
-// Format joins name's parts by order. An empty order keeps stored order,
+// format joins name's parts by order. An empty order keeps stored order,
 // spaces between parts. No parts returns form. The same order and separators
 // as Swift NameValueDisplay; only Swift decorates (quotes, parentheses). The
-// list sort key is SortKey.
-func Format(name namevalue.Value, order []PartOrder) string {
+// list sort key is Profile.SortKey.
+func format(name namevalue.Value, order []PartOrder) string {
 	if len(name.Parts) == 0 {
 		return strings.TrimSpace(name.Form)
 	}
@@ -323,9 +323,10 @@ func builtinLoaded() Loaded {
 // sortKeyOmits are the part types a name's list sort key leaves out.
 var sortKeyOmits = []string{namevalue.PartTypePrefix}
 
-// SortKey is a name's list sort key: its parts joined in order, without
-// honorific prefixes unless nothing else remains. form is never a sort key.
-func SortKey(name namevalue.Value, order []PartOrder) string {
+// SortKey is a name's list sort key: its parts joined in the profile's sorted
+// order, without honorific prefixes unless nothing else remains. form is never
+// a sort key.
+func (p Profile) SortKey(name namevalue.Value) string {
 	if len(name.Parts) == 0 {
 		return ""
 	}
@@ -338,5 +339,5 @@ func SortKey(name namevalue.Value, order []PartOrder) string {
 	if len(kept) == 0 {
 		kept = name.Parts
 	}
-	return strings.TrimSpace(Format(namevalue.Value{Parts: kept}, order))
+	return strings.TrimSpace(format(namevalue.Value{Parts: kept}, p.Sorted))
 }

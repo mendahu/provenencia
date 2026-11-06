@@ -376,8 +376,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummar
 	if err != nil {
 		return nil, err
 	}
-	order := loaded.Profile.Sorted
-	sortPersons(out, order)
+	sortPersons(out, loaded.Profile)
 	return out, nil
 }
 
