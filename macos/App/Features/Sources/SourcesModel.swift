@@ -340,8 +340,7 @@ final class SourcesModel {
         if typeID.isEmpty {
             return L10n.string(L10n.Sources.filterAllTypes)
         }
-        return types.first { $0.id == typeID }?.label
-            ?? L10n.string(L10n.Sources.filterAllTypes)
+        return types.label(forTypeID: typeID) ?? L10n.string(L10n.Sources.filterAllTypes)
     }
 
     var sortControlLabel: String {
