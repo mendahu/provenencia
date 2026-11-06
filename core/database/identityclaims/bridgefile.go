@@ -120,25 +120,33 @@ func FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error) {
 }
 
 // UnpromoteBridgeHandlesDeleted lists association handles UnfileBridges would
-// delete because the bridge Subject is their last accepted member.
+// delete: those whose every accepted member is among the filed bridges, in the
+// order a handle first appears in filed. UnfileBridges releases all of them, so
+// a handle several of them share goes when the last is released.
 func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, filed []FiledBridge) ([]deleteimpact.Listed, error) {
-	var out []deleteimpact.Listed
-	seen := map[string]bool{}
+	var order [][]byte
+	leaving := map[string][][]byte{}
 	for _, f := range filed {
-		goes, err := deleteimpact.HandleGoesWithout(tx, f.EntityID, f.SubjectID)
-		if err != nil || !goes {
+		key := string(f.EntityID)
+		if _, ok := leaving[key]; !ok {
+			order = append(order, f.EntityID)
+		}
+		leaving[key] = append(leaving[key], f.SubjectID)
+	}
+	var out []deleteimpact.Listed
+	for _, entityID := range order {
+		goes, err := deleteimpact.HandleGoesWithout(tx, entityID, leaving[string(entityID)])
+		if err != nil {
+			return nil, err
+		}
+		if !goes {
 			continue
 		}
 		var ref string
-		if err := tx.QueryRow(`SELECT ref FROM canonical_entities WHERE id = ?`, f.EntityID).Scan(&ref); err != nil {
+		if err := tx.QueryRow(`SELECT ref FROM canonical_entities WHERE id = ?`, entityID).Scan(&ref); err != nil {
 			return nil, err
 		}
-		key := string(f.EntityID)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
-		out = append(out, deleteimpact.Listed{ID: append([]byte(nil), f.EntityID...), Ref: ref})
+		out = append(out, deleteimpact.Listed{ID: append([]byte(nil), entityID...), Ref: ref})
 	}
 	return out, nil
 }

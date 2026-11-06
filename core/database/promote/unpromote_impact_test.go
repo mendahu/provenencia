@@ -169,3 +169,37 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 		}
 	})
 }
+
+func TestUnpromoteImpactListsSharedBridgeHandle(t *testing.T) {
+	w := newBridgeWorld(t)
+	james := w.node("person", "James", 0, 0)
+	john := w.node("person", "John", 2, 0)
+	johnny := w.node("person", "Johnny", 4, 0)
+	w.relationship(james, john, w.spouse)
+	w.relationship(james, johnny, w.spouse)
+	w.join(johnny, w.promote(john).Entity.ID)
+	w.promote(james)
+	report, err := promote.UnpromoteImpact(w.c, james.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, res, err := writes.Run(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := promote.Unpromote(tx, userID, james.ID)
+		return struct{}{}, ch, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Deletes.Total != 2 || len(report.Deletes.Listed) != 2 || len(res.Effects.DeletedHandles) != 2 {
+		t.Fatalf("forecast %+v, write deleted %x, want 2 each", report.Deletes, res.Effects.DeletedHandles)
+	}
+	for _, l := range report.Deletes.Listed {
+		found := false
+		for _, id := range res.Effects.DeletedHandles {
+			found = found || bytes.Equal(id, l.ID)
+		}
+		if !found {
+			t.Fatalf("forecast lists %x, which the write did not delete (%x)", l.ID, res.Effects.DeletedHandles)
+		}
+	}
+}
