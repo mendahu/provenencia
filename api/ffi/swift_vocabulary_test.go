@@ -404,9 +404,10 @@ var (
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
 	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`
-	// and `return .placePartOf`; sentenceRow reads `Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.partOf, …`.
+	// and `return .placePartOf`; sentenceRow reads `namedTermSentence(.placeRelationship, SeededPlaceRelationshipTypeTerm.partOf, …`,
+	// so a plain `Sentence(` row does not satisfy a composer-worded term.
 	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return \.?(\w+)`)
-	sentenceRow = regexp.MustCompile(`Sentence\(kind: [^,]+, term: (Seeded\w+Term)\.(\w+),`)
+	sentenceRow = regexp.MustCompile(`namedTermSentence\(\s*\.\w+,\s*(Seeded\w+Term)\.(\w+),`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)

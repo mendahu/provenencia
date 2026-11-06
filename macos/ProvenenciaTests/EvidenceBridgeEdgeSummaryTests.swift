@@ -239,6 +239,19 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(!sentence.contains("ceremony"))
     }
 
+    @Test func aPlaceBridgeWithNoEndpointsAndNoLabelReadsItsTermNameThenItsRef() {
+        var term = observation(
+            propertyKey: SeededPropertyKey.placeRelationshipType,
+            valueText: "Catalog words",
+            valueType: "term"
+        )
+        term.valueTermKey = SeededPlaceRelationshipTypeTerm.partOf
+        term.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .placeRelationship, observations: [term], label: "", ref: "CPA-1")
+        let snap = snapshot(bridge: placed, subjects: [])
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Part of · CPA-1")
+    }
+
     @Test func everyBridgeKindReadsItsTermFromTheSeededProperty() {
         let expected: [EvidenceBridgeKind: String] = [
             .relationship: SeededPropertyKey.relationshipType,

@@ -112,12 +112,16 @@ enum ConnectionSentenceRegistry {
             Text.bridgeSentenceFuneralSubject(person: $0.a, event: $0.b)
         },
         subjectSentence(SeededEventTypeTerm.burial) { Text.bridgeSentenceBurialSubject(person: $0.a) },
-        Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.partOf, eventType: nil, sentence: {
-            Text.bridgeSentencePlacePartOf(part: $0.a, whole: $0.b)
-        }, phrase: termName(SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.partOf)),
-        Sentence(kind: .placeRelationship, term: SeededPlaceRelationshipTypeTerm.succeededBy, eventType: nil, sentence: {
-            Text.bridgeSentencePlaceSucceededBy(earlier: $0.a, later: $0.b)
-        }, phrase: termName(SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.succeededBy)),
+        namedTermSentence(
+            .placeRelationship,
+            SeededPlaceRelationshipTypeTerm.partOf,
+            name: L10n.PropertyTerm.placeRelationshipPartOf
+        ) { Text.bridgeSentencePlacePartOf(part: $0.a, whole: $0.b) },
+        namedTermSentence(
+            .placeRelationship,
+            SeededPlaceRelationshipTypeTerm.succeededBy,
+            name: L10n.PropertyTerm.placeRelationshipSucceededBy
+        ) { Text.bridgeSentencePlaceSucceededBy(earlier: $0.a, later: $0.b) },
         Sentence(kind: .relationship, term: SeededRelationshipTypeTerm.spouse, eventType: nil, sentence: {
             Text.bridgeSentenceSpouse(a: $0.a, b: $0.b)
         }),
@@ -126,13 +130,16 @@ enum ConnectionSentenceRegistry {
         }),
     ]
 
-    /// A card phrase that is the product term's own name ("Part of"), not the
-    /// kind's "Is … of" around a label; the label reads when the product does
-    /// not word the term.
-    private static func termName(_ propertyKey: String, _ termKey: String) -> @Sendable (String?) -> String {
-        { label in
-            L10n.PropertyTerm.resource(propertyKey: propertyKey, termKey: termKey).map { L10n.string($0) } ?? label ?? ""
-        }
+    /// A row whose card phrase is the product term's own name ("Part of"), not
+    /// the kind's "Is … of" around a label. Every composer-worded term's row
+    /// comes from here, so its phrase never depends on the row's author.
+    private static func namedTermSentence(
+        _ kind: EvidenceBridgeKind,
+        _ term: String,
+        name: LocalizedStringResource,
+        sentence: @escaping @Sendable (Slots) -> String
+    ) -> Sentence {
+        Sentence(kind: kind, term: term, eventType: nil, sentence: sentence, phrase: { _ in L10n.string(name) })
     }
 
     private static func subjectSentence(
