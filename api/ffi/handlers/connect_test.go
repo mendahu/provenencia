@@ -3,10 +3,14 @@ package handlers
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/ingest"
 	"google.golang.org/protobuf/proto"
 )
@@ -96,6 +100,7 @@ func connectFixture(t *testing.T) (
 }
 
 func TestCreateCitedBridge(t *testing.T) {
+	var dir string
 	runRPC(t, CreateCitedBridge, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 		{
@@ -127,6 +132,48 @@ func TestCreateCitedBridge(t *testing.T) {
 				}
 				if len(created.GetObservations()) != 3 {
 					t.Fatalf("observations %d", len(created.GetObservations()))
+				}
+			},
+		},
+		{
+			name: "files a participation between two promoted subjects",
+			reqFn: func(t *testing.T) proto.Message {
+				d, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, roleTerm := connectFixture(t)
+				dir = d
+				promoteInDir(t, dir, userID, personID, "")
+				promoteInDir(t, dir, userID, eventID, "")
+				return &engine.CreateCitedBridgeRequest{
+					ProjectDir:    dir,
+					UserId:        userID,
+					FromSubjectId: personID,
+					ToSubjectId:   eventID,
+					BridgeTypeKey: "participation",
+					ArtifactId:    artifactID,
+					LocatorJson:   validLocatorJSON,
+					Observations: []*engine.ObservationDraft{
+						{PropertyId: personProp, ValueSubjectId: personID},
+						{PropertyId: eventProp, ValueSubjectId: eventID},
+						{PropertyId: roleProp, ValueTermId: roleTerm},
+					},
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var created engine.CreateCitedBridgeResponse
+				if err := proto.Unmarshal(out, &created); err != nil {
+					t.Fatal(err)
+				}
+				bridge := uuid.MustParse(created.GetSubject().GetId())
+				if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+					claim, err := identityclaims.AcceptedEntityForSubject(c, bridge[:])
+					if err != nil {
+						return err
+					}
+					if !slices.Contains(created.GetEffects().GetHandles(), database.UUIDString(claim.EntityID)) {
+						t.Fatalf("effects.handles %v lacks the association %x", created.GetEffects().GetHandles(), claim.EntityID)
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
 				}
 			},
 		},
