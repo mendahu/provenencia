@@ -10,13 +10,16 @@ struct PVUnpromoteConfirmContent: Identifiable, Equatable {
     let name: String
     let message: String
     let tone: PVConfirmTone
-    /// One sentence per connection that comes off with the promotion.
-    let bridges: [String]
-    /// The connections could not be listed; the sentence stands in for the list.
-    let bridgesUnlisted: Bool
+    let connections: PVUnpromoteConnections
     let error: String?
-    /// The error is announced to VoiceOver (a preflight failure appears with the sheet).
-    let announcesError: Bool
+}
+
+/// The connections that come off with the promotion.
+enum PVUnpromoteConnections: Equatable {
+    /// One sentence per connection; none draws nothing.
+    case listed([String])
+    /// The connections could not be listed; a sentence stands in for the list.
+    case unlisted
 }
 
 extension View {
@@ -53,32 +56,42 @@ extension View {
 private struct PVUnpromoteConfirmDetail: View {
     let content: PVUnpromoteConfirmContent
 
+    private var sentences: [String] {
+        if case .listed(let sentences) = content.connections { return sentences }
+        return []
+    }
+
+    private var isUnlisted: Bool { content.connections == .unlisted }
+
     var body: some View {
-        if content.bridgesUnlisted || !content.bridges.isEmpty || content.error != nil {
+        if isUnlisted || !sentences.isEmpty || content.error != nil {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                if content.bridgesUnlisted {
+                if isUnlisted {
                     Text(L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                } else if !content.bridges.isEmpty {
+                } else if !sentences.isEmpty {
                     Text(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader)
                         .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
-                    VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                        ForEach(Array(content.bridges.enumerated()), id: \.offset) { _, sentence in
-                            Text(verbatim: sentence)
-                                .font(PVFont.body(size: PVTypeScale.bodySmall))
-                                .foregroundStyle(PVColor.textPrimary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: PVSpacing.space2) {
+                            ForEach(Array(sentences.enumerated()), id: \.offset) { _, sentence in
+                                Text(verbatim: sentence)
+                                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                                    .foregroundStyle(PVColor.textPrimary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         }
                     }
+                    .frame(maxHeight: PVDeleteImpactLayout.listMaxHeight)
                     Text(L10n.EvidenceGraph.unpromoteConfirmBridgesNote)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textSecondary)
                 }
                 if let error = content.error {
-                    PVCallout(tone: .danger, message: error, announces: content.announcesError)
+                    PVCallout(tone: .danger, message: error, announces: true)
                 }
             }
         }
@@ -93,11 +106,28 @@ private struct PVUnpromoteConfirmDetail: View {
                 id: "s1", name: "J. Weber",
                 message: "This promotion is removed. The cards stay on the graph, and the handle stays.",
                 tone: .irreversible,
-                bridges: ["J. Weber is the father of M. Weber."],
-                bridgesUnlisted: false, error: nil, announcesError: false
+                connections: .listed(["J. Weber is the father of M. Weber."]),
+                error: nil
             )),
             isRunning: false,
             accessibilityIdentifierPrefix: "preview.unpromote",
+            onConfirm: {}
+        )
+}
+
+#Preview("Unpromote confirm, 200 connections") {
+    Color.clear
+        .frame(width: 520, height: 520)
+        .pvUnpromoteConfirm(
+            item: .constant(PVUnpromoteConfirmContent(
+                id: "s1", name: "J. Weber",
+                message: "This promotion is removed. The cards stay on the graph, and the handle stays.",
+                tone: .irreversible,
+                connections: .listed((1...200).map { "J. Weber is the father of M. Weber \($0)." }),
+                error: nil
+            )),
+            isRunning: false,
+            accessibilityIdentifierPrefix: "preview.unpromote.long",
             onConfirm: {}
         )
 }

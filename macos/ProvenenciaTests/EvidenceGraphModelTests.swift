@@ -1964,7 +1964,7 @@ struct EvidenceGraphModelTests {
         let opened = await waitUntil(timeout: .seconds(5)) { model.unpromote.pending != nil }
         #expect(opened)
         #expect(model.unpromote.pending?.name == "James Robins")
-        #expect(model.unpromote.pending?.bridges == [sonOfSentence, participationSentence])
+        #expect(model.unpromote.pending?.connections == .listed([sonOfSentence, participationSentence]))
         #expect(model.unpromote.pending?.error == nil)
     }
 
@@ -1979,8 +1979,7 @@ struct EvidenceGraphModelTests {
         }
         #expect(loaded)
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.unpromote.pending?.bridges == [])
-        #expect(model.unpromote.pending?.bridgesUnlisted == false)
+        #expect(model.unpromote.pending?.connections == .listed([]))
 
         let (_, unfiled) = await promotableModel()
         await unfiled.beginUnpromote(subjectID: "s-james")
@@ -2074,7 +2073,7 @@ struct EvidenceGraphModelTests {
         #expect(model.unpromote.pending != nil)
         #expect(model.unpromote.pending?.deletedHandles == nil)
         #expect(model.unpromote.pending?.impactCheckFailed == true)
-        #expect(model.unpromote.pending?.bridgesUnlisted == true)
+        #expect(model.unpromote.pending?.connections == .unlisted)
         #expect(model.unpromote.pending?.confirmTone == .danger)
         #expect(model.unpromote.pending?.error != nil)
         store.getUnpromoteImpactError = nil

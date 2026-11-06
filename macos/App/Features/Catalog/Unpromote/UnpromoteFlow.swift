@@ -12,10 +12,9 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
     let kind: EvidencePrimaryKind
     /// The Subject's own handle: the one its promotion filed it under.
     let handleID: String?
-    /// One sentence per connection the engine says comes off with it.
-    let bridges: [String]
-    /// The connections could not be listed (no preflight, no graph rows, or none matched).
-    var bridgesUnlisted = false
+    /// The connections the engine says come off with it, or that they could not be listed
+    /// (no preflight, no graph rows, or none matched).
+    let connections: PVUnpromoteConnections
     /// Handles the preflight reports this Unpromote deletes; nil when every handle stays.
     var deletedHandles: CatalogDeleteImpactGroup?
     /// The impact check failed; confirming may still delete the Subject's handle.
@@ -53,8 +52,7 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
 
     var content: PVUnpromoteConfirmContent {
         PVUnpromoteConfirmContent(
-            id: id, name: name, message: message, tone: confirmTone, bridges: bridges,
-            bridgesUnlisted: bridgesUnlisted, error: error, announcesError: impactCheckFailed
+            id: id, name: name, message: message, tone: confirmTone, connections: connections, error: error
         )
     }
 }
@@ -121,8 +119,8 @@ final class UnpromoteFlow {
         }
         guard generation == mine else { return }
         var item = UnpromoteConfirmItem(
-            id: subjectID, name: name, kind: kind, handleID: handleID, bridges: sentences,
-            bridgesUnlisted: impactCheckFailed || (!bridgeIDs.isEmpty && sentences.isEmpty)
+            id: subjectID, name: name, kind: kind, handleID: handleID,
+            connections: impactCheckFailed || (!bridgeIDs.isEmpty && sentences.isEmpty) ? .unlisted : .listed(sentences)
         )
         item.deletedHandles = deletedHandles
         item.impactCheckFailed = impactCheckFailed

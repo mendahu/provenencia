@@ -81,7 +81,7 @@ struct UnpromoteFlowTests {
     private func item(
         handleID: String? = "h-maria", deletes: CatalogDeleteImpactGroup? = nil, failed: Bool = false
     ) -> UnpromoteConfirmItem {
-        var item = UnpromoteConfirmItem(id: "s", name: "Maria", kind: .person, handleID: handleID, bridges: [])
+        var item = UnpromoteConfirmItem(id: "s", name: "Maria", kind: .person, handleID: handleID, connections: .listed([]))
         item.deletedHandles = deletes
         item.impactCheckFailed = failed
         return item
@@ -133,18 +133,15 @@ struct UnpromoteFlowTests {
 
         script(["b2", "b1"])
         await open()
-        #expect(flow.pending?.bridges == [second, first])
-        #expect(flow.pending?.bridgesUnlisted == false)
+        #expect(flow.pending?.connections == .listed([second, first]))
 
         script(["b2", "gone"])
         await open()
-        #expect(flow.pending?.bridges == [second])
-        #expect(flow.pending?.bridgesUnlisted == false)
+        #expect(flow.pending?.connections == .listed([second]))
 
         script(["gone"])
         await open()
-        #expect(flow.pending?.bridges == [])
-        #expect(flow.pending?.bridgesUnlisted == true)
+        #expect(flow.pending?.connections == .unlisted)
 
         // Rows that cannot be read, with ids named.
         let (failingStore, failingSession) = makeFixture()
@@ -158,8 +155,7 @@ struct UnpromoteFlowTests {
             subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: nil,
             graphID: graphID, session: failingSession
         )
-        #expect(failingFlow.pending?.bridges == [])
-        #expect(failingFlow.pending?.bridgesUnlisted == true)
+        #expect(failingFlow.pending?.connections == .unlisted)
 
         // No ids, and a failing rows load: nothing to list.
         let (quietStore, quietSession) = makeFixture()
@@ -169,12 +165,12 @@ struct UnpromoteFlowTests {
             subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: nil,
             graphID: graphID, session: quietSession
         )
-        #expect(quietFlow.pending?.bridgesUnlisted == false)
+        #expect(quietFlow.pending?.connections == .listed([]))
 
         // The preflight throws.
         store.getUnpromoteImpactError = Boom()
         await open()
-        #expect(flow.pending?.bridgesUnlisted == true)
+        #expect(flow.pending?.connections == .unlisted)
         #expect(flow.pending?.impactCheckFailed == true)
     }
 
