@@ -1,7 +1,7 @@
 # Ship log — S14-33 A bridge between two handles files when it is made
 
 **Plan:** [`S14-33-auto-file-bridges.md`](S14-33-auto-file-bridges.md) · **Branch:** `s14-33-auto-file-bridges` · **PR:** #723
-**State:** review 2
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `b6996e68`. Gate PASS (run by the orchestrator on the pushed head, base `d5cefe54`). Report: Status line reads "Landed in #723 (2026-11-06)" because `check-plan-docs` rejects the shorter form; the deleted dogfood note was unlinked in the plan's Context line and STEP-7 (text only) so the link check passes; manual check not run (needs the Mac app).
@@ -75,3 +75,33 @@ Head `c64a2a5f`. Gate PASS (run by the orchestrator on the pushed head). F-1 to 
 
 ## Round 2 — review
 Reviewers: CON (Fix-now majors CON-1, CON-2), MNT (MNT-1, MNT-2), SEC+PRF (PRF-1, PRF-2). Scope `b6996e68...c64a2a5f`.
+
+CON: CON-1, CON-2 Resolved; CON-4 checked and Resolved. MNT: MNT-1, MNT-2 Resolved. PRF: PRF-1 Resolved (3.26 ms at 300 filed participations, 3.40 ms at 1,200); PRF-2 Resolved for a location and a link's `to` end (72 ms against 3.23 s at 6,000 events). Security: no findings. Round-1 minors, read by the orchestrator: MNT-4, MNT-5, MNT-8, MNT-9 Resolved; MNT-3 Not resolved: the new sentence reads oddly and overruns its line (CON-5, CON-6), finished in F-5.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| PRF-5 | PRF | blocker | A connect that joins an existing part_of reprojects every event at the `from` place though nothing moved | Fix now → F-5 | read `autoreconciler.go:233`: `movedRoots` adds the walk ends of associations outside `moved`. Reviewer: 2.75 s at 6,000 events, 21.5 s at 24,000; 0.14 s and 0.58 s with `movedRoots` gated. Connect is a new caller |
+| PRF-6 | PRF | blocker | A filed location loads every link of its place, twice per write | To user → deferred (answered 2026-11-06) | supersedes FU-2. 72 ms at 6,000 links, the map's Scale; 306 ms at 24,000. The fix is non-trivial graph cache work. User accepted the cost; noted as a possible fix in `docs/ideas/promote-ranking.md` by F-6 |
+
+Nits (logged): `CON-5 · bridgefile.go:22-25 · rewrap` · `CON-6 · bridgefile.go:23 · say which set writes.Run recomputes`. Both finish MNT-3 in F-5.
+Follow-up homes (user, 2026-11-06): FU-1 → a new row on this spike's map, in F-6. PRF-4; FU-3, the first `part_of` filed from a city (1.84 s at 6,000 events, 17.0 s at 24,000; rows do move; the reprojection cost S14-21 deferred); FU-4, `subjects.Delete` still walks from the place end (not measured, MNT round 2) → `docs/ideas/structural-debt.md`, in F-6.
+
+### Fix plan 2
+
+**F-5 — Walk only from the ends of associations that moved** (from PRF-5; finishes MNT-3)
+Files: `core/database/conclusionsummaries/dependents.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/promotealign/perf_test.go`, `core/database/conclusionsummaries/filedlinks_test.go`, `core/database/identityclaims/bridgefile.go`.
+Failing test first: a `TestLargeSourceBudgets` row, `budgetSecondPartOfAtCity` (500 ms): a second record's `part_of` from the 6,000-event city, both Subjects joined to their handles, so the bridge joins the existing association. About 2.75 s today.
+Do: `AssociationEndpoints` also selects `r.entity_id` and returns the walk ends by association id. In `RecomputeReported`, `roots` stays every association's walk ends and `deps` stays the full walk, as the existing comment says. `movedRoots` becomes `moved` plus the before and after walk ends of the associations in `moved` only. `ReprojectHandles` still gets `roots` and `ends`: a root's own document is always rewritten.
+Add a positive pin beside `TestFiledPartOfWalksFromThePart`: a part_of that does move a row (the first one filed from a place) still rewrites the search document of an event at `from`.
+`bridgefile.go`: rewrap `FileBridgesTx`'s doc. Say the ids are the handles filing touched, and that the caller discards them because `writes.Run` recomputes every handle named by the changes.
+Check: tests pass; `PROVENENCIA_GRAPH_VERIFY=1 go test -tags fts5 ./core/database/... ./core/search/...` green; scripts/check-pr.sh PASS.
+
+**F-6 — Record what the user placed** (from PRF-6, FU-1, PRF-4, FU-3, FU-4)
+Files: `docs/ideas/promote-ranking.md`, `docs/ideas/structural-debt.md`, `docs/deployment-plan/spike-14/deployment-plan.md`, the plan's Landed note, `docs/deployment-plan/spike-14/completed.md` if it names these costs.
+Failing test first: none.
+Do:
+- `promote-ranking.md`: a possible fix. A filed location loads the place's whole link list twice in one write (`graphcache.loadIDs`, from `OnCommit`'s reload and `composeEvents`): about 72 ms at 6,000 links, 306 ms at 24,000. Patching the loaded node with the one new link would remove it. Accepted by the user 2026-11-06.
+- `structural-debt.md`, three rows, `S14-33 ship log` in the Was column: a `part_of` connect reads every filed link of the term (`filedLinks`, 2.97 ms at 1,200 links; walking up from the new link's `to` end would follow only the reachable chain); the first `part_of` filed from a city reprojects its events (1.84 s at 6,000, 17.0 s at 24,000; the rows do move, and the cost is faster than linear; the same reprojection cost as S14-21's follow-up); `subjects.Delete` calls `Dependents` directly, so deleting a location bridge still walks from the place end (not measured).
+- `deployment-plan.md`: take the next free S14 number and add a row in Slice 7c's table plus a short scope entry, status Scoped, no plan yet: after Unpromote or a bridge delete, search documents and stored summary rows go stale. Probe: 234 stale documents over 451 unpromotes, 45 stale display rows. Likely cause: `AssociationEndpoints` joins `canonical_entities`, so a deleted association has no ends. Bug, predates S14-33.
+- Plan's Landed note: add `movedRoots` gated by F-5, PRF-6 accepted, and the new map row.
+Check: `scripts/check-plan-docs.py` clean; scripts/check-pr.sh PASS.
