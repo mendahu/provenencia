@@ -1820,6 +1820,34 @@ struct CitationComposerModelTests {
         #expect(words.contains("is the"))
     }
 
+    @Test func stepperOrderMatchesPosition() {
+        func listed(_ ref: String, page: Int?, top: Double?) -> CatalogListedCitation {
+            let points = top.map {
+                [CGPoint(x: 0.1, y: $0), CGPoint(x: 0.4, y: $0), CGPoint(x: 0.4, y: $0 + 0.2), CGPoint(x: 0.1, y: $0 + 0.2)]
+            }
+            let json = points.map { RegionFixtures.locatorJSON(points: $0, page: page) }
+                ?? (page.map { _ in RegionFixtures.locatorJSON(points: [], page: page) } ?? "")
+            return CatalogListedCitation(
+                citation: CatalogCitation(
+                    id: "id-\(ref)", ref: ref, artifactID: "art", locatorJSON: json, transcription: "",
+                    description: "", transcriptionUncertain: false, transcriptionNote: ""
+                ),
+                observationCount: 0
+            )
+        }
+        let input = [
+            listed("CIT-10", page: 2, top: 0.5),
+            listed("CIT-2", page: 2, top: 0.5),
+            listed("CIT-3", page: 2, top: 0.1),
+            listed("CIT-4", page: 1, top: 0.9),
+            listed("CIT-5", page: nil, top: nil),
+            listed("CIT-1", page: nil, top: nil),
+            listed("CIT-6", page: 2, top: nil),
+        ]
+        let refs = CitationComposerAuthoring.stepperOrder(input).map(\.citation.ref)
+        #expect(refs == ["CIT-1", "CIT-5", "CIT-4", "CIT-6", "CIT-3", "CIT-2", "CIT-10"])
+    }
+
     @Test func everyReadingMatchesTheCard() {
         var participation = termVocabulary(
             propertyKey: "role", terms: [(key: "witness", label: "Witness", origin: CatalogOrigin.provenencia)],

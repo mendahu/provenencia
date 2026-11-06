@@ -266,13 +266,17 @@ enum CitationComposerAuthoring {
     }
 
     static func stepperOrder(_ listed: [CatalogListedCitation]) -> [CatalogListedCitation] {
-        listed.sorted { lhs, rhs in
-            let a = position(of: lhs.citation)
-            let b = position(of: rhs.citation)
-            if a.page != b.page { return a.page < b.page }
-            if a.top != b.top { return a.top < b.top }
-            return a.ref.localizedStandardCompare(b.ref) == .orderedAscending
-        }
+        // Decode each locator once, not once per comparison.
+        listed
+            .map { (position: position(of: $0.citation), listed: $0) }
+            .sorted { lhs, rhs in
+                let a = lhs.position
+                let b = rhs.position
+                if a.page != b.page { return a.page < b.page }
+                if a.top != b.top { return a.top < b.top }
+                return a.ref.localizedStandardCompare(b.ref) == .orderedAscending
+            }
+            .map(\.listed)
     }
 
     static func resolvePair(

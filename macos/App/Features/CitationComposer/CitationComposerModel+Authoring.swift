@@ -62,7 +62,7 @@ extension CitationComposerModel {
 
     func citationStepLabel(for id: String?) -> String {
         guard let id, !id.isEmpty,
-              let listed = orderedCitations.first(where: { $0.citation.id == id })
+              let listed = listedCitations.first(where: { $0.citation.id == id })
         else {
             return L10n.CitationComposer.citationClosed(
                 L10n.string(L10n.CitationComposer.newCitation),

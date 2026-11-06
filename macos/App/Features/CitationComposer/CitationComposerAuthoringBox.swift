@@ -540,12 +540,14 @@ struct CitationComposerModalLead: View {
     var onBridge: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+        let ordered = model.orderedCitations
+        let listedByID = Dictionary(ordered.map { ($0.citation.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVField(label: L10n.CitationComposer.citationEyebrow) {
                 VStack(alignment: .leading, spacing: PVSpacing.space3) {
                     PVSelect(
                         selection: citationSelection,
-                        options: citationOptions,
+                        options: citationOptions(ordered),
                         size: .sm,
                         displayLabel: model.citationStepLabel(for: citationSelection.wrappedValue),
                         menuWidth: 460,
@@ -564,7 +566,7 @@ struct CitationComposerModalLead: View {
                                     .font(PVFont.body(size: 12, italic: true))
                                     .foregroundStyle(PVColor.textMuted)
                             }
-                        } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
+                        } else if let listed = listedByID[option.id] {
                             CitationStepMenuRow(listed: listed, locator: menuLocator(listed.citation))
                         } else {
                             Text(verbatim: option.label)
@@ -636,9 +638,9 @@ struct CitationComposerModalLead: View {
         .accessibilityIdentifier("citationComposer.modal.citationReading")
     }
 
-    private var citationOptions: [PVSelectOption] {
+    private func citationOptions(_ ordered: [CatalogListedCitation]) -> [PVSelectOption] {
         [PVSelectOption(value: "", label: L10n.string(L10n.CitationComposer.newCitation))]
-            + model.orderedCitations.map {
+            + ordered.map {
                 PVSelectOption(value: $0.citation.id, label: $0.citation.ref)
             }
     }

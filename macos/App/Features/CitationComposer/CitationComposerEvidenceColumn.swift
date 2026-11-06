@@ -18,7 +18,7 @@ struct CitationComposerEvidenceColumn: View {
             VStack(alignment: .leading, spacing: 0) {
                 PVSectionHeader(
                     title: L10n.CitationComposer.citationEyebrow,
-                    meta: "\(model.orderedCitations.count)"
+                    meta: "\(model.listedCitations.count)"
                 )
                 .padding(.horizontal, PVSpacing.space7)
                 .padding(.top, 14)
@@ -106,11 +106,12 @@ struct CitationComposerEvidenceColumn: View {
     }
 
     private var citationStepper: some View {
-        stepper(
+        let ordered = model.orderedCitations
+        return stepper(
             eyebrow: L10n.CitationComposer.citationEyebrow,
-            position: citationPosition
+            position: citationPosition(in: ordered)
         ) {
-            citationSelect
+            citationSelect(ordered)
         }
     }
 
@@ -134,10 +135,11 @@ struct CitationComposerEvidenceColumn: View {
         }
     }
 
-    private var citationSelect: some View {
-        PVSelect(
+    private func citationSelect(_ ordered: [CatalogListedCitation]) -> some View {
+        let listedByID = Dictionary(ordered.map { ($0.citation.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return PVSelect(
             selection: citationSelection,
-            options: citationOptions,
+            options: citationOptions(ordered),
             size: .md,
             displayLabel: model.citationStepLabel(for: model.activeCitationID),
             menuWidth: 480,
@@ -156,7 +158,7 @@ struct CitationComposerEvidenceColumn: View {
                         .font(PVFont.body(size: 12, italic: true))
                         .foregroundStyle(PVColor.textMuted)
                 }
-            } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
+            } else if let listed = listedByID[option.id] {
                 citationMenuRow(listed)
             } else {
                 Text(verbatim: option.label)
@@ -208,9 +210,9 @@ struct CitationComposerEvidenceColumn: View {
         )
     }
 
-    private var citationOptions: [PVSelectOption] {
+    private func citationOptions(_ ordered: [CatalogListedCitation]) -> [PVSelectOption] {
         [PVSelectOption(value: "", label: L10n.string(L10n.CitationComposer.newCitation))]
-            + model.orderedCitations.map {
+            + ordered.map {
                 PVSelectOption(value: $0.citation.id, label: $0.citation.ref)
             }
     }
@@ -221,15 +223,15 @@ struct CitationComposerEvidenceColumn: View {
         }
     }
 
-    private var citationPosition: String {
+    private func citationPosition(in ordered: [CatalogListedCitation]) -> String {
         guard let id = model.activeCitationID,
-              let index = model.orderedCitations.firstIndex(where: { $0.citation.id == id })
+              let index = ordered.firstIndex(where: { $0.citation.id == id })
         else {
             return L10n.string(L10n.CitationComposer.newPosition)
         }
         return L10n.DesignSystem.selectOptionPosition(
             current: index + 1,
-            count: model.orderedCitations.count
+            count: ordered.count
         )
     }
 
