@@ -200,24 +200,21 @@ func TestConclusionHandleSets(t *testing.T) {
 		var changes []rowchange.Change
 		var entity canonicalentities.Entity
 		if len(entityID) == 0 {
-			var ch rowchange.Change
 			var err error
-			entity, ch, err = canonicalentities.InsertTx(tx, canonicalentities.CreateInput{SubjectTypeID: subject.SubjectTypeID})
+			entity, changes, err = promotetest.ClaimTx(tx, subject, status)
 			if err != nil {
 				t.Fatal(err)
 			}
-			entityID = entity.ID
-			changes = append(changes, ch)
 		} else {
 			entity.ID = append([]byte(nil), entityID...)
+			_, ch, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
+				SubjectID: subject.ID, EntityID: entityID, Status: status,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			changes = append(changes, ch)
 		}
-		_, ch, err := identityclaims.InsertTx(tx, identityclaims.CreateInput{
-			SubjectID: subject.ID, EntityID: entityID, Status: status,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		changes = append(changes, ch)
 		var assocs [][]byte
 		if file {
 			var err error
@@ -309,23 +306,11 @@ func TestConclusionHandleSets(t *testing.T) {
 	t.Run("batch files both ends", func(t *testing.T) {
 		tx, done := open()
 		defer done()
-		bobEntity, bobChange, err := canonicalentities.InsertTx(tx.Tx, canonicalentities.CreateInput{SubjectTypeID: bob.SubjectTypeID})
+		bobEntity, bobChanges, err := promotetest.ClaimTx(tx.Tx, bob, identityclaims.StatusAccepted)
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, bobClaim, err := identityclaims.InsertTx(tx.Tx, identityclaims.CreateInput{
-			SubjectID: bob.ID, EntityID: bobEntity.ID, Status: identityclaims.StatusAccepted,
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		birthEntity, birthChange, err := canonicalentities.InsertTx(tx.Tx, canonicalentities.CreateInput{SubjectTypeID: birth.SubjectTypeID})
-		if err != nil {
-			t.Fatal(err)
-		}
-		_, birthClaim, err := identityclaims.InsertTx(tx.Tx, identityclaims.CreateInput{
-			SubjectID: birth.ID, EntityID: birthEntity.ID, Status: identityclaims.StatusAccepted,
-		})
+		birthEntity, birthChanges, err := promotetest.ClaimTx(tx.Tx, birth, identityclaims.StatusAccepted)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -336,7 +321,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		if len(assocs) == 0 {
 			t.Fatal("expected both ends to file")
 		}
-		changes := []rowchange.Change{bobChange, bobClaim, birthChange, birthClaim}
+		changes := append(bobChanges, birthChanges...)
 		changes = append(changes, filed...)
 		got, err := effects.Handles(tx.Tx, changes)
 		if err != nil {

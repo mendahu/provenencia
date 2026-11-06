@@ -959,8 +959,9 @@ final class EvidenceGraphModel {
         )
     }
 
-    /// Promote with every subject expanded. Works after the cards are filed,
-    /// so a relationship added later can still be filed from this page.
+    /// Promote with every subject expanded. Promote stays open after the cards
+    /// are filed, so a bridge left unfiled by an older catalog or a refused
+    /// filing can be filed from this page.
     /// Nil when the graph has no primary subjects.
     func promoteAllLocation() -> WorkspaceLocation? {
         let subjects = currentSnapshot()?.subjects ?? []

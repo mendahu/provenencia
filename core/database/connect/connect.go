@@ -1,4 +1,5 @@
-// Package connect creates cited Interpretation bridges atomically.
+// Package connect creates cited Interpretation bridges atomically and files a
+// bridge whose ends are already handles.
 package connect
 
 import (
@@ -13,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
@@ -44,10 +46,12 @@ type Result struct {
 	Observations []observations.Observation
 }
 
-// CreateCitedBridge writes a bridge Subject, position, Citation, and Observations
-// on tx. Nothing persists if citation insert fails. The caller records the
-// returned changes. The position is one of them; Run stores it and does not
-// record it.
+// CreateCitedBridge writes a bridge Subject, position, Citation, and
+// Observations on tx, and files the bridge when both ends are already handles
+// (promote-graph-alignment.md §9.1). A wait or a refused filing is not an
+// error. A database error while filing, or while inserting the Citation, rolls
+// the whole write back. The caller records the returned changes. The position
+// is one of them; Run stores it and does not record it.
 func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, []rowchange.Change, error) {
 	if tx == nil {
 		return Result{}, nil, ErrInvalid
@@ -181,6 +185,10 @@ func CreateCitedBridge(tx *database.Tx, userID []byte, in CreateInput) (Result, 
 		citation = cited.Citation
 		written = cited.Observations
 		changes = append(changes, citChanges...)
+	}
+	_, changes, err = identityclaims.AppendFiling(q, bridge.ID, changes)
+	if err != nil {
+		return Result{}, nil, err
 	}
 	return Result{
 		Subject:      bridge,

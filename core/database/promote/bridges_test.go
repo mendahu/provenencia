@@ -562,3 +562,142 @@ func TestBridgeFilingReadsDoNotGrowWithTheBridges(t *testing.T) {
 		t.Fatalf("3 bridges read %d times and 12 read %d: the reads grow with the bridges", few, many)
 	}
 }
+
+// A bridge drawn after both of its ends are handles files in the same write.
+func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
+	t.Run("relationship between two handles files", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		alice := w.node("person", "Alice", 0, 0)
+		bob := w.node("person", "Bob", 4, 0)
+		a := w.promote(alice)
+		b := w.promote(bob)
+		res := w.relationship(alice, bob, w.spouse)
+		got := w.handles("relationship")
+		if len(got) != 1 {
+			t.Fatalf("relationship handles %d, want 1", len(got))
+		}
+		if w.members(got[0]) != 1 {
+			t.Fatalf("members %d, want 1", w.members(got[0]))
+		}
+		claim, err := identityclaims.AcceptedEntityForSubject(w.c, res.Subject.ID)
+		if err != nil || !bytes.Equal(claim.EntityID, got[0]) {
+			t.Fatalf("bridge claim %v %x", err, claim.EntityID)
+		}
+		if !bytes.Equal(w.cachedEntity(got[0], "person"), a.Entity.ID) {
+			t.Fatal("person end is not Alice's handle")
+		}
+		if !bytes.Equal(w.cachedEntity(got[0], "related_to"), b.Entity.ID) {
+			t.Fatal("related_to end is not Bob's handle")
+		}
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+	})
+
+	t.Run("participation, location and place relationship file", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		james := w.node("person", "James", 0, 0)
+		birth := w.node("event", "Birth", 2, 0)
+		w.promote(james)
+		w.promote(birth)
+		w.participation(james, birth, w.subjectRole)
+		if got := w.handles("participation"); len(got) != 1 {
+			t.Fatalf("participation handles %d, want 1", len(got))
+		}
+
+		birth2 := w.node("event", "Birth again", 2, 2)
+		york := w.node("place", "York", 4, 2)
+		w.promote(birth2)
+		w.promote(york)
+		w.location(birth2, york)
+		if got := w.handles("location"); len(got) != 1 {
+			t.Fatalf("location handles %d, want 1", len(got))
+		}
+
+		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		uc := w.node("place", "Upper Canada", 6, 2)
+		w.promote(uc)
+		w.placeRelationship(york, uc, partOf)
+		if got := w.handles("place_relationship"); len(got) != 1 {
+			t.Fatalf("place_relationship handles %d, want 1", len(got))
+		}
+	})
+
+	t.Run("a second record joins the association", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		alice := w.node("person", "Alice", 0, 0)
+		bob := w.node("person", "Bob", 4, 0)
+		a := w.promote(alice)
+		b := w.promote(bob)
+		w.relationship(alice, bob, w.spouse)
+
+		alice2 := w.node("person", "Alice (baptism)", 0, 2)
+		bob2 := w.node("person", "Bob (baptism)", 4, 2)
+		w.join(alice2, a.Entity.ID)
+		w.join(bob2, b.Entity.ID)
+		w.relationship(alice2, bob2, w.spouse)
+		got := w.handles("relationship")
+		if len(got) != 1 {
+			t.Fatalf("relationship handles %d, want 1", len(got))
+		}
+		if w.members(got[0]) != 2 {
+			t.Fatalf("members %d, want 2", w.members(got[0]))
+		}
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+	})
+
+	t.Run("one end unpromoted waits", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		alice := w.node("person", "Alice", 0, 0)
+		bob := w.node("person", "Bob", 4, 0)
+		w.promote(alice)
+		res := w.relationship(alice, bob, w.spouse)
+		if w.filed(res.Subject) {
+			t.Fatal("bridge filed with an unpromoted end")
+		}
+		if got := w.handles("relationship"); len(got) != 0 {
+			t.Fatalf("relationship handles %d, want 0", len(got))
+		}
+		w.promote(bob)
+		got := w.handles("relationship")
+		if len(got) != 1 || w.members(got[0]) != 1 {
+			t.Fatalf("after promoting Bob: %d handles", len(got))
+		}
+	})
+
+	t.Run("a refused filing does not fail the connect", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		alice := w.node("person", "Alice", 0, 0)
+		dup := w.node("person", "Alice again", 4, 0)
+		a := w.promote(alice)
+		w.join(dup, a.Entity.ID)
+		res := w.relationship(alice, dup, w.spouse)
+		if w.filed(res.Subject) {
+			t.Fatal("a self-link filed")
+		}
+		if got := w.handles("relationship"); len(got) != 0 {
+			t.Fatalf("relationship handles %d, want 0", len(got))
+		}
+		if !w.filed(alice) || !w.filed(dup) {
+			t.Fatal("an endpoint claim was lost")
+		}
+	})
+
+	t.Run("a place loop does not fail the connect", func(t *testing.T) {
+		w := newBridgeWorld(t)
+		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		york := w.node("place", "York", 0, 0)
+		uc := w.node("place", "Upper Canada", 2, 0)
+		canada := w.node("place", "Canada", 4, 0)
+		w.promote(york)
+		w.promote(uc)
+		w.promote(canada)
+		w.placeRelationship(york, uc, partOf)
+		w.placeRelationship(uc, canada, partOf)
+		loop := w.placeRelationship(canada, york, partOf)
+		if w.filed(loop.Subject) {
+			t.Fatal("a loop filed")
+		}
+		if got := w.handles("place_relationship"); len(got) != 2 {
+			t.Fatalf("place_relationship handles %d, want 2", len(got))
+		}
+	})
+}

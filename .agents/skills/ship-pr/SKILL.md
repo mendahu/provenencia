@@ -36,7 +36,7 @@ Skills the other roles load: [`implement-pr`](../implement-pr/SKILL.md),
 | --- | --- | --- | --- |
 | Orchestrator | This session | The session's model | The plan, the ship log, reports, findings |
 | Implementer | `pr-implementer` (`.claude/agents/pr-implementer.md`) | Smaller | The plan or the round's fix plan. Nothing else |
-| Reviewer | `pr-reviewer` (`.claude/agents/pr-reviewer.md`), once per routed reviewer | Strongest; conformance on Sonnet (§3) | The lens, the plan, base and head. Never the implementer's reasoning |
+| Reviewer | `pr-reviewer` (`.claude/agents/pr-reviewer.md`), once per routed reviewer | Strongest | The lens, the plan, base and head. Never the implementer's reasoning |
 | Verifier | `pr-reviewer`, with a verify prompt | Strongest | One finding and the code |
 
 Start each implementer and reviewer as a new agent. Do not continue an earlier
@@ -116,14 +116,9 @@ and a missed blocker is not. Write the reviewers you dispatched in the ship
 log, and say why each one you skipped did not match. The user can ask for every
 reviewer on a PR.
 
-**Models.** Dispatch the conformance reviewer with the Agent tool's
-`model: sonnet` override. Its work is mostly mechanical: each AC, the code that
-meets it, and the test that proves it. Every other reviewer, and the verifier,
-runs on the agent's default (Opus). This started 2026-10-18 to save tokens and
-has not been measured yet. When a later round, another lens, CI, or the user
-turns up a conformance blocker or major that round-1 conformance should have
-caught, add a line to the ship log's **Result**: `CON miss: <ID>`. After two
-misses across PRs, take it to the user to move conformance back to Opus.
+**Models.** Every reviewer and the verifier run on the agent's default (Opus).
+Conformance ran on Sonnet from 2026-10-18; the user moved it back on 2026-11-06
+after four misses across PRs.
 
 Dispatch one `pr-reviewer` per routed reviewer, **in parallel**:
 
@@ -297,7 +292,7 @@ Head `<sha>`. Gate PASS. F-1 done; F-2 not reproduced (dropped CON-3).
 …
 
 ## Result
-Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: — · CON miss: none
+Gate PASS · CI <green> · open: none · follow-ups: MNT-3, UX-5 · to user: —
 ```
 
 ## Report to the user

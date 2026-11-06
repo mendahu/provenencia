@@ -201,7 +201,7 @@ func RecomputeTx(q Querier, entityIDs [][]byte) error {
 // The commit drops stored rows for those ids and does not walk again.
 func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(entityIDs)
-	before, err := conclusionsummaries.AssociationEndpoints(q, ids)
+	beforeEnds, beforeWalk, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -213,27 +213,44 @@ func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	}); err != nil {
 		return nil, err
 	}
-	after, err := conclusionsummaries.AssociationEndpoints(q, ids)
+	afterEnds, afterWalk, err := conclusionsummaries.AssociationEndpoints(q, ids)
 	if err != nil {
 		return nil, err
 	}
-	roots := database.UniqueBlobIDs(append(append(append([][]byte(nil), ids...), before...), after...))
+	roots := append([][]byte(nil), ids...)
+	for _, walk := range []map[string][][]byte{beforeWalk, afterWalk} {
+		for _, ends := range walk {
+			roots = append(roots, ends...)
+		}
+	}
+	roots = database.UniqueBlobIDs(roots)
 	deps, err := conclusionsummaries.Dependents(q, roots)
 	if err != nil {
 		return nil, err
 	}
+	// A link names both its ends, so the client reloads a cached page of
+	// either, though no walk starts at a place end.
+	ends := append(append([][]byte(nil), beforeEnds...), afterEnds...)
+	deps = database.UniqueBlobIDs(append(deps, ends...))
 	// Dependents' search text reads only the roots' displayed rows, so a root
-	// whose rows did not move needs none of its dependents reprojected. deps
-	// stays the full walk: the graph cache drops displays that read a label.
+	// whose rows did not move needs none of its dependents reprojected. An
+	// association that did not move, such as a second record of a link already
+	// filed, adds none of its ends. deps stays the full walk: the graph cache
+	// drops displays that read a label.
 	reproject := deps
 	if len(moved) < len(ids) {
-		movedRoots := database.UniqueBlobIDs(append(append(append([][]byte(nil), moved...), before...), after...))
+		movedRoots := append([][]byte(nil), moved...)
+		for _, id := range moved {
+			movedRoots = append(movedRoots, beforeWalk[string(id)]...)
+			movedRoots = append(movedRoots, afterWalk[string(id)]...)
+		}
+		movedRoots = database.UniqueBlobIDs(movedRoots)
 		reproject, err = conclusionsummaries.Dependents(q, movedRoots)
 		if err != nil {
 			return nil, err
 		}
 	}
-	if err := searchindex.ReprojectHandles(q, append(roots, reproject...)); err != nil {
+	if err := searchindex.ReprojectHandles(q, append(append(roots, ends...), reproject...)); err != nil {
 		return nil, err
 	}
 	return deps, nil

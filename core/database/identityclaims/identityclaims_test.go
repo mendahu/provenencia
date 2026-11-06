@@ -413,3 +413,39 @@ func TestBridgeHeadQueryPlans(t *testing.T) {
 		})
 	}
 }
+
+// TestAssociationQueryPlan: finding the bridge between two handles seeks the
+// accepted claims of the from end, then the Observations naming them, and
+// never starts at the subject type index or the property index, which read
+// every bridge of the type.
+func TestAssociationQueryPlan(t *testing.T) {
+	f := newFixture(t)
+	db, err := f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := make([]byte, 16)
+	for _, withTerm := range []bool{false, true} {
+		var termID []byte
+		if withTerm {
+			termID = id
+		}
+		q, args := identityclaims.AssociationSQL("participation", []string{"person", "event"}, id, "role", termID)
+		seeksClaims, seeksValue := false, false
+		for _, detail := range dbtest.QueryPlan(t, db, q, args...) {
+			t.Log(detail)
+			if strings.Contains(detail, "subjects_subject_type_id_idx") || strings.Contains(detail, "observations_property_id_idx") {
+				t.Errorf("withTerm=%v: plan starts at a scan index: %s", withTerm, detail)
+			}
+			if strings.HasPrefix(detail, "SEARCH ec0 ") && strings.Contains(detail, "identity_claims_entity_id_idx") {
+				seeksClaims = true
+			}
+			if strings.HasPrefix(detail, "SEARCH o0 ") && strings.Contains(detail, "observations_value_subject_id_idx") {
+				seeksValue = true
+			}
+		}
+		if !seeksClaims || !seeksValue {
+			t.Errorf("withTerm=%v: plan does not seek ec0 by entity (%v) then o0 by value subject (%v)", withTerm, seeksClaims, seeksValue)
+		}
+	}
+}

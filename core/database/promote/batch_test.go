@@ -234,9 +234,9 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	per := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
-	evt := promotetest.Save(t, f.c, userID, promote.Input{SubjectID: event.ID})
 	f.participation(person, event)
+	per := promotetest.ClaimWithoutFiling(t, f.c, userID, person)
+	evt := promotetest.ClaimWithoutFiling(t, f.c, userID, event)
 	if f.bridgeClaims("participation") != 0 {
 		t.Fatal("bridge filed before the batch")
 	}
@@ -244,8 +244,8 @@ func TestSaveBatchFilesBridgeWhoseEndsWereAlreadyPromoted(t *testing.T) {
 	f.save(promote.Batch{
 		GraphID: f.graph, SeenRevision: f.revision(),
 		Rows: []promote.BatchRow{
-			{SubjectID: person.ID, Target: promote.TargetHandle, EntityID: per.Entity.ID},
-			{SubjectID: event.ID, Target: promote.TargetHandle, EntityID: evt.Entity.ID},
+			{SubjectID: person.ID, Target: promote.TargetHandle, EntityID: per},
+			{SubjectID: event.ID, Target: promote.TargetHandle, EntityID: evt},
 		},
 	})
 	if f.bridgeClaims("participation") != 1 {
@@ -379,9 +379,9 @@ func TestSaveBatchFilesOnlyItsGraph(t *testing.T) {
 	f := newBatchFixture(t)
 	person := f.bare("person")
 	event := f.bare("event")
-	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: person.ID})
-	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: event.ID})
 	f.participation(person, event)
+	promotetest.ClaimWithoutFiling(f.t, f.c, userID, person)
+	promotetest.ClaimWithoutFiling(f.t, f.c, userID, event)
 	if n := f.bridgeClaims("participation"); n != 0 {
 		t.Fatalf("participation claims %d before any Done, want 0", n)
 	}
@@ -463,5 +463,23 @@ func TestSaveBatchRefusesAnAssociationRowAlreadyFiled(t *testing.T) {
 	})
 	if !errors.Is(err, promote.ErrUnsupportedType) {
 		t.Fatalf("err %v, want promote.ErrUnsupportedType", err)
+	}
+}
+
+// A bridge filed when it was drawn stays filed, once, through a Done.
+func TestSaveBatchKeepsABridgeFiledOnCreate(t *testing.T) {
+	f := newBatchFixture(t)
+	person := f.bare("person")
+	event := f.bare("event")
+	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: person.ID})
+	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: event.ID})
+	f.participation(person, event)
+	if n := f.bridgeClaims("participation"); n != 1 {
+		t.Fatalf("participation claims %d after the connect, want 1", n)
+	}
+
+	f.save(promote.Batch{GraphID: f.graph, SeenRevision: f.revision()})
+	if n := f.bridgeClaims("participation"); n != 1 {
+		t.Fatalf("participation claims %d after the Done, want 1", n)
 	}
 }
