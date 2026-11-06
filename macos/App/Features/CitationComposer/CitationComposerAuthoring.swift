@@ -530,6 +530,11 @@ enum CitationComposerAuthoring {
         }
     }
 
+    /// A relationship term as a row or a reading names it.
+    private static func relationshipName(_ term: CatalogPropertyTerm) -> String {
+        PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType)
+    }
+
     private static func endTitles(
         subjectA: CitationComposerModel.GraphSubjectOption,
         subjectB: CitationComposerModel.GraphSubjectOption,
@@ -542,10 +547,8 @@ enum CitationComposerAuthoring {
         case EvidenceBridgeKind.relationship.rawValue:
             if let term {
                 let inverse = inverseTerm(of: term, property: property, vocabulary: vocabulary)
-                let name = PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType)
-                let inverseName = inverse.map {
-                    PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.relationshipType)
-                }
+                let name = relationshipName(term)
+                let inverseName = inverse.map(relationshipName)
                 return (name, inverseName ?? name, true)
             }
             return (
@@ -616,7 +619,7 @@ enum CitationComposerAuthoring {
                 ? inverseTerm(of: term, property: termProperty, vocabulary: vocabulary) ?? term
                 : term
             let label = spoken.map {
-                L10n.CitationComposer.termOf(PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.relationshipType))
+                L10n.CitationComposer.termOf(relationshipName($0))
             }
                 ?? L10n.string(L10n.CitationComposer.bridgeKindRelationship)
             return (label, other.label)
@@ -662,14 +665,18 @@ enum CitationComposerAuthoring {
                 kind: .relationship,
                 endpointA: from.label,
                 endpointB: to.label,
-                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType),
+                term: relationshipName(term),
                 termKey: term.productKey
             )
         case EvidenceBridgeKind.participation.rawValue:
             guard let term else { return nil }
             let person = from.typeKey == "person" ? from : to
             let event = from.typeKey == "event" ? from : to
-            return L10n.CitationComposer.roleInTheEvent(person.label, term.label, event.label)
+            return L10n.CitationComposer.roleInTheEvent(
+                person.label,
+                PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.role),
+                event.label
+            )
         case EvidenceBridgeKind.location.rawValue:
             let event = from.typeKey == "event" ? from : to
             let place = from.typeKey == "place" ? from : to
@@ -682,7 +689,7 @@ enum CitationComposerAuthoring {
                 kind: .placeRelationship,
                 endpointA: from.label,
                 endpointB: to.label,
-                term: term.label,
+                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.placeRelationshipType),
                 termKey: key
             )
         default:

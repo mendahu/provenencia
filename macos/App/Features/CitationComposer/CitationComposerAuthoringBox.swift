@@ -808,7 +808,7 @@ struct CitationBridgeSentence: View {
 
     static func displayLabel(_ term: CatalogPropertyTerm, property: CatalogProperty?) -> String {
         CitationComposerAuthoring.termWording(term, property: property).map { L10n.string($0.comboWord) }
-            ?? term.label.localizedLowercase
+            ?? PropertyTermDisplay.name(term: term, propertyKey: property?.key ?? "").localizedLowercase
     }
 
     private enum Piece: Identifiable {

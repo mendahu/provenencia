@@ -1777,6 +1777,17 @@ struct CitationComposerModelTests {
         func roleLine(_ id: String) -> CitationSavedLine? { roleGroups.first { $0.subjectID == id }?.lines.first }
         #expect(roleLine("a")?.label == L10n.CitationComposer.roleIn(witnessName))
         #expect(roleLine("b")?.label == witnessName)
+        let reading = readyBridge(participation, termID: "term-provenencia-witness")?.reading
+        #expect(reading?.localizedCaseInsensitiveContains(witnessName) == true)
+        #expect(reading?.contains("Catalog words") == false)
+        let witness = CatalogPropertyTerm(
+            id: "t", propertyID: "p-role", key: "witness", origin: CatalogOrigin.provenencia,
+            label: "Catalog words", description: ""
+        )
+        #expect(
+            CitationBridgeSentence.displayLabel(witness, property: participation.propertiesByID["p-role"])
+                == witnessName.localizedLowercase
+        )
         let theirs = vocabulary(
             "relationship_type",
             [(key: "parent", label: "Mine", origin: CatalogOrigin.user)],
