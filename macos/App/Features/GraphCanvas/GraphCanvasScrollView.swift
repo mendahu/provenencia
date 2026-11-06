@@ -159,8 +159,7 @@ struct GraphCanvasScrollView<Content: View>: NSViewRepresentable {
             documentSize: contentSize,
             visibleSize: clip.bounds.size
         )
-        clip.scroll(to: origin)
-        scrollView.reflectScrolledClipView(clip)
+        scrollView.scrollClip(to: origin)
     }
 
     final class Coordinator {
@@ -237,8 +236,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             documentSize: contentSize,
             visibleSize: visible
         )
-        contentView.scroll(to: origin)
-        reflectScrolledClipView(contentView)
+        scrollClip(to: origin)
     }
 
     override func reflectScrolledClipView(_ clipView: NSClipView) {
@@ -383,8 +381,7 @@ final class GraphCanvasNSScrollView: NSScrollView {
             visibleSize: visible
         )
 
-        clip.scroll(to: origin)
-        reflectScrolledClipView(clip)
+        scrollClip(to: origin)
     }
 
     static func isTrackpadOrMagicMouseScroll(_ event: NSEvent) -> Bool {
@@ -423,8 +420,7 @@ final class GraphCanvasViewportController {
             visibleSize: clip.bounds.size
         )
 
-        clip.scroll(to: origin)
-        scrollView.reflectScrolledClipView(clip)
+        scrollView.scrollClip(to: origin)
     }
 
     /// Scrolls so the grid point is at the center of the visible area, keeping the
@@ -445,8 +441,7 @@ final class GraphCanvasViewportController {
             contentSize: document.frame.size,
             magnification: scrollView.magnification
         )
-        clip.scroll(to: origin)
-        scrollView.reflectScrolledClipView(clip)
+        scrollView.scrollClip(to: origin)
     }
 }
 
@@ -489,5 +484,13 @@ extension EnvironmentValues {
     var graphCanvasItems: GraphCanvasItemLayer? {
         get { self[GraphCanvasItemsKey.self] }
         set { self[GraphCanvasItemsKey.self] = newValue }
+    }
+}
+
+private extension NSScrollView {
+    /// Scrolls the clip to `origin` and reflects it, so the scrollers and the reported camera follow.
+    func scrollClip(to origin: CGPoint) {
+        contentView.scroll(to: origin)
+        reflectScrolledClipView(contentView)
     }
 }

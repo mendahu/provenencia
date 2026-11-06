@@ -33,6 +33,6 @@ enum ConclusionFold {
     /// The first item an unfold adds: `list[limit]` when folding would hide at least
     /// `minimumHidden`, expanded or not; else nil.
     static func firstRevealed<T>(_ list: [T], limit: Int, minimumHidden: Int) -> T? {
-        list.count - limit >= minimumHidden ? list[limit] : nil
+        list.count - limit >= minimumHidden ? list.dropFirst(limit).first : nil
     }
 }

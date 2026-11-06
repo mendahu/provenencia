@@ -11,7 +11,7 @@ struct PersonSourcesSection: View {
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
 
-    /// The Sources whose lines the researcher has unfolded. Reset when the page is another person.
+    /// The Sources whose lines the researcher has unfolded; another person's page is another view.
     @State private var expanded: Set<String> = []
 
     var body: some View {
@@ -42,7 +42,6 @@ struct PersonSourcesSection: View {
                 expand: { self.expanded.insert($0) }
             )
         }
-        .onChange(of: entityId) { self.expanded = [] }
     }
 }
 
@@ -57,20 +56,20 @@ enum PersonSourcesColumns {
     static let lineIndent: CGFloat = 20
 }
 
-extension View {
-    func sourcesCitationCell() -> some View {
+private extension View {
+    func personSourcesCitationCell() -> some View {
         frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    func sourcesTypeCell() -> some View {
+    func personSourcesTypeCell() -> some View {
         frame(width: PersonSourcesColumns.typeWidth, alignment: .leading)
     }
 
-    func sourcesDateCell() -> some View {
+    func personSourcesDateCell() -> some View {
         frame(width: PersonSourcesColumns.dateWidth, alignment: .leading)
     }
 
-    func sourcesRefCell() -> some View {
+    func personSourcesRefCell() -> some View {
         frame(width: PersonSourcesColumns.refWidth, alignment: .leading)
     }
 }
@@ -83,8 +82,6 @@ struct PersonSourcesList: View {
 
     /// The graph link with the keyboard.
     @FocusState private var focusedLine: String?
-    /// The first line an unfold added, to focus once it is drawn.
-    @State private var pendingFocus: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -95,25 +92,20 @@ struct PersonSourcesList: View {
                 PersonSourcesRowView(row: row, open: open, expand: { unfold(row) }, focused: $focusedLine)
             }
         }
-        .onChange(of: content) {
-            if let id = pendingFocus, content.rows.contains(where: { $0.lines.contains { $0.id == id } }) {
-                pendingFocus = nil
-                focusedLine = id
-            }
-        }
     }
 
+    /// Unfolds a Source and, once its lines are drawn, focuses the first one it added.
     private func unfold(_ row: PersonSourcesContent.Row) {
-        pendingFocus = row.firstRevealedLineID
         expand(row.id)
+        Task { @MainActor in focusedLine = row.firstRevealedLineID }
     }
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline, spacing: PersonSourcesColumns.spacing) {
-            Text(L10n.Conclusions.sourcesColumnSource).sourcesCitationCell()
-            Text(L10n.Conclusions.sourcesColumnType).sourcesTypeCell()
-            Text(L10n.Conclusions.sourcesColumnDate).sourcesDateCell()
-            Text(L10n.Conclusions.sourcesColumnRef).sourcesRefCell()
+            Text(L10n.Conclusions.sourcesColumnSource).personSourcesCitationCell()
+            Text(L10n.Conclusions.sourcesColumnType).personSourcesTypeCell()
+            Text(L10n.Conclusions.sourcesColumnDate).personSourcesDateCell()
+            Text(L10n.Conclusions.sourcesColumnRef).personSourcesRefCell()
         }
         .pvMicroCaps()
         .foregroundStyle(PVColor.textMuted)
@@ -131,18 +123,18 @@ private struct PersonSourcesRowView: View {
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PersonSourcesColumns.spacing) {
-            citation.sourcesCitationCell()
-            typeCell.sourcesTypeCell().accessibilityHidden(true)
+            citation.personSourcesCitationCell()
+            typeCell.personSourcesTypeCell().accessibilityHidden(true)
             Text(L10n.Conclusions.sourcesDateNone)
                 .font(PVFont.body(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textMuted)
-                .sourcesDateCell()
+                .personSourcesDateCell()
                 .accessibilityHidden(true)
             Text(verbatim: row.ref)
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textSecondary)
                 .textSelection(.enabled)
-                .sourcesRefCell()
+                .personSourcesRefCell()
                 .accessibilityHidden(true)
         }
         // The row as one element; the title link and the lines follow as controls.
@@ -188,7 +180,7 @@ private struct PersonSourcesRowView: View {
 }
 
 /// One record: the graph's name as a link, then "· graph ref · Subject name · Subject ref".
-/// A line too narrow cuts the Subject's name first.
+/// Every part stays on one line; a line too narrow cuts the Subject's name first.
 private struct PersonSourcesLineView: View {
     let line: PersonSourcesContent.Line
     let open: (WorkspaceLocation) -> Void
@@ -197,13 +189,19 @@ private struct PersonSourcesLineView: View {
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             PVButton(line.graphTitle, variant: .link, size: .sm) { open(line.location) }
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .help(line.graphTitle)
                 .focused(focused, equals: line.id)
+                .pvFocusRing(focused.wrappedValue == line.id, cornerRadius: PVRadius.xs)
+                .pvActivatesOnReturn(when: focused.wrappedValue == line.id) { open(line.location) }
                 .accessibilityLabel(line.accessibilityLabel)
                 .accessibilityIdentifier("persons.detail.sources.graph.\(line.id)")
             Group {
                 if let graphRef = line.graphRef {
                     Text(verbatim: " · ")
                     Text(verbatim: graphRef).font(PVFont.mono(size: PVTypeScale.caption))
+                        .lineLimit(1).fixedSize(horizontal: true, vertical: false)
                 }
                 Text(verbatim: " · ")
                 Text(verbatim: line.subjectName)
@@ -213,6 +211,7 @@ private struct PersonSourcesLineView: View {
                     .help(line.subjectName)
                 Text(verbatim: " · ")
                 Text(verbatim: line.subjectRef).font(PVFont.mono(size: PVTypeScale.caption))
+                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
             }
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textSecondary)
@@ -222,3 +221,35 @@ private struct PersonSourcesLineView: View {
         .accessibilityIdentifier("persons.detail.sources.line.\(line.id)")
     }
 }
+
+#if DEBUG
+/// The Sources section over a fixture, with its folds working.
+private struct PersonSourcesPreview: View {
+    let groups: [CatalogPersonClaimGroup]
+    var expandedAtStart: Set<String> = []
+
+    @State private var expanded: Set<String> = []
+
+    var body: some View {
+        PVPageColumns(primaryFill: true) {
+            PersonSourcesList(
+                content: PersonSourcesContent(
+                    groups: groups,
+                    sourceTypes: PersonSourcesPreviewData.types,
+                    orders: NameFormatOrders(),
+                    expanded: expanded
+                ),
+                open: { _ in },
+                expand: { expanded.insert($0) }
+            )
+        }
+        .frame(width: 1102, height: 700)
+        .background(PVColor.surfacePage)
+        .onAppear { expanded = expandedAtStart }
+    }
+}
+
+#Preview("Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular) }
+#Preview("Untitled Source") { PersonSourcesPreview(groups: PersonSourcesPreviewData.untitled) }
+#Preview("Folded") { PersonSourcesPreview(groups: PersonSourcesPreviewData.folded) }
+#endif
