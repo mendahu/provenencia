@@ -308,14 +308,20 @@ enum DeleteImpactCascadeVia: Sendable, Equatable {
     }
 }
 
-/// What the Conclusion detail read says when it fails (the code of the error:
-/// `conclusiondetails.not_found`, an unknown or merged handle).
-enum ConclusionDetailsError: Sendable, Equatable {
-    case notFound
+/// The engine error codes the client branches on (the code of a `CoreInvokeError`); every other
+/// code only has its message. `conclusiondetails.not_found` is an unknown, deleted or merged
+/// handle; `promote.stale` a Done that lost the revision race; `sourcemetadata.invalid` a value
+/// the field refuses.
+enum EngineErrorCode: Sendable, Equatable {
+    case conclusionNotFound
+    case promoteStale
+    case sourceMetadataInvalid
 
     init?(wire: String) {
         switch wire {
-        case "conclusiondetails.not_found": self = .notFound
+        case "conclusiondetails.not_found": self = .conclusionNotFound
+        case "promote.stale": self = .promoteStale
+        case "sourcemetadata.invalid": self = .sourceMetadataInvalid
         default: return nil
         }
     }

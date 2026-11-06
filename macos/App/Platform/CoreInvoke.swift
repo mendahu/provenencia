@@ -36,6 +36,11 @@ extension CoreInvokeError {
         case .failed: nil
         }
     }
+
+    /// The code when it is one the client branches on.
+    var engineCode: EngineErrorCode? {
+        code.flatMap(EngineErrorCode.init(wire:))
+    }
 }
 
 extension CoreInvokeError: LocalizedError {

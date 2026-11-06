@@ -19,7 +19,7 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
         case .loaded(let value):
             self = .content(content(value), refreshing: isFetching)
         case .failed(let error):
-            if let code = (error as? CoreInvokeError)?.code, ConclusionDetailsError(wire: code) == .notFound {
+            if (error as? CoreInvokeError)?.engineCode == .conclusionNotFound {
                 self = .gone
             } else {
                 self = .failed(L10n.Errors.message(for: error))
