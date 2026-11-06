@@ -18,6 +18,7 @@ func writeEffectsProto(res writes.Result) *engine.WriteEffects {
 		Structure:      set.Structure,
 		SummaryHandles: idStrings(set.SummaryDeps),
 		HandleScopes:   idStrings(set.HandleScopes),
+		Deleted:        deletedProtos(set.Deleted),
 		Revision:       res.Revision,
 		RevisionAt:     res.At,
 	}
@@ -30,6 +31,17 @@ func readProtos(reads []effects.ReadIDs) []*engine.WriteEffectsRead {
 	out := make([]*engine.WriteEffectsRead, len(reads))
 	for i, r := range reads {
 		out[i] = &engine.WriteEffectsRead{Read: string(r.Read), Ids: idStrings(r.IDs)}
+	}
+	return out
+}
+
+func deletedProtos(deleted []effects.DeletedIDs) []*engine.WriteEffectsDeleted {
+	if len(deleted) == 0 {
+		return nil
+	}
+	out := make([]*engine.WriteEffectsDeleted, len(deleted))
+	for i, d := range deleted {
+		out[i] = &engine.WriteEffectsDeleted{Entity: d.Entity, Ids: idStrings(d.IDs)}
 	}
 	return out
 }

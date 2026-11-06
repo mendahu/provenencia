@@ -1,6 +1,6 @@
 # S13-37 — Unpromote reports what it removes
 
-**Status:** Planned
+**Status:** Landed in #725 (2026-11-06)
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: two wire fields and their Swift mapping; nothing draws them until S13-17)
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-deletes.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`../person-detail.md`](../person-detail.md) R-38, R-39; working rule "One Unpromote, deletes through the registry"; the S13-17 plan (D-3, D-6: its consumers) and its review log (round 1 M-2, M-3, the reason for this PR); the S13-08 plan
 **Planned:** 2026-11-06 against `main` @ `d5cefe5`
+**Landed:** the code follows the plan; five notes. (1) T-4 sits in `core/database/effects/deleted_handles_path_test.go` (package `effects`, which `validate` and `registry` need) beside `deleted_handles_test.go` (package `effects_test`, which needs `core/database`); one file cannot be both. (2) The base had moved: S14-33 added filing in `bridgefile.go` but left every Current state row true, so `FiledBridgesOf` sits beside the new `fileCond` and `graphCond` queries unchanged. (3) D-4 and D-5 are superseded, by the user, in round 1: the effects report ids as one keyed list, `Effect.Deleted` (a path ending at the entry's own table) and `Set.Deleted []DeletedIDs{Entity, IDs}`, on the wire `repeated WriteEffectsDeleted deleted = 16`; Swift's `CatalogWriteEffects.deleted` has a computed `deletedHandles` that reads the `canonical_entity` entry, so S13-17's D-6 reads as planned. A later deleted-Sources set is one registry line. (4) Round 1 also made the deletes forecast count every filed bridge on a handle (`HandleGoesWithout` takes the Subjects leaving) and gave the write and its preview one load of the filed Subject. (5) §10 step 1 is not yet run in the app.
 **Review:** [`S13-37-unpromote-reports-what-it-removes.review.md`](S13-37-unpromote-reports-what-it-removes.review.md) — round 1 Fits with changes / Not ready; every finding Fixed
 
 ### Implementer — read this first

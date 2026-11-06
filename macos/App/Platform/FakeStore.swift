@@ -196,8 +196,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var reorderSourceMetadataError: Error?
     /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
     var unpromoteSubjectError: Error?
-    /// Scripted delete groups for `getUnpromoteImpact` by subject id.
-    var unpromoteImpactBySubject: [String: CatalogDeleteImpactGroup] = [:]
+    /// Scripted reports for `getUnpromoteImpact` by subject id.
+    var unpromoteImpactBySubject: [String: CatalogUnpromoteImpact] = [:]
     var getUnpromoteImpactError: Error?
     var getUnpromoteImpactCalls = 0
     /// When set, `setPreferredLikeness` throws (the portrait model shows a danger toast).
@@ -1418,12 +1418,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         return (entity, claim)
     }
 
-    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogDeleteImpactGroup? {
+    func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogUnpromoteImpact {
         try withState {
             markCatalogSessionHeld(projectDir)
             getUnpromoteImpactCalls += 1
             if let getUnpromoteImpactError { throw getUnpromoteImpactError }
             return unpromoteImpactBySubject[subjectID]
+                ?? CatalogUnpromoteImpact(deletes: nil, unpromotedBridgeSubjectIDs: [])
         }
     }
 

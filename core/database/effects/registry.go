@@ -65,6 +65,19 @@ func (r Read) KeyTable() string {
 // Reads is every keyed read, in the order Set.Reads reports them.
 var Reads = []Read{ReadCitations, ReadEvidenceGraphProgress, ReadEvidenceGraphs, ReadPropertyTerms}
 
+// DeletedEntities is every Entity that reports deleted ids (an entry with a
+// non-zero Effect.Deleted), sorted: the wire keys of Set.Deleted.
+func DeletedEntities() []string {
+	var out []string
+	for _, e := range registry {
+		if !e.Deleted.zero() && !slices.Contains(out, e.Entity) {
+			out = append(out, e.Entity)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
 // ReadPath is one keyed read: Read says which, Path says whose key ids (it
 // ends at Read.KeyTable()).
 type ReadPath struct {
@@ -76,6 +89,13 @@ type ReadPath struct {
 type ReadIDs struct {
 	Read Read
 	IDs  [][]byte
+}
+
+// DeletedIDs is the ids of one entity a batch deleted. Entity is the
+// Effect.Entity of the table the rows were in.
+type DeletedIDs struct {
+	Entity string
+	IDs    [][]byte
 }
 
 // List names a catalog-wide fact a write changed that no row id names: a list
@@ -116,7 +136,11 @@ type Set struct {
 	// HandleScopes are the handles whose canonical_entity audit scope the
 	// batch moves (Effect.HandleScope); Handles is the recompute set.
 	HandleScopes [][]byte
-	Search       []SearchIDs
+	// Deleted are the ids the batch deleted, by entity (Effect.Deleted), in
+	// the order each entity first appears and then in change order. A merge
+	// updates a handle and is not listed.
+	Deleted []DeletedIDs
+	Search  []SearchIDs
 	// Lists are the catalog-wide lists the batch changed, deduped, in the
 	// order of Lists.
 	Lists []List
@@ -149,7 +173,11 @@ type Effect struct {
 	// HandleScope is the handles whose canonical_entity audit scope this
 	// change moves; Handles is the recompute set.
 	HandleScope Path
-	Search      []SearchDoc
+	// Deleted is the ids of this entry's own table that this change deleted (a
+	// Path guarded by onDelete that ends at the table), reported under
+	// Entity: the app learns from a write's effects which rows are gone.
+	Deleted Path
+	Search  []SearchDoc
 	// Lists are the catalog-wide lists a change to the table moves. Which
 	// updates move them is one choice: all (the default), those writing
 	// ListsOnField, or none (ListsOnCreateDelete). Creates and deletes always
@@ -405,6 +433,7 @@ var registry = map[string]Effect{
 	},
 	"canonical_entities": {
 		Entity: "canonical_entity", Handles: self(), HandleScope: self(),
+		Deleted: onDelete(self()),
 		// The sidebar counts filter merged_into_id IS NULL, so a merge moves
 		// them; a preferred-picture update does not.
 		Lists: []List{ListCounts}, ListsOnField: "merged_into_id",
@@ -475,7 +504,7 @@ func init() {
 
 // paths lists every path field of the effect.
 func (e Effect) paths() []Path {
-	out := []Path{e.EvidenceGraph, e.SourceScope, e.Handles, e.HandleScope, e.Structure}
+	out := []Path{e.EvidenceGraph, e.SourceScope, e.Handles, e.HandleScope, e.Deleted, e.Structure}
 	for _, r := range e.Reads {
 		out = append(out, r.Path)
 	}
@@ -503,6 +532,14 @@ func (e Effect) validate(table string) error {
 		}
 		if end, err := r.Path.check(table); err == nil && end != "" && end != r.Read.KeyTable() {
 			return errf("%s: read %q ends at %s, want %s", table, r.Read, end, r.Read.KeyTable())
+		}
+	}
+	if !e.Deleted.zero() {
+		if e.Entity == "" {
+			return errf("%s: Deleted without an Entity to report under", table)
+		}
+		if end, err := e.Deleted.check(table); err == nil && end != table {
+			return errf("%s: deleted ids end at %s, want its own table", table, end)
 		}
 	}
 	for _, l := range e.Lists {

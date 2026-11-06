@@ -22,13 +22,13 @@ func GetUnpromoteImpact(in []byte) ([]byte, error) {
 	}
 	var out *engine.GetUnpromoteImpactResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		group, err := promote.UnpromoteImpact(c, subjectID)
+		report, err := promote.UnpromoteImpact(c, subjectID)
 		if err != nil {
 			return err
 		}
-		out = &engine.GetUnpromoteImpactResponse{}
-		if group.Via != "" {
-			out.Deletes = groupToProto(group)
+		out = &engine.GetUnpromoteImpactResponse{UnpromotedBridgeSubjectIds: idStrings(report.UnpromotedBridgeSubjects)}
+		if report.Deletes.Via != "" {
+			out.Deletes = groupToProto(report.Deletes)
 		}
 		return nil
 	})

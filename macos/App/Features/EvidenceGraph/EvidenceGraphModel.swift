@@ -1006,10 +1006,11 @@ final class EvidenceGraphModel {
             deletedHandles: nil
         )
         do {
-            if let group = try await store.getUnpromoteImpact(
+            let impact = try await store.getUnpromoteImpact(
                 projectDir: session.projectKey.projectDir,
                 subjectID: subjectID
-            ), group.total > 0 {
+            )
+            if let group = impact.deletes, group.total > 0 {
                 pending.deletedHandles = group
             }
         } catch {

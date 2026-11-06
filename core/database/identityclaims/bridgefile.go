@@ -73,8 +73,9 @@ type bridgeHead struct {
 	id      []byte
 	typeKey string
 	typeID  []byte
-	// claimID is the head's accepted claim, nil when it has none.
-	claimID []byte
+	// claimID is the head's accepted claim and entityID the handle that claim
+	// is a member of; both nil when it has none.
+	claimID, entityID []byte
 }
 
 // touchesEnd is true for a bridge Subject s (alias) that has subject ? as an
@@ -90,15 +91,17 @@ const fileCond = `s.id IN (SELECT ? UNION ALL SELECT o.subject_id FROM observati
 // graphCond is a bridge on Evidence graph ? (one argument).
 const graphCond = `s.graph_id = ?`
 
-// UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
-// accepted claim of every bridge that has subjectID as an end, in
-// bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
-// per graph. A bridge handle whose last member goes is deleted in releaseClaim.
-// Does not commit.
+// FiledBridge is a bridge Subject with an accepted claim: its Subject id, that
+// claim's id and the handle the claim is a member of.
+type FiledBridge struct {
+	SubjectID, ClaimID, EntityID []byte
+}
 
-// UnpromoteBridgeHandlesDeleted lists association handles UnfileBridges would
-// delete because the bridge Subject is their last accepted member.
-func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]deleteimpact.Listed, error) {
+// FiledBridgesOf lists the filed bridges that have subjectID as an end, in
+// bridge Subject id order. It is the one read of what an Unpromote takes back:
+// UnfileBridges releases these claims and the Unpromote preflight reports them.
+// A bridge that waits (no accepted claim) is not listed.
+func FiledBridgesOf(tx *sql.Tx, subjectID []byte) ([]FiledBridge, error) {
 	if len(subjectID) != 16 {
 		return nil, nil
 	}
@@ -106,48 +109,61 @@ func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, subjectID []byte) ([]deleteimpact
 	if err != nil {
 		return nil, err
 	}
-	var out []deleteimpact.Listed
-	seen := map[string]bool{}
+	var out []FiledBridge
 	for _, head := range heads {
 		if head.claimID == nil {
 			continue
 		}
-		var entityID []byte
-		if err := tx.QueryRow(`SELECT entity_id FROM identity_claims WHERE id = ?`, head.claimID).Scan(&entityID); err != nil {
+		out = append(out, FiledBridge{SubjectID: head.id, ClaimID: head.claimID, EntityID: head.entityID})
+	}
+	return out, nil
+}
+
+// UnpromoteBridgeHandlesDeleted lists association handles UnfileBridges would
+// delete: those whose every accepted member is among the filed bridges, in the
+// order a handle first appears in filed. UnfileBridges releases all of them, so
+// a handle several of them share goes when the last is released.
+func UnpromoteBridgeHandlesDeleted(tx *sql.Tx, filed []FiledBridge) ([]deleteimpact.Listed, error) {
+	var order [][]byte
+	leaving := map[string][][]byte{}
+	for _, f := range filed {
+		key := string(f.EntityID)
+		if _, ok := leaving[key]; !ok {
+			order = append(order, f.EntityID)
+		}
+		leaving[key] = append(leaving[key], f.SubjectID)
+	}
+	var out []deleteimpact.Listed
+	for _, entityID := range order {
+		goes, err := deleteimpact.HandleGoesWithout(tx, entityID, leaving[string(entityID)])
+		if err != nil {
 			return nil, err
 		}
-		goes, err := deleteimpact.HandleGoesWithout(tx, entityID, head.id)
-		if err != nil || !goes {
+		if !goes {
 			continue
 		}
 		var ref string
 		if err := tx.QueryRow(`SELECT ref FROM canonical_entities WHERE id = ?`, entityID).Scan(&ref); err != nil {
 			return nil, err
 		}
-		key := string(entityID)
-		if seen[key] {
-			continue
-		}
-		seen[key] = true
 		out = append(out, deleteimpact.Listed{ID: append([]byte(nil), entityID...), Ref: ref})
 	}
 	return out, nil
 }
 
+// UnfileBridges is the inverse of FileBridgesTx: it deletes, audited, the
+// accepted claim of every bridge that has subjectID as an end, in
+// bridge Subject id order. A bridge is on its ends' Evidence graph, so this is
+// per graph. A bridge handle whose last member goes is deleted in releaseClaim.
+// Does not commit.
 func UnfileBridges(tx *database.Tx, subjectID []byte) ([]rowchange.Change, error) {
-	if len(subjectID) != 16 {
-		return nil, nil
-	}
-	heads, err := bridgeHeads(tx.Tx, touchesEnd, subjectID)
+	filed, err := FiledBridgesOf(tx.Tx, subjectID)
 	if err != nil {
 		return nil, err
 	}
 	var changes []rowchange.Change
-	for _, head := range heads {
-		if head.claimID == nil {
-			continue
-		}
-		released, err := deleteimpact.ReleaseClaim(tx, head.claimID)
+	for _, f := range filed {
+		released, err := deleteimpact.ReleaseClaim(tx, f.ClaimID)
 		if err != nil {
 			return nil, err
 		}
@@ -176,12 +192,13 @@ func bridgeHeads(tx *sql.Tx, cond string, condArgs ...any) ([]bridgeHead, error)
 	var out []bridgeHead
 	for rows.Next() {
 		var b bridgeHead
-		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.claimID); err != nil {
+		if err := rows.Scan(&b.id, &b.typeKey, &b.typeID, &b.claimID, &b.entityID); err != nil {
 			return nil, err
 		}
 		b.id = append([]byte(nil), b.id...)
 		b.typeID = append([]byte(nil), b.typeID...)
 		b.claimID = append([]byte(nil), b.claimID...)
+		b.entityID = append([]byte(nil), b.entityID...)
 		out = append(out, b)
 	}
 	return out, rows.Err()
@@ -543,7 +560,7 @@ func associationSQL(typeKey string, ends []endpoint, termKey string, termID []by
 // order the join, it starts at the type index and reads every bridge Subject
 // in the catalog (see graphcache/load.go linkLoadSQL).
 func bridgeHeadsSQL(cond string, nKeys int) string {
-	return `SELECT s.id, st.key, s.subject_type_id, ic.id
+	return `SELECT s.id, st.key, s.subject_type_id, ic.id, ic.entity_id
 		FROM subjects s
 		CROSS JOIN subject_types st ON st.id = s.subject_type_id AND st.origin = 'provenencia'
 		LEFT JOIN identity_claims ic ON ic.subject_id = s.id AND ic.status = 'accepted'

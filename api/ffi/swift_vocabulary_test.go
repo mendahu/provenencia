@@ -544,6 +544,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: sorted(readStrings()...),
 		},
 		{
+			name: "deleted entities", path: swiftCatalogMut, enum: "CatalogDeletedEntity", re: listCase,
+			want: effects.DeletedEntities(),
+		},
+		{
 			name: "search kinds", path: swiftSearchKind, enum: "CatalogSearchKind", re: listCase,
 			want: searchKinds(),
 		},

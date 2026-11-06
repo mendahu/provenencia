@@ -65,7 +65,7 @@ func lastMemberRows(tx *sql.Tx, subjectID []byte) ([]probeRow, error) {
 	if err != nil {
 		return nil, err
 	}
-	goes, err := handleGoesWithout(tx, entityID, subjectID)
+	goes, err := handleGoesWithout(tx, entityID, [][]byte{subjectID})
 	if err != nil || !goes {
 		return nil, err
 	}
@@ -135,10 +135,10 @@ func subjectHandleCascadeList(tx *sql.Tx, subjectID []byte, limit int) ([]probeR
 	return out, rows.Err()
 }
 
-// handleGoesWithout reports whether entityID would be deleted when subjectID's
-// claim on it is removed: the handle exists, no other Subject holds an accepted
-// claim on it, and Impact allows deleting it.
-func handleGoesWithout(tx *sql.Tx, entityID, subjectID []byte) (bool, error) {
+// handleGoesWithout reports whether entityID would be deleted when the claims
+// of the Subjects leaving on it are removed: the handle exists, no other
+// Subject holds an accepted claim on it, and Impact allows deleting it.
+func handleGoesWithout(tx *sql.Tx, entityID []byte, leaving [][]byte) (bool, error) {
 	var one int
 	err := tx.QueryRow(`SELECT 1 FROM canonical_entities WHERE id = ?`, entityID).Scan(&one)
 	if err == sql.ErrNoRows {
@@ -147,10 +147,11 @@ func handleGoesWithout(tx *sql.Tx, entityID, subjectID []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	args := append([]any{entityID, claimStatusAccepted}, database.BlobArgs(leaving)...)
 	var n int
 	if err := tx.QueryRow(`SELECT COUNT(*) FROM identity_claims
-		WHERE entity_id = ? AND status = ? AND subject_id != ?`,
-		entityID, claimStatusAccepted, subjectID).Scan(&n); err != nil {
+		WHERE entity_id = ? AND status = ? AND subject_id NOT IN (`+database.SQLInPlaceholders(len(leaving))+`)`,
+		args...).Scan(&n); err != nil {
 		return false, err
 	}
 	if n > 0 {
@@ -164,7 +165,7 @@ func handleGoesWithout(tx *sql.Tx, entityID, subjectID []byte) (bool, error) {
 }
 
 func releaseHandleIfGone(tx *sql.Tx, entityID, subjectID []byte) (released, error) {
-	goes, err := handleGoesWithout(tx, entityID, subjectID)
+	goes, err := handleGoesWithout(tx, entityID, [][]byte{subjectID})
 	if err != nil || !goes {
 		return released{}, err
 	}
@@ -211,8 +212,8 @@ func LastMemberGroup(tx *sql.Tx, subjectID []byte) (Group, error) {
 	return groups[0], nil
 }
 
-// HandleGoesWithout reports whether entityID would be deleted when subjectID's
-// claim on it is removed.
-func HandleGoesWithout(tx *sql.Tx, entityID, subjectID []byte) (bool, error) {
-	return handleGoesWithout(tx, entityID, subjectID)
+// HandleGoesWithout reports whether entityID would be deleted when the accepted
+// claims of every Subject in leaving on it are removed.
+func HandleGoesWithout(tx *sql.Tx, entityID []byte, leaving [][]byte) (bool, error) {
+	return handleGoesWithout(tx, entityID, leaving)
 }

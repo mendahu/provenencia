@@ -51,10 +51,11 @@ func promoteInDir(t *testing.T, dir, userID, subjectID, entityID string) promote
 }
 
 func TestUnpromoteSubject(t *testing.T) {
+	var handle string // the handle the last promoted() filed the Subject onto
 	promoted := func(t *testing.T) *engine.UnpromoteSubjectRequest {
 		t.Helper()
 		dir, userID, subjectID := promotableSubject(t)
-		promoteInDir(t, dir, userID, subjectID, "")
+		handle = database.UUIDString(promoteInDir(t, dir, userID, subjectID, "").Entity.ID)
 		return &engine.UnpromoteSubjectRequest{ProjectDir: dir, UserId: userID, SubjectId: subjectID}
 	}
 	memberships := func(t *testing.T, dir, subjectID string) int {
@@ -117,6 +118,9 @@ func TestUnpromoteSubject(t *testing.T) {
 				e := resp.GetEffects()
 				if len(e.GetEvidenceGraphs()) == 0 || len(e.GetHandles()) == 0 {
 					t.Fatalf("effects %+v", e)
+				}
+				if got := deletedIDs(e, "canonical_entity"); len(got) != 1 || got[0] != handle {
+					t.Fatalf("deleted canonical_entity ids %v, want [%s]", got, handle)
 				}
 				hasCounts := false
 				for _, list := range e.GetLists() {
@@ -228,6 +232,9 @@ func TestGetUnpromoteImpact(t *testing.T) {
 		sole.Deletes.GetListed()[0].GetLocation().GetEntityId() == "" {
 		t.Fatalf("%+v", sole.Deletes)
 	}
+	if len(sole.GetUnpromotedBridgeSubjectIds()) != 0 {
+		t.Fatalf("no bridges, got %v", sole.GetUnpromotedBridgeSubjectIds())
+	}
 
 	dir2, userID2, sourceID2, typeID2 := subjectFixture(t)
 	createSubject := func(label string) string {
@@ -271,8 +278,8 @@ func TestGetUnpromoteImpact(t *testing.T) {
 	if err := proto.Unmarshal(out, &unpromoted); err != nil {
 		t.Fatal(err)
 	}
-	if unpromoted.Deletes != nil {
-		t.Fatalf("unpromoted: %+v", unpromoted.Deletes)
+	if unpromoted.Deletes != nil || len(unpromoted.GetUnpromotedBridgeSubjectIds()) != 0 {
+		t.Fatalf("unpromoted: %+v", &unpromoted)
 	}
 
 	dir4, userID4, sourceID4, typeID4 := subjectFixture(t)

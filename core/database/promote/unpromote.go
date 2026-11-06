@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/subjects"
 )
 
 // Unpromote is the inverse of Save for one primary Subject: it deletes the
@@ -28,15 +29,8 @@ func Unpromote(tx *database.Tx, userID, subjectID []byte) ([]rowchange.Change, e
 		return nil, ErrInvalid
 	}
 	q := tx.Tx
-	subject, err := loadPrimary(q, subjectID)
-	if err != nil {
-		return nil, err
-	}
-	claim, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
+	subject, claim, filed, err := loadFiledPrimary(q, subjectID)
+	if err != nil || !filed {
 		return nil, err
 	}
 	released, err := deleteimpact.ReleaseClaim(tx, claim.ID)
@@ -48,4 +42,22 @@ func Unpromote(tx *database.Tx, userID, subjectID []byte) ([]rowchange.Change, e
 		return nil, err
 	}
 	return append(released, bridges...), nil
+}
+
+// loadFiledPrimary loads a primary Subject and its accepted Identity Claim.
+// filed is false when the Subject has no accepted claim: an Unpromote and its
+// preflight have nothing to do then.
+func loadFiledPrimary(q *sql.Tx, subjectID []byte) (subjects.Subject, identityclaims.Claim, bool, error) {
+	subject, err := loadPrimary(q, subjectID)
+	if err != nil {
+		return subjects.Subject{}, identityclaims.Claim{}, false, err
+	}
+	claim, err := identityclaims.AcceptedEntityForSubjectTx(q, subject.ID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return subject, identityclaims.Claim{}, false, nil
+	}
+	if err != nil {
+		return subjects.Subject{}, identityclaims.Claim{}, false, err
+	}
+	return subject, claim, true, nil
 }
