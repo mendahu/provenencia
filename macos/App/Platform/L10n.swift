@@ -1777,7 +1777,7 @@ enum L10n {
         static let unpromote = LocalizedStringResource(
             "evidenceGraph.subject.unpromote",
             defaultValue: "Unpromote",
-            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its promotion back"
+            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, the confirm button, and the Person page's button on a record's line, that takes its promotion back"
         )
 
         static let unpromoteKeep = LocalizedStringResource(
@@ -1854,6 +1854,12 @@ enum L10n {
             "evidenceGraph.subject.unpromoteConfirmBridgesHeader",
             defaultValue: "Also unpromoted",
             comment: "Header over the relationships, participations, and locations the Unpromote confirm lists"
+        )
+
+        static let unpromoteConfirmBridgesUnlisted = LocalizedStringResource(
+            "evidenceGraph.subject.unpromoteConfirmBridgesUnlisted",
+            defaultValue: "The connections that come off with it could not be listed. The other end of each stays promoted.",
+            comment: "Unpromote confirm, in place of the connection list, when the engine or the graph could not supply it"
         )
 
         static let unpromoteConfirmBridgesNote = LocalizedStringResource(
@@ -9546,6 +9552,14 @@ enum L10n {
                 defaultValue: "Open %@",
                 comment: "Spoken label of a Source's title link on a Person's Sources section; argument is the Source title"
             ), title)
+        }
+
+        static func sourcesUnpromoteAccessibility(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sources.unpromoteAccessibility",
+                defaultValue: "Unpromote %@",
+                comment: "Spoken label of the Unpromote button on a record's line on a Person's Sources section; the argument is the record's name"
+            ), name)
         }
 
         static func sourcesOpenGraph(graph: String, subject: String, ref: String) -> String {

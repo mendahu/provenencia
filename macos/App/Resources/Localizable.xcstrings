@@ -133,6 +133,18 @@
         }
       }
     },
+    "conclusions.sources.unpromoteAccessibility": {
+      "comment": "Spoken label of the Unpromote button on a record's line on a Person's Sources section; the argument is the record's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote %@"
+          }
+        }
+      }
+    },
     "designSystem.field.requiredMarker": {
       "comment": "Marks a required PVField as required, shown beside its label",
       "extractionState": "manual",
@@ -16073,7 +16085,7 @@
       }
     },
     "evidenceGraph.subject.unpromote": {
-      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its promotion back",
+      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, the confirm button, and the Person page's button on a record's line, that takes its promotion back",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -16176,6 +16188,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The other end of each stays promoted."
+          }
+        }
+      }
+    },
+    "evidenceGraph.subject.unpromoteConfirmBridgesUnlisted": {
+      "comment": "Unpromote confirm, in place of the connection list, when the engine or the graph could not supply it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connections that come off with it could not be listed. The other end of each stays promoted."
           }
         }
       }
