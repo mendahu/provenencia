@@ -80,5 +80,27 @@ Reviewers: MNT (MNT-1, MNT-2 were Fix-now majors). Skipped: CON (rated CON-2 min
 
 MNT-1 **Resolved**, MNT-2 **Resolved**. No new blocker, so no Fix plan 2. Below the round-2 bar, for the user to place: `engine.proto:1291` with its generated copies and `GenealogyStore.swift:1515` still say Persons order by the title shown; `docs/ideas/international-names.md:37` names the now-private `nameformats.Format`.
 
+**User answer (2026-11-06).** All three follow-ups go on this PR. Not review findings; no review round follows, by the two-round cap.
+
+### Fix plan 2
+**F-8 — Persons list comments say the sort title** (follow-up 1)
+Files: `api/proto/engine.proto`, its generated copies, `macos/App/Platform/GenealogyStore.swift`.
+Do: `engine.proto:1291`: Persons order by the name without honorifics (auto-reconciled name, else label), then ref-only rows. Regenerate the copies with the repo's generator, not by hand. `GenealogyStore.swift:1515`: "by sort name, which leaves honorifics out, then ref-only by ref". Comments only.
+Check: the diff of the Swift and generated files changes only comment lines.
+
+**F-9 — Idea file names `Profile.Format`** (follow-up 2)
+Files: `docs/ideas/international-names.md`.
+Do: line 37: `nameformats.Format` → `nameformats.Profile.Format`.
+Check: `grep -rn "nameformats\.Format" docs/ideas` prints nothing.
+
+**F-10 — `SourcePageModelTests` gets its own folder per test** (follow-up 3)
+Root cause: the suite's fixed `projectDir` is `/tmp/source-page.provenencia`, tests run in parallel, and one test's `defer removeItem` deleted the folder under another. The failure read "That file is missing from the project folder."
+Files: `macos/ProvenenciaTests/SourcePageModelTests.swift`.
+Do: `private let projectDir = ArtifactFileFixtures.uniqueProjectDir()`. Swift Testing makes a new suite value per test, so each gets its own. Leave the `defer`s. Make the same change in any other suite whose fixed `/tmp` folder is removed in a test; say which.
+Check: `scripts/check-pr.sh` PASS.
+
+## Round 2 — fix
+Head `7d8694f8`. Gate PASS (orchestrator run). F-8, F-9, F-10 done; the Swift and generated diffs are comment lines plus the two test `projectDir` lines. F-10 also moved `EvidenceGraphModelTests`, whose fixed folder a test removed. `WorkspaceDestinationHostTests` stays: its removed paths are per-test folders. Not reviewed: no third round.
+
 ## Result
-Gate PASS at `6250ab1c`; `origin/main` has not moved since the branch was cut · CI pending at this commit · open: none · follow-ups: stale Persons order comments, idea file mention, `SourcePageModelTests` flake · to user: answered (MNT-1, MNT-5, MNT-7).
+Gate PASS at `7d8694f8`; `origin/main` has not moved since the branch was cut · CI green at `c4ea0c09`, not yet read for the follow-up commits · open: none · follow-ups: none, all three done on this PR · to user: answered (MNT-1, MNT-5, MNT-7).
