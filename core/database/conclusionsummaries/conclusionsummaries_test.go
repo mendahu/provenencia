@@ -3,6 +3,7 @@ package conclusionsummaries_test
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -896,6 +897,32 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 				t.Fatalf("got %v want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+// SortByTitle asks for each row's title once, not once per comparison.
+func TestSortByTitleKeysOnce(t *testing.T) {
+	var rows []conclusionsummaries.PlaceSummary
+	for i := 0; i < 50; i++ {
+		rows = append(rows, conclusionsummaries.PlaceSummary{
+			Entity: canonicalentities.Entity{Ref: fmt.Sprintf("P%02d", i)},
+			Names:  []string{fmt.Sprintf("Town %02d", (i*17)%50)},
+		})
+	}
+	want := append([]conclusionsummaries.PlaceSummary(nil), rows...)
+	sort.SliceStable(want, func(i, j int) bool { return want[i].Names[0] < want[j].Names[0] })
+	calls := 0
+	conclusionsummaries.SortByTitle(rows, func(h conclusionsummaries.PlaceSummary) string {
+		calls++
+		return h.Names[0]
+	}, func(h conclusionsummaries.PlaceSummary) string { return h.Entity.Ref })
+	if calls != 50 {
+		t.Fatalf("title called %d times, want 50", calls)
+	}
+	for i := range rows {
+		if rows[i].Entity.Ref != want[i].Entity.Ref {
+			t.Fatalf("row %d is %s, want %s", i, rows[i].Entity.Ref, want[i].Entity.Ref)
+		}
 	}
 }
 

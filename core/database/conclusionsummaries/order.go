@@ -21,18 +21,27 @@ var titleCollator = collate.New(language.Und, collate.IgnoreCase, collate.Ignore
 // titled only by its ref sorts last, by ref. Ties break by ref. This is the
 // one owner of title order; the app shows rows as given.
 func SortByTitle[T any](rows []T, title func(T) string, ref func(T) string) {
-	sort.SliceStable(rows, func(i, j int) bool {
-		ti, tj := strings.TrimSpace(title(rows[i])), strings.TrimSpace(title(rows[j]))
-		if (ti == "") != (tj == "") {
-			return tj == ""
+	sortByKey(rows, func(row T) titleKey {
+		return titleKey{title: strings.TrimSpace(title(row)), ref: strings.ToLower(ref(row))}
+	}, titleKeyLess)
+}
+
+// titleKey is a row's title and ref, each prepared once: the trimmed title and
+// the lowercased ref.
+type titleKey struct{ title, ref string }
+
+// titleKeyLess is title order: a row with no title last, then the root
+// collation of the titles, then the refs.
+func titleKeyLess(a, b titleKey) bool {
+	if (a.title == "") != (b.title == "") {
+		return b.title == ""
+	}
+	if a.title != "" {
+		if o := titleCollator.CompareString(a.title, b.title); o != 0 {
+			return o < 0
 		}
-		if ti != "" {
-			if o := titleCollator.CompareString(ti, tj); o != 0 {
-				return o < 0
-			}
-		}
-		return strings.ToLower(ref(rows[i])) < strings.ToLower(ref(rows[j]))
-	})
+	}
+	return a.ref < b.ref
 }
 
 // SortByBirth orders people by birth date: dated first, earliest first, then by
@@ -92,20 +101,36 @@ func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span Tim
 // then by ref. Each key is computed once, and rows with equal keys keep their
 // order.
 func sortByDateKey[T any](rows []T, key func(T) dateKey) {
+	sortByKey(rows, key, dateKeyLess)
+}
+
+// sortByKey computes each row's key once, sorts stably by less, and writes the
+// rows back. Rows with equal keys keep their order.
+func sortByKey[T, K any](rows []T, key func(T) K, less func(a, b K) bool) {
 	type keyed struct {
 		row T
-		key dateKey
+		key K
 	}
 	keyedRows := make([]keyed, len(rows))
 	for i := range rows {
 		keyedRows[i] = keyed{row: rows[i], key: key(rows[i])}
 	}
 	sort.SliceStable(keyedRows, func(i, j int) bool {
-		return dateKeyLess(keyedRows[i].key, keyedRows[j].key)
+		return less(keyedRows[i].key, keyedRows[j].key)
 	})
 	for i := range rows {
 		rows[i] = keyedRows[i].row
 	}
+}
+
+// sortPersons is the Persons list order.
+func sortPersons(rows []PersonSummary, order []nameformats.PartOrder) {
+	SortByTitle(rows, func(h PersonSummary) string { return personSortKey(h, order) }, func(h PersonSummary) string { return h.Entity.Ref })
+}
+
+// sortPlaces is the Places list order.
+func sortPlaces(rows []PlaceSummary) {
+	SortByTitle(rows, placeTitle, func(h PlaceSummary) string { return h.Entity.Ref })
 }
 
 // personSortKey is the People list order. A name with parts sorts by the
