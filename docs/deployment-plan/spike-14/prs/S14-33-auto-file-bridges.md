@@ -1,6 +1,6 @@
 # S14-33 — A bridge between two handles files when it is made
 
-**Status:** Landed #723 (2026-11-06)
+**Status:** Landed in #723 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the bridge card already shows membership when its bridge is filed; this PR only makes the engine file it sooner)
@@ -11,7 +11,7 @@
 **Version bump:** patch — a researcher-visible behavior fix in the engine; no schema, no new RPC ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-audit-scope`](../../../../.agents/skills/add-audit-scope/SKILL.md) (read only: the filed claim's audit scope is already registered), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md) (handler test only)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-audit.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Creating a bridge files it when both ends are already handles"; bar outcome 28; dogfood note [`ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md`](../ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md) (deleted on land); [`docs/promote-graph-alignment.md` §9.1](../../../promote-graph-alignment.md#91-bridge-filing)
+**Context:** working rule "(Batch 7) Creating a bridge files it when both ends are already handles"; bar outcome 28; dogfood note 2026-11-02 (deleted on land); [`docs/promote-graph-alignment.md` §9.1](../../../promote-graph-alignment.md#91-bridge-filing)
 **Planned:** 2026-11-05 against `main` @ `c8a8bdb`
 **Review:** [`S14-33-auto-file-bridges.review.md`](S14-33-auto-file-bridges.review.md) — Fits — Ready with changes, 2 rounds; no open blocker; nothing to user
 
@@ -204,7 +204,7 @@ Do: raise PATCH by one from what `main` holds when you branch (0.3.4 → 0.3.5 a
 Check: `rg -n "<old version>" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing.
 
 **STEP-7 — Docs**
-Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status → `Landed in #N`, Plan column keeps this file's link; "Where the notes went" row for the dogfood note becomes "Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted YYYY-MM-DD; landed #N)"), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md` (delete), this plan.
+Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status → `Landed in #N`, Plan column keeps this file's link; "Where the notes went" row for the dogfood note becomes "Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted YYYY-MM-DD; landed #N)"), `docs/deployment-plan/spike-14/completed.md`, the dogfood note `ux/2026-11-02-relationship-auto-promote-between-promoted-subjects.md` (deleted), this plan.
 Do: per the Definition of done.
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-33-auto-file-bridges.md` passes.
 
