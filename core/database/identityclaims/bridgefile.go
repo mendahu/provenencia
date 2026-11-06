@@ -21,7 +21,8 @@ import (
 // is part of the key; a directed term keeps order and a symmetric one does not.
 //
 // Returned association ids are the handles whose cache the caller recomputes.
-// Changes belong on the caller's revision. Does not commit.
+// Changes belong on the caller's revision. Does not commit. subjectID is a new
+// member (the bridges touching it file) or a new bridge (it files itself).
 func FileBridgesTx(tx *sql.Tx, subjectID []byte) (assocIDs [][]byte, changes []rowchange.Change, err error) {
 	if len(subjectID) != 16 {
 		return nil, nil, nil

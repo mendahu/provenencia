@@ -84,7 +84,8 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Claim, []rowchange.
 }
 
 // AppendFiling files bridges the new member completes and returns the
-// association handles plus the revision's changes.
+// association handles plus the revision's changes. subjectID is a new member
+// (the bridges touching it file) or a new bridge (it files itself).
 func AppendFiling(tx *sql.Tx, subjectID []byte, changes []rowchange.Change) ([][]byte, []rowchange.Change, error) {
 	assocs, filed, err := FileBridgesTx(tx, subjectID)
 	if err != nil {
