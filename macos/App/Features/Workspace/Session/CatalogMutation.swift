@@ -111,8 +111,8 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// Sources whose last-updated time this write moved. The session patches
     /// those rows in the cached Sources list with `activity`; it reloads nothing.
     var sourceScopes: [String] = []
-    /// Ids this write deleted, by entity. The session ignores it until a page
-    /// that shows one leaves on it.
+    /// Ids this write deleted, by entity. The session ignores it: a page that
+    /// shows a deleted id leaves before `apply` (`UnpromoteFlow.confirm`'s `beforeApply`).
     var deleted: [CatalogWriteEffectsDeleted] = []
     /// The write's own audit revision and time; revision 0 when it recorded none.
     var activity = CatalogActivity()
