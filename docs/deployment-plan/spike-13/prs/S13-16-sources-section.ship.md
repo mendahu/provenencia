@@ -152,4 +152,4 @@ Check: test passes locally; scripts/check-pr.sh PASS; CI green.
 Head `a5bd4ab5`. Gate PASS (orchestrator re-ran). F-14 done; no product change.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-2, PRF-2 · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5 answered · CON miss: none
+Gate PASS · CI green on `b5cd9f33` · open: none · follow-ups: UX-2, PRF-2 · to user: SEC-2, MNT-17, UX-2, UX-3, UX-5 answered · CON miss: none
