@@ -1,6 +1,6 @@
 # S13-16 — Sources section
 
-**Status:** Planned
+**Status:** Landed in #722 (2026-11-05)
 **Spike / slice:** Spike 13 · Slice 6 — Sources
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S13-D6](../design/S13-D6-sources-section.md) (revision 2), board agreed 2026-11-05
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/design-system-layers.mdc`, `.cursor/rules/swift-tests.mdc`
 **Context:** [`../person-detail.md` § 5 Sources](../person-detail.md#5-sources) (R-33 – R-37, R-2, R-13b); working rules "Each section reads its own query", "Claims are read per person from the graph cache, grouped by Source in Go", "Sections are places", "A full-width section keeps its states in the band", "Canonical only, filtered in Go"; brief [S13-D6](../design/S13-D6-sources-section.md); the S13-01 plan (D-4, D-14: the type id and the Swift types), the S13-13 plan (D-10: the section host); the S13-36 plan (the provenance record row and table this section borrows)
 **Planned:** 2026-11-05 against `main` @ `124d492`; refreshed 2026-11-05 against `4c642497` after the implementer's stop on D-11 (ship log, round 0)
+**Landed:** the code follows the plan; two notes. (1) The Timeline's dated fold now hides a marker that sits inside the hidden run with its neighbors (T-11); before, a marker there stayed after "Show N more". (2) The app was not run: manual check items 2 (cold and warm graph open), 3 and 4 are unverified; only the pure offset, the viewport controller in a hosted scroll view and the model's selection are tested.
 **Review:** [`S13-16-sources-section.review.md`](S13-16-sources-section.review.md) — round 1 (card draft) Fits with changes / Not ready, every finding Fixed; round 2 (Source rows, board agreed) and the D-11 refresh in the log
 
 ### Implementer — read this first
