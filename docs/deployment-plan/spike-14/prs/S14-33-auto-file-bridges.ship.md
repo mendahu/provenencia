@@ -1,7 +1,7 @@
 # Ship log — S14-33 A bridge between two handles files when it is made
 
 **Plan:** [`S14-33-auto-file-bridges.md`](S14-33-auto-file-bridges.md) · **Branch:** `s14-33-auto-file-bridges` · **PR:** #723
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `b6996e68`. Gate PASS (run by the orchestrator on the pushed head, base `d5cefe54`). Report: Status line reads "Landed in #723 (2026-11-06)" because `check-plan-docs` rejects the shorter form; the deleted dogfood note was unlinked in the plan's Context line and STEP-7 (text only) so the link check passes; manual check not run (needs the Mac app).
@@ -69,3 +69,9 @@ Do:
 - `docs/ideas/promote-ranking.md`, "Name index on commit": a filed connect (S14-33) is now a handle commit too. At 18,233 handles the first same-graph proposal after one is about 0.78 s against 0.57 s after an unfiled connect; at 36,977 handles about 1.35 s against 0.95 s. Skipping the drops is not safe: participation changes a Person's profile and relationship changes `canonlinks`. Location and place_relationship could skip both. Accepted by the user 2026-11-06.
 - Plan: a Landed note listing every difference: T-5 split into two subtests; T-2 promotes Upper Canada too; the dogfood link removed from Context; the Status wording; §6 Scale was wrong (findAssociation, the dependents walk, the match index), with F-1 and F-2 as the fixes; `queryAssociation` and `RecomputeReported` changed; effects now name both ends; the Swift comment; PRF-3 accepted; F-3 supersedes the Out line. Decisions and Scope text stay as written.
 Check: `rg relationship-auto-promote docs` prints only the plan's backticked mentions; `git diff` on the Swift file shows comment lines only; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `c64a2a5f`. Gate PASS (run by the orchestrator on the pushed head). F-1 to F-4 done. Deviations reported: `TestAssociationQueryPlan` was written after the rewrite, so it was never run red against the old query; `+o.value_term_id` added because the term subquery otherwise took `observations_value_term_id_idx`; `RecomputeReported` also reprojects every end, so an end's own document is still rewritten; `ClaimTx` takes a status for the effects test's provisional case; `requireEndsNamed` replaces the shared `ends` variable too. Budget row: 2.73 s before F-2, 96 ms after, at the 6,000-event city.
+
+## Round 2 — review
+Reviewers: CON (Fix-now majors CON-1, CON-2), MNT (MNT-1, MNT-2), SEC+PRF (PRF-1, PRF-2). Scope `b6996e68...c64a2a5f`.
