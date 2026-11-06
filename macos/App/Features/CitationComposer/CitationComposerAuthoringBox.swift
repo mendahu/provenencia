@@ -749,7 +749,7 @@ struct CitationBridgeSentence: View {
         }
     }
 
-    private var pieces: [Piece] {
+    var pieces: [Piece] {
         let nameA = subjectA?.label ?? ""
         let nameB = subjectB?.label ?? ""
         let typeA = subjectA?.typeKey ?? ""
@@ -757,7 +757,7 @@ struct CitationBridgeSentence: View {
         case EvidenceBridgeKind.relationship.rawValue:
             return sentence([
                 .word(text: nameA, strong: true, slot: 0),
-                .word(text: L10n.string(L10n.CitationComposer.bridgeIsA), strong: false, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeIsThe), strong: false, slot: 0),
                 .term,
                 .word(text: L10n.string(L10n.CitationComposer.bridgeOf), strong: false, slot: 0),
                 .word(text: nameB, strong: true, slot: 0),
@@ -811,7 +811,7 @@ struct CitationBridgeSentence: View {
             ?? PropertyTermDisplay.name(term: term, propertyKey: property?.key ?? "").localizedLowercase
     }
 
-    private enum Piece: Identifiable {
+    enum Piece: Identifiable {
         case word(text: String, strong: Bool, slot: Int)
         case term
 

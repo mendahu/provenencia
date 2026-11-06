@@ -4710,9 +4710,9 @@ enum L10n {
             comment: "Chip that records a bridge"
         )
 
-        static let bridgeIsA = LocalizedStringResource(
-            "citationComposer.bridgeIsA",
-            defaultValue: "is a",
+        static let bridgeIsThe = LocalizedStringResource(
+            "citationComposer.bridgeIsThe",
+            defaultValue: "is the",
             comment: "Words before the relationship type in the bridge sentence"
         )
 

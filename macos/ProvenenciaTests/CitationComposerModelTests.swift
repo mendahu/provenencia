@@ -1796,6 +1796,30 @@ struct CitationComposerModelTests {
         #expect(readyBridge(theirs, termID: "term-user-parent")?.endATitle == "Mine")
     }
 
+    @Test func theBoxSaysIsTheBeforeARelationshipTerm() throws {
+        let vocabulary = termVocabulary(
+            propertyKey: "relationship_type",
+            terms: [(key: "parent", label: "Parent", origin: CatalogOrigin.provenencia)],
+            endTypeKey: "person"
+        )
+        let ready = try #require(readyBridge(vocabulary, termID: "term-provenencia-parent"))
+        let box = CitationBridgeSentence(
+            ready: ready,
+            subjectA: vocabulary.subjectsByID["a"],
+            subjectB: vocabulary.subjectsByID["b"],
+            terms: [],
+            termID: .constant(""),
+            canSwap: false,
+            onSwap: {},
+            onAddTerm: {}
+        )
+        let words = box.pieces.compactMap { piece -> String? in
+            if case .word(let text, _, _) = piece { return text }
+            return nil
+        }
+        #expect(words.contains("is the"))
+    }
+
     @Test func everyReadingMatchesTheCard() {
         var participation = termVocabulary(
             propertyKey: "role", terms: [(key: "witness", label: "Witness", origin: CatalogOrigin.provenencia)],

@@ -21095,14 +21095,14 @@
         }
       }
     },
-    "citationComposer.bridgeIsA": {
+    "citationComposer.bridgeIsThe": {
       "comment": "Words before the relationship type in the bridge sentence",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "is a"
+            "value": "is the"
           }
         }
       }
