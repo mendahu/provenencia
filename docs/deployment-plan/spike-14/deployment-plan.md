@@ -178,7 +178,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
 | S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
-| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Draft |
+| S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Planned |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | — | Scoped |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |
 | S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties; composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
