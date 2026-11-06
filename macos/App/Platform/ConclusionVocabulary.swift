@@ -308,6 +308,19 @@ enum DeleteImpactCascadeVia: Sendable, Equatable {
     }
 }
 
+/// What the Conclusion detail read says when it fails (the code of the error:
+/// `conclusiondetails.not_found`, an unknown or merged handle).
+enum ConclusionDetailsError: Sendable, Equatable {
+    case notFound
+
+    init?(wire: String) {
+        switch wire {
+        case "conclusiondetails.not_found": self = .notFound
+        default: return nil
+        }
+    }
+}
+
 /// Why the engine refuses to unlink an Artifact from a graph (the code of the
 /// refusal: `evidencegraphs.artifact_in_use`, `.last_artifact`).
 enum EvidenceGraphUnlinkReason: Sendable, Equatable {

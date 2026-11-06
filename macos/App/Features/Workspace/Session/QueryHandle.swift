@@ -12,6 +12,11 @@ enum QueryRead<Value> {
         if case .loading = self { return true }
         return false
     }
+
+    var isFailed: Bool {
+        if case .failed = self { return true }
+        return false
+    }
 }
 
 /// Typed view of one cached catalog query. Owned by `WorkspaceSession` per key.

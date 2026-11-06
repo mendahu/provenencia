@@ -386,7 +386,7 @@ final class PromoteModel {
             navigation?.go(to: entry.graphLocation)
         } catch {
             flow.saving = false
-            if case CoreInvokeError.coded(_, let code, _, _) = error, code == "promote.stale" {
+            if (error as? CoreInvokeError)?.code == "promote.stale" {
                 showingNotices { flow.staleNote = L10n.string(L10n.Promote.stale) }
                 submitProposal()
                 return

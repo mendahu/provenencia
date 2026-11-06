@@ -507,6 +507,10 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: sorted(apperr.CodeEvidenceGraphsArtifactInUse, apperr.CodeEvidenceGraphsLastArtifact),
 		},
 		{
+			name: "conclusion detail errors", path: swiftVocabulary, enum: "ConclusionDetailsError", re: wireCase,
+			want: sorted(apperr.CodeConclusionDetailsNotFound),
+		},
+		{
 			name: "cascade vias", path: swiftVocabulary, enum: "DeleteImpactCascadeVia", re: wireCase,
 			want: sorted(deleteimpact.ViaLeavesHandle, deleteimpact.ViaDeletesCitations, deleteimpact.ViaLastMember),
 		},

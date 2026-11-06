@@ -23,6 +23,23 @@ struct PersonDetailTests {
         )
     }
 
+    @Test func conclusionNotFoundIsReadFromTheFailure() {
+        let notFound: QueryRead<CatalogConclusionDetail> = .failed(
+            CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+        )
+        #expect(notFound.isConclusionNotFound)
+        let other: QueryRead<CatalogConclusionDetail> = .failed(
+            CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        )
+        #expect(!other.isConclusionNotFound)
+        let uncoded: QueryRead<CatalogConclusionDetail> = .failed(CoreInvokeError.failed(status: 1))
+        #expect(!uncoded.isConclusionNotFound)
+        let loading: QueryRead<CatalogConclusionDetail> = .loading
+        #expect(!loading.isConclusionNotFound)
+        let loaded: QueryRead<CatalogConclusionDetail> = .loaded(detail())
+        #expect(!loaded.isConclusionNotFound)
+    }
+
     @Test func presentationFollowsTheHandle() {
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
             .loading, isFetching: true, content: { PersonDetailContent(detail: $0) }

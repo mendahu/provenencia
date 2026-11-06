@@ -321,3 +321,23 @@ struct ListScrollAnchorModifier: ViewModifier {
         }
     }
 }
+
+/// Leaves the page for its section's list once its entity is gone: it replaces the current
+/// entry (`fallbackToSectionRoot`). Also fires on mount, so a page opened on a gone entity leaves.
+private struct LeavesForSectionRoot: ViewModifier {
+    let gone: Bool
+    @Environment(WorkspaceNavigation.self) private var navigation
+
+    func body(content: Content) -> some View {
+        content.onChange(of: gone, initial: true) { _, gone in
+            if gone { navigation.fallbackToSectionRoot() }
+        }
+    }
+}
+
+extension View {
+    /// Leaves for the section's list when `gone` is true (the entity the page shows no longer exists).
+    func leavesForSectionRoot(when gone: Bool) -> some View {
+        modifier(LeavesForSectionRoot(gone: gone))
+    }
+}

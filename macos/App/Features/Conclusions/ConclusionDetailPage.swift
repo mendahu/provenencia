@@ -24,6 +24,16 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     }
 }
 
+extension QueryRead {
+    /// The read failed because the handle is gone (deleted or merged), not for a reason that may pass.
+    var isConclusionNotFound: Bool {
+        guard case .failed(let error) = self,
+              let code = (error as? CoreInvokeError)?.code
+        else { return false }
+        return ConclusionDetailsError(wire: code) == .notFound
+    }
+}
+
 /// One related-place row inside a Place detail section (S9-40).
 struct ConclusionDetailRelationship: Equatable, Identifiable {
     var relationship: CatalogPlaceRelationship
@@ -495,10 +505,15 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
             case .loading:
                 ConclusionDetailPage<Content, Secondary, PageSections>.loadingPage
             case .failed(let message):
-                PVPageColumns(primary: {
-                    PVCallout(tone: .danger, message: message)
-                        .accessibilityIdentifier(errorIdentifier)
-                })
+                // A handle that is gone leaves for its list; the Callout never paints.
+                if handle.read.isConclusionNotFound {
+                    ConclusionDetailPage<Content, Secondary, PageSections>.loadingPage
+                } else {
+                    PVPageColumns(primary: {
+                        PVCallout(tone: .danger, message: message)
+                            .accessibilityIdentifier(errorIdentifier)
+                    })
+                }
             case .content(let content, let refreshing):
                 PVPageColumns(
                     headerPinned: !offeredPageSections.isEmpty,
@@ -534,6 +549,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                 )
             }
         }
+        .leavesForSectionRoot(when: handle.read.isConclusionNotFound)
     }
 }
 

@@ -74,9 +74,7 @@ struct EvidenceGraphView: View {
         .task {
             await model.prepare()
         }
-        .onChange(of: model.graphIsGone, initial: true) { _, gone in
-            if gone { navigation.fallbackToSectionRoot() }
-        }
+        .leavesForSectionRoot(when: model.graphIsGone)
         .onChange(of: model.armedKind) { _, kind in
             if kind != nil {
                 NSCursor.crosshair.push()

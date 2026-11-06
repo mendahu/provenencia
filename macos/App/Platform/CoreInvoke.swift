@@ -27,6 +27,17 @@ enum CoreInvokeError: Error, Equatable {
     case failed(status: Int32)
 }
 
+extension CoreInvokeError {
+    /// The engine's error code, or nil for a failure that carried none. The one read of a coded
+    /// error: a caller that matches on the code reads this, not the case.
+    var code: String? {
+        switch self {
+        case .coded(_, let code, _, _): code
+        case .failed: nil
+        }
+    }
+}
+
 extension CoreInvokeError: LocalizedError {
     var errorDescription: String? {
         switch self {
