@@ -6020,9 +6020,12 @@ type WriteEffects struct {
 	// table (Evidence graphs for "citations" and "evidence_graph_progress",
 	// Sources for "evidence_graphs", Properties for "property_terms"): effects.Read values. Swift refreshes only
 	// those keys' reads.
-	Reads         []*WriteEffectsRead `protobuf:"bytes,15,rep,name=reads,proto3" json:"reads,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Reads []*WriteEffectsRead `protobuf:"bytes,15,rep,name=reads,proto3" json:"reads,omitempty"`
+	// Handles (canonical entities) this write deleted: effects.Set.DeletedHandles.
+	// A merge updates a handle and is not listed.
+	DeletedHandles []string `protobuf:"bytes,16,rep,name=deleted_handles,json=deletedHandles,proto3" json:"deleted_handles,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *WriteEffects) Reset() {
@@ -6121,6 +6124,13 @@ func (x *WriteEffects) GetEvidenceGraphs() []string {
 func (x *WriteEffects) GetReads() []*WriteEffectsRead {
 	if x != nil {
 		return x.Reads
+	}
+	return nil
+}
+
+func (x *WriteEffects) GetDeletedHandles() []string {
+	if x != nil {
+		return x.DeletedHandles
 	}
 	return nil
 }
@@ -9269,10 +9279,13 @@ func (x *GetUnpromoteImpactRequest) GetSubjectId() string {
 // The handle the Unpromote deletes because the Subject is its last member;
 // unset when the handle stays.
 type GetUnpromoteImpactResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Deletes       *DeleteImpactGroup     `protobuf:"bytes,1,opt,name=deletes,proto3" json:"deletes,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Deletes *DeleteImpactGroup     `protobuf:"bytes,1,opt,name=deletes,proto3" json:"deletes,omitempty"`
+	// Bridge Subjects whose accepted claims the Unpromote takes back, in bridge
+	// Subject id order.
+	UnpromotedBridgeSubjectIds []string `protobuf:"bytes,2,rep,name=unpromoted_bridge_subject_ids,json=unpromotedBridgeSubjectIds,proto3" json:"unpromoted_bridge_subject_ids,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *GetUnpromoteImpactResponse) Reset() {
@@ -9308,6 +9321,13 @@ func (*GetUnpromoteImpactResponse) Descriptor() ([]byte, []int) {
 func (x *GetUnpromoteImpactResponse) GetDeletes() *DeleteImpactGroup {
 	if x != nil {
 		return x.Deletes
+	}
+	return nil
+}
+
+func (x *GetUnpromoteImpactResponse) GetUnpromotedBridgeSubjectIds() []string {
+	if x != nil {
+		return x.UnpromotedBridgeSubjectIds
 	}
 	return nil
 }
@@ -19420,7 +19440,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vcitation_id\x18\x03 \x01(\tR\n" +
 	"citationId\"W\n" +
 	"\x16DeleteCitationResponse\x12=\n" +
-	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xad\x03\n" +
+	"\aeffects\x18\x01 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xd6\x03\n" +
 	"\fWriteEffects\x12\x18\n" +
 	"\ahandles\x18\x01 \x03(\tR\ahandles\x12\x1c\n" +
 	"\tstructure\x18\x05 \x01(\bR\tstructure\x12'\n" +
@@ -19433,7 +19453,8 @@ const file_engine_proto_rawDesc = "" +
 	" \x03(\tR\fsourceScopes\x12\x14\n" +
 	"\x05lists\x18\r \x03(\tR\x05lists\x12'\n" +
 	"\x0fevidence_graphs\x18\x0e \x03(\tR\x0eevidenceGraphs\x12=\n" +
-	"\x05reads\x18\x0f \x03(\v2'.provenencia.engine.v1.WriteEffectsReadR\x05readsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\f\x10\rJ\x04\b\v\x10\fR\asourcesR\x10citation_sources\"8\n" +
+	"\x05reads\x18\x0f \x03(\v2'.provenencia.engine.v1.WriteEffectsReadR\x05reads\x12'\n" +
+	"\x0fdeleted_handles\x18\x10 \x03(\tR\x0edeletedHandlesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\f\x10\rJ\x04\b\v\x10\fR\asourcesR\x10citation_sources\"8\n" +
 	"\x10WriteEffectsRead\x12\x12\n" +
 	"\x04read\x18\x01 \x01(\tR\x04read\x12\x10\n" +
 	"\x03ids\x18\x02 \x03(\tR\x03ids\"\x8a\x01\n" +
@@ -19685,9 +19706,10 @@ const file_engine_proto_rawDesc = "" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1d\n" +
 	"\n" +
-	"subject_id\x18\x02 \x01(\tR\tsubjectId\"`\n" +
+	"subject_id\x18\x02 \x01(\tR\tsubjectId\"\xa3\x01\n" +
 	"\x1aGetUnpromoteImpactResponse\x12B\n" +
-	"\adeletes\x18\x01 \x01(\v2(.provenencia.engine.v1.DeleteImpactGroupR\adeletes\"\x9b\x01\n" +
+	"\adeletes\x18\x01 \x01(\v2(.provenencia.engine.v1.DeleteImpactGroupR\adeletes\x12A\n" +
+	"\x1dunpromoted_bridge_subject_ids\x18\x02 \x03(\tR\x1aunpromotedBridgeSubjectIds\"\x9b\x01\n" +
 	"\x1bSetPreferredLikenessRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

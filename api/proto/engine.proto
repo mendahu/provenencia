@@ -750,6 +750,9 @@ message WriteEffects {
   // Sources for "evidence_graphs", Properties for "property_terms"): effects.Read values. Swift refreshes only
   // those keys' reads.
   repeated WriteEffectsRead reads = 15;
+  // Handles (canonical entities) this write deleted: effects.Set.DeletedHandles.
+  // A merge updates a handle and is not listed.
+  repeated string deleted_handles = 16;
 }
 
 message WriteEffectsRead {
@@ -1112,6 +1115,9 @@ message GetUnpromoteImpactRequest {
 // unset when the handle stays.
 message GetUnpromoteImpactResponse {
   DeleteImpactGroup deletes = 1;
+  // Bridge Subjects whose accepted claims the Unpromote takes back, in bridge
+  // Subject id order.
+  repeated string unpromoted_bridge_subject_ids = 2;
 }
 
 // SetPreferredLikeness chooses a Person's portrait (S10-39): observation_id is

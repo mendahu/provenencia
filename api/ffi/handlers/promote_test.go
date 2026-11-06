@@ -228,6 +228,9 @@ func TestGetUnpromoteImpact(t *testing.T) {
 		sole.Deletes.GetListed()[0].GetLocation().GetEntityId() == "" {
 		t.Fatalf("%+v", sole.Deletes)
 	}
+	if len(sole.GetUnpromotedBridgeSubjectIds()) != 0 {
+		t.Fatalf("no bridges, got %v", sole.GetUnpromotedBridgeSubjectIds())
+	}
 
 	dir2, userID2, sourceID2, typeID2 := subjectFixture(t)
 	createSubject := func(label string) string {
@@ -271,8 +274,8 @@ func TestGetUnpromoteImpact(t *testing.T) {
 	if err := proto.Unmarshal(out, &unpromoted); err != nil {
 		t.Fatal(err)
 	}
-	if unpromoted.Deletes != nil {
-		t.Fatalf("unpromoted: %+v", unpromoted.Deletes)
+	if unpromoted.Deletes != nil || len(unpromoted.GetUnpromotedBridgeSubjectIds()) != 0 {
+		t.Fatalf("unpromoted: %+v", &unpromoted)
 	}
 
 	dir4, userID4, sourceID4, typeID4 := subjectFixture(t)
