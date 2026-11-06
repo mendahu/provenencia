@@ -131,5 +131,83 @@ Check: the new tests pass; `rg -n 'looksLikeCircleRing|inferredLOpen' macos/App`
 
 **Docs for Fix plan 4.** Extend the plan's Landed note with F-10, and the S14-32 paragraph in `spike-14/completed.md`. Change no AC or Decision.
 
+## Round 4 — fix
+Head `ea1cc45f`. Gate PASS (orchestrator run). F-10 done. Red run before the change, on the old code: `aSixPointAxisAlignedPolygonFromAnotherStartIsNotAnL` got `.lOpenTopLeft`, `aBumpyThirtyTwoPointPolygonIsNotACircle` got `.circle`, `aSixPointPolygonIsNotAnL` got `.lOpenBottomLeft`, `freeformKindsSurviveAReload` got `.circle` and `.lOpenBottomLeft`: bug confirmed. Deviations: `rebuiltL` rather than `lShapePoints(kind:params:)`, because the public one clamps a small drawn L; `nearlyEqual(epsilon: 0.0001)` for the L; strict `min < mid < max` ordering; `distance(_:_:)` deleted as unused.
+
+Merged `main` @ `2a5da084` (S14-33's plan) in `37c6154c`: conflict in the map row only, gate PASS. `main` moving is why CI showed no checks after `1a4af0d4`. CI was green on `1919b09e`: the flake passed on a rerun before F-6 landed.
+
+## Round 3 — review
+The user lifted the two-round cap for this PR. Reviewers: CON (Sonnet), MNT, UX, SEC+PRF, on `1a4af0d4...ea1cc45f`, F-6 to F-10. SEC+PRF added beyond what the user was told, because F-10 reads stored points.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-11, MNT-15 | MNT | major | A composer-worded term's phrase is an unguarded per-row argument | Fix now → F-11 | verified: the Go guard needs only a row; `?? label ?? ""` is unreachable |
+| MNT-12, CON-2, UX-4 | MNT, CON, UX | major | Raw `term.label` remains beside F-9's display names | Fix now → F-12 | verified at `CitationComposerAuthoring.swift:672`, `:685`, `CitationComposerAuthoringBox.swift:811` |
+| MNT-13 | MNT | major | `readingSentence` half moved onto the registry | To user → move both, this PR → F-13 | user, 2026-11-05 |
+| UX-1 | UX | minor | Box says "is a", toast and card say "is the" | To user → "is the" → F-14 | user, 2026-11-05 |
+| MNT-14 | MNT | major | Two copies of the L vertex table | Fix now → F-15 | same-pass; verified: the switches differ only in `p.` |
+| UX-3 | UX | minor | A thin L reloads as a polygon or another L | Fix now → F-15 | probe: nothing with a short side under 0.02 reloaded correctly; `LParams.clamp` leaves the notch outside the box |
+| UX-2 | UX | minor | A four-point polygon from another start reloads as a rectangle whose handles collapse it | Fix now → F-15 | probe; supersedes F-10's "leave the 4-point case alone" |
+| MNT-16, MNT-17, MNT-21 | MNT | minor, nit | Redundant axis loop, repeated ring angle, unnamed tolerances | Fix now → F-15 | code this PR adds |
+| MNT-18 | MNT | minor | Region fixtures duplicated | Fix now → F-15 | same-pass |
+| MNT-19 | MNT | minor | Relationship name call at four sites | Fix now → F-12 | F-9's own condition for a helper was met |
+| PRF-1 | PRF | major | Citation sort decodes locators per comparison | To user → fix on this PR → F-16 | user, 2026-11-05; older than this PR, counted, not timed |
+| PRF-2, MNT-20, CON-4, SEC+PRF outside lens | PRF, MNT, CON | minor | Budget comment omits 360 ms best of five, long line, dead `narrower-canon-walk.md` link | Fix now → F-17 | verified; the 375 ms figure stays the user's |
+| MNT outside lens | CON | minor | F-7's assembled "Part of · ref" has no test | Fix now → F-11 | |
+| MNT-22 | MNT | nit | Plan's What stays and test name are stale | Fix now → F-17 | |
+| CON-3 | CON | minor | No record of F-10's red run | Resolved | recorded in Round 4 above |
+| CON-5 | CON | nit | Round heading | Resolved | Round 4 above |
+| UX outside lens | UX | — | Spouse's phrase stays "Is the spouse of" while its sentence is "are spouses" | Rejected | the phrase is a fragment before a ref, and "Are spouses · ref" reads worse |
+
+### Fix plan 5
+Order as written. Fail first where a test is named, and report the red output.
+
+**F-11 — A worded term's row always carries its name** (from MNT-11, MNT-15)
+Files: `ConnectionSentenceRegistry.swift`, `ConnectionSentenceRegistryTests.swift`, `api/ffi/swift_vocabulary_test.go`, `.agents/skills/add-seeded-vocabulary/SKILL.md`; a test beside the existing `EvidenceBridgeEdgeSummary` tests.
+Failing test first: a summary test that a place bridge with a missing endpoint and no stored label reads "Part of · <ref>".
+Do: add `namedTermSentence(_ kind:, _ term: String, name: LocalizedStringResource, sentence:)` beside `subjectSentence`, which sets `phrase` to `{ _ in L10n.string(name) }`. Move the two place rows onto it with `L10n.PropertyTerm.placeRelationshipPartOf` and `placeRelationshipSucceededBy`. Delete `termName`. Point `sentenceRow` at the factory, so a plain `Sentence(` row for a composer-worded term fails the guard. Make the skill sentence say the row comes from `namedTermSentence`.
+Check: with one row changed back to `Sentence(`, the Go subtest fails naming it; restored, it passes.
+
+**F-12 — One display name throughout the composer** (from MNT-12, CON-2, UX-4, MNT-19)
+Files: `CitationComposerAuthoring.swift`, `CitationComposerAuthoringBox.swift`, `CitationComposerModelTests.swift`.
+Failing test first: extend `productTermsReadTheirLocalizedNameOnEveryRow` to assert the participation reading and `displayLabel`.
+Do: add a private `relationshipName(_:)` and use it at the four sites. Pass display names at `:672` and `:685`. In `displayLabel`, read `PropertyTermDisplay.name` with `property?.key`, keeping the lowercase step and `termWording` first.
+Check: `rg -n 'term\.label' macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` prints only the place fallback for researcher terms in `endTitles`.
+
+**F-13 — Every reading reads the registry** (MNT-13; user)
+Files: `CitationComposerAuthoring.swift`, `L10n.swift`, `Localizable.xcstrings`, `CitationComposerModelTests.swift`.
+Failing test first: `everyReadingMatchesTheCard`: participation and location draft readings equal `ConnectionSentenceRegistry.sentence` for the same endpoints, term key and event type.
+Do: route both cases through `ConnectionSentenceRegistry.sentence`, participation with A = person, B = event, location with A = event, B = place, passing the term key and the event type key. Delete `roleInTheEvent`, `tookPlaceAt` and their catalog keys. If the composer options do not carry the event type, read how `EvidenceBridgeEdgeSummary` gets it. If it cannot be reached without a new FFI field, stop and report: do not add one.
+Researcher-visible: the save toast and leave-draft detail change.
+Check: `rg -n 'roleInTheEvent|tookPlaceAt' macos` prints nothing.
+
+**F-14 — The box says "is the"** (UX-1; user)
+Files: `L10n.swift`, `Localizable.xcstrings`, the box or model test that pins it.
+Failing test first: the box's pieces for a relationship read "is the".
+Do: rename `bridgeIsA` to `bridgeIsThe` (`citationComposer.bridgeIsThe`, "is the"), and every caller. Cards keep their sentence.
+Check: `rg -n 'bridgeIsA' macos` prints nothing.
+
+**F-15 — Region kinds: one table, and only what the kind builds** (from UX-2, UX-3, MNT-14, MNT-16, MNT-17, MNT-18, MNT-21)
+Files: `ArtifactRegionGeometry.swift`, `ArtifactRegionTool.swift` if `infer` holds the rectangle rule, `ArtifactRegionGeometryTests.swift`, `CitationLocatorDraftTests.swift`, `RegionFixtures.swift`.
+Failing tests first: `aFourPointPolygonFromAnotherStartIsNotARectangle` (points `[(0.6,0.6),(0.2,0.6),(0.2,0.2),(0.6,0.2)]`, `.freeform`), and in the existing L test a thin L whose handle was dragged (handle 4 of an `lOpenTopRight` from (0.1,0.1) to (0.7,0.7), to (0.7,0.115)) stays its kind.
+Do:
+- Rectangle: also require the points to equal `rectanglePoints(from: min, to: max)` within `nearlyEqual`. App rectangles always start top-left, so saved ones keep their kind; confirm against `rectanglePoints`, `moveRectangleHandle` and `ArtifactRegionDraft.whole`.
+- `LParams.clamp`: keep the notch strictly inside the box, with the gap capped below half the short side.
+- `lShapePoints(kind:from:to:)` computes min, max and mid and calls `rebuiltL`; delete its switch.
+- Delete `inferredLOpen`'s axis-aligned loop. Name the two tolerances beside `minimumPolygonArea`. Add a private `circleRingAngle(_:)` for the builder and the recogniser.
+- Move the bumpy ring and hexagon into `RegionFixtures`.
+Check: tests pass; no overlay file touched beyond a caller a rename needs.
+
+**F-16 — Sort Citations with one decode each** (PRF-1; user)
+Files: `CitationComposerAuthoring.swift`, its readers in `CitationComposerEvidenceColumn.swift` and `CitationComposerAuthoringBox.swift`, a model test.
+Failing test first: none for speed. Add `stepperOrderMatchesPosition` pinning today's order, including ties, and keep it green across the change.
+Do: in `stepperOrder`, decorate once (`listed.map { (position(of: $0.citation), $0) }`), sort, then undecorate; keep the same tie-break. Read `orderedCitations` once per `body`, and have menu rows look up an id-keyed dictionary rather than re-sorting per option.
+Check: `rg -n 'orderedCitations' macos/App` shows no read inside a per-option closure; tests pass.
+
+**F-17 — Comments and docs** (from PRF-2, MNT-20, MNT-22)
+Files: `core/database/promotealign/perf_test.go`, the plan, `spike-14/completed.md`.
+Do: rewrap the budget comment to the block's width; add that S14-20 measured 360 ms as a best of five; point the `narrower-canon-walk.md` link at `docs/ideas/promote-ranking.md#narrower-canon-walk`. Keep `budgetWarm` at 375 ms. In the plan, note in "What stays" that review changed the draft reading and person rows, fix the renamed test in §8, and extend the Landed note with F-11 to F-17, naming the toast, leave-draft and box copy changes. Add those copy changes to `completed.md`. Change no AC or Decision. Write no dogfood note.
+Check: scripts/check-pr.sh PASS.
+
 ## Result
-Gate PASS · CI pending · open: F-10; round 3 review · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
+Gate PASS · CI pending · open: Fix plan 5 · to user: MNT-3 and MNT-4, rejected on D-5 and D-3, named so they can be overturned; Fix plan 2 stretched its blockers-only cap for one test-only same-pass cleanup · CON miss: none
