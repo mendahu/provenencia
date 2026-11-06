@@ -215,6 +215,21 @@ struct EvidenceBridgeEdgeSummaryTests {
         #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Alice was born")
     }
 
+    @Test func anEventsTypeKeyIsItsProductTermKeyOnly() {
+        var eventType = identityObservation(subjectID: "e1", propertyKey: "event_type", valueText: "Birth")
+        eventType.valueTermKey = "birth"
+        eventType.valueTermOrigin = CatalogOrigin.provenencia
+        let event = primary(id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType])
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: event) == "birth")
+        eventType.valueTermOrigin = CatalogOrigin.user
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: primary(
+            id: "e1", kind: .event, label: "Birth", ref: "CEV-1", observations: [eventType]
+        )) == nil)
+        #expect(EvidenceBridgeEdgeSummary.eventTypeKey(of: primary(
+            id: "p1", kind: .person, label: "Alice", ref: "CPR-1", observations: [eventType]
+        )) == nil)
+    }
+
     @Test func aRelabelledProductRoleReadsWithTheAppsName() {
         var role = observation(propertyKey: "role", valueText: "Witness at the ceremony", valueType: "term")
         role.valueTermKey = "witness"
@@ -237,6 +252,19 @@ struct EvidenceBridgeEdgeSummaryTests {
         let sentence = EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap)
         #expect(sentence == "Alice participated as witness at Marriage")
         #expect(!sentence.contains("ceremony"))
+    }
+
+    @Test func aPlaceBridgeWithNoEndpointsAndNoLabelReadsItsTermNameThenItsRef() {
+        var term = observation(
+            propertyKey: SeededPropertyKey.placeRelationshipType,
+            valueText: "Catalog words",
+            valueType: "term"
+        )
+        term.valueTermKey = SeededPlaceRelationshipTypeTerm.partOf
+        term.valueTermOrigin = CatalogOrigin.provenencia
+        let placed = bridge(kind: .placeRelationship, observations: [term], label: "", ref: "CPA-1")
+        let snap = snapshot(bridge: placed, subjects: [])
+        #expect(EvidenceBridgeEdgeSummary.sentence(for: placed, in: snap) == "Part of · CPA-1")
     }
 
     @Test func everyBridgeKindReadsItsTermFromTheSeededProperty() {

@@ -233,6 +233,29 @@ struct CitationSubjectGroup: Identifiable, Equatable {
     var id: String { subjectID }
 }
 
+/// The composer's words for one product term: the two end titles, the term
+/// combo's word, and the far end's saved-line label.
+struct CitationBridgeTermWording: Sendable {
+    var fromEnd: LocalizedStringResource
+    var toEnd: LocalizedStringResource
+    var comboWord: LocalizedStringResource
+    var farEnd: LocalizedStringResource
+
+    static let placePartOf = CitationBridgeTermWording(
+        fromEnd: L10n.CitationComposer.partEnd,
+        toEnd: L10n.CitationComposer.wholeEnd,
+        comboWord: L10n.CitationComposer.placeTermPartOf,
+        farEnd: L10n.CitationComposer.containsWord
+    )
+
+    static let placeSucceededBy = CitationBridgeTermWording(
+        fromEnd: L10n.CitationComposer.earlierPlace,
+        toEnd: L10n.CitationComposer.laterPlace,
+        comboWord: L10n.CitationComposer.placeTermSucceededBy,
+        farEnd: L10n.CitationComposer.succeededWord
+    )
+}
+
 enum CitationComposerAuthoring {
     static func preview(transcription: String, description: String) -> CitationPreview {
         let transcription = collapsed(transcription)
@@ -243,13 +266,17 @@ enum CitationComposerAuthoring {
     }
 
     static func stepperOrder(_ listed: [CatalogListedCitation]) -> [CatalogListedCitation] {
-        listed.sorted { lhs, rhs in
-            let a = position(of: lhs.citation)
-            let b = position(of: rhs.citation)
-            if a.page != b.page { return a.page < b.page }
-            if a.top != b.top { return a.top < b.top }
-            return a.ref.localizedStandardCompare(b.ref) == .orderedAscending
-        }
+        // Decode each locator once, not once per comparison.
+        listed
+            .map { (position: position(of: $0.citation), listed: $0) }
+            .sorted { lhs, rhs in
+                let a = lhs.position
+                let b = rhs.position
+                if a.page != b.page { return a.page < b.page }
+                if a.top != b.top { return a.top < b.top }
+                return a.ref.localizedStandardCompare(b.ref) == .orderedAscending
+            }
+            .map(\.listed)
     }
 
     static func resolvePair(
@@ -507,6 +534,11 @@ enum CitationComposerAuthoring {
         }
     }
 
+    /// A relationship term as a row or a reading names it.
+    private static func relationshipName(_ term: CatalogPropertyTerm) -> String {
+        PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.relationshipType)
+    }
+
     private static func endTitles(
         subjectA: CitationComposerModel.GraphSubjectOption,
         subjectB: CitationComposerModel.GraphSubjectOption,
@@ -519,7 +551,9 @@ enum CitationComposerAuthoring {
         case EvidenceBridgeKind.relationship.rawValue:
             if let term {
                 let inverse = inverseTerm(of: term, property: property, vocabulary: vocabulary)
-                return (term.label, inverse?.label ?? term.label, true)
+                let name = relationshipName(term)
+                let inverseName = inverse.map(relationshipName)
+                return (name, inverseName ?? name, true)
             }
             return (
                 L10n.string(L10n.CitationComposer.firstPerson),
@@ -527,27 +561,15 @@ enum CitationComposerAuthoring {
                 true
             )
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            switch term?.productKey {
-            case SeededPlaceRelationshipTypeTerm.partOf:
-                return (
-                    L10n.string(L10n.CitationComposer.partEnd),
-                    L10n.string(L10n.CitationComposer.wholeEnd),
-                    true
-                )
-            case SeededPlaceRelationshipTypeTerm.succeededBy:
-                return (
-                    L10n.string(L10n.CitationComposer.earlierPlace),
-                    L10n.string(L10n.CitationComposer.laterPlace),
-                    true
-                )
-            default:
-                if let term { return (term.label, term.label, true) }
-                return (
-                    L10n.string(L10n.CitationComposer.firstPlace),
-                    L10n.string(L10n.CitationComposer.secondPlace),
-                    true
-                )
+            if let wording = termWording(term, property: property) {
+                return (L10n.string(wording.fromEnd), L10n.string(wording.toEnd), true)
             }
+            if let term { return (term.label, term.label, true) }
+            return (
+                L10n.string(L10n.CitationComposer.firstPlace),
+                L10n.string(L10n.CitationComposer.secondPlace),
+                true
+            )
         case EvidenceBridgeKind.participation.rawValue:
             if subjectA.typeKey == "person" {
                 return (
@@ -600,18 +622,21 @@ enum CitationComposerAuthoring {
             let spoken = viewing == to.id
                 ? inverseTerm(of: term, property: termProperty, vocabulary: vocabulary) ?? term
                 : term
-            let label = spoken.map { L10n.CitationComposer.termOf($0.label) }
+            let label = spoken.map {
+                L10n.CitationComposer.termOf(relationshipName($0))
+            }
                 ?? L10n.string(L10n.CitationComposer.bridgeKindRelationship)
             return (label, other.label)
         case EvidenceBridgeKind.participation.rawValue:
             let person = from.typeKey == "person" ? from : to
             let event = from.typeKey == "event" ? from : to
+            let roleName = term.map { PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.role) }
             if viewing == person.id {
-                let label = term.map { L10n.CitationComposer.roleIn($0.label) }
+                let label = roleName.map { L10n.CitationComposer.roleIn($0) }
                     ?? L10n.string(L10n.CitationComposer.takesPart)
                 return (label, event.label)
             }
-            return (term?.label ?? L10n.string(L10n.CitationComposer.takesPart), person.label)
+            return (roleName ?? L10n.string(L10n.CitationComposer.takesPart), person.label)
         case EvidenceBridgeKind.location.rawValue:
             let event = from.typeKey == "event" ? from : to
             let place = from.typeKey == "place" ? from : to
@@ -620,7 +645,11 @@ enum CitationComposerAuthoring {
             }
             return (L10n.string(L10n.CitationComposer.siteOfWord), event.label)
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            let label = term?.label ?? L10n.string(L10n.CitationComposer.bridgeKindPlace)
+            if viewing == to.id, let wording = termWording(term, property: termProperty) {
+                return (L10n.string(wording.farEnd), other.label)
+            }
+            let label = term.map { PropertyTermDisplay.name(term: $0, propertyKey: SeededPropertyKey.placeRelationshipType) }
+                ?? L10n.string(L10n.CitationComposer.bridgeKindPlace)
             return (label, other.label)
         default:
             return ("", other.label)
@@ -636,31 +665,42 @@ enum CitationComposerAuthoring {
         switch rule.bridgeTypeKey {
         case EvidenceBridgeKind.relationship.rawValue:
             guard let term else { return nil }
-            if term.productKey == SeededRelationshipTypeTerm.spouse {
-                return L10n.CitationComposer.areSpouses(from.label, to.label)
-            }
-            if term.productKey == SeededRelationshipTypeTerm.sibling {
-                return L10n.CitationComposer.areSiblings(from.label, to.label)
-            }
-            return L10n.CitationComposer.isATermOf(from.label, term.label.lowercased(), to.label)
+            return ConnectionSentenceRegistry.sentence(
+                kind: .relationship,
+                endpointA: from.label,
+                endpointB: to.label,
+                term: relationshipName(term),
+                termKey: term.productKey
+            )
         case EvidenceBridgeKind.participation.rawValue:
             guard let term else { return nil }
             let person = from.typeKey == "person" ? from : to
             let event = from.typeKey == "event" ? from : to
-            return L10n.CitationComposer.roleInTheEvent(person.label, term.label, event.label)
+            return ConnectionSentenceRegistry.sentence(
+                kind: .participation,
+                endpointA: person.label,
+                endpointB: event.label,
+                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.role),
+                termKey: term.productKey,
+                eventType: event.eventTypeKey
+            )
         case EvidenceBridgeKind.location.rawValue:
             let event = from.typeKey == "event" ? from : to
             let place = from.typeKey == "place" ? from : to
-            return L10n.CitationComposer.tookPlaceAt(event.label, place.label)
+            return ConnectionSentenceRegistry.sentence(
+                kind: .location, endpointA: event.label, endpointB: place.label, term: nil
+            )
         case EvidenceBridgeKind.placeRelationship.rawValue:
-            guard let term else { return nil }
-            if term.productKey == SeededPlaceRelationshipTypeTerm.partOf {
-                return L10n.CitationComposer.isPartOf(from.label, to.label)
-            }
-            if term.productKey == SeededPlaceRelationshipTypeTerm.succeededBy {
-                return L10n.CitationComposer.wasSucceededBy(from.label, to.label)
-            }
-            return nil
+            guard let term, let key = term.productKey,
+                  ConnectionSentenceRegistry.lookup(kind: .placeRelationship, term: key, eventType: nil) != nil
+            else { return nil }
+            return ConnectionSentenceRegistry.sentence(
+                kind: .placeRelationship,
+                endpointA: from.label,
+                endpointB: to.label,
+                term: PropertyTermDisplay.name(term: term, propertyKey: SeededPropertyKey.placeRelationshipType),
+                termKey: key
+            )
         default:
             return nil
         }
@@ -710,5 +750,21 @@ enum CitationComposerAuthoring {
     ) -> CatalogPropertyTerm? {
         guard let term, let property, let inverseKey = term.productKey.flatMap({ SeededRelationshipTypeTerm.inverse[$0] }) else { return nil }
         return vocabulary.termsByPropertyID[property.id]?.first { $0.productKey == inverseKey }
+    }
+
+    /// The composer's chrome for a product term, keyed by property and term
+    /// key like `L10n.PropertyTerm.resource`. nil: a researcher's term, or a
+    /// product term this table does not word.
+    static func termWording(propertyKey: String, termKey: String) -> CitationBridgeTermWording? {
+        switch (propertyKey, termKey) {
+        case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.partOf): return .placePartOf
+        case (SeededPropertyKey.placeRelationshipType, SeededPlaceRelationshipTypeTerm.succeededBy): return .placeSucceededBy
+        default: return nil
+        }
+    }
+
+    static func termWording(_ term: CatalogPropertyTerm?, property: CatalogProperty?) -> CitationBridgeTermWording? {
+        guard let termKey = term?.productKey, let propertyKey = property?.key else { return nil }
+        return termWording(propertyKey: propertyKey, termKey: termKey)
     }
 }

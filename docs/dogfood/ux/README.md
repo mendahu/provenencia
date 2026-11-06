@@ -1,6 +1,6 @@
 # Dogfood UX entries
 
-One file per finding: `YYYY-MM-DD-<slug>.md`. Not a commitment and not a test plan.
+One file per finding: `YYYY-MM-DD-<slug>.md`. Not a commitment and not a test plan. Feedback from people using the app only: no PR follow-ups, review findings or plan Out lines.
 
 When a note is pulled into a spike or parked as an idea, delete it here. The plan or idea is the copy.
 

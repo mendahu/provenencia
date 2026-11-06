@@ -9,6 +9,13 @@ struct CitationLocatorDraftTests {
         #expect(CitationLocatorDraft.decode(RegionFixtures.locatorJSON(ringCount: 256)).region != nil)
     }
 
+    @Test func freeformKindsSurviveAReload() {
+        for points in [RegionFixtures.bumpyRing, RegionFixtures.hexagon] {
+            let region = CitationLocatorDraft.decode(RegionFixtures.locatorJSON(points: points)).region
+            #expect(region?.kind == .freeform)
+        }
+    }
+
     @Test func pdfRegionStampsPageWhenMissing() {
         var draft = CitationLocatorDraft.artifactOnly()
         let stamped = draft.setRegion(Self.rectangle, capabilities: Self.pdf, viewerPage: 3)

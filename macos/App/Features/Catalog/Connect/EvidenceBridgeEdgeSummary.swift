@@ -131,6 +131,12 @@ enum EvidenceBridgeEdgeSummary {
             ?? eventTypeObservation(subjectID: endpointBID, subjects: subjects)
     }
 
+    /// An event Subject's event type as a product key; nil for any other kind or a researcher's type.
+    static func eventTypeKey(of placed: EvidenceGraphPlacedSubject) -> String? {
+        guard placed.kind == .event else { return nil }
+        return productKey(of: identityObservation(on: placed))
+    }
+
     private static func eventTypeObservation(
         subjectID: String?,
         subjects: [String: EvidenceGraphPlacedSubject]

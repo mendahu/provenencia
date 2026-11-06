@@ -42,14 +42,16 @@ import (
 // limit on either side fails here, not as a silently missing badge, row or
 // match, or a wrongly refused input.
 const (
-	swiftVocabulary   = "../../macos/App/Platform/ConclusionVocabulary.swift"
-	swiftL10n         = "../../macos/App/Platform/L10n.swift"
-	swiftValueKinds   = "../../macos/App/Platform/InterpretationValueKinds.swift"
-	swiftMarks        = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
-	swiftGraphKinds   = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
-	swiftCatalogMut   = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
-	swiftSearchKind   = "../../macos/App/Platform/CatalogSearchKind.swift"
-	swiftNamePartType = "../../macos/App/Platform/NamePartType.swift"
+	swiftVocabulary                 = "../../macos/App/Platform/ConclusionVocabulary.swift"
+	swiftL10n                       = "../../macos/App/Platform/L10n.swift"
+	swiftCitationComposerAuthoring  = "../../macos/App/Features/CitationComposer/CitationComposerAuthoring.swift"
+	swiftConnectionSentenceRegistry = "../../macos/App/Features/Catalog/Connect/ConnectionSentenceRegistry.swift"
+	swiftValueKinds                 = "../../macos/App/Platform/InterpretationValueKinds.swift"
+	swiftMarks                      = "../../macos/App/DesignSystem/Recipes/Marks/PVMark.swift"
+	swiftGraphKinds                 = "../../macos/App/Features/Workspace/Session/EvidenceGraphSnapshot.swift"
+	swiftCatalogMut                 = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
+	swiftSearchKind                 = "../../macos/App/Platform/CatalogSearchKind.swift"
+	swiftNamePartType               = "../../macos/App/Platform/NamePartType.swift"
 
 	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
@@ -83,6 +85,29 @@ func swiftEnumBody(t *testing.T, path, name string) string {
 		t.Fatalf("%s: enum %s does not close", path, name)
 	}
 	return src[start : start+end]
+}
+
+// namedTerms collects "Enum.name" from the first two groups of each match of re in src.
+func namedTerms(re *regexp.Regexp, src string) map[string]bool {
+	named := map[string]bool{}
+	for _, m := range re.FindAllStringSubmatch(src, -1) {
+		named[m[1]+"."+m[2]] = true
+	}
+	return named
+}
+
+// reportUnnamedTerms fails once for each constant of the term enums in
+// swiftVocabulary that named lacks; missing is the "has no …" text.
+func reportUnnamedTerms(t *testing.T, enums []struct{ enum, property string }, named map[string]bool, missing string) {
+	t.Helper()
+	for _, tc := range enums {
+		enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
+		for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
+			if !named[tc.enum+"."+m[1]] {
+				t.Errorf("Swift %s.%s (%s term %q) %s", tc.enum, m[1], tc.property, m[2], missing)
+			}
+		}
+	}
 }
 
 // swiftFuncBody returns the source from `signature` to the brace that closes
@@ -378,8 +403,11 @@ var (
 	// swiftNamedKey reads `static let spouse = "spouse"`; swiftInverseEntry reads `parent: child,`.
 	swiftNamedKey     = regexp.MustCompile(`static let (\w+) = "([^"]*)"`)
 	swiftInverseEntry = regexp.MustCompile(`(?m)^\s+(\w+): (\w+),\s*$`)
-	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`.
-	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return (\w+)`)
+	// wordingCase reads `case (SeededPropertyKey.role, SeededRoleTerm.spouse): return roleSpouse`
+	// and `return .placePartOf`; sentenceRow reads `namedTermSentence(.placeRelationship, SeededPlaceRelationshipTypeTerm.partOf, …`,
+	// so a plain `Sentence(` row does not satisfy a composer-worded term.
+	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return \.?(\w+)`)
+	sentenceRow = regexp.MustCompile(`namedTermSentence\(\s*\.\w+,\s*(Seeded\w+Term)\.(\w+),`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
 	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
 	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
@@ -639,18 +667,31 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 	})
 	t.Run("every seeded term has wording", func(t *testing.T) {
 		body := swiftFuncBody(t, swiftL10n, "static func resource(propertyKey")
-		named := map[string]bool{}
-		for _, m := range wordingCase.FindAllStringSubmatch(body, -1) {
-			named[m[1]+"."+m[2]] = true
+		named := namedTerms(wordingCase, body)
+		reportUnnamedTerms(t, seededTermEnums, named, "has no L10n.PropertyTerm resource")
+	})
+	// The terms whose wording the Citation composer holds in CitationComposerAuthoring.termWording.
+	composerWordedTermEnums := []struct{ enum, property string }{
+		{"SeededPlaceRelationshipTypeTerm", "place_relationship_type"},
+	}
+	t.Run("every composer-worded term has composer wording", func(t *testing.T) {
+		body := swiftFuncBody(t, swiftCitationComposerAuthoring, "static func termWording(propertyKey")
+		named := namedTerms(wordingCase, body)
+		if len(named) == 0 {
+			t.Fatal("termWording(propertyKey:termKey:): no wording cases read")
 		}
-		for _, tc := range seededTermEnums {
-			enumBody := swiftEnumBody(t, swiftVocabulary, tc.enum)
-			for _, m := range swiftNamedKey.FindAllStringSubmatch(enumBody, -1) {
-				if !named[tc.enum+"."+m[1]] {
-					t.Errorf("Swift %s.%s (%s term %q) has no L10n.PropertyTerm resource", tc.enum, m[1], tc.property, m[2])
-				}
-			}
+		reportUnnamedTerms(t, composerWordedTermEnums, named, "has no CitationComposerAuthoring.termWording case")
+	})
+	t.Run("every composer-worded term has a connection sentence", func(t *testing.T) {
+		b, err := os.ReadFile(swiftConnectionSentenceRegistry)
+		if err != nil {
+			t.Fatal(err)
 		}
+		named := namedTerms(sentenceRow, string(b))
+		if len(named) == 0 {
+			t.Fatal("ConnectionSentenceRegistry: no sentence rows read")
+		}
+		reportUnnamedTerms(t, composerWordedTermEnums, named, "has no ConnectionSentenceRegistry.sentences row")
 	})
 	t.Run("every delete-impact kind has a noun", func(t *testing.T) {
 		want := map[string]bool{"item": true}

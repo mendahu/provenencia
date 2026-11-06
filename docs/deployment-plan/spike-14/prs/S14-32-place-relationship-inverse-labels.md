@@ -1,6 +1,7 @@
 # S14-32 — Place relationship rows read from the far end
 
-**Status:** Planned
+**Status:** Landed in #720 (2026-11-05)
+**Landed:** `wordingCase` in `api/ffi/swift_vocabulary_test.go` now takes an optional leading dot (`return \.?(\w+)`), because D-6 writes `return .placePartOf` and the old pattern did not match it. Version bumped 0.3.4 to 0.3.5. A second subtest, "every composer-worded term has a connection sentence", also requires a `ConnectionSentenceRegistry.sentences` row for each term (extends D-9; review round 1). Fix plan 3 (user, 2026-11-05) took the three Out lines above into this PR (F-6 to F-9): the warm promote-align budget is 375 ms; a place card with a missing end reads the term's own name ("Part of · …", "Succeeded by · …") instead of "Is part of of"; the relationship draft reading comes from `ConnectionSentenceRegistry` (spouse and sibling got registry rows, so those cards now read "A and B are spouses" / "are siblings", and other terms in the draft use the card's wording); and the composer's `listedLine` and `endTitles` read a product term's localized name through `PropertyTermDisplay`. `areSpouses`, `areSiblings` and `isATermOf` were deleted. Fix plan 4 (user, 2026-11-05) fixed F-10: a saved region reloads as a circle only when its 32 points are the ring `circleRing` draws (an ellipse in normalized space on a non-square image), and as an L only when every edge is axis-aligned and the six points are exactly what the kind builds from its corners and notch (read the way `moveLHandle` does), so any other 32- or 6-point polygon reloads as freeform. `inferredLOpen` no longer returns the nearest of four kinds; its `distance` helper was deleted. Fix plan 5 (user, 2026-11-05; F-11 to F-17): every composer-worded term's card phrase comes from `namedTermSentence`, so a row cannot omit it and the Go guard counts only those rows; the composer reads a term's display name in `displayLabel`, the participation reading and the place reading as well as its rows, through one `relationshipName` helper; the participation and location draft readings come from `ConnectionSentenceRegistry` (the event's product type key rides on `GraphSubjectOption.eventTypeKey`, read from the snapshot, no new FFI field), so the save toast and the leave-draft detail now read "Alice participated as witness at Marriage" and the card's location sentence instead of "Alice, Witness in the Marriage" and "The Marriage took place at Leeds" (`roleInTheEvent` and `tookPlaceAt` were deleted); the box says "is the" before a relationship term (was "is a"; `bridgeIsA` became `bridgeIsThe`); a four-point polygon reloads as a rectangle only in the order `rectanglePoints` builds, and `LParams.clamp` keeps a thin L's notch inside its box so it reloads as its kind; the L vertex table is `rebuiltL` alone; the composer sorts Citations with one locator decode each; and the promote-align budget comment records S14-20's 360 ms best of five.
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: rows, cards and the authoring box keep their layout; only words change — the far-end row label, and "is" → "was" in the `succeeded_by` card sentence)
@@ -11,7 +12,7 @@
 **Version bump:** patch — a researcher-visible labelling bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/macos-l10n.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note [`ux/2026-10-15-place-relationship-inverse-label.md`](../ux/2026-10-15-place-relationship-inverse-label.md) (deleted on land); [`docs/ideas/organizations.md`](../../../ideas/organizations.md) ("Structure like places": an `organization_relationship` bridge copies `part_of` / `succeeded_by`)
+**Context:** working rule "(Batch 7) Place relationship rows use the inverse label on the far end" (reworded by this plan, see §5); bar outcome 27; dogfood note 2026-10-15 (deleted on land); [`docs/ideas/organizations.md`](../../../ideas/organizations.md) ("Structure like places": an `organization_relationship` bridge copies `part_of` / `succeeded_by`)
 **Planned:** 2026-11-05 against `main` @ `c77f7392` (re-checked after S14-31 landed in #718; the files in §4 are unchanged since `b6cac73d`)
 **Review:** [`S14-32-place-relationship-inverse-labels.review.md`](S14-32-place-relationship-inverse-labels.review.md) — Fits with changes — Ready with changes, 2 rounds; M-1 and M-7 answered by the user 2026-11-05; no open blocker
 
@@ -39,7 +40,7 @@ The composer words the two product place terms in three separate switches today,
 
 **Why now.** Batch 7 dogfood fix (note 2026-10-15, bar outcome 27).
 
-**What stays.** Every other string stays the same: the near-end row ("Part of Alberta", "Succeeded by New Town"), the box's end titles and combo words, the draft reading, the `part_of` card sentence, and person relationship rows. Place relationship terms stay product-only with no vocabulary `Inverse`.
+**What stays.** Every other string stays the same: the near-end row ("Part of Alberta", "Succeeded by New Town"), the box's end titles and combo words, and the `part_of` card sentence. Review changed the draft reading and person relationship rows (see the Landed note): they now read a term's display name and the registry's sentences. Place relationship terms stay product-only with no vocabulary `Inverse`.
 
 ## 2. User stories
 
@@ -85,9 +86,9 @@ The composer words the two product place terms in three separate switches today,
 | Out | Home |
 | --- | --- |
 | Inverse terms in the seeded `place_relationship_type` vocabulary | not planned (working rule: copy from L10n; Go `TestAcyclicTermsAreSeededDirectedWithNoInverse` forbids them) |
-| The registry's place card phrase reads "Is part of of" / "Is succeeded by of" for a product term (`bridgeSummaryPlaceRelationshipTypeOnly` "Is %@ of") | dogfood log — a copy fix the user has not decided; the new `Sentence` rows leave `phrase` nil |
-| The `relationship` case of `readingSentence` (`areSpouses` / `areSiblings` / `isATermOf`) beside the registry's relationship sentences | dogfood log — same drift as M-7, person terms (review round 2) |
-| Routing the `relationship` and `participation` cases of `listedLine`, and `endTitles`' relationship case, through `PropertyTermDisplay` | dogfood log — raw-`term.label` bypass, older than this PR (review M-2) |
+| The registry's place card phrase reads "Is part of of" / "Is succeeded by of" for a product term (`bridgeSummaryPlaceRelationshipTypeOnly` "Is %@ of") | this PR (user, 2026-11-05) |
+| The `relationship` case of `readingSentence` (`areSpouses` / `areSiblings` / `isATermOf`) beside the registry's relationship sentences | this PR (user, 2026-11-05) |
+| Routing the `relationship` and `participation` cases of `listedLine`, and `endTitles`' relationship case, through `PropertyTermDisplay` | this PR (user, 2026-11-05) |
 | Moving older `ConnectionRow(...)` literals onto the `savedRow` helper | not planned (review M-4: new tests only) |
 | Organization relationship wording | [`docs/ideas/organizations.md`](../../../ideas/organizations.md) — gets one row in D-9's list and cases in `termWording` |
 | Changing the Place page's wording | not planned |
@@ -235,7 +236,7 @@ Do: raise PATCH by one from what `main` holds when you branch (0.3.4 → 0.3.5 a
 Check: `rg -n "0\.3\.4" VERSION core/version.go macos/Provenencia.xcodeproj/project.pbxproj` prints nothing (old number substituted if `main` moved).
 
 **STEP-7 — Docs**
-Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/ux/2026-10-15-place-relationship-inverse-label.md` (delete), this plan.
+Files: `docs/deployment-plan/spike-14/deployment-plan.md` (map row status, "Where the notes went" row), `docs/deployment-plan/spike-14/completed.md`, the 2026-10-15 place-relationship dogfood note under `ux/` (delete), this plan.
 Do: per the Definition of done. Check the working rule, bar outcome 27 and the scope entry say "Succeeded".
 Check: links resolve; `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-32-place-relationship-inverse-labels.md` passes.
 
@@ -251,7 +252,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-4 | Swift | `ConnectionSentenceRegistryTests.swift` `placeTermsHaveTheirOwnSentence` *(new)* | `sentence(kind: .placeRelationship, endpointA: "Old Town", endpointB: "New Town", term: "Succeeded by", termKey: "succeeded_by")` → `bridgeSentencePlaceSucceededBy(earlier: "Old Town", later: "New Town")`; same with `part_of` → `bridgeSentencePlacePartOf`; `term: "within", termKey: nil` → `L10n.EvidenceGraph.bridgeSummaryPlaceRelationship(from: "A", type: "within", to: "B")` | AC-2.1, AC-2.2, AC-2.3, D-4 |
 | T-5 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo/every_composer-worded_term_has_composer_wording` *(new)* | live constants → each has a `termWording` case | AC-3.1, D-9 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (`aProductTermsInverseIsNeverAResearchersTerm`, `aResearchersSpouseTermGetsNoSpouseSentence`), `ConnectionSentenceRegistryTests`, `EvidenceBridgeEdgeSummaryTests`, `TestSwiftVocabularyMatchesGo`, `scripts/check-localizable-xcstrings.py`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` (`aProductTermsInverseIsNeverAResearchersTerm`, `relationshipReadingMatchesTheCard`), `ConnectionSentenceRegistryTests`, `EvidenceBridgeEdgeSummaryTests`, `TestSwiftVocabularyMatchesGo`, `scripts/check-localizable-xcstrings.py`.
 
 ## 9. Definition of done
 

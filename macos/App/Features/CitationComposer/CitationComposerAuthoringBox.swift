@@ -540,12 +540,14 @@ struct CitationComposerModalLead: View {
     var onBridge: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
+        let ordered = model.orderedCitations
+        let listedByID = Dictionary(ordered.map { ($0.citation.id, $0) }, uniquingKeysWith: { first, _ in first })
+        return VStack(alignment: .leading, spacing: PVSpacing.space5) {
             PVField(label: L10n.CitationComposer.citationEyebrow) {
                 VStack(alignment: .leading, spacing: PVSpacing.space3) {
                     PVSelect(
                         selection: citationSelection,
-                        options: citationOptions,
+                        options: citationOptions(ordered),
                         size: .sm,
                         displayLabel: model.citationStepLabel(for: citationSelection.wrappedValue),
                         menuWidth: 460,
@@ -564,7 +566,7 @@ struct CitationComposerModalLead: View {
                                     .font(PVFont.body(size: 12, italic: true))
                                     .foregroundStyle(PVColor.textMuted)
                             }
-                        } else if let listed = model.orderedCitations.first(where: { $0.citation.id == option.id }) {
+                        } else if let listed = listedByID[option.id] {
                             CitationStepMenuRow(listed: listed, locator: menuLocator(listed.citation))
                         } else {
                             Text(verbatim: option.label)
@@ -636,9 +638,9 @@ struct CitationComposerModalLead: View {
         .accessibilityIdentifier("citationComposer.modal.citationReading")
     }
 
-    private var citationOptions: [PVSelectOption] {
+    private func citationOptions(_ ordered: [CatalogListedCitation]) -> [PVSelectOption] {
         [PVSelectOption(value: "", label: L10n.string(L10n.CitationComposer.newCitation))]
-            + model.orderedCitations.map {
+            + ordered.map {
                 PVSelectOption(value: $0.citation.id, label: $0.citation.ref)
             }
     }
@@ -734,7 +736,7 @@ struct CitationBridgeSentence: View {
 
     private var termOptions: [PVComboBoxOption] {
         terms.map { term in
-            PVComboBoxOption(value: term.id, label: Self.displayLabel(term))
+            PVComboBoxOption(value: term.id, label: Self.displayLabel(term, property: ready.termProperty))
         }
     }
 
@@ -749,7 +751,7 @@ struct CitationBridgeSentence: View {
         }
     }
 
-    private var pieces: [Piece] {
+    var pieces: [Piece] {
         let nameA = subjectA?.label ?? ""
         let nameB = subjectB?.label ?? ""
         let typeA = subjectA?.typeKey ?? ""
@@ -757,7 +759,7 @@ struct CitationBridgeSentence: View {
         case EvidenceBridgeKind.relationship.rawValue:
             return sentence([
                 .word(text: nameA, strong: true, slot: 0),
-                .word(text: L10n.string(L10n.CitationComposer.bridgeIsA), strong: false, slot: 0),
+                .word(text: L10n.string(L10n.CitationComposer.bridgeIsThe), strong: false, slot: 0),
                 .term,
                 .word(text: L10n.string(L10n.CitationComposer.bridgeOf), strong: false, slot: 0),
                 .word(text: nameB, strong: true, slot: 0),
@@ -806,18 +808,12 @@ struct CitationBridgeSentence: View {
         }
     }
 
-    static func displayLabel(_ term: CatalogPropertyTerm) -> String {
-        switch term.productKey {
-        case SeededPlaceRelationshipTypeTerm.partOf:
-            return L10n.string(L10n.CitationComposer.placeTermPartOf)
-        case SeededPlaceRelationshipTypeTerm.succeededBy:
-            return L10n.string(L10n.CitationComposer.placeTermSucceededBy)
-        default:
-            return term.label.localizedLowercase
-        }
+    static func displayLabel(_ term: CatalogPropertyTerm, property: CatalogProperty?) -> String {
+        CitationComposerAuthoring.termWording(term, property: property).map { L10n.string($0.comboWord) }
+            ?? PropertyTermDisplay.name(term: term, propertyKey: property?.key ?? "").localizedLowercase
     }
 
-    private enum Piece: Identifiable {
+    enum Piece: Identifiable {
         case word(text: String, strong: Bool, slot: Int)
         case term
 

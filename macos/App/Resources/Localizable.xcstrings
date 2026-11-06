@@ -4252,6 +4252,54 @@
         }
       }
     },
+    "evidenceGraph.bridge.sentence.placePartOf": {
+      "comment": "Connection sentence for part of; arguments are the part, then the whole",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is part of %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.placeSucceededBy": {
+      "comment": "Connection sentence for succeeded by; arguments are the earlier place, then the later",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ was succeeded by %2$@"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.spouse": {
+      "comment": "Connection sentence for spouses; arguments are the two people",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are spouses"
+          }
+        }
+      }
+    },
+    "evidenceGraph.bridge.sentence.sibling": {
+      "comment": "Connection sentence for siblings; arguments are the two people",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ and %2$@ are siblings"
+          }
+        }
+      }
+    },
     "evidenceGraph.bridge.summary.participationBare": {
       "comment": "Participation edge summary when role and endpoint labels are missing",
       "extractionState": "manual",
@@ -20747,30 +20795,6 @@
         }
       }
     },
-    "citationComposer.areSiblings": {
-      "comment": "Relationship reading for siblings",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ and %2$@ are siblings"
-          }
-        }
-      }
-    },
-    "citationComposer.areSpouses": {
-      "comment": "Relationship reading for spouses",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ and %2$@ are spouses"
-          }
-        }
-      }
-    },
     "citationComposer.artifactCitationCount": {
       "comment": "Artifact card count; argument is how many citations",
       "extractionState": "manual",
@@ -21071,14 +21095,14 @@
         }
       }
     },
-    "citationComposer.bridgeIsA": {
+    "citationComposer.bridgeIsThe": {
       "comment": "Words before the relationship type in the bridge sentence",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "is a"
+            "value": "is the"
           }
         }
       }
@@ -21299,30 +21323,6 @@
         }
       }
     },
-    "citationComposer.isATermOf": {
-      "comment": "Relationship reading; arguments are the first person, the type, and the second person",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ is a %2$@ of %3$@"
-          }
-        }
-      }
-    },
-    "citationComposer.isPartOf": {
-      "comment": "Place-relationship reading for part of",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ is part of %2$@"
-          }
-        }
-      }
-    },
     "citationComposer.laterPlace": {
       "comment": "Second end when one place was succeeded by another",
       "extractionState": "manual",
@@ -21503,18 +21503,6 @@
         }
       }
     },
-    "citationComposer.roleInTheEvent": {
-      "comment": "Participation reading; arguments are the person, the role, and the event",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@, %2$@ in the %3$@"
-          }
-        }
-      }
-    },
     "citationComposer.saveObservation": {
       "comment": "Writes the property draft, and confirms the observation edit sheet",
       "extractionState": "manual",
@@ -21539,6 +21527,30 @@
         }
       }
     },
+    "citationComposer.containsWord": {
+      "comment": "Place-relationship line label on the whole place, read from its side of part of. Matches conclusions.place.contains",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contains"
+          }
+        }
+      }
+    },
+    "citationComposer.succeededWord": {
+      "comment": "Place-relationship line label on the later place, read from its side of succeeded by. Matches conclusions.place.succeeded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Succeeded"
+          }
+        }
+      }
+    },
     "citationComposer.takesPart": {
       "comment": "Participation line label before a role is chosen",
       "extractionState": "manual",
@@ -21559,18 +21571,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ of"
-          }
-        }
-      }
-    },
-    "citationComposer.tookPlaceAt": {
-      "comment": "Location reading; arguments are the event and the place",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The %1$@ took place at %2$@"
           }
         }
       }
@@ -21619,18 +21619,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "As written on the record"
-          }
-        }
-      }
-    },
-    "citationComposer.wasSucceededBy": {
-      "comment": "Place-relationship reading for succeeded by",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ was succeeded by %2$@"
           }
         }
       }

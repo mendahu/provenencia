@@ -2365,6 +2365,42 @@ enum L10n {
             ), person)
         }
 
+        /// "%1$@ is part of %2$@"; arguments are the part, then the whole.
+        static func bridgeSentencePlacePartOf(part: String, whole: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.placePartOf",
+                defaultValue: "%1$@ is part of %2$@",
+                comment: "Connection sentence for part of; arguments are the part, then the whole"
+            ), part, whole)
+        }
+
+        /// "%1$@ was succeeded by %2$@"; arguments are the earlier place, then the later.
+        static func bridgeSentencePlaceSucceededBy(earlier: String, later: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.placeSucceededBy",
+                defaultValue: "%1$@ was succeeded by %2$@",
+                comment: "Connection sentence for succeeded by; arguments are the earlier place, then the later"
+            ), earlier, later)
+        }
+
+        /// "%1$@ and %2$@ are spouses"; arguments are the two people.
+        static func bridgeSentenceSpouse(a: String, b: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.spouse",
+                defaultValue: "%1$@ and %2$@ are spouses",
+                comment: "Connection sentence for spouses; arguments are the two people"
+            ), a, b)
+        }
+
+        /// "%1$@ and %2$@ are siblings"; arguments are the two people.
+        static func bridgeSentenceSibling(a: String, b: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "evidenceGraph.bridge.sentence.sibling",
+                defaultValue: "%1$@ and %2$@ are siblings",
+                comment: "Connection sentence for siblings; arguments are the two people"
+            ), a, b)
+        }
+
         static let linksRotor = LocalizedStringResource(
             "evidenceGraph.rotor.links",
             defaultValue: "Links",
@@ -4674,9 +4710,9 @@ enum L10n {
             comment: "Chip that records a bridge"
         )
 
-        static let bridgeIsA = LocalizedStringResource(
-            "citationComposer.bridgeIsA",
-            defaultValue: "is a",
+        static let bridgeIsThe = LocalizedStringResource(
+            "citationComposer.bridgeIsThe",
+            defaultValue: "is the",
             comment: "Words before the relationship type in the bridge sentence"
         )
 
@@ -4892,6 +4928,20 @@ enum L10n {
             comment: "Location line label on the place"
         )
 
+        /// Far-end label of part of; matches `L10n.Conclusions.placeContains` on the Place page.
+        static let containsWord = LocalizedStringResource(
+            "citationComposer.containsWord",
+            defaultValue: "Contains",
+            comment: "Place-relationship line label on the whole place, read from its side of part of. Matches conclusions.place.contains"
+        )
+
+        /// Far-end label of succeeded by; matches `L10n.Conclusions.placeSucceeded` on the Place page.
+        static let succeededWord = LocalizedStringResource(
+            "citationComposer.succeededWord",
+            defaultValue: "Succeeded",
+            comment: "Place-relationship line label on the later place, read from its side of succeeded by. Matches conclusions.place.succeeded"
+        )
+
         static let takesPart = LocalizedStringResource(
             "citationComposer.takesPart",
             defaultValue: "Takes part",
@@ -4951,62 +5001,6 @@ enum L10n {
                 defaultValue: "%1$@ in",
                 comment: "Participation line label on the person; argument is the role"
             ), role)
-        }
-
-        static func isATermOf(_ subject: String, _ term: String, _ other: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.isATermOf",
-                defaultValue: "%1$@ is a %2$@ of %3$@",
-                comment: "Relationship reading; arguments are the first person, the type, and the second person"
-            ), subject, term, other)
-        }
-
-        static func areSpouses(_ a: String, _ b: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.areSpouses",
-                defaultValue: "%1$@ and %2$@ are spouses",
-                comment: "Relationship reading for spouses"
-            ), a, b)
-        }
-
-        static func areSiblings(_ a: String, _ b: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.areSiblings",
-                defaultValue: "%1$@ and %2$@ are siblings",
-                comment: "Relationship reading for siblings"
-            ), a, b)
-        }
-
-        static func roleInTheEvent(_ person: String, _ role: String, _ event: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.roleInTheEvent",
-                defaultValue: "%1$@, %2$@ in the %3$@",
-                comment: "Participation reading; arguments are the person, the role, and the event"
-            ), person, role, event)
-        }
-
-        static func tookPlaceAt(_ event: String, _ place: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.tookPlaceAt",
-                defaultValue: "The %1$@ took place at %2$@",
-                comment: "Location reading; arguments are the event and the place"
-            ), event, place)
-        }
-
-        static func isPartOf(_ part: String, _ whole: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.isPartOf",
-                defaultValue: "%1$@ is part of %2$@",
-                comment: "Place-relationship reading for part of"
-            ), part, whole)
-        }
-
-        static func wasSucceededBy(_ earlier: String, _ later: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "citationComposer.wasSucceededBy",
-                defaultValue: "%1$@ was succeeded by %2$@",
-                comment: "Place-relationship reading for succeeded by"
-            ), earlier, later)
         }
 
         static func addForNamedSubject(_ name: String) -> String {

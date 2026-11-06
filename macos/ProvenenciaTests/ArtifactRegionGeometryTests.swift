@@ -71,6 +71,18 @@ struct ArtifactRegionGeometryTests {
         }
     }
 
+    @Test func aThinLWhoseHandleWasDraggedStaysItsKind() {
+        let kind = ArtifactRegionKind.lOpenTopRight
+        let points = ArtifactRegionGeometry.lShapePoints(
+            kind: kind, from: CGPoint(x: 0.1, y: 0.1), to: CGPoint(x: 0.7, y: 0.7)
+        )
+        let thin = ArtifactRegionGeometry.moveLHandle(
+            kind: kind, points: points, handle: 4, to: CGPoint(x: 0.7, y: 0.115)
+        )
+        #expect(ArtifactRegionGeometry.isValidPolygon(thin))
+        #expect(ArtifactRegionKind.infer(fromNormalized: thin) == kind)
+    }
+
     @Test func circleStaysCircularOnNonSquareImage() {
         let image = CGRect(x: 0, y: 0, width: 200, height: 100)
         let ring = ArtifactRegionGeometry.circleRing(
@@ -115,6 +127,42 @@ struct ArtifactRegionGeometryTests {
         )
         #expect(resized.count == 32)
         #expect(ArtifactRegionGeometry.looksLikeCircleRing(resized))
+    }
+
+    @Test func aBumpyThirtyTwoPointPolygonIsNotACircle() {
+        #expect(ArtifactRegionKind.infer(fromNormalized: RegionFixtures.bumpyRing) == .freeform)
+    }
+
+    @Test func aCircleRingOnAWideImageIsStillACircle() {
+        let image = CGRect(x: 0, y: 0, width: 400, height: 200)
+        let ring = ArtifactRegionGeometry.circleRing(
+            centerNormalized: CGPoint(x: 0.5, y: 0.5),
+            throughNormalized: CGPoint(x: 0.7, y: 0.5),
+            imageRect: image
+        )
+        #expect(ring.count == 32)
+        #expect(ArtifactRegionKind.infer(fromNormalized: ring) == .circle)
+    }
+
+    @Test func aFourPointPolygonFromAnotherStartIsNotARectangle() {
+        let shifted = [
+            CGPoint(x: 0.6, y: 0.6), CGPoint(x: 0.2, y: 0.6), CGPoint(x: 0.2, y: 0.2), CGPoint(x: 0.6, y: 0.2),
+        ]
+        #expect(ArtifactRegionKind.infer(fromNormalized: shifted) == .freeform)
+    }
+
+    @Test func aSixPointPolygonIsNotAnL() {
+        #expect(ArtifactRegionKind.infer(fromNormalized: RegionFixtures.hexagon) == .freeform)
+    }
+
+    @Test func aSixPointAxisAlignedPolygonFromAnotherStartIsNotAnL() {
+        let l = ArtifactRegionGeometry.lShapePoints(
+            kind: .lOpenTopRight,
+            from: CGPoint(x: 0.1, y: 0.1),
+            to: CGPoint(x: 0.7, y: 0.7)
+        )
+        let shifted = Array(l.dropFirst()) + [l[0]]
+        #expect(ArtifactRegionKind.infer(fromNormalized: shifted) == .freeform)
     }
 
     @Test func resizeCursorFollowsEightDirections() {

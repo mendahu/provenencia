@@ -8,6 +8,10 @@ enum ArtifactRegionGeometry {
     static let maxRegionPoints = 256
     static let minimumPolygonArea: CGFloat = 1e-12
     static let freeformMinimumVertices = 3
+    /// How far a saved point may sit from where `circleRing` puts it and still reload as a circle.
+    static let circleReloadTolerance: CGFloat = 0.001
+    /// How far a saved point may sit from where `rectanglePoints` or `rebuiltL` puts it and still reload as that shape.
+    static let polygonReloadTolerance: CGFloat = 0.000_1
 
     // MARK: Image rect + normalize
 
@@ -78,50 +82,10 @@ enum ArtifactRegionGeometry {
         let maxX = max(a.x, b.x)
         let minY = min(a.y, b.y)
         let maxY = max(a.y, b.y)
-        let midX = (minX + maxX) / 2
-        let midY = (minY + maxY) / 2
-        let raw: [CGPoint]
-        switch kind {
-        case .lOpenTopRight:
-            raw = [
-                CGPoint(x: minX, y: minY),
-                CGPoint(x: midX, y: minY),
-                CGPoint(x: midX, y: midY),
-                CGPoint(x: maxX, y: midY),
-                CGPoint(x: maxX, y: maxY),
-                CGPoint(x: minX, y: maxY),
-            ]
-        case .lOpenTopLeft:
-            raw = [
-                CGPoint(x: midX, y: minY),
-                CGPoint(x: maxX, y: minY),
-                CGPoint(x: maxX, y: maxY),
-                CGPoint(x: minX, y: maxY),
-                CGPoint(x: minX, y: midY),
-                CGPoint(x: midX, y: midY),
-            ]
-        case .lOpenBottomRight:
-            raw = [
-                CGPoint(x: minX, y: minY),
-                CGPoint(x: maxX, y: minY),
-                CGPoint(x: maxX, y: midY),
-                CGPoint(x: midX, y: midY),
-                CGPoint(x: midX, y: maxY),
-                CGPoint(x: minX, y: maxY),
-            ]
-        case .lOpenBottomLeft:
-            raw = [
-                CGPoint(x: minX, y: minY),
-                CGPoint(x: maxX, y: minY),
-                CGPoint(x: maxX, y: maxY),
-                CGPoint(x: midX, y: maxY),
-                CGPoint(x: midX, y: midY),
-                CGPoint(x: minX, y: midY),
-            ]
-        default:
-            return rectanglePoints(from: a, to: b)
-        }
-        return raw.map(clampNormalized)
+        return rebuiltL(kind: kind, params: LParams(
+            minX: minX, maxX: maxX, minY: minY, maxY: maxY,
+            midX: (minX + maxX) / 2, midY: (minY + maxY) / 2
+        ))
     }
 
     static func lShapePoints(kind: ArtifactRegionKind, params: LParams) -> [CGPoint] {
@@ -207,7 +171,7 @@ enum ArtifactRegionGeometry {
         let r = min(max(radiusDocument, 0), max(maxR, 0))
         guard r > 0 else { return [] }
         return (0..<circleRingCount).map { index in
-            let angle = CGFloat(index) / CGFloat(circleRingCount) * 2 * .pi
+            let angle = circleRingAngle(index)
             return normalize(
                 documentPoint: CGPoint(
                     x: centerDocument.x + r * cos(angle),
@@ -226,6 +190,11 @@ enum ArtifactRegionGeometry {
             radiusDocument: radius,
             imageRect: media
         )
+    }
+
+    /// The angle of ring point `index`: point 0 at angle 0, counter-clockwise in image pixels.
+    private static func circleRingAngle(_ index: Int) -> CGFloat {
+        CGFloat(index) / CGFloat(circleRingCount) * 2 * .pi
     }
 
     // MARK: Constrained edit
@@ -343,15 +312,27 @@ enum ArtifactRegionGeometry {
 
     // MARK: Queries
 
+    /// Whether these are the points `rectanglePoints` builds for their own bounds, in its order.
+    /// A four-point polygon from another start would collapse under the rectangle handles.
     static func isAxisAlignedRectangle(_ points: [CGPoint]) -> Bool {
         guard points.count == 4 else { return false }
-        let xs = Set(points.map { rounded($0.x) })
-        let ys = Set(points.map { rounded($0.y) })
-        return xs.count == 2 && ys.count == 2
+        let box = boundingRect(of: points)
+        let built = rectanglePoints(from: CGPoint(x: box.minX, y: box.minY), to: CGPoint(x: box.maxX, y: box.maxY))
+        return zip(points, built).allSatisfy { nearlyEqual($0, $1, epsilon: polygonReloadTolerance) }
     }
 
     static func looksLikeCircleRing(_ points: [CGPoint]) -> Bool {
-        points.count == circleRingCount && circleCenter(points) != nil
+        guard points.count == circleRingCount, let center = circleCenter(points) else { return false }
+        // `circleRing` is a circle in image pixels, so in normalized space an ellipse with
+        // axes along x and y: point 0 sits at angle 0 and point 8 at angle π/2.
+        let rx = points[0].x - center.x
+        let ry = points[circleRingCount / 4].y - center.y
+        guard rx > 0, ry > 0 else { return false }
+        return points.indices.allSatisfy { index in
+            let angle = circleRingAngle(index)
+            let expected = CGPoint(x: center.x + rx * cos(angle), y: center.y + ry * sin(angle))
+            return nearlyEqual(points[index], expected, epsilon: circleReloadTolerance)
+        }
     }
 
     static func circleCenter(_ points: [CGPoint]) -> CGPoint? {
@@ -366,31 +347,20 @@ enum ArtifactRegionGeometry {
         return hypot(first.x - center.x, first.y - center.y)
     }
 
+    /// The L kind whose points these are, or nil. The points must be what `rebuiltL` builds for
+    /// the kind, so a six-point polygon that is not an L stays freeform.
     static func inferredLOpen(from points: [CGPoint]) -> ArtifactRegionKind? {
         guard points.count == 6 else { return nil }
-        let minX = points.map(\.x).min() ?? 0
-        let maxX = points.map(\.x).max() ?? 1
-        let minY = points.map(\.y).min() ?? 0
-        let maxY = points.map(\.y).max() ?? 1
         let candidates: [ArtifactRegionKind] = [
             .lOpenTopRight, .lOpenTopLeft, .lOpenBottomRight, .lOpenBottomLeft,
         ]
-        return candidates.min { a, b in
-            distance(
-                points,
-                lShapePoints(
-                    kind: a,
-                    from: CGPoint(x: minX, y: minY),
-                    to: CGPoint(x: maxX, y: maxY)
-                )
-            ) < distance(
-                points,
-                lShapePoints(
-                    kind: b,
-                    from: CGPoint(x: minX, y: minY),
-                    to: CGPoint(x: maxX, y: maxY)
-                )
-            )
+        return candidates.first { kind in
+            guard let params = lParams(kind: kind, points: points),
+                  params.minX < params.midX, params.midX < params.maxX,
+                  params.minY < params.midY, params.midY < params.maxY
+            else { return false }
+            let rebuilt = rebuiltL(kind: kind, params: params)
+            return zip(points, rebuilt).allSatisfy { nearlyEqual($0, $1, epsilon: polygonReloadTolerance) }
         }
     }
 
@@ -711,15 +681,6 @@ enum ArtifactRegionGeometry {
         let t = max(0, min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / length2))
         return hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy))
     }
-
-    private static func rounded(_ value: CGFloat) -> Int {
-        Int((value * 10_000).rounded())
-    }
-
-    private static func distance(_ a: [CGPoint], _ b: [CGPoint]) -> CGFloat {
-        guard a.count == b.count else { return .greatestFiniteMagnitude }
-        return zip(a, b).reduce(0) { $0 + hypot($1.0.x - $1.1.x, $1.0.y - $1.1.y) }
-    }
 }
 
 /// What a pointer grabs on a committed region.
@@ -746,7 +707,8 @@ struct LParams: Equatable {
     mutating func clamp() {
         if minX > maxX { swap(&minX, &maxX) }
         if minY > maxY { swap(&minY, &maxY) }
-        let gap: CGFloat = 0.02
+        // Below half the short side, so the notch stays strictly inside the box of a thin L.
+        let gap = min(0.02, min(maxX - minX, maxY - minY) / 4)
         midX = min(max(midX, minX + gap), maxX - gap)
         midY = min(max(midY, minY + gap), maxY - gap)
     }
