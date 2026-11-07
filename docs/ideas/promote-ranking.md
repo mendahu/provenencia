@@ -110,6 +110,6 @@ Stopping early when values match does not help: matches are already the cheap pa
 
 ### Before picking it up
 
-- The move changes Promote's code path, so it needs a Promote regression check. `TestDefaultIsFresh` and the Subject compare suite are where to start.
+- The move changes Promote's code path, so it needs a Promote regression check. The Subject compare and graph alignment suites are where to start.
 - Measure Promote at the map's Scale first: the numbers above are from the record-links read.
 - `recordlinks` would then read the shared limit rather than its own knobs, and the two inventory rows would move.
