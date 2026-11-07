@@ -12,5 +12,6 @@ func PairWork(page []byte, a, b Graph, cfg Config) int {
 
 // ReadWork is the work of a read of graphs as Pairs counts it, uncapped.
 func ReadWork(page []byte, graphs []Graph, cfg Config) int {
-	return readWork(page, graphs, holdings{}, cfg, math.MaxInt)
+	_, n := readPlan(string(page), graphs, holdings{}, cfg, math.MaxInt)
+	return n
 }

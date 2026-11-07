@@ -40,9 +40,11 @@ type Rules struct {
 	// MaxPairWork is the most work one pair of graphs may do before it reads
 	// the pair as malformed and compares nothing: every shared person
 	// keeps a line at 0 facts. Work is counted before any compare: for each
-	// member pair, the words of one side times the words of the other for each
-	// property that counts, and for each entity both link to, the shapes of
-	// one side's links times the other's, a link with no shape counting one.
+	// member pair, every link and every counting property key either member
+	// holds (a link to an entity the other graph lacks included), then the
+	// words of one side times the words of the other for each property that
+	// counts, and for each entity both link to, the shapes of one side's links
+	// times the other's, a link with no shape counting one.
 	MaxPairWork int
 	// MaxValueBytes is the most bytes one value may hold (valuecompare.Size)
 	// before the property holding it counts nothing for the member pair: it
@@ -83,6 +85,9 @@ type Graph struct {
 	// links holds each member's links read from its end, by member id and then
 	// by the far end's entity.
 	links map[string]map[string][]memberLink
+	// linkCount is the number of links each member holds, by member id: every
+	// memberLink under every far entity.
+	linkCount map[string]int
 }
 
 // memberLink is one link read from a member's end.
@@ -98,10 +103,11 @@ type memberLink struct {
 // its inputs and changes neither.
 func NewGraph(members []Member, links []kinship.Link) Graph {
 	g := Graph{
-		entityOf: map[string][]byte{},
-		persons:  map[string][]Member{},
-		members:  map[string]int{},
-		links:    map[string]map[string][]memberLink{},
+		entityOf:  map[string][]byte{},
+		persons:   map[string][]Member{},
+		members:   map[string]int{},
+		links:     map[string]map[string][]memberLink{},
+		linkCount: map[string]int{},
 	}
 	for _, m := range members {
 		if _, dup := g.entityOf[string(m.ID)]; dup {
@@ -140,6 +146,7 @@ func (g Graph) addLink(l kinship.Link, end []byte) {
 		g.links[string(end)] = byEntity
 	}
 	byEntity[string(e)] = append(byEntity[string(e)], memberLink{key, l.Recording})
+	g.linkCount[string(end)]++
 }
 
 // Strength is how heavily a line weighs.
@@ -181,7 +188,7 @@ func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) 
 	skip := work > limit
 	var out []Pair
 	for _, p := range shared {
-		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, skip)})
+		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, skip || p.over)})
 	}
 	return out
 }
@@ -193,6 +200,8 @@ type pairKey struct{ a, b int }
 type sharedPair struct {
 	a, b     int
 	entities []string
+	// over reports that the pair's work passes MaxPairWork.
+	over bool
 }
 
 // readPlan indexes the persons of graphs other than the page and returns the
@@ -242,19 +251,15 @@ func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([
 		}
 		return p.b - q.b
 	})
-	for _, p := range out {
+	for i := range out {
+		p := &out[i]
 		w := pairWork(p.entities, graphs[p.a], graphs[p.b], h, h, cfg, cfg.RecordLinks.MaxPairWork)
+		p.over = w > cfg.RecordLinks.MaxPairWork
 		if n += min(w, cfg.RecordLinks.MaxPairWork); n > limit {
 			return out, n
 		}
 	}
 	return out, n
-}
-
-// readWork is the work of a read as Pairs counts it, stopping once past limit.
-func readWork(page []byte, graphs []Graph, h holdings, cfg Config, limit int) int {
-	_, n := readPlan(string(page), graphs, h, cfg, limit)
-	return n
 }
 
 // sharedOf is the person entities, ascending, that a and b both hold, the
@@ -275,13 +280,13 @@ func sharedOf(page []byte, a, b Graph) []string {
 // graphs whose work passes MaxPairWork compares nothing: every line has 0
 // facts.
 func pairLines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Line {
-	return linesOf(sharedOf(page, a, b), a, b, metas, cfg, holdings{}, holdings{}, false)
+	shared := sharedOf(page, a, b)
+	return linesOf(shared, a, b, metas, cfg, holdings{}, holdings{}, overWork(shared, a, b, holdings{}, holdings{}, cfg))
 }
 
-// linesOf is the lines for the shared entities. skip compares nothing.
-func linesOf(shared []string, a, b Graph, metas subjectcompare.Metas, cfg Config, ha, hb holdings, skip bool) []Line {
+// linesOf is the lines for the shared entities. capped compares nothing.
+func linesOf(shared []string, a, b Graph, metas subjectcompare.Metas, cfg Config, ha, hb holdings, capped bool) []Line {
 	var out []Line
-	capped := skip || overWork(shared, a, b, ha, hb, cfg)
 	for _, e := range shared {
 		var best int
 		if !capped && !over(e, a, b, cfg) {
@@ -425,16 +430,34 @@ func overWork(shared []string, a, b Graph, ha, hb holdings, cfg Config) bool {
 	return pairWork(shared, a, b, ha, hb, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
 }
 
+// walk is what comparing m against any member walks before a product is
+// formed: every link it holds and every property key it holds that counts. A
+// link to an entity the other graph lacks is walked all the same.
+func walk(m Member, g Graph, h holdings, cfg Config) int {
+	return g.linkCount[string(m.ID)] + len(h.of(m, cfg))
+}
+
 // pairWork is the sum, over every member pair of every shared person (a sorted
-// list that excludes the page), of the pair's work. A sum of products does not
-// depend on the order of the graphs or of their members. It stops counting
-// once past limit, so the result is the work only when it is within limit.
+// list that excludes the page), of the pair's work: the links and property keys
+// both members walk, then the pair's products. A sum does not depend on the
+// order of the graphs or of their members. It stops counting once past limit,
+// so the result is the work only when it is within limit. An entity's walks
+// are charged before any member's cost is built, so a member whose links alone
+// pass limit is never walked per pair.
 func pairWork(shared []string, a, b Graph, ha, hb holdings, cfg Config, limit int) int {
 	var n int
 	for _, e := range shared {
 		xs, ys := a.persons[e], b.persons[e]
 		if len(ys) == 0 || over(e, a, b, cfg) {
 			continue
+		}
+		for _, x := range xs {
+			wx := walk(x, a, ha, cfg)
+			for _, y := range ys {
+				if n += wx + walk(y, b, hb, cfg); n > limit {
+					return n
+				}
+			}
 		}
 		costY := make([]cost, len(ys))
 		for i, y := range ys {

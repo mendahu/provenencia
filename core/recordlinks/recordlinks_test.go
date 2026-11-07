@@ -589,6 +589,24 @@ func sized(prefix string, n int) string {
 	return prefix + strings.Repeat("z", n-len(prefix))
 }
 
+// unsharedLinks is one graph with one shared person on entF who is a witness on
+// k events only this graph holds, each event on its own entity: k links to
+// entities the other graph lacks. The tag keeps one graph's entities from
+// another's.
+func unsharedLinks(k int) func(tag string, id, ev func(byte) []byte) recordlinks.Graph {
+	return func(tag string, id, ev func(byte) []byte) recordlinks.Graph {
+		ms := []recordlinks.Member{person(id(1), entP), person(id(2), entF, vals{sex: {pt.Term("male")}})}
+		var edges []kinship.Edge
+		for j := range k {
+			at := []byte{byte(j), byte(j >> 8)}
+			e := append(ev(0), at...)
+			ms = append(ms, event(e, append(append([]byte{0xEE}, tag...), at...)))
+			edges = append(edges, kinshiptest.Part(id(2), e, "witness", birth, at))
+		}
+		return build(ms, edges...)
+	}
+}
+
 func axes(cfg recordlinks.Config) []axis {
 	exact, text := cfg.Value.Words.MaxExactPairing, cfg.Value.Text.MaxWords
 	return []axis{
@@ -604,6 +622,7 @@ func axes(cfg recordlinks.Config) []axis {
 		}},
 		{"shared people", 1000, func(n int) (recordlinks.Graph, recordlinks.Graph) { return crowd(cfg, n, 1) }},
 		{"shapes", 2000, marriages},
+		{"unshared links", 40000, func(n int) (recordlinks.Graph, recordlinks.Graph) { return pair(unsharedLinks(n)) }},
 		{"longest values", cfg.RecordLinks.MaxUnitValues, longest(cfg)},
 	}
 }
@@ -621,7 +640,8 @@ func underCap(t testing.TB, ax axis, cfg recordlinks.Config) int {
 			hi = mid - 1
 		}
 	}
-	if n == 0 || n == ax.most {
+	// longest values is stopped by MaxUnitValues, below the cap.
+	if n == 0 || n == ax.most && ax.name != "longest values" {
 		t.Fatalf("axis %s: the cap sits at %d, outside 1 to %d", ax.name, n, ax.most)
 	}
 	return n
@@ -693,6 +713,9 @@ func TestLinesWorkCap(t *testing.T) {
 			people = max(people, 1)
 			a, b := ax.build(n)
 			check(t, a, b, people, true)
+			if ax.name == "longest values" {
+				return // MaxUnitValues stops it below the cap, and its own test holds that
+			}
 			a, b = ax.build(n + 1)
 			if ax.name == "shared people" {
 				people = n + 1
@@ -976,6 +999,17 @@ func TestPairsReadCap(t *testing.T) {
 		t.Fatalf("the big pair's work %d is not over MaxPairWork", w)
 	}
 
+	// Sixty-four graphs, each holding the shared person as a witness on 5,000
+	// events only that graph holds: 2,016 pairs, none of them over MaxPairWork,
+	// whose work is only the links each compare would walk.
+	var crafted []recordlinks.Graph
+	for i := range 64 {
+		tag := fmt.Sprintf("g%d", i)
+		id := func(k byte) []byte { return []byte{byte(i), byte(i >> 8), k} }
+		ev := func(k byte) []byte { return []byte{0xEE, byte(i), byte(i >> 8), k} }
+		crafted = append(crafted, unsharedLinks(5000)(tag, id, ev))
+	}
+
 	cases := []struct {
 		name   string
 		graphs []recordlinks.Graph
@@ -1008,12 +1042,27 @@ func TestPairsReadCap(t *testing.T) {
 					t.Fatalf("got %+v", got)
 				}
 			}},
+		{"unshared links: the links each compare walks are work", crafted, func(int) int { return cfg.RecordLinks.MaxReadWork },
+			func(t *testing.T, got []recordlinks.Pair) {
+				if len(got) != 2016 {
+					t.Fatalf("pairs = %d, want 2016", len(got))
+				}
+				for _, p := range got {
+					if len(p.Lines) != 1 || p.Lines[0].Facts != 0 || p.Lines[0].Strength != weak {
+						t.Fatalf("pair %d-%d lines = %s; want one line at 0 facts", p.A, p.B, show(p.Lines))
+					}
+				}
+			}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			run := cfg
 			run.RecordLinks.MaxReadWork = c.cap(recordlinks.ReadWork(entP, c.graphs, cfg))
+			start := time.Now()
 			got := recordlinks.Pairs(entP, c.graphs, metas, run)
+			if took := time.Since(start); took > time.Second {
+				t.Errorf("Pairs took %v", took)
+			}
 			c.check(t, got)
 			back := recordlinks.Pairs(entP, reversed(c.graphs), metas, run)
 			if want := mirror(got, len(c.graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
@@ -1039,29 +1088,46 @@ func TestPairsAtScale(t *testing.T) {
 	}
 }
 
-// BenchmarkPairsAtCap is the slowest read the cap lets through: the "names"
-// axis at its largest size under MaxPairWork, in as many graphs as stay within
+// BenchmarkPairsAtCap is the slowest read the cap lets through: one
+// sub-benchmark for each of the "names" and "unshared links" axes at its
+// largest size under MaxPairWork, in as many graphs as stay within
 // MaxReadWork.
 func BenchmarkPairsAtCap(b *testing.B) {
 	cfg := matchregistry.Default().RecordLinksConfig()
 	metas := subjectcomparetest.Metas()
-	n := underCap(b, axes(cfg)[0], cfg)
-	graphs := func(m int) []recordlinks.Graph {
-		out := make([]recordlinks.Graph, m)
-		for i := range out {
-			id := func(k byte) []byte { return []byte{byte(i), byte(i >> 8), k} }
-			out[i] = soloGraph(name, pt.Name, cfg.Value.Words.MaxExactPairing, n)(fmt.Sprintf("g%d", i), id, nil)
+	exact := cfg.Value.Words.MaxExactPairing
+	one := map[string]func(n int) func(tag string, id, ev func(byte) []byte) recordlinks.Graph{
+		"names": func(n int) func(string, func(byte) []byte, func(byte) []byte) recordlinks.Graph {
+			return soloGraph(name, pt.Name, exact, n)
+		},
+		"unshared links": unsharedLinks,
+	}
+	for _, ax := range axes(cfg) {
+		build, ok := one[ax.name]
+		if !ok {
+			continue
 		}
-		return out
+		b.Run(ax.name, func(b *testing.B) {
+			n := underCap(b, ax, cfg)
+			graphs := func(m int) []recordlinks.Graph {
+				out := make([]recordlinks.Graph, m)
+				for i := range out {
+					id := func(k byte) []byte { return []byte{byte(i), byte(i >> 8), k} }
+					ev := func(k byte) []byte { return []byte{0xEE, byte(i), byte(i >> 8), k} }
+					out[i] = build(n)(fmt.Sprintf("g%d", i), id, ev)
+				}
+				return out
+			}
+			m := 2
+			for recordlinks.ReadWork(entP, graphs(m+1), cfg) <= cfg.RecordLinks.MaxReadWork {
+				m++
+			}
+			gs := graphs(m)
+			b.ResetTimer()
+			for range b.N {
+				recordlinks.Pairs(entP, gs, metas, cfg)
+			}
+			b.ReportMetric(float64(m), "graphs")
+		})
 	}
-	m := 2
-	for recordlinks.ReadWork(entP, graphs(m+1), cfg) <= cfg.RecordLinks.MaxReadWork {
-		m++
-	}
-	gs := graphs(m)
-	b.ResetTimer()
-	for range b.N {
-		recordlinks.Pairs(entP, gs, metas, cfg)
-	}
-	b.ReportMetric(float64(m), "graphs")
 }
