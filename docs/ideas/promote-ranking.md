@@ -93,3 +93,23 @@ The same rule makes an undated event against an undated event of the same type a
 
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, labeler; tooling for changing the algorithm with confidence, not a Promote performance fix. Also holds "remember researcher decisions."
 - [`promote-graph-alignment.md`](../promote-graph-alignment.md) — what proves a join; the live model.
+
+## A value limit under every property compare
+
+From the S13-26 ship loop (#736), the user's idea, 2026-11-07.
+
+### Problem
+
+`core/recordlinks` stops a crafted catalog with `recordlinks.MaxUnitValues` and `MaxValueBytes`, but those limits sit in that one package. Subject compare runs the same values × values loop through `propertycompare.Compare`, on names with no limit on how many values a Subject holds or how long each one is. Promote keeps that exposure. S13-26's probes measured the record-links read, not Promote: 20 names of 12 words on each side took 1.54 s for one member pair.
+
+### Direction
+
+Move the limit down into `propertycompare.Compare`, so every caller gets it. Over the limit, the property reads as unknown, the way text compare answers `CauseTooLong`. Do not compare only the first few values: which values come first would decide the result, and the matching value may be the one left out, so Promote could see a false conflict.
+
+Stopping early when values match does not help: matches are already the cheap path, and the slow input is many similar values that never match.
+
+### Before picking it up
+
+- The move changes Promote's code path, so it needs a Promote regression check. The Subject compare and graph alignment suites are where to start.
+- Measure Promote at the map's Scale first: the numbers above are from the record-links read.
+- `recordlinks` would then read the shared limit rather than its own knobs, and the two inventory rows would move.

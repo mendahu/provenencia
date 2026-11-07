@@ -114,15 +114,14 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 		if l, ok := rules.Lifespans[kind][key]; ok {
 			res = lifespan(key, a, b, l, value)
 		} else {
-			res = propertycompare.Compare(Side(kind, key, a, rules), Side(kind, key, b, rules), metas[key], value)
+			res = CompareProperty(kind, key, a, b, metas, rules, value)
 		}
 		pr := PropertyResult{Key: key, Result: res}
 		pr.Points = Points(res, w)
 		score += max(pr.Points, 0)
-		switch res.Outcome {
-		case propertycompare.OutcomeAgree, propertycompare.OutcomePartial:
+		if res.Outcome.Matches() {
 			counted += w.Agree
-		case propertycompare.OutcomeConflict:
+		} else if res.Outcome == propertycompare.OutcomeConflict {
 			counted += w.Conflict
 		}
 		out.Evidence += pr.Points
@@ -132,6 +131,15 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 		out.Similarity = score / counted
 	}
 	return out
+}
+
+// CompareProperty is layer 2's verdict on one property that counts (see
+// Rules.CountsUnder): it runs property compare on the values Side gives each
+// Subject for key, under key's meta. It is the one place Side meets property
+// compare; Compare and the record-links count both call it (the lifespan rule
+// calls propertycompare.Compare directly).
+func CompareProperty(kind vocabkey.SubjectType, key vocabkey.PropertyKey, a, b Values, metas Metas, rules Rules, value valuecompare.Rules) propertycompare.Result {
+	return propertycompare.Compare(Side(kind, key, a, rules), Side(kind, key, b, rules), metas[key], value)
 }
 
 // Points is what one lead property adds to Evidence: an agree earns the agree
@@ -205,13 +213,28 @@ func (r Rules) Lead(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabk
 // property with a lead compares under the lead, except a period end, which
 // compares under its own key; a property with no lead compares under its own
 // key. The rest of how a property counts reads from Role: it counts under the
-// lead when there is one (else under its own key, unweighted), its weights are
-// Weights[kind][lead], and its values compare through Side when there is a
-// lead and the role is not RolePeriodEnd.
+// lead when there is one (else under its own key, unweighted), and its weights
+// are Weights[kind][lead]. CompareProperty compares a property through Side, and
+// CountsUnder names the key it compares under.
 func (r Rules) Meta(kind vocabkey.SubjectType, p vocabkey.PropertyKey) vocabkey.PropertyKey {
 	lead, role, ok := r.Role(kind, p)
 	if !ok || role == RolePeriodEnd {
 		return p
 	}
 	return lead
+}
+
+// CountsUnder returns the key a property counts under for the kind: the key
+// whose values CompareProperty compares, which is Meta (a pooled property
+// counts with its lead). It is false for a key that counts under none of its own: a derived
+// property (a lifespan and its span), which the profile builder builds from
+// events, and the start or end of a period, which the lead reads as one range.
+func (r Rules) CountsUnder(kind vocabkey.SubjectType, key vocabkey.PropertyKey) (vocabkey.PropertyKey, bool) {
+	if r.Derived(kind, key) {
+		return "", false
+	}
+	if _, role, ok := r.Role(kind, key); ok && role == RolePeriodEnd {
+		return "", false
+	}
+	return r.Meta(kind, key), true
 }

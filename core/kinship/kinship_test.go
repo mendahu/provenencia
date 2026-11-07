@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -26,15 +27,13 @@ func e(n byte) []byte { return []byte{0x20 + n} }
 func b(n byte) []byte { return []byte{0x30 + n} }
 
 // part is a participation edge with the person at A.
-func part(t testing.TB, person, event byte, role vocabkey.Role, eventType vocabkey.EventType, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), vocabkey.BridgeTerm(role), eventType, terms)
-	return kinship.Edge{A: p(person), B: e(event), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
+func part(person, event byte, role vocabkey.Role, eventType vocabkey.EventType, bridgeID byte) kinship.Edge {
+	return kinshiptest.Part(p(person), e(event), vocabkey.BridgeTerm(role), eventType, b(bridgeID))
 }
 
 // rel is a relationship edge with the person endpoint at A.
-func rel(t testing.TB, person, relatedTo byte, term vocabkey.BridgeTerm, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship), term, "", terms)
-	return kinship.Edge{A: p(person), B: p(relatedTo), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
+func rel(person, relatedTo byte, term vocabkey.BridgeTerm, bridgeID byte) kinship.Edge {
+	return kinshiptest.Rel(p(person), p(relatedTo), term, b(bridgeID))
 }
 
 func flip(x kinship.Edge) kinship.Edge {
@@ -43,8 +42,8 @@ func flip(x kinship.Edge) kinship.Edge {
 }
 
 // link is the Edge an implied relationship link has.
-func link(t testing.TB, a, c byte, term vocabkey.BridgeTerm, assoc ...byte) kinship.Edge {
-	x := rel(t, a, c, term, 0)
+func link(a, c byte, term vocabkey.BridgeTerm, assoc ...byte) kinship.Edge {
+	x := rel(a, c, term, 0)
 	x.Associations = nil
 	for _, n := range assoc {
 		x.Associations = append(x.Associations, b(n))
@@ -58,27 +57,27 @@ func TestDerive(t *testing.T) {
 		birth    = vocabkey.EventBirth
 	)
 	spouse := func(person, event, br byte) kinship.Edge {
-		return part(t, person, event, vocabkey.RoleSubject, marriage, br)
+		return part(person, event, vocabkey.RoleSubject, marriage, br)
 	}
-	parent := func(g, m, br byte) kinship.Edge { return rel(t, g, m, vocabkey.TermParent, br) }
+	parent := func(g, m, br byte) kinship.Edge { return rel(g, m, vocabkey.TermParent, br) }
 	birthParents := func(father, subject, event, b1, b2 byte) kinship.Implied {
-		pa := part(t, father, event, vocabkey.RoleFather, birth, b1)
-		ch := part(t, subject, event, vocabkey.RoleSubject, birth, b2)
+		pa := part(father, event, vocabkey.RoleFather, birth, b1)
+		ch := part(subject, event, vocabkey.RoleSubject, birth, b2)
 		return kinship.Implied{
-			Edge:    link(t, father, subject, vocabkey.TermParent, b1, b2),
+			Edge:    link(father, subject, vocabkey.TermParent, b1, b2),
 			Pattern: kinship.PatternBirthParents, Event: e(event), From: []kinship.Edge{pa, ch},
 		}
 	}
 	marriedPair := func(event, b1, b2 byte) kinship.Implied {
 		return kinship.Implied{
-			Edge:    link(t, 1, 2, vocabkey.TermSpouse, b1, b2),
+			Edge:    link(1, 2, vocabkey.TermSpouse, b1, b2),
 			Pattern: kinship.PatternMarriageSpouses, Event: e(event),
 			From: []kinship.Edge{spouse(1, event, b1), spouse(2, event, b2)},
 		}
 	}
 	grand := func(g, c, through byte, from []kinship.Edge, assoc ...byte) kinship.Implied {
 		return kinship.Implied{
-			Edge:    link(t, g, c, vocabkey.TermGrandparent, assoc...),
+			Edge:    link(g, c, vocabkey.TermGrandparent, assoc...),
 			Pattern: kinship.PatternParentOfParent, Through: p(through), From: from,
 		}
 	}
@@ -92,25 +91,25 @@ func TestDerive(t *testing.T) {
 		{"AC-1.1", []kinship.Edge{spouse(1, 1, 1), spouse(2, 1, 2)}, []kinship.Implied{marriedPair(1, 1, 2)}},
 		{"AC-1.2", []kinship.Edge{flip(spouse(1, 1, 1)), flip(spouse(2, 1, 2))}, []kinship.Implied{
 			{
-				Edge:    link(t, 1, 2, vocabkey.TermSpouse, 1, 2),
+				Edge:    link(1, 2, vocabkey.TermSpouse, 1, 2),
 				Pattern: kinship.PatternMarriageSpouses, Event: e(1),
 				From: []kinship.Edge{flip(spouse(1, 1, 1)), flip(spouse(2, 1, 2))},
 			},
 		}},
 		{"AC-1.3", []kinship.Edge{
-			part(t, 1, 1, vocabkey.RoleFather, birth, 1),
-			part(t, 2, 1, vocabkey.RoleMother, birth, 2),
-			part(t, 3, 1, vocabkey.RoleSubject, birth, 3),
+			part(1, 1, vocabkey.RoleFather, birth, 1),
+			part(2, 1, vocabkey.RoleMother, birth, 2),
+			part(3, 1, vocabkey.RoleSubject, birth, 3),
 		}, []kinship.Implied{
 			{
-				Edge:    link(t, 1, 3, vocabkey.TermParent, 1, 3),
+				Edge:    link(1, 3, vocabkey.TermParent, 1, 3),
 				Pattern: kinship.PatternBirthParents, Event: e(1),
-				From: []kinship.Edge{part(t, 1, 1, vocabkey.RoleFather, birth, 1), part(t, 3, 1, vocabkey.RoleSubject, birth, 3)},
+				From: []kinship.Edge{part(1, 1, vocabkey.RoleFather, birth, 1), part(3, 1, vocabkey.RoleSubject, birth, 3)},
 			},
 			{
-				Edge:    link(t, 2, 3, vocabkey.TermParent, 2, 3),
+				Edge:    link(2, 3, vocabkey.TermParent, 2, 3),
 				Pattern: kinship.PatternBirthParents, Event: e(1),
-				From: []kinship.Edge{part(t, 2, 1, vocabkey.RoleMother, birth, 2), part(t, 3, 1, vocabkey.RoleSubject, birth, 3)},
+				From: []kinship.Edge{part(2, 1, vocabkey.RoleMother, birth, 2), part(3, 1, vocabkey.RoleSubject, birth, 3)},
 			},
 		}},
 		{"AC-1.4", []kinship.Edge{parent(1, 2, 1), parent(2, 3, 2)}, []kinship.Implied{
@@ -118,43 +117,43 @@ func TestDerive(t *testing.T) {
 		}},
 		{"AC-1.5", []kinship.Edge{
 			parent(1, 2, 1),
-			part(t, 2, 1, vocabkey.RoleFather, birth, 2),
-			part(t, 3, 1, vocabkey.RoleSubject, birth, 3),
+			part(2, 1, vocabkey.RoleFather, birth, 2),
+			part(3, 1, vocabkey.RoleSubject, birth, 3),
 		}, []kinship.Implied{
 			birthP2,
 			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), birthP2.Edge}, 1, 2, 3),
 		}},
-		{"AC-1.6", []kinship.Edge{rel(t, 2, 1, "child", 1), parent(2, 3, 2)}, []kinship.Implied{
-			grand(1, 3, 2, []kinship.Edge{rel(t, 2, 1, "child", 1), parent(2, 3, 2)}, 1, 2),
+		{"AC-1.6", []kinship.Edge{rel(2, 1, "child", 1), parent(2, 3, 2)}, []kinship.Implied{
+			grand(1, 3, 2, []kinship.Edge{rel(2, 1, "child", 1), parent(2, 3, 2)}, 1, 2),
 		}},
-		{"AC-1.7", []kinship.Edge{rel(t, 1, 3, vocabkey.TermGrandparent, 1)}, nil},
+		{"AC-1.7", []kinship.Edge{rel(1, 3, vocabkey.TermGrandparent, 1)}, nil},
 		{"AC-1.8", []kinship.Edge{parent(1, 2, 1), parent(2, 3, 2), parent(3, 4, 3)}, []kinship.Implied{
 			grand(1, 3, 2, []kinship.Edge{parent(1, 2, 1), parent(2, 3, 2)}, 1, 2),
 			grand(2, 4, 3, []kinship.Edge{parent(2, 3, 2), parent(3, 4, 3)}, 2, 3),
 		}},
-		{"AC-1.9 spouse", []kinship.Edge{rel(t, 1, 2, vocabkey.TermSpouse, 1)}, nil},
+		{"AC-1.9 spouse", []kinship.Edge{rel(1, 2, vocabkey.TermSpouse, 1)}, nil},
 		{"AC-1.9 parent", []kinship.Edge{parent(1, 2, 1)}, nil},
 		{"AC-1.10", []kinship.Edge{
-			part(t, 1, 1, "groom", marriage, 1), part(t, 2, 1, "groom", marriage, 2),
-			part(t, 1, 2, vocabkey.RoleSubject, "wedding", 3), part(t, 2, 2, vocabkey.RoleSubject, "wedding", 4),
+			part(1, 1, "groom", marriage, 1), part(2, 1, "groom", marriage, 2),
+			part(1, 2, vocabkey.RoleSubject, "wedding", 3), part(2, 2, vocabkey.RoleSubject, "wedding", 4),
 		}, nil},
 		{"AC-1.11 child role", []kinship.Edge{
-			part(t, 1, 1, vocabkey.RoleFather, birth, 1), part(t, 2, 1, "child", birth, 2),
+			part(1, 1, vocabkey.RoleFather, birth, 1), part(2, 1, "child", birth, 2),
 		}, nil},
 		{"AC-1.11 witness", []kinship.Edge{
-			part(t, 1, 1, "witness", marriage, 1), spouse(2, 1, 2),
+			part(1, 1, "witness", marriage, 1), spouse(2, 1, 2),
 		}, nil},
 		{"AC-1.11 father in marriage", []kinship.Edge{
-			part(t, 1, 1, vocabkey.RoleFather, marriage, 1), part(t, 2, 1, vocabkey.RoleSubject, marriage, 2),
+			part(1, 1, vocabkey.RoleFather, marriage, 1), part(2, 1, vocabkey.RoleSubject, marriage, 2),
 		}, nil},
 		{"AC-1.12 birth", []kinship.Edge{
-			part(t, 1, 1, vocabkey.RoleFather, birth, 1), part(t, 1, 1, vocabkey.RoleSubject, birth, 2),
+			part(1, 1, vocabkey.RoleFather, birth, 1), part(1, 1, vocabkey.RoleSubject, birth, 2),
 		}, nil},
 		{"AC-1.12 cycle", []kinship.Edge{parent(1, 2, 1), parent(2, 1, 2)}, nil},
 		{"AC-1.13", []kinship.Edge{
 			parent(1, 2, 1),
-			part(t, 1, 1, vocabkey.RoleFather, birth, 2),
-			part(t, 2, 1, vocabkey.RoleSubject, birth, 3),
+			part(1, 1, vocabkey.RoleFather, birth, 2),
+			part(2, 1, vocabkey.RoleSubject, birth, 3),
 			parent(2, 3, 4),
 		}, []kinship.Implied{
 			birthParents(1, 2, 1, 2, 3),
@@ -169,7 +168,7 @@ func TestDerive(t *testing.T) {
 		{"AC-1.14 nil", nil, nil},
 		{"AC-1.15", []kinship.Edge{spouse(2, 1, 2), spouse(1, 1, 1)}, []kinship.Implied{
 			{
-				Edge:    link(t, 1, 2, vocabkey.TermSpouse, 1, 2),
+				Edge:    link(1, 2, vocabkey.TermSpouse, 1, 2),
 				Pattern: kinship.PatternMarriageSpouses, Event: e(1),
 				From: []kinship.Edge{spouse(1, 1, 1), spouse(2, 1, 2)},
 			},
@@ -196,27 +195,27 @@ func TestDeriveBound(t *testing.T) {
 	spouses := func(n int) []kinship.Edge {
 		var edges []kinship.Edge
 		for i := 1; i <= n; i++ {
-			edges = append(edges, part(t, byte(i), 1, vocabkey.RoleSubject, vocabkey.EventMarriage, byte(i)))
+			edges = append(edges, part(byte(i), 1, vocabkey.RoleSubject, vocabkey.EventMarriage, byte(i)))
 		}
 		return edges
 	}
 	birthWith := func(parents int) []kinship.Edge {
-		edges := []kinship.Edge{part(t, 20, 1, vocabkey.RoleSubject, vocabkey.EventBirth, 30)}
+		edges := []kinship.Edge{part(20, 1, vocabkey.RoleSubject, vocabkey.EventBirth, 30)}
 		for i := 1; i <= parents; i++ {
 			role := vocabkey.RoleFather
 			if i%2 == 0 {
 				role = vocabkey.RoleMother
 			}
-			edges = append(edges, part(t, byte(i), 1, role, vocabkey.EventBirth, byte(i)))
+			edges = append(edges, part(byte(i), 1, role, vocabkey.EventBirth, byte(i)))
 		}
 		return edges
 	}
 	parentsOf := func(n int) []kinship.Edge {
 		var edges []kinship.Edge
 		for i := 1; i <= n; i++ {
-			edges = append(edges, rel(t, byte(i), 20, vocabkey.TermParent, byte(i)))
+			edges = append(edges, rel(byte(i), 20, vocabkey.TermParent, byte(i)))
 		}
-		return append(edges, rel(t, 20, 21, vocabkey.TermParent, 30))
+		return append(edges, rel(20, 21, vocabkey.TermParent, 30))
 	}
 	cases := []struct {
 		name  string
@@ -386,9 +385,9 @@ func TestDeriveInvariants(t *testing.T) {
 			var x kinship.Edge
 			if r.Intn(2) == 0 {
 				ev := byte(1 + r.Intn(events))
-				x = part(t, person(), ev, roles[r.Intn(len(roles))], evType[ev], bridgeID)
+				x = part(person(), ev, roles[r.Intn(len(roles))], evType[ev], bridgeID)
 			} else {
-				x = rel(t, person(), person(), relTerms[r.Intn(len(relTerms))], bridgeID)
+				x = rel(person(), person(), relTerms[r.Intn(len(relTerms))], bridgeID)
 			}
 			if r.Intn(2) == 0 {
 				x = flip(x)
@@ -420,12 +419,12 @@ func TestDeriveInvariants(t *testing.T) {
 		}
 
 		catalogOnly := append(slices.Clone(edges),
-			part(t, person(), 1, "groom", evType[1], 100), rel(t, person(), person(), "godparent", 101))
+			part(person(), 1, "groom", evType[1], 100), rel(person(), person(), "godparent", 101))
 		if again := kinship.Derive(catalogOnly, terms, rules); !reflect.DeepEqual(again, got) {
 			t.Fatalf("case %d: a catalog's own role and term changed the output", i)
 		}
 
-		withDirect := append(slices.Clone(edges), rel(t, 1, 2, vocabkey.TermGrandparent, 102))
+		withDirect := append(slices.Clone(edges), rel(1, 2, vocabkey.TermGrandparent, 102))
 		if again := kinship.Derive(withDirect, terms, rules); !reflect.DeepEqual(again, got) {
 			t.Fatalf("case %d: a direct grandparent link changed the output", i)
 		}
@@ -542,6 +541,38 @@ func TestCountedOnce(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			if got := kinship.CountedOnce(c.a, c.b, c.paired); got != c.want {
 				t.Fatalf("CountedOnce = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSameShape(t *testing.T) {
+	rec := func(pattern kinship.Pattern, pivot string, only bool) kinship.Recording {
+		return kinship.Recording{Shapes: []kinship.Shape{{Pattern: pattern, Pivot: []byte(pivot)}}, OnlyImplied: only}
+	}
+	same := func(a, b []byte) bool { return string(a) == "E1" && string(b) == "E9" }
+	never := func(a, b []byte) bool { return false }
+	const marriage, birth = kinship.PatternMarriageSpouses, kinship.PatternBirthParents
+	twoShapes := kinship.Recording{Shapes: []kinship.Shape{
+		{Pattern: marriage, Pivot: []byte("E0")}, {Pattern: marriage, Pivot: []byte("E1")},
+	}, OnlyImplied: true}
+	cases := []struct {
+		name string
+		a, b kinship.Recording
+		same func(a, b []byte) bool
+		want bool
+	}{
+		{"same pattern, same pivots", rec(marriage, "E1", true), rec(marriage, "E9", true), same, true},
+		{"same pattern, pivots differ", rec(marriage, "E1", true), rec(marriage, "E9", true), never, false},
+		{"different patterns", rec(marriage, "E1", true), rec(birth, "E9", true), same, false},
+		{"empty shapes", kinship.Recording{OnlyImplied: true}, kinship.Recording{OnlyImplied: true}, same, false},
+		{"both recorded", rec(marriage, "E1", false), rec(marriage, "E9", false), same, true},
+		{"two shapes, one pairs", twoShapes, rec(marriage, "E9", true), same, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := kinship.SameShape(c.a, c.b, c.same); got != c.want {
+				t.Fatalf("SameShape = %v, want %v", got, c.want)
 			}
 		})
 	}

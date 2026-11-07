@@ -189,7 +189,7 @@ func (st *state) newPairSegments(a, b *Subject, own float64) (float64, bool) {
 				}
 				res := st.compare(la.key, sa.Kind, sa.Values, lb.key, sb.Kind, sb.Values, placed, own,
 					func() subjectcompare.Result { return st.evaluate(sa.Kind, sa.Values, sb.Values) })
-				if !same && res.Outcome != propertycompare.OutcomeAgree && res.Outcome != propertycompare.OutcomePartial {
+				if !same && !res.Outcome.Matches() {
 					continue
 				}
 				if !ok || res.Evidence > best {

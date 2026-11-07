@@ -34,6 +34,8 @@ var layerPackages = []struct {
 	{"core/segmentcompare", true},
 	{"core/segmentcompare/segmentcomparetest", false},
 	{"core/kinship", true},
+	{"core/kinship/kinshiptest", false},
+	{"core/recordlinks", true},
 	{"core/shortlist", true},
 	{"core/graphalign", true},
 	{"core/matchregistry", false},

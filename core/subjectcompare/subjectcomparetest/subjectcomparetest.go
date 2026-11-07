@@ -27,6 +27,7 @@ func Metas() subjectcompare.Metas {
 		vocabkey.PropertyEndDate:    {ValueType: propertymeta.ValueTypeDate, Cardinality: single},
 		vocabkey.PropertyToponym:    {ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 		vocabkey.PropertyLikeness:   {ValueType: propertymeta.ValueTypeDepiction, Cardinality: propertymeta.CardinalityMultiple},
+		"religion":                  {ValueType: propertymeta.ValueTypeTerm, Cardinality: propertymeta.CardinalityMultiple},
 		"interests":                 {ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple},
 		"event_name":                {ValueType: propertymeta.ValueTypeText, Cardinality: single},
 	}

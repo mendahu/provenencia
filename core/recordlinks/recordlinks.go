@@ -1,0 +1,396 @@
+// Package recordlinks is the record-links comparison: given two Evidence
+// graphs of one person, it counts what the two records share about each other
+// person both hold, and weighs that line weak or strong. It judges two members
+// the researcher already joined to one canonical entity; it is not a layer
+// under graph alignment and never reads its scoring, weights, points or band.
+// Properties compare through subjectcompare.CompareProperty and links through
+// segmentcompare.Corresponds, with kinship.SameShape keeping a fact recorded
+// through a pivot one fact. Pure: no catalog, no I/O, no numbers; the rules
+// come in as arguments.
+package recordlinks
+
+import (
+	"bytes"
+	"maps"
+	"slices"
+
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/subjectcompare"
+	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
+)
+
+// Rules is the match registry's record-links section.
+type Rules struct {
+	// StrongAt is the fewest facts two records share about a person for their
+	// line to be strong; fewer is weak.
+	StrongAt int
+	// MaxEntityMembers is the most members of any kind either graph may file on
+	// one canonical entity before the comparison reads it as malformed: a
+	// person over it keeps its line at 0 facts, and links to an entity over it
+	// count nothing. It bounds the member pairs and link pairs one Lines call
+	// compares.
+	MaxEntityMembers int
+	// MaxUnitValues is the most values either member may hold for one property
+	// that counts, its pooled properties included, before that property counts
+	// nothing. It bounds the value pairs property compare reads.
+	MaxUnitValues int
+	// MaxPairWork is the most work one Lines call may do before it reads the
+	// pair of graphs as malformed and compares nothing: every shared person
+	// keeps a line at 0 facts. Work is counted before any compare: for each
+	// member pair, the words of one side times the words of the other for each
+	// property that counts, and for each entity both link to, the shapes of
+	// one side's links times the other's, a link with no shape counting one.
+	MaxPairWork int
+	// MaxValueBytes is the most bytes one value may hold (valuecompare.Size)
+	// before the property holding it counts nothing for the member pair: it
+	// is not compared and charges no work. It bounds what one value costs to
+	// read, so a crafted value cannot hang a Lines call.
+	MaxValueBytes int
+}
+
+// Config is the registry as the record-links comparison reads it.
+type Config struct {
+	Value       valuecompare.Rules
+	Subject     subjectcompare.Rules
+	RecordLinks Rules
+}
+
+// Member is one Subject of an Evidence graph.
+type Member struct {
+	ID []byte
+	// Entity is the canonical entity of the member's accepted Identity Claim,
+	// nil when it has none; the caller sets it.
+	Entity []byte
+	Kind   vocabkey.SubjectType
+	Values subjectcompare.Values
+}
+
+// Graph is one Evidence graph indexed once for comparison. The zero Graph is
+// valid and holds nothing.
+type Graph struct {
+	// entityOf is each member's entity by member id, nil when it has none.
+	entityOf map[string][]byte
+	// persons holds the person members that have an entity, by entity.
+	persons map[string][]Member
+	// members counts the members of any kind that have an entity, by entity.
+	members map[string]int
+	// links holds each member's links read from its end, by member id and then
+	// by the far end's entity.
+	links map[string]map[string][]memberLink
+}
+
+// memberLink is one link read from a member's end.
+type memberLink struct {
+	key vocabkey.BridgeKey
+	rec kinship.Recording
+}
+
+// NewGraph indexes a graph's members and links, links being its
+// kinship.LinkSet's Links after WithImplied. A later member with an id already
+// seen is ignored; a link with neither end a member is ignored; a link whose
+// far end is no member, or has no entity, never counts. It keeps references to
+// its inputs and changes neither.
+func NewGraph(members []Member, links []kinship.Link) Graph {
+	g := Graph{
+		entityOf: map[string][]byte{},
+		persons:  map[string][]Member{},
+		members:  map[string]int{},
+		links:    map[string]map[string][]memberLink{},
+	}
+	for _, m := range members {
+		if _, dup := g.entityOf[string(m.ID)]; dup {
+			continue
+		}
+		g.entityOf[string(m.ID)] = m.Entity
+		if m.Entity != nil {
+			g.members[string(m.Entity)]++
+		}
+		if m.Kind == vocabkey.Person && m.Entity != nil {
+			g.persons[string(m.Entity)] = append(g.persons[string(m.Entity)], m)
+		}
+	}
+	for _, l := range links {
+		g.addLink(l, l.A)
+		if !bytes.Equal(l.A, l.B) {
+			g.addLink(l, l.B)
+		}
+	}
+	return g
+}
+
+// addLink files l under the member at one end, by the far end's entity.
+func (g Graph) addLink(l kinship.Link, end []byte) {
+	if _, ok := g.entityOf[string(end)]; !ok {
+		return
+	}
+	far, key, _ := l.Edge.From(end)
+	e := g.entityOf[string(far)]
+	if e == nil {
+		return
+	}
+	byEntity := g.links[string(end)]
+	if byEntity == nil {
+		byEntity = map[string][]memberLink{}
+		g.links[string(end)] = byEntity
+	}
+	byEntity[string(e)] = append(byEntity[string(e)], memberLink{key, l.Recording})
+}
+
+// Strength is how heavily a line weighs.
+type Strength string
+
+const (
+	StrengthWeak   Strength = "weak"
+	StrengthStrong Strength = "strong"
+)
+
+// Line is one person both graphs hold: the facts the two records share about
+// that person and the line's weight.
+type Line struct {
+	Entity   []byte
+	Facts    int
+	Strength Strength
+}
+
+// Lines is one line for each person both graphs hold on one canonical entity,
+// other than the page's own: the facts the two records share about that
+// person and the line's weight. Lines are sorted by entity. A pair of graphs
+// whose work passes MaxPairWork compares nothing: every line has 0 facts.
+func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Line {
+	var out []Line
+	ha, hb := holdings{}, holdings{}
+	capped := overWork(string(page), a, b, ha, hb, cfg)
+	for _, e := range slices.Sorted(maps.Keys(a.persons)) {
+		if e == string(page) || len(b.persons[e]) == 0 {
+			continue
+		}
+		var best int
+		if !capped && !over(e, a, b, cfg) {
+			for _, x := range a.persons[e] {
+				for _, y := range b.persons[e] {
+					best = max(best, len(properties(ha.of(x, cfg), hb.of(y, cfg), x, y, metas, cfg))+len(links(x, y, a, b, cfg)))
+				}
+			}
+		}
+		s := StrengthWeak
+		if best >= cfg.RecordLinks.StrongAt {
+			s = StrengthStrong
+		}
+		out = append(out, Line{Entity: bytes.Clone([]byte(e)), Facts: best, Strength: s})
+	}
+	return out
+}
+
+// over reports whether either graph files more members of any kind on entity e
+// than the registry allows.
+func over(e string, a, b Graph, cfg Config) bool {
+	most := cfg.RecordLinks.MaxEntityMembers
+	return a.members[e] > most || b.members[e] > most
+}
+
+// properties returns the keys, ascending, whose values the two members agree
+// or partly agree on. A property counts once under its key, with its pooled
+// properties; one that is skipped for either member (see tally.skipped)
+// counts nothing. heldX and heldY are the members' holdings.
+func properties(heldX, heldY map[vocabkey.PropertyKey]tally, x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.PropertyKey {
+	keys := map[vocabkey.PropertyKey]struct{}{}
+	for key := range heldX {
+		keys[key] = struct{}{}
+	}
+	for key := range heldY {
+		keys[key] = struct{}{}
+	}
+	var out []vocabkey.PropertyKey
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		if heldX[key].skipped(cfg) || heldY[key].skipped(cfg) {
+			continue
+		}
+		res := subjectcompare.CompareProperty(vocabkey.Person, key, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
+		if res.Outcome.Matches() {
+			out = append(out, key)
+		}
+	}
+	return out
+}
+
+// tally is what a member holds for one property that counts: its values, the
+// words of the values within MaxValueBytes, and whether any value is over it.
+type tally struct {
+	values, words int
+	big           bool
+}
+
+// skipped reports whether the property counts nothing for the member: more than
+// MaxUnitValues values, or a value over MaxValueBytes.
+func (t tally) skipped(cfg Config) bool {
+	return t.big || t.values > cfg.RecordLinks.MaxUnitValues
+}
+
+// held tallies a member's values by the key their property counts under. A
+// value over MaxValueBytes is sized, never tokenized.
+func held(v subjectcompare.Values, cfg Config) map[vocabkey.PropertyKey]tally {
+	out := map[vocabkey.PropertyKey]tally{}
+	for p, vs := range v {
+		if key, ok := cfg.Subject.CountsUnder(vocabkey.Person, p); ok {
+			t := out[key]
+			t.values += len(vs)
+			for _, val := range vs {
+				if valuecompare.Size(val.Value) > cfg.RecordLinks.MaxValueBytes {
+					t.big = true
+					continue
+				}
+				t.words += valuecompare.WordCount(val.Value)
+			}
+			out[key] = t
+		}
+	}
+	return out
+}
+
+// holdings are the members' tallies of one graph by member id, each read once.
+type holdings map[string]map[vocabkey.PropertyKey]tally
+
+// of is m's tally, read the first time it is asked for.
+func (h holdings) of(m Member, cfg Config) map[vocabkey.PropertyKey]tally {
+	t, ok := h[string(m.ID)]
+	if !ok {
+		t = held(m.Values, cfg)
+		h[string(m.ID)] = t
+	}
+	return t
+}
+
+// cost is what one member brings to the work count: its words by property
+// that counts and, by far entity, the shapes of its links.
+type cost struct {
+	words  map[vocabkey.PropertyKey]int
+	shapes map[string]int
+}
+
+// costOf reads a member's cost. A skipped property and a far entity over
+// MaxEntityMembers compare nothing, so they cost nothing.
+func costOf(m Member, g Graph, h holdings, a, b Graph, cfg Config) cost {
+	c := cost{words: map[vocabkey.PropertyKey]int{}, shapes: map[string]int{}}
+	for key, t := range h.of(m, cfg) {
+		if !t.skipped(cfg) {
+			c.words[key] = t.words
+		}
+	}
+	for e, ls := range g.links[string(m.ID)] {
+		if over(e, a, b, cfg) {
+			continue
+		}
+		for _, l := range ls {
+			c.shapes[e] += max(1, len(l.rec.Shapes))
+		}
+	}
+	return c
+}
+
+// against is the work of comparing two members: the product of their words for
+// each property and of their link shapes for each entity both link to.
+func (x cost) against(y cost) int {
+	var n int
+	for key, w := range x.words {
+		n += w * y.words[key]
+	}
+	for e, s := range x.shapes {
+		n += s * y.shapes[e]
+	}
+	return n
+}
+
+// overWork reports whether the work of comparing every member pair of every
+// shared person passes MaxPairWork.
+func overWork(page string, a, b Graph, ha, hb holdings, cfg Config) bool {
+	return pairWork(page, a, b, ha, hb, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
+}
+
+// pairWork is the sum, over every member pair of every shared person, of the
+// pair's work. A sum of products does not depend on the order of the graphs or
+// of their members. It stops counting once past limit, so the result is the
+// work only when it is within limit.
+func pairWork(page string, a, b Graph, ha, hb holdings, cfg Config, limit int) int {
+	var n int
+	for e, xs := range a.persons {
+		ys := b.persons[e]
+		if e == page || len(ys) == 0 || over(e, a, b, cfg) {
+			continue
+		}
+		costY := make([]cost, len(ys))
+		for i, y := range ys {
+			costY[i] = costOf(y, b, hb, a, b, cfg)
+		}
+		for _, x := range xs {
+			cx := costOf(x, a, ha, a, b, cfg)
+			for _, cy := range costY {
+				if n += cx.against(cy); n > limit {
+					return n
+				}
+			}
+		}
+	}
+	return n
+}
+
+// linkFact is one counted link: the link as the member reads it, and the
+// entity at its far end.
+type linkFact struct {
+	key    vocabkey.BridgeKey
+	entity string
+}
+
+// links returns the link facts the two members share. For each far entity both
+// have links to, a pair of links that correspond counts once when any such pair
+// is not skipped. A pair is skipped when kinship.SameShape matches their shapes
+// at pivots filed on one entity E in both graphs and the two members' links to
+// E hold a corresponding pair: the pivot's own fact is then counted, and this
+// one counts through it. A pivot link that is itself skipped counts through its
+// own pivot, so shapes end at a recorded participation or parent link. Links to
+// an entity over the member bound count nothing, so a pivot filed on one is not
+// counted and its links are not skipped.
+func links(x, y Member, a, b Graph, cfg Config) []linkFact {
+	byX, byY := a.links[string(x.ID)], b.links[string(y.ID)]
+	counted := map[string]bool{} // by pivot entity: the members' links to it correspond
+	same := func(pa, pb []byte) bool {
+		ea, eb := a.entityOf[string(pa)], b.entityOf[string(pb)]
+		if ea == nil || !bytes.Equal(ea, eb) || over(string(ea), a, b, cfg) {
+			return false
+		}
+		v, ok := counted[string(ea)]
+		if !ok {
+			v = anyCorresponds(byX[string(ea)], byY[string(ea)])
+			counted[string(ea)] = v
+		}
+		return v
+	}
+	var out []linkFact
+	for _, e := range slices.Sorted(maps.Keys(byX)) {
+		if over(e, a, b, cfg) {
+			continue
+		}
+		seen := map[vocabkey.BridgeKey]bool{}
+		for _, lx := range byX[e] {
+			if seen[lx.key] {
+				continue
+			}
+			for _, ly := range byY[e] {
+				if segmentcompare.Corresponds(lx.key, ly.key) && !kinship.SameShape(lx.rec, ly.rec, same) {
+					seen[lx.key] = true
+					out = append(out, linkFact{lx.key, e})
+					break
+				}
+			}
+		}
+	}
+	return out
+}
+
+// anyCorresponds reports whether a link of xs and a link of ys correspond.
+func anyCorresponds(xs, ys []memberLink) bool {
+	return slices.ContainsFunc(xs, func(lx memberLink) bool {
+		return slices.ContainsFunc(ys, func(ly memberLink) bool { return segmentcompare.Corresponds(lx.key, ly.key) })
+	})
+}

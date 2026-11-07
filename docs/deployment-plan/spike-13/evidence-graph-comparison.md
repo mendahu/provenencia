@@ -31,8 +31,8 @@ Start as simple as possible, build it, and look at many people in the dogfood pr
 
 - **This is not Promote's job.** Promote's suggestions guess which Subjects might match; here the researcher has already joined both members to one entity, and the question is how much evidence the two records share. So the derived lifespan, a suggestion helper, is not counted, and nothing reads graph alignment's scoring.
 - **One line per shared person.** Two graphs get a line for each other person both name. Events, places and the page's own person are not lines.
-- **A line counts facts.** Each Property both members record that agrees or partly agrees (a name with at least one word in common), and each link both record to the same canonical entity (a relationship, or the same birth, death or marriage in the same role), counts once.
-- **Two weights.** One fact is thin (weak); two or more is thick (strong). Conflicts are ignored. The number of arcs is the data, so two graphs sharing three people get three arcs.
+- **A line counts facts.** Each Property both members record that agrees or partly agrees (a name the name compare does not call a conflict), and each link both record to the same canonical entity (a relationship, or the same birth, death or marriage in the same role), counts once.
+- **Two weights.** A line with 0 or 1 fact is thin (weak); two or more is thick (strong). Conflicts are ignored. The number of arcs is the data, so two graphs sharing three people get three arcs.
 - **A circular link diagram.** Graphs sit around a circle, labelled by the graph ref the Sources list shows; hovering a graph on the circle or in the list highlights it in both, so the researcher knows which graph to go and look at.
 - **No explanation yet.** Nothing about a line is shown beyond its arc and weight: no label, tooltip or detail. Requirement 1's "every result explains itself" waits for a later version.
 
