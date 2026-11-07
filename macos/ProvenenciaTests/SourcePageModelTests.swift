@@ -1256,10 +1256,27 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         await model.askDeleteSource()
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(left)
         #expect(store.deleteSourceCalls == 1)
         #expect(model.pendingImpact == nil)
+    }
+
+    /// Deleting the Source with its page visible leaves once, with no reload of the deleted id.
+    @Test func resourceDeleteDoesNotReloadTheDeletedSource() async {
+        let store = makeStore()
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
+        await model.warmFromSession()
+        await model.askDeleteSource()
+        let loadsBefore = store.getSourceWorkspaceCalls
+        var leaves = 0
+        let left = await model.confirmResourceDelete(leaving: { leaves += 1 })
+        await session.settleWrites()
+        #expect(left)
+        #expect(leaves == 1)
+        #expect(store.getSourceWorkspaceCalls == loadsBefore)
     }
 
     @Test func blockedSourceDoesNotCallDelete() async {
@@ -1276,7 +1293,7 @@ struct SourcePageModelTests {
         await model.askDeleteSource()
         #expect(model.pendingImpact?.report.allowed == false)
         #expect(model.pendingImpact?.report.groups.first?.via == "artifacts.source_id")
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteSourceCalls == 0)
     }
@@ -1396,7 +1413,7 @@ struct SourcePageModelTests {
         await model.askDeleteGraph(id: "g-jones")
         #expect(model.pendingImpact?.target.kind == "evidence_graph")
         #expect(model.pendingImpact?.target.ref == "GPH-G-JONES")
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteEvidenceGraphCalls == 1)
         #expect(store.deleteArtifactCalls == 0)
@@ -1425,7 +1442,7 @@ struct SourcePageModelTests {
         #expect(model.pendingImpact?.report.allowed == false)
         #expect(model.pendingImpact?.report.gate == report.gate)
         #expect(model.pendingImpact?.report.groups.first?.total == report.groups.first?.total)
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteEvidenceGraphCalls == 0)
     }
@@ -1450,7 +1467,7 @@ struct SourcePageModelTests {
         await model.warmFromSession()
         await model.askDeleteArtifact(id: "a1")
         #expect(model.pendingImpact?.report.allowed == true)
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteArtifactCalls == 1)
         #expect(model.artifacts.items.isEmpty)
@@ -1485,7 +1502,7 @@ struct SourcePageModelTests {
         await model.warmFromSession()
         await model.askDeleteArtifact(id: "a1")
         let workspaceReads = store.getSourceWorkspaceCalls
-        _ = await model.confirmResourceDelete()
+        _ = await model.confirmResourceDelete(leaving: {})
         let list: QueryHandle<[CatalogSource]>? = session.queryHandle(listKey)
         #expect(list?.value?.first?.hasArtifact == false)
         // The refresh is the one read of the Source's workspace, as create does.
@@ -1529,7 +1546,7 @@ struct SourcePageModelTests {
         #expect(jump?.sourceSurface == .citationComposer)
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.title == "John Hartley, worsted weaver")
         #expect(model.pendingImpact?.report.groups.first?.listed.first?.ref == "CIT-AAAAA")
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteArtifactCalls == 0)
     }
@@ -1553,7 +1570,7 @@ struct SourcePageModelTests {
         model.identity.titleDraft = "Unsaved title"
         model.notes.draft = "Scratch note"
         await model.askDeleteArtifact(id: "a2")
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(!left)
         #expect(store.deleteArtifactCalls == 1)
         #expect(model.identity.editingTitle)
@@ -1598,7 +1615,7 @@ struct SourcePageModelTests {
         )
         await model.warmFromSession()
         await model.askDeleteSource()
-        let left = await model.confirmResourceDelete()
+        let left = await model.confirmResourceDelete(leaving: {})
         #expect(left)
         #expect(await waitUntil { counts.sources == 1 })
     }

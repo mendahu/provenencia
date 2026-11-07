@@ -180,9 +180,10 @@ final class SourcePageModel {
         await presentImpact(kind: "artifact", id: art.id, ref: art.ref, title: art.displayTitle)
     }
 
-    /// Returns true when the Source itself was erased (leave the page).
+    /// Returns true when the Source itself was erased. `leave` runs once, inside the write's
+    /// application, when it was; a failed write does not run it.
     @discardableResult
-    func confirmResourceDelete() async -> Bool {
+    func confirmResourceDelete(leaving leave: () -> Void) async -> Bool {
         let kind = deleteImpact.request?.target.kind
         let erasedSource = await deleteImpact.confirm { target in
             switch target.kind {
@@ -192,7 +193,7 @@ final class SourcePageModel {
                     userID: context.userID,
                     sourceID: target.id
                 )
-                context.session.apply(effects, .deletedSource(id: target.id))
+                context.session.apply(effects, .deletedSource(id: target.id), leavingPage: leave)
             case "artifact":
                 let effects = try await context.store.deleteArtifact(
                     projectDir: context.projectDir,

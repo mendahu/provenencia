@@ -68,6 +68,12 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
             .padding(.top, 96)
     }
 
+    private func error(_ message: String) -> some View {
+        PVCallout(tone: .danger, title: errorTitle, message: message)
+            .pvKeepsPageBand()
+            .accessibilityIdentifier("\(idRoot).error")
+    }
+
     @ViewBuilder
     private func loaded(_ handle: QueryHandle<Value>) -> some View {
         let presentation = ConclusionDetailPresentation<Content>(
@@ -76,12 +82,14 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
             content: make
         )
         switch presentation {
-        case .loading, .gone:
+        case .loading:
             loading
+        case .gone:
+            // The page above leaves when its own read reports the handle gone; a section whose
+            // read fails first, under a page that still holds its value, shows why.
+            error(L10n.string(L10n.Errors.conclusionDetailsNotFound))
         case .failed(let message):
-            PVCallout(tone: .danger, title: errorTitle, message: message)
-                .pvKeepsPageBand()
-                .accessibilityIdentifier("\(idRoot).error")
+            error(message)
         case .content(let value, _):
             if isEmpty(value) {
                 PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)

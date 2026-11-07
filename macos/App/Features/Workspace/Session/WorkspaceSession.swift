@@ -288,12 +288,17 @@ final class WorkspaceSession {
         }
     }
 
-    /// A write that deleted the entity the page shows. Applies the effects with every key hidden,
-    /// so the page's own keys are evicted and no list loads, then runs `leave`, which moves to the
-    /// next place and loads its keys once. Nothing reads the deleted id in between.
-    func apply(_ effects: CatalogWriteEffects, leavingPage leave: () -> Void) {
+    /// A write that deleted the entity the page shows. Applies the effects (and the mutation, when
+    /// one names a key the effects cannot) with every key hidden, so the page's own keys are evicted
+    /// and no list loads, then runs `leave`, which moves to the next place and loads its keys once.
+    /// Nothing reads the deleted id in between.
+    func apply(
+        _ effects: CatalogWriteEffects,
+        _ mutation: CatalogMutation? = nil,
+        leavingPage leave: () -> Void
+    ) {
         visibleKeys = []
-        apply(effects)
+        apply(effects, mutation)
         leave()
     }
 

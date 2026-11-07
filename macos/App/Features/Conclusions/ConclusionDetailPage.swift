@@ -496,6 +496,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     }
 
     var body: some View {
+        let presentation = presentation
         Group {
             switch presentation {
             case .loading, .gone:

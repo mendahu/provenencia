@@ -242,11 +242,7 @@ private struct SourcePageContent: View {
             flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "sources.page.deleteImpact",
             onConfirm: {
-                Task {
-                    if await model.confirmResourceDelete() {
-                        navigation.fallbackToSectionRoot()
-                    }
-                }
+                Task { await model.confirmResourceDelete(leaving: navigation.fallbackToSectionRoot) }
             },
             onNavigate: { location in
                 navigation.go(to: location)
