@@ -1,9 +1,9 @@
 # S14-39 — Properties page reads single-only
 
-**Status:** Planned
+**Status:** Landed in #737 (2026-11-07)
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D9](../design/S14-D9-properties-single-only.md), board agreed 2026-11-07
+**Brief:** [S14-D9](../design/archive/S14-D9-properties-single-only.md), board agreed 2026-11-07
 **Board:** S14-D9 — the *Properties View* project, a [migrated design on claude.ai](https://claude.ai/artifact/XRS4WQDZbaDa7jAzVKYQdc), page *S7-D2 Subject Fields.dc.html*, section "S14-D9 · Single-only value type", frames 1, 2, 3, 4, 5, 6a, 6b and the "Value type pills · SO-5" table. Changes from the brief: every pill gets a light and a dark shade, `text` moves to paper-700 and `term` to ochre-900 to pass 4.5:1 (D-8); Holds in create keeps the radios' height (D-5); the lock also shows its reason as a tooltip (D-4); dark mode is the board's theme switch, not separate frames. The implementer may not be able to open it: **Design → macOS** describes each frame in words.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-D9
 **Blocks:** S14-37
