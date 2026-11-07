@@ -5,7 +5,7 @@
 
 ## To user
 
-- **Bridge delete changes with this PR (M-1, D-6).** Sharing one read of a bridge's ends means `subjects.Delete` stops recomputing and walking from a location's place end and a place relationship's `to` end. That is the structural-debt row S14-33 left as FU-4 ("not measured"), now fixed instead of deferred. Nothing stored reads a link through those ends (S14-33 F-2; this plan's succession and part_of probe). Recommendation: take it here, because the alternative keeps two copies of one read.
+- **Bridge delete changes with this PR (M-1, D-6).** Answered by the user (2026-11-07). They asked whether keeping two copies would avoid the stale place page. It would not: neither path told the app about the place. They then asked for the place-page fix in this PR, on the plan that merges the copies. Their answer is D-9.
 
 ## Writer's own calls
 
@@ -13,7 +13,6 @@
 - D-4: an end's "last updated" time does not move when another Subject's Unpromote takes a link back.
 - D-7: `promotetest.Unpromote` and a new `connect/connecttest` package for the bridge builders; the existing private copies move later (structural-debt row).
 - D-8: `budgetUnpromoteAtCity` is 500 ms, against 45 ms measured.
-- Out row 1: telling the app about an unread place end without a walk goes to `docs/ideas/structural-debt.md`, not this PR. It needs the effects Set to carry ends apart from `Handles`.
 
 ## Round 1
 

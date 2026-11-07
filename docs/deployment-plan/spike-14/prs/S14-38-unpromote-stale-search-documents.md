@@ -30,11 +30,11 @@
 
 ## 1. Objective
 
-When the researcher unpromotes a Subject, every filed link it ends is taken back with it. Today the other end of each link keeps its old search document: unpromote James, and the omnibar still finds his birth as "Birth of James Robins" though the Events list and a rebuild say "Unspecified birth". After this PR, Unpromote rewrites the stored rows and the search document of every end a link was read through, in the same write, and names those ends to the app so an open detail page reloads. Bridge delete reads the same ends through the same read, so it stops walking from a location's place end (S14-33 FU-4).
+When the researcher unpromotes a Subject, every filed link it ends is taken back with it. Today the other end of each link keeps its old search document: unpromote James, and the omnibar still finds his birth as "Birth of James Robins" though the Events list and a rebuild say "Unspecified birth". After this PR, Unpromote rewrites the stored rows and the search document of every end a link was read through, in the same write, and names every end to the app so an open detail page reloads, a place end included, without walking from the place. Bridge delete reads the same ends through the same read, so it stops walking from a location's place end (S14-33 FU-4).
 
 **Why now.** Found in the S14-33 ship loop (FU-1): 234 stale documents over 451 unpromotes in the probe. It predates S14-33. The planning probe reproduced it in both directions (§4).
 
-**What stays.** Promote and filing behave as they do. Bridge delete still rewrites its ends; it no longer recomputes the end no row reads a link through (`location.place`, `place_relationship.to`), which has no row that changes. The 6,000-event city stays as cheap as S14-33 left it.
+**What stays.** Promote and filing behave as they do. Bridge delete still rewrites its ends; it no longer recomputes the end no row reads a link through (`location.place`, `place_relationship.to`), which has no row that changes, and now names that end to the app. The 6,000-event city stays as cheap as S14-33 left it.
 
 ## 2. User stories
 
@@ -61,6 +61,7 @@ When the researcher unpromotes a Subject, every filed link it ends is taken back
 | --- | --- | --- |
 | AC-3.1 | Leeds with 3 and with 12 other promoted births located there. Unpromote one further located birth | The write's `Effects.SummaryDeps` holds none of the other births, and `Effects.Handles` does not hold Leeds |
 | AC-3.2 | Leeds with 3 other located births, their event documents marked stale. Delete one further birth's location bridge (`subjects.Delete`) | The other births' documents keep the mark (no walk from Leeds); the deleted link's event document is rewritten |
+| AC-3.4 | Leeds with 3 other located births. Unpromote one further located birth; in a fresh world, delete that birth's location bridge instead | `Effects.SummaryDeps` holds Leeds (so an open Leeds page reloads) and `Effects.Handles` does not; no sibling birth is in either |
 | AC-3.3 | `TestLargeSourceBudgets` fixture (city with 6,000 events). Unpromote an event located at the city | Under `budgetUnpromoteAtCity` (500 ms); 45 ms at planning, today and with the prototype of D-1 |
 
 ## 3. Scope
@@ -71,16 +72,16 @@ When the researcher unpromotes a Subject, every filed link it ends is taken back
 | One filtered read of a Subject's link-end handles in `effects` (`LinkEndHandles` and its SQL), used by the registry and by `subjects.Delete`; `subjects.linkedHandles` deleted | STEP-3, STEP-4, D-1, D-7 |
 | A deleted accepted claim names the handles of its Subject's read link ends in `Set.Handles` | STEP-3, AC-1.1 – AC-2.3 |
 | Bridge delete walks only from read ends | STEP-4, AC-3.2 |
-| Tests: rebuild-equals-upkeep scenarios, an effects registry subtest, display-cache and walk tests, a budget | STEP-2, STEP-5, §8 |
-| Doc comments and the effects, writes and catalog-deletes docs | STEP-6 |
+| Every end of a link taken back or deleted, read or unread, is named to the app in `summary_handles` without a recompute or a walk (`Effect.LinkEnds`, `Set.LinkEnds`) | STEP-5, AC-3.4, D-9 |
+| Tests: rebuild-equals-upkeep scenarios, an effects registry subtest, display-cache and walk tests, a budget | STEP-2, STEP-6, §8 |
+| Doc comments and the effects, writes and catalog-deletes docs | STEP-7 |
 
 | Out | Home |
 | --- | --- |
-| Telling the app about an unread end (a place) of a link taken back or deleted, without walking from it, so a cached place page that lists the link reloads | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md): new row, STEP-7 |
 | Reprojection cost when the whole of a part_of with a crowded part is unpromoted (the part's rows do move) | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md), the existing row "The first `part_of` filed from a city reprojects its events" |
 | Moving `subjects.Delete`'s recompute onto `writes.Run` | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md), the existing row "catalog graph cache leftovers": the bridge's Observations are deleted before `effects.Resolve` runs |
 | `(*bridgeWorld).unpromote` in `core/database/promote/unpromote_test.go` moving onto the new `promotetest.Unpromote` | not planned: working test code this PR does not otherwise touch |
-| Moving the existing private bridge builders (D-7) onto `connecttest` | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md): new row, STEP-7 |
+| Moving the existing private bridge builders (D-7) onto `connecttest` | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md): new row, STEP-8 |
 | Bridges in the seeded rebuild-equals-upkeep generator | not planned: the named scenarios hold each shape |
 
 ## 4. Current state
@@ -99,6 +100,8 @@ Verified at `986d304`.
 | Ends | `core/database/conclusionsummaries/dependents.go` `AssociationEndpoints`, `linkEnds` (line 156) | `linkEnds` is a literal map built from `hops.PlacesOfEvent` and `hops.ParentsOfPlace` (`.Bridge()`, `.To()`); its use is at line 141 |
 | Bridges | `core/connectrules/connectrules.go` `Endpoint`, `productBridges`, `Bridges` | `Endpoint{PropertyKey, TypeKey}`. `Register` has no caller outside tests. `connectrules` imports only `vocabkey` |
 | Bridge delete | `core/database/subjects/subjects.go` `Delete` (lines 205–278), `linkedHandles` (line 353) | `linkedHandles`: the accepted handles of the Subjects this one's Observations point at, unfiltered. `Delete` adds them to `touched` and walks `Dependents` from them, so a location bridge delete walks from the place end (`docs/ideas/structural-debt.md` row "`subjects.Delete` calls `Dependents` directly") |
+| Effects set | `core/database/effects/registry.go` `Set`, `Effect`, `(Effect).paths`; `resolve.go` `Resolve` | `Set.SummaryDeps` is filled only by `Run` from the recompute walk; every id in `Set.Handles` is a recompute root and a walk root. No field names a handle to the app alone. The `observations` entry's `Handles` is `observationMembers` (the Observation's own Subject's handles), so a deleted subject-valued Observation names nothing on its value end |
+| App | `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` `.conclusionDetail` | Reloads a detail page whose entity id is in `touchedHandles` (`handles` + `summary_handles`); a place page is a `.conclusionDetail` |
 | Writes | `core/writes/run.go` `Run` | `effects.Resolve` → `audit.Record` → `RecomputeReported(set.Handles)` → `set.SummaryDeps`; `api/ffi/handlers/write_effects.go` sends both; Swift `CatalogWriteEffects.touchedHandles` is both |
 | Display cache | `core/database/graphcache/commit.go` `detachAssociation`, `dropCommittedDisplays` | A loaded association is detached and its ends reloaded; the AC-1.3 shape passed in the planning probe today |
 | Place rows | `core/database/conclusionsummaries/places.go` `PlaceSummary` | `PartOf`, `Contains`, `Predecessors`, `Successors` are filled only for detail (`AttachPlaceRelationships`), not stored |
@@ -125,6 +128,8 @@ Verified at `986d304`.
 | D-7 | Test helpers. `promotetest.Unpromote(t testing.TB, c *database.Catalog, userID, subjectID []byte) writes.Result` *(new)* runs `promote.Unpromote` in `writes.Run` with action `unpromote_subject` and fails the test on error. A new package `core/database/connect/connecttest` *(new)* holds `Participation(t, c, userID, artifactID []byte, person, event subjects.Subject, roleKey string) subjects.Subject`, `Location(t, c, userID, artifactID []byte, event, place subjects.Subject) subjects.Subject` and `PlaceRelationship(t, c, userID, artifactID []byte, from, to subjects.Subject, termKey string) subjects.Subject` *(new)*: each one `connect.CreateCitedBridge` through `writes.Call` (action `create_cited_bridge`, locator `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`), Properties from `properties.Lookup(c, key, vocabkey.OriginProvenencia)` (`person`, `event`, `role`; `event`, `place`; `from`, `to`, `place_relationship_type`), terms from `propertyterms.Lookup(c, prop.ID, key, vocabkey.OriginProvenencia)`, returning the bridge Subject. The autoreconciler scenarios use them; every world creates its bridges first and then promotes the ends, which files them, as the line-1355 scenario does | Five location builders and three place-relationship builders already live in test packages (review M-6: `conclusionsummaries` `location`/`placeRel`, `promotealign` `locate`/`placeRel`, `promote` `(*bridgeWorld).location`/`placeRelationship`, `grapheventtitles` and `graphcache` `location`); the repo's convention for shared test helpers is a `…test` package (`promotetest`, `subjectstest`) | A sixth and fourth private copy in `autoreconciler_test.go` |
 | D-8 | `budgetUnpromoteAtCity` *(new)* = 500 ms | Same order as `budgetLocateAtCity`; 45 ms on the planning machine; CI is about 3× slower | A tighter figure — flakes on CI |
 
+| D-9 | The effects registry gains one job: `Effect.LinkEnds Path` and `Set.LinkEnds [][]byte` *(new)*, "the ends of a link a change takes back or deletes; named to the app, not recomputed or walked". `identity_claims`: `LinkEnds: onDelete(onStatus("accepted", from("subject_id", chain(inbound("observations", "subject_id"), field("value_subject_id"), membersOf))))`. `observations`: `LinkEnds: onDelete(chain(field("value_subject_id"), membersOf))` (a delete's old `value_subject_id`; the bridge delete case). `(Effect).paths` includes it; `Resolve` appends it after `HandleScopes`. `writes.Run` sets `set.SummaryDeps = database.UniqueBlobIDs(append(set.SummaryDeps, set.LinkEnds...))` after the recompute, outside the `len(set.Handles) > 0` block. The wire is unchanged: `summary_handles` already carries `SummaryDeps`, and the graph cache drops their displays | The user asked to fix the cached place page in this PR (2026-11-07). Every id in `Handles` is a walk root, so a place there walks its events; `SummaryDeps` is the app's "reload these" list with no walk behind it. Prototype at planning: Leeds in `SummaryDeps` and not in `Handles` after both an Unpromote and a bridge delete, no sibling in either, `Graph().Verify()` nil; effects, writes, promote, subjects, autoreconciler, conclusionsummaries, identityclaims, graphcache, catalogsession, `api/ffi/...` green; S14-33 budgets under budget. The paths are unfiltered: naming an end costs one id | (a) Put the place in `Handles` — walks 6,000 events (161 ms, 10,004 ids); (b) a filtered SQL for unread ends only — a second query for a list where duplicates cost nothing; (c) a new wire field — `summary_handles` already means "reload these" to the app |
+
 **Rules this plan bends.** None.
 
 ## 6. Design
@@ -137,11 +142,12 @@ Verified at `986d304`.
 | `effects.LinkEndHandles`, `sqlLinkEndHandles`, path `linkEnds` *(new)* | func / const / path | `subjects.linkedHandles` (deleted), `observers` (the inbound direction) | Moves `linkedHandles` to the package both callers import, with the filter |
 | `promotetest.Unpromote` *(new)* | helper | `promotetest.Save`; `(*bridgeWorld).unpromote` (private to `promote_test`) | Extends `promotetest` |
 | `connecttest.Participation`, `Location`, `PlaceRelationship` *(new)* | helper package | five private location and three place-relationship builders (D-7) | The first shared home; the existing copies move later (Out) |
+| `Effect.LinkEnds`, `Set.LinkEnds` *(new)* | registry field | `Set.SummaryDeps` (filled by `Run`), `Effect.Handles` (recompute set) | `Handles` makes a walk root; `SummaryDeps` has no registry path. One field joins the existing walk of a batch (`Resolve`) and pours into `SummaryDeps` |
 | Tests in §8 | test | the line-1355 scenario, `TestFiledLocationWalksOnlyFromItsEvent`, `TestConclusionHandleSets` | Extend those suites |
 | `budgetUnpromoteAtCity` *(new)* | const | `budgetLocateAtCity` | One more row |
 
 **Builds on.** The effects registry and its path helpers; `connectrules` bridge declarations; S14-33's walk-end rule.
-**Deletes.** `subjects.linkedHandles`. The literal body of `conclusionsummaries.linkEnds`. The structural-debt row "`subjects.Delete` calls `Dependents` directly, so deleting a location bridge still walks from the place end" (fixed here). The words "linked handles" in the `RecomputeTx` doc comment (`autoreconciler.go:190`).
+**Deletes.** `subjects.linkedHandles`. The "unread end not named to the app" gap S14-33 F-2 closed for filing only. The literal body of `conclusionsummaries.linkEnds`. The structural-debt row "`subjects.Delete` calls `Dependents` directly, so deleting a location bridge still walks from the place end" (fixed here). The words "linked handles" in the `RecomputeTx` doc comment (`autoreconciler.go:190`).
 **Next adds.** A new product bridge in `productBridges` with an end no row reads through sets `Unread` on that endpoint; filing, Unpromote and bridge delete honour it. `linkEnds` and the SQL are built once at init, so a bridge added later through `connectrules.Register` is not covered (Stop condition), and `linkEnds` holds one unread end per bridge.
 
 ### Reach
@@ -151,7 +157,8 @@ Verified at `986d304`.
 | An Unpromote names the remaining read-end handles in `Handles` | Swift `touchedHandles` → `conclusionDetail` refresh by id | The end still exists; its page reloads as after any write naming it |
 | A deleted claim whose Subject is deleted in the same batch (`subjects.Delete`) | path `linkEnds` | The Observations are gone; it returns nothing. `Delete` reads `LinkEndHandles` itself before releasing |
 | A deleted claim of a non-bridge Subject | path `linkEnds` | Returns the handles of that Subject's subject-valued Observations, if any: each is a handle the Subject pointed at, so a recompute is correct; one handle each |
-| A bridge delete no longer recomputes its unread end | `subjects.Delete` | That end's rows and document do not read the link (AC-2.3); the app was not told about it before either (`Delete`'s recompute is inside the closure) |
+| A bridge delete no longer recomputes its unread end | `subjects.Delete` | That end's rows and document do not read the link (AC-2.3); `Set.LinkEnds` now names it to the app (AC-3.4), which it was not before |
+| Every deleted subject-valued Observation names its value's handles in `summary_handles` | Swift `touchedHandles` → `.conclusionDetail`, lists that follow `touchedHandles` | A visible page or list reloads once per write; a hidden one goes stale (`applyHiddenPolicy`). An Observation delete in the composer now also reloads the value end's open page, which is correct: its record list changed |
 
 ### Scale
 
@@ -161,7 +168,7 @@ At the map's Scale (a project of 3,000 Sources, 37,000 Subjects and 92,000 Obser
 
 - **Assumptions.** `effects.Resolve` runs after the closure (`run.go`), so a taken-back bridge's Observations are present. Ends are unique per write (`UniqueBlobIDs` in `RecomputeReported`), so a self-link or two links to one end recompute it once. T-1 – T-6 hold it.
 - **Neighbors.** Filing: unchanged (D-3); `TestFiledLocationWalksOnlyFromItsEvent`, `TestFiledPartOfWalksFromThePart` stay green. Unpromote of a Subject with no filed bridges: nothing added (`TestUnpromote` "a Subject with no filed bridges loses only its own claim"). succeeded_by: unpromoting `from` leaves `to` untouched and nothing stale (AC-2.3, T-4). A reject or a later path deleting a filed bridge claim gains the same ends (intended).
-- **Removed inputs.** The unpromoted Subject's handle: deleted when last member (`Set.Deleted`), else recomputed by `field("entity_id")`. The association: deleted, or recomputed when a second record keeps it. Read ends: recomputed and rewritten (this PR). Unread ends: not touched; nothing stored changes (Out row 1 for the app's page).
+- **Removed inputs.** The unpromoted Subject's handle: deleted when last member (`Set.Deleted`), else recomputed by `field("entity_id")`. The association: deleted, or recomputed when a second record keeps it. Read ends: recomputed and rewritten (this PR). Unread ends: nothing stored changes; named to the app through `Set.LinkEnds` (D-9).
 - **Real data.** Bridges today: participation (person, event), relationship (person, related_to), location (event, place*), place_relationship (from, to*); * = `Unread`.
 - **Untrusted size.** None — catalog rows the app wrote, bounded by one Subject's Observations.
 
@@ -176,6 +183,8 @@ None — no catalog change.
 | `core/connectrules` | `Endpoint.Unread bool` *(new)*, doc comment; set on two endpoints in `productBridges` |
 | `core/database/conclusionsummaries` | `linkEnds` initialised from `connectrules.Bridges()` (`map[string]string`, bridge key → the `Unread` endpoint's Property key), same name and use. `AssociationEndpoints` doc: a deleted association has no rows (CASCADE); its read ends come from the deleted claim through `effects` |
 | `core/database/effects` | `sqlLinkEndHandles` (built in a `func linkEndHandlesSQL() string` called at package var init), `LinkEndHandles`, path `linkEnds`, the D-3 arm |
+| `core/database/effects` (D-9) | `Effect.LinkEnds`, `Set.LinkEnds` *(new)*, with doc comments in the style of their neighbours; the two registry entries; `paths()`; `Resolve` |
+| `core/writes` | `Run` appends `set.LinkEnds` to `set.SummaryDeps` (D-9) |
 | `core/database/subjects` | `Delete` uses `effects.LinkEndHandles`; `linkedHandles` deleted |
 | `core/database/autoreconciler` | `RecomputeReported` comment only |
 | `core/database/promote/promotetest` | `Unpromote` *(new)* |
@@ -217,30 +226,35 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/connectrules/... ./core/database
 **STEP-2 — Helpers and failing tests**
 Files: `core/database/promote/promotetest/promotetest.go`, `core/database/connect/connecttest/connecttest.go` *(new)*, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/conclusionsummaries/filedlinks_test.go`, `core/database/effects/conclusion_handles_test.go`.
 Do: add `promotetest.Unpromote` and `core/database/connect/connecttest/connecttest.go` *(new)* (D-7), with a package doc comment. Add T-1 – T-8 (§8). In T-1 – T-4 name the person with `nameIn(p, f.props["name"], "given=James|surname=Robins")`, type the event with `termIn(e, f.props["event_type"], f.terms["birth"])` and date it with `dateIn(e, f.props["date"], 1885, ip(5), nil)`, through `f.cite`; name places with `textIn(pl, f.props["toponym"], "Leeds")`. Each T-5 / T-6 row builds a fresh world.
-Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/conclusionsummaries/ ./core/database/effects/ -run 'Scenarios|Unpromoted|DeletedLocation|ConclusionHandleSets'` — T-1, T-2, T-3, T-4's part_of rows, T-5's `Handles` assertion and T-7's positive case fail; T-4's succeeded_by rows, T-6, T-8 and T-7's negative cases pass (they pin what must not regress). T-4 succeeded_by fails today only if its `Verify` or document check finds a stale row; record the result.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/autoreconciler/ ./core/database/conclusionsummaries/ ./core/database/effects/ -run 'Scenarios|Unpromoted|DeletedLocation|ConclusionHandleSets'` — T-1, T-2, T-3, T-4's part_of rows, T-5's `Handles` assertion, T-7's positive case and T-10 fail; T-4's succeeded_by rows, T-6, T-8 and T-7's negative cases pass (they pin what must not regress). T-4 succeeded_by fails today only if its `Verify` or document check finds a stale row; record the result.
 
 **STEP-3 — The deleted claim names its read link ends**
 Files: `core/database/effects/registry.go`.
 Do: add `linkEndHandlesSQL`, `sqlLinkEndHandles`, `LinkEndHandles` and path `linkEnds` beside `observers`, each with a doc comment; append the D-3 arm.
-Check: the STEP-2 command passes except T-8 (bridge delete, STEP-4); `CGO_ENABLED=1 go test -tags fts5 ./core/database/effects/ ./core/database/promote/ ./core/database/identityclaims/` passes.
+Check: the STEP-2 command passes except T-8 (bridge delete, STEP-4) and T-10 and T-7's `LinkEnds` assertion (STEP-5); `CGO_ENABLED=1 go test -tags fts5 ./core/database/effects/ ./core/database/promote/ ./core/database/identityclaims/` passes.
 
 **STEP-4 — Bridge delete reads the same ends**
 Files: `core/database/subjects/subjects.go`. Skill: `add-catalog-delete`.
 Do: replace the `linkedHandles` call with `effects.LinkEndHandles(tx.Tx, id)`; delete `linkedHandles`; update `Delete`'s doc comment ("linked handles" → "the handles of its read link ends").
 Check: T-8 passes; `CGO_ENABLED=1 go test -tags fts5 ./core/database/subjects/ ./core/database/autoreconciler/` passes, including the line-1355 scenario.
 
-**STEP-5 — Budget**
+**STEP-5 — Name every end to the app**
+Files: `core/database/effects/registry.go`, `core/database/effects/resolve.go`, `core/writes/run.go`.
+Do: D-9.
+Check: T-10 and T-7's `LinkEnds` assertions pass; `CGO_ENABLED=1 go test -tags fts5 ./core/database/effects/ ./core/writes/ ./core/database/graphcache/... ./api/ffi/...` passes.
+
+**STEP-6 — Budget**
 Files: `core/database/promotealign/perf_test.go`.
 Do: add `budgetUnpromoteAtCity` (D-8) with a comment in the style of `budgetLocateAtCity`, and T-9 as the last subtest: 3 births from `f.birth(lf.onePlace, lf.pageArt)`, each promoted with `f.promote(e)` and then located at `lf.citySubject` with `f.locate(lf.onePlace, lf.pageArt, e, lf.citySubject)` (so the location files), as the "locate an event at the city" subtest does; time `promotetest.Unpromote(t, f.c, userID, e.ID)` with `fastest(3, …)` and `over(…)`.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/ -run TestLargeSourceBudgets -v` logs the new line under budget and every S14-33 budget under its own.
 
-**STEP-6 — Comments and docs of the read**
-Files: `core/database/conclusionsummaries/dependents.go` (`AssociationEndpoints` doc: after "A save calls it before rewriting those rows and again after." add "A deleted association has no rows by then (CASCADE); the effects registry names its read ends through the deleted claim."), `core/database/autoreconciler/autoreconciler.go` (`RecomputeTx` doc: "linked handles" → "the handles of its read link ends"), `core/database/effects/README.md` (one sentence: a deleted accepted claim names the handles of its Subject's read link ends, through `LinkEndHandles`, which Subject delete also reads; an end is unread when its `connectrules.Endpoint` says so), `core/writes/README.md` and `docs/catalog-deletes.md` ("linked handles" → "the handles of its read link ends (`effects.LinkEndHandles`)").
+**STEP-7 — Comments and docs of the read**
+Files: `core/database/conclusionsummaries/dependents.go` (`AssociationEndpoints` doc: after "A save calls it before rewriting those rows and again after." add "A deleted association has no rows by then (CASCADE); the effects registry names its read ends through the deleted claim."), `core/database/autoreconciler/autoreconciler.go` (`RecomputeTx` doc: "linked handles" → "the handles of its read link ends"), `core/database/effects/README.md` (a deleted accepted claim names the handles of its Subject's read link ends, through `LinkEndHandles`, which Subject delete also reads; an end is unread when its `connectrules.Endpoint` says so; and `Set.LinkEnds`: every end of a link a change takes back or deletes, which `Run` adds to `SummaryDeps` for the app without a recompute or walk), `core/writes/README.md` and `docs/catalog-deletes.md` ("linked handles" → "the handles of its read link ends (`effects.LinkEndHandles`)").
 Check: `gofmt -l core` prints nothing; `rg -n 'linkedHandles|linked handles' core docs .agents .cursor` finds nothing.
 
-**STEP-7 — Version and docs**
+**STEP-8 — Version and docs**
 Files: `VERSION` and `core/version.go` (0.4.0 → 0.4.1), `macos/Provenencia.xcodeproj/project.pbxproj` (all four `MARKETING_VERSION` lines), `docs/ideas/structural-debt.md`, `docs/deployment-plan/spike-14/completed.md`, `docs/deployment-plan/spike-14/deployment-plan.md`, this plan.
-Do: the patch bump per `docs/versioning.md` (use the next patch after `main`'s `VERSION` if it moved). In `structural-debt.md` delete the row that starts "`subjects.Delete` calls `Dependents` directly" and add two rows: "— | S14-38 review M-6 | Private bridge builders in test packages (`conclusionsummaries` `location`/`placeRel`, `promotealign` `locate`/`placeRel`, `promote` `(*bridgeWorld).location`/`placeRelationship`, `grapheventtitles` and `graphcache` `location`) move onto `connecttest` when those tests are next touched." and "— | S14-38 plan | An Unpromote or a bridge delete does not name a link's unread end (a place) to the app, because no row reads the link through it; a cached place page that lists the link stays stale until it reloads. Report that end without a walk when the effects Set can carry ends apart from `Handles`." Then the DoD lines.
+Do: the patch bump per `docs/versioning.md` (use the next patch after `main`'s `VERSION` if it moved). In `structural-debt.md` delete the row that starts "`subjects.Delete` calls `Dependents` directly" and add one row: "— | S14-38 review M-6 | Private bridge builders in test packages (`conclusionsummaries` `location`/`placeRel`, `promotealign` `locate`/`placeRel`, `promote` `(*bridgeWorld).location`/`placeRelationship`, `grapheventtitles` and `graphcache` `location`) move onto `connecttest` when those tests are next touched." Then the DoD lines.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-38-unpromote-stale-search-documents.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -255,8 +269,9 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-4 | Go | same, table of four scenarios "a filed part_of / succeeded_by, then the whole / from / to is unpromoted" *(new)* | Toronto part_of Ontario + a birth at Toronto, unpromote Ontario; York succeeded_by Toronto, unpromote York; and unpromote Toronto → each passes | AC-2.2, AC-2.3 |
 | T-5 | Go | `core/database/conclusionsummaries/filedlinks_test.go` `TestUnpromotedLinkEndsInDisplayCache` *(new)* | rows {unpromote person, unpromote event}, fresh world each: `PersonsByIDs` and `EventsByIDs` loaded, `promotetest.Unpromote` → `f.c.Graph().Verify()` nil and `res.Effects.Handles` holds the remaining end; row {York succeeded_by Toronto, `PlacesByIDs` loaded, unpromote York} → `Verify` nil | AC-1.3, AC-1.4, AC-2.3 |
 | T-6 | Go | same file, `TestUnpromotedLocationWalksOnlyFromItsEvent` *(new)* | rows {3, 12} sibling births at Leeds (`placeSubject("Leeds", nil, nil, 2, 0)`, its handle from `promoteSubject`); one further `promotedBirth(leeds)`; unpromote that birth → `countIn(res.Effects.SummaryDeps, siblings...) == 0` and `!database.ContainsBlobID(res.Effects.Handles, leedsID)` | AC-3.1, D-1, D-3 |
-| T-7 | Go | `core/database/effects/conclusion_handles_test.go` `TestConclusionHandleSets` "deleted accepted bridge claim covers its read ends" *(new)* | in `open()`: `claim(tx.Tx, birth, nil, identityclaims.StatusAccepted, true)`, then `claim(tx.Tx, bob, nil, identityclaims.StatusAccepted, true)` (files the existing bob–birth participation; keep its changes as `filed`). Read the bridge claim id: `SELECT ic.id FROM identity_claims ic JOIN observations o ON o.subject_id = ic.subject_id WHERE o.value_subject_id = ? AND ic.status = 'accepted' AND ic.entity_id IN (assocs)` with bob's id. `deleteimpact.ReleaseClaim(tx, id)` → `effects.Handles(tx.Tx, released)` covers the birth's and bob's handles. Negative (D-3): `effects.Handles(tx.Tx, filed)` does not hold the birth's handle (a claim create names no link end) | D-1, D-3 |
+| T-7 | Go | `core/database/effects/conclusion_handles_test.go` `TestConclusionHandleSets` "deleted accepted bridge claim covers its read ends" *(new)* | in `open()`: `claim(tx.Tx, birth, nil, identityclaims.StatusAccepted, true)`, then `claim(tx.Tx, bob, nil, identityclaims.StatusAccepted, true)` (files the existing bob–birth participation; keep its changes as `filed`). Read the bridge claim id: `SELECT ic.id FROM identity_claims ic JOIN observations o ON o.subject_id = ic.subject_id WHERE o.value_subject_id = ? AND ic.status = 'accepted' AND ic.entity_id IN (assocs)` with bob's id. `deleteimpact.ReleaseClaim(tx, id)` → `effects.Handles(tx.Tx, released)` covers the birth's and bob's handles, and `effects.Resolve(tx.Tx, released)` has `LinkEnds` covering both. Negative (D-3): `effects.Handles(tx.Tx, filed)` does not hold the birth's handle (a claim create names no link end) | D-1, D-3, D-9 |
 | T-8 | Go | `core/database/conclusionsummaries/filedlinks_test.go` `TestDeletedLocationWalksOnlyFromItsEvent` *(new)* | 3 sibling births located at Leeds, a further birth located there (`promotedBirth(leeds)`); its bridge Subject id read with `SELECT s.id FROM subjects s JOIN subject_types st ON st.id = s.subject_type_id AND st.key = 'location' JOIN observations o ON o.subject_id = s.id WHERE o.value_subject_id = ?` (the birth's Subject id), so `location` and `bridge` do not change; `staleEventDocs()`; `subjects.Delete` of that bridge through `writes.Call` with action `delete_subject` → the siblings' documents keep `display_subtitle = 'stale'`, the further birth's does not | AC-3.2, D-6 |
+| T-10 | Go | `core/database/conclusionsummaries/filedlinks_test.go` `TestTakenBackLinkNamesItsPlace` *(new)* | rows {unpromote, delete bridge}, fresh world each: Leeds with 3 located sibling births and one further `promotedBirth(leeds)`; unpromote that birth (`promotetest.Unpromote`), or delete its location bridge through `writes.Run` (bridge id read as in T-8) → `res.Effects.SummaryDeps` holds Leeds, `res.Effects.Handles` does not, `countIn` of the siblings in either is 0, `f.c.Graph().Verify()` nil | AC-3.4, D-9 |
 | T-9 | Go | `core/database/promotealign/perf_test.go` `TestLargeSourceBudgets` "unpromote an event at the city" *(new)* | fastest of 3 → under `budgetUnpromoteAtCity` | AC-3.3, D-8 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `core/database/effects` (`TestHandlePaths`, `registry_completeness_test.go`, `TestConclusionHandleSets`), `core/database/subjects`, `core/database/conclusionsummaries` `TestFiled*`, `core/database/promote` `TestUnpromote*`, the S14-33 budgets.
@@ -276,8 +291,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain doc updated if a rule in docs/*.md changed: docs/catalog-deletes.md (STEP-6)
-- [ ] docs/ideas/structural-debt.md: the FU-4 row deleted, the STEP-7 row added
+- [ ] Domain doc updated if a rule in docs/*.md changed: docs/catalog-deletes.md (STEP-7)
+- [ ] docs/ideas/structural-debt.md: the FU-4 row deleted, the STEP-8 row added
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -301,6 +316,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - T-1 or T-2 passes before STEP-3 (the bug is fixed elsewhere; report the commit).
 - Any S14-33 budget or T-9 goes over after STEP-3 or STEP-4.
 - `effects` cannot import `core/connectrules`, or `subjects` cannot call `effects.LinkEndHandles`, without an import cycle.
+- `registry_completeness_test.go` or a test that lists `Effect` fields needs a rule for `LinkEnds` that D-9 does not give.
 - `TestHandlePaths` or `registry_completeness_test.go` fails on the new `sqlPath` and the fix needs a change to `path.go`.
 - A test registers a bridge through `connectrules.Register` after `effects` init and needs its unread end excluded.
 
@@ -311,4 +327,4 @@ None.
 ## 13. PR
 
 **Title:** S14-38 — Unpromote rewrites the ends of the links it takes back
-**Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence (T-1 – T-9 output); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-14/prs/S14-38-unpromote-stale-search-documents.md`.
+**Body:** objective in one sentence; what shipped against US-1 – US-3; AC evidence (T-1 – T-10 output); deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-14/prs/S14-38-unpromote-stale-search-documents.md`.
