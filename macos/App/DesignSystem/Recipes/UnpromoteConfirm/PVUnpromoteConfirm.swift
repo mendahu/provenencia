@@ -36,10 +36,10 @@ extension View {
             item: item,
             copy: { content in
                 PVConfirmCopy(
-                    title: L10n.EvidenceGraph.unpromoteConfirmTitle(name: content.name),
+                    title: L10n.Unpromote.confirmTitle(name: content.name),
                     message: content.message,
-                    confirm: L10n.EvidenceGraph.unpromote,
-                    cancel: L10n.EvidenceGraph.unpromoteKeep
+                    confirm: L10n.Unpromote.button,
+                    cancel: L10n.Unpromote.keep
                 )
             },
             tone: item.wrappedValue?.tone ?? .irreversible,
@@ -67,12 +67,12 @@ private struct PVUnpromoteConfirmDetail: View {
         if isUnlisted || !sentences.isEmpty || content.error != nil {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 if isUnlisted {
-                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesUnlisted)
+                    Text(L10n.Unpromote.confirmBridgesUnlisted)
                         .font(PVFont.body(size: PVTypeScale.bodySmall))
                         .foregroundStyle(PVColor.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else if !sentences.isEmpty {
-                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesHeader)
+                    Text(L10n.Unpromote.confirmBridgesHeader)
                         .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
                     ScrollView {
@@ -86,7 +86,7 @@ private struct PVUnpromoteConfirmDetail: View {
                         }
                     }
                     .frame(maxHeight: PVDeleteImpactLayout.listMaxHeight)
-                    Text(L10n.EvidenceGraph.unpromoteConfirmBridgesNote)
+                    Text(L10n.Unpromote.confirmBridgesNote)
                         .font(PVFont.body(size: PVTypeScale.caption))
                         .foregroundStyle(PVColor.textSecondary)
                 }

@@ -350,11 +350,11 @@ struct PVDeleteImpactCascadeCopyTests {
         #expect(PVDeleteImpactCopy.cascadeLines(CatalogDeleteImpact(allowed: true, gate: .ok, groups: [], cascades: [two])) ==
             ["PER-A and REL-1 have no other records, so they are deleted."])
 
-        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .person, ref: "PER-7KD45") ==
+        #expect(L10n.Unpromote.confirmMessageDeletes(kind: .person, ref: "PER-7KD45") ==
             "PER-7KD45 has no other records, so this person is deleted. The cards stay on the graph.")
-        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .event, ref: "EVT-1") ==
+        #expect(L10n.Unpromote.confirmMessageDeletes(kind: .event, ref: "EVT-1") ==
             "EVT-1 has no other records, so this event is deleted. The cards stay on the graph.")
-        #expect(L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .place, ref: "PLC-1") ==
+        #expect(L10n.Unpromote.confirmMessageDeletes(kind: .place, ref: "PLC-1") ==
             "PLC-1 has no other records, so this place is deleted. The cards stay on the graph.")
     }
 }

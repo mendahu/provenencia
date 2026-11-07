@@ -108,11 +108,11 @@ struct UnpromoteFlowTests {
         #expect(other.confirmTone == .danger)
 
         let failed = item(failed: true)
-        #expect(failed.message == L10n.EvidenceGraph.unpromoteConfirmPreflightFailed(kind: .person))
+        #expect(failed.message == L10n.Unpromote.confirmPreflightFailed(kind: .person))
         #expect(failed.confirmTone == .danger)
 
         let none = item()
-        #expect(none.message == L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage))
+        #expect(none.message == L10n.string(L10n.Unpromote.confirmMessage))
         #expect(none.confirmTone == .irreversible)
     }
 

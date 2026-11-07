@@ -333,7 +333,7 @@ private struct PersonSourcesLineView: View {
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textSecondary)
             .accessibilityHidden(true)
-            PVButton(L10n.EvidenceGraph.unpromote, variant: .ghost, size: .sm, icon: .unpromote) {
+            PVButton(L10n.Unpromote.button, variant: .ghost, size: .sm, icon: .unpromote) {
                 beginUnpromote(line)
             }
             .fixedSize()

@@ -1774,100 +1774,6 @@ enum L10n {
             comment: "Footer button on an unpromoted primary card that creates its Person, Event or Place"
         )
 
-        static let unpromote = LocalizedStringResource(
-            "evidenceGraph.subject.unpromote",
-            defaultValue: "Unpromote",
-            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, the confirm button, and the Person page's button on a record's line, that takes its promotion back"
-        )
-
-        static let unpromoteKeep = LocalizedStringResource(
-            "evidenceGraph.subject.unpromoteKeep",
-            defaultValue: "Keep promotion",
-            comment: "Cancel button of the Unpromote confirm"
-        )
-
-        static func unpromoteConfirmTitle(name: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "evidenceGraph.subject.unpromoteConfirmTitle",
-                defaultValue: "Unpromote %1$@?",
-                comment: "Title of the Unpromote confirm; argument is the subject's name"
-            ), name)
-        }
-
-        static let unpromoteConfirmMessage = LocalizedStringResource(
-            "evidenceGraph.subject.unpromoteConfirmMessage",
-            defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",
-            comment: "Message of the Unpromote confirm when the handle keeps another record"
-        )
-
-        static func unpromoteConfirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
-            let key: LocalizedStringResource
-            switch kind {
-            case .person:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.person",
-                    defaultValue: "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph.",
-                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a person"
-                )
-            case .event:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.event",
-                    defaultValue: "The check for whether this event is deleted could not run. Confirming may still delete this event. The cards stay on the graph.",
-                    comment: "Unpromote confirm when GetUnpromoteImpact fails for an event"
-                )
-            case .place:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.place",
-                    defaultValue: "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph.",
-                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a place"
-                )
-            }
-            return L10n.string(key)
-        }
-
-        static func unpromoteConfirmMessageDeletes(kind: EvidencePrimaryKind, ref: String) -> String {
-            let key: LocalizedStringResource
-            switch kind {
-            case .person:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.person",
-                    defaultValue: "%@ has no other records, so this person is deleted. The cards stay on the graph.",
-                    comment: "Unpromote confirm when the Person handle is deleted; argument is its ref"
-                )
-            case .event:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.event",
-                    defaultValue: "%@ has no other records, so this event is deleted. The cards stay on the graph.",
-                    comment: "Unpromote confirm when the Event handle is deleted; argument is its ref"
-                )
-            case .place:
-                key = LocalizedStringResource(
-                    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.place",
-                    defaultValue: "%@ has no other records, so this place is deleted. The cards stay on the graph.",
-                    comment: "Unpromote confirm when the Place handle is deleted; argument is its ref"
-                )
-            }
-            return L10n.format(key, ref)
-        }
-
-        static let unpromoteConfirmBridgesHeader = LocalizedStringResource(
-            "evidenceGraph.subject.unpromoteConfirmBridgesHeader",
-            defaultValue: "Also unpromoted",
-            comment: "Header over the relationships, participations, and locations the Unpromote confirm lists"
-        )
-
-        static let unpromoteConfirmBridgesUnlisted = LocalizedStringResource(
-            "evidenceGraph.subject.unpromoteConfirmBridgesUnlisted",
-            defaultValue: "The connections that come off with it could not be listed. The other end of each stays promoted.",
-            comment: "Unpromote confirm, in place of the connection list, when the engine or the graph could not supply it"
-        )
-
-        static let unpromoteConfirmBridgesNote = LocalizedStringResource(
-            "evidenceGraph.subject.unpromoteConfirmBridgesNote",
-            defaultValue: "The other end of each stays promoted.",
-            comment: "Note under the list in the Unpromote confirm"
-        )
-
         static func promoteAccessibility(label: String, ref: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "evidenceGraph.subject.promoteAccessibility",
@@ -8455,6 +8361,103 @@ enum L10n {
             "personCard.noLikeness",
             defaultValue: "No likeness recorded",
             comment: "Accessibility label of the empty portrait slot of a person: the card's thumbnail and the Person page header"
+        )
+    }
+
+    /// The Unpromote confirm and its buttons, shared by the Evidence graph and the Person page.
+    enum Unpromote {
+        static let button = LocalizedStringResource(
+            "unpromote.button",
+            defaultValue: "Unpromote",
+            comment: "Footer icon button's tooltip and VoiceOver action on a promoted card, the confirm button, and the Person page's button on a record's line, that takes its promotion back"
+        )
+
+        static let keep = LocalizedStringResource(
+            "unpromote.keep",
+            defaultValue: "Keep promotion",
+            comment: "Cancel button of the Unpromote confirm"
+        )
+
+        static func confirmTitle(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "unpromote.confirmTitle",
+                defaultValue: "Unpromote %1$@?",
+                comment: "Title of the Unpromote confirm; argument is the subject's name"
+            ), name)
+        }
+
+        static let confirmMessage = LocalizedStringResource(
+            "unpromote.confirmMessage",
+            defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",
+            comment: "Message of the Unpromote confirm when the handle keeps another record"
+        )
+
+        static func confirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "unpromote.confirmPreflightFailed.person",
+                    defaultValue: "The check for whether this person is deleted could not run. Confirming may still delete this person. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a person"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "unpromote.confirmPreflightFailed.event",
+                    defaultValue: "The check for whether this event is deleted could not run. Confirming may still delete this event. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for an event"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "unpromote.confirmPreflightFailed.place",
+                    defaultValue: "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph.",
+                    comment: "Unpromote confirm when GetUnpromoteImpact fails for a place"
+                )
+            }
+            return L10n.string(key)
+        }
+
+        static func confirmMessageDeletes(kind: EvidencePrimaryKind, ref: String) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessageDeletes.person",
+                    defaultValue: "%@ has no other records, so this person is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Person handle is deleted; argument is its ref"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessageDeletes.event",
+                    defaultValue: "%@ has no other records, so this event is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Event handle is deleted; argument is its ref"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessageDeletes.place",
+                    defaultValue: "%@ has no other records, so this place is deleted. The cards stay on the graph.",
+                    comment: "Unpromote confirm when the Place handle is deleted; argument is its ref"
+                )
+            }
+            return L10n.format(key, ref)
+        }
+
+        static let confirmBridgesHeader = LocalizedStringResource(
+            "unpromote.confirmBridgesHeader",
+            defaultValue: "Also unpromoted",
+            comment: "Header over the relationships, participations, and locations the Unpromote confirm lists"
+        )
+
+        static let confirmBridgesUnlisted = LocalizedStringResource(
+            "unpromote.confirmBridgesUnlisted",
+            defaultValue: "The connections that come off with it could not be listed. The other end of each stays promoted.",
+            comment: "Unpromote confirm, in place of the connection list, when the engine or the graph could not supply it"
+        )
+
+        static let confirmBridgesNote = LocalizedStringResource(
+            "unpromote.confirmBridgesNote",
+            defaultValue: "The other end of each stays promoted.",
+            comment: "Note under the list in the Unpromote confirm"
         )
     }
 

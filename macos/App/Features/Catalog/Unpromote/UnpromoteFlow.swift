@@ -36,7 +36,7 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
 
     var message: String {
         if deletesOwnHandle, let ref = deletedHandles?.listed.first?.ref {
-            return L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: kind, ref: ref)
+            return L10n.Unpromote.confirmMessageDeletes(kind: kind, ref: ref)
         }
         if let group = deletedHandles,
            let line = PVDeleteImpactCopy.cascadeLines(
@@ -45,9 +45,9 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
             return line
         }
         if impactCheckFailed {
-            return L10n.EvidenceGraph.unpromoteConfirmPreflightFailed(kind: kind)
+            return L10n.Unpromote.confirmPreflightFailed(kind: kind)
         }
-        return L10n.string(L10n.EvidenceGraph.unpromoteConfirmMessage)
+        return L10n.string(L10n.Unpromote.confirmMessage)
     }
 
     var content: PVUnpromoteConfirmContent {

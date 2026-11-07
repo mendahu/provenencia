@@ -2070,7 +2070,7 @@ struct EvidenceGraphModelTests {
         #expect(model.unpromote.pending?.deletedHandles?.listed.first?.ref == "PER-7KD45")
         #expect(model.unpromote.pending?.kind == .person)
         #expect(model.unpromote.pending?.error == nil)
-        #expect(model.unpromote.pending?.message == L10n.EvidenceGraph.unpromoteConfirmMessageDeletes(kind: .person, ref: "PER-7KD45"))
+        #expect(model.unpromote.pending?.message == L10n.Unpromote.confirmMessageDeletes(kind: .person, ref: "PER-7KD45"))
     }
 
     @Test func unpromotePreflightFailureStaysInTheConfirm() async {
