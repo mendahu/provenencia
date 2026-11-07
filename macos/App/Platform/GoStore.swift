@@ -1261,6 +1261,40 @@ struct GoStore: GenealogyStore {
         )
     }
 
+    func getPersonRecordLinks(projectDir: String, entityID: String) async throws -> CatalogPersonRecordLinks {
+        var req = Provenencia_Engine_V1_GetPersonRecordLinksRequest()
+        req.projectDir = projectDir
+        req.entityID = entityID
+        let resp: Provenencia_Engine_V1_GetPersonRecordLinksResponse = try await provenenciaCall(
+            method: CoreMethod.getPersonRecordLinks,
+            request: req
+        )
+        return CatalogPersonRecordLinks(
+            graphs: resp.graphs.map {
+                CatalogRecordLinksGraph(
+                    graphID: $0.graphID,
+                    graphRef: $0.graphRef,
+                    graphName: $0.graphName,
+                    sourceID: $0.sourceID,
+                    sourceTitle: $0.sourceTitle,
+                    sourceTypeID: $0.sourceTypeID
+                )
+            },
+            pairs: resp.pairs.map {
+                CatalogRecordLinksPair(graphAID: $0.graphAID, graphBID: $0.graphBID, lines: $0.lines.compactMap(Self.mapRecordLink))
+            }
+        )
+    }
+
+    /// A line of a strength this build doesn't know is dropped.
+    private static func mapRecordLink(_ l: Provenencia_Engine_V1_RecordLink) -> CatalogRecordLink? {
+        switch l.strength {
+        case .weak: CatalogRecordLink(entityID: l.entityID, strength: .weak)
+        case .strong: CatalogRecordLink(entityID: l.entityID, strength: .strong)
+        default: nil
+        }
+    }
+
     /// An empty id is nil: a placeholder, or a marker with no span to sit beside.
     private static func mapLifeMarker(_ m: Provenencia_Engine_V1_LifeMarker) -> CatalogLifeMarker {
         CatalogLifeMarker(
