@@ -149,7 +149,7 @@ final class PropertiesModel {
     /// until the first load (⌘N and Add can open create before it).
     var offeredValueTypes: [String] {
         snapshot.valueTypeRules.isEmpty
-            ? [draft?.valueType ?? "text"]
+            ? [draft?.valueType ?? PropertyValueType.text.rawValue]
             : snapshot.creatableValueTypes
     }
 
@@ -314,7 +314,7 @@ final class PropertiesModel {
         let label = prefillLabel
         draft = Draft(
             label: label,
-            valueType: "text",
+            valueType: PropertyValueType.text.rawValue,
             description: "",
             cardinality: PropertyCardinality.single.rawValue,
             bindTypeIDs: bind

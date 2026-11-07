@@ -149,7 +149,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	if cardinality == "" {
 		cardinality = propertymeta.CardinalitySingle
 	}
-	if label == "" || !valueTypeOK(valueType) || !cardinalityAllowed(valueType, cardinality) {
+	if label == "" || !cardinalityAllowed(valueType, cardinality) {
 		return Property{}, nil, ErrInvalid
 	}
 	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, database.NullString(description), valueType, cardinality); err != nil {

@@ -251,12 +251,11 @@ struct PropertiesModelTests {
         }
     }
 
-    /// `propertymeta.Types` as Go sends it today. The Go side pins the real table
-    /// (`TestGetPropertiesWorkspaceValueTypes`); a test here seeds the fake with it.
+    /// A small rules list in Go's shape: one type a researcher may create and
+    /// one they may not, in an order that is not alphabetical. Go pins the real
+    /// table (`TestGetPropertiesWorkspaceValueTypes`).
     private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
-        ("text", true, false), ("integer", true, false), ("date", true, false),
-        ("name", true, false), ("subject", true, false), ("term", false, false),
-        ("depiction", false, false), ("boolean", false, true),
+        ("name", true, false), ("date", false, false),
     ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
@@ -269,7 +268,7 @@ struct PropertiesModelTests {
         model.openCreate()
         model.draft = PropertiesModel.Draft(
             label: "Custom Fact",
-            valueType: "text",
+            valueType: "name",
             description: "",
             bindTypeIDs: [person.id]
         )
@@ -280,22 +279,20 @@ struct PropertiesModelTests {
         #expect(location?.title == "Custom Fact")
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" && $0.cardinality == "single" } == true)
         #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
-        #expect(!model.offeredValueTypes.contains("term"))
+        #expect(!model.offeredValueTypes.contains("date"))
     }
 
     /// T-12 (AC-4.2): the create picker offers what Go marks creatable, in Go's
-    /// order; boolean and term are refused until Go says otherwise.
+    /// order; a type Go does not mark creatable is refused.
     @Test func createOffersGoCreatableTypes() async {
         let store = FakeStore()
         store.valueTypeRules = Self.goValueTypeRules
         let (model, session, _) = makeModel(store: store, types: [personType()])
         await warm(model, session: session)
         model.openCreate()
-        #expect(model.offeredValueTypes == ["text", "integer", "date", "name", "subject"])
-        for refused in ["boolean", "term"] {
-            let draft = PropertiesModel.Draft(label: "Literate", valueType: refused, description: "", bindTypeIDs: [])
-            #expect(!model.canSubmitCreate(draft), "\(refused)")
-        }
+        #expect(model.offeredValueTypes == ["name"])
+        let refused = PropertiesModel.Draft(label: "Born", valueType: "date", description: "", bindTypeIDs: [])
+        #expect(!model.canSubmitCreate(refused))
     }
 
     /// T-12 (D-11): create opened before the first load offers the draft's own
@@ -304,7 +301,7 @@ struct PropertiesModelTests {
         let (model, _, _) = makeModel(types: [personType()])
         model.openCreate()
         #expect(model.snapshot.valueTypeRules.isEmpty)
-        #expect(model.offeredValueTypes == [model.draft?.valueType ?? "text"])
+        #expect(model.offeredValueTypes == [model.draft?.valueType ?? PropertyValueType.text.rawValue])
         let draft = PropertiesModel.Draft(label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [])
         #expect(model.canSubmitCreate(draft))
     }
