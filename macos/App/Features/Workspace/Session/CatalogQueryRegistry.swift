@@ -81,6 +81,49 @@ extension CatalogQueryDescriptor {
     }
 }
 
+extension CatalogQueryDescriptor {
+    /// A per-person section key that a relative's or co-participant's change
+    /// reaches: that change touches their id, not the Person's, so any touched
+    /// handle reloads it.
+    static func personSection<Value>(
+        kind: CatalogQueryKey.Kind,
+        load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
+    ) -> CatalogQueryDescriptor {
+        .make(
+            kind: kind,
+            stalePolicy: .sessionFresh,
+            whenHidden: .evict,
+            refreshes: [
+                .applyHiddenPolicyOnAny(follows: .touchedHandles),
+                .followsPropertyLabels,
+            ],
+            load: load
+        )
+    }
+
+    /// A per-person section key read from the Person's Evidence graphs: it
+    /// reloads when its own handle or one of the graphs its value holds is
+    /// written.
+    static func personGraphsSection<Value>(
+        kind: CatalogQueryKey.Kind,
+        entityId: @escaping @Sendable (CatalogQueryKey) -> String?,
+        graphIDs: @escaping @Sendable (Value) -> Set<String>,
+        load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
+    ) -> CatalogQueryDescriptor {
+        .make(
+            kind: kind,
+            stalePolicy: .sessionFresh,
+            whenHidden: .evict,
+            refreshes: [
+                .applyHiddenPolicy(follows: .touchedHandles) { _, key in entityId(key).map { [$0] } ?? [] },
+                .applyHiddenPolicy(followsValue: .evidenceGraphs, ids: graphIDs),
+                .followsPropertyLabels,
+            ],
+            load: load
+        )
+    }
+}
+
 /// Declarative catalog read loaders and mutation invalidation map.
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
@@ -534,20 +577,15 @@ extension CatalogQueryKey.Kind {
             // change who a claim belongs to, so every cached key is stale on a
             // trigger. Otherwise a write reloads it for its own handle, and for
             // the Evidence graphs it holds a claim on.
-            return .make(
+            return .personGraphsSection(
                 kind: self,
-                stalePolicy: .sessionFresh,
-                whenHidden: .evict,
-                refreshes: [
-                    .applyHiddenPolicy(follows: .touchedHandles) { _, key in
-                        guard case .personClaims(_, let entityId) = key else { return [] }
-                        return [entityId]
-                    },
-                    .applyHiddenPolicy(followsValue: .evidenceGraphs) { (groups: [CatalogPersonClaimGroup]) in
-                        Set(groups.flatMap(\.claims).map(\.graphID))
-                    },
-                    .followsPropertyLabels,
-                ],
+                entityId: { key in
+                    guard case .personClaims(_, let entityId) = key else { return nil }
+                    return entityId
+                },
+                graphIDs: { (groups: [CatalogPersonClaimGroup]) in
+                    Set(groups.flatMap(\.claims).map(\.graphID))
+                },
                 load: { key, store in
                     guard case .personClaims(let project, let entityId) = key else {
                         mismatchedCatalogKey(key, .personClaims)
@@ -561,40 +599,42 @@ extension CatalogQueryKey.Kind {
             // hops away, so any write that names a handle reloads a visible
             // Family section; the read is cheap warm. A newly filed relative is
             // not in the cached value, so the key cannot follow the ids it names.
-            return .make(
-                kind: self,
-                stalePolicy: .sessionFresh,
-                whenHidden: .evict,
-                refreshes: [
-                    .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .followsPropertyLabels,
-                ],
-                load: { key, store in
-                    guard case .personFamily(let project, let entityId) = key else {
-                        mismatchedCatalogKey(key, .personFamily)
-                    }
-                    return try await store.getPersonFamily(projectDir: project.projectDir, entityID: entityId)
+            return .personSection(kind: self) { key, store in
+                guard case .personFamily(let project, let entityId) = key else {
+                    mismatchedCatalogKey(key, .personFamily)
                 }
-            )
+                return try await store.getPersonFamily(projectDir: project.projectDir, entityID: entityId)
+            }
         case .personEvents:
             // A Person's timeline (S13-05). An edit to an event or a
             // co-participant touches their id, not this Person's, and a newly
             // filed participation is not in the cached value, so any write that
             // names a handle reloads a visible Timeline section; the read is
             // cheap warm.
-            return .make(
+            return .personSection(kind: self) { key, store in
+                guard case .personEvents(let project, let entityId) = key else {
+                    mismatchedCatalogKey(key, .personEvents)
+                }
+                return try await store.listPersonEvents(projectDir: project.projectDir, entityID: entityId)
+            }
+        case .personRecordLinks:
+            // A Person's Evidence graphs and the lines between them (S13-27).
+            // Every write that can change a line names a graph the value holds
+            // (a neighbor's claim names its graph; a Subject, Observation or
+            // Source write names its graph) or the Person's own handle (a graph
+            // gained or lost), so a write elsewhere does not reload the pairs.
+            return .personGraphsSection(
                 kind: self,
-                stalePolicy: .sessionFresh,
-                whenHidden: .evict,
-                refreshes: [
-                    .applyHiddenPolicyOnAny(follows: .touchedHandles),
-                    .followsPropertyLabels,
-                ],
+                entityId: { key in
+                    guard case .personRecordLinks(_, let entityId) = key else { return nil }
+                    return entityId
+                },
+                graphIDs: { (links: CatalogPersonRecordLinks) in Set(links.graphs.map(\.graphID)) },
                 load: { key, store in
-                    guard case .personEvents(let project, let entityId) = key else {
-                        mismatchedCatalogKey(key, .personEvents)
+                    guard case .personRecordLinks(let project, let entityId) = key else {
+                        mismatchedCatalogKey(key, .personRecordLinks)
                     }
-                    return try await store.listPersonEvents(projectDir: project.projectDir, entityID: entityId)
+                    return try await store.getPersonRecordLinks(projectDir: project.projectDir, entityID: entityId)
                 }
             )
         }

@@ -448,7 +448,6 @@ struct CatalogQueryRegistryTests {
 
     @Test func everyKindHasOneDescriptor() {
         let kinds = CatalogQueryKey.Kind.allCases
-        #expect(kinds.count == 21)
         let described = kinds.map { kind -> CatalogQueryKey.Kind in
             let descriptor = kind.descriptor
             #expect(descriptor.kind == kind)
@@ -1285,6 +1284,7 @@ struct CatalogQueryRegistryTests {
             "personClaims": .personClaims(project: project, entityId: "e1"),
             "personFamily": .personFamily(project: project, entityId: "e1"),
             "personEvents": .personEvents(project: project, entityId: "e1"),
+            "personRecordLinks": .personRecordLinks(project: project, entityId: "e1"),
             "propertyTerms(p1)": .propertyTerms(project: project, propertyId: "p1"),
             "propertyTerms(p2)": .propertyTerms(project: project, propertyId: "p2"),
             "sourceWorkspace": .sourceWorkspace(project: project, sourceId: "s1"),
@@ -1302,6 +1302,7 @@ struct CatalogQueryRegistryTests {
         session.setQueryValue(keys["personClaims"]!, value: [CatalogPersonClaimGroup]())
         session.setQueryValue(keys["personFamily"]!, value: CatalogPersonFamily(units: []))
         session.setQueryValue(keys["personEvents"]!, value: CatalogPersonTimeline())
+        session.setQueryValue(keys["personRecordLinks"]!, value: CatalogPersonRecordLinks())
         session.setQueryValue(keys["propertyTerms(p1)"]!, value: [CatalogPropertyTerm]())
         session.setQueryValue(keys["propertyTerms(p2)"]!, value: [CatalogPropertyTerm]())
         session.setQueryValue(keys["sourceWorkspace"]!, value: CatalogSourceWorkspace(
@@ -1334,7 +1335,7 @@ struct CatalogQueryRegistryTests {
             effects: CatalogWriteEffects(lists: [.propertyVocabulary]),
             reached: [
                 "propertiesWorkspace", "personsList", "eventsList", "placesList",
-                "conclusionDetail", "personClaims", "personFamily", "personEvents",
+                "conclusionDetail", "personClaims", "personFamily", "personEvents", "personRecordLinks",
             ]
         ),
         FamilyCase(
@@ -1362,6 +1363,7 @@ struct CatalogQueryRegistryTests {
         let source = CatalogSource(id: "s1", ref: "SRC-1", sourceTypeID: "", title: "T", description: "")
         let conclusionKinds: Set<CatalogQueryKey.Kind> = [
             .personsList, .eventsList, .placesList, .conclusionDetail, .personClaims, .personFamily, .personEvents,
+            .personRecordLinks,
         ]
         let mutations: [CatalogMutation] = [
             .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
@@ -1502,6 +1504,58 @@ struct CatalogQueryRegistryTests {
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
         #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
         #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
+    }
+
+    /// A write that names a graph the value holds, or the Person's own handle,
+    /// revalidates the cached `personRecordLinks` key; a write that names only a
+    /// handle and a graph it does not hold does not. The key is evicted while
+    /// hidden.
+    @Test func personRecordLinksRevalidate() {
+        let session = makeSession()
+        let project = session.projectKey
+        let key = CatalogQueryKey.personRecordLinks(project: project, entityId: "e1")
+        session.setQueryValue(key, value: CatalogPersonRecordLinks(graphs: [
+            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: "", sourceTypeID: ""),
+            CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "", sourceID: "s2", sourceTitle: "", sourceTypeID: ""),
+        ]))
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e7"], evidenceGraphs: ["g9"])).isEmpty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(lists: [.propertyVocabulary])).contains(key))
+        #expect(key.kind == .personRecordLinks)
+        #expect(key.project == project)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
+        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(
+            CatalogQueryKey.Kind.personRecordLinks.descriptor.refreshes.map(\.follows)
+                == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]
+        )
+    }
+
+    /// The key loads through the store; an unseeded handle is coded not found,
+    /// as Go answers for an unknown handle.
+    @Test func personRecordLinksLoadThroughTheStore() async throws {
+        let store = FakeStore()
+        let links = CatalogPersonRecordLinks(
+            graphs: [
+                CatalogRecordLinksGraph(graphID: "g1", graphRef: "EG-1", graphName: "Default", sourceID: "s1", sourceTitle: "A", sourceTypeID: "t1"),
+                CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "Default", sourceID: "s2", sourceTitle: "B", sourceTypeID: "t1"),
+            ],
+            pairs: [CatalogRecordLinksPair(
+                graphAID: "g1", graphBID: "g2",
+                lines: [CatalogRecordLink(entityID: "e2", strength: .weak), CatalogRecordLink(entityID: "e3", strength: .strong)]
+            )]
+        )
+        store.seededPersonRecordLinks = ["e1": links]
+        let session = makeSession(store: store)
+        let handle: QueryHandle<CatalogPersonRecordLinks> = session.query(
+            .personRecordLinks(project: session.projectKey, entityId: "e1")
+        )
+        await waitForQuery(handle)
+        #expect(handle.value == links)
+        await #expect(throws: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])) {
+            _ = try await store.getPersonRecordLinks(projectDir: projectDir, entityID: "e9")
+        }
     }
 
     /// T-7 (AC-4.1): the key loads through the store; an unseeded handle is

@@ -38,6 +38,9 @@ enum CatalogQueryKey: Hashable, Sendable {
     /// One Person's timeline events (S13-05), read for the Timeline section.
     /// Evicted, not revalidated, while off screen.
     case personEvents(project: ProjectKey, entityId: String)
+    /// One Person's Evidence graphs and the lines between them (S13-27), read
+    /// for the record links view. Evicted, not revalidated, while off screen.
+    case personRecordLinks(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload. Each kind has one
     /// `CatalogQueryDescriptor` (`Kind.descriptor`).
@@ -63,6 +66,7 @@ enum CatalogQueryKey: Hashable, Sendable {
         case personClaims
         case personFamily
         case personEvents
+        case personRecordLinks
     }
 
     var kind: Kind {
@@ -109,6 +113,8 @@ enum CatalogQueryKey: Hashable, Sendable {
             return .personFamily
         case .personEvents:
             return .personEvents
+        case .personRecordLinks:
+            return .personRecordLinks
         }
     }
 
@@ -134,7 +140,8 @@ enum CatalogQueryKey: Hashable, Sendable {
              .conclusionDetail(let project, _),
              .personClaims(let project, _),
              .personFamily(let project, _),
-             .personEvents(let project, _):
+             .personEvents(let project, _),
+             .personRecordLinks(let project, _):
             project
         }
     }
