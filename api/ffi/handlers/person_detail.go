@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/recordlinks"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -188,6 +189,66 @@ func ListPersonEvents(in []byte) ([]byte, error) {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+// GetPersonRecordLinks returns the Evidence graphs that hold an accepted member
+// of a canonical person and, for each pair of them, one line for each other
+// person both name. The lines are computed on each read.
+func GetPersonRecordLinks(in []byte) ([]byte, error) {
+	var req engine.GetPersonRecordLinksRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("get_person_record_links", err)
+	}
+	entityID, err := parseID(req.GetEntityId())
+	if err != nil {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	out := &engine.GetPersonRecordLinksResponse{}
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		links, err := persondetail.RecordLinks(c, entityID)
+		if err != nil {
+			return err
+		}
+		for _, g := range links.Graphs {
+			out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
+				GraphId:      database.UUIDString(g.GraphID),
+				GraphRef:     g.GraphRef,
+				GraphName:    g.GraphName,
+				SourceId:     database.UUIDString(g.SourceID),
+				SourceTitle:  g.SourceTitle,
+				SourceTypeId: database.UUIDString(g.SourceTypeID),
+			})
+		}
+		for _, p := range links.Pairs {
+			pair := &engine.RecordLinksPair{
+				GraphAId: database.UUIDString(links.Graphs[p.A].GraphID),
+				GraphBId: database.UUIDString(links.Graphs[p.B].GraphID),
+			}
+			for _, l := range p.Lines {
+				pair.Lines = append(pair.Lines, &engine.RecordLink{
+					EntityId: database.UUIDString(l.Entity),
+					Strength: recordLinkStrengthProto(l.Strength),
+				})
+			}
+			out.Pairs = append(out.Pairs, pair)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+// recordLinkStrengthProto maps a line's weight to the wire.
+func recordLinkStrengthProto(s recordlinks.Strength) engine.RecordLinkStrength {
+	switch s {
+	case recordlinks.StrengthWeak:
+		return engine.RecordLinkStrength_RECORD_LINK_STRENGTH_WEAK
+	case recordlinks.StrengthStrong:
+		return engine.RecordLinkStrength_RECORD_LINK_STRENGTH_STRONG
+	}
+	return engine.RecordLinkStrength_RECORD_LINK_STRENGTH_UNSPECIFIED
 }
 
 // lifeMarkerProto maps a marker; an id that is not there is empty.
