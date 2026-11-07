@@ -101,4 +101,4 @@ Check: `rg -n "ObservationRow\.draft\(|static func draft\(subjectID" macos` find
 Head `08d87dec`. Gate PASS (run by the orchestrator on the pushed head). F-9 done. MNT-2 **Resolved**, read in the commit by the orchestrator.
 
 ## Result
-Gate PASS on `08d87dec` (the only later commit is this log) · CI not run: #739 is a draft · open: UX-1's proof (manual check 3) · follow-ups: PRF-1, collapse `ObservationRowState.draft` · to user: MNT-1 and plan-review M-9, both answered 2026-11-07. `main` moved by docs only (#738, S13-29's plan); #737 is mergeable and clean.
+Gate PASS on `08d87dec` (the only later commit is this log) · CI not run: #739 is a draft · open: UX-1's proof (manual check 3) · follow-ups: PRF-1 and the `ObservationRowState.draft` collapse, both in `docs/ideas/structural-debt.md` (user, 2026-11-07) · to user: MNT-1 and plan-review M-9, both answered 2026-11-07. `main` moved by docs only (#738, S13-29's plan); #737 is mergeable and clean.
