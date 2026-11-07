@@ -59,7 +59,7 @@ You add or change a tunable, a comparer, a relation, cause or unit code, a layer
 
 1. Add a `comparer` (`compare` and `key`) and an entry in `comparers` in `core/valuecompare/valuecompare.go`, keyed by the `propertymeta.ValueType*` constant.
 2. Add a sample row and a generator to `core/valuecompare/contract_test.go`; `TestComparerContract` fails without them.
-3. A new value type adds a row to `propertymeta.Types`. A type with no comparer adds a `noComparer` entry in `TestCompareUnsupported`.
+3. A new value type adds a row to `propertymeta.Types` and says whether it is researcher-creatable, single-only and negatable. A type with no comparer adds a `noComparer` entry in `TestCompareUnsupported`.
 4. A type with a distance computes its similarity through `falloff`, or the plan records why not.
 5. `Key` must agree with `Compare`: equal at `Same` exactly when the relation is `Same`, equal at `Equivalent` exactly when `Same` or `Equivalent` (`TestKeyContract`). Agreement holds under rules with no alias tables; name keys ignore aliases (S11-03 D-10).
 
