@@ -45,9 +45,9 @@ const (
 
 	sqlInsert = `INSERT INTO observations (
 		id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id,
+		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id,
 		value_depiction_id
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsertNote = `INSERT INTO observation_notes (id, observation_id, body) VALUES (?, ?, ?)`
 
@@ -57,7 +57,7 @@ const (
 		JOIN subject_types t ON t.id = s.subject_type_id
 		WHERE s.id = ?`
 	sqlGetRow = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id,
+		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id,
 		value_depiction_id
 		FROM observations WHERE id = ?`
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
@@ -73,7 +73,7 @@ const (
 	// label, name form, subject label, compact date) so graph cards / clients
 	// that only read value_text stay correct for every Property value_type.
 	sqlListSelect = `SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
-		o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
+		o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id,
 		o.value_depiction_id,
 		p.key, p.label, p.value_type,
 		COALESCE(pt.label, ''),
@@ -122,6 +122,8 @@ type Observation struct {
 	HasText        bool
 	ValueInteger   int64
 	HasInteger     bool
+	ValueBoolean   bool
+	HasBoolean     bool
 	ValueDateID    []byte
 	ValueNameID    []byte
 	ValueSubjectID []byte
@@ -168,6 +170,8 @@ type Input struct {
 	HasText        bool
 	ValueInteger   int64
 	HasInteger     bool
+	ValueBoolean   bool
+	HasBoolean     bool
 	Date           *datevalue.Value // when set, InsertTx inside the caller's tx
 	ValueDateID    []byte           // existing date_values.id when Date is nil
 	Name           *namevalue.Value
@@ -223,6 +227,7 @@ func InsertManyTx(tx *sql.Tx, citationID []byte, inputs []Input, opts InsertOpti
 type resolvedValue struct {
 	Text              string
 	Integer           *int64
+	Boolean           *bool
 	DateID, NameID    []byte
 	SubjectID, TermID []byte
 	DepictionID       []byte
@@ -356,6 +361,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			polarity,
 			database.NullString(resolved.Text),
 			nullInt64(resolved.Integer),
+			database.NullBool(resolved.Boolean),
 			database.NullBlob(resolved.DateID),
 			database.NullBlob(resolved.NameID),
 			database.NullBlob(resolved.SubjectID),
@@ -371,25 +377,21 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		return Observation{}, nil, mapConstraint(err)
 	}
 
+	obs := Observation{
+		ID:         append([]byte(nil), idBytes...),
+		Ref:        obsRef,
+		CitationID: append([]byte(nil), citationID...),
+		SubjectID:  append([]byte(nil), in.SubjectID...),
+		PropertyID: append([]byte(nil), in.PropertyID...),
+		Polarity:   polarity,
+	}
+	applyResolved(&obs, resolved)
+
 	changes := []rowchange.Change{{
 		EntityType: "observation",
 		EntityID:   idBytes,
 		Action:     rowchange.ActionCreate,
-		Fields: rowchange.FullRow(map[string]any{
-			"id":                 id.String(),
-			"ref":                obsRef,
-			"citation_id":        database.UUIDJSON(citationID),
-			"subject_id":         database.UUIDJSON(in.SubjectID),
-			"property_id":        database.UUIDJSON(in.PropertyID),
-			"polarity":           polarity,
-			"value_text":         database.NullString(resolved.Text),
-			"value_integer":      nullInt64(resolved.Integer),
-			"value_date_id":      database.UUIDJSON(resolved.DateID),
-			"value_name_id":      database.UUIDJSON(resolved.NameID),
-			"value_subject_id":   database.UUIDJSON(resolved.SubjectID),
-			"value_term_id":      database.UUIDJSON(resolved.TermID),
-			"value_depiction_id": database.UUIDJSON(resolved.DepictionID),
-		}),
+		Fields:     rowchange.FullRow(observationRowMap(obs)),
 	}}
 	changes = append(changes, resolved.ValueChanges...)
 
@@ -417,28 +419,29 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		})
 	}
 
-	obs := Observation{
-		ID:         append([]byte(nil), idBytes...),
-		Ref:        obsRef,
-		CitationID: append([]byte(nil), citationID...),
-		SubjectID:  append([]byte(nil), in.SubjectID...),
-		PropertyID: append([]byte(nil), in.PropertyID...),
-		Polarity:   polarity,
-	}
-	if resolved.Text != "" {
-		obs.ValueText = resolved.Text
+	return obs, changes, nil
+}
+
+// applyResolved fills obs's value fields from a resolved value, for insert and
+// update alike.
+func applyResolved(obs *Observation, r resolvedValue) {
+	if r.Text != "" {
+		obs.ValueText = r.Text
 		obs.HasText = true
 	}
-	if resolved.Integer != nil {
-		obs.ValueInteger = *resolved.Integer
+	if r.Integer != nil {
+		obs.ValueInteger = *r.Integer
 		obs.HasInteger = true
 	}
-	obs.ValueDateID = append([]byte(nil), resolved.DateID...)
-	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
-	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
-	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
-	obs.ValueDepictionID = append([]byte(nil), resolved.DepictionID...)
-	return obs, changes, nil
+	if r.Boolean != nil {
+		obs.ValueBoolean = *r.Boolean
+		obs.HasBoolean = true
+	}
+	obs.ValueDateID = append([]byte(nil), r.DateID...)
+	obs.ValueNameID = append([]byte(nil), r.NameID...)
+	obs.ValueSubjectID = append([]byte(nil), r.SubjectID...)
+	obs.ValueTermID = append([]byte(nil), r.TermID...)
+	obs.ValueDepictionID = append([]byte(nil), r.DepictionID...)
 }
 
 func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, existing *Observation) (resolvedValue, error) {
@@ -455,6 +458,12 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 		}
 		v := in.ValueInteger
 		return resolvedValue{Integer: &v}, nil
+	case propertymeta.ValueTypeBoolean:
+		if !in.HasBoolean || hasOtherScalars(in, "boolean") {
+			return resolvedValue{}, ErrInvalid
+		}
+		v := in.ValueBoolean
+		return resolvedValue{Boolean: &v}, nil
 	case propertymeta.ValueTypeDate:
 		if hasOtherScalars(in, "date") {
 			return resolvedValue{}, ErrInvalid
@@ -560,6 +569,9 @@ func hasOtherScalars(in Input, keep string) bool {
 	if keep != "integer" && in.HasInteger {
 		return true
 	}
+	if keep != "boolean" && in.HasBoolean {
+		return true
+	}
 	if keep != "date" && (in.Date != nil || len(in.ValueDateID) > 0) {
 		return true
 	}
@@ -643,6 +655,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 			l                                                         Listed
 			valueText                                                 sql.NullString
 			valueInt                                                  sql.NullInt64
+			valueBool                                                 sql.NullBool
 			dateID, nameID, subjectID, termID, depictionID            []byte
 			depictionRegion                                           sql.NullString
 			depictionImage                                            []byte
@@ -654,7 +667,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		)
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,
-			&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID,
+			&valueText, &valueInt, &valueBool, &dateID, &nameID, &subjectID, &termID,
 			&depictionID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
 			&termLabel, &termKey, &termOrigin, &nameForm, &subjectLabel,
@@ -675,6 +688,10 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		if valueInt.Valid {
 			l.ValueInteger = valueInt.Int64
 			l.HasInteger = true
+		}
+		if valueBool.Valid {
+			l.ValueBoolean = valueBool.Bool
+			l.HasBoolean = true
 		}
 		l.ValueDateID = append([]byte(nil), dateID...)
 		l.ValueNameID = append([]byte(nil), nameID...)

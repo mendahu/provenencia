@@ -18,7 +18,7 @@ import (
 const (
 	sqlUpdateObservation = `UPDATE observations SET
 		subject_id = ?, property_id = ?, polarity = ?,
-		value_text = ?, value_integer = ?,
+		value_text = ?, value_integer = ?, value_boolean = ?,
 		value_date_id = ?, value_name_id = ?, value_subject_id = ?, value_term_id = ?,
 		value_depiction_id = ?
 		WHERE id = ? AND citation_id = ?`
@@ -65,6 +65,7 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		polarity,
 		database.NullString(resolved.Text),
 		nullInt64(resolved.Integer),
+		database.NullBool(resolved.Boolean),
 		database.NullBlob(resolved.DateID),
 		database.NullBlob(resolved.NameID),
 		database.NullBlob(resolved.SubjectID),
@@ -118,19 +119,7 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		PropertyID: append([]byte(nil), in.PropertyID...),
 		Polarity:   polarity,
 	}
-	if resolved.Text != "" {
-		obs.ValueText = resolved.Text
-		obs.HasText = true
-	}
-	if resolved.Integer != nil {
-		obs.ValueInteger = *resolved.Integer
-		obs.HasInteger = true
-	}
-	obs.ValueDateID = append([]byte(nil), resolved.DateID...)
-	obs.ValueNameID = append([]byte(nil), resolved.NameID...)
-	obs.ValueSubjectID = append([]byte(nil), resolved.SubjectID...)
-	obs.ValueTermID = append([]byte(nil), resolved.TermID...)
-	obs.ValueDepictionID = append([]byte(nil), resolved.DepictionID...)
+	applyResolved(&obs, resolved)
 	changes := extra
 	changes = append(changes, resolved.ValueChanges...)
 	if ch := observationUpdateChange(prev, obs); ch != nil {
@@ -162,6 +151,16 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 			new = next.ValueInteger
 		}
 		fields["value_integer"] = rowchange.FieldDiff{Old: old, New: new}
+	}
+	if prev.HasBoolean != next.HasBoolean || (next.HasBoolean && prev.ValueBoolean != next.ValueBoolean) {
+		var old, new any
+		if prev.HasBoolean {
+			old = prev.ValueBoolean
+		}
+		if next.HasBoolean {
+			new = next.ValueBoolean
+		}
+		fields["value_boolean"] = rowchange.FieldDiff{Old: old, New: new}
 	}
 	if !bytes.Equal(prev.ValueDateID, next.ValueDateID) {
 		fields["value_date_id"] = rowchange.FieldDiff{Old: database.UUIDString(prev.ValueDateID), New: database.UUIDString(next.ValueDateID)}

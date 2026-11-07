@@ -17,3 +17,15 @@ func NullString(s string) any {
 	}
 	return s
 }
+
+// NullBool binds a nil pointer as SQL NULL and a bool as 0 or 1, so an
+// optional boolean column keeps false distinct from absent.
+func NullBool(p *bool) any {
+	if p == nil {
+		return nil
+	}
+	if *p {
+		return int64(1)
+	}
+	return int64(0)
+}

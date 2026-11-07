@@ -138,13 +138,14 @@ func scanRawObservation(row rowScanner) (Observation, error) {
 		obs               Observation
 		valueText         sql.NullString
 		valueInt          sql.NullInt64
+		valueBool         sql.NullBool
 		dateID, nameID    []byte
 		subjectID, termID []byte
 		depictionID       []byte
 	)
 	if err := row.Scan(
 		&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-		&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID, &depictionID,
+		&valueText, &valueInt, &valueBool, &dateID, &nameID, &subjectID, &termID, &depictionID,
 	); err != nil {
 		return Observation{}, err
 	}
@@ -155,6 +156,10 @@ func scanRawObservation(row rowScanner) (Observation, error) {
 	if valueInt.Valid {
 		obs.ValueInteger = valueInt.Int64
 		obs.HasInteger = true
+	}
+	if valueBool.Valid {
+		obs.ValueBoolean = valueBool.Bool
+		obs.HasBoolean = true
 	}
 	obs.ValueDateID = append([]byte(nil), dateID...)
 	obs.ValueNameID = append([]byte(nil), nameID...)
@@ -254,6 +259,10 @@ func observationRowMap(o Observation) map[string]any {
 	if o.HasInteger {
 		integer = o.ValueInteger
 	}
+	var boolean any
+	if o.HasBoolean {
+		boolean = o.ValueBoolean
+	}
 	return map[string]any{
 		"id":                 database.UUIDJSON(o.ID),
 		"ref":                o.Ref,
@@ -263,6 +272,7 @@ func observationRowMap(o Observation) map[string]any {
 		"polarity":           o.Polarity,
 		"value_text":         database.NullString(o.ValueText),
 		"value_integer":      integer,
+		"value_boolean":      boolean,
 		"value_date_id":      database.UUIDJSON(o.ValueDateID),
 		"value_name_id":      database.UUIDJSON(o.ValueNameID),
 		"value_subject_id":   database.UUIDJSON(o.ValueSubjectID),
