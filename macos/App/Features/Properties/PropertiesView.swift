@@ -773,6 +773,10 @@ private struct PropertiesCreateHost: View {
                 PVCallout(tone: .danger, message: formError)
                     .accessibilityIdentifier("properties.create.error")
             }
+            if let loadError = model.createLoadError {
+                PVCallout(tone: .danger, message: L10n.Errors.message(for: loadError))
+                    .accessibilityIdentifier("properties.create.loadError")
+            }
 
             PVTabPair { label, description in
                 PVField(

@@ -309,6 +309,24 @@ struct PropertiesModelTests {
         #expect(model.canSubmitCreate(draft))
     }
 
+    /// UX-1: a load that failed leaves create with no Go list to offer from, so
+    /// the dialog says why and refuses to confirm instead of offering text alone.
+    @Test func createRefusesAfterAFailedLoad() async {
+        struct LoadFailed: Error {}
+        let store = FakeStore()
+        store.getPropertiesWorkspaceError = LoadFailed()
+        let (model, session, _) = makeModel(store: store, types: [personType()])
+        await warm(model, session: session)
+        model.openCreate()
+        #expect(model.loadError != nil)
+        #expect(!model.acceptsValueType("text"))
+        let draft = PropertiesModel.Draft(label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [])
+        #expect(!model.canSubmitCreate(draft))
+        let created = await model.submitCreate(draft)
+        #expect(created == nil)
+        #expect(store.propertiesByProject[projectDir]?.isEmpty == true)
+    }
+
     /// T-12 (AC-4.6): boolean's label.
     @Test func booleanLabelReadsYesNo() {
         #expect(L10n.string(PropertyValueType.boolean.label) == "Yes / no")
