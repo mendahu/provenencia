@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/propertycompare"
 	pt "github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/recordlinks"
 	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
@@ -349,4 +350,144 @@ func withDerivedMetas() subjectcompare.Metas {
 	metas[vocabkey.PropertyLifespan] = date
 	metas[vocabkey.PropertyLifespanSpan] = date
 	return metas
+}
+
+// TestLinesBounds holds the two registry bounds: members of any kind per
+// entity and values per property. Each bound is the largest size that still
+// compares as usual; one more counts nothing.
+func TestLinesBounds(t *testing.T) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	maxMembers, maxValues := cfg.RecordLinks.MaxEntityMembers, cfg.RecordLinks.MaxUnitValues
+	john := pt.Name("John Smith")
+	male := pt.Term("male")
+	pageA, pageB := person(idA(1), entP), person(idB(1), entP)
+	repeat := func(v propertycompare.Value, n int) []propertycompare.Value {
+		out := make([]propertycompare.Value, n)
+		for i := range out {
+			out[i] = v
+		}
+		return out
+	}
+	// persons are n people on entF named John, with ids from 2 up in one graph.
+	persons := func(id func(byte) []byte, n int) []recordlinks.Member {
+		var out []recordlinks.Member
+		for i := range n {
+			out = append(out, person(id(byte(2+i)), entF, vals{name: {john}}))
+		}
+		return out
+	}
+	// events are n events on entity e, with ids from 1 up in one graph.
+	events := func(id func(byte) []byte, e []byte, n int) []recordlinks.Member {
+		var out []recordlinks.Member
+		for i := range n {
+			out = append(out, event(id(byte(1+i)), e))
+		}
+		return out
+	}
+	with := func(a []recordlinks.Member, rest ...[]recordlinks.Member) []recordlinks.Member {
+		for _, r := range rest {
+			a = append(a, r...)
+		}
+		return a
+	}
+	one := func(m ...recordlinks.Member) []recordlinks.Member { return m }
+
+	cases := []struct {
+		name string
+		a, b recordlinks.Graph
+		want []recordlinks.Line
+	}{
+		{"members at the bound in A",
+			build(with(one(pageA), persons(idA, maxMembers))), build(with(one(pageB), persons(idB, 1))),
+			lines(want{entF, 1, weak})},
+		{"members over the bound in A",
+			build(with(one(pageA), persons(idA, maxMembers+1))), build(with(one(pageB), persons(idB, 1))),
+			lines(want{entF, 0, weak})},
+		{"members over the bound in B only",
+			build(with(one(pageA), persons(idA, 1))), build(with(one(pageB), persons(idB, 1), events(evB, entF, maxMembers))),
+			lines(want{entF, 0, weak})},
+		{"members at the bound in B, events counted",
+			build(with(one(pageA), persons(idA, 1))), build(with(one(pageB), persons(idB, 1), events(evB, entF, maxMembers-1))),
+			lines(want{entF, 1, weak})},
+		{"far entity at the bound counts its link",
+			build(with(one(pageA, person(idA(2), entF, vals{name: {john}})), events(evA, entE, maxMembers)),
+				part(idA(2), evA(1), "subject", birth, 1)),
+			build(one(pageB, person(idB(2), entF, vals{name: {john}}), event(evB(1), entE)),
+				part(idB(2), evB(1), "subject", birth, 1)),
+			lines(want{entF, 2, strong})},
+		{"far entity over the bound counts no link",
+			build(with(one(pageA, person(idA(2), entF, vals{name: {john}})), events(evA, entE, maxMembers+1)),
+				part(idA(2), evA(1), "subject", birth, 1)),
+			build(one(pageB, person(idB(2), entF, vals{name: {john}}), event(evB(1), entE)),
+				part(idB(2), evB(1), "subject", birth, 1)),
+			lines(want{entF, 1, weak})},
+		{"values at the bound in A",
+			build(one(pageA, person(idA(2), entF, vals{name: repeat(john, maxValues), sex: {male}}))),
+			build(one(pageB, person(idB(2), entF, vals{name: {john}, sex: {male}}))),
+			lines(want{entF, 2, strong})},
+		{"values over the bound in A, other properties still count",
+			build(one(pageA, person(idA(2), entF, vals{name: repeat(john, maxValues+1), sex: {male}}))),
+			build(one(pageB, person(idB(2), entF, vals{name: {john}, sex: {male}}))),
+			lines(want{entF, 1, weak})},
+		{"values over the bound in B",
+			build(one(pageA, person(idA(2), entF, vals{name: {john}, sex: {male}}))),
+			build(one(pageB, person(idB(2), entF, vals{name: repeat(john, maxValues+1), sex: {male}}))),
+			lines(want{entF, 1, weak})},
+		{"pooled values add up at the bound",
+			build(one(pageA, person(idA(2), entF, vals{gender: repeat(pt.Term("man"), maxValues-maxValues/2), sex: repeat(male, maxValues/2)}))),
+			build(one(pageB, person(idB(2), entF, vals{sex: {male}}))),
+			lines(want{entF, 1, weak})},
+		{"pooled values add up over the bound",
+			build(one(pageA, person(idA(2), entF, vals{gender: repeat(pt.Term("man"), maxValues-maxValues/2+1), sex: repeat(male, maxValues/2)}))),
+			build(one(pageB, person(idB(2), entF, vals{sex: {male}}))),
+			lines(want{entF, 0, weak})},
+	}
+	metas := subjectcomparetest.Metas()
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			for _, swap := range []bool{false, true} {
+				a, b := c.a, c.b
+				if swap {
+					a, b = b, a
+				}
+				if got := recordlinks.Lines(entP, a, b, metas, cfg); !equalLines(got, c.want) {
+					t.Errorf("Lines (swapped %v) = %s; want %s", swap, show(got), show(c.want))
+				}
+			}
+		})
+	}
+}
+
+// BenchmarkLinesAtBounds is one pair of graphs at the worst input the bounds
+// allow: ten people on one entity and ten events on another in each graph,
+// every person in every event, and every person holding twenty names and
+// twenty religions that mostly differ between the graphs.
+func BenchmarkLinesAtBounds(b *testing.B) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	graph := func(tag string) recordlinks.Graph {
+		id := func(n byte) []byte { return []byte{'p', tag[0], n} }
+		evID := func(n byte) []byte { return []byte{'e', tag[0], n} }
+		members := []recordlinks.Member{person(id(1), entP)} // ids from 2 up are the people
+		var edges []kinship.Edge
+		for i := range cfg.RecordLinks.MaxEntityMembers {
+			v := vals{}
+			for j := range cfg.RecordLinks.MaxUnitValues {
+				v[name] = append(v[name], pt.Name(fmt.Sprintf("Given%s%d Surname%d", tag, j, i)))
+				v[religion] = append(v[religion], pt.Term(fmt.Sprintf("faith%s%d", tag, j)))
+			}
+			members = append(members, person(id(byte(2+i)), entF, v), event(evID(byte(1+i)), entE))
+		}
+		for i := range cfg.RecordLinks.MaxEntityMembers {
+			for j := range cfg.RecordLinks.MaxEntityMembers {
+				edges = append(edges, part(id(byte(2+i)), evID(byte(1+j)), "subject", birth, byte(i*16+j)))
+			}
+		}
+		return build(members, edges...)
+	}
+	ga, gb := graph("a"), graph("b")
+	b.ResetTimer()
+	for range b.N {
+		recordlinks.Lines(entP, ga, gb, metas, cfg)
+	}
 }

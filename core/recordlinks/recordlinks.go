@@ -26,6 +26,16 @@ type Rules struct {
 	// StrongAt is the fewest facts two records share about a person for their
 	// line to be strong; fewer is weak.
 	StrongAt int
+	// MaxEntityMembers is the most members of any kind either graph may file on
+	// one canonical entity before the comparison reads it as malformed: a
+	// person over it keeps its line at 0 facts, and links to an entity over it
+	// count nothing. It bounds the member pairs and link pairs one Lines call
+	// compares.
+	MaxEntityMembers int
+	// MaxUnitValues is the most values either member may hold for one property
+	// that counts, its pooled properties included, before that property counts
+	// nothing. It bounds the value pairs property compare reads.
+	MaxUnitValues int
 }
 
 // Config is the registry as the record-links comparison reads it.
@@ -52,6 +62,8 @@ type Graph struct {
 	entityOf map[string][]byte
 	// persons holds the person members that have an entity, by entity.
 	persons map[string][]Member
+	// members counts the members of any kind that have an entity, by entity.
+	members map[string]int
 	// links holds each member's links read from its end, by member id and then
 	// by the far end's entity.
 	links map[string]map[string][]memberLink
@@ -72,6 +84,7 @@ func NewGraph(members []Member, links []kinship.Link) Graph {
 	g := Graph{
 		entityOf: map[string][]byte{},
 		persons:  map[string][]Member{},
+		members:  map[string]int{},
 		links:    map[string]map[string][]memberLink{},
 	}
 	for _, m := range members {
@@ -79,6 +92,9 @@ func NewGraph(members []Member, links []kinship.Link) Graph {
 			continue
 		}
 		g.entityOf[string(m.ID)] = m.Entity
+		if m.Entity != nil {
+			g.members[string(m.Entity)]++
+		}
 		if m.Kind == vocabkey.Person && m.Entity != nil {
 			g.persons[string(m.Entity)] = append(g.persons[string(m.Entity)], m)
 		}
@@ -136,9 +152,11 @@ func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Li
 			continue
 		}
 		var best int
-		for _, x := range a.persons[e] {
-			for _, y := range b.persons[e] {
-				best = max(best, len(properties(x, y, metas, cfg))+len(links(x, y, a, b)))
+		if !over(e, a, b, cfg) {
+			for _, x := range a.persons[e] {
+				for _, y := range b.persons[e] {
+					best = max(best, len(properties(x, y, metas, cfg))+len(links(x, y, a, b, cfg)))
+				}
 			}
 		}
 		s := StrengthWeak
@@ -150,23 +168,45 @@ func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Li
 	return out
 }
 
+// over reports whether either graph files more members of any kind on entity e
+// than the registry allows.
+func over(e string, a, b Graph, cfg Config) bool {
+	most := cfg.RecordLinks.MaxEntityMembers
+	return a.members[e] > most || b.members[e] > most
+}
+
 // properties returns the keys, ascending, whose values the two members agree
 // or partly agree on. A property counts once under its key, with its pooled
-// properties.
+// properties; one where either member holds more than MaxUnitValues values
+// counts nothing.
 func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.PropertyKey {
+	heldX, heldY := held(x.Values, cfg), held(y.Values, cfg)
 	keys := map[vocabkey.PropertyKey]struct{}{}
-	for _, v := range []subjectcompare.Values{x.Values, y.Values} {
-		for p := range v {
-			if key, ok := cfg.Subject.CountsUnder(vocabkey.Person, p); ok {
-				keys[key] = struct{}{}
-			}
-		}
+	for key := range heldX {
+		keys[key] = struct{}{}
+	}
+	for key := range heldY {
+		keys[key] = struct{}{}
 	}
 	var out []vocabkey.PropertyKey
 	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		if most := cfg.RecordLinks.MaxUnitValues; heldX[key] > most || heldY[key] > most {
+			continue
+		}
 		res := subjectcompare.CompareProperty(vocabkey.Person, key, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
 		if res.Outcome.Matches() {
 			out = append(out, key)
+		}
+	}
+	return out
+}
+
+// held counts a member's values by the key their property counts under.
+func held(v subjectcompare.Values, cfg Config) map[vocabkey.PropertyKey]int {
+	out := map[vocabkey.PropertyKey]int{}
+	for p, vs := range v {
+		if key, ok := cfg.Subject.CountsUnder(vocabkey.Person, p); ok {
+			out[key] += len(vs)
 		}
 	}
 	return out
@@ -185,13 +225,15 @@ type linkFact struct {
 // at pivots filed on one entity E in both graphs and the two members' links to
 // E hold a corresponding pair: the pivot's own fact is then counted, and this
 // one counts through it. A pivot link that is itself skipped counts through its
-// own pivot, so shapes end at a recorded participation or parent link.
-func links(x, y Member, a, b Graph) []linkFact {
+// own pivot, so shapes end at a recorded participation or parent link. Links to
+// an entity over the member bound count nothing, so a pivot filed on one is not
+// counted and its links are not skipped.
+func links(x, y Member, a, b Graph, cfg Config) []linkFact {
 	byX, byY := a.links[string(x.ID)], b.links[string(y.ID)]
 	counted := map[string]bool{} // by pivot entity: the members' links to it correspond
 	same := func(pa, pb []byte) bool {
 		ea, eb := a.entityOf[string(pa)], b.entityOf[string(pb)]
-		if ea == nil || !bytes.Equal(ea, eb) {
+		if ea == nil || !bytes.Equal(ea, eb) || over(string(ea), a, b, cfg) {
 			return false
 		}
 		v, ok := counted[string(ea)]
@@ -203,14 +245,20 @@ func links(x, y Member, a, b Graph) []linkFact {
 	}
 	var out []linkFact
 	for _, e := range slices.Sorted(maps.Keys(byX)) {
+		if over(e, a, b, cfg) {
+			continue
+		}
 		seen := map[vocabkey.BridgeKey]bool{}
 		for _, lx := range byX[e] {
+			if seen[lx.key] {
+				continue
+			}
 			for _, ly := range byY[e] {
-				if seen[lx.key] || !segmentcompare.Corresponds(lx.key, ly.key) || kinship.SameShape(lx.rec, ly.rec, same) {
-					continue
+				if segmentcompare.Corresponds(lx.key, ly.key) && !kinship.SameShape(lx.rec, ly.rec, same) {
+					seen[lx.key] = true
+					out = append(out, linkFact{lx.key, e})
+					break
 				}
-				seen[lx.key] = true
-				out = append(out, linkFact{lx.key, e})
 			}
 		}
 	}
