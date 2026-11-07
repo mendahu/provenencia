@@ -384,3 +384,27 @@ func TestMeta(t *testing.T) {
 		}
 	}
 }
+
+func TestUnit(t *testing.T) {
+	rules := matchregistry.Default().Subject
+	for _, c := range []struct {
+		kind vocabkey.SubjectType
+		key  vocabkey.PropertyKey
+		want vocabkey.PropertyKey
+		ok   bool
+	}{
+		{vocabkey.Person, name, name, true},
+		{vocabkey.Person, gender, sex, true},
+		{vocabkey.Person, sex, sex, true},
+		{vocabkey.Person, "religion", "religion", true},
+		{vocabkey.Person, vocabkey.PropertyLifespan, "", false},
+		{vocabkey.Person, vocabkey.PropertyLifespanSpan, "", false},
+		{vocabkey.Event, start, "", false},
+		{vocabkey.Event, date, date, true},
+	} {
+		got, ok := rules.Unit(c.kind, c.key)
+		if got != c.want || ok != c.ok {
+			t.Errorf("Unit(%s, %s) = %q, %v; want %q, %v", c.kind, c.key, got, ok, c.want, c.ok)
+		}
+	}
+}
