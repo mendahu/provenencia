@@ -24,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -110,7 +111,7 @@ func TestGraphProgress(t *testing.T) {
 		}
 		if _, _, err := observationstest.Cite(c, userID, place.GraphID, art.ID, validLocator, []observations.Input{{
 			SubjectID: place.ID, PropertyID: toponym.ID,
-			ValueText: "Boston", HasText: true,
+			Scalar: propertymeta.TextScalar("Boston"),
 		}}...); err != nil {
 			t.Fatal(err)
 		}

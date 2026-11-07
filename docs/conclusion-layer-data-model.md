@@ -103,7 +103,7 @@ Selected user-facing entities receive a required short human-readable `ref`. Can
 
 ## 2.7 The auto-reconciler cache
 
-Displayed values are not a second truth table. `auto_reconciler_values` and `auto_reconciler_outcomes` are a derived, rebuildable projection: one row set per handle and Property, written in the same transaction as the change that invalidates them, and never referenced by a truth foreign key. A full rebuild produces the same rows as incremental upkeep. Association ends (a Participation's person, a Location's place) are auto-reconciled subject-valued Properties in that same cache, so the canonical graph is those rows plus a reverse index. Lists, details, Promote, and search compose from the cache. How a value is chosen is [`conclusion-reconciliation.md`](conclusion-reconciliation.md).
+Displayed values are not a second truth table. `auto_reconciler_values` and `auto_reconciler_outcomes` are a derived, rebuildable projection: one row set per handle and Property, written in the same transaction as the change that invalidates them, and never referenced by a truth foreign key. A full rebuild produces the same rows as incremental upkeep. Association ends (a Participation's person, a Location's place) are auto-reconciled subject-valued Properties in that same cache, so the canonical graph is those rows plus a reverse index. Lists, details, Promote, and search compose from the cache. Its `value_boolean` column is checked to hold 0 or 1, and a stored value outside that reads as absent, so a damaged row never blocks the repair that rewrites it. How a value is chosen is [`conclusion-reconciliation.md`](conclusion-reconciliation.md).
 
 ---
 

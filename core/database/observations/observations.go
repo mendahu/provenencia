@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -112,18 +113,13 @@ const (
 
 // Observation is one observations row.
 type Observation struct {
-	ID             []byte
-	Ref            string
-	CitationID     []byte
-	SubjectID      []byte
-	PropertyID     []byte
-	Polarity       string
-	ValueText      string
-	HasText        bool
-	ValueInteger   int64
-	HasInteger     bool
-	ValueBoolean   bool
-	HasBoolean     bool
+	ID         []byte
+	Ref        string
+	CitationID []byte
+	SubjectID  []byte
+	PropertyID []byte
+	Polarity   string
+	propertymeta.Scalar
 	ValueDateID    []byte
 	ValueNameID    []byte
 	ValueSubjectID []byte
@@ -162,16 +158,11 @@ type Listed struct {
 
 // Input is one Observation write. ID empty inserts. ID set updates that row.
 type Input struct {
-	ID             []byte
-	SubjectID      []byte
-	PropertyID     []byte
-	Polarity       string // "" → positive
-	ValueText      string
-	HasText        bool
-	ValueInteger   int64
-	HasInteger     bool
-	ValueBoolean   bool
-	HasBoolean     bool
+	ID         []byte
+	SubjectID  []byte
+	PropertyID []byte
+	Polarity   string // "" → positive
+	propertymeta.Scalar
 	Date           *datevalue.Value // when set, InsertTx inside the caller's tx
 	ValueDateID    []byte           // existing date_values.id when Date is nil
 	Name           *namevalue.Value
@@ -426,15 +417,15 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 // update alike.
 func applyResolved(obs *Observation, r resolvedValue) {
 	if r.Text != "" {
-		obs.ValueText = r.Text
+		obs.Text = r.Text
 		obs.HasText = true
 	}
 	if r.Integer != nil {
-		obs.ValueInteger = *r.Integer
+		obs.Integer = *r.Integer
 		obs.HasInteger = true
 	}
 	if r.Boolean != nil {
-		obs.ValueBoolean = *r.Boolean
+		obs.Boolean = *r.Boolean
 		obs.HasBoolean = true
 	}
 	obs.ValueDateID = append([]byte(nil), r.DateID...)
@@ -447,7 +438,7 @@ func applyResolved(obs *Observation, r resolvedValue) {
 func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, existing *Observation) (resolvedValue, error) {
 	switch valueType {
 	case propertymeta.ValueTypeText:
-		text := strings.TrimSpace(in.ValueText)
+		text := strings.TrimSpace(in.Text)
 		if !in.HasText || text == "" || hasOtherScalars(in, "text") {
 			return resolvedValue{}, ErrInvalid
 		}
@@ -456,13 +447,13 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 		if !in.HasInteger || hasOtherScalars(in, "integer") {
 			return resolvedValue{}, ErrInvalid
 		}
-		v := in.ValueInteger
+		v := in.Integer
 		return resolvedValue{Integer: &v}, nil
 	case propertymeta.ValueTypeBoolean:
 		if !in.HasBoolean || hasOtherScalars(in, "boolean") {
 			return resolvedValue{}, ErrInvalid
 		}
-		v := in.ValueBoolean
+		v := in.Boolean
 		return resolvedValue{Boolean: &v}, nil
 	case propertymeta.ValueTypeDate:
 		if hasOtherScalars(in, "date") {
@@ -653,9 +644,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 	for rows.Next() {
 		var (
 			l                                                         Listed
-			valueText                                                 sql.NullString
-			valueInt                                                  sql.NullInt64
-			valueBool                                                 sql.NullBool
+			scalar                                                    scalarcols.Columns
 			dateID, nameID, subjectID, termID, depictionID            []byte
 			depictionRegion                                           sql.NullString
 			depictionImage                                            []byte
@@ -667,7 +656,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		)
 		if err := rows.Scan(
 			&l.ID, &l.Ref, &l.CitationID, &l.SubjectID, &l.PropertyID, &l.Polarity,
-			&valueText, &valueInt, &valueBool, &dateID, &nameID, &subjectID, &termID,
+			&scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &subjectID, &termID,
 			&depictionID,
 			&l.PropertyKey, &l.PropertyLabel, &l.PropertyValueType,
 			&termLabel, &termKey, &termOrigin, &nameForm, &subjectLabel,
@@ -681,18 +670,7 @@ func scanListed(rows *sql.Rows) ([]Listed, error) {
 		); err != nil {
 			return nil, err
 		}
-		if valueText.Valid {
-			l.ValueText = valueText.String
-			l.HasText = true
-		}
-		if valueInt.Valid {
-			l.ValueInteger = valueInt.Int64
-			l.HasInteger = true
-		}
-		if valueBool.Valid {
-			l.ValueBoolean = valueBool.Bool
-			l.HasBoolean = true
-		}
+		l.Scalar = scalar.Scalar()
 		l.ValueDateID = append([]byte(nil), dateID...)
 		l.ValueNameID = append([]byte(nil), nameID...)
 		l.ValueSubjectID = append([]byte(nil), subjectID...)
@@ -768,17 +746,17 @@ func FillListedDisplayText(l *Listed) {
 	}
 	switch {
 	case l.ValueTermLabel != "":
-		l.ValueText = l.ValueTermLabel
+		l.Text = l.ValueTermLabel
 	case l.ValueNameForm != "":
-		l.ValueText = l.ValueNameForm
+		l.Text = l.ValueNameForm
 	case l.ValueSubjectLabel != "":
-		l.ValueText = l.ValueSubjectLabel
+		l.Text = l.ValueSubjectLabel
 	case l.Date != nil:
-		l.ValueText = datevalue.CompactDisplay(*l.Date)
+		l.Text = datevalue.CompactDisplay(*l.Date)
 	default:
 		return
 	}
-	if l.ValueText != "" {
+	if l.Text != "" {
 		l.HasText = true
 	}
 }

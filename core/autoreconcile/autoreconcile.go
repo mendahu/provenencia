@@ -73,19 +73,14 @@ var (
 // Value is one Property value. Exactly the field for the Property's
 // value_type is set.
 type Value struct {
-	Text       string
-	HasText    bool
-	Integer    int64
-	HasInteger bool
-	Boolean    bool
-	HasBoolean bool
-	TermID     []byte
-	TermKey    string // the term's key, when known
-	Neutral    bool   // the term is no evidence either way (its catalog flag)
-	SubjectID  []byte // the cited subject
-	EntityID   []byte // that subject's accepted handle, when the loader resolved one
-	Date       *datevalue.Value
-	Name       *namevalue.Value
+	propertymeta.Scalar
+	TermID    []byte
+	TermKey   string // the term's key, when known
+	Neutral   bool   // the term is no evidence either way (its catalog flag)
+	SubjectID []byte // the cited subject
+	EntityID  []byte // that subject's accepted handle, when the loader resolved one
+	Date      *datevalue.Value
+	Name      *namevalue.Value
 	// Depiction is the depiction_values row, read through
 	// depictionvalue.Readable; its ImageFileID is empty when the image is refused.
 	Depiction *depictionvalue.Value

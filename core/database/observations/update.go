@@ -139,26 +139,26 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 	if prev.Polarity != next.Polarity {
 		fields["polarity"] = rowchange.FieldDiff{Old: prev.Polarity, New: next.Polarity}
 	}
-	if prev.ValueText != next.ValueText {
-		fields["value_text"] = rowchange.FieldDiff{Old: database.NullString(prev.ValueText), New: database.NullString(next.ValueText)}
+	if prev.Text != next.Text {
+		fields["value_text"] = rowchange.FieldDiff{Old: database.NullString(prev.Text), New: database.NullString(next.Text)}
 	}
-	if prev.HasInteger != next.HasInteger || (next.HasInteger && prev.ValueInteger != next.ValueInteger) {
+	if prev.HasInteger != next.HasInteger || (next.HasInteger && prev.Integer != next.Integer) {
 		var old, new any
 		if prev.HasInteger {
-			old = prev.ValueInteger
+			old = prev.Integer
 		}
 		if next.HasInteger {
-			new = next.ValueInteger
+			new = next.Integer
 		}
 		fields["value_integer"] = rowchange.FieldDiff{Old: old, New: new}
 	}
-	if prev.HasBoolean != next.HasBoolean || (next.HasBoolean && prev.ValueBoolean != next.ValueBoolean) {
+	if prev.HasBoolean != next.HasBoolean || (next.HasBoolean && prev.Boolean != next.Boolean) {
 		var old, new any
 		if prev.HasBoolean {
-			old = prev.ValueBoolean
+			old = prev.Boolean
 		}
 		if next.HasBoolean {
-			new = next.ValueBoolean
+			new = next.Boolean
 		}
 		fields["value_boolean"] = rowchange.FieldDiff{Old: old, New: new}
 	}

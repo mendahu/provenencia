@@ -114,9 +114,7 @@ func listedFromSource(o graphcache.EvidenceObservation, props map[string]propert
 		Observation: observations.Observation{
 			ID: o.ID, Ref: o.Ref, CitationID: o.CitationID, SubjectID: o.SubjectID,
 			PropertyID: o.PropertyID, Polarity: o.Polarity,
-			ValueText: o.Text, HasText: o.HasText,
-			ValueInteger: o.Integer, HasInteger: o.HasInteger,
-			ValueBoolean: o.Boolean, HasBoolean: o.HasBoolean,
+			Scalar:      o.Scalar,
 			ValueDateID: o.DateID, ValueNameID: o.NameID,
 			ValueSubjectID: o.ValueSubjectID, ValueTermID: o.TermID,
 			ValueDepictionID: o.DepictionID,

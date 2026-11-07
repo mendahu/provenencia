@@ -44,6 +44,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -456,9 +457,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		var (
 			entityID, obsID, propertyID       []byte
 			valueType, cardinality            string
-			text                              sql.NullString
-			integer                           sql.NullInt64
-			boolean                           sql.NullBool
+			scalar                            scalarcols.Columns
 			dateID, nameID, termID, subjectID []byte
 			depictionID, imageID              []byte
 			region, locatorJSON, mediaType    sql.NullString
@@ -468,7 +467,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			sourceID                          []byte
 			provenance                        autoreconcile.Provenance
 		)
-		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
 			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
 		if err := rows.Scan(dest...); err != nil {
@@ -483,9 +482,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			groups = append(groups, g)
 		}
 		c := autoreconcile.Candidate{ObservationID: obsID, Value: autoreconcile.Value{
-			Text: text.String, HasText: text.Valid,
-			Integer: integer.Int64, HasInteger: integer.Valid,
-			Boolean: boolean.Bool, HasBoolean: boolean.Valid,
+			Scalar: scalar.Scalar(),
 			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
 			Depiction: depictionvalues.FromJoin(depictionID, region, imageID, locatorJSON, mediaType),
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,

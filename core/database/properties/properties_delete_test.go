@@ -358,7 +358,7 @@ func insertObservationOn(t *testing.T, c *database.Catalog, userID, propertyID [
 			GraphID:    graph,
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 		}, []observations.Input{{
-			SubjectID: place.ID, PropertyID: propertyID, ValueText: "Leeds", HasText: true,
+			SubjectID: place.ID, PropertyID: propertyID, Scalar: propertymeta.TextScalar("Leeds"),
 		}})
 	})
 	if err != nil {

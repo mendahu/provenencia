@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 
 	"github.com/mendahu/provenencia/core/apperr"
 )
@@ -412,14 +413,12 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 	var (
 		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID, depictionID []byte
 		ref, polarity                                                                                 string
-		text                                                                                          sql.NullString
-		integer                                                                                       sql.NullInt64
-		boolean                                                                                       sql.NullBool
+		scalar                                                                                        scalarcols.Columns
 	)
 	if err := tx.QueryRow(`SELECT id, ref, citation_id, subject_id, property_id, polarity,
 		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
 		FROM observations WHERE id = ?`, id).Scan(&obsID, &ref, &citationID, &subjectID, &propertyID,
-		&polarity, &text, &integer, &boolean, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
+		&polarity, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
 		return released{}, err
 	}
 	out, err := releaseFacets(tx, catalogmodel.KindObservation, id)
@@ -438,13 +437,12 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 		return released{}, err
 	}
 	out.Objects = append(out.Objects, objects...)
-	var integerJSON any
-	if integer.Valid {
-		integerJSON = integer.Int64
+	var integerJSON, booleanJSON any
+	if scalar.Integer.Valid {
+		integerJSON = scalar.Integer.Int64
 	}
-	var booleanJSON any
-	if boolean.Valid {
-		booleanJSON = boolean.Bool
+	if scalar.Boolean.Valid {
+		booleanJSON = scalar.Boolean.Int64 == 1
 	}
 	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "observation",
@@ -457,7 +455,7 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 			"subject_id":         database.UUIDJSON(subjectID),
 			"property_id":        database.UUIDJSON(propertyID),
 			"polarity":           polarity,
-			"value_text":         nullStringJSON(text),
+			"value_text":         nullStringJSON(scalar.Text),
 			"value_integer":      integerJSON,
 			"value_boolean":      booleanJSON,
 			"value_date_id":      database.UUIDJSON(dateID),

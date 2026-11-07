@@ -1,5 +1,6 @@
 -- S14-36: value_type = boolean. A yes/no fact: observations.value_boolean
--- holds 0 or 1, and the auto-reconciler cache keeps it beside value_integer.
+-- holds 0 or 1, and the auto-reconciler cache keeps it beside value_integer
+-- under the same check.
 -- No seed Property is boolean; researchers create them (from S14-37).
 -- migrate: foreign_keys off
 
@@ -26,4 +27,4 @@ DROP TABLE properties;
 ALTER TABLE properties__new RENAME TO properties;
 
 ALTER TABLE observations ADD COLUMN value_boolean INTEGER CHECK (value_boolean IN (0, 1));
-ALTER TABLE auto_reconciler_values ADD COLUMN value_boolean INTEGER;
+ALTER TABLE auto_reconciler_values ADD COLUMN value_boolean INTEGER CHECK (value_boolean IN (0, 1));

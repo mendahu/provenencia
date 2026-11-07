@@ -33,6 +33,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/locator"
@@ -52,15 +53,10 @@ type Querier interface {
 
 // Value is one Property value. Exactly the field for the value type is set.
 type Value struct {
-	Text       string
-	HasText    bool
-	Integer    int64
-	HasInteger bool
-	Boolean    bool
-	HasBoolean bool
-	TermID     []byte
-	TermKey    string
-	TermLabel  string
+	propertymeta.Scalar
+	TermID    []byte
+	TermKey   string
+	TermLabel string
 	// TermOrigin is the term's origin: its key is the product's only when this is vocabkey.OriginProvenencia.
 	TermOrigin string
 	Date       *datevalue.Value
@@ -397,9 +393,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 				Rank: rank.Rank, Reason: rank.Reason,
 				Support: rank.Support, Against: rank.Against,
 			}
-			v.Value.Text, v.Value.HasText = rank.Text, rank.HasText
-			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
-			v.Value.Boolean, v.Value.HasBoolean = rank.Boolean, rank.HasBoolean
+			v.Value.Scalar = rank.Scalar
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
 			if name, ok := terms[string(rank.TermID)]; ok {
 				v.Value.TermKey, v.Value.TermLabel, v.Value.TermOrigin = name.Key, name.Label, name.Origin
@@ -441,15 +435,13 @@ func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[stri
 		var (
 			entityID, propertyID, termID, dateID, nameID, valueSubjectID []byte
 			rank                                                         sql.NullInt64
-			text                                                         sql.NullString
-			integer                                                      sql.NullInt64
-			boolean                                                      sql.NullBool
+			scalar                                                       scalarcols.Columns
 			o                                                            Outcome
 			locatorJSON                                                  string
 		)
 		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &boolean, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
+			&scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
@@ -458,9 +450,7 @@ func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[stri
 		}
 		o.ValueRank = int(rank.Int64)
 		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
-		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
-		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
-		o.Recorded.Boolean, o.Recorded.HasBoolean = boolean.Bool, boolean.Valid
+		o.Recorded.Scalar = scalar.Scalar()
 		o.Recorded.TermID = termID
 		f, ok := byProp[string(entityID)][string(propertyID)]
 		if !ok {

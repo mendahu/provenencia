@@ -39,8 +39,8 @@ func loadMetas(g *graphcache.Graph) (subjectcompare.Metas, error) {
 
 // decode is the one row decoder for both sides: a Source Observation and a
 // cached handle value carry the same value columns.
-func decode(text string, hasText bool, integer int64, hasInteger bool, boolean, hasBoolean bool, termID, date, name, image []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
-	v := autoreconcile.Value{Text: text, HasText: hasText, Integer: integer, HasInteger: hasInteger, Boolean: boolean, HasBoolean: hasBoolean}
+func decode(scalar propertymeta.Scalar, termID, date, name, image []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
+	v := autoreconcile.Value{Scalar: scalar}
 	if len(termID) > 0 {
 		t := terms[string(termID)]
 		v.TermID = bytes.Clone(termID)
@@ -69,7 +69,7 @@ func decode(text string, hasText bool, integer int64, hasInteger bool, boolean, 
 
 // reconciled is a cached handle value as the reconciler left it.
 func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (autoreconcile.ReconciledValue, error) {
-	v, err := decode(row.Text, row.HasText, row.Integer, row.HasInteger, row.Boolean, row.HasBoolean, row.TermID, row.Date, row.Name, row.ImageFileID, terms)
+	v, err := decode(row.Scalar, row.TermID, row.Date, row.Name, row.ImageFileID, terms)
 	if err != nil {
 		return autoreconcile.ReconciledValue{}, err
 	}
@@ -93,7 +93,7 @@ func layerValues(eg graphcache.EvidenceGraph, subjects map[string]bool, props ma
 		if !ok || prop.Origin != vocabkey.OriginProvenencia {
 			continue
 		}
-		v, err := decode(o.Text, o.HasText, o.Integer, o.HasInteger, o.Boolean, o.HasBoolean, o.TermID, o.Date, o.Name, o.DepictionImageFileID, terms)
+		v, err := decode(o.Scalar, o.TermID, o.Date, o.Name, o.DepictionImageFileID, terms)
 		if err != nil {
 			return nil, err
 		}

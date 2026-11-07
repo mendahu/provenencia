@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // Graph is one catalog's canonical graph. Nodes are immutable: a commit
@@ -115,14 +116,9 @@ func Rank1(rows []Value) (Value, bool) {
 
 // Value is one auto_reconciler_values row. Date and Name are the stored blobs.
 type Value struct {
-	Rank        int
-	Reason      string
-	Text        string
-	HasText     bool
-	Integer     int64
-	HasInteger  bool
-	Boolean     bool
-	HasBoolean  bool
+	Rank   int
+	Reason string
+	propertymeta.Scalar
 	TermID      []byte
 	TermKey     string
 	EntityID    []byte

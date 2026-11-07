@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
@@ -133,9 +134,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			entityID, propID []byte
 			rank             int
 			reason           string
-			text             sql.NullString
-			integer          sql.NullInt64
-			boolean          sql.NullBool
+			scalar           scalarcols.Columns
 			termID           []byte
 			termKey          string
 			entityVal        []byte
@@ -144,7 +143,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			imageID          []byte
 			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -153,9 +152,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 		}
 		out[ek][pk] = append(out[ek][pk], Value{
 			Rank: rank, Reason: reason,
-			Text: text.String, HasText: text.Valid,
-			Integer: integer.Int64, HasInteger: integer.Valid,
-			Boolean: boolean.Bool, HasBoolean: boolean.Valid,
+			Scalar: scalar.Scalar(),
 			TermID: cloneID(termID), TermKey: termKey,
 			EntityID:    cloneID(entityVal),
 			Date:        append([]byte(nil), dateBlob...),

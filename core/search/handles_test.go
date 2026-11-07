@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/workspacelocation"
 	"github.com/mendahu/provenencia/core/writes"
@@ -105,7 +106,7 @@ func (f *handleFixture) place(toponyms ...string) subjects.Subject {
 	return f.subject("place", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, name := range toponyms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name)})
 		}
 		return in
 	})
@@ -312,7 +313,7 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	}
 	var jamesObs observations.Listed
 	for _, o := range obs {
-		if o.ValueNameForm == "James Robins" || o.ValueText == "James Robins" {
+		if o.ValueNameForm == "James Robins" || o.Text == "James Robins" {
 			jamesObs = o
 			break
 		}

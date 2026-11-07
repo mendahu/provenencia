@@ -88,7 +88,7 @@ func (f *fixture) birthAt(src sources.Source, toponyms ...observations.Input) ([
 
 const blankMarker = "BLANK"
 
-func text(s string) observations.Input { return observations.Input{ValueText: s, HasText: true} }
+func text(s string) observations.Input { return observations.Input{Scalar: propertymeta.TextScalar(s)} }
 
 func (f *fixture) placeRows(person []byte) []conclusiondetails.OwnerField {
 	f.t.Helper()
@@ -156,7 +156,7 @@ func TestLinkRecordReadsKeepQueriesConstant(t *testing.T) {
 		owners := f.placeRows(h)
 		for i := range unrelated {
 			other := f.subjectOn(src, "place")
-			f.cite(other, observations.Input{SubjectID: other.ID, PropertyID: f.prop("toponym").ID, ValueText: fmt.Sprintf("Town %d", i), HasText: true})
+			f.cite(other, observations.Input{SubjectID: other.ID, PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(fmt.Sprintf("Town %d", i))})
 		}
 		var ids [][]byte
 		for _, o := range owners {

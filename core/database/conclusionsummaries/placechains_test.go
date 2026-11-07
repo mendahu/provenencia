@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 
 	// placeSubject cites a Place (and optional period) but does not promote — call
 	// promoteSubject after placeRel so bridges file with the ends.
@@ -32,7 +33,7 @@ func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subject
 	s := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.at(s, x, y)
 	in := []observations.Input{
-		{PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true},
+		{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name)},
 	}
 	if start != nil {
 		in = append(in, observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(*start, 0, 0)})

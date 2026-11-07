@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -136,31 +137,19 @@ func getRowTx(tx *sql.Tx, id []byte) (Observation, error) {
 func scanRawObservation(row rowScanner) (Observation, error) {
 	var (
 		obs               Observation
-		valueText         sql.NullString
-		valueInt          sql.NullInt64
-		valueBool         sql.NullBool
+		scalar            scalarcols.Columns
 		dateID, nameID    []byte
 		subjectID, termID []byte
 		depictionID       []byte
 	)
 	if err := row.Scan(
 		&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-		&valueText, &valueInt, &valueBool, &dateID, &nameID, &subjectID, &termID, &depictionID,
+		&scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &subjectID, &termID, &depictionID,
 	); err != nil {
 		return Observation{}, err
 	}
-	if valueText.Valid {
-		obs.ValueText = valueText.String
-		obs.HasText = obs.ValueText != ""
-	}
-	if valueInt.Valid {
-		obs.ValueInteger = valueInt.Int64
-		obs.HasInteger = true
-	}
-	if valueBool.Valid {
-		obs.ValueBoolean = valueBool.Bool
-		obs.HasBoolean = true
-	}
+	obs.Scalar = scalar.Scalar()
+	obs.HasText = obs.Text != ""
 	obs.ValueDateID = append([]byte(nil), dateID...)
 	obs.ValueNameID = append([]byte(nil), nameID...)
 	obs.ValueSubjectID = append([]byte(nil), subjectID...)
@@ -257,11 +246,11 @@ func getListedTx(tx *sql.Tx, id []byte) (Listed, error) {
 func observationRowMap(o Observation) map[string]any {
 	var integer any
 	if o.HasInteger {
-		integer = o.ValueInteger
+		integer = o.Integer
 	}
 	var boolean any
 	if o.HasBoolean {
-		boolean = o.ValueBoolean
+		boolean = o.Boolean
 	}
 	return map[string]any{
 		"id":                 database.UUIDJSON(o.ID),
@@ -270,7 +259,7 @@ func observationRowMap(o Observation) map[string]any {
 		"subject_id":         database.UUIDJSON(o.SubjectID),
 		"property_id":        database.UUIDJSON(o.PropertyID),
 		"polarity":           o.Polarity,
-		"value_text":         database.NullString(o.ValueText),
+		"value_text":         database.NullString(o.Text),
 		"value_integer":      integer,
 		"value_boolean":      boolean,
 		"value_date_id":      database.UUIDJSON(o.ValueDateID),

@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // EvidenceGraphLoader fills one Evidence graph. graphfill registers it. The
@@ -44,18 +45,13 @@ type EvidenceSubject struct {
 // EvidenceObservation is one observation on an Evidence graph. Property and term labels are applied
 // when the row is shown. Date and Name are the stored value blobs.
 type EvidenceObservation struct {
-	ID             []byte
-	Ref            string
-	CitationID     []byte
-	SubjectID      []byte
-	PropertyID     []byte
-	Polarity       string
-	Text           string
-	HasText        bool
-	Integer        int64
-	HasInteger     bool
-	Boolean        bool
-	HasBoolean     bool
+	ID         []byte
+	Ref        string
+	CitationID []byte
+	SubjectID  []byte
+	PropertyID []byte
+	Polarity   string
+	propertymeta.Scalar
 	DateID         []byte
 	NameID         []byte
 	ValueSubjectID []byte

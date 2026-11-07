@@ -22,6 +22,7 @@ import (
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -139,12 +140,12 @@ func TestCanonicalWalks(t *testing.T) {
 
 	york := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
 	f.cite(york,
-		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "York", HasText: true},
-		observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Tkaronto", HasText: true},
+		observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("York")},
+		observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("Tkaronto")},
 	)
 	f.at(york, 8, 0)
 	toronto := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
-	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, ValueText: "Toronto", HasText: true})
+	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("Toronto")})
 	f.at(toronto, 8, 2)
 
 	f.participation(james, birth, "subject")

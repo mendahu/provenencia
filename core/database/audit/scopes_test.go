@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -199,7 +200,7 @@ func (s scopeSeed) citation(t *testing.T, in citations.CreateInput, obs ...obser
 }
 
 func (s scopeSeed) textObs(subject subjects.Subject, text string) observations.Input {
-	return observations.Input{SubjectID: subject.ID, PropertyID: s.toponymProp.ID, ValueText: text, HasText: true}
+	return observations.Input{SubjectID: subject.ID, PropertyID: s.toponymProp.ID, Scalar: propertymeta.TextScalar(text)}
 }
 
 // promote promotes a Subject to a new handle and returns the handle id.
@@ -439,7 +440,7 @@ func TestSourceScopes(t *testing.T) {
 				s.bumpsA(t, func() {
 					s.updateObservation(t, observations.Input{
 						ID: added[0].ID, SubjectID: s.place2.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Salem Town", HasText: true,
+						Scalar: propertymeta.TextScalar("Salem Town"),
 					})
 				})
 				// Deleting an observation releases its notes first; the
@@ -467,7 +468,7 @@ func TestSourceScopes(t *testing.T) {
 				s.bumpsA(t, func() {
 					s.updateObservation(t, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true, Polarity: observations.PolarityNegative,
+						Scalar: propertymeta.TextScalar("Boston"), Polarity: observations.PolarityNegative,
 					})
 				})
 			},
@@ -616,7 +617,7 @@ func TestHandleScopes(t *testing.T) {
 				edit := func(text string, notes ...string) observations.Input {
 					return observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: text, HasText: true, Notes: notes,
+						Scalar: propertymeta.TextScalar(text), Notes: notes,
 					}
 				}
 				s.movesBoth(t, h, func() { s.updateObservation(t, edit("Boston Town")) })

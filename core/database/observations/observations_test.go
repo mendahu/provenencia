@@ -222,7 +222,7 @@ func TestObservations(t *testing.T) {
 				_, err = writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 					return observations.AddToCitation(tx, userID, cit.ID, []observations.Input{{
 						SubjectID: s.person.ID, PropertyID: unbound.ID,
-						ValueText: "Al", HasText: true,
+						Scalar: propertymeta.TextScalar("Al"),
 					}})
 				})
 				if !errors.Is(err, observations.ErrInvalid) {
@@ -241,7 +241,7 @@ func TestObservations(t *testing.T) {
 					},
 					observations.Input{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Cambridge", HasText: true,
+						Scalar: propertymeta.TextScalar("Cambridge"),
 					},
 				)
 				list, err := observations.ListByCitation(c, cit.ID)
@@ -250,12 +250,12 @@ func TestObservations(t *testing.T) {
 				}
 				var sawText, sawTerm bool
 				for _, row := range list {
-					if row.PropertyKey == "toponym" && row.HasText && row.ValueText == "Cambridge" {
+					if row.PropertyKey == "toponym" && row.HasText && row.Text == "Cambridge" {
 						sawText = true
 					}
 					if row.PropertyKey == "sex_at_birth" && len(row.ValueTermID) == 16 {
-						if row.ValueTermLabel == "" || row.ValueText != row.ValueTermLabel {
-							t.Fatalf("term display: label=%q text=%q", row.ValueTermLabel, row.ValueText)
+						if row.ValueTermLabel == "" || row.Text != row.ValueTermLabel {
+							t.Fatalf("term display: label=%q text=%q", row.ValueTermLabel, row.Text)
 						}
 						if row.ValueTermKey != "female" {
 							t.Fatalf("term key %q, want female", row.ValueTermKey)
@@ -308,8 +308,8 @@ func TestObservations(t *testing.T) {
 				var sawName, sawDate bool
 				for _, row := range list {
 					if row.PropertyKey == "name" {
-						if row.ValueNameForm != "Ada Lovelace" || row.ValueText != "Ada Lovelace" {
-							t.Fatalf("name display form=%q text=%q", row.ValueNameForm, row.ValueText)
+						if row.ValueNameForm != "Ada Lovelace" || row.Text != "Ada Lovelace" {
+							t.Fatalf("name display form=%q text=%q", row.ValueNameForm, row.Text)
 						}
 						if row.Name == nil || len(row.Name.Parts) != 2 || row.Name.Parts[0].Type != "given" {
 							t.Fatalf("name parts=%v", row.Name)
@@ -317,8 +317,8 @@ func TestObservations(t *testing.T) {
 						sawName = true
 					}
 					if row.PropertyKey == "date" {
-						if row.Date == nil || row.ValueText != "About 1882-04" {
-							t.Fatalf("date display text=%q date=%v", row.ValueText, row.Date)
+						if row.Date == nil || row.Text != "About 1882-04" {
+							t.Fatalf("date display text=%q date=%v", row.Text, row.Date)
 						}
 						sawDate = true
 					}
@@ -334,7 +334,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				_, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
 					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-					ValueText: "   ", HasText: true,
+					Scalar: propertymeta.TextScalar("   "),
 				}}...)
 				if !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v want ErrInvalid", err)
@@ -437,7 +437,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
 					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-					ValueText: "Boston", HasText: true,
+					Scalar: propertymeta.TextScalar("Boston"),
 				}}...)
 				if err != nil {
 					t.Fatal(err)
@@ -453,7 +453,7 @@ func TestObservations(t *testing.T) {
 				if _, err := writes.Call(c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 					return observations.Update(tx, userID, observations.Input{
 						ID: res.Observations[0].ID, SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true,
+						Scalar: propertymeta.TextScalar("Boston"),
 					})
 				}); err != nil {
 					t.Fatal(err)
@@ -478,8 +478,8 @@ func TestObservations(t *testing.T) {
 						Notes: []string{"keep me"},
 					}, []observations.Input{{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true,
-						Notes: []string{"obs note"},
+						Scalar: propertymeta.TextScalar("Boston"),
+						Notes:  []string{"obs note"},
 					}})
 				})
 				if err != nil {
@@ -576,7 +576,7 @@ func TestObservations(t *testing.T) {
 				}
 				changes, err := observationstest.UpdateObservation(c, userID, observations.Input{
 					ID: res.Observations[0].ID, SubjectID: s.event.ID, PropertyID: eventNameProp.ID,
-					ValueText: "Birth", HasText: true,
+					Scalar: propertymeta.TextScalar("Birth"),
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -595,7 +595,7 @@ func TestObservations(t *testing.T) {
 				c, s := mustSeed(t)
 				res, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
 					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-					ValueText: "Boston", HasText: true,
+					Scalar: propertymeta.TextScalar("Boston"),
 				}}...)
 				if err != nil {
 					t.Fatal(err)
@@ -710,7 +710,7 @@ func TestObservations(t *testing.T) {
 				}
 				ordinary, _, err := observationstest.Cite(c, userID, s.graph, s.artifact.ID, validLocator, []observations.Input{{
 					SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-					ValueText: "Leeds", HasText: true,
+					Scalar: propertymeta.TextScalar("Leeds"),
 				}}...)
 				if err != nil {
 					t.Fatal(err)
@@ -889,7 +889,7 @@ func TestObservations(t *testing.T) {
 						Depiction: &observations.DepictionInput{RegionJSON: region, ImagePath: path}}
 				}
 				withText := like(observationstest.LikenessRegion, good)
-				withText.ValueText, withText.HasText = "x", true
+				withText.Text, withText.HasText = "x", true
 				onName := observations.Input{SubjectID: s.person.ID, PropertyID: s.nameProp.ID,
 					Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: good}}
 				unstaged := like(observationstest.LikenessRegion, good)
@@ -1524,7 +1524,7 @@ func (f booleanFixture) cite(in observations.Input) (citations.CreateResult, []r
 }
 
 func (f booleanFixture) boolIn(property properties.Property, has, v bool) observations.Input {
-	return observations.Input{SubjectID: f.person.ID, PropertyID: property.ID, HasBoolean: has, ValueBoolean: v}
+	return observations.Input{SubjectID: f.person.ID, PropertyID: property.ID, Scalar: propertymeta.Scalar{HasBoolean: has, Boolean: v}}
 }
 
 func TestBooleanObservationValue(t *testing.T) {
@@ -1539,17 +1539,17 @@ func TestBooleanObservationValue(t *testing.T) {
 		{"a boolean without a value is refused", func(f booleanFixture) observations.Input { return f.boolIn(f.literate, false, false) }, true, false},
 		{"a boolean with text is refused", func(f booleanFixture) observations.Input {
 			in := f.boolIn(f.literate, true, true)
-			in.HasText, in.ValueText = true, "yes"
+			in.HasText, in.Text = true, "yes"
 			return in
 		}, true, false},
 		{"a boolean with an integer is refused", func(f booleanFixture) observations.Input {
 			in := f.boolIn(f.literate, true, true)
-			in.HasInteger, in.ValueInteger = true, 1
+			in.HasInteger, in.Integer = true, 1
 			return in
 		}, true, false},
 		{"a text Property with a boolean is refused", func(f booleanFixture) observations.Input {
 			in := f.boolIn(f.text, true, true)
-			in.HasText, in.ValueText = true, "Ohio"
+			in.HasText, in.Text = true, "Ohio"
 			return in
 		}, true, false},
 	}
@@ -1570,7 +1570,7 @@ func TestBooleanObservationValue(t *testing.T) {
 				t.Fatal(err)
 			}
 			got := res.Observations[0]
-			if !got.HasBoolean || got.ValueBoolean != tt.want || got.HasInteger || got.HasText {
+			if !got.HasBoolean || got.Boolean != tt.want || got.HasInteger || got.HasText {
 				t.Fatalf("returned %+v", got)
 			}
 			stored := 0
@@ -1581,7 +1581,7 @@ func TestBooleanObservationValue(t *testing.T) {
 				t.Fatalf("value_boolean = %d not stored", stored)
 			}
 			listed, err := observations.ListBySubject(f.c, f.person.ID)
-			if err != nil || len(listed) != 1 || !listed[0].HasBoolean || listed[0].ValueBoolean != tt.want {
+			if err != nil || len(listed) != 1 || !listed[0].HasBoolean || listed[0].Boolean != tt.want {
 				t.Fatalf("listed %v %+v", err, listed)
 			}
 			var audited any
