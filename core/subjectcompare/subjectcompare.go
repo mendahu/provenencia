@@ -71,6 +71,14 @@ type Rules struct {
 // derived properties the profile builder adds (a person's lifespan).
 type Values map[vocabkey.PropertyKey][]propertycompare.Value
 
+// Subject is one primary Subject or handle with its comparable values.
+type Subject struct {
+	ID     []byte
+	Ref    string
+	Kind   string // person, event, place
+	Values Values
+}
+
 // Metas are the catalog's value type and cardinality for each property.
 type Metas map[vocabkey.PropertyKey]propertymeta.Meta
 

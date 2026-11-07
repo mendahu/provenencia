@@ -16,33 +16,33 @@ import (
 // filedLinkDeps recomputes the association handle of the last bridge of type
 // kind, as the write that filed it does, and returns what the walk reported.
 func (f *fixture) filedLinkDeps(kind string) [][]byte {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
 	var assoc []byte
-	must(f.t, db.QueryRow(`SELECT ic.entity_id FROM identity_claims ic
+	must(f.T, db.QueryRow(`SELECT ic.entity_id FROM identity_claims ic
 		JOIN subjects s ON s.id = ic.subject_id
 		JOIN subject_types st ON st.id = s.subject_type_id AND st.key = ?
 		WHERE ic.status = 'accepted' ORDER BY s.id DESC LIMIT 1`, kind).Scan(&assoc))
 	deps, err := autoreconciler.RecomputeReported(db, [][]byte{assoc})
-	must(f.t, err)
+	must(f.T, err)
 	return deps
 }
 
 // promotedBirth promotes a person and their birth event, files the
 // participation, and files the location at place unless place is the zero Subject.
 func (f *fixture) promotedBirth(place subjects.Subject) (person, event subjects.Subject, handles [2][]byte) {
-	f.t.Helper()
-	person = subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.T.Helper()
+	person = subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person, "Ann")
 	f.at(person, 0, 20)
-	event = subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	event = subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
 	f.at(event, 6, 20)
-	f.cite(event, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID})
+	f.Cite(f.Artifact, event, observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID})
 	handles = [2][]byte{f.promoteSubject(person), f.promoteSubject(event)}
-	f.participation(person, event, "subject")
+	f.Participation(f.Source, f.Artifact, person, event, "subject")
 	if place.ID != nil {
-		f.location(event, place)
+		f.Locate(f.Source, f.Artifact, event, place)
 	}
 	return person, event, handles
 }
@@ -70,7 +70,7 @@ func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
 			siblingEvents = append(siblingEvents, h[1])
 		}
 		_, event, h := f.promotedBirth(subjects.Subject{})
-		f.location(event, place)
+		f.Locate(f.Source, f.Artifact, event, place)
 		deps := f.filedLinkDeps("location")
 		if countIn(deps, h[1], placeID) != 2 {
 			t.Fatalf("%d siblings: deps lack an end of the link", siblings)
@@ -113,19 +113,19 @@ func TestFiledPartOfWalksFromThePart(t *testing.T) {
 // staleEventDocs marks every event search document, so a later write shows
 // whether it rewrote one: a rewrite replaces the mark.
 func (f *fixture) staleEventDocs() {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
 	_, err = db.Exec(`UPDATE catalog_search_docs SET display_subtitle = 'stale' WHERE kind = 'event'`)
-	must(f.t, err)
+	must(f.T, err)
 }
 
 func (f *fixture) eventDocsStale() bool {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
 	var n int
-	must(f.t, db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'event' AND display_subtitle = 'stale'`).Scan(&n))
+	must(f.T, db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE kind = 'event' AND display_subtitle = 'stale'`).Scan(&n))
 	return n > 0
 }
 
@@ -148,7 +148,7 @@ func TestFiledPartOfReprojectsEventsOnlyWhenARowMoved(t *testing.T) {
 
 	join := func(name string, entityID []byte) subjects.Subject {
 		s := f.placeSubject(name, nil, nil, 0, 0)
-		promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+		promotetest.Save(t, f.C, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 		return s
 	}
 	part2, whole2 := join("Toronto", partID), join("Ontario", wholeID)

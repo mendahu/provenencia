@@ -74,8 +74,8 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	must(t, namealiases.Install(f.c))
 	must(t, catalogsession.WarmOnOpen(f.c))
 
-	placeSrc, placeArt := f.newSource("Births at one place")
-	city := f.place(placeSrc, placeArt, "City")
+	placeSrc, placeArt := f.NewSource("Births at one place")
+	city := f.Place(placeSrc, placeArt, "City")
 	cityID := f.promote(city).Entity.ID
 
 	r := rand.New(rand.NewPCG(1, 2))
@@ -84,7 +84,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	filed := make([]string, 20)
 	for n := 1; n <= 20; n++ {
 		filed[n-1] = names.next()
-		src, art := f.newSource("Census " + letters(n))
+		src, art := f.NewSource("Census " + letters(n))
 		f.filedBirth(src, art, filed[n-1], 1850+n, nil, nil)
 	}
 
@@ -95,12 +95,12 @@ func newLargeFixture(t *testing.T) *largeFixture {
 
 	// Source A: 40 persons, 40 births and 20 deaths, none located.
 	filedOn := func(name string, birthYear, deathYear int) {
-		p := f.person(f.source, f.artifact, name)
-		b := f.eventOn(f.source, f.artifact, "birth", fixtureDate(r, birthYear))
-		f.participation(f.source, f.artifact, p, b, "subject")
+		p := f.Person(f.source, f.artifact, name)
+		b := f.EventOn(f.source, f.artifact, "birth", fixtureDate(r, birthYear))
+		f.Participation(f.source, f.artifact, p, b, "subject")
 		if deathYear != 0 {
-			d := f.eventOn(f.source, f.artifact, "death", fixtureDate(r, deathYear))
-			f.participation(f.source, f.artifact, p, d, "subject")
+			d := f.EventOn(f.source, f.artifact, "death", fixtureDate(r, deathYear))
+			f.Participation(f.source, f.artifact, p, d, "subject")
 		}
 	}
 	for n := 1; n <= 20; n++ {
@@ -114,13 +114,13 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	pageArt, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: placeSrc.ID, Label: "Page"})
 	must(t, err)
 	for i := 0; i < 30; i++ {
-		p := f.person(placeSrc, pageArt, names.next())
-		b := f.eventOn(placeSrc, pageArt, "birth", fixtureDate(r, 1800+r.IntN(100)))
-		f.participation(placeSrc, pageArt, p, b, "subject")
-		f.locate(placeSrc, pageArt, b, city)
+		p := f.Person(placeSrc, pageArt, names.next())
+		b := f.EventOn(placeSrc, pageArt, "birth", fixtureDate(r, 1800+r.IntN(100)))
+		f.Participation(placeSrc, pageArt, p, b, "subject")
+		f.Locate(placeSrc, pageArt, b, city)
 	}
 
-	otherSrc, otherArt := f.newSource("Other")
+	otherSrc, otherArt := f.NewSource("Other")
 	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, pageArt: pageArt, other: otherSrc, otherA: otherArt, city: cityID, citySubject: city}
 }
 
@@ -150,7 +150,7 @@ func since(call func()) time.Duration {
 func TestLargeSourceBudgets(t *testing.T) {
 	lf := newLargeFixture(t)
 	f := lf.fixture
-	aGraph := f.graph(lf.a)
+	aGraph := f.Graph(lf.a)
 	propose := func() graphalign.Proposal { return f.propose(aGraph, nil) }
 	over := func(t *testing.T, what string, got, budget time.Duration) {
 		t.Helper()
@@ -230,7 +230,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 		n := 0
 		d := fastest(2, func() time.Duration {
 			n++
-			f.promote(f.person(lf.other, lf.otherA, "Added "+letters(n)+" Person"))
+			f.promote(f.Person(lf.other, lf.otherA, "Added "+letters(n)+" Person"))
 			return since(func() { propose() })
 		})
 		over(t, "proposal after a handle commit", d, budgetAfterCommit)
@@ -251,7 +251,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 		}
 	})
 
-	onePlaceGraph := f.graph(lf.onePlace)
+	onePlaceGraph := f.Graph(lf.onePlace)
 	proposeOnePlace := func() { f.propose(onePlaceGraph, nil) }
 
 	t.Run("births at one place cold", func(t *testing.T) {
@@ -272,7 +272,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	t.Run("join a place onto the city", func(t *testing.T) {
 		var joining []subjects.Subject
 		for i := 0; i < 3; i++ {
-			joining = append(joining, f.place(lf.other, lf.otherA, "City"))
+			joining = append(joining, f.Place(lf.other, lf.otherA, "City"))
 		}
 		i := 0
 		d := fastest(3, func() time.Duration {
@@ -286,7 +286,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	t.Run("locate an event at the city", func(t *testing.T) {
 		var events []subjects.Subject
 		for i := 0; i < 3; i++ {
-			e := f.birth(lf.onePlace, lf.pageArt)
+			e := f.Birth(lf.onePlace, lf.pageArt)
 			f.promote(e)
 			events = append(events, e)
 		}
@@ -294,23 +294,23 @@ func TestLargeSourceBudgets(t *testing.T) {
 		d := fastest(3, func() time.Duration {
 			e := events[i]
 			i++
-			return since(func() { f.locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
+			return since(func() { f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
 		})
 		over(t, "file one location at the city", d, budgetLocateAtCity)
 	})
 	t.Run("second part_of from the city", func(t *testing.T) {
-		region := f.place(lf.other, lf.otherA, "Region")
+		region := f.Place(lf.other, lf.otherA, "Region")
 		regionID := f.promote(region).Entity.ID
 		// The first part_of mints the association; it moves rows and is not timed.
-		first := f.place(lf.other, lf.otherA, "City")
+		first := f.Place(lf.other, lf.otherA, "City")
 		f.join(first, lf.city)
-		f.placeRel(lf.other, lf.otherA, first, region, "part_of")
+		f.PlaceRel(lf.other, lf.otherA, first, region, "part_of")
 		type pair struct{ from, to subjects.Subject }
 		var pairs []pair
 		for i := 0; i < 3; i++ {
-			from := f.place(lf.other, lf.otherA, "City")
+			from := f.Place(lf.other, lf.otherA, "City")
 			f.join(from, lf.city)
-			to := f.place(lf.other, lf.otherA, "Region")
+			to := f.Place(lf.other, lf.otherA, "Region")
 			f.join(to, regionID)
 			pairs = append(pairs, pair{from, to})
 		}
@@ -318,7 +318,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 		d := fastest(3, func() time.Duration {
 			p := pairs[i]
 			i++
-			return since(func() { f.placeRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
+			return since(func() { f.PlaceRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
 		})
 		over(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
 	})

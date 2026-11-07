@@ -89,11 +89,11 @@ func mergeMetas(ms ...subjectcompare.Metas) subjectcompare.Metas {
 }
 
 // link is one bridge read from both ends: a is the key at the first end
-// (Bridge.A, CanonEdge.From), b at the second.
+// (Link.A, CanonEdge.From), b at the second.
 type link struct{ a, b vocabkey.BridgeKey }
 
-func bridge(a, b []byte, l link) graphalign.Bridge {
-	return graphalign.Bridge{Edge: kinship.Edge{A: a, B: b, KeyA: l.a, KeyB: l.b}}
+func bridge(a, b []byte, l link) kinship.Link {
+	return kinship.Link{Edge: kinship.Edge{A: a, B: b, KeyA: l.a, KeyB: l.b}}
 }
 
 func edge(from, to []byte, l link) graphalign.CanonEdge {
@@ -153,7 +153,7 @@ func TestSeedFromAlreadyPromotedNeighbor(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -189,7 +189,7 @@ func TestSeedFromNewlyFixedIntoUnpromoted(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -218,7 +218,7 @@ func TestBothUnpromotedOnceOneFixed(t *testing.T) {
 			{ID: a, Ref: "PER-A", Kind: "person", Values: vals(na, va)},
 			{ID: b, Ref: "PER-B", Kind: "person", Values: vals(nb, vb)},
 		},
-		Bridges: []graphalign.Bridge{bridge(a, b, sig)},
+		Bridges: []kinship.Link{bridge(a, b, sig)},
 		Metas:   personMetas(),
 	}
 	canon := graphalign.Canon{
@@ -380,7 +380,7 @@ func TestConfigOverrideWithoutEditingRegistry(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: vals(np, nv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(personMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -446,7 +446,7 @@ func gracieObituary() (graphalign.Layer, graphalign.Canon) {
 			{ID: res1, Ref: "PLC-R", Kind: "place", Values: vals(resTop, resV)},
 			{ID: medHat, Ref: "PLC-M", Kind: "place", Values: vals(top, topV)},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(gracie, birth, birthSig),
 			bridge(gracie, death, deathSig),
 			bridge(gracie, burial, burialSig),
@@ -880,7 +880,7 @@ func TestEdgeSupportCountsTheSeedingNeighborOnce(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person"},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   personMetas(),
 	}
 	canon := graphalign.Canon{
@@ -906,7 +906,7 @@ func TestExactNameCreditsTheNeighborOnce(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -935,7 +935,7 @@ func TestOtherLinkCreditStaysUnderTheBar(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -963,7 +963,7 @@ func TestConflictingNeighborLowersTheScore(t *testing.T) {
 			{ID: evSub, Ref: "EVT-S", Kind: "event"},
 			{ID: perSub, Ref: "PER-S", Kind: "person", Values: nameVals("Mary", "Robins")},
 		},
-		Bridges: []graphalign.Bridge{bridge(perSub, evSub, sig)},
+		Bridges: []kinship.Link{bridge(perSub, evSub, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -1011,7 +1011,7 @@ func TestAcceptedPropertyMatchNominatesItsNeighbor(t *testing.T) {
 			{ID: b, Ref: "PER-B", Kind: "person", Values: nameVals("Bob", "Ames")},
 			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(a, mid, sig),
 			bridge(b, mid, sig),
 		},
@@ -1062,7 +1062,7 @@ func TestCandidateLoserDoesNotNominate(t *testing.T) {
 			{ID: person, Ref: "PER-A", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: mid, Ref: "EVT-M", Kind: "event", Values: vals(et, etv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(person, mid, sig)},
+		Bridges: []kinship.Link{bridge(person, mid, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -1107,7 +1107,7 @@ func TestNeighborCreditStopsAtOneHop(t *testing.T) {
 			{ID: mid, Ref: "EVT-M", Kind: "event"},
 			{ID: far, Ref: "PLC-F", Kind: "place"},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(person, mid, birth),
 			bridge(mid, far, loc),
 		},
@@ -1183,7 +1183,7 @@ func TestHeldNewAndSkipDecisions(t *testing.T) {
 					{ID: id("s-y"), Ref: "PER-Y", Kind: "person", Values: nameVals("Xavier", "Xu")},
 					{ID: id("s-z"), Ref: "PER-Z", Kind: "person"},
 				},
-				Bridges: []graphalign.Bridge{
+				Bridges: []kinship.Link{
 					bridge(id("s-a"), id("s-x"), sig),
 					bridge(id("s-x"), id("s-z"), sig),
 				},
@@ -1217,7 +1217,7 @@ func TestDecidedRowTheNeighborsContradict(t *testing.T) {
 			{ID: id("s-person"), Ref: "PER-S", Kind: "person", Values: nameVals("Gracie", "Gates")},
 			{ID: id("s-birth"), Ref: "EVT-S", Kind: "event", Values: vals(et, etv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(id("s-person"), id("s-birth"), sig)},
+		Bridges: []kinship.Link{bridge(id("s-person"), id("s-birth"), sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -1320,13 +1320,13 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 	}
 	tests := []struct {
 		name     string
-		bridges  []graphalign.Bridge
+		bridges  []kinship.Link
 		subjects []graphalign.Subject
 		dup      bool
 	}{
 		{
 			name: "different participants",
-			bridges: []graphalign.Bridge{
+			bridges: []kinship.Link{
 				bridge(id("p-paty"), id("e-a"), part),
 				bridge(id("p-sandra"), id("e-b"), part),
 			},
@@ -1334,7 +1334,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 		},
 		{
 			name: "the same participant",
-			bridges: []graphalign.Bridge{
+			bridges: []kinship.Link{
 				bridge(id("p-paty"), id("e-a"), part),
 				bridge(id("p-paty"), id("e-b"), part),
 			},
@@ -1344,7 +1344,7 @@ func TestNewEventsDisagreeWhenTheirParticipantsDo(t *testing.T) {
 		{name: "no participants", subjects: base, dup: true},
 		{
 			name: "the same participant and different places",
-			bridges: []graphalign.Bridge{
+			bridges: []kinship.Link{
 				bridge(id("p-paty"), id("e-a"), part),
 				bridge(id("p-paty"), id("e-b"), part),
 				bridge(id("e-a"), id("l-hat"), place),
@@ -1377,7 +1377,7 @@ func TestRowReasons(t *testing.T) {
 		name       string
 		layer      []graphalign.Subject
 		handles    []graphalign.Handle
-		bridges    []graphalign.Bridge
+		bridges    []kinship.Link
 		edges      []graphalign.CanonEdge
 		fixed      []graphalign.Fixed
 		subject    string
@@ -1400,7 +1400,7 @@ func TestRowReasons(t *testing.T) {
 				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 				{ID: id("h-e"), Ref: "EVT-1", Kind: "event", Values: vals(termProp("event_type", "residence"))},
 			},
-			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-e"), partLink("subject", "residence"))},
+			bridges: []kinship.Link{bridge(id("s-a"), id("s-e"), partLink("subject", "residence"))},
 			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-e"), partLink("subject", "residence"))},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
 			subject: "s-e", wantTarget: "", want: graphalign.ReasonUnplaced,
@@ -1431,7 +1431,7 @@ func TestRowReasons(t *testing.T) {
 				{ID: id("h-a"), Ref: "PER-1", Kind: "person", Values: nameVals("Ann", "Ames")},
 				{ID: id("h-b"), Ref: "PER-2", Kind: "person", Values: nameVals("Bob", "Ames")},
 			},
-			bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-b"), sig)},
+			bridges: []kinship.Link{bridge(id("s-a"), id("s-b"), sig)},
 			edges:   []graphalign.CanonEdge{edge(id("h-a"), id("h-b"), sig)},
 			fixed:   []graphalign.Fixed{{SubjectID: id("s-a"), HandleID: id("h-a")}},
 			subject: "s-b", wantTarget: graphalign.TargetHandle, want: graphalign.ReasonVia,
@@ -1483,7 +1483,7 @@ func partOfChain() (graphalign.Layer, graphalign.Canon) {
 			{ID: state, Ref: "CPL-S", Kind: "place", Values: vals(sn, sv)},
 			{ID: country, Ref: "CPL-U", Kind: "place", Values: vals(un, uv)},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(city, state, sig),
 			bridge(state, country, sig),
 		},
@@ -1536,7 +1536,7 @@ func TestPartOfDoesNotFileADifferentToponym(t *testing.T) {
 			{ID: child, Ref: "CPL-C", Kind: "place", Values: vals(cn, cv)},
 			{ID: parent, Ref: "CPL-A", Kind: "place", Values: vals(pn, pv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(child, parent, sig)},
+		Bridges: []kinship.Link{bridge(child, parent, sig)},
 		Metas: subjectcompare.Metas{cn: {
 			ValueType: propertymeta.ValueTypeText, Cardinality: propertymeta.CardinalityMultiple,
 		}},
@@ -1572,7 +1572,7 @@ func TestPartOfBreaksASharedToponym(t *testing.T) {
 			{ID: spring, Ref: "CPL-S", Kind: "place", Values: vals(sn, sv)},
 			{ID: ill, Ref: "CPL-I", Kind: "place", Values: vals(in, iv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(spring, ill, sig)},
+		Bridges: []kinship.Link{bridge(spring, ill, sig)},
 		Metas:   placeMetas(),
 	}
 	canon := graphalign.Canon{
@@ -1631,7 +1631,7 @@ func TestDirectedRelationshipsMatchFromTheSameEnd(t *testing.T) {
 					{ID: id("s-a"), Ref: "A", Kind: "person", Values: nameVals("Ann", "Ames")},
 					{ID: id("s-b"), Ref: "B", Kind: "person", Values: nameVals("Bob", "Ames")},
 				},
-				Bridges: []graphalign.Bridge{bridge(id("s-a"), id("s-b"), l)}, // Ann is Bob's term
+				Bridges: []kinship.Link{bridge(id("s-a"), id("s-b"), l)}, // Ann is Bob's term
 				Metas:   nameMetas(),
 			}
 			canon := graphalign.Canon{
@@ -1682,7 +1682,7 @@ func TestSettlingDropsSupportFromAMovedNeighbor(t *testing.T) {
 			{ID: carl, Ref: "S-CARL", Kind: "person", Values: nameVals("Carl", "Lee")},
 			{ID: dora, Ref: "S-DORA", Kind: "person", Values: nameVals("Dora", "Lee")},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(ann, husband, spouse),
 			bridge(ann, carl, sibling),
 			bridge(ann, dora, sibling),
@@ -1735,7 +1735,7 @@ func TestNewDuplicateCheckComparesDirectedNeighborsByEnd(t *testing.T) {
 			{ID: son, Ref: "S-SON", Kind: "person", Values: nameVals("Robert", "Smith")},
 			{ID: father, Ref: "S-FATHER", Kind: "person", Values: nameVals("William", "Smith")},
 		},
-		Bridges: []graphalign.Bridge{
+		Bridges: []kinship.Link{
 			bridge(a, son, parent),    // a is the son's parent
 			bridge(father, b, parent), // b is the father's child
 		},
@@ -1869,7 +1869,7 @@ func TestBirthIsNeverProposedOnADeath(t *testing.T) {
 				{ID: p, Ref: "PER-S", Kind: "person", Values: vals(nameProp("Ann Ames"))},
 				{ID: e, Ref: "EVT-S", Kind: "event", Values: eventVals("birth", 1850)},
 			},
-			Bridges: []graphalign.Bridge{bridge(p, e, sig)},
+			Bridges: []kinship.Link{bridge(p, e, sig)},
 			Metas:   metas,
 		}
 		canon := graphalign.Canon{
@@ -1989,7 +1989,7 @@ func placedApart(t *testing.T, eventType string) (person, event float64) {
 			{ID: p, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: e, Ref: "EVT-S", Kind: "event", Values: vals(et, etv, dp, dv)},
 		},
-		Bridges: []graphalign.Bridge{bridge(p, e, link)},
+		Bridges: []kinship.Link{bridge(p, e, link)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	canon := graphalign.Canon{
@@ -2041,7 +2041,7 @@ func TestSpouseNeverCorrespondsToSibling(t *testing.T) {
 			{ID: ann, Ref: "S-ANN", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: bob, Ref: "S-BOB", Kind: "person", Values: nameVals("Bob", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{bridge(ann, bob, relLink("spouse"))},
+		Bridges: []kinship.Link{bridge(ann, bob, relLink("spouse"))},
 		Metas:   nameMetas(),
 	}
 	canon := graphalign.Canon{
@@ -2117,7 +2117,7 @@ func TestOnlyCandidatesOrNominatedHandlesAreCompared(t *testing.T) {
 				{ID: id("s"), Ref: "PER-S", Kind: "person", Values: nameVals("Rob", "Robnis")},
 				{ID: id("e"), Ref: "EVT-S", Kind: "event", Values: vals(et, birth, date, y1817)},
 			},
-			Bridges: []graphalign.Bridge{bridge(id("s"), id("e"), sig)},
+			Bridges: []kinship.Link{bridge(id("s"), id("e"), sig)},
 			Metas:   mergeMetas(nameMetas(), eventMetas()),
 		}
 		canon := graphalign.Canon{
@@ -2156,7 +2156,7 @@ func TestSettlingMovesAPairAndSaysWhy(t *testing.T) {
 			{ID: id("p"), Ref: "PER-P", Kind: "person", Values: withSex(nameVals("Ann", "Ames"), "male")},
 			{ID: id("s"), Ref: "PER-S", Kind: "person", Values: nameVals("John", "Ames")},
 		},
-		Bridges: []graphalign.Bridge{bridge(id("p"), id("s"), spouse)},
+		Bridges: []kinship.Link{bridge(id("p"), id("s"), spouse)},
 		Metas:   sexMetas(),
 	}
 	canon := graphalign.Canon{
@@ -2225,7 +2225,7 @@ func TestAConflictCountsAgainstAPlacedPair(t *testing.T) {
 			{ID: id("n"), Ref: "PER-N", Kind: "person", Values: nameVals("Zed", "Zimm")},
 			{ID: id("k"), Ref: "PER-K", Kind: "person", Values: nameVals("Kay", "Kell")},
 		},
-		Bridges: []graphalign.Bridge{bridge(id("p"), id("e"), sig)},
+		Bridges: []kinship.Link{bridge(id("p"), id("e"), sig)},
 		Metas:   sexMetas(),
 	}
 	canon := graphalign.Canon{
@@ -2296,7 +2296,7 @@ func TestPlacedPairNominatesTopK(t *testing.T) {
 					{ID: placeK, Ref: "PLC-S", Kind: "place", Values: vals(tp, tv)},
 					{ID: kidK, Ref: "EVT-S", Kind: "event", Values: tc.layerBirth},
 				},
-				Bridges: []graphalign.Bridge{bridge(kidK, placeK, loc)},
+				Bridges: []kinship.Link{bridge(kidK, placeK, loc)},
 				Metas:   mergeMetas(placeMetas(), eventMetas()),
 			}
 			canon := graphalign.Canon{Handles: []graphalign.Handle{{ID: placeH, Ref: "PLC-1", Kind: "place", Values: vals(tp, tv)}}}
@@ -2321,13 +2321,13 @@ func TestPlacedPairNominatesTopK(t *testing.T) {
 }
 
 // implied marks b as a link the kinship pattern p implies through pivot.
-func implied(b graphalign.Bridge, p kinship.Pattern, pivot []byte, onlyImplied bool) graphalign.Bridge {
+func implied(b kinship.Link, p kinship.Pattern, pivot []byte, onlyImplied bool) kinship.Link {
 	b.Recording = kinship.Recording{Shapes: []kinship.Shape{{Pattern: p, Pivot: pivot}}, OnlyImplied: onlyImplied}
 	return b
 }
 
 // canonOf is the canon's edges of a layer's bridges, associations dropped.
-func canonOf(bs []graphalign.Bridge) []graphalign.CanonEdge {
+func canonOf(bs []kinship.Link) []graphalign.CanonEdge {
 	var out []graphalign.CanonEdge
 	for _, b := range bs {
 		out = append(out, graphalign.CanonEdge{
@@ -2349,16 +2349,16 @@ func marriageFixture(layerShape, canonShape string, dated bool) (graphalign.Laye
 	if dated {
 		eventValues[vocabkey.PropertyDate] = append(eventValues[vocabkey.PropertyDate], propertycomparetest.Date(datevaluetest.YMD(1840, 5, 12)))
 	}
-	side := func(shape string, ann, bob, ev []byte) []graphalign.Bridge {
+	side := func(shape string, ann, bob, ev []byte) []kinship.Link {
 		spouse := relLink("spouse")
 		part := partLink("subject", "marriage")
 		switch shape {
 		case "rel":
-			return []graphalign.Bridge{bridge(ann, bob, spouse)}
+			return []kinship.Link{bridge(ann, bob, spouse)}
 		case "event":
-			return []graphalign.Bridge{bridge(ann, ev, part), bridge(bob, ev, part)}
+			return []kinship.Link{bridge(ann, ev, part), bridge(bob, ev, part)}
 		}
-		out := []graphalign.Bridge{bridge(ann, ev, part), bridge(bob, ev, part)}
+		out := []kinship.Link{bridge(ann, ev, part), bridge(bob, ev, part)}
 		return append(out, implied(bridge(ann, bob, spouse), kinship.PatternMarriageSpouses, ev, shape == "marriage"))
 	}
 	layer := graphalign.Layer{

@@ -7,24 +7,17 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -33,11 +26,8 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-const handleLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-
 type handleFixture struct {
-	t        *testing.T
-	c        *database.Catalog
+	*evidencelayertest.Records
 	user     []byte
 	source   []byte
 	artifact []byte
@@ -46,46 +36,18 @@ type handleFixture struct {
 
 func newHandleFixture(t *testing.T) *handleFixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	user := seedUser(t, c)
-	if err := subjectvocab.Install(c); err != nil {
-		t.Fatal(err)
-	}
-	typeID := seedType(t, c, "Book", "")
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, user, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	art, err := artifactstest.Create(c, user, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &handleFixture{t: t, c: c, user: user, source: src.ID, artifact: art.ID, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
-}
-
-func (f *handleFixture) prop(key string) properties.Property {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return p
+	r := evidencelayertest.New(t)
+	return &handleFixture{Records: r, user: evidencelayertest.UserID, source: r.Source.ID, artifact: r.Artifact.ID, graph: r.Graph(r.Source)}
 }
 
 // subject creates a Subject of kind with the given Observations.
 func (f *handleFixture) subject(kind string, in func(s subjects.Subject) []observations.Input) subjects.Subject {
-	f.t.Helper()
-	s := subjectstest.On(f.t, f.c, f.user, f.graph, kind, "")
+	f.T.Helper()
+	s := subjectstest.On(f.T, f.C, f.user, f.graph, kind, "")
 	if in != nil {
 		obs := in(s)
-		if _, _, err := observationstest.Cite(f.c, f.user, f.graph, f.artifact, handleLocator, obs...); err != nil {
-			f.t.Fatal(err)
+		if _, _, err := observationstest.Cite(f.C, f.user, f.graph, f.artifact, evidencelayertest.Locator, obs...); err != nil {
+			f.T.Fatal(err)
 		}
 	}
 	return s
@@ -95,7 +57,7 @@ func (f *handleFixture) person(forms ...string) subjects.Subject {
 	return f.subject("person", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, form := range forms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western(form)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.Prop("name").ID, Name: namevaluetest.Western(form)})
 		}
 		return in
 	})
@@ -106,22 +68,22 @@ func (f *handleFixture) place(toponyms ...string) subjects.Subject {
 	return f.subject("place", func(s subjects.Subject) []observations.Input {
 		var in []observations.Input
 		for _, name := range toponyms {
-			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name)})
+			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar(name)})
 		}
 		return in
 	})
 }
 
 func (f *handleFixture) promote(s subjects.Subject, onto []byte) promote.Result {
-	f.t.Helper()
-	return promotetest.Save(f.t, f.c, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
+	f.T.Helper()
+	return promotetest.Save(f.T, f.C, f.user, promote.Input{SubjectID: s.ID, EntityID: onto})
 }
 
 func (f *handleFixture) search(text string, kinds ...string) []Hit {
-	f.t.Helper()
-	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{Text: text, Kinds: kinds})
+	f.T.Helper()
+	hits, err := DefaultEngine().Search(context.Background(), f.C, Query{Text: text, Kinds: kinds})
 	if err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
 	return hits
 }
@@ -202,15 +164,15 @@ func TestHandleSearchFindsOutvotedNames(t *testing.T) {
 func TestHandleSearchFollowsEdits(t *testing.T) {
 	f := newHandleFixture(t)
 	s := f.subject("person", func(s subjects.Subject) []observations.Input {
-		return []observations.Input{{SubjectID: s.ID, PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Ada Byron")}}
+		return []observations.Input{{SubjectID: s.ID, PropertyID: f.Prop("name").ID, Name: namevaluetest.Western("Ada Byron")}}
 	})
 	ada := f.promote(s, nil)
-	obs, err := observations.ListBySubject(f.c, s.ID)
+	obs, err := observations.ListBySubject(f.C, s.ID)
 	if err != nil || len(obs) != 1 {
 		t.Fatalf("%v %d", err, len(obs))
 	}
-	nameID := f.prop("name").ID
-	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	nameID := f.Prop("name").ID
+	if _, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
 			ID: obs[0].ID, SubjectID: s.ID, PropertyID: nameID, Name: namevaluetest.Western("Ada Lovelace"),
 		})
@@ -229,60 +191,26 @@ func TestHandleSearchFollowsEdits(t *testing.T) {
 // with toponym, their three positions, and the participation and location
 // bridges. It stops before promote and fileBridges.
 func (f *handleFixture) locatedBirth(toponym string, forms ...string) (person, event, place subjects.Subject) {
-	f.t.Helper()
-	t := f.t
+	f.T.Helper()
+	t := f.T
 	person = f.person(forms...)
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
+	birth := f.Term("event_type", "birth")
 	event = f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
-			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
+			{SubjectID: s.ID, PropertyID: f.Prop("event_type").ID, ValueTermID: birth.ID},
+			{SubjectID: s.ID, PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 		}
 	})
 	place = f.place(toponym)
 	for i, s := range []subjects.Subject{person, event, place} {
-		if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+		if _, err := writes.Call(f.C, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 			return subjectpositions.Set(tx, s.ID, int64(i), 0)
 		}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	role, err := propertyterms.Lookup(f.c, f.prop("role").ID, "subject", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	personProp := f.prop("person").ID
-	eventProp := f.prop("event").ID
-	roleProp := f.prop("role").ID
-	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
-			Observations: []observations.Input{
-				{PropertyID: personProp, ValueSubjectID: person.ID},
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: roleProp, ValueTermID: role.ID},
-			},
-		})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	placeProp := f.prop("place").ID
-	if _, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
-			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: handleLocator},
-			Observations: []observations.Input{
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: placeProp, ValueSubjectID: place.ID},
-			},
-		})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	f.Participation(f.Source, f.Artifact, person, event, "subject")
+	f.Locate(f.Source, f.Artifact, event, place)
 	return person, event, place
 }
 
@@ -307,7 +235,7 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 		t.Fatalf("place: %s", refsOf(hits))
 	}
 
-	obs, err := observations.ListBySubject(f.c, person.ID)
+	obs, err := observations.ListBySubject(f.C, person.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,8 +249,8 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 	if len(jamesObs.ID) != 16 {
 		t.Fatalf("james observation missing: %+v", obs)
 	}
-	nameID := f.prop("name").ID
-	if _, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	nameID := f.Prop("name").ID
+	if _, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: f.user}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, f.user, observations.Input{
 			ID: jamesObs.ID, SubjectID: person.ID, PropertyID: nameID,
 			Name: namevaluetest.Western("John Robins"),
@@ -339,19 +267,19 @@ func TestSummarySearchFindsTheListTitle(t *testing.T) {
 }
 
 func (f *handleFixture) fileBridges() {
-	f.t.Helper()
-	db, err := f.c.DB()
+	f.T.Helper()
+	db, err := f.C.DB()
 	if err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
 	var rev int64
 	if err := db.QueryRow(`SELECT COALESCE(MAX(revision), 0) FROM audit_transactions`).Scan(&rev); err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
-	if _, err := writes.Call(f.c, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	if _, err := writes.Call(f.C, writes.Op{Action: "promote_batch", UserID: f.user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		return promote.SaveBatch(tx, f.user, promote.Batch{GraphID: f.graph, SeenRevision: rev})
 	}); err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
 }
 
@@ -379,14 +307,11 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
-	birth, err := propertyterms.Lookup(f.c, f.prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
+	birth := f.Term("event_type", "birth")
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
-			{SubjectID: s.ID, PropertyID: f.prop("event_type").ID, ValueTermID: birth.ID},
-			{SubjectID: s.ID, PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 5, 0)},
+			{SubjectID: s.ID, PropertyID: f.Prop("event_type").ID, ValueTermID: birth.ID},
+			{SubjectID: s.ID, PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1817, 5, 0)},
 		}
 	}), nil)
 	place := f.promote(f.place("York, Upper Canada"), nil)
@@ -418,7 +343,7 @@ func TestHandleWithoutValuesIsFoundByRef(t *testing.T) {
 func TestRebuildIndexesHandles(t *testing.T) {
 	f := newHandleFixture(t)
 	james := f.promote(f.person("James Robins"), nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -428,7 +353,7 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	if err := searchindex.SetProjectionVersion(db, 0); err != nil {
 		t.Fatal(err)
 	}
-	if err := searchindex.EnsureCatalog(f.c); err != nil {
+	if err := searchindex.EnsureCatalog(f.C); err != nil {
 		t.Fatal(err)
 	}
 	if hits := f.search("Robins", KindPerson); len(hits) != 1 || hits[0].Ref != james.Entity.Ref {
@@ -473,8 +398,8 @@ func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
 	f := newHandleFixture(t)
 	person := f.promote(f.person("James Robins"), nil)
 	place := f.promote(f.place("Robins"), nil)
-	typeID := seedType(t, f.c, "Census", "")
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: f.user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+	typeID := seedType(t, f.C, "Census", "")
+	src, _, err := writes.Run(f.C, writes.Op{Action: "create_source", UserID: f.user}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
 		return sources.Create(tx, f.user, sources.CreateInput{
 			SourceTypeID: typeID,
 			Title:        "Robins parish",
@@ -483,7 +408,7 @@ func TestSimilarTitlesRankThePersonAheadOfTheSource(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	hits, err := DefaultEngine().Search(context.Background(), f.c, Query{Text: "Robins"})
+	hits, err := DefaultEngine().Search(context.Background(), f.C, Query{Text: "Robins"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -516,7 +441,7 @@ func TestMergedHandleLeavesTheIndex(t *testing.T) {
 	f := newHandleFixture(t)
 	a := f.promote(f.person("James Robins"), nil)
 	b := f.promote(f.person("James Robins"), nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -637,7 +562,7 @@ func TestJoinReprojectsDependentsOnlyWhenTheRootMoves(t *testing.T) {
 	placeH := f.promote(place, nil)
 	f.fileBridges()
 
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	if err != nil {
 		t.Fatal(err)
 	}

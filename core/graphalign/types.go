@@ -10,23 +10,7 @@ import (
 )
 
 // Subject is one primary Subject on the Evidence layer.
-type Subject struct {
-	ID     []byte
-	Ref    string
-	Kind   string // person, event, place
-	Values subjectcompare.Values
-}
-
-// Bridge links two primary Subjects on the layer (walked undirected).
-type Bridge struct {
-	// Edge's Associations are the bridge Subjects behind the edge. The layers
-	// never read them; the loader sets them for a later reader of the bridge
-	// Subjects (S13-29's shared loader).
-	kinship.Edge
-	// Recording is how the kinship patterns imply the link; the zero value is a
-	// link only recorded.
-	kinship.Recording
-}
+type Subject = subjectcompare.Subject
 
 // Handle is one canonical entity in the prefetched canon neighborhood.
 type Handle struct {
@@ -41,15 +25,16 @@ type Handle struct {
 type CanonEdge struct {
 	From, To       []byte
 	KeyFrom, KeyTo vocabkey.BridgeKey // the edge read from From's end and from To's
-	// Recording is as on Bridge.
+	// Recording is as on kinship.Link.
 	kinship.Recording
 }
 
 // Layer is one Source's primary Subjects and bridges, recorded or implied by
-// the kinship patterns.
+// the kinship patterns. A bridge is a kinship.Link; its Edge's Associations are
+// the bridge Subjects behind it, which the layers never read.
 type Layer struct {
 	Subjects []Subject
-	Bridges  []Bridge
+	Bridges  []kinship.Link
 	Metas    subjectcompare.Metas
 }
 

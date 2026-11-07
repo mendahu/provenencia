@@ -19,7 +19,7 @@ import (
 var terms = segmentcomparetest.Terms()
 
 // rules is the shipped bound, written here because the layer holds no numbers.
-var rules = kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10}
+var rules = kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: 100_000}
 
 // Subject ids: people P1.. = 0x11.., events E1.. = 0x21.., bridges b1.. = 0x31...
 func p(n byte) []byte { return []byte{0x10 + n} }
@@ -242,7 +242,7 @@ func TestDeriveBound(t *testing.T) {
 // and ten children under the middle person: the grandparent links must not
 // rescan their associations for each one.
 func TestDeriveManyAssociations(t *testing.T) {
-	const n = 20000
+	const n = 4000 // twice n copies for each of 10 children stays under the shipped MaxChainWork
 	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
 	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
 	id := func(i int) []byte { return []byte(fmt.Sprintf("a%d", i)) }
@@ -313,7 +313,7 @@ func TestDeriveManyDuplicateParentSteps(t *testing.T) {
 			kinship.Edge{A: []byte("m"), B: []byte("c"), KeyA: first, KeyB: second, Associations: [][]byte{a}})
 	}
 	start := time.Now()
-	got := kinship.Derive(edges, terms, kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10})
+	got := kinship.Derive(edges, terms, rules)
 	if len(got) != 1 {
 		t.Fatalf("Derive made %d links, want 1", len(got))
 	}
@@ -347,6 +347,43 @@ func TestDeriveManyDuplicatesTimesGrandchildren(t *testing.T) {
 	}
 	if d := time.Since(start); d > time.Second {
 		t.Errorf("Derive took %v, want under a second", d)
+	}
+}
+
+// TestDeriveChainWorkCap files one grandparent-to-middle link holding many
+// associations and several children of the middle person: every chain copies
+// the up link's associations, so a total over MaxChainWork implies no chain,
+// and one just under implies every chain.
+func TestDeriveChainWorkCap(t *testing.T) {
+	const children, cap = 10, 1000
+	rel := segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship)
+	first, second := segmentcompare.Keys(rel, vocabkey.TermParent, "", terms)
+	edgesWith := func(assocs int) []kinship.Edge {
+		var up [][]byte
+		for i := 0; i < assocs; i++ {
+			up = append(up, []byte(fmt.Sprintf("a%d", i)))
+		}
+		edges := []kinship.Edge{{A: []byte("g"), B: []byte("m"), KeyA: first, KeyB: second, Associations: up}}
+		for i := 0; i < children; i++ {
+			edges = append(edges, kinship.Edge{A: []byte("m"), B: []byte(fmt.Sprintf("c%d", i)), KeyA: first, KeyB: second, Associations: [][]byte{[]byte("d")}})
+		}
+		return edges
+	}
+	capped := kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: cap}
+	// Each chain copies the up link's associations and the down link's one.
+	for _, tc := range []struct {
+		name   string
+		assocs int
+		want   int
+	}{
+		{"at the cap", cap/children - 1, children},
+		{"over the cap", cap / children, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := len(kinship.Derive(edgesWith(tc.assocs), terms, capped)); got != tc.want {
+				t.Fatalf("Derive implied %d chains, want %d", got, tc.want)
+			}
+		})
 	}
 }
 

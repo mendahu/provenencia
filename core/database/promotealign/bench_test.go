@@ -141,9 +141,9 @@ func benchName(i int) string {
 // 20k persons, 30k events, and a few cities, and reports the heap afterward.
 func BenchmarkProposeColdCity(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "City")
+	city := f.Place(f.source, f.artifact, "City")
 	cityID := f.promote(city).Entity.ID
-	f.person(f.source, f.artifact, benchName(7))
+	f.Person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, cityID, benchShape()))
@@ -153,7 +153,7 @@ func BenchmarkProposeColdCity(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		f.c.Graph().Drop()
 		runtime.GC()
-		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil, nil)
+		_, _, err := promotealign.Propose(f.c, f.Graph(f.source), nil, nil)
 		must(b, err)
 		runtime.GC()
 		var ms runtime.MemStats
@@ -169,18 +169,18 @@ func BenchmarkProposeColdCity(b *testing.B) {
 // and the first one builds it. Reported, not gated.
 func BenchmarkProposeWarmCity(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "City")
+	city := f.Place(f.source, f.artifact, "City")
 	cityID := f.promote(city).Entity.ID
-	f.person(f.source, f.artifact, benchName(7))
+	f.Person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, cityID, benchShape()))
-	_, _, err = promotealign.Propose(f.c, f.graph(f.source), nil, nil)
+	_, _, err = promotealign.Propose(f.c, f.Graph(f.source), nil, nil)
 	must(b, err)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil, nil)
+		_, _, err := promotealign.Propose(f.c, f.Graph(f.source), nil, nil)
 		must(b, err)
 	}
 	b.StopTimer()
@@ -194,9 +194,9 @@ func BenchmarkProposeWarmCity(b *testing.B) {
 // so each one rebuilds the shortlist index. Reported, not gated.
 func BenchmarkProposeAfterCommit(b *testing.B) {
 	f := newFixture(b)
-	city := f.place(f.source, f.artifact, "City")
+	city := f.Place(f.source, f.artifact, "City")
 	cityID := f.promote(city).Entity.ID
-	f.person(f.source, f.artifact, benchName(7))
+	f.Person(f.source, f.artifact, benchName(7))
 	db, err := f.c.DB()
 	must(b, err)
 	must(b, bulkCanon(db, cityID, benchShape()))
@@ -204,9 +204,9 @@ func BenchmarkProposeAfterCommit(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
-		f.promote(f.person(f.source, f.artifact, fmt.Sprintf("Added%d Person", i)))
+		f.promote(f.Person(f.source, f.artifact, fmt.Sprintf("Added%d Person", i)))
 		b.StartTimer()
-		_, _, err := promotealign.Propose(f.c, f.graph(f.source), nil, nil)
+		_, _, err := promotealign.Propose(f.c, f.Graph(f.source), nil, nil)
 		must(b, err)
 	}
 }
