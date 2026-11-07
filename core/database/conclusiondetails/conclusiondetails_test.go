@@ -17,6 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -26,28 +27,22 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var userID = evidencelayertest.UserID
 
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+const locator = evidencelayertest.Locator
 
 type fixture struct {
-	t      *testing.T
-	c      *database.Catalog
-	typeID []byte
+	*evidencelayertest.Records
 	arts   map[string]artifacts.Artifact
 	person subjecttypes.Type
 	name   properties.Property
@@ -55,7 +50,7 @@ type fixture struct {
 	date   properties.Property
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
@@ -64,17 +59,11 @@ func must(t *testing.T, err error) {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
+	r := evidencelayertest.New(t)
+	c := r.C
 	must(t, sourcecredibilitygrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{}}
+	f := &fixture{Records: r, arts: map[string]artifacts.Artifact{}}
+	var err error
 	f.person, err = subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
 	must(t, err)
 	f.name, err = properties.Lookup(c, "name", vocabkey.OriginProvenencia)
@@ -86,36 +75,32 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
+// source is another Source, with its Artifact kept for cite.
 func (f *fixture) source(title string) sources.Source {
-	f.t.Helper()
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
-	})
-	must(f.t, err)
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(f.t, err)
+	f.T.Helper()
+	src, art := f.NewSource(title)
 	f.arts[string(src.ID)] = art
 	return src
 }
 
 func (f *fixture) personOn(src sources.Source) subjects.Subject {
-	f.t.Helper()
+	f.T.Helper()
 	return f.subjectOn(src, "person")
 }
 
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
-	f.t.Helper()
-	ty, err := subjecttypes.Lookup(f.c, kind, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	return subjectstest.OfType(f.t, f.c, userID, graph, ty.ID, "")
+	f.T.Helper()
+	ty, err := subjecttypes.Lookup(f.C, kind, vocabkey.OriginProvenencia)
+	must(f.T, err)
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, src.ID).ID
+	return subjectstest.OfType(f.T, f.C, userID, graph, ty.ID, "")
 }
 
 // name files a name Observation from "type=value|…" parts (or "form:…").
 func (f *fixture) cite(s subjects.Subject, in observations.Input) observations.Observation {
-	f.t.Helper()
-	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, []observations.Input{in}...)
-	must(f.t, err)
+	f.T.Helper()
+	res, _, err := observationstest.Cite(f.C, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, []observations.Input{in}...)
+	must(f.T, err)
 	return res.Observations[0]
 }
 
@@ -136,15 +121,15 @@ func (f *fixture) nameIn(s subjects.Subject, spec string) observations.Input {
 }
 
 func (f *fixture) promote(s subjects.Subject, onto []byte) []byte {
-	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
+	f.T.Helper()
+	res := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID, EntityID: onto})
 	return res.Entity.ID
 }
 
 func (f *fixture) detail(h []byte) conclusiondetails.Detail {
-	f.t.Helper()
-	d, err := conclusiondetails.ForEntity(f.c, h)
-	must(f.t, err)
+	f.T.Helper()
+	d, err := conclusiondetails.ForEntity(f.C, h)
+	must(f.T, err)
 	return d
 }
 
@@ -223,10 +208,10 @@ func TestForEntity(t *testing.T) {
 func TestForEntityCitationParts(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register of Baptisms")
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Vol. 3"})
+	art, err := artifactstest.Create(f.C, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Vol. 3"})
 	must(t, err)
 	a := f.personOn(src)
-	res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+	res, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			GraphID: a.GraphID, ArtifactID: art.ID, Label: "Baptism of Ada",
 			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
@@ -304,8 +289,8 @@ func TestForEntityPictures(t *testing.T) {
 	register, census := f.source("Register"), f.source("Census")
 	a, b := f.personOn(register), f.personOn(census)
 	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
-	oa := observationstest.SaveLikeness(t, f.c, userID, register.ID, a.ID, 100)
-	ob := observationstest.SaveLikeness(t, f.c, userID, census.ID, b.ID, 200)
+	oa := observationstest.SaveLikeness(t, f.C, userID, register.ID, a.ID, 100)
+	ob := observationstest.SaveLikeness(t, f.C, userID, census.ID, b.ID, 200)
 	h := f.promote(a, nil)
 	f.promote(b, h)
 	d := f.detail(h)
@@ -329,7 +314,7 @@ func TestForEntityPictures(t *testing.T) {
 	if !d.Pictures[0].Leads || d.Pictures[1].Leads {
 		t.Fatalf("leads before a choice: %+v", d.Pictures)
 	}
-	_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	_, err := writes.Call(f.C, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
 		return struct{}{}, ch, err
 	})
@@ -354,7 +339,7 @@ func TestForEntityPlacePictures(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Map")
 	s := f.subjectOn(src, "place")
-	o := observationstest.SaveDepiction(t, f.c, userID, src.ID, s.ID, vocabkey.PropertyPlacePicture, 100)
+	o := observationstest.SaveDepiction(t, f.C, userID, src.ID, s.ID, vocabkey.PropertyPlacePicture, 100)
 	h := f.promote(s, nil)
 	d := f.detail(h)
 	if len(d.Pictures) != 1 || !bytes.Equal(d.Pictures[0].Record.ObservationID, o.ID) {
@@ -367,9 +352,9 @@ func TestForEntityPicturesSkipNegatives(t *testing.T) {
 	f := newFixture(t)
 	album, census, register := f.source("Album"), f.source("Census"), f.source("Register")
 	sn, sb, sa := f.personOn(album), f.personOn(census), f.personOn(register)
-	n := observationstest.SaveNegativeLikeness(t, f.c, userID, album.ID, sn.ID, 100)
-	b := observationstest.SaveLikeness(t, f.c, userID, census.ID, sb.ID, 200)
-	observationstest.SaveLikeness(t, f.c, userID, register.ID, sa.ID, 100)
+	n := observationstest.SaveNegativeLikeness(t, f.C, userID, album.ID, sn.ID, 100)
+	b := observationstest.SaveLikeness(t, f.C, userID, census.ID, sb.ID, 200)
+	observationstest.SaveLikeness(t, f.C, userID, register.ID, sa.ID, 100)
 	h := f.promote(sa, nil)
 	f.promote(sb, h)
 	f.promote(sn, h)
@@ -392,9 +377,9 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register")
 	a := f.personOn(src)
-	oa := observationstest.SaveLikeness(t, f.c, userID, src.ID, a.ID, 100)
+	oa := observationstest.SaveLikeness(t, f.C, userID, src.ID, a.ID, 100)
 	h := f.promote(a, nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	var image []byte
 	must(t, db.QueryRow(`SELECT dv.image_file_id FROM observations o
@@ -404,8 +389,8 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 	if d := f.detail(h); len(d.Pictures) != 0 {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}
-	f.c.Graph().Drop()
-	rows, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{h})
+	f.C.Graph().Drop()
+	rows, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{h})
 	must(t, err)
 	if len(rows) != 1 || rows[0].PictureImageFileID != nil {
 		t.Fatalf("summary leads with %x", rows[0].PictureImageFileID)
@@ -415,25 +400,25 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 func TestForEntityEvidence(t *testing.T) {
 	f := newFixture(t)
 	register, census, gazette := f.source("Register"), f.source("Census"), f.source("Gazette")
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
+	g, err := sourcecredibilitygrades.Lookup(f.C, "low_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: register.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
-	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+	if _, p6look3 := sourcecredibility.GetBySource(f.C, p6in2.SourceID); p6look3 == nil {
 		p6act1 = "update_source_credibility_assessment"
 	}
-	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
 		return sourcecredibility.Upsert(tx, userID, p6in2)
 	})
 	must(t, err)
-	hg, err := sourcecredibilitygrades.Lookup(f.c, "high_trust", vocabkey.OriginProvenencia)
+	hg, err := sourcecredibilitygrades.Lookup(f.C, "high_trust", vocabkey.OriginProvenencia)
 	must(t, err)
 	p6in5 := sourcecredibility.UpsertInput{SourceID: gazette.ID, CredibilityGradeID: hg.ID}
 	p6act4 := "create_source_credibility_assessment"
-	if _, p6look6 := sourcecredibility.GetBySource(f.c, p6in5.SourceID); p6look6 == nil {
+	if _, p6look6 := sourcecredibility.GetBySource(f.C, p6in5.SourceID); p6look6 == nil {
 		p6act4 = "update_source_credibility_assessment"
 	}
-	_, err = writes.Call(f.c, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: p6act4, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
 		return sourcecredibility.Upsert(tx, userID, p6in5)
 	})
 	must(t, err)
@@ -446,7 +431,7 @@ func TestForEntityEvidence(t *testing.T) {
 	neg.Polarity = observations.PolarityNegative
 	negative := f.cite(c, neg)
 	d := f.personOn(census)
-	uncertainRes, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+	uncertainRes, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 			GraphID: d.GraphID, ArtifactID: f.arts[string(d.SourceID)].ID, LocatorJSON: locator, TranscriptionUncertain: true,
 		}, []observations.Input{f.nameIn(d, "given=James|surname=Robins")})
@@ -470,7 +455,7 @@ func TestForEntityEvidence(t *testing.T) {
 		t.Fatalf("uncertain outcome %+v", o)
 	}
 	// An outcome names the Evidence graph of its Observation's Subject.
-	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.c, register.ID).ID) {
+	if o := outcomeOf(name, weak.ID); !bytes.Equal(o.GraphID, evidencegraphstest.SoleGraph(t, f.C, register.ID).ID) {
 		t.Fatalf("outcome graph %x, want the Register's graph", o.GraphID)
 	}
 	if o := outcomeOf(name, denied.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, negative.ID) {
@@ -491,20 +476,20 @@ func TestForEntityEvidence(t *testing.T) {
 func TestForEntityNotFound(t *testing.T) {
 	f := newFixture(t)
 	for _, id := range [][]byte{nil, []byte("short"), bytes.Repeat([]byte{9}, 16)} {
-		if _, err := conclusiondetails.ForEntity(f.c, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
+		if _, err := conclusiondetails.ForEntity(f.C, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
 			t.Fatalf("%x: %v", id, err)
 		}
 	}
 	a := f.personOn(f.source("Register"))
 	h := f.promote(a, nil)
 	other := f.promote(f.personOn(f.source("Census")), nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, other, h)
 	must(t, err)
 	// The update skipped the write path, so the open graph still has the old node.
-	f.c.Graph().Drop()
-	if _, err := conclusiondetails.ForEntity(f.c, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
+	f.C.Graph().Drop()
+	if _, err := conclusiondetails.ForEntity(f.C, h); !errors.Is(err, conclusiondetails.ErrNotFound) {
 		t.Fatalf("merged: %v", err)
 	}
 }
@@ -522,18 +507,18 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	f.cite(big, observations.Input{SubjectID: big.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
 	hb := f.promote(big, nil)
 
-	g := f.c.Graph()
+	g := f.C.Graph()
 	g.Drop()
 	if _, err := g.Vocabulary(); err != nil {
 		t.Fatal(err)
 	}
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	_, err := conclusiondetails.ForEntity(f.c, hs)
+	_, err := conclusiondetails.ForEntity(f.C, hs)
 	must(t, err)
 	smallN := n
 	n = 0
-	_, err = conclusiondetails.ForEntity(f.c, hb)
+	_, err = conclusiondetails.ForEntity(f.C, hb)
 	must(t, err)
 	if smallN == 0 || smallN != n {
 		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
@@ -545,7 +530,7 @@ func TestDetailReusesStoredValues(t *testing.T) {
 	a := f.personOn(f.source("Register"))
 	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
 	h := f.promote(a, nil)
-	g := f.c.Graph()
+	g := f.C.Graph()
 	g.Drop()
 	first := f.detail(h)
 	if len(field(first, "name").Outcomes) == 0 || !bytes.Equal(field(first, "name").Outcomes[0].ObservationID, obs.ID) {
@@ -572,7 +557,7 @@ func TestDetailValuesFollowAnEdit(t *testing.T) {
 	}
 	in := f.nameIn(a, "given=Anne|surname=Lee")
 	in.ID = obs.ID
-	_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	_, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, in)
 	})
 	must(t, err)
@@ -587,7 +572,7 @@ func TestDetailValuesFollowAnEdit(t *testing.T) {
 
 func termID(t *testing.T, f *fixture, key string) []byte {
 	t.Helper()
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	var id []byte
 	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
@@ -610,11 +595,11 @@ func TestFieldsOf(t *testing.T) {
 	f.promote(b, first)
 	second := f.promote(c, nil)
 	merged := f.promote(f.subjectOn(f.source("Other"), "event"), nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, first, merged)
 	must(t, err)
-	f.c.Graph().Drop()
+	f.C.Graph().Drop()
 
 	tests := []struct {
 		name  string
@@ -647,7 +632,7 @@ func TestFieldsOf(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := conclusiondetails.FieldsOf(f.c, tc.ids)
+			got, err := conclusiondetails.FieldsOf(f.C, tc.ids)
 			must(t, err)
 			tc.check(t, got)
 		})
@@ -670,9 +655,9 @@ func TestForEntityBoolean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+			id, err := properties.Upsert(f.C, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
 			must(t, err)
-			db, err := f.c.DB()
+			db, err := f.C.DB()
 			must(t, err)
 			_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.person.ID, id)
 			must(t, err)

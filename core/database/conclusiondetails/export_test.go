@@ -2,9 +2,10 @@ package conclusiondetails
 
 import (
 	"database/sql"
+	"strings"
+
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"strings"
 )
 
 // FieldsOf composes the fields of several handles at once, keyed by entity
