@@ -1,7 +1,7 @@
 # Review — S14-36 Boolean value type (engine)
 
-**Verdict:** round 1: Fits with changes — Ready with changes. Round 2 pending.
-**Rounds:** 1 (round 2 to run). **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (round 2 raised four blockers: all Fixed; no open blocker)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -15,6 +15,8 @@
 - **D-9:** negative polarity gets no boolean-specific rule.
 - **D-13:** a boolean's delete-impact title is its Property label, with no Go "yes"/"no".
 - **D-14:** the update diff stays per column, not derived from row maps.
+- **D-12 (round 2):** FakeStore carries no default value-type rules; tests seed them.
+- **Map:** planning moved "researcher-creatable in Go" and the Holds-several hide to S14-37 and rewrote the Batch 7 boolean working rule (same commit as this log).
 
 ## Round 1
 
@@ -80,3 +82,53 @@
 
 ### Writer's own find after round 1
 The old Reach row said the create form opens only from a loaded page. ⌘N and the header Add button (`PropertiesView` `header`) open it at any time. D-11 now falls back to the draft's type and lets Go validate before the first load, and T-12 covers it.
+
+## Round 2
+
+Reviewers: maintainability (opus) — Fits with changes; executability (sonnet) — Not ready. Both checked every round-1 answer. They found the answers sound except M-1 for the tests (M-10), M-2 for the fake (M-11), the partial M-7 and the M-8 symbol name.
+
+### X-8 · blocker · Subject-profile conversion omits Boolean
+**Codebase:** `core/subjectprofile/subjectprofile.go` `Value` copies `Integer` into `valuecompare.Value` and is missing from §4.
+**Answer:** Fixed. It is in §4 and the Go core table, and STEP-5 copies `Boolean: v.Boolean`.
+
+### X-9 · blocker · The "source surfaces" want expression does not compile, and its import is not named
+**Answer:** Fixed. D-20 now gives `sorted(append([]string{…three constants…}, swiftOnlySurfaces...)...)` and the `workspacelocation` import.
+
+### M-10 · blocker · The new value-type table is not wired into the three tests that list every value type
+**Codebase:** `contract_test.go` `allTypes` (a missing type is skipped silently), `modules_test.go` `TestModuleFor`, `valuecompare_test.go` `TestCompareUnsupported`.
+**Answer:** Fixed. STEP-4: `allTypes` = `propertymeta.ValueTypes()`, and `TestCompareUnsupported` wants `ValueTypes()` minus a declared `noComparer`. STEP-5: `TestModuleFor` ranges over `ValueTypes()`. §4 records the silent skip.
+
+### M-11 · blocker · `FakeStore.defaultValueTypeRules` is an unpinned Swift copy of `propertymeta.Types`
+**Answer:** Fixed with the reviewer's second option. D-12: FakeStore `valueTypeRules` is empty unless a test seeds it, so there is no default list. T-12 and the create-flow test seed the rows themselves.
+
+### X-10 · major · AC-4.5 / T-14 needs a private function
+**Answer:** Fixed. T-14 round-trips through the existing `GoStore.updateObservationRequest`, and `mapCatalogObservation` stays private (D-17).
+
+### X-11 · major · Adding `PropertiesSnapshot.valueTypeRules` breaks call sites the plan does not list
+**Answer:** Fixed. D-11 declares `valueTypeRules = []` last, so the memberwise call sites compile unchanged.
+
+### X-12 · major · T-12 and the replaced assertions do not say how the snapshot gets loaded
+**Answer:** Fixed. STEP-8 spells out both replacements (seed then assert at ~273; drop the line at ~797), and T-12 seeds `store.valueTypeRules`.
+
+### X-13 · minor · Cache column position is only half-specified
+**Answer:** Fixed. `value_boolean` sits directly after `value_integer` in every SELECT, scan and insert.
+
+### X-14 · minor · Handler-test file, `valueInput` position, and "is it new" markers
+**Answer:** Fixed. `propertymeta_test.go` is an existing file. T-11 is in `subject_defs_test.go`. D-16 gives the call shape. FakeStore needs no boolean Observation handling (no editor until S14-37).
+
+### X-15 · minor · Doc steps
+**Answer:** Fixed. STEP-10 now gives:
+- the exact `matching-model.md` wording
+- the skill's Create sentence
+- the working rule's "from S14-37"
+
+### M-7 (partial), M-8 (symbol)
+**Answer:** Fixed. The skill line 59 is in STEP-10, and the symbol is `PropertiesTypeChrome.valueTypeForeground`.
+
+### Round-2 below-blocker notes
+- **Existing test uses "boolean" as its invalid type:** Fixed. `properties_test.go` "rejects bad value type" uses `"real"` (STEP-2).
+- **`conclusion-layer-data-model.md` ~362:** Fixed. It is the claims sketch and already has `value_boolean`, so the edit was removed.
+- **`real` sentence:** Fixed. It is reworded, not deleted.
+- **Guard written twice:** Fixed. It is one `PropertiesModel.acceptsValueType(_:)`.
+- **`nullInt64` → `database.NullInt64`:** Declined. It moves a working private helper with four call sites that this PR does not otherwise change. The new column's binder is shared, which was M-4's point.
+- **Fold `SubjectPropertyValueType.label` into `PropertyValueType`:** Declined for this PR. It renames call sites outside the boolean path; S14-37 edits these files and can take it.

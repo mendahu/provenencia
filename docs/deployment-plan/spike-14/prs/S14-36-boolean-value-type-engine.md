@@ -1,6 +1,6 @@
 # S14-36 — Boolean value type (engine)
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Properties create picker offers the same five types, now read from Go; no view offers, edits or draws a boolean until S14-37)
@@ -11,9 +11,9 @@
 **Version bump:** none — engine and wire only; a researcher cannot create a boolean Property until S14-37 marks it creatable ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../../.agents/skills/add-catalog-model/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md) (snapshot only), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
-**Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs"; working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31 (completed by S14-37); dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); [structural debt](../../../ideas/structural-debt.md) SourceSurface row; [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (value types, Property create rules); [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2; [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) (auto-reconciler cache)
+**Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs"; working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31 (completed by S14-37); dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); [structural debt](../../../ideas/structural-debt.md) SourceSurface row; [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (value types, Property create rules); [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2
 **Planned:** 2026-11-07 against `main` @ `f971f40`
-**Review:** [`S14-36-boolean-value-type-engine.review.md`](S14-36-boolean-value-type-engine.review.md) — round 1 answered; round 2 pending
+**Review:** [`S14-36-boolean-value-type-engine.review.md`](S14-36-boolean-value-type-engine.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: M-2 answered (Go sends the rules on the wire)
 
 ### Implementer — read this first
 
@@ -109,7 +109,7 @@ Yes/no facts from a record ("literate", "can sign name", "veteran" on a census) 
 | --- | --- |
 | Boolean marked researcher-creatable (one table flag) and offered in Properties create | S14-37 |
 | Properties page hides "Holds several" for a single-only type (reads `singleOnly` from the snapshot) | S14-37 (brief S14-D8 or its own board: it changes the Properties page) |
-| Value-type pill colour for boolean (`SubjectTypeChrome.valueTypeForeground`) | S14-37 (board) |
+| Value-type pill colour for boolean (`PropertiesTypeChrome.valueTypeForeground` in `macos/App/Features/Catalog/SubjectTypeChrome.swift`) | S14-37 (board) |
 | Composer checkbox editor (`CitationObservationValue`, `CitationComposerVocabulary.supportedValueTypes`) | S14-37 (brief S14-D8) |
 | Evidence graph card text for a boolean Observation (`ObservationValueDisplay`, calling `PropertyValueType.booleanText`) | S14-37 |
 | Omnibar indexing of boolean values | not planned (integers are not indexed either; `core/database/searchindex/handles.go` reads text, names and dates only) |
@@ -133,10 +133,11 @@ Verified at `f971f40`.
 | Observation write | `observations.go` `sqlInsert`, `sqlGetRow`, `sqlListSelect`, `Observation`, `Input`, `resolvedValue`, `resolveValue`, `hasOtherScalars`, `scanListed`; insert builds its audit row inline (~376–392) and fills `obs` from `resolved` (~420–440) | Column list in four hand-kept places |
 | Observation update / raw read | `core/database/observations/update.go` (SQL ~21, fill ~118–132, `observationUpdateChange` diff ~143–185); `core/database/observations/write.go` `scanRawObservation`, `observationRowMap` (~252) | Second copy of the fill; `observationRowMap` is the delete path's row map |
 | Comparers | `core/valuecompare/valuecompare.go` `comparers`, `Value`; `term.go` | No boolean comparer |
-| Comparer tests | `core/valuecompare/contract_test.go` `samples`, `generators` (~224), `TestComparerContract`, `TestKeyContract`; `valuecompare_test.go` `TestCompareUnsupported` | Fail on a comparer without a row |
+| Comparer tests | `core/valuecompare/contract_test.go` `samples`, `generators` (~224), `TestComparerContract` (`allTypes`, ~340, a hand list), `TestKeyContract`; `valuecompare_test.go` `TestCompareUnsupported` (hand `want`); `core/autoreconcile/modules_test.go` `TestModuleFor` (hand list, ~104) | `TestComparerContract` runs only `allTypes ∩ ComparerTypes()`, so a type missing from `allTypes` is silently skipped |
 | Reconcile | `core/autoreconcile/autoreconcile.go` `Value` (`Integer`, `HasInteger`), `Carries`, `SortKey`; `modules.go` `moduleFor`, `Value.compareValue` | Integer via `keyModule` |
 | Cache load / write | `core/database/autoreconciler/autoreconciler.go` `sqlInsert`, `sqlLoadCandidates`, candidate scan (~460–486), `insertRow` (~571–615, binds each scalar inline); `truth.go` (~75) | `value_integer` threaded |
 | Cache readers | `core/database/graphcache/graph.go` `Value` (~117), `evidence_graph.go` `EvidenceObservation` (~44), `verify.go` `TruthRow` (~17), `SameDisplay` (~259), `rowOf` (~271), `load.go` (~120–156); `core/database/graphfill/load.go` (~119–149); `core/database/promotealign/profiles.go` `decode` (~42, positional) and its two callers | `Integer`/`HasInteger` threaded |
+| Profile conversion | `core/subjectprofile/subjectprofile.go` `Value` (~219) | The one conversion from `autoreconcile.Value` to `valuecompare.Value`; copies `Integer`, not a boolean |
 | Conclusion detail | `core/database/conclusiondetails/conclusiondetails.go` `Value` (~55), recorded SQL (~151), scan (~442–458), rank copy (~399) | Integer threaded |
 | Delete impact | `core/database/deleteimpact/facets.go` `eraseObservation` (~403–460): own SELECT, scan and audit row; `projectors.go` `projectObservation` | `deleteimpact` cannot import `observations` (the import runs the other way) |
 | Proto | `api/proto/engine.proto` `ConclusionValue` (oneof 1–6), `Property.value_type` comment (stale: no `depiction`), `Observation` (1–21), `ObservationDraft` (1–13), `GetPropertiesWorkspaceResponse` (1–3) | No boolean, no value-type rules |
@@ -166,16 +167,16 @@ Verified at `f971f40`.
 | D-8 | `autoreconcile`: boolean uses `keyModule` (with text, integer, depiction); `Carries` reads `HasBoolean`; `SortKey` is `"0"` for false, `"1"` for true; `compareValue` passes `Boolean` | Same module as integer | A new module — because nothing folds |
 | D-9 | Negative polarity gets no special case: a negative `true` denies positive `true` candidates; it does not create a `false` value | One rule for every type; the composer (S14-37) decides what it offers | Folding "not true" into "false" |
 | D-10 | Proto: `ConclusionValue` `bool boolean = 7;` in the oneof; `Observation` `optional bool value_boolean = 22;`; `ObservationDraft` `optional bool value_boolean = 14;`; `message PropertyValueTypeRule { string value_type = 1; bool researcher_creatable = 2; bool single_only = 3; }` *(new)*; `GetPropertiesWorkspaceResponse` `repeated PropertyValueTypeRule value_types = 4;`; the `Property.value_type` comment says "a propertymeta value type; GetPropertiesWorkspace lists them" | Next free numbers; `optional` and the oneof keep false distinct from unset; the rules ride the read the Properties page already makes (user, 2026-11-07: Go sends the rules on the wire) | A new RPC — because the Properties workspace read already loads every Property; a Swift mirror pinned by a test — the user chose the wire |
-| D-11 | Swift: `CatalogPropertyValueTypeRule` *(new, `GenealogyStore.swift`)* `{ valueType: String; researcherCreatable: Bool; singleOnly: Bool }`; `PropertiesSnapshot.valueTypeRules: [CatalogPropertyValueTypeRule]` *(new, `.empty` has `[]`)* and `var creatableValueTypes: [String]` *(new)* in Go's order; `PropertiesModel.offeredValueTypes` *(new)* is `snapshot.creatableValueTypes`, or `[draft.valueType]` while the snapshot has no rules (before the first load; the draft defaults to "text"); the create picker shows `offeredValueTypes`. `canSubmitCreate` and `submitCreate` accept a value type when `snapshot.valueTypeRules.isEmpty || snapshot.creatableValueTypes.contains(vt)`: before the first load Go decides, and its refusal shows through the existing create error path. `SubjectPropertyValueType.researcherCreatable` is deleted (`SubjectPropertyValueType.label` stays). `singleOnly` is mapped and not read until S14-37 | One owner for the rule (review M-2); ⌘N and the header Add open create before the page has loaded (`PropertiesView` `header`, the ⌘N button), so the form must work without the rules | Keeping the Swift list — the drift the review found; disabling create until load — a behaviour change with no board |
-| D-12 | FakeStore seeds `valueTypeRules` with one static list *(new, `FakeStore.defaultValueTypeRules`)* matching D-4's rows, returned by `getPropertiesWorkspace` | Seeded data, per working rule "FakeStore is a seeded fake" | Computing it — FakeStore holds no engine rule |
+| D-11 | Swift: `CatalogPropertyValueTypeRule` *(new, `GenealogyStore.swift`)* `{ valueType: String; researcherCreatable: Bool; singleOnly: Bool }`; `PropertiesSnapshot.valueTypeRules: [CatalogPropertyValueTypeRule] = []` *(new, declared last, so existing memberwise call sites compile unchanged)* and `var creatableValueTypes: [String]` *(new)* in Go's order; `PropertiesModel.offeredValueTypes` *(new)* is `snapshot.creatableValueTypes`, or `[draft.valueType]` while the snapshot has no rules (before the first load; the draft defaults to "text"); the create picker shows `offeredValueTypes`. `PropertiesModel.acceptsValueType(_:)` *(new)* returns `snapshot.valueTypeRules.isEmpty || snapshot.creatableValueTypes.contains(vt)`, and `canSubmitCreate` and `submitCreate` call it: before the first load Go decides, and its refusal shows through the existing create error path. `SubjectPropertyValueType.researcherCreatable` is deleted (`SubjectPropertyValueType.label` stays). `singleOnly` is mapped and not read until S14-37 | One owner for the rule (review M-2); ⌘N and the header Add open create before the page has loaded (`PropertiesView` `header`, the ⌘N button), so the form must work without the rules | Keeping the Swift list — the drift the review found; disabling create until load — a behaviour change with no board |
+| D-12 | FakeStore has `var valueTypeRules: [CatalogPropertyValueTypeRule] = []` *(new)*, returned by `getPropertiesWorkspace`; a test that needs rules seeds them, as tests seed `propertiesByProject`. No default list | Seeded data, per working rule "FakeStore is a seeded fake"; a default list would be an unpinned Swift copy of `propertymeta.Types` (round-2 M-11) | A static default list — an unpinned copy; a pinned default — a mirror the user's M-2 answer turned down |
 | D-13 | `deleteimpact` `eraseObservation` selects, scans and records `value_boolean` (true/false/nil); `projectObservation` adds no boolean arm, so a boolean Observation's impact row is titled by its Property label | Go keeps no English "Yes"/"No"; depiction already titles this way | A Go "yes"/"no" literal |
 | D-14 | `observations`: the insert builds `obs` first and records `rowchange.FullRow(observationRowMap(obs))`; one `applyResolved(obs *Observation, r resolvedValue)` *(new)* fills the value fields for insert and update. `observationUpdateChange` keeps its per-column diff and gains the `value_boolean` line | One column list for the audit row (review M-3); the update diff stays per column because date and name diffs are value-row diffs, not column diffs | Deriving the update diff from two row maps — because date and name changes are recorded on their own value rows |
 | D-15 | `conclusionValueProto` arm `v.HasBoolean` → `ConclusionValue_Boolean`, placed beside the integer arm | Exactly one field is set | — |
-| D-16 | `valueInput` takes `valueBoolean *bool` after `valueInteger`; both callers pass `GetValueBoolean`'s pointer (`o.ValueBoolean`, `d.ValueBoolean`); `observationProto` sets `ValueBoolean: optionalBool(o.HasBoolean, o.ValueBoolean)` *(new, beside `optionalInt64`)* | Same shape as integer | — |
-| D-17 | Swift mapping and text (user, 2026-11-07): `PropertyValueType.boolean`; `CatalogConclusionValue.boolean(Bool)`; `valueBoolean: Bool? = nil` declared directly after `valueInteger` in `CatalogObservation` and `CatalogObservationDraft`; `GoStore` maps both ways; `GoStore.mapConclusionValue` becomes `static` (not `private`) so a test calls it | Regenerating the proto makes the Swift switch non-exhaustive; S14-01 set the precedent that the engine PR owns the Swift wire mapping | Mapping to `.none` until S14-37 — the user chose the full wire mapping |
+| D-16 | `valueInput` takes `valueBoolean *bool` after `valueInteger`; the calls become `valueInput(&in, o.GetValueText(), o.ValueInteger, o.ValueBoolean, o.GetDate(), …)` and the same with `d`; `observationProto` sets `ValueBoolean: optionalBool(o.HasBoolean, o.ValueBoolean)` *(new, beside `optionalInt64`)* | Same shape as integer | — |
+| D-17 | Swift mapping and text (user, 2026-11-07): `PropertyValueType.boolean`; `CatalogConclusionValue.boolean(Bool)`; `valueBoolean: Bool? = nil` declared directly after `valueInteger` in `CatalogObservation` and `CatalogObservationDraft`; `GoStore` maps both ways; `GoStore.mapConclusionValue` becomes `static` (not `private`) so a test calls it; the Observation round trip is tested through the existing `GoStore.updateObservationRequest`, as `ObservationDepictionMappingTests` does (~51), and `mapCatalogObservation` stays private | Regenerating the proto makes the Swift switch non-exhaustive; S14-01 set the precedent that the engine PR owns the Swift wire mapping | Mapping to `.none` until S14-37 — the user chose the full wire mapping |
 | D-18 | One boolean text function: `extension PropertyValueType { static func booleanText(_ value: Bool) -> String }` *(new, `InterpretationValueKinds.swift`)* returns `L10n.string(L10n.Properties.valueBooleanYes / valueBooleanNo)`. `ReconciledValueDisplay.string` calls it; S14-37's `ObservationValueDisplay` arm calls it too | One place says how a boolean reads (review M-5) | Keys under `L10n.Conclusions` inline in `ReconciledValueDisplay` |
 | D-19 | Copy (user, 2026-11-07): type label "Yes / no"; values "Yes", "No" | Researcher wording | "Boolean", "True"/"False" |
-| D-20 | "source surfaces" vocabulary row: `swiftWorkspaceLocation = "../../macos/App/Features/Workspace/WorkspaceLocation.swift"` *(new const)*; `swiftOnlySurfaces = []string{"promote"}` *(new, comment: Promote is a Swift-only place Go never opens)*; want `sorted(SurfacePage, SurfaceGraph, SurfaceCitationComposer, swiftOnlySurfaces...)`, regex `rawCase`. "value types" want becomes `sorted(propertymeta.ValueTypes()...)` | User, 2026-11-07; exact equality catches drift on both sides | A Go `SurfacePromote` nothing uses |
+| D-20 | "source surfaces" vocabulary row: `swiftWorkspaceLocation = "../../macos/App/Features/Workspace/WorkspaceLocation.swift"` *(new const)*; `swiftOnlySurfaces = []string{"promote"}` *(new, comment: Promote is a Swift-only place Go never opens)*; want `sorted(append([]string{workspacelocation.SurfacePage, workspacelocation.SurfaceGraph, workspacelocation.SurfaceCitationComposer}, swiftOnlySurfaces...)...)`, regex `rawCase`, with the import `"github.com/mendahu/provenencia/core/workspacelocation"`. "value types" want becomes `sorted(propertymeta.ValueTypes()...)` | User, 2026-11-07; exact equality catches drift on both sides | A Go `SurfacePromote` nothing uses |
 | D-21 | No cache-version or search projection-version bump | No catalog can hold a boolean before this migration (the CHECK forbids it) | Bumping `auto_reconciler_meta.cache_version` |
 
 **Rules this plan bends.** None. The working rule leaves storage to `plan-pr` (D-1). D-6, D-10, D-17, D-19 and D-20 carry the user's answers of 2026-11-07; STEP-10 writes the single-only rule and "Go sends value-type rules" into the map's boolean working rule.
@@ -198,7 +199,7 @@ Searched: `valueTypeOK`, `researcherCreatable`, `cardinalityOK`, `nullInt64`, `N
 | `valuecompare.boolean` | comparer | `term` | A registry entry, per `add-match-rule` |
 | `PropertyValueTypeRule`, `value_types` | proto | `SubjectTypePresentation` on the same response | Extends the existing read |
 | `optionalBool` | func | `optionalInt64` | Sibling helper |
-| `CatalogPropertyValueTypeRule`, `PropertiesSnapshot.valueTypeRules`, `creatableValueTypes`, `PropertiesModel.offeredValueTypes`, `FakeStore.defaultValueTypeRules` | Swift type / fields / seed | `CatalogSubjectTypePresentation`, `presentationsByKey` | Same snapshot |
+| `CatalogPropertyValueTypeRule`, `PropertiesSnapshot.valueTypeRules`, `creatableValueTypes`, `PropertiesModel.offeredValueTypes`, `acceptsValueType`, `FakeStore.valueTypeRules` | Swift type / fields / seed | `CatalogSubjectTypePresentation`, `presentationsByKey` | Same snapshot |
 | `CatalogConclusionValue.boolean`, `valueBoolean` | Swift case / fields | `.integer`, `valueInteger` | D-17 |
 | `PropertyValueType.booleanText` | Swift func | `PropertyValueType.label` | Same type |
 | `L10n.Properties.valueTypeBoolean`, `valueBooleanYes`, `valueBooleanNo` | keys | `valueTypeInteger` | Same namespace |
@@ -213,7 +214,7 @@ Searched: `valueTypeOK`, `researcherCreatable`, `cardinalityOK`, `nullInt64`, `N
 | New path or state | Destination | Checked |
 | --- | --- | --- |
 | The create picker reads `snapshot.creatableValueTypes` | `PropertiesView` create form, `PropertiesModel.canSubmitCreate` / `submitCreate` | Same five types in the same order (AC-4.2). Before the first load (⌘N or Add on a cold page) the picker offers the draft's "text" and Go validates (D-11, T-12) |
-| A boolean Property in the Properties list (catalog made outside the app) | `SubjectPropertyValueType.label`, `SubjectTypeChrome.valueTypeForeground` | Label "Yes / no"; pill colour falls to the default, as `depiction` does today (S14-37); "Holds several" stays offered and Go refuses it with `properties.invalid` (S14-37 hides it) |
+| A boolean Property in the Properties list (catalog made outside the app) | `SubjectPropertyValueType.label`, `PropertiesTypeChrome.valueTypeForeground` | Label "Yes / no"; pill colour falls to the default, as `depiction` does today (S14-37); "Holds several" stays offered and Go refuses it with `properties.invalid` (S14-37 hides it) |
 | A boolean value on a Conclusion detail | `ReconciledValueDisplay.string` | "Yes"/"No" (AC-4.4) |
 | A boolean Observation on an Evidence graph card | `ObservationValueDisplay` | Empty value text until S14-37 |
 
@@ -265,11 +266,12 @@ No new table or FK: no `catalogmodel` registration; `TestPragmaHonesty` stays gr
 | `core/database/observations` | `value_boolean` in `sqlInsert`, `sqlGetRow`, `sqlListSelect`, update SQL; fields (D-2); `resolvedValue.Boolean`; `resolveValue` case `ValueTypeBoolean` (refuse when `!in.HasBoolean || hasOtherScalars(in, "boolean")`); `hasOtherScalars` line; `scanListed`, `scanRawObservation`; `observationRowMap` `"value_boolean"` (bool or nil); `applyResolved` and the insert audit row (D-14); update diff line |
 | `core/valuecompare` | `Value.Boolean`; `boolean{}` (D-7) |
 | `core/autoreconcile` | D-8 |
-| `core/database/autoreconciler` | `value_boolean` in `sqlInsert` (after `value_integer`), `sqlLoadCandidates`, candidate scan, `insertRow` via `NullBool`; `truth.go` copies `Boolean`/`HasBoolean` |
-| `core/database/graphcache` | `Boolean`/`HasBoolean` on `Value`, `EvidenceObservation`, `TruthRow`; `SameDisplay` compares them; `rowOf` copies them; `load.go` selects and scans `r.value_boolean` |
-| `core/database/graphfill` | `load.go` selects and scans `o.value_boolean` into `EvidenceObservation` |
+| `core/database/autoreconciler` | `value_boolean` directly after `value_integer` in `sqlInsert` and its `Exec` arguments, `sqlLoadCandidates` and the scan `dest`; `insertRow` binds via `NullBool`; `truth.go` copies `Boolean`/`HasBoolean` |
+| `core/database/graphcache` | `Boolean`/`HasBoolean` on `Value`, `EvidenceObservation`, `TruthRow`; `SameDisplay` compares them; `rowOf` copies them; `load.go` selects and scans `r.value_boolean` directly after `r.value_integer` |
+| `core/database/graphfill` | `load.go` selects and scans `o.value_boolean` directly after `o.value_integer` |
 | `core/database/promotealign` | `decode` takes `boolean, hasBoolean bool` after `hasInteger`; both callers pass them |
 | `core/database/conclusiondetails` | `Value.Boolean`/`HasBoolean`; recorded SQL, scan, rank copy |
+| `core/subjectprofile` | `Value` copies `Boolean: v.Boolean` beside `Integer` |
 | `core/database/deleteimpact` | D-13 (`facets.go` only) |
 
 Errors: `ErrInvalid` (`properties.invalid`, `observations.invalid`) for D-5, D-6, AC-2.2, AC-2.3, AC-2.4. No new codes.
@@ -286,7 +288,7 @@ No view changes; the picker shows what it shows today.
 | --- | --- | --- | --- |
 | Value-type rules | `CatalogPropertyValueTypeRule`, `PropertiesSnapshot.valueTypeRules`, `creatableValueTypes` | `GenealogyStore.swift`, `PropertiesSnapshot.swift` | D-11 |
 | Mapping | `getPropertiesWorkspace` maps `resp.valueTypes`; `mapConclusionValue`, `mapObservation`, `mapCatalogObservation`, `mapObservationDraft` | `GoStore.swift` | D-17 |
-| Fake | `defaultValueTypeRules` | `FakeStore.swift` | D-12 |
+| Fake | `valueTypeRules` (empty unless seeded) | `FakeStore.swift` | D-12 |
 | Create picker / guards | existing `PVSegmentedControl` | `PropertiesView.swift`, `PropertiesModel.swift` | `offeredValueTypes`; guard per D-11 |
 | Value type case | `PropertyValueType.boolean`, `label`, `booleanText` | `InterpretationValueKinds.swift` | D-18 |
 | Value text | `.boolean(let b)` → `PropertyValueType.booleanText(b)` | `ReconciledValueDisplay.swift` | — |
@@ -304,13 +306,13 @@ Removed: none.
 ## 7. Steps
 
 **STEP-1 — Value-type table and migration**
-Files: `core/propertymeta/propertymeta.go`, `core/propertymeta/propertymeta_test.go` *(new)*, `core/database/migrations/000061.sql` *(new)*. Skill: `add-catalog-migration`, `add-catalog-model`.
+Files: `core/propertymeta/propertymeta.go`, `core/propertymeta/propertymeta_test.go` (add `TestTypes`), `core/database/migrations/000061.sql` *(new)*. Skill: `add-catalog-migration`, `add-catalog-model`.
 Do: D-4; the migration per §6 Schema, copying `000052.sql`'s `properties__new` columns exactly. Add T-1.
 Check: `go test ./core/propertymeta/` and `CGO_ENABLED=1 go test -tags fts5 ./core/database/...` pass.
 
 **STEP-2 — Property rules read the table**
 Files: `core/database/properties/properties.go`, `properties_test.go`.
-Do: D-5, D-6. Add T-2, T-3.
+Do: D-5, D-6; the existing "rejects bad value type" case uses `"real"` instead of `"boolean"`. Add T-2, T-3.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/` passes.
 
 **STEP-3 — Observation storage**
@@ -320,13 +322,13 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/observations/` passes (
 
 **STEP-4 — Comparer**
 Files: `core/valuecompare/valuecompare.go`, `core/valuecompare/boolean.go` *(new)*, `core/valuecompare/boolean_test.go` *(new)*, `contract_test.go`, `valuecompare_test.go`. Skill: `add-match-rule` (Add a comparer).
-Do: D-7. In `contract_test.go`: `func boolValue(b bool) valuecompare.Value { return valuecompare.Value{Type: propertymeta.ValueTypeBoolean, Boolean: b} }`, `func ofBool(a, b bool) samplePair`, samples `ofBool(true, true), ofBool(true, false), ofBool(false, true), ofBool(false, false)` (no "no value" pair: a boolean always has a key), generator `func(rng *rand.Rand) samplePair { return ofBool(rng.Intn(2) == 0, rng.Intn(2) == 0) }`. Add boolean to `TestCompareUnsupported`'s want list. Add T-6.
+Do: D-7. In `contract_test.go`: `func boolValue(b bool) valuecompare.Value { return valuecompare.Value{Type: propertymeta.ValueTypeBoolean, Boolean: b} }`, `func ofBool(a, b bool) samplePair`, samples `ofBool(true, true), ofBool(true, false), ofBool(false, true), ofBool(false, false)` (no "no value" pair: a boolean always has a key), generator `func(rng *rand.Rand) samplePair { return ofBool(rng.Intn(2) == 0, rng.Intn(2) == 0) }`. `TestComparerContract`'s `allTypes` becomes `propertymeta.ValueTypes()`; `TestCompareUnsupported`'s want becomes `propertymeta.ValueTypes()` minus a declared `noComparer := map[string]bool{propertymeta.ValueTypeSubject: true}`, sorted. Add T-6.
 Check: `go test ./core/valuecompare/` passes.
 
 **STEP-5 — Reconcile**
-Files: `core/autoreconcile/autoreconcile.go`, `modules.go`, `autoreconcile_test.go`.
-Do: D-8, D-9. Add T-7.
-Check: `go test ./core/autoreconcile/` passes.
+Files: `core/autoreconcile/autoreconcile.go`, `modules.go`, `autoreconcile_test.go`, `modules_test.go`; `core/subjectprofile/subjectprofile.go`.
+Do: D-8, D-9; `subjectprofile.Value` copies `Boolean`; `TestModuleFor` ranges over `propertymeta.ValueTypes()` instead of its hand list. Add T-7.
+Check: `go test ./core/autoreconcile/ ./core/subjectprofile/` passes.
 
 **STEP-6 — Cache and readers**
 Files: `core/database/autoreconciler/autoreconciler.go`, `truth.go`, `autoreconciler_test.go`; `core/database/graphcache/graph.go`, `evidence_graph.go`, `load.go`, `verify.go`; `core/database/graphfill/load.go`; `core/database/promotealign/profiles.go`; `core/database/conclusiondetails/conclusiondetails.go`; `core/database/deleteimpact/facets.go`.
@@ -334,13 +336,13 @@ Do: §6 Go core rows for these packages; D-13, D-21. Add T-8.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes.
 
 **STEP-7 — Proto and handlers**
-Files: `api/proto/engine.proto`, `api/proto/engine/engine.pb.go`, `macos/App/Platform/Generated/engine.pb.swift`, `api/ffi/handlers/observations.go`, `source_read.go`, `conclusion_detail.go`, `subject_defs.go`, `conclusion_detail_test.go`, `citations_test.go`, and the test file that covers `GetPropertiesWorkspace` (find it with `rg -l GetPropertiesWorkspace api/ffi/handlers/*_test.go`; if none exists, add `subject_defs_test.go` *(new)*). Skill: `add-ffi-handler`.
+Files: `api/proto/engine.proto`, `api/proto/engine/engine.pb.go`, `macos/App/Platform/Generated/engine.pb.swift`, `api/ffi/handlers/observations.go`, `source_read.go`, `conclusion_detail.go`, `subject_defs.go`, `conclusion_detail_test.go`, `citations_test.go`, `subject_defs_test.go`. Skill: `add-ffi-handler`.
 Do: D-10, D-15, D-16; run `./scripts/generate-proto.sh`. Add T-9, T-10, T-11.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes (Swift compiles after STEP-8).
 
 **STEP-8 — Swift: rules from Go, booleans on the wire**
 Files: `macos/App/Platform/InterpretationValueKinds.swift`, `GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`, `ReconciledValueDisplay.swift`, `L10n.swift`, `Localizable.xcstrings`; `macos/App/Features/Properties/PropertiesSnapshot.swift`, `PropertiesModel.swift`, `PropertiesView.swift`; tests `macos/ProvenenciaTests/PropertiesModelTests.swift`, `ReconciledValueDisplayTests.swift`, `ObservationDepictionMappingTests.swift`. Skill: `add-localized-string`, `add-swift-test`.
-Do: D-11, D-12, D-17, D-18, D-19; §6 Strings. Replace the two `SubjectPropertyValueType.researcherCreatable` assertions in `PropertiesModelTests.swift` with assertions on `creatableValueTypes`. Add T-12, T-13, T-14. Assert copy with `L10n.string(...)`, as `PropertiesModelTests` does at ~794.
+Do: D-11, D-12, D-17, D-18, D-19; §6 Strings. In `PropertiesModelTests.swift`: the create-flow test (~273) seeds `store.valueTypeRules` with the eight rows of D-4 before the model loads and asserts `!model.offeredValueTypes.contains("term")`; the label test (~797) drops its `researcherCreatable` line (the rule is Go's, held by T-1 and T-11). The test at `core/database/properties/properties_test.go` "rejects bad value type" (~49) changes its invalid type from `"boolean"` to `"real"` (STEP-2). Add T-12, T-13, T-14. Assert copy with `L10n.string(...)`, as `PropertiesModelTests` does at ~794.
 Check: Xcode tests pass with no Swift warning (`scripts/check-pr.sh`); `rg -n "SubjectPropertyValueType.researcherCreatable" macos/` finds nothing.
 
 **STEP-9 — Vocabulary pins**
@@ -350,13 +352,12 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/ -run TestSwiftVocabularyMatc
 
 **STEP-10 — Docs**
 Files:
-- `docs/interpretation-layer-data-model.md`: the value-type list (~613–635) adds `boolean` (single only; researcher-creatable from S14-37); delete both sentences that say `real` and `boolean` are not used (~627, ~866); add `value_boolean` to the observations sketch (~880).
-- `docs/conclusion-layer-data-model.md`: `value_boolean` in the cache sketch (~362).
+- `docs/interpretation-layer-data-model.md`: the value-type list (~613–635) adds `boolean` (single only; researcher-creatable from S14-37); reword both sentences that say `real` and `boolean` are not used (~627, ~866) to say `real` is not used; add `value_boolean` to the observations sketch (~880).
 - `docs/seeded-vocabulary.md` §3.2: `boolean` is a valid `value_type` with no seed row.
-- `docs/matching-model.md` (~49): the value kinds list adds a picture and a yes/no.
-- `.agents/skills/add-seeded-vocabulary/SKILL.md` (~58): the value-type list adds `boolean`; say `propertymeta.Types` is the list.
+- `docs/matching-model.md` (~49): the **value** row reads "One recorded fact of one value type: a name, a date, a piece of text, a term, an integer, a picture, a yes/no".
+- `.agents/skills/add-seeded-vocabulary/SKILL.md` (~58–60): the value-type list adds `boolean` and says `propertymeta.Types` is the list; the Create sentence reads "Researcher Create Property accepts only the types `propertymeta.Types` marks creatable (text, integer, date, name, subject; boolean from S14-37)."
 - `docs/ideas/structural-debt.md`: the SourceSurface row (already struck) ends "Done in S14-36."; add two rows: the cached value columns repeated across `graphcache` `Value` / `TruthRow` / `EvidenceObservation`, `promotealign.decode`, `conclusiondetails.Value` and `deleteimpact.eraseObservation`'s own row map (S14-36 review M-3, M-6); integer text differs between `ReconciledValueDisplay` and `ObservationValueDisplay` (M-5).
-- `../deployment-plan.md`: S14-36 row Plan link and status; S14-36 scope entry "researcher-creatable in Go" → "value-type rules in Go, sent to the app"; S14-37 scope entry adds "flip boolean's `ResearcherCreatable`; hide Holds several for a single-only type"; the Batch 7 boolean working rule replaces "Storage column vs reusing `value_integer` is decided in `plan-pr` (dedicated column preferred in the note)." with "Stored in a dedicated `value_boolean` column. Single cardinality only. Go owns the value-type rules and sends them to the app (user, 2026-11-07)."
+- `../deployment-plan.md`: S14-36 row status (planning already updated its scope entries and the Batch 7 boolean working rule).
 - `../completed.md`, this plan.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-36-boolean-value-type-engine.md` reports no errors; `rg -n "boolean. are not" docs/` finds nothing.
@@ -367,7 +368,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/propertymeta/propertymeta_test.go` `TestTypes` *(new)* | `ValueTypes()` = the eight in order; `Rule("boolean")` = not creatable, single-only; `Rule("nope")` not found; no duplicate | AC-1.1, D-4, D-5 |
+| T-1 | Go | `core/propertymeta/propertymeta_test.go` `TestTypes` *(new test, existing file)* | `ValueTypes()` = the eight in order; `Rule("boolean")` = not creatable, single-only; `Rule("nope")` not found; no duplicate | AC-1.1, D-4, D-5 |
 | T-2 | Go | `core/database/properties/properties_test.go` `TestValueTypeRules` *(new)*, table-driven | Upsert boolean "" → single; Upsert boolean multiple → `ErrInvalid`; Create boolean → `ErrInvalid`; Create integer multiple → ok; Create term → `ErrInvalid` | AC-1.2, AC-1.3, AC-1.5, AC-1.6, D-6 |
 | T-3 | Go | same file `TestBooleanCardinalityStaysSingle` *(new)* | Update boolean to multiple → `ErrInvalid`, row unchanged | AC-1.4 |
 | T-4 | Go | `core/database/observations/observations_test.go` `TestBooleanObservationValue` *(new)*, table-driven | false and true stored, listed, raw-read, audit row; missing → `ErrInvalid`; boolean + text → `ErrInvalid`; text Property + boolean → `ErrInvalid` | AC-2.1, AC-2.2, AC-2.3, AC-2.4, D-3, D-14 |
@@ -377,10 +378,10 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-8 | Go | `core/database/autoreconciler/autoreconciler_test.go` `TestReconciledBoolean` *(new)* | boolean Property, two members true → cache `value_boolean = 1`, support 2; delete one Observation → support 1; `graphcache` verify passes | AC-3.3, D-21 |
 | T-9 | Go | `api/ffi/handlers/citations_test.go` `TestCreateCitationBooleanObservation` *(new)* | draft `value_boolean = false` → response `ValueBoolean != nil` and false | AC-2.6, D-16 |
 | T-10 | Go | `api/ffi/handlers/conclusion_detail_test.go` `TestConclusionValueProtoCoversEveryKind` rows *(new)* | `HasBoolean` false → `ConclusionValue_Boolean` false; true likewise | AC-3.5, D-15 |
-| T-11 | Go | the `GetPropertiesWorkspace` handler test (STEP-7) `TestGetPropertiesWorkspaceValueTypes` *(new)* | `value_types` equals `propertymeta.Types` field for field | AC-4.1, D-10 |
-| T-12 | Swift | `macos/ProvenenciaTests/PropertiesModelTests.swift` `createOffersGoCreatableTypes` *(new)*, `booleanLabelReadsYesNo` *(new)* | FakeStore default rules → `offeredValueTypes` = text, integer, date, name, subject; `canSubmitCreate` false for "boolean"; with no snapshot loaded → `offeredValueTypes` = ["text"] and `canSubmitCreate` true for a labelled text draft; `L10n.string(PropertyValueType.boolean.label)` = "Yes / no" | AC-4.2, AC-4.6, D-11, D-12 |
+| T-11 | Go | `api/ffi/handlers/subject_defs_test.go` `TestGetPropertiesWorkspaceValueTypes` *(new)* | `value_types` equals `propertymeta.Types` field for field | AC-4.1, D-10 |
+| T-12 | Swift | `macos/ProvenenciaTests/PropertiesModelTests.swift` `createOffersGoCreatableTypes` *(new)*, `booleanLabelReadsYesNo` *(new)* | `store.valueTypeRules` seeded with D-4's eight rows, model loaded → `offeredValueTypes` = text, integer, date, name, subject; `canSubmitCreate` false for "boolean"; with no snapshot loaded → `offeredValueTypes` = ["text"] and `canSubmitCreate` true for a labelled text draft; `L10n.string(PropertyValueType.boolean.label)` = "Yes / no" | AC-4.2, AC-4.6, D-11, D-12 |
 | T-13 | Swift | `macos/ProvenenciaTests/ReconciledValueDisplayTests.swift` `aBooleanReadsAsYesOrNo` *(new)* | `.boolean(true)` → "Yes"; `.boolean(false)` → "No" | AC-4.4, D-18 |
-| T-14 | Swift | `macos/ProvenenciaTests/ObservationDepictionMappingTests.swift` `booleanValuesMapBothWays` *(new)* | proto `boolean=false` → `.boolean(false)`; Observation round trip; absent → nil | AC-4.3, AC-4.5, D-17 |
+| T-14 | Swift | `macos/ProvenenciaTests/ObservationDepictionMappingTests.swift` `booleanValuesMapBothWays` *(new)* | proto `boolean=false` → `.boolean(false)`; proto Observation `value_boolean=false` → `mapObservation` → `valueBoolean == false` → `updateObservationRequest(...).observation.valueBoolean == false` and `hasValueBoolean`; absent → nil | AC-4.3, AC-4.5, D-17 |
 | T-15 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` "value types", "source surfaces" *(new row)* | Swift = Go (+ `promote`) | AC-5.1, AC-5.2, D-20 |
 | — | Go | existing suites through the schema hash | a migrated catalog opens | AC-1.7 |
 
@@ -399,9 +400,9 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New (no brief; no view change)
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: S14-36 row status Landed #N, scope entries and the boolean working rule as STEP-10 says; completed.md: one short paragraph of what shipped
+- [ ] deployment-plan.md: S14-36 row status Landed #N; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated) — not gated
-- [ ] Domain docs and skill updated per STEP-10: interpretation and conclusion data models, seeded-vocabulary.md §3.2, matching-model.md, add-seeded-vocabulary, structural-debt rows
+- [ ] Domain docs and skill updated per STEP-10: interpretation data model, seeded-vocabulary.md §3.2, matching-model.md, add-seeded-vocabulary, structural-debt rows
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
