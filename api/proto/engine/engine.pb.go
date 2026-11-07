@@ -18296,6 +18296,7 @@ type PropertyValueTypeRule struct {
 	ValueType           string                 `protobuf:"bytes,1,opt,name=value_type,json=valueType,proto3" json:"value_type,omitempty"`
 	ResearcherCreatable bool                   `protobuf:"varint,2,opt,name=researcher_creatable,json=researcherCreatable,proto3" json:"researcher_creatable,omitempty"`
 	SingleOnly          bool                   `protobuf:"varint,3,opt,name=single_only,json=singleOnly,proto3" json:"single_only,omitempty"`
+	Negatable           bool                   `protobuf:"varint,4,opt,name=negatable,proto3" json:"negatable,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -18347,6 +18348,13 @@ func (x *PropertyValueTypeRule) GetResearcherCreatable() bool {
 func (x *PropertyValueTypeRule) GetSingleOnly() bool {
 	if x != nil {
 		return x.SingleOnly
+	}
+	return false
+}
+
+func (x *PropertyValueTypeRule) GetNegatable() bool {
+	if x != nil {
+		return x.Negatable
 	}
 	return false
 }
@@ -20634,13 +20642,14 @@ const file_engine_proto_rawDesc = "" +
 	"\n" +
 	"properties\x18\x02 \x03(\v2*.provenencia.engine.v1.SubjectTypePropertyR\n" +
 	"properties\x12R\n" +
-	"\fpresentation\x18\x03 \x01(\v2..provenencia.engine.v1.SubjectTypePresentationR\fpresentation\"\x8a\x01\n" +
+	"\fpresentation\x18\x03 \x01(\v2..provenencia.engine.v1.SubjectTypePresentationR\fpresentation\"\xa8\x01\n" +
 	"\x15PropertyValueTypeRule\x12\x1d\n" +
 	"\n" +
 	"value_type\x18\x01 \x01(\tR\tvalueType\x121\n" +
 	"\x14researcher_creatable\x18\x02 \x01(\bR\x13researcherCreatable\x12\x1f\n" +
 	"\vsingle_only\x18\x03 \x01(\bR\n" +
-	"singleOnly\"\xb5\x02\n" +
+	"singleOnly\x12\x1c\n" +
+	"\tnegatable\x18\x04 \x01(\bR\tnegatable\"\xb5\x02\n" +
 	"\x1eGetPropertiesWorkspaceResponse\x12?\n" +
 	"\n" +
 	"properties\x18\x01 \x03(\v2\x1f.provenencia.engine.v1.PropertyR\n" +

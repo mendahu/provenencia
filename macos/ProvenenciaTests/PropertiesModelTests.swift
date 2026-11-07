@@ -258,7 +258,7 @@ struct PropertiesModelTests {
     /// table (`TestGetPropertiesWorkspaceValueTypes`).
     private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
         ("name", true, false), ("integer", true, true), ("date", false, false),
-    ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
+    ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2, negatable: true) }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
         let person = personType()

@@ -7509,6 +7509,8 @@ public nonisolated struct Provenencia_Engine_V1_PropertyValueTypeRule: Sendable 
 
   public var singleOnly: Bool = false
 
+  public var negatable: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -21083,7 +21085,7 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypePropertiesGroup: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_PropertyValueTypeRule: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PropertyValueTypeRule"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}value_type\0\u{3}researcher_creatable\0\u{3}single_only\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}value_type\0\u{3}researcher_creatable\0\u{3}single_only\0\u{1}negatable\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -21094,6 +21096,7 @@ nonisolated extension Provenencia_Engine_V1_PropertyValueTypeRule: SwiftProtobuf
       case 1: try { try decoder.decodeSingularStringField(value: &self.valueType) }()
       case 2: try { try decoder.decodeSingularBoolField(value: &self.researcherCreatable) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.singleOnly) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.negatable) }()
       default: break
       }
     }
@@ -21109,6 +21112,9 @@ nonisolated extension Provenencia_Engine_V1_PropertyValueTypeRule: SwiftProtobuf
     if self.singleOnly != false {
       try visitor.visitSingularBoolField(value: self.singleOnly, fieldNumber: 3)
     }
+    if self.negatable != false {
+      try visitor.visitSingularBoolField(value: self.negatable, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -21116,6 +21122,7 @@ nonisolated extension Provenencia_Engine_V1_PropertyValueTypeRule: SwiftProtobuf
     if lhs.valueType != rhs.valueType {return false}
     if lhs.researcherCreatable != rhs.researcherCreatable {return false}
     if lhs.singleOnly != rhs.singleOnly {return false}
+    if lhs.negatable != rhs.negatable {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
