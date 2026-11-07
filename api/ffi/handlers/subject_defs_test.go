@@ -272,8 +272,20 @@ func TestGetPropertiesWorkspaceValueTypes(t *testing.T) {
 	}
 	for i, want := range propertymeta.Types {
 		r := got.ValueTypes[i]
-		if r.GetValueType() != want.ValueType || r.GetResearcherCreatable() != want.ResearcherCreatable || r.GetSingleOnly() != want.SingleOnly {
+		if r.GetValueType() != want.ValueType || r.GetResearcherCreatable() != want.ResearcherCreatable || r.GetSingleOnly() != want.SingleOnly || r.GetNegatable() != want.Negatable {
 			t.Errorf("value_types[%d] = %+v, want %+v", i, r, want)
+		}
+	}
+	for _, r := range got.ValueTypes {
+		switch r.GetValueType() {
+		case "boolean":
+			if !r.GetResearcherCreatable() || r.GetNegatable() {
+				t.Errorf("boolean rule = %+v, want creatable and not negatable", r)
+			}
+		case "text":
+			if !r.GetNegatable() {
+				t.Errorf("text rule = %+v, want negatable", r)
+			}
 		}
 	}
 }

@@ -269,6 +269,7 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 				ValueType:           r.ValueType,
 				ResearcherCreatable: r.ResearcherCreatable,
 				SingleOnly:          r.SingleOnly,
+				Negatable:           r.Negatable,
 			})
 		}
 		for _, p := range props {

@@ -1941,7 +1941,8 @@ struct GoStore: GenealogyStore {
                 CatalogPropertyValueTypeRule(
                     valueType: $0.valueType,
                     researcherCreatable: $0.researcherCreatable,
-                    singleOnly: $0.singleOnly
+                    singleOnly: $0.singleOnly,
+                    negatable: $0.negatable
                 )
             }
         )

@@ -627,9 +627,9 @@ CREATE TABLE properties (
 
 A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_properties` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
-Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**, **`depiction`**, and **`boolean`**. `real` is not used. `core/propertymeta` `Types` declares them once, with which a researcher may create and which are single-valued only; the app reads that table from `GetPropertiesWorkspace`.
+Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**, **`depiction`**, and **`boolean`**. `real` is not used. `core/propertymeta` `Types` declares them once, with which a researcher may create, which are single-valued only, and which may be negative; the app reads that table from `GetPropertiesWorkspace`.
 
-`value_type = 'boolean'` is a yes/no fact ("literate", "veteran"): `observations.value_boolean` holds 0 or 1, so false is a recorded value, not an absent one. A boolean Property is single-valued only: two answers to a yes/no are a conflict to show (state `mixed`), not two values to keep. Values compare equal or different, and reconcile as integers do. A researcher cannot create a boolean Property until S14-37 marks the type creatable; no seeded Property is boolean.
+`value_type = 'boolean'` is a yes/no fact ("literate", "veteran"): `observations.value_boolean` holds 0 or 1, so false is a recorded value, not an absent one. A boolean Property is single-valued only: two answers to a yes/no are a conflict to show (state `mixed`), not two values to keep. Values compare equal or different, and reconcile as integers do. A researcher creates boolean Properties; no seeded Property is boolean. A boolean Observation is never negative: No is the value that says it (`observations` refuses a negative one).
 
 `value_type = 'term'` means the Observation value is a row in `property_terms` for that Property (§5.1.1). Kind and edge Properties (`event_type`, `role`, `relationship_type`) use `term`.
 

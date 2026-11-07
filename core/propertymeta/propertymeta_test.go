@@ -39,23 +39,24 @@ func TestTypes(t *testing.T) {
 		valueType           string
 		researcherCreatable bool
 		singleOnly          bool
+		negatable           bool
 	}{
-		{"text", true, false},
-		{"integer", true, false},
-		{"date", true, false},
-		{"name", true, false},
-		{"subject", true, false},
-		{"term", false, false},
-		{"depiction", false, false},
-		{"boolean", false, true},
+		{"text", true, false, true},
+		{"integer", true, false, true},
+		{"date", true, false, true},
+		{"name", true, false, true},
+		{"subject", true, false, true},
+		{"term", false, false, true},
+		{"depiction", false, false, true},
+		{"boolean", true, true, false},
 	}
 	if len(flags) != len(want) {
 		t.Fatalf("flags table has %d rows, want %d", len(flags), len(want))
 	}
 	for _, f := range flags {
 		r, ok := propertymeta.Rule(f.valueType)
-		if !ok || r.ResearcherCreatable != f.researcherCreatable || r.SingleOnly != f.singleOnly {
-			t.Errorf("Rule(%s) = %+v, %v; want creatable %v, single-only %v", f.valueType, r, ok, f.researcherCreatable, f.singleOnly)
+		if !ok || r.ResearcherCreatable != f.researcherCreatable || r.SingleOnly != f.singleOnly || r.Negatable != f.negatable {
+			t.Errorf("Rule(%s) = %+v, %v; want creatable %v, single-only %v, negatable %v", f.valueType, r, ok, f.researcherCreatable, f.singleOnly, f.negatable)
 		}
 	}
 	if _, ok := propertymeta.Rule("nope"); ok {

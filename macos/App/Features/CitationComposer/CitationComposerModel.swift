@@ -371,7 +371,7 @@ final class CitationComposerModel {
                 ? L10n.string(L10n.CitationComposer.newCitation)
                 : activeCitationRef
             if case .property(let draft) = authoring,
-               draft.values.depictionDraft.hasRegion,
+               draft.values.valueFields.depictionDraft.hasRegion,
                vocabulary.isDepiction(propertyID: draft.values.propertyID),
                let property = vocabulary.property(id: draft.values.propertyID),
                let person = vocabulary.subjectsByID[draft.values.subjectID]?.label,
@@ -695,7 +695,7 @@ final class CitationComposerModel {
             if draft.applyToEdit, var session = editSession {
                 switch session.kind {
                 case .property(var values, let persistedID, let persistedRef):
-                    values.valueTermID = term.id
+                    values.valueFields.valueTermID = term.id
                     session.kind = .property(values: values, persistedID: persistedID, persistedRef: persistedRef)
                 case .bridge(let endA, let endB, _, let bridgeID, let bridgeRef, let baseline):
                     session.kind = .bridge(
@@ -709,7 +709,7 @@ final class CitationComposerModel {
                 }
                 editSession = session
             } else if case .property(var property) = authoring {
-                property.values.valueTermID = term.id
+                property.values.valueFields.valueTermID = term.id
                 authoring = .property(property)
             } else if case .bridge(var bridge) = authoring {
                 bridge.termID = term.id
@@ -1061,7 +1061,7 @@ final class CitationComposerModel {
         if activeCitationID != before {
             // A region belongs to its Citation's page; the preview always
             // renders from the open Citation's viewer.
-            mutateProperty { $0.values.depictionDraft = .empty() }
+            mutateProperty { $0.values.valueFields.depictionDraft = .empty() }
         }
         let blank = id == nil || id?.isEmpty == true
         await presentAfterIdentityChange(keepReadingPage: blank)

@@ -5,7 +5,12 @@ import SwiftUI
 /// `select` action, so a caller that navigates, sets a model field or refuses
 /// while locked uses it the same way. Each segment is a `PVChip` (so it shows
 /// keyboard focus and reads as selected); the group reads its `label` to
-/// VoiceOver.
+/// VoiceOver. A `focus:` handle lands on the first enabled segment, so a host
+/// can Tab or write focus into the control like any other kit field. With a
+/// handle every enabled segment is also a Tab stop that Space chooses, so Tab
+/// reaches each option at default macOS settings. The control does not read the
+/// handle's `next` / `previous` neighbours: Tab between segments is left to the
+/// key loop. With no handle it adds no Tab stop (as today).
 ///
 /// Meaning-free like `PVChip`: the options and what choosing one does belong
 /// to the caller.
@@ -76,6 +81,7 @@ struct PVSegmentedControl<Value: Hashable>: View {
     private let items: [Item]
     private let selection: Value
     private let size: PVControlSize
+    private let focus: PVFieldFocus?
     private let select: (Value) -> Void
 
     init(
@@ -83,19 +89,21 @@ struct PVSegmentedControl<Value: Hashable>: View {
         items: [Item],
         selection: Value,
         size: PVControlSize = .md,
+        focus: PVFieldFocus? = nil,
         select: @escaping (Value) -> Void
     ) {
         self.label = label
         self.items = items
         self.selection = selection
         self.size = size
+        self.focus = focus
         self.select = select
     }
 
     var body: some View {
         PVChipGroup(style: .segmented) {
             ForEach(items) { item in
-                chip(item)
+                segment(item)
                     .disabled(item.isDisabled)
                     .modifier(PVSegmentShortcut(shortcut: item.shortcut))
                     .help(item.shortcutHelp ?? "")
@@ -104,6 +112,27 @@ struct PVSegmentedControl<Value: Hashable>: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(label))
+    }
+
+    /// The chip. With a host handle each enabled segment is a Tab stop that
+    /// Space chooses, and the first enabled one carries the handle.
+    @ViewBuilder
+    private func segment(_ item: Item) -> some View {
+        if let focus, !item.isDisabled {
+            let stop = chip(item)
+                .focusable()
+                .onKeyPress(.space) {
+                    select(item.value)
+                    return .handled
+                }
+            if item.id == items.first(where: { !$0.isDisabled })?.id {
+                focus.apply(AnyView(stop))
+            } else {
+                stop
+            }
+        } else {
+            chip(item)
+        }
     }
 
     @ViewBuilder

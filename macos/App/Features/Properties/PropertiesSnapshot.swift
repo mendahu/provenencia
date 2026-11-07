@@ -32,6 +32,11 @@ struct PropertiesSnapshot: Sendable, Equatable {
         valueTypeRules.filter(\.researcherCreatable).map(\.valueType)
     }
 
+    /// Go's rule for one value type; nil before the rules load or for an unknown key.
+    func valueTypeRule(_ valueType: String) -> CatalogPropertyValueTypeRule? {
+        valueTypeRules.first { $0.valueType == valueType }
+    }
+
     func presentation(for type: CatalogSubjectType) -> CatalogSubjectTypePresentation? {
         presentationsByKey[type.key]
     }

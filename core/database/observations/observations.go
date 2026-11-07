@@ -269,6 +269,16 @@ func mapMissing(err error) error {
 	return err
 }
 
+// negationAllowed is false only for a negative Observation of a value type
+// whose rule says it is not negatable: a yes/no says No with its value.
+func negationAllowed(valueType, polarity string) bool {
+	if polarity != PolarityNegative {
+		return true
+	}
+	rule, ok := propertymeta.Rule(valueType)
+	return !ok || rule.Negatable
+}
+
 func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Observation, []rowchange.Change, error) {
 	if len(in.ID) != 0 {
 		return Observation{}, nil, ErrInvalid
@@ -301,6 +311,9 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 	prop, err := getPropertyTx(tx, in.PropertyID)
 	if err != nil {
 		return Observation{}, nil, err
+	}
+	if !negationAllowed(prop.ValueType, polarity) {
+		return Observation{}, nil, ErrInvalid
 	}
 	typeKey, _, err := subjectTypeKeyTx(tx, in.SubjectID)
 	if err != nil {

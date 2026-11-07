@@ -10145,13 +10145,13 @@
       }
     },
     "properties.inspector.valueTypeImmutable": {
-      "comment": "Accessibility label for the lock beside value type in the inspector",
+      "comment": "The lock's spoken label and tooltip beside value type in the inspector",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Immutable after create"
+            "value": "Cannot be changed once the property exists"
           }
         }
       }
@@ -10193,13 +10193,25 @@
       }
     },
     "properties.inspector.holdsLocked": {
-      "comment": "Accessibility label for the lock beside a seeded property's Holds value",
+      "comment": "The lock's spoken label and tooltip beside a seeded property's Holds value",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Set by Provenencia"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsSingleOnly": {
+      "comment": "Why Holds is locked for a single-only value type; argument is the type's label, such as Yes / no",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Properties hold one value"
           }
         }
       }
@@ -12588,18 +12600,6 @@
         }
       }
     },
-    "citationComposer.dateUnset": {
-      "comment": "Summary when a date Observation has no valid DateValue yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No date set"
-          }
-        }
-      }
-    },
     "dates.display.about": {
       "comment": "DateValue summary prefix for ABT; argument is the formatted point date",
       "extractionState": "manual",
@@ -12944,18 +12944,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose an Artifact before saving."
-          }
-        }
-      }
-    },
-    "citationComposer.dialogPropertyRequired": {
-      "comment": "Inline error under Property in the Add observation dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick the Property this observation is about."
           }
         }
       }
@@ -14970,30 +14958,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved"
-          }
-        }
-      }
-    },
-    "citationComposer.negateObservation": {
-      "comment": "Row menu item that flips a positive Observation to negative",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Negate observation"
-          }
-        }
-      }
-    },
-    "citationComposer.affirmObservation": {
-      "comment": "Row menu item that flips a negative Observation to positive",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove negation"
           }
         }
       }

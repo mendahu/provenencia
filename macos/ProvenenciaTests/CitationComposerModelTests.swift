@@ -25,6 +25,7 @@ struct CitationComposerModelTests {
     private let relatedToPropertyID = "prop-related-to"
     private let rolePropertyID = "prop-role"
     private let relationshipTypePropertyID = "prop-relationship-type"
+    private let canReadPropertyID = "prop-can-read"
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
@@ -50,10 +51,20 @@ struct CitationComposerModelTests {
                 label: "Relationship type",
                 valueType: "term"
             ),
+            property(id: canReadPropertyID, key: "can_read", label: "Can read", valueType: "boolean"),
+        ]
+        store.valueTypeRules = [
+            CatalogPropertyValueTypeRule(
+                valueType: "text", researcherCreatable: true, singleOnly: false, negatable: true
+            ),
+            CatalogPropertyValueTypeRule(
+                valueType: "boolean", researcherCreatable: true, singleOnly: true, negatable: false
+            ),
         ]
         store.subjectTypePropertiesByType[personTypeID] = [
             field(store.propertiesByProject[projectDir]![0], 0),
             field(store.propertiesByProject[projectDir]![1], 1),
+            field(store.propertiesByProject[projectDir]![8], 2),
         ]
         store.subjectTypePropertiesByType[eventTypeID] = [
             field(store.propertiesByProject[projectDir]![3], 0),
@@ -266,7 +277,7 @@ struct CitationComposerModelTests {
         #expect(persistedID == "obs-1")
         #expect(values.subjectID == subjectID)
         #expect(values.propertyID == occupationPropertyID)
-        #expect(values.valueText == "miller")
+        #expect(values.valueFields.valueText == "miller")
         #expect(model.activeCitationID == "cit-1")
         #expect(model.editSession?.isDirty == false)
     }
@@ -279,7 +290,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
@@ -313,7 +324,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "weaver"
+            $0.values.valueFields.valueText = "weaver"
         }
         store.recordedCalls = []
         await model.saveAuthoring()
@@ -328,7 +339,9 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         let rowID = model.observations[0].id
-        model.observationRows.applyText(rowID: rowID, text: "changed")
+        var changed = model.observations[0].values
+        changed.valueFields.valueText = "changed"
+        model.observationRows.replaceValues(rowID: rowID, values: changed)
         #expect(model.observations[0].state == .edited)
         store.recordedCalls = []
         await model.observationRows.commit(rowID: rowID, citation: model.fields.values)
@@ -345,9 +358,11 @@ struct CitationComposerModelTests {
         model.discardAuthoring()
         #expect(model.observations.count == 1)
         let rowID = model.observations[0].id
-        model.observationRows.applyText(rowID: rowID, text: "changed")
+        var changed = model.observations[0].values
+        changed.valueFields.valueText = "changed"
+        model.observationRows.replaceValues(rowID: rowID, values: changed)
         model.observationRows.revert(rowID: rowID)
-        #expect(model.observations[0].valueText == "miller")
+        #expect(model.observations[0].values.valueFields.valueText == "miller")
         #expect(model.observations[0].state == .saved)
     }
 
@@ -575,7 +590,7 @@ struct CitationComposerModelTests {
         jones.beginPropertyDraft(subjectID: subjectID)
         jones.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         store.nextWriteEffects = CatalogWriteEffects(
             reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])], lists: [.propertyUsage]
@@ -600,7 +615,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         model.selectAuthoringSubject(eventID, field: .propertySubject)
         guard case .property(let draft) = model.authoring else {
@@ -609,7 +624,7 @@ struct CitationComposerModelTests {
         }
         #expect(draft.values.subjectID == eventID)
         #expect(draft.values.propertyID.isEmpty)
-        #expect(draft.values.valueText.isEmpty)
+        #expect(draft.values.valueFields.valueText.isEmpty)
         #expect(model.authoringCanConfirm == false)
     }
 
@@ -639,12 +654,12 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "weaver"
+            $0.values.valueFields.valueText = "weaver"
         }
         await model.saveAuthoring()
         let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
@@ -917,35 +932,151 @@ struct CitationComposerModelTests {
         )
     }
 
-    @Test func polarityMenuTitleFollowsPolarity() {
-        var row = ObservationRow.draft(subjectID: subjectID)
-        #expect(!row.isNegated)
-        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.negateObservation))
-        row.polarity = ObservationPolarity.negative.rawValue
-        #expect(row.isNegated)
-        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.affirmObservation))
+    private func savedObservation(
+        id: String, valueType: String, valueText: String = ""
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: "OBS-\(id)", citationID: "cit-1", subjectID: subjectID,
+            propertyID: "prop-\(valueType)", polarity: ObservationPolarity.positive.rawValue,
+            valueText: valueText, valueInteger: nil, valueDateID: "", valueNameID: "", valueSubjectID: "",
+            valueTermID: "", propertyKey: valueType, propertyLabel: valueType.capitalized,
+            propertyValueType: valueType
+        )
     }
 
-    @Test func nameRowUsesDisplayOrderNotTheStoredForm() {
-        let fields = CitationObservationValue.Fields(
-            nameDraft: NameValueDraft(
-                form: "Gumtree, Jeremiah Arthurt",
-                parts: [
-                    CatalogNameValuePart(value: "Jeremiah", type: "given"),
-                    CatalogNameValuePart(value: "Arthur", type: "given"),
-                    CatalogNameValuePart(value: "Gumtree", type: "surname"),
-                ]
-            )
-        )
-        let orders = NameFormatOrders.givenSurname
+    private func lineTexts(_ observations: [CatalogObservation], vocabulary: CitationComposerVocabulary) -> [String] {
+        CitationComposerAuthoring.groups(
+            observations: observations.map(ObservationRow.loaded(from:)),
+            connections: [],
+            vocabulary: vocabulary
+        ).flatMap(\.lines).map(\.valueText)
+    }
+
+    @Test func savedLinesReadTheObservationValueDisplay() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let vocabulary = model.vocabulary
+        #expect(lineTexts([savedObservation(id: "d", valueType: "date")], vocabulary: vocabulary) == [""])
+        #expect(lineTexts([savedObservation(id: "s", valueType: "subject")], vocabulary: vocabulary) == [""])
         #expect(
-            CitationObservationValue.summary(
-                valueType: PropertyValueType.name.rawValue,
-                fields: fields,
-                termLabel: nil,
-                orders: orders
-            ) == "Jeremiah Arthur Gumtree"
+            lineTexts(
+                [savedObservation(id: "p", valueType: "depiction", valueText: "Portrait")],
+                vocabulary: vocabulary
+            ) == ["Portrait"]
         )
+        func canRead(_ value: Bool) -> CatalogObservation {
+            canReadObservation(id: "cr", ref: "OBS-CR", citationID: "cit-1", value: value)
+        }
+        let yes = CitationComposerAuthoring.groups(
+            observations: [ObservationRow.loaded(from: canRead(true))], connections: [], vocabulary: vocabulary
+        ).flatMap(\.lines)
+        let no = CitationComposerAuthoring.groups(
+            observations: [ObservationRow.loaded(from: canRead(false))], connections: [], vocabulary: vocabulary
+        ).flatMap(\.lines)
+        #expect(yes.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanYes)])
+        #expect(no.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanNo)])
+        #expect(!yes[0].mono && !no[0].mono)
+    }
+
+    private func chooseProperty(_ model: CitationComposerModel, _ propertyID: String) {
+        model.mutateProperty { model.applyObservationProperty(propertyID, values: &$0.values) }
+    }
+
+    private func draftValues(_ model: CitationComposerModel) -> ObservationRowValues? {
+        guard case .property(let draft) = model.authoring else { return nil }
+        return draft.values
+    }
+
+    @Test func booleanAnswerSavesOnlyOnceChosen() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        let offered = model.vocabulary.propertyOptions(
+            forSubjectID: subjectID, capabilities: model.depictionCapabilities
+        )
+        #expect(offered.contains { $0.id == canReadPropertyID })
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        #expect(!model.authoringCanConfirm)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = false }
+        #expect(model.authoringCanConfirm)
+        await model.saveAuthoring()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") || $0.hasPrefix("addObservationsToCitation") })
+        let stored = store.observationsByGraph[graphID]?.filter { $0.propertyID == canReadPropertyID } ?? []
+        #expect(stored.count == 1)
+        #expect(stored.first?.valueBoolean == false)
+        let line = model.subjectGroups.flatMap(\.lines).first { $0.label == "Can read" }
+        #expect(line?.valueText == L10n.string(L10n.Properties.valueBooleanNo))
+    }
+
+    @Test func propertyChangeResetsOnlyWhenThePropertyChanges() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        chooseProperty(model, occupationPropertyID)
+        model.mutateProperty { $0.values.polarity = ObservationPolarity.negative.rawValue }
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        await model.saveAuthoring()
+        let stored = store.observationsByGraph[graphID]?.filter { $0.propertyID == canReadPropertyID } ?? []
+        #expect(stored.first?.polarity == ObservationPolarity.positive.rawValue)
+
+        model.beginPropertyDraft(subjectID: subjectID)
+        chooseProperty(model, canReadPropertyID)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        chooseProperty(model, occupationPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        #expect(draftValues(model)?.valueFields.valueText == "")
+
+        chooseProperty(model, canReadPropertyID)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == true)
+    }
+
+    @Test func editingABooleanOpensOnItsAnswer() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)])
+        let model = makeModel(store: store, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(values.valueFields.valueBoolean == true)
+        #expect(model.observations[0].state == .saved)
+        store.recordedCalls = []
+        await model.saveEdit()
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("updateObservation") })
+    }
+
+    @Test func negativeIsOfferedByGoRule() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let vocabulary = model.vocabulary
+        #expect(!vocabulary.offersNegative(propertyID: canReadPropertyID))
+        #expect(vocabulary.offersNegative(propertyID: occupationPropertyID))
+        var bare = vocabulary
+        bare.fields.valueTypeRules = []
+        #expect(bare.offersNegative(propertyID: canReadPropertyID))
+
+        let property = property(id: canReadPropertyID, key: "can_read", label: "Can read", valueType: "boolean")
+        var row = ObservationRow.loaded(
+            from: canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)
+        )
+        row.values.polarity = ObservationPolarity.negative.rawValue
+        #expect(row.asDraft(property: property, vocabulary: vocabulary).0?.polarity == ObservationPolarity.positive.rawValue)
+        #expect(row.asDraft(property: property, vocabulary: bare).0?.polarity == ObservationPolarity.negative.rawValue)
     }
 
     @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
@@ -1183,7 +1314,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         #expect(model.transcription == "edited before save")
@@ -1289,7 +1420,7 @@ struct CitationComposerModelTests {
         await model.confirmCustomTerm()
         #expect(model.customTermDraft == nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueTermID.isEmpty == false)
+            #expect(draft.values.valueFields.valueTermID.isEmpty == false)
         } else {
             Issue.record("the term should land on the draft")
         }
@@ -1343,7 +1474,7 @@ struct CitationComposerModelTests {
         #expect(properties.isStale || store.getPropertiesWorkspaceCalls > propertiesBefore)
         #expect(model.customTermDraft == nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueTermID.isEmpty == false)
+            #expect(draft.values.valueFields.valueTermID.isEmpty == false)
         } else {
             Issue.record("the term should land on the draft")
         }
@@ -1379,6 +1510,18 @@ struct CitationComposerModelTests {
             valueText: "miller", valueInteger: nil, valueDateID: "", valueNameID: "", valueSubjectID: "",
             valueTermID: "", propertyKey: "occupation", propertyLabel: "Occupation",
             propertyValueType: "text"
+        )
+    }
+
+    private func canReadObservation(
+        id: String, ref: String, citationID: String, value: Bool
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: ref, citationID: citationID, subjectID: subjectID,
+            propertyID: canReadPropertyID, polarity: ObservationPolarity.positive.rawValue,
+            valueText: "", valueInteger: nil, valueBoolean: value, valueDateID: "", valueNameID: "",
+            valueSubjectID: "", valueTermID: "", propertyKey: "can_read", propertyLabel: "Can read",
+            propertyValueType: "boolean"
         )
     }
 
@@ -1483,19 +1626,19 @@ struct CitationComposerModelTests {
         #expect(store.recordedCalls.isEmpty)
         if case .property(let draft) = model.authoring {
             #expect(draft.isDuplicate)
-            #expect(draft.values.valueText == "miller")
+            #expect(draft.values.valueFields.valueText == "miller")
         } else {
             Issue.record("duplicate should open a property draft")
         }
-        model.mutateProperty { $0.values.valueText = "changed" }
+        model.mutateProperty { $0.values.valueFields.valueText = "changed" }
         model.duplicate(line: line!)
         #expect(model.pendingLeave != nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueText == "changed")
+            #expect(draft.values.valueFields.valueText == "changed")
         }
         model.discardLeaveChanges()
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueText == "miller")
+            #expect(draft.values.valueFields.valueText == "miller")
         } else {
             Issue.record("confirm should replace the dirty draft")
         }
@@ -1557,13 +1700,13 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         if case .property(let draft) = model.authoring {
             #expect(draft.values.subjectID == subjectID)
             #expect(draft.values.propertyID.isEmpty)
-            #expect(draft.values.valueText.isEmpty)
+            #expect(draft.values.valueFields.valueText.isEmpty)
             #expect(draft.holdsLeave == false)
         } else {
             Issue.record("the box should stay open on the subject")
@@ -2161,7 +2304,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         model.beginAddCustomTerm(propertyID: occupationPropertyID)
         model.customTermDraft?.label = "Weaver"
@@ -2187,7 +2330,7 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         model.beginPropertyDraft(subjectID: subjectID)
-        model.mutateProperty { $0.values.valueText = "miller" }
+        model.mutateProperty { $0.values.valueFields.valueText = "miller" }
         model.beginAddCustomTerm(propertyID: occupationPropertyID)
         model.customTermDraft?.label = "Weaver"
         #expect(model.shouldHoldNavigation(.back))
@@ -2206,7 +2349,7 @@ struct CitationComposerModelTests {
         #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
         model.mutateEdit { session in
             guard case .property(var values, let id, let ref) = session.kind else { return }
-            values.valueText = "changed"
+            values.valueFields.valueText = "changed"
             session.kind = .property(values: values, persistedID: id, persistedRef: ref)
         }
         #expect(model.shouldHoldNavigation(.back))
@@ -2218,7 +2361,7 @@ struct CitationComposerModelTests {
         model.keepEditingAfterLeave()
         #expect(model.presented == .edit)
         if case .property(let values, _, _) = model.editSession?.kind {
-            #expect(values.valueText == "changed")
+            #expect(values.valueFields.valueText == "changed")
         } else {
             Issue.record("the edit session should still hold the draft")
         }
@@ -2259,7 +2402,7 @@ struct CitationComposerModelTests {
         #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
         model.mutateEdit { session in
             guard case .property(var values, let id, let ref) = session.kind else { return }
-            values.valueText = "changed"
+            values.valueFields.valueText = "changed"
             session.kind = .property(values: values, persistedID: id, persistedRef: ref)
         }
         store.recordedCalls = []
@@ -2267,6 +2410,61 @@ struct CitationComposerModelTests {
         #expect(model.presented == nil)
         #expect(model.editSession == nil)
         #expect(store.recordedCalls.contains("updateObservation id=obs-1"))
+    }
+
+    @Test func failedEditThenDiscardKeepsTheStoredLine() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        func line() -> CitationSavedLine? {
+            CitationComposerAuthoring.groups(
+                observations: model.observations, connections: [], vocabulary: model.vocabulary
+            ).flatMap(\.lines).first
+        }
+        let before = line()
+        #expect(before?.negative == false)
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.polarity = ObservationPolarity.negative.rawValue
+            values.valueFields.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        store.updateObservationError = ComposerLoadFailure()
+        await model.saveEdit()
+        #expect(model.editSession?.error != nil)
+        model.discardEdit()
+        #expect(line()?.negative == false)
+        #expect(line()?.valueText == before?.valueText)
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(values.polarity == ObservationPolarity.positive.rawValue)
+        #expect(values.valueFields.valueText == "miller")
+    }
+
+    @Test func editingABooleanSavesTheNewAnswerPositive() async {
+        let store = makeStore()
+        seedArtifact(store)
+        var seeded = canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)
+        seeded.polarity = ObservationPolarity.negative.rawValue
+        seedCitation(store, observations: [seeded])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueFields.valueBoolean = false
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        await model.saveEdit()
+        let stored = store.observationsByGraph.values.flatMap { $0 }.first { $0.id == "obs-1" }
+        #expect(stored?.valueBoolean == false)
+        #expect(stored?.polarity == ObservationPolarity.positive.rawValue)
     }
 
     @Test func saveEditKeepsTheDialogWhenThePropertyIsMissing() async {

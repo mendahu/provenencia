@@ -131,6 +131,17 @@ enum PVColor {
     /// Woman family ink on the Person header Badge (board S10-D12, `--person-woman-ink`).
     static let personWomanInk = Color.pvDynamic(light: PVPalette.plum700, dark: PVPalette.plum300)
 
+    // MARK: Property value types (S7-D2 / S14-D9 VT_COLOR)
+    // Pill ink on the sunken pill: 700 light / 300 dark, `term` 900 light for 4.5:1.
+    static let valueTypeTextInk = Color.pvDynamic(light: PVPalette.paper700, dark: PVPalette.paper300)
+    static let valueTypeIntegerInk = Color.pvDynamic(light: PVPalette.copper700, dark: PVPalette.copper300)
+    static let valueTypeDateInk = Color.pvDynamic(light: PVPalette.lapis700, dark: PVPalette.lapis300)
+    static let valueTypeNameInk = Color.pvDynamic(light: PVPalette.iron700, dark: PVPalette.iron300)
+    static let valueTypeSubjectInk = Color.pvDynamic(light: PVPalette.plum700, dark: PVPalette.plum300)
+    static let valueTypeTermInk = Color.pvDynamic(light: PVPalette.ochre900, dark: PVPalette.ochre300)
+    static let valueTypeBooleanInk = Color.pvDynamic(light: PVPalette.verdigris700, dark: PVPalette.verdigris300)
+    static let valueTypeDepictionInk = Color.pvDynamic(light: PVPalette.madder700, dark: PVPalette.madder300)
+
     // MARK: Evidence graph subject kinds (S6-D1 / S6-02 / S7 board)
     // Person = iron, Event = copper, Place = verdigris.
     // Fill/border are board hexes (OKLab blends of family steps). Ink = 700 light /
