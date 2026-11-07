@@ -214,4 +214,4 @@ Later PR: the whole-read bound goes to S13-27's scope entry in the map (Check li
 
 ## Result
 
-Gate PASS · CI: see PR · open: none · follow-ups: move the value limit into `propertycompare` so Promote gets it (user's idea, 2026-11-07; home to be asked) · nits logged: MNT-7, MNT-8, MNT-9, MNT-10 · to user: all answered; the user approved a third review round for SEC+PRF
+Gate PASS · CI: see PR · open: none · follow-ups: move the value limit into `propertycompare` so Promote gets it (user's idea, 2026-11-07; the user chose a `docs/ideas` home: [`promote-ranking.md`](../../../ideas/promote-ranking.md#a-value-limit-under-every-property-compare)) · nits logged: MNT-7, MNT-8, MNT-9, MNT-10 · to user: all answered; the user approved a third review round for SEC+PRF
