@@ -1,14 +1,14 @@
 # S14-39 — Properties page reads single-only
 
-**Status:** Blocked — on board S14-D9
+**Status:** Draft
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D9](../design/S14-D9-properties-single-only.md), board not drawn yet
-**Board:** the *Properties View* project, a [migrated design on claude.ai](https://claude.ai/artifact/XRS4WQDZbaDa7jAzVKYQdc), page *S7-D2 Subject Fields.dc.html*, section "S14-D9 · Single-only value type" (to draw). The implementer may not be able to open it: **Design → macOS** describes each frame in words, refreshed from the agreed board.
+**Brief:** [S14-D9](../design/S14-D9-properties-single-only.md), board agreed 2026-11-07
+**Board:** S14-D9 — the *Properties View* project, a [migrated design on claude.ai](https://claude.ai/artifact/XRS4WQDZbaDa7jAzVKYQdc), page *S7-D2 Subject Fields.dc.html*, section "S14-D9 · Single-only value type", frames 1, 2, 3, 4, 5, 6a, 6b and the "Value type pills · SO-5" table. Changes from the brief: every pill gets a light and a dark shade, `text` moves to paper-700 and `term` to ochre-900 to pass 4.5:1 (D-8); Holds in create keeps the radios' height (D-5); the lock also shows its reason as a tooltip (D-4); dark mode is the board's theme switch, not separate frames. The implementer may not be able to open it: **Design → macOS** describes each frame in words.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-D9
 **Blocks:** S14-37
 **Branch:** `s14-39-properties-single-only`
-**Version bump:** patch — the only change a researcher sees before S14-37 is the `depiction` pill's own pigment, a polish of an existing screen ([`docs/versioning.md`](../../../versioning.md)); the next patch after `VERSION` at merge
+**Version bump:** patch — before S14-37 a researcher sees only the pills' new pigments (`depiction` coloured, `text` and `term` darker, dark-mode shades), a polish of an existing screen ([`docs/versioning.md`](../../../versioning.md)); the next patch after `VERSION` at merge
 **Skills to load:** [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/macos-client.mdc` (Go wire vocabulary is a typed enum; views and models use the typed cases)
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; Swift keeps no copy); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; S14-36 plan D-11 (`singleOnly` mapped, read here) and its **Landed** note
@@ -63,7 +63,7 @@ Tests use a neutral rules fixture in which `integer` is creatable and single-onl
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `PropertiesTypeChrome.valueTypeForeground` for each `PropertyValueType` case | Eight pigments, no two the same; `boolean` and `depiction` are the board's; the other six as today |
+| AC-3.1 | `PropertiesTypeChrome.valueTypeForeground` for each `PropertyValueType` case | D-8's table: eight pigments, no two the same, each a light 700 (900 for `term`) and dark 300 shade |
 | AC-3.2 | `valueTypeForeground("nope")` | `PVColor.textSecondary` |
 | AC-3.3 | The `boolean` pill | Mono key `boolean`; VoiceOver "Yes / no" (as today) |
 
@@ -116,11 +116,11 @@ Verified at `aaf3b15`.
 | D-1 | `PropertiesSnapshot.valueTypeRule(_ valueType: String) -> CatalogPropertyValueTypeRule?` *(new)* = `valueTypeRules.first { $0.valueType == valueType }`. It is the one lookup into Go's rules; S14-37's composer reads it too (its D-6 is changed to match, review M-1) | One lookup, no stored copy; a later flag needs no new lookup | `isSingleOnly(_:)` — one predicate per flag; a dictionary on the composer — a second copy |
 | D-2 | `PropertiesModel.holdsLockReason(valueType: String, origin: String) -> String?` *(new)*: `snapshot.valueTypeRule(valueType)?.singleOnly == true` → `L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(SubjectPropertyValueType.label(valueType)))`; else `origin != CatalogOrigin.user` → `L10n.string(L10n.Properties.holdsLocked)`; else nil (editable). `canEditCardinality` becomes `selectedProperty.map { holdsLockReason(valueType: $0.valueType, origin: $0.origin) == nil } ?? false`. A single-only type wins over a seeded origin | One place decides "locked?" and "why" for create and the inspector (review M-3); `setCardinality` is already guarded by `canEditCardinality` | Three model APIs and a view-built hint |
 | D-3 | `PropertiesModel.Draft` gains `mutating func chooseValueType(_ valueType: String, singleOnly: Bool)` *(new)*: sets `valueType`; when `singleOnly`, sets `cardinality = single`. And `mutating func toggleBind(typeID: String)` *(new)*, the body of today's toggle. The picker's `select` is `{ vt in draft?.chooseValueType(vt, singleOnly: model.snapshot.valueTypeRule(vt)?.singleOnly == true) }`; `PropertiesView.toggleBind(typeID:)` becomes `draft?.toggleBind(typeID: typeID)`. `PropertiesModel.toggleDraftBind(typeID:)` is deleted | Draft edits live on the draft; fits the Optional `@State` (`draft?.…`); removes a dead copy (review M-5, X-2) | An `inout` model method — an unwrap at the call site |
-| D-4 | `fileprivate struct PropertiesLockedValue<Content: View>: View` *(new, PropertiesView.swift)* `{ let reason: String; @ViewBuilder let content: Content }`: an `HStack(spacing: 6)` of `content` and the existing `lock.fill` image (12pt semibold, `PVColor.textFaint`, `.accessibilityLabel(Text(verbatim: reason))`). Callers: the Value type row (`content` = its pill, `reason` = `L10n.string(L10n.Properties.valueTypeImmutable)`), `holdsRow`'s locked branch and the create Holds field (`content` = the One / Several `Text` in `PVFont.body(size: PVTypeScale.bodySmall)`, `PVColor.textPrimary`, as today) | Three sites, one look (review M-4, X-3); the image stays so nothing visible changes | `PVIcon(.lock)` — a visible change the board did not draw |
-| D-5 | Create Holds field: when `model.holdsLockReason(valueType: draft.valueType, origin: CatalogOrigin.user)` is a reason, the `PVField(label: L10n.Properties.holds, hint: reason)` holds `PropertiesLockedValue(reason: reason) { Text(L10n.Properties.holdsOne) }` with `.accessibilityIdentifier("properties.create.holds.locked")`; else the radios and `holdsEventsHint`, as today. The lock speaks the reason, as in the inspector | SO-1, SO-2; the user chose read-only "One value" drawn like the inspector row (2026-11-07) | A disabled radio; a read-only `PVInput` (review M-7: the user chose the inspector row's look) |
+| D-4 | `fileprivate struct PropertiesLockedValue<Content: View>: View` *(new, PropertiesView.swift)* `{ let reason: String; @ViewBuilder let content: Content }`: an `HStack(spacing: 6)` of `content` and the existing `lock.fill` image (12pt semibold, `PVColor.textFaint`, `.accessibilityLabel(Text(verbatim: reason))`, `.help(reason)`). Callers: the Value type row (`content` = its pill, `reason` = `L10n.string(L10n.Properties.valueTypeImmutable)`), `holdsRow`'s locked branch and the create Holds field (`content` = the One / Several `Text` in `PVFont.body(size: PVTypeScale.bodySmall)`, `PVColor.textPrimary`, as today) | Three sites, one look (review M-4, X-3); the board shows the reason as the lock's tooltip too | `PVIcon(.lock)` — a visible change the board did not draw |
+| D-5 | Create Holds field: when `model.holdsLockReason(valueType: draft.valueType, origin: CatalogOrigin.user)` is a reason, the `PVField(label: L10n.Properties.holds, hint: reason)` holds a `ZStack(alignment: .topLeading)` of the two radios, `.hidden()` and `.accessibilityHidden(true)` (they reserve the height, so Bind to subject types does not move: board frame 1), and `PropertiesLockedValue(reason: reason) { Text(L10n.Properties.holdsOne) }` with `.accessibilityIdentifier("properties.create.holds.locked")`; VoiceOver reads "Holds, One value, Yes / no Properties hold one value". Otherwise the radios and `holdsEventsHint`, as today | SO-1, SO-2; the user chose read-only "One value" drawn like the inspector row (2026-11-07); the board keeps the field's height | A disabled radio; a read-only `PVInput` (review M-7); a fixed `minHeight` — a number that drifts from the radios |
 | D-6 | Inspector: `holdsRow` shows the radios when `model.canEditCardinality`, else `PropertiesLockedValue(reason: model.holdsLockReason(…) ?? "")` with the One / Several text, as today | SO-3, SO-4 | — |
 | D-7 | Copy (user, 2026-11-07): `L10n.Properties.holdsSingleOnly(typeLabel: String) -> String` *(new)*, key `properties.inspector.holdsSingleOnly`, default "%@ Properties hold one value", comment "Why Holds is locked for a single-only value type; argument is the type's label, such as Yes / no", built like `holdsGroup(label:)` | Reads "Yes / no Properties hold one value"; fits a later single-only type | A boolean-only sentence |
-| D-8 | `valueTypeForeground(_ valueType: String)` switches on `PropertyValueType(rawValue: valueType)`: an exhaustive switch over the eight cases (the six pigments as today; `boolean` and `depiction` the board's), and `nil` → `PVColor.textSecondary`. `inspectorBody`'s `property.valueType == "term"` becomes `== PropertyValueType.term.rawValue` | `.cursor/rules/macos-client.mdc`: views use the typed cases; the next type fails to compile until it has a pigment, as `depiction` silently did not (review M-2) | Adding `case "boolean":` to the string switch |
+| D-8 | `valueTypeForeground(_ valueType: String)` switches on `PropertyValueType(rawValue: valueType)`, exhaustively over the eight cases, each `Color.pvDynamic(light:dark:)` from the agreed board: `text` paper700 / paper300; `integer` copper700 / copper300; `date` lapis700 / lapis300; `name` iron700 / iron300; `subject` plum700 / plum300; `term` ochre900 / ochre300; `boolean` verdigris700 / verdigris300; `depiction` madder700 / madder300 (all `PVPalette`). `nil` → `PVColor.textSecondary`. `inspectorBody`'s `property.valueType == "term"` becomes `== PropertyValueType.term.rawValue` | `.cursor/rules/macos-client.mdc`: views use the typed cases; the next type fails to compile until it has a pigment (review M-2). The board measured each on the sunken pill: every pair passes 4.5:1 (ochre700 was 4.15:1, so `term` moves to ochre900; `text` moves from paper600 to paper700) | Adding `case "boolean":` to the string switch; one shade for both themes, as today |
 | D-9 | Test fixture: `goValueTypeRules` gains single-only on `integer`: `("name", true, false), ("integer", true, true), ("date", false, false)`. `userProperty` gains `valueType: String = "text"` | The rule is general; one fixture for S14-37 to extend (review M-6, X-6) | A second, boolean fixture |
 | D-10 | Keys stay: the pill and picker show `boolean` (user, 2026-11-07) | Every type keeps its mono key | Labels |
 
@@ -191,7 +191,16 @@ From the S14-D9 inventory.
 | Locked value | `PropertiesLockedValue` (snowflake, new) | `PropertiesView.swift` | D-4 |
 | Value type pill | `PropertiesValueTypePill`, `valueTypeForeground` (Extend) | `PropertiesSnapshot.swift`, `SubjectTypeChrome.swift` | D-8 |
 
-Frames, in words: written from the agreed board (Blocked). Brief frames: 1 create with `boolean` and the read-only Holds; 2 back to `text`, radios; 3 inspector Can read, locked; 4 inspector Languages spoken, radios; 5 table pills, `boolean` and `depiction` among them; 6 dark of 1 and 3; 7 Wide of 2 and 4.
+Frames, in words (from the agreed board; the Properties pane with the Person type selected, and the table holding Name, Birth, Occupation, Likeness, Languages spoken, Can read, Age at event, Event type, Event place, Picture):
+
+1. **Create, a single-only type.** New property dialog (560pt) over the page: Label "Can read", Key `can-read`, Value type `boolean` selected among `text`, `integer`, `date`, `name`, `subject`, `boolean` (segments share the row, none truncated). Holds: "One value" and the lock, no radios, in the space the radios take; hint "Yes / no Properties hold one value". Bind to subject types unchanged below it.
+2. **Create, back to text.** Frame 1 with `text` chosen: the two radios, One value selected, hint "Facts that change over time, like occupation or residence, usually belong in events". Nothing else moves.
+3. **Inspector, Can read.** Value type row: the `boolean` pill in verdigris and its lock. Holds: the locked row ("One value" and the lock), no radios, no notice. The lock's tooltip and VoiceOver: "Yes / no Properties hold one value".
+4. **Inspector, Languages spoken.** A user `text` Property: both Holds radios, Several values selected, as today.
+5. **Table pills.** All properties: every key in its pigment; Likeness and Picture's `depiction` in madder. Likeness selected: its Holds locked with "Set by Provenencia".
+6a, 6b. **Wide** of 2 and 4: the table takes the width, the inspector stays 340pt, the dialog stays 560pt and centred.
+
+Dark: the board's theme switch shows every frame with the 300 shades.
 
 ### Strings
 
@@ -216,7 +225,7 @@ Check: `xcodebuild -project macos/Provenencia.xcodeproj -scheme Provenencia -des
 
 **STEP-4 — Pill pigments, typed**
 Files: `macos/App/Features/Catalog/SubjectTypeChrome.swift`, `PropertiesView.swift` (the `"term"` literal). Skill: `add-ui-component`.
-Do: D-8, with the board's two pigments.
+Do: D-8.
 Check: the build succeeds; manual check 4.
 
 **STEP-5 — Tests pass whole**
@@ -268,7 +277,7 @@ On a Mac, with a local, **uncommitted** edit to `core/propertymeta/propertymeta.
 1. New property: the picker offers `text`, `integer`, `date`, `name`, `subject`, `boolean`, no segment truncated. Choose `integer`, pick Several values, then choose `boolean`: Holds reads "One value" with the lock and the hint "Yes / no Properties hold one value". Choose `text`: the radios are back, One value selected. (AC-1.2, AC-1.3, SO-1, SO-2, SO-6)
 2. Create "Can read" as `boolean`; the inspector's Holds is locked; VoiceOver on the lock reads "Yes / no Properties hold one value". (AC-1.4, AC-2.1, SO-3)
 3. Select a user `text` Property: the radios work as before. Select a seeded Property: "Set by Provenencia". (AC-2.2, AC-2.3, SO-4)
-4. The table and inspector show `boolean` and `depiction` (Likeness) in their pigments, in light and dark. (AC-3.1, AC-3.3, SO-5)
+4. The table and inspector show every key in D-8's pigment, `boolean` verdigris and `depiction` (Likeness) madder, in light and in dark (the 300 shades). (AC-3.1, AC-3.3, SO-5)
 5. Widen past 1600pt of pane: the dialog and inspector look the same. (SO-W1)
 
 Then `git checkout core/propertymeta/propertymeta.go` before committing.
@@ -285,11 +294,10 @@ Then `git checkout core/propertymeta/propertymeta.go` before committing.
 
 - Manual check 1 shows a truncated segment in the six-type picker at the dialog's width (SO-6). Do not shorten the keys (D-10).
 - `PropertyValueType` has a case not in Go's `propertymeta.Types`, or misses one, at your base (D-8 would be wrong).
-- The agreed S14-D9 board differs from §6 macOS in anything but wording or the two pigments.
 
 ## 12. Open questions
 
-None from the code. Blocked until the S14-D9 board is agreed; then D-8's two pigments and §6 frames are filled in and `review-plan` round 2 runs.
+None. The board is agreed; `review-plan` round 2 runs before Planned.
 
 ## 13. PR
 
