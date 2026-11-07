@@ -60,4 +60,23 @@ struct ObservationDepictionMappingTests {
         #expect(!req.observation.hasDepiction)
         #expect(req.observation.valueDepictionID == "v")
     }
+
+    /// T-14 (AC-4.3, AC-4.5): a false answer is a value on the wire, both ways.
+    @Test func booleanValuesMapBothWays() {
+        var value = Provenencia_Engine_V1_ConclusionValue()
+        value.boolean = false
+        #expect(GoStore.mapConclusionValue(value) == .boolean(false))
+        value.boolean = true
+        #expect(GoStore.mapConclusionValue(value) == .boolean(true))
+
+        var proto = Provenencia_Engine_V1_Observation()
+        proto.valueBoolean = false
+        let mapped = GoStore.mapObservation(proto)
+        #expect(mapped.valueBoolean == false)
+        let req = GoStore.updateObservationRequest(projectDir: "/tmp/p", userID: "u", observation: mapped, depictionInput: nil)
+        #expect(req.observation.hasValueBoolean)
+        #expect(req.observation.valueBoolean == false)
+
+        #expect(GoStore.mapObservation(Provenencia_Engine_V1_Observation()).valueBoolean == nil)
+    }
 }

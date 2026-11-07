@@ -28,6 +28,11 @@ type samplePair struct{ a, b valuecompare.Value }
 func ofText(a, b string) samplePair { return samplePair{textValue(a), textValue(b)} }
 func ofTerm(a, b string) samplePair { return samplePair{termValue(a), termValue(b)} }
 func ofInt(a, b int64) samplePair   { return samplePair{intValue(a), intValue(b)} }
+func boolValue(b bool) valuecompare.Value {
+	return valuecompare.Value{Type: propertymeta.ValueTypeBoolean, Boolean: b}
+}
+
+func ofBool(a, b bool) samplePair   { return samplePair{boolValue(a), boolValue(b)} }
 func ofName(a, b string) samplePair { return samplePair{nv(a), nv(b)} }
 
 // pic is a depiction value whose image File id is 16 bytes of id; 0 is none.
@@ -97,6 +102,9 @@ var samples = map[string][]samplePair{
 	},
 	propertymeta.ValueTypeDepiction: {
 		ofPic(1, 1), ofPic(1, 2), ofPic(0, 1), ofPic(0, 0),
+	},
+	propertymeta.ValueTypeBoolean: {
+		ofBool(true, true), ofBool(true, false), ofBool(false, true), ofBool(false, false),
 	},
 	propertymeta.ValueTypeInteger: {
 		ofInt(3, 3), ofInt(3, 4), ofInt(3, 6), ofInt(0, 0), ofInt(-2, 2),
@@ -247,6 +255,9 @@ var generators = map[string]func(rng *rand.Rand) samplePair{
 	propertymeta.ValueTypeDepiction: func(rng *rand.Rand) samplePair {
 		return ofPic(byte(rng.Intn(4)), byte(rng.Intn(4)))
 	},
+	propertymeta.ValueTypeBoolean: func(rng *rand.Rand) samplePair {
+		return ofBool(rng.Intn(2) == 0, rng.Intn(2) == 0)
+	},
 	propertymeta.ValueTypeInteger: func(rng *rand.Rand) samplePair {
 		return ofInt(int64(rng.Intn(10)), int64(rng.Intn(10)))
 	},
@@ -337,11 +348,7 @@ func mirrored(a, b valuecompare.Detail) bool {
 func near(a, b float64) bool { return math.Abs(a-b) < 1e-9 }
 
 func TestComparerContract(t *testing.T) {
-	allTypes := []string{
-		propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
-		propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm,
-		propertymeta.ValueTypeDepiction,
-	}
+	allTypes := propertymeta.ValueTypes()
 	supported := valuecompare.ComparerTypes()
 	for _, typ := range allTypes {
 		if !slices.Contains(supported, typ) {

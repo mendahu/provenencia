@@ -254,7 +254,7 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 			kind: "event",
 			cite: func(f *fixture) []observations.Input {
 				return []observations.Input{
-					{PropertyID: f.prop("event_name").ID, ValueText: "Phantom Fair", HasText: true},
+					{PropertyID: f.prop("event_name").ID, Scalar: propertymeta.TextScalar("Phantom Fair")},
 					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
 					{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1801, 0, 0)},
 				}
@@ -571,7 +571,7 @@ func TestListEvents(t *testing.T) {
 	birth := f.term("event_type", "birth")
 
 	fire := f.event(
-		observations.Input{PropertyID: name.ID, ValueText: " The Great Fire ", HasText: true},
+		observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar(" The Great Fire ")},
 		observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1849, 0, 0)},
 	)
 	birthID := f.event(
@@ -642,9 +642,9 @@ func TestListEventsQueryCountIsConstant(t *testing.T) {
 func TestEventsByIDs(t *testing.T) {
 	f := newFixture(t)
 	name := f.prop("event_name")
-	fire := f.event(observations.Input{PropertyID: name.ID, ValueText: "Fire", HasText: true})
+	fire := f.event(observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar("Fire")})
 	bare := f.event()
-	f.event(observations.Input{PropertyID: name.ID, ValueText: "Other", HasText: true})
+	f.event(observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar("Other")})
 	_, _, person := f.person("Ada Lovelace")
 	got, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{bare, fire, fire, person, make([]byte, 16)})
 	must(t, err)
@@ -709,7 +709,7 @@ func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names .
 	toponym := f.prop("toponym")
 	in := make([]observations.Input, len(names))
 	for i, name := range names {
-		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, ValueText: name, HasText: true}
+		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar(name)}
 	}
 	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
 	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
@@ -1042,7 +1042,7 @@ func TestListSummariesCarryUpdated(t *testing.T) {
 
 	bobSubject, bobObs, bob := f.person("Bob Smith")
 	_, _, ann := f.person("Ann Lee")
-	fire := f.event(observations.Input{PropertyID: f.prop("event_name").ID, ValueText: "Fire", HasText: true})
+	fire := f.event(observations.Input{PropertyID: f.prop("event_name").ID, Scalar: propertymeta.TextScalar("Fire")})
 	_, art := f.book("Gazetteer")
 	boston := f.place(art, "Boston")
 
@@ -1230,7 +1230,7 @@ func TestPersonSummaryTerms(t *testing.T) {
 				must(f.t, err)
 				personType := f.typeID("person")
 				must(f.t, subjectvocab.EnsureBinding(f.c, personType, prop.ID, 99))
-				f.cite(s, observations.Input{PropertyID: prop.ID, ValueText: "Woman", HasText: true})
+				f.cite(s, observations.Input{PropertyID: prop.ID, Scalar: propertymeta.TextScalar("Woman")})
 				return id
 			},
 		},

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/observationrow"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/google/uuid"
@@ -112,7 +113,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		EntityType: "observation",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
-		Fields:     rowchange.DeletedRow(observationRowMap(prev)),
+		Fields:     rowchange.DeletedRow(prev.AuditFields()),
 	}), nil
 }
 
@@ -134,33 +135,12 @@ func getRowTx(tx *sql.Tx, id []byte) (Observation, error) {
 }
 
 func scanRawObservation(row rowScanner) (Observation, error) {
-	var (
-		obs               Observation
-		valueText         sql.NullString
-		valueInt          sql.NullInt64
-		dateID, nameID    []byte
-		subjectID, termID []byte
-		depictionID       []byte
-	)
-	if err := row.Scan(
-		&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-		&valueText, &valueInt, &dateID, &nameID, &subjectID, &termID, &depictionID,
-	); err != nil {
+	r, err := observationrow.Scan(row)
+	if err != nil {
 		return Observation{}, err
 	}
-	if valueText.Valid {
-		obs.ValueText = valueText.String
-		obs.HasText = obs.ValueText != ""
-	}
-	if valueInt.Valid {
-		obs.ValueInteger = valueInt.Int64
-		obs.HasInteger = true
-	}
-	obs.ValueDateID = append([]byte(nil), dateID...)
-	obs.ValueNameID = append([]byte(nil), nameID...)
-	obs.ValueSubjectID = append([]byte(nil), subjectID...)
-	obs.ValueTermID = append([]byte(nil), termID...)
-	obs.ValueDepictionID = append([]byte(nil), depictionID...)
+	obs := r
+	obs.HasText = obs.Text != ""
 	return obs, nil
 }
 
@@ -247,28 +227,6 @@ func getListedTx(tx *sql.Tx, id []byte) (Listed, error) {
 		return Listed{}, ErrInvalid
 	}
 	return listed[0], nil
-}
-
-func observationRowMap(o Observation) map[string]any {
-	var integer any
-	if o.HasInteger {
-		integer = o.ValueInteger
-	}
-	return map[string]any{
-		"id":                 database.UUIDJSON(o.ID),
-		"ref":                o.Ref,
-		"citation_id":        database.UUIDJSON(o.CitationID),
-		"subject_id":         database.UUIDJSON(o.SubjectID),
-		"property_id":        database.UUIDJSON(o.PropertyID),
-		"polarity":           o.Polarity,
-		"value_text":         database.NullString(o.ValueText),
-		"value_integer":      integer,
-		"value_date_id":      database.UUIDJSON(o.ValueDateID),
-		"value_name_id":      database.UUIDJSON(o.ValueNameID),
-		"value_subject_id":   database.UUIDJSON(o.ValueSubjectID),
-		"value_term_id":      database.UUIDJSON(o.ValueTermID),
-		"value_depiction_id": database.UUIDJSON(o.ValueDepictionID),
-	}
 }
 
 type rowScanner interface {

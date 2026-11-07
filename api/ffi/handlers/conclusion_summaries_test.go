@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -233,7 +234,7 @@ func citedEvent(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
-			{SubjectID: s.ID, PropertyID: name.ID, ValueText: "The Great Fire", HasText: true},
+			{SubjectID: s.ID, PropertyID: name.ID, Scalar: propertymeta.TextScalar("The Great Fire")},
 			{SubjectID: s.ID, PropertyID: eventType.ID, ValueTermID: term.ID},
 			{SubjectID: s.ID, PropertyID: dateProp.ID, Date: datevaluetest.YMD(1849, 0, 0)},
 		}...)
@@ -310,8 +311,8 @@ func citedPlace(t *testing.T) (dir, entityID string) {
 			return err
 		}
 		_, _, err = observationstest.Cite(c, userID[:], s.GraphID, art.ID, `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`, []observations.Input{
-			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-			{SubjectID: s.ID, PropertyID: toponym.ID, ValueText: "Toronto", HasText: true},
+			{SubjectID: s.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("York")},
+			{SubjectID: s.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("Toronto")},
 		}...)
 		if err != nil {
 			return err

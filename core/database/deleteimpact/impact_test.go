@@ -244,7 +244,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 				GraphID:    graph,
 				ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Leeds",
 			}, []observations.Input{{
-				SubjectID: place.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true,
+				SubjectID: place.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("Leeds"),
 			}})
 		})
 		if err != nil {
@@ -296,7 +296,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		for i := range inputs {
 			inputs[i] = observations.Input{
 				SubjectID: place.ID, PropertyID: toponym.ID,
-				ValueText: fmt.Sprintf("name-%02d", i), HasText: true,
+				Scalar: propertymeta.TextScalar(fmt.Sprintf("name-%02d", i)),
 			}
 		}
 		res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, inputs...)
@@ -385,11 +385,45 @@ func TestImpactCitationAndSubject(t *testing.T) {
 			}
 		})
 
+		t.Run("a released boolean facet audits its false", func(t *testing.T) {
+			tx, err := c.BeginWrite()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				_ = tx.Rollback()
+				c.EndWrite()
+			}()
+			if _, err := tx.Exec(`UPDATE observations SET value_term_id = NULL, value_boolean = 0
+				WHERE subject_id = ? AND property_id = ?`, bridge.Subject.ID, roleProp.ID); err != nil {
+				t.Fatal(err)
+			}
+			changes, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, bridge.Subject.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, ch := range changes {
+				if ch.EntityType != "observation" {
+					continue
+				}
+				if d := ch.Fields["value_boolean"]; d.Old != nil {
+					found = true
+					if d.Old != false {
+						t.Fatalf("audited value_boolean %v, want false", d.Old)
+					}
+				}
+			}
+			if !found {
+				t.Fatal("no released Observation audited a value_boolean")
+			}
+		})
+
 		t.Run("bridge extra observation inbound", func(t *testing.T) {
 			subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 			if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 				return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
-					SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
+					SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("extra"),
 				}})
 			}); err != nil {
 				t.Fatal(err)
@@ -444,7 +478,7 @@ func TestImpactCitationAndSubject(t *testing.T) {
 		}
 		subjectvocabtest.Assign(t, c, userID, personType.ID, userRole.ID)
 		res, _, err := observationstest.Cite(c, userID, graph, art.ID, testLocator, []observations.Input{{
-			SubjectID: alice.ID, PropertyID: userRole.ID, ValueText: "witness", HasText: true,
+			SubjectID: alice.ID, PropertyID: userRole.ID, Scalar: propertymeta.TextScalar("witness"),
 		}}...)
 		if err != nil {
 			t.Fatal(err)
@@ -1059,7 +1093,7 @@ func TestLocationsNameTheirGraph(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cited, _, err := observationstest.Cite(c, userID, jones.ID, page.ID, testLocator, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, ValueText: "Leeds", HasText: true}}...)
+	cited, _, err := observationstest.Cite(c, userID, jones.ID, page.ID, testLocator, []observations.Input{{SubjectID: subject.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("Leeds")}}...)
 	if err != nil {
 		t.Fatal(err)
 	}

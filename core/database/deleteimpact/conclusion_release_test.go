@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -88,8 +89,8 @@ func newConclusionFixture(t *testing.T) conclusionFixture {
 			GraphID:    graph,
 			ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "York",
 		}, []observations.Input{
-			{SubjectID: a.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
-			{SubjectID: b.ID, PropertyID: toponym.ID, ValueText: "York", HasText: true},
+			{SubjectID: a.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("York")},
+			{SubjectID: b.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("York")},
 		})
 	})
 	if err != nil {

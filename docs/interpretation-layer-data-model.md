@@ -606,6 +606,7 @@ CREATE TABLE properties (
     label           TEXT NOT NULL,
     description     TEXT,
     value_type      TEXT NOT NULL,
+    cardinality     TEXT NOT NULL DEFAULT 'single' CHECK (cardinality IN ('single', 'multiple')),
 
     UNIQUE (key, origin),
     CHECK (value_type IN (
@@ -615,8 +616,10 @@ CREATE TABLE properties (
         'name',
         'subject',
         'term',
-        'depiction'
-    ))
+        'depiction',
+        'boolean'
+    )),
+    CHECK (value_type <> 'boolean' OR cardinality = 'single')
 ) STRICT;
 ```
 
@@ -624,7 +627,9 @@ CREATE TABLE properties (
 
 A Property's `value_type` is intrinsic to the Property. Seeded Properties (for example `name`, `event_type`, `role`, `person`, `mentions`, `remark`) and their `subject_type_properties` bindings are listed in [`seeded-vocabulary.md`](seeded-vocabulary.md).
 
-Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**, and **`depiction`**. `real` and `boolean` are not used.
+Product value types are **`text`**, **`integer`**, **`date`**, **`name`**, **`subject`**, **`term`**, **`depiction`**, and **`boolean`**. `real` is not used. `core/propertymeta` `Types` declares them once, with which a researcher may create and which are single-valued only; the app reads that table from `GetPropertiesWorkspace`.
+
+`value_type = 'boolean'` is a yes/no fact ("literate", "veteran"): `observations.value_boolean` holds 0 or 1, so false is a recorded value, not an absent one. A boolean Property is single-valued only: two answers to a yes/no are a conflict to show (state `mixed`), not two values to keep. Values compare equal or different, and reconcile as integers do. A researcher cannot create a boolean Property until S14-37 marks the type creatable; no seeded Property is boolean.
 
 `value_type = 'term'` means the Observation value is a row in `property_terms` for that Property (§5.1.1). Kind and edge Properties (`event_type`, `role`, `relationship_type`) use `term`.
 
@@ -861,9 +866,11 @@ date
 name
 subject
 term
+depiction
+boolean
 ```
 
-(`real` and `boolean` are not product value types.)
+(`real` is not a product value type.)
 
 A provisional SQL shape is:
 
@@ -878,6 +885,7 @@ CREATE TABLE observations (
 
     value_text      TEXT,
     value_integer   INTEGER,
+    value_boolean   INTEGER CHECK (value_boolean IN (0, 1)),
     value_date_id   BLOB REFERENCES date_values(id),
     value_name_id   BLOB REFERENCES name_values(id),
     value_subject_id BLOB REFERENCES subjects(id),

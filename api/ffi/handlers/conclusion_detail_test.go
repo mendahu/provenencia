@@ -129,6 +129,14 @@ func TestConclusionValueProtoCoversEveryKind(t *testing.T) {
 			_, ok := v.GetKind().(*engine.ConclusionValue_Integer)
 			return ok
 		}},
+		{"boolean true", conclusiondetails.Value{Boolean: true, HasBoolean: true}, func(v *engine.ConclusionValue) bool {
+			_, ok := v.GetKind().(*engine.ConclusionValue_Boolean)
+			return ok && v.GetBoolean()
+		}},
+		{"boolean false is a value, not an empty one", conclusiondetails.Value{HasBoolean: true}, func(v *engine.ConclusionValue) bool {
+			_, ok := v.GetKind().(*engine.ConclusionValue_Boolean)
+			return ok && !v.GetBoolean()
+		}},
 		{"term", conclusiondetails.Value{TermID: term, TermKey: "male", TermLabel: "Male", TermOrigin: "user"}, func(v *engine.ConclusionValue) bool {
 			tm := v.GetTerm()
 			return tm.GetId() == database.UUIDString(term) && tm.GetKey() == "male" && tm.GetLabel() == "Male" && tm.GetOrigin() == "user"

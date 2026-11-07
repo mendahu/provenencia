@@ -1,11 +1,9 @@
 import Foundation
 import Observation
 
-/// Researcher-creatable Property value types (S7-05). Schema also has `term`
-/// and `depiction` (registry-only) — never offered here.
+/// Property value type wording. Which types a researcher may create is Go's
+/// rule (`propertymeta.Types`), read from the snapshot.
 enum SubjectPropertyValueType {
-    static let researcherCreatable = ["text", "integer", "date", "name", "subject"]
-
     static func label(_ valueType: String) -> LocalizedStringResource {
         PropertyValueType(rawValue: valueType)?.label ?? L10n.Properties.valueTypeText
     }
@@ -144,7 +142,28 @@ final class PropertiesModel {
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return !label.isEmpty
             && !FieldSlug.kebab(label).isEmpty
-            && SubjectPropertyValueType.researcherCreatable.contains(draft.valueType)
+            && acceptsValueType(draft.valueType)
+    }
+
+    /// The create picker's types: Go's creatable list, or the draft's own type
+    /// until the first load (⌘N and Add can open create before it).
+    var offeredValueTypes: [String] {
+        snapshot.valueTypeRules.isEmpty
+            ? [draft?.valueType ?? PropertyValueType.text.rawValue]
+            : snapshot.creatableValueTypes
+    }
+
+    /// Whether create takes a value type. While the first load is pending Go
+    /// decides, and its refusal shows through the create error path. After a
+    /// failed load there is no list to go by, so create takes nothing.
+    func acceptsValueType(_ valueType: String) -> Bool {
+        if snapshot.valueTypeRules.isEmpty { return loadError == nil }
+        return snapshot.creatableValueTypes.contains(valueType)
+    }
+
+    /// The failed first load that leaves create with no value types to offer.
+    var createLoadError: Error? {
+        snapshot.valueTypeRules.isEmpty ? loadError : nil
     }
 
     var showsDelete: Bool { selectedProperty != nil }
@@ -295,7 +314,7 @@ final class PropertiesModel {
         let label = prefillLabel
         draft = Draft(
             label: label,
-            valueType: "text",
+            valueType: PropertyValueType.text.rawValue,
             description: "",
             cardinality: PropertyCardinality.single.rawValue,
             bindTypeIDs: bind
@@ -457,7 +476,7 @@ final class PropertiesModel {
             formError = L10n.string(L10n.Properties.errorLabelRequired)
             return nil
         }
-        guard SubjectPropertyValueType.researcherCreatable.contains(draft.valueType) else {
+        guard acceptsValueType(draft.valueType) else {
             formError = L10n.string(L10n.Properties.errorValueType)
             return nil
         }

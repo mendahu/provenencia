@@ -46,7 +46,7 @@ func TestProperties(t *testing.T) {
 			name: "rejects bad value type",
 			run: func(t *testing.T, c *database.Catalog, _ []byte) {
 				if _, err := properties.Upsert(c, properties.Property{
-					Key: "x", Origin: vocabkey.OriginUser, Label: "X", ValueType: "boolean",
+					Key: "x", Origin: vocabkey.OriginUser, Label: "X", ValueType: "real",
 				}); !errors.Is(err, properties.ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -203,5 +203,130 @@ func TestProperties(t *testing.T) {
 			}
 			tt.run(t, c, userID)
 		})
+	}
+}
+
+func newPropertiesCatalog(t *testing.T) (*database.Catalog, []byte) {
+	t.Helper()
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	return c, userID
+}
+
+func TestValueTypeRules(t *testing.T) {
+	create := func(c *database.Catalog, userID []byte, label, valueType, cardinality string) error {
+		_, err := writes.Call(c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+			return properties.Create(tx, userID, label, valueType, "", cardinality)
+		})
+		return err
+	}
+	tests := []struct {
+		name string
+		run  func(c *database.Catalog, userID []byte) error
+		want error
+		// stored is the (value type, cardinality) read back for key, when set.
+		key, storedType, storedCard string
+	}{
+		{
+			name: "upsert boolean empty cardinality is single",
+			run: func(c *database.Catalog, _ []byte) error {
+				_, err := properties.Upsert(c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+				return err
+			},
+			key: "literate", storedType: propertymeta.ValueTypeBoolean, storedCard: propertymeta.CardinalitySingle,
+		},
+		{
+			name: "upsert boolean multiple is refused",
+			run: func(c *database.Catalog, _ []byte) error {
+				_, err := properties.Upsert(c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean, Cardinality: propertymeta.CardinalityMultiple})
+				return err
+			},
+			want: properties.ErrInvalid,
+		},
+		{
+			name: "create boolean is not researcher-creatable yet",
+			run: func(c *database.Catalog, userID []byte) error {
+				return create(c, userID, "Literate", propertymeta.ValueTypeBoolean, "")
+			},
+			want: properties.ErrInvalid,
+		},
+		{
+			name: "create integer multiple is allowed",
+			run: func(c *database.Catalog, userID []byte) error {
+				return create(c, userID, "Ages", propertymeta.ValueTypeInteger, propertymeta.CardinalityMultiple)
+			},
+			key: "ages", storedType: propertymeta.ValueTypeInteger, storedCard: propertymeta.CardinalityMultiple,
+		},
+		{
+			name: "create term is refused",
+			run: func(c *database.Catalog, userID []byte) error {
+				return create(c, userID, "Kind", propertymeta.ValueTypeTerm, "")
+			},
+			want: properties.ErrInvalid,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, userID := newPropertiesCatalog(t)
+			err := tt.run(c, userID)
+			if tt.want != nil {
+				if !errors.Is(err, tt.want) {
+					t.Fatalf("got %v, want %v", err, tt.want)
+				}
+				list, lerr := properties.List(c)
+				if lerr != nil || len(list) != 0 {
+					t.Fatalf("rows after refusal: %v %d", lerr, len(list))
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := properties.Lookup(c, tt.key, vocabkey.OriginUser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.ValueType != tt.storedType || got.Cardinality != tt.storedCard {
+				t.Fatalf("got %s/%s, want %s/%s", got.ValueType, got.Cardinality, tt.storedType, tt.storedCard)
+			}
+		})
+	}
+}
+
+func TestBooleanCardinalityStaysSingle(t *testing.T) {
+	c, userID := newPropertiesCatalog(t)
+	id, err := properties.Upsert(c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = writes.Call(c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		return properties.Update(tx, userID, id, "Literate", propertymeta.ValueTypeBoolean, "", propertymeta.CardinalityMultiple)
+	})
+	if !errors.Is(err, properties.ErrInvalid) {
+		t.Fatalf("got %v", err)
+	}
+	got, err := properties.GetByID(c, id)
+	if err != nil || got.Cardinality != propertymeta.CardinalitySingle {
+		t.Fatalf("row changed: %v %+v", err, got)
+	}
+
+	// The table holds the rule too, not only the Go write paths.
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE properties SET cardinality = 'multiple' WHERE id = ?`, id); err == nil {
+		t.Fatal("the table accepted a multiple-valued boolean Property")
 	}
 }

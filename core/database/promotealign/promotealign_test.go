@@ -39,6 +39,7 @@ import (
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -153,7 +154,7 @@ func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string)
 	f.t.Helper()
 	s := f.bare(src, "place")
 	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("toponym").ID, ValueText: name, HasText: true,
+		PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name),
 	})
 	return s
 }

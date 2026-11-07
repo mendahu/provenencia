@@ -6,6 +6,8 @@ import (
 	"os"
 	"slices"
 	"sort"
+
+	"github.com/mendahu/provenencia/core/propertymeta"
 )
 
 // VerifyMode reports whether PROVENENCIA_GRAPH_VERIFY=1, which rebuilds and checks the cache after every commit.
@@ -15,13 +17,10 @@ func VerifyMode() bool {
 
 // TruthRow is one value a fresh reconcile would write for an entity.
 type TruthRow struct {
-	PropertyID  []byte
-	Rank        int
-	Reason      string
-	Text        string
-	HasText     bool
-	Integer     int64
-	HasInteger  bool
+	PropertyID []byte
+	Rank       int
+	Reason     string
+	propertymeta.Scalar
 	TermID      []byte
 	EntityID    []byte
 	Date        []byte
@@ -255,8 +254,7 @@ func valueEqual(v Value, t TruthRow) bool {
 // any reader displays.
 func SameDisplay(a, b TruthRow) bool {
 	return bytes.Equal(a.PropertyID, b.PropertyID) && a.Rank == b.Rank && a.Reason == b.Reason &&
-		a.HasText == b.HasText && a.Text == b.Text &&
-		a.HasInteger == b.HasInteger && a.Integer == b.Integer &&
+		a.Scalar == b.Scalar &&
 		bytes.Equal(a.TermID, b.TermID) &&
 		bytes.Equal(a.EntityID, b.EntityID) &&
 		bytes.Equal(a.Date, b.Date) &&
@@ -268,7 +266,7 @@ func SameDisplay(a, b TruthRow) bool {
 func rowOf(v Value, property []byte) TruthRow {
 	return TruthRow{
 		PropertyID: property, Rank: v.Rank, Reason: v.Reason,
-		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
+		Scalar: v.Scalar,
 		TermID: v.TermID, EntityID: v.EntityID, Date: v.Date, Name: v.Name, ImageFileID: v.ImageFileID,
 		Support: v.Support, Against: v.Against,
 	}

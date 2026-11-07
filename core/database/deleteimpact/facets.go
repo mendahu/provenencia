@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/observationrow"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -409,16 +410,8 @@ func releaseConnectionFacets(tx *sql.Tx, subjectID []byte) (released, error) {
 // owned date / name values, auditing the full row. Only connection-facet
 // release uses it; ordinary Observations go through observations.Delete.
 func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
-	var (
-		obsID, citationID, subjectID, propertyID, dateID, nameID, valueSubjectID, termID, depictionID []byte
-		ref, polarity                                                                                 string
-		text                                                                                          sql.NullString
-		integer                                                                                       sql.NullInt64
-	)
-	if err := tx.QueryRow(`SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
-		FROM observations WHERE id = ?`, id).Scan(&obsID, &ref, &citationID, &subjectID, &propertyID,
-		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
+	row, err := observationrow.Scan(tx.QueryRow(`SELECT `+observationrow.Columns+` FROM observations WHERE id = ?`, id))
+	if err != nil {
 		return released{}, err
 	}
 	out, err := releaseFacets(tx, catalogmodel.KindObservation, id)
@@ -437,29 +430,11 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 		return released{}, err
 	}
 	out.Objects = append(out.Objects, objects...)
-	var integerJSON any
-	if integer.Valid {
-		integerJSON = integer.Int64
-	}
 	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "observation",
-		EntityID:   obsID,
+		EntityID:   row.ID,
 		Action:     rowchange.ActionDelete,
-		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                 database.UUIDJSON(obsID),
-			"ref":                ref,
-			"citation_id":        database.UUIDJSON(citationID),
-			"subject_id":         database.UUIDJSON(subjectID),
-			"property_id":        database.UUIDJSON(propertyID),
-			"polarity":           polarity,
-			"value_text":         nullStringJSON(text),
-			"value_integer":      integerJSON,
-			"value_date_id":      database.UUIDJSON(dateID),
-			"value_name_id":      database.UUIDJSON(nameID),
-			"value_subject_id":   database.UUIDJSON(valueSubjectID),
-			"value_term_id":      database.UUIDJSON(termID),
-			"value_depiction_id": database.UUIDJSON(depictionID),
-		}),
+		Fields:     rowchange.DeletedRow(row.AuditFields()),
 	})
 	return out, nil
 }

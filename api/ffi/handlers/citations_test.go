@@ -12,13 +12,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/locator"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -1375,4 +1379,57 @@ func TestDepictionStagesBeforeSession(t *testing.T) {
 			t.Fatalf("temps left: %v", temps)
 		}
 	})
+}
+
+// A false answer crosses the wire as present: the draft's value_boolean = false
+// is stored, and the response Observation carries value_boolean = false.
+func TestCreateCitationBooleanObservation(t *testing.T) {
+	dir, userID, _, artifactID, placeID, _ := citationFixture(t)
+	var propID string
+	if err := withProjectCatalog(dir, func(c *database.Catalog) error {
+		id, err := properties.Upsert(c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+		if err != nil {
+			return err
+		}
+		propID = uuid.UUID(id).String()
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		subject := uuid.MustParse(placeID)
+		_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order)
+			SELECT subject_type_id, ?, 99 FROM subjects WHERE id = ?`, id, subject[:])
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	no := false
+	var created engine.CreateCitationWithObservationsResponse
+	mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{{SubjectId: placeID, PropertyId: propID, ValueBoolean: &no}},
+	}, &created)
+	if len(created.Observations) != 1 {
+		t.Fatalf("observations %+v", created.Observations)
+	}
+	got := created.Observations[0]
+	if got.ValueBoolean == nil || *got.ValueBoolean {
+		t.Fatalf("value_boolean %v, want present and false", got.ValueBoolean)
+	}
+	if got.ValueInteger != nil || got.GetValueText() != "" {
+		t.Fatalf("other values set: %+v", got)
+	}
+
+	// The graph-backed read keeps the false too: the Citation read lists the
+	// row from the source's Evidence graph, which is what the Citation page shows.
+	var read engine.GetCitationResponse
+	mustRPC(t, GetCitation, &engine.GetCitationRequest{
+		ProjectDir: dir, CitationId: created.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID),
+	}, &read)
+	if len(read.Observations) != 1 {
+		t.Fatalf("read observations %+v", read.Observations)
+	}
+	if v := read.Observations[0].ValueBoolean; v == nil || *v {
+		t.Fatalf("read value_boolean %v, want present and false", v)
+	}
 }

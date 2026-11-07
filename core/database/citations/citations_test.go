@@ -25,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/locator"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -172,7 +173,7 @@ func TestCitations(t *testing.T) {
 				}, []observations.Input{
 					{
 						SubjectID: s.place.ID, PropertyID: s.toponymProp.ID,
-						ValueText: "Boston", HasText: true,
+						Scalar: propertymeta.TextScalar("Boston"),
 					},
 					{
 						SubjectID: s.person.ID, PropertyID: s.sexProp.ID,
@@ -214,7 +215,7 @@ func TestCitations(t *testing.T) {
 				if err != nil || len(placeObs) != 1 {
 					t.Fatalf("place obs %v len=%d", err, len(placeObs))
 				}
-				if !placeObs[0].HasText || placeObs[0].ValueText != "Boston" {
+				if !placeObs[0].HasText || placeObs[0].Text != "Boston" {
 					t.Fatalf("toponym %+v", placeObs[0])
 				}
 			},

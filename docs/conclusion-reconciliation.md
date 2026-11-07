@@ -134,11 +134,14 @@ Each module answers three questions:
 | --- | --- | --- | --- | --- |
 | **text** | the same words, ignoring case, punctuation and spacing (value compare's `Same`; *Sainte-Anne* = *Sainte Anne*; *god-father* = *godfather*); accents count (*Montréal*, *Montreal* are two) | none | the best-ranked member's text | empty |
 | **integer** | equal (value compare's `Same`) | none | the value | — |
+| **boolean** | equal (value compare's `Same`) | none | the value | — |
 | **term** | same term | none | the term | terms flagged `property_terms.neutral` (seeded on *unknown*, *indeterminate*) |
 | **subject** | candidate Subjects map to the **same handle**; unpromoted Subjects drop out | none | the handle (an edge of the canonical graph) | unpromoted |
 | **date** | the same span of days (§7.1) | span containment | §7.1 | empty |
 | **name** | §7.2 | containment per part type (§7.2) | §7.2 | no parts |
 | **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalue.Readable` refuses |
+
+A boolean follows the integer rules, with one caveat: negative polarity is not folded into the value. A negative `true` denies positive `true` candidates; it does not create a `false`. A boolean Property is single-valued, so two Sources that answer differently read `mixed`, and a `false` is a recorded value, never an absent one.
 
 A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The gallery shows each record's own `depiction_values.image_file_id`, not the reconciler cache copy. The Person page lists no depiction field.
 
@@ -274,7 +277,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 
 | Piece | Where |
 | --- | --- |
-| Shared pipeline and simple modules (text, integer, term); every value cached with its reason | `core/autoreconcile` |
+| Shared pipeline and simple modules (text, integer, boolean, term); every value cached with its reason | `core/autoreconcile` |
 | Names: parts by type, containment per part type, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
 | Dates: value compare's span keys and containment fold, ABT as a range; `date_lo` / `date_hi` and `sort_key` as written | `core/autoreconcile` |
 | Per-Property cardinality on that same pipeline | `core/autoreconcile` |

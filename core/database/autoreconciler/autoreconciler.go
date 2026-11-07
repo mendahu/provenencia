@@ -44,6 +44,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -126,9 +127,9 @@ const (
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
 
 	sqlInsert = `INSERT INTO auto_reconciler_values
-		(entity_id, property_id, rank, value_text, value_integer, value_term_id,
+		(entity_id, property_id, rank, value_text, value_integer, value_boolean, value_term_id,
 		 value_entity_id, value_date, value_name, value_image_file_id, date_lo, date_hi, sort_key, support, against, reason)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 	// One row per Observation on an accepted or provisional member of the
 	// batch (rejected members don't count), with its evidence: polarity, the
@@ -136,7 +137,7 @@ const (
 	// the provenencia default grade (standard); no assessment, no grade, or no
 	// vocabulary reads as 0.
 	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_term_id,
+			o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_term_id,
 			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
 			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
@@ -456,8 +457,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		var (
 			entityID, obsID, propertyID       []byte
 			valueType, cardinality            string
-			text                              sql.NullString
-			integer                           sql.NullInt64
+			scalar                            scalarcols.Columns
 			dateID, nameID, termID, subjectID []byte
 			depictionID, imageID              []byte
 			region, locatorJSON, mediaType    sql.NullString
@@ -467,7 +467,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			sourceID                          []byte
 			provenance                        autoreconcile.Provenance
 		)
-		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &text, &integer, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
 			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
 		if err := rows.Scan(dest...); err != nil {
@@ -482,8 +482,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			groups = append(groups, g)
 		}
 		c := autoreconcile.Candidate{ObservationID: obsID, Value: autoreconcile.Value{
-			Text: text.String, HasText: text.Valid,
-			Integer: integer.Int64, HasInteger: integer.Valid,
+			Scalar: scalar.Scalar(),
 			TermID: termID, TermKey: termKey, Neutral: neutral, SubjectID: subjectID,
 			Depiction: depictionvalues.FromJoin(depictionID, region, imageID, locatorJSON, mediaType),
 		}, SourceID: sourceID, Negative: negative, Provisional: provisional,
@@ -571,7 +570,6 @@ func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
 func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Value) error {
 	var (
 		text, sortKey  any
-		integer        any
 		termID         any
 		valueEntity    any
 		imageFileID    any
@@ -581,8 +579,13 @@ func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Val
 	if row.HasText {
 		text = row.Text
 	}
+	var integer *int64
 	if row.HasInteger {
-		integer = row.Integer
+		integer = &row.Integer
+	}
+	var boolean *bool
+	if row.HasBoolean {
+		boolean = &row.Boolean
 	}
 	if len(row.TermID) > 0 {
 		termID = row.TermID
@@ -612,7 +615,7 @@ func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Val
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, integer, termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, database.NullInt64(integer), database.NullBool(boolean), termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
 		row.Support, row.Against, row.Reason)
 	return err
 }

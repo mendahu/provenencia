@@ -21,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -321,7 +322,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := observationstest.Cite(c, userID, f.jones.ID, page2.ID, pageLocator, []observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, ValueText: "Bea", HasText: true}}...); err != nil {
+	if _, _, err := observationstest.Cite(c, userID, f.jones.ID, page2.ID, pageLocator, []observations.Input{{SubjectID: f.bea.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("Bea")}}...); err != nil {
 		t.Fatal(err)
 	}
 	f.other = newSource("Elsewhere")

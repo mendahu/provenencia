@@ -26,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/subjectvocab/subjectvocabtest"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -204,7 +205,7 @@ func TestSubjectDelete(t *testing.T) {
 		subjectvocabtest.Assign(t, c, userID, bridge.Subject.SubjectTypeID, toponym.ID)
 		if _, err := writes.Call(c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, bridge.Citation.ID, []observations.Input{{
-				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, ValueText: "extra", HasText: true,
+				SubjectID: bridge.Subject.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("extra"),
 			}})
 		}); err != nil {
 			t.Fatal(err)

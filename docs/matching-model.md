@@ -46,7 +46,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 
 | Term | Means |
 | --- | --- |
-| **value** | One recorded fact of one value type: a name, a date, a piece of text, a term, an integer |
+| **value** | One recorded fact of one value type: a name, a date, a piece of text, a term, an integer, a picture, a yes/no |
 | **value type** | The kind of a value; each has its own value comparison |
 | **speaking pair** | The one pair of values, one from each side, that decides a property comparison |
 | **relation** | What kind of match two values are: `Same`, `Equivalent`, `Contains`, `Overlaps`, `Near`, `Different` or `Unknown` |

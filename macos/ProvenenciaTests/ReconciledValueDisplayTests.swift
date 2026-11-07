@@ -146,6 +146,14 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.emptyText(propertyKey: "occupation") == "Nothing recorded")
     }
 
+    /// T-13 (AC-4.4): a boolean reads Yes or No, from the one function that words it.
+    @Test func aBooleanReadsAsYesOrNo() {
+        #expect(ReconciledValueDisplay.string(for: .boolean(true), propertyKey: "literate") == "Yes")
+        #expect(ReconciledValueDisplay.string(for: .boolean(false), propertyKey: "literate") == "No")
+        #expect(PropertyValueType.booleanText(true) == "Yes")
+        #expect(PropertyValueType.booleanText(false) == "No")
+    }
+
     @Test func valuesUseTheirOwnDisplays() {
         let en = Locale(identifier: "en_US")
         #expect(ReconciledValueDisplay.string(for: .none, propertyKey: "occupation") == "")

@@ -99,6 +99,8 @@ enum ReconciledValueDisplay {
             return text.trimmingCharacters(in: .whitespacesAndNewlines)
         case .integer(let integer):
             return integer.formatted(.number.grouping(.never).locale(locale))
+        case .boolean(let value):
+            return PropertyValueType.booleanText(value)
         case .term:
             return PropertyTermDisplay.name(value, propertyKey: propertyKey) ?? ""
         case .date(let date):

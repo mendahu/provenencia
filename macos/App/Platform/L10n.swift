@@ -7306,6 +7306,21 @@ enum L10n {
             defaultValue: "Integer",
             comment: "Property value type label: integer"
         )
+        static let valueTypeBoolean = LocalizedStringResource(
+            "properties.valueType.boolean",
+            defaultValue: "Yes / no",
+            comment: "Property value type label: boolean (a yes/no fact)"
+        )
+        static let valueBooleanYes = LocalizedStringResource(
+            "properties.value.booleanYes",
+            defaultValue: "Yes",
+            comment: "A boolean Property value that is true"
+        )
+        static let valueBooleanNo = LocalizedStringResource(
+            "properties.value.booleanNo",
+            defaultValue: "No",
+            comment: "A boolean Property value that is false"
+        )
         static let valueTypeDate = LocalizedStringResource(
             "properties.valueType.date",
             defaultValue: "Date",

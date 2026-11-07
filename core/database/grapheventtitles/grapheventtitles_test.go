@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -143,7 +144,7 @@ func TestForEvidenceGraph(t *testing.T) {
 		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
 	}
 	text := func(key, v string) observations.Input {
-		return observations.Input{PropertyID: f.prop(key), ValueText: v, HasText: true}
+		return observations.Input{PropertyID: f.prop(key), Scalar: propertymeta.TextScalar(v)}
 	}
 	james := f.subject("person", "James", name("James Robins"))
 	mary := f.subject("person", "Mary", name("Mary Smith"))

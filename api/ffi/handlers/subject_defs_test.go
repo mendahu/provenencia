@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -259,4 +260,20 @@ func TestAssignRemoveSubjectTypePropertyAreAudited(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertLatestAuditAction(t, dir, "remove_subject_type_property")
+}
+
+// The workspace sends propertymeta.Types, field for field and in order.
+func TestGetPropertiesWorkspaceValueTypes(t *testing.T) {
+	dir, _, _, _ := subjectFixture(t)
+	var got engine.GetPropertiesWorkspaceResponse
+	mustRPC(t, GetPropertiesWorkspace, &engine.GetPropertiesWorkspaceRequest{ProjectDir: dir}, &got)
+	if len(got.ValueTypes) != len(propertymeta.Types) {
+		t.Fatalf("value_types %d, want %d", len(got.ValueTypes), len(propertymeta.Types))
+	}
+	for i, want := range propertymeta.Types {
+		r := got.ValueTypes[i]
+		if r.GetValueType() != want.ValueType || r.GetResearcherCreatable() != want.ResearcherCreatable || r.GetSingleOnly() != want.SingleOnly {
+			t.Errorf("value_types[%d] = %+v, want %+v", i, r, want)
+		}
+	}
 }

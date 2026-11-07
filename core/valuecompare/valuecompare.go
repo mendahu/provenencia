@@ -151,13 +151,14 @@ type PartMatch struct {
 
 // Value is one value to compare. Type is a propertymeta.ValueType* constant.
 // Text is present when NormalizeForm leaves a word, a term when its key is
-// non-empty; an integer is always present; a date is present when not nil.
+// non-empty; an integer and a boolean are always present; a date is present when not nil.
 // Ref is the caller's id for the value, echoed in the Detail.
 type Value struct {
 	Type    string
 	Text    string
 	Term    string
 	Integer int64
+	Boolean bool
 	// Name is a name value; only its Parts are read. NamePattern is the stored
 	// name-format key that gives the parts their roles and weights.
 	Name        *namevalue.Value
@@ -179,6 +180,7 @@ var comparers = map[string]comparer{
 	propertymeta.ValueTypeText:    text{},
 	propertymeta.ValueTypeTerm:    term{},
 	propertymeta.ValueTypeInteger: integer{},
+	propertymeta.ValueTypeBoolean: boolean{},
 	propertymeta.ValueTypeDate:    date{},
 	propertymeta.ValueTypeName:    name{},
 

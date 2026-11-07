@@ -2,6 +2,7 @@ package autoreconciler_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/gallery"
@@ -260,7 +262,7 @@ func nameValue(spec string) *namevalue.Value {
 }
 
 func textIn(s subjects.Subject, p properties.Property, v string) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, ValueText: v, HasText: true}
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Scalar: propertymeta.TextScalar(v)}
 }
 
 func termIn(s subjects.Subject, p properties.Property, term propertyterms.Term) observations.Input {
@@ -268,7 +270,7 @@ func termIn(s subjects.Subject, p properties.Property, term propertyterms.Term) 
 }
 
 func intIn(s subjects.Subject, p properties.Property, n int64) observations.Input {
-	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, ValueInteger: n, HasInteger: true}
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Scalar: propertymeta.IntegerScalar(n)}
 }
 
 func ip(n int) *int { return &n }
@@ -1833,5 +1835,124 @@ func TestValueRulesNamesInvariants(t *testing.T) {
 				t.Fatalf("%s: input order changed the result (%v)", where, err)
 			}
 		}
+	}
+}
+
+func boolIn(s subjects.Subject, p properties.Property, v bool) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, Scalar: propertymeta.BooleanScalar(v)}
+}
+
+// Two Sources saying true are one cached true with support 2; losing one
+// leaves support 1, and the cache still equals a rebuild.
+func TestReconciledBoolean(t *testing.T) {
+	f := newFixture(t)
+	id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	must(t, err)
+	literate := properties.Property{ID: id, Key: "literate", ValueType: propertymeta.ValueTypeBoolean}
+	f.bind("person", id)
+	a := f.subject("person")
+	b := f.subjectOn(f.other, "person")
+	f.cite(boolIn(a, literate, true))
+	second := f.cite(boolIn(b, literate, true))
+	h := f.promote(a)
+	f.join(b, h)
+
+	db, err := f.c.DB()
+	must(t, err)
+	cached := func() (n, support int, value int) {
+		t.Helper()
+		must(t, db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(support), 0), COALESCE(MAX(value_boolean), -1)
+			FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, h, id).Scan(&n, &support, &value))
+		return n, support, value
+	}
+	// loadedTrue loads the handle into the graph, so Verify has a node to
+	// compare, and reads the one cached rank as a present true.
+	loadedTrue := func(handle []byte) {
+		t.Helper()
+		node, err := f.c.Graph().Node(handle)
+		must(t, err)
+		ranks := node.Values[string(id)]
+		if len(ranks) != 1 || !ranks[0].HasBoolean || !ranks[0].Boolean {
+			t.Fatalf("graph ranks %+v, want one present true", ranks)
+		}
+	}
+	if n, support, value := cached(); n != 1 || support != 2 || value != 1 {
+		t.Fatalf("cache rows %d support %d value_boolean %d, want 1, 2, 1", n, support, value)
+	}
+	f.assertUpkeepEqualsRebuild("TestReconciledBoolean merged")
+	loadedTrue(h)
+	must(t, f.c.Graph().Verify())
+
+	_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, userID, second[0].ID)
+		return struct{}{}, changes, err
+	})
+	must(t, err)
+	if n, support, value := cached(); n != 1 || support != 1 || value != 1 {
+		t.Fatalf("after delete: rows %d support %d value_boolean %d, want 1, 1, 1", n, support, value)
+	}
+	f.assertUpkeepEqualsRebuild("TestReconciledBoolean after delete")
+	loadedTrue(h)
+	must(t, f.c.Graph().Verify())
+}
+
+// A yes/no column holding anything but 0 or 1 reads as absent rather than
+// failing the read, so a damaged row never blocks the repair that rewrites it.
+func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
+	f := newFixture(t)
+	id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	must(t, err)
+	literate := properties.Property{ID: id, Key: "literate", ValueType: propertymeta.ValueTypeBoolean}
+	f.bind("person", id)
+	a := f.subject("person")
+	cited := f.cite(boolIn(a, literate, true))
+	h := f.promote(a)
+	db, err := f.c.DB()
+	must(t, err)
+	damage := func(query string, args ...any) {
+		t.Helper()
+		conn, err := db.Conn(context.Background())
+		must(t, err)
+		defer func() { _ = conn.Close() }()
+		_, err = conn.ExecContext(context.Background(), `PRAGMA ignore_check_constraints = ON`)
+		must(t, err)
+		_, err = conn.ExecContext(context.Background(), query, args...)
+		must(t, err)
+		_, err = conn.ExecContext(context.Background(), `PRAGMA ignore_check_constraints = OFF`)
+		must(t, err)
+	}
+
+	damage(`UPDATE auto_reconciler_values SET value_boolean = 2 WHERE entity_id = ? AND property_id = ?`, h, id)
+	var raw int
+	must(t, db.QueryRow(`SELECT value_boolean FROM auto_reconciler_values WHERE entity_id = ?`, h).Scan(&raw))
+	if raw != 2 {
+		t.Fatalf("the cache column holds %d, want the damaged 2", raw)
+	}
+	g := f.c.Graph()
+	g.Drop()
+	n, err := g.Node(h)
+	must(t, err)
+	if len(n.Values[string(id)]) != 1 || n.Values[string(id)][0].HasBoolean {
+		t.Fatalf("a damaged cache boolean read as %+v, want absent", n.Values[string(id)])
+	}
+	tx, err := db.Begin()
+	must(t, err)
+	must(t, autoreconciler.RecomputeTx(tx, [][]byte{h}))
+	must(t, tx.Commit())
+	var stored int
+	must(t, db.QueryRow(`SELECT value_boolean FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, h, id).Scan(&stored))
+	if stored != 1 {
+		t.Fatalf("recompute left value_boolean %d, want 1", stored)
+	}
+
+	damage(`UPDATE observations SET value_boolean = 2 WHERE id = ?`, cited[0].ID)
+	_, err = db.Exec(`UPDATE auto_reconciler_meta SET cache_version = 0`)
+	must(t, err)
+	must(t, autoreconciler.EnsureCatalog(f.c))
+	if _, err := observations.ListByCitation(f.c, cited[0].CitationID); err != nil {
+		t.Fatalf("citation Observation list: %v", err)
+	}
+	if _, err := conclusiondetails.ForEntity(f.c, h); err != nil {
+		t.Fatalf("conclusion detail: %v", err)
 	}
 }

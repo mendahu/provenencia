@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -68,7 +69,7 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: obsID, SubjectID: country.ID, PropertyID: toponymID,
-			ValueText: "Renamed", HasText: true,
+			Scalar: propertymeta.TextScalar("Renamed"),
 		})
 	})
 	must(t, err)

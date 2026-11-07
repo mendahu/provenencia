@@ -73,17 +73,14 @@ var (
 // Value is one Property value. Exactly the field for the Property's
 // value_type is set.
 type Value struct {
-	Text       string
-	HasText    bool
-	Integer    int64
-	HasInteger bool
-	TermID     []byte
-	TermKey    string // the term's key, when known
-	Neutral    bool   // the term is no evidence either way (its catalog flag)
-	SubjectID  []byte // the cited subject
-	EntityID   []byte // that subject's accepted handle, when the loader resolved one
-	Date       *datevalue.Value
-	Name       *namevalue.Value
+	propertymeta.Scalar
+	TermID    []byte
+	TermKey   string // the term's key, when known
+	Neutral   bool   // the term is no evidence either way (its catalog flag)
+	SubjectID []byte // the cited subject
+	EntityID  []byte // that subject's accepted handle, when the loader resolved one
+	Date      *datevalue.Value
+	Name      *namevalue.Value
 	// Depiction is the depiction_values row, read through
 	// depictionvalue.Readable; its ImageFileID is empty when the image is refused.
 	Depiction *depictionvalue.Value
@@ -246,6 +243,8 @@ func Carries(valueType string, v Value) bool {
 		return v.HasText
 	case propertymeta.ValueTypeInteger:
 		return v.HasInteger
+	case propertymeta.ValueTypeBoolean:
+		return v.HasBoolean
 	case propertymeta.ValueTypeTerm:
 		return len(v.TermID) > 0
 	case propertymeta.ValueTypeSubject:
@@ -262,7 +261,8 @@ func Carries(valueType string, v Value) bool {
 
 // SortKey is the text a value sorts by within its Property (the cache's
 // sort_key): normalized form for names, case-folded text, an
-// order-preserving encoding for integers, and the date window's start.
+// order-preserving encoding for integers, "0" or "1" for a boolean, and the
+// date window's start.
 // Terms have no sort key here (ok = false): they sort by label.
 func SortKey(valueType string, v Value) (key string, ok bool) {
 	switch valueType {
@@ -282,6 +282,14 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		}
 		// Offset into uint64 so byte order matches numeric order, negatives included.
 		return fmt.Sprintf("%020d", uint64(v.Integer)^(1<<63)), true
+	case propertymeta.ValueTypeBoolean:
+		if !v.HasBoolean {
+			return "", false
+		}
+		if v.Boolean {
+			return "1", true
+		}
+		return "0", true
 	case propertymeta.ValueTypeDate:
 		if v.Date == nil {
 			return "", false

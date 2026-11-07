@@ -191,6 +191,8 @@ func conclusionValueProto(v conclusiondetails.Value, depiction *engine.Depiction
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Term{Term: term}}
 	case v.HasInteger:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Integer{Integer: v.Integer}}
+	case v.HasBoolean:
+		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Boolean{Boolean: v.Boolean}}
 	case v.HasText:
 		return &engine.ConclusionValue{Kind: &engine.ConclusionValue_Text{Text: v.Text}}
 	}

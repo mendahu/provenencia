@@ -24,6 +24,10 @@ func name(n byte, form string) Candidate {
 	return Candidate{ObservationID: id(n), Value: Value{Name: &namevalue.Value{Form: form}}}
 }
 
+func boolean(n byte, v bool) Candidate {
+	return Candidate{ObservationID: id(n), Value: Value{Boolean: v, HasBoolean: true}}
+}
+
 func ip(v int) *int { return &v }
 
 func date(n byte, y int, m, d *int) Candidate {
@@ -91,6 +95,10 @@ func TestReconcile(t *testing.T) {
 				{ObservationID: id(2), Value: Value{Integer: 7, HasInteger: true}},
 				{ObservationID: id(3), Value: Value{Integer: 0, HasInteger: true}},
 			}, nil, [][]byte{{1, 2}, {3}}, StateMerged},
+		{"booleans that agree merge", propertymeta.ValueTypeBoolean,
+			[]Candidate{boolean(1, true), boolean(2, true)}, nil, [][]byte{{1, 2}}, StateMerged},
+		{"booleans that disagree are mixed", propertymeta.ValueTypeBoolean,
+			[]Candidate{boolean(1, true), boolean(2, false)}, nil, [][]byte{{1}, {2}}, StateMixed},
 		{"terms by id", propertymeta.ValueTypeTerm,
 			[]Candidate{
 				{ObservationID: id(1), Value: Value{TermID: []byte("birth")}},
@@ -231,6 +239,14 @@ func TestSortKey(t *testing.T) {
 		}
 		prev = k
 	}
+	kf, okf := SortKey(propertymeta.ValueTypeBoolean, Value{Boolean: false, HasBoolean: true})
+	kt, okt := SortKey(propertymeta.ValueTypeBoolean, Value{Boolean: true, HasBoolean: true})
+	if !okf || !okt || kf != "0" || kt != "1" || kf >= kt {
+		t.Fatalf("boolean keys %q %v, %q %v", kf, okf, kt, okt)
+	}
+	if _, ok := SortKey(propertymeta.ValueTypeBoolean, Value{Boolean: true}); ok {
+		t.Fatal("an absent boolean has a sort key")
+	}
 	for _, vt := range []string{propertymeta.ValueTypeDate, propertymeta.ValueTypeTerm, propertymeta.ValueTypeSubject} {
 		if _, ok := SortKey(vt, Value{TermID: []byte("x"), SubjectID: []byte("x"), Date: &datevalue.Value{}}); ok {
 			t.Fatalf("%s has no sort key yet", vt)
@@ -259,5 +275,35 @@ func TestReasonIntoValue(t *testing.T) {
 		if got := r.IntoValue(); got != want {
 			t.Errorf("%s.IntoValue() = %v, want %v", r, got, want)
 		}
+	}
+}
+
+// A boolean is a value like an integer: two Sources saying true are one value
+// with support 2, a negative true denies a positive true, and a true against a
+// false is not folded into one.
+func TestReconcileBoolean(t *testing.T) {
+	cases := []struct {
+		name  string
+		in    []Candidate
+		want  []wantRow
+		state State
+	}{
+		{"two Sources saying true",
+			[]Candidate{from("a", boolean(1, true)), from("b", boolean(2, true))},
+			[]wantRow{{[]byte{1, 2}, ReasonKept, 2, 0}}, StateMerged},
+		{"a stronger negative true denies a positive true and makes no false",
+			[]Candidate{boolean(1, true), highTrust(neg(boolean(2, true)))},
+			[]wantRow{{[]byte{1}, ReasonDenied, 1, 1}}, StateEmpty},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Reconcile(testRules, propertymeta.ValueTypeBoolean, tc.in, nil, propertymeta.CardinalitySingle)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if rows := rowsOf(got); !reflect.DeepEqual(rows, tc.want) || got.State() != tc.state {
+				t.Fatalf("rows %+v state %s, want %+v %s", rows, got.State(), tc.want, tc.state)
+			}
+		})
 	}
 }

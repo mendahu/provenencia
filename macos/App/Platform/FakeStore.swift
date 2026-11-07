@@ -107,6 +107,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var propertiesByProject: [String: [CatalogProperty]] = [:]
+    /// Value-type rules `getPropertiesWorkspace` returns; empty unless a test seeds them.
+    var valueTypeRules: [CatalogPropertyValueTypeRule] = []
     var propertyTermsByProperty: [String: [CatalogPropertyTerm]] = [:]
     var subjectTypePropertiesByType: [String: [CatalogSubjectTypeProperty]] = [:]
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
@@ -132,6 +134,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var getSourceWorkspaceCalls = 0
     var listPersonSummariesCalls = 0
     var getPropertiesWorkspaceCalls = 0
+    var getPropertiesWorkspaceError: Error?
     var listEvidenceGraphProgressCalls = 0
     /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
     var citationCountsGraphIDs: [String] = []
@@ -2547,9 +2550,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func getPropertiesWorkspace(projectDir: String) async throws -> PropertiesSnapshot {
-        return withState {
+        return try withState {
             getPropertiesWorkspaceCalls += 1
             markCatalogSessionHeld(projectDir)
+            if let getPropertiesWorkspaceError { throw getPropertiesWorkspaceError }
             let types = subjectTypesByProject[projectDir] ?? []
             var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]] = [:]
             var presentationsByKey: [String: CatalogSubjectTypePresentation] = [:]
@@ -2562,7 +2566,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 properties: propertiesByProject[projectDir] ?? [],
                 types: types,
                 propertiesByTypeID: propertiesByTypeID,
-                presentationsByKey: presentationsByKey
+                presentationsByKey: presentationsByKey,
+                valueTypeRules: valueTypeRules
             )
         }
     }
@@ -3115,6 +3120,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             polarity: row.polarity.isEmpty ? "positive" : row.polarity,
             valueText: displayText,
             valueInteger: row.valueInteger,
+            valueBoolean: row.valueBoolean,
             valueDateID: row.valueDateID,
             date: row.date,
             valueNameID: row.valueNameID,
@@ -3189,6 +3195,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 polarity: draft.polarity.isEmpty ? "positive" : draft.polarity,
                 valueText: displayText,
                 valueInteger: draft.valueInteger,
+                valueBoolean: draft.valueBoolean,
                 valueDateID: draft.valueDateID,
                 date: draft.date,
                 valueNameID: draft.valueNameID,
