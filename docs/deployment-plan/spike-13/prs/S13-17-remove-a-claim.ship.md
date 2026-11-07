@@ -1,7 +1,7 @@
 # Ship log — S13-17 Remove a claim
 
 **Plan:** [`S13-17-remove-a-claim.md`](S13-17-remove-a-claim.md) · **Branch:** `s13-17-remove-a-claim` · **PR:** #729
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `69e06cdf`. Gate PASS (orchestrator run). Report: `UnpromoteFlowTests` and T-7 seed through `FakeStore` and let the session load; `unpromoteLastRecordNamesTheDeletedHandle` lists the Subject's own handle id; `PersonSourcesList` keeps `unpromotingClaimID` (D-10 did not say where the removed claim's id comes from); the Source page keeps its `model.sync` `.onChange`; the strings landed in the STEP-2/3 commit. The manual check was not run.
@@ -91,3 +91,9 @@ Check: the test passes; scripts/check-pr.sh PASS.
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, the recipe, `UnpromoteFlow.swift`, `PersonSourcesSection.swift`, the card's callers, tests. Skill: `add-localized-string`.
 Do: every `L10n.EvidenceGraph.unpromote*` member moves to `L10n.Unpromote`, with catalog keys `unpromote.*`. Copy and comments are unchanged.
 Check: `rg 'L10n\.EvidenceGraph\.unpromote|evidenceGraph\.subject\.unpromote' macos` finds nothing; `check-localizable-xcstrings.py` passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `66138766`. Gate PASS (orchestrator run). F-1 – F-10 done. `L10n.Unpromote` members take shorter names (`button`, `keep`, `confirmTitle`, …), copy unchanged. Landed S13-23's plan still cites the old keys; it is history, left alone. Manual check not run.
+
+## Round 2 — review
+Reviewers: MNT, UX, SEC+PRF (each had a Fix-now major). CON skipped: CON-1 was Rejected, so it has no fix to re-review. Scope `69e06cdf...66138766`.
