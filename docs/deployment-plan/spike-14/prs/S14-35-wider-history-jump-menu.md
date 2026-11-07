@@ -1,6 +1,6 @@
 # S14-35 — Wider history jump menu
 
-**Status:** Planned
+**Status:** Landed in #730 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7d — List and nav polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the map scopes Batch 7's other PRs as ungated; the panel keeps its rows, components and copy, and only its width changes)
@@ -11,7 +11,8 @@
 **Version bump:** patch — a researcher-visible layout bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md) (read only: the jump menu is part of navigation history; nothing in it changes)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) History jump menu is wider first"; bar outcome 30; [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](../ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) (its "How it works today" predates S14-14: row leaves now come from `WorkspaceLocationLabels`, see §4)
+**Context:** working rule "(Batch 7) History jump menu is wider first"; bar outcome 30; [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) § History menu row labels (the dogfood note's "How it works today" predated S14-14: row leaves now come from `WorkspaceLocationLabels`, see §4)
+**Landed:** [#730](https://github.com/mendahu/provenencia/pull/730), 2026-11-06. Differences from the plan: (1) Back's anchor is x = 32 and Forward's about 82, not 12, so at the 436pt column the caps are 388pt and about 338pt, not AC-1.3's 408pt and D-5's about 376pt, and Forward is narrower there than the old 360pt; the right edge stays inside the column and the Decisions stand as written. (2) T-1 gained the rows (436, 32) → 388 and (436, 82) → 338. (3) Opening the jump menu closes omnibar results. (4) The leaf label has a tooltip reading it in full. The implementer did not run the §10 manual check.
 **Planned:** 2026-11-06 against `main` @ `f48846c`
 **Review:** [`S14-35-wider-history-jump-menu.review.md`](S14-35-wider-history-jump-menu.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker
 

@@ -39,6 +39,16 @@ The fields are not the same, so the omnibar cannot simply become a combo box. Th
 
 The toolbar's Back / Forward history menu builds its own rows and presenter (`HistoryJumpMenuModel`, `PVContextMenuPanel`) instead of `PVActionMenuRows` (S12-17 ship log). Pairs with "One popup dismissal" above.
 
+## History menu row labels
+
+Dogfood 2026-10-29; S14-35 widened the panel to 600pt and left these.
+
+> "The drop-down menu for the navigation bar's back and forward needs to be wider because they're truncating the last part of the breadcrumb and so all the entries look the same."
+
+- **Truncation mode.** Keep the distinguishing suffix of a long leaf with head or middle truncation on the row leaf in `HistoryJumpMenuPanel` (and on the mono ref when it is the unique part).
+- **Richer or reordered labels.** The row leaf is `WorkspaceLocationLabels.labels(for:names:)` joined to its section by `L10n.Conclusions.pageSectionLeaf`, at a width from `HistoryJumpMenuModel.fittedPanelWidth`. Build it from the full `WorkspaceToolbar.breadcrumbItems` (Source title before graph name), or leaf-first, and drop the section prefix when the leaf already carries it.
+- **Multi-line rows.** Allow two lines for long composer and entity labels, trading vertical space against scan speed.
+
 ## Type-select can land on a disabled menu row
 
 S12-17 ship log; dogfood 2026-10-29. Typing a letter in an action menu can highlight a disabled row (`keyboardTitles` keeps disabled titles), and Return on it closes the menu with no action. Seen on Sources list Clear and other `PVActionMenuItem` menus. Type-select and Return should skip or refuse disabled rows the same way pointer activation does.

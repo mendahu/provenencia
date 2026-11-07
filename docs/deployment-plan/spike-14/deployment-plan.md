@@ -92,7 +92,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-10-15: place relationship rows lack the inverse label (note deleted 2026-11-05; landed #720) | S14-32 | — |
 | Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted 2026-11-06; landed #723) | S14-33 | — |
 | Dogfood 2026-10-15: Persons sort ignores honorifics (note deleted 2026-11-06; landed #727) | S14-34 | — |
-| [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) | S14-35 | — |
+| Dogfood 2026-10-29: history jump menu truncates breadcrumb tails (note deleted 2026-11-06; landed #730; leftovers in [`shared-list-helpers.md`](../../ideas/shared-list-helpers.md)) | S14-35 | — |
 | [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-37 | S14-D8 |
 
 **Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here. [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): wedding / birth / residence shortcuts and paste-a-cluster (considered for Batch 7; left out 2026-11-04 as too large for this batch).
@@ -179,7 +179,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
 | S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
-| S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Planned |
+| S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Landed #730 |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; Go's value-type rules table sent to the app; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | [S14-36-boolean-value-type-engine.md](prs/S14-36-boolean-value-type-engine.md) | Planned |
 | S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties (flip `ResearcherCreatable`; hide Holds several for a single-only type); composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -546,10 +546,10 @@ One PR (user, 2026-11-01).
 
 #### S14-35 — Wider history jump menu
 
-**Ships.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel(width:)` (from 360) so typical Source / graph / composer titles fit without tail truncation. Swift test or snapshot of the width constant if one exists; otherwise a short comment and manual check.
+**Ships.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel(width:)` (from 360) so typical Source / graph / composer titles fit without tail truncation, capped to the content column on a small window. Swift test of the width rule.
 **Not this PR.** Head truncation, multi-line rows, or rebuilding labels from full `breadcrumbItems` (evaluate after dogfood).
 **Check.** Bar outcome 30 on a stack of deep composer / graph places.
-**Context.** Working rule "History jump menu is wider first"; [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md); `WorkspaceToolbar.swift`.
+**Context.** Working rule "History jump menu is wider first"; [`ideas/shared-list-helpers.md`](../../ideas/shared-list-helpers.md) § History menu row labels; `WorkspaceToolbar.swift`.
 
 ### Slice 7e — Boolean value type
 
