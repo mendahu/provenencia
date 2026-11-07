@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The one focus handle every kit field takes (`PVInput`, `PVTextArea`,
-/// `PVComboBox`, `PVSelect`). The field applies `.focused($binding, equals:)`
+/// `PVComboBox`, `PVSelect`, `PVSegmentedControl`). The field applies `.focused($binding, equals:)`
 /// itself, so a write to the host's `FocusState` lands in the field. A handle
 /// may also carry a Tab neighbour: the field to move to on Tab (`next`) and on
 /// Shift-Tab (`previous`). With no neighbour a field leaves Tab to the key loop.
