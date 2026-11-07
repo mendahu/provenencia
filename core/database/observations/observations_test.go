@@ -1628,3 +1628,58 @@ func TestUpdateBooleanObservation(t *testing.T) {
 		t.Fatalf("unchanged update made changes %+v", again)
 	}
 }
+
+func TestNegationFollowsTheValueType(t *testing.T) {
+	negative := func(in observations.Input) observations.Input {
+		in.Polarity = observations.PolarityNegative
+		return in
+	}
+	t.Run("a negative boolean is refused on add", func(t *testing.T) {
+		f := newBooleanFixture(t)
+		if _, _, err := f.cite(negative(f.boolIn(f.literate, true, true))); !errors.Is(err, observations.ErrInvalid) {
+			t.Fatalf("err = %v, want ErrInvalid", err)
+		}
+		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations`); n != 0 {
+			t.Fatalf("%d observation rows stored", n)
+		}
+	})
+	t.Run("a negative text is stored", func(t *testing.T) {
+		f := newBooleanFixture(t)
+		in := negative(observations.Input{SubjectID: f.person.ID, PropertyID: f.text.ID, Scalar: propertymeta.TextScalar("Ghent")})
+		if _, _, err := f.cite(in); err != nil {
+			t.Fatal(err)
+		}
+		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != 1 {
+			t.Fatalf("%d negative rows, want 1", n)
+		}
+	})
+	t.Run("a stored negative boolean updates only to positive", func(t *testing.T) {
+		f := newBooleanFixture(t)
+		res, _, err := f.cite(f.boolIn(f.literate, true, true))
+		if err != nil {
+			t.Fatal(err)
+		}
+		db, err := f.c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE observations SET polarity = 'negative' WHERE id = ?`, res.Observations[0].ID); err != nil {
+			t.Fatal(err)
+		}
+		in := negative(f.boolIn(f.literate, true, true))
+		in.ID = res.Observations[0].ID
+		if _, err := observationstest.UpdateObservation(f.c, f.userID, in); !errors.Is(err, observations.ErrInvalid) {
+			t.Fatalf("err = %v, want ErrInvalid", err)
+		}
+		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != 1 {
+			t.Fatalf("%d negative rows after a refused update, want 1", n)
+		}
+		in.Polarity = observations.PolarityPositive
+		if _, err := observationstest.UpdateObservation(f.c, f.userID, in); err != nil {
+			t.Fatal(err)
+		}
+		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'positive'`); n != 1 {
+			t.Fatalf("%d positive rows, want 1", n)
+		}
+	})
+}

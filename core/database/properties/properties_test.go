@@ -255,9 +255,16 @@ func TestValueTypeRules(t *testing.T) {
 			want: properties.ErrInvalid,
 		},
 		{
-			name: "create boolean is not researcher-creatable yet",
+			name: "create boolean empty cardinality is single",
 			run: func(c *database.Catalog, userID []byte) error {
 				return create(c, userID, "Literate", propertymeta.ValueTypeBoolean, "")
+			},
+			key: "literate", storedType: propertymeta.ValueTypeBoolean, storedCard: propertymeta.CardinalitySingle,
+		},
+		{
+			name: "create boolean multiple is refused",
+			run: func(c *database.Catalog, userID []byte) error {
+				return create(c, userID, "Literate", propertymeta.ValueTypeBoolean, propertymeta.CardinalityMultiple)
 			},
 			want: properties.ErrInvalid,
 		},

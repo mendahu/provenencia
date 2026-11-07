@@ -46,19 +46,21 @@ type TypeRule struct {
 	// SingleOnly is whether a Property of the type must be single-valued: two
 	// answers to a yes/no are a conflict to show, not two values to keep.
 	SingleOnly bool
+	// Negatable is whether an Observation of the type may be negative: a
+	// yes/no says No with its value.
+	Negatable bool
 }
 
 // Types declares every value type once, in the order the app lists them.
-// Boolean is not creatable until S14-37 adds its editor.
 var Types = []TypeRule{
-	{ValueType: ValueTypeText, ResearcherCreatable: true},
-	{ValueType: ValueTypeInteger, ResearcherCreatable: true},
-	{ValueType: ValueTypeDate, ResearcherCreatable: true},
-	{ValueType: ValueTypeName, ResearcherCreatable: true},
-	{ValueType: ValueTypeSubject, ResearcherCreatable: true},
-	{ValueType: ValueTypeTerm},
-	{ValueType: ValueTypeDepiction},
-	{ValueType: ValueTypeBoolean, SingleOnly: true},
+	{ValueType: ValueTypeText, ResearcherCreatable: true, Negatable: true},
+	{ValueType: ValueTypeInteger, ResearcherCreatable: true, Negatable: true},
+	{ValueType: ValueTypeDate, ResearcherCreatable: true, Negatable: true},
+	{ValueType: ValueTypeName, ResearcherCreatable: true, Negatable: true},
+	{ValueType: ValueTypeSubject, ResearcherCreatable: true, Negatable: true},
+	{ValueType: ValueTypeTerm, Negatable: true},
+	{ValueType: ValueTypeDepiction, Negatable: true},
+	{ValueType: ValueTypeBoolean, ResearcherCreatable: true, SingleOnly: true},
 }
 
 // ValueTypes lists every value type in Types order.

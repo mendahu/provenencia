@@ -50,6 +50,9 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 	if err != nil {
 		return Observation{}, nil, err
 	}
+	if !negationAllowed(prop.ValueType, polarity) {
+		return Observation{}, nil, ErrInvalid
+	}
 	resolved, err := resolveValue(tx.Tx, citationID, prop.ValueType, in, &prev)
 	if err != nil {
 		return Observation{}, nil, err
