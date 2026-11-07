@@ -1,7 +1,7 @@
 # Ship log — S13-17 Remove a claim
 
 **Plan:** [`S13-17-remove-a-claim.md`](S13-17-remove-a-claim.md) · **Branch:** `s13-17-remove-a-claim` · **PR:** #729
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Head `69e06cdf`. Gate PASS (orchestrator run). Report: `UnpromoteFlowTests` and T-7 seed through `FakeStore` and let the session load; `unpromoteLastRecordNamesTheDeletedHandle` lists the Subject's own handle id; `PersonSourcesList` keeps `unpromotingClaimID` (D-10 did not say where the removed claim's id comes from); the Source page keeps its `model.sync` `.onChange`; the strings landed in the STEP-2/3 commit. The manual check was not run.
@@ -118,3 +118,9 @@ Check: the test passes; scripts/check-pr.sh PASS.
 Files: `macos/App/Features/Conclusions/ConclusionPageSectionHost.swift`, `macos/App/Features/Conclusions/ConclusionDetailPage.swift`.
 Do: the host's `.gone` branch draws the `.failed` branch's `PVCallout` and id with `L10n.Errors.conclusionDetailsNotFound`, so a section whose read fails under a page holding a value shows what it showed before F-4. `ConclusionDetailLoaded.body` reads `presentation` once into a `let`, as `ConclusionPageSectionHost.loaded` does, and every use in `body` takes it.
 Check: scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `88ba5bb3`, `main` merged at `285c81ff`. Gate PASS (orchestrator run on the merge). F-11, F-12 done.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: answered (UX-3 Toast, confirm title, recipe split) · CON miss: none
