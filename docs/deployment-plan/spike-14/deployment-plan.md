@@ -138,7 +138,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
 - **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts, so "Mrs. Smith" sorts with Smith. Go owns list order. The working-label fallback is not stripped of titles: no code path writes a Person label (descoped by the user, 2026-11-06). Binds S14-34.
 - **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
-- **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI (composer checkbox, Properties create, Conclusion display). Researcher-creatable like `text` and `integer`. Storage column vs reusing `value_integer` is decided in `plan-pr` (dedicated column preferred in the note). Binds S14-36, S14-37.
+- **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI (composer checkbox, Properties create, Conclusion display). Researcher-creatable like `text` and `integer` from S14-37. Stored in a dedicated `value_boolean` column. Single cardinality only. Go owns the value-type rules (`propertymeta.Types`: creatable, single-only) and sends them to the app on the Properties workspace read; Swift keeps no copy (user, 2026-11-07). Binds S14-36, S14-37.
 
 ## PR map
 
@@ -180,8 +180,8 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Landed #730 |
-| S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | — | Scoped |
-| S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties; composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
+| S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; Go's value-type rules table sent to the app; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | [S14-36-boolean-value-type-engine.md](prs/S14-36-boolean-value-type-engine.md) | Planned |
+| S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties (flip `ResearcherCreatable`; hide Holds several for a single-only type); composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -555,14 +555,14 @@ One PR (user, 2026-11-01).
 
 #### S14-36 — Boolean value type (engine)
 
-**Ships.** `ValueTypeBoolean`; migration expanding `properties.value_type` CHECK and observation / conclusion storage (**decide in `plan-pr`:** dedicated `value_boolean` vs `value_integer` 0/1 — note prefers dedicated); researcher-creatable in Go; valuecompare / autoreconcile module; proto `ConclusionValue` bool arm and observation draft field; `swift_vocabulary_test` row for boolean. Also pins Swift's `SourceSurface` raw values to Go's `workspacelocation.Surface*` constants in the same test (structural debt from S12-15 ship log — same file, same guard pattern). Docs: `seeded-vocabulary.md` §3.2, `interpretation-layer-data-model.md`. Skills: `add-catalog-migration`, `add-catalog-model`, `add-ffi-handler`.
-**Not this PR.** Composer / Properties / Conclusion UI (S14-37); omnibar indexing of booleans (out unless cheap).
+**Ships.** `ValueTypeBoolean`; migration expanding `properties.value_type` CHECK and observation / conclusion storage (**decide in `plan-pr`:** dedicated `value_boolean` vs `value_integer` 0/1 — note prefers dedicated); value-type rules declared in `propertymeta` and sent to the app on `GetPropertiesWorkspace` (boolean single-only, not yet creatable); valuecompare / autoreconcile module; proto `ConclusionValue` bool arm and observation draft field; `swift_vocabulary_test` row for boolean. Also pins Swift's `SourceSurface` raw values to Go's `workspacelocation.Surface*` constants in the same test (structural debt from S12-15 ship log — same file, same guard pattern). Docs: `seeded-vocabulary.md` §3.2, `interpretation-layer-data-model.md`. Skills: `add-catalog-migration`, `add-catalog-model`, `add-ffi-handler`.
+**Not this PR.** Composer / Properties / Conclusion UI (S14-37), including marking boolean creatable; omnibar indexing of booleans (not planned).
 **Check.** Handler and domain tests create, read and compare a boolean Property; existing catalogs migrate; the `SourceSurface` / `Surface*` vocabulary row fails if either side drifts.
 **Context.** Working rule "Boolean is a first-class value type in two PRs"; [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md); [`ideas/structural-debt.md`](../../ideas/structural-debt.md) SourceSurface row.
 
 #### S14-37 — Boolean value type (UI)
 
-**Ships.** `PropertyValueType.boolean` in Swift; Properties create offers it; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
+**Ships.** Go marks boolean researcher-creatable (one `propertymeta.Types` flag), so Properties create offers it; the Properties page hides Holds several for a single-only type; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
 **Not this PR.** Engine path (S14-36).
 **Check.** Bar outcome 31: create a boolean Property, cite true/false on a Subject, see it on Conclusion detail.
 **Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; `CitationObservationValue`, `PropertiesModel.researcherCreatable`, `ReconciledValueDisplay`.
