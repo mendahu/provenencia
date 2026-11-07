@@ -20,6 +20,17 @@ final class HistoryJumpMenuModel {
     }
 
     var isPresented: Bool { side != nil }
+
+    /// The panel's preferred width.
+    static let panelWidth: CGFloat = 600
+
+    /// The width drawn: the preferred width, narrowed so the panel's right edge
+    /// stays `PVSpacing.space6` inside the content column. An unmeasured column
+    /// (width 0) keeps the preferred width.
+    static func fittedPanelWidth(contentWidth: CGFloat, anchorMinX: CGFloat) -> CGFloat {
+        guard contentWidth > 0 else { return Self.panelWidth }
+        return min(Self.panelWidth, contentWidth - anchorMinX - PVSpacing.space6)
+    }
 }
 
 enum HistoryJumpMenuSide: Hashable {
@@ -126,6 +137,7 @@ struct WorkspaceToolbar: View {
                 get: { jumpMenu.side == side },
                 set: { presented in
                     if presented {
+                        omnibarResults.closePanel()
                         jumpMenu.present(side)
                     } else if jumpMenu.side == side {
                         jumpMenu.dismiss()
@@ -286,6 +298,7 @@ struct HistoryJumpMenuHost: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
     var jumpMenu: HistoryJumpMenuModel
+    let contentWidth: CGFloat
     @State private var dismissMonitor: Any?
     @State private var activeIndex = -1
 
@@ -298,6 +311,10 @@ struct HistoryJumpMenuHost: View {
                     HistoryJumpMenuPanel(
                         items: items,
                         activeIndex: activeIndex,
+                        width: HistoryJumpMenuModel.fittedPanelWidth(
+                            contentWidth: contentWidth,
+                            anchorMinX: anchor.minX
+                        ),
                         onSelect: { index in
                             jumpMenu.dismiss()
                             navigation.go(toIndex: index)
@@ -528,11 +545,12 @@ private struct HistoryNavControl: View {
 private struct HistoryJumpMenuPanel: View {
     let items: [HistoryJumpRow]
     var activeIndex: Int
+    let width: CGFloat
     let onSelect: (Int) -> Void
 
     var body: some View {
         PVContextMenuPanel(
-            width: 360,
+            width: width,
             accessibilityIdentifier: "workspace.toolbar.jumpMenu"
         ) {
             ForEach(Array(items.enumerated()), id: \.element.id) { offset, item in
@@ -559,6 +577,7 @@ private struct HistoryJumpMenuPanel: View {
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .layoutPriority(1)
+                                    .help(Text(verbatim: leafLabel))
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
