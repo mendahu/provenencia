@@ -7,11 +7,11 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -21,32 +21,25 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/namevalue"
-	"github.com/mendahu/provenencia/core/ref"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var userID = evidencelayertest.UserID
 
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+const locator = evidencelayertest.Locator
 
 type fixture struct {
-	t      *testing.T
-	c      *database.Catalog
-	typeID []byte
-	name   properties.Property
-	arts   map[string]artifacts.Artifact
+	*evidencelayertest.Records
+	name properties.Property
+	arts map[string]artifacts.Artifact
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
@@ -55,42 +48,28 @@ func must(t *testing.T, err error) {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
-	must(t, err)
-	return &fixture{t: t, c: c, typeID: typeID, name: name, arts: map[string]artifacts.Artifact{}}
+	r := evidencelayertest.New(t)
+	return &fixture{Records: r, name: r.Prop("name"), arts: map[string]artifacts.Artifact{}}
 }
 
+// source is another Source, with its Artifact kept for cite.
 func (f *fixture) source(title string) sources.Source {
-	f.t.Helper()
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
-	})
-	must(f.t, err)
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(f.t, err)
+	f.T.Helper()
+	src, art := f.NewSource(title)
 	f.arts[string(src.ID)] = art
 	return src
 }
 
 func (f *fixture) person(graphID []byte, label string) subjects.Subject {
-	f.t.Helper()
-	return subjectstest.On(f.t, f.c, userID, graphID, "person", label)
+	f.T.Helper()
+	return subjectstest.On(f.T, f.C, userID, graphID, "person", label)
 }
 
 // cite files the Observations on the Subject's graph through the Source's Artifact.
 func (f *fixture) cite(s subjects.Subject, in ...observations.Input) []observations.Observation {
-	f.t.Helper()
-	res, _, err := observationstest.Cite(f.c, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, in...)
-	must(f.t, err)
+	f.T.Helper()
+	res, _, err := observationstest.Cite(f.C, userID, s.GraphID, f.arts[string(s.SourceID)].ID, locator, in...)
+	must(f.T, err)
 	return res.Observations
 }
 
@@ -100,23 +79,23 @@ func (f *fixture) nameOf(s subjects.Subject, form string) observations.Input {
 
 // promote files an accepted claim for s onto onto, or onto a new handle.
 func (f *fixture) promote(s subjects.Subject, onto []byte) canonicalentities.Entity {
-	f.t.Helper()
-	return promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: onto}).Entity
+	f.T.Helper()
+	return promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID, EntityID: onto}).Entity
 }
 
 // provisional files a provisional claim for s on e.
 func (f *fixture) provisional(s subjects.Subject, e canonicalentities.Entity) {
-	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+	f.T.Helper()
+	_, err := writes.Call(f.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 		return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: s.ID, EntityID: e.ID, Status: identityclaims.StatusProvisional})
 	})
-	must(f.t, err)
+	must(f.T, err)
 }
 
 func (f *fixture) claims(id []byte) []persondetail.ClaimGroup {
-	f.t.Helper()
-	groups, err := persondetail.Claims(f.c, id)
-	must(f.t, err)
+	f.T.Helper()
+	groups, err := persondetail.Claims(f.C, id)
+	must(f.T, err)
 	return groups
 }
 
@@ -131,17 +110,17 @@ type shape struct {
 }
 
 func (f *fixture) burialsAndBaptisms() shape {
-	f.t.Helper()
+	f.T.Helper()
 	src := f.source("Parish register")
-	burials := evidencegraphstest.SoleGraph(f.t, f.c, src.ID)
-	_, _, err := writes.Run(f.c, writes.Op{Action: "update_evidence_graph", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	burials := evidencegraphstest.SoleGraph(f.T, f.C, src.ID)
+	_, _, err := writes.Run(f.C, writes.Op{Action: "update_evidence_graph", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := evidencegraphs.Update(tx, userID, burials.ID, evidencegraphs.UpdateInput{Name: "Burials"})
 		return struct{}{}, ch, err
 	})
-	must(f.t, err)
+	must(f.T, err)
 	burials.Name = "Burials"
-	baptisms := evidencegraphstest.Create(f.t, f.c, userID, src.ID, "Baptisms", f.arts[string(src.ID)].ID)
-	third := evidencegraphstest.Create(f.t, f.c, userID, src.ID, "Marriages", f.arts[string(src.ID)].ID)
+	baptisms := evidencegraphstest.Create(f.T, f.C, userID, src.ID, "Baptisms", f.arts[string(src.ID)].ID)
+	third := evidencegraphstest.Create(f.T, f.C, userID, src.ID, "Marriages", f.arts[string(src.ID)].ID)
 
 	bs := f.person(burials.ID, "Ann")
 	f.cite(bs, f.nameOf(bs, "Ann Lee"), f.nameOf(bs, "Annie Lee"))
@@ -161,7 +140,7 @@ func TestClaimsGroupsBySource(t *testing.T) {
 		t.Fatalf("%d groups, want 1", len(groups))
 	}
 	g := groups[0]
-	if !bytes.Equal(g.SourceID, s.src.ID) || g.SourceRef != s.src.Ref || g.Title != "Parish register" || !bytes.Equal(g.SourceTypeID, f.typeID) {
+	if !bytes.Equal(g.SourceID, s.src.ID) || g.SourceRef != s.src.Ref || g.Title != "Parish register" || !bytes.Equal(g.SourceTypeID, f.Source.SourceTypeID) {
 		t.Fatalf("group %+v", g)
 	}
 	if len(g.Claims) != 2 {
@@ -194,7 +173,7 @@ func TestClaimsOrderSources(t *testing.T) {
 	refs := map[string]string{}
 	for i, title := range titles {
 		src := f.source(title)
-		s := f.person(evidencegraphstest.SoleGraph(t, f.c, src.ID).ID, "")
+		s := f.person(evidencegraphstest.SoleGraph(t, f.C, src.ID).ID, "")
 		if i == 0 {
 			p = f.promote(s, nil)
 		} else {
@@ -224,20 +203,20 @@ func TestClaimsOrderSources(t *testing.T) {
 func TestClaimsMissingAndEmpty(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register")
-	graph := evidencegraphstest.SoleGraph(t, f.c, src.ID).ID
+	graph := evidencegraphstest.SoleGraph(t, f.C, src.ID).ID
 	merged := f.promote(f.person(graph, "A"), nil)
 	into := f.promote(f.person(graph, "B"), nil)
 	provisionalOnly := f.promote(f.person(graph, "C"), nil)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into.ID, merged.ID)
 	must(t, err)
-	f.c.Graph().Drop()
+	f.C.Graph().Drop()
 	// A handle whose only claim is provisional: a second handle with a claim
 	// moved to provisional status.
 	_, err = db.Exec(`UPDATE identity_claims SET status = ? WHERE entity_id = ?`, identityclaims.StatusProvisional, provisionalOnly.ID)
 	must(t, err)
-	f.c.Graph().Drop()
+	f.C.Graph().Drop()
 
 	tests := []struct {
 		name    string
@@ -252,7 +231,7 @@ func TestClaimsMissingAndEmpty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			groups, err := persondetail.Claims(f.c, tt.id)
+			groups, err := persondetail.Claims(f.C, tt.id)
 			if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("error %v, want %v", err, tt.wantErr)
 			}
@@ -268,7 +247,7 @@ func TestClaimsWarmReadIssuesNoQuery(t *testing.T) {
 	s := f.burialsAndBaptisms()
 	first := f.claims(s.person.ID)
 	var n int
-	f.c.Graph().SetQueryCounterForTest(func() { n++ })
+	f.C.Graph().SetQueryCounterForTest(func() { n++ })
 	second := f.claims(s.person.ID)
 	if n != 0 {
 		t.Fatalf("the warm read issued %d queries", n)

@@ -214,6 +214,11 @@ func (g *Graph) SetEvidenceGraphMemo(graphID []byte, key string, v any) {
 	e.memos[key] = v
 }
 
+// maxWalkEdges is the most edges one walk builds. A graph over it is
+// malformed and the walk reaches nothing. A real graph holds about one edge
+// per bridge Subject; the largest walk in the 100-Subject budget fixture builds 60.
+const maxWalkEdges = 50_000
+
 // WalkEvidenceGraph follows h through one Evidence graph from each Subject
 // in from, in memory: Association is the bridge Subject. A bridge Subject is
 // one of the hop's bridge type on eg. It cites a from Subject on the hop's
@@ -221,7 +226,8 @@ func (g *Graph) SetEvidenceGraphMemo(graphID []byte, key string, v any) {
 // both positively, and the filter term on the filter property when the hop
 // has one. Each edge appears once, ordered by from Subject id, then the
 // bridge's ref, then the to Subject's ref. A name the vocabulary does not
-// know reaches nothing.
+// know reaches nothing. A walk that would build more than maxWalkEdges edges
+// reaches nothing, counted before any edge is built.
 func (g *Graph) WalkEvidenceGraph(eg EvidenceGraph, h hops.Hop, from [][]byte) ([]EvidenceEdge, error) {
 	if h.Bridge() == "" {
 		return nil, fmt.Errorf("graphcache: zero Hop")
@@ -294,6 +300,15 @@ func (g *Graph) WalkEvidenceGraph(eg EvidenceGraph, h hops.Hop, from [][]byte) (
 		if filtered && bytes.Equal(o.PropertyID, filterProp) && filterTerms[string(o.TermID)] {
 			c.filtered = true
 		}
+	}
+	total := 0
+	for _, r := range reaches {
+		if c := bridges[string(r.bridge)]; !filtered || c.filtered {
+			total += len(c.tos)
+		}
+	}
+	if total > maxWalkEdges {
+		return nil, nil
 	}
 	var out []EvidenceEdge
 	seen := map[string]bool{}

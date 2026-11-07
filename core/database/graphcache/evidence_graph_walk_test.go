@@ -4,140 +4,49 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
-	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
-	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
-	"github.com/mendahu/provenencia/core/writes"
 
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
-var walkUser = []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}
-
-const walkLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+var walkUser = evidencelayertest.UserID
 
 type walkFixture struct {
-	t    *testing.T
-	c    *database.Catalog
-	src  sources.Source
-	art  artifacts.Artifact
-	y    int64
+	*evidencelayertest.Records
 	name map[string]subjects.Subject
 }
 
 func newWalkFixture(t *testing.T) *walkFixture {
 	t.Helper()
-	c := graphcachetest.OpenCatalog(t)
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	f := &walkFixture{t: t, c: c, name: map[string]subjects.Subject{}}
-	f.src, f.art = f.newSource(typeID, "Register")
-	return f
+	return &walkFixture{Records: evidencelayertest.New(t), name: map[string]subjects.Subject{}}
 }
 
-func (f *walkFixture) newSource(typeID []byte, title string) (sources.Source, artifacts.Artifact) {
-	f.t.Helper()
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: walkUser}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, walkUser, sources.CreateInput{SourceTypeID: typeID, Title: title})
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	art, _, err := writes.Run(f.c, writes.Op{Action: "create_artifact", UserID: walkUser}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-		return artifacts.Create(tx, walkUser, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return src, art
-}
-
+// subject is a Subject of the kind on src, found later under name.
 func (f *walkFixture) subject(src sources.Source, name, kind string) subjects.Subject {
-	f.t.Helper()
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	s := subjectstest.On(f.t, f.c, walkUser, graph, kind, "")
-	if _, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-		return subjectpositions.Set(tx, s.ID, 0, f.y)
-	}); err != nil {
-		f.t.Fatal(err)
-	}
-	f.y += 2
+	f.T.Helper()
+	s := f.Bare(src, kind)
 	f.name[name] = s
 	return s
 }
 
-func (f *walkFixture) prop(key string) []byte {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return p.ID
-}
-
-func (f *walkFixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) subjects.Subject {
-	f.t.Helper()
-	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: walkUser}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, walkUser, connect.CreateInput{
-			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: walkLocator},
-			Observations: obs,
-		})
-	})
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return res.Subject
-}
-
-func (f *walkFixture) participation(person, event subjects.Subject, role string) subjects.Subject {
-	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.prop("role"), role, vocabkey.OriginProvenencia)
-	if err != nil {
-		f.t.Fatal(err)
-	}
-	return f.bridge("participation", person, event,
-		observations.Input{PropertyID: f.prop("person"), ValueSubjectID: person.ID},
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: event.ID},
-		observations.Input{PropertyID: f.prop("role"), ValueTermID: term.ID},
-	)
-}
-
-func (f *walkFixture) location(event, place subjects.Subject) subjects.Subject {
-	f.t.Helper()
-	return f.bridge("location", event, place,
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: event.ID},
-		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: place.ID},
-	)
-}
-
 func (f *walkFixture) exec(query string, args ...any) {
-	f.t.Helper()
-	db, err := f.c.DB()
+	f.T.Helper()
+	db, err := f.C.DB()
 	if err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
 	if _, err := db.Exec(query, args...); err != nil {
-		f.t.Fatal(err)
+		f.T.Fatal(err)
 	}
 }
 
@@ -155,34 +64,30 @@ type walkCase struct {
 // and in order, when the in-memory walk landed).
 func TestWalkEvidenceGraphEdges(t *testing.T) {
 	f := newWalkFixture(t)
-	james, mary := f.subject(f.src, "james", "person"), f.subject(f.src, "mary", "person")
-	infant, witness := f.subject(f.src, "infant", "person"), f.subject(f.src, "witness", "person")
-	birth, wedding := f.subject(f.src, "birth", "event"), f.subject(f.src, "wedding", "event")
-	york, hull := f.subject(f.src, "york", "place"), f.subject(f.src, "hull", "place")
+	james, mary := f.subject(f.Source, "james", "person"), f.subject(f.Source, "mary", "person")
+	infant, witness := f.subject(f.Source, "infant", "person"), f.subject(f.Source, "witness", "person")
+	birth, wedding := f.subject(f.Source, "birth", "event"), f.subject(f.Source, "wedding", "event")
+	york, hull := f.subject(f.Source, "york", "place"), f.subject(f.Source, "hull", "place")
 
-	f.name["j-birth"] = f.participation(james, birth, "subject")
-	f.name["j-wedding"] = f.participation(james, wedding, "witness")
-	f.name["m-wedding"] = f.participation(mary, wedding, "subject")
-	f.name["w-wedding"] = f.participation(witness, wedding, "witness")
-	f.name["i-birth"] = f.participation(infant, birth, "subject")
-	f.name["birth-york"] = f.location(birth, york)
-	f.name["wedding-hull"] = f.location(wedding, hull)
+	f.name["j-birth"] = f.Participation(f.Source, f.Artifact, james, birth, "subject")
+	f.name["j-wedding"] = f.Participation(f.Source, f.Artifact, james, wedding, "witness")
+	f.name["m-wedding"] = f.Participation(f.Source, f.Artifact, mary, wedding, "subject")
+	f.name["w-wedding"] = f.Participation(f.Source, f.Artifact, witness, wedding, "witness")
+	f.name["i-birth"] = f.Participation(f.Source, f.Artifact, infant, birth, "subject")
+	f.name["birth-york"] = f.Locate(f.Source, f.Artifact, birth, york)
+	f.name["wedding-hull"] = f.Locate(f.Source, f.Artifact, wedding, hull)
 
 	// A negative from-endpoint: the infant's participation no longer names them.
 	f.exec(`UPDATE observations SET polarity = 'negative'
-		WHERE subject_id = ? AND property_id = ?`, f.name["i-birth"].ID, f.prop("person"))
+		WHERE subject_id = ? AND property_id = ?`, f.name["i-birth"].ID, f.Prop("person").ID)
 	// A filter term recorded negatively: the witness' role no longer counts.
 	f.exec(`UPDATE observations SET polarity = 'negative'
-		WHERE subject_id = ? AND property_id = ?`, f.name["w-wedding"].ID, f.prop("role"))
+		WHERE subject_id = ? AND property_id = ?`, f.name["w-wedding"].ID, f.Prop("role").ID)
 	// A to-end on another Source: Hull's location now names a Subject elsewhere.
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	other, _ := f.newSource(typeID, "Elsewhere")
+	other, _ := f.NewSource("Elsewhere")
 	away := f.subject(other, "away", "place")
 	f.exec(`UPDATE observations SET value_subject_id = ? WHERE subject_id = ? AND property_id = ?`,
-		away.ID, f.name["wedding-hull"].ID, f.prop("place"))
+		away.ID, f.name["wedding-hull"].ID, f.Prop("place").ID)
 
 	participates := hops.MustHop("participation", "person", "event", nil)
 	asSubject := hops.MustHop("participation", "person", "event", &hops.TermFilter{PropertyKey: "role", TermKey: "subject"})
@@ -211,8 +116,8 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 		}},
 		{name: "no from Subjects", hop: participates},
 	}
-	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+	g := f.C.Graph()
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,18 +153,64 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 	}
 }
 
-// An Evidence graph is walked alone: another graph's Subjects reach nothing.
-func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
+// TestWalkEvidenceGraphEdgeCap: one bridge citing many Subjects on each end
+// builds edges as their product, so a walk over the cap reaches nothing.
+func TestWalkEvidenceGraphEdgeCap(t *testing.T) {
 	f := newWalkFixture(t)
-	james, birth := f.subject(f.src, "james", "person"), f.subject(f.src, "birth", "event")
-	f.participation(james, birth, "subject")
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	g := f.C.Graph()
+	v, err := g.Vocabulary()
 	if err != nil {
 		t.Fatal(err)
 	}
-	other, _ := f.newSource(typeID, "Elsewhere")
-	g := f.c.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, other.ID).ID)
+	var bridgeType []byte
+	for _, ty := range v.Types {
+		if ty.Key == "participation" && ty.Origin == vocabkey.OriginProvenencia {
+			bridgeType = ty.ID
+		}
+	}
+	id := func(n int) []byte {
+		b := make([]byte, 16)
+		b[0], b[1] = byte(n>>8), byte(n)
+		return b
+	}
+	run := func(t *testing.T, froms, tos int) int {
+		bridge := id(60000)
+		eg := graphcache.EvidenceGraph{Found: true, Subjects: []graphcache.EvidenceSubject{{ID: bridge, SubjectTypeID: bridgeType, Ref: "SUB-B"}}}
+		var from [][]byte
+		for i := 0; i < tos; i++ {
+			eg.Subjects = append(eg.Subjects, graphcache.EvidenceSubject{ID: id(i + 1), Ref: "SUB-P"})
+		}
+		for i := 0; i < froms; i++ {
+			from = append(from, id(i+1))
+			eg.Observations = append(eg.Observations, graphcache.EvidenceObservation{
+				SubjectID: bridge, PropertyID: f.Prop("person").ID, ValueSubjectID: id(i + 1), Polarity: "positive"})
+		}
+		for i := 0; i < tos; i++ {
+			eg.Observations = append(eg.Observations, graphcache.EvidenceObservation{
+				SubjectID: bridge, PropertyID: f.Prop("event").ID, ValueSubjectID: id(i + 1), Polarity: "positive"})
+		}
+		edges, err := g.WalkEvidenceGraph(eg, hops.MustHop("participation", "person", "event", nil), from)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(edges)
+	}
+	if got := run(t, 223, 224); got != 223*224 {
+		t.Fatalf("under the cap: got %d edges, want %d", got, 223*224)
+	}
+	if got := run(t, 224, 224); got != 0 {
+		t.Fatalf("over the cap: got %d edges, want none", got)
+	}
+}
+
+// An Evidence graph is walked alone: another graph's Subjects reach nothing.
+func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
+	f := newWalkFixture(t)
+	james, birth := f.subject(f.Source, "james", "person"), f.subject(f.Source, "birth", "event")
+	f.Participation(f.Source, f.Artifact, james, birth, "subject")
+	other, _ := f.NewSource("Elsewhere")
+	g := f.C.Graph()
+	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, other.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -280,16 +231,16 @@ func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 func TestMemberSourceAndGraph(t *testing.T) {
 	check := func(t *testing.T, f *walkFixture, james subjects.Subject, wantGraph []byte) {
 		t.Helper()
-		res := promotetest.Save(t, f.c, walkUser, promote.Input{SubjectID: james.ID})
-		g := f.c.Graph()
+		res := promotetest.Save(t, f.C, walkUser, promote.Input{SubjectID: james.ID})
+		g := f.C.Graph()
 		g.Drop()
 		n, err := g.Node(res.Entity.ID)
 		if err != nil || n == nil || len(n.Members) != 1 {
 			t.Fatalf("node %+v, err %v", n, err)
 		}
 		m := n.Members[0]
-		if !bytes.Equal(m.SubjectID, james.ID) || !bytes.Equal(m.SourceID, f.src.ID) || !bytes.Equal(m.GraphID, wantGraph) {
-			t.Fatalf("member %+v, want Subject %x on Source %x, graph %x", m, james.ID, f.src.ID, wantGraph)
+		if !bytes.Equal(m.SubjectID, james.ID) || !bytes.Equal(m.SourceID, f.Source.ID) || !bytes.Equal(m.GraphID, wantGraph) {
+			t.Fatalf("member %+v, want Subject %x on Source %x, graph %x", m, james.ID, f.Source.ID, wantGraph)
 		}
 		if err := g.Verify(); err != nil {
 			t.Fatal(err)
@@ -301,13 +252,13 @@ func TestMemberSourceAndGraph(t *testing.T) {
 	}
 	t.Run("the Default graph", func(t *testing.T) {
 		f := newWalkFixture(t)
-		james := f.subject(f.src, "james", "person")
-		check(t, f, james, evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+		james := f.subject(f.Source, "james", "person")
+		check(t, f, james, evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
 	})
 	t.Run("a Split graph", func(t *testing.T) {
 		f := newWalkFixture(t)
-		_, jones, _ := artifactstest.Split(t, f.c, walkUser, f.src.ID, "Jones")
-		james := subjectstest.On(t, f.c, walkUser, jones.ID, "person", "")
+		_, jones, _ := artifactstest.Split(t, f.C, walkUser, f.Source.ID, "Jones")
+		james := subjectstest.On(t, f.C, walkUser, jones.ID, "person", "")
 		check(t, f, james, jones.ID)
 	})
 }

@@ -7,8 +7,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 type capStep struct {
@@ -21,16 +19,12 @@ type capStep struct {
 func capFixture(t *testing.T) (*graphcache.Graph, [][]byte) {
 	t.Helper()
 	f := newWalkFixture(t)
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := [][]byte{evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID}
+	ids := [][]byte{evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID}
 	for _, title := range []string{"Second", "Third", "Fourth"} {
-		src, _ := f.newSource(typeID, title)
-		ids = append(ids, evidencegraphstest.SoleGraph(t, f.c, src.ID).ID)
+		src, _ := f.NewSource(title)
+		ids = append(ids, evidencegraphstest.SoleGraph(t, f.C, src.ID).ID)
 	}
-	g := f.c.Graph()
+	g := f.C.Graph()
 	g.Drop()
 	g.SetEvidenceGraphCapForTest(2)
 	t.Cleanup(func() { g.SetEvidenceGraphCapForTest(0) })

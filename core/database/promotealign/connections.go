@@ -2,6 +2,7 @@ package promotealign
 
 import (
 	"github.com/mendahu/provenencia/core/connectrules"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -71,7 +72,7 @@ func pageBridges(eg graphcache.EvidenceGraph, vocab graphcache.Vocabulary) []gra
 // other Subject is off the page. A caller's fixed row is its handle, New or
 // Skip; any other row starts as the proposal starts it (a handle), or has no
 // target yet. A Subject left out is not on the page.
-func pageEnds(promoted map[string][]byte, primary map[string]primarySubject, caller []graphalign.Fixed, rows []graphalign.Row, only []byte) map[string]graphalign.EndTarget {
+func pageEnds(promoted map[string][]byte, layer evidencelayer.Layer, caller []graphalign.Fixed, rows []graphalign.Row, only []byte) map[string]graphalign.EndTarget {
 	ends := map[string]graphalign.EndTarget{}
 	decided := make(map[string]graphalign.Fixed, len(caller))
 	for _, f := range caller {
@@ -81,7 +82,8 @@ func pageEnds(promoted map[string][]byte, primary map[string]primarySubject, cal
 		ends[sk] = endTarget(graphalign.TargetHandle, handle)
 	}
 	if len(only) > 0 {
-		for sk := range primary {
+		for _, s := range layer.Subjects {
+			sk := string(s.ID)
 			if _, anchored := ends[sk]; !anchored && sk != string(only) {
 				ends[sk] = graphalign.EndTarget{Waits: graphalign.ConnectionNotOnPage}
 			}
@@ -91,7 +93,8 @@ func pageEnds(promoted map[string][]byte, primary map[string]primarySubject, cal
 	for _, r := range rows {
 		started[string(r.SubjectID)] = r
 	}
-	for sk := range primary {
+	for _, s := range layer.Subjects {
+		sk := string(s.ID)
 		if _, ok := ends[sk]; ok {
 			continue
 		}

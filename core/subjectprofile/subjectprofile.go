@@ -33,6 +33,26 @@ type LifeEvent struct {
 	Dates     []datevalue.Value
 }
 
+// LifeEventOf reads one event an entity takes part in from the event's built
+// profile: its type, and every date it records.
+func LifeEventOf(event subjectcompare.Values, role vocabkey.Role) LifeEvent {
+	le := LifeEvent{Role: role}
+	for _, v := range event[vocabkey.PropertyEventType] {
+		if v.Positive() {
+			le.EventType = vocabkey.EventType(v.Term)
+			break
+		}
+	}
+	for _, key := range []vocabkey.PropertyKey{vocabkey.PropertyDate, vocabkey.PropertyStartDate, vocabkey.PropertyEndDate} {
+		for _, v := range event[key] {
+			if v.Positive() && v.Date != nil {
+				le.Dates = append(le.Dates, *v.Date)
+			}
+		}
+	}
+	return le
+}
+
 // Subject is a plain Subject's own Observations by property and its life
 // events.
 type Subject struct {

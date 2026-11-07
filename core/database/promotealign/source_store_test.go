@@ -10,8 +10,8 @@ import (
 
 func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 	f := newFixture(t)
-	graphID := f.graph(f.source)
-	s := f.person(f.source, f.artifact, "Ann Lee")
+	graphID := f.Graph(f.source)
+	s := f.Person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()
@@ -42,8 +42,8 @@ func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 
 func TestPromoteDropsTheSource(t *testing.T) {
 	f := newFixture(t)
-	graphID := f.graph(f.source)
-	s := f.person(f.source, f.artifact, "Ann Lee")
+	graphID := f.Graph(f.source)
+	s := f.Person(f.source, f.artifact, "Ann Lee")
 	g := f.c.Graph()
 	g.Drop()
 	before, err := g.EvidenceGraph(graphID)
@@ -61,8 +61,8 @@ func TestPromoteDropsTheSource(t *testing.T) {
 
 func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	f := newFixture(t)
-	graphID := f.graph(f.source)
-	s := f.person(f.source, f.artifact, "Ann Lee")
+	graphID := f.Graph(f.source)
+	s := f.Person(f.source, f.artifact, "Ann Lee")
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()

@@ -10,6 +10,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/shortlist"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -104,7 +105,7 @@ func Warm(c *database.Catalog) error {
 	if err != nil {
 		return err
 	}
-	metas, err := loadMetas(g)
+	metas, err := valuerules.Metas(g)
 	if err != nil {
 		return err
 	}

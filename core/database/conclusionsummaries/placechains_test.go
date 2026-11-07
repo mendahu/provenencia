@@ -29,32 +29,32 @@ import (
 func year(y int) *int { return &y }
 
 func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subjects.Subject {
-	f.t.Helper()
-	s := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
+	f.T.Helper()
+	s := subjectstest.On(f.T, f.C, userID, f.graph, "place", "")
 	f.at(s, x, y)
 	in := []observations.Input{
-		{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name)},
+		{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar(name)},
 	}
 	if start != nil {
-		in = append(in, observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(*start, 0, 0)})
+		in = append(in, observations.Input{PropertyID: f.Prop("start_date").ID, Date: datevaluetest.YMD(*start, 0, 0)})
 	}
 	if end != nil {
-		in = append(in, observations.Input{PropertyID: f.prop("end_date").ID, Date: datevaluetest.YMD(*end, 0, 0)})
+		in = append(in, observations.Input{PropertyID: f.Prop("end_date").ID, Date: datevaluetest.YMD(*end, 0, 0)})
 	}
-	f.cite(s, in...)
+	f.Cite(f.Artifact, s, in...)
 	return s
 }
 
 func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) {
-	f.t.Helper()
-	term := f.term("place_relationship_type", kind)
-	fromProp := f.prop("from").ID
-	toProp := f.prop("to").ID
-	typeProp := f.prop("place_relationship_type").ID
-	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	f.T.Helper()
+	term := f.Term("place_relationship_type", kind)
+	fromProp := f.Prop("from").ID
+	toProp := f.Prop("to").ID
+	typeProp := f.Prop("place_relationship_type").ID
+	res, err := writes.Call(f.C, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
-			Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
+			Citation: citations.CreateInput{ArtifactID: f.Artifact.ID, LocatorJSON: locator},
 			Observations: []observations.Input{
 				{PropertyID: fromProp, ValueSubjectID: from.ID},
 				{PropertyID: toProp, ValueSubjectID: to.ID},
@@ -62,23 +62,23 @@ func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, li
 			},
 		})
 	})
-	must(f.t, err)
+	must(f.T, err)
 	if linkStart != nil || linkEnd != nil {
 		var extra []observations.Input
 		if linkStart != nil {
 			extra = append(extra, observations.Input{
-				SubjectID: res.Subject.ID, PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(*linkStart, 0, 0),
+				SubjectID: res.Subject.ID, PropertyID: f.Prop("start_date").ID, Date: datevaluetest.YMD(*linkStart, 0, 0),
 			})
 		}
 		if linkEnd != nil {
 			extra = append(extra, observations.Input{
-				SubjectID: res.Subject.ID, PropertyID: f.prop("end_date").ID, Date: datevaluetest.YMD(*linkEnd, 0, 0),
+				SubjectID: res.Subject.ID, PropertyID: f.Prop("end_date").ID, Date: datevaluetest.YMD(*linkEnd, 0, 0),
 			})
 		}
-		_, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+		_, err := writes.Call(f.C, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, res.Citation.ID, extra)
 		})
-		must(f.t, err)
+		must(f.T, err)
 	}
 }
 
@@ -100,7 +100,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 
 	parents := func(y int) []string {
 		t.Helper()
-		got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, *datevaluetest.YMD(y, 0, 0))
+		got, err := conclusionsummaries.ParentsAtDate(f.C, torontoID, *datevaluetest.YMD(y, 0, 0))
 		must(t, err)
 		return got
 	}
@@ -116,7 +116,7 @@ func TestPlaceParentsAtDateFromPeriods(t *testing.T) {
 	// About 1841 → both UC and PC candidates.
 	abt := *datevaluetest.YMD(1841, 0, 0)
 	abt.Qualifier = datevalue.QualifierABT
-	got, err := conclusionsummaries.ParentsAtDate(f.c, torontoID, abt)
+	got, err := conclusionsummaries.ParentsAtDate(f.C, torontoID, abt)
 	must(t, err)
 	if !sameSet(got, []string{"Upper Canada", "Province of Canada"}) {
 		t.Fatalf("about 1841 parents %v", got)
@@ -133,7 +133,7 @@ func TestPlaceSeveralParentsAreAllCandidates(t *testing.T) {
 	farmID := f.promoteSubject(farm)
 	f.promoteSubject(township)
 	f.promoteSubject(county)
-	got, err := conclusionsummaries.ParentsAtDate(f.c, farmID, conclusionsummaries.TodayDate())
+	got, err := conclusionsummaries.ParentsAtDate(f.C, farmID, conclusionsummaries.TodayDate())
 	must(t, err)
 	if !sameSet(got, []string{"York Township", "York County"}) {
 		t.Fatalf("parents %v", got)
@@ -147,24 +147,24 @@ func TestIrelandUKDatedMembershipDropsAfter1922(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	before, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *datevaluetest.YMD(1900, 0, 0))
+	before, err := conclusionsummaries.ParentsAtDate(f.C, irelandID, *datevaluetest.YMD(1900, 0, 0))
 	must(t, err)
 	if !sameSet(before, []string{"United Kingdom"}) {
 		t.Fatalf("1900 %v", before)
 	}
-	after, err := conclusionsummaries.ParentsAtDate(f.c, irelandID, *datevaluetest.YMD(1923, 0, 0))
+	after, err := conclusionsummaries.ParentsAtDate(f.C, irelandID, *datevaluetest.YMD(1923, 0, 0))
 	must(t, err)
 	if len(after) != 0 {
 		t.Fatalf("1923 still has parents %v", after)
 	}
 	// Both places continue: UK still lists Ireland as a former part only via
 	// the dated link — PartsAtDate at 1923 is empty.
-	parts, err := conclusionsummaries.PartsAtDate(f.c, ukID, *datevaluetest.YMD(1923, 0, 0))
+	parts, err := conclusionsummaries.PartsAtDate(f.C, ukID, *datevaluetest.YMD(1923, 0, 0))
 	must(t, err)
 	if len(parts) != 0 {
 		t.Fatalf("UK parts in 1923 %v", parts)
 	}
-	parts1900, err := conclusionsummaries.PartsAtDate(f.c, ukID, *datevaluetest.YMD(1900, 0, 0))
+	parts1900, err := conclusionsummaries.PartsAtDate(f.C, ukID, *datevaluetest.YMD(1900, 0, 0))
 	must(t, err)
 	if !sameSet(parts1900, []string{"Ireland"}) {
 		t.Fatalf("UK parts in 1900 %v", parts1900)
@@ -178,17 +178,17 @@ func TestSuccessionNeverBuildsChain(t *testing.T) {
 	f.placeRel(york, toronto, propertyterms.KeySucceededBy, nil, nil)
 	yorkID := f.promoteSubject(york)
 	torontoID := f.promoteSubject(toronto)
-	parents, err := conclusionsummaries.ParentsAtDate(f.c, yorkID, *datevaluetest.YMD(1834, 0, 0))
+	parents, err := conclusionsummaries.ParentsAtDate(f.C, yorkID, *datevaluetest.YMD(1834, 0, 0))
 	must(t, err)
 	if len(parents) != 0 {
 		t.Fatalf("succession leaked into chain %v", parents)
 	}
-	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, yorkID)
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.C, yorkID)
 	must(t, err)
 	if len(pred) != 0 || !sameSet(succ, []string{"Toronto"}) {
 		t.Fatalf("york succession pred=%v succ=%v", pred, succ)
 	}
-	pred, succ, err = conclusionsummaries.SuccessionNames(f.c, torontoID)
+	pred, succ, err = conclusionsummaries.SuccessionNames(f.C, torontoID)
 	must(t, err)
 	if !sameSet(pred, []string{"York"}) || len(succ) != 0 {
 		t.Fatalf("toronto succession pred=%v succ=%v", pred, succ)
@@ -211,7 +211,7 @@ func TestSuccessionSplitAndAmalgamation(t *testing.T) {
 	newID := f.promoteSubject(newOne)
 	f.promoteSubject(left)
 	f.promoteSubject(right)
-	pred, succ, err := conclusionsummaries.SuccessionNames(f.c, newID)
+	pred, succ, err := conclusionsummaries.SuccessionNames(f.C, newID)
 	must(t, err)
 	if !sameSet(pred, []string{"Old A", "Old B"}) || !sameSet(succ, []string{"Left", "Right"}) {
 		t.Fatalf("amalgamation/split pred=%v succ=%v", pred, succ)
@@ -225,24 +225,24 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	scotland := f.placeSubject("Scotland", nil, nil, 4, 0)
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 
-	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	person := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person, "James")
 	f.at(person, 0, 4)
-	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
 	f.at(birth, 4, 4)
-	f.cite(birth,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	f.Cite(f.Artifact, birth,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
 	)
-	f.participation(person, birth, "subject")
-	f.location(birth, toronto)
-	f.location(birth, ontario)
+	f.Participation(f.Source, f.Artifact, person, birth, "subject")
+	f.Locate(f.Source, f.Artifact, birth, toronto)
+	f.Locate(f.Source, f.Artifact, birth, ontario)
 	f.promoteSubject(person)
 	f.promoteSubject(birth)
 	f.promoteSubject(toronto)
 	f.promoteSubject(ontario)
 
-	persons, err := conclusionsummaries.ListPersons(f.c)
+	persons, err := conclusionsummaries.ListPersons(f.C)
 	must(t, err)
 	if len(persons) != 1 {
 		t.Fatalf("persons %d", len(persons))
@@ -259,22 +259,22 @@ func TestBirthLocationsFoldWhenPartOf(t *testing.T) {
 	}
 
 	// Unrelated Scotland stays a competing value.
-	birth2 := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	birth2 := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
 	f.at(birth2, 4, 6)
-	f.cite(birth2,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	f.Cite(f.Artifact, birth2,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
 	)
-	person2 := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	person2 := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person2, "Mary")
 	f.at(person2, 0, 6)
-	f.participation(person2, birth2, "subject")
-	f.location(birth2, toronto)
-	f.location(birth2, scotland)
+	f.Participation(f.Source, f.Artifact, person2, birth2, "subject")
+	f.Locate(f.Source, f.Artifact, birth2, toronto)
+	f.Locate(f.Source, f.Artifact, birth2, scotland)
 	f.promoteSubject(person2)
 	f.promoteSubject(birth2)
 	f.promoteSubject(scotland)
-	persons, err = conclusionsummaries.ListPersons(f.c)
+	persons, err = conclusionsummaries.ListPersons(f.C)
 	must(t, err)
 	var mary *conclusionsummaries.PersonSummary
 	for i := range persons {
@@ -298,26 +298,26 @@ func TestSiblingBirthPlacesStayCompetingUnderASharedParent(t *testing.T) {
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 	f.placeRel(hamilton, ontario, propertyterms.KeyPartOf, nil, nil)
 
-	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	person := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person, "James")
 	f.at(person, 0, 4)
-	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
 	f.at(birth, 4, 4)
-	f.cite(birth,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
+	f.Cite(f.Artifact, birth,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1850, 0, 0)},
 	)
-	f.participation(person, birth, "subject")
-	f.location(birth, toronto)
-	f.location(birth, hamilton)
-	f.location(birth, ontario)
+	f.Participation(f.Source, f.Artifact, person, birth, "subject")
+	f.Locate(f.Source, f.Artifact, birth, toronto)
+	f.Locate(f.Source, f.Artifact, birth, hamilton)
+	f.Locate(f.Source, f.Artifact, birth, ontario)
 	f.promoteSubject(person)
 	f.promoteSubject(birth)
 	f.promoteSubject(toronto)
 	f.promoteSubject(hamilton)
 	f.promoteSubject(ontario)
 
-	persons, err := conclusionsummaries.ListPersons(f.c)
+	persons, err := conclusionsummaries.ListPersons(f.C)
 	must(t, err)
 	if len(persons) != 1 {
 		t.Fatalf("persons %d", len(persons))
@@ -367,13 +367,13 @@ func TestAttachPlaceRelationships(t *testing.T) {
 	f.promoteSubject(uc)
 	f.promoteSubject(ontario)
 	yorkID := f.promoteSubject(york)
-	summaries, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{torontoID})
+	summaries, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{torontoID})
 	must(t, err)
 	if len(summaries) != 1 {
 		t.Fatalf("%d", len(summaries))
 	}
 	h := summaries[0]
-	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &h))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &h))
 	if len(h.PartOf) != 2 {
 		t.Fatalf("part_of %+v", h.PartOf)
 	}
@@ -394,9 +394,9 @@ func TestAttachPlaceRelationships(t *testing.T) {
 		t.Fatalf("successors %+v", h.Successors)
 	}
 	// York → Toronto succession both ways; successor shows Toronto's period.
-	yh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{yorkID})
+	yh, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{yorkID})
 	must(t, err)
-	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &yh[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &yh[0]))
 	if len(yh[0].Successors) != 1 || yh[0].Successors[0].Title != "Toronto" {
 		t.Fatalf("york successors %+v", yh[0].Successors)
 	}
@@ -413,9 +413,9 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	f.placeRel(ireland, uk, propertyterms.KeyPartOf, nil, year(1922))
 	irelandID := f.promoteSubject(ireland)
 	ukID := f.promoteSubject(uk)
-	ih, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{irelandID})
+	ih, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{irelandID})
 	must(t, err)
-	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &ih[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &ih[0]))
 	if len(ih[0].PartOf) != 1 || ih[0].PartOf[0].Title != "United Kingdom" {
 		t.Fatalf("ireland part_of %+v", ih[0].PartOf)
 	}
@@ -423,9 +423,9 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 		*ih[0].PartOf[0].EndDate.StartYear != 1922 {
 		t.Fatalf("ireland membership end %+v", ih[0].PartOf[0])
 	}
-	uh, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{ukID})
+	uh, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{ukID})
 	must(t, err)
-	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &uh[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &uh[0]))
 	// Contains is "today"; a membership that ended in 1922 is not listed.
 	for _, c := range uh[0].Contains {
 		if c.Title == "Ireland" {
@@ -441,7 +441,7 @@ func TestDependentsIncludeChildPlaces(t *testing.T) {
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 	torontoID := f.promoteSubject(toronto)
 	ontarioID := f.promoteSubject(ontario)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	deps, err := conclusionsummaries.Dependents(db, [][]byte{ontarioID})
 	must(t, err)
@@ -458,7 +458,7 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 	childID := f.promoteSubject(child)
 	f.promoteSubject(parent)
 	for _, y := range []int{1, 1000, 2020} {
-		got, err := conclusionsummaries.ParentsAtDate(f.c, childID, *datevaluetest.YMD(y, 0, 0))
+		got, err := conclusionsummaries.ParentsAtDate(f.C, childID, *datevaluetest.YMD(y, 0, 0))
 		must(t, err)
 		if !sameSet(got, []string{"Parent"}) {
 			t.Fatalf("%d parents %v", y, got)
@@ -470,24 +470,24 @@ func TestUndatedPlacesAlwaysHold(t *testing.T) {
 // dateKey ("date" or "start_date"; "" for no date) at year, located at places.
 // It does not promote.
 func (f *fixture) lifeEvent(person subjects.Subject, kind, dateKey string, y int, y2 int64, places ...subjects.Subject) subjects.Subject {
-	f.t.Helper()
-	ev := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
+	f.T.Helper()
+	ev := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
 	f.at(ev, 6, y2)
-	in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", kind).ID}}
+	in := []observations.Input{{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", kind).ID}}
 	if dateKey != "" {
-		in = append(in, observations.Input{PropertyID: f.prop(dateKey).ID, Date: datevaluetest.YMD(y, 0, 0)})
+		in = append(in, observations.Input{PropertyID: f.Prop(dateKey).ID, Date: datevaluetest.YMD(y, 0, 0)})
 	}
-	f.cite(ev, in...)
-	f.participation(person, ev, "subject")
+	f.Cite(f.Artifact, ev, in...)
+	f.Participation(f.Source, f.Artifact, person, ev, "subject")
 	for _, p := range places {
-		f.location(ev, p)
+		f.Locate(f.Source, f.Artifact, ev, p)
 	}
 	return ev
 }
 
 func (f *fixture) lifePerson() subjects.Subject {
-	f.t.Helper()
-	p := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	f.T.Helper()
+	p := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(p, "Ann")
 	f.at(p, 0, 20)
 	return p
@@ -496,19 +496,19 @@ func (f *fixture) lifePerson() subjects.Subject {
 // deniedDate cites a date on event that a stronger negative of the same date
 // denies: the positive rides an uncertain transcription, the negative does not.
 func (f *fixture) deniedDate(event subjects.Subject, y int) {
-	f.t.Helper()
-	date := f.prop("date").ID
+	f.T.Helper()
+	date := f.Prop("date").ID
 	for _, c := range []struct {
 		uncertain bool
 		polarity  string
 	}{{true, observations.PolarityPositive}, {false, observations.PolarityNegative}} {
-		_, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		_, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
 				GraphID:    f.graph,
-				ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: c.uncertain,
+				ArtifactID: f.Artifact.ID, LocatorJSON: locator, TranscriptionUncertain: c.uncertain,
 			}, []observations.Input{{SubjectID: event.ID, PropertyID: date, Date: datevaluetest.YMD(y, 0, 0), Polarity: c.polarity}})
 		})
-		must(f.t, err)
+		must(f.T, err)
 	}
 }
 
@@ -520,15 +520,15 @@ func TestPersonLifeOwners(t *testing.T) {
 	}
 	// link is the association of event's `location` link to place.
 	link := func(f *fixture, event, place []byte) []byte {
-		f.t.Helper()
-		links, err := f.c.Graph().Follow(event, hops.PlacesOfEvent)
-		must(f.t, err)
+		f.T.Helper()
+		links, err := f.C.Graph().Follow(event, hops.PlacesOfEvent)
+		must(f.T, err)
 		for _, l := range links {
 			if bytes.Equal(l.Neighbor, place) {
 				return l.Association
 			}
 		}
-		f.t.Fatalf("event %x has no location link to %x", event, place)
+		f.T.Fatalf("event %x has no location link to %x", event, place)
 		return nil
 	}
 	type world struct {
@@ -621,7 +621,7 @@ func TestPersonLifeOwners(t *testing.T) {
 		{"same event linked twice", func(f *fixture) world {
 			p := f.lifePerson()
 			ev := f.lifeEvent(p, "birth", "date", 1817, 2)
-			f.participation(p, ev, "subject")
+			f.Participation(f.Source, f.Artifact, p, ev, "subject")
 			var w world
 			w.person = f.promoteSubject(p)
 			w.birth.dates = []owner{{f.promoteSubject(ev), "date", nil}}
@@ -639,7 +639,7 @@ func TestPersonLifeOwners(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			w := tc.build(f)
-			birth, death, err := conclusionsummaries.PersonLifeOwners(f.c, w.person)
+			birth, death, err := conclusionsummaries.PersonLifeOwners(f.C, w.person)
 			must(t, err)
 			check := func(side string, got conclusionsummaries.LifeOwners, want struct{ dates, places []owner }) {
 				t.Helper()
@@ -663,7 +663,7 @@ func TestPersonLifeOwners(t *testing.T) {
 							part.want[i].place != nil && !bytes.Equal(part.got[i].Place.Entity.ID, part.want[i].place) {
 							t.Fatalf("%s %s[%d]: wrong Place", side, part.name, i)
 						}
-						if wantID := f.prop(part.want[i].prop).ID; !bytes.Equal(part.got[i].PropertyID, wantID) {
+						if wantID := f.Prop(part.want[i].prop).ID; !bytes.Equal(part.got[i].PropertyID, wantID) {
 							t.Fatalf("%s %s[%d]: property %x, want %s", side, part.name, i, part.got[i].PropertyID, part.want[i].prop)
 						}
 					}
@@ -672,7 +672,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			check("birth", birth, w.birth)
 			check("death", death, w.death)
 			if tc.name == "death at two Places that do not fold" {
-				persons, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{w.person})
+				persons, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{w.person})
 				must(t, err)
 				summary := persons[0].Death.Places
 				if len(death.Places) != 2 || len(summary) != 2 {
@@ -719,14 +719,14 @@ func TestPersonDerivedRows(t *testing.T) {
 			}
 			count := func(id []byte) (int, []conclusiondetails.DerivedRow) {
 				t.Helper()
-				g := f.c.Graph()
+				g := f.C.Graph()
 				g.Drop()
 				_, err := g.Vocabulary()
 				must(t, err)
 				n := 0
 				g.SetQueryCounterForTest(func() { n++ })
 				defer g.SetQueryCounterForTest(nil)
-				rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+				rows, err := conclusiondetails.PersonDerivedRows(f.C, id)
 				must(t, err)
 				return n, rows
 			}
@@ -752,7 +752,7 @@ func TestPersonDerivedRows(t *testing.T) {
 			f.promoteSubject(birth)
 			f.promoteSubject(death)
 			yorkID := f.promoteSubject(york)
-			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			rows, err := conclusiondetails.PersonDerivedRows(f.C, id)
 			must(t, err)
 			kinds := map[conclusiondetails.DerivedRowKind]conclusiondetails.DerivedRow{}
 			for _, r := range rows {
@@ -783,7 +783,7 @@ func TestPersonDerivedRows(t *testing.T) {
 			f.deniedDate(ev, 1817)
 			id := f.promoteSubject(p)
 			evID := f.promoteSubject(ev)
-			rows, err := conclusiondetails.PersonDerivedRows(f.c, id)
+			rows, err := conclusiondetails.PersonDerivedRows(f.C, id)
 			must(t, err)
 			if len(rows) != 1 || rows[0].Kind != conclusiondetails.DerivedRowBirthDate || len(rows[0].Owners) != 1 {
 				t.Fatalf("rows %+v, want one birth date owner", rows)

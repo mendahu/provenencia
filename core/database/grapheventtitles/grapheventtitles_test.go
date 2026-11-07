@@ -4,38 +4,25 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/grapheventtitles"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/ref"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+var userID = evidencelayertest.UserID
 
 func must(t *testing.T, err error) {
 	t.Helper()
@@ -45,106 +32,36 @@ func must(t *testing.T, err error) {
 }
 
 type fixture struct {
-	t   *testing.T
-	c   *database.Catalog
-	src sources.Source
-	art artifacts.Artifact
-	y   int64
+	*evidencelayertest.Records
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	must(t, err)
-	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(t, err)
-	return &fixture{t: t, c: c, src: src, art: art}
+	return &fixture{evidencelayertest.New(t)}
 }
 
+// subject is a Subject of the kind on the fixture's Source, labelled, with the
+// Observations cited on its Artifact.
 func (f *fixture) subject(kind, label string, in ...observations.Input) subjects.Subject {
-	f.t.Helper()
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, f.src.ID).ID
-	s := subjectstest.On(f.t, f.c, userID, graph, kind, label)
-	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-		return subjectpositions.Set(tx, s.ID, 0, f.y)
-	})
-	must(f.t, err)
-	f.y += 2
+	f.T.Helper()
+	s := f.Labelled(f.Source, kind, label)
 	if len(in) > 0 {
-		for i := range in {
-			in[i].SubjectID = s.ID
-		}
-		_, _, err = observationstest.Cite(f.c, userID, s.GraphID, f.art.ID, locator, in...)
-		must(f.t, err)
+		f.Cite(f.Artifact, s, in...)
 	}
 	return s
 }
 
-func (f *fixture) prop(key string) []byte {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return p.ID
-}
-
-func (f *fixture) term(propertyKey, termKey string) []byte {
-	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.prop(propertyKey), termKey, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return term.ID
-}
-
 func (f *fixture) eventType(key string) observations.Input {
-	return observations.Input{PropertyID: f.prop("event_type"), ValueTermID: f.term("event_type", key)}
-}
-
-func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) {
-	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
-			Observations: obs,
-		})
-	})
-	must(f.t, err)
-}
-
-func (f *fixture) participation(person, event subjects.Subject, role string) {
-	f.t.Helper()
-	f.bridge("participation", person, event,
-		observations.Input{PropertyID: f.prop("person"), ValueSubjectID: person.ID},
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: event.ID},
-		observations.Input{PropertyID: f.prop("role"), ValueTermID: f.term("role", role)},
-	)
-}
-
-func (f *fixture) location(event, place subjects.Subject) {
-	f.t.Helper()
-	f.bridge("location", event, place,
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: event.ID},
-		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: place.ID},
-	)
+	return observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", key).ID}
 }
 
 func TestForEvidenceGraph(t *testing.T) {
 	f := newFixture(t)
 	name := func(form string) observations.Input {
-		return observations.Input{PropertyID: f.prop("name"), Name: namevaluetest.Western(form)}
+		return observations.Input{PropertyID: f.Prop("name").ID, Name: namevaluetest.Western(form)}
 	}
 	text := func(key, v string) observations.Input {
-		return observations.Input{PropertyID: f.prop(key), Scalar: propertymeta.TextScalar(v)}
+		return observations.Input{PropertyID: f.Prop(key).ID, Scalar: propertymeta.TextScalar(v)}
 	}
 	james := f.subject("person", "James", name("James Robins"))
 	mary := f.subject("person", "Mary", name("Mary Smith"))
@@ -153,22 +70,22 @@ func TestForEvidenceGraph(t *testing.T) {
 	york := f.subject("place", "the town", text("toponym", "York"))
 
 	baptism := f.subject("event", "Baptism", f.eventType("baptism"))
-	f.participation(james, baptism, "subject")
-	f.participation(witness, baptism, "witness")
-	f.location(baptism, york)
+	f.Participation(f.Source, f.Artifact, james, baptism, "subject")
+	f.Participation(f.Source, f.Artifact, witness, baptism, "witness")
+	f.Locate(f.Source, f.Artifact, baptism, york)
 	marriage := f.subject("event", "", f.eventType("marriage"))
-	f.participation(james, marriage, "subject")
-	f.participation(mary, marriage, "subject")
+	f.Participation(f.Source, f.Artifact, james, marriage, "subject")
+	f.Participation(f.Source, f.Artifact, mary, marriage, "subject")
 	birth := f.subject("event", "", f.eventType("birth"))
-	f.participation(nobody, birth, "subject")
-	eventTypeID := f.prop("event_type")
-	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+	f.Participation(f.Source, f.Artifact, nobody, birth, "subject")
+	eventTypeID := f.Prop("event_type").ID
+	fireTerm, _, err := writes.Run(f.C, writes.Op{Action: "create_property_term", UserID: userID},
 		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
 		})
 	must(t, err)
-	fire := f.subject("event", "", observations.Input{PropertyID: f.prop("event_type"), ValueTermID: fireTerm.ID})
-	f.location(fire, york)
+	fire := f.subject("event", "", observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: fireTerm.ID})
+	f.Locate(f.Source, f.Artifact, fire, york)
 	named := f.subject("event", "Grandpa's fire", text("event_name", "The Great Fire"))
 	labelled := f.subject("event", "Grandpa's house fire")
 	typed := f.subject("event", "", f.eventType("death"))
@@ -232,7 +149,7 @@ func TestForEvidenceGraph(t *testing.T) {
 	// Subject order is by participation ref, so et al. always names the same
 	// person, read after read.
 	t.Run("subjects are in participation-ref order, every time", func(t *testing.T) {
-		db, err := f.c.DB()
+		db, err := f.C.DB()
 		must(t, err)
 		var refs []string
 		rows, err := db.Query(`SELECT s.ref FROM subjects s
@@ -277,9 +194,9 @@ func TestForEvidenceGraph(t *testing.T) {
 	t.Run("one Event on each graph titles only its own graph's", func(t *testing.T) {
 		f := newFixture(t)
 		f.subject("event", "Default event")
-		_, jones, _ := artifactstest.Split(t, f.c, userID, f.src.ID, "Jones")
-		jonesEvent := subjectstest.On(t, f.c, userID, jones.ID, "event", "Jones event")
-		eg, err := f.c.Graph().EvidenceGraph(jones.ID)
+		_, jones, _ := artifactstest.Split(t, f.C, userID, f.Source.ID, "Jones")
+		jonesEvent := subjectstest.On(t, f.C, userID, jones.ID, "event", "Jones event")
+		eg, err := f.C.Graph().EvidenceGraph(jones.ID)
 		must(t, err)
 		got := grapheventtitles.FromStored(eg, nil, nil)
 		if len(got) != 1 || string(got[0].SubjectID) != string(jonesEvent.ID) {
@@ -297,9 +214,9 @@ func TestForEvidenceGraph(t *testing.T) {
 
 func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	t.Helper()
-	eg, err := f.c.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID)
+	eg, err := f.C.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
 	must(t, err)
-	v, err := f.c.Graph().Vocabulary()
+	v, err := f.C.Graph().Vocabulary()
 	must(t, err)
 	propKey := map[string]string{}
 	for _, p := range v.Properties {

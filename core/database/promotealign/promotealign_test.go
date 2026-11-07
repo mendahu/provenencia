@@ -9,256 +9,56 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/promotealign"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
-	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var (
+	userID = evidencelayertest.UserID
+	must   = evidencelayertest.Must
+)
 
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+const locator = evidencelayertest.Locator
 
+// fixture is the shared Source-building records, with the fields the tests read
+// by name.
 type fixture struct {
+	*evidencelayertest.Records
 	t        testing.TB
 	c        *database.Catalog
 	source   sources.Source
 	artifact artifacts.Artifact
-	y        int64
-}
-
-func must(t testing.TB, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 func newFixture(t testing.TB) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	must(t, err)
-	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(t, err)
-	return &fixture{t: t, c: c, source: src, artifact: art}
-}
-
-func (f *fixture) newSource(title string) (sources.Source, artifacts.Artifact) {
-	f.t.Helper()
-	typeID, err := sourcetypes.Upsert(f.c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(f.t, err)
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
-	})
-	must(f.t, err)
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(f.t, err)
-	return src, art
-}
-
-func (f *fixture) prop(key string) properties.Property {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return p
-}
-
-func (f *fixture) term(propKey, termKey string) propertyterms.Term {
-	f.t.Helper()
-	t, err := propertyterms.Lookup(f.c, f.prop(propKey).ID, termKey, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return t
-}
-
-func (f *fixture) bare(src sources.Source, kind string) subjects.Subject {
-	f.t.Helper()
-	s := subjectstest.On(f.t, f.c, userID, f.graph(src), kind, "")
-	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-		return subjectpositions.Set(tx, s.ID, 0, f.y)
-	})
-	must(f.t, err)
-	f.y += 2
-	return s
-}
-
-func (f *fixture) cite(art artifacts.Artifact, s subjects.Subject, in ...observations.Input) {
-	f.t.Helper()
-	for i := range in {
-		in[i].SubjectID = s.ID
-	}
-	_, _, err := observationstest.Cite(f.c, userID, s.GraphID, art.ID, locator, in...)
-	must(f.t, err)
-}
-
-func (f *fixture) person(src sources.Source, art artifacts.Artifact, name string) subjects.Subject {
-	f.t.Helper()
-	s := f.bare(src, "person")
-	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("name").ID, Name: namevaluetest.Western(name),
-	})
-	return s
-}
-
-func (f *fixture) birth(src sources.Source, art artifacts.Artifact) subjects.Subject {
-	f.t.Helper()
-	s := f.bare(src, "event")
-	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID,
-	})
-	return s
-}
-
-func (f *fixture) place(src sources.Source, art artifacts.Artifact, name string) subjects.Subject {
-	f.t.Helper()
-	s := f.bare(src, "place")
-	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar(name),
-	})
-	return s
-}
-
-func (f *fixture) participation(src sources.Source, art artifacts.Artifact, person, event subjects.Subject, role string) subjects.Subject {
-	f.t.Helper()
-	personProp := f.prop("person").ID
-	eventProp := f.prop("event").ID
-	roleProp := f.prop("role").ID
-	roleTerm := f.term("role", role).ID
-	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-			Observations: []observations.Input{
-				{PropertyID: personProp, ValueSubjectID: person.ID},
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: roleProp, ValueTermID: roleTerm},
-			},
-		})
-	})
-	must(f.t, err)
-	return res.Subject
-}
-
-func (f *fixture) locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) {
-	f.t.Helper()
-	eventProp := f.prop("event").ID
-	placeProp := f.prop("place").ID
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
-			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-			Observations: []observations.Input{
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: placeProp, ValueSubjectID: place.ID},
-			},
-		})
-	})
-	must(f.t, err)
-}
-
-func (f *fixture) placeRel(src sources.Source, art artifacts.Artifact, from, to subjects.Subject, kind string) subjects.Subject {
-	f.t.Helper()
-	fromProp := f.prop("from").ID
-	toProp := f.prop("to").ID
-	typeProp := f.prop("place_relationship_type").ID
-	kindTerm := f.term("place_relationship_type", kind).ID
-	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
-			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-			Observations: []observations.Input{
-				{PropertyID: fromProp, ValueSubjectID: from.ID},
-				{PropertyID: toProp, ValueSubjectID: to.ID},
-				{PropertyID: typeProp, ValueTermID: kindTerm},
-			},
-		})
-	})
-	must(f.t, err)
-	return res.Subject
-}
-
-// relationship cites "person is typ of related" on src.
-func (f *fixture) relationship(src sources.Source, art artifacts.Artifact, person, related subjects.Subject, typ string) subjects.Subject {
-	f.t.Helper()
-	personProp := f.prop("person").ID
-	relatedProp := f.prop("related_to").ID
-	typeProp := f.prop("relationship_type").ID
-	typTerm := f.term("relationship_type", typ).ID
-	res, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
-			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: locator},
-			Observations: []observations.Input{
-				{PropertyID: personProp, ValueSubjectID: person.ID},
-				{PropertyID: relatedProp, ValueSubjectID: related.ID},
-				{PropertyID: typeProp, ValueTermID: typTerm},
-			},
-		})
-	})
-	must(f.t, err)
-	return res.Subject
-}
-
-// sexOnly is a person whose record gives no name, only a sex at birth.
-func (f *fixture) sexOnly(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
-	f.t.Helper()
-	s := f.bare(src, "person")
-	f.cite(art, s, observations.Input{
-		PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
-	})
-	return s
+	r := evidencelayertest.New(t)
+	return &fixture{Records: r, t: t, c: r.C, source: r.Source, artifact: r.Artifact}
 }
 
 func (f *fixture) promote(s subjects.Subject) promote.Result {
 	f.t.Helper()
 	return promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
-}
-
-// graph is the one Evidence graph of src. Call it outside a write closure.
-func (f *fixture) graph(src sources.Source) []byte {
-	f.t.Helper()
-	return evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
 }
 
 func (f *fixture) propose(graphID []byte, fixed []graphalign.Fixed) graphalign.Proposal {
@@ -281,16 +81,16 @@ func rowFor(p graphalign.Proposal, subjectID []byte) graphalign.Row {
 // read every node to build the shortlist index.
 func TestProposeWithOnlyFixedSubjectsBuildsNoIndex(t *testing.T) {
 	f := newFixture(t)
-	aPerson := f.person(f.source, f.artifact, "Gracie")
+	aPerson := f.Person(f.source, f.artifact, "Gracie")
 	per := f.promote(aPerson)
-	srcB, artB := f.newSource("Obituary")
-	bPerson := f.person(srcB, artB, "Gracie")
+	srcB, artB := f.NewSource("Obituary")
+	bPerson := f.Person(srcB, artB, "Gracie")
 
-	f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
+	f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
 	if _, ok := f.c.Graph().MatchIndex(); ok {
 		t.Error("Propose built the match index with no Subject to seed")
 	}
-	f.propose(f.graph(srcB), nil)
+	f.propose(f.Graph(srcB), nil)
 	if _, ok := f.c.Graph().MatchIndex(); !ok {
 		t.Error("Propose with an unfixed Subject did not build the match index")
 	}
@@ -302,19 +102,19 @@ func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
 	f := newFixture(t)
 
 	// Canon: Gracie ↔ birth filed on Source A.
-	aPerson := f.person(f.source, f.artifact, "Gracie")
-	aBirth := f.birth(f.source, f.artifact)
-	f.participation(f.source, f.artifact, aPerson, aBirth, "subject")
+	aPerson := f.Person(f.source, f.artifact, "Gracie")
+	aBirth := f.Birth(f.source, f.artifact)
+	f.Participation(f.source, f.artifact, aPerson, aBirth, "subject")
 	per := f.promote(aPerson)
 	evt := f.promote(aBirth)
 
 	// Layer B: matching person + birth; fix the birth to the known handle.
-	srcB, artB := f.newSource("Obituary")
-	bPerson := f.person(srcB, artB, "Gracie")
-	bBirth := f.birth(srcB, artB)
-	f.participation(srcB, artB, bPerson, bBirth, "subject")
+	srcB, artB := f.NewSource("Obituary")
+	bPerson := f.Person(srcB, artB, "Gracie")
+	bBirth := f.Birth(srcB, artB)
+	f.Participation(srcB, artB, bPerson, bBirth, "subject")
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{
 		SubjectID: bBirth.ID, HandleID: evt.Entity.ID,
 	}})
 	row := rowFor(got, bPerson.ID)
@@ -333,18 +133,18 @@ func TestProposeSeedFromPromotedNeighbor(t *testing.T) {
 func TestProposePlacePartOfChain(t *testing.T) {
 	f := newFixture(t)
 
-	york := f.place(f.source, f.artifact, "York")
-	ontario := f.place(f.source, f.artifact, "Ontario")
-	f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+	york := f.Place(f.source, f.artifact, "York")
+	ontario := f.Place(f.source, f.artifact, "Ontario")
+	f.PlaceRel(f.source, f.artifact, york, ontario, "part_of")
 	yorkH := f.promote(york)
 	ontarioH := f.promote(ontario)
 
-	srcB, artB := f.newSource("Gazetteer")
-	york2 := f.place(srcB, artB, "York")
-	ontario2 := f.place(srcB, artB, "Ontario")
-	f.placeRel(srcB, artB, york2, ontario2, "part_of")
+	srcB, artB := f.NewSource("Gazetteer")
+	york2 := f.Place(srcB, artB, "York")
+	ontario2 := f.Place(srcB, artB, "Ontario")
+	f.PlaceRel(srcB, artB, york2, ontario2, "part_of")
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{
 		SubjectID: ontario2.ID, HandleID: ontarioH.Entity.ID,
 	}})
 	row := rowFor(got, york2.ID)
@@ -367,26 +167,26 @@ func TestProposeOverlappingBoundShowsTheDateAndResembles(t *testing.T) {
 	// death is a one-cardinality link, so the event files through its subject.
 	earlier, later := bef(1985, 2, 1), bef(1985, 3, 31)
 
-	aPerson := f.person(f.source, f.artifact, "Doug")
-	aEvent := f.bare(f.source, "event")
-	f.cite(f.artifact, aEvent,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
-		observations.Input{PropertyID: f.prop("start_date").ID, Date: earlier},
+	aPerson := f.Person(f.source, f.artifact, "Doug")
+	aEvent := f.Bare(f.source, "event")
+	f.Cite(f.artifact, aEvent,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "death").ID},
+		observations.Input{PropertyID: f.Prop("start_date").ID, Date: earlier},
 	)
-	f.participation(f.source, f.artifact, aPerson, aEvent, "subject")
+	f.Participation(f.source, f.artifact, aPerson, aEvent, "subject")
 	per := f.promote(aPerson)
 	evt := f.promote(aEvent)
 
-	srcB, artB := f.newSource("Letter")
-	bPerson := f.person(srcB, artB, "Doug")
-	bEvent := f.bare(srcB, "event")
-	f.cite(artB, bEvent,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
-		observations.Input{PropertyID: f.prop("start_date").ID, Date: later},
+	srcB, artB := f.NewSource("Letter")
+	bPerson := f.Person(srcB, artB, "Doug")
+	bEvent := f.Bare(srcB, "event")
+	f.Cite(artB, bEvent,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "death").ID},
+		observations.Input{PropertyID: f.Prop("start_date").ID, Date: later},
 	)
-	f.participation(srcB, artB, bPerson, bEvent, "subject")
+	f.Participation(srcB, artB, bPerson, bEvent, "subject")
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
 	row := rowFor(got, bEvent.ID)
 	if !bytes.Equal(row.HandleID, evt.Entity.ID) {
 		t.Fatalf("event %+v, want %s", row, evt.Entity.Ref)
@@ -404,12 +204,12 @@ func TestProposeInvalidGraph(t *testing.T) {
 // A Source with two graphs proposes one graph's Subjects at a time.
 func TestProposeReadsOneGraph(t *testing.T) {
 	f := newFixture(t)
-	census, censusArt := f.newSource("Census")
+	census, censusArt := f.NewSource("Census")
 	def, jones, page2 := artifactstest.Split(t, f.c, userID, census.ID, "Jones")
 	smith := subjectstest.On(t, f.c, userID, def.ID, "person", "")
-	f.cite(censusArt, smith, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("John Smith")})
+	f.Cite(censusArt, smith, observations.Input{PropertyID: f.Prop("name").ID, Name: namevaluetest.Western("John Smith")})
 	mary := subjectstest.On(t, f.c, userID, jones.ID, "person", "")
-	f.cite(page2, mary, observations.Input{PropertyID: f.prop("name").ID, Name: namevaluetest.Western("Mary Jones")})
+	f.Cite(page2, mary, observations.Input{PropertyID: f.Prop("name").ID, Name: namevaluetest.Western("Mary Jones")})
 
 	for _, tc := range []struct {
 		name        string
@@ -450,12 +250,12 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			per := f.promote(f.person(f.source, f.artifact, "Gracie"))
-			srcB, artB := f.newSource("Obituary")
-			again := f.person(srcB, artB, "Gracie")
+			per := f.promote(f.Person(f.source, f.artifact, "Gracie"))
+			srcB, artB := f.NewSource("Obituary")
+			again := f.Person(srcB, artB, "Gracie")
 			fixed := tt.fixed(per.Entity.ID)
 			fixed.SubjectID = again.ID
-			p, _, err := promotealign.Propose(f.c, f.graph(srcB), []graphalign.Fixed{fixed}, nil)
+			p, _, err := promotealign.Propose(f.c, f.Graph(srcB), []graphalign.Fixed{fixed}, nil)
 			if tt.wantErr {
 				if err != promote.ErrInvalid {
 					t.Fatalf("err %v, want promote.ErrInvalid", err)
@@ -475,21 +275,21 @@ func TestProposeHoldsNewAndSkipDecisions(t *testing.T) {
 func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 	queries := func(people int) int {
 		f := newFixture(t)
-		srcB, artB := f.newSource("Obituary")
+		srcB, artB := f.NewSource("Obituary")
 		for i := 0; i < people; i++ {
 			name := fmt.Sprintf("Person %c", 'A'+i)
-			p := f.person(f.source, f.artifact, name)
-			b := f.birth(f.source, f.artifact)
-			f.participation(f.source, f.artifact, p, b, "subject")
+			p := f.Person(f.source, f.artifact, name)
+			b := f.Birth(f.source, f.artifact)
+			f.Participation(f.source, f.artifact, p, b, "subject")
 			f.promote(p)
 			f.promote(b)
-			pb := f.person(srcB, artB, name)
-			bb := f.birth(srcB, artB)
-			f.participation(srcB, artB, pb, bb, "subject")
+			pb := f.Person(srcB, artB, name)
+			bb := f.Birth(srcB, artB)
+			f.Participation(srcB, artB, pb, bb, "subject")
 		}
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
-		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil, nil)
+		_, _, err := promotealign.Propose(f.c, f.Graph(srcB), nil, nil)
 		must(t, err)
 		return n
 	}
@@ -504,23 +304,23 @@ func TestProposeQueryCountDoesNotGrowWithTheLayer(t *testing.T) {
 // nothing decided yet, are strong. The hierarchy is one hop of context.
 func TestPartOfChainIsAStrongMatch(t *testing.T) {
 	f := newFixture(t)
-	city := f.place(f.source, f.artifact, "Gumptiontown")
-	state := f.place(f.source, f.artifact, "Provenance")
-	country := f.place(f.source, f.artifact, "Arcadia")
-	f.placeRel(f.source, f.artifact, city, state, "part_of")
-	f.placeRel(f.source, f.artifact, state, country, "part_of")
+	city := f.Place(f.source, f.artifact, "Gumptiontown")
+	state := f.Place(f.source, f.artifact, "Provenance")
+	country := f.Place(f.source, f.artifact, "Arcadia")
+	f.PlaceRel(f.source, f.artifact, city, state, "part_of")
+	f.PlaceRel(f.source, f.artifact, state, country, "part_of")
 	cityH := f.promote(city)
 	stateH := f.promote(state)
 	countryH := f.promote(country)
 
-	srcB, artB := f.newSource("Gazetteer")
-	city2 := f.place(srcB, artB, "Gumptiontown")
-	state2 := f.place(srcB, artB, "Provenance")
-	country2 := f.place(srcB, artB, "Arcadia")
-	f.placeRel(srcB, artB, city2, state2, "part_of")
-	f.placeRel(srcB, artB, state2, country2, "part_of")
+	srcB, artB := f.NewSource("Gazetteer")
+	city2 := f.Place(srcB, artB, "Gumptiontown")
+	state2 := f.Place(srcB, artB, "Provenance")
+	country2 := f.Place(srcB, artB, "Arcadia")
+	f.PlaceRel(srcB, artB, city2, state2, "part_of")
+	f.PlaceRel(srcB, artB, state2, country2, "part_of")
 
-	prop := f.propose(f.graph(srcB), nil)
+	prop := f.propose(f.Graph(srcB), nil)
 	cfg := matchregistry.Default().AlignConfig()
 	for _, pair := range []struct {
 		sub    subjects.Subject
@@ -542,12 +342,12 @@ func TestPartOfChainIsAStrongMatch(t *testing.T) {
 // when another place in the catalog makes that name look common.
 func TestSameToponymAloneIsAMediumMatch(t *testing.T) {
 	f := newFixture(t)
-	york := f.promote(f.place(f.source, f.artifact, "York"))
-	f.promote(f.place(f.source, f.artifact, "Leeds"))
+	york := f.promote(f.Place(f.source, f.artifact, "York"))
+	f.promote(f.Place(f.source, f.artifact, "Leeds"))
 
-	srcB, artB := f.newSource("Gazetteer")
-	again := f.place(srcB, artB, "York")
-	row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
+	srcB, artB := f.NewSource("Gazetteer")
+	again := f.Place(srcB, artB, "York")
+	row := rowFor(f.propose(f.Graph(srcB), nil), again.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, york.Entity.ID) ||
 		row.Assessment != graphalign.AssessMedium {
 		t.Fatalf("york row %+v, want %s as a weak match", row, york.Entity.Ref)
@@ -564,10 +364,10 @@ func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.short, func(t *testing.T) {
 			f := newFixture(t)
-			known := f.promote(f.person(f.source, f.artifact, tc.full))
-			srcB, artB := f.newSource("Census")
-			again := f.person(srcB, artB, tc.short)
-			row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
+			known := f.promote(f.Person(f.source, f.artifact, tc.full))
+			srcB, artB := f.NewSource("Census")
+			again := f.Person(srcB, artB, tc.short)
+			row := rowFor(f.propose(f.Graph(srcB), nil), again.ID)
 			cfg := matchregistry.Default().AlignConfig()
 			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
 				row.Assessment != graphalign.AssessWeak ||
@@ -585,12 +385,12 @@ func TestShorterStructuredNameIsAWeakMatch(t *testing.T) {
 // valuecompare's wordKeys).
 func TestSpellingOnlyToponymIsNotShortlisted(t *testing.T) {
 	f := newFixture(t)
-	f.promote(f.place(f.source, f.artifact, "Provenanced"))
-	f.promote(f.place(f.source, f.artifact, "Leeds"))
+	f.promote(f.Place(f.source, f.artifact, "Provenanced"))
+	f.promote(f.Place(f.source, f.artifact, "Leeds"))
 
-	srcB, artB := f.newSource("Gazetteer")
-	again := f.place(srcB, artB, "Provenance")
-	row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
+	srcB, artB := f.NewSource("Gazetteer")
+	again := f.Place(srcB, artB, "Provenance")
+	row := rowFor(f.propose(f.Graph(srcB), nil), again.ID)
 	if row.Target != "" || row.Reason != graphalign.ReasonUnplaced {
 		t.Fatalf("provenance row %+v, want no target and unplaced", row)
 	}
@@ -600,25 +400,25 @@ func TestSpellingOnlyToponymIsNotShortlisted(t *testing.T) {
 // its whole, though both are named York) is what the layer's part matches.
 func TestProposePartOfMatchesTheSameEnd(t *testing.T) {
 	f := newFixture(t)
-	part := f.place(f.source, f.artifact, "York")
-	middle := f.place(f.source, f.artifact, "Ontario")
-	whole := f.place(f.source, f.artifact, "York")
-	f.placeRel(f.source, f.artifact, part, middle, "part_of")
-	f.placeRel(f.source, f.artifact, middle, whole, "part_of")
+	part := f.Place(f.source, f.artifact, "York")
+	middle := f.Place(f.source, f.artifact, "Ontario")
+	whole := f.Place(f.source, f.artifact, "York")
+	f.PlaceRel(f.source, f.artifact, part, middle, "part_of")
+	f.PlaceRel(f.source, f.artifact, middle, whole, "part_of")
 	partH := f.promote(part)
 	middleH := f.promote(middle)
 	f.promote(whole)
 	// Other places, so "York" is not a common name and the edge decides.
 	for _, name := range []string{"Bath", "Leeds", "Hull", "Derby", "Ely", "Wells"} {
-		f.promote(f.place(f.source, f.artifact, name))
+		f.promote(f.Place(f.source, f.artifact, name))
 	}
 
-	srcB, artB := f.newSource("Gazetteer")
-	york := f.place(srcB, artB, "York")
-	ontario := f.place(srcB, artB, "Ontario")
-	f.placeRel(srcB, artB, york, ontario, "part_of")
+	srcB, artB := f.NewSource("Gazetteer")
+	york := f.Place(srcB, artB, "York")
+	ontario := f.Place(srcB, artB, "Ontario")
+	f.PlaceRel(srcB, artB, york, ontario, "part_of")
 
-	row := rowFor(f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: ontario.ID, HandleID: middleH.Entity.ID}}), york.ID)
+	row := rowFor(f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: ontario.ID, HandleID: middleH.Entity.ID}}), york.ID)
 	if row.Reason != graphalign.ReasonVia || !bytes.Equal(row.HandleID, partH.Entity.ID) {
 		t.Fatalf("york row %+v, want the part %s via Ontario", row, partH.Entity.Ref)
 	}
@@ -628,18 +428,18 @@ func TestProposePartOfMatchesTheSameEnd(t *testing.T) {
 // one relationship: the walk from Mary reaches John's handle either way.
 func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
 	f := newFixture(t)
-	mary := f.person(f.source, f.artifact, "Mary Smith")
-	john := f.person(f.source, f.artifact, "John Smith")
-	f.relationship(f.source, f.artifact, mary, john, "parent")
+	mary := f.Person(f.source, f.artifact, "Mary Smith")
+	john := f.Person(f.source, f.artifact, "John Smith")
+	f.Relationship(f.source, f.artifact, mary, john, "parent")
 	hMary := f.promote(mary).Entity.ID
 	hJohn := f.promote(john).Entity.ID
 
-	src2, art2 := f.newSource("Baptism")
-	son := f.person(src2, art2, "John Smith")
-	mother := f.person(src2, art2, "Mary Smith")
-	f.relationship(src2, art2, son, mother, "child")
+	src2, art2 := f.NewSource("Baptism")
+	son := f.Person(src2, art2, "John Smith")
+	mother := f.Person(src2, art2, "Mary Smith")
+	f.Relationship(src2, art2, son, mother, "child")
 
-	p := f.propose(f.graph(src2), []graphalign.Fixed{{SubjectID: mother.ID, HandleID: hMary}})
+	p := f.propose(f.Graph(src2), []graphalign.Fixed{{SubjectID: mother.ID, HandleID: hMary}})
 	r := rowFor(p, son.ID)
 	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, hJohn) || r.Reason != graphalign.ReasonVia {
 		t.Fatalf("son: target=%s handle-is-John=%v reason=%s, want John's handle via his mother",
@@ -656,9 +456,9 @@ func TestProposeInverseKinshipTermsCorrespond(t *testing.T) {
 // matching dogfood).
 func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 	f := newFixture(t)
-	mary := f.person(f.source, f.artifact, "Mary Smith")
-	john := f.person(f.source, f.artifact, "John Smith")
-	f.relationship(f.source, f.artifact, mary, john, "parent")
+	mary := f.Person(f.source, f.artifact, "Mary Smith")
+	john := f.Person(f.source, f.artifact, "John Smith")
+	f.Relationship(f.source, f.artifact, mary, john, "parent")
 	hMary := f.promote(mary).Entity.ID
 	hJohn := f.promote(john).Entity.ID
 
@@ -673,26 +473,26 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			src, art := f.newSource(tt.name)
+			src, art := f.NewSource(tt.name)
 			var parent, child subjects.Subject
 			var fixed graphalign.Fixed
 			var want []byte
 			if tt.anchorIsParent {
-				parent = f.person(src, art, "Mary Smith")
-				child = f.sexOnly(src, art, "male")
+				parent = f.Person(src, art, "Mary Smith")
+				child = f.SexOnly(src, art, "male")
 				if tt.namedOther {
-					child = f.person(src, art, "John Smith")
+					child = f.Person(src, art, "John Smith")
 				}
 				fixed = graphalign.Fixed{SubjectID: parent.ID, HandleID: hMary}
 				want = hJohn
 			} else {
-				parent = f.sexOnly(src, art, "female")
-				child = f.person(src, art, "John Smith")
+				parent = f.SexOnly(src, art, "female")
+				child = f.Person(src, art, "John Smith")
 				fixed = graphalign.Fixed{SubjectID: child.ID, HandleID: hJohn}
 				want = hMary
 			}
-			f.relationship(src, art, parent, child, "parent")
-			p := f.propose(f.graph(src), []graphalign.Fixed{fixed})
+			f.Relationship(src, art, parent, child, "parent")
+			p := f.propose(f.Graph(src), []graphalign.Fixed{fixed})
 			other := child
 			if !tt.anchorIsParent {
 				other = parent
@@ -722,23 +522,23 @@ func TestProposeRelationshipFromEitherEnd(t *testing.T) {
 // subject, and the place lands on its handle.
 func TestPlaceWithManyEventsProposalStaysOnTheLayer(t *testing.T) {
 	f := newFixture(t)
-	city := f.place(f.source, f.artifact, "Gumptiontown")
+	city := f.Place(f.source, f.artifact, "Gumptiontown")
 	cityH := f.promote(city)
 	for i := 0; i < 3; i++ {
-		person := f.person(f.source, f.artifact, fmt.Sprintf("Neighbor %d", i))
-		birth := f.birth(f.source, f.artifact)
-		f.participation(f.source, f.artifact, person, birth, "subject")
-		f.locate(f.source, f.artifact, birth, city)
+		person := f.Person(f.source, f.artifact, fmt.Sprintf("Neighbor %d", i))
+		birth := f.Birth(f.source, f.artifact)
+		f.Participation(f.source, f.artifact, person, birth, "subject")
+		f.Locate(f.source, f.artifact, birth, city)
 		f.promote(person)
 		f.promote(birth)
 	}
 
-	srcB, artB := f.newSource("Gazetteer")
-	city2 := f.place(srcB, artB, "Gumptiontown")
-	birth2 := f.birth(srcB, artB)
-	f.locate(srcB, artB, birth2, city2)
+	srcB, artB := f.NewSource("Gazetteer")
+	city2 := f.Place(srcB, artB, "Gumptiontown")
+	birth2 := f.Birth(srcB, artB)
+	f.Locate(srcB, artB, birth2, city2)
 
-	got := f.propose(f.graph(srcB), nil)
+	got := f.propose(f.Graph(srcB), nil)
 	if len(got.Rows) != 2 {
 		t.Fatalf("rows %d, want the layer's place and birth", len(got.Rows))
 	}
@@ -757,24 +557,24 @@ func TestPlaceWithManyEventsProposalStaysOnTheLayer(t *testing.T) {
 func TestProposeIgnoresANeutralSex(t *testing.T) {
 	f := newFixture(t)
 	named := func(src sources.Source, art artifacts.Artifact, sex string) subjects.Subject {
-		s := f.person(src, art, "John Smith")
-		f.cite(art, s, observations.Input{
-			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		s := f.Person(src, art, "John Smith")
+		f.Cite(art, s, observations.Input{
+			PropertyID: f.Prop("sex_at_birth").ID, ValueTermID: f.Term("sex_at_birth", sex).ID,
 		})
 		return s
 	}
 	handle := f.promote(named(f.source, f.artifact, "male")).Entity.ID
 
-	src, art := f.newSource("Register")
+	src, art := f.NewSource("Register")
 	unknown := named(src, art, "unknown")
-	r := rowFor(f.propose(f.graph(src), nil), unknown.ID)
+	r := rowFor(f.propose(f.Graph(src), nil), unknown.ID)
 	if r.Target != graphalign.TargetHandle || !bytes.Equal(r.HandleID, handle) {
 		t.Fatalf("unknown sex: target %s score %.2f, want the male John Smith", r.Target, r.Score)
 	}
 
-	src2, art2 := f.newSource("Census")
+	src2, art2 := f.NewSource("Census")
 	female := named(src2, art2, "female")
-	if r := rowFor(f.propose(f.graph(src2), nil), female.ID); r.Target == graphalign.TargetHandle && bytes.Equal(r.HandleID, handle) {
+	if r := rowFor(f.propose(f.Graph(src2), nil), female.ID); r.Target == graphalign.TargetHandle && bytes.Equal(r.HandleID, handle) {
 		t.Fatalf("female John Smith landed on the male one (score %.2f)", r.Score)
 	}
 }
@@ -786,20 +586,20 @@ func TestProposeIgnoresANeutralSex(t *testing.T) {
 func TestProposeExtraGivenNamesAreAWeakMatch(t *testing.T) {
 	f := newFixture(t)
 	withGender := func(src sources.Source, art artifacts.Artifact, name string) subjects.Subject {
-		s := f.person(src, art, name)
-		f.cite(art, s, observations.Input{
-			PropertyID: f.prop("gender").ID, ValueTermID: f.term("gender", "man").ID,
+		s := f.Person(src, art, name)
+		f.Cite(art, s, observations.Input{
+			PropertyID: f.Prop("gender").ID, ValueTermID: f.Term("gender", "man").ID,
 		})
 		return s
 	}
 	james := withGender(f.source, f.artifact, "James Kenneth Robins")
 	handle := f.promote(james).Entity.ID
-	birthSrc, birthArt := f.newSource("Birth Announcement")
+	birthSrc, birthArt := f.NewSource("Birth Announcement")
 	f.join(withGender(birthSrc, birthArt, "Jake Robins"), handle)
 
-	noteSrc, noteArt := f.newSource("Note")
+	noteSrc, noteArt := f.NewSource("Note")
 	probe := withGender(noteSrc, noteArt, "Jake Robins")
-	row := rowFor(f.propose(f.graph(noteSrc), nil), probe.ID)
+	row := rowFor(f.propose(f.Graph(noteSrc), nil), probe.ID)
 	cfg := matchregistry.Default().AlignConfig()
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
 		row.Assessment != graphalign.AssessWeak || row.Score < cfg.Alignment.Bands.Weak || row.Score >= cfg.Alignment.Bands.Medium ||
@@ -818,11 +618,11 @@ func TestProposeAPrefixNameIsAWeakMatch(t *testing.T) {
 	} {
 		t.Run(tc.filed+" and "+tc.probe, func(t *testing.T) {
 			f := newFixture(t)
-			known := f.promote(f.person(f.source, f.artifact, tc.filed))
-			f.promote(f.person(f.source, f.artifact, tc.other))
-			srcB, artB := f.newSource("Census")
-			again := f.person(srcB, artB, tc.probe)
-			row := rowFor(f.propose(f.graph(srcB), nil), again.ID)
+			known := f.promote(f.Person(f.source, f.artifact, tc.filed))
+			f.promote(f.Person(f.source, f.artifact, tc.other))
+			srcB, artB := f.NewSource("Census")
+			again := f.Person(srcB, artB, tc.probe)
+			row := rowFor(f.propose(f.Graph(srcB), nil), again.ID)
 			bands := matchregistry.Default().AlignConfig().Alignment.Bands
 			if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, known.Entity.ID) ||
 				row.Assessment != graphalign.AssessWeak || row.Score < bands.Weak || row.Score >= bands.Medium {
@@ -838,8 +638,8 @@ func TestProposeAPrefixNameIsAWeakMatch(t *testing.T) {
 func (f *fixture) namedMembers(n int, name string) (handle []byte, members []subjects.Subject) {
 	f.t.Helper()
 	for i := 0; i < n; i++ {
-		src, art := f.newSource(fmt.Sprintf("Census %d", 1851+10*i))
-		p := f.person(src, art, name)
+		src, art := f.NewSource(fmt.Sprintf("Census %d", 1851+10*i))
+		p := f.Person(src, art, name)
 		if i == 0 {
 			handle = f.promote(p).Entity.ID
 		} else {
@@ -858,21 +658,21 @@ func (f *fixture) join(s subjects.Subject, entityID []byte) {
 func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a stray name", func(t *testing.T) {
 		f := newFixture(t)
-		handle := f.promote(f.person(f.source, f.artifact, "Mary Smith")).Entity.ID
+		handle := f.promote(f.Person(f.source, f.artifact, "Mary Smith")).Entity.ID
 		blob, err := valuecodec.MarshalName(*namevaluetest.Western("James Robins"))
 		must(t, err)
 		db, err := f.c.DB()
 		must(t, err)
-		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("name").ID)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.Prop("name").ID)
 		must(t, err)
 		_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_name, support, against, reason)
-			VALUES (?, ?, 2, ?, 1, 0, 'outvoted')`, handle, f.prop("name").ID, blob)
+			VALUES (?, ?, 2, ?, 1, 0, 'outvoted')`, handle, f.Prop("name").ID, blob)
 		must(t, err)
 		f.c.Graph().Drop()
 
-		src, art := f.newSource("Register")
-		incoming := f.person(src, art, "James Robins")
-		row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		src, art := f.NewSource("Register")
+		incoming := f.Person(src, art, "James Robins")
+		row := rowFor(f.propose(f.Graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 		if row.Score >= 0 {
 			t.Fatalf("score %.2f, want the name conflict to count against the pair", row.Score)
 		}
@@ -881,24 +681,24 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 	t.Run("a negative Observation", func(t *testing.T) {
 		f := newFixture(t)
 		sex := func(src sources.Source, art artifacts.Artifact, key string) subjects.Subject {
-			s := f.person(src, art, "Mary Smith")
-			f.cite(art, s, observations.Input{PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", key).ID})
+			s := f.Person(src, art, "Mary Smith")
+			f.Cite(art, s, observations.Input{PropertyID: f.Prop("sex_at_birth").ID, ValueTermID: f.Term("sex_at_birth", key).ID})
 			return s
 		}
 		handle := f.promote(sex(f.source, f.artifact, "male")).Entity.ID
 		db, err := f.c.DB()
 		must(t, err)
-		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 3 WHERE entity_id = ? AND property_id = ?`, handle, f.prop("sex_at_birth").ID)
+		_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 3 WHERE entity_id = ? AND property_id = ?`, handle, f.Prop("sex_at_birth").ID)
 		must(t, err)
 		f.c.Graph().Drop()
 
-		src, art := f.newSource("Census")
-		incoming := f.person(src, art, "Mary Smith")
-		f.cite(art, incoming, observations.Input{
-			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", "male").ID,
+		src, art := f.NewSource("Census")
+		incoming := f.Person(src, art, "Mary Smith")
+		f.Cite(art, incoming, observations.Input{
+			PropertyID: f.Prop("sex_at_birth").ID, ValueTermID: f.Term("sex_at_birth", "male").ID,
 			Polarity: observations.PolarityNegative,
 		})
-		row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+		row := rowFor(f.propose(f.Graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 		if row.Score >= 3 {
 			t.Fatalf("score %.2f, want the sex conflict to count against the name's agreement", row.Score)
 		}
@@ -910,18 +710,18 @@ func TestProposeJudgesAgainstTheMajority(t *testing.T) {
 func TestProposeIgnoresLikenesses(t *testing.T) {
 	score := func(t *testing.T, withLikeness bool) graphalign.Row {
 		f := newFixture(t)
-		a := f.person(f.source, f.artifact, "John Smith")
+		a := f.Person(f.source, f.artifact, "John Smith")
 		if withLikeness {
 			observationstest.SaveLikeness(t, f.c, userID, f.source.ID, a.ID, 40)
 		}
 		f.promote(a)
-		src, art := f.newSource("Obituary")
-		incoming := f.person(src, art, "John Smith")
+		src, art := f.NewSource("Obituary")
+		incoming := f.Person(src, art, "John Smith")
 		if withLikeness {
 			observationstest.SaveLikeness(t, f.c, userID, src.ID, incoming.ID, 200)
 		}
 		_ = art
-		return rowFor(f.propose(f.graph(src), nil), incoming.ID)
+		return rowFor(f.propose(f.Graph(src), nil), incoming.ID)
 	}
 	with, without := score(t, true), score(t, false)
 	if with.Target != without.Target || with.Assessment != without.Assessment || with.Score != without.Score || with.Reason != without.Reason {
@@ -933,53 +733,26 @@ func TestProposeIgnoresLikenesses(t *testing.T) {
 // agrees, because a multiple-cardinality Property weighs no value down.
 func TestProposeMultipleToponyms(t *testing.T) {
 	f := newFixture(t)
-	handle := f.promote(f.place(f.source, f.artifact, "York")).Entity.ID
+	handle := f.promote(f.Place(f.source, f.artifact, "York")).Entity.ID
 	db, err := f.c.DB()
 	must(t, err)
-	_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.prop("toponym").ID)
+	_, err = db.Exec(`UPDATE auto_reconciler_values SET support = 5 WHERE entity_id = ? AND property_id = ? AND rank = 1`, handle, f.Prop("toponym").ID)
 	must(t, err)
 	_, err = db.Exec(`INSERT INTO auto_reconciler_values (entity_id, property_id, rank, value_text, support, against, reason)
-		VALUES (?, ?, 2, 'Eboracum', 1, 0, 'kept')`, handle, f.prop("toponym").ID)
+		VALUES (?, ?, 2, 'Eboracum', 1, 0, 'kept')`, handle, f.Prop("toponym").ID)
 	must(t, err)
 	f.c.Graph().Drop()
 
-	src, art := f.newSource("Roman itinerary")
-	incoming := f.place(src, art, "Eboracum")
-	row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
+	src, art := f.NewSource("Roman itinerary")
+	incoming := f.Place(src, art, "Eboracum")
+	row := rowFor(f.propose(f.Graph(src), []graphalign.Fixed{{SubjectID: incoming.ID, HandleID: handle}}), incoming.ID)
 	if row.Score <= 0 {
 		t.Fatalf("score %.2f, want the minority toponym to agree", row.Score)
 	}
 }
 
 func datedEvent(f *fixture, src sources.Source, art artifacts.Artifact, eventType string, year int) subjects.Subject {
-	return f.datedOn(src, art, eventType, year, 0, 0)
-}
-
-// datedOn is an event cited as an event type on a date (m and d 0 for a year).
-func (f *fixture) datedOn(src sources.Source, art artifacts.Artifact, eventType string, y, m, d int) subjects.Subject {
-	f.t.Helper()
-	return f.eventOn(src, art, eventType, datevaluetest.YMD(y, m, d))
-}
-
-// marriage is a marriage event cited in src with a and b as its participants,
-// each in role.
-func (f *fixture) marriage(src sources.Source, art artifacts.Artifact, a, b subjects.Subject, role string) subjects.Subject {
-	m := f.eventOn(src, art, "marriage", nil)
-	f.participation(src, art, a, m, role)
-	f.participation(src, art, b, m, role)
-	return m
-}
-
-// eventOn is an event cited as an event type, on a date when d is not nil.
-func (f *fixture) eventOn(src sources.Source, art artifacts.Artifact, eventType string, d *datevalue.Value) subjects.Subject {
-	f.t.Helper()
-	s := f.bare(src, "event")
-	in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", eventType).ID}}
-	if d != nil {
-		in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: d})
-	}
-	f.cite(art, s, in...)
-	return s
+	return f.DatedOn(src, art, eventType, year, 0, 0)
 }
 
 // lifeFixture is a person "James Robins" on the first Source, the subject of a
@@ -988,16 +761,16 @@ func (f *fixture) eventOn(src sources.Source, art artifacts.Artifact, eventType 
 func lifeFixture(t *testing.T, deathYear int) (f *fixture, handle []byte, src sources.Source, person subjects.Subject) {
 	t.Helper()
 	f = newFixture(t)
-	aPerson := f.person(f.source, f.artifact, "James Robins")
+	aPerson := f.Person(f.source, f.artifact, "James Robins")
 	aDeath := datedEvent(f, f.source, f.artifact, "death", deathYear)
-	f.participation(f.source, f.artifact, aPerson, aDeath, "subject")
+	f.Participation(f.source, f.artifact, aPerson, aDeath, "subject")
 	handle = f.promote(aPerson).Entity.ID
 	f.promote(aDeath)
 
-	src, art := f.newSource("Letter")
-	person = f.person(src, art, "James Robins")
+	src, art := f.NewSource("Letter")
+	person = f.Person(src, art, "James Robins")
 	bBirth := datedEvent(f, src, art, "birth", 1850)
-	f.participation(src, art, person, bBirth, "subject")
+	f.Participation(src, art, person, bBirth, "subject")
 	return f, handle, src, person
 }
 
@@ -1006,14 +779,14 @@ func lifeFixture(t *testing.T, deathYear int) (f *fixture, handle []byte, src so
 func TestProposeLifespanFromLifeEvents(t *testing.T) {
 	t.Run("AC-3.1", func(t *testing.T) {
 		f, _, src, person := lifeFixture(t, 1830)
-		row := rowFor(f.propose(f.graph(src), nil), person.ID)
+		row := rowFor(f.propose(f.Graph(src), nil), person.ID)
 		if row.Target != "" || row.Reason != graphalign.ReasonUnplaced {
 			t.Fatalf("a man who died in 1830 for a man born in 1850: %+v", row)
 		}
 	})
 	t.Run("AC-3.2", func(t *testing.T) {
 		f, handle, src, person := lifeFixture(t, 1920)
-		row := rowFor(f.propose(f.graph(src), nil), person.ID)
+		row := rowFor(f.propose(f.Graph(src), nil), person.ID)
 		if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, handle) ||
 			row.Assessment != graphalign.AssessWeak || math.Abs(row.Score-2.6) > 1e-9 {
 			t.Fatalf("a man who died in 1920 for a man born in 1850: %+v, want the handle at weak 2.6", row)
@@ -1025,43 +798,9 @@ func TestProposeLifespanFromLifeEvents(t *testing.T) {
 // was born takes its conflict from the score.
 func TestProposeComparesTheLifespan(t *testing.T) {
 	f, handle, src, person := lifeFixture(t, 1830)
-	row := rowFor(f.propose(f.graph(src), []graphalign.Fixed{{SubjectID: person.ID, HandleID: handle}}), person.ID)
+	row := rowFor(f.propose(f.Graph(src), []graphalign.Fixed{{SubjectID: person.ID, HandleID: handle}}), person.ID)
 	if row.Score > -10 {
 		t.Fatalf("score %.2f, want the lifespan's -20 conflict counted", row.Score)
-	}
-}
-
-// datedBirth is an event cited as a birth in a year.
-func (f *fixture) datedBirth(src sources.Source, art artifacts.Artifact, y int) subjects.Subject {
-	f.t.Helper()
-	return f.datedOn(src, art, "birth", y, 0, 0)
-}
-
-// The loader reads a Source's links from the connect rules: one bridge for
-// each registered bridge type, whatever its term.
-func TestLayerBridgesCoverEveryConnectRule(t *testing.T) {
-	f := newFixture(t)
-	ann := f.person(f.source, f.artifact, "Ann Ames")
-	bob := f.person(f.source, f.artifact, "Bob Ames")
-	birth := f.birth(f.source, f.artifact)
-	york := f.place(f.source, f.artifact, "York")
-	ontario := f.place(f.source, f.artifact, "Ontario")
-	f.participation(f.source, f.artifact, ann, birth, "subject")
-	f.locate(f.source, f.artifact, birth, york)
-	f.relationship(f.source, f.artifact, ann, bob, "parent")
-	f.placeRel(f.source, f.artifact, york, ontario, "part_of")
-
-	bridges, err := promotealign.LayerBridges(f.c, f.graph(f.source))
-	must(t, err)
-	var got []string
-	for _, b := range bridges {
-		got = append(got, string(b.KeyA.Type))
-	}
-	want := connectrules.BridgeTypeKeys()
-	slices.Sort(got)
-	slices.Sort(want)
-	if !slices.Equal(got, want) {
-		t.Fatalf("bridge types %v, want %v", got, want)
 	}
 }
 
@@ -1069,25 +808,25 @@ func TestLayerBridgesCoverEveryConnectRule(t *testing.T) {
 // person: a person has one birth.
 func TestProposeBirthOnAnotherPersonSubtracts(t *testing.T) {
 	f := newFixture(t)
-	aAnn := f.person(f.source, f.artifact, "Ann Ames")
-	aBirth := f.datedBirth(f.source, f.artifact, 1817)
-	f.participation(f.source, f.artifact, aAnn, aBirth, "subject")
+	aAnn := f.Person(f.source, f.artifact, "Ann Ames")
+	aBirth := f.DatedBirth(f.source, f.artifact, 1817)
+	f.Participation(f.source, f.artifact, aAnn, aBirth, "subject")
 	annH := f.promote(aAnn)
 	f.promote(aBirth)
 
-	srcC, artC := f.newSource("Register")
-	cMary := f.person(srcC, artC, "Mary Ames")
-	cBirth := f.datedBirth(srcC, artC, 1817)
-	f.participation(srcC, artC, cMary, cBirth, "subject")
+	srcC, artC := f.NewSource("Register")
+	cMary := f.Person(srcC, artC, "Mary Ames")
+	cBirth := f.DatedBirth(srcC, artC, 1817)
+	f.Participation(srcC, artC, cMary, cBirth, "subject")
 	f.promote(cMary)
 	cBirthH := f.promote(cBirth)
 
-	srcB, artB := f.newSource("Obituary")
-	bAnn := f.person(srcB, artB, "Ann Ames")
-	bBirth := f.datedBirth(srcB, artB, 1817)
-	f.participation(srcB, artB, bAnn, bBirth, "subject")
+	srcB, artB := f.NewSource("Obituary")
+	bAnn := f.Person(srcB, artB, "Ann Ames")
+	bBirth := f.DatedBirth(srcB, artB, 1817)
+	f.Participation(srcB, artB, bAnn, bBirth, "subject")
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: cBirthH.Entity.ID}})
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: cBirthH.Entity.ID}})
 	row := rowFor(got, bAnn.ID)
 	if row.Target == graphalign.TargetHandle && bytes.Equal(row.HandleID, annH.Entity.ID) {
 		t.Fatalf("person row %+v filed on the Ann whose birth is another event", row)
@@ -1098,18 +837,18 @@ func TestProposeBirthOnAnotherPersonSubtracts(t *testing.T) {
 // fixed birth files on the other record's place.
 func TestProposePlaceThroughALocation(t *testing.T) {
 	f := newFixture(t)
-	aBirth := f.birth(f.source, f.artifact)
-	aYork := f.place(f.source, f.artifact, "York")
-	f.locate(f.source, f.artifact, aBirth, aYork)
+	aBirth := f.Birth(f.source, f.artifact)
+	aYork := f.Place(f.source, f.artifact, "York")
+	f.Locate(f.source, f.artifact, aBirth, aYork)
 	birthH := f.promote(aBirth)
 	yorkH := f.promote(aYork)
 
-	srcB, artB := f.newSource("Register")
-	bBirth := f.birth(srcB, artB)
-	bYork := f.place(srcB, artB, "York")
-	f.locate(srcB, artB, bBirth, bYork)
+	srcB, artB := f.NewSource("Register")
+	bBirth := f.Birth(srcB, artB)
+	bYork := f.Place(srcB, artB, "York")
+	f.Locate(srcB, artB, bBirth, bYork)
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthH.Entity.ID}})
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bBirth.ID, HandleID: birthH.Entity.ID}})
 	row := rowFor(got, bYork.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, yorkH.Entity.ID) || row.Reason != graphalign.ReasonVia {
 		t.Fatalf("place row %+v, want York's handle via the birth", row)
@@ -1120,18 +859,18 @@ func TestProposePlaceThroughALocation(t *testing.T) {
 // reaches John's handle through the canonical term.
 func TestProposeChildOfReadsAsParentOf(t *testing.T) {
 	f := newFixture(t)
-	aMary := f.person(f.source, f.artifact, "Mary Smith")
-	aJohn := f.person(f.source, f.artifact, "John Smith")
-	f.relationship(f.source, f.artifact, aMary, aJohn, "parent")
+	aMary := f.Person(f.source, f.artifact, "Mary Smith")
+	aJohn := f.Person(f.source, f.artifact, "John Smith")
+	f.Relationship(f.source, f.artifact, aMary, aJohn, "parent")
 	maryH := f.promote(aMary).Entity.ID
 	johnH := f.promote(aJohn).Entity.ID
 
-	srcB, artB := f.newSource("Baptism")
-	bJohn := f.person(srcB, artB, "John Smith")
-	bMary := f.person(srcB, artB, "Mary Smith")
-	f.relationship(srcB, artB, bJohn, bMary, "child")
+	srcB, artB := f.NewSource("Baptism")
+	bJohn := f.Person(srcB, artB, "John Smith")
+	bMary := f.Person(srcB, artB, "Mary Smith")
+	f.Relationship(srcB, artB, bJohn, bMary, "child")
 
-	got := f.propose(f.graph(srcB), []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryH}})
+	got := f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bMary.ID, HandleID: maryH}})
 	row := rowFor(got, bJohn.ID)
 	if row.Target != graphalign.TargetHandle || !bytes.Equal(row.HandleID, johnH) || row.Reason != graphalign.ReasonVia {
 		t.Fatalf("John row %+v, want his handle via Mary", row)
@@ -1145,16 +884,16 @@ func TestProposeChildOfReadsAsParentOf(t *testing.T) {
 // commit, so a handle promoted afterwards is found.
 func TestProposeSeesAHandlePromotedAfterTheIndexWasBuilt(t *testing.T) {
 	f := newFixture(t)
-	a := f.person(f.source, f.artifact, "Ann Ames")
-	srcB, artB := f.newSource("Obituary")
-	b := f.person(srcB, artB, "Ann Ames")
+	a := f.Person(f.source, f.artifact, "Ann Ames")
+	srcB, artB := f.NewSource("Obituary")
+	b := f.Person(srcB, artB, "Ann Ames")
 
-	first := rowFor(f.propose(f.graph(srcB), nil), b.ID)
+	first := rowFor(f.propose(f.Graph(srcB), nil), b.ID)
 	if first.Target != "" {
 		t.Fatalf("with nothing promoted the row is %+v, want no target", first)
 	}
 	known := f.promote(a)
-	second := rowFor(f.propose(f.graph(srcB), nil), b.ID)
+	second := rowFor(f.propose(f.Graph(srcB), nil), b.ID)
 	if second.Target != graphalign.TargetHandle || !bytes.Equal(second.HandleID, known.Entity.ID) {
 		t.Fatalf("after promoting, the row is %+v, want %s", second, known.Entity.Ref)
 	}
@@ -1165,23 +904,23 @@ func TestProposeSeesAHandlePromotedAfterTheIndexWasBuilt(t *testing.T) {
 func TestProposeQueryCountStaysFlatWhenWarm(t *testing.T) {
 	queries := func(people int) int {
 		f := newFixture(t)
-		srcB, artB := f.newSource("Obituary")
+		srcB, artB := f.NewSource("Obituary")
 		for i := 0; i < people; i++ {
 			name := fmt.Sprintf("Person %c", 'A'+i)
-			p := f.person(f.source, f.artifact, name)
-			b := f.birth(f.source, f.artifact)
-			f.participation(f.source, f.artifact, p, b, "subject")
+			p := f.Person(f.source, f.artifact, name)
+			b := f.Birth(f.source, f.artifact)
+			f.Participation(f.source, f.artifact, p, b, "subject")
 			f.promote(p)
 			f.promote(b)
-			pb := f.person(srcB, artB, name)
-			bb := f.birth(srcB, artB)
-			f.participation(srcB, artB, pb, bb, "subject")
+			pb := f.Person(srcB, artB, name)
+			bb := f.Birth(srcB, artB)
+			f.Participation(srcB, artB, pb, bb, "subject")
 		}
-		_, _, err := promotealign.Propose(f.c, f.graph(srcB), nil, nil)
+		_, _, err := promotealign.Propose(f.c, f.Graph(srcB), nil, nil)
 		must(t, err)
 		n := 0
 		f.c.Graph().SetQueryCounterForTest(func() { n++ })
-		_, _, err = promotealign.Propose(f.c, f.graph(srcB), nil, nil)
+		_, _, err = promotealign.Propose(f.c, f.Graph(srcB), nil, nil)
 		must(t, err)
 		return n
 	}
@@ -1196,22 +935,22 @@ func TestProposeQueryCountStaysFlatWhenWarm(t *testing.T) {
 // the walk reaches from them: not the life of every person in the catalog.
 func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
 	f := newFixture(t)
-	ann := f.person(f.source, f.artifact, "Ann Ames")
-	annBirth := f.datedBirth(f.source, f.artifact, 1850)
-	f.participation(f.source, f.artifact, ann, annBirth, "subject")
+	ann := f.Person(f.source, f.artifact, "Ann Ames")
+	annBirth := f.DatedBirth(f.source, f.artifact, 1850)
+	f.Participation(f.source, f.artifact, ann, annBirth, "subject")
 	annH, annBirthH := f.promote(ann), f.promote(annBirth)
 	for i := 1; i <= 6; i++ {
-		p := f.person(f.source, f.artifact, fmt.Sprintf("Unrelated %d", i))
-		b := f.datedBirth(f.source, f.artifact, 1900+i)
-		f.participation(f.source, f.artifact, p, b, "subject")
+		p := f.Person(f.source, f.artifact, fmt.Sprintf("Unrelated %d", i))
+		b := f.DatedBirth(f.source, f.artifact, 1900+i)
+		f.Participation(f.source, f.artifact, p, b, "subject")
 		f.promote(p)
 		f.promote(b)
 	}
-	srcB, artB := f.newSource("Obituary")
-	f.person(srcB, artB, "Ann Ames")
+	srcB, artB := f.NewSource("Obituary")
+	f.Person(srcB, artB, "Ann Ames")
 
 	f.c.Graph().Drop()
-	got, err := promotealign.ProfiledRefsForTest(f.c, f.graph(srcB))
+	got, err := promotealign.ProfiledRefsForTest(f.c, f.Graph(srcB))
 	must(t, err)
 	want := []string{annH.Entity.Ref, annBirthH.Entity.Ref}
 	slices.Sort(want)
@@ -1225,21 +964,21 @@ func TestProposeColdIndexBuildsNoUnshortlistedLife(t *testing.T) {
 func TestProposeFilesAConflictingRowOnTheLinks(t *testing.T) {
 	f := newFixture(t)
 	sexed := func(src sources.Source, art artifacts.Artifact, sex string) (subjects.Subject, subjects.Subject) {
-		p := f.person(src, art, "Ann Ames")
-		f.cite(art, p, observations.Input{
-			PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+		p := f.Person(src, art, "Ann Ames")
+		f.Cite(art, p, observations.Input{
+			PropertyID: f.Prop("sex_at_birth").ID, ValueTermID: f.Term("sex_at_birth", sex).ID,
 		})
-		b := f.datedBirth(src, art, 1817)
-		f.participation(src, art, p, b, "subject")
+		b := f.DatedBirth(src, art, 1817)
+		f.Participation(src, art, p, b, "subject")
 		return p, b
 	}
 	pF, bF := sexed(f.source, f.artifact, "female")
 	annH := f.promote(pF).Entity.ID
 	f.promote(bF)
 
-	src, art := f.newSource("Register")
+	src, art := f.NewSource("Register")
 	pM, bM := sexed(src, art, "male")
-	got := f.propose(f.graph(src), nil)
+	got := f.propose(f.Graph(src), nil)
 	person, birth := rowFor(got, pM.ID), rowFor(got, bM.ID)
 	if person.Target != graphalign.TargetHandle || !bytes.Equal(person.HandleID, annH) ||
 		person.Assessment != graphalign.AssessStrong {
@@ -1254,11 +993,11 @@ func TestProposeFilesAConflictingRowOnTheLinks(t *testing.T) {
 // filed person: the row is New.
 func TestProposeDoesNotCompareAnUnshortlistedHandle(t *testing.T) {
 	f := newFixture(t)
-	f.promote(f.person(f.source, f.artifact, "Robins"))
+	f.promote(f.Person(f.source, f.artifact, "Robins"))
 
-	src, art := f.newSource("Register")
-	robnis := f.person(src, art, "Robnis")
-	row := rowFor(f.propose(f.graph(src), nil), robnis.ID)
+	src, art := f.NewSource("Register")
+	robnis := f.Person(src, art, "Robnis")
+	row := rowFor(f.propose(f.Graph(src), nil), robnis.ID)
 	if row.Target != "" || row.Reason != graphalign.ReasonUnplaced || len(row.Alternatives) != 0 {
 		t.Fatalf("Robnis row %+v, want unplaced with no alternatives", row)
 	}
@@ -1280,19 +1019,19 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			sexed := func(src sources.Source, art artifacts.Artifact, name, sex string) subjects.Subject {
-				p := f.person(src, art, name)
+				p := f.Person(src, art, name)
 				if sex != "" {
-					f.cite(art, p, observations.Input{
-						PropertyID: f.prop("sex_at_birth").ID, ValueTermID: f.term("sex_at_birth", sex).ID,
+					f.Cite(art, p, observations.Input{
+						PropertyID: f.Prop("sex_at_birth").ID, ValueTermID: f.Term("sex_at_birth", sex).ID,
 					})
 				}
 				return p
 			}
 			handle := f.promote(sexed(f.source, f.artifact, "Robins", tt.filedSex)).Entity.ID
 
-			src, art := f.newSource("Register")
+			src, art := f.NewSource("Register")
 			robnis := sexed(src, art, "Robnis", tt.incomingSex)
-			graph := f.graph(src)
+			graph := f.Graph(src)
 
 			unfixed := rowFor(f.propose(graph, nil), robnis.ID)
 			if unfixed.Target == graphalign.TargetHandle && bytes.Equal(unfixed.HandleID, handle) {
@@ -1310,40 +1049,6 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 				t.Fatalf("fixed row %+v, want the handle, decided, no conflict with fixed", row)
 			}
 		})
-	}
-}
-
-// A Source that records a spouse relationship and a marriage has one spouse
-// bridge, with every association behind it; a marriage alone has an implied one.
-func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
-	spouses := func(bs []graphalign.Bridge) []graphalign.Bridge {
-		var out []graphalign.Bridge
-		for _, b := range bs {
-			if b.KeyA.Type == vocabkey.BridgeRelationship && b.KeyA.Term == "spouse" {
-				out = append(out, b)
-			}
-		}
-		return out
-	}
-	build := func(withRelationship bool) []graphalign.Bridge {
-		f := newFixture(t)
-		ann := f.person(f.source, f.artifact, "Ann Ames")
-		bob := f.person(f.source, f.artifact, "Bob Ames")
-		f.marriage(f.source, f.artifact, ann, bob, "subject")
-		if withRelationship {
-			f.relationship(f.source, f.artifact, ann, bob, "spouse")
-		}
-		bridges, err := promotealign.LayerBridges(f.c, f.graph(f.source))
-		must(t, err)
-		return bridges
-	}
-	both := spouses(build(true))
-	if len(both) != 1 || len(both[0].Associations) != 3 || len(both[0].Shapes) != 1 || both[0].OnlyImplied {
-		t.Fatalf("recorded and implied: %+v, want one recorded bridge with 3 associations and one shape", both)
-	}
-	only := spouses(build(false))
-	if len(only) != 1 || len(only[0].Associations) != 2 || !only[0].OnlyImplied {
-		t.Fatalf("marriage only: %+v, want one implied bridge with 2 associations", only)
 	}
 }
 
@@ -1369,29 +1074,29 @@ type kinRow struct {
 
 func kinRelationship(term string) kinShape {
 	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
-		f.relationship(src, art, a, b, term)
+		f.Relationship(src, art, a, b, term)
 		return nil
 	}
 }
 
 func kinMarriage(role string) kinShape {
 	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
-		return []subjects.Subject{f.marriage(src, art, a, b, role)}
+		return []subjects.Subject{f.Marriage(src, art, a, b, role)}
 	}
 }
 
 func kinBirth(parentRole string) kinShape {
 	return func(f *fixture, src sources.Source, art artifacts.Artifact, a, _, b subjects.Subject) []subjects.Subject {
-		birth := f.eventOn(src, art, "birth", nil)
-		f.participation(src, art, a, birth, parentRole)
-		f.participation(src, art, b, birth, "subject")
+		birth := f.EventOn(src, art, "birth", nil)
+		f.Participation(src, art, a, birth, parentRole)
+		f.Participation(src, art, b, birth, "subject")
 		return []subjects.Subject{birth}
 	}
 }
 
 func kinChain(f *fixture, src sources.Source, art artifacts.Artifact, a, m, b subjects.Subject) []subjects.Subject {
-	f.relationship(src, art, a, m, "parent")
-	f.relationship(src, art, m, b, "parent")
+	f.Relationship(src, art, a, m, "parent")
+	f.Relationship(src, art, m, b, "parent")
 	return nil
 }
 
@@ -1412,14 +1117,14 @@ func kinTree(t *testing.T, target string, tree kinSide, sides ...kinSide) (targe
 	t.Helper()
 	f := newFixture(t)
 	people := func(src sources.Source, art artifacts.Artifact, s kinSide) (a, m, b subjects.Subject) {
-		a = f.person(src, art, "Ann Ames")
+		a = f.Person(src, art, "Ann Ames")
 		if s.mid {
-			m = f.person(src, art, "Bea Ames")
+			m = f.Person(src, art, "Bea Ames")
 		}
 		if s.sexOnly {
-			b = f.sexOnly(src, art, "male")
+			b = f.SexOnly(src, art, "male")
 		} else {
-			b = f.person(src, art, target)
+			b = f.Person(src, art, target)
 		}
 		return a, m, b
 	}
@@ -1434,14 +1139,14 @@ func kinTree(t *testing.T, target string, tree kinSide, sides ...kinSide) (targe
 		f.promote(s)
 	}
 	for i, side := range sides {
-		src, art := f.newSource(fmt.Sprintf("Source %d", i))
+		src, art := f.NewSource(fmt.Sprintf("Source %d", i))
 		sa, sm, sb := people(src, art, side)
 		side.shape(f, src, art, sa, sm, sb)
 		var fixed []graphalign.Fixed
 		if side.fixAnn {
 			fixed = []graphalign.Fixed{{SubjectID: sa.ID, HandleID: annHandle}}
 		}
-		out = append(out, kinRow{row: rowFor(f.propose(f.graph(src), fixed), sb.ID), ann: sa, target: sb})
+		out = append(out, kinRow{row: rowFor(f.propose(f.Graph(src), fixed), sb.ID), ann: sa, target: sb})
 	}
 	return targetHandle, out
 }
@@ -1574,13 +1279,13 @@ func TestProposeKinshipShapes(t *testing.T) {
 // promotes them when an entity is nil, and returns them with their entities.
 func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name string, year int, personHandle, birthHandle []byte) (p, b subjects.Subject, ph, bh []byte) {
 	f.t.Helper()
-	p = f.person(src, art, name)
+	p = f.Person(src, art, name)
 	if year == 0 {
-		b = f.birth(src, art)
+		b = f.Birth(src, art)
 	} else {
-		b = f.datedBirth(src, art, year)
+		b = f.DatedBirth(src, art, year)
 	}
-	f.participation(src, art, p, b, "subject")
+	f.Participation(src, art, p, b, "subject")
 	ph, bh = personHandle, birthHandle
 	if ph == nil {
 		ph = f.promote(p).Entity.ID
@@ -1599,20 +1304,20 @@ func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name st
 // page reads leave the proposal as it was.
 func TestProposeIgnoresStoredSiblings(t *testing.T) {
 	f := newFixture(t)
-	ann := f.person(f.source, f.artifact, "Ann Ames")
-	bea := f.person(f.source, f.artifact, "Bea Ames")
-	cal := f.person(f.source, f.artifact, "Cal Ames")
-	f.relationship(f.source, f.artifact, ann, bea, "parent")
-	f.relationship(f.source, f.artifact, ann, cal, "parent")
+	ann := f.Person(f.source, f.artifact, "Ann Ames")
+	bea := f.Person(f.source, f.artifact, "Bea Ames")
+	cal := f.Person(f.source, f.artifact, "Cal Ames")
+	f.Relationship(f.source, f.artifact, ann, bea, "parent")
+	f.Relationship(f.source, f.artifact, ann, cal, "parent")
 	f.promote(ann)
 	beaID := f.promote(bea).Entity.ID
 	calID := f.promote(cal).Entity.ID
 
-	src, art := f.newSource("Source 1")
-	sbea := f.person(src, art, "Bea Ames")
-	scal := f.person(src, art, "Cal Ames")
-	f.relationship(src, art, sbea, scal, "sibling")
-	before := f.propose(f.graph(src), nil)
+	src, art := f.NewSource("Source 1")
+	sbea := f.Person(src, art, "Bea Ames")
+	scal := f.Person(src, art, "Cal Ames")
+	f.Relationship(src, art, sbea, scal, "sibling")
+	before := f.propose(f.Graph(src), nil)
 
 	reader, err := canonlinks.NewReader(f.c.Graph(), matchregistry.Default().Kinship)
 	must(t, err)
@@ -1624,7 +1329,7 @@ func TestProposeIgnoresStoredSiblings(t *testing.T) {
 	}) {
 		t.Fatal("setup: Bea has no sibling through Ann")
 	}
-	after := f.propose(f.graph(src), nil)
+	after := f.propose(f.Graph(src), nil)
 	if !reflect.DeepEqual(before, after) {
 		t.Fatalf("proposal changed after siblings were stored:\n%+v\n%+v", before, after)
 	}
@@ -1684,25 +1389,25 @@ func TestProposeReportsEachConnection(t *testing.T) {
 	}
 	build := func(t *testing.T, kind string) tree {
 		f := newFixture(t)
-		york := f.place(f.source, f.artifact, "York")
-		ontario := f.place(f.source, f.artifact, "Ontario")
-		treeBridge := f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+		york := f.Place(f.source, f.artifact, "York")
+		ontario := f.Place(f.source, f.artifact, "Ontario")
+		treeBridge := f.PlaceRel(f.source, f.artifact, york, ontario, "part_of")
 		yorkH := f.promote(york).Entity.ID
 		ontH := f.promote(ontario).Entity.ID
 		if n := f.placeRelationships(); n != 1 {
 			t.Fatalf("tree filed %d place relationships, want 1", n)
 		}
-		srcB, artB := f.newSource("Gazetteer")
-		york2 := f.place(srcB, artB, "York")
-		ont2 := f.place(srcB, artB, "Ontario")
-		bridge := f.placeRel(srcB, artB, ont2, york2, kind)
+		srcB, artB := f.NewSource("Gazetteer")
+		york2 := f.Place(srcB, artB, "York")
+		ont2 := f.Place(srcB, artB, "Ontario")
+		bridge := f.PlaceRel(srcB, artB, ont2, york2, kind)
 		return tree{
 			f: f, yorkH: yorkH, ontH: ontH, srcB: srcB, artB: artB, york2: york2, ont2: ont2, bridge: bridge, treeBridge: treeBridge,
 			fixed: []graphalign.Fixed{
 				{SubjectID: ont2.ID, HandleID: ontH},
 				{SubjectID: york2.ID, HandleID: yorkH},
 			},
-			bridgeGraph: f.graph(srcB),
+			bridgeGraph: f.Graph(srcB),
 		}
 	}
 	// agree fails unless the one connection reads as Done files it.
@@ -1751,12 +1456,12 @@ func TestProposeReportsEachConnection(t *testing.T) {
 	})
 	t.Run("a filed bridge is not reported", func(t *testing.T) {
 		f := newFixture(t)
-		york := f.place(f.source, f.artifact, "York")
-		ontario := f.place(f.source, f.artifact, "Ontario")
-		f.placeRel(f.source, f.artifact, york, ontario, "part_of")
+		york := f.Place(f.source, f.artifact, "York")
+		ontario := f.Place(f.source, f.artifact, "Ontario")
+		f.PlaceRel(f.source, f.artifact, york, ontario, "part_of")
 		f.promote(york)
 		f.promote(ontario)
-		if conns, _ := f.proposeConnections(f.graph(f.source), nil, nil); len(conns) != 0 {
+		if conns, _ := f.proposeConnections(f.Graph(f.source), nil, nil); len(conns) != 0 {
 			t.Fatalf("connections %+v, want none", conns)
 		}
 	})
@@ -1767,7 +1472,7 @@ func TestProposeReportsEachConnection(t *testing.T) {
 		must(t, func() error {
 			_, err := observationstest.UpdateObservation(tr.f.c, userID, observations.Input{
 				ID: old.ID, SubjectID: tr.treeBridge.ID, PropertyID: old.PropertyID,
-				ValueTermID: tr.f.term("place_relationship_type", "succeeded_by").ID,
+				ValueTermID: tr.f.Term("place_relationship_type", "succeeded_by").ID,
 			})
 			return err
 		}())
@@ -1784,9 +1489,9 @@ func TestProposeReportsEachConnection(t *testing.T) {
 	})
 	t.Run("two type terms", func(t *testing.T) {
 		tr := build(t, "succeeded_by")
-		tr.f.cite(tr.artB, tr.bridge, observations.Input{
-			PropertyID:  tr.f.prop("place_relationship_type").ID,
-			ValueTermID: tr.f.term("place_relationship_type", "part_of").ID,
+		tr.f.Cite(tr.artB, tr.bridge, observations.Input{
+			PropertyID:  tr.f.Prop("place_relationship_type").ID,
+			ValueTermID: tr.f.Term("place_relationship_type", "part_of").ID,
 		})
 		conns, rev := tr.f.proposeConnections(tr.bridgeGraph, tr.fixed, nil)
 		if len(conns) != 1 {

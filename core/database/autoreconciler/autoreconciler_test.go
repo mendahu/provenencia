@@ -17,13 +17,12 @@ import (
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
-	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/namealiases"
@@ -38,59 +37,40 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var userID = evidencelayertest.UserID
 
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+const locator = evidencelayertest.Locator
 
 // fixture is a catalog with one Source and Artifact, the seeded vocabulary,
 // and a user integer Property ("age") bound to person.
 type fixture struct {
-	t        *testing.T
-	c        *database.Catalog
-	source   sources.Source                // the first Source ("Register")
-	artifact artifacts.Artifact            // its Artifact
-	other    sources.Source                // a second Source ("Census"), for independent evidence
-	typeID   []byte                        // the book Source type, for newSource
-	arts     map[string]artifacts.Artifact // Source id → its Artifact
-	types    map[string]subjecttypes.Type
-	props    map[string]properties.Property
-	terms    map[string]propertyterms.Term
+	*evidencelayertest.Records
+	other sources.Source                // a second Source ("Census"), for independent evidence
+	arts  map[string]artifacts.Artifact // Source id → its Artifact
+	types map[string]subjecttypes.Type
+	props map[string]properties.Property
+	terms map[string]propertyterms.Term
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	must(t, sourcecredibilitygrades.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	f := &fixture{t: t, c: c, typeID: typeID, arts: map[string]artifacts.Artifact{},
+	r := evidencelayertest.New(t)
+	must(t, sourcecredibilitygrades.Install(r.C))
+	c := r.C
+	f := &fixture{Records: r, arts: map[string]artifacts.Artifact{string(r.Source.ID): r.Artifact},
 		types: map[string]subjecttypes.Type{}, props: map[string]properties.Property{}, terms: map[string]propertyterms.Term{}}
-	f.source = f.newSource("Register")
-	f.artifact = f.arts[string(f.source.ID)]
 	f.other = f.newSource("Census")
 	for _, k := range vocabkey.PrimaryKinds() {
 		st, err := subjecttypes.Lookup(c, k, vocabkey.OriginProvenencia)
@@ -110,19 +90,15 @@ func newFixture(t *testing.T) *fixture {
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
 	must(t, err)
 	for _, k := range []string{"female", "male"} {
-		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, vocabkey.OriginProvenencia)
-		must(t, err)
-		f.terms[k] = term
+		f.terms[k] = f.Term("sex_at_birth", k)
 	}
 	for _, k := range []string{"birth", "death"} {
-		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, vocabkey.OriginProvenencia)
-		must(t, err)
-		f.terms[k] = term
+		f.terms[k] = f.Term("event_type", k)
 	}
 	return f
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
@@ -132,68 +108,63 @@ func must(t *testing.T, err error) {
 // newSource is another Source with one Artifact: independent evidence, a
 // separate vote for the auto-reconciler's majority.
 func (f *fixture) newSource(title string) sources.Source {
-	f.t.Helper()
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.typeID, Title: title})
-	})
-	must(f.t, err)
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(f.t, err)
+	f.T.Helper()
+	src, art := f.NewSource(title)
 	f.arts[string(src.ID)] = art
 	return src
 }
 
 func (f *fixture) bind(kind string, propertyID []byte) {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.types[kind].ID, propertyID)
-	must(f.t, err)
+	must(f.T, err)
 }
 
-func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.source, kind) }
+func (f *fixture) subject(kind string) subjects.Subject { return f.subjectOn(f.Source, kind) }
 
 func (f *fixture) subjectOn(src sources.Source, kind string) subjects.Subject {
-	f.t.Helper()
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, src.ID).ID
-	return subjectstest.OfType(f.t, f.c, userID, graph, f.types[kind].ID, "")
+	f.T.Helper()
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, src.ID).ID
+	return subjectstest.OfType(f.T, f.C, userID, graph, f.types[kind].ID, "")
 }
 
 // cite files the Observations on one new Citation, on the Artifact of the
 // first one's Subject's Source.
 func (f *fixture) cite(in ...observations.Input) []observations.Observation {
-	f.t.Helper()
-	art := f.artifact
+	f.T.Helper()
+	art := f.Artifact
 	if len(in) > 0 {
-		s, err := subjects.Get(f.c, in[0].SubjectID)
-		must(f.t, err)
+		s, err := subjects.Get(f.C, in[0].SubjectID)
+		must(f.T, err)
 		art = f.arts[string(s.SourceID)]
 	}
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	res, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
-	must(f.t, err)
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID
+	res, _, err := observationstest.Cite(f.C, userID, graph, art.ID, locator, in...)
+	must(f.T, err)
 	return res.Observations
 }
 
 // credibility assesses a Source with a seeded grade key.
 func (f *fixture) credibility(src sources.Source, key string) error {
-	g, err := sourcecredibilitygrades.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
+	g, err := sourcecredibilitygrades.Lookup(f.C, key, vocabkey.OriginProvenencia)
+	must(f.T, err)
 	p6in2 := sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: g.ID}
 	p6act1 := "create_source_credibility_assessment"
 
 	// certainty sets a Citation's transcription certainty.
-	if _, p6look3 := sourcecredibility.GetBySource(f.c, p6in2.SourceID); p6look3 == nil {
+	if _, p6look3 := sourcecredibility.GetBySource(f.C, p6in2.SourceID); p6look3 == nil {
 		p6act1 = "update_source_credibility_assessment"
 	}
-	_, err = writes.Call(f.c, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: p6act1, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
 		return sourcecredibility.Upsert(tx, userID, p6in2)
 	})
 	return err
 }
 
 func (f *fixture) certainty(citationID []byte, uncertain bool) error {
-	_, err := writes.Call(f.c, writes.Op{Action: "update_citation", UserID: userID}, func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
+	_, err := writes.Call(f.C, writes.Op{Action: "update_citation", UserID: userID}, func(tx *database.Tx) (citations.Citation, []rowchange.Change, error) {
 		return citations.Update(tx, userID, citationID, citations.CitationFieldsInput{LocatorJSON: locator, TranscriptionUncertain: uncertain})
 	})
 	return err
@@ -205,39 +176,32 @@ func negative(in observations.Input) observations.Input {
 }
 
 func place(f *fixture, s subjects.Subject, x, y int64) error {
-	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+	_, err := writes.Call(f.C, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, x, y)
 	})
 	return err
 }
 
-func mustProp(f *fixture, key string) properties.Property {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return p
-}
-
 func associationOf(f *fixture, typeKey string) []byte {
-	f.t.Helper()
-	db, err := f.c.DB()
-	must(f.t, err)
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
 	var id []byte
-	must(f.t, db.QueryRow(`SELECT e.id FROM canonical_entities e
+	must(f.T, db.QueryRow(`SELECT e.id FROM canonical_entities e
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE st.key = ? AND st.origin = 'provenencia'`, typeKey).Scan(&id))
 	return id
 }
 
 func (f *fixture) promote(s subjects.Subject) []byte {
-	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	f.T.Helper()
+	res := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
 func (f *fixture) join(s subjects.Subject, entityID []byte) {
-	f.t.Helper()
-	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	f.T.Helper()
+	promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 // nameIn is a name Observation from "type=value" parts separated by "|"
@@ -297,7 +261,7 @@ type row struct {
 	ImageFileID          []byte
 }
 
-func snapshot(t *testing.T, q autoreconciler.Querier) []row {
+func snapshot(t testing.TB, q autoreconciler.Querier) []row {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, rank, value_text, value_integer, value_term_id,
 		value_date, value_name, date_lo, date_hi, sort_key, support, against, reason, value_entity_id, value_image_file_id
@@ -316,9 +280,9 @@ func snapshot(t *testing.T, q autoreconciler.Querier) []row {
 }
 
 func (f *fixture) rows() []row {
-	db, err := f.c.DB()
-	must(f.t, err)
-	return snapshot(f.t, db)
+	db, err := f.C.DB()
+	must(f.T, err)
+	return snapshot(f.T, db)
 }
 
 func rowsFor(all []row, entityID, propertyID []byte) []row {
@@ -340,7 +304,7 @@ type outcome struct {
 	VoteSupport, VoteTotal              *int
 }
 
-func outcomesSnapshot(t *testing.T, q autoreconciler.Querier) []outcome {
+func outcomesSnapshot(t testing.TB, q autoreconciler.Querier) []outcome {
 	t.Helper()
 	rows, err := q.Query(`SELECT entity_id, property_id, observation_id, reason, value_rank, denied_by,
 			vote_support, vote_total
@@ -359,9 +323,9 @@ func outcomesSnapshot(t *testing.T, q autoreconciler.Querier) []outcome {
 }
 
 func (f *fixture) outcomes() []outcome {
-	db, err := f.c.DB()
-	must(f.t, err)
-	return outcomesSnapshot(f.t, db)
+	db, err := f.C.DB()
+	must(f.T, err)
+	return outcomesSnapshot(f.T, db)
 }
 
 func TestReconciledValues(t *testing.T) {
@@ -399,7 +363,7 @@ func TestReconciledValues(t *testing.T) {
 	}
 
 	t.Run("observation update", func(t *testing.T) {
-		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		_, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
 				ID: kenneth.ID, SubjectID: person.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=James|surname=Robins"),
 			})
@@ -411,7 +375,7 @@ func TestReconciledValues(t *testing.T) {
 		}
 	})
 	t.Run("observation add", func(t *testing.T) {
-		obs, err := writes.Call(f.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+		obs, err := writes.Call(f.C, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, kenneth.CitationID, []observations.Input{intIn(person, f.props["age"], 35)})
 		})
 		must(t, err)
@@ -420,7 +384,7 @@ func TestReconciledValues(t *testing.T) {
 			t.Fatalf("after add %+v", age)
 		}
 		{
-			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := observations.Delete(tx, userID, obs[0].ID)
 				return struct{}{}, changes, err
 			})
@@ -462,14 +426,14 @@ func TestReconciledValues(t *testing.T) {
 			t.Fatal("promoted name not cached")
 		}
 		{
-			_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := observations.Delete(tx, userID, obs[0].ID)
 				return struct{}{}, changes, err
 			})
 			must(t, err)
 		}
 		{
-			_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 				changes, err := subjects.Delete(tx, userID, lone.ID)
 				return struct{}{}, changes, err
 			})
@@ -489,7 +453,7 @@ func TestReconciledValues(t *testing.T) {
 // Property, a majority still outvotes a distinct spelling.
 func TestReconciledValuesKeepEveryValue(t *testing.T) {
 	f := newFixture(t)
-	aliasID, err := properties.Upsert(f.c, properties.Property{
+	aliasID, err := properties.Upsert(f.C, properties.Property{
 		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
@@ -542,7 +506,7 @@ func TestMultipleCardinalityKeepsDistinctValues(t *testing.T) {
 // A seeded Property's cardinality stays fixed.
 func TestCardinalityChangeRecomputes(t *testing.T) {
 	f := newFixture(t)
-	aliasID, err := properties.Upsert(f.c, properties.Property{
+	aliasID, err := properties.Upsert(f.C, properties.Property{
 		Key: "alias", Origin: vocabkey.OriginUser, Label: "Alias", ValueType: propertymeta.ValueTypeText,
 	})
 	must(t, err)
@@ -559,7 +523,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	if len(rows) != 2 || rows[1].Reason != "outvoted" {
 		t.Fatalf("single %+v", rows)
 	}
-	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 		return properties.Update(tx, userID, alias.ID, "Alias", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
 	})
 
@@ -572,7 +536,7 @@ func TestCardinalityChangeRecomputes(t *testing.T) {
 	f.assertUpkeepEqualsRebuild("TestCardinalityChangeRecomputes")
 
 	top := f.props["toponym"]
-	_, err = writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 		return properties.Update(tx, userID, top.ID, top.Label, top.ValueType, top.Description, propertymeta.CardinalitySingle)
 	})
 	if !errors.Is(err, properties.ErrLocked) {
@@ -655,23 +619,23 @@ func TestReconciledNames(t *testing.T) {
 
 // photo is an Artifact on a PNG File under src. Every photo shares one File.
 func (f *fixture) photo(src sources.Source) artifacts.Artifact {
-	f.t.Helper()
-	return observationstest.FileArtifact(f.t, f.c, userID, src.ID)
+	f.T.Helper()
+	return observationstest.FileArtifact(f.T, f.C, userID, src.ID)
 }
 
 // likenessIn is a likeness whose crop is a 40 x 30 PNG of one gray shade.
 func (f *fixture) likenessIn(s subjects.Subject, shade uint8) observations.Input {
 	return observations.Input{SubjectID: s.ID, PropertyID: f.props["likeness"].ID,
-		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.t, 40, 30, shade)}}
+		Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(f.T, 40, 30, shade)}}
 }
 
 // citeOn files the Observations on a Citation of art, through the real
 // likeness save path.
 func (f *fixture) citeOn(art artifacts.Artifact, in ...observations.Input) []observations.Observation {
-	f.t.Helper()
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	res, _, err := observationstest.SaveCitation(f.c, userID, graph, art, in...)
-	must(f.t, err)
+	f.T.Helper()
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID
+	res, _, err := observationstest.SaveCitation(f.C, userID, graph, art, in...)
+	must(f.T, err)
 	return res.Observations
 }
 
@@ -685,12 +649,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	}
 	start := func(t *testing.T, shadeB uint8) *world {
 		f := newFixture(t)
-		pr, pc := f.photo(f.source), f.photo(f.other)
+		pr, pc := f.photo(f.Source), f.photo(f.other)
 		a, b := f.subject("person"), f.subjectOn(f.other, "person")
 		oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
 		ob := f.citeOn(pc, f.likenessIn(b, shadeB))[0]
 		h := f.promote(a)
-		_, err := f.c.Graph().Node(h)
+		_, err := f.C.Graph().Node(h)
 		must(t, err)
 		return &world{f: f, a: a, b: b, oa: oa, ob: ob, h: h}
 	}
@@ -713,12 +677,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 				return o
 			}
 		}
-		w.f.t.Fatalf("no outcome for %x", id)
+		w.f.T.Fatalf("no outcome for %x", id)
 		return outcome{}
 	}
 	galleryOf := func(w *world) []gallery.Picture {
 		t.Helper()
-		g, err := gallery.ForEntities(w.f.c.Graph(), [][]byte{w.h})
+		g, err := gallery.ForEntities(w.f.C.Graph(), [][]byte{w.h})
 		must(t, err)
 		return g[string(w.h)]
 	}
@@ -726,7 +690,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	finish := func(t *testing.T, w *world, name string) {
 		t.Helper()
 		w.f.assertUpkeepEqualsRebuild(name)
-		n, err := w.f.c.Graph().Node(w.h)
+		n, err := w.f.C.Graph().Node(w.h)
 		must(t, err)
 		cached := n.Values[string(w.f.props["likeness"].ID)]
 		rows := likenessRows(w)
@@ -738,7 +702,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 				t.Fatalf("node value %d image %x, table %x", i, cached[i].ImageFileID, rows[i].ImageFileID)
 			}
 		}
-		must(t, w.f.c.Graph().Verify())
+		must(t, w.f.C.Graph().Verify())
 	}
 
 	t.Run("two images are two values", func(t *testing.T) {
@@ -748,7 +712,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		if len(rows) != 2 {
 			t.Fatalf("rows %+v", rows)
 		}
-		for _, img := range [][]byte{observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)} {
+		for _, img := range [][]byte{observationstest.ImageOf(t, w.f.C, w.oa.ID), observationstest.ImageOf(t, w.f.C, w.ob.ID)} {
 			r := byImage(t, w, img)
 			if r.Reason != "kept" || r.Support != 1 {
 				t.Fatalf("row %+v", r)
@@ -763,9 +727,9 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 			}
 		}
 		g := galleryOf(w)
-		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) ||
+		if len(g) != 2 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.C, w.oa.ID)) ||
 			len(g[0].ObservationIDs) != 1 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) ||
-			!bytes.Equal(g[1].ImageFileID, observationstest.ImageOf(t, w.f.c, w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
+			!bytes.Equal(g[1].ImageFileID, observationstest.ImageOf(t, w.f.C, w.ob.ID)) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "two images")
@@ -773,12 +737,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	t.Run("a redrawn face keeps its place", func(t *testing.T) {
 		w := start(t, 200)
 		w.f.join(w.b, w.h)
-		_, err := observationstest.UpdateObservation(w.f.c, userID, observations.Input{
+		_, err := observationstest.UpdateObservation(w.f.C, userID, observations.Input{
 			ID: w.oa.ID, SubjectID: w.a.ID, PropertyID: w.f.props["likeness"].ID,
 			Depiction: &observations.DepictionInput{RegionJSON: observationstest.LikenessRegion, ImagePath: observationstest.Crop(t, 40, 30, 150)}})
 		must(t, err)
 		g := galleryOf(w)
-		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
+		if len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.C, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "redraw")
@@ -786,7 +750,7 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	t.Run("the same pixels are one value", func(t *testing.T) {
 		w := start(t, 100)
 		w.f.join(w.b, w.h)
-		if !bytes.Equal(observationstest.ImageOf(t, w.f.c, w.oa.ID), observationstest.ImageOf(t, w.f.c, w.ob.ID)) {
+		if !bytes.Equal(observationstest.ImageOf(t, w.f.C, w.oa.ID), observationstest.ImageOf(t, w.f.C, w.ob.ID)) {
 			t.Fatal("two shade-100 crops are two Files")
 		}
 		rows := likenessRows(w)
@@ -814,36 +778,36 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		must(t, f.credibility(album, "high_trust"))
 		f.join(w.b, w.h)
 		f.join(c, w.h)
-		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.ob.ID)); r.Reason != "denied" {
+		if r := byImage(t, w, observationstest.ImageOf(t, f.C, w.ob.ID)); r.Reason != "denied" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, observationstest.ImageOf(t, f.c, w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, f.C, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "denied" || !bytes.Equal(o.DeniedBy, oc.ID) {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.c, w.oa.ID)) {
+		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, f.C, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "denied")
 	})
 	t.Run("a provisional member", func(t *testing.T) {
 		w := start(t, 200)
-		_, err := writes.Call(w.f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		_, err := writes.Call(w.f.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 			return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: w.b.ID, EntityID: w.h, Status: identityclaims.StatusProvisional})
 		})
 		must(t, err)
-		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "provisional" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.C, w.ob.ID)); r.Reason != "provisional" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.C, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
 		if o := outcomeOf(w, w.ob.ID); o.Reason != "provisional" {
 			t.Fatalf("outcome %+v", o)
 		}
-		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.c, w.oa.ID)) {
+		if g := galleryOf(w); len(g) != 1 || !bytes.Equal(g[0].ImageFileID, observationstest.ImageOf(t, w.f.C, w.oa.ID)) {
 			t.Fatalf("gallery %+v", g)
 		}
 		finish(t, w, "provisional")
@@ -852,10 +816,10 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 		w := start(t, 200)
 		must(t, w.f.credibility(w.f.other, "low_trust"))
 		w.f.join(w.b, w.h)
-		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.ob.ID)); r.Reason != "weak" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.C, w.ob.ID)); r.Reason != "weak" {
 			t.Fatalf("shade 200 %+v", r)
 		}
-		if r := byImage(t, w, observationstest.ImageOf(t, w.f.c, w.oa.ID)); r.Reason != "kept" {
+		if r := byImage(t, w, observationstest.ImageOf(t, w.f.C, w.oa.ID)); r.Reason != "kept" {
 			t.Fatalf("shade 100 %+v", r)
 		}
 		if g := galleryOf(w); len(g) != 2 || !bytes.Equal(g[0].ObservationIDs[0], w.oa.ID) || !bytes.Equal(g[1].ObservationIDs[0], w.ob.ID) {
@@ -866,12 +830,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	t.Run("an unreadable image is no evidence", func(t *testing.T) {
 		w := start(t, 200)
 		w.f.join(w.b, w.h)
-		db, err := w.f.c.DB()
+		db, err := w.f.C.DB()
 		must(t, err)
-		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, observationstest.ImageOf(t, w.f.c, w.ob.ID))
+		_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, observationstest.ImageOf(t, w.f.C, w.ob.ID))
 		must(t, err)
 		must(t, autoreconciler.Rebuild(db))
-		w.f.c.Graph().Drop()
+		w.f.C.Graph().Drop()
 		if rows := likenessRows(w); len(rows) != 1 {
 			t.Fatalf("rows %+v", rows)
 		}
@@ -885,16 +849,16 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	t.Run("Verify sees a stale image", func(t *testing.T) {
 		w := start(t, 200)
 		w.f.join(w.b, w.h)
-		w.f.c.Graph().Drop()
-		db, err := w.f.c.DB()
+		w.f.C.Graph().Drop()
+		db, err := w.f.C.DB()
 		must(t, err)
 		_, err = db.Exec(`UPDATE auto_reconciler_values SET value_image_file_id = ?
 			WHERE entity_id = ? AND property_id = ? AND value_image_file_id = ?`,
-			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, observationstest.ImageOf(t, w.f.c, w.oa.ID))
+			bytes.Repeat([]byte{1}, 16), w.h, w.f.props["likeness"].ID, observationstest.ImageOf(t, w.f.C, w.oa.ID))
 		must(t, err)
-		_, err = w.f.c.Graph().Node(w.h)
+		_, err = w.f.C.Graph().Node(w.h)
 		must(t, err)
-		if err := w.f.c.Graph().Verify(); err == nil {
+		if err := w.f.C.Graph().Verify(); err == nil {
 			t.Fatal("Verify passed with a stale image id")
 		}
 	})
@@ -918,13 +882,13 @@ func TestReconciledEvidence(t *testing.T) {
 				return o
 			}
 		}
-		f.t.Fatalf("no outcome for %x", obsID)
+		f.T.Fatalf("no outcome for %x", obsID)
 		return outcome{}
 	}
 
 	t.Run("a low-trust Source's value is weak beside a standard one", func(t *testing.T) {
 		f := newFixture(t)
-		must(t, f.credibility(f.source, "low_trust"))
+		must(t, f.credibility(f.Source, "low_trust"))
 		a, b := f.subject("place"), f.subjectOn(f.other, "place")
 		f.cite(textIn(a, f.props["toponym"], "U.C."))
 		f.cite(textIn(b, f.props["toponym"], "Upper Canada"))
@@ -939,10 +903,10 @@ func TestReconciledEvidence(t *testing.T) {
 	t.Run("an uncertain transcription is weak", func(t *testing.T) {
 		f := newFixture(t)
 		a, b := f.subject("place"), f.subjectOn(f.other, "place")
-		graph := evidencegraphstest.SoleGraph(t, f.c, f.artifact.SourceID).ID
-		res, err := writes.Call(f.c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		graph := evidencegraphstest.SoleGraph(t, f.C, f.Artifact.SourceID).ID
+		res, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
 			return citations.CreateWithObservations(tx, userID, citations.CreateInput{
-				GraphID: graph, ArtifactID: f.artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
+				GraphID: graph, ArtifactID: f.Artifact.ID, LocatorJSON: locator, TranscriptionUncertain: true,
 			}, []observations.Input{textIn(a, f.props["toponym"], "Yorke")})
 		})
 		must(t, err)
@@ -1040,7 +1004,7 @@ func TestReconciledEvidence(t *testing.T) {
 			f.cite(textIn(a, f.props["toponym"], "York"))
 			claimed := f.cite(textIn(b, f.props["toponym"], "Toronto"))[0]
 			h := f.promote(a)
-			_, err := writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			_, err := writes.Call(f.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 				return identityclaims.Create(tx, userID, identityclaims.CreateInput{SubjectID: b.ID, EntityID: h, Status: tt.status})
 			})
 			must(t, err)
@@ -1088,7 +1052,7 @@ func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
 			f.promote(p)
 			want := f.rows()
 
-			db, err := f.c.DB()
+			db, err := f.C.DB()
 			must(t, err)
 			_, err = db.Exec(`DELETE FROM auto_reconciler_values`)
 			must(t, err)
@@ -1099,7 +1063,7 @@ func TestEnsureCatalogRebuildsStaleVersion(t *testing.T) {
 			if !need {
 				t.Fatal("stale version not detected")
 			}
-			must(t, autoreconciler.EnsureCatalog(f.c))
+			must(t, autoreconciler.EnsureCatalog(f.C))
 			if v, err := autoreconciler.StoredVersion(db); err != nil || v != autoreconciler.CacheVersion {
 				t.Fatalf("version %d %v", v, err)
 			}
@@ -1123,7 +1087,7 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 		f.cite(nameIn(p, f.props["name"], fmt.Sprintf("given=Person|surname=P%d", i)), intIn(p, f.props["age"], int64(i)))
 		handles = append(handles, f.promote(p))
 	}
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	one, err := autoreconciler.LoadQueryCount(db, handles[:1])
 	must(t, err)
@@ -1137,24 +1101,24 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 // assertUpkeepEqualsRebuild fails when the incrementally maintained table
 // differs from a full rebuild (taken in a rolled-back transaction).
 func (f *fixture) assertUpkeepEqualsRebuild(at string) {
-	f.t.Helper()
-	autoreconcilertest.AssertCacheMatchesRebuild(f.t, f.c)
+	f.T.Helper()
+	autoreconcilertest.AssertCacheMatchesRebuild(f.T, f.C)
 	// The handle search documents ride on the same upkeep (RecomputeTx), so
 	// they must equal a full search rebuild too.
-	db, err := f.c.DB()
-	must(f.t, err)
-	got := handleDocs(f.t, db)
+	db, err := f.C.DB()
+	must(f.T, err)
+	got := handleDocs(f.T, db)
 	tx, err := db.Begin()
-	must(f.t, err)
+	must(f.T, err)
 	defer func() { _ = tx.Rollback() }()
-	must(f.t, searchindex.RebuildAll(tx))
-	if want := handleDocs(f.t, tx); !reflect.DeepEqual(got, want) {
-		f.t.Fatalf("%s: handle search docs differ from a rebuild:\n upkeep  %v\n rebuild %v", at, got, want)
+	must(f.T, searchindex.RebuildAll(tx))
+	if want := handleDocs(f.T, tx); !reflect.DeepEqual(got, want) {
+		f.T.Fatalf("%s: handle search docs differ from a rebuild:\n upkeep  %v\n rebuild %v", at, got, want)
 	}
 }
 
 // handleDocs is every person / event / place search document, as text.
-func handleDocs(t *testing.T, q autoreconciler.Querier) []string {
+func handleDocs(t testing.TB, q autoreconciler.Querier) []string {
 	t.Helper()
 	rows, err := q.Query(`SELECT kind, entity_id, display_ref, display_title, title, ref, secondary
 		FROM catalog_search_docs WHERE kind IN ('person', 'event', 'place') ORDER BY kind, entity_id`)
@@ -1200,51 +1164,51 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			p := f.subject("person")
 			obs := f.cite(nameIn(p, f.props["name"], "given=James|surname=Robins"), nameIn(p, f.props["name"], "given=Kenneth|surname=Robins"))
 			f.promote(p)
-			_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+			_, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 				return observations.Update(tx, userID, observations.Input{
 					ID: obs[1].ID, SubjectID: p.ID, PropertyID: f.props["name"].ID, Name: nameValue("given=james|surname=robins"),
 				})
 			})
-			must(f.t, err)
+			must(f.T, err)
 			f.assertUpkeepEqualsRebuild("after update")
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := observations.Delete(tx, userID, obs[0].ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 		}},
 		{"a likeness region edit replaces its image value", func(f *fixture) {
 			const region50 = `{"version":1,"selectors":[{"type":"page","artifact_page":1},{"type":"region","unit":"normalized","points":[{"x":0.5,"y":0.5},{"x":0.9,"y":0.5},{"x":0.9,"y":0.9}]}]}`
-			pr, pc := f.photo(f.source), f.photo(f.other)
+			pr, pc := f.photo(f.Source), f.photo(f.other)
 			a, b := f.subject("person"), f.subjectOn(f.other, "person")
 			oa := f.citeOn(pr, f.likenessIn(a, 100))[0]
 			f.citeOn(pc, f.likenessIn(b, 200))
 			h := f.promote(a)
 			f.join(b, h)
-			old := observationstest.ImageOf(t, f.c, oa.ID)
-			_, err := observationstest.UpdateObservation(f.c, userID, observations.Input{
+			old := observationstest.ImageOf(t, f.C, oa.ID)
+			_, err := observationstest.UpdateObservation(f.C, userID, observations.Input{
 				ID: oa.ID, SubjectID: a.ID, PropertyID: f.props["likeness"].ID,
-				Depiction: &observations.DepictionInput{RegionJSON: region50, ImagePath: observationstest.Crop(f.t, 40, 30, 50)}})
-			must(f.t, err)
-			now := observationstest.ImageOf(t, f.c, oa.ID)
+				Depiction: &observations.DepictionInput{RegionJSON: region50, ImagePath: observationstest.Crop(f.T, 40, 30, 50)}})
+			must(f.T, err)
+			now := observationstest.ImageOf(t, f.C, oa.ID)
 			if bytes.Equal(old, now) {
-				f.t.Fatal("the edit kept the old image")
+				f.T.Fatal("the edit kept the old image")
 			}
 			rows := rowsFor(f.rows(), h, f.props["likeness"].ID)
 			if len(rows) != 2 {
-				f.t.Fatalf("rows %+v", rows)
+				f.T.Fatalf("rows %+v", rows)
 			}
 			seen := false
 			for _, r := range rows {
 				if bytes.Equal(r.ImageFileID, old) {
-					f.t.Fatalf("old image still cached: %+v", r)
+					f.T.Fatalf("old image still cached: %+v", r)
 				}
 				seen = seen || bytes.Equal(r.ImageFileID, now)
 			}
 			if !seen {
-				f.t.Fatalf("new image not cached: %+v", rows)
+				f.T.Fatalf("new image not cached: %+v", rows)
 			}
 		}},
 		{"observations added before and after promote on two members", func(f *fixture) {
@@ -1256,7 +1220,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.assertUpkeepEqualsRebuild("two handles")
 			// Both from the Register: one value, one Source's support.
 			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 1 || rows[0].Support != 1 {
-				f.t.Fatalf("York / york should be one value: %+v", rows)
+				f.T.Fatalf("York / york should be one value: %+v", rows)
 			}
 		}},
 		{"joining a second member merges its name, then adds a given name", func(f *fixture) {
@@ -1268,15 +1232,15 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.assertUpkeepEqualsRebuild("after join")
 			names := rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 || names[0].Support != 2 {
-				f.t.Fatalf("join should merge the names into one value of 2: %+v", names)
+				f.T.Fatalf("join should merge the names into one value of 2: %+v", names)
 			}
 			f.cite(nameIn(b, f.props["name"], "given=Kenneth|surname=Robins"))
 			names = rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 {
-				f.t.Fatalf("a member's new given name should join the one name: %+v", names)
+				f.T.Fatalf("a member's new given name should join the one name: %+v", names)
 			}
 			if n, err := valuecodec.UnmarshalName(names[0].Name); err != nil || n.Form != "James Kenneth Robins" {
-				f.t.Fatalf("name %+v %v", n, err)
+				f.T.Fatalf("name %+v %v", n, err)
 			}
 		}},
 		{"deleting the full given name drops rank 1 back to the initial", func(f *fixture) {
@@ -1286,20 +1250,20 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.join(b, h)
 			f.assertUpkeepEqualsRebuild("after join")
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := observations.Delete(tx, userID, obs[1].ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 			names := rowsFor(f.rows(), h, f.props["name"].ID)
 			if len(names) != 1 || names[0].Support != 1 {
-				f.t.Fatalf("names %+v", names)
+				f.T.Fatalf("names %+v", names)
 			}
 			n, err := valuecodec.UnmarshalName(names[0].Name)
-			must(f.t, err)
+			must(f.T, err)
 			if n.Form != "J. Robins" {
-				f.t.Fatalf("rank 1 %q, want J. Robins", n.Form)
+				f.T.Fatalf("rank 1 %q, want J. Robins", n.Form)
 			}
 		}},
 		{"lowering a Source's credibility drops its spelling", func(f *fixture) {
@@ -1309,33 +1273,33 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			h := f.promote(a)
 			f.join(b, h)
 			f.assertUpkeepEqualsRebuild("before")
-			must(f.t, f.credibility(f.source, "low_trust"))
+			must(f.T, f.credibility(f.Source, "low_trust"))
 			f.assertUpkeepEqualsRebuild("after the Register fell")
 			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 2 || *rows[0].Text != "Upper Canada" || rows[1].Reason != "weak" {
-				f.t.Fatalf("toponyms %+v", rows)
+				f.T.Fatalf("toponyms %+v", rows)
 			}
 		}},
 		{"a stronger negative removes a value, and deleting it brings it back", func(f *fixture) {
 			a, b, c := f.subject("place"), f.subjectOn(f.other, "place"), f.subjectOn(f.newSource("Gazette"), "place")
 			f.cite(textIn(a, f.props["toponym"], "York"))
 			f.cite(textIn(c, f.props["toponym"], "Toronto"))
-			must(f.t, f.credibility(f.other, "high_trust"))
+			must(f.T, f.credibility(f.other, "high_trust"))
 			h := f.promote(a)
 			f.join(b, h)
 			f.join(c, h)
 			denial := f.cite(negative(textIn(b, f.props["toponym"], "York")))
 			f.assertUpkeepEqualsRebuild("denied")
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := observations.Delete(tx, userID, denial[0].ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 			f.assertUpkeepEqualsRebuild("restored")
 			for _, r := range rowsFor(f.rows(), h, f.props["toponym"].ID) {
 				if r.Reason != "kept" || r.Against != 0 {
-					f.t.Fatalf("after the negative went: %+v", r)
+					f.T.Fatalf("after the negative went: %+v", r)
 				}
 			}
 		}},
@@ -1345,47 +1309,32 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.cite(textIn(b, f.props["toponym"], "York"))
 			h := f.promote(a)
 			f.join(b, h)
-			must(f.t, f.certainty(obs[0].CitationID, true))
+			must(f.T, f.certainty(obs[0].CitationID, true))
 			f.assertUpkeepEqualsRebuild("uncertain")
 			if rows := rowsFor(f.rows(), h, f.props["toponym"].ID); len(rows) != 2 || rows[1].Reason != "weak" {
-				f.t.Fatalf("toponyms %+v", rows)
+				f.T.Fatalf("toponyms %+v", rows)
 			}
-			must(f.t, f.certainty(obs[0].CitationID, false))
+			must(f.T, f.certainty(obs[0].CitationID, false))
 		}},
 		{"promoting both ends of a participation files it, then the bridge is deleted", func(f *fixture) {
 			person, event := f.subject("person"), f.subject("event")
-			must(f.t, place(f, person, 0, 0))
-			must(f.t, place(f, event, 2, 0))
-			personProp := mustProp(f, "person")
-			eventProp := mustProp(f, "event")
-			roleProp := mustProp(f, "role")
-			role, err := propertyterms.Lookup(f.c, roleProp.ID, "subject", vocabkey.OriginProvenencia)
-			must(f.t, err)
-			bridge, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-				return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-					FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-					Citation: citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
-					Observations: []observations.Input{
-						{PropertyID: personProp.ID, ValueSubjectID: person.ID},
-						{PropertyID: eventProp.ID, ValueSubjectID: event.ID},
-						{PropertyID: roleProp.ID, ValueTermID: role.ID},
-					},
-				})
-			})
-			must(f.t, err)
+			must(f.T, place(f, person, 0, 0))
+			must(f.T, place(f, event, 2, 0))
+			personProp := f.Prop("person")
+			bridge := f.Participation(f.Source, f.Artifact, person, event, "subject")
 			personHandle := f.promote(person)
 			f.promote(event)
 			f.assertUpkeepEqualsRebuild("filed")
 			rows := rowsFor(f.rows(), associationOf(f, "participation"), personProp.ID)
 			if len(rows) != 1 || !bytes.Equal(rows[0].ValueEntityID, personHandle) {
-				f.t.Fatalf("person edge %+v", rows)
+				f.T.Fatalf("person edge %+v", rows)
 			}
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-					changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					changes, err := subjects.Delete(tx, userID, bridge.ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 		}},
 		{"emptied member subject deleted", func(f *fixture) {
@@ -1393,18 +1342,18 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			obs := f.cite(dateIn(p, f.props["date"], 1985, ip(5), nil))
 			f.promote(p)
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := observations.Delete(tx, userID, obs[0].ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 			{
-				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					changes, err := subjects.Delete(tx, userID, p.ID)
 					return struct{}{}, changes, err
 				})
-				must(f.t, err)
+				must(f.T, err)
 			}
 		}},
 	}
@@ -1468,7 +1417,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			for step := 1; step <= 200; step++ {
 				switch op := rng.Intn(13); {
 				case op < 2 || len(subs) == 0:
-					src := f.source
+					src := f.Source
 					if rng.Intn(2) == 0 {
 						src = f.other
 					}
@@ -1483,7 +1432,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					if same := handles[kindOf(f, s)]; len(same) > 0 && rng.Intn(2) == 0 {
 						in.EntityID = same[rng.Intn(len(same))]
 					}
-					res, err := writes.Call(f.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+					res, err := writes.Call(f.C, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 						return promote.Save(tx, userID, in)
 					})
 					tolerate(err)
@@ -1498,13 +1447,13 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					s := subjectByID(subs, obs[i].SubjectID)
 					in := value(s)
 					in.ID = obs[i].ID
-					_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+					_, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 						return observations.Update(tx, userID, in)
 					})
 					tolerate(err)
 				case op < 9 && len(obs) > 0:
 					i := rng.Intn(len(obs))
-					_, err := writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					_, err := writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 						changes, err := observations.Delete(tx, userID, obs[i].ID)
 						return struct{}{}, changes, err
 					})
@@ -1513,7 +1462,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 						obs = append(obs[:i], obs[i+1:]...)
 					}
 				case op == 10:
-					src := f.source
+					src := f.Source
 					if rng.Intn(2) == 0 {
 						src = f.other
 					}
@@ -1536,7 +1485,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 					obs = append(obs, f.cite(negative(value(s)))...)
 				default:
 					i := rng.Intn(len(subs))
-					_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 						changes, err := subjects.Delete(tx, userID, subs[i].ID)
 						return struct{}{}, changes, err
 					})
@@ -1555,7 +1504,7 @@ func TestRebuildEqualsUpkeep_SeededSequences(t *testing.T) {
 			if joins == 0 {
 				t.Fatal("sequence never joined an existing handle")
 			}
-			db, err := f.c.DB()
+			db, err := f.C.DB()
 			must(t, err)
 			if len(handleDocs(t, db)) == 0 {
 				t.Fatal("sequence never indexed a handle; the search comparison is not exercised")
@@ -1676,7 +1625,7 @@ func joinNameSpecParts(parts []namevalue.Part) string {
 }
 
 // nameSpec renders a name's parts as "type=value|…".
-func nameSpec(t *testing.T, raw []byte) string {
+func nameSpec(t testing.TB, raw []byte) string {
 	t.Helper()
 	n, err := valuecodec.UnmarshalName(raw)
 	must(t, err)
@@ -1746,7 +1695,7 @@ func TestValueRulesFoldChains(t *testing.T) {
 }
 
 // nameSpecFromValue renders a reconciled Value's parts as "type=value|…".
-func nameSpecFromValue(t *testing.T, v autoreconcile.Value) string {
+func nameSpecFromValue(t testing.TB, v autoreconcile.Value) string {
 	t.Helper()
 	return joinNameSpecParts(v.Name.Parts)
 }
@@ -1846,7 +1795,7 @@ func boolIn(s subjects.Subject, p properties.Property, v bool) observations.Inpu
 // leaves support 1, and the cache still equals a rebuild.
 func TestReconciledBoolean(t *testing.T) {
 	f := newFixture(t)
-	id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	id, err := properties.Upsert(f.C, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
 	must(t, err)
 	literate := properties.Property{ID: id, Key: "literate", ValueType: propertymeta.ValueTypeBoolean}
 	f.bind("person", id)
@@ -1857,7 +1806,7 @@ func TestReconciledBoolean(t *testing.T) {
 	h := f.promote(a)
 	f.join(b, h)
 
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	cached := func() (n, support int, value int) {
 		t.Helper()
@@ -1869,7 +1818,7 @@ func TestReconciledBoolean(t *testing.T) {
 	// compare, and reads the one cached rank as a present true.
 	loadedTrue := func(handle []byte) {
 		t.Helper()
-		node, err := f.c.Graph().Node(handle)
+		node, err := f.C.Graph().Node(handle)
 		must(t, err)
 		ranks := node.Values[string(id)]
 		if len(ranks) != 1 || !ranks[0].HasBoolean || !ranks[0].Boolean {
@@ -1881,9 +1830,9 @@ func TestReconciledBoolean(t *testing.T) {
 	}
 	f.assertUpkeepEqualsRebuild("TestReconciledBoolean merged")
 	loadedTrue(h)
-	must(t, f.c.Graph().Verify())
+	must(t, f.C.Graph().Verify())
 
-	_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		changes, err := observations.Delete(tx, userID, second[0].ID)
 		return struct{}{}, changes, err
 	})
@@ -1893,21 +1842,21 @@ func TestReconciledBoolean(t *testing.T) {
 	}
 	f.assertUpkeepEqualsRebuild("TestReconciledBoolean after delete")
 	loadedTrue(h)
-	must(t, f.c.Graph().Verify())
+	must(t, f.C.Graph().Verify())
 }
 
 // A yes/no column holding anything but 0 or 1 reads as absent rather than
 // failing the read, so a damaged row never blocks the repair that rewrites it.
 func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
 	f := newFixture(t)
-	id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	id, err := properties.Upsert(f.C, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
 	must(t, err)
 	literate := properties.Property{ID: id, Key: "literate", ValueType: propertymeta.ValueTypeBoolean}
 	f.bind("person", id)
 	a := f.subject("person")
 	cited := f.cite(boolIn(a, literate, true))
 	h := f.promote(a)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	damage := func(query string, args ...any) {
 		t.Helper()
@@ -1928,7 +1877,7 @@ func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
 	if raw != 2 {
 		t.Fatalf("the cache column holds %d, want the damaged 2", raw)
 	}
-	g := f.c.Graph()
+	g := f.C.Graph()
 	g.Drop()
 	n, err := g.Node(h)
 	must(t, err)
@@ -1948,11 +1897,11 @@ func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
 	damage(`UPDATE observations SET value_boolean = 2 WHERE id = ?`, cited[0].ID)
 	_, err = db.Exec(`UPDATE auto_reconciler_meta SET cache_version = 0`)
 	must(t, err)
-	must(t, autoreconciler.EnsureCatalog(f.c))
-	if _, err := observations.ListByCitation(f.c, cited[0].CitationID); err != nil {
+	must(t, autoreconciler.EnsureCatalog(f.C))
+	if _, err := observations.ListByCitation(f.C, cited[0].CitationID); err != nil {
 		t.Fatalf("citation Observation list: %v", err)
 	}
-	if _, err := conclusiondetails.ForEntity(f.c, h); err != nil {
+	if _, err := conclusiondetails.ForEntity(f.C, h); err != nil {
 		t.Fatalf("conclusion detail: %v", err)
 	}
 }

@@ -17,8 +17,8 @@ import (
 )
 
 func (w *bridgeWorld) unpromote(s subjects.Subject) error {
-	w.t.Helper()
-	_, err := writes.Call(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	w.T.Helper()
+	_, err := writes.Call(w.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := promote.Unpromote(tx, userID, s.ID)
 		return struct{}{}, ch, err
 	})
@@ -26,26 +26,26 @@ func (w *bridgeWorld) unpromote(s subjects.Subject) error {
 }
 
 func (w *bridgeWorld) filed(s subjects.Subject) bool {
-	w.t.Helper()
-	_, err := identityclaims.AcceptedEntityForSubject(w.c, s.ID)
+	w.T.Helper()
+	_, err := identityclaims.AcceptedEntityForSubject(w.C, s.ID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return false
 	}
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return true
 }
 
 func (w *bridgeWorld) revisions() int {
-	w.t.Helper()
-	db, err := w.c.DB()
+	w.T.Helper()
+	db, err := w.C.DB()
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	var n int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return n
 }
@@ -90,7 +90,7 @@ func TestUnpromote(t *testing.T) {
 		if w.revisions() != before+1 {
 			t.Fatalf("revisions %d, want %d", w.revisions(), before+1)
 		}
-		if got := lastRevisionChanges(t, w.c); got[:len("unpromote_subject:")] != "unpromote_subject:" {
+		if got := lastRevisionChanges(t, w.C); got[:len("unpromote_subject:")] != "unpromote_subject:" {
 			t.Fatalf("revision %s", got)
 		}
 		for name, s := range map[string]subjects.Subject{"james": h.james, "son-of": h.sonOf, "participation": h.part} {
@@ -109,7 +109,7 @@ func TestUnpromote(t *testing.T) {
 		if len(w.handles("relationship"))+len(w.handles("participation")) >= personAssoc {
 			t.Fatal("expected an emptied association handle to be deleted")
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 
 	t.Run("a Subject with no filed bridges loses only its own claim", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestUnpromote(t *testing.T) {
 		if err := w.unpromote(bad); !errors.Is(err, promote.ErrInvalid) {
 			t.Fatalf("unknown: %v", err)
 		}
-		_, err := writes.Call(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, err := writes.Call(w.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			ch, err := promote.Unpromote(tx, nil, bad.ID)
 			return struct{}{}, ch, err
 		})
@@ -212,7 +212,7 @@ func TestUnpromote(t *testing.T) {
 func TestUnpromoteReportsDeletedHandles(t *testing.T) {
 	unpromote := func(w *bridgeWorld, s subjects.Subject) [][]byte {
 		t.Helper()
-		_, res, err := writes.Run(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, res, err := writes.Run(w.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			ch, err := promote.Unpromote(tx, userID, s.ID)
 			return struct{}{}, ch, err
 		})

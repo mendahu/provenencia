@@ -1,6 +1,6 @@
 # S13-29 — One loader for a Subject's comparable values
 
-**Status:** Planned
+**Status:** Landed in [#741](https://github.com/mendahu/provenencia/pull/741) (2026-11-07)
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a Go-only move with no behavior change; nothing on screen reads the new package until S13-28)
@@ -14,6 +14,19 @@
 **Context:** working rules "Scoring and the view are two concerns" (slice 7), "Slice 7 starts with a simple count" (slice 7, "A matching link counts"); S13-26 plan [D-2](S13-26-scoring-two-evidence-graphs.md) and its review M-5; [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §8 (Caching and decisions)
 **Planned:** 2026-11-07 against `main` @ `82547284` (refreshed after S13-26 landed; first drafted on `97e6f30f`)
 **Review:** [`S13-29-one-loader-for-comparable-values.review.md`](S13-29-one-loader-for-comparable-values.review.md) — round 1: Fits with changes / Not ready; findings Fixed; M-5 answered by the user 2026-11-07 (move the fixture in this PR); round 2: Fits with changes / Not ready; findings Fixed; M-11 answered 2026-11-07 (S13-26 had landed: this PR reshapes `recordlinks.Member` and adds its guard row)
+
+**Landed note.** The code differs from the plan in these ways (the Decisions and the Out table above are kept as planned):
+
+- **STEP-7:** the `main` budget run used `git checkout main` in this checkout, not a second worktree (the user's standing rule: no worktree unasked).
+- **D-13:** the rename used perl in place of GNU `sed` (BSD `sed` has no `\u`), with the same effect.
+- **STEP-3:** the `rg` still prints two `connectrules.Bridge{}` lines; that is a different type from `graphalign.Bridge`.
+- **`promotealign_test.go`:** the redundant `graphfill` blank import is dropped (`evidencelayertest` imports it).
+- **`docs/ideas/structural-debt.md`:** the S14-36 entry's `promotealign.decode` became `evidencelayer.Decode` (the Definition of done sweep).
+- **Untrusted size (Edges):** wrong as planned. `graphcache.WalkEvidenceGraph` had no bound on one bridge's ends, so 8,000 crafted rows cost 38 s and 18.8 GB in `Load`. The walk now counts its edges before building any and returns none over `maxWalkEdges` = 50,000 (one high total cap, user, S13-26 SEC-1). The largest walk in `TestLargeSourceBudgets`' fixture builds 60 edges. This covers `graphfill`, which calls the same walk.
+- **Untrusted size (Associations):** wrong as planned a second time. `kinship.chains` copied the up link's associations into every grandchild's chain, so associations per link times children per parent ran `Load` to 21 GB on 32,002 rows, under the walk cap. `kinship.Rules.MaxChainWork` = 100,000 (one high total cap, user, S13-26 SEC-1 rule) counts those copies before any chain is built and implies no chain over it. The largest count in `TestLargeSourceBudgets`' fixture is 4. `TestDeriveManyAssociations` files 4,000 associations twice instead of 20,000 so it stays under the cap.
+- **D-12:** `MemoSnapshot` and `MemoSnapshotForTest` are deleted, not kept. `evidencelayertest.Records.Layer` reads the layer through `evidencelayer.Load`, and `TestLoadSharesPromotesMemo` reads the memo by its literal key.
+- **Out (the other fixtures):** `grapheventtitles`, `canonicalgraph`, `conclusionsummaries`, `promote`, `graphcache`, and also `autoreconciler`, `conclusiondetails`, `persondetail` and `search` now build their Sources on `evidencelayertest.Records`, in this PR (user's same-pass rule). `Records.Labelled` is new, and `Records.Locate` returns the bridge Subject. Kept as they were, each because it differs: `promote/bridges_test.go`'s `bridge` family (returns `connect.Result`, whose `Citation` one test adds to), `conclusionsummaries` `placeRel` (adds Observations to the same Citation), the `cite` helpers that choose the Artifact from the Subject's Source (`autoreconciler`, `conclusiondetails`, `persondetail`), `observations_test.go`'s `booleanFixture.cite`, `canonlinks`' `relationship`, (moved in round 2: `search`'s `locatedBirth`, `mustProp` in `autoreconciler`, `termID` in `conclusiondetails`, `promote`'s `newCatalog` and the `propertyterms.Lookup`s in `search` and `conclusiondetails` now use `Records`; the `propertyterms.Lookup`s that stay are in the `citations`, `connect`, `deleteimpact`, `effects`, `observations`, `subjects` and `subjectvocab` tests, each one-off), and the in-package and one-off `create_cited_bridge` calls in the `subjects`, `citations`, `connect`, `effects`, `deleteimpact` and `observations` tests. The structural-debt entry for them is removed.
+- **Multi-graph load:** the cache-cap debt is added to the S13-16 PRF-2 entry already in `docs/ideas/structural-debt.md`, not as a new entry, and to S13-27's Check in the map.
 
 ### Implementer — read this first
 

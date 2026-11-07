@@ -10,13 +10,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/nameformats"
@@ -30,12 +30,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue"
@@ -46,20 +44,17 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var userID = evidencelayertest.UserID
 
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+const locator = evidencelayertest.Locator
 
 type fixture struct {
-	t        *testing.T
-	c        *database.Catalog
-	source   sources.Source
-	artifact artifacts.Artifact
-	graph    []byte // the Source's one Evidence graph
-	name     properties.Property
+	*evidencelayertest.Records
+	graph []byte // the Source's one Evidence graph
+	name  properties.Property
 }
 
-func must(t *testing.T, err error) {
+func must(t testing.TB, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
@@ -68,55 +63,41 @@ func must(t *testing.T, err error) {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
+	r := evidencelayertest.New(t)
+	name, err := properties.Lookup(r.C, "name", vocabkey.OriginProvenencia)
 	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	must(t, err)
-	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(t, err)
-	name, err := properties.Lookup(c, "name", vocabkey.OriginProvenencia)
-	must(t, err)
-	return &fixture{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID, name: name}
+	return &fixture{Records: r, graph: r.Graph(r.Source), name: name}
 }
 
 func (f *fixture) typeID(key string) []byte {
-	st, err := subjecttypes.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
+	st, err := subjecttypes.Lookup(f.C, key, vocabkey.OriginProvenencia)
+	must(f.T, err)
 	return st.ID
 }
 
 // person promotes a new person Subject named by forms (one Observation each).
 func (f *fixture) person(forms ...string) (subjects.Subject, []observations.Observation, []byte) {
-	f.t.Helper()
+	f.T.Helper()
 	personType := f.typeID("person")
-	s := subjectstest.OfType(f.t, f.c, userID, f.graph, personType, "")
+	s := subjectstest.OfType(f.T, f.C, userID, f.graph, personType, "")
 	var obs []observations.Observation
 	if len(forms) > 0 {
 		var in []observations.Input
 		for _, form := range forms {
 			in = append(in, observations.Input{SubjectID: s.ID, PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 		}
-		res, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, locator, in...)
-		must(f.t, err)
+		res, _, err := observationstest.Cite(f.C, userID, f.graph, f.Artifact.ID, locator, in...)
+		must(f.T, err)
 		obs = res.Observations
 	}
-	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	p := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return s, obs, p.Entity.ID
 }
 
 func (f *fixture) list() []conclusionsummaries.PersonSummary {
-	f.t.Helper()
-	h, err := conclusionsummaries.ListPersons(f.c)
-	must(f.t, err)
+	f.T.Helper()
+	h, err := conclusionsummaries.ListPersons(f.C)
+	must(f.T, err)
 	return h
 }
 
@@ -129,17 +110,17 @@ func TestListPersons(t *testing.T) {
 	f.person("Mary Smith")
 	_, jamesObs, _ := f.person("James Robins", "Kenneth Robins", "james robins")
 	p6a1 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("person"), Label: "Mother of James"}
-	labelled, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+	labelled, err := writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 		return canonicalentities.Create(tx, userID, p6a1)
 	})
 	must(t, err)
 	p6a2 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("person")}
-	bare, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+	bare, err := writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 		return canonicalentities.Create(tx, userID, p6a2)
 	})
 	must(t, err)
 	p6a3 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("place"), Label: "York"}
-	_, err = writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 		return canonicalentities.Create(tx, userID, p6a3)
 	})
 	must(t, err)
@@ -167,7 +148,7 @@ func TestListPersons(t *testing.T) {
 
 	t.Run("a name edit reaches the summary", func(t *testing.T) {
 		// Kenneth → James merges the two values.
-		_, err := writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		_, err := writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 			return observations.Update(tx, userID, observations.Input{
 				ID: jamesObs[1].ID, SubjectID: jamesObs[1].SubjectID, PropertyID: f.name.ID,
 				Name: namevaluetest.Western("James Robins"),
@@ -185,17 +166,17 @@ func TestListPersons(t *testing.T) {
 // not a name the list files, so that person sorts last.
 func TestListPersonsSortsBySortedPartsNotForm(t *testing.T) {
 	f := newFixture(t)
-	must(t, nameformats.Install(f.c))
+	must(t, nameformats.Install(f.C))
 	f.person("Aaron Zimmerman")
 	f.person("Zachary Adams")
 	formOnly := &namevalue.Value{Form: "Aaron Aardvark"}
 	personType := f.typeID("person")
-	s := subjectstest.OfType(t, f.c, userID, f.graph, personType, "")
-	_, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, locator, []observations.Input{{
+	s := subjectstest.OfType(t, f.C, userID, f.graph, personType, "")
+	_, _, err := observationstest.Cite(f.C, userID, f.graph, f.Artifact.ID, locator, []observations.Input{{
 		SubjectID: s.ID, PropertyID: f.name.ID, Name: formOnly,
 	}}...)
 	must(t, err)
-	promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID})
+	promotetest.Save(t, f.C, userID, promote.Input{SubjectID: s.ID})
 
 	got := f.list()
 	if len(got) != 3 {
@@ -254,9 +235,9 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 			kind: "event",
 			cite: func(f *fixture) []observations.Input {
 				return []observations.Input{
-					{PropertyID: f.prop("event_name").ID, Scalar: propertymeta.TextScalar("Phantom Fair")},
-					{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-					{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1801, 0, 0)},
+					{PropertyID: f.Prop("event_name").ID, Scalar: propertymeta.TextScalar("Phantom Fair")},
+					{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+					{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1801, 0, 0)},
 				}
 			},
 			check: func(t *testing.T, f *fixture, entityID []byte) {
@@ -275,19 +256,19 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			p6a4 := canonicalentities.CreateInput{SubjectTypeID: f.typeID(tt.kind)}
-			handle, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+			handle, err := writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 				return canonicalentities.Create(tx, userID, p6a4)
 			})
 			must(t, err)
-			s := subjectstest.On(f.t, f.c, userID, f.graph, tt.kind, "")
-			f.cite(s, tt.cite(f)...)
-			_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+			s := subjectstest.On(f.T, f.C, userID, f.graph, tt.kind, "")
+			f.Cite(f.Artifact, s, tt.cite(f)...)
+			_, err = writes.Call(f.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 				return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 					SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
 				})
 			})
 			must(t, err)
-			db, err := f.c.DB()
+			db, err := f.C.DB()
 			must(t, err)
 			must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
 			tt.check(t, f, handle.ID)
@@ -298,19 +279,19 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	gender := func(s subjects.Subject) {
-		f.cite(s, observations.Input{PropertyID: f.prop("gender").ID, ValueTermID: f.term("gender", "woman").ID})
+		f.Cite(f.Artifact, s, observations.Input{PropertyID: f.Prop("gender").ID, ValueTermID: f.Term("gender", "woman").ID})
 	}
 	s, _, _ := f.person("Ada Lovelace")
 	gender(s)
-	f.c.Graph().Drop()
-	one, err := conclusionsummaries.ListPersonsQueryCount(f.c)
+	f.C.Graph().Drop()
+	one, err := conclusionsummaries.ListPersonsQueryCount(f.C)
 	must(t, err)
 	for i := 0; i < 50; i++ {
 		s, _, _ := f.person(fmt.Sprintf("Person %d", i), fmt.Sprintf("Alias %d", i))
 		gender(s)
 	}
-	f.c.Graph().Drop()
-	many, err := conclusionsummaries.ListPersonsQueryCount(f.c)
+	f.C.Graph().Drop()
+	many, err := conclusionsummaries.ListPersonsQueryCount(f.C)
 	must(t, err)
 	// The name row is one query; birth and death are one more, and the
 	// likeness lead one more, each for the whole list. The count stays put as the list grows.
@@ -321,9 +302,9 @@ func TestListPersonsQueryCountIsConstant(t *testing.T) {
 
 // subjectAndHandle creates and promotes a Subject of kind; returns subject and handle.
 func (f *fixture) subjectAndHandle(kind string) (subjects.Subject, []byte) {
-	f.t.Helper()
-	s := subjectstest.OfType(f.t, f.c, userID, f.graph, f.typeID(kind), "")
-	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	f.T.Helper()
+	s := subjectstest.OfType(f.T, f.C, userID, f.graph, f.typeID(kind), "")
+	p := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return s, p.Entity.ID
 }
 
@@ -362,7 +343,7 @@ func summaryPictureCases() []summaryPictureCase {
 				return pictureLeads(f.list(), personID, personPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionsummaries.PersonsByIDs(f.c, ids)
+				rows, err := conclusionsummaries.PersonsByIDs(f.C, ids)
 				return pictureLeads(rows, personID, personPic), err
 			},
 		},
@@ -376,7 +357,7 @@ func summaryPictureCases() []summaryPictureCase {
 				return pictureLeads(f.events(), eventID, eventPic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionsummaries.EventsByIDs(f.c, ids)
+				rows, err := conclusionsummaries.EventsByIDs(f.C, ids)
 				return pictureLeads(rows, eventID, eventPic), err
 			},
 		},
@@ -390,7 +371,7 @@ func summaryPictureCases() []summaryPictureCase {
 				return pictureLeads(f.places(), placeID, placePic), nil
 			},
 			byIDs: func(f *fixture, ids [][]byte) (map[string][]byte, error) {
-				rows, err := conclusionsummaries.PlacesByIDs(f.c, ids)
+				rows, err := conclusionsummaries.PlacesByIDs(f.C, ids)
 				return pictureLeads(rows, placeID, placePic), err
 			},
 		},
@@ -406,19 +387,19 @@ func TestSummaryLeadsWithEarliestPicture(t *testing.T) {
 			if tc.name == "person" {
 				_, _, other = f.person("Bob Lee")
 			}
-			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.C, o.ID) }
 			leads, err := tc.list(f)
 			must(t, err)
 			if got := leads[string(h)]; got != nil {
 				t.Fatalf("lead before any picture: %x", got)
 			}
-			a := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 100)
+			a := observationstest.SaveDepiction(t, f.C, userID, f.Source.ID, s.ID, tc.key, 100)
 			leads, err = tc.list(f)
 			must(t, err)
 			if got := leads[string(h)]; !bytes.Equal(got, imageOf(a)) {
 				t.Fatalf("lead after A: %x, want %x", got, imageOf(a))
 			}
-			observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 200)
+			observationstest.SaveDepiction(t, f.C, userID, f.Source.ID, s.ID, tc.key, 200)
 			leads, err = tc.list(f)
 			must(t, err)
 			if got := leads[string(h)]; !bytes.Equal(got, imageOf(a)) {
@@ -438,7 +419,7 @@ func TestSummaryLeadsWithEarliestPicture(t *testing.T) {
 					t.Fatalf("handle without a picture leads with %x", got)
 				}
 			}
-			must(t, f.c.Graph().Verify())
+			must(t, f.C.Graph().Verify())
 		})
 	}
 }
@@ -446,19 +427,19 @@ func TestSummaryLeadsWithEarliestPicture(t *testing.T) {
 func TestPersonSummarySkipsNegativeLikeness(t *testing.T) {
 	f := newFixture(t)
 	s, _, h := f.person("Ann Lee")
-	observationstest.SaveNegativeLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
-	b := observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 200)
-	observationstest.SaveLikeness(t, f.c, userID, f.source.ID, s.ID, 100)
+	observationstest.SaveNegativeLikeness(t, f.C, userID, f.Source.ID, s.ID, 100)
+	b := observationstest.SaveLikeness(t, f.C, userID, f.Source.ID, s.ID, 200)
+	observationstest.SaveLikeness(t, f.C, userID, f.Source.ID, s.ID, 100)
 	var got []byte
 	for _, r := range f.list() {
 		if bytes.Equal(r.Entity.ID, h) {
 			got = r.PictureImageFileID
 		}
 	}
-	if want := observationstest.ImageOf(t, f.c, b.ID); !bytes.Equal(got, want) {
+	if want := observationstest.ImageOf(t, f.C, b.ID); !bytes.Equal(got, want) {
 		t.Fatalf("lead %x, want %x", got, want)
 	}
-	must(t, f.c.Graph().Verify())
+	must(t, f.C.Graph().Verify())
 }
 
 func TestSummaryLeadsWithChosenPicture(t *testing.T) {
@@ -466,12 +447,12 @@ func TestSummaryLeadsWithChosenPicture(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			s, h := tc.setup(f)
-			a := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 100)
-			b := observationstest.SaveDepiction(t, f.c, userID, f.source.ID, s.ID, tc.key, 200)
-			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.c, o.ID) }
+			a := observationstest.SaveDepiction(t, f.C, userID, f.Source.ID, s.ID, tc.key, 100)
+			b := observationstest.SaveDepiction(t, f.C, userID, f.Source.ID, s.ID, tc.key, 200)
+			imageOf := func(o observations.Observation) []byte { return observationstest.ImageOf(t, f.C, o.ID) }
 			choose := func(obs []byte) {
 				t.Helper()
-				_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+				_, err := writes.Call(f.C, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					ch, err := canonicalentities.SetPreferredLikeness(tx, userID, h, obs)
 					return struct{}{}, ch, err
 				})
@@ -488,7 +469,7 @@ func TestSummaryLeadsWithChosenPicture(t *testing.T) {
 						t.Fatalf("%s: lead %x, want %x", label, got, imageOf(want))
 					}
 				}
-				must(t, f.c.Graph().Verify())
+				must(t, f.C.Graph().Verify())
 			}
 			check(a, "no choice")
 			choose(b.ID)
@@ -505,56 +486,41 @@ func TestPersonsByIDs(t *testing.T) {
 	_, _, james := f.person("James Robins")
 	f.person("Ada Lovelace")
 	p6a9 := canonicalentities.CreateInput{SubjectTypeID: f.typeID("place")}
-	place, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+	place, err := writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 		return canonicalentities.Create(tx, userID, p6a9)
 	})
 	must(t, err)
 
-	got, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
+	got, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{mary, james, mary, place.ID, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 || got[0].Name.Form != "James Robins" || got[1].Name.Form != "Mary Smith" {
 		t.Fatalf("want James, Mary in list order: %+v", got)
 	}
-	if got, err := conclusionsummaries.PersonsByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.PersonsByIDs(f.C, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
 
-func (f *fixture) prop(key string) properties.Property {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return p
-}
-
-func (f *fixture) term(propertyKey, termKey string) propertyterms.Term {
-	f.t.Helper()
-	p := f.prop(propertyKey)
-	term, err := propertyterms.Lookup(f.c, p.ID, termKey, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return term
-}
-
 // event promotes a new event Subject with the given Observations.
 func (f *fixture) event(in ...observations.Input) []byte {
-	f.t.Helper()
+	f.T.Helper()
 	eventType := f.typeID("event")
-	s := subjectstest.OfType(f.t, f.c, userID, f.graph, eventType, "")
+	s := subjectstest.OfType(f.T, f.C, userID, f.graph, eventType, "")
 	if len(in) > 0 {
 		for i := range in {
 			in[i].SubjectID = s.ID
 		}
-		_, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, locator, in...)
-		must(f.t, err)
+		_, _, err := observationstest.Cite(f.C, userID, f.graph, f.Artifact.ID, locator, in...)
+		must(f.T, err)
 	}
-	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	p := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return p.Entity.ID
 }
 
 func (f *fixture) events() []conclusionsummaries.EventSummary {
-	f.t.Helper()
-	h, err := conclusionsummaries.ListEvents(f.c)
-	must(f.t, err)
+	f.T.Helper()
+	h, err := conclusionsummaries.ListEvents(f.C)
+	must(f.T, err)
 	return h
 }
 
@@ -563,12 +529,12 @@ func TestListEvents(t *testing.T) {
 	if got := f.events(); len(got) != 0 {
 		t.Fatalf("empty project listed %d", len(got))
 	}
-	name := f.prop("event_name")
-	date := f.prop("date")
-	start := f.prop("start_date")
-	end := f.prop("end_date")
-	eventType := f.prop("event_type")
-	birth := f.term("event_type", "birth")
+	name := f.Prop("event_name")
+	date := f.Prop("date")
+	start := f.Prop("start_date")
+	end := f.Prop("end_date")
+	eventType := f.Prop("event_type")
+	birth := f.Term("event_type", "birth")
 
 	fire := f.event(
 		observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar(" The Great Fire ")},
@@ -622,15 +588,15 @@ func TestListEvents(t *testing.T) {
 func TestListEventsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
 	f.event()
-	f.c.Graph().Drop()
-	one, err := conclusionsummaries.ListEventsQueryCount(f.c)
+	f.C.Graph().Drop()
+	one, err := conclusionsummaries.ListEventsQueryCount(f.C)
 	must(t, err)
-	date := f.prop("date")
+	date := f.Prop("date")
 	for i := 0; i < 50; i++ {
 		f.event(observations.Input{PropertyID: date.ID, Date: datevaluetest.YMD(1800+i, 0, 0)})
 	}
-	f.c.Graph().Drop()
-	many, err := conclusionsummaries.ListEventsQueryCount(f.c)
+	f.C.Graph().Drop()
+	many, err := conclusionsummaries.ListEventsQueryCount(f.C)
 	must(t, err)
 	// The event row is one query; subjects and places are one each, for the
 	// whole list. The count stays put as the list grows.
@@ -641,12 +607,12 @@ func TestListEventsQueryCountIsConstant(t *testing.T) {
 
 func TestEventsByIDs(t *testing.T) {
 	f := newFixture(t)
-	name := f.prop("event_name")
+	name := f.Prop("event_name")
 	fire := f.event(observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar("Fire")})
 	bare := f.event()
 	f.event(observations.Input{PropertyID: name.ID, Scalar: propertymeta.TextScalar("Other")})
 	_, _, person := f.person("Ada Lovelace")
-	got, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{bare, fire, fire, person, make([]byte, 16)})
+	got, err := conclusionsummaries.EventsByIDs(f.C, [][]byte{bare, fire, fire, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -655,91 +621,80 @@ func TestEventsByIDs(t *testing.T) {
 	if !names["Fire"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionsummaries.EventsByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.EventsByIDs(f.C, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
 
-func (f *fixture) book(title string) (sources.Source, artifacts.Artifact) {
-	f.t.Helper()
-	src, _, err := writes.Run(f.c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: f.source.SourceTypeID, Title: title})
-	})
-	must(f.t, err)
-	art, err := artifactstest.Create(f.c, userID, artifacts.CreateInput{SourceID: src.ID, Label: title})
-	must(f.t, err)
-	return src, art
-}
-
 func (f *fixture) lowTrust(src sources.Source) {
-	f.t.Helper()
-	g, err := sourcecredibilitygrades.Lookup(f.c, "low_trust", vocabkey.OriginProvenencia)
-	must(f.t, err)
+	f.T.Helper()
+	g, err := sourcecredibilitygrades.Lookup(f.C, "low_trust", vocabkey.OriginProvenencia)
+	must(f.T, err)
 	p6in11 := sourcecredibility.UpsertInput{
 		SourceID: src.ID, CredibilityGradeID: g.ID,
 	}
 	p6act10 := "create_source_credibility_assessment"
 
 	// place promotes a new Place whose toponyms are cited, in order, on art.
-	if _, p6look12 := sourcecredibility.GetBySource(f.c, p6in11.SourceID); p6look12 == nil {
+	if _, p6look12 := sourcecredibility.GetBySource(f.C, p6in11.SourceID); p6look12 == nil {
 		p6act10 = "update_source_credibility_assessment"
 	}
-	_, err = writes.Call(f.c, writes.Op{Action: p6act10, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: p6act10, UserID: userID}, func(tx *database.Tx) (sourcecredibility.Assessment, []rowchange.Change, error) {
 		return sourcecredibility.Upsert(tx, userID, p6in11)
 	})
 
-	must(f.t, err)
+	must(f.T, err)
 }
 
 func (f *fixture) place(art artifacts.Artifact, names ...string) []byte {
-	f.t.Helper()
+	f.T.Helper()
 	placeType := f.typeID("place")
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID
+	s := subjectstest.OfType(f.T, f.C, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
-	p := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	p := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return p.Entity.ID
 }
 
 func (f *fixture) citeToponyms(art artifacts.Artifact, subjectID []byte, names ...string) {
-	f.t.Helper()
+	f.T.Helper()
 	if len(names) == 0 {
 		return
 	}
-	toponym := f.prop("toponym")
+	toponym := f.Prop("toponym")
 	in := make([]observations.Input, len(names))
 	for i, name := range names {
 		in[i] = observations.Input{SubjectID: subjectID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar(name)}
 	}
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
-	must(f.t, err)
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID
+	_, _, err := observationstest.Cite(f.C, userID, graph, art.ID, locator, in...)
+	must(f.T, err)
 }
 
 func (f *fixture) joinPlace(art artifacts.Artifact, entityID []byte, names ...string) {
-	f.t.Helper()
+	f.T.Helper()
 	placeType := f.typeID("place")
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	s := subjectstest.OfType(f.t, f.c, userID, graph, placeType, "")
+	graph := evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID
+	s := subjectstest.OfType(f.T, f.C, userID, graph, placeType, "")
 	f.citeToponyms(art, s.ID, names...)
-	promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func (f *fixture) places() []conclusionsummaries.PlaceSummary {
-	f.t.Helper()
-	h, err := conclusionsummaries.ListPlaces(f.c)
-	must(f.t, err)
+	f.T.Helper()
+	h, err := conclusionsummaries.ListPlaces(f.C)
+	must(f.T, err)
 	return h
 }
 
 func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
 	f := newFixture(t)
-	must(t, sourcecredibilitygrades.Install(f.c))
-	census, censusArt := f.book("Census")
-	gazette, gazetteArt := f.book("Gazette")
+	must(t, sourcecredibilitygrades.Install(f.C))
+	census, censusArt := f.NewSource("Census")
+	gazette, gazetteArt := f.NewSource("Gazette")
 	f.lowTrust(gazette)
 
-	york := f.place(f.artifact, "York", "york")
+	york := f.place(f.Artifact, "York", "york")
 	f.joinPlace(censusArt, york, "Toronto")
 	f.joinPlace(gazetteArt, york, "Muddy York")
 
@@ -751,7 +706,7 @@ func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
 		t.Fatalf("no period or parents without evidence: %+v", got[0])
 	}
 
-	detail, err := conclusiondetails.ForEntity(f.c, york)
+	detail, err := conclusiondetails.ForEntity(f.C, york)
 	must(t, err)
 	var weak string
 	for _, field := range detail.Fields {
@@ -772,10 +727,10 @@ func TestPlaceKeepsEveryDistinctToponym(t *testing.T) {
 
 func TestPlaceSort(t *testing.T) {
 	f := newFixture(t)
-	york := f.place(f.artifact, "York")
-	montreal := f.place(f.artifact, "montreal")
-	bareA := f.place(f.artifact)
-	bareB := f.place(f.artifact)
+	york := f.place(f.Artifact, "York")
+	montreal := f.place(f.Artifact, "montreal")
+	bareA := f.place(f.Artifact)
+	bareB := f.place(f.Artifact)
 	f.event()
 
 	got := f.places()
@@ -803,15 +758,15 @@ func TestPlaceSort(t *testing.T) {
 
 func TestListPlacesQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
-	f.place(f.artifact, "York")
-	f.c.Graph().Drop()
-	one, err := conclusionsummaries.ListPlacesQueryCount(f.c)
+	f.place(f.Artifact, "York")
+	f.C.Graph().Drop()
+	one, err := conclusionsummaries.ListPlacesQueryCount(f.C)
 	must(t, err)
 	for i := 0; i < 20; i++ {
-		f.place(f.artifact, fmt.Sprintf("Place %d", i))
+		f.place(f.Artifact, fmt.Sprintf("Place %d", i))
 	}
-	f.c.Graph().Drop()
-	many, err := conclusionsummaries.ListPlacesQueryCount(f.c)
+	f.C.Graph().Drop()
+	many, err := conclusionsummaries.ListPlacesQueryCount(f.C)
 	must(t, err)
 	// Place list is one summary scan plus a fixed place-relationship graph
 	// walk for today's chains (S9-39), whatever the row count.
@@ -822,11 +777,11 @@ func TestListPlacesQueryCountIsConstant(t *testing.T) {
 
 func TestPlacesByIDs(t *testing.T) {
 	f := newFixture(t)
-	york := f.place(f.artifact, "York")
-	bare := f.place(f.artifact)
-	f.place(f.artifact, "Toronto")
+	york := f.place(f.Artifact, "York")
+	bare := f.place(f.Artifact)
+	f.place(f.Artifact, "Toronto")
 	_, _, person := f.person("Ada Lovelace")
-	got, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{bare, york, york, person, make([]byte, 16)})
+	got, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{bare, york, york, person, make([]byte, 16)})
 	must(t, err)
 	if len(got) != 2 {
 		t.Fatalf("%+v", got)
@@ -842,7 +797,7 @@ func TestPlacesByIDs(t *testing.T) {
 	if !names["York"] || !names[""] {
 		t.Fatalf("%+v", got)
 	}
-	if got, err := conclusionsummaries.PlacesByIDs(f.c, nil); err != nil || got != nil {
+	if got, err := conclusionsummaries.PlacesByIDs(f.C, nil); err != nil || got != nil {
 		t.Fatalf("no ids: %v %+v", err, got)
 	}
 }
@@ -902,10 +857,10 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 
 func TestPersonListOrder(t *testing.T) {
 	f := newFixture(t)
-	must(t, nameformats.Install(f.c))
-	db, err := f.c.DB()
+	must(t, nameformats.Install(f.C))
+	db, err := f.C.DB()
 	must(t, err)
-	loaded, err := nameformats.LoadFor(f.c.Graph(), db)
+	loaded, err := nameformats.LoadFor(f.C.Graph(), db)
 	must(t, err)
 	western := loaded.Profile
 	part := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }
@@ -965,20 +920,20 @@ func TestPersonListOrder(t *testing.T) {
 // holds its prefix.
 func TestListPersonsSortIgnoresHonorifics(t *testing.T) {
 	f := newFixture(t)
-	must(t, nameformats.Install(f.c))
+	must(t, nameformats.Install(f.C))
 	add := func(parts ...namevalue.Part) {
 		var words []string
 		for i := range parts {
 			parts[i].Idx = i
 			words = append(words, parts[i].Value)
 		}
-		s := subjectstest.OfType(t, f.c, userID, f.graph, f.typeID("person"), "")
-		_, _, err := observationstest.Cite(f.c, userID, f.graph, f.artifact.ID, locator, observations.Input{
+		s := subjectstest.OfType(t, f.C, userID, f.graph, f.typeID("person"), "")
+		_, _, err := observationstest.Cite(f.C, userID, f.graph, f.Artifact.ID, locator, observations.Input{
 			SubjectID: s.ID, PropertyID: f.name.ID,
 			Name: &namevalue.Value{Form: strings.Join(words, " "), Parts: parts},
 		})
 		must(t, err)
-		promotetest.Save(t, f.c, userID, promote.Input{SubjectID: s.ID})
+		promotetest.Save(t, f.C, userID, promote.Input{SubjectID: s.ID})
 	}
 	add(namevalue.Part{Type: "prefix", Value: "Mrs."}, namevalue.Part{Type: "given", Value: "Smith"})
 	add(namevalue.Part{Type: "given", Value: "Zachary"}, namevalue.Part{Type: "surname", Value: "Adams"})
@@ -1027,10 +982,10 @@ func TestSortByTitleKeysOnce(t *testing.T) {
 // rows and not from the display cache.
 func TestListSummariesCarryUpdated(t *testing.T) {
 	f := newFixture(t)
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	// A handle with no scope row, inserted before the graph is first loaded.
-	personType, err := subjecttypes.Lookup(f.c, "person", vocabkey.OriginProvenencia)
+	personType, err := subjecttypes.Lookup(f.C, "person", vocabkey.OriginProvenencia)
 	must(t, err)
 	raw, err := uuid.NewV7()
 	must(t, err)
@@ -1042,8 +997,8 @@ func TestListSummariesCarryUpdated(t *testing.T) {
 
 	bobSubject, bobObs, bob := f.person("Bob Smith")
 	_, _, ann := f.person("Ann Lee")
-	fire := f.event(observations.Input{PropertyID: f.prop("event_name").ID, Scalar: propertymeta.TextScalar("Fire")})
-	_, art := f.book("Gazetteer")
+	fire := f.event(observations.Input{PropertyID: f.Prop("event_name").ID, Scalar: propertymeta.TextScalar("Fire")})
+	_, art := f.NewSource("Gazetteer")
 	boston := f.place(art, "Boston")
 
 	at := func(rev int64) string {
@@ -1068,7 +1023,7 @@ func TestListSummariesCarryUpdated(t *testing.T) {
 	if got, ok := byID[string(raw[:])]; !ok || got != (effects.Activity{}) {
 		t.Fatalf("handle without scope rows: listed %v, updated %+v", ok, got)
 	}
-	evs, err := conclusionsummaries.ListEvents(f.c)
+	evs, err := conclusionsummaries.ListEvents(f.C)
 	must(t, err)
 	if len(evs) != 1 || string(evs[0].Entity.ID) != string(fire) {
 		t.Fatalf("events %+v", evs)
@@ -1083,7 +1038,7 @@ func TestListSummariesCarryUpdated(t *testing.T) {
 	// A note moves the scope without dropping the cached display row.
 	annBefore := byID[string(ann)]
 	bobBefore := byID[string(bob)]
-	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	_, err = writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: bobObs[0].ID, SubjectID: bobSubject.ID, PropertyID: f.name.ID,
 			Name: namevaluetest.Western("Bob Smith"), Notes: []string{"seen"},
@@ -1106,7 +1061,7 @@ func TestListSummariesCarryUpdated(t *testing.T) {
 		t.Fatalf("handle without scope rows updated %+v", got)
 	}
 
-	byIDs, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{bob})
+	byIDs, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{bob})
 	must(t, err)
 	if len(byIDs) != 1 || byIDs[0].Updated != (effects.Activity{}) {
 		t.Fatalf("PersonsByIDs %+v", byIDs)
@@ -1117,7 +1072,7 @@ func TestByIDs(t *testing.T) {
 	f := newFixture(t)
 	_, _, person := f.person("Ada Lovelace")
 	event := f.event()
-	h, err := conclusionsummaries.ByIDs(f.c, conclusionsummaries.Want{Persons: [][]byte{person, event}, Events: [][]byte{event, person}})
+	h, err := conclusionsummaries.ByIDs(f.C, conclusionsummaries.Want{Persons: [][]byte{person, event}, Events: [][]byte{event, person}})
 	must(t, err)
 	if p, ok := h.Person(person); !ok || p.Name.Form != "Ada Lovelace" {
 		t.Errorf("Person(person) = %+v, %v", p, ok)
@@ -1138,15 +1093,15 @@ func TestByIDs(t *testing.T) {
 
 // termObs cites the term of a product Property.
 func (f *fixture) termObs(propertyKey, termKey string) observations.Input {
-	return observations.Input{PropertyID: f.prop(propertyKey).ID, ValueTermID: f.term(propertyKey, termKey).ID}
+	return observations.Input{PropertyID: f.Prop(propertyKey).ID, ValueTermID: f.Term(propertyKey, termKey).ID}
 }
 
 func (f *fixture) personSummary(id []byte) conclusionsummaries.PersonSummary {
-	f.t.Helper()
-	got, err := conclusionsummaries.PersonsByIDs(f.c, [][]byte{id})
-	must(f.t, err)
+	f.T.Helper()
+	got, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{id})
+	must(f.T, err)
 	if len(got) != 1 {
-		f.t.Fatalf("summaries %d", len(got))
+		f.T.Fatalf("summaries %d", len(got))
 	}
 	return got[0]
 }
@@ -1169,7 +1124,7 @@ func TestPersonSummaryTerms(t *testing.T) {
 			name: "one member",
 			build: func(f *fixture) []byte {
 				s, _, id := f.person("Ada")
-				f.cite(s, f.termObs("gender", "woman"))
+				f.Cite(f.Artifact, s, f.termObs("gender", "woman"))
 				return id
 			},
 			gender: "woman", genderCount: 1, genderTermSet: true,
@@ -1178,7 +1133,7 @@ func TestPersonSummaryTerms(t *testing.T) {
 			name: "sex only",
 			build: func(f *fixture) []byte {
 				s, _, id := f.person("Ada")
-				f.cite(s, f.termObs("sex_at_birth", "male"))
+				f.Cite(f.Artifact, s, f.termObs("sex_at_birth", "male"))
 				return id
 			},
 			sex: "male", sexCount: 1, sexTermSet: true,
@@ -1187,11 +1142,11 @@ func TestPersonSummaryTerms(t *testing.T) {
 			name: "two Sources disagree",
 			build: func(f *fixture) []byte {
 				s, _, id := f.person("Ada")
-				f.cite(s, f.termObs("gender", "woman"))
-				_, art := f.book("Census")
-				s2 := subjectstest.OfType(f.t, f.c, userID, evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID, f.typeID("person"), "")
-				f.citeOn(art, s2, f.termObs("gender", "man"))
-				promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s2.ID, EntityID: id})
+				f.Cite(f.Artifact, s, f.termObs("gender", "woman"))
+				_, art := f.NewSource("Census")
+				s2 := subjectstest.OfType(f.T, f.C, userID, evidencegraphstest.SoleGraph(f.T, f.C, art.SourceID).ID, f.typeID("person"), "")
+				f.Cite(art, s2, f.termObs("gender", "man"))
+				promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s2.ID, EntityID: id})
 				return id
 			},
 			genderCount: 2, genderTermSet: true,
@@ -1200,19 +1155,19 @@ func TestPersonSummaryTerms(t *testing.T) {
 			name: "provisional",
 			build: func(f *fixture) []byte {
 				personType := f.typeID("person")
-				handle, err := writes.Call(f.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+				handle, err := writes.Call(f.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 					return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: personType})
 				})
 				must(t, err)
-				s := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
-				f.cite(s, f.termObs("gender", "woman"))
-				_, err = writes.Call(f.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+				s := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
+				f.Cite(f.Artifact, s, f.termObs("gender", "woman"))
+				_, err = writes.Call(f.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 					return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 						SubjectID: s.ID, EntityID: handle.ID, Status: identityclaims.StatusProvisional,
 					})
 				})
 				must(t, err)
-				db, err := f.c.DB()
+				db, err := f.C.DB()
 				must(t, err)
 				must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
 				return handle.ID
@@ -1224,13 +1179,13 @@ func TestPersonSummaryTerms(t *testing.T) {
 				s, _, id := f.person("Ada")
 				// Researchers cannot create term Properties, so the user's own
 				// "gender" is a text Property: it still must not feed the summary.
-				prop, err := writes.Call(f.c, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+				prop, err := writes.Call(f.C, writes.Op{Action: "create_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 					return properties.Create(tx, userID, "Gender", propertymeta.ValueTypeText, "", propertymeta.CardinalityMultiple)
 				})
-				must(f.t, err)
+				must(f.T, err)
 				personType := f.typeID("person")
-				must(f.t, subjectvocab.EnsureBinding(f.c, personType, prop.ID, 99))
-				f.cite(s, observations.Input{PropertyID: prop.ID, Scalar: propertymeta.TextScalar("Woman")})
+				must(f.T, subjectvocab.EnsureBinding(f.C, personType, prop.ID, 99))
+				f.Cite(f.Artifact, s, observations.Input{PropertyID: prop.ID, Scalar: propertymeta.TextScalar("Woman")})
 				return id
 			},
 		},
@@ -1256,7 +1211,7 @@ func TestPersonSummaryTermLabels(t *testing.T) {
 	t.Run("labels", func(t *testing.T) {
 		f := newFixture(t)
 		s, _, id := f.person("Ada")
-		f.cite(s, f.termObs("gender", "woman"))
+		f.Cite(f.Artifact, s, f.termObs("gender", "woman"))
 		h := f.personSummary(id)
 		if h.Gender.Term == nil || h.Gender.Term.Label != "Woman" || h.Gender.Term.Origin != vocabkey.OriginProvenencia {
 			t.Fatalf("term %+v", h.Gender.Term)
@@ -1268,16 +1223,16 @@ func TestPersonSummaryTermLabels(t *testing.T) {
 	t.Run("term relabel", func(t *testing.T) {
 		f := newFixture(t)
 		s, _, id := f.person("Ada")
-		genderID := f.prop("gender").ID
-		term, err := writes.Call(f.c, writes.Op{Action: "create_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+		genderID := f.Prop("gender").ID
+		term, err := writes.Call(f.C, writes.Op{Action: "create_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Create(tx, userID, genderID, "Agender", "")
 		})
 		must(t, err)
-		f.cite(s, observations.Input{PropertyID: genderID, ValueTermID: term.ID})
+		f.Cite(f.Artifact, s, observations.Input{PropertyID: genderID, ValueTermID: term.ID})
 		if h := f.personSummary(id); h.Gender.Term == nil || h.Gender.Term.Label != "Agender" {
 			t.Fatalf("before %+v", h.Gender.Term)
 		}
-		_, err = writes.Call(f.c, writes.Op{Action: "update_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+		_, err = writes.Call(f.C, writes.Op{Action: "update_property_term", UserID: userID}, func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Update(tx, userID, term.ID, "No gender", "")
 		})
 		must(t, err)
@@ -1285,24 +1240,24 @@ func TestPersonSummaryTermLabels(t *testing.T) {
 		if h.Gender.Term == nil || h.Gender.Term.Label != "No gender" || h.Gender.Term.Origin != "user" {
 			t.Fatalf("after %+v", h.Gender.Term)
 		}
-		must(t, f.c.Graph().Verify())
+		must(t, f.C.Graph().Verify())
 	})
 	t.Run("Property relabel", func(t *testing.T) {
 		f := newFixture(t)
 		s, _, id := f.person("Ada")
-		f.cite(s, f.termObs("gender", "woman"))
+		f.Cite(f.Artifact, s, f.termObs("gender", "woman"))
 		if h := f.personSummary(id); h.Gender.PropertyLabel != "Gender" {
 			t.Fatalf("before %q", h.Gender.PropertyLabel)
 		}
-		p := f.prop("gender")
-		_, err := writes.Call(f.c, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+		p := f.Prop("gender")
+		_, err := writes.Call(f.C, writes.Op{Action: "update_property", UserID: userID}, func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
 			return properties.Update(tx, userID, p.ID, "Gender identity", p.ValueType, p.Description, p.Cardinality)
 		})
 		must(t, err)
 		if h := f.personSummary(id); h.Gender.PropertyLabel != "Gender identity" {
 			t.Fatalf("after %q", h.Gender.PropertyLabel)
 		}
-		must(t, f.c.Graph().Verify())
+		must(t, f.C.Graph().Verify())
 	})
 }
 
@@ -1390,7 +1345,7 @@ func TestEventSpan(t *testing.T) {
 
 func TestEventOrderAtKnownEnd(t *testing.T) {
 	f := newFixture(t)
-	date := f.prop("date")
+	date := f.Prop("date")
 	dated := func(d *datevalue.Value) []byte {
 		return f.event(observations.Input{PropertyID: date.ID, Date: d})
 	}
@@ -1418,14 +1373,14 @@ func TestEventOrderAtKnownEnd(t *testing.T) {
 		}
 	}
 	check("ListEvents", f.events())
-	byIDs, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{undated, aft2011, y1881, bef1880, day2011, y1880, bef2011, y1879})
+	byIDs, err := conclusionsummaries.EventsByIDs(f.C, [][]byte{undated, aft2011, y1881, bef1880, day2011, y1880, bef2011, y1879})
 	must(t, err)
 	check("EventsByIDs", byIDs)
 }
 
 func refOf(t *testing.T, f *fixture, id []byte) string {
 	t.Helper()
-	got, err := conclusionsummaries.EventsByIDs(f.c, [][]byte{id})
+	got, err := conclusionsummaries.EventsByIDs(f.C, [][]byte{id})
 	must(t, err)
 	if len(got) != 1 {
 		t.Fatalf("no event %x", id)

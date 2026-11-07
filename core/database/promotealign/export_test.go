@@ -4,32 +4,8 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/valuerules"
-	"github.com/mendahu/provenencia/core/graphalign"
 )
-
-// LayerBridges exposes the bridges the loader reads for one Evidence graph.
-func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	cfg, namePattern, err := loadConfig(c.Graph(), db)
-	if err != nil {
-		return nil, err
-	}
-	terms, err := canonlinks.LoadTerms(c.Graph())
-	if err != nil {
-		return nil, err
-	}
-	layer, _, err := loadLayer(c.Graph(), graphID, cfg, namePattern, terms)
-	if err != nil {
-		return nil, err
-	}
-	return layer.Bridges, nil
-}
 
 // ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
 // sorted, the Ref of every handle whose full profile was built.
@@ -50,36 +26,6 @@ func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) 
 	}
 	slices.Sort(refs)
 	return refs, nil
-}
-
-// MemoSnapshot is what the graph holds as promotealign's Evidence graph memos.
-type MemoSnapshot struct {
-	Layer     graphalign.Layer
-	LayerKind map[string]string // primary Subject id -> kind
-	LayerOK   bool
-}
-
-// MemoSnapshotForTest reads the memoized layer of graphID, as stored. Nothing
-// is built.
-func MemoSnapshotForTest(c *database.Catalog, graphID []byte) MemoSnapshot {
-	db, err := c.DB()
-	if err != nil {
-		return MemoSnapshot{}
-	}
-	_, namePattern, err := valuerules.Load(c.Graph(), db)
-	if err != nil {
-		return MemoSnapshot{}
-	}
-	var out MemoSnapshot
-	if v, ok := c.Graph().EvidenceGraphMemo(graphID, layerMemoKey+namePattern); ok {
-		m := v.(layerMemo)
-		out.Layer, out.LayerOK = m.layer, true
-		out.LayerKind = map[string]string{}
-		for id, p := range m.primary {
-			out.LayerKind[id] = p.kind
-		}
-	}
-	return out
 }
 
 // ProfilesKeptForTest is how many handle profiles the graph's match index

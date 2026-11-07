@@ -29,17 +29,17 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	f.placeRel(city, region, propertyterms.KeyPartOf, nil, nil)
 	f.placeRel(town, city, propertyterms.KeyPartOf, nil, nil)
 
-	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	person := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person, "Ada Town")
 	f.at(person, 8, 0)
-	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(birth,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
+	birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, birth,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
 	)
 	f.at(birth, 8, 2)
-	f.participation(person, birth, "subject")
-	f.location(birth, town)
+	f.Participation(f.Source, f.Artifact, person, birth, "subject")
+	f.Locate(f.Source, f.Artifact, birth, town)
 
 	countryID := f.promoteSubject(country)
 	f.promoteSubject(region)
@@ -48,7 +48,7 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	personID := f.promoteSubject(person)
 	birthID := f.promoteSubject(birth)
 
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	deps, err := conclusionsummaries.Dependents(db, [][]byte{countryID})
 	must(t, err)
@@ -60,13 +60,13 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	if !sameSet(before.Birth.Places[0].Parents, []string{"City", "Region", "Country"}) {
 		t.Fatalf("birth parents %v", before.Birth.Places[0].Parents)
 	}
-	if err := f.c.Graph().Verify(); err != nil {
+	if err := f.C.Graph().Verify(); err != nil {
 		t.Fatal(err)
 	}
 
-	toponymID := f.prop("toponym").ID
-	obsID := observationID(t, f.c, country.ID, toponymID)
-	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	toponymID := f.Prop("toponym").ID
+	obsID := observationID(t, f.C, country.ID, toponymID)
+	_, err = writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: obsID, SubjectID: country.ID, PropertyID: toponymID,
 			Scalar: propertymeta.TextScalar("Renamed"),
@@ -79,12 +79,12 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 		t.Fatalf("after rename %v", after.Birth.Places[0].Parents)
 	}
 
-	towns, err := conclusionsummaries.PlacesByIDs(f.c, [][]byte{townID})
+	towns, err := conclusionsummaries.PlacesByIDs(f.C, [][]byte{townID})
 	must(t, err)
 	if len(towns) != 1 || !sameSet(towns[0].Parents, []string{"City", "Region", "Renamed"}) {
 		t.Fatalf("town chain %v", towns)
 	}
-	must(t, conclusionsummaries.AttachPlaceRelationships(f.c, &towns[0]))
+	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &towns[0]))
 	if len(towns[0].PartOf) != 1 || towns[0].PartOf[0].Title != "City" {
 		t.Fatalf("town part of %+v", towns[0].PartOf)
 	}
@@ -94,16 +94,16 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 // row drops the birth, and the search document written in that save drops it too.
 func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	f := newFixture(t)
-	person := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	person := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(person, "Ada Birth")
 	f.at(person, 0, 0)
-	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(birth,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
+	birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, birth,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1901, 0, 0)},
 	)
 	f.at(birth, 2, 0)
-	f.participation(person, birth, "subject")
+	f.Participation(f.Source, f.Artifact, person, birth, "subject")
 	personID := f.promoteSubject(person)
 	birthID := f.promoteSubject(birth)
 
@@ -111,16 +111,16 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	if before.Birth.Event == nil || !bytes.Equal(before.Birth.Event.ID, birthID) {
 		t.Fatal("birth was not on the person row")
 	}
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	if n := personDocsMentioning(t, db, "1901"); n != 1 {
 		t.Fatalf("person search docs mentioning 1901: %d", n)
 	}
 
-	eventTypeID := f.prop("event_type").ID
-	marriageID := f.term("event_type", "marriage").ID
-	obsID := observationID(t, f.c, birth.ID, eventTypeID)
-	_, err = writes.Call(f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+	eventTypeID := f.Prop("event_type").ID
+	marriageID := f.Term("event_type", "marriage").ID
+	obsID := observationID(t, f.C, birth.ID, eventTypeID)
+	_, err = writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
 		return observations.Update(tx, userID, observations.Input{
 			ID: obsID, SubjectID: birth.ID, PropertyID: eventTypeID,
 			ValueTermID: marriageID,

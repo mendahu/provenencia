@@ -7,13 +7,11 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -21,26 +19,16 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-const bridgeLocator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
-
 type bridgeWorld struct {
-	t                        *testing.T
-	c                        *database.Catalog
-	source                   sources.Source
-	artifact                 artifacts.Artifact
+	*evidencelayertest.Records
 	graph                    []byte // the Source's one Evidence graph
 	personProp, eventProp    properties.Property
 	placeProp, relatedProp   properties.Property
@@ -51,81 +39,35 @@ type bridgeWorld struct {
 
 func newBridgeWorld(t *testing.T) *bridgeWorld {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := users.Upsert(c, userID, "Tester", r); err != nil {
-		t.Fatal(err)
-	}
-	if err := subjectvocab.Install(c); err != nil {
-		t.Fatal(err)
-	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	w := &bridgeWorld{t: t, c: c, source: src, artifact: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
-	w.personProp = w.prop("person")
-	w.eventProp = w.prop("event")
-	w.placeProp = w.prop("place")
-	w.relatedProp = w.prop("related_to")
-	w.roleProp = w.prop("role")
-	w.relTypeProp = w.prop("relationship_type")
-	w.subjectRole = w.term(w.roleProp, "subject")
-	w.witnessRole = w.term(w.roleProp, "witness")
-	w.spouse = w.term(w.relTypeProp, "spouse")
-	w.parent = w.term(w.relTypeProp, "parent")
+	r := evidencelayertest.New(t)
+	w := &bridgeWorld{Records: r, graph: r.Graph(r.Source)}
+	w.personProp = w.Prop("person")
+	w.eventProp = w.Prop("event")
+	w.placeProp = w.Prop("place")
+	w.relatedProp = w.Prop("related_to")
+	w.roleProp = w.Prop("role")
+	w.relTypeProp = w.Prop("relationship_type")
+	w.subjectRole = w.Term("role", "subject")
+	w.witnessRole = w.Term("role", "witness")
+	w.spouse = w.Term("relationship_type", "spouse")
+	w.parent = w.Term("relationship_type", "parent")
 	if w.spouse.Directed || !w.parent.Directed {
 		t.Fatalf("spouse directed=%v parent directed=%v", w.spouse.Directed, w.parent.Directed)
 	}
 	return w
 }
 
-func (w *bridgeWorld) prop(key string) properties.Property {
-	w.t.Helper()
-	p, err := properties.Lookup(w.c, key, vocabkey.OriginProvenencia)
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return p
-}
-
-func (w *bridgeWorld) term(p properties.Property, key string) propertyterms.Term {
-	w.t.Helper()
-	term, err := propertyterms.Lookup(w.c, p.ID, key, vocabkey.OriginProvenencia)
-	if err != nil {
-		w.t.Fatal(err)
-	}
-	return term
-}
-
 func (w *bridgeWorld) node(kind, label string, x, y int64) subjects.Subject {
-	w.t.Helper()
-	st, err := subjecttypes.Lookup(w.c, kind, vocabkey.OriginProvenencia)
+	w.T.Helper()
+	st, err := subjecttypes.Lookup(w.C, kind, vocabkey.OriginProvenencia)
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
-	return subjectstest.At(w.t, w.c, userID, w.graph, st.ID, label, subjects.Placement{GridX: x, GridY: y})
+	return subjectstest.At(w.T, w.C, userID, w.graph, st.ID, label, subjects.Placement{GridX: x, GridY: y})
 }
 
 func (w *bridgeWorld) participation(person, event subjects.Subject, role propertyterms.Term) connect.Result {
-	w.t.Helper()
+	w.T.Helper()
 	return w.bridge("participation", person, event, []observations.Input{
 		{PropertyID: w.personProp.ID, ValueSubjectID: person.ID},
 		{PropertyID: w.eventProp.ID, ValueSubjectID: event.ID},
@@ -134,7 +76,7 @@ func (w *bridgeWorld) participation(person, event subjects.Subject, role propert
 }
 
 func (w *bridgeWorld) relationship(from, to subjects.Subject, kind propertyterms.Term) connect.Result {
-	w.t.Helper()
+	w.T.Helper()
 	return w.bridge("relationship", from, to, []observations.Input{
 		{PropertyID: w.personProp.ID, ValueSubjectID: from.ID},
 		{PropertyID: w.relatedProp.ID, ValueSubjectID: to.ID},
@@ -143,7 +85,7 @@ func (w *bridgeWorld) relationship(from, to subjects.Subject, kind propertyterms
 }
 
 func (w *bridgeWorld) location(event, place subjects.Subject) connect.Result {
-	w.t.Helper()
+	w.T.Helper()
 	return w.bridge("location", event, place, []observations.Input{
 		{PropertyID: w.eventProp.ID, ValueSubjectID: event.ID},
 		{PropertyID: w.placeProp.ID, ValueSubjectID: place.ID},
@@ -151,10 +93,10 @@ func (w *bridgeWorld) location(event, place subjects.Subject) connect.Result {
 }
 
 func (w *bridgeWorld) placeRelationship(from, to subjects.Subject, kind propertyterms.Term) connect.Result {
-	w.t.Helper()
-	fromProp := w.prop("from")
-	toProp := w.prop("to")
-	typeProp := w.prop("place_relationship_type")
+	w.T.Helper()
+	fromProp := w.Prop("from")
+	toProp := w.Prop("to")
+	typeProp := w.Prop("place_relationship_type")
 	return w.bridge("place_relationship", from, to, []observations.Input{
 		{PropertyID: fromProp.ID, ValueSubjectID: from.ID},
 		{PropertyID: toProp.ID, ValueSubjectID: to.ID},
@@ -163,103 +105,103 @@ func (w *bridgeWorld) placeRelationship(from, to subjects.Subject, kind property
 }
 
 func (w *bridgeWorld) bridge(kind string, from, to subjects.Subject, obs []observations.Input) connect.Result {
-	w.t.Helper()
-	res, err := writes.Call(w.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	w.T.Helper()
+	res, err := writes.Call(w.C, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
 			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-			Citation:     citations.CreateInput{ArtifactID: w.artifact.ID, LocatorJSON: bridgeLocator},
+			Citation:     citations.CreateInput{ArtifactID: w.Artifact.ID, LocatorJSON: evidencelayertest.Locator},
 			Observations: obs,
 		})
 	})
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return res
 }
 
 func (w *bridgeWorld) promote(s subjects.Subject) promote.Result {
-	w.t.Helper()
-	return promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID})
+	w.T.Helper()
+	return promotetest.Save(w.T, w.C, userID, promote.Input{SubjectID: s.ID})
 }
 
 func (w *bridgeWorld) join(s subjects.Subject, entityID []byte) {
-	w.t.Helper()
-	promotetest.Save(w.t, w.c, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
+	w.T.Helper()
+	promotetest.Save(w.T, w.C, userID, promote.Input{SubjectID: s.ID, EntityID: entityID})
 }
 
 func (w *bridgeWorld) handles(typeKey string) [][]byte {
-	w.t.Helper()
-	db, err := w.c.DB()
+	w.T.Helper()
+	db, err := w.C.DB()
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	rows, err := db.Query(`SELECT e.id FROM canonical_entities e
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE st.key = ? AND st.origin = 'provenencia'
 		ORDER BY e.ref`, typeKey)
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	defer rows.Close()
 	var out [][]byte
 	for rows.Next() {
 		var id []byte
 		if err := rows.Scan(&id); err != nil {
-			w.t.Fatal(err)
+			w.T.Fatal(err)
 		}
 		out = append(out, append([]byte(nil), id...))
 	}
 	if err := rows.Err(); err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return out
 }
 
 func (w *bridgeWorld) members(entityID []byte) int {
-	w.t.Helper()
-	got, err := identityclaims.AcceptedMembers(w.c, entityID)
+	w.T.Helper()
+	got, err := identityclaims.AcceptedMembers(w.C, entityID)
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return len(got)
 }
 
 func (w *bridgeWorld) cachedEntity(assocID []byte, propKey string) []byte {
-	w.t.Helper()
-	db, err := w.c.DB()
+	w.T.Helper()
+	db, err := w.C.DB()
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	var id []byte
 	err = db.QueryRow(`SELECT r.value_entity_id FROM auto_reconciler_values r
 		JOIN properties p ON p.id = r.property_id
 		WHERE r.entity_id = ? AND p.key = ? AND r.rank = 1 AND r.reason = 'kept'`, assocID, propKey).Scan(&id)
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return id
 }
 
 func (w *bridgeWorld) roleRows(assocID []byte) int {
-	w.t.Helper()
-	db, err := w.c.DB()
+	w.T.Helper()
+	db, err := w.C.DB()
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	var n int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM auto_reconciler_values r
 		JOIN properties p ON p.id = r.property_id
 		WHERE r.entity_id = ? AND p.key = 'role' AND r.reason = 'kept'`, assocID).Scan(&n); err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return n
 }
 
 func (w *bridgeWorld) relationships(term propertyterms.Term) int {
-	w.t.Helper()
-	db, err := w.c.DB()
+	w.T.Helper()
+	db, err := w.C.DB()
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	var n int
 	err = db.QueryRow(`SELECT COUNT(DISTINCT ic.entity_id)
@@ -269,7 +211,7 @@ func (w *bridgeWorld) relationships(term propertyterms.Term) int {
 		JOIN observations o ON o.subject_id = b.id AND o.value_term_id = ?
 		WHERE ic.status = 'accepted'`, term.ID).Scan(&n)
 	if err != nil {
-		w.t.Fatal(err)
+		w.T.Fatal(err)
 	}
 	return n
 }
@@ -298,7 +240,7 @@ func TestBridgeFiling(t *testing.T) {
 		if !bytes.Equal(w.cachedEntity(got[0], "event"), event.Entity.ID) {
 			t.Fatal("event end is not the event handle")
 		}
-		claim, err := identityclaims.AcceptedEntityForSubject(w.c, first.Subject.ID)
+		claim, err := identityclaims.AcceptedEntityForSubject(w.C, first.Subject.ID)
 		if err != nil || !bytes.Equal(claim.EntityID, got[0]) {
 			t.Fatalf("bridge claim %v %+v", err, claim.EntityID)
 		}
@@ -317,7 +259,7 @@ func TestBridgeFiling(t *testing.T) {
 		if w.roleRows(got[0]) != 2 {
 			t.Fatalf("role rows %d, want the two roles kept apart from the key", w.roleRows(got[0]))
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 
 	t.Run("spouse is one relationship and parent keeps direction", func(t *testing.T) {
@@ -336,7 +278,7 @@ func TestBridgeFiling(t *testing.T) {
 		if w.relationships(w.parent) != 2 {
 			t.Fatalf("parent associations %d, want 2", w.relationships(w.parent))
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 
 	t.Run("a self-link is not filed and the claim stands", func(t *testing.T) {
@@ -349,10 +291,10 @@ func TestBridgeFiling(t *testing.T) {
 		if got := w.handles("relationship"); len(got) != 0 {
 			t.Fatalf("self-link filed %d associations", len(got))
 		}
-		if _, err := identityclaims.AcceptedEntityForSubject(w.c, alice.ID); err != nil {
+		if _, err := identityclaims.AcceptedEntityForSubject(w.C, alice.ID); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := identityclaims.AcceptedEntityForSubject(w.c, dup.ID); err != nil {
+		if _, err := identityclaims.AcceptedEntityForSubject(w.C, dup.ID); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -379,17 +321,17 @@ func TestBridgeFiling(t *testing.T) {
 		birth := w.node("event", "Birth", 2, 0)
 		w.participation(james, birth, w.subjectRole)
 		w.promote(james)
-		eventType, err := subjecttypes.Lookup(w.c, "event", vocabkey.OriginProvenencia)
+		eventType, err := subjecttypes.Lookup(w.C, "event", vocabkey.OriginProvenencia)
 		if err != nil {
 			t.Fatal(err)
 		}
-		entity, err := writes.Call(w.c, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
+		entity, err := writes.Call(w.C, writes.Op{Action: "create_canonical_entity", UserID: userID}, func(tx *database.Tx) (canonicalentities.Entity, []rowchange.Change, error) {
 			return canonicalentities.Create(tx, userID, canonicalentities.CreateInput{SubjectTypeID: eventType.ID})
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writes.Call(w.c, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
+		if _, err := writes.Call(w.C, writes.Op{Action: "create_identity_claim", UserID: userID}, func(tx *database.Tx) (identityclaims.Claim, []rowchange.Change, error) {
 			return identityclaims.Create(tx, userID, identityclaims.CreateInput{
 				SubjectID: birth.ID, EntityID: entity.ID, Status: identityclaims.StatusAccepted,
 			})
@@ -403,9 +345,8 @@ func TestBridgeFiling(t *testing.T) {
 
 	t.Run("place relationship files; cycles refuse; split and amalgamation ok", func(t *testing.T) {
 		w := newBridgeWorld(t)
-		typeProp := w.prop("place_relationship_type")
-		partOf := w.term(typeProp, "part_of")
-		succeededBy := w.term(typeProp, "succeeded_by")
+		partOf := w.Term("place_relationship_type", "part_of")
+		succeededBy := w.Term("place_relationship_type", "succeeded_by")
 		if !partOf.Directed || !succeededBy.Directed {
 			t.Fatalf("directed part_of=%v succeeded_by=%v", partOf.Directed, succeededBy.Directed)
 		}
@@ -418,9 +359,9 @@ func TestBridgeFiling(t *testing.T) {
 		w.placeRelationship(canada, york, partOf) // would cycle after all three file
 
 		year := 1791
-		startProp := w.prop("start_date")
-		endProp := w.prop("end_date")
-		if _, err := writes.Call(w.c, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
+		startProp := w.Prop("start_date")
+		endProp := w.Prop("end_date")
+		if _, err := writes.Call(w.C, writes.Op{Action: "add_observations", UserID: userID}, func(tx *database.Tx) ([]observations.Observation, []rowchange.Change, error) {
 			return observations.AddToCitation(tx, userID, link.Citation.ID, []observations.Input{
 				{SubjectID: link.Subject.ID, PropertyID: startProp.ID, Date: &datevalue.Value{
 					Kind: datevalue.KindPoint, StartYear: &year,
@@ -440,7 +381,7 @@ func TestBridgeFiling(t *testing.T) {
 		if len(got) != 2 {
 			t.Fatalf("hierarchical associations %d, want 2 (cycle refused)", len(got))
 		}
-		listed, err := observations.ListBySubject(w.c, link.Subject.ID)
+		listed, err := observations.ListBySubject(w.C, link.Subject.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -456,7 +397,7 @@ func TestBridgeFiling(t *testing.T) {
 		if !sawStart || !sawEnd {
 			t.Fatalf("hierarchical link lost start/end (start=%v end=%v)", sawStart, sawEnd)
 		}
-		if _, err := identityclaims.AcceptedEntityForSubject(w.c, link.Subject.ID); err != nil {
+		if _, err := identityclaims.AcceptedEntityForSubject(w.C, link.Subject.ID); err != nil {
 			t.Fatalf("filed link claim: %v", err)
 		}
 
@@ -481,14 +422,14 @@ func TestBridgeFiling(t *testing.T) {
 		if got := w.handles("place_relationship"); len(got) != 6 {
 			t.Fatalf("place_relationship associations %d, want 6", len(got))
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 }
 
 func TestPlaceRelationshipTypeCreateRefused(t *testing.T) {
 	w := newBridgeWorld(t)
-	prop := w.prop("place_relationship_type")
-	_, _, err := writes.Run(w.c, writes.Op{Action: "create_property_term", UserID: userID},
+	prop := w.Prop("place_relationship_type")
+	_, _, err := writes.Run(w.C, writes.Op{Action: "create_property_term", UserID: userID},
 		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Create(tx, userID, prop.ID, "Adjacent", "")
 		})
@@ -505,13 +446,13 @@ func TestBridgeSubjectDeleteKeepsTheEndClaims(t *testing.T) {
 	w.promote(james)
 	w.promote(birth)
 
-	if _, err := writes.Call(w.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	if _, err := writes.Call(w.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		changes, err := subjects.Delete(tx, userID, bridge.Subject.ID)
 		return struct{}{}, changes, err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := identityclaims.AcceptedEntityForSubject(w.c, james.ID); err != nil {
+	if _, err := identityclaims.AcceptedEntityForSubject(w.C, james.ID); err != nil {
 		t.Fatalf("person claim: %v", err)
 	}
 }
@@ -525,7 +466,7 @@ func TestSaveRefusesAnAssociationAlreadyFiledByItsBridge(t *testing.T) {
 	bridge := w.participation(james, birth, w.subjectRole)
 	w.promote(james)
 	w.promote(birth)
-	_, err := writes.Call(w.c, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+	_, err := writes.Call(w.C, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
 		return promote.Save(tx, userID, promote.Input{SubjectID: bridge.Subject.ID})
 	})
 	if !errors.Is(err, promote.ErrUnsupportedType) {
@@ -540,7 +481,7 @@ func TestSaveRefusesAnAssociationAlreadyFiledByItsBridge(t *testing.T) {
 func TestBridgeFilingReadsDoNotGrowWithTheBridges(t *testing.T) {
 	reads := func(n int) int {
 		w := newBridgeWorld(t)
-		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		partOf := w.Term("place_relationship_type", "part_of")
 		canada := w.node("place", "Canada", 0, 0)
 		for i := 0; i < n; i++ {
 			child := w.node("place", fmt.Sprintf("Child %d", i), int64(2+2*i), 0)
@@ -579,7 +520,7 @@ func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
 		if w.members(got[0]) != 1 {
 			t.Fatalf("members %d, want 1", w.members(got[0]))
 		}
-		claim, err := identityclaims.AcceptedEntityForSubject(w.c, res.Subject.ID)
+		claim, err := identityclaims.AcceptedEntityForSubject(w.C, res.Subject.ID)
 		if err != nil || !bytes.Equal(claim.EntityID, got[0]) {
 			t.Fatalf("bridge claim %v %x", err, claim.EntityID)
 		}
@@ -589,7 +530,7 @@ func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
 		if !bytes.Equal(w.cachedEntity(got[0], "related_to"), b.Entity.ID) {
 			t.Fatal("related_to end is not Bob's handle")
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 
 	t.Run("participation, location and place relationship file", func(t *testing.T) {
@@ -612,7 +553,7 @@ func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
 			t.Fatalf("location handles %d, want 1", len(got))
 		}
 
-		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		partOf := w.Term("place_relationship_type", "part_of")
 		uc := w.node("place", "Upper Canada", 6, 2)
 		w.promote(uc)
 		w.placeRelationship(york, uc, partOf)
@@ -641,7 +582,7 @@ func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
 		if w.members(got[0]) != 2 {
 			t.Fatalf("members %d, want 2", w.members(got[0]))
 		}
-		autoreconcilertest.AssertCacheMatchesRebuild(t, w.c)
+		autoreconcilertest.AssertCacheMatchesRebuild(t, w.C)
 	})
 
 	t.Run("one end unpromoted waits", func(t *testing.T) {
@@ -683,7 +624,7 @@ func TestBridgeFilesWhenDrawnBetweenHandles(t *testing.T) {
 
 	t.Run("a place loop does not fail the connect", func(t *testing.T) {
 		w := newBridgeWorld(t)
-		partOf := w.term(w.prop("place_relationship_type"), "part_of")
+		partOf := w.Term("place_relationship_type", "part_of")
 		york := w.node("place", "York", 0, 0)
 		uc := w.node("place", "Upper Canada", 2, 0)
 		canada := w.node("place", "Canada", 4, 0)

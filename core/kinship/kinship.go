@@ -28,6 +28,12 @@ type Rules struct {
 	// duplicates of the same pair are not read. It keeps Siblings and the
 	// parent-of-parent chain linear in their input.
 	MaxPairSteps int
+	// MaxChainWork is the most association copies one Derive's parent-of-parent
+	// chains may make before they read as malformed and imply nothing: each
+	// chain copies the associations of every kept step of both its links. It is
+	// counted before any chain is built. It bounds a crafted catalog whose
+	// links hold many associations and whose middle person has many children.
+	MaxChainWork int
 }
 
 // Edge is one link between two primary Subjects: its two ends, the link read
@@ -206,7 +212,7 @@ func Derive(edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 		impliedEdges[i] = imp.Edge
 	}
 	steps = append(steps, stepsOf(impliedEdges, terms)...)
-	return append(out, chains(indexSteps(steps, rules.MaxPairSteps), terms, rules.MaxPivotEnd)...)
+	return append(out, chains(indexSteps(steps, rules.MaxPairSteps), terms, rules.MaxPivotEnd, rules.MaxChainWork)...)
 }
 
 // step is one parent step: g is m's parent, and edge is the link it was read
@@ -415,15 +421,12 @@ func eventLinks(p eventPattern, edges []Edge, part connectrules.Bridge, terms se
 	return out
 }
 
-// chains makes one grandparent link per grandparent, middle and grandchild.
-func chains(idx parentSteps, terms segmentcompare.Terms, maxPivotEnd int) []Implied {
-	first, second, ok := relationshipKeys(vocabkey.TermGrandparent, terms)
-	if !ok {
-		return nil
-	}
-	var out []Implied
+// eachChain calls fn for every grandparent, middle and grandchild: up is the
+// grandparent-to-middle step read for the chain, down the middle-to-grandchild
+// step, and upPair and downPair their pairs. A middle person with too many
+// parents is skipped.
+func eachChain(idx parentSteps, maxPivotEnd int, fn func(up, down step, upPair, downPair stepPair)) {
 	for _, up := range idx.order {
-		// A middle person with too many parents implies nothing.
 		if len(idx.parentsOf[up.m]) > maxPivotEnd {
 			continue
 		}
@@ -433,15 +436,41 @@ func chains(idx parentSteps, terms segmentcompare.Terms, maxPivotEnd int) []Impl
 			if bytes.Equal(upStep.g, down.m) {
 				continue
 			}
-			from := idx.edgesOf(up, stepPair{up.m, string(down.m)})
-			assoc := associationsOf(from)
-			out = append(out, Implied{
-				Edge:    Edge{A: upStep.g, B: down.m, KeyA: first, KeyB: second, Associations: assoc},
-				Pattern: PatternParentOfParent,
-				Through: upStep.m,
-				From:    from,
-			})
+			fn(upStep, down, up, stepPair{up.m, string(down.m)})
 		}
 	}
+}
+
+// chainWork is the association copies the chains would make, counted without
+// building one: the associations of every kept step of both links of each.
+func chainWork(idx parentSteps, maxPivotEnd int) int {
+	var work int
+	eachChain(idx, maxPivotEnd, func(_, _ step, upPair, downPair stepPair) {
+		for _, p := range []stepPair{upPair, downPair} {
+			for _, j := range idx.byPair[p] {
+				work += len(idx.steps[j].edge.Associations)
+			}
+		}
+	})
+	return work
+}
+
+// chains makes one grandparent link per grandparent, middle and grandchild. A
+// set of chains whose work passes maxChainWork implies none.
+func chains(idx parentSteps, terms segmentcompare.Terms, maxPivotEnd, maxChainWork int) []Implied {
+	first, second, ok := relationshipKeys(vocabkey.TermGrandparent, terms)
+	if !ok || chainWork(idx, maxPivotEnd) > maxChainWork {
+		return nil
+	}
+	var out []Implied
+	eachChain(idx, maxPivotEnd, func(upStep, down step, upPair, downPair stepPair) {
+		from := idx.edgesOf(upPair, downPair)
+		out = append(out, Implied{
+			Edge:    Edge{A: upStep.g, B: down.m, KeyA: first, KeyB: second, Associations: associationsOf(from)},
+			Pattern: PatternParentOfParent,
+			Through: upStep.m,
+			From:    from,
+		})
+	})
 	return out
 }

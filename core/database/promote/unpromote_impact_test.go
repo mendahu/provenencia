@@ -16,7 +16,7 @@ import (
 func TestUnpromoteImpactListsBridgeHandles(t *testing.T) {
 	w := newBridgeWorld(t)
 	h := newHousehold(w)
-	report, err := promote.UnpromoteImpact(w.c, h.james.ID)
+	report, err := promote.UnpromoteImpact(w.C, h.james.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +31,7 @@ func TestUnpromoteImpactEmptyWhenHandleStays(t *testing.T) {
 	john := w.node("person", "John", 2, 0)
 	entity := w.promote(james).Entity.ID
 	w.join(john, entity)
-	report, err := promote.UnpromoteImpact(w.c, james.ID)
+	report, err := promote.UnpromoteImpact(w.C, james.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestFiledBridgesOf(t *testing.T) {
 			w := newBridgeWorld(t)
 			f := newBridgeFixture(w)
 			id, want := tt.run(w, f)
-			db, err := w.c.DB()
+			db, err := w.C.DB()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -117,13 +117,13 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 		f := newBridgeFixture(w)
 		wantClaims := map[string]bool{}
 		for _, b := range []subjects.Subject{f.r, f.q, f.p} {
-			claim, err := identityclaims.AcceptedEntityForSubject(w.c, b.ID)
+			claim, err := identityclaims.AcceptedEntityForSubject(w.C, b.ID)
 			if err != nil {
 				t.Fatal(err)
 			}
 			wantClaims[string(claim.ID)] = true
 		}
-		report, err := promote.UnpromoteImpact(w.c, f.p.ID)
+		report, err := promote.UnpromoteImpact(w.C, f.p.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -131,7 +131,7 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 		if len(got) != 2 || !bytes.Equal(got[0], f.r.ID) || !bytes.Equal(got[1], f.q.ID) {
 			t.Fatalf("unpromoted bridges %x, want [%x %x]", got, f.r.ID, f.q.ID)
 		}
-		changes, err := writes.Call(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
+		changes, err := writes.Call(w.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) ([]rowchange.Change, []rowchange.Change, error) {
 			ch, err := promote.Unpromote(tx, userID, f.p.ID)
 			return ch, ch, err
 		})
@@ -157,11 +157,11 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 	t.Run("a Subject with no accepted claim reports nothing", func(t *testing.T) {
 		w := newBridgeWorld(t)
 		f := newBridgeFixture(w)
-		claim, err := identityclaims.AcceptedEntityForSubject(w.c, f.p.ID)
+		claim, err := identityclaims.AcceptedEntityForSubject(w.C, f.p.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := writes.Call(w.c, writes.Op{Action: "release_claim", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		if _, err := writes.Call(w.C, writes.Op{Action: "release_claim", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			ch, err := deleteimpact.ReleaseClaim(tx, claim.ID)
 			return struct{}{}, ch, err
 		}); err != nil {
@@ -170,7 +170,7 @@ func TestUnpromoteImpactListsUnpromotedBridges(t *testing.T) {
 		if !w.filed(f.r) || !w.filed(f.q) {
 			t.Fatal("the bridges should stay filed with only P's claim released")
 		}
-		report, err := promote.UnpromoteImpact(w.c, f.p.ID)
+		report, err := promote.UnpromoteImpact(w.C, f.p.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -189,11 +189,11 @@ func TestUnpromoteImpactListsSharedBridgeHandle(t *testing.T) {
 	w.relationship(james, johnny, w.spouse)
 	w.join(johnny, w.promote(john).Entity.ID)
 	w.promote(james)
-	report, err := promote.UnpromoteImpact(w.c, james.ID)
+	report, err := promote.UnpromoteImpact(w.C, james.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, res, err := writes.Run(w.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+	_, res, err := writes.Run(w.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 		ch, err := promote.Unpromote(tx, userID, james.ID)
 		return struct{}{}, ch, err
 	})

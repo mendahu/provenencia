@@ -49,6 +49,59 @@ var layerPackages = []struct {
 	{"core/vocabkey", false},
 }
 
+// readerPackages are the packages that read the matching layers' inputs and
+// must not use graph alignment's types. A row lists the packages its direct
+// production imports may not hold. The check is on direct imports because
+// core/matchregistry itself imports core/graphalign, so every reader of the
+// registry reaches it transitively. A new reader of this kind adds a row.
+var readerPackages = []struct {
+	dir     string
+	forbids []string
+}{
+	{"core/database/evidencelayer", []string{"core/graphalign", "core/database/promotealign"}},
+	{"core/recordlinks", []string{"core/graphalign"}},
+}
+
+func TestReaderPackages(t *testing.T) {
+	root := filepath.Join("..", "..")
+	for _, p := range readerPackages {
+		t.Run(p.dir, func(t *testing.T) { checkForbids(t, root, p.dir, p.forbids) })
+	}
+}
+
+// importPkg reads the package at dir as it builds with no tags. It fails the
+// test when the package has no such Go file, or has a file that builds only
+// with a tag or a platform, so a guard cannot miss a file it never read.
+func importPkg(t *testing.T, root, dir string) *build.Package {
+	t.Helper()
+	ctx := build.Default
+	ctx.BuildTags = nil
+	pkg, err := ctx.ImportDir(filepath.Join(root, dir), 0)
+	if err != nil {
+		t.Fatalf("%s: %v", dir, err)
+	}
+	if len(pkg.GoFiles) == 0 {
+		t.Errorf("%s has no Go files without build tags", dir)
+	}
+	if len(pkg.IgnoredGoFiles) > 0 {
+		t.Errorf("%s has files that build only with a tag or a platform: %s", dir, strings.Join(pkg.IgnoredGoFiles, ", "))
+	}
+	return pkg
+}
+
+// checkForbids fails when a non-test file of the package imports one of the
+// forbidden packages directly.
+func checkForbids(t *testing.T, root, dir string, forbids []string) {
+	pkg := importPkg(t, root, dir)
+	for _, imp := range pkg.Imports {
+		for _, f := range forbids {
+			if imp == modulePath+f {
+				t.Errorf("%s imports %s", dir, f)
+			}
+		}
+	}
+}
+
 func TestLayerPackages(t *testing.T) {
 	root := filepath.Join("..", "..")
 	for _, p := range layerPackages {
@@ -66,18 +119,9 @@ func TestLayerPackages(t *testing.T) {
 // core/subjectprofile reaches core/autoreconcile. It is one walker with three
 // rules (D-11).
 func checkPure(t *testing.T, root, dir string, numbers bool) {
+	pkg := importPkg(t, root, dir)
 	ctx := build.Default
 	ctx.BuildTags = nil
-	pkg, err := ctx.ImportDir(filepath.Join(root, dir), 0)
-	if err != nil {
-		t.Fatalf("%s: %v", dir, err)
-	}
-	if len(pkg.GoFiles) == 0 {
-		t.Errorf("%s has no Go files without build tags", dir)
-	}
-	if len(pkg.IgnoredGoFiles) > 0 {
-		t.Errorf("%s has files that build only with a tag or a platform: %s", dir, strings.Join(pkg.IgnoredGoFiles, ", "))
-	}
 	// One walker, three rules (D-11). The catalog rule holds on every hop; the
 	// registry and autoreconcile rules hold only along production imports.
 	// visited is keyed by import path and prodOnly, so a package first reached

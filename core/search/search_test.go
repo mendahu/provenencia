@@ -774,7 +774,7 @@ func TestTokenize(t *testing.T) {
 	}
 }
 
-func seedUser(t *testing.T, c *database.Catalog) []byte {
+func seedUser(t testing.TB, c *database.Catalog) []byte {
 	t.Helper()
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 	r, err := ref.Mint(ref.PrefixUser)
@@ -787,7 +787,7 @@ func seedUser(t *testing.T, c *database.Catalog) []byte {
 	return userID
 }
 
-func seedType(t *testing.T, c *database.Catalog, label, desc string) []byte {
+func seedType(t testing.TB, c *database.Catalog, label, desc string) []byte {
 	t.Helper()
 	id, err := sourcetypes.Upsert(c, sourcetypes.Type{
 		Key: "book", Origin: vocabkey.OriginProvenencia, Label: label, Description: desc,

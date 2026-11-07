@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
@@ -27,7 +28,7 @@ func sparseAnnAmes() (graphalign.Layer, graphalign.Canon) {
 			{ID: per, Ref: "PER-S", Kind: "person", Values: nameVals("Ann", "Ames")},
 			{ID: ev, Ref: "EVT-S", Kind: "event", Values: vals(et, birth, date, year(1817))},
 		},
-		Bridges: []graphalign.Bridge{bridge(per, ev, sig)},
+		Bridges: []kinship.Link{bridge(per, ev, sig)},
 		Metas:   mergeMetas(nameMetas(), eventMetas()),
 	}
 	p1, e1, p2, e2 := id("h-person-1"), id("h-event-1"), id("h-person-2"), id("h-event-2")
