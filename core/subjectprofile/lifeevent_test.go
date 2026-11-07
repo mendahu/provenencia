@@ -34,6 +34,14 @@ func TestLifeEventOf(t *testing.T) {
 			want:  subjectprofile.LifeEvent{Role: vocabkey.RoleSubject},
 		},
 		{
+			name: "a negative type beside a positive one",
+			event: subjectcompare.Values{vocabkey.PropertyEventType: {
+				subjectprofile.Value(term("death"), true, ""),
+				subjectprofile.Value(term("birth"), false, ""),
+			}},
+			want: subjectprofile.LifeEvent{Role: vocabkey.RoleSubject, EventType: vocabkey.EventBirth},
+		},
+		{
 			name: "every date, in key order",
 			event: subjectcompare.Values{
 				vocabkey.PropertyEndDate:   in(autoreconcile.Value{Date: d3}, false),
