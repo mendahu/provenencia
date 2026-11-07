@@ -1,7 +1,7 @@
 # Ship log — S14-35 Wider history jump menu
 
 **Plan:** [`S14-35-wider-history-jump-menu.md`](S14-35-wider-history-jump-menu.md) · **Branch:** `s14-35-wider-history-jump-menu` · **PR:** #730
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Base `f971f406`. §4 files unchanged since the planned base `f48846c`.
@@ -43,3 +43,13 @@ Check: scripts/check-pr.sh PASS. No unit test reaches a view binding; the PR bod
 Files: `macos/App/Features/Workspace/WorkspaceToolbar.swift`, `HistoryJumpMenuPanel` leaf `Text`.
 Do: add `.help(Text(verbatim: leafLabel))` to the leaf `Text`, as `PVSelect.swift:402` does.
 Check: scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `047bb78e`. Gate PASS (orchestrator run). F-1 to F-4 done. F-2 adds rows and F-4 is a tooltip, so neither ran red first; F-3 has no unit seam, so the PR body's manual check gains the step.
+
+## Round 2 — review
+Reviewers: CON (CON-1 was a Fix-now major). Not sent back: UX. UX-1 and UX-2 were minor; read in the fix commits and **Resolved** (T-1 rows at `HistoryJumpMenuModelTests.swift`, `.help` on the leaf).
+CON-1 **Resolved** (reviewer confirmed the Landed note and that no Decision or AC changed). No new blockers. Verdict: Clean.
+
+## Result
+Gate PASS at `047bb78e` · CI pending at this commit · open: none · follow-ups: none · to user: Forward's about 338pt at the minimum window, judged at §10 step 3. Manual check not run; it is the user's.
