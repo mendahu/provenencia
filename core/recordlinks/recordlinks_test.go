@@ -11,12 +11,14 @@ import (
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertycompare"
 	pt "github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/recordlinks"
 	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare/subjectcomparetest"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -544,13 +546,58 @@ func marriages(n int) (a, b recordlinks.Graph) {
 	})
 }
 
+// longest is one shared person with the most members, each holding n one-word
+// names of the most bytes MaxValueBytes allows (a name's form and its part both
+// count), and agreeing on sex.
+func longest(cfg recordlinks.Config) func(n int) (recordlinks.Graph, recordlinks.Graph) {
+	return func(n int) (recordlinks.Graph, recordlinks.Graph) {
+		return pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			ms := []recordlinks.Member{person(id(1), entP)}
+			for j := range cfg.RecordLinks.MaxEntityMembers {
+				v := vals{sex: {pt.Term("male")}}
+				for k := range n {
+					v[name] = append(v[name], pt.Name(sized(fmt.Sprintf("%s%d_%d_", tag, j, k), cfg.RecordLinks.MaxValueBytes/2)))
+				}
+				ms = append(ms, person(id(byte(2+j)), entF, v))
+			}
+			return build(ms)
+		})
+	}
+}
+
+// compact returns n distinct three-letter words, the first letter the tag's,
+// so a text of Text.MaxWords of them stays within MaxValueBytes; k shifts the
+// words so two values differ.
+func compact(tag byte, k, n int) string {
+	w := make([]string, n)
+	for i := range w {
+		x := (i + k*n) % 676
+		w[i] = string([]byte{tag, 'a' + byte(x/26), 'a' + byte(x%26)})
+	}
+	return strings.Join(w, " ")
+}
+
+// sized is prefix padded with letters to exactly n bytes.
+func sized(prefix string, n int) string {
+	return prefix + strings.Repeat("z", n-len(prefix))
+}
+
 func axes(cfg recordlinks.Config) []axis {
 	exact, text := cfg.Value.Words.MaxExactPairing, cfg.Value.Text.MaxWords
 	return []axis{
 		{"names", cfg.RecordLinks.MaxUnitValues, solo(name, pt.Name, exact)},
-		{"interests", cfg.RecordLinks.MaxUnitValues, solo(interests, pt.Text, text)},
+		{"interests", cfg.RecordLinks.MaxUnitValues, func(n int) (recordlinks.Graph, recordlinks.Graph) {
+			return pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+				v := vals{sex: {pt.Term("male")}}
+				for k := range n {
+					v[interests] = append(v[interests], pt.Text(compact(tag[0], k, text)))
+				}
+				return build([]recordlinks.Member{person(id(1), entP), person(id(2), entF, v)})
+			})
+		}},
 		{"shared people", 1000, func(n int) (recordlinks.Graph, recordlinks.Graph) { return crowd(cfg, n, 1) }},
 		{"shapes", 2000, marriages},
+		{"longest values", cfg.RecordLinks.MaxUnitValues, longest(cfg)},
 	}
 }
 
@@ -653,7 +700,7 @@ func TestLinesWorkCap(t *testing.T) {
 			for j := range most {
 				v := vals{sex: {pt.Term("male")}}
 				for k := range cfg.RecordLinks.MaxUnitValues {
-					v[interests] = append(v[interests], pt.Text(words(fmt.Sprintf("%s%d_%d_", tag, j, k), cfg.Value.Text.MaxWords)))
+					v[interests] = append(v[interests], pt.Text(compact(tag[0], j*cfg.RecordLinks.MaxUnitValues+k, cfg.Value.Text.MaxWords)))
 				}
 				ms = append(ms, person(id(byte(2+j)), entF, v))
 			}
@@ -675,6 +722,123 @@ func TestLinesWorkCap(t *testing.T) {
 			t.Errorf("Lines = %d lines, first %v; want 41 counted", len(got), got[:1])
 		}
 	})
+}
+
+// TestLinesValueSize holds the limit on one value: a value over MaxValueBytes
+// makes its property count nothing, whatever its words, and fast; a value at the
+// limit compares as usual. The first three inputs are the ones that got past
+// the cap's word count.
+func TestLinesValueSize(t *testing.T) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	most, limit := cfg.RecordLinks.MaxEntityMembers, cfg.RecordLinks.MaxValueBytes
+	male := pt.Term("male")
+	// graph is the page's person and, on entF, members members each holding
+	// the values per(tag, j) gives.
+	graph := func(members int, per func(tag string, j int) vals) func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+		return func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			ms := []recordlinks.Member{person(id(1), entP)}
+			for j := range members {
+				ms = append(ms, person(id(byte(2+j)), entF, per(tag, j)))
+			}
+			return build(ms)
+		}
+	}
+	// twoLetter is 64 distinct two-letter words from eight letters from first.
+	twoLetter := func(first byte) string {
+		var w []string
+		for i := range 8 {
+			for j := range 8 {
+				w = append(w, string([]byte{first + byte(i), first + byte(j)}))
+			}
+		}
+		return strings.Join(w, " ")
+	}
+	both := func(tag string) propertycompare.Value {
+		first := byte('a')
+		if tag == "b" {
+			first = 'i'
+		}
+		return propertycompare.Value{Value: valuecompare.Value{Name: namevaluetest.Western("x"), Text: twoLetter(first)}}
+	}
+	repeatN := func(n int, f func(k int) propertycompare.Value) []propertycompare.Value {
+		var out []propertycompare.Value
+		for k := range n {
+			out = append(out, f(k))
+		}
+		return out
+	}
+	one := func(e []byte, v vals) func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+		return func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			return build([]recordlinks.Member{person(id(1), entP), person(id(2), e, v)})
+		}
+	}
+	// twoPeople is entF holding vF and entS holding sex, in both graphs.
+	twoPeople := func(vF vals) func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+		return func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			return build([]recordlinks.Member{person(id(1), entP), person(id(2), entF, vF), person(id(3), entS, vals{sex: {male}})})
+		}
+	}
+	cases := []struct {
+		name  string
+		build func(tag string, id, _ func(byte) []byte) recordlinks.Graph
+		want  []recordlinks.Line
+	}{
+		{"15 one-word 64 KB names at 10 by 10 members",
+			graph(most, func(tag string, j int) vals {
+				return vals{name: repeatN(15, func(k int) propertycompare.Value {
+					return pt.Name(sized(fmt.Sprintf("%s%d_%d_", tag, j, k), 64<<10))
+				})}
+			}),
+			lines(want{entF, 0, weak})},
+		{"21 two-word interests of long words at 10 by 10 members",
+			graph(most, func(tag string, j int) vals {
+				return vals{interests: repeatN(cfg.RecordLinks.MaxUnitValues+1, func(k int) propertycompare.Value {
+					p := fmt.Sprintf("%s%d_%d_", tag, j, k)
+					return pt.Text(sized(p+"a", 32<<10) + " " + sized(p+"b", 32<<10))
+				})}
+			}),
+			lines(want{entF, 0, weak})},
+		{"15 interests of name and 64 words at 10 by 10 members, cap trips",
+			graph(most, func(tag string, j int) vals {
+				return vals{sex: {male}, interests: repeatN(15, func(int) propertycompare.Value { return both(tag) })}
+			}),
+			lines(want{entF, 0, weak})},
+		{"one 159-word interests on one person, other lines count",
+			twoPeople(vals{sex: {male}, interests: {pt.Text(words("w", 159))}}),
+			lines(want{entF, 1, weak}, want{entS, 1, weak})},
+		{"a text of exactly the limit compares",
+			one(entF, vals{interests: {pt.Text(strings.Repeat("a", limit))}}),
+			lines(want{entF, 1, weak})},
+		{"a text one byte over the limit counts nothing",
+			one(entF, vals{interests: {pt.Text(strings.Repeat("a", limit+1))}}),
+			lines(want{entF, 0, weak})},
+		{"a name of exactly the limit, form and part together, compares",
+			one(entF, vals{name: {pt.Name(strings.Repeat("n", limit/2))}}),
+			lines(want{entF, 1, weak})},
+		{"a name one byte over the limit counts nothing",
+			one(entF, vals{name: {pt.Name(strings.Repeat("n", limit/2+1))}}),
+			lines(want{entF, 0, weak})},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			a, b := pair(c.build)
+			for _, swap := range []bool{false, true} {
+				x, y := a, b
+				if swap {
+					x, y = y, x
+				}
+				start := time.Now()
+				got := recordlinks.Lines(entP, x, y, metas, cfg)
+				if took := time.Since(start); took > time.Second {
+					t.Errorf("Lines (swapped %v) took %v", swap, took)
+				}
+				if !equalLines(got, c.want) {
+					t.Errorf("Lines (swapped %v) = %s; want %s", swap, show(got), show(c.want))
+				}
+			}
+		})
+	}
 }
 
 // BenchmarkLinesAtCap is the slowest pair the cap lets through, one

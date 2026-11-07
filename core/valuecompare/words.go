@@ -411,17 +411,31 @@ func alignWords(a, b, fa, fb []string, w WordRules) (pairs []wordPair, onlyA, on
 }
 
 // WordCount is how many words v holds for the word comparers: the words of a
-// name's parts, the words of a text, and one for any other value. It is at
+// name's parts plus the words of a text, and one for any other value. It is at
 // least one.
 func WordCount(v Value) int {
 	n := 0
-	switch {
-	case v.Name != nil:
+	if v.Name != nil {
 		for _, p := range v.Name.Parts {
 			n += len(RawTokens(p.Value))
 		}
-	case v.Text != "":
-		n = len(RawTokens(v.Text))
+	}
+	if v.Text != "" {
+		n += len(RawTokens(v.Text))
 	}
 	return max(n, 1)
+}
+
+// Size is the bytes of every string v holds: its text, its term, and a name's
+// form and parts. It reads the fields' lengths and no words, so its cost does
+// not grow with what is in them.
+func Size(v Value) int {
+	n := len(v.Text) + len(v.Term)
+	if v.Name != nil {
+		n += len(v.Name.Form)
+		for _, p := range v.Name.Parts {
+			n += len(p.Value)
+		}
+	}
+	return n
 }

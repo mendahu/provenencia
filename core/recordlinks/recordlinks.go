@@ -43,6 +43,11 @@ type Rules struct {
 	// property that counts, and for each entity both link to, the shapes of
 	// one side's links times the other's, a link with no shape counting one.
 	MaxPairWork int
+	// MaxValueBytes is the most bytes one value may hold (valuecompare.Size)
+	// before the property holding it counts nothing for the member pair: it
+	// is not compared and charges no work. It bounds what one value costs to
+	// read, so a crafted value cannot hang a Lines call.
+	MaxValueBytes int
 }
 
 // Config is the registry as the record-links comparison reads it.
@@ -155,7 +160,8 @@ type Line struct {
 // whose work passes MaxPairWork compares nothing: every line has 0 facts.
 func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Line {
 	var out []Line
-	capped := overWork(string(page), a, b, cfg)
+	ha, hb := holdings{}, holdings{}
+	capped := overWork(string(page), a, b, ha, hb, cfg)
 	for _, e := range slices.Sorted(maps.Keys(a.persons)) {
 		if e == string(page) || len(b.persons[e]) == 0 {
 			continue
@@ -164,7 +170,7 @@ func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Li
 		if !capped && !over(e, a, b, cfg) {
 			for _, x := range a.persons[e] {
 				for _, y := range b.persons[e] {
-					best = max(best, len(properties(x, y, metas, cfg))+len(links(x, y, a, b, cfg)))
+					best = max(best, len(properties(ha.of(x, cfg), hb.of(y, cfg), x, y, metas, cfg))+len(links(x, y, a, b, cfg)))
 				}
 			}
 		}
@@ -186,10 +192,9 @@ func over(e string, a, b Graph, cfg Config) bool {
 
 // properties returns the keys, ascending, whose values the two members agree
 // or partly agree on. A property counts once under its key, with its pooled
-// properties; one where either member holds more than MaxUnitValues values
-// counts nothing.
-func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.PropertyKey {
-	heldX, heldY := held(x.Values, cfg), held(y.Values, cfg)
+// properties; one that is skipped for either member (see tally.skipped)
+// counts nothing. heldX and heldY are the members' holdings.
+func properties(heldX, heldY map[vocabkey.PropertyKey]tally, x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.PropertyKey {
 	keys := map[vocabkey.PropertyKey]struct{}{}
 	for key := range heldX {
 		keys[key] = struct{}{}
@@ -199,7 +204,7 @@ func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.
 	}
 	var out []vocabkey.PropertyKey
 	for _, key := range slices.Sorted(maps.Keys(keys)) {
-		if most := cfg.RecordLinks.MaxUnitValues; heldX[key].values > most || heldY[key].values > most {
+		if heldX[key].skipped(cfg) || heldY[key].skipped(cfg) {
 			continue
 		}
 		res := subjectcompare.CompareProperty(vocabkey.Person, key, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
@@ -210,11 +215,21 @@ func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.
 	return out
 }
 
-// tally is what a member holds for one property that counts: its values and
-// their words.
-type tally struct{ values, words int }
+// tally is what a member holds for one property that counts: its values, the
+// words of the values within MaxValueBytes, and whether any value is over it.
+type tally struct {
+	values, words int
+	big           bool
+}
 
-// held tallies a member's values by the key their property counts under.
+// skipped reports whether the property counts nothing for the member: more than
+// MaxUnitValues values, or a value over MaxValueBytes.
+func (t tally) skipped(cfg Config) bool {
+	return t.big || t.values > cfg.RecordLinks.MaxUnitValues
+}
+
+// held tallies a member's values by the key their property counts under. A
+// value over MaxValueBytes is sized, never tokenized.
 func held(v subjectcompare.Values, cfg Config) map[vocabkey.PropertyKey]tally {
 	out := map[vocabkey.PropertyKey]tally{}
 	for p, vs := range v {
@@ -222,12 +237,29 @@ func held(v subjectcompare.Values, cfg Config) map[vocabkey.PropertyKey]tally {
 			t := out[key]
 			t.values += len(vs)
 			for _, val := range vs {
+				if valuecompare.Size(val.Value) > cfg.RecordLinks.MaxValueBytes {
+					t.big = true
+					continue
+				}
 				t.words += valuecompare.WordCount(val.Value)
 			}
 			out[key] = t
 		}
 	}
 	return out
+}
+
+// holdings are the members' tallies of one graph by member id, each read once.
+type holdings map[string]map[vocabkey.PropertyKey]tally
+
+// of is m's tally, read the first time it is asked for.
+func (h holdings) of(m Member, cfg Config) map[vocabkey.PropertyKey]tally {
+	t, ok := h[string(m.ID)]
+	if !ok {
+		t = held(m.Values, cfg)
+		h[string(m.ID)] = t
+	}
+	return t
 }
 
 // cost is what one member brings to the work count: its words by property
@@ -237,12 +269,12 @@ type cost struct {
 	shapes map[string]int
 }
 
-// costOf reads a member's cost. A property over MaxUnitValues and a far entity
-// over MaxEntityMembers compare nothing, so they cost nothing.
-func costOf(m Member, g Graph, a, b Graph, cfg Config) cost {
+// costOf reads a member's cost. A skipped property and a far entity over
+// MaxEntityMembers compare nothing, so they cost nothing.
+func costOf(m Member, g Graph, h holdings, a, b Graph, cfg Config) cost {
 	c := cost{words: map[vocabkey.PropertyKey]int{}, shapes: map[string]int{}}
-	for key, t := range held(m.Values, cfg) {
-		if t.values <= cfg.RecordLinks.MaxUnitValues {
+	for key, t := range h.of(m, cfg) {
+		if !t.skipped(cfg) {
 			c.words[key] = t.words
 		}
 	}
@@ -272,15 +304,15 @@ func (x cost) against(y cost) int {
 
 // overWork reports whether the work of comparing every member pair of every
 // shared person passes MaxPairWork.
-func overWork(page string, a, b Graph, cfg Config) bool {
-	return pairWork(page, a, b, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
+func overWork(page string, a, b Graph, ha, hb holdings, cfg Config) bool {
+	return pairWork(page, a, b, ha, hb, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
 }
 
 // pairWork is the sum, over every member pair of every shared person, of the
 // pair's work. A sum of products does not depend on the order of the graphs or
 // of their members. It stops counting once past limit, so the result is the
 // work only when it is within limit.
-func pairWork(page string, a, b Graph, cfg Config, limit int) int {
+func pairWork(page string, a, b Graph, ha, hb holdings, cfg Config, limit int) int {
 	var n int
 	for e, xs := range a.persons {
 		ys := b.persons[e]
@@ -289,10 +321,10 @@ func pairWork(page string, a, b Graph, cfg Config, limit int) int {
 		}
 		costY := make([]cost, len(ys))
 		for i, y := range ys {
-			costY[i] = costOf(y, b, a, b, cfg)
+			costY[i] = costOf(y, b, hb, a, b, cfg)
 		}
 		for _, x := range xs {
-			cx := costOf(x, a, a, b, cfg)
+			cx := costOf(x, a, ha, a, b, cfg)
 			for _, cy := range costY {
 				if n += cx.against(cy); n > limit {
 					return n
