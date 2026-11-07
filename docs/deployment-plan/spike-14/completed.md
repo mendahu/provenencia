@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-36 — Boolean value type (engine)
+
+**Landed 2026-11-06** in [#733](https://github.com/mendahu/provenencia/pull/733). Go declares every Property value type and its rules once (`propertymeta.Types`: researcher-creatable, single-only) and sends the table to the app on the Properties workspace read, so Swift keeps no list of its own. A new `boolean` type is stored in `observations.value_boolean` (migration 61), compared, reconciled like an integer, and sent over the wire, with "Yes" and "No" on a Conclusion value; a boolean Property is single-valued only. No researcher can create one until S14-37, so nothing changes in the app yet. `swift_vocabulary_test.go` now also pins the app's source surfaces to Go's. No version bump.
+
 ## S14-35 — Wider history jump menu
 
 **Landed 2026-11-06** in [#730](https://github.com/mendahu/provenencia/pull/730). The Back and Forward history menu is 600pt wide (was 360pt), so a graph name and its "Citation for" label read in full. On a small window it narrows to stay 16pt inside the content column: `HistoryJumpMenuModel.fittedPanelWidth` is the one width rule, and `WorkspaceContent` measures its column for it. Other menus keep their widths; truncation stays at the tail. Version 0.3.8.

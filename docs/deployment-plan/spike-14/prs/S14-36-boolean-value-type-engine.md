@@ -1,6 +1,6 @@
 # S14-36 — Boolean value type (engine)
 
-**Status:** Planned
+**Status:** Landed in #733 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Properties create picker offers the same five types, now read from Go; no view offers, edits or draws a boolean until S14-37)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../../.agents/skills/add-catalog-model/SKILL.md), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md) (snapshot only), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs"; working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31 (completed by S14-37); dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); [structural debt](../../../ideas/structural-debt.md) SourceSurface row; [`interpretation-layer-data-model.md`](../../../interpretation-layer-data-model.md) (value types, Property create rules); [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) §3.2
+**Landed:** [#733](https://github.com/mendahu/provenencia/pull/733), 2026-11-06. Differences from the plan: (1) T-7 also has `TestReconcileBoolean` in `autoreconcile_test.go`, which carries the support-2 and negative-denial rows (`TestReconcile` checks only members and state). (2) T-12 gained `createBeforeTheFirstLoadFallsBackToTheDraftType`, a separate test for the cold-page case. The implementer did not run the §10 manual check.
 **Planned:** 2026-11-07 against `main` @ `f971f40`
 **Review:** [`S14-36-boolean-value-type-engine.review.md`](S14-36-boolean-value-type-engine.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: M-2 answered (Go sends the rules on the wire)
 
