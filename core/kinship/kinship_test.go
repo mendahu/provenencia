@@ -27,13 +27,13 @@ func b(n byte) []byte { return []byte{0x30 + n} }
 
 // part is a participation edge with the person at A.
 func part(t testing.TB, person, event byte, role vocabkey.Role, eventType vocabkey.EventType, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), vocabkey.BridgeTerm(role), eventType, terms)
+	ka, kb := segmentcomparetest.PartKeys(vocabkey.BridgeTerm(role), eventType)
 	return kinship.Edge{A: p(person), B: e(event), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
 }
 
 // rel is a relationship edge with the person endpoint at A.
 func rel(t testing.TB, person, relatedTo byte, term vocabkey.BridgeTerm, bridgeID byte) kinship.Edge {
-	ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship), term, "", terms)
+	ka, kb := segmentcomparetest.RelKeys(term)
 	return kinship.Edge{A: p(person), B: p(relatedTo), KeyA: ka, KeyB: kb, Associations: [][]byte{b(bridgeID)}}
 }
 
@@ -542,6 +542,38 @@ func TestCountedOnce(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			if got := kinship.CountedOnce(c.a, c.b, c.paired); got != c.want {
 				t.Fatalf("CountedOnce = %v, want %v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestSameShape(t *testing.T) {
+	rec := func(pattern kinship.Pattern, pivot string, only bool) kinship.Recording {
+		return kinship.Recording{Shapes: []kinship.Shape{{Pattern: pattern, Pivot: []byte(pivot)}}, OnlyImplied: only}
+	}
+	same := func(a, b []byte) bool { return string(a) == "E1" && string(b) == "E9" }
+	never := func(a, b []byte) bool { return false }
+	const marriage, birth = kinship.PatternMarriageSpouses, kinship.PatternBirthParents
+	twoShapes := kinship.Recording{Shapes: []kinship.Shape{
+		{Pattern: marriage, Pivot: []byte("E0")}, {Pattern: marriage, Pivot: []byte("E1")},
+	}, OnlyImplied: true}
+	cases := []struct {
+		name string
+		a, b kinship.Recording
+		same func(a, b []byte) bool
+		want bool
+	}{
+		{"same pattern, same pivots", rec(marriage, "E1", true), rec(marriage, "E9", true), same, true},
+		{"same pattern, pivots differ", rec(marriage, "E1", true), rec(marriage, "E9", true), never, false},
+		{"different patterns", rec(marriage, "E1", true), rec(birth, "E9", true), same, false},
+		{"empty shapes", kinship.Recording{OnlyImplied: true}, kinship.Recording{OnlyImplied: true}, same, false},
+		{"both recorded", rec(marriage, "E1", false), rec(marriage, "E9", false), same, true},
+		{"two shapes, one pairs", twoShapes, rec(marriage, "E9", true), same, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := kinship.SameShape(c.a, c.b, c.same); got != c.want {
+				t.Fatalf("SameShape = %v, want %v", got, c.want)
 			}
 		})
 	}

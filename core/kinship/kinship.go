@@ -153,6 +153,21 @@ func (r *Recording) Merge(o Recording) {
 	r.OnlyImplied = r.OnlyImplied && o.OnlyImplied
 }
 
+// SameShape reports whether two corresponding links are recorded through the
+// same kinship pattern at pivots the caller counts as one: a shape of a and a
+// shape of b have the same Pattern and same holds for their pivots (a's first).
+// It reads only the shapes, not whether either link is also recorded directly.
+func SameShape(a, b Recording, same func(pivotA, pivotB []byte) bool) bool {
+	for _, x := range a.Shapes {
+		for _, y := range b.Shapes {
+			if x.Pattern == y.Pattern && same(x.Pivot, y.Pivot) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // CountedOnce reports whether two corresponding links stand for one fact both
 // sides record through the same kinship pattern, already counted because the
 // shape's pivots are paired: paired maps a pivot of a, the layer side, to its
@@ -161,18 +176,10 @@ func CountedOnce(a, b Recording, paired func(pivot []byte) ([]byte, bool)) bool 
 	if !a.OnlyImplied && !b.OnlyImplied {
 		return false
 	}
-	for _, x := range a.Shapes {
-		partner, ok := paired(x.Pivot)
-		if !ok {
-			continue
-		}
-		for _, y := range b.Shapes {
-			if x.Pattern == y.Pattern && bytes.Equal(partner, y.Pivot) {
-				return true
-			}
-		}
-	}
-	return false
+	return SameShape(a, b, func(pa, pb []byte) bool {
+		partner, ok := paired(pa)
+		return ok && bytes.Equal(partner, pb)
+	})
 }
 
 // Derive returns the relationship links the edges imply through the event

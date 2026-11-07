@@ -52,3 +52,26 @@ func Bridge(t testing.TB, key string) connectrules.Bridge {
 	}
 	return b
 }
+
+// PartKeys are a participation read from the person's end and the event's,
+// built through segmentcompare.Key over the seeded terms. It takes no testing.TB;
+// TestKeysMatchSeededBridges holds it equal to the seeded bridge's keys.
+func PartKeys(role vocabkey.BridgeTerm, eventType vocabkey.EventType) (person, event vocabkey.BridgeKey) {
+	terms := Terms()
+	person = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: role,
+		End: vocabkey.PropertyPerson, Other: vocabkey.PropertyEvent, EventType: eventType}, terms)
+	event = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeParticipation, Term: role,
+		End: vocabkey.PropertyEvent, Other: vocabkey.PropertyPerson, EventType: eventType}, terms)
+	return person, event
+}
+
+// RelKeys are a relationship read from the person's end and the related_to
+// end, built the way PartKeys builds a participation.
+func RelKeys(term vocabkey.BridgeTerm) (person, relatedTo vocabkey.BridgeKey) {
+	terms := Terms()
+	person = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: term,
+		End: vocabkey.PropertyPerson, Other: vocabkey.PropertyRelatedTo, SameType: true}, terms)
+	relatedTo = segmentcompare.Key(segmentcompare.Link{Type: vocabkey.BridgeRelationship, Term: term,
+		End: vocabkey.PropertyRelatedTo, Other: vocabkey.PropertyPerson, SameType: true}, terms)
+	return person, relatedTo
+}
