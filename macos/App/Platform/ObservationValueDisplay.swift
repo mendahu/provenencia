@@ -1,6 +1,7 @@
 import Foundation
 
-/// User-visible Observation value strings for graph cards and other list rows.
+/// User-visible Observation value strings: words a saved Observation on every
+/// list surface (graph cards, the evidence column, bridge summaries).
 /// Handles every Property value_type so structured date/name/term/subject
 /// Observations never collapse to an empty “—” when value_text is unset in SQLite.
 enum ObservationValueDisplay {

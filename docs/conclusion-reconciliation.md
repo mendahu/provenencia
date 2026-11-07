@@ -141,7 +141,7 @@ Each module answers three questions:
 | **name** | §7.2 | containment per part type (§7.2) | §7.2 | no parts |
 | **depiction** | the same image File (the same pixels) | none | the image | an image `depictionvalue.Readable` refuses |
 
-A boolean follows the integer rules, with one caveat: negative polarity is not folded into the value. A negative `true` denies positive `true` candidates; it does not create a `false`. A boolean Property is single-valued, so two Sources that answer differently read `mixed`, and a `false` is a recorded value, never an absent one.
+A boolean follows the integer rules, with one caveat: negative polarity is not folded into the value. A negative `true` denies positive `true` candidates; it does not create a `false`; only a row edited by hand can be a negative boolean, because `observations` refuses one on add and update. A boolean Property is single-valued, so two Sources that answer differently read `mixed`, and a `false` is a recorded value, never an absent one.
 
 A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The gallery shows each record's own `depiction_values.image_file_id`, not the reconciler cache copy. The Person page lists no depiction field.
 

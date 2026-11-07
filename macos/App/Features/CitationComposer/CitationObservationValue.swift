@@ -1,6 +1,6 @@
 import Foundation
 
-/// Display, validation, and save-draft fill for one composer observation value.
+/// Validation and save-draft fill for one composer observation value.
 enum CitationObservationValue {
     struct Fields: Equatable {
         var valueText: String = ""

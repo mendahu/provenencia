@@ -348,7 +348,7 @@ Target Subject type hints are application-only (not SQL allow-lists). See the In
 
 `name_format` (Conclusion naming profiles) is not an Interpretation Property in the create-time seed. `integer` remains a valid value_type with no seed row yet.
 
-`boolean` is a valid `value_type` with no seed row: researchers create boolean Properties (from S14-37), and `propertymeta.Types` marks it single-valued only.
+`boolean` is a valid `value_type` with no seed row: researchers create boolean Properties, and `propertymeta.Types` marks it single-valued only. A boolean Observation is never negative: No is the value that says it (`observations` refuses a negative one).
 
 Create-time Install seeds the full §3.2 matrix, including kind/edge and person term Properties as `value_type = term` with `property_terms` (§3.4–3.7 and §3.9–3.11).
 
