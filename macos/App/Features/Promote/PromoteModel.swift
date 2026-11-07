@@ -155,7 +155,7 @@ final class PromoteModel {
             )
             // Rows are built from the graph's Subjects. Without them every row
             // would drop and the page would read as empty: say so instead.
-            guard let snapshot = await graphSnapshot() else {
+            guard let snapshot = await session.evidenceGraphSnapshot(graphID: entry.graphID) else {
                 loadError = L10n.string(L10n.Promote.graphUnavailable)
                 loadAttempt += 1
                 return
@@ -267,7 +267,7 @@ final class PromoteModel {
                         onlySubjectID: input.onlySubjectID
                     )
                     if pendingProposal != nil { continue }
-                    let snapshot = await graphSnapshot()
+                    let snapshot = await session.evidenceGraphSnapshot(graphID: entry.graphID)
                     if pendingProposal != nil { continue }
                     if let snapshot {
                         syncNameOrders()
@@ -393,12 +393,6 @@ final class PromoteModel {
             }
             showingNotices { saveError = L10n.Errors.message(for: error) }
         }
-    }
-
-    /// The Source graph as a snapshot. Nil
-    /// when the graph read isn't ready (never loaded, or failed with nothing cached).
-    private func graphSnapshot() async -> EvidenceGraphSnapshot? {
-        await session.evidenceGraphSnapshot(graphID: entry.graphID)
     }
 
     /// The snapshot's Subjects as rows read them.

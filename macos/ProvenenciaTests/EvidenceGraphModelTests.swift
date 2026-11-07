@@ -127,6 +127,23 @@ struct EvidenceGraphModelTests {
         )
     }
 
+    /// Session graph payload.
+    private func graphRows(
+        graphId: String,
+        subjects: [CatalogSubject],
+        positions: [CatalogSubjectPosition],
+        observations: [CatalogObservation] = [],
+        memberships: [CatalogSubjectMembership] = []
+    ) -> EvidenceGraphRows {
+        EvidenceGraphRows(
+            graphId: graphId,
+            subjects: subjects,
+            positions: positions,
+            observations: observations,
+            memberships: memberships
+        )
+    }
+
     private func makeModel(store: FakeStore, openingSubjectID: String? = nil) -> EvidenceGraphModel {
         let session = WorkspaceSession(
             projectKey: ProjectKey(projectDir: projectDir),
@@ -532,8 +549,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 1),
                     CatalogSubjectPosition(subjectID: "e1", gridX: 5, gridY: 1),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -590,8 +606,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
         model.toggleConnect()
@@ -635,8 +650,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -686,8 +700,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "e2", gridX: 2, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -721,8 +734,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)]
             )
         )
 
@@ -760,8 +772,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [bridge],
-                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)]
             )
         )
         model.beginEdit(subjectID: "b1")
@@ -1216,8 +1227,7 @@ struct EvidenceGraphModelTests {
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
                     CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
         await model.beginDelete(subjectID: "b1")
@@ -1426,7 +1436,6 @@ struct EvidenceGraphModelTests {
                     CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
                     CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
                 ],
-                types: store.subjectTypesByProject[projectDir] ?? [],
                 observations: edges
             )
         )
@@ -1649,8 +1658,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)]
             )
         )
         model.selectSubject(id: "p1")
@@ -1681,8 +1689,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)]
             )
         )
         let location = model.performCardAction(
@@ -2412,8 +2419,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: subjects,
-                positions: positions,
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: positions
             )
         )
         return (store, model)

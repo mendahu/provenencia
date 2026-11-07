@@ -177,8 +177,7 @@ extension WorkspaceSession {
 
     /// One graph as a snapshot: its rows, the Subject types and the connect
     /// rules, each warmed when cold or stale and awaited. Nil when the rows
-    /// are not ready (never loaded, or failed with nothing cached); missing
-    /// types or rules read as empty.
+    /// could not be read; missing types or rules read as empty.
     func evidenceGraphSnapshot(graphID: String) async -> EvidenceGraphSnapshot? {
         let graphKey = CatalogQueryKey.evidenceGraph(project: projectKey, graphId: graphID)
         let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: projectKey)
