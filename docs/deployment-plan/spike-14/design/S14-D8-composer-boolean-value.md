@@ -4,7 +4,7 @@
 **Spike:** Provenencia Spike 14 (odds and ends), batch 7 — Boolean value type (slice 7e)
 **View:** the Citation composer: the observation dialog's Value field and Negative checkbox, and the saved lines in the evidence column
 **Implements later as:** PR **S14-37** (Boolean value type (UI))
-**Board:** — (not drawn yet). Draw on the Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, as a new section "S14-D8 · Yes / no value", beside the S14-D6 frames.
+**Board:** drawn 2026-11-07, not agreed: the section "S14-D8 · Yes / no value" in the *Citation Composer* project, now on claude.ai as a [migrated design](https://claude.ai/artifact/3GSFQZjqdQjL8v2rpgMiDc) (frames 1, 2, 3, 4, 5, 6, 7a, 7b, 8a, 8b). Change asked 2026-11-07: remove frame 6 and the negative case (BV-4, BV-6), and drop "Checkbox (Negative, only when already checked)" from the board's Kit used note. Originally drawn on the Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, as a new section "S14-D8 · Yes / no value", beside the S14-D6 frames.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733): the engine stores, reconciles and sends a `boolean` value; it reads "Yes" and "No").
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 7) Boolean is a first-class value type in two PRs", bar outcome 31; dogfood note [`../ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-37-boolean-value-type-ui.md`](../prs/S14-37-boolean-value-type-ui.md). The Properties page (offering the type, its pill, Holds) is brief S14-D9 and PR S14-39, not this board.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -96,7 +96,7 @@ Census and register columns record yes/no facts: "Can read", "Can write", "Veter
 | A yes/no Property | A Property whose value type is `boolean`. Its type label is "Yes / no"; its values read "Yes" and "No" everywhere in the app. Examples: Can read, Can write, Veteran, Owns home. |
 | One answer | A yes/no Property holds one value per Subject. Two Sources that disagree show as mixed on the Person page; this board does not draw that. |
 | No is a recorded fact | "Can read: No" is what the census says. It is not the same as a column left blank, which the researcher simply does not cite. So the control starts with nothing chosen: a click the researcher never made must not save a No. |
-| Negative | Every other Property has a Negative checkbox: "The record says this is not so" (a record that denies a birth date, say). A yes/no Property already says No with its value, so the engine marks the type as one that is never negative, and the dialog hides the checkbox for it. A catalog made outside the app can still hold a negative yes/no line: then the checkbox shows, checked, so the researcher can see it and clear it. |
+| Negative | Every other Property has a Negative checkbox: "The record says this is not so" (a record that denies a birth date, say). A yes/no Property already says No with its value, so the engine marks the type as one that is never negative, and the dialog hides the checkbox for it. There is no negative yes/no anywhere: the engine refuses one, and the composer always saves a yes/no as stated (user, 2026-11-07). |
 | The observation dialog | Opens from the evidence column's Add and from a saved line's Edit. New and edit share the same fields. Save is the footer's primary Button; it is disabled while a required value is missing. |
 | The evidence column | Lists this Citation's saved lines, grouped by Subject. Each line: Property label (secondary, 12pt), value (body, or mono for integers and dates), a "not" word and Negative Badge on a negative line, and hover actions. |
 | Two widths | The composer has three panes side by side on a wide window (viewer, evidence, observations) and two on a narrower one. The dialog keeps its width at both. |
@@ -128,9 +128,9 @@ Census and register columns record yes/no facts: "Can read", "Can write", "Veter
 | BV-1 | **Yes / No control.** When the dialog's Property is a yes/no Property, the Value field ("Value") holds the kit Segmented control with two segments, "Yes" then "No", at the small size the dialog's other value inputs use, as wide as the Value field. It sits where the text input sits for a text Property. |
 | BV-2 | **Nothing chosen at first.** On a new observation, and whenever the Property changes to a yes/no Property, neither segment is selected. Clicking one selects it; clicking the other moves the selection. There is no way back to nothing chosen except changing the Property. |
 | BV-3 | **Save waits.** The footer's Save Button shows its disabled state until Yes or No is chosen, as it does for an empty text value today. No hint, Callout or caption is added for it. |
-| BV-4 | **No Negative checkbox.** For a yes/no Property the Negative checkbox and its description are not drawn; the dialog closes up the space. Exception: an observation that is already negative (a catalog made outside the app) shows the checkbox, checked, as today. |
+| BV-4 | **No Negative checkbox.** For a yes/no Property the Negative checkbox and its description are not drawn; the dialog closes up the space. There is no exception: a yes/no is never negative. |
 | BV-5 | **Edit opens on the saved answer.** Edit on a saved yes/no line opens the dialog with that answer's segment selected and Save enabled. |
-| BV-6 | **Saved line.** In the evidence column a yes/no line shows the Property label and "Yes" or "No" in the body face (not mono), with no Badge and no glyph. A negative yes/no line (BV-4's exception) shows the "not" word and the Negative Badge, as any negative line does. |
+| BV-6 | **Saved line.** In the evidence column a yes/no line shows the Property label and "Yes" or "No" in the body face (not mono), with no Badge and no glyph. A yes/no line never has the "not" word or the Negative Badge. |
 | BV-7 | **Keyboard and VoiceOver.** Tab from the Property combo box reaches the Yes segment, then No, then the dialog's next stop. Space chooses the focused segment. VoiceOver reads the group as "Value", each segment as "Yes" or "No", and the chosen one as selected. Nothing visible changes beyond the kit's focus ring; draw it as a note on frame 1. |
 | BV-W1 | **Wide.** The composer at Wide is its three-pane arrangement today. The dialog keeps its Regular width in the observations column (rule 2), and the evidence column's lines keep their layout (rule 3: the column takes the width, a line does not stretch its value). Every BV requirement looks the same at both widths; draw frames 2 and 5 at Wide. |
 
@@ -152,7 +152,7 @@ Draw each as the composer pane only, with no app sidebar, at Regular (1102 × 90
 3. **Text Property for comparison.** The same dialog with Property Occupation: the text input in the Value field and the Negative checkbox below it, unchanged from today. Draw it small, beside frame 1, so the difference reads (BV-4).
 4. **Edit a saved answer.** Edit on John's saved "Can write  Yes": the dialog opens with Yes selected and Save enabled (BV-5).
 5. **Evidence column.** John Robins: "Occupation  Carpenter", "Can read  Yes", "Can write  Yes"; Mary Robins: "Can read  No", "Can write  No" (BV-6).
-6. **A negative line from elsewhere.** Mary's "Can read" line saved negative with Yes: the line shows "not", "Yes" and the Negative Badge; its Edit dialog shows the Negative checkbox, checked (BV-4, BV-6).
+6. *(Removed 2026-11-07.)* Delete frame 6 ("A negative line from elsewhere") and its note "The line itself": a yes/no is never negative, so there is no such line or dialog. Keep the other frame numbers as they are.
 7. **Dark mode.** Frames 1 and 5 in dark mode.
 8. **Wide.** Frames 2 and 5 at Wide (BV-W1).
 
@@ -167,9 +167,9 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Value field | Component | Ship | `PVField` in `Features/CitationComposer/CitationComposerAuthoringBox.swift` `CitationPropertyFields.valueControls` | BV-1. Same label "Value". |
 | Yes / No control | Component | **Extend** | `DesignSystem/Components/Chip/PVSegmentedControl.swift` | BV-1, BV-2, BV-7. Two items, small size, no selection until chosen. Gains the kit's field focus handle (the one `Input`, `Select` and `ComboBox` take) so Tab lands on its first segment; nothing visible changes. **Yes / No → Segmented control, not a Checkbox, Switch, Radio pair or Select.** |
 | Property observation form | Snowflake | **Extend** | `CitationComposerAuthoringBox.swift` `CitationPropertyFields` | BV-1, BV-4. One new value case; the Negative checkbox is conditional. Not a second form. |
-| Negative checkbox | Component | Ship | `PVCheckbox` in `CitationPropertyFields` | BV-4. Hidden for a yes/no Property unless already checked. |
+| Negative checkbox | Component | Ship | `PVCheckbox` in `CitationPropertyFields` | BV-4. Never drawn for a yes/no Property. |
 | Dialog Save | Component | Ship | the observation dialog's Save `PVButton` | BV-3, BV-5. Disabled state only. |
-| Saved line | Snowflake | Ship | `Features/CitationComposer/CitationComposerSubjectGroups.swift` line row | BV-6. Value text in the body face; existing "not" word and `PVBadge` for a negative line. |
+| Saved line | Snowflake | Ship | `Features/CitationComposer/CitationComposerSubjectGroups.swift` line row | BV-6. Value text in the body face. |
 
 ### Explicit non-goals
 

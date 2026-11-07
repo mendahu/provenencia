@@ -11,10 +11,18 @@
 
 ## Writer's own calls
 
-- **D-2.** Go refuses a negative Observation of a non-negatable type, on both add and update. A stored negative boolean (crafted catalog) must therefore be cleared before it can be saved again. The user asked for the rule field; enforcing it in the engine is the writer's call.
+- **D-2.** Go refuses a negative Observation of a non-negatable type, on both add and update. The user asked for the rule field; enforcing it in the engine is the writer's call.
 - **D-6 / AC-3.4.** With no rules loaded, the composer offers Negative, as today, and Go decides.
 - **D-7.** Re-committing the same Property in the combo box now keeps the value and polarity, for every value type, not only boolean. Today a Shift-Tab, Tab round trip clears a typed value.
 - **D-8.** `applyText(rowID:text:)` stays, because two row-edit tests drive it. The other dead row paths and their two strings are deleted.
+
+## Board check (2026-11-07)
+
+- The writer read the drawn board (export and the migrated design) against the brief. Frames 1–5, 7a, 7b, 8a and 8b match BV-1 – BV-7 and BV-W1.
+- Frame 6 drew the brief's own BV-4 exception: a negative yes/no from an outside catalog, shown with its checkbox. **User (2026-11-07): a yes/no is never negative, no exception.**
+- Fixed in the brief: BV-4 and BV-6 have no exception, and frame 6 is to be removed from the board.
+- Fixed in the plan: D-6 `offersNegative(propertyID:)` drops polarity, and `asDraft` always writes a boolean positive. D-7 no longer resets polarity. AC-2.4, AC-3.3, T-4 and T-6 are restated.
+- The board is not agreed yet.
 
 ## Round 1
 
