@@ -17,9 +17,6 @@ type Columns struct {
 	Boolean sql.NullInt64
 }
 
-// Dest is the scan targets, in column order: text, integer, boolean.
-func (c *Columns) Dest() []any { return []any{&c.Text, &c.Integer, &c.Boolean} }
-
 // Scalar is the scanned columns as a Scalar. HasBoolean is true only for 0 or 1.
 func (c Columns) Scalar() propertymeta.Scalar {
 	return propertymeta.Scalar{

@@ -35,9 +35,28 @@ func TestTypes(t *testing.T) {
 		}
 		seen[vt] = true
 	}
-	b, ok := propertymeta.Rule("boolean")
-	if !ok || b.ResearcherCreatable || !b.SingleOnly {
-		t.Errorf("Rule(boolean) = %+v, %v; want not creatable, single-only", b, ok)
+	flags := []struct {
+		valueType           string
+		researcherCreatable bool
+		singleOnly          bool
+	}{
+		{"text", true, false},
+		{"integer", true, false},
+		{"date", true, false},
+		{"name", true, false},
+		{"subject", true, false},
+		{"term", false, false},
+		{"depiction", false, false},
+		{"boolean", false, true},
+	}
+	if len(flags) != len(want) {
+		t.Fatalf("flags table has %d rows, want %d", len(flags), len(want))
+	}
+	for _, f := range flags {
+		r, ok := propertymeta.Rule(f.valueType)
+		if !ok || r.ResearcherCreatable != f.researcherCreatable || r.SingleOnly != f.singleOnly {
+			t.Errorf("Rule(%s) = %+v, %v; want creatable %v, single-only %v", f.valueType, r, ok, f.researcherCreatable, f.singleOnly)
+		}
 	}
 	if _, ok := propertymeta.Rule("nope"); ok {
 		t.Error("Rule(nope) found")

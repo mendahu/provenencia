@@ -255,7 +255,7 @@ struct PropertiesModelTests {
     /// one they may not, in an order that is not alphabetical. Go pins the real
     /// table (`TestGetPropertiesWorkspaceValueTypes`).
     private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
-        ("name", true, false), ("date", false, false),
+        ("name", true, false), ("integer", true, false), ("date", false, false),
     ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
@@ -290,7 +290,7 @@ struct PropertiesModelTests {
         let (model, session, _) = makeModel(store: store, types: [personType()])
         await warm(model, session: session)
         model.openCreate()
-        #expect(model.offeredValueTypes == ["name"])
+        #expect(model.offeredValueTypes == ["name", "integer"])
         let refused = PropertiesModel.Draft(label: "Born", valueType: "date", description: "", bindTypeIDs: [])
         #expect(!model.canSubmitCreate(refused))
     }
