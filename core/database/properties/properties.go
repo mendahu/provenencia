@@ -86,7 +86,7 @@ func Upsert(c *database.Catalog, p Property) ([]byte, error) {
 	if p.Cardinality == "" {
 		p.Cardinality = propertymeta.CardinalitySingle
 	}
-	if p.Key == "" || p.Label == "" || !vocabkey.ValidOrigin(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityOK(p.Cardinality) {
+	if p.Key == "" || p.Label == "" || !vocabkey.ValidOrigin(p.Origin) || !valueTypeOK(p.ValueType) || !cardinalityAllowed(p.ValueType, p.Cardinality) {
 		return nil, ErrInvalid
 	}
 	id := p.ID
@@ -149,7 +149,7 @@ func Create(tx *database.Tx, userID []byte, label, valueType, description, cardi
 	if cardinality == "" {
 		cardinality = propertymeta.CardinalitySingle
 	}
-	if label == "" || !valueTypeOK(valueType) || !cardinalityOK(cardinality) {
+	if label == "" || !valueTypeOK(valueType) || !cardinalityAllowed(valueType, cardinality) {
 		return Property{}, nil, ErrInvalid
 	}
 	if _, err := tx.Exec(sqlUpsert, id, key, vocabkey.OriginUser, label, database.NullString(description), valueType, cardinality); err != nil {
@@ -214,7 +214,7 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	if cardinality == "" {
 		cardinality = existing.Cardinality
 	}
-	if !cardinalityOK(cardinality) {
+	if !cardinalityAllowed(existing.ValueType, cardinality) {
 		return Property{}, nil, ErrInvalid
 	}
 	cardinalityChanged := cardinality != existing.Cardinality
@@ -388,24 +388,24 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 }
 
 func valueTypeOK(vt string) bool {
-	switch vt {
-	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction:
-		return true
-	default:
-		return false
-	}
+	_, ok := propertymeta.Rule(vt)
+	return ok
 }
 
 // researcherCreatable lists the value types a researcher may give a new
-// Property. It matches Swift's SubjectPropertyValueType.researcherCreatable;
-// term and depiction are Install/registry only.
+// Property: the propertymeta.Types rows marked creatable.
 func researcherCreatable(valueType string) bool {
-	switch valueType {
-	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate, propertymeta.ValueTypeName, propertymeta.ValueTypeSubject:
-		return true
-	default:
+	r, ok := propertymeta.Rule(valueType)
+	return ok && r.ResearcherCreatable
+}
+
+// cardinalityAllowed is cardinalityOK, and not multiple for a single-only type.
+func cardinalityAllowed(valueType, cardinality string) bool {
+	if !cardinalityOK(cardinality) {
 		return false
 	}
+	r, _ := propertymeta.Rule(valueType)
+	return !(r.SingleOnly && cardinality == propertymeta.CardinalityMultiple)
 }
 
 func cardinalityOK(cardinality string) bool {
