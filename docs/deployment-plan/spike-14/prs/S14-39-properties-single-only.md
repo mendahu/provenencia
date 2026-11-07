@@ -1,6 +1,6 @@
 # S14-39 — Properties page reads single-only
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S14-D9](../design/S14-D9-properties-single-only.md), board agreed 2026-11-07
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc` (Go wire vocabulary is a typed enum; views and models use the typed cases)
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; Swift keeps no copy); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; S14-36 plan D-11 (`singleOnly` mapped, read here) and its **Landed** note
 **Planned:** 2026-11-07 against `main` @ `aaf3b15`
-**Review:** [`S14-39-properties-single-only.review.md`](S14-39-properties-single-only.review.md) — Fits with changes — Ready with changes, round 1 answered; round 2 runs once the board is agreed
+**Review:** [`S14-39-properties-single-only.review.md`](S14-39-properties-single-only.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; no To user item open
 
 ### Implementer — read this first
 
@@ -45,8 +45,8 @@ Tests use a neutral rules fixture in which `integer` is creatable and single-onl
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | Rules with `integer` single-only; `model.holdsLockReason(valueType: "integer", origin: user)` | "Integer Properties hold one value" |
-| AC-1.2 | A draft with cardinality `multiple`, then `draft.chooseValueType("integer", singleOnly: true)` | `draft.valueType == "integer"`, `draft.cardinality == "single"` |
-| AC-1.3 | AC-1.2, then `draft.chooseValueType("name", singleOnly: false)` | cardinality stays `single`; `holdsLockReason(valueType: "name", origin: user)` is nil (the radios show) |
+| AC-1.2 | A draft with cardinality `multiple`, then `draft.chooseValueType("integer", holdsLocked: true)` | `draft.valueType == "integer"`, `draft.cardinality == "single"` |
+| AC-1.3 | AC-1.2, then `draft.chooseValueType("name", holdsLocked: false)` | cardinality stays `single`; `holdsLockReason(valueType: "name", origin: user)` is nil (the radios show) |
 | AC-1.4 | Create submitted after AC-1.2 | The stored Property has cardinality `single` (model-level: the draft carries it; Go's refusal of `multiple` is S14-36's `TestValueTypeRules`) |
 | AC-1.5 | No rules loaded; `holdsLockReason(valueType: "integer", origin: user)` | nil (Go decides) |
 
@@ -85,6 +85,7 @@ Tests use a neutral rules fixture in which `integer` is creatable and single-onl
 | Marking boolean creatable | S14-37 |
 | The composer's Yes / no editor | S14-37 (brief S14-D8) |
 | Value type labels in place of keys | not planned (user, 2026-11-07) |
+| A pigment on the create picker's segments | not planned (the kit `PVSegmentedControl` has no colour slot; the board's picker is plain) |
 | A Go change | not planned (S14-36 sends `single_only`; `properties.Update` refuses multiple) |
 | FakeStore refusing a single-only `multiple` | not planned (a seeded fake, working rule "FakeStore is a seeded fake") |
 | `SubjectPropertyValueType.label` falling back to "Text" for an unknown key | not planned (Go's CHECK allows only known keys) |
@@ -115,12 +116,12 @@ Verified at `aaf3b15`.
 | --- | --- | --- | --- |
 | D-1 | `PropertiesSnapshot.valueTypeRule(_ valueType: String) -> CatalogPropertyValueTypeRule?` *(new)* = `valueTypeRules.first { $0.valueType == valueType }`. It is the one lookup into Go's rules; S14-37's composer reads it too (its D-6 is changed to match, review M-1) | One lookup, no stored copy; a later flag needs no new lookup | `isSingleOnly(_:)` — one predicate per flag; a dictionary on the composer — a second copy |
 | D-2 | `PropertiesModel.holdsLockReason(valueType: String, origin: String) -> String?` *(new)*: `snapshot.valueTypeRule(valueType)?.singleOnly == true` → `L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(SubjectPropertyValueType.label(valueType)))`; else `origin != CatalogOrigin.user` → `L10n.string(L10n.Properties.holdsLocked)`; else nil (editable). `canEditCardinality` becomes `selectedProperty.map { holdsLockReason(valueType: $0.valueType, origin: $0.origin) == nil } ?? false`. A single-only type wins over a seeded origin | One place decides "locked?" and "why" for create and the inspector (review M-3); `setCardinality` is already guarded by `canEditCardinality` | Three model APIs and a view-built hint |
-| D-3 | `PropertiesModel.Draft` gains `mutating func chooseValueType(_ valueType: String, singleOnly: Bool)` *(new)*: sets `valueType`; when `singleOnly`, sets `cardinality = single`. And `mutating func toggleBind(typeID: String)` *(new)*, the body of today's toggle. The picker's `select` is `{ vt in draft?.chooseValueType(vt, singleOnly: model.snapshot.valueTypeRule(vt)?.singleOnly == true) }`; `PropertiesView.toggleBind(typeID:)` becomes `draft?.toggleBind(typeID: typeID)`. `PropertiesModel.toggleDraftBind(typeID:)` is deleted | Draft edits live on the draft; fits the Optional `@State` (`draft?.…`); removes a dead copy (review M-5, X-2) | An `inout` model method — an unwrap at the call site |
-| D-4 | `fileprivate struct PropertiesLockedValue<Content: View>: View` *(new, PropertiesView.swift)* `{ let reason: String; @ViewBuilder let content: Content }`: an `HStack(spacing: 6)` of `content` and the existing `lock.fill` image (12pt semibold, `PVColor.textFaint`, `.accessibilityLabel(Text(verbatim: reason))`, `.help(reason)`). Callers: the Value type row (`content` = its pill, `reason` = `L10n.string(L10n.Properties.valueTypeImmutable)`), `holdsRow`'s locked branch and the create Holds field (`content` = the One / Several `Text` in `PVFont.body(size: PVTypeScale.bodySmall)`, `PVColor.textPrimary`, as today) | Three sites, one look (review M-4, X-3); the board shows the reason as the lock's tooltip too | `PVIcon(.lock)` — a visible change the board did not draw |
-| D-5 | Create Holds field: when `model.holdsLockReason(valueType: draft.valueType, origin: CatalogOrigin.user)` is a reason, the `PVField(label: L10n.Properties.holds, hint: reason)` holds a `ZStack(alignment: .topLeading)` of the two radios, `.hidden()` and `.accessibilityHidden(true)` (they reserve the height, so Bind to subject types does not move: board frame 1), and `PropertiesLockedValue(reason: reason) { Text(L10n.Properties.holdsOne) }` with `.accessibilityIdentifier("properties.create.holds.locked")`; VoiceOver reads "Holds, One value, Yes / no Properties hold one value". Otherwise the radios and `holdsEventsHint`, as today | SO-1, SO-2; the user chose read-only "One value" drawn like the inspector row (2026-11-07); the board keeps the field's height | A disabled radio; a read-only `PVInput` (review M-7); a fixed `minHeight` — a number that drifts from the radios |
-| D-6 | Inspector: `holdsRow` shows the radios when `model.canEditCardinality`, else `PropertiesLockedValue(reason: model.holdsLockReason(…) ?? "")` with the One / Several text, as today | SO-3, SO-4 | — |
+| D-3 | `PropertiesModel.Draft` gains `mutating func chooseValueType(_ valueType: String, holdsLocked: Bool)` *(new)*: sets `valueType`; when `holdsLocked`, sets `cardinality = single`. And `mutating func toggleBind(typeID: String)` *(new)*, the body of today's toggle. The picker's `select` is `{ vt in draft?.chooseValueType(vt, holdsLocked: model.holdsLockReason(valueType: vt, origin: CatalogOrigin.user) != nil) }`: the same function that draws the lock decides the reset, so the field cannot show a lock the draft does not obey (round-2 M2-1). The one caller of `PropertiesView.toggleBind(typeID:)` calls `draft?.toggleBind(typeID: type.id)` and the view function is deleted. `PropertiesModel.toggleDraftBind(typeID:)` is deleted | Draft edits live on the draft; fits the Optional `@State` (`draft?.…`); one reader of the rule; removes two copies (review M-5, X-2) | An `inout` model method — an unwrap at the call site; a second `valueTypeRule(vt)?.singleOnly` read in the view |
+| D-4 | `fileprivate struct PropertiesLockedValue<Content: View>: View` *(new, PropertiesView.swift)* `{ let reason: String; var speaksReason = true; @ViewBuilder let content: Content }`: an `HStack(spacing: 6)` of `content` and the existing `lock.fill` image (12pt semibold, `PVColor.textFaint`, `.help(reason)`; `.accessibilityLabel(Text(verbatim: reason))` when `speaksReason`, else `.accessibilityHidden(true)`), the whole `.accessibilityElement(children: .combine)` so an identifier on it lands on one element. Callers: the Value type row (`content` = its pill, `reason` = `L10n.string(L10n.Properties.valueTypeImmutable)`), `holdsRow`'s locked branch and the create Holds field (`content` = the One / Several `Text` in `PVFont.body(size: PVTypeScale.bodySmall)`, `PVColor.textPrimary`, as today) | Three sites, one look (review M-4, X-3); the board shows the reason as the lock's tooltip too | `PVIcon(.lock)` — a visible change the board did not draw |
+| D-5 | Create Holds field: `if let reason = model.holdsLockReason(valueType: draft?.valueType ?? PropertyValueType.text.rawValue, origin: CatalogOrigin.user)`, the `PVField(label: L10n.Properties.holds, hint: reason)` holds a `ZStack(alignment: .topLeading)` of the two radios, `.hidden()` and `.accessibilityHidden(true)` (they reserve the height, so Bind to subject types does not move: board frame 1), and `PropertiesLockedValue(reason: reason, speaksReason: false) { Text(draft?.cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne) }` with `.accessibilityIdentifier("properties.create.holds.locked")`. The text is the draft's own cardinality (always One after D-3), so the field never shows what the draft will not submit. The hint carries the reason, so the lock is silent here; VoiceOver reads "Holds, One value, Yes / no Properties hold one value". With no reason (or no draft), the radios and `holdsEventsHint`, as today | SO-1, SO-2; the user chose read-only "One value" drawn like the inspector row (2026-11-07); the board keeps the field's height; the reason is spoken once (round-2 X2-4) | A disabled radio; a read-only `PVInput` (review M-7); a fixed `minHeight` — a number that drifts from the radios |
+| D-6 | Inspector: `holdsRow` shows the radios when `model.canEditCardinality`; else `if let reason = model.holdsLockReason(valueType: property.valueType, origin: property.origin)`, `PropertiesLockedValue(reason: reason) { … }` with the One / Several text, as today. The lock speaks the reason (the inspector has no hint) | SO-3, SO-4 | — |
 | D-7 | Copy (user, 2026-11-07): `L10n.Properties.holdsSingleOnly(typeLabel: String) -> String` *(new)*, key `properties.inspector.holdsSingleOnly`, default "%@ Properties hold one value", comment "Why Holds is locked for a single-only value type; argument is the type's label, such as Yes / no", built like `holdsGroup(label:)` | Reads "Yes / no Properties hold one value"; fits a later single-only type | A boolean-only sentence |
-| D-8 | `valueTypeForeground(_ valueType: String)` switches on `PropertyValueType(rawValue: valueType)`, exhaustively over the eight cases, each `Color.pvDynamic(light:dark:)` from the agreed board: `text` paper700 / paper300; `integer` copper700 / copper300; `date` lapis700 / lapis300; `name` iron700 / iron300; `subject` plum700 / plum300; `term` ochre900 / ochre300; `boolean` verdigris700 / verdigris300; `depiction` madder700 / madder300 (all `PVPalette`). `nil` → `PVColor.textSecondary`. `inspectorBody`'s `property.valueType == "term"` becomes `== PropertyValueType.term.rawValue` | `.cursor/rules/macos-client.mdc`: views use the typed cases; the next type fails to compile until it has a pigment (review M-2). The board measured each on the sunken pill: every pair passes 4.5:1 (ochre700 was 4.15:1, so `term` moves to ochre900; `text` moves from paper600 to paper700) | Adding `case "boolean":` to the string switch; one shade for both themes, as today |
+| D-8 | Eight `PVColor` tokens *(new, `macos/App/DesignSystem/Tokens/PVColor.swift`, `static let`, under `// MARK: Property value types (S7-D2 / S14-D9 VT_COLOR)` beside the subject-kind inks)*: `valueTypeTextInk`, `valueTypeIntegerInk`, `valueTypeDateInk`, `valueTypeNameInk`, `valueTypeSubjectInk`, `valueTypeTermInk`, `valueTypeBooleanInk`, `valueTypeDepictionInk`, each `pvDynamic(light:dark:)` from the agreed board: `text` paper700 / paper300; `integer` copper700 / copper300; `date` lapis700 / lapis300; `name` iron700 / iron300; `subject` plum700 / plum300; `term` ochre900 / ochre300; `boolean` verdigris700 / verdigris300; `depiction` madder700 / madder300 (all `PVPalette`). `valueTypeForeground(_ valueType: String)` switches on `PropertyValueType(rawValue: valueType)`, exhaustively over the eight cases, returning those tokens; `nil` → `PVColor.textSecondary`. `inspectorBody`'s `property.valueType == "term"` becomes `== PropertyValueType.term.rawValue` | `.cursor/rules/macos-client.mdc`: views use the typed cases; the next type fails to compile until it has a pigment (review M-2). Colour pairs live in `PVColor`, as `subjectPersonInk` and `personWomanInk` (a board-defined ink) do, built once (round-2 M2-2). The board measured each on the sunken pill: every pair passes 4.5:1 (ochre700 was 4.15:1, so `term` moves to ochre900; `text` moves from paper600 to paper700) | Adding `case "boolean":` to the string switch; one shade for both themes, as today; `pvDynamic` pairs inline in feature code |
 | D-9 | Test fixture: `goValueTypeRules` gains single-only on `integer`: `("name", true, false), ("integer", true, true), ("date", false, false)`. `userProperty` gains `valueType: String = "text"` | The rule is general; one fixture for S14-37 to extend (review M-6, X-6) | A second, boolean fixture |
 | D-10 | Keys stay: the pill and picker show `boolean` (user, 2026-11-07) | Every type keeps its mono key | Labels |
 
@@ -140,9 +141,10 @@ Searched: `singleOnly`, `creatableValueTypes`, `acceptsValueType`, `canEditCardi
 | `PropertiesLockedValue` | fileprivate view | two inline `lock.fill` rows | Replaces them |
 | `L10n.Properties.holdsSingleOnly(typeLabel:)` | key | `holdsGroup(label:)` | Same namespace and shape |
 | Typed `valueTypeForeground` | switch | the string switch | Replaces it |
+| `PVColor.valueTypeTextInk` and its seven siblings | tokens | `PVColor.subjectPersonInk`, `personWomanInk` | Same ink family, in the token file |
 
 **Builds on.** S14-36's rules on the snapshot; the inspector's locked Holds row; `PropertyValueType`.
-**Deletes.** `PropertiesModel.toggleDraftBind(typeID:)`; the body of `PropertiesView.toggleBind(typeID:)`; the two inline lock rows; the string switch in `valueTypeForeground`; the `"term"` literal.
+**Deletes.** `PropertiesModel.toggleDraftBind(typeID:)`; `PropertiesView.toggleBind(typeID:)`; the two inline lock rows; the string switch in `valueTypeForeground`; the `"term"` literal.
 **Next adds.** S14-37 reads `valueTypeRule(_:)?.negatable` in the composer and flips boolean creatable; the picker then offers it and every rule here applies. A later single-only type needs only its `Types` row in Go; a later value type needs a pigment to compile.
 
 ### Reach
@@ -204,7 +206,7 @@ Dark: the board's theme switch shows every frame with the 300 shades.
 
 ### Strings
 
-New: `properties.inspector.holdsSingleOnly` (D-7). Removed: none.
+New: `properties.inspector.holdsSingleOnly` (D-7). Changed: the `comment` of `properties.inspector.valueTypeImmutable` and `properties.inspector.holdsLocked` (`L10n.swift` ~7447, ~7489) says "lock's spoken label and tooltip", since D-4 shows them as tooltips. Removed: none.
 
 ## 7. Steps
 
@@ -224,9 +226,9 @@ Do: D-4, D-5, D-6.
 Check: `xcodebuild -project macos/Provenencia.xcodeproj -scheme Provenencia -destination 'platform=macOS' build` succeeds with no Swift warning; manual checks 1–3.
 
 **STEP-4 — Pill pigments, typed**
-Files: `macos/App/Features/Catalog/SubjectTypeChrome.swift`, `PropertiesView.swift` (the `"term"` literal). Skill: `add-ui-component`.
-Do: D-8.
-Check: the build succeeds; manual check 4.
+Files: `macos/App/DesignSystem/Tokens/PVColor.swift`, `macos/App/Features/Catalog/SubjectTypeChrome.swift`, `PropertiesView.swift` (the `"term"` literal); `macos/ProvenenciaTests/PropertiesModelTests.swift`. Skill: `add-ui-component`.
+Do: D-8. Add T-4.
+Check: T-4 passes; manual check 4.
 
 **STEP-5 — Tests pass whole**
 Files: none new.
@@ -244,10 +246,11 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `PropertiesModelTests` `singleOnlyCreateHoldsOneValue` *(new)* | `store.valueTypeRules = goValueTypeRules`, warm; `holdsLockReason(valueType: "integer", origin: user)` = `holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))`; draft `multiple` → `chooseValueType("integer", singleOnly: true)` → `single`; → `chooseValueType("name", singleOnly: false)` → still `single`, reason nil; submit `integer` → stored `single` | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1, D-2, D-3, D-7 |
+| T-1 | Swift | `PropertiesModelTests` `singleOnlyCreateHoldsOneValue` *(new)* | `store.valueTypeRules = goValueTypeRules`, warm; `holdsLockReason(valueType: "integer", origin: user)` = `holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))`; a draft (label "Score", `multiple`) → `chooseValueType("name", holdsLocked: false)` → still `multiple`, reason nil → `chooseValueType("integer", holdsLocked: true)` → `single`; `model.submitCreate(thatDraft)` → the stored `integer` Property has `single` | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1, D-2, D-3, D-7 |
 | T-2 | Swift | `PropertiesModelTests` `singleOnlyUserPropertyHoldsIsLocked` *(new)* | rules seeded; `userProperty(valueType: "integer")` selected → `canEditCardinality` false, `setCardinality("multiple")` false, store unchanged; `userProperty(valueType: "name")` → true; `nameProperty()` (seeded `name`) → false, reason `holdsLocked` | AC-2.1, AC-2.2, AC-2.3, D-2 |
 | T-3 | Swift | `PropertiesModelTests` `singleOnlyWaitsForTheRules` *(new)* | no rules (FakeStore default); `userProperty(valueType: "integer")` → `canEditCardinality` true; `holdsLockReason(valueType: "integer", origin: user)` nil | AC-1.5, AC-2.4 |
-| — | manual | §10 | Holds field, inspector, pills, picker, Wide | AC-3.1, AC-3.2, AC-3.3, SO-5, SO-6, SO-W1, D-4, D-8 |
+| T-4 | Swift | `PropertiesModelTests` `valueTypeInksAreDistinct` *(new)* | for the eight cases listed in the test (`[.text, .integer, .date, .name, .subject, .term, .depiction, .boolean]`; the enum is not `CaseIterable`), `NSColor(PropertiesTypeChrome.valueTypeForeground(case.rawValue))` resolved under `.aqua` and `.darkAqua` → eight distinct colours per appearance; `valueTypeForeground("nope") == PVColor.textSecondary` | AC-3.1, AC-3.2, D-8 |
+| — | manual | §10 | Holds field, inspector, pills, picker, Wide | AC-3.3, SO-5, SO-6, SO-W1, D-4, D-8 |
 
 T-1 – T-3 are model-level: FakeStore does not enforce the rule (Out); Go's refusal is S14-36's `TestValueTypeRules`. Must stay green: everything `scripts/check-pr.sh` runs; most likely to break: `PropertiesModelTests` (the fixture change), cardinality tests.
 
@@ -259,7 +262,7 @@ T-1 – T-3 are model-level: FakeStore does not enforce the rule (Out); Go's ref
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
-- [ ] Sweep: `rg -n "toggleDraftBind|valueType == \"term\"" macos .agents docs/*.md` finds nothing; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Sweep: `rg -n "toggleDraftBind|func toggleBind\(typeID|valueType == \"term\"" macos/App .agents docs/*.md` finds only `Draft.toggleBind`; `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none)
 - [ ] UI matches the S14-D9 board and inventory; no new kit primitive
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — patch
@@ -297,7 +300,7 @@ Then `git checkout core/propertymeta/propertymeta.go` before committing.
 
 ## 12. Open questions
 
-None. The board is agreed; `review-plan` round 2 runs before Planned.
+None.
 
 ## 13. PR
 
