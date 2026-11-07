@@ -151,22 +151,23 @@ func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Li
 	return out
 }
 
-// properties returns the units, ascending, whose values the two members agree
-// or partly agree on. A unit counts once, with its pooled properties.
+// properties returns the keys, ascending, whose values the two members agree
+// or partly agree on. A property counts once under its key, with its pooled
+// properties.
 func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.PropertyKey {
-	units := map[vocabkey.PropertyKey]struct{}{}
+	keys := map[vocabkey.PropertyKey]struct{}{}
 	for _, v := range []subjectcompare.Values{x.Values, y.Values} {
-		for key := range v {
-			if u, ok := cfg.Subject.Unit(vocabkey.Person, key); ok {
-				units[u] = struct{}{}
+		for p := range v {
+			if key, ok := cfg.Subject.CountsUnder(vocabkey.Person, p); ok {
+				keys[key] = struct{}{}
 			}
 		}
 	}
 	var out []vocabkey.PropertyKey
-	for _, u := range slices.Sorted(maps.Keys(units)) {
-		res := subjectcompare.CompareProperty(vocabkey.Person, u, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
+	for _, key := range slices.Sorted(maps.Keys(keys)) {
+		res := subjectcompare.CompareProperty(vocabkey.Person, key, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
 		if res.Outcome == propertycompare.OutcomeAgree || res.Outcome == propertycompare.OutcomePartial {
-			out = append(out, u)
+			out = append(out, key)
 		}
 	}
 	return out

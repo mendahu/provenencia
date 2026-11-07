@@ -385,7 +385,7 @@ func TestMeta(t *testing.T) {
 	}
 }
 
-func TestUnit(t *testing.T) {
+func TestCountsUnder(t *testing.T) {
 	rules := matchregistry.Default().Subject
 	for _, c := range []struct {
 		kind vocabkey.SubjectType
@@ -402,9 +402,9 @@ func TestUnit(t *testing.T) {
 		{vocabkey.Event, start, "", false},
 		{vocabkey.Event, date, date, true},
 	} {
-		got, ok := rules.Unit(c.kind, c.key)
+		got, ok := rules.CountsUnder(c.kind, c.key)
 		if got != c.want || ok != c.ok {
-			t.Errorf("Unit(%s, %s) = %q, %v; want %q, %v", c.kind, c.key, got, ok, c.want, c.ok)
+			t.Errorf("CountsUnder(%s, %s) = %q, %v; want %q, %v", c.kind, c.key, got, ok, c.want, c.ok)
 		}
 	}
 }
