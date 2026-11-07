@@ -177,7 +177,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
-| S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote or a bridge delete, search documents and stored summary rows of the link's ends stay stale | — | — | — | Scoped |
+| S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote, the search documents of the ends of the links it takes back stay stale; one read of a bridge's ends for Unpromote and bridge delete, which stops walking from a place end | — | — | [S14-38-unpromote-stale-search-documents.md](prs/S14-38-unpromote-stale-search-documents.md) | Draft |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Landed #730 |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; Go's value-type rules table sent to the app; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | [S14-36-boolean-value-type-engine.md](prs/S14-36-boolean-value-type-engine.md) | Landed #733 |
@@ -534,10 +534,10 @@ One PR (user, 2026-11-01).
 
 #### S14-38 — Unpromote leaves stale search documents
 
-**Ships.** After Unpromote or a bridge delete, the search documents and stored summary rows of the ends of the link are rewritten, not left as they were. Bug, found in the S14-33 ship loop; it predates S14-33. Probe: 234 stale documents over 451 unpromotes, and 45 stale display rows. Likely cause: `conclusionsummaries.AssociationEndpoints` joins `canonical_entities`, so a deleted association has no ends to walk from. A Go test that unpromotes and deletes a bridge, then compares the documents with `searchindex.RebuildAll`.
-**Not this PR.** Reprojection cost (`docs/ideas/structural-debt.md`).
+**Ships.** After Unpromote, the search documents and stored rows of the ends of the links it takes back are rewritten, not left as they were. Bug, found in the S14-33 ship loop; it predates S14-33. Probe: 234 stale documents over 451 unpromotes. Cause: the association's value rows go by CASCADE inside the write, so `conclusionsummaries.AssociationEndpoints` finds no ends. The deleted bridge claim names its read ends through the effects registry (`effects.LinkEndHandles`), and bridge delete reads the same ends, so it no longer walks from a location's place end (S14-33 FU-4). The unread ends are marked on `connectrules.Endpoint`. Bridge delete already rewrote its ends, and display rows were correct in the planning probe.
+**Not this PR.** Telling the app about an unread place end without a walk (`docs/ideas/structural-debt.md`); reprojection cost (`docs/ideas/structural-debt.md`).
 **Check.** Unpromote a person who has a filed participation, then search for the event: its document matches a rebuild.
-**Context.** S14-33 ship log (`FU-1`); `core/database/autoreconciler`, `core/database/conclusionsummaries/dependents.go`.
+**Context.** S14-33 ship log (`FU-1`, `FU-4`); `core/database/effects`, `core/database/conclusionsummaries/dependents.go`, `core/database/subjects`.
 
 ### Slice 7d — List and nav polish
 
