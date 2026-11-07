@@ -35,6 +35,7 @@ import (
 	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/workspacelocation"
 )
 
 // The app reads Go's wire vocabulary, and mirrors some of Go's rules and
@@ -52,6 +53,7 @@ const (
 	swiftCatalogMut                 = "../../macos/App/Features/Workspace/Session/CatalogMutation.swift"
 	swiftSearchKind                 = "../../macos/App/Platform/CatalogSearchKind.swift"
 	swiftNamePartType               = "../../macos/App/Platform/NamePartType.swift"
+	swiftWorkspaceLocation          = "../../macos/App/Features/Workspace/WorkspaceLocation.swift"
 
 	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
@@ -63,6 +65,10 @@ const (
 	swiftEvidencePlacement  = "../../macos/App/Features/Catalog/Connect/EvidenceGraphPlacement.swift"
 	swiftBoundedImageDecode = "../../macos/App/Platform/BoundedImageDecode.swift"
 )
+
+// swiftOnlySurfaces are the SourceSurface cases Go never opens: Promote is a
+// Swift-only place.
+var swiftOnlySurfaces = []string{"promote"}
 
 // swiftEnumBody returns the source between `enum <name>` and its closing
 // brace at column 0.
@@ -524,8 +530,11 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "value types", path: swiftValueKinds, enum: "PropertyValueType", re: rawCase,
-			want: sorted(propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDate,
-				propertymeta.ValueTypeName, propertymeta.ValueTypeSubject, propertymeta.ValueTypeTerm, propertymeta.ValueTypeDepiction),
+			want: sorted(propertymeta.ValueTypes()...),
+		},
+		{
+			name: "source surfaces", path: swiftWorkspaceLocation, enum: "SourceSurface", re: rawCase,
+			want: sorted(append([]string{workspacelocation.SurfacePage, workspacelocation.SurfaceGraph, workspacelocation.SurfaceCitationComposer}, swiftOnlySurfaces...)...),
 		},
 		{
 			name: "cardinality", path: swiftValueKinds, enum: "PropertyCardinality", re: rawCase,

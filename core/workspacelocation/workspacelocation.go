@@ -16,7 +16,7 @@ const (
 	Places      = "places"
 )
 
-// Surface values match macOS SourceSurface raw values.
+// Surface values match macOS SourceSurface raw values; TestSwiftVocabularyMatchesGo holds them.
 const (
 	SurfacePage             = "page"
 	SurfaceGraph            = "graph"
