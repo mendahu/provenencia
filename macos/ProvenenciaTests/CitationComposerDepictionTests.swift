@@ -263,7 +263,7 @@ struct CitationComposerDepictionTests {
             id: likenessID, key: "likeness", origin: "provenencia", label: "Likeness",
             description: "", valueType: "depiction"
         )
-        let rebuilt = try #require(row.asCatalogObservation(property: property).0)
+        let rebuilt = try #require(row.asCatalogObservation(property: property, vocabulary: .empty).0)
         #expect(rebuilt.valueDepictionID == "dep-1")
 
         observation.depiction = CatalogDepictionValue(regionJSON: "", imageRelPath: savedRelPath)

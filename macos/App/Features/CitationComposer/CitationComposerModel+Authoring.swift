@@ -223,6 +223,7 @@ extension CitationComposerModel {
     }
 
     func applyObservationProperty(_ propertyID: String, values: inout ObservationRowValues) {
+        guard propertyID != values.propertyID else { return }
         values.propertyID = propertyID
         values.clearValue()
     }
@@ -515,7 +516,7 @@ extension CitationComposerModel {
             baseline: nil,
             state: .draft
         )
-        let (draftOrNil, draftError) = row.asDraft(property: property)
+        let (draftOrNil, draftError) = row.asDraft(property: property, vocabulary: vocabulary)
         if let draftError {
             draft.error = draftError
             authoring = .property(draft)

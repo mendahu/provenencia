@@ -25,6 +25,7 @@ struct CitationComposerModelTests {
     private let relatedToPropertyID = "prop-related-to"
     private let rolePropertyID = "prop-role"
     private let relationshipTypePropertyID = "prop-relationship-type"
+    private let canReadPropertyID = "prop-can-read"
 
     private func makeStore() -> FakeStore {
         let store = FakeStore()
@@ -50,10 +51,20 @@ struct CitationComposerModelTests {
                 label: "Relationship type",
                 valueType: "term"
             ),
+            property(id: canReadPropertyID, key: "can_read", label: "Can read", valueType: "boolean"),
+        ]
+        store.valueTypeRules = [
+            CatalogPropertyValueTypeRule(
+                valueType: "text", researcherCreatable: true, singleOnly: false, negatable: true
+            ),
+            CatalogPropertyValueTypeRule(
+                valueType: "boolean", researcherCreatable: true, singleOnly: true, negatable: false
+            ),
         ]
         store.subjectTypePropertiesByType[personTypeID] = [
             field(store.propertiesByProject[projectDir]![0], 0),
             field(store.propertiesByProject[projectDir]![1], 1),
+            field(store.propertiesByProject[projectDir]![8], 2),
         ]
         store.subjectTypePropertiesByType[eventTypeID] = [
             field(store.propertiesByProject[projectDir]![3], 0),
@@ -955,12 +966,124 @@ struct CitationComposerModelTests {
                 vocabulary: vocabulary
             ) == ["Portrait"]
         )
+        func canRead(_ value: Bool) -> CatalogObservation {
+            canReadObservation(id: "cr", ref: "OBS-CR", citationID: "cit-1", value: value)
+        }
+        let yes = CitationComposerAuthoring.groups(
+            observations: [ObservationRow.loaded(from: canRead(true))], connections: [], vocabulary: vocabulary
+        ).flatMap(\.lines)
+        let no = CitationComposerAuthoring.groups(
+            observations: [ObservationRow.loaded(from: canRead(false))], connections: [], vocabulary: vocabulary
+        ).flatMap(\.lines)
+        #expect(yes.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanYes)])
+        #expect(no.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanNo)])
+        #expect(!yes[0].mono && !no[0].mono)
         var draft = ObservationRow.draft(subjectID: subjectID)
         draft.values.propertyID = occupationPropertyID
         #expect(
             CitationComposerAuthoring.groups(observations: [draft], connections: [], vocabulary: vocabulary)
                 .flatMap(\.lines).isEmpty
         )
+    }
+
+    private func chooseProperty(_ model: CitationComposerModel, _ propertyID: String) {
+        model.mutateProperty { model.applyObservationProperty(propertyID, values: &$0.values) }
+    }
+
+    private func draftValues(_ model: CitationComposerModel) -> ObservationRowValues? {
+        guard case .property(let draft) = model.authoring else { return nil }
+        return draft.values
+    }
+
+    @Test func booleanAnswerSavesOnlyOnceChosen() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        let offered = model.vocabulary.propertyOptions(
+            forSubjectID: subjectID, capabilities: model.depictionCapabilities
+        )
+        #expect(offered.contains { $0.id == canReadPropertyID })
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        #expect(!model.authoringCanConfirm)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = false }
+        #expect(model.authoringCanConfirm)
+        await model.saveAuthoring()
+        #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations") || $0.hasPrefix("addObservationsToCitation") })
+        let stored = store.observationsByGraph[graphID]?.filter { $0.propertyID == canReadPropertyID } ?? []
+        #expect(stored.count == 1)
+        #expect(stored.first?.valueBoolean == false)
+        let line = model.subjectGroups.flatMap(\.lines).first { $0.label == "Can read" }
+        #expect(line?.valueText == L10n.string(L10n.Properties.valueBooleanNo))
+    }
+
+    @Test func propertyChangeResetsOnlyWhenThePropertyChanges() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        model.beginPropertyDraft(subjectID: subjectID)
+        chooseProperty(model, occupationPropertyID)
+        model.mutateProperty { $0.values.polarity = ObservationPolarity.negative.rawValue }
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        await model.saveAuthoring()
+        let stored = store.observationsByGraph[graphID]?.filter { $0.propertyID == canReadPropertyID } ?? []
+        #expect(stored.first?.polarity == ObservationPolarity.positive.rawValue)
+
+        model.beginPropertyDraft(subjectID: subjectID)
+        chooseProperty(model, canReadPropertyID)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        chooseProperty(model, occupationPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == nil)
+        #expect(draftValues(model)?.valueFields.valueText == "")
+
+        chooseProperty(model, canReadPropertyID)
+        model.mutateProperty { $0.values.valueFields.valueBoolean = true }
+        chooseProperty(model, canReadPropertyID)
+        #expect(draftValues(model)?.valueFields.valueBoolean == true)
+    }
+
+    @Test func editingABooleanOpensOnItsAnswer() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)])
+        let model = makeModel(store: store, citationID: "cit-1", observationID: "obs-1")
+        await model.prepare()
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(values.valueFields.valueBoolean == true)
+        #expect(model.observations[0].state == .saved)
+        store.recordedCalls = []
+        await model.saveEdit()
+        #expect(!store.recordedCalls.contains { $0.hasPrefix("updateObservation") })
+    }
+
+    @Test func negativeIsOfferedByGoRule() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let vocabulary = model.vocabulary
+        #expect(!vocabulary.offersNegative(propertyID: canReadPropertyID))
+        #expect(vocabulary.offersNegative(propertyID: occupationPropertyID))
+        var bare = vocabulary
+        bare.fields.valueTypeRules = []
+        #expect(bare.offersNegative(propertyID: canReadPropertyID))
+
+        let property = property(id: canReadPropertyID, key: "can_read", label: "Can read", valueType: "boolean")
+        var row = ObservationRow.loaded(
+            from: canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)
+        )
+        row.values.polarity = ObservationPolarity.negative.rawValue
+        #expect(row.asDraft(property: property, vocabulary: vocabulary).0?.polarity == ObservationPolarity.positive.rawValue)
+        #expect(row.asDraft(property: property, vocabulary: bare).0?.polarity == ObservationPolarity.negative.rawValue)
+        #expect(ObservationRow.draft(subjectID: subjectID).isEmptyDraft)
     }
 
     @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
@@ -1394,6 +1517,18 @@ struct CitationComposerModelTests {
             valueText: "miller", valueInteger: nil, valueDateID: "", valueNameID: "", valueSubjectID: "",
             valueTermID: "", propertyKey: "occupation", propertyLabel: "Occupation",
             propertyValueType: "text"
+        )
+    }
+
+    private func canReadObservation(
+        id: String, ref: String, citationID: String, value: Bool
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: ref, citationID: citationID, subjectID: subjectID,
+            propertyID: canReadPropertyID, polarity: ObservationPolarity.positive.rawValue,
+            valueText: "", valueInteger: nil, valueBoolean: value, valueDateID: "", valueNameID: "",
+            valueSubjectID: "", valueTermID: "", propertyKey: "can_read", propertyLabel: "Can read",
+            propertyValueType: "boolean"
         )
     }
 

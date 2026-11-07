@@ -95,6 +95,7 @@ struct ObservationRow: Identifiable, Equatable {
         var fields = CitationObservationValue.Fields(
             valueText: observation.valueText,
             valueIntegerText: observation.valueInteger.map(String.init) ?? "",
+            valueBoolean: observation.valueBoolean,
             valueTermID: observation.valueTermID,
             valueSubjectID: observation.valueSubjectID,
             dateDraft: observation.date.map(DateValueDraft.init(from:)) ?? .empty(),
@@ -123,7 +124,10 @@ struct ObservationRow: Identifiable, Equatable {
         )
     }
 
-    func asDraft(property: CatalogProperty) -> (CatalogObservationDraft?, String?) {
+    func asDraft(
+        property: CatalogProperty,
+        vocabulary: CitationComposerVocabulary
+    ) -> (CatalogObservationDraft?, String?) {
         if values.subjectID.isEmpty {
             return (nil, L10n.string(L10n.CitationComposer.subjectRequiredError))
         }
@@ -131,6 +135,7 @@ struct ObservationRow: Identifiable, Equatable {
             subjectID: values.subjectID,
             propertyID: property.id,
             polarity: values.polarity == ObservationPolarity.negative.rawValue
+                && vocabulary.offersNegative(propertyID: property.id)
                 ? ObservationPolarity.negative.rawValue
                 : ObservationPolarity.positive.rawValue
         )
@@ -144,11 +149,14 @@ struct ObservationRow: Identifiable, Equatable {
         return (draft, nil)
     }
 
-    func asCatalogObservation(property: CatalogProperty) -> (CatalogObservation?, String?) {
+    func asCatalogObservation(
+        property: CatalogProperty,
+        vocabulary: CitationComposerVocabulary
+    ) -> (CatalogObservation?, String?) {
         guard let persistedID, let persistedRef else {
             return (nil, L10n.string(L10n.CitationComposer.missingPropertyError))
         }
-        let (draft, message) = asDraft(property: property)
+        let (draft, message) = asDraft(property: property, vocabulary: vocabulary)
         if let message { return (nil, message) }
         guard let draft else { return (nil, message) }
         return (
@@ -161,6 +169,7 @@ struct ObservationRow: Identifiable, Equatable {
                 polarity: draft.polarity,
                 valueText: draft.valueText,
                 valueInteger: draft.valueInteger,
+                valueBoolean: draft.valueBoolean,
                 valueDateID: draft.valueDateID,
                 date: draft.date,
                 valueNameID: draft.valueNameID,
@@ -288,7 +297,7 @@ final class CitationObservationRows {
             markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.missingPropertyError))
             return
         }
-        let (draftOrNil, draftError) = row.asDraft(property: property)
+        let (draftOrNil, draftError) = row.asDraft(property: property, vocabulary: context.vocabulary)
         if let draftError {
             markError(rowID: rowID, message: draftError)
             return
@@ -311,7 +320,7 @@ final class CitationObservationRows {
                 }
                 context.applyWrite(written.1)
             } else {
-                let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
+                let (observationOrNil, updateError) = row.asCatalogObservation(property: property, vocabulary: context.vocabulary)
                 if let updateError {
                     markError(rowID: rowID, message: updateError)
                     return

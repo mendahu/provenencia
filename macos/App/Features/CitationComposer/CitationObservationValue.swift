@@ -5,6 +5,8 @@ enum CitationObservationValue {
     struct Fields: Equatable {
         var valueText: String = ""
         var valueIntegerText: String = ""
+        /// nil is "not chosen"; a yes/no is saved only once one is picked.
+        var valueBoolean: Bool?
         var valueTermID: String = ""
         var valueSubjectID: String = ""
         var dateDraft: DateValueDraft = .empty()
@@ -20,20 +22,22 @@ enum CitationObservationValue {
 
     /// Dialog confirm. Subject values are saved from loaded rows, not picked in the dialog.
     static func isDialogValid(valueType: String, fields: Fields) -> Bool {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
+        switch PropertyValueType(rawValue: valueType) {
+        case .text:
             return !fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case PropertyValueType.integer.rawValue:
+        case .integer:
             return Int64(fields.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-        case PropertyValueType.term.rawValue:
+        case .boolean:
+            return fields.valueBoolean != nil
+        case .term:
             return !fields.valueTermID.isEmpty
-        case PropertyValueType.date.rawValue:
+        case .date:
             return fields.dateDraft.isValid
-        case PropertyValueType.name.rawValue:
+        case .name:
             return fields.nameDraft.isValid
-        case PropertyValueType.depiction.rawValue:
+        case .depiction:
             return fields.depictionDraft.hasRegion
-        default:
+        case .subject, nil:
             return false
         }
     }
@@ -44,29 +48,32 @@ enum CitationObservationValue {
         fields: Fields,
         to draft: inout CatalogObservationDraft
     ) -> Failure? {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
+        switch PropertyValueType(rawValue: valueType) {
+        case .text:
             draft.valueText = fields.valueText
-        case PropertyValueType.integer.rawValue:
+        case .integer:
             guard let value = Int64(fields.valueIntegerText) else { return .invalidInteger }
             draft.valueInteger = value
-        case PropertyValueType.term.rawValue:
+        case .boolean:
+            guard let value = fields.valueBoolean else { return .unsupported }
+            draft.valueBoolean = value
+        case .term:
             draft.valueTermID = fields.valueTermID
-        case PropertyValueType.date.rawValue:
+        case .date:
             guard fields.dateDraft.isValid else { return .invalidDate }
             draft.date = fields.dateDraft.toInput()
-        case PropertyValueType.name.rawValue:
+        case .name:
             guard fields.nameDraft.isValid else { return .unsupported }
             let input = fields.nameDraft.toInput()
             draft.nameForm = input.form
             draft.nameParts = input.parts
-        case PropertyValueType.subject.rawValue:
+        case .subject:
             guard !fields.valueSubjectID.isEmpty else { return .unsupported }
             draft.valueSubjectID = fields.valueSubjectID
-        case PropertyValueType.depiction.rawValue:
+        case .depiction:
             // The model attaches the rendered image after this (it cannot render here).
             guard fields.depictionDraft.hasRegion else { return .unsupported }
-        default:
+        case nil:
             return .unsupported
         }
         return nil
