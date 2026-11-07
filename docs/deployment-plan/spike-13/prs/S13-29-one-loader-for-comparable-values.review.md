@@ -35,7 +35,7 @@ Maintainability (fresh): **Fits with changes** — every round-1 answer holds; o
 
 | ID | Severity | Finding | Answer |
 | --- | --- | --- | --- |
-| M-11 | blocker | `subjectcompare.Subject` and the `recordlinks` guard row count on S13-26 doing work its Planned plan does not do (flat `Member`, no `readerPackages` row) | **To user.** Open question 1: which PR lands first; recommendation S13-29 first, S13-26's D-2 embeds `subjectcompare.Subject` and its STEP-3 adds the row |
+| M-11 | blocker | `subjectcompare.Subject` and the `recordlinks` guard row count on S13-26 doing work its Planned plan does not do (flat `Member`, no `readerPackages` row) | **To user → answered 2026-11-07: S13-26 had already landed (#736).** So this PR does the reshape: D-15 (`Member` embeds `subjectcompare.Subject`), D-11 adds the `recordlinks` row unconditionally; base refreshed to `82547284`; Current state gains the `recordlinks` row |
 | X-2 | blocker | Who adds the `recordlinks` row was conditional on a package that does not exist | **Fixed in part.** D-11 has the `evidencelayer` row only; the `recordlinks` row's owner is M-11's question |
 | X-1 | blocker | The DoD sweep hit historical plan docs and could never pass | **Fixed.** The sweep covers `.agents/`, `.cursor/rules/`, `docs/*.md`, `docs/ideas/`; plans and logs under `docs/deployment-plan/` are records and are not edited |
 | X-3 | major | Moved bodies use `f.t`/`f.c`/`f.y`; `fixture`'s `t` was not named | **Fixed.** D-13: bodies read `r.T`, `r.C`, `r.y`; `fixture` keeps `t`, `c`, `source`, `artifact` |
@@ -53,4 +53,4 @@ Maintainability (fresh): **Fits with changes** — every round-1 answer holds; o
 | M-7 side effect | minor | `MemoSnapshotForTest` now builds on a miss; the `LayerOK` check is dead | **Fixed.** D-12: doc rewritten, `LayerOK` and its check removed; T-3 carries the proof |
 | Q4 | minor | `graphalign.Subject` alias and `subjectprofile.Subject` beside `subjectcompare.Subject` | Logged. The alias goes when `graphalign.Handle` folds in (structural-debt entry, STEP-8) |
 
-Two rounds done. Open: M-11, to the user. The plan is Planned once it is answered.
+Two rounds done. M-11 answered by the user 2026-11-07; the plan was refreshed against `main` @ `82547284` (S13-26 landed: no Current state row broke; `recordlinks.Member` is the only new touchpoint). No blocker open. **Planned.**
