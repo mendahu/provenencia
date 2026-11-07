@@ -7446,7 +7446,7 @@ enum L10n {
         )
         static let valueTypeImmutable = LocalizedStringResource(
             "properties.inspector.valueTypeImmutable",
-            defaultValue: "Immutable after create",
+            defaultValue: "Cannot be changed once the property exists",
             comment: "The lock's spoken label and tooltip beside value type in the inspector"
         )
         static let holds = LocalizedStringResource(

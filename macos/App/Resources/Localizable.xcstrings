@@ -10151,7 +10151,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Immutable after create"
+            "value": "Cannot be changed once the property exists"
           }
         }
       }
