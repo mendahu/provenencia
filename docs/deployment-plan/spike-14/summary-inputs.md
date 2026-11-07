@@ -37,11 +37,11 @@ An input key is one of:
 
 | Key | Recorded by | Changes when |
 | --- | --- | --- |
-| A handle's values `(H, values)` | `Graph.Node(H)` called by a composer inside a scope | H's stored value rows move (the existing `SameDisplayRows` check in `recomputeBatch`), H is merged or deleted |
-| A handle's links of one bridge at one end `(H, bridge, end)` | `Graph.Follow(H, hop)` inside a scope. `Follow`'s own internal `Node(H)` records nothing more | A link of that bridge with H at that end is created, deleted or merged away, or its values move: a filtered hop (`EventsOfSubject` keeps role subject, `ParentsOfPlace` keeps part_of) can start or stop returning a link whose role or type changed, so the key covers every link of the bridge at that end, not only those the filter returned |
-| An association's values `(A, values)` | `Follow` for each link it returns, and `Node(A)` | A's rows move (role, type, link dates) or A is deleted |
+| A handle's values `(H, values)` | `InputScope.Node(H)`: a composer reads through its row's `graphcache.InputScope` | H's stored value rows move (the existing `SameDisplayRows` check in `recomputeBatch`), H is merged or deleted |
+| A handle's links of one bridge at one end `(H, bridge, end)` | `InputScope.Follow(H, hop)`. `Follow`'s own internal `Node(H)` records nothing more | A link of that bridge with H at that end is created, deleted or merged away, or its values move: a filtered hop (`EventsOfSubject` keeps role subject, `ParentsOfPlace` keeps part_of) can start or stop returning a link whose role or type changed, so the key covers every link of the bridge at that end, not only those the filter returned |
+| An association's values `(A, values)` | `InputScope.Follow` for each link it returns, and `InputScope.Node(A)` | A's rows move (role, type, link dates) or A is deleted |
 
-`Nodes(ids)` is a prefetch and records nothing. Vocabulary labels (the one raw query in `compose.go`, `loadVocab`) are not handle inputs. They follow the existing vocabulary drop, which does not rewrite stored search documents (logged in [`docs/ideas/structural-debt.md`](../../ideas/structural-debt.md)).
+`InputScope.Nodes(ids)` is a prefetch and records nothing. Vocabulary labels (the one raw query in `compose.go`, `loadVocab`) are not handle inputs. They follow the existing vocabulary drop, which does not rewrite stored search documents (logged in [`docs/ideas/structural-debt.md`](../../ideas/structural-debt.md)).
 
 Keying links by bridge and end is what keeps the city cheap. Events at the city use `(city, values)` for its name and `(city, place_relationship, from)` for its parent chain, never `(city, location, place)`.
 
@@ -60,7 +60,8 @@ Composers work in batches. `composePersons` prefetches every row's events, build
 So inputs are attributed per row explicitly:
 - The scope is a `graphcache.Graph` API keyed by a dependent id, not a private type in `conclusionsummaries`. The kinship memo slots (`canonlinks`) can become its next users instead of building a second recorder.
 - Each row is composed under its scope.
-- For place chains, a row records the chain closure from its own places: every place up to the chain depth, and each part_of association's values (its dates decide whether the link holds, `placeGraph.linkHolds`). That is the same set composing the row alone reads, so the oracle holds.
+- For place chains, the batch's `placeGraph` reads each place through its own scope and keeps those keys per place; a row takes the union over the places within the chain depth of its own places, so no key is written by hand. That is the same set composing the row alone reads, so the oracle holds.
+- A person's place graph is built from its birth and death events only, as `PersonLifeOwners` does, so a marriage's place is not a person's input.
 - Shared prefetches record nothing.
 
 The proof is an oracle test. Composing each row alone with a recorder on the graph gives that row's true graph inputs. On fixtures, the batch-attributed sets must equal it.
@@ -73,7 +74,7 @@ Search documents persist across sessions, so the index is a catalog table, owned
 - **It has no foreign key to `canonical_entities`.** A CASCADE would delete a deleted association's rows inside the write, which is the S14-38 failure again. Rows go only when the reprojector rewrites or drops their dependent.
 - `searchindex.ProjectionVersion` is bumped, so an existing catalog fills the index on open. Otherwise invalidation would find nothing on old catalogs, with no error.
 
-The graph cache's display rows are composed by the same composers and use the same index, so there is one index, not one per cache. The table and column names are fixed in S14-40's plan.
+The graph cache's display rows are composed by the same composers and use the same index, so there is one index, not one per cache. The table is `catalog_search_inputs` (dependent, input, bridge, endpoint), with the `catalog_search_` prefix of its owner's other tables (S14-40's plan, D-7).
 
 ### Invalidation
 
