@@ -11,14 +11,20 @@ import (
 )
 
 func TestCompareUnsupported(t *testing.T) {
-	want := []string{propertymeta.ValueTypeDate, propertymeta.ValueTypeDepiction, propertymeta.ValueTypeInteger, propertymeta.ValueTypeName, propertymeta.ValueTypeTerm, propertymeta.ValueTypeText}
+	// noComparer are the value types with no comparer: Compare is Unknown.
+	noComparer := map[string]bool{propertymeta.ValueTypeSubject: true}
+	var want []string
+	for _, vt := range propertymeta.ValueTypes() {
+		if !noComparer[vt] {
+			want = append(want, vt)
+		}
+	}
+	slices.Sort(want)
 	if got := valuecompare.ComparerTypes(); !slices.Equal(got, want) {
 		t.Errorf("ComparerTypes() = %v, want %v", got, want)
 	}
 	rules := matchregistry.Default().Value
-	for _, typ := range []string{
-		propertymeta.ValueTypeSubject,
-	} {
+	for typ := range noComparer {
 		v := valuecompare.Value{Type: typ, Text: "x"}
 		res, det := valuecompare.Compare(v, v, rules)
 		if res.Relation != valuecompare.Unknown || res.Similarity != 0 || det.Cause != valuecompare.CauseUnsupported {

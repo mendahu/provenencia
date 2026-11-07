@@ -101,8 +101,7 @@ func TestModules(t *testing.T) {
 
 // Every value type has a module, and mismatched values are refused.
 func TestModuleFor(t *testing.T) {
-	for _, vt := range []string{propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeTerm,
-		propertymeta.ValueTypeSubject, propertymeta.ValueTypeName, propertymeta.ValueTypeDate, propertymeta.ValueTypeDepiction} {
+	for _, vt := range propertymeta.ValueTypes() {
 		if moduleFor(testRules, vt) == nil {
 			t.Errorf("%s has no module", vt)
 		}

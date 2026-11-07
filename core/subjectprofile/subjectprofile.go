@@ -223,6 +223,7 @@ func Value(v autoreconcile.Value, negative bool, namePattern string) propertycom
 			Text:      v.Text,
 			Term:      v.TermKey,
 			Integer:   v.Integer,
+			Boolean:   v.Boolean,
 			Name:      v.Name,
 			Date:      v.Date,
 			Depiction: v.Depiction,

@@ -50,7 +50,7 @@ const wholeValue = ""
 // Contains folds, and no other relation does (D-2 of S11-06).
 func moduleFor(rules valuecompare.Rules, valueType string) module {
 	switch valueType {
-	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeDepiction:
+	case propertymeta.ValueTypeText, propertymeta.ValueTypeInteger, propertymeta.ValueTypeBoolean, propertymeta.ValueTypeDepiction:
 		return keyModule{keyOf: func(v Value) (string, bool) {
 			return valuecompare.Key(v.compareValue(valueType), valuecompare.Same, rules)
 		}}
@@ -68,10 +68,10 @@ func moduleFor(rules valuecompare.Rules, valueType string) module {
 	return nil
 }
 
-// compareValue is v in the shape value compare reads: the text, integer, date
+// compareValue is v in the shape value compare reads: the text, integer, boolean, date
 // or depiction of a value of valueType. Names go through nameUnit.compareValue.
 func (v Value) compareValue(valueType string) valuecompare.Value {
-	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Date: v.Date, Depiction: v.Depiction}
+	return valuecompare.Value{Type: valueType, Text: v.Text, Integer: v.Integer, Boolean: v.Boolean, Date: v.Date, Depiction: v.Depiction}
 }
 
 // keyModule is a value type whose values are the same exactly when their
