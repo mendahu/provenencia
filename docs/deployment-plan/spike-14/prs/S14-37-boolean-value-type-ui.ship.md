@@ -1,7 +1,7 @@
 # Ship log — S14-37 Boolean value type (UI)
 
 **Plan:** [`S14-37-boolean-value-type-ui.md`](S14-37-boolean-value-type-ui.md) · **Branch:** `s14-37-boolean-value-type-ui`, stacked on `s14-39-properties-single-only` (#737, user 2026-11-07) · **PR:** #739
-**State:** fixing 1
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `210181ab`. Gate PASS (run by the orchestrator on the pushed head, `--base s14-39-properties-single-only`). Report: STEP-3 is one commit; the D-4 rename reached more sites than the plan's regex; a private `segment(_:)` helper in `PVSegmentedControl`. All are in the plan's Landed note. Manual check not run: Tab landing on Yes and the nil-selection drawing, both stop conditions, are untested.
@@ -71,3 +71,28 @@ Check: `rg -n "S14-37" docs/*.md` finds nothing.
 Files: `docs/deployment-plan/spike-14/prs/S14-37-boolean-value-type-ui.md`, and `completed.md` if a fix changed what shipped.
 Do this last. Add to the `**Landed:**` line: segments take `.focusable()` and Space when given a handle (F-1); a saved line reads only `saved`, superseding D-14's clause (user, 2026-11-07); `markSaved` stores the written row and `discardEdit` reverts (F-2); the widened deletions (F-4); `ObservationValueDisplay` lives in Platform (F-6). Do not edit Decisions, Scope, or ACs.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-37-boolean-value-type-ui.md` reports no errors; `scripts/check-pr.sh --base s14-39-properties-single-only` PASS.
+
+## Round 1 — fix
+Head `34acdb18`. Gate PASS (run by the orchestrator on the pushed head). F-1 to F-8 done. F-1's hosted test could not show the change: `firstResponder` never moves in a hosted window, with or without it, so the test was removed and Tab landing on Yes rests on manual check 3. F-2, F-3 and F-4 share one commit. Left by the fix: `ObservationRow.isNegated` and `ObservationRow.draft(subjectID:)` have no callers. MNT-4, CON-4, MNT-5, MNT-6, CON-3 read in the fix commits by the reviewers below.
+
+## Round 2 — review
+Scope `210181ab...34acdb18`. Reviewers: CON, MNT, UX (each had a Fix-now blocker or major). Not sent: SEC+PRF (one minor, a Follow-up).
+
+| ID | Lens | Round-1 finding | Result |
+| --- | --- | --- | --- |
+| UX-1 (CON-1) | UX, CON | Keyboard reach | Code fixed (UX: Resolved). Proof **open**: AC-5.2 and the focus stop condition rest on manual check 3, which has not been run. #739 stays a draft until it has |
+| MNT-1 | MNT | One saved line, two states | Resolved |
+| CON-2 | CON | A changed answer reaches the store | Resolved |
+| MNT-2 (CON-7) | MNT, CON | Dead draft-row path | **Not resolved**: `isNegated` and `draft(subjectID:)` lost their last callers in round 1 → F-9. Collapsing `ObservationRowState.draft` and an optional `baseline` is a Follow-up (nothing is wrong today; `savePropertyDraft`'s throwaway row still uses them) |
+
+No new blockers. Noted for manual check 3: with Full Keyboard Access on, each segment may be two Tab stops (a `Button` inside `.focusable()`); whether the ring lights; whether only the kit ring shows.
+
+### Fix plan 2
+
+Fix plan 2 exists to close a round-1 major that round 2 found open. One item.
+
+**F-9 — The last dead draft-row members go** (from MNT-2, CON-5)
+Files: `macos/App/Features/CitationComposer/CitationObservationRows.swift`, `docs/deployment-plan/spike-14/prs/S14-37-boolean-value-type-ui.md`.
+Failing test first: none (dead code).
+Do: delete `ObservationRow.isNegated`, `ObservationRow.draft(subjectID:)` and the `subjectID` accessor, and make the `propertyID` accessor get-only. Add to the plan's `**Landed:**` line that these went. Leave `ObservationRowState.draft` and the `baseline` branches alone.
+Check: `rg -n "ObservationRow\.draft\(|static func draft\(subjectID" macos` finds nothing; `rg -n "isNegated" macos/App/Features/CitationComposer macos/ProvenenciaTests` finds nothing; `scripts/check-pr.sh --base s14-39-properties-single-only` PASS.
