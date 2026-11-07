@@ -23,14 +23,15 @@ struct ObservationRowValues: Equatable {
 
 struct ObservationRow: Identifiable, Equatable {
     var id: UUID
-    var persistedID: String?
-    var persistedRef: String?
     var values: ObservationRowValues
     var baseline: ObservationRowValues?
     var state: ObservationRowState
-    /// The catalog row this row was loaded from; nil on a draft. The saved
-    /// line reads its value text from it.
+    /// The catalog row last stored; nil on a draft. The saved line reads
+    /// every part of itself from it, never from `values`.
     var saved: CatalogObservation?
+
+    var persistedID: String? { saved?.id }
+    var persistedRef: String? { saved?.ref }
 
     var subjectID: String {
         get { values.subjectID }
@@ -40,12 +41,6 @@ struct ObservationRow: Identifiable, Equatable {
     var propertyID: String {
         get { values.propertyID }
         set { values.propertyID = newValue }
-    }
-
-    var isEmptyDraft: Bool {
-        baseline == nil
-            && values.propertyID.isEmpty
-            && values.valueFields == .init()
     }
 
     var canSave: Bool {
@@ -73,9 +68,8 @@ struct ObservationRow: Identifiable, Equatable {
         state = values == baseline ? .saved : .edited
     }
 
-    mutating func markSaved(id: String, ref: String) {
-        persistedID = id
-        persistedRef = ref
+    mutating func markSaved(_ written: CatalogObservation) {
+        saved = written
         baseline = values
         state = .saved
     }
@@ -83,8 +77,6 @@ struct ObservationRow: Identifiable, Equatable {
     static func draft(subjectID: String = "") -> ObservationRow {
         ObservationRow(
             id: UUID(),
-            persistedID: nil,
-            persistedRef: nil,
             values: ObservationRowValues(subjectID: subjectID),
             baseline: nil,
             state: .draft
@@ -115,8 +107,6 @@ struct ObservationRow: Identifiable, Equatable {
         )
         return ObservationRow(
             id: UUID(),
-            persistedID: observation.id,
-            persistedRef: observation.ref,
             values: values,
             baseline: values,
             state: .saved,
@@ -192,7 +182,6 @@ struct ObservationRow: Identifiable, Equatable {
 @Observable
 final class CitationObservationRows {
     var rows: [ObservationRow] = []
-    var focusedID: UUID?
 
     private weak var context: CitationComposerContext?
 
@@ -202,13 +191,6 @@ final class CitationObservationRows {
 
     func replace(_ next: [ObservationRow]) {
         rows = next
-        focusedID = next.first?.id
-    }
-
-    func addDraft(subjectID: String) {
-        let row = ObservationRow.draft(subjectID: subjectID)
-        rows.append(row)
-        focusedID = row.id
     }
 
     /// `depictionInput` is a new region and image for a depiction Observation;
@@ -232,11 +214,8 @@ final class CitationObservationRows {
 
     func revert(rowID: UUID) {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
-        if rows[index].baseline == nil {
-            rows.remove(at: index)
-            return
-        }
-        rows[index].values = rows[index].baseline!
+        guard let baseline = rows[index].baseline else { return }
+        rows[index].values = baseline
         rows[index].state = .saved
     }
 
@@ -252,9 +231,9 @@ final class CitationObservationRows {
         }
     }
 
-    func markSaved(rowID: UUID, id: String, ref: String) {
+    func markSaved(rowID: UUID, written: CatalogObservation) {
         mutate(rowID) { row in
-            row.markSaved(id: id, ref: ref)
+            row.markSaved(written)
         }
     }
 
@@ -266,23 +245,6 @@ final class CitationObservationRows {
 
     func remove(rowID: UUID) {
         rows.removeAll { $0.id == rowID }
-    }
-
-    var hasEditedOrSaving: Bool {
-        rows.contains {
-            switch $0.state {
-            case .edited, .saving, .error: return true
-            case .draft: return !$0.isEmptyDraft
-            case .saved: return false
-            }
-        }
-    }
-
-    var unsavedObservationCount: Int {
-        rows.filter {
-            if case .saved = $0.state { return false }
-            return !$0.isEmptyDraft
-        }.count
     }
 
     private func performCommit(
@@ -302,43 +264,27 @@ final class CitationObservationRows {
             markError(rowID: rowID, message: draftError)
             return
         }
-        guard var draft = draftOrNil else { return }
-        draft.depiction = depictionInput
+        guard draftOrNil != nil else { return }
         do {
             let citationID = try await context.ensureCitationID(citation)
-            if row.persistedID == nil {
-                let written = try await context.store.addObservationsToCitation(
-                    projectDir: context.projectDir,
-                    userID: context.userID,
-                    citationID: citationID,
-                    observations: [draft]
-                )
-                if let saved = written.0.first {
-                    markSaved(rowID: rowID, id: saved.id, ref: saved.ref)
-                } else {
-                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.observationSaveFailed))
-                }
-                context.applyWrite(written.1)
-            } else {
-                let (observationOrNil, updateError) = row.asCatalogObservation(property: property, vocabulary: context.vocabulary)
-                if let updateError {
-                    markError(rowID: rowID, message: updateError)
-                    return
-                }
-                if var observation = observationOrNil {
-                    observation.citationID = citationID
-                    let written = try await context.store.updateObservation(
-                        projectDir: context.projectDir,
-                        userID: context.userID,
-                        observation: observation,
-                        depictionInput: depictionInput
-                    )
-                    markSaved(rowID: rowID, id: written.0.id, ref: written.0.ref)
-                    context.applyWrite(written.1)
-                } else {
-                    markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.observationSaveFailed))
-                }
+            let (observationOrNil, updateError) = row.asCatalogObservation(property: property, vocabulary: context.vocabulary)
+            if let updateError {
+                markError(rowID: rowID, message: updateError)
+                return
             }
+            guard var observation = observationOrNil else {
+                markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.observationSaveFailed))
+                return
+            }
+            observation.citationID = citationID
+            let written = try await context.store.updateObservation(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                observation: observation,
+                depictionInput: depictionInput
+            )
+            markSaved(rowID: rowID, written: written.0)
+            context.applyWrite(written.1)
         } catch is CitationComposerNeedArtifact {
             markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.needArtifact))
         } catch {
@@ -366,6 +312,5 @@ final class CitationObservationRows {
     private func mutate(_ rowID: UUID, _ body: (inout ObservationRow) -> Void) {
         guard let index = rows.firstIndex(where: { $0.id == rowID }) else { return }
         body(&rows[index])
-        focusedID = rowID
     }
 }

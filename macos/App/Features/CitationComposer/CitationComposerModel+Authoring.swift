@@ -396,6 +396,11 @@ extension CitationComposerModel {
     }
 
     func discardEdit() {
+        if case .property(_, let persistedID, _) = editSession?.kind,
+           let row = observationRows.rows.first(where: { $0.persistedID == persistedID })
+        {
+            observationRows.revert(rowID: row.id)
+        }
         closeEditDialog()
     }
 
@@ -510,8 +515,6 @@ extension CitationComposerModel {
         }
         let row = ObservationRow(
             id: UUID(),
-            persistedID: nil,
-            persistedRef: nil,
             values: draft.values,
             baseline: nil,
             state: .draft

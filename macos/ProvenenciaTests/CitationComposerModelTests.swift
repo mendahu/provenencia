@@ -978,12 +978,6 @@ struct CitationComposerModelTests {
         #expect(yes.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanYes)])
         #expect(no.map(\.valueText) == [L10n.string(L10n.Properties.valueBooleanNo)])
         #expect(!yes[0].mono && !no[0].mono)
-        var draft = ObservationRow.draft(subjectID: subjectID)
-        draft.values.propertyID = occupationPropertyID
-        #expect(
-            CitationComposerAuthoring.groups(observations: [draft], connections: [], vocabulary: vocabulary)
-                .flatMap(\.lines).isEmpty
-        )
     }
 
     private func chooseProperty(_ model: CitationComposerModel, _ propertyID: String) {
@@ -1083,7 +1077,6 @@ struct CitationComposerModelTests {
         row.values.polarity = ObservationPolarity.negative.rawValue
         #expect(row.asDraft(property: property, vocabulary: vocabulary).0?.polarity == ObservationPolarity.positive.rawValue)
         #expect(row.asDraft(property: property, vocabulary: bare).0?.polarity == ObservationPolarity.negative.rawValue)
-        #expect(ObservationRow.draft(subjectID: subjectID).isEmptyDraft)
     }
 
     @Test func loadingBridgeEdgesYieldsOneConnectionAndKeepsExtraRole() async {
@@ -2417,6 +2410,61 @@ struct CitationComposerModelTests {
         #expect(model.presented == nil)
         #expect(model.editSession == nil)
         #expect(store.recordedCalls.contains("updateObservation id=obs-1"))
+    }
+
+    @Test func failedEditThenDiscardKeepsTheStoredLine() async {
+        let store = makeStore()
+        seedArtifact(store)
+        seedCitation(store, observations: [occupationObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1")])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        func line() -> CitationSavedLine? {
+            CitationComposerAuthoring.groups(
+                observations: model.observations, connections: [], vocabulary: model.vocabulary
+            ).flatMap(\.lines).first
+        }
+        let before = line()
+        #expect(before?.negative == false)
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.polarity = ObservationPolarity.negative.rawValue
+            values.valueFields.valueText = "changed"
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        store.updateObservationError = ComposerLoadFailure()
+        await model.saveEdit()
+        #expect(model.editSession?.error != nil)
+        model.discardEdit()
+        #expect(line()?.negative == false)
+        #expect(line()?.valueText == before?.valueText)
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        guard case .property(let values, _, _) = model.editSession?.kind else {
+            Issue.record("expected the edit dialog")
+            return
+        }
+        #expect(values.polarity == ObservationPolarity.positive.rawValue)
+        #expect(values.valueFields.valueText == "miller")
+    }
+
+    @Test func editingABooleanSavesTheNewAnswerPositive() async {
+        let store = makeStore()
+        seedArtifact(store)
+        var seeded = canReadObservation(id: "obs-1", ref: "OBS-ABC", citationID: "cit-1", value: true)
+        seeded.polarity = ObservationPolarity.negative.rawValue
+        seedCitation(store, observations: [seeded])
+        let model = makeModel(store: store, citationID: "cit-1")
+        await model.prepare()
+        #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
+        model.mutateEdit { session in
+            guard case .property(var values, let id, let ref) = session.kind else { return }
+            values.valueFields.valueBoolean = false
+            session.kind = .property(values: values, persistedID: id, persistedRef: ref)
+        }
+        await model.saveEdit()
+        let stored = store.observationsByGraph.values.flatMap { $0 }.first { $0.id == "obs-1" }
+        #expect(stored?.valueBoolean == false)
+        #expect(stored?.polarity == ObservationPolarity.positive.rawValue)
     }
 
     @Test func saveEditKeepsTheDialogWhenThePropertyIsMissing() async {

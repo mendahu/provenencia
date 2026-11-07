@@ -334,9 +334,9 @@ enum CitationComposerAuthoring {
     ) -> [CitationSubjectGroup] {
         var lines: [CitationSavedLine] = []
         for row in observations {
-            guard let saved = row.saved, !row.subjectID.isEmpty else { continue }
+            guard let saved = row.saved, !saved.subjectID.isEmpty else { continue }
             let persistedID = saved.id
-            let property = vocabulary.property(id: row.propertyID)
+            let property = vocabulary.property(id: saved.propertyID)
             let valueText = ObservationValueDisplay.string(for: saved, orders: nameOrders)
             let label = property?.label ?? ""
             let mono = property?.valueType == PropertyValueType.integer.rawValue
@@ -345,18 +345,18 @@ enum CitationComposerAuthoring {
                 CitationSavedLine(
                     id: "obs:\(persistedID)",
                     sortKey: persistedID,
-                    subjectID: row.subjectID,
+                    subjectID: saved.subjectID,
                     observationID: persistedID,
                     bridgeID: nil,
                     label: label,
                     valueText: valueText,
                     mono: mono,
                     body: [label, valueText].filter { !$0.isEmpty }.joined(separator: " "),
-                    negative: row.isNegated,
+                    negative: saved.polarity == ObservationPolarity.negative.rawValue,
                     markKey: nil,
-                    imageRelPath: row.values.valueFields.depictionDraft.imageRelPath.isEmpty
-                        ? nil
-                        : row.values.valueFields.depictionDraft.imageRelPath
+                    imageRelPath: saved.depiction?.imageRelPath.isEmpty == false
+                        ? saved.depiction?.imageRelPath
+                        : nil
                 )
             )
         }
