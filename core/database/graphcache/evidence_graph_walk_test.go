@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -245,6 +246,56 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestWalkEvidenceGraphEdgeCap: one bridge citing many Subjects on each end
+// builds edges as their product, so a walk over the cap reaches nothing.
+func TestWalkEvidenceGraphEdgeCap(t *testing.T) {
+	f := newWalkFixture(t)
+	g := f.c.Graph()
+	v, err := g.Vocabulary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bridgeType []byte
+	for _, ty := range v.Types {
+		if ty.Key == "participation" && ty.Origin == vocabkey.OriginProvenencia {
+			bridgeType = ty.ID
+		}
+	}
+	id := func(n int) []byte {
+		b := make([]byte, 16)
+		b[0], b[1] = byte(n>>8), byte(n)
+		return b
+	}
+	run := func(t *testing.T, froms, tos int) int {
+		bridge := id(60000)
+		eg := graphcache.EvidenceGraph{Found: true, Subjects: []graphcache.EvidenceSubject{{ID: bridge, SubjectTypeID: bridgeType, Ref: "SUB-B"}}}
+		var from [][]byte
+		for i := 0; i < tos; i++ {
+			eg.Subjects = append(eg.Subjects, graphcache.EvidenceSubject{ID: id(i + 1), Ref: "SUB-P"})
+		}
+		for i := 0; i < froms; i++ {
+			from = append(from, id(i+1))
+			eg.Observations = append(eg.Observations, graphcache.EvidenceObservation{
+				SubjectID: bridge, PropertyID: f.prop("person"), ValueSubjectID: id(i + 1), Polarity: "positive"})
+		}
+		for i := 0; i < tos; i++ {
+			eg.Observations = append(eg.Observations, graphcache.EvidenceObservation{
+				SubjectID: bridge, PropertyID: f.prop("event"), ValueSubjectID: id(i + 1), Polarity: "positive"})
+		}
+		edges, err := g.WalkEvidenceGraph(eg, hops.MustHop("participation", "person", "event", nil), from)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(edges)
+	}
+	if got := run(t, 223, 224); got != 223*224 {
+		t.Fatalf("under the cap: got %d edges, want %d", got, 223*224)
+	}
+	if got := run(t, 224, 224); got != 0 {
+		t.Fatalf("over the cap: got %d edges, want none", got)
 	}
 }
 
