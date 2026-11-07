@@ -100,17 +100,6 @@ func edge(from, to []byte, l link) graphalign.CanonEdge {
 	return graphalign.CanonEdge{From: from, To: to, KeyFrom: l.a, KeyTo: l.b}
 }
 
-// partKeys are a participation read from the person's end and the event's.
-func partKeys(role vocabkey.BridgeTerm, eventType vocabkey.EventType) (person, event vocabkey.BridgeKey) {
-	return segmentcomparetest.PartKeys(role, eventType)
-}
-
-// relKeys are a relationship read from the person's end and the related_to
-// end.
-func relKeys(term vocabkey.BridgeTerm) (a, b vocabkey.BridgeKey) {
-	return segmentcomparetest.RelKeys(term)
-}
-
 // partOfKeys are part_of read from the part's end (from) and the whole's (to).
 func partOfKeys() (part, whole vocabkey.BridgeKey) {
 	terms := segmentcomparetest.Terms()
@@ -122,12 +111,12 @@ func partOfKeys() (part, whole vocabkey.BridgeKey) {
 }
 
 func partLink(role vocabkey.BridgeTerm, eventType vocabkey.EventType) link {
-	a, b := partKeys(role, eventType)
+	a, b := segmentcomparetest.PartKeys(role, eventType)
 	return link{a, b}
 }
 
 func relLink(term vocabkey.BridgeTerm) link {
-	a, b := relKeys(term)
+	a, b := segmentcomparetest.RelKeys(term)
 	return link{a, b}
 }
 

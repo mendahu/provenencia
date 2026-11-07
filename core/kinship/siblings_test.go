@@ -33,11 +33,11 @@ func sibsOf(imps []kinship.Implied) []sib {
 }
 
 func TestSiblings(t *testing.T) {
-	parent := func(g, m, br byte) kinship.Edge { return rel(t, g, m, vocabkey.TermParent, br) }
+	parent := func(g, m, br byte) kinship.Edge { return rel(g, m, vocabkey.TermParent, br) }
 	birth := func(father, subject, event, b1, b2 byte) []kinship.Edge {
 		return []kinship.Edge{
-			part(t, father, event, vocabkey.RoleFather, vocabkey.EventBirth, b1),
-			part(t, subject, event, vocabkey.RoleSubject, vocabkey.EventBirth, b2),
+			part(father, event, vocabkey.RoleFather, vocabkey.EventBirth, b1),
+			part(subject, event, vocabkey.RoleSubject, vocabkey.EventBirth, b2),
 		}
 	}
 	check := func(t *testing.T, person byte, edges []kinship.Edge, want ...sib) {
@@ -73,8 +73,8 @@ func TestSiblings(t *testing.T) {
 	t.Run("AC-1.3", func(t *testing.T) {
 		// The birth links Derive returns for two births with one father.
 		edges := slices.Concat(
-			[]kinship.Edge{part(t, 1, 1, vocabkey.RoleFather, vocabkey.EventBirth, 1), part(t, 2, 1, vocabkey.RoleSubject, vocabkey.EventBirth, 2)},
-			[]kinship.Edge{part(t, 1, 2, vocabkey.RoleFather, vocabkey.EventBirth, 3), part(t, 3, 2, vocabkey.RoleSubject, vocabkey.EventBirth, 4)},
+			[]kinship.Edge{part(1, 1, vocabkey.RoleFather, vocabkey.EventBirth, 1), part(2, 1, vocabkey.RoleSubject, vocabkey.EventBirth, 2)},
+			[]kinship.Edge{part(1, 2, vocabkey.RoleFather, vocabkey.EventBirth, 3), part(3, 2, vocabkey.RoleSubject, vocabkey.EventBirth, 4)},
 		)
 		var births []kinship.Edge
 		for _, imp := range kinship.Derive(edges, terms, rules) {
@@ -101,7 +101,7 @@ func TestSiblings(t *testing.T) {
 	})
 	t.Run("AC-1.7", func(t *testing.T) {
 		edges := []kinship.Edge{
-			parent(1, 2, 1), rel(t, 1, 4, vocabkey.TermSpouse, 2), parent(4, 5, 3), parent(2, 3, 4),
+			parent(1, 2, 1), rel(1, 4, vocabkey.TermSpouse, 2), parent(4, 5, 3), parent(2, 3, 4),
 		}
 		check(t, 2, edges)
 		check(t, 3, edges)
@@ -109,7 +109,7 @@ func TestSiblings(t *testing.T) {
 	})
 	t.Run("AC-1.1", func(t *testing.T) {
 		// A recorded sibling link is Relationships' job, not Siblings'.
-		check(t, 2, []kinship.Edge{rel(t, 2, 3, vocabkey.TermSibling, 1)})
+		check(t, 2, []kinship.Edge{rel(2, 3, vocabkey.TermSibling, 1)})
 	})
 	t.Run("AC-1.8", func(t *testing.T) {
 		edges := []kinship.Edge{parent(1, 2, 1)}

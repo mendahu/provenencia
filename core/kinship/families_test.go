@@ -170,7 +170,7 @@ func TestKinOf(t *testing.T) {
 	}
 	for _, term := range terms11 {
 		t.Run(string(term), func(t *testing.T) {
-			l := kinship.Link{Edge: rel(t, 1, 2, term, 1)}
+			l := kinship.Link{Edge: rel(1, 2, term, 1)}
 			for i, person := range []byte{1, 2} {
 				kin := kinship.KinOf(p(person), []kinship.Link{l}, terms)
 				w := want[term].one
@@ -190,20 +190,20 @@ func TestKinOf(t *testing.T) {
 		})
 	}
 	t.Run("a link to self", func(t *testing.T) {
-		l := kinship.Link{Edge: rel(t, 1, 1, vocabkey.TermParent, 1)}
+		l := kinship.Link{Edge: rel(1, 1, vocabkey.TermParent, 1)}
 		if kin := kinship.KinOf(p(1), []kinship.Link{l}, terms); len(kin) != 0 {
 			t.Fatalf("got %v", kin)
 		}
 	})
 	t.Run("a stranger", func(t *testing.T) {
-		l := kinship.Link{Edge: rel(t, 1, 2, vocabkey.TermSpouse, 1)}
+		l := kinship.Link{Edge: rel(1, 2, vocabkey.TermSpouse, 1)}
 		if kin := kinship.KinOf(p(3), []kinship.Link{l}, terms); len(kin) != 0 {
 			t.Fatalf("got %v", kin)
 		}
 	})
 	t.Run("link order within a role", func(t *testing.T) {
-		a := kinship.Link{Edge: rel(t, 2, 1, vocabkey.TermParent, 1)}
-		b := kinship.Link{Edge: rel(t, 3, 1, vocabkey.TermParent, 2)}
+		a := kinship.Link{Edge: rel(2, 1, vocabkey.TermParent, 1)}
+		b := kinship.Link{Edge: rel(3, 1, vocabkey.TermParent, 2)}
 		kin := kinship.KinOf(p(1), []kinship.Link{b, a}, terms)
 		if !reflect.DeepEqual(kin[kinship.RoleParent], []kinship.Link{b, a}) {
 			t.Fatalf("got %v", kin[kinship.RoleParent])
@@ -216,14 +216,14 @@ func TestFamilies(t *testing.T) {
 		marriage = vocabkey.EventMarriage
 		birth    = vocabkey.EventBirth
 	)
-	parent := func(g, m, br byte) kinship.Edge { return rel(t, g, m, vocabkey.TermParent, br) }
-	spouse := func(a, c, br byte) kinship.Edge { return rel(t, a, c, vocabkey.TermSpouse, br) }
-	sibling := func(a, c, br byte) kinship.Edge { return rel(t, a, c, vocabkey.TermSibling, br) }
+	parent := func(g, m, br byte) kinship.Edge { return rel(g, m, vocabkey.TermParent, br) }
+	spouse := func(a, c, br byte) kinship.Edge { return rel(a, c, vocabkey.TermSpouse, br) }
+	sibling := func(a, c, br byte) kinship.Edge { return rel(a, c, vocabkey.TermSibling, br) }
 	married := func(person, event, br byte) kinship.Edge {
-		return part(t, person, event, vocabkey.RoleSubject, marriage, br)
+		return part(person, event, vocabkey.RoleSubject, marriage, br)
 	}
 	born := func(person, event byte, role vocabkey.Role, br byte) kinship.Edge {
-		return part(t, person, event, role, birth, br)
+		return part(person, event, role, birth, br)
 	}
 	// johnMaryPat is birth 1: P6 father, P7 mother, P1 subject.
 	johnMaryPat := []kinship.Edge{
@@ -257,7 +257,7 @@ func TestFamilies(t *testing.T) {
 		{"AC-1.8", []kinship.Edge{parent(1, 14, 1), spouse(1, 2, 2)}, nil, []string{"Partner{2;}", "OneParent{;14}"}},
 		{"AC-1.10", []kinship.Edge{parent(6, 1, 1), spouse(1, 6, 2)}, nil, []string{"Parents{6;}", "Partner{6;}"}},
 		{"AC-1.11", []kinship.Edge{
-			rel(t, 8, 1, vocabkey.TermGrandparent, 1), rel(t, 1, 9, "cousin", 2), rel(t, 10, 1, "guardian", 3),
+			rel(8, 1, vocabkey.TermGrandparent, 1), rel(1, 9, "cousin", 2), rel(10, 1, "guardian", 3),
 			parent(6, 7, 4), parent(7, 1, 5),
 		}, nil, []string{"Parents{7;}"}},
 		{"a parent not shown, a sibling only through them", []kinship.Edge{parent(6, 1, 1), parent(6, 9, 2)}, []byte{6},
@@ -370,7 +370,7 @@ func crowd(t testing.TB, parents, sibs int) (pat []byte, edges []kinship.Edge) {
 	pat = p(1)
 	id := func(hi, n int) []byte { return []byte{byte(hi), byte(n)} }
 	link := func(a, c []byte, term vocabkey.BridgeTerm, br int) {
-		x := rel(t, 1, 2, term, 1)
+		x := rel(1, 2, term, 1)
 		x.A, x.B, x.Associations = a, c, [][]byte{id(0x30, br)}
 		edges = append(edges, x)
 	}
@@ -446,7 +446,7 @@ func pairs(t testing.TB, parents, assocs int) (pat []byte, edges []kinship.Edge,
 	id := func(hi, n int) []byte { return []byte{byte(hi), byte(n)} }
 	br := 0
 	link := func(a, c []byte) {
-		x := rel(t, 1, 2, vocabkey.TermParent, 1)
+		x := rel(1, 2, vocabkey.TermParent, 1)
 		x.A, x.B, x.Associations = a, c, nil
 		for k := 0; k < assocs; k++ {
 			br++
@@ -532,10 +532,10 @@ func TestUnitEmpty(t *testing.T) {
 
 func TestKinAround(t *testing.T) {
 	links := []kinship.Link{
-		{Edge: rel(t, 6, 1, vocabkey.TermParent, 1)},
-		{Edge: rel(t, 1, 9, vocabkey.TermParent, 2)},
-		{Edge: rel(t, 6, 1, vocabkey.TermParent, 3)},
-		{Edge: rel(t, 1, 8, vocabkey.TermSpouse, 4)},
+		{Edge: rel(6, 1, vocabkey.TermParent, 1)},
+		{Edge: rel(1, 9, vocabkey.TermParent, 2)},
+		{Edge: rel(6, 1, vocabkey.TermParent, 3)},
+		{Edge: rel(1, 8, vocabkey.TermSpouse, 4)},
 	}
 	got := kinship.KinOf(p(1), links, terms).Around(p(1))
 	if !reflect.DeepEqual(got, [][]byte{p(6), p(9)}) {
@@ -566,11 +566,11 @@ func FuzzFamilyUnits(f *testing.F) {
 			}
 			switch data[i] % 3 {
 			case 0:
-				edges = append(edges, rel(t, a, c, vocabkey.TermParent, byte(i)))
+				edges = append(edges, rel(a, c, vocabkey.TermParent, byte(i)))
 			case 1:
-				edges = append(edges, rel(t, a, c, vocabkey.TermSpouse, byte(i)))
+				edges = append(edges, rel(a, c, vocabkey.TermSpouse, byte(i)))
 			default:
-				edges = append(edges, rel(t, a, c, vocabkey.TermSibling, byte(i)))
+				edges = append(edges, rel(a, c, vocabkey.TermSibling, byte(i)))
 			}
 		}
 		units := unitsFor(t, p(1), edges, nil)

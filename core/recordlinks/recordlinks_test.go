@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	pt "github.com/mendahu/provenencia/core/propertycompare/propertycomparetest"
 	"github.com/mendahu/provenencia/core/recordlinks"
@@ -55,16 +56,16 @@ func event(id, entity []byte) recordlinks.Member {
 
 type vals = subjectcompare.Values
 
-// part is a participation edge with the person at A.
+// part is a participation edge with the person at A, recorded by one
+// association.
 func part(person, event []byte, role vocabkey.BridgeTerm, eventType vocabkey.EventType, assoc byte) kinship.Edge {
-	ka, kb := segmentcomparetest.PartKeys(role, eventType)
-	return kinship.Edge{A: person, B: event, KeyA: ka, KeyB: kb, Associations: [][]byte{{assoc}}}
+	return kinshiptest.Part(person, event, role, eventType, []byte{assoc})
 }
 
-// rel is a relationship edge with the person end at A.
+// rel is a relationship edge with the person end at A, recorded by one
+// association.
 func rel(person, relatedTo []byte, term vocabkey.BridgeTerm, assoc byte) kinship.Edge {
-	ka, kb := segmentcomparetest.RelKeys(term)
-	return kinship.Edge{A: person, B: relatedTo, KeyA: ka, KeyB: kb, Associations: [][]byte{{assoc}}}
+	return kinshiptest.Rel(person, relatedTo, term, []byte{assoc})
 }
 
 // build indexes a graph the way the loader's caller does: the edges in a

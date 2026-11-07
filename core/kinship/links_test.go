@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/segmentcompare"
-	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -27,12 +27,10 @@ func TestLinkSet(t *testing.T) {
 	event := func(n byte) []byte { return []byte{0x20 + n} }
 	bridgeID := func(n byte) []byte { return []byte{0x30 + n} }
 	part := func(p, e, b byte) kinship.Link {
-		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeParticipation), "subject", "marriage", terms)
-		return kinship.Link{Edge: kinship.Edge{A: person(p), B: event(e), KeyA: ka, KeyB: kb, Associations: [][]byte{bridgeID(b)}}}
+		return kinship.Link{Edge: kinshiptest.Part(person(p), event(e), "subject", vocabkey.EventMarriage, bridgeID(b))}
 	}
 	spouse := func(p, q, b byte) kinship.Link {
-		ka, kb := segmentcompare.Keys(segmentcomparetest.Bridge(t, vocabkey.BridgeRelationship), "spouse", "", terms)
-		return kinship.Link{Edge: kinship.Edge{A: person(p), B: person(q), KeyA: ka, KeyB: kb, Associations: [][]byte{bridgeID(b)}}}
+		return kinship.Link{Edge: kinshiptest.Rel(person(p), person(q), "spouse", bridgeID(b))}
 	}
 	flip := func(l kinship.Link) kinship.Link {
 		l.A, l.B, l.KeyA, l.KeyB = l.B, l.A, l.KeyB, l.KeyA
