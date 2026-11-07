@@ -113,7 +113,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		EntityType: "observation",
 		EntityID:   append([]byte(nil), id...),
 		Action:     rowchange.ActionDelete,
-		Fields:     rowchange.DeletedRow(observationRowMap(prev)),
+		Fields:     rowchange.DeletedRow(prev.AuditFields()),
 	}), nil
 }
 
@@ -139,12 +139,7 @@ func scanRawObservation(row rowScanner) (Observation, error) {
 	if err != nil {
 		return Observation{}, err
 	}
-	obs := Observation{
-		ID: r.ID, Ref: r.Ref, CitationID: r.CitationID, SubjectID: r.SubjectID, PropertyID: r.PropertyID,
-		Polarity: r.Polarity, Scalar: r.Scalar,
-		ValueDateID: r.ValueDateID, ValueNameID: r.ValueNameID, ValueSubjectID: r.ValueSubjectID,
-		ValueTermID: r.ValueTermID, ValueDepictionID: r.ValueDepictionID,
-	}
+	obs := r
 	obs.HasText = obs.Text != ""
 	return obs, nil
 }
@@ -232,15 +227,6 @@ func getListedTx(tx *sql.Tx, id []byte) (Listed, error) {
 		return Listed{}, ErrInvalid
 	}
 	return listed[0], nil
-}
-
-func observationRowMap(o Observation) map[string]any {
-	return observationrow.Row{
-		ID: o.ID, Ref: o.Ref, CitationID: o.CitationID, SubjectID: o.SubjectID, PropertyID: o.PropertyID,
-		Polarity: o.Polarity, Scalar: o.Scalar,
-		ValueDateID: o.ValueDateID, ValueNameID: o.ValueNameID, ValueSubjectID: o.ValueSubjectID,
-		ValueTermID: o.ValueTermID, ValueDepictionID: o.ValueDepictionID,
-	}.AuditFields()
 }
 
 type rowScanner interface {

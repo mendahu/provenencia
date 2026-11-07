@@ -110,21 +110,7 @@ const (
 )
 
 // Observation is one observations row.
-type Observation struct {
-	ID         []byte
-	Ref        string
-	CitationID []byte
-	SubjectID  []byte
-	PropertyID []byte
-	Polarity   string
-	propertymeta.Scalar
-	ValueDateID    []byte
-	ValueNameID    []byte
-	ValueSubjectID []byte
-	ValueTermID    []byte
-	// ValueDepictionID is depiction_values.id for a depiction Property.
-	ValueDepictionID []byte
-}
+type Observation = observationrow.Row
 
 // Listed is an Observation plus Property summary for graph / card rows.
 type Listed struct {
@@ -380,7 +366,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 		EntityType: "observation",
 		EntityID:   idBytes,
 		Action:     rowchange.ActionCreate,
-		Fields:     rowchange.FullRow(observationRowMap(obs)),
+		Fields:     rowchange.FullRow(obs.AuditFields()),
 	}}
 	changes = append(changes, resolved.ValueChanges...)
 

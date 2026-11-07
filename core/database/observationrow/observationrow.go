@@ -15,7 +15,7 @@ const Columns = `id, ref, citation_id, subject_id, property_id, polarity,
 		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id,
 		value_depiction_id`
 
-// Row is one observations row.
+// Row is one observations row. observations.Observation is this type.
 type Row struct {
 	ID         []byte
 	Ref        string
@@ -24,10 +24,11 @@ type Row struct {
 	PropertyID []byte
 	Polarity   string
 	propertymeta.Scalar
-	ValueDateID      []byte
-	ValueNameID      []byte
-	ValueSubjectID   []byte
-	ValueTermID      []byte
+	ValueDateID    []byte
+	ValueNameID    []byte
+	ValueSubjectID []byte
+	ValueTermID    []byte
+	// ValueDepictionID is depiction_values.id for a depiction Property.
 	ValueDepictionID []byte
 }
 
