@@ -128,16 +128,16 @@ final class UnpromoteFlow {
         pending = item
     }
 
-    /// Writes the Unpromote. `beforeApply` sees the effects before the session
-    /// applies them, so a page can leave an entity the write deleted. Success
-    /// closes the confirm and returns the effects; a failure stays in the
-    /// confirm as its error and returns nil.
+    /// Writes the Unpromote and applies its effects: through `apply` when the page leaves an
+    /// entity the write deleted, else `session.apply(effects)`. Success closes the confirm and
+    /// returns true; a failure stays in the confirm as its error and returns false.
+    @discardableResult
     func confirm(
         session: WorkspaceSession,
         userID: String,
-        beforeApply: @MainActor (CatalogWriteEffects) -> Void = { _ in }
-    ) async -> CatalogWriteEffects? {
-        guard let item = pending, !isRunning else { return nil }
+        apply: (@MainActor (CatalogWriteEffects) -> Void)? = nil
+    ) async -> Bool {
+        guard let item = pending, !isRunning else { return false }
         isRunning = true
         defer { isRunning = false }
         pending?.error = nil
@@ -147,13 +147,16 @@ final class UnpromoteFlow {
                 userID: userID,
                 subjectID: item.id
             )
-            beforeApply(effects)
-            session.apply(effects)
+            if let apply {
+                apply(effects)
+            } else {
+                session.apply(effects)
+            }
             pending = nil
-            return effects
+            return true
         } catch {
             pending?.error = L10n.Errors.message(for: error)
-            return nil
+            return false
         }
     }
 

@@ -130,6 +130,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// The graph id of each `listSubjects` call, in order.
     var listSubjectsGraphIDs: [String] = []
     var getSourceWorkspaceCalls = 0
+    var listPersonSummariesCalls = 0
     var getPropertiesWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
     /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
@@ -1638,6 +1639,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary] {
         // A read: no `recordedCalls`.
         return withState {
+            listPersonSummariesCalls += 1
             markCatalogSessionHeld(projectDir)
             return personSummaries()
         }

@@ -781,6 +781,37 @@ struct WorkspaceSessionTests {
         #expect(list.value?.isEmpty == true)
     }
 
+    /// A write that deletes the shown entity applies with every key hidden and then leaves the
+    /// page, so the next place's list loads once and the entity's own keys are dropped.
+    @Test func applyLeavingPageLoadsTheNextListOnce() async throws {
+        let store = FakeStore()
+        let session = makeSession(store: store)
+        let people = CatalogQueryKey.personsList(project: session.projectKey)
+        let detail = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "h-maria")
+        session.apply(location: .personDetail(entityId: "h-maria", ref: "PER-8JD2L", title: "Maria"))
+        session.setQueryValue(people, value: [personSummary("h-maria", revision: 10)])
+        session.invalidate(people)
+        let warmed: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detail)
+        #expect(warmed != nil)
+
+        var left = false
+        session.apply(
+            CatalogWriteEffects(
+                handles: ["h-maria"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-maria"])]
+            ),
+            leavingPage: {
+                left = true
+                session.apply(location: .sectionRoot(.persons))
+            }
+        )
+        #expect(left)
+        let list: QueryHandle<[CatalogPersonSummary]> = try #require(session.queryHandle(people))
+        await waitForQuery(list)
+        #expect(store.listPersonSummariesCalls == 1)
+        let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detail)
+        #expect(evicted == nil)
+    }
+
     /// A write that changes list values reloads the list on screen and leaves
     /// the others stale until they are shown.
     @Test func hiddenListsGoStaleVisibleListReloads() async throws {

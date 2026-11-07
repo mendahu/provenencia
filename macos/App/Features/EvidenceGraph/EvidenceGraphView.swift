@@ -203,7 +203,7 @@ private struct EvidenceGraphContent: View {
         .unpromoteConfirm(
             flow: model.unpromote,
             accessibilityIdentifierPrefix: "evidenceGraph.unpromote",
-            onConfirm: { Task { _ = await model.unpromote.confirm(session: model.session, userID: model.userID) } }
+            onConfirm: { Task { await model.unpromote.confirm(session: model.session, userID: model.userID) } }
         )
     }
 

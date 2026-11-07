@@ -215,7 +215,7 @@ struct UnpromoteFlowTests {
         await opening.value
         #expect(!flow.isBusy)
 
-        // The person is deleted: beforeApply sees the effects, and leaving there evicts her page.
+        // The person is deleted: `apply` receives the effects, and leaving there evicts her page.
         store.nextWriteEffects = CatalogWriteEffects(
             handles: ["h-maria"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-maria"])]
         )
@@ -226,17 +226,16 @@ struct UnpromoteFlowTests {
         var seen: [String] = []
         store.unpromoteSubjectHold.isOn = true
         let writing = Task {
-            await flow.confirm(session: session, userID: "user-1", beforeApply: { effects in
+            await flow.confirm(session: session, userID: "user-1", apply: { effects in
                 seen = effects.deletedHandles
-                session.apply(location: .sectionRoot(.persons))
+                session.apply(effects, leavingPage: { session.apply(location: .sectionRoot(.persons)) })
             })
         }
         #expect(await waitUntil { store.unpromoteSubjectHold.count == 1 })
         #expect(flow.isBusy)
         store.unpromoteSubjectHold.isOn = false
         store.unpromoteSubjectHold.release()
-        let effects = try #require(await writing.value)
-        #expect(effects.deletedHandles == ["h-maria"])
+        #expect(await writing.value)
         #expect(seen == ["h-maria"])
         #expect(flow.pending == nil)
         #expect(!flow.isBusy)
@@ -246,8 +245,9 @@ struct UnpromoteFlowTests {
         // The person stayed.
         store.nextWriteEffects = CatalogWriteEffects(handles: ["h-maria"])
         await open()
-        let stayed = try #require(await flow.confirm(session: session, userID: "user-1"))
-        #expect(stayed.deletedHandles.isEmpty)
+        var stayedSeen: CatalogWriteEffects?
+        #expect(await flow.confirm(session: session, userID: "user-1", apply: { stayedSeen = $0 }))
+        #expect(stayedSeen?.deletedHandles.isEmpty == true)
     }
 
     @Test func confirmFailureStaysOpen() async {
@@ -259,7 +259,7 @@ struct UnpromoteFlowTests {
         let failure = CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .user, params: [])
         store.unpromoteSubjectError = failure
         let result = await flow.confirm(session: session, userID: "user-1")
-        #expect(result == nil)
+        #expect(!result)
         #expect(flow.pending?.error == L10n.Errors.message(for: failure))
         store.unpromoteSubjectError = nil
         // A retry clears the error before the write returns.
@@ -269,7 +269,7 @@ struct UnpromoteFlowTests {
         #expect(flow.pending?.error == nil)
         store.unpromoteSubjectHold.isOn = false
         store.unpromoteSubjectHold.release()
-        #expect(await retry.value != nil)
+        #expect(await retry.value)
         #expect(flow.pending == nil)
     }
 }
