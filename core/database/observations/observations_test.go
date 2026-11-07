@@ -1634,52 +1634,91 @@ func TestNegationFollowsTheValueType(t *testing.T) {
 		in.Polarity = observations.PolarityNegative
 		return in
 	}
-	t.Run("a negative boolean is refused on add", func(t *testing.T) {
-		f := newBooleanFixture(t)
-		if _, _, err := f.cite(negative(f.boolIn(f.literate, true, true))); !errors.Is(err, observations.ErrInvalid) {
-			t.Fatalf("err = %v, want ErrInvalid", err)
-		}
-		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations`); n != 0 {
-			t.Fatalf("%d observation rows stored", n)
-		}
-	})
-	t.Run("a negative text is stored", func(t *testing.T) {
-		f := newBooleanFixture(t)
-		in := negative(observations.Input{SubjectID: f.person.ID, PropertyID: f.text.ID, Scalar: propertymeta.TextScalar("Ghent")})
-		if _, _, err := f.cite(in); err != nil {
-			t.Fatal(err)
-		}
-		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != 1 {
-			t.Fatalf("%d negative rows, want 1", n)
-		}
-	})
-	t.Run("a stored negative boolean updates only to positive", func(t *testing.T) {
-		f := newBooleanFixture(t)
-		res, _, err := f.cite(f.boolIn(f.literate, true, true))
-		if err != nil {
-			t.Fatal(err)
-		}
-		db, err := f.c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := db.Exec(`UPDATE observations SET polarity = 'negative' WHERE id = ?`, res.Observations[0].ID); err != nil {
-			t.Fatal(err)
-		}
-		in := negative(f.boolIn(f.literate, true, true))
-		in.ID = res.Observations[0].ID
-		if _, err := observationstest.UpdateObservation(f.c, f.userID, in); !errors.Is(err, observations.ErrInvalid) {
-			t.Fatalf("err = %v, want ErrInvalid", err)
-		}
-		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != 1 {
-			t.Fatalf("%d negative rows after a refused update, want 1", n)
-		}
-		in.Polarity = observations.PolarityPositive
-		if _, err := observationstest.UpdateObservation(f.c, f.userID, in); err != nil {
-			t.Fatal(err)
-		}
-		if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'positive'`); n != 1 {
-			t.Fatalf("%d positive rows, want 1", n)
-		}
-	})
+	// stored is the row the case starts with: a boolean answered yes, made
+	// negative by hand (the only way one exists); nil starts with no rows.
+	cases := []struct {
+		name         string
+		stored       bool
+		in           func(f booleanFixture, storedID []byte) observations.Input
+		wantInvalid  bool
+		wantRows     int
+		wantNegative int
+		wantTrue     int // rows with value_boolean = 1
+	}{
+		{
+			name: "a negative boolean is refused on add",
+			in: func(f booleanFixture, _ []byte) observations.Input {
+				return negative(f.boolIn(f.literate, true, true))
+			},
+			wantInvalid: true,
+		},
+		{
+			name: "a negative text is stored",
+			in: func(f booleanFixture, _ []byte) observations.Input {
+				return negative(observations.Input{SubjectID: f.person.ID, PropertyID: f.text.ID, Scalar: propertymeta.TextScalar("Ghent")})
+			},
+			wantRows: 1, wantNegative: 1,
+		},
+		{
+			name:   "a stored negative boolean refuses a changed negative answer and keeps its row",
+			stored: true,
+			in: func(f booleanFixture, id []byte) observations.Input {
+				in := negative(f.boolIn(f.literate, true, false))
+				in.ID = id
+				return in
+			},
+			wantInvalid: true, wantRows: 1, wantNegative: 1, wantTrue: 1,
+		},
+		{
+			name:   "a stored negative boolean updates to positive",
+			stored: true,
+			in: func(f booleanFixture, id []byte) observations.Input {
+				in := f.boolIn(f.literate, true, false)
+				in.ID = id
+				return in
+			},
+			wantRows: 1, wantTrue: 0,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newBooleanFixture(t)
+			var storedID []byte
+			if tc.stored {
+				res, _, err := f.cite(f.boolIn(f.literate, true, true))
+				if err != nil {
+					t.Fatal(err)
+				}
+				storedID = res.Observations[0].ID
+				db, err := f.c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`UPDATE observations SET polarity = 'negative' WHERE id = ?`, storedID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			in := tc.in(f, storedID)
+			var err error
+			if tc.stored {
+				_, err = observationstest.UpdateObservation(f.c, f.userID, in)
+			} else {
+				_, _, err = f.cite(in)
+			}
+			if tc.wantInvalid != errors.Is(err, observations.ErrInvalid) || (!tc.wantInvalid && err != nil) {
+				t.Fatalf("err = %v, wantInvalid %v", err, tc.wantInvalid)
+			}
+			if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations`); n != tc.wantRows {
+				t.Fatalf("%d rows, want %d", n, tc.wantRows)
+			}
+			if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != tc.wantNegative {
+				t.Fatalf("%d negative rows, want %d", n, tc.wantNegative)
+			}
+			if tc.stored {
+				if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE value_boolean = 1`); n != tc.wantTrue {
+					t.Fatalf("%d rows with value_boolean 1, want %d", n, tc.wantTrue)
+				}
+			}
+		})
+	}
 }
