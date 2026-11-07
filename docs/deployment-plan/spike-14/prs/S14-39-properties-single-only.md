@@ -104,7 +104,7 @@ Verified at `aaf3b15`.
 | Pill | `PropertiesSnapshot.swift` `PropertiesValueTypePill`; `macos/App/Features/Catalog/SubjectTypeChrome.swift` `PropertiesTypeChrome.valueTypeForeground(_ valueType: String)` | String switch; `depiction` and `boolean` fall to `PVColor.textSecondary` |
 | Value types | `macos/App/Platform/InterpretationValueKinds.swift` `PropertyValueType` (eight cases, `label`), pinned to Go by `api/ffi/swift_vocabulary_test.go`; `PropertiesModel.swift` `SubjectPropertyValueType.label(_:)` | — |
 | Copy | `macos/App/Platform/L10n.swift` `L10n.Properties.holds*` (~7450–7500); `holdsGroup(label:)` is the format precedent | No single-only copy |
-| Field | `macos/App/DesignSystem/Components/Field/PVField.swift` `hint: (any PVCopy)?`; `String` is `PVCopy` (`Components/Copy/PVCopy.swift`) | Takes a formatted hint |
+| Field | `macos/App/DesignSystem/Components/Field/PVField.swift` `hint: (any PVCopy)?`; `String` is `PVCopy` (`macos/App/DesignSystem/Components/Copy/PVCopy.swift`) | Takes a formatted hint |
 | Tests | `macos/ProvenenciaTests/PropertiesModelTests.swift` `goValueTypeRules` (~257: name creatable, integer creatable, date not), `createDefaultsToOneValueAndCanSubmitSeveral` (~388), `userPropertyCardinalityChangeKeepsTheNoticeUntilSelectionMoves` (~400); helpers `makeModel`, `warm`, `personType`, `nameProperty` (seeded `name`), `userProperty(id:usedBy:)` (hard-codes `valueType: "text"`) | Templates |
 
 **Precedent.** S14-36 ([#733](https://github.com/mendahu/provenencia/pull/733)) added `creatableValueTypes` and `acceptsValueType` over the same rules, with empty rules leaving Go to decide: copy that shape. The inspector's seeded branch of `holdsRow` is the locked row.
