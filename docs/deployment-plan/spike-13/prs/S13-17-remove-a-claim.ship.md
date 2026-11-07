@@ -1,7 +1,7 @@
 # Ship log — S13-17 Remove a claim
 
 **Plan:** [`S13-17-remove-a-claim.md`](S13-17-remove-a-claim.md) · **Branch:** `s13-17-remove-a-claim` · **PR:** #729
-**State:** review 2
+**State:** fixing 2
 
 ## Round 0 — implement
 Head `69e06cdf`. Gate PASS (orchestrator run). Report: `UnpromoteFlowTests` and T-7 seed through `FakeStore` and let the session load; `unpromoteLastRecordNamesTheDeletedHandle` lists the Subject's own handle id; `PersonSourcesList` keeps `unpromotingClaimID` (D-10 did not say where the removed claim's id comes from); the Source page keeps its `model.sync` `.onChange`; the strings landed in the STEP-2/3 commit. The manual check was not run.
@@ -97,3 +97,24 @@ Head `66138766`. Gate PASS (orchestrator run). F-1 – F-10 done. `L10n.Unpromot
 
 ## Round 2 — review
 Reviewers: MNT, UX, SEC+PRF (each had a Fix-now major). CON skipped: CON-1 was Rejected, so it has no fix to re-review. Scope `69e06cdf...66138766`.
+
+Resolved: SEC-1, UX-1 – UX-4, MNT-1 – MNT-4 (reviewers). Read by the orchestrator: UX-5, MNT-5 – MNT-9, PRF-1, UX-6, UX-8 Resolved.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-15 | MNT | blocker | Two ways to leave a page whose entity a write deleted | Fix now → F-11 | verified: `SourcePageModel` applies with `.sourceWorkspace` visible, then the view leaves; the guidance states the new order as the rule |
+| MNT out of lens (UX) | UX | blocker | `ConclusionPageSectionHost` spins forever on `.gone` | Fix now → F-12 | re-rated: F-4 added a state with no exit where a Callout stood; the page may hold its value while a section read fails |
+| PRF note | PRF | minor | `presentation` builds the page's content three times per `body` | Fix now → F-12 | rides F-12, same lines this PR added |
+
+### Fix plan 2
+
+**F-11 — One way to leave a deleted entity's page** (from MNT-15)
+Files: `macos/App/Features/Workspace/Session/WorkspaceSession.swift`, `macos/App/Features/Sources/SourcePageModel.swift`, `macos/App/Features/Sources/SourcePageView.swift`, `macos/App/Features/Catalog/Unpromote/UnpromoteFlow.swift` if the signature needs it, `macos/ProvenenciaTests/WorkspaceSessionTests.swift`, `macos/ProvenenciaTests/SourcePageModelTests.swift`.
+Failing test first: `SourcePageModelTests/resourceDeleteDoesNotReloadTheDeletedSource`: confirming a Source delete with its page visible → `getSourceWorkspace` is not called for that id again, and `leave` ran once.
+Do: `apply(_ effects:, _ mutation: CatalogMutation? = nil, leavingPage leave: () -> Void)`. `SourcePageModel.confirmResourceDelete(leaving:)` takes the leave closure and passes it to that call; on a failed write it does not run. `SourcePageView` passes `navigation.fallbackToSectionRoot` and stops calling it after the `await`. Master–detail pages (`MetadataView`, `SourceTypesView`, `PropertiesView`) stay as they are: their list stays on screen. Say that scope in `add-workspace-location`, `add-workspace-place` and `workspace-navigation.mdc`: the rule is for a page that the deleted entity is the whole of.
+Check: the test passes; scripts/check-pr.sh PASS.
+
+**F-12 — A section with a gone handle has an exit, and `presentation` is read once** (from the two notes above)
+Files: `macos/App/Features/Conclusions/ConclusionPageSectionHost.swift`, `macos/App/Features/Conclusions/ConclusionDetailPage.swift`.
+Do: the host's `.gone` branch draws the `.failed` branch's `PVCallout` and id with `L10n.Errors.conclusionDetailsNotFound`, so a section whose read fails under a page holding a value shows what it showed before F-4. `ConclusionDetailLoaded.body` reads `presentation` once into a `let`, as `ConclusionPageSectionHost.loaded` does, and every use in `body` takes it.
+Check: scripts/check-pr.sh PASS.
