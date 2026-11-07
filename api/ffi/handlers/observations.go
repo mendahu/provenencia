@@ -178,7 +178,7 @@ func observationToInput(o *engine.Observation) (observations.Input, error) {
 		}
 		in.ID = parsed
 	}
-	if err := valueInput(&in, o.GetValueText(), o.ValueInteger, o.GetDate(), o.GetValueDateId(), o.GetName(), o.GetValueNameId(), o.GetValueSubjectId(), o.GetValueTermId()); err != nil {
+	if err := valueInput(&in, o.GetValueText(), o.ValueInteger, o.ValueBoolean, o.GetDate(), o.GetValueDateId(), o.GetName(), o.GetValueNameId(), o.GetValueSubjectId(), o.GetValueTermId()); err != nil {
 		return observations.Input{}, err
 	}
 	depictionID, err := optionalID(o.GetValueDepictionId())
@@ -248,7 +248,7 @@ func observationDraftToInputAllowEmptySubject(d *engine.ObservationDraft) (obser
 		Polarity:   d.GetPolarity(),
 		Notes:      d.GetNotes(),
 	}
-	if err := valueInput(&in, d.GetValueText(), d.ValueInteger, d.GetDate(), d.GetValueDateId(), d.GetName(), d.GetValueNameId(), d.GetValueSubjectId(), d.GetValueTermId()); err != nil {
+	if err := valueInput(&in, d.GetValueText(), d.ValueInteger, d.ValueBoolean, d.GetDate(), d.GetValueDateId(), d.GetName(), d.GetValueNameId(), d.GetValueSubjectId(), d.GetValueTermId()); err != nil {
 		return observations.Input{}, err
 	}
 	in.Depiction = depictionInput(d.GetDepiction())
@@ -272,6 +272,7 @@ func valueInput(
 	in *observations.Input,
 	valueText string,
 	valueInteger *int64,
+	valueBoolean *bool,
 	date *engine.DateValueInput,
 	valueDateID string,
 	name *engine.NameValueInput,
@@ -287,6 +288,10 @@ func valueInput(
 	if valueInteger != nil {
 		in.ValueInteger = *valueInteger
 		in.HasInteger = true
+	}
+	if valueBoolean != nil {
+		in.ValueBoolean = *valueBoolean
+		in.HasBoolean = true
 	}
 	if date != nil && strings.TrimSpace(date.GetKind()) != "" {
 		v := valuecodec.DateFromProto(date)
@@ -329,6 +334,7 @@ func observationProto(o observations.Observation) *engine.Observation {
 		Polarity:         o.Polarity,
 		ValueText:        o.ValueText,
 		ValueInteger:     optionalInt64(o.HasInteger, o.ValueInteger),
+		ValueBoolean:     optionalBool(o.HasBoolean, o.ValueBoolean),
 		ValueDateId:      database.UUIDString(o.ValueDateID),
 		ValueNameId:      database.UUIDString(o.ValueNameID),
 		ValueSubjectId:   database.UUIDString(o.ValueSubjectID),
@@ -411,6 +417,13 @@ func listedWritten(c *database.Catalog, citationID []byte, written []observation
 }
 
 func optionalInt64(has bool, v int64) *int64 {
+	if !has {
+		return nil
+	}
+	return &v
+}
+
+func optionalBool(has bool, v bool) *bool {
 	if !has {
 		return nil
 	}

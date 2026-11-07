@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
+	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -263,6 +264,13 @@ func GetPropertiesWorkspace(in []byte) ([]byte, error) {
 			return err
 		}
 		out = &engine.GetPropertiesWorkspaceResponse{}
+		for _, r := range propertymeta.Types {
+			out.ValueTypes = append(out.ValueTypes, &engine.PropertyValueTypeRule{
+				ValueType:           r.ValueType,
+				ResearcherCreatable: r.ResearcherCreatable,
+				SingleOnly:          r.SingleOnly,
+			})
+		}
 		for _, p := range props {
 			out.Properties = append(out.Properties, propertyProto(p))
 		}

@@ -4854,6 +4854,14 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionValue: Sendable {
     set {kind = .depiction(newValue)}
   }
 
+  public var boolean: Bool {
+    get {
+      if case .boolean(let v)? = kind {return v}
+      return false
+    }
+    set {kind = .boolean(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Kind: Equatable, Sendable {
@@ -4864,6 +4872,7 @@ public nonisolated struct Provenencia_Engine_V1_ConclusionValue: Sendable {
     case name(Provenencia_Engine_V1_NameValueInput)
     /// A likeness: the stored crop's path, with no region.
     case depiction(Provenencia_Engine_V1_DepictionValue)
+    case boolean(Bool)
 
   }
 
@@ -6023,7 +6032,7 @@ public nonisolated struct Provenencia_Engine_V1_Property: Sendable {
 
   public var description_p: String = String()
 
-  /// text | integer | date | name | subject | term
+  /// a propertymeta value type; GetPropertiesWorkspace lists them
   public var valueType: String = String()
 
   /// subject_type_properties references; delete only at 0
@@ -6840,6 +6849,15 @@ public nonisolated struct Provenencia_Engine_V1_Observation: @unchecked Sendable
     set {_uniqueStorage()._valueTermOrigin = newValue}
   }
 
+  public var valueBoolean: Bool {
+    get {_storage._valueBoolean ?? false}
+    set {_uniqueStorage()._valueBoolean = newValue}
+  }
+  /// Returns true if `valueBoolean` has been explicitly set.
+  public var hasValueBoolean: Bool {_storage._valueBoolean != nil}
+  /// Clears the value of `valueBoolean`. Subsequent reads from it will return its default value.
+  public mutating func clearValueBoolean() {_uniqueStorage()._valueBoolean = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -6908,6 +6926,15 @@ public nonisolated struct Provenencia_Engine_V1_ObservationDraft: Sendable {
   /// Clears the value of `depiction`. Subsequent reads from it will return its default value.
   public mutating func clearDepiction() {self._depiction = nil}
 
+  public var valueBoolean: Bool {
+    get {_valueBoolean ?? false}
+    set {_valueBoolean = newValue}
+  }
+  /// Returns true if `valueBoolean` has been explicitly set.
+  public var hasValueBoolean: Bool {self._valueBoolean != nil}
+  /// Clears the value of `valueBoolean`. Subsequent reads from it will return its default value.
+  public mutating func clearValueBoolean() {self._valueBoolean = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -6916,6 +6943,7 @@ public nonisolated struct Provenencia_Engine_V1_ObservationDraft: Sendable {
   fileprivate var _date: Provenencia_Engine_V1_DateValueInput? = nil
   fileprivate var _name: Provenencia_Engine_V1_NameValueInput? = nil
   fileprivate var _depiction: Provenencia_Engine_V1_DepictionValueInput? = nil
+  fileprivate var _valueBoolean: Bool? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_CreateCitationWithObservationsRequest: Sendable {
@@ -7469,6 +7497,23 @@ public nonisolated struct Provenencia_Engine_V1_SubjectTypePropertiesGroup: Send
   fileprivate var _presentation: Provenencia_Engine_V1_SubjectTypePresentation? = nil
 }
 
+/// PropertyValueTypeRule is what propertymeta.Types says about one value type.
+public nonisolated struct Provenencia_Engine_V1_PropertyValueTypeRule: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var valueType: String = String()
+
+  public var researcherCreatable: Bool = false
+
+  public var singleOnly: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 public nonisolated struct Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -7479,6 +7524,8 @@ public nonisolated struct Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: 
   public var types: [Provenencia_Engine_V1_SubjectType] = []
 
   public var groups: [Provenencia_Engine_V1_SubjectTypePropertiesGroup] = []
+
+  public var valueTypes: [Provenencia_Engine_V1_PropertyValueTypeRule] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -15786,7 +15833,7 @@ nonisolated extension Provenencia_Engine_V1_ListPlaceSummariesResponse: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_ConclusionValue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ConclusionValue"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}integer\0\u{1}term\0\u{1}date\0\u{1}name\0\u{1}depiction\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}integer\0\u{1}term\0\u{1}date\0\u{1}name\0\u{1}depiction\0\u{1}boolean\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -15862,6 +15909,14 @@ nonisolated extension Provenencia_Engine_V1_ConclusionValue: SwiftProtobuf.Messa
           self.kind = .depiction(v)
         }
       }()
+      case 7: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.kind != nil {try decoder.handleConflictingOneOf()}
+          self.kind = .boolean(v)
+        }
+      }()
       default: break
       }
     }
@@ -15896,6 +15951,10 @@ nonisolated extension Provenencia_Engine_V1_ConclusionValue: SwiftProtobuf.Messa
     case .depiction?: try {
       guard case .depiction(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .boolean?: try {
+      guard case .boolean(let v)? = self.kind else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 7)
     }()
     case nil: break
     }
@@ -19528,7 +19587,7 @@ nonisolated extension Provenencia_Engine_V1_Citation: SwiftProtobuf.Message, Swi
 
 nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Observation"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0\u{3}value_depiction_id\0\u{1}depiction\0\u{3}value_term_key\0\u{3}value_term_origin\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}ref\0\u{3}citation_id\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{3}value_date_id\0\u{1}date\0\u{3}value_name_id\0\u{1}name\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{3}property_key\0\u{3}property_label\0\u{3}property_value_type\0\u{3}value_depiction_id\0\u{1}depiction\0\u{3}value_term_key\0\u{3}value_term_origin\0\u{3}value_boolean\0")
 
   fileprivate class _StorageClass {
     var _id: String = String()
@@ -19552,6 +19611,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
     var _depiction: Provenencia_Engine_V1_DepictionValue? = nil
     var _valueTermKey: String = String()
     var _valueTermOrigin: String = String()
+    var _valueBoolean: Bool? = nil
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -19583,6 +19643,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       _depiction = source._depiction
       _valueTermKey = source._valueTermKey
       _valueTermOrigin = source._valueTermOrigin
+      _valueBoolean = source._valueBoolean
     }
   }
 
@@ -19622,6 +19683,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         case 19: try { try decoder.decodeSingularMessageField(value: &_storage._depiction) }()
         case 20: try { try decoder.decodeSingularStringField(value: &_storage._valueTermKey) }()
         case 21: try { try decoder.decodeSingularStringField(value: &_storage._valueTermOrigin) }()
+        case 22: try { try decoder.decodeSingularBoolField(value: &_storage._valueBoolean) }()
         default: break
         }
       }
@@ -19697,6 +19759,9 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
       if !_storage._valueTermOrigin.isEmpty {
         try visitor.visitSingularStringField(value: _storage._valueTermOrigin, fieldNumber: 21)
       }
+      try { if let v = _storage._valueBoolean {
+        try visitor.visitSingularBoolField(value: v, fieldNumber: 22)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -19727,6 +19792,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
         if _storage._depiction != rhs_storage._depiction {return false}
         if _storage._valueTermKey != rhs_storage._valueTermKey {return false}
         if _storage._valueTermOrigin != rhs_storage._valueTermOrigin {return false}
+        if _storage._valueBoolean != rhs_storage._valueBoolean {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -19738,7 +19804,7 @@ nonisolated extension Provenencia_Engine_V1_Observation: SwiftProtobuf.Message, 
 
 nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ObservationDraft"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{1}date\0\u{3}value_date_id\0\u{1}name\0\u{3}value_name_id\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{1}notes\0\u{1}depiction\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}subject_id\0\u{3}property_id\0\u{1}polarity\0\u{3}value_text\0\u{3}value_integer\0\u{1}date\0\u{3}value_date_id\0\u{1}name\0\u{3}value_name_id\0\u{3}value_subject_id\0\u{3}value_term_id\0\u{1}notes\0\u{1}depiction\0\u{3}value_boolean\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -19759,6 +19825,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
       case 11: try { try decoder.decodeSingularStringField(value: &self.valueTermID) }()
       case 12: try { try decoder.decodeRepeatedStringField(value: &self.notes) }()
       case 13: try { try decoder.decodeSingularMessageField(value: &self._depiction) }()
+      case 14: try { try decoder.decodeSingularBoolField(value: &self._valueBoolean) }()
       default: break
       }
     }
@@ -19808,6 +19875,9 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
     try { if let v = self._depiction {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     } }()
+    try { if let v = self._valueBoolean {
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 14)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -19825,6 +19895,7 @@ nonisolated extension Provenencia_Engine_V1_ObservationDraft: SwiftProtobuf.Mess
     if lhs.valueTermID != rhs.valueTermID {return false}
     if lhs.notes != rhs.notes {return false}
     if lhs._depiction != rhs._depiction {return false}
+    if lhs._valueBoolean != rhs._valueBoolean {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -21010,9 +21081,49 @@ nonisolated extension Provenencia_Engine_V1_SubjectTypePropertiesGroup: SwiftPro
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_PropertyValueTypeRule: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".PropertyValueTypeRule"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}value_type\0\u{3}researcher_creatable\0\u{3}single_only\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.valueType) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.researcherCreatable) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.singleOnly) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.valueType.isEmpty {
+      try visitor.visitSingularStringField(value: self.valueType, fieldNumber: 1)
+    }
+    if self.researcherCreatable != false {
+      try visitor.visitSingularBoolField(value: self.researcherCreatable, fieldNumber: 2)
+    }
+    if self.singleOnly != false {
+      try visitor.visitSingularBoolField(value: self.singleOnly, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_PropertyValueTypeRule, rhs: Provenencia_Engine_V1_PropertyValueTypeRule) -> Bool {
+    if lhs.valueType != rhs.valueType {return false}
+    if lhs.researcherCreatable != rhs.researcherCreatable {return false}
+    if lhs.singleOnly != rhs.singleOnly {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetPropertiesWorkspaceResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}types\0\u{1}groups\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}properties\0\u{1}types\0\u{1}groups\0\u{3}value_types\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -21023,6 +21134,7 @@ nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Swif
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.properties) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.types) }()
       case 3: try { try decoder.decodeRepeatedMessageField(value: &self.groups) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.valueTypes) }()
       default: break
       }
     }
@@ -21038,6 +21150,9 @@ nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Swif
     if !self.groups.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.groups, fieldNumber: 3)
     }
+    if !self.valueTypes.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.valueTypes, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -21045,6 +21160,7 @@ nonisolated extension Provenencia_Engine_V1_GetPropertiesWorkspaceResponse: Swif
     if lhs.properties != rhs.properties {return false}
     if lhs.types != rhs.types {return false}
     if lhs.groups != rhs.groups {return false}
+    if lhs.valueTypes != rhs.valueTypes {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
