@@ -121,6 +121,8 @@ type Value struct {
 	HasText     bool
 	Integer     int64
 	HasInteger  bool
+	Boolean     bool
+	HasBoolean  bool
 	TermID      []byte
 	TermKey     string
 	EntityID    []byte

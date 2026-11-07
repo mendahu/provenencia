@@ -54,6 +54,8 @@ type EvidenceObservation struct {
 	HasText        bool
 	Integer        int64
 	HasInteger     bool
+	Boolean        bool
+	HasBoolean     bool
 	DateID         []byte
 	NameID         []byte
 	ValueSubjectID []byte

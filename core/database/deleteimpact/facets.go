@@ -414,11 +414,12 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 		ref, polarity                                                                                 string
 		text                                                                                          sql.NullString
 		integer                                                                                       sql.NullInt64
+		boolean                                                                                       sql.NullBool
 	)
 	if err := tx.QueryRow(`SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
+		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id, value_depiction_id
 		FROM observations WHERE id = ?`, id).Scan(&obsID, &ref, &citationID, &subjectID, &propertyID,
-		&polarity, &text, &integer, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
+		&polarity, &text, &integer, &boolean, &dateID, &nameID, &valueSubjectID, &termID, &depictionID); err != nil {
 		return released{}, err
 	}
 	out, err := releaseFacets(tx, catalogmodel.KindObservation, id)
@@ -441,6 +442,10 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 	if integer.Valid {
 		integerJSON = integer.Int64
 	}
+	var booleanJSON any
+	if boolean.Valid {
+		booleanJSON = boolean.Bool
+	}
 	out.Changes = append(out.Changes, rowchange.Change{
 		EntityType: "observation",
 		EntityID:   obsID,
@@ -454,6 +459,7 @@ func eraseObservation(tx *sql.Tx, id []byte) (released, error) {
 			"polarity":           polarity,
 			"value_text":         nullStringJSON(text),
 			"value_integer":      integerJSON,
+			"value_boolean":      booleanJSON,
 			"value_date_id":      database.UUIDJSON(dateID),
 			"value_name_id":      database.UUIDJSON(nameID),
 			"value_subject_id":   database.UUIDJSON(valueSubjectID),

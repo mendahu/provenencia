@@ -22,6 +22,8 @@ type TruthRow struct {
 	HasText     bool
 	Integer     int64
 	HasInteger  bool
+	Boolean     bool
+	HasBoolean  bool
 	TermID      []byte
 	EntityID    []byte
 	Date        []byte
@@ -257,6 +259,7 @@ func SameDisplay(a, b TruthRow) bool {
 	return bytes.Equal(a.PropertyID, b.PropertyID) && a.Rank == b.Rank && a.Reason == b.Reason &&
 		a.HasText == b.HasText && a.Text == b.Text &&
 		a.HasInteger == b.HasInteger && a.Integer == b.Integer &&
+		a.HasBoolean == b.HasBoolean && a.Boolean == b.Boolean &&
 		bytes.Equal(a.TermID, b.TermID) &&
 		bytes.Equal(a.EntityID, b.EntityID) &&
 		bytes.Equal(a.Date, b.Date) &&
@@ -269,6 +272,7 @@ func rowOf(v Value, property []byte) TruthRow {
 	return TruthRow{
 		PropertyID: property, Rank: v.Rank, Reason: v.Reason,
 		Text: v.Text, HasText: v.HasText, Integer: v.Integer, HasInteger: v.HasInteger,
+		Boolean: v.Boolean, HasBoolean: v.HasBoolean,
 		TermID: v.TermID, EntityID: v.EntityID, Date: v.Date, Name: v.Name, ImageFileID: v.ImageFileID,
 		Support: v.Support, Against: v.Against,
 	}

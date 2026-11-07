@@ -56,6 +56,8 @@ type Value struct {
 	HasText    bool
 	Integer    int64
 	HasInteger bool
+	Boolean    bool
+	HasBoolean bool
 	TermID     []byte
 	TermKey    string
 	TermLabel  string
@@ -148,7 +150,7 @@ const (
 
 	sqlOutcomes = `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.ref, ao.reason, ao.value_rank, ao.denied_by,
 			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0),
-			o.value_text, o.value_integer, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
+			o.value_text, o.value_integer, o.value_boolean, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id, o.value_subject_id,
 			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
 			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
@@ -397,6 +399,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			}
 			v.Value.Text, v.Value.HasText = rank.Text, rank.HasText
 			v.Value.Integer, v.Value.HasInteger = rank.Integer, rank.HasInteger
+			v.Value.Boolean, v.Value.HasBoolean = rank.Boolean, rank.HasBoolean
 			v.Value.TermID = append([]byte(nil), rank.TermID...)
 			if name, ok := terms[string(rank.TermID)]; ok {
 				v.Value.TermKey, v.Value.TermLabel, v.Value.TermOrigin = name.Key, name.Label, name.Origin
@@ -440,12 +443,13 @@ func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[stri
 			rank                                                         sql.NullInt64
 			text                                                         sql.NullString
 			integer                                                      sql.NullInt64
+			boolean                                                      sql.NullBool
 			o                                                            Outcome
 			locatorJSON                                                  string
 		)
 		dest := append([]any{&entityID, &propertyID, &o.ObservationID, &o.ObservationRef, &o.Reason, &rank, &o.DeniedBy,
 			&o.Vote.Support, &o.Vote.Of,
-			&text, &integer, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
+			&text, &integer, &boolean, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
 			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
 			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
 			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
@@ -456,6 +460,7 @@ func loadOutcomes(q Querier, toponym []byte, entityIDs [][]byte, byProp map[stri
 		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
 		o.Recorded.Text, o.Recorded.HasText = text.String, text.Valid
 		o.Recorded.Integer, o.Recorded.HasInteger = integer.Int64, integer.Valid
+		o.Recorded.Boolean, o.Recorded.HasBoolean = boolean.Bool, boolean.Valid
 		o.Recorded.TermID = termID
 		f, ok := byProp[string(entityID)][string(propertyID)]
 		if !ok {

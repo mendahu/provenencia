@@ -116,7 +116,7 @@ func loadGraphSubjects(q graphcache.Querier, graphID []byte) ([]graphcache.Evide
 
 func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceObservation, error) {
 	rows, err := q.Query(`SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
-			o.value_text, o.value_integer, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id,
+			o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id,
 			dpv.region_json, dpv.image_file_id, dc.locator_json, dpf.media_type
 		FROM observations o
 		JOIN subjects s ON s.id = o.subject_id
@@ -135,18 +135,20 @@ func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.E
 			o                               graphcache.EvidenceObservation
 			text                            sql.NullString
 			integer                         sql.NullInt64
+			boolean                         sql.NullBool
 			depictionRegion                 sql.NullString
 			depictionImage                  []byte
 			citationLocator, imageMediaType sql.NullString
 		)
 		if err := rows.Scan(&o.ID, &o.Ref, &o.CitationID, &o.SubjectID, &o.PropertyID, &o.Polarity,
-			&text, &integer, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID, &o.DepictionID,
+			&text, &integer, &boolean, &o.DateID, &o.NameID, &o.ValueSubjectID, &o.TermID, &o.DepictionID,
 			&depictionRegion, &depictionImage, &citationLocator, &imageMediaType); err != nil {
 			_ = rows.Close()
 			return nil, err
 		}
 		o.Text, o.HasText = text.String, text.Valid
 		o.Integer, o.HasInteger = integer.Int64, integer.Valid
+		o.Boolean, o.HasBoolean = boolean.Bool, boolean.Valid
 		o.ID = append([]byte(nil), o.ID...)
 		o.CitationID = append([]byte(nil), o.CitationID...)
 		o.SubjectID = append([]byte(nil), o.SubjectID...)

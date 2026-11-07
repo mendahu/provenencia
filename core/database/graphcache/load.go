@@ -117,7 +117,7 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error) {
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
-			r.value_text, r.value_integer, r.value_term_id, COALESCE(t.key, ''),
+			r.value_text, r.value_integer, r.value_boolean, r.value_term_id, COALESCE(t.key, ''),
 			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, r.support, r.against
 		FROM ` + g.valueTable + ` r
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
@@ -135,6 +135,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			reason           string
 			text             sql.NullString
 			integer          sql.NullInt64
+			boolean          sql.NullBool
 			termID           []byte
 			termKey          string
 			entityVal        []byte
@@ -143,7 +144,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			imageID          []byte
 			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &text, &integer, &boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -154,6 +155,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			Rank: rank, Reason: reason,
 			Text: text.String, HasText: text.Valid,
 			Integer: integer.Int64, HasInteger: integer.Valid,
+			Boolean: boolean.Bool, HasBoolean: boolean.Valid,
 			TermID: cloneID(termID), TermKey: termKey,
 			EntityID:    cloneID(entityVal),
 			Date:        append([]byte(nil), dateBlob...),

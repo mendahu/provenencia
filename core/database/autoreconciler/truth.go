@@ -74,6 +74,8 @@ func truthRow(g *group, rank int, cl autoreconcile.ReconciledValue) (graphcache.
 		HasText:    v.HasText,
 		Integer:    v.Integer,
 		HasInteger: v.HasInteger,
+		Boolean:    v.Boolean,
+		HasBoolean: v.HasBoolean,
 		TermID:     append([]byte(nil), v.TermID...),
 		EntityID:   append([]byte(nil), v.EntityID...),
 		Support:    cl.Support,

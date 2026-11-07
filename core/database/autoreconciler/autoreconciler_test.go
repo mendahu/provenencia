@@ -1835,3 +1835,48 @@ func TestValueRulesNamesInvariants(t *testing.T) {
 		}
 	}
 }
+
+func boolIn(s subjects.Subject, p properties.Property, v bool) observations.Input {
+	return observations.Input{SubjectID: s.ID, PropertyID: p.ID, ValueBoolean: v, HasBoolean: true}
+}
+
+// Two Sources saying true are one cached true with support 2; losing one
+// leaves support 1, and the cache still equals a rebuild.
+func TestReconciledBoolean(t *testing.T) {
+	f := newFixture(t)
+	id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+	must(t, err)
+	literate := properties.Property{ID: id, Key: "literate", ValueType: propertymeta.ValueTypeBoolean}
+	f.bind("person", id)
+	a := f.subject("person")
+	b := f.subjectOn(f.other, "person")
+	f.cite(boolIn(a, literate, true))
+	second := f.cite(boolIn(b, literate, true))
+	h := f.promote(a)
+	f.join(b, h)
+
+	db, err := f.c.DB()
+	must(t, err)
+	cached := func() (n, support int, value int) {
+		t.Helper()
+		must(t, db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(support), 0), COALESCE(MAX(value_boolean), -1)
+			FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, h, id).Scan(&n, &support, &value))
+		return n, support, value
+	}
+	if n, support, value := cached(); n != 1 || support != 2 || value != 1 {
+		t.Fatalf("cache rows %d support %d value_boolean %d, want 1, 2, 1", n, support, value)
+	}
+	f.assertUpkeepEqualsRebuild("TestReconciledBoolean merged")
+	must(t, f.c.Graph().Verify())
+
+	_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		changes, err := observations.Delete(tx, userID, second[0].ID)
+		return struct{}{}, changes, err
+	})
+	must(t, err)
+	if n, support, value := cached(); n != 1 || support != 1 || value != 1 {
+		t.Fatalf("after delete: rows %d support %d value_boolean %d, want 1, 1, 1", n, support, value)
+	}
+	f.assertUpkeepEqualsRebuild("TestReconciledBoolean after delete")
+	must(t, f.c.Graph().Verify())
+}
