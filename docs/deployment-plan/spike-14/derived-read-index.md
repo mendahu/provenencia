@@ -60,7 +60,7 @@ The proof is an oracle test. Composing each row alone with a recorder on the gra
 
 ### Storage
 
-Search documents persist across sessions, so the index is a catalog table, written in the same transaction as the documents it describes, and rebuilt by `searchindex.RebuildAll`. Each row is (reader, read handle, key aspect), with an index on the read side. The graph cache's display rows are composed by the same composers and use the same index, so there is one index, not one per cache. The table and column names are fixed in S14-41's plan.
+Search documents persist across sessions, so the index is a catalog table, written in the same transaction as the documents it describes, and rebuilt by `searchindex.RebuildAll`. Each row is (reader, read handle, key aspect), with an index on the read side. The graph cache's display rows are composed by the same composers and use the same index, so there is one index, not one per cache. The table and column names are fixed in S14-40's plan.
 
 ### Invalidation
 
@@ -92,5 +92,5 @@ At the map's Scale (37,000 Subjects) the index is a few hundred thousand rows. T
 
 - The effects registry for layer 1 (`Set.Handles`), the audit scopes and `Set.Search` for Source and Evidence graph documents.
 - The rebuild-equals-upkeep tests, which now also compare the index with a rebuild.
-- The graph cache's memo slots for kinship (`canonlinks`, `DropOnHandleCommit`) stay as they are. Moving them onto the index is a later step ([`docs/ideas/structural-debt.md`](../../ideas/structural-debt.md)).
+- The graph cache's memo slots for kinship (`canonlinks`, `DropOnHandleCommit`) stay as they are. Moving them onto the index is a later step after S14-42 ([`docs/ideas/structural-debt.md`](../../ideas/structural-debt.md)).
 - Detail pages are not readers in the index. They reload by id from `touchedHandles`, and the index tells the app the ends of changed links.

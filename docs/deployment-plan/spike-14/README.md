@@ -13,7 +13,7 @@ The first odds-and-ends spike (working rule "Even spikes are odds and ends"). It
 | [**Deployment plan**](deployment-plan.md) | Goal, working rules, PR map, order |
 | [**Event and Place pictures**](event-place-pictures.md) | Design for batch 1. PRs are in the map |
 | [**Oversized JPEG thumbnails**](oversized-jpeg-thumbnails.md) | Design for S14-23 (batch 1, from Spike 12) |
-| [**Derived rows know what they read**](derived-read-index.md) | Design for batch 8 (S14-40 – S14-43) |
+| [**Derived rows know what they read**](derived-read-index.md) | Design for batch 8 (S14-40, S14-42) |
 | [**App-health audit**](app-health-audit.md) | The 2026-10-27 findings behind batch 5's `A-n` items |
 | [**App-health audit 2**](app-health-audit-2.md) | The 2026-10-28 findings behind batch 5's `B-n` items |
 | [**Batch 7 dogfood notes**](ux/) | UX notes pulled into S14-28 – S14-37 |
