@@ -562,7 +562,7 @@ One PR (user, 2026-11-01).
 
 #### S14-37 — Boolean value type (UI)
 
-**Ships.** Go marks boolean researcher-creatable (one `propertymeta.Types` flag), so Properties create offers it; the Properties page hides Holds several for a single-only type; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
+**Ships.** Go marks boolean researcher-creatable (one `propertymeta.Types` flag), so Properties create offers it; the Properties page hides Holds several for a single-only type; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Decide in S14-D8 whether the type pill and the picker show the raw key `boolean` or `PropertyValueType.label` ("Yes / no"), because today the label reaches VoiceOver only. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
 **Not this PR.** Engine path (S14-36).
 **Check.** Bar outcome 31: create a boolean Property, cite true/false on a Subject, see it on Conclusion detail.
-**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; `CitationObservationValue`, `PropertiesModel.researcherCreatable`, `ReconciledValueDisplay`.
+**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; `CitationObservationValue`, `propertymeta.Types`, `PropertiesSnapshot.creatableValueTypes`, `ReconciledValueDisplay`.
