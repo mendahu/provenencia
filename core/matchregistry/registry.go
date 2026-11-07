@@ -10,6 +10,7 @@ package matchregistry
 import (
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/recordlinks"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -28,15 +29,23 @@ type Registry struct {
 	Alignment graphalign.Rules
 	// Kinship is the bound on what one pivot of a kinship pattern implies.
 	Kinship kinship.Rules
+	// RecordLinks is the record-links comparison: how many shared facts make a
+	// line between two Evidence graphs strong.
+	RecordLinks recordlinks.Rules
 }
 
 // Default is the shipped registry. Each call builds new slices and maps, so a
 // caller that changes its copy changes no one else's.
 func Default() Registry {
-	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment(), Kinship: defaultKinship()}
+	return Registry{Value: defaultValue(), Subject: defaultSubject(), Segment: defaultSegment(), Alignment: defaultAlignment(), Kinship: defaultKinship(), RecordLinks: defaultRecordLinks()}
 }
 
 // AlignConfig is the registry as graph alignment reads it.
 func (r Registry) AlignConfig() graphalign.Config {
 	return graphalign.Config{Value: r.Value, Subject: r.Subject, Segment: r.Segment, Alignment: r.Alignment}
+}
+
+// RecordLinksConfig is the registry as the record-links comparison reads it.
+func (r Registry) RecordLinksConfig() recordlinks.Config {
+	return recordlinks.Config{Value: r.Value, Subject: r.Subject, RecordLinks: r.RecordLinks}
 }
