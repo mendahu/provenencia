@@ -4,9 +4,7 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 )
 
 // ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
@@ -28,29 +26,6 @@ func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) 
 	}
 	slices.Sort(refs)
 	return refs, nil
-}
-
-// MemoSnapshot is what the graph holds as promotealign's Evidence graph memos.
-type MemoSnapshot struct {
-	Layer evidencelayer.Layer
-}
-
-// MemoSnapshotForTest reads graphID's layer through evidencelayer.Load; it
-// builds the layer on a miss, so call it after a Propose.
-func MemoSnapshotForTest(c *database.Catalog, graphID []byte) MemoSnapshot {
-	db, err := c.DB()
-	if err != nil {
-		return MemoSnapshot{}
-	}
-	_, namePattern, err := valuerules.Load(c.Graph(), db)
-	if err != nil {
-		return MemoSnapshot{}
-	}
-	layer, err := evidencelayer.Load(c.Graph(), graphID, namePattern)
-	if err != nil {
-		return MemoSnapshot{}
-	}
-	return MemoSnapshot{Layer: layer}
 }
 
 // ProfilesKeptForTest is how many handle profiles the graph's match index

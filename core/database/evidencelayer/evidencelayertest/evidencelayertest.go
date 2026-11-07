@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -25,6 +26,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -262,6 +264,19 @@ func (r *Records) SexOnly(src sources.Source, art artifacts.Artifact, sex string
 func (r *Records) Graph(src sources.Source) []byte {
 	r.T.Helper()
 	return evidencegraphstest.SoleGraph(r.T, r.C, src.ID).ID
+}
+
+// Layer is the Evidence layer of the graph, loaded under the catalog's name
+// pattern: the memoized one, or one built.
+func (r *Records) Layer(graph []byte) evidencelayer.Layer {
+	r.T.Helper()
+	db, err := r.C.DB()
+	Must(r.T, err)
+	_, namePattern, err := valuerules.Load(r.C.Graph(), db)
+	Must(r.T, err)
+	layer, err := evidencelayer.Load(r.C.Graph(), graph, namePattern)
+	Must(r.T, err)
+	return layer
 }
 
 // DatedOn is an event cited as an event type on a date (m and d 0 for a year).

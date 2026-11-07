@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -18,13 +17,7 @@ import (
 // catalog's name pattern.
 func links(t *testing.T, r *evidencelayertest.Records, graph []byte) []kinship.Link {
 	t.Helper()
-	db, err := r.C.DB()
-	evidencelayertest.Must(t, err)
-	_, namePattern, err := valuerules.Load(r.C.Graph(), db)
-	evidencelayertest.Must(t, err)
-	layer, err := evidencelayer.Load(r.C.Graph(), graph, namePattern)
-	evidencelayertest.Must(t, err)
-	return layer.Links
+	return r.Layer(graph).Links
 }
 
 // The loader reads a Source's links from the connect rules: one link for

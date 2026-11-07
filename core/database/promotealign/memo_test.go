@@ -144,7 +144,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 	w := newWarmFixture(t)
 	w.f.propose(w.f.Graph(w.srcB), nil)
 	first := w.snapshot(t)
-	if len(first.Layer.Subjects) == 0 {
+	if len(first.Subjects) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
@@ -155,14 +155,15 @@ func TestMemoIsNotMutated(t *testing.T) {
 		}
 		// The same layer, not a rebuilt copy.
 		again := w.snapshot(t)
-		if &again.Layer.Subjects[0] != &first.Layer.Subjects[0] {
+		if &again.Subjects[0] != &first.Subjects[0] {
 			t.Fatal("the layer was rebuilt, not read from the memo")
 		}
 	}
 }
 
-// T-3 (AC-1.1): the layer Propose memoized is the one evidencelayer.Load reads,
-// with no query, and a second Load shares it.
+// T-3 (AC-1.1): Propose stores the layer on the graph under the Evidence
+// layer's memo key, and evidencelayer.Load reads that layer with no query; a
+// second Load shares it.
 func TestLoadSharesPromotesMemo(t *testing.T) {
 	w := newWarmFixture(t)
 	graph := w.f.Graph(w.srcB)
@@ -175,6 +176,14 @@ func TestLoadSharesPromotesMemo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	v, ok := w.f.c.Graph().EvidenceGraphMemo(graph, "evidencelayer\x00"+namePattern)
+	if !ok {
+		t.Fatal("Propose memoized no layer")
+	}
+	stored, ok := v.(evidencelayer.Layer)
+	if !ok || len(stored.Subjects) == 0 {
+		t.Fatalf("Propose memoized %T with no Subjects", v)
+	}
 	n := 0
 	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
 	got, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
@@ -184,10 +193,7 @@ func TestLoadSharesPromotesMemo(t *testing.T) {
 	if n != 0 {
 		t.Fatalf("Load issued %d graph queries after a Propose", n)
 	}
-	if len(got.Subjects) == 0 {
-		t.Fatal("Load returned no Subjects")
-	}
-	if &got.Subjects[0] != &w.snapshot(t).Layer.Subjects[0] {
+	if &got.Subjects[0] != &stored.Subjects[0] {
 		t.Fatal("Load built its own layer, not the one Propose memoized")
 	}
 	again, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
@@ -199,10 +205,11 @@ func TestLoadSharesPromotesMemo(t *testing.T) {
 	}
 }
 
-// snapshot is the memoized layer of the incoming Source's graph.
-func (w *warmFixture) snapshot(t *testing.T) promotealign.MemoSnapshot {
+// snapshot is the layer of the incoming Source's graph, as the memo holds it
+// once a Propose has run.
+func (w *warmFixture) snapshot(t *testing.T) evidencelayer.Layer {
 	t.Helper()
-	return promotealign.MemoSnapshotForTest(w.f.c, w.f.Graph(w.srcB))
+	return w.f.Layer(w.f.Graph(w.srcB))
 }
 
 func memoJSON(t *testing.T, w *warmFixture) string {
