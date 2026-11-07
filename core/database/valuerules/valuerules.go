@@ -12,7 +12,10 @@ import (
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Querier is *sql.DB or *sql.Tx.
@@ -47,3 +50,20 @@ var product = sync.OnceValue(func() valuecompare.Rules {
 	rules.Names.Aliases = namealiases.ProductIndex()
 	return rules
 })
+
+// Metas is the catalog's value type and cardinality of every product
+// property.
+func Metas(g *graphcache.Graph) (subjectcompare.Metas, error) {
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	out := subjectcompare.Metas{}
+	for _, p := range v.Properties {
+		if p.Origin != vocabkey.OriginProvenencia {
+			continue
+		}
+		out[vocabkey.PropertyKey(p.Key)] = propertymeta.Meta{ValueType: p.ValueType, Cardinality: p.Cardinality}
+	}
+	return out, nil
+}
