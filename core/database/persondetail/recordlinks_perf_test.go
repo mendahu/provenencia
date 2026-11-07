@@ -103,7 +103,8 @@ func TestRecordLinksBudgets(t *testing.T) {
 		son := households(g, 65)
 		first := g.recordLinks(son)
 		g.C.Graph().Drop()
-		if cold := g.recordLinks(son); !reflect.DeepEqual(first.Pairs, cold.Pairs) || len(first.Graphs) != len(cold.Graphs) {
+		cold := g.recordLinks(son)
+		if !reflect.DeepEqual(first.Pairs, cold.Pairs) || !reflect.DeepEqual(graphIDs(first), graphIDs(cold)) {
 			t.Fatal("the read at 65 graphs differs from the read after dropping the cache")
 		}
 		threeStrong(t, first, 65)
@@ -113,4 +114,13 @@ func TestRecordLinksBudgets(t *testing.T) {
 		})
 		databasetest.WithinBudget(t, "repeat read at 65 graphs", d, budgetLinksPast)
 	})
+}
+
+// graphIDs is the id of each graph of a read, in the order the read lists them.
+func graphIDs(rl persondetail.PersonRecordLinks) [][]byte {
+	out := make([][]byte, len(rl.Graphs))
+	for i, g := range rl.Graphs {
+		out[i] = g.GraphID
+	}
+	return out
 }
