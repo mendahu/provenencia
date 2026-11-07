@@ -1,7 +1,7 @@
 # Review — S14-38 Unpromote rewrites the ends of the links it takes back
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Rounds:** 3 (round 3 on D-9 only). **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -95,3 +95,34 @@ Five location builders and three place-relationship builders already exist in te
 
 ### X-15 · nit · T-9 promote-then-locate order
 **Answer:** Fixed — STEP-5 states it and the call arguments.
+
+## Round 3 — D-9 (added at the user's request, 2026-11-07)
+
+One fresh reviewer, both lenses, on the D-9 text only. No blockers.
+
+### M-10 · major · "linkEnds" names three different sets
+**Answer:** Fixed — the D-9 field is `Effect.Reload` / `Set.Reload`, named for its job.
+
+### M-11 · major · D-9 writes D-1's read a second time, inline
+**Answer:** Fixed — `valueMembersOfSubject` is a named var beside `observers`, documented as the unfiltered form of `linkEnds`.
+
+### M-12 · major · Docs that D-9 makes untrue
+**Answer:** Fixed — STEP-7 gives the new text for the `Set.SummaryDeps` doc, the `dropCommittedDisplays` doc, the Swift `.touchedHandles` doc and the writes README. D-9 now states that `SummaryDepsWalked` and `graphcache` do not change, and why: a deleted accepted claim always brings `Handles`.
+
+### M-13 · major · The `observations` arm reloads three whole lists on unfiled-bridge deletes
+**Answer:** Fixed by narrowing. The `observations` arm is dropped, so D-9 covers Unpromote only. At `effects.Resolve` a deleted bridge's claim and Observations are gone, so no path can tell filed from unfiled. Naming the place after a bridge delete is an Out row with a structural-debt entry. It is not a regression: bridge delete never named it. **Tell the user**: their place-page fix is full for Unpromote, not for bridge delete.
+
+### M-14 · minor · `Set.Reload` repeats `SummaryDeps` after `Run`
+**Answer:** Declined. The field's doc says `Run` folds it; it keeps `Resolve` free of `SummaryDeps`, which only `Run` fills today.
+
+### M-15 · minor · Observation update re-pointing `value_subject_id`
+**Answer:** Moot — the `observations` arm is dropped.
+
+### X-16 · major · Test filter never runs T-10
+**Answer:** Fixed — `TakenBack` added to the regex; STEP-5's command adds conclusionsummaries, promote, subjects and autoreconciler.
+
+### X-17 · major · `SummaryDepsWalked`, doc text and graphcache left open
+**Answer:** Fixed — D-9 and STEP-5.
+
+### X-18 · minor · T-10 setup
+**Answer:** Fixed — T-10 names the Leeds setup (as T-6) and the call; the bridge-delete row is gone with M-13.
