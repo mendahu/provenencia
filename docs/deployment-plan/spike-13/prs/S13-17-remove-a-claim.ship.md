@@ -123,4 +123,4 @@ Check: scripts/check-pr.sh PASS.
 Head `88ba5bb3`, `main` merged at `285c81ff`. Gate PASS (orchestrator run on the merge). F-11, F-12 done.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: answered (UX-3 Toast, confirm title, recipe split) · CON miss: none
+Gate PASS · CI green (Go tests, macOS tests) · open: none · follow-ups: none · to user: answered (UX-3 Toast, confirm title, recipe split) · CON miss: none
