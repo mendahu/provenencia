@@ -1,7 +1,7 @@
 # Ship log — S14-37 Boolean value type (UI)
 
 **Plan:** [`S14-37-boolean-value-type-ui.md`](S14-37-boolean-value-type-ui.md) · **Branch:** `s14-37-boolean-value-type-ui`, stacked on `s14-39-properties-single-only` (#737, user 2026-11-07) · **PR:** #739
-**State:** fixing 2
+**State:** stopped — draft until manual check 3 proves UX-1
 
 ## Round 0 — implement
 Head `210181ab`. Gate PASS (run by the orchestrator on the pushed head, `--base s14-39-properties-single-only`). Report: STEP-3 is one commit; the D-4 rename reached more sites than the plan's regex; a private `segment(_:)` helper in `PVSegmentedControl`. All are in the plan's Landed note. Manual check not run: Tab landing on Yes and the nil-selection drawing, both stop conditions, are untested.
@@ -96,3 +96,9 @@ Files: `macos/App/Features/CitationComposer/CitationObservationRows.swift`, `doc
 Failing test first: none (dead code).
 Do: delete `ObservationRow.isNegated`, `ObservationRow.draft(subjectID:)` and the `subjectID` accessor, and make the `propertyID` accessor get-only. Add to the plan's `**Landed:**` line that these went. Leave `ObservationRowState.draft` and the `baseline` branches alone.
 Check: `rg -n "ObservationRow\.draft\(|static func draft\(subjectID" macos` finds nothing; `rg -n "isNegated" macos/App/Features/CitationComposer macos/ProvenenciaTests` finds nothing; `scripts/check-pr.sh --base s14-39-properties-single-only` PASS.
+
+## Round 2 — fix
+Head `08d87dec`. Gate PASS (run by the orchestrator on the pushed head). F-9 done. MNT-2 **Resolved**, read in the commit by the orchestrator.
+
+## Result
+Gate PASS on `08d87dec` (the only later commit is this log) · CI not run: #739 is a draft · open: UX-1's proof (manual check 3) · follow-ups: PRF-1, collapse `ObservationRowState.draft` · to user: MNT-1 and plan-review M-9, both answered 2026-11-07. `main` moved by docs only (#738, S13-29's plan); #737 is mergeable and clean.
