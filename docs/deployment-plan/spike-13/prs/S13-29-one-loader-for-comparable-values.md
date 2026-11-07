@@ -15,6 +15,18 @@
 **Planned:** 2026-11-07 against `main` @ `82547284` (refreshed after S13-26 landed; first drafted on `97e6f30f`)
 **Review:** [`S13-29-one-loader-for-comparable-values.review.md`](S13-29-one-loader-for-comparable-values.review.md) — round 1: Fits with changes / Not ready; findings Fixed; M-5 answered by the user 2026-11-07 (move the fixture in this PR); round 2: Fits with changes / Not ready; findings Fixed; M-11 answered 2026-11-07 (S13-26 had landed: this PR reshapes `recordlinks.Member` and adds its guard row)
 
+**Landed note.** The code differs from the plan in these ways (the Decisions and the Out table above are kept as planned):
+
+- **STEP-7:** the `main` budget run used `git checkout main` in this checkout, not a second worktree (the user's standing rule: no worktree unasked).
+- **D-13:** the rename used perl in place of GNU `sed` (BSD `sed` has no `\u`), with the same effect.
+- **STEP-3:** the `rg` still prints two `connectrules.Bridge{}` lines; that is a different type from `graphalign.Bridge`.
+- **`promotealign_test.go`:** the redundant `graphfill` blank import is dropped (`evidencelayertest` imports it).
+- **`docs/ideas/structural-debt.md`:** the S14-36 entry's `promotealign.decode` became `evidencelayer.Decode` (the Definition of done sweep).
+- **Untrusted size (Edges):** wrong as planned. `graphcache.WalkEvidenceGraph` had no bound on one bridge's ends, so 8,000 crafted rows cost 38 s and 18.8 GB in `Load`. The walk now counts its edges before building any and returns none over `maxWalkEdges` = 50,000 (one high total cap, user, S13-26 SEC-1). The largest walk in `TestLargeSourceBudgets`' fixture builds 60 edges. This covers `graphfill`, which calls the same walk.
+- **D-12:** `MemoSnapshot` and `MemoSnapshotForTest` are deleted, not kept. `evidencelayertest.Records.Layer` reads the layer through `evidencelayer.Load`, and `TestLoadSharesPromotesMemo` reads the memo by its literal key.
+- **Out (the other fixtures):** `grapheventtitles`, `canonicalgraph`, `conclusionsummaries`, `promote`, `graphcache`, and also `autoreconciler`, `conclusiondetails`, `persondetail` and `search` now build their Sources on `evidencelayertest.Records`, in this PR (user's same-pass rule). `Records.Labelled` is new, and `Records.Locate` returns the bridge Subject. Kept as they were, each because it differs: `promote/bridges_test.go`'s `bridge` family (returns `connect.Result`, whose `Citation` one test adds to), `conclusionsummaries` `placeRel` (adds Observations to the same Citation), the `cite` helpers that choose the Artifact from the Subject's Source (`autoreconciler`, `conclusiondetails`, `persondetail`), `observations_test.go`'s `booleanFixture.cite`, and the in-package and one-off `create_cited_bridge` calls in the `subjects`, `citations`, `connect`, `effects`, `deleteimpact` and `observations` tests. The structural-debt entry for them is removed.
+- **Multi-graph load:** the cache-cap debt is added to the S13-16 PRF-2 entry already in `docs/ideas/structural-debt.md`, not as a new entry, and to S13-27's Check in the map.
+
 ### Implementer — read this first
 
 1. **This file is the whole task.** Read it top to bottom before you change code. Then read every file under **Current state** and load every skill under **Skills to load**.
