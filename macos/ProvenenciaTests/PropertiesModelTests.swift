@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -467,6 +469,23 @@ struct PropertiesModelTests {
         model.selectProperty(integer.id)
         #expect(model.canEditCardinality)
         #expect(model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user) == nil)
+    }
+
+    @Test func valueTypeInksAreDistinct() {
+        let types: [PropertyValueType] = [.text, .integer, .date, .name, .subject, .term, .depiction, .boolean]
+        for name in [NSAppearance.Name.aqua, .darkAqua] {
+            let appearance = NSAppearance(named: name)!
+            var inks: Set<String> = []
+            appearance.performAsCurrentDrawingAppearance {
+                for type in types {
+                    let ink = NSColor(PropertiesTypeChrome.valueTypeForeground(type.rawValue))
+                        .usingColorSpace(.sRGB)!
+                    inks.insert(String(format: "%.3f/%.3f/%.3f", ink.redComponent, ink.greenComponent, ink.blueComponent))
+                }
+            }
+            #expect(inks.count == types.count, "\(name.rawValue)")
+        }
+        #expect(PropertiesTypeChrome.valueTypeForeground("nope") == PVColor.textSecondary)
     }
 
     @Test func userPropertyCardinalityChangeKeepsTheNoticeUntilSelectionMoves() async {

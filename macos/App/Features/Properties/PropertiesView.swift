@@ -468,7 +468,7 @@ private struct PropertiesContent: View {
                 }
             }
 
-            if property.valueType == "term" {
+            if property.valueType == PropertyValueType.term.rawValue {
                 Text(L10n.Properties.termNote)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
