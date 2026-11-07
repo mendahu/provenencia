@@ -209,3 +209,37 @@ func TestLinesInvariants(t *testing.T) {
 		}
 	}
 }
+
+// TestPairsInvariants holds Pairs to the one-pair count: each pair of a read
+// equals the lines over the same two graphs, and a pair is present exactly when
+// those lines are not empty.
+func TestPairsInvariants(t *testing.T) {
+	r := rand.New(rand.NewSource(2))
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	people := [][]byte{ent(1), ent(2), ent(3), ent(4), ent(5), ent(6)}
+	events := [][]byte{ent(20), ent(21), ent(22)}
+	p := people[0]
+	prefixes := []byte{0xA0, 0xB0, 0xC0, 0xD0}
+
+	for round := range 100 {
+		var graphs []recordlinks.Graph
+		for i, prefix := range prefixes {
+			ms, es := materialize(genGraph(r, p, people, events), prefix, 0x10*byte(i+1))
+			graphs = append(graphs, build(ms, es...))
+		}
+		got := map[[2]int][]recordlinks.Line{}
+		for _, pair := range recordlinks.Pairs(p, graphs, metas, cfg) {
+			got[[2]int{pair.A, pair.B}] = pair.Lines
+		}
+		for a := range graphs {
+			for b := a + 1; b < len(graphs); b++ {
+				want := recordlinks.Lines(p, graphs[a], graphs[b], metas, cfg)
+				lines, present := got[[2]int{a, b}]
+				if present != (len(want) != 0) || (present && !reflect.DeepEqual(lines, want)) {
+					t.Fatalf("round %d pair %d-%d: Pairs = %s (present %v), Lines = %s", round, a, b, show(lines), present, show(want))
+				}
+			}
+		}
+	}
+}

@@ -3,6 +3,8 @@ package recordlinks_test
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -501,17 +503,22 @@ func pair(graph func(tag string, id func(byte) []byte, ev func(byte) []byte) rec
 	return graph("a", idA, evA), graph("b", idB, evB)
 }
 
-// solo is one shared person on entF, one member in each graph, holding n values
-// of the given words for key.
+// soloGraph is one graph with one shared person on entF, holding n values of
+// the given words for key; the tag keeps one graph's words from another's.
+func soloGraph(key vocabkey.PropertyKey, text func(string) propertycompare.Value, wordsEach, n int) func(tag string, id, ev func(byte) []byte) recordlinks.Graph {
+	return func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+		v := vals{sex: {pt.Term("male")}}
+		for j := range n {
+			v[key] = append(v[key], text(words(fmt.Sprintf("%s%d_", tag, j), wordsEach)))
+		}
+		return build([]recordlinks.Member{person(id(1), entP), person(id(2), entF, v)})
+	}
+}
+
+// solo is a pair of soloGraphs.
 func solo(key vocabkey.PropertyKey, text func(string) propertycompare.Value, wordsEach int) func(n int) (recordlinks.Graph, recordlinks.Graph) {
 	return func(n int) (recordlinks.Graph, recordlinks.Graph) {
-		return pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
-			v := vals{sex: {pt.Term("male")}}
-			for j := range n {
-				v[key] = append(v[key], text(words(fmt.Sprintf("%s%d_", tag, j), wordsEach)))
-			}
-			return build([]recordlinks.Member{person(id(1), entP), person(id(2), entF, v)})
-		})
+		return pair(soloGraph(key, text, wordsEach, n))
 	}
 }
 
@@ -855,4 +862,206 @@ func BenchmarkLinesAtCap(b *testing.B) {
 			}
 		})
 	}
+}
+
+// householdGraphs is n household graphs in memory, the same shape as
+// persondetail's households fixture, which asserts the same numbers: each
+// holds the son (entP, the page), the father (entF), the mother (entM) and the
+// sister (entS), named with their names only, and four parent links (father and
+// mother to the son, father and mother to the sister). Each pair of graphs then
+// has three strong lines (father, mother, sister): 1,225 pairs at n = 50.
+func householdGraphs(n int) []recordlinks.Graph {
+	out := make([]recordlinks.Graph, n)
+	for i := range out {
+		id := func(k byte) []byte { return []byte{byte(i), byte(i >> 8), k} }
+		out[i] = build([]recordlinks.Member{
+			person(id(1), entP, vals{name: {pt.Name("Thomas Smith")}}),
+			person(id(2), entF, vals{name: {pt.Name("William Smith")}}),
+			person(id(3), entM, vals{name: {pt.Name("Mary Ann Jones")}}),
+			person(id(4), entS, vals{name: {pt.Name("Ann Smith")}}),
+		},
+			rel(id(2), id(1), "parent", 1), rel(id(3), id(1), "parent", 2),
+			rel(id(2), id(4), "parent", 3), rel(id(3), id(4), "parent", 4))
+	}
+	return out
+}
+
+func TestPairs(t *testing.T) {
+	john, mary := pt.Name("John Smith"), pt.Name("Mary Smith")
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	g := func(id func(byte) []byte, others ...recordlinks.Member) recordlinks.Graph {
+		return build(append([]recordlinks.Member{person(id(1), entP)}, others...))
+	}
+	ida := func(n byte) []byte { return []byte{0xC0 + n} }
+	cases := []struct {
+		name   string
+		graphs []recordlinks.Graph
+		want   []recordlinks.Pair
+	}{
+		{"AC-1.1 a shared person",
+			[]recordlinks.Graph{
+				g(idA, person(idA(2), entF, vals{name: {john}})),
+				g(idB, person(idB(2), entF, vals{name: {john}}))},
+			[]recordlinks.Pair{{A: 0, B: 1, Lines: lines(want{entF, 1, weak})}}},
+		{"two pairs, ordered",
+			[]recordlinks.Graph{
+				g(idA, person(idA(2), entF)),
+				g(idB, person(idB(2), entM)),
+				g(ida, person(ida(2), entF), person(ida(3), entM))},
+			[]recordlinks.Pair{
+				{A: 0, B: 2, Lines: lines(want{entF, 0, weak})},
+				{A: 1, B: 2, Lines: lines(want{entM, 0, weak})}}},
+		{"AC-1.2 the page is no line",
+			[]recordlinks.Graph{g(idA), g(idB), g(ida)}, nil},
+		{"AC-1.7 one graph", []recordlinks.Graph{g(idA, person(idA(2), entF))}, nil},
+		{"no graph", nil, nil},
+		{"AC-1.7 a graph that shares no one",
+			[]recordlinks.Graph{
+				g(idA, person(idA(2), entF, vals{name: {mary}})),
+				g(idB, person(idB(2), entF, vals{name: {mary}})),
+				g(ida, person(ida(2), entS))},
+			[]recordlinks.Pair{{A: 0, B: 1, Lines: lines(want{entF, 1, weak})}}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := recordlinks.Pairs(entP, c.graphs, metas, cfg)
+			if !reflect.DeepEqual(got, c.want) {
+				t.Fatalf("Pairs = %+v, want %+v", got, c.want)
+			}
+		})
+	}
+}
+
+// reversed is graphs in the opposite order.
+func reversed(graphs []recordlinks.Graph) []recordlinks.Graph {
+	out := slices.Clone(graphs)
+	slices.Reverse(out)
+	return out
+}
+
+// mirror maps the pairs of a read to the pairs of the reversed read.
+func mirror(pairs []recordlinks.Pair, n int) []recordlinks.Pair {
+	var out []recordlinks.Pair
+	for _, p := range pairs {
+		out = append(out, recordlinks.Pair{A: n - 1 - p.B, B: n - 1 - p.A, Lines: p.Lines})
+	}
+	slices.SortFunc(out, func(x, y recordlinks.Pair) int {
+		if x.A != y.A {
+			return x.A - y.A
+		}
+		return x.B - y.B
+	})
+	return out
+}
+
+func TestPairsReadCap(t *testing.T) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	john := pt.Name("John Smith")
+	named := func(id func(byte) []byte, others ...recordlinks.Member) recordlinks.Graph {
+		return build(append([]recordlinks.Member{person(id(1), entP)}, others...))
+	}
+	ids := func(base byte) func(byte) []byte { return func(n byte) []byte { return []byte{base + n} } }
+	two := []recordlinks.Graph{
+		named(idA, person(idA(2), entF, vals{name: {john}, sex: {pt.Term("male")}})),
+		named(idB, person(idB(2), entF, vals{name: {john}, sex: {pt.Term("male")}}))}
+	three := []recordlinks.Graph{
+		named(idA, person(idA(2), entF)), named(idB, person(idB(2), entF)), named(ids(0xC0), person(ids(0xC0)(2), entF))}
+	big1, big2 := solo(name, pt.Name, cfg.Value.Words.MaxExactPairing)(underCap(t, axes(cfg)[0], cfg) + 1)
+	mixed := []recordlinks.Graph{big1, big2,
+		named(ids(0xC0), person(ids(0xC0)(2), entM, vals{name: {john}})),
+		named(ids(0xD0), person(ids(0xD0)(2), entM, vals{name: {john}}))}
+	if w := recordlinks.PairWork(entP, big1, big2, cfg); w <= cfg.RecordLinks.MaxPairWork {
+		t.Fatalf("the big pair's work %d is not over MaxPairWork", w)
+	}
+
+	cases := []struct {
+		name   string
+		graphs []recordlinks.Graph
+		cap    func(work int) int
+		check  func(t *testing.T, got []recordlinks.Pair)
+	}{
+		{"AC-2.5 cap equals the work: counted", two, func(w int) int { return w },
+			func(t *testing.T, got []recordlinks.Pair) {
+				if want := lines(want{entF, 2, strong}); len(got) != 1 || !equalLines(got[0].Lines, want) {
+					t.Fatalf("got %+v", got)
+				}
+			}},
+		{"AC-2.3 cap one short: every pair listed at 0 facts", two, func(w int) int { return w - 1 },
+			func(t *testing.T, got []recordlinks.Pair) {
+				if want := lines(want{entF, 0, weak}); len(got) != 1 || !equalLines(got[0].Lines, want) {
+					t.Fatalf("got %+v", got)
+				}
+			}},
+		{"AC-2.4 lines alone pass the cap: no pair", three, func(int) int { return 2 },
+			func(t *testing.T, got []recordlinks.Pair) {
+				if got != nil {
+					t.Fatalf("got %+v", got)
+				}
+			}},
+		{"AC-2.5 a pair over MaxPairWork beside a small pair", mixed, func(w int) int { return w },
+			func(t *testing.T, got []recordlinks.Pair) {
+				if len(got) != 2 || got[0].A != 0 || got[0].B != 1 || got[1].A != 2 || got[1].B != 3 ||
+					!equalLines(got[0].Lines, lines(want{entF, 0, weak})) ||
+					!equalLines(got[1].Lines, lines(want{entM, 1, weak})) {
+					t.Fatalf("got %+v", got)
+				}
+			}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			run := cfg
+			run.RecordLinks.MaxReadWork = c.cap(recordlinks.ReadWork(entP, c.graphs, cfg))
+			got := recordlinks.Pairs(entP, c.graphs, metas, run)
+			c.check(t, got)
+			back := recordlinks.Pairs(entP, reversed(c.graphs), metas, run)
+			if want := mirror(got, len(c.graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
+				t.Fatalf("reversed read = %+v, want %+v", back, want)
+			}
+		})
+	}
+}
+
+func TestPairsAtScale(t *testing.T) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	graphs := householdGraphs(50)
+	t.Logf("ReadWork at 50 households = %d (MaxReadWork %d)", recordlinks.ReadWork(entP, graphs, cfg), cfg.RecordLinks.MaxReadWork)
+	got := recordlinks.Pairs(entP, graphs, subjectcomparetest.Metas(), cfg)
+	if len(got) != 1225 {
+		t.Fatalf("pairs = %d, want 1225", len(got))
+	}
+	for _, p := range got {
+		if len(p.Lines) != 3 || p.Lines[0].Strength != strong || p.Lines[1].Strength != strong || p.Lines[2].Strength != strong ||
+			!bytes.Equal(p.Lines[0].Entity, entF) || !bytes.Equal(p.Lines[1].Entity, entM) || !bytes.Equal(p.Lines[2].Entity, entS) {
+			t.Fatalf("pair %d-%d lines = %s", p.A, p.B, show(p.Lines))
+		}
+	}
+}
+
+// BenchmarkPairsAtCap is the slowest read the cap lets through: the "names"
+// axis at its largest size under MaxPairWork, in as many graphs as stay within
+// MaxReadWork.
+func BenchmarkPairsAtCap(b *testing.B) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	n := underCap(b, axes(cfg)[0], cfg)
+	graphs := func(m int) []recordlinks.Graph {
+		out := make([]recordlinks.Graph, m)
+		for i := range out {
+			id := func(k byte) []byte { return []byte{byte(i), byte(i >> 8), k} }
+			out[i] = soloGraph(name, pt.Name, cfg.Value.Words.MaxExactPairing, n)(fmt.Sprintf("g%d", i), id, nil)
+		}
+		return out
+	}
+	m := 2
+	for recordlinks.ReadWork(entP, graphs(m+1), cfg) <= cfg.RecordLinks.MaxReadWork {
+		m++
+	}
+	gs := graphs(m)
+	b.ResetTimer()
+	for range b.N {
+		recordlinks.Pairs(entP, gs, metas, cfg)
+	}
+	b.ReportMetric(float64(m), "graphs")
 }

@@ -1,6 +1,7 @@
-// Package recordlinks is the record-links comparison: given two Evidence
-// graphs of one person, it counts what the two records share about each other
-// person both hold, and weighs that line weak or strong. It judges two members
+// Package recordlinks is the record-links comparison: given the Evidence
+// graphs of one person, Pairs counts, for each pair of them, what the two
+// records share about each other person both hold, and weighs that line weak
+// or strong. It judges two members
 // the researcher already joined to one canonical entity; it is not a layer
 // under graph alignment and never reads its scoring, weights, points or band.
 // Properties compare through subjectcompare.CompareProperty and links through
@@ -29,15 +30,15 @@ type Rules struct {
 	// MaxEntityMembers is the most members of any kind either graph may file on
 	// one canonical entity before the comparison reads it as malformed: a
 	// person over it keeps its line at 0 facts, and links to an entity over it
-	// count nothing. It bounds the member pairs and link pairs one Lines call
+	// count nothing. It bounds the member pairs and link pairs one pair of graphs
 	// compares.
 	MaxEntityMembers int
 	// MaxUnitValues is the most values either member may hold for one property
 	// that counts, its pooled properties included, before that property counts
 	// nothing. It bounds the value pairs property compare reads.
 	MaxUnitValues int
-	// MaxPairWork is the most work one Lines call may do before it reads the
-	// pair of graphs as malformed and compares nothing: every shared person
+	// MaxPairWork is the most work one pair of graphs may do before it reads
+	// the pair as malformed and compares nothing: every shared person
 	// keeps a line at 0 facts. Work is counted before any compare: for each
 	// member pair, the words of one side times the words of the other for each
 	// property that counts, and for each entity both link to, the shapes of
@@ -46,8 +47,13 @@ type Rules struct {
 	// MaxValueBytes is the most bytes one value may hold (valuecompare.Size)
 	// before the property holding it counts nothing for the member pair: it
 	// is not compared and charges no work. It bounds what one value costs to
-	// read, so a crafted value cannot hang a Lines call.
+	// read, so a crafted value cannot hang a pair's count.
 	MaxValueBytes int
+	// MaxReadWork is the most work one Pairs call may do before it compares
+	// nothing: every line keeps 0 facts, and when the number of lines alone
+	// passes it, no line is listed. Work is the number of lines plus each
+	// pair's work as MaxPairWork counts it, capped at MaxPairWork.
+	MaxReadWork int
 }
 
 // Config is the registry as the record-links comparison reads it.
@@ -152,18 +158,131 @@ type Line struct {
 	Strength Strength
 }
 
-// Lines is one line for each person both graphs hold on one canonical entity,
-// other than the page's own: the facts the two records share about that
-// person and the line's weight. Lines are sorted by entity. A pair of graphs
-// whose work passes MaxPairWork compares nothing: every line has 0 facts.
-func Lines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Line {
-	var out []Line
-	ha, hb := holdings{}, holdings{}
-	capped := overWork(string(page), a, b, ha, hb, cfg)
-	for _, e := range slices.Sorted(maps.Keys(a.persons)) {
-		if e == string(page) || len(b.persons[e]) == 0 {
-			continue
+// Pair is the lines between two graphs of a read; A < B index the graphs
+// Pairs was given.
+type Pair struct {
+	A, B  int
+	Lines []Line
+}
+
+// Pairs is the lines between every pair of graphs that share a person other
+// than the page's own, ordered by A and then B; a pair with no line is absent.
+// Each pair's lines are what the one-pair count gives over the two graphs. The
+// whole read is bounded by MaxReadWork, counted before any compare: past it
+// every pair is listed and every line has 0 facts, and when the number of lines
+// alone passes it, no pair is returned.
+func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) []Pair {
+	h := holdings{}
+	limit := cfg.RecordLinks.MaxReadWork
+	shared, work := readPlan(string(page), graphs, h, cfg, limit)
+	if shared == nil {
+		return nil
+	}
+	skip := work > limit
+	var out []Pair
+	for _, p := range shared {
+		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, skip)})
+	}
+	return out
+}
+
+// pairKey is the indexes of two graphs, lower first.
+type pairKey struct{ a, b int }
+
+// sharedPair is the person entities, ascending, that graphs a < b both hold.
+type sharedPair struct {
+	a, b     int
+	entities []string
+}
+
+// readPlan indexes the persons of graphs other than the page and returns the
+// pairs that share one, ordered, with the read's work: the number of lines plus
+// each pair's work capped at MaxPairWork. It counts the lines before it builds
+// any pair and stops counting once past limit; past it, the work is returned
+// as counted so far, and the pairs are nil when the lines alone passed limit.
+func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([]sharedPair, int) {
+	holders := map[string][]int{}
+	for i, g := range graphs {
+		for e := range g.persons {
+			if e != page {
+				holders[e] = append(holders[e], i)
+			}
 		}
+	}
+	entities := slices.Sorted(maps.Keys(holders))
+	var n int
+	for _, e := range entities {
+		for i := range holders[e] {
+			if n += i; n > limit {
+				return nil, n
+			}
+		}
+	}
+	byPair := map[pairKey]*sharedPair{}
+	for _, e := range entities {
+		hs := holders[e]
+		for j, y := range hs {
+			for _, x := range hs[:j] {
+				p := byPair[pairKey{x, y}]
+				if p == nil {
+					p = &sharedPair{a: x, b: y}
+					byPair[pairKey{x, y}] = p
+				}
+				p.entities = append(p.entities, e)
+			}
+		}
+	}
+	out := make([]sharedPair, 0, len(byPair))
+	for _, p := range byPair {
+		out = append(out, *p)
+	}
+	slices.SortFunc(out, func(p, q sharedPair) int {
+		if p.a != q.a {
+			return p.a - q.a
+		}
+		return p.b - q.b
+	})
+	for _, p := range out {
+		w := pairWork(p.entities, graphs[p.a], graphs[p.b], h, h, cfg, cfg.RecordLinks.MaxPairWork)
+		if n += min(w, cfg.RecordLinks.MaxPairWork); n > limit {
+			return out, n
+		}
+	}
+	return out, n
+}
+
+// readWork is the work of a read as Pairs counts it, stopping once past limit.
+func readWork(page []byte, graphs []Graph, h holdings, cfg Config, limit int) int {
+	_, n := readPlan(string(page), graphs, h, cfg, limit)
+	return n
+}
+
+// sharedOf is the person entities, ascending, that a and b both hold, the
+// page's own excluded.
+func sharedOf(page []byte, a, b Graph) []string {
+	var out []string
+	for _, e := range slices.Sorted(maps.Keys(a.persons)) {
+		if e != string(page) && len(b.persons[e]) != 0 {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// pairLines is one line for each person both graphs hold on one canonical
+// entity, other than the page's own: the facts the two records share about
+// that person and the line's weight. Lines are sorted by entity. A pair of
+// graphs whose work passes MaxPairWork compares nothing: every line has 0
+// facts.
+func pairLines(page []byte, a, b Graph, metas subjectcompare.Metas, cfg Config) []Line {
+	return linesOf(sharedOf(page, a, b), a, b, metas, cfg, holdings{}, holdings{}, false)
+}
+
+// linesOf is the lines for the shared entities. skip compares nothing.
+func linesOf(shared []string, a, b Graph, metas subjectcompare.Metas, cfg Config, ha, hb holdings, skip bool) []Line {
+	var out []Line
+	capped := skip || overWork(shared, a, b, ha, hb, cfg)
+	for _, e := range shared {
 		var best int
 		if !capped && !over(e, a, b, cfg) {
 			for _, x := range a.persons[e] {
@@ -302,19 +421,19 @@ func (x cost) against(y cost) int {
 
 // overWork reports whether the work of comparing every member pair of every
 // shared person passes MaxPairWork.
-func overWork(page string, a, b Graph, ha, hb holdings, cfg Config) bool {
-	return pairWork(page, a, b, ha, hb, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
+func overWork(shared []string, a, b Graph, ha, hb holdings, cfg Config) bool {
+	return pairWork(shared, a, b, ha, hb, cfg, cfg.RecordLinks.MaxPairWork) > cfg.RecordLinks.MaxPairWork
 }
 
-// pairWork is the sum, over every member pair of every shared person, of the
-// pair's work. A sum of products does not depend on the order of the graphs or
-// of their members. It stops counting once past limit, so the result is the
-// work only when it is within limit.
-func pairWork(page string, a, b Graph, ha, hb holdings, cfg Config, limit int) int {
+// pairWork is the sum, over every member pair of every shared person (a sorted
+// list that excludes the page), of the pair's work. A sum of products does not
+// depend on the order of the graphs or of their members. It stops counting
+// once past limit, so the result is the work only when it is within limit.
+func pairWork(shared []string, a, b Graph, ha, hb holdings, cfg Config, limit int) int {
 	var n int
-	for e, xs := range a.persons {
-		ys := b.persons[e]
-		if e == page || len(ys) == 0 || over(e, a, b, cfg) {
+	for _, e := range shared {
+		xs, ys := a.persons[e], b.persons[e]
+		if len(ys) == 0 || over(e, a, b, cfg) {
 			continue
 		}
 		costY := make([]cost, len(ys))

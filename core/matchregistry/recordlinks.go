@@ -15,5 +15,7 @@ func defaultRecordLinks() recordlinks.Rules {
 		MaxPairWork: 25_000,
 		// decided: user, 2026-11-07 (S13-26 SEC-3): a high limit on one value, so a crafted value cannot hang a read; a longer note loses that one fact
 		MaxValueBytes: 256,
+		// decided: S13-27 plan D-3, the rule the user set for MaxPairWork (2026-11-07, S13-26 SEC-1): a high cap a researcher never reaches, so a crafted catalog cannot hang a read
+		MaxReadWork: 640_000,
 	}
 }
