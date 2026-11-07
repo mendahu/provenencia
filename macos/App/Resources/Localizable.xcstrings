@@ -10145,13 +10145,13 @@
       }
     },
     "properties.inspector.valueTypeImmutable": {
-      "comment": "Accessibility label for the lock beside value type in the inspector",
+      "comment": "The lock's spoken label and tooltip beside value type in the inspector",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Immutable after create"
+            "value": "Cannot be changed once the property exists"
           }
         }
       }
@@ -10193,13 +10193,25 @@
       }
     },
     "properties.inspector.holdsLocked": {
-      "comment": "Accessibility label for the lock beside a seeded property's Holds value",
+      "comment": "The lock's spoken label and tooltip beside a seeded property's Holds value",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
             "value": "Set by Provenencia"
+          }
+        }
+      }
+    },
+    "properties.inspector.holdsSingleOnly": {
+      "comment": "Why Holds is locked for a single-only value type; argument is the type's label, such as Yes / no",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Properties hold one value"
           }
         }
       }

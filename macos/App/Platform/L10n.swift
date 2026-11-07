@@ -7446,8 +7446,8 @@ enum L10n {
         )
         static let valueTypeImmutable = LocalizedStringResource(
             "properties.inspector.valueTypeImmutable",
-            defaultValue: "Immutable after create",
-            comment: "Accessibility label for the lock beside value type in the inspector"
+            defaultValue: "Cannot be changed once the property exists",
+            comment: "The lock's spoken label and tooltip beside value type in the inspector"
         )
         static let holds = LocalizedStringResource(
             "properties.inspector.holds",
@@ -7489,8 +7489,15 @@ enum L10n {
         static let holdsLocked = LocalizedStringResource(
             "properties.inspector.holdsLocked",
             defaultValue: "Set by Provenencia",
-            comment: "Accessibility label for the lock beside a seeded property's Holds value"
+            comment: "The lock's spoken label and tooltip beside a seeded property's Holds value"
         )
+        static func holdsSingleOnly(typeLabel: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "properties.inspector.holdsSingleOnly",
+                defaultValue: "%@ Properties hold one value",
+                comment: "Why Holds is locked for a single-only value type; argument is the type's label, such as Yes / no"
+            ), typeLabel)
+        }
         static func holdsGroup(label: String) -> String {
             L10n.format(LocalizedStringResource(
                 "properties.inspector.holdsGroup",

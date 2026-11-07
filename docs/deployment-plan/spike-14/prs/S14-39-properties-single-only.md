@@ -1,9 +1,9 @@
 # S14-39 — Properties page reads single-only
 
-**Status:** Planned
+**Status:** Landed in #737 (2026-11-07)
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D9](../design/S14-D9-properties-single-only.md), board agreed 2026-11-07
+**Brief:** [S14-D9](../design/archive/S14-D9-properties-single-only.md), board agreed 2026-11-07
 **Board:** S14-D9 — the *Properties View* project, a [migrated design on claude.ai](https://claude.ai/artifact/XRS4WQDZbaDa7jAzVKYQdc), page *S7-D2 Subject Fields.dc.html*, section "S14-D9 · Single-only value type", frames 1, 2, 3, 4, 5, 6a, 6b and the "Value type pills · SO-5" table. Changes from the brief: every pill gets a light and a dark shade, `text` moves to paper-700 and `term` to ochre-900 to pass 4.5:1 (D-8); Holds in create keeps the radios' height (D-5); the lock also shows its reason as a tooltip (D-4); dark mode is the board's theme switch, not separate frames. The implementer may not be able to open it: **Design → macOS** describes each frame in words.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-D9
 **Blocks:** S14-37
@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc` (Go wire vocabulary is a typed enum; views and models use the typed cases)
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; Swift keeps no copy); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; S14-36 plan D-11 (`singleOnly` mapped, read here) and its **Landed** note
 **Planned:** 2026-11-07 against `main` @ `aaf3b15`
+**Landed:** [#737](https://github.com/mendahu/provenencia/pull/737), 2026-11-07. Differences from the plan: (1) `holdsValueText(_:)`, a `fileprivate` helper the plan did not name, sits beside `PropertiesLockedValue` (and `holdsValueLabel(_:)` under it). (2) `holdsRow` reads `holdsLockReason` once, not the shape D-6 spells (user, 2026-11-07). (3) The create dialog passes `width: 560`, the board's frame width. (4) `valueTypeImmutable`'s default is now "Cannot be changed once the property exists". (5) `PropertyValueType` gained `CaseIterable`, so T-4 can list the cases. (6) Scope's `chooseValueType(_:singleOnly:)` is `chooseValueType(_:holdsLocked:)`, as D-3 says. Decisions, Scope and ACs stand as written.
 **Review:** [`S14-39-properties-single-only.review.md`](S14-39-properties-single-only.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; no To user item open
 
 ### Implementer — read this first

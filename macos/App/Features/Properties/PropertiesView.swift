@@ -442,12 +442,8 @@ private struct PropertiesContent: View {
 
             VStack(spacing: PVSpacing.space4) {
                 inspectorMetaRow(label: L10n.Properties.inspectorValueType) {
-                    HStack(spacing: 6) {
+                    PropertiesLockedValue(reason: L10n.string(L10n.Properties.valueTypeImmutable)) {
                         PropertiesValueTypePill(valueType: property.valueType)
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(PVColor.textFaint)
-                            .accessibilityLabel(Text(L10n.Properties.valueTypeImmutable))
                     }
                 }
                 holdsRow(property)
@@ -472,7 +468,7 @@ private struct PropertiesContent: View {
                 }
             }
 
-            if property.valueType == "term" {
+            if property.valueType == PropertyValueType.term.rawValue {
                 Text(L10n.Properties.termNote)
                     .font(PVFont.body(size: PVTypeScale.caption, italic: true))
                     .foregroundStyle(PVColor.textMuted)
@@ -516,7 +512,13 @@ private struct PropertiesContent: View {
 
     @ViewBuilder
     private func holdsRow(_ property: CatalogProperty) -> some View {
-        if model.canEditCardinality {
+        if let reason = model.holdsLockReason(valueType: property.valueType, origin: property.origin) {
+            inspectorMetaRow(label: L10n.Properties.holds) {
+                PropertiesLockedValue(reason: reason) {
+                    holdsValueText(property.cardinality)
+                }
+            }
+        } else {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 Text(L10n.Properties.holds)
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -553,18 +555,6 @@ private struct PropertiesContent: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(verbatim: L10n.Properties.holdsGroup(label: property.label)))
-        } else {
-            inspectorMetaRow(label: L10n.Properties.holds) {
-                HStack(spacing: 6) {
-                    Text(property.cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne)
-                        .font(PVFont.body(size: PVTypeScale.bodySmall))
-                        .foregroundStyle(PVColor.textPrimary)
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(PVColor.textFaint)
-                        .accessibilityLabel(Text(L10n.Properties.holdsLocked))
-                }
-            }
         }
     }
 
@@ -737,6 +727,7 @@ private struct PropertiesCreateHost: View {
                     confirm: L10n.Properties.createSubmit,
                     cancel: L10n.Properties.createCancel
                 ),
+                width: 560,
                 isRunning: model.isSaving,
                 isDirty: draft != model.draft,
                 confirmDisabled: !model.canSubmitCreate(draft),
@@ -764,6 +755,57 @@ private struct PropertiesCreateHost: View {
             get: { model.createOpen },
             set: { if !$0 { model.closeCreate() } }
         )
+    }
+
+    /// Holds in create: the radios, or the value type's one value with its reason.
+    @ViewBuilder
+    private var holdsField: some View {
+        if let reason = model.holdsLockReason(
+            valueType: draft?.valueType ?? PropertyValueType.text.rawValue,
+            origin: CatalogOrigin.user
+        ) {
+            PVField(label: L10n.Properties.holds, hint: reason) {
+                ZStack(alignment: .topLeading) {
+                    // Hidden, they reserve the radios' height so nothing below moves.
+                    holdsRadios
+                        .hidden()
+                        .accessibilityHidden(true)
+                    PropertiesLockedValue(reason: reason, speaksReason: false) {
+                        holdsValueText(draft?.cardinality ?? PropertyCardinality.single.rawValue)
+                    }
+                    .accessibilityLabel(Text(L10n.Properties.holds))
+                    .accessibilityValue(Text(holdsValueLabel(draft?.cardinality ?? PropertyCardinality.single.rawValue)))
+                    .accessibilityIdentifier("properties.create.holds.locked")
+                }
+            }
+        } else {
+            PVField(label: L10n.Properties.holds, hint: L10n.Properties.holdsEventsHint) {
+                holdsRadios
+            }
+        }
+    }
+
+    private var holdsRadios: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space3) {
+            PVRadio(
+                L10n.Properties.holdsOne,
+                description: L10n.Properties.holdsOneDescription,
+                isSelected: (draft?.cardinality ?? PropertyCardinality.single.rawValue) != PropertyCardinality.multiple.rawValue
+            ) {
+                draft?.cardinality = PropertyCardinality.single.rawValue
+            }
+            .accessibilityIdentifier("properties.create.holds.single")
+            PVRadio(
+                L10n.Properties.holdsSeveral,
+                description: L10n.Properties.holdsSeveralDescription,
+                isSelected: draft?.cardinality == PropertyCardinality.multiple.rawValue
+            ) {
+                draft?.cardinality = PropertyCardinality.multiple.rawValue
+            }
+            .accessibilityIdentifier("properties.create.holds.multiple")
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(Text(L10n.Properties.holds))
     }
 
     @ViewBuilder
@@ -840,35 +882,16 @@ private struct PropertiesCreateHost: View {
                         )
                     },
                     selection: draft?.valueType ?? "text",
-                    select: { draft?.valueType = $0 }
+                    select: { vt in
+                        draft?.chooseValueType(
+                            vt,
+                            holdsLocked: model.holdsLockReason(valueType: vt, origin: CatalogOrigin.user) != nil
+                        )
+                    }
                 )
             }
 
-            PVField(
-                label: L10n.Properties.holds,
-                hint: L10n.Properties.holdsEventsHint
-            ) {
-                VStack(alignment: .leading, spacing: PVSpacing.space3) {
-                    PVRadio(
-                        L10n.Properties.holdsOne,
-                        description: L10n.Properties.holdsOneDescription,
-                        isSelected: (draft?.cardinality ?? PropertyCardinality.single.rawValue) != PropertyCardinality.multiple.rawValue
-                    ) {
-                        draft?.cardinality = PropertyCardinality.single.rawValue
-                    }
-                    .accessibilityIdentifier("properties.create.holds.single")
-                    PVRadio(
-                        L10n.Properties.holdsSeveral,
-                        description: L10n.Properties.holdsSeveralDescription,
-                        isSelected: draft?.cardinality == PropertyCardinality.multiple.rawValue
-                    ) {
-                        draft?.cardinality = PropertyCardinality.multiple.rawValue
-                    }
-                    .accessibilityIdentifier("properties.create.holds.multiple")
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel(Text(L10n.Properties.holds))
-            }
+            holdsField
 
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 Text(L10n.Properties.createBindSection)
@@ -899,7 +922,7 @@ private struct PropertiesCreateHost: View {
         let ink = PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation)
         let on = draft?.bindTypeIDs.contains(type.id) == true
         return Button {
-            toggleBind(typeID: type.id)
+            draft?.toggleBind(typeID: type.id)
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 PVCheckboxMark(isChecked: on)
@@ -921,13 +944,37 @@ private struct PropertiesCreateHost: View {
         .accessibilityAddTraits(on ? [.isSelected] : [])
         .accessibilityIdentifier("properties.create.bind.\(type.key)")
     }
+}
 
-    private func toggleBind(typeID: String) {
-        guard draft != nil else { return }
-        if draft!.bindTypeIDs.contains(typeID) {
-            draft!.bindTypeIDs.remove(typeID)
-        } else {
-            draft!.bindTypeIDs.insert(typeID)
+/// A property's cardinality as its One / Several words.
+fileprivate func holdsValueLabel(_ cardinality: String) -> LocalizedStringResource {
+    cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne
+}
+
+/// A property's cardinality as its One / Several value.
+fileprivate func holdsValueText(_ cardinality: String) -> some View {
+    Text(holdsValueLabel(cardinality))
+        .font(PVFont.body(size: PVTypeScale.bodySmall))
+        .foregroundStyle(PVColor.textPrimary)
+}
+
+/// A read-only value and its lock. The reason is the lock's tooltip and, unless
+/// a hint already speaks it, its VoiceOver label.
+fileprivate struct PropertiesLockedValue<Content: View>: View {
+    let reason: String
+    var speaksReason = true
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 6) {
+            content
+            Image(systemName: "lock.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(PVColor.textFaint)
+                .help(reason)
+                .accessibilityLabel(Text(verbatim: reason))
+                .accessibilityHidden(!speaksReason)
         }
+        .accessibilityElement(children: .combine)
     }
 }

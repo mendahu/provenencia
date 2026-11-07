@@ -28,14 +28,16 @@ enum PropertiesTypeChrome {
 
     /// Board VT_COLOR — mono pill foreground.
     static func valueTypeForeground(_ valueType: String) -> Color {
-        switch valueType {
-        case "text": return PVPalette.paper600
-        case "integer": return PVPalette.copper700
-        case "date": return PVPalette.lapis700
-        case "name": return PVPalette.iron700
-        case "subject": return PVPalette.plum700
-        case "term": return PVPalette.ochre700
-        default: return PVColor.textSecondary
+        guard let type = PropertyValueType(rawValue: valueType) else { return PVColor.textSecondary }
+        switch type {
+        case .text: return PVColor.valueTypeTextInk
+        case .integer: return PVColor.valueTypeIntegerInk
+        case .date: return PVColor.valueTypeDateInk
+        case .name: return PVColor.valueTypeNameInk
+        case .subject: return PVColor.valueTypeSubjectInk
+        case .term: return PVColor.valueTypeTermInk
+        case .boolean: return PVColor.valueTypeBooleanInk
+        case .depiction: return PVColor.valueTypeDepictionInk
         }
     }
 }

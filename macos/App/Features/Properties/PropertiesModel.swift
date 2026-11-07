@@ -20,6 +20,21 @@ final class PropertiesModel {
         /// `single` or `multiple`. Create defaults to one value.
         var cardinality: String = PropertyCardinality.single.rawValue
         var bindTypeIDs: Set<String>
+
+        /// Picks the value type. A type whose Holds is locked holds one value,
+        /// so the draft goes back to it.
+        mutating func chooseValueType(_ valueType: String, holdsLocked: Bool) {
+            self.valueType = valueType
+            if holdsLocked { cardinality = PropertyCardinality.single.rawValue }
+        }
+
+        mutating func toggleBind(typeID: String) {
+            if bindTypeIDs.contains(typeID) {
+                bindTypeIDs.remove(typeID)
+            } else {
+                bindTypeIDs.insert(typeID)
+            }
+        }
     }
 
     private(set) var selectedTypeKey: String?
@@ -198,9 +213,24 @@ final class PropertiesModel {
         return !CatalogOrigin.isPlugin(property.origin)
     }
 
-    /// Seeded and plugin Properties show Holds read-only. A researcher Property can change it.
+    /// Why Holds is read-only, or nil when a researcher can change it. A
+    /// single-only value type holds one value whoever made the Property; a
+    /// seeded or plugin Property is set by Provenencia. With no rules loaded
+    /// Go decides.
+    func holdsLockReason(valueType: String, origin: String) -> String? {
+        if snapshot.valueTypeRule(valueType)?.singleOnly == true {
+            return L10n.Properties.holdsSingleOnly(
+                typeLabel: L10n.string(SubjectPropertyValueType.label(valueType))
+            )
+        }
+        if origin != CatalogOrigin.user { return L10n.string(L10n.Properties.holdsLocked) }
+        return nil
+    }
+
     var canEditCardinality: Bool {
-        selectedProperty?.origin == CatalogOrigin.user
+        selectedProperty.map {
+            holdsLockReason(valueType: $0.valueType, origin: $0.origin) == nil
+        } ?? false
     }
 
     func isEditDirty(label: String, description: String) -> Bool {
@@ -327,15 +357,6 @@ final class PropertiesModel {
         formError = nil
     }
 
-    func toggleDraftBind(typeID: String) {
-        guard draft != nil else { return }
-        if draft!.bindTypeIDs.contains(typeID) {
-            draft!.bindTypeIDs.remove(typeID)
-        } else {
-            draft!.bindTypeIDs.insert(typeID)
-        }
-    }
-
     func beginEdit() {
         guard canEditSelected else { return }
         isEditingIdentity = true
@@ -381,7 +402,7 @@ final class PropertiesModel {
         }
     }
 
-    /// Saves Holds immediately. The value already stored is a no-op. Seeded and plugin Properties stay fixed.
+    /// Saves Holds immediately. The value already stored is a no-op. Seeded, plugin and single-only Properties stay fixed.
     @discardableResult
     func setCardinality(_ cardinality: String) async -> Bool {
         guard canEditCardinality, let property = selectedProperty, !isSaving else { return false }

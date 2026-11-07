@@ -1,4 +1,6 @@
+import AppKit
 import Foundation
+import SwiftUI
 import Testing
 @testable import Provenencia
 
@@ -255,7 +257,7 @@ struct PropertiesModelTests {
     /// one they may not, in an order that is not alphabetical. Go pins the real
     /// table (`TestGetPropertiesWorkspaceValueTypes`).
     private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
-        ("name", true, false), ("integer", true, false), ("date", false, false),
+        ("name", true, false), ("integer", true, true), ("date", false, false),
     ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
@@ -397,6 +399,120 @@ struct PropertiesModelTests {
         #expect(store.propertiesByProject[projectDir]?.first?.cardinality == "multiple")
     }
 
+    @Test func singleOnlyCreateHoldsOneValue() async {
+        let seeded = FakeStore()
+        seeded.valueTypeRules = Self.goValueTypeRules
+        let (model, session, store) = makeModel(store: seeded, types: [personType()])
+        await warm(model, session: session)
+        let reason = model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user)
+        #expect(reason == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger)))
+        #expect(model.snapshot.valueTypeRule("integer")?.singleOnly == true)
+
+        var draft = PropertiesModel.Draft(
+            label: "Score",
+            valueType: "text",
+            description: "",
+            cardinality: "multiple",
+            bindTypeIDs: []
+        )
+        draft.chooseValueType(
+            "name",
+            holdsLocked: model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) != nil
+        )
+        #expect(draft.cardinality == "multiple")
+        #expect(model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) == nil)
+        draft.chooseValueType("integer", holdsLocked: reason != nil)
+        #expect(draft.valueType == "integer")
+        #expect(draft.cardinality == "single")
+        var back = draft
+        back.chooseValueType(
+            "name",
+            holdsLocked: model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) != nil
+        )
+        #expect(back.valueType == "name")
+        #expect(back.cardinality == "single")
+
+        let location = await model.submitCreate(draft)
+        #expect(location?.title == "Score")
+        #expect(store.propertiesByProject[projectDir]?.first { $0.key == "score" }?.valueType == "integer")
+        #expect(store.propertiesByProject[projectDir]?.first { $0.key == "score" }?.cardinality == "single")
+    }
+
+    @Test func singleOnlyUserPropertyHoldsIsLocked() async {
+        let seeded = FakeStore()
+        seeded.valueTypeRules = Self.goValueTypeRules
+        let integer = userProperty(id: "prop-int", valueType: "integer")
+        let name = userProperty(id: "prop-user-name", valueType: "name")
+        let seededName = nameProperty()
+        let (model, session, store) = makeModel(
+            store: seeded, properties: [integer, name, seededName], types: [personType()]
+        )
+        await warm(model, session: session)
+
+        model.selectProperty(integer.id)
+        #expect(!model.canEditCardinality)
+        #expect(
+            model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user)
+                == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))
+        )
+        #expect(
+            model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.provenencia)
+                == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))
+        )
+        #expect(await model.setCardinality("multiple") == false)
+        #expect(store.propertiesByProject[projectDir]?.first { $0.id == integer.id }?.cardinality == "single")
+
+        model.selectProperty(name.id)
+        #expect(model.canEditCardinality)
+
+        model.selectProperty(seededName.id)
+        #expect(!model.canEditCardinality)
+        #expect(
+            model.holdsLockReason(valueType: seededName.valueType, origin: seededName.origin)
+                == L10n.string(L10n.Properties.holdsLocked)
+        )
+    }
+
+    @Test func singleOnlyWaitsForTheRules() async {
+        let integer = userProperty(valueType: "integer")
+        let (model, session, _) = makeModel(properties: [integer], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(integer.id)
+        #expect(model.canEditCardinality)
+        #expect(model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user) == nil)
+    }
+
+    @Test func valueTypeInksAreDistinct() throws {
+        let table: [(type: PropertyValueType, light: Color, dark: Color)] = [
+            (.text, PVPalette.paper700, PVPalette.paper300),
+            (.integer, PVPalette.copper700, PVPalette.copper300),
+            (.date, PVPalette.lapis700, PVPalette.lapis300),
+            (.name, PVPalette.iron700, PVPalette.iron300),
+            (.subject, PVPalette.plum700, PVPalette.plum300),
+            (.term, PVPalette.ochre900, PVPalette.ochre300),
+            (.boolean, PVPalette.verdigris700, PVPalette.verdigris300),
+            (.depiction, PVPalette.madder700, PVPalette.madder300),
+        ]
+        #expect(Set(table.map(\.type)) == Set(PropertyValueType.allCases))
+
+        func key(_ color: NSColor) throws -> String {
+            let rgb = try #require(color.usingColorSpace(.sRGB))
+            return String(format: "%.3f/%.3f/%.3f", rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
+        }
+        for (name, isDark) in [(NSAppearance.Name.aqua, false), (.darkAqua, true)] {
+            let appearance = try #require(NSAppearance(named: name))
+            var inks: Set<String> = []
+            for row in table {
+                let ink = try key(PVPainter.color(PropertiesTypeChrome.valueTypeForeground(row.type.rawValue), in: appearance))
+                let want = try key(PVPainter.color(isDark ? row.dark : row.light, in: appearance))
+                #expect(ink == want, "\(row.type.rawValue) \(name.rawValue)")
+                inks.insert(ink)
+            }
+            #expect(inks.count == table.count, "\(name.rawValue)")
+        }
+        #expect(PropertiesTypeChrome.valueTypeForeground("nope") == PVColor.textSecondary)
+    }
+
     @Test func userPropertyCardinalityChangeKeepsTheNoticeUntilSelectionMoves() async {
         let store = FakeStore()
         let property = userProperty()
@@ -471,6 +587,7 @@ struct PropertiesModelTests {
 
     private func userProperty(
         id: String = "prop-user",
+        valueType: String = "text",
         usedBy: Int = 0
     ) -> CatalogProperty {
         CatalogProperty(
@@ -479,7 +596,7 @@ struct PropertiesModelTests {
             origin: "user",
             label: "Burial ground",
             description: "Cemetery name",
-            valueType: "text",
+            valueType: valueType,
             usedBy: usedBy
         )
     }
