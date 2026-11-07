@@ -4,33 +4,10 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/valuerules"
-	"github.com/mendahu/provenencia/core/graphalign"
-	"github.com/mendahu/provenencia/core/kinship"
 )
-
-// LayerBridges exposes the bridges the loader reads for one Evidence graph.
-func LayerBridges(c *database.Catalog, graphID []byte) ([]kinship.Link, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	cfg, namePattern, err := loadConfig(c.Graph(), db)
-	if err != nil {
-		return nil, err
-	}
-	terms, err := canonlinks.LoadTerms(c.Graph())
-	if err != nil {
-		return nil, err
-	}
-	layer, _, err := loadLayer(c.Graph(), graphID, cfg, namePattern, terms)
-	if err != nil {
-		return nil, err
-	}
-	return layer.Bridges, nil
-}
 
 // ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
 // sorted, the Ref of every handle whose full profile was built.
@@ -55,13 +32,11 @@ func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) 
 
 // MemoSnapshot is what the graph holds as promotealign's Evidence graph memos.
 type MemoSnapshot struct {
-	Layer     graphalign.Layer
-	LayerKind map[string]string // primary Subject id -> kind
-	LayerOK   bool
+	Layer evidencelayer.Layer
 }
 
-// MemoSnapshotForTest reads the memoized layer of graphID, as stored. Nothing
-// is built.
+// MemoSnapshotForTest reads graphID's layer through evidencelayer.Load; it
+// builds the layer on a miss, so call it after a Propose.
 func MemoSnapshotForTest(c *database.Catalog, graphID []byte) MemoSnapshot {
 	db, err := c.DB()
 	if err != nil {
@@ -71,16 +46,11 @@ func MemoSnapshotForTest(c *database.Catalog, graphID []byte) MemoSnapshot {
 	if err != nil {
 		return MemoSnapshot{}
 	}
-	var out MemoSnapshot
-	if v, ok := c.Graph().EvidenceGraphMemo(graphID, layerMemoKey+namePattern); ok {
-		m := v.(layerMemo)
-		out.Layer, out.LayerOK = m.layer, true
-		out.LayerKind = map[string]string{}
-		for id, p := range m.primary {
-			out.LayerKind[id] = p.kind
-		}
+	layer, err := evidencelayer.Load(c.Graph(), graphID, namePattern)
+	if err != nil {
+		return MemoSnapshot{}
 	}
-	return out
+	return MemoSnapshot{Layer: layer}
 }
 
 // ProfilesKeptForTest is how many handle profiles the graph's match index

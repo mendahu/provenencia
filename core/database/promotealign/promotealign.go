@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -48,12 +49,12 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	cfg, namePattern, terms, layer, primary := in.cfg, in.namePattern, in.terms, in.layer, in.primary
+	cfg, namePattern, terms, layer := in.cfg, in.namePattern, in.terms, in.layer
 	if len(layer.Subjects) == 0 {
 		return graphalign.Proposal{Rows: nil}, rev, nil, nil
 	}
 
-	anchors, promoted, err := mergeFixed(c.Graph(), in.graphID, primary, fixed)
+	anchors, promoted, err := mergeFixed(c.Graph(), in.graphID, in.evidence, fixed)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -76,7 +77,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
-	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(promoted, in.primary, fixed, prop.Rows, only), canon.Edges)
+	prop.Connections = graphalign.Connections(pageBridges(eg, vocab), pageEnds(promoted, in.evidence, fixed, prop.Rows, only), canon.Edges)
 	return prop, rev, prof, nil
 }
 
@@ -87,8 +88,8 @@ type inputs struct {
 	cfg         graphalign.Config
 	namePattern string
 	terms       segmentcompare.Terms
+	evidence    evidencelayer.Layer
 	layer       graphalign.Layer
-	primary     map[string]primarySubject
 }
 
 // loadConfig is the alignment config a proposal ranks with and the shortlist
@@ -133,24 +134,29 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	layer, primary, err := loadLayerMemo(c.Graph(), graphID, cfg, namePattern, terms)
+	evidence, err := evidencelayer.Load(c.Graph(), graphID, namePattern)
 	if err != nil {
 		return inputs{}, err
 	}
-	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, layer: layer, primary: primary}, nil
+	metas, err := valuerules.Metas(c.Graph())
+	if err != nil {
+		return inputs{}, err
+	}
+	layer := graphalign.Layer{Subjects: evidence.Subjects, Bridges: evidence.Links, Metas: metas}
+	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, evidence: evidence, layer: layer}, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
 // as free anchors, read from the Evidence graph's accepted members. Caller fixed wins
 // when both name the same Subject. promoted is the handle of each Subject
 // added from the members, by Subject id.
-func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primarySubject, caller []graphalign.Fixed) (anchors []graphalign.Fixed, promoted map[string][]byte, err error) {
-	out := make([]graphalign.Fixed, 0, len(caller)+len(primary))
+func mergeFixed(g *graphcache.Graph, graphID []byte, layer evidencelayer.Layer, caller []graphalign.Fixed) (anchors []graphalign.Fixed, promoted map[string][]byte, err error) {
+	out := make([]graphalign.Fixed, 0, len(caller)+len(layer.Subjects))
 	seen := map[string]bool{}
 	promoted = map[string][]byte{}
 
 	for _, f := range caller {
-		fixed, err := checkFixed(g, primary, f)
+		fixed, err := checkFixed(g, layer, f)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -167,7 +173,7 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primaryS
 		if seen[sk] {
 			continue
 		}
-		if _, ok := primary[sk]; !ok {
+		if _, ok := layer.Subject(m.SubjectID); !ok {
 			continue
 		}
 		out = append(out, graphalign.Fixed{
@@ -187,11 +193,11 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, primary map[string]primaryS
 // Subject must be a primary Subject of the graph; New and Skip carry no
 // handle; any other pair names a handle of 16 bytes that the graph cache has
 // unmerged and of the Subject's kind. Anything else is promote.ErrInvalid.
-func checkFixed(g *graphcache.Graph, primary map[string]primarySubject, f graphalign.Fixed) (graphalign.Fixed, error) {
+func checkFixed(g *graphcache.Graph, layer evidencelayer.Layer, f graphalign.Fixed) (graphalign.Fixed, error) {
 	if len(f.SubjectID) != 16 {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
-	ps, ok := primary[string(f.SubjectID)]
+	ps, ok := layer.Subject(f.SubjectID)
 	if !ok {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
@@ -219,7 +225,7 @@ func checkFixed(g *graphcache.Graph, primary map[string]primarySubject, f grapha
 	if err != nil {
 		return graphalign.Fixed{}, err
 	}
-	if v.TypeKeysByID()[string(n.SubjectTypeID)] != ps.kind {
+	if v.TypeKeysByID()[string(n.SubjectTypeID)] != ps.Kind {
 		return graphalign.Fixed{}, promote.ErrInvalid
 	}
 	return graphalign.Fixed{

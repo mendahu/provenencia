@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/effects"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -17,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
@@ -142,7 +144,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 	w := newWarmFixture(t)
 	w.f.propose(w.f.Graph(w.srcB), nil)
 	first := w.snapshot(t)
-	if !first.LayerOK || len(first.Layer.Subjects) == 0 {
+	if len(first.Layer.Subjects) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
@@ -156,6 +158,44 @@ func TestMemoIsNotMutated(t *testing.T) {
 		if &again.Layer.Subjects[0] != &first.Layer.Subjects[0] {
 			t.Fatal("the layer was rebuilt, not read from the memo")
 		}
+	}
+}
+
+// T-3 (AC-1.1): the layer Propose memoized is the one evidencelayer.Load reads,
+// with no query, and a second Load shares it.
+func TestLoadSharesPromotesMemo(t *testing.T) {
+	w := newWarmFixture(t)
+	graph := w.f.Graph(w.srcB)
+	w.f.propose(graph, nil)
+	db, err := w.f.c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, namePattern, err := valuerules.Load(w.f.c.Graph(), db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
+	got, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("Load issued %d graph queries after a Propose", n)
+	}
+	if len(got.Subjects) == 0 {
+		t.Fatal("Load returned no Subjects")
+	}
+	if &got.Subjects[0] != &w.snapshot(t).Layer.Subjects[0] {
+		t.Fatal("Load built its own layer, not the one Propose memoized")
+	}
+	again, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if &again.Subjects[0] != &got.Subjects[0] {
+		t.Fatal("a second Load did not share the memo")
 	}
 }
 

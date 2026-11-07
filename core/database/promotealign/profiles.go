@@ -1,113 +1,34 @@
 package promotealign
 
 import (
-	"bytes"
-	"slices"
-
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/depictionvalue"
-	"github.com/mendahu/provenencia/core/propertymeta"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/subjectprofile"
-	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// The profile loader: both sides of a pair are built here, once per proposal,
-// with the profile builder (layer 4), so graphalign stays pure.
+// The canon side's profile loader: each handle is built here, once per match
+// index, with the profile builder; the Evidence side is built by
+// core/database/evidencelayer.
 
-// loadMetas is the catalog's value type and cardinality of every product
-// property.
-func loadMetas(g *graphcache.Graph) (subjectcompare.Metas, error) {
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	out := subjectcompare.Metas{}
-	for _, p := range v.Properties {
-		if p.Origin != vocabkey.OriginProvenencia {
-			continue
-		}
-		out[vocabkey.PropertyKey(p.Key)] = propertymeta.Meta{ValueType: p.ValueType, Cardinality: p.Cardinality}
-	}
-	return out, nil
-}
-
-// decode is the one row decoder for both sides: a Source Observation and a
-// cached handle value carry the same value columns.
-func decode(scalar propertymeta.Scalar, termID, date, name, image []byte, terms map[string]graphcache.VocabTerm) (autoreconcile.Value, error) {
-	v := autoreconcile.Value{Scalar: scalar}
-	if len(termID) > 0 {
-		t := terms[string(termID)]
-		v.TermID = bytes.Clone(termID)
-		v.TermKey = t.Key
-		v.Neutral = t.Neutral
-	}
-	if len(date) > 0 {
-		d, err := valuecodec.UnmarshalDate(date)
-		if err != nil {
-			return autoreconcile.Value{}, err
-		}
-		v.Date = &d
-	}
-	if len(name) > 0 {
-		n, err := valuecodec.UnmarshalName(name)
-		if err != nil {
-			return autoreconcile.Value{}, err
-		}
-		v.Name = &n
-	}
-	if len(image) > 0 {
-		v.Depiction = &depictionvalue.Value{ImageFileID: bytes.Clone(image)}
-	}
-	return v, nil
-}
+// hopPersonToEvent follows a person to the events it takes part in, any role.
+// The profile builder reads it.
+var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.PropertyPerson, vocabkey.PropertyEvent, nil)
 
 // reconciled is a cached handle value as the reconciler left it.
 func reconciled(row graphcache.Value, terms map[string]graphcache.VocabTerm) (autoreconcile.ReconciledValue, error) {
-	v, err := decode(row.Scalar, row.TermID, row.Date, row.Name, row.ImageFileID, terms)
+	v, err := evidencelayer.Decode(row.Scalar, row.TermID, row.Date, row.Name, row.ImageFileID, terms)
 	if err != nil {
 		return autoreconcile.ReconciledValue{}, err
 	}
 	return autoreconcile.ReconciledValue{
 		Value: v, Support: row.Support, Against: row.Against, Reason: autoreconcile.Reason(row.Reason),
 	}, nil
-}
-
-// layerValues is each listed Subject's own product Observations, both
-// polarities, by property key and in Observation id order. subjects is the set
-// of Subject ids to read.
-func layerValues(eg graphcache.EvidenceGraph, subjects map[string]bool, props map[string]graphcache.VocabProperty, terms map[string]graphcache.VocabTerm) (map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate, error) {
-	obs := slices.Clone(eg.Observations)
-	slices.SortStableFunc(obs, func(a, b graphcache.EvidenceObservation) int { return bytes.Compare(a.ID, b.ID) })
-	out := map[string]map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
-	for _, o := range obs {
-		if !subjects[string(o.SubjectID)] || len(o.ValueSubjectID) > 0 {
-			continue
-		}
-		prop, ok := props[string(o.PropertyID)]
-		if !ok || prop.Origin != vocabkey.OriginProvenencia {
-			continue
-		}
-		v, err := decode(o.Scalar, o.TermID, o.Date, o.Name, o.DepictionImageFileID, terms)
-		if err != nil {
-			return nil, err
-		}
-		key := vocabkey.PropertyKey(prop.Key)
-		if out[string(o.SubjectID)] == nil {
-			out[string(o.SubjectID)] = map[vocabkey.PropertyKey][]autoreconcile.Candidate{}
-		}
-		out[string(o.SubjectID)][key] = append(out[string(o.SubjectID)][key], autoreconcile.Candidate{
-			ObservationID: bytes.Clone(o.ID),
-			Value:         v,
-			Negative:      o.Polarity == observations.PolarityNegative,
-		})
-	}
-	return out, nil
 }
 
 // profile is a built handle: its values.

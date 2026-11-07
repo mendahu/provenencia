@@ -9,7 +9,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
@@ -805,34 +804,6 @@ func TestProposeComparesTheLifespan(t *testing.T) {
 	}
 }
 
-// The loader reads a Source's links from the connect rules: one bridge for
-// each registered bridge type, whatever its term.
-func TestLayerBridgesCoverEveryConnectRule(t *testing.T) {
-	f := newFixture(t)
-	ann := f.Person(f.source, f.artifact, "Ann Ames")
-	bob := f.Person(f.source, f.artifact, "Bob Ames")
-	birth := f.Birth(f.source, f.artifact)
-	york := f.Place(f.source, f.artifact, "York")
-	ontario := f.Place(f.source, f.artifact, "Ontario")
-	f.Participation(f.source, f.artifact, ann, birth, "subject")
-	f.Locate(f.source, f.artifact, birth, york)
-	f.Relationship(f.source, f.artifact, ann, bob, "parent")
-	f.PlaceRel(f.source, f.artifact, york, ontario, "part_of")
-
-	bridges, err := promotealign.LayerBridges(f.c, f.Graph(f.source))
-	must(t, err)
-	var got []string
-	for _, b := range bridges {
-		got = append(got, string(b.KeyA.Type))
-	}
-	want := connectrules.BridgeTypeKeys()
-	slices.Sort(got)
-	slices.Sort(want)
-	if !slices.Equal(got, want) {
-		t.Fatalf("bridge types %v, want %v", got, want)
-	}
-}
-
 // A birth placed on another event than the handle's birth subtracts from the
 // person: a person has one birth.
 func TestProposeBirthOnAnotherPersonSubtracts(t *testing.T) {
@@ -1078,40 +1049,6 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 				t.Fatalf("fixed row %+v, want the handle, decided, no conflict with fixed", row)
 			}
 		})
-	}
-}
-
-// A Source that records a spouse relationship and a marriage has one spouse
-// bridge, with every association behind it; a marriage alone has an implied one.
-func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
-	spouses := func(bs []kinship.Link) []kinship.Link {
-		var out []kinship.Link
-		for _, b := range bs {
-			if b.KeyA.Type == vocabkey.BridgeRelationship && b.KeyA.Term == "spouse" {
-				out = append(out, b)
-			}
-		}
-		return out
-	}
-	build := func(withRelationship bool) []kinship.Link {
-		f := newFixture(t)
-		ann := f.Person(f.source, f.artifact, "Ann Ames")
-		bob := f.Person(f.source, f.artifact, "Bob Ames")
-		f.Marriage(f.source, f.artifact, ann, bob, "subject")
-		if withRelationship {
-			f.Relationship(f.source, f.artifact, ann, bob, "spouse")
-		}
-		bridges, err := promotealign.LayerBridges(f.c, f.Graph(f.source))
-		must(t, err)
-		return bridges
-	}
-	both := spouses(build(true))
-	if len(both) != 1 || len(both[0].Associations) != 3 || len(both[0].Shapes) != 1 || both[0].OnlyImplied {
-		t.Fatalf("recorded and implied: %+v, want one recorded bridge with 3 associations and one shape", both)
-	}
-	only := spouses(build(false))
-	if len(only) != 1 || len(only[0].Associations) != 2 || !only[0].OnlyImplied {
-		t.Fatalf("marriage only: %+v, want one implied bridge with 2 associations", only)
 	}
 }
 
