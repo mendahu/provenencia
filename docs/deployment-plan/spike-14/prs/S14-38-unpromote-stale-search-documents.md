@@ -1,6 +1,6 @@
 # S14-38 — Unpromote rewrites the ends of the links it takes back
 
-**Status:** Descoped (2026-11-07) → S14-42 (user: working rule "(Batch 8) The structural fix comes before the patch"). This plan is not built. Its scenarios (T-1 – T-6, T-8, T-10) are S14-42's acceptance tests; the mechanism it designs (D-1, D-2, D-9) is replaced by the read index ([design](../derived-read-index.md)).
+**Status:** Descoped (2026-11-07) → S14-42 (user: working rule "(Batch 8) The structural fix comes before the patch"). This plan is not built. Its scenarios (T-1 – T-6, T-8, T-10) are S14-42's acceptance tests; the mechanism it designs (D-1, D-2, D-9) is replaced by the input index ([design](../summary-inputs.md)).
 **Spike / slice:** Spike 14 · Slice 7c — Evidence graph polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the search hits, lists and detail pages look the same; only stale text is rewritten)
