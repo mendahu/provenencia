@@ -129,6 +129,8 @@ struct PVThumbnail: View {
         .frame(width: size, height: size)
         .background(fillColor)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        // Clipping hides a cropped image's overflow but leaves it hit-testable.
+        .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(lineColor, lineWidth: 1)
