@@ -653,3 +653,65 @@ func TestFieldsOf(t *testing.T) {
 		})
 	}
 }
+
+// A yes/no field reads through the detail with false kept distinct from absent,
+// both in the reconciled values and in each record's own outcome.
+func TestForEntityBoolean(t *testing.T) {
+	tests := []struct {
+		name      string
+		answers   []bool
+		wantState autoreconcile.State
+		wantShown []bool // the displayed values, in rank order
+	}{
+		{"agree true", []bool{true, true}, autoreconcile.StateMerged, []bool{true}},
+		{"agree false", []bool{false, false}, autoreconcile.StateMerged, []bool{false}},
+		{"disagree", []bool{true, false}, autoreconcile.StateMixed, []bool{true, false}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := newFixture(t)
+			id, err := properties.Upsert(f.c, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+			must(t, err)
+			db, err := f.c.DB()
+			must(t, err)
+			_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.person.ID, id)
+			must(t, err)
+
+			var people []subjects.Subject
+			var cited []observations.Observation
+			for i, answer := range tt.answers {
+				p := f.personOn(f.source(fmt.Sprintf("Source %d", i)))
+				people = append(people, p)
+				cited = append(cited, f.cite(p, observations.Input{SubjectID: p.ID, PropertyID: id, Scalar: propertymeta.BooleanScalar(answer)}))
+			}
+			h := f.promote(people[0], nil)
+			for _, p := range people[1:] {
+				f.promote(p, h)
+			}
+
+			got := field(f.detail(h), "literate")
+			if got.State != tt.wantState {
+				t.Fatalf("state %q, want %q", got.State, tt.wantState)
+			}
+			var shown []bool
+			for _, v := range got.Values {
+				if !v.Displayed() {
+					continue
+				}
+				if !v.Value.HasBoolean || v.Value.HasInteger || v.Value.HasText {
+					t.Fatalf("displayed value %+v is not a boolean", v.Value)
+				}
+				shown = append(shown, v.Value.Boolean)
+			}
+			if !reflect.DeepEqual(shown, tt.wantShown) {
+				t.Fatalf("displayed %v, want %v", shown, tt.wantShown)
+			}
+			for i, answer := range tt.answers {
+				o := outcomeOf(got, cited[i].ID)
+				if !o.Recorded.HasBoolean || o.Recorded.Boolean != answer {
+					t.Fatalf("outcome %d recorded %+v, want boolean %v", i, o.Recorded.Scalar, answer)
+				}
+			}
+		})
+	}
+}

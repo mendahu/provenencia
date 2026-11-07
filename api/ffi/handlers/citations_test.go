@@ -1419,4 +1419,17 @@ func TestCreateCitationBooleanObservation(t *testing.T) {
 	if got.ValueInteger != nil || got.GetValueText() != "" {
 		t.Fatalf("other values set: %+v", got)
 	}
+
+	// The graph-backed read keeps the false too: the Citation read lists the
+	// row from the source's Evidence graph, which is what the Citation page shows.
+	var read engine.GetCitationResponse
+	mustRPC(t, GetCitation, &engine.GetCitationRequest{
+		ProjectDir: dir, CitationId: created.Citation.GetId(), GraphId: graphLinking(t, dir, artifactID),
+	}, &read)
+	if len(read.Observations) != 1 {
+		t.Fatalf("read observations %+v", read.Observations)
+	}
+	if v := read.Observations[0].ValueBoolean; v == nil || *v {
+		t.Fatalf("read value_boolean %v, want present and false", v)
+	}
 }

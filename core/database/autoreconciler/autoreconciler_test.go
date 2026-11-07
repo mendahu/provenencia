@@ -1865,10 +1865,22 @@ func TestReconciledBoolean(t *testing.T) {
 			FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, h, id).Scan(&n, &support, &value))
 		return n, support, value
 	}
+	// loadedTrue loads the handle into the graph, so Verify has a node to
+	// compare, and reads the one cached rank as a present true.
+	loadedTrue := func(handle []byte) {
+		t.Helper()
+		node, err := f.c.Graph().Node(handle)
+		must(t, err)
+		ranks := node.Values[string(id)]
+		if len(ranks) != 1 || !ranks[0].HasBoolean || !ranks[0].Boolean {
+			t.Fatalf("graph ranks %+v, want one present true", ranks)
+		}
+	}
 	if n, support, value := cached(); n != 1 || support != 2 || value != 1 {
 		t.Fatalf("cache rows %d support %d value_boolean %d, want 1, 2, 1", n, support, value)
 	}
 	f.assertUpkeepEqualsRebuild("TestReconciledBoolean merged")
+	loadedTrue(h)
 	must(t, f.c.Graph().Verify())
 
 	_, err = writes.Call(f.c, writes.Op{Action: "delete_observation", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -1880,6 +1892,7 @@ func TestReconciledBoolean(t *testing.T) {
 		t.Fatalf("after delete: rows %d support %d value_boolean %d, want 1, 1, 1", n, support, value)
 	}
 	f.assertUpkeepEqualsRebuild("TestReconciledBoolean after delete")
+	loadedTrue(h)
 	must(t, f.c.Graph().Verify())
 }
 
