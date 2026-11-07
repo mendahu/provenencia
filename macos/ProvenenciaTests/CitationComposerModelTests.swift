@@ -921,25 +921,45 @@ struct CitationComposerModelTests {
         )
     }
 
-    @Test func nameRowUsesDisplayOrderNotTheStoredForm() {
-        let fields = CitationObservationValue.Fields(
-            nameDraft: NameValueDraft(
-                form: "Gumtree, Jeremiah Arthurt",
-                parts: [
-                    CatalogNameValuePart(value: "Jeremiah", type: "given"),
-                    CatalogNameValuePart(value: "Arthur", type: "given"),
-                    CatalogNameValuePart(value: "Gumtree", type: "surname"),
-                ]
-            )
+    private func savedObservation(
+        id: String, valueType: String, valueText: String = ""
+    ) -> CatalogObservation {
+        CatalogObservation(
+            id: id, ref: "OBS-\(id)", citationID: "cit-1", subjectID: subjectID,
+            propertyID: "prop-\(valueType)", polarity: ObservationPolarity.positive.rawValue,
+            valueText: valueText, valueInteger: nil, valueDateID: "", valueNameID: "", valueSubjectID: "",
+            valueTermID: "", propertyKey: valueType, propertyLabel: valueType.capitalized,
+            propertyValueType: valueType
         )
-        let orders = NameFormatOrders.givenSurname
+    }
+
+    private func lineTexts(_ observations: [CatalogObservation], vocabulary: CitationComposerVocabulary) -> [String] {
+        CitationComposerAuthoring.groups(
+            observations: observations.map(ObservationRow.loaded(from:)),
+            connections: [],
+            vocabulary: vocabulary
+        ).flatMap(\.lines).map(\.valueText)
+    }
+
+    @Test func savedLinesReadTheObservationValueDisplay() async {
+        let store = makeStore()
+        seedArtifact(store)
+        let model = makeModel(store: store)
+        await model.prepare()
+        let vocabulary = model.vocabulary
+        #expect(lineTexts([savedObservation(id: "d", valueType: "date")], vocabulary: vocabulary) == [""])
+        #expect(lineTexts([savedObservation(id: "s", valueType: "subject")], vocabulary: vocabulary) == [""])
         #expect(
-            CitationObservationValue.summary(
-                valueType: PropertyValueType.name.rawValue,
-                fields: fields,
-                termLabel: nil,
-                orders: orders
-            ) == "Jeremiah Arthur Gumtree"
+            lineTexts(
+                [savedObservation(id: "p", valueType: "depiction", valueText: "Portrait")],
+                vocabulary: vocabulary
+            ) == ["Portrait"]
+        )
+        var draft = ObservationRow.draft(subjectID: subjectID)
+        draft.values.propertyID = occupationPropertyID
+        #expect(
+            CitationComposerAuthoring.groups(observations: [draft], connections: [], vocabulary: vocabulary)
+                .flatMap(\.lines).isEmpty
         )
     }
 

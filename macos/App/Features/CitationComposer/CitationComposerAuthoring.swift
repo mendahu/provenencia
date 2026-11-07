@@ -333,16 +333,11 @@ enum CitationComposerAuthoring {
         nameOrders: NameFormatOrders = NameFormatOrders()
     ) -> [CitationSubjectGroup] {
         var lines: [CitationSavedLine] = []
-        for row in observations where row.persistedID != nil {
-            guard let persistedID = row.persistedID, !row.subjectID.isEmpty else { continue }
+        for row in observations {
+            guard let saved = row.saved, !row.subjectID.isEmpty else { continue }
+            let persistedID = saved.id
             let property = vocabulary.property(id: row.propertyID)
-            let termLabel = vocabulary.termLabel(termID: row.values.valueFields.valueTermID, propertyID: row.propertyID)
-            let valueText = CitationObservationValue.summary(
-                valueType: property?.valueType ?? "",
-                fields: row.values.valueFields,
-                termLabel: termLabel,
-                orders: nameOrders
-            )
+            let valueText = ObservationValueDisplay.string(for: saved, orders: nameOrders)
             let label = property?.label ?? ""
             let mono = property?.valueType == PropertyValueType.integer.rawValue
                 || property?.valueType == PropertyValueType.date.rawValue

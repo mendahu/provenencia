@@ -4280,12 +4280,6 @@ enum L10n {
             comment: "Label field when minting a custom Property term"
         )
 
-        static let dateUnset = LocalizedStringResource(
-            "citationComposer.dateUnset",
-            defaultValue: "No date set",
-            comment: "Summary when a date Observation has no valid DateValue yet"
-        )
-
         static let artifactKindPDF = LocalizedStringResource(
             "citationComposer.artifactKindPDF",
             defaultValue: "PDF",

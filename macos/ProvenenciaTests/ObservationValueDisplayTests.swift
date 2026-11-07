@@ -47,6 +47,30 @@ struct ObservationValueDisplayTests {
         #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "Two-spirit")
     }
 
+    @Test func booleanReadsYesOrNo() {
+        var obs = base(propertyValueType: "boolean")
+        obs.valueBoolean = true
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == L10n.string(L10n.Properties.valueBooleanYes))
+        obs.valueBoolean = false
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == L10n.string(L10n.Properties.valueBooleanNo))
+        obs.valueBoolean = nil
+        #expect(ObservationValueDisplay.string(for: obs, locale: enUS) == "")
+    }
+
+    @Test func nameFollowsTheDisplayOrderNotTheStoredForm() {
+        var obs = base(propertyValueType: "name")
+        obs.nameForm = "Gumtree, Jeremiah Arthurt"
+        obs.nameParts = [
+            CatalogNameValuePart(value: "Jeremiah", type: "given"),
+            CatalogNameValuePart(value: "Arthur", type: "given"),
+            CatalogNameValuePart(value: "Gumtree", type: "surname"),
+        ]
+        #expect(
+            ObservationValueDisplay.string(for: obs, locale: enUS, orders: .givenSurname)
+                == "Jeremiah Arthur Gumtree"
+        )
+    }
+
     @Test func nameUsesFormWhenValueTextEmpty() {
         var obs = base(propertyValueType: "name")
         obs.nameForm = "Ada Lovelace"

@@ -18,33 +18,6 @@ enum CitationObservationValue {
         case unsupported
     }
 
-    static func summary(
-        valueType: String,
-        fields: Fields,
-        termLabel: String?,
-        orders: NameFormatOrders = NameFormatOrders()
-    ) -> String {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
-            return fields.valueText
-        case PropertyValueType.integer.rawValue:
-            return fields.valueIntegerText
-        case PropertyValueType.term.rawValue:
-            return termLabel ?? fields.valueTermID
-        case PropertyValueType.date.rawValue:
-            return dateSummary(fields.dateDraft)
-        case PropertyValueType.name.rawValue:
-            return nameSummary(fields.nameDraft, orders: orders)
-        case PropertyValueType.depiction.rawValue:
-            return ""
-        case PropertyValueType.subject.rawValue:
-            let trimmed = fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? fields.valueSubjectID : trimmed
-        default:
-            return ""
-        }
-    }
-
     /// Dialog confirm. Subject values are saved from loaded rows, not picked in the dialog.
     static func isDialogValid(valueType: String, fields: Fields) -> Bool {
         switch valueType {
@@ -108,25 +81,5 @@ enum CitationObservationValue {
         case .unsupported:
             return L10n.string(L10n.CitationComposer.unsupportedValueTypeError)
         }
-    }
-
-    /// Natural display order. Parts win over the stored form; no parts falls back to the form.
-    private static func nameSummary(_ draft: NameValueDraft, orders: NameFormatOrders) -> String {
-        NameValueDisplay.string(
-            for: CatalogNameValue(
-                form: draft.form,
-                parts: draft.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) }
-            ),
-            style: .natural,
-            orders: orders
-        )
-    }
-
-    private static func dateSummary(_ draft: DateValueDraft) -> String {
-        let formatted = DateValueDisplay.string(for: draft)
-        if formatted.isEmpty {
-            return L10n.string(L10n.CitationComposer.dateUnset)
-        }
-        return formatted
     }
 }

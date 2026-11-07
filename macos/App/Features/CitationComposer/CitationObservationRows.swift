@@ -28,6 +28,9 @@ struct ObservationRow: Identifiable, Equatable {
     var values: ObservationRowValues
     var baseline: ObservationRowValues?
     var state: ObservationRowState
+    /// The catalog row this row was loaded from; nil on a draft. The saved
+    /// line reads its value text from it.
+    var saved: CatalogObservation?
 
     var subjectID: String {
         get { values.subjectID }
@@ -115,7 +118,8 @@ struct ObservationRow: Identifiable, Equatable {
             persistedRef: observation.ref,
             values: values,
             baseline: values,
-            state: .saved
+            state: .saved,
+            saved: observation
         )
     }
 

@@ -201,12 +201,4 @@ struct CitationComposerVocabulary: Equatable {
     func property(key: String) -> CatalogProperty? {
         propertiesByID.values.first { $0.key == key }
     }
-
-    func termLabel(termID: String, propertyID: String) -> String? {
-        guard let term = termsByPropertyID[propertyID]?.first(where: { $0.id == termID }) else {
-            return nil
-        }
-        let propertyKey = propertiesByID[propertyID]?.key ?? ""
-        return PropertyTermDisplay.name(term: term, propertyKey: propertyKey)
-    }
 }

@@ -12600,18 +12600,6 @@
         }
       }
     },
-    "citationComposer.dateUnset": {
-      "comment": "Summary when a date Observation has no valid DateValue yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No date set"
-          }
-        }
-      }
-    },
     "dates.display.about": {
       "comment": "DateValue summary prefix for ABT; argument is the formatted point date",
       "extractionState": "manual",
