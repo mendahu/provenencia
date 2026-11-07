@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/observationrow"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/scalarcols"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/connectrules"
@@ -135,26 +135,17 @@ func getRowTx(tx *sql.Tx, id []byte) (Observation, error) {
 }
 
 func scanRawObservation(row rowScanner) (Observation, error) {
-	var (
-		obs               Observation
-		scalar            scalarcols.Columns
-		dateID, nameID    []byte
-		subjectID, termID []byte
-		depictionID       []byte
-	)
-	if err := row.Scan(
-		&obs.ID, &obs.Ref, &obs.CitationID, &obs.SubjectID, &obs.PropertyID, &obs.Polarity,
-		&scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &subjectID, &termID, &depictionID,
-	); err != nil {
+	r, err := observationrow.Scan(row)
+	if err != nil {
 		return Observation{}, err
 	}
-	obs.Scalar = scalar.Scalar()
+	obs := Observation{
+		ID: r.ID, Ref: r.Ref, CitationID: r.CitationID, SubjectID: r.SubjectID, PropertyID: r.PropertyID,
+		Polarity: r.Polarity, Scalar: r.Scalar,
+		ValueDateID: r.ValueDateID, ValueNameID: r.ValueNameID, ValueSubjectID: r.ValueSubjectID,
+		ValueTermID: r.ValueTermID, ValueDepictionID: r.ValueDepictionID,
+	}
 	obs.HasText = obs.Text != ""
-	obs.ValueDateID = append([]byte(nil), dateID...)
-	obs.ValueNameID = append([]byte(nil), nameID...)
-	obs.ValueSubjectID = append([]byte(nil), subjectID...)
-	obs.ValueTermID = append([]byte(nil), termID...)
-	obs.ValueDepictionID = append([]byte(nil), depictionID...)
 	return obs, nil
 }
 
@@ -244,30 +235,12 @@ func getListedTx(tx *sql.Tx, id []byte) (Listed, error) {
 }
 
 func observationRowMap(o Observation) map[string]any {
-	var integer any
-	if o.HasInteger {
-		integer = o.Integer
-	}
-	var boolean any
-	if o.HasBoolean {
-		boolean = o.Boolean
-	}
-	return map[string]any{
-		"id":                 database.UUIDJSON(o.ID),
-		"ref":                o.Ref,
-		"citation_id":        database.UUIDJSON(o.CitationID),
-		"subject_id":         database.UUIDJSON(o.SubjectID),
-		"property_id":        database.UUIDJSON(o.PropertyID),
-		"polarity":           o.Polarity,
-		"value_text":         database.NullString(o.Text),
-		"value_integer":      integer,
-		"value_boolean":      boolean,
-		"value_date_id":      database.UUIDJSON(o.ValueDateID),
-		"value_name_id":      database.UUIDJSON(o.ValueNameID),
-		"value_subject_id":   database.UUIDJSON(o.ValueSubjectID),
-		"value_term_id":      database.UUIDJSON(o.ValueTermID),
-		"value_depiction_id": database.UUIDJSON(o.ValueDepictionID),
-	}
+	return observationrow.Row{
+		ID: o.ID, Ref: o.Ref, CitationID: o.CitationID, SubjectID: o.SubjectID, PropertyID: o.PropertyID,
+		Polarity: o.Polarity, Scalar: o.Scalar,
+		ValueDateID: o.ValueDateID, ValueNameID: o.ValueNameID, ValueSubjectID: o.ValueSubjectID,
+		ValueTermID: o.ValueTermID, ValueDepictionID: o.ValueDepictionID,
+	}.AuditFields()
 }
 
 type rowScanner interface {

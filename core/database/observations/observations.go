@@ -7,6 +7,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database/observationrow"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
 
@@ -57,10 +58,7 @@ const (
 	sqlSubjectTypeKey = `SELECT t.key, t.origin FROM subjects s
 		JOIN subject_types t ON t.id = s.subject_type_id
 		WHERE s.id = ?`
-	sqlGetRow = `SELECT id, ref, citation_id, subject_id, property_id, polarity,
-		value_text, value_integer, value_boolean, value_date_id, value_name_id, value_subject_id, value_term_id,
-		value_depiction_id
-		FROM observations WHERE id = ?`
+	sqlGetRow                 = `SELECT ` + observationrow.Columns + ` FROM observations WHERE id = ?`
 	sqlListNotesByObservation = `SELECT id, body FROM observation_notes WHERE observation_id = ? ORDER BY rowid`
 	sqlDeleteNote             = `DELETE FROM observation_notes WHERE id = ?`
 	sqlDeleteObservationByID  = `DELETE FROM observations WHERE id = ?`
