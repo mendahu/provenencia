@@ -11,8 +11,8 @@ import (
 // drop of the graph, Drop, a vocabulary change and SetAliasIndex each clear it.
 func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 	f := newWalkFixture(t)
-	g := f.c.Graph()
-	id := evidencegraphstest.SoleGraph(t, f.c, f.src.ID).ID
+	g := f.C.Graph()
+	id := evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID
 	load := func(t *testing.T) {
 		t.Helper()
 		if _, err := g.EvidenceGraph(id); err != nil {

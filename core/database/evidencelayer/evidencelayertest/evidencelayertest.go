@@ -194,12 +194,12 @@ func (r *Records) Participation(src sources.Source, art artifacts.Artifact, pers
 	return res.Subject
 }
 
-// Locate cites event as taking place at place.
-func (r *Records) Locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) {
+// Locate cites event as taking place at place, and returns the bridge Subject.
+func (r *Records) Locate(src sources.Source, art artifacts.Artifact, event, place subjects.Subject) subjects.Subject {
 	r.T.Helper()
 	eventProp := r.Prop("event").ID
 	placeProp := r.Prop("place").ID
-	_, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, UserID, connect.CreateInput{
 			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: Locator},
@@ -210,6 +210,7 @@ func (r *Records) Locate(src sources.Source, art artifacts.Artifact, event, plac
 		})
 	})
 	Must(r.T, err)
+	return res.Subject
 }
 
 // PlaceRel cites from as a kind of place relationship to to.
