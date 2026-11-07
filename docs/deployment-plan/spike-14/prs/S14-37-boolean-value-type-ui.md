@@ -1,10 +1,10 @@
 # S14-37 — Boolean value type (UI)
 
-**Status:** Blocked — on S14-39, board S14-D8
+**Status:** Blocked — on S14-39
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D8](../design/S14-D8-composer-boolean-value.md), board not drawn yet
-**Board:** the Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), section "S14-D8 · Yes / no value". The implementer cannot open Claude Design: **Design → macOS** describes each frame in words (user, 2026-11-07), and is refreshed from the agreed board.
+**Brief:** [S14-D8](../design/S14-D8-composer-boolean-value.md), board agreed 2026-11-07
+**Board:** S14-D8 — the *Citation Composer* project, now a [migrated design on claude.ai](https://claude.ai/artifact/3GSFQZjqdQjL8v2rpgMiDc), page *Citation Composer.dc.html*, section "S14-D8 · Yes / no value", frames 1, 2, 3, 4, 5, 7a, 7b, 8a, 8b. Change from the brief: frame 6 (a negative yes/no) removed; a yes/no is never negative (user, 2026-11-07). The implementer may not be able to open it: **Design → macOS** describes each frame in words.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-39 (scoped), S14-D8
 **Blocks:** —
 **Branch:** `s14-37-boolean-value-type-ui`
@@ -242,14 +242,14 @@ From the S14-D8 inventory.
 | Dialog Save | existing footer `PVButton` | `CitationComposerAuthoringBox.swift` | Disabled while `authoringCanConfirm` is false; BV-3, BV-5 |
 | Saved line | line row (Ship) | `CitationComposerSubjectGroups.swift` | Text from `summary`; BV-6 |
 
-Frames, in words (from the brief; refresh from the agreed board):
+Frames, in words (from the agreed board; the board's dialog is the existing observation dialog: title "New observation" or "Edit observation", the Citation picker and its transcription, Property | Bridge, then the fields; footer Discard or Cancel, and Save observation):
 
-1. **New yes/no observation.** Subject John Robins, Property Can read. Under them, the Value field holds a full-width two-segment control, "Yes" then "No", small size, neither selected. No Negative checkbox; the dialog is shorter by its height. Save disabled.
-2. **Answer chosen.** As 1, with No selected. Save enabled.
-3. **Text Property.** Property Occupation: the text input and the Negative checkbox, as today.
-4. **Edit a saved answer.** Opens with Yes selected and Save enabled.
-5. **Evidence column.** John: "Occupation Carpenter", "Can read Yes", "Can write Yes"; Mary: "Can read No", "Can write No". Value in the body face, no Badge.
-7. **Dark mode** of 1 and 5. 8. **Wide** of 2 and 5: unchanged arrangement.
+1. **New yes/no observation.** Subject John Robins, Property Can read. Under them, the Value field holds a two-segment control, "Yes" then "No", small, as wide as the field, neither selected. No Negative checkbox; the dialog is shorter by its height. Save observation disabled. Note on the board: Tab from Property lands on Yes, then No, then the footer; Space chooses; VoiceOver reads "Value", "Yes" / "No", selected; only the kit focus ring shows.
+2. **Answer chosen.** As 1, with No selected (the segmented control's selected chip). Save observation enabled. Clicking Yes moves the selection; nothing returns to none.
+3. **Text Property** (half size, beside 1). Occupation: the text input in Value and the Negative checkbox under it, as today.
+4. **Edit a saved answer.** Edit on John's Can write Yes: Yes selected, Save observation enabled.
+5. **Evidence column.** John Robins: Occupation Carpenter, Can read Yes, Can write Yes. Mary Robins: Can read No, Can write No. Yes / No in the body face, like Carpenter; no Badge, no glyph.
+7a, 7b. **Dark** of 1 and 5. 8a, 8b. **Wide** of 2 and 5: the three-pane composer as today; the dialog and the observations column keep their widths, the value does not stretch.
 
 States: nothing chosen → Save disabled; chosen → enabled; a refused save shows the existing save error. Accessibility: the group is labelled "Value"; each segment reads "Yes" or "No" with the selected trait; Tab from Property lands on Yes (D-9, D-10).
 
@@ -370,7 +370,6 @@ This is the slice 7e Check: bar outcome 31 on a new project.
 - With `focus:` applied, Tab from the Property combo box does not land on the Yes segment, or `focus.apply` on a `PVChip` does not take keyboard focus.
 - `PVSegmentedControl` with a `nil` selection draws a selected segment.
 - STEP-3 needs any change other than the rename and D-8's deletions to keep the suite green.
-- The agreed S14-D8 board differs from §6 macOS frames in anything but wording.
 
 ## 12. Open questions
 

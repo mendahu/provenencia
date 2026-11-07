@@ -22,7 +22,7 @@
 - Frame 6 drew the brief's own BV-4 exception: a negative yes/no from an outside catalog, shown with its checkbox. **User (2026-11-07): a yes/no is never negative, no exception.**
 - Fixed in the brief: BV-4 and BV-6 have no exception, and frame 6 is to be removed from the board.
 - Fixed in the plan: D-6 `offersNegative(propertyID:)` drops polarity, and `asDraft` always writes a boolean positive. D-7 no longer resets polarity. AC-2.4, AC-3.3, T-4 and T-6 are restated.
-- The board is not agreed yet.
+- The board was redrawn without frame 6, its note or the Checkbox in "Kit used". **Agreed 2026-11-07.** The plan's §6 macOS frames are written from it.
 
 ## Round 1
 

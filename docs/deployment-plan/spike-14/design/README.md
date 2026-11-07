@@ -8,7 +8,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
-| [S14-D8](S14-D8-composer-boolean-value.md) | Citation composer: the Yes / no value editor (segmented, nothing chosen at first; no Negative checkbox for a boolean) | — (to draw on the [Citation Composer project](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share)) | S14-37 |
+| [S14-D8](S14-D8-composer-boolean-value.md) | Citation composer: the Yes / no value editor (segmented, nothing chosen at first; no Negative checkbox for a boolean) | Agreed 2026-11-07 in the [Citation Composer project](https://claude.ai/artifact/3GSFQZjqdQjL8v2rpgMiDc) | S14-37 |
 | S14-D9 | Properties page: a single-only value type offers no Holds several; boolean pill colour | — (written just before S14-39) | S14-39 |
 
 ## Archived
