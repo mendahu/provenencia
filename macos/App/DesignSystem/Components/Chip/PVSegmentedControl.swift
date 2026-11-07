@@ -6,7 +6,11 @@ import SwiftUI
 /// while locked uses it the same way. Each segment is a `PVChip` (so it shows
 /// keyboard focus and reads as selected); the group reads its `label` to
 /// VoiceOver. A `focus:` handle lands on the first enabled segment, so a host
-/// can Tab or write focus into the control like any other kit field.
+/// can Tab or write focus into the control like any other kit field. With a
+/// handle every enabled segment is also a Tab stop that Space chooses, so Tab
+/// reaches each option at default macOS settings. The control does not read the
+/// handle's `next` / `previous` neighbours: Tab between segments is left to the
+/// key loop. With no handle it adds no Tab stop (as today).
 ///
 /// Meaning-free like `PVChip`: the options and what choosing one does belong
 /// to the caller.
@@ -110,11 +114,22 @@ struct PVSegmentedControl<Value: Hashable>: View {
         .accessibilityLabel(Text(label))
     }
 
-    /// The chip, with the host's focus handle on the first enabled segment.
+    /// The chip. With a host handle each enabled segment is a Tab stop that
+    /// Space chooses, and the first enabled one carries the handle.
     @ViewBuilder
     private func segment(_ item: Item) -> some View {
-        if let focus, item.id == items.first(where: { !$0.isDisabled })?.id {
-            focus.apply(AnyView(chip(item)))
+        if let focus, !item.isDisabled {
+            let stop = chip(item)
+                .focusable()
+                .onKeyPress(.space) {
+                    select(item.value)
+                    return .handled
+                }
+            if item.id == items.first(where: { !$0.isDisabled })?.id {
+                focus.apply(AnyView(stop))
+            } else {
+                stop
+            }
         } else {
             chip(item)
         }
