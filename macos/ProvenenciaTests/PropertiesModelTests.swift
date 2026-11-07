@@ -255,7 +255,7 @@ struct PropertiesModelTests {
     /// one they may not, in an order that is not alphabetical. Go pins the real
     /// table (`TestGetPropertiesWorkspaceValueTypes`).
     private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
-        ("name", true, false), ("integer", true, false), ("date", false, false),
+        ("name", true, false), ("integer", true, true), ("date", false, false),
     ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
 
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
@@ -397,6 +397,78 @@ struct PropertiesModelTests {
         #expect(store.propertiesByProject[projectDir]?.first?.cardinality == "multiple")
     }
 
+    @Test func singleOnlyCreateHoldsOneValue() async {
+        let seeded = FakeStore()
+        seeded.valueTypeRules = Self.goValueTypeRules
+        let (model, session, store) = makeModel(store: seeded, types: [personType()])
+        await warm(model, session: session)
+        let reason = model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user)
+        #expect(reason == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger)))
+        #expect(model.snapshot.valueTypeRule("integer")?.singleOnly == true)
+
+        var draft = PropertiesModel.Draft(
+            label: "Score",
+            valueType: "text",
+            description: "",
+            cardinality: "multiple",
+            bindTypeIDs: []
+        )
+        draft.chooseValueType(
+            "name",
+            holdsLocked: model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) != nil
+        )
+        #expect(draft.cardinality == "multiple")
+        #expect(model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) == nil)
+        draft.chooseValueType("integer", holdsLocked: reason != nil)
+        #expect(draft.valueType == "integer")
+        #expect(draft.cardinality == "single")
+
+        let location = await model.submitCreate(draft)
+        #expect(location?.title == "Score")
+        #expect(store.propertiesByProject[projectDir]?.first { $0.key == "score" }?.valueType == "integer")
+        #expect(store.propertiesByProject[projectDir]?.first { $0.key == "score" }?.cardinality == "single")
+    }
+
+    @Test func singleOnlyUserPropertyHoldsIsLocked() async {
+        let seeded = FakeStore()
+        seeded.valueTypeRules = Self.goValueTypeRules
+        let integer = userProperty(id: "prop-int", valueType: "integer")
+        let name = userProperty(id: "prop-user-name", valueType: "name")
+        let seededName = nameProperty()
+        let (model, session, store) = makeModel(
+            store: seeded, properties: [integer, name, seededName], types: [personType()]
+        )
+        await warm(model, session: session)
+
+        model.selectProperty(integer.id)
+        #expect(!model.canEditCardinality)
+        #expect(
+            model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user)
+                == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))
+        )
+        #expect(await model.setCardinality("multiple") == false)
+        #expect(store.propertiesByProject[projectDir]?.first { $0.id == integer.id }?.cardinality == "single")
+
+        model.selectProperty(name.id)
+        #expect(model.canEditCardinality)
+
+        model.selectProperty(seededName.id)
+        #expect(!model.canEditCardinality)
+        #expect(
+            model.holdsLockReason(valueType: seededName.valueType, origin: seededName.origin)
+                == L10n.string(L10n.Properties.holdsLocked)
+        )
+    }
+
+    @Test func singleOnlyWaitsForTheRules() async {
+        let integer = userProperty(valueType: "integer")
+        let (model, session, _) = makeModel(properties: [integer], types: [personType()])
+        await warm(model, session: session)
+        model.selectProperty(integer.id)
+        #expect(model.canEditCardinality)
+        #expect(model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user) == nil)
+    }
+
     @Test func userPropertyCardinalityChangeKeepsTheNoticeUntilSelectionMoves() async {
         let store = FakeStore()
         let property = userProperty()
@@ -471,6 +543,7 @@ struct PropertiesModelTests {
 
     private func userProperty(
         id: String = "prop-user",
+        valueType: String = "text",
         usedBy: Int = 0
     ) -> CatalogProperty {
         CatalogProperty(
@@ -479,7 +552,7 @@ struct PropertiesModelTests {
             origin: "user",
             label: "Burial ground",
             description: "Cemetery name",
-            valueType: "text",
+            valueType: valueType,
             usedBy: usedBy
         )
     }

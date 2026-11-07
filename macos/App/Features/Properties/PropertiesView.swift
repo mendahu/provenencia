@@ -840,7 +840,12 @@ private struct PropertiesCreateHost: View {
                         )
                     },
                     selection: draft?.valueType ?? "text",
-                    select: { draft?.valueType = $0 }
+                    select: { vt in
+                        draft?.chooseValueType(
+                            vt,
+                            holdsLocked: model.holdsLockReason(valueType: vt, origin: CatalogOrigin.user) != nil
+                        )
+                    }
                 )
             }
 
@@ -899,7 +904,7 @@ private struct PropertiesCreateHost: View {
         let ink = PropertiesTypeChrome.ink(typeKey: type.key, presentation: presentation)
         let on = draft?.bindTypeIDs.contains(type.id) == true
         return Button {
-            toggleBind(typeID: type.id)
+            draft?.toggleBind(typeID: type.id)
         } label: {
             HStack(spacing: PVSpacing.space5) {
                 PVCheckboxMark(isChecked: on)
@@ -920,14 +925,4 @@ private struct PropertiesCreateHost: View {
         .accessibilityLabel(type.label)
         .accessibilityAddTraits(on ? [.isSelected] : [])
         .accessibilityIdentifier("properties.create.bind.\(type.key)")
-    }
-
-    private func toggleBind(typeID: String) {
-        guard draft != nil else { return }
-        if draft!.bindTypeIDs.contains(typeID) {
-            draft!.bindTypeIDs.remove(typeID)
-        } else {
-            draft!.bindTypeIDs.insert(typeID)
-        }
-    }
-}
+    }}
