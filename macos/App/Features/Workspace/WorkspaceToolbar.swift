@@ -137,6 +137,7 @@ struct WorkspaceToolbar: View {
                 get: { jumpMenu.side == side },
                 set: { presented in
                     if presented {
+                        omnibarResults.closePanel()
                         jumpMenu.present(side)
                     } else if jumpMenu.side == side {
                         jumpMenu.dismiss()
@@ -576,6 +577,7 @@ private struct HistoryJumpMenuPanel: View {
                                     .lineLimit(1)
                                     .truncationMode(.tail)
                                     .layoutPriority(1)
+                                    .help(Text(verbatim: leafLabel))
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
