@@ -1,5 +1,7 @@
 # Review — S13-26 Scoring two Evidence graphs
 
+**Verdict:** Fits with changes / Ready with changes after two rounds; every finding Fixed except M-2 and M-5, which are To user (below).
+
 Plan: [`S13-26-scoring-two-evidence-graphs.md`](S13-26-scoring-two-evidence-graphs.md)
 
 ## Round 1 (2026-11-07)
@@ -11,7 +13,7 @@ Fresh reviewers, plan only. Maintainability: **Fits with changes** (2 blockers, 
 | ID | Severity | Finding | Answer |
 | --- | --- | --- | --- |
 | M-1 | blocker | D-6 composed `Side` and `propertycompare.Compare` in `recordlinks`, a second copy of `subjectcompare.Compare`'s property step, against `add-match-rule`'s Do-not line | **Fixed.** D-6: `subjectcompare.Rules.Unit` and `CompareProperty` *(new)*; `Compare` calls `CompareProperty`; `recordlinks` counts through them. The "else own values" branch and the missing-meta rule are gone: `Side` returns a key's own values, and a zero meta compares as unsupported, as in `Compare` (§4 Value compare row). STEP-2, T-9, §6 Codebase fit, STEP-8 (a) rewords the skill bullet |
-| M-2 | blocker | D-8 drops `CountedOnce`'s only-implied gate while the map's working rule "A matching link counts" names `CountedOnce`; §5 said no rule is bent | **Fixed.** §5 Rules this plan bends names it, with the user's 2026-11-07 refusal ("counting a marriage and the spouse link it implies as two facts"), which does not depend on whether the spouse link is also written down: the planner named `CountedOnce` in the rule before checking that it never skips two recorded links. STEP-8 (e) rewrites the rule and the S13-26 scope entry. Raised to the user in the report |
+| M-2 | blocker | D-8 drops `CountedOnce`'s only-implied gate while the map's working rule "A matching link counts" names `CountedOnce`; §5 said no rule is bent | **To user** (relabelled in round 2: the refusal does not name the both-recorded case). Plan text: §5 Rules this plan bends names it, with the user's 2026-11-07 refusal ("counting a marriage and the spouse link it implies as two facts"), which does not depend on whether the spouse link is also written down: the planner named `CountedOnce` in the rule before checking that it never skips two recorded links. STEP-8 (e) rewrites the rule and the S13-26 scope entry. Raised to the user in the report |
 | M-3 | major | D-11 added a third private copy of the participation and relationship key builders | **Fixed.** D-12: `segmentcomparetest.PartKeys` / `RelKeys`; `kinship_test` `part` / `rel` and `align_test` `partKeys` / `relKeys` move onto them (STEP-1). The other one-off `Keys` calls in tests are an Out line with a reason |
 | M-4 | major | `religion` added to a test-local metas copy instead of the seed-pinned `subjectcomparetest.Metas` | **Fixed.** STEP-2 adds it to `Metas`; the subjectvocab seed test covers it |
 | M-5 | minor | `graphalign.Bridge` duplicates `kinship.Link`; S13-27 would convert | **To user.** Recommendation: S13-29's scope entry says the shared loader yields `[]kinship.Link` and `graphalign.Bridge` becomes `kinship.Link`. A map change to a preparatory PR, so the user's call. Out line added |
@@ -41,6 +43,23 @@ Fresh reviewers, plan only. Maintainability: **Fits with changes** (2 blockers, 
 - **No missing-meta rule** (M-1): `CompareProperty` reads `metas[unit]` as `Compare` did; a zero meta is unsupported in value compare, so it is unknown.
 - **Only `part` / `rel` and `partKeys` / `relKeys` move** onto the shared key builders (M-3); one-off `Keys` calls inside single tests stay.
 
-## Round 2
+## Round 2 (2026-11-07)
 
-Pending.
+Fresh reviewers with the plan and this log. Maintainability: **Fits with changes** (1 new blocker). Executability: **Ready with changes** (1 new blocker, the same one; 1 major, 3 minors). Both checked every round-1 answer against the code; all held except M-3's fix.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-8 / X-13 | blocker | D-12's `PartKeys(t, …)` cannot be called from `align_test.go`'s `partKeys` / `relKeys`, which take no `t`, build through `segmentcompare.Key(Link{…})` (not `Keys`), and feed `partLink` / `relLink` at about 25 call sites; §4's row was half wrong | **Fixed.** D-12: the helpers take no `t` and build as `align_test` does; `partKeys` / `relKeys` become one-line calls; no caller's signature changes. T-10 holds them equal to `Keys(Bridge(t, …))` for the seeded bridges. §4 row corrected |
+| M-1 note | — | `Rules.Meta`'s doc comment restates the `Side` rule `CompareProperty` now owns | **Fixed.** STEP-2 rewords it |
+| M-2 / M-5 | process | Both belong under To user, with a Verdict header | **Fixed.** Relabelled; To user section and Verdict added |
+| X-14 | major | T-8's link generation and shuffle point were open | **Fixed.** §8 T-8: participation and relationship counts, same-graph endpoints, association ids, half the rounds sharing events with B, and the shuffle of edges before a new `LinkSet` |
+| X-15 | minor | A far entity equal to the line's own entity | **Fixed.** D-7: any far entity counts, the page's and the line's own included |
+| X-16 | minor | Helper return types unnamed | **Fixed.** D-9: `[]vocabkey.PropertyKey` and `[]linkFact{key, entity}` |
+| X-17 | minor | D-1's import list missed `maps` | **Fixed.** D-1 says "at least" and lists `maps` |
+
+Loop closed at round 2 (the cap). No blocker open.
+
+## To user
+
+1. **M-2 — both-recorded spouse links.** When both records hold a marriage on one entity and also write the spouse link down, the plan counts one fact (`kinship.SameShape` without `CountedOnce`'s gate) and rewrites the working rule "A matching link counts" to say so. Recommendation: one fact, as the user's 2026-11-07 refusal of double counting reads. Pending the user's answer.
+2. **M-5 — one link type from the loader.** Recommendation: S13-29's scope entry says the shared loader yields `[]kinship.Link` and `graphalign.Bridge` becomes `kinship.Link`, so S13-27 hands the loader's output to `NewGraph` with no conversion. A map change to a preparatory PR. Pending the user's answer.
