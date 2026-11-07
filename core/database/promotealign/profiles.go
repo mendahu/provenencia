@@ -110,26 +110,6 @@ func layerValues(eg graphcache.EvidenceGraph, subjects map[string]bool, props ma
 	return out, nil
 }
 
-// lifeEvent reads one event an entity takes part in from the event's built
-// profile: its type, and every date it records.
-func lifeEvent(event subjectcompare.Values, role vocabkey.Role) subjectprofile.LifeEvent {
-	le := subjectprofile.LifeEvent{Role: role}
-	for _, v := range event[vocabkey.PropertyEventType] {
-		if v.Positive() {
-			le.EventType = vocabkey.EventType(v.Term)
-			break
-		}
-	}
-	for _, key := range []vocabkey.PropertyKey{vocabkey.PropertyDate, vocabkey.PropertyStartDate, vocabkey.PropertyEndDate} {
-		for _, v := range event[key] {
-			if v.Positive() && v.Date != nil {
-				le.Dates = append(le.Dates, *v.Date)
-			}
-		}
-	}
-	return le
-}
-
 // profile is a built handle: its values.
 type profile struct {
 	values subjectcompare.Values
@@ -298,7 +278,7 @@ func (p *profiler) build(n *graphcache.Node) error {
 		}
 		for _, l := range links {
 			if ev, ok := p.done[string(l.Neighbor)]; ok {
-				e.Life = append(e.Life, lifeEvent(ev.values, vocabkey.Role(l.TermKey)))
+				e.Life = append(e.Life, subjectprofile.LifeEventOf(ev.values, vocabkey.Role(l.TermKey)))
 			}
 		}
 	}

@@ -116,7 +116,7 @@ func loadLayer(g *graphcache.Graph, graphID []byte, cfg graphalign.Config, nameP
 	life := map[string][]subjectprofile.LifeEvent{}
 	for _, p := range participations {
 		if ev, ok := built[string(p.event)]; ok {
-			life[string(p.person)] = append(life[string(p.person)], lifeEvent(ev, vocabkey.Role(p.role)))
+			life[string(p.person)] = append(life[string(p.person)], subjectprofile.LifeEventOf(ev, vocabkey.Role(p.role)))
 		}
 	}
 	for id, s := range primary {
