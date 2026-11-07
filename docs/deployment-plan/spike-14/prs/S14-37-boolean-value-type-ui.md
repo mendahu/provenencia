@@ -1,9 +1,9 @@
 # S14-37 — Boolean value type (UI)
 
-**Status:** Planned
+**Status:** Landed in #739 (2026-11-07)
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S14-D8](../design/S14-D8-composer-boolean-value.md), board agreed 2026-11-07
+**Brief:** [S14-D8](../design/archive/S14-D8-composer-boolean-value.md), board agreed 2026-11-07
 **Board:** S14-D8 — the *Citation Composer* project, now a [migrated design on claude.ai](https://claude.ai/artifact/3GSFQZjqdQjL8v2rpgMiDc), page *Citation Composer.dc.html*, section "S14-D8 · Yes / no value", frames 1, 2, 3, 4, 5, 7a, 7b, 8a, 8b. Change from the brief: frame 6 (a negative yes/no) removed; a yes/no is never negative (user, 2026-11-07). The implementer may not be able to open it: **Design → macOS** describes each frame in words.
 **Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-39 (open as [#737](https://github.com/mendahu/provenencia/pull/737), stacked beneath this PR), S14-D8
 **Blocks:** —
@@ -14,6 +14,7 @@
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; the composer's Yes / No and no Negative); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); S14-36 plan and its **Landed** note [`S14-36-boolean-value-type-engine.md`](S14-36-boolean-value-type-engine.md)
 **Planned:** 2026-11-07 against `s14-39-properties-single-only` @ `39d8ea4c` (refreshed; `main` @ `82547284` beneath it)
 **Review:** [`S14-37-boolean-value-type-ui.review.md`](S14-37-boolean-value-type-ui.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user answered (M-1, M-2, M-4, M-9)
+**Landed:** [#739](https://github.com/mendahu/provenencia/pull/739), 2026-11-07. Differences from the plan: (1) STEP-3's two commits (D-4, D-8) are one, because the field move and the dead-path deletions share lines and the first alone would not build. (2) The D-4 rename also reached `currentDepictionValues?.valueFields.depictionDraft` and `propertyBaseline.valueFields.depictionDraft` in `CitationComposerModel+Depiction.swift`, and the test files' `row.` and `draftValues(…)` reads, which the plan's `values.` regex does not catch. (3) `PVSegmentedControl` picks its focus segment in a private `segment(_:)` helper. (4) `nameRowUsesDisplayOrderNotTheStoredForm` became `ObservationValueDisplayTests.nameFollowsTheDisplayOrderNotTheStoredForm`. (5) The manual checks of section 10 were not run by the implementer (no way to drive the macOS app from that session). Decisions, Scope and ACs stand as written.
 
 ### Implementer — read this first
 
