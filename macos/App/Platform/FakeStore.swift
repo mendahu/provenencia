@@ -107,6 +107,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var propertiesByProject: [String: [CatalogProperty]] = [:]
+    /// Value-type rules `getPropertiesWorkspace` returns; empty unless a test seeds them.
+    var valueTypeRules: [CatalogPropertyValueTypeRule] = []
     var propertyTermsByProperty: [String: [CatalogPropertyTerm]] = [:]
     var subjectTypePropertiesByType: [String: [CatalogSubjectTypeProperty]] = [:]
     var subjectTypePresentations: [String: CatalogSubjectTypePresentation] = [:]
@@ -2562,7 +2564,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 properties: propertiesByProject[projectDir] ?? [],
                 types: types,
                 propertiesByTypeID: propertiesByTypeID,
-                presentationsByKey: presentationsByKey
+                presentationsByKey: presentationsByKey,
+                valueTypeRules: valueTypeRules
             )
         }
     }

@@ -151,6 +151,8 @@ struct ReconciledValueDisplayTests {
         #expect(ReconciledValueDisplay.string(for: .none, propertyKey: "occupation") == "")
         #expect(ReconciledValueDisplay.string(for: .text("  farmer "), propertyKey: "occupation") == "farmer")
         #expect(ReconciledValueDisplay.string(for: .integer(1890), propertyKey: "occupation", locale: en) == "1890")
+        #expect(ReconciledValueDisplay.string(for: .boolean(true), propertyKey: "literate", locale: en) == "Yes")
+        #expect(ReconciledValueDisplay.string(for: .boolean(false), propertyKey: "literate", locale: en) == "No")
         #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "Male", origin: CatalogOrigin.provenencia), propertyKey: SeededPropertyKey.sexAtBirth) == "Male")
         #expect(ReconciledValueDisplay.string(for: .term(id: "t", key: "male", label: "", origin: CatalogOrigin.provenencia), propertyKey: SeededPropertyKey.sexAtBirth) == "Male")
         #expect(ReconciledValueDisplay.string(for: .name(Self.jamesRobins), propertyKey: "occupation") == "James Robins")

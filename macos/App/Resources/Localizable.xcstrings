@@ -10600,6 +10600,42 @@
         }
       }
     },
+    "properties.value.booleanNo": {
+      "comment": "A boolean Property value that is false",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        }
+      }
+    },
+    "properties.value.booleanYes": {
+      "comment": "A boolean Property value that is true",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        }
+      }
+    },
+    "properties.valueType.boolean": {
+      "comment": "Property value type label: boolean (a yes/no fact)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes / no"
+          }
+        }
+      }
+    },
     "properties.valueType.date": {
       "comment": "Property value type label: date",
       "extractionState": "manual",

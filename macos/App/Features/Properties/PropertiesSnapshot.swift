@@ -7,6 +7,8 @@ struct PropertiesSnapshot: Sendable, Equatable {
     var types: [CatalogSubjectType]
     var propertiesByTypeID: [String: [CatalogSubjectTypeProperty]]
     var presentationsByKey: [String: CatalogSubjectTypePresentation]
+    /// Go's value-type rules; empty before the first load.
+    var valueTypeRules: [CatalogPropertyValueTypeRule] = []
 
     static let empty = PropertiesSnapshot(
         properties: [],
@@ -23,6 +25,11 @@ struct PropertiesSnapshot: Sendable, Equatable {
             let b = presentationsByKey[rhs.key]?.paletteSort ?? Int.max
             return a != b ? a < b : lhs.key < rhs.key
         }
+    }
+
+    /// The value types a researcher may give a new Property, in Go's order.
+    var creatableValueTypes: [String] {
+        valueTypeRules.filter(\.researcherCreatable).map(\.valueType)
     }
 
     func presentation(for type: CatalogSubjectType) -> CatalogSubjectTypePresentation? {

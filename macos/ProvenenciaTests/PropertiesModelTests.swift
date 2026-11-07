@@ -251,9 +251,19 @@ struct PropertiesModelTests {
         }
     }
 
+    /// `propertymeta.Types` as Go sends it today. The Go side pins the real table
+    /// (`TestGetPropertiesWorkspaceValueTypes`); a test here seeds the fake with it.
+    private static let goValueTypeRules: [CatalogPropertyValueTypeRule] = [
+        ("text", true, false), ("integer", true, false), ("date", true, false),
+        ("name", true, false), ("subject", true, false), ("term", false, false),
+        ("depiction", false, false), ("boolean", false, true),
+    ].map { CatalogPropertyValueTypeRule(valueType: $0.0, researcherCreatable: $0.1, singleOnly: $0.2) }
+
     @Test func createPropertyUsesResearcherValueTypesOnly() async {
         let person = personType()
-        let (model, session, store) = makeModel(types: [person])
+        let seeded = FakeStore()
+        seeded.valueTypeRules = Self.goValueTypeRules
+        let (model, session, store) = makeModel(store: seeded, types: [person])
         await warm(model, session: session)
         model.selectType("person")
         model.openCreate()
@@ -270,7 +280,39 @@ struct PropertiesModelTests {
         #expect(location?.title == "Custom Fact")
         #expect(store.propertiesByProject[projectDir]?.contains { $0.key == "custom-fact" && $0.cardinality == "single" } == true)
         #expect(store.subjectTypePropertiesByType[person.id]?.contains { $0.property.key == "custom-fact" } == true)
-        #expect(!(SubjectPropertyValueType.researcherCreatable.contains("term")))
+        #expect(!model.offeredValueTypes.contains("term"))
+    }
+
+    /// T-12 (AC-4.2): the create picker offers what Go marks creatable, in Go's
+    /// order; boolean and term are refused until Go says otherwise.
+    @Test func createOffersGoCreatableTypes() async {
+        let store = FakeStore()
+        store.valueTypeRules = Self.goValueTypeRules
+        let (model, session, _) = makeModel(store: store, types: [personType()])
+        await warm(model, session: session)
+        model.openCreate()
+        #expect(model.offeredValueTypes == ["text", "integer", "date", "name", "subject"])
+        for refused in ["boolean", "term"] {
+            let draft = PropertiesModel.Draft(label: "Literate", valueType: refused, description: "", bindTypeIDs: [])
+            #expect(!model.canSubmitCreate(draft), "\(refused)")
+        }
+    }
+
+    /// T-12 (D-11): create opened before the first load offers the draft's own
+    /// type and leaves the verdict to Go.
+    @Test func createBeforeTheFirstLoadFallsBackToTheDraftType() {
+        let (model, _, _) = makeModel(types: [personType()])
+        model.openCreate()
+        #expect(model.snapshot.valueTypeRules.isEmpty)
+        #expect(model.offeredValueTypes == [model.draft?.valueType ?? "text"])
+        let draft = PropertiesModel.Draft(label: "Custom Fact", valueType: "text", description: "", bindTypeIDs: [])
+        #expect(model.canSubmitCreate(draft))
+    }
+
+    /// T-12 (AC-4.6): boolean's label.
+    @Test func booleanLabelReadsYesNo() {
+        #expect(L10n.string(PropertyValueType.boolean.label) == "Yes / no")
+        #expect(L10n.string(SubjectPropertyValueType.label("boolean")) == "Yes / no")
     }
 
     /// T-9 (AC-1.1): a Property relabel reports `property_vocabulary`; a hidden
@@ -794,7 +836,6 @@ struct PropertiesModelTests {
         #expect(L10n.string(SubjectPropertyValueType.label("depiction")) == "Depiction")
         #expect(L10n.string(PropertyValueType.depiction.label) == "Depiction")
         #expect(L10n.string(SubjectPropertyValueType.label("nope")) == "Text")
-        #expect(!SubjectPropertyValueType.researcherCreatable.contains("depiction"))
         #expect(PropertyValueType(rawValue: "depiction") == .depiction)
     }
 

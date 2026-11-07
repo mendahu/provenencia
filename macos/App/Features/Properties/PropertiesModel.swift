@@ -1,11 +1,9 @@
 import Foundation
 import Observation
 
-/// Researcher-creatable Property value types (S7-05). Schema also has `term`
-/// and `depiction` (registry-only) — never offered here.
+/// Property value type wording. Which types a researcher may create is Go's
+/// rule (`propertymeta.Types`), read from the snapshot.
 enum SubjectPropertyValueType {
-    static let researcherCreatable = ["text", "integer", "date", "name", "subject"]
-
     static func label(_ valueType: String) -> LocalizedStringResource {
         PropertyValueType(rawValue: valueType)?.label ?? L10n.Properties.valueTypeText
     }
@@ -144,7 +142,21 @@ final class PropertiesModel {
         let label = draft.label.trimmingCharacters(in: .whitespacesAndNewlines)
         return !label.isEmpty
             && !FieldSlug.kebab(label).isEmpty
-            && SubjectPropertyValueType.researcherCreatable.contains(draft.valueType)
+            && acceptsValueType(draft.valueType)
+    }
+
+    /// The create picker's types: Go's creatable list, or the draft's own type
+    /// until the first load (⌘N and Add can open create before it).
+    var offeredValueTypes: [String] {
+        snapshot.valueTypeRules.isEmpty
+            ? [draft?.valueType ?? "text"]
+            : snapshot.creatableValueTypes
+    }
+
+    /// Whether create takes a value type. Before the first load Go decides, and
+    /// its refusal shows through the create error path.
+    func acceptsValueType(_ valueType: String) -> Bool {
+        snapshot.valueTypeRules.isEmpty || snapshot.creatableValueTypes.contains(valueType)
     }
 
     var showsDelete: Bool { selectedProperty != nil }
@@ -457,7 +469,7 @@ final class PropertiesModel {
             formError = L10n.string(L10n.Properties.errorLabelRequired)
             return nil
         }
-        guard SubjectPropertyValueType.researcherCreatable.contains(draft.valueType) else {
+        guard acceptsValueType(draft.valueType) else {
             formError = L10n.string(L10n.Properties.errorValueType)
             return nil
         }

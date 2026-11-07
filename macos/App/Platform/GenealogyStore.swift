@@ -577,6 +577,7 @@ enum CatalogConclusionValue: Sendable, Equatable {
     case none
     case text(String)
     case integer(Int64)
+    case boolean(Bool)
     /// `origin` is the term's: `key` names a product term only when `CatalogOrigin.isProduct(origin)`.
     case term(id: String, key: String, label: String, origin: String)
     case date(CatalogDateValueInput)
@@ -915,6 +916,7 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var polarity: String
     var valueText: String
     var valueInteger: Int64?
+    var valueBoolean: Bool? = nil
     var valueDateID: String
     /// Structured DateValue when listed from the catalog (locale-aware display).
     var date: CatalogDateValueInput? = nil
@@ -936,6 +938,14 @@ struct CatalogObservation: Sendable, Equatable, Identifiable {
     var valueDepictionID: String = ""
     /// The saved depiction when listed; response data, never sent back to Go.
     var depiction: CatalogDepictionValue? = nil
+}
+
+/// What Go says about one Property value type (`propertymeta.Types`).
+struct CatalogPropertyValueTypeRule: Sendable, Equatable {
+    var valueType: String
+    var researcherCreatable: Bool
+    /// A Property of this type cannot hold several values.
+    var singleOnly: Bool
 }
 
 struct CatalogProperty: Sendable, Equatable, Identifiable {
@@ -1692,6 +1702,7 @@ struct CatalogObservationDraft: Sendable {
     var polarity: String = ""
     var valueText: String = ""
     var valueInteger: Int64?
+    var valueBoolean: Bool? = nil
     var date: CatalogDateValueInput?
     var valueDateID: String = ""
     var nameForm: String = ""

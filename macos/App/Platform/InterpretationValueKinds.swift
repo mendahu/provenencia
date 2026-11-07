@@ -18,6 +18,7 @@ enum PropertyValueType: String, Sendable {
     case subject
     case term
     case depiction
+    case boolean
 
     var label: LocalizedStringResource {
         switch self {
@@ -28,6 +29,12 @@ enum PropertyValueType: String, Sendable {
         case .subject: return L10n.Properties.valueTypeSubject
         case .term: return L10n.Properties.valueTypeTerm
         case .depiction: return L10n.Properties.valueTypeDepiction
+        case .boolean: return L10n.Properties.valueTypeBoolean
         }
+    }
+
+    /// How a yes/no value reads: the one place that words it.
+    static func booleanText(_ value: Bool) -> String {
+        L10n.string(value ? L10n.Properties.valueBooleanYes : L10n.Properties.valueBooleanNo)
     }
 }

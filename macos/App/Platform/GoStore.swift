@@ -1409,10 +1409,11 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapConclusionValue(_ v: Provenencia_Engine_V1_ConclusionValue) -> CatalogConclusionValue {
+    static func mapConclusionValue(_ v: Provenencia_Engine_V1_ConclusionValue) -> CatalogConclusionValue {
         switch v.kind {
         case .text(let t): return .text(t)
         case .integer(let i): return .integer(i)
+        case .boolean(let b): return .boolean(b)
         case .term(let t): return mapConclusionTerm(t)
         case .date(let d): return .date(mapDateValue(d))
         case .name(let n): return .name(mapNameValue(n))
@@ -1935,7 +1936,14 @@ struct GoStore: GenealogyStore {
             properties: resp.properties.map(Self.mapProperty),
             types: resp.types.map(Self.mapSubjectType),
             propertiesByTypeID: propertiesByTypeID,
-            presentationsByKey: presentationsByKey
+            presentationsByKey: presentationsByKey,
+            valueTypeRules: resp.valueTypes.map {
+                CatalogPropertyValueTypeRule(
+                    valueType: $0.valueType,
+                    researcherCreatable: $0.researcherCreatable,
+                    singleOnly: $0.singleOnly
+                )
+            }
         )
     }
 
@@ -2293,6 +2301,7 @@ struct GoStore: GenealogyStore {
             polarity: o.polarity,
             valueText: o.valueText,
             valueInteger: o.hasValueInteger ? o.valueInteger : nil,
+            valueBoolean: o.hasValueBoolean ? o.valueBoolean : nil,
             valueDateID: o.valueDateID,
             date: o.hasDate ? Self.mapDateValue(o.date) : nil,
             valueNameID: o.valueNameID,
@@ -2321,6 +2330,9 @@ struct GoStore: GenealogyStore {
         msg.valueText = o.valueText
         if let valueInteger = o.valueInteger {
             msg.valueInteger = valueInteger
+        }
+        if let valueBoolean = o.valueBoolean {
+            msg.valueBoolean = valueBoolean
         }
         if let date = o.date {
             msg.date = Self.mapDateValueToProto(date)
@@ -2355,6 +2367,9 @@ struct GoStore: GenealogyStore {
         o.valueText = d.valueText
         if let valueInteger = d.valueInteger {
             o.valueInteger = valueInteger
+        }
+        if let valueBoolean = d.valueBoolean {
+            o.valueBoolean = valueBoolean
         }
         if let date = d.date {
             o.date = Self.mapDateValueToProto(date)

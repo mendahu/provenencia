@@ -828,7 +828,7 @@ private struct PropertiesCreateHost: View {
             ) {
                 PVSegmentedControl(
                     L10n.Properties.createValueType,
-                    items: SubjectPropertyValueType.researcherCreatable.map { vt in
+                    items: model.offeredValueTypes.map { vt in
                         .init(
                             text: vt,
                             value: vt,
