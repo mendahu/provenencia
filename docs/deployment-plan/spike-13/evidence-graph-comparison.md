@@ -1,6 +1,6 @@
 # How a person's records connect
 
-**Status:** requirements, captured 2026-10-29 (user). Spike 13 slice 7 (S13-26 – S13-29) is blocked on the scoring design (open question 11 in the [map](deployment-plan.md#open-questions)) and runs after the Promote cleanup, the pin removal and the Person page. The implementation is deliberately not decided yet.
+**Status:** requirements, captured 2026-10-29 (user); the first version decided 2026-11-07 (user, [below](#first-version-2026-11-07)). Spike 13 slice 7 (S13-26 – S13-29) runs after the Promote cleanup, the pin removal and the Person page.
 
 ## The problem
 
@@ -25,6 +25,18 @@ A function takes two Evidence graphs and says how strongly they connect, in a wa
 
 Given Requirement 1's results for a handle, show its Evidence graphs and their connections so a researcher can see weak links, a record that stands apart, and groups of records that do not connect. The form is open: a node-to-node web, a circle with arcs between its records (a chord diagram), or another. The view depends only on Requirement 1's output, not on how it is computed. Its brief is S13-D10.
 
+## First version (2026-11-07)
+
+Start as simple as possible, build it, and look at many people in the dogfood projects before designing anything richer. The decisions are working rules in the [map](deployment-plan.md#slice-7--how-a-persons-records-connect): "Slice 7 starts with a simple count" and "The view is a circular link diagram". In short:
+
+- **This is not Promote's job.** Promote's suggestions guess which Subjects might match; here the researcher has already joined both members to one entity, and the question is how much evidence the two records share. So the derived lifespan, a suggestion helper, is not counted, and nothing reads graph alignment's scoring.
+- **One line per shared person.** Two graphs get a line for each other person both name. Events, places and the page's own person are not lines.
+- **A line counts facts.** Each Property both members record that agrees or partly agrees (a name with at least one word in common), and each link both record to the same canonical entity (a relationship, or the same birth, death or marriage in the same role), counts once.
+- **Two weights.** One fact is thin (weak); two or more is thick (strong). Conflicts are listed but change nothing.
+- **A circular link diagram.** Graphs sit around a circle, labelled by the graph ref the Sources list shows; hovering a graph in either place highlights it in both.
+
+What this version leaves out is in [Open](#open), still open for a later version.
+
 ## Scale
 
 A person with 50 Evidence graphs has 1,225 graph pairs; each compares only the Subjects the two graphs share (a household's few people, an obituary's few dozen at most). Most people have 5 – 20 graphs. A place or event with thousands of member records needs bounding when Event and Place pages adopt this.
@@ -35,9 +47,12 @@ Researcher-chosen links stored at Promote, and recording what led the researcher
 
 ## Open
 
-- How the score is built and expressed: named levels per pair, a numeric score explained in the view, or something else; and what makes a connection strong enough to join two graphs into one group.
+Left out of the first version, to revisit after dogfooding it:
+
+- Whether conflicts and contested values should weaken or break a line.
+- A richer score than two weights, and what should make a connection strong enough to join two graphs into one group (today any line does).
 - Whether Source quality (credibility, transcription certainty) and independence (two graphs from one Source or informant) weigh in.
-- The visualization's form.
+- Whether shared events and places, not only persons, should draw lines.
 
 ## Later
 
