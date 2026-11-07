@@ -92,6 +92,8 @@ struct CachedThumbnail: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipped()
+        // Clipping hides a cropped image's overflow but leaves it hit-testable.
+        .contentShape(Rectangle())
         .accessibilityHidden(true)
     }
 
