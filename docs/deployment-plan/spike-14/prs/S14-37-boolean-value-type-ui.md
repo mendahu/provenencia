@@ -1,19 +1,19 @@
 # S14-37 — Boolean value type (UI)
 
-**Status:** Blocked — on S14-36 (engine code not on `main`), S14-39, board S14-D8
+**Status:** Blocked — on S14-39, board S14-D8
 **Spike / slice:** Spike 14 · Slice 7e — Boolean value type
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S14-D8](../design/S14-D8-composer-boolean-value.md), board not drawn yet
 **Board:** the Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), section "S14-D8 · Yes / no value". The implementer cannot open Claude Design: **Design → macOS** describes each frame in words (user, 2026-11-07), and is refreshed from the agreed board.
-**Depends on:** S14-36 (planned; PR [#732](https://github.com/mendahu/provenencia/pull/732) merged its plan only), S14-39 (scoped), S14-D8
+**Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733)), S14-39 (scoped), S14-D8
 **Blocks:** —
 **Branch:** `s14-37-boolean-value-type-ui`
 **Version bump:** minor — researchers can create and cite a new kind of Property, a feature ([`docs/versioning.md`](../../../versioning.md)); the next minor after `VERSION` at merge (0.3.8 → 0.4.0 at planning)
-**Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) (only to read the `propertymeta.Types` row it owns), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
+**Skills to load:** [`add-match-rule`](../../../../.agents/skills/add-match-rule/SKILL.md) (the `propertymeta.Types` table), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md) (`observations`), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`
-**Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs"; working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); S14-36 plan [`S14-36-boolean-value-type-engine.md`](S14-36-boolean-value-type-engine.md) (D-4, D-11, D-17, D-18, D-19 and its Out rows)
-**Planned:** 2026-11-07 against `main` @ `2ee4adb` (draft: S14-36's code is not on `main`; every row marked *(S14-36)* names what its plan adds)
-**Review:** — (not reviewed yet)
+**Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; the composer's Yes / No and no Negative); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; dogfood note [`ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); S14-36 plan and its **Landed** note [`S14-36-boolean-value-type-engine.md`](S14-36-boolean-value-type-engine.md)
+**Planned:** 2026-11-07 against `main` @ `aaf3b15`
+**Review:** [`S14-37-boolean-value-type-ui.review.md`](S14-37-boolean-value-type-ui.review.md) — Fits with changes — Ready with changes, round 1 answered; To user answered (M-1, M-2, M-4); round 2 runs once the board is agreed
 
 ### Implementer — read this first
 
@@ -30,42 +30,49 @@
 
 ## 1. Objective
 
-A researcher can make a yes/no Property ("Can read", "Veteran") on the Properties page and cite it from a census column in the Citation composer. The composer's Value field becomes a Yes / No segmented control with nothing chosen at first, so a No is always one the researcher picked. A yes/no Property has no Negative checkbox, because No is how the record says it. The saved answer reads "Yes" or "No" in the composer's evidence column and on Evidence graph cards; Conclusion detail already reads it (S14-36). This completes bar outcome 31 and the dogfood note of 2026-10-25.
+A researcher can make a yes/no Property ("Can read", "Veteran") on the Properties page and cite it from a census column in the Citation composer. The composer's Value field becomes a Yes / No segmented control with nothing chosen at first, so a No is always one the researcher picked. A yes/no Property cannot be negated: No is how the record says it. Go owns that rule beside the other value-type rules and refuses a negative boolean; the composer reads it and draws no Negative checkbox. The saved answer reads "Yes" or "No" in the composer's evidence column and on Evidence graph cards; Conclusion detail already reads it (S14-36). This completes bar outcome 31 and the dogfood note of 2026-10-25.
+
+The PR also makes the composer keep its value fields in one place (the value part of a row becomes `CitationObservationValue.Fields`), deletes the composer's dead row-mutation paths, and gives the kit's segmented control the focus handle every other kit field has.
 
 **Why now.** S14-36 stores, reconciles and sends booleans; S14-39 makes the Properties page honour the single-only rule. Boolean stays uncreatable until the composer can take the value: this PR flips it.
 
-**What stays.** Every other value type's editor and its Negative checkbox. The observation dialog's layout and the evidence column's line layout. The Properties page (S14-39 owns it). Conclusion detail's value text (S14-36).
+**What stays.** Every other value type's editor and its Negative checkbox. The observation dialog's layout and the evidence column's line layout. The Properties page (S14-39). Conclusion detail's value text (S14-36). A negative Observation of any other type.
 
 ## 2. User stories
 
-**US-1.** As a researcher, when I create a Property, I can choose the yes/no type.
+**US-1.** As the engine, I own whether a value type can be created by a researcher and whether it can be negated, and I refuse what my rules forbid.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | `propertymeta.Rule("boolean")` | Found; `ResearcherCreatable` true, `SingleOnly` true |
-| AC-1.2 | `properties.Create(label "Can read", valueType "boolean", cardinality "")` | Created, `cardinality = single` |
-| AC-1.3 | `properties.Create(label "Can read", valueType "boolean", cardinality "multiple")` | `ErrInvalid`; no row |
-| AC-1.4 | `GetPropertiesWorkspace` | `value_types` row `boolean` has `researcher_creatable` true |
+| AC-1.1 | `propertymeta.Rule("boolean")` | `ResearcherCreatable` true, `SingleOnly` true, `Negatable` false; every other row `Negatable` true |
+| AC-1.2 | `properties.Create(tx, userID, "Can read", "boolean", "", "")` | Created, `cardinality = single` |
+| AC-1.3 | The same with cardinality `"multiple"` | `ErrInvalid`; no row |
+| AC-1.4 | `GetPropertiesWorkspace` | the `boolean` row of `value_types` has `researcher_creatable` true and `negatable` false; `text` has `negatable` true |
+| AC-1.5 | `AddToCitation` with a boolean Observation, polarity `negative`, value true | `ErrInvalid`; no row |
+| AC-1.6 | `Update` of a stored negative boolean Observation (written by raw SQL) keeping polarity `negative` | `ErrInvalid`; row unchanged. The same update with polarity `positive` succeeds |
+| AC-1.7 | `AddToCitation` with a text Observation, polarity `negative` | Stored, as today |
 
 **US-2.** As a researcher, when I cite a yes/no Property in the composer, I pick Yes or No, and nothing is saved until I do.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | The Property combo box of a Person Subject whose type binds "Can read" (boolean) | "Can read" is offered (it was hidden before: `supportedValueTypes`) |
-| AC-2.2 | A new property draft, Property set to "Can read" | `values.valueBoolean == nil`; the dialog cannot save (`propertyValuesComplete` false) |
-| AC-2.3 | AC-2.2, then `valueBoolean = false`, then Save | `addObservationsToCitation` (or `createCitationWithObservations`) is called with a draft whose `valueBoolean == false`; the saved row reads "No" in the evidence column |
-| AC-2.4 | A draft with Occupation, Negative ticked, then Property changed to "Can read" | `polarity == positive`, `valueBoolean == nil` |
+| AC-2.1 | The Property combo box for a Person Subject whose type binds "Can read" (boolean) | "Can read" is offered (`supportedValueTypes`) |
+| AC-2.2 | A new property draft: Subject, then Property "Can read" | `values.valueFields.valueBoolean == nil`; `authoringCanConfirm` false |
+| AC-2.3 | AC-2.2, then `valueBoolean = false`, then Save | `recordedCalls` has the `addObservationsToCitation` (or `createCitationWithObservations`) prefix; `store.observationsByGraph[graphID]` holds one Can read row with `valueBoolean == false`; the saved composer row's summary is "No" |
+| AC-2.4 | A draft with Occupation and Negative ticked, then Property changed to "Can read" | `polarity == positive`, `valueBoolean == nil` |
 | AC-2.5 | A draft with "Can read" and `valueBoolean = true`, then Property changed to Occupation | `valueBoolean == nil`, `valueText == ""` |
-| AC-2.6 | Edit on a saved "Can read: Yes" Observation | The edit dialog's values have `valueBoolean == true`; Save of an unchanged edit does not call `updateObservation` (the row is not dirty) |
-| AC-2.7 | `CitationObservationValue.summary(valueType: "boolean", …)` with `true`, `false`, `nil` | "Yes", "No", "" |
+| AC-2.6 | A draft with "Can read" and `valueBoolean = true`, then "Can read" committed again in the Property combo box | `valueBoolean == true` (nothing changes) |
+| AC-2.7 | Edit on a saved "Can read: Yes" Observation | The edit's `valueBoolean == true`; the row's `state == .saved` (not dirty); Save of the unchanged edit records no `updateObservation` |
+| AC-2.8 | `CitationObservationValue.summary(valueType: "boolean", …)` with `true`, `false`, `nil` | "Yes", "No", "" |
 
 **US-3.** As a researcher, a yes/no Property shows no Negative checkbox, unless the line is already negative.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | The dialog with Property "Can read", polarity positive | `CitationPropertyFields.showsNegative` *(new)* false |
-| AC-3.2 | The dialog with Property Occupation | `showsNegative` true |
-| AC-3.3 | Edit on a saved "Can read" Observation with polarity negative (catalog made outside the app) | `showsNegative` true, checkbox checked; the evidence line shows "not" and the Negative Badge |
+| AC-3.1 | `CitationComposerVocabulary.offersNegative(propertyID: canRead, polarity: positive)` with rules seeded | false |
+| AC-3.2 | The same for Occupation | true |
+| AC-3.3 | The same for "Can read" with polarity `negative` (a catalog made outside the app) | true |
+| AC-3.4 | The same for "Can read" with no rules loaded (`valueTypeRules` empty) | true (Go decides, as before the first load) |
 
 **US-4.** As a researcher, a saved yes/no answer reads "Yes" or "No" wherever an Observation's value is shown.
 
@@ -75,133 +82,152 @@ A researcher can make a yes/no Property ("Can read", "Veteran") on the Propertie
 | AC-4.2 | The same with `valueBoolean nil` and `valueText ""` | "" (as today) |
 | AC-4.3 | A Person with two Citations both saying "Can read: Yes", on Conclusion detail | "Yes", merged (S14-36's text; checked by hand here) |
 
+**US-5.** As a keyboard user, Tab from the Property combo box lands on the Yes segment.
+
+| AC | Given / when | Then |
+| --- | --- | --- |
+| AC-5.1 | `PVSegmentedControl` given `focus:` and the host sets that focus | The first enabled segment takes keyboard focus |
+| AC-5.2 | In the dialog, Property "Can read" committed with Tab | Focus is on Yes; Space chooses it (manual check 3) |
+
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| Go marks boolean researcher-creatable (`propertymeta.Types`) | STEP-1, AC-1.1 – AC-1.4 |
-| Composer draft value: `valueBoolean` through the row, the value fields, summary, validity and save draft; one `Fields` constructor | STEP-2, AC-2.2, AC-2.3, AC-2.5, AC-2.6, AC-2.7 |
-| Composer offers boolean Properties; Property change resets polarity for a boolean | STEP-2, AC-2.1, AC-2.4 |
-| FakeStore keeps `valueBoolean` on the Observations it stores | STEP-2, AC-2.3, AC-2.6 |
-| Yes / No control in the Value field (BV-1, BV-2, BV-3, BV-5, BV-7) | STEP-3, AC-2.2, AC-2.3 |
-| Negative checkbox hidden for a boolean (BV-4) | STEP-3, AC-3.1 – AC-3.3 |
-| Saved line text (BV-6) | STEP-2 (summary), AC-2.3, AC-2.7 |
+| `propertymeta.TypeRule.Negatable` *(new)*; boolean creatable and not negatable | STEP-1, AC-1.1, AC-1.2, AC-1.3 |
+| `observations` refuses a negative Observation of a non-negatable type | STEP-1, AC-1.5, AC-1.6, AC-1.7 |
+| Proto `PropertyValueTypeRule.negatable`; handler; Swift rule mapping | STEP-2, AC-1.4 |
+| The composer row's value part is one `CitationObservationValue.Fields` | STEP-3, all US-2 tests |
+| Dead composer row-mutation paths deleted | STEP-3 |
+| Composer draft value `valueBoolean`, summary, validity, save; boolean offered; Property change resets polarity and value only when the Property changes | STEP-4, AC-2.1 – AC-2.8 |
+| `CitationComposerVocabulary.offersNegative` from Go's rule (BV-4) | STEP-4, AC-3.1 – AC-3.4 |
+| `PVSegmentedControl` focus handle | STEP-5, AC-5.1 |
+| Yes / No control, Negative checkbox, Tab (BV-1 – BV-5, BV-7) | STEP-6, AC-2.2, AC-5.2 |
+| Saved line text (BV-6) | STEP-4 (summary), AC-2.3, AC-2.8 |
 | Wide (BV-W1) | manual check 6 |
-| Evidence graph card text | STEP-4, AC-4.1, AC-4.2 |
-| Docs: data model, `add-seeded-vocabulary`, map, completed, brief archive | STEP-6 |
+| Evidence graph card text | STEP-7, AC-4.1, AC-4.2 |
+| Docs, version bump | STEP-8 |
 
 | Out | Home |
 | --- | --- |
-| Properties page: Holds several hidden for a single-only type; boolean pill colour; how the create picker looks with "boolean" in it | S14-39 (brief S14-D9) |
+| Properties page: Holds several hidden for a single-only type; boolean pill colour; the picker's label for boolean | S14-39 (brief S14-D9) |
 | A "not answered" or "unknown" value | not planned (a blank column is not cited; brief non-goal) |
 | Keyboard shortcuts for Yes and No | not planned (brief §2.1) |
-| A focus binding on `PVSegmentedControl` | not planned unless STEP-3's Stop condition fires; then the user decides |
+| Using the new focus handle in `DateValueEditorForm` and `PropertiesView` | not planned (their Tab order works today) |
+| Folding a stored negative boolean into its opposite value | not planned (S14-36 D-9; the engine now refuses new ones) |
+| `FakeStore.appendFakeObservations` built on `fakeObservation`, and its `displayText` synthesis | [structural debt](../../../ideas/structural-debt.md) (row added in STEP-8) |
+| Two text paths for a saved Observation (`CitationObservationValue.summary` and `ObservationValueDisplay`) | [structural debt](../../../ideas/structural-debt.md) (S14-36's display row gains `summary`, STEP-8) |
 | Omnibar indexing of boolean values | not planned (S14-36 Out) |
-| Folding a negative boolean into its opposite value | not planned (S14-36 D-9) |
-| Integer text differing between `ReconciledValueDisplay` and `ObservationValueDisplay` | [structural debt](../../../ideas/structural-debt.md) (row from S14-36) |
 
 ## 4. Current state
 
-Verified at `2ee4adb`, plus S14-36's planned additions marked *(S14-36)*. Redo this table when S14-36 lands.
+Verified at `aaf3b15`.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Value-type rules (Go) | `core/propertymeta/propertymeta.go` `Types`, `Rule` *(S14-36 D-4)* | boolean row `ResearcherCreatable: false, SingleOnly: true` |
-| Rule tests (Go) | `core/propertymeta/propertymeta_test.go` `TestTypes` *(S14-36 T-1)*; `core/database/properties/properties_test.go` `TestValueTypeRules` *(S14-36 T-2)*; `api/ffi/handlers/subject_defs_test.go` `TestGetPropertiesWorkspaceValueTypes` *(S14-36 T-11)* | T-1 asserts boolean not creatable; T-2 has a row "Create boolean → `ErrInvalid`"; T-11 compares with `Types` field for field, so it follows the flip |
-| Swift value kinds | `macos/App/Platform/InterpretationValueKinds.swift` `PropertyValueType.boolean`, `booleanText(_:)` *(S14-36 D-17, D-18)* | Reads "Yes" / "No" from `L10n.Properties.valueBooleanYes` / `valueBooleanNo` *(S14-36)* |
-| Swift models | `macos/App/Platform/GenealogyStore.swift` `CatalogObservation.valueBoolean`, `CatalogObservationDraft.valueBoolean` *(S14-36 D-17)* | `Bool?`, declared after `valueInteger`, default nil; `GoStore` maps both ways |
-| Composer offered types | `macos/App/Features/CitationComposer/CitationComposerVocabulary.swift` `supportedValueTypes`, `isOffered(valueType:capabilities:)`, `isDepiction(propertyID:)` | No boolean: a boolean Property is not offered in the Property combo box |
-| Composer row values | `macos/App/Features/CitationComposer/CitationObservationRows.swift` `ObservationRowValues` (fields, `clearValue`), `ObservationRow` (`isEmptyDraft`, `loaded(from:)`, `valueFields()`, `asDraft(property:)`, `asCatalogObservation(property:)`) | One field per value type; no boolean |
-| Composer value logic | `macos/App/Features/CitationComposer/CitationObservationValue.swift` `Fields`, `fields(from:)`, `summary`, `isDialogValid`, `apply` | `switch valueType` per type, `default` refuses |
-| `Fields` copies | `CitationObservationValue.fields(from:)`, `ObservationRow.valueFields()`, `CitationComposerModel+Authoring.swift` `propertyValuesComplete` (~124) | Three hand-written memberwise copies of the same seven fields |
-| Property change | `CitationComposerModel+Authoring.swift` `applyObservationProperty(_:values:)` (~233) | Sets the Property and clears the value; polarity stays |
-| Dialog form | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` `CitationPropertyFields` (`body`, `valueControls` ~366, `claimTab` ~448, bindings ~495–530) | Value switch per type; Negative `PVCheckbox` always drawn under the Value field |
-| Tab order | `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` `CitationAuthoringDraftAfterCommit.propertyValueTakesFocus`, `CitationAuthoringNavigation.next` | False only for a depiction whose Draw is blocked; then the combo does not claim Tab |
-| Saved lines | `CitationComposerAuthoring.swift` `groups(observations:…)` (~330); `CitationComposerSubjectGroups.swift` line row (~150–190) | Text from `summary`; `mono` for integer and date; "not" word and Negative Badge when negative |
-| Card text | `macos/App/Features/EvidenceGraph/ObservationValueDisplay.swift` `string(for:locale:orders:)` | Name, date, term, text, integer; a boolean reads "" |
-| Fake | `macos/App/Platform/FakeStore.swift` `fakeObservation(…row:)` (~3083), the add path's `CatalogObservation(…)` (~3185) | Copies `valueInteger`, not `valueBoolean` (S14-36 left it: no editor) |
-| Kit | `macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift` | Generic `Value: Hashable`; a selection matching no item selects nothing; no focus binding; each segment is a `PVChip` |
-| Tests | `macos/ProvenenciaTests/CitationComposerModelTests.swift` (`makeStore`, `firstRowSaveOnNewCreatesCitationAndExposesRef` ~274, `nameRowUsesDisplayOrderNotTheStoredForm` ~929, `editedRowSaveCallsUpdateOnly`); `macos/ProvenenciaTests/ObservationValueDisplayTests.swift` (`integerUsesValueInteger` ~14) | Integer and text cases are the templates |
-| Docs | `docs/interpretation-layer-data-model.md` value-type list; `.agents/skills/add-seeded-vocabulary/SKILL.md` Create sentence | Say "boolean from S14-37" *(S14-36 STEP-10)* |
+| Value-type rules (Go) | `core/propertymeta/propertymeta.go` `TypeRule` (`ValueType`, `ResearcherCreatable`, `SingleOnly`), `Types`, `Rule`, `ValueTypes` | boolean row `{ValueType: ValueTypeBoolean, SingleOnly: true}` |
+| Rule tests (Go) | `core/propertymeta/propertymeta_test.go` `TestTypes` (`flags` table pins every row); `core/database/properties/properties_test.go` `TestValueTypeRules` (row "create boolean is not researcher-creatable yet") | Both assert boolean not creatable |
+| Observation polarity | `core/database/observations/observations.go` `insertOne` (~273: polarity check, ~300 `getPropertyTx`, ~314 `resolveValue`); `core/database/observations/update.go` `updateOne` (~27 polarity, ~49 `getPropertyTx`) | Any type takes `negative` |
+| Observation tests | `core/database/observations/observations_test.go` `TestBooleanObservationValue` (~1530, table with `booleanFixture`) | No polarity rows |
+| Proto / handler | `api/proto/engine.proto` `PropertyValueTypeRule` (~2325, fields 1–3); `api/ffi/handlers/subject_defs.go` `GetPropertiesWorkspace` (~268); `api/ffi/handlers/subject_defs_test.go` `TestGetPropertiesWorkspaceValueTypes` (~266, compares field for field) | No `negatable` |
+| Swift rule | `macos/App/Platform/GenealogyStore.swift` `CatalogPropertyValueTypeRule` (~944); `macos/App/Platform/GoStore.swift` `getPropertiesWorkspace` (~1940); `macos/ProvenenciaTests/PropertiesModelTests.swift` `goValueTypeRules` (~257) | Three fields; two construction sites |
+| Swift snapshot | `macos/App/Features/Properties/PropertiesSnapshot.swift` `valueTypeRules`, `creatableValueTypes` | No per-type lookup |
+| Swift value kinds | `macos/App/Platform/InterpretationValueKinds.swift` `PropertyValueType.boolean`, `booleanText(_:)`; `macos/App/Platform/L10n.swift` `L10n.Properties.valueBooleanYes`, `valueBooleanNo` | "Yes" / "No" |
+| Swift models | `GenealogyStore.swift` `CatalogObservation.valueBoolean`, `CatalogObservationDraft.valueBoolean` (`Bool? = nil`); `GoStore` maps both ways; `FakeStore.fakeObservation` (~3123) and `appendFakeObservations` (~3198) copy it | Wire complete |
+| Composer offered types | `macos/App/Features/CitationComposer/CitationComposerVocabulary.swift` `supportedValueTypes`, `isOffered`, `isDepiction(propertyID:)`, `make(fields:snapshot:rules:termsByPropertyID:)` | No boolean; no value-type rules kept |
+| Composer row values | `macos/App/Features/CitationComposer/CitationObservationRows.swift` `ObservationRowValues` (`subjectID`, `propertyID`, `polarity`, then seven value fields; `clearValue`), `ObservationRow` (seven value-field forwarding accessors ~60–93, `isEmptyDraft`, `loaded(from:)`, `valueFields()`, `asDraft`, `asCatalogObservation`) | The same seven fields as `Fields`, kept by hand |
+| Composer value logic | `macos/App/Features/CitationComposer/CitationObservationValue.swift` `Fields`, `fields(from:)` (no caller), `summary`, `isDialogValid`, `apply` | `switch valueType` per type |
+| Model copy of `Fields` | `macos/App/Features/CitationComposer/CitationComposerModel+Authoring.swift` `propertyValuesComplete` (~124), `authoringCanConfirm`, `applyObservationProperty(_:values:)` (~233) | Hand copy of seven fields; Property change always clears the value |
+| Dead row paths | `CitationObservationRows.swift` `applyProperty(rowID:propertyID:)`, `applyInteger(rowID:text:)`, `applyTerm(rowID:termID:)`, `togglePolarity(rowID:)`, `ObservationRow.polarityMenuTitle`; `L10n.CitationComposer.negateObservation`, `affirmObservation` | No caller in `macos/App`; `polarityMenuTitle` is called only from its own test; `applyText` only from two row-edit tests (~331, ~348) |
+| Dialog form | `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift` `CitationPropertyFields` (`body`, `valueControls` ~366, `claimTab` ~448, bindings ~495–530) | Negative `PVCheckbox` always drawn; each value editor takes `PVFieldFocus(focus, equals: .value)` |
+| Tab order | `macos/App/Features/CitationComposer/CitationComposerAuthoring.swift` `CitationAuthoringDraftAfterCommit.propertyValueTakesFocus` | False only when the value has no control (a blocked depiction) |
+| Saved lines | `CitationComposerAuthoring.swift` `groups(observations:…)` (~330); `CitationComposerSubjectGroups.swift` line row (~150–190) | Text from `summary`; "not" word and Negative Badge on a negative line |
+| Kit | `macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift`; `macos/App/DesignSystem/Components/Input/PVFieldFocus.swift`; `macos/App/DesignSystem/README.md` SegmentedControl row (~173) | No focus handle; a selection matching no item selects nothing; each segment is a `PVChip` (draws keyboard focus) |
+| Card text | `macos/App/Features/EvidenceGraph/ObservationValueDisplay.swift` `string(for:locale:orders:)` | A boolean reads "" |
+| Tests | `macos/ProvenenciaTests/CitationComposerModelTests.swift` (`makeStore` ~29 builds `propertiesByProject` as a list and binds by index `![0]`…`![7]`; `occupationObservation` ~1375; `polarityMenuTitleFollowsPolarity` ~920); `macos/ProvenenciaTests/CitationComposerDepictionTests.swift`; `macos/ProvenenciaTests/ObservationValueDisplayTests.swift` | Integer and text cases are the templates |
+| Docs | `docs/interpretation-layer-data-model.md`; `.agents/skills/add-seeded-vocabulary/SKILL.md`; `docs/deployment-plan/spike-14/deployment-plan.md` bar outcome 31 | Say boolean is creatable "from S14-37" |
 
-**Precedent.** S10-32 added the depiction value to the composer: a `supportedValueTypes` entry, a `DepictionValueDraft` on `ObservationRowValues`, an arm in each `CitationObservationValue` switch, a `valueControls` case, and `isDepiction(propertyID:)` for the Tab rule. Copy that shape with the integer arms as the line-by-line template. `DateValueEditorForm`'s kind control (`macos/App/Features/Dates/DateValueEditorForm.swift` ~40) is the precedent for a `PVSegmentedControl` inside a value editor.
+**Precedent.** S14-36 ([#733](https://github.com/mendahu/provenencia/pull/733)) added `SingleOnly` end to end: a `TypeRule` field, a refusal in the domain package, a proto field, a Swift field mapped in `GoStore`: copy that path for `Negatable`. S10-32 added the depiction value to the composer (`supportedValueTypes`, a draft field, one arm per `CitationObservationValue` switch, a `valueControls` case, `isDepiction`): copy its shape with the integer arms as the line-by-line template. `PVSelect`'s `focus: PVFieldFocus? = nil` (`macos/App/DesignSystem/Components/Select/PVSelect.swift` ~109) is the precedent for the kit focus handle.
 
 ## 5. Decisions
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | `propertymeta.Types` boolean row becomes `ResearcherCreatable: true` (keeps `SingleOnly: true`). No other Go change | S14-36 D-5 left this one flag for this PR; Swift reads creatability from the snapshot (S14-36 D-11), so the picker offers it with no Swift change | — |
-| D-2 | Editor: a Yes / No segmented control with nothing chosen at first (user, 2026-11-07) | An unticked checkbox cannot tell "No" from "not answered", and the form already has a Negative checkbox | `PVCheckbox` (unticked saves No); `PVSwitch` (the kit says a saved form uses Checkbox) |
-| D-3 | Draft value: `valueBoolean: Bool? = nil` *(new)* on `ObservationRowValues` (after `valueIntegerText`) and on `CitationObservationValue.Fields` (after `valueIntegerText`). nil is "not chosen". `clearValue` sets nil; `isEmptyDraft` requires nil; `loaded(from:)` copies `observation.valueBoolean`; `asCatalogObservation` passes `valueBoolean: draft.valueBoolean` | `Bool?` is the wire's own shape (S14-36 D-17); one field, no "chosen" flag | `Bool` + `hasBoolean` — two fields for one optional |
-| D-4 | `CitationObservationValue.Fields.init(_ values: ObservationRowValues)` *(new)* is the one copy of the row's value fields. `fields(from:)` returns `Fields(row.values)`; `ObservationRow.valueFields()` returns `Fields(values)`; `propertyValuesComplete` passes `Fields(values)`. The memberwise init stays for tests | Adding a field to three hand copies is the drift this PR would otherwise repeat; the owning type gets one constructor | Adding `valueBoolean` to each of the three copies |
-| D-5 | `CitationObservationValue`: `summary` boolean arm → `fields.valueBoolean.map(PropertyValueType.booleanText) ?? ""`; `isDialogValid` → `fields.valueBoolean != nil`; `apply` → `guard let value = fields.valueBoolean else { return .unsupported }; draft.valueBoolean = value` | The integer arms' shape; the dialog never saves without a choice (Save is disabled), so `.unsupported` is a guard, not a path a researcher sees | A new `Failure` case and string — unreachable copy |
-| D-6 | `CitationComposerVocabulary.supportedValueTypes` adds `PropertyValueType.boolean.rawValue`; `isOffered` needs no boolean branch. `func isBoolean(propertyID: String) -> Bool` *(new)* beside `isDepiction` | The composer offers what it can edit; the depiction precedent | Checking `valueType == "boolean"` inline at each call site |
-| D-7 | `valueControls` case `PropertyValueType.boolean.rawValue`: `PVSegmentedControl<Bool?>(L10n.CitationComposer.valueLabel, items: [.init(L10n.Properties.valueBooleanYes, value: true, accessibilityIdentifier: "\(identifierPrefix).boolean.yes"), .init(L10n.Properties.valueBooleanNo, value: false, accessibilityIdentifier: "\(identifierPrefix).boolean.no")], selection: values.valueBoolean, size: .sm, select: { values.valueBoolean = $0 })`, not wrapped in `inlineValue` | BV-1, BV-2; the kit control selects nothing when the selection matches no item, so no kit change; the segments reuse S14-36's Yes / No keys, the one place a boolean's words live | New `L10n.CitationComposer` Yes / No keys — a second copy of the words |
-| D-8 | Negative: `CitationPropertyFields.showsNegative` *(new, computed)* = `!model.vocabulary.isBoolean(propertyID: values.propertyID) \|\| values.polarity == ObservationPolarity.negative.rawValue`; the `PVCheckbox` is drawn only when true. `applyObservationProperty` sets `values.polarity = positive` when `propertyID` differs from the old one and the new Property is boolean | User, 2026-11-07: No is how the record says it. Resetting on change stops a hidden tick from saving a negative boolean; checking for a real change keeps a re-commit of the same Property from clearing a stored negative | Hiding the checkbox always — a negative row from another catalog would be negative with nothing on screen saying so |
-| D-9 | Tab: `CitationPropertyFields.claimTab` passes `propertyValueTakesFocus: false` when `model.vocabulary.isBoolean(propertyID: committed)` (beside the depiction rule), so the combo does not claim Tab and the key-view loop moves to the Yes segment | `PVSegmentedControl` has no focus binding; the depiction rule already uses this path | Adding a focus binding to the kit control — a kit change the brief does not mark |
-| D-10 | `ObservationValueDisplay.string`: after the term arm and before the text arm, `if let value = observation.valueBoolean { return PropertyValueType.booleanText(value) }` | One wording (S14-36 D-18); `valueText` is empty for a boolean, so the order only matters for a malformed row, where the typed value wins as the date and term arms already do | Reading `propertyValueType` first — the value field already says it |
-| D-11 | FakeStore copies `valueBoolean` from the row in `fakeObservation` and from the draft in the add path | A seeded fake still returns what it was given (working rule "FakeStore is a seeded fake"), so composer tests see the saved value | — |
-| D-12 | No new L10n keys. The group's spoken label is `L10n.CitationComposer.valueLabel` ("Value") | BV-7; the Field's label already says it | — |
-| D-13 | Evidence graph card and the evidence column show the word in their existing text slot; neither is a chrome change for the canvas. The composer's evidence column is on the S14-D8 board (frame 5) | The card draws a value it already has room for; Conclusion detail did the same in S14-36 | A separate canvas board |
+| D-1 | `propertymeta.TypeRule` gains `Negatable bool` *(new)*, declared after `SingleOnly`, comment "Negatable is whether an Observation of the type may be negative: a yes/no says No with its value". Every row of `Types` sets `Negatable: true` except boolean. The boolean row becomes `{ValueType: ValueTypeBoolean, ResearcherCreatable: true, SingleOnly: true}` | User, 2026-11-07: Go owns the rule, beside creatable and single-only; S14-36 D-5 left the creatable flag for this PR | A Swift-only rule — the user chose Go; a negative-sense `NoNegative` field — the other two fields read positive |
+| D-2 | `observations.negationAllowed(valueType, polarity string) bool` *(new, observations.go)*: true unless `polarity == PolarityNegative` and `propertymeta.Rule(valueType)` is found with `Negatable` false. `insertOne` and `updateOne` call it right after `getPropertyTx` and return `ErrInvalid` when false | A rule Go owns is enforced by Go; the composer never sends one (D-9), so the refusal only meets crafted calls | Letting the engine accept it and only hiding the checkbox — the rule would be advice |
+| D-3 | Proto: `PropertyValueTypeRule` `bool negatable = 4;`. `GetPropertiesWorkspace` sets `Negatable: r.Negatable`. Swift: `CatalogPropertyValueTypeRule.negatable: Bool` *(new, no default)*; `GoStore` maps `$0.negatable`; `goValueTypeRules` passes `negatable: true`. | The S14-36 path for `singleOnly`; no default, so a missing mapping does not compile | A default of `true` — it hides a missing mapping |
+| D-4 | The composer row's value part is one struct (user, 2026-11-07): `ObservationRowValues` keeps `subjectID`, `propertyID`, `polarity` and gains `var valueFields = CitationObservationValue.Fields()` in place of its seven value fields. `clearValue()` becomes `valueFields = .init()`; `isEmptyDraft` tests `values.valueFields == .init()`; `ObservationRow`'s seven value-field forwarding accessors and `valueFields()` are deleted (callers read `row.values.valueFields`); `propertyValuesComplete` passes `values.valueFields`; `CitationObservationValue.fields(from:)` is deleted. Each caller is renamed mechanically (`values.valueText` → `values.valueFields.valueText`); no behaviour changes in this step | One declaration per value field; the "empty" and "clear" rules become one `==` and one assignment instead of hand lists (review M-1) | Adding `valueBoolean` to seven places; one `Fields.init(_:)` replacing three copies — still five places |
+| D-5 | `CitationObservationValue.Fields.valueBoolean: Bool? = nil` *(new)*, after `valueIntegerText`; nil is "not chosen". `loaded(from:)` sets it from `observation.valueBoolean`; `asCatalogObservation` passes `valueBoolean: draft.valueBoolean`. `summary` → `fields.valueBoolean.map(PropertyValueType.booleanText) ?? ""`; `isDialogValid` → `fields.valueBoolean != nil`; `apply` → `guard let value = fields.valueBoolean else { return .unsupported }; draft.valueBoolean = value` | The wire's own shape (S14-36 D-17); the integer arms' shape. Save is disabled without a choice, so `.unsupported` is a guard no researcher meets | `Bool` + a chosen flag; a new `Failure` case and string — unreachable copy |
+| D-6 | `CitationComposerVocabulary`: `supportedValueTypes` adds `PropertyValueType.boolean.rawValue`; `func valueType(propertyID: String) -> PropertyValueType?` *(new)*; `var valueTypeRules: [String: CatalogPropertyValueTypeRule]` *(new, from `fields.valueTypeRules` in `make`; `.empty` has `[:]`)*; `func offersNegative(propertyID: String, polarity: String) -> Bool` *(new)* = `polarity == negative \|\| valueTypeRules[valueType]?.negatable ?? true`. `isDepiction` stays | The rule's one Swift reader; with no rules loaded Go decides (AC-3.4). A typed lookup instead of a second `isX` (review M-6) | `isBoolean(propertyID:)` — one predicate per type |
+| D-7 | `applyObservationProperty(_:values:)`: returns without change when `propertyID == values.propertyID`; otherwise sets the Property, clears the value, and sets `polarity = positive` when `!vocabulary.offersNegative(propertyID: propertyID, polarity: positive)` | A re-commit of the same Property (Shift-Tab back, Tab on) no longer wipes an answer, for every type; a hidden tick cannot reach Go | Resetting polarity in the view — a rule in two places |
+| D-8 | Dead paths deleted: `ObservationRows.applyProperty(rowID:propertyID:)`, `applyInteger(rowID:text:)`, `applyTerm(rowID:termID:)`, `togglePolarity(rowID:)`, `ObservationRow.polarityMenuTitle`, `L10n.CitationComposer.negateObservation` and `affirmObservation` (and their `Localizable.xcstrings` entries), test `polarityMenuTitleFollowsPolarity`. `applyText(rowID:text:)` stays: `editedRowSaveCallsUpdateOnly` and `revertDraftRemovesAndRevertEditedRestores` drive a row edit through it | Twins of the paths D-4 and D-7 change; a revived one would skip the polarity rule (review M-3) | Leaving them — a second negation path |
+| D-9 | Dialog: `valueControls` case `PropertyValueType.boolean.rawValue` → `PVSegmentedControl<Bool?>(L10n.CitationComposer.valueLabel, items: [.init(L10n.Properties.valueBooleanYes, value: true, accessibilityIdentifier: "\(identifierPrefix).boolean.yes"), .init(L10n.Properties.valueBooleanNo, value: false, accessibilityIdentifier: "\(identifierPrefix).boolean.no")], selection: values.valueFields.valueBoolean, size: .sm, focus: PVFieldFocus(focus, equals: .value), select: { values.valueFields.valueBoolean = $0 })`, not wrapped in `inlineValue`, with no extra frame (the segments expand). The Negative `PVCheckbox` sits in `if model.vocabulary.offersNegative(propertyID: values.propertyID, polarity: values.polarity)`, so the `VStack` closes up. `claimTab` needs no change: the Yes segment takes `.value` | BV-1 – BV-5, BV-7; the segments reuse S14-36's Yes / No keys; one focus mechanism for every value editor | A `PVCheckbox` (user chose segmented); the key-view loop (user, 2026-11-07) |
+| D-10 | Kit: `PVSegmentedControl` gains `focus: PVFieldFocus? = nil` *(new init parameter, after `size`)*, applied with `focus.apply(AnyView(chip))` to the first item that is not disabled; the README SegmentedControl row names it | Every other kit field takes the handle (`PVInput`, `PVTextArea`, `PVComboBox`, `PVSelect`); the user chose the kit change (2026-11-07) | A composer-local wrapper — a second copy of the control |
+| D-11 | `ObservationValueDisplay.string`: after the term arm and before the text arm, `if let value = observation.valueBoolean { return PropertyValueType.booleanText(value) }` | One wording (S14-36 D-18) | Reading `propertyValueType` first — the value field already says it |
+| D-12 | No new L10n keys. Two removed (D-8) | — | New Yes / No keys under `CitationComposer` — a second copy |
+| D-13 | The Evidence graph card shows the word in its existing text slot; no canvas board. The composer's evidence column is on S14-D8 (frame 5) | The card draws a value it already has room for, as Conclusion detail did in S14-36 | A separate canvas board |
 
-**Rules this plan bends.** None. D-2 and D-8 carry the user's answers of 2026-11-07, recorded in the map's Batch 7 boolean working rule (this planning commit).
+**Rules this plan bends.** None. D-1, D-2, D-4, D-9 and D-10 carry the user's answers of 2026-11-07. Planning added "negatable" to the map's Batch 7 boolean working rule beside creatable and single-only.
 
 ## 6. Design
 
 ### Codebase fit
 
-Searched: `supportedValueTypes`, `isDepiction`, `valueIntegerText`, `CitationObservationValue.Fields(`, `PVSegmentedControl(`, `negativeBinding`, `propertyValueTakesFocus`, `booleanText`, `valueBooleanYes`.
+Searched: `TypeRule`, `SingleOnly`, `single_only`, `singleOnly`, `supportedValueTypes`, `isDepiction`, `valueIntegerText`, `CitationObservationValue.Fields(`, `PVSegmentedControl(`, `focus: PVFieldFocus?`, `negativeBinding`, `applyProperty(`, `togglePolarity`, `booleanText`, `valueBooleanYes`.
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `ObservationRowValues.valueBoolean`, `Fields.valueBoolean` | field | `valueIntegerText` | Sibling field (D-3) |
-| `CitationObservationValue.Fields.init(_:)` | init | `fields(from:)`, `valueFields()`, `propertyValuesComplete`'s copy | Replaces the three copies (D-4) |
-| `CitationComposerVocabulary.isBoolean(propertyID:)` | func | `isDepiction(propertyID:)` | Sibling (D-6) |
-| `CitationPropertyFields.showsNegative` | computed | the always-drawn `PVCheckbox` | D-8 |
+| `TypeRule.Negatable`, proto `negatable`, `CatalogPropertyValueTypeRule.negatable` | field | `SingleOnly` / `single_only` / `singleOnly` | Extends the same table and wire (D-1, D-3) |
+| `observations.negationAllowed` | func | `properties.cardinalityAllowed` (S14-36) | The same shape in the package that writes Observations (D-2) |
+| `ObservationRowValues.valueFields` | field | the seven value fields it replaces | D-4 |
+| `Fields.valueBoolean` | field | `valueIntegerText` | D-5 |
+| `CitationComposerVocabulary.valueType(propertyID:)`, `valueTypeRules`, `offersNegative` | func / field | `isDepiction(propertyID:)` | D-6 |
+| `PVSegmentedControl` `focus:` | init parameter | `PVSelect` `focus:` | D-10 |
 | Boolean arms in `summary`, `isDialogValid`, `apply`, `valueControls`, `ObservationValueDisplay` | switch arms | integer arms | Extends each switch |
-| `CitationComposerModelTests` `canReadPropertyID` and its property row | test fixture | `occupationPropertyID` | Same fixture table |
+| `CitationComposerModelTests` `canReadPropertyID`, `canReadObservation(id:ref:citationID:value:polarity:)` | test fixture | `occupationPropertyID`, `occupationObservation` | Same fixture table |
 
-**Builds on.** S14-36's `propertymeta.Types` (one flag), `PropertyValueType.booleanText` and the Yes / No keys; the composer's per-type switches; `PVSegmentedControl` as `DateValueEditorForm` uses it.
-**Deletes.** The three memberwise `Fields` copies (D-4). S14-36's doc wording "boolean from S14-37" in `docs/interpretation-layer-data-model.md` and `.agents/skills/add-seeded-vocabulary/SKILL.md`.
-**Next adds.** A later value type with a composer editor is one `supportedValueTypes` entry, one field on `ObservationRowValues` and `Fields` (now one copy), and one arm per switch.
+**Builds on.** S14-36's value-type table and wire; the composer's per-type switches; the kit's `PVFieldFocus`.
+**Deletes.** The seven value fields of `ObservationRowValues` and `ObservationRow`'s seven forwarding accessors and `valueFields()` (D-4); `CitationObservationValue.fields(from:)`; the hand list in `propertyValuesComplete`; the dead row paths, two strings and one test of D-8; the docs' "from S14-37".
+**Next adds.** S14-39 reads `singleOnly` from the same snapshot. A later value type with a composer editor is one `supportedValueTypes` entry, one field on `Fields`, one arm per switch, and one `Types` row that says whether it is negatable.
 
 ### Reach
 
 | New path or state | Destination | Checked |
 | --- | --- | --- |
-| A boolean Property in the composer's Property combo box | `CitationPropertyFields.valueControls`, `propertyValuesComplete`, `asDraft` | Each has a boolean arm (D-5, D-7); AC-2.2, AC-2.3 |
-| A boolean Observation in the evidence column | `CitationComposerAuthoring.groups`, line row | `summary` gives "Yes" / "No"; `mono` false; negative lines unchanged (AC-2.7, AC-3.3) |
-| A boolean Observation on an Evidence graph card and in `EvidenceBridgeEdgeSummary` | `ObservationValueDisplay.string` | D-10, AC-4.1 |
-| A negative boolean Observation (catalog made outside the app) | `CitationPropertyFields` | Checkbox shows, checked (AC-3.3). Clearing it hides it on the next draw (D-8): the row is then positive, as intended |
-| A boolean Property in Properties create | `PropertiesView` create picker (S14-36 D-11, S14-39) | Offered once D-1 lands; Holds several hidden by S14-39 |
+| A boolean Property in the composer's Property combo box | `valueControls`, `propertyValuesComplete`, `asDraft` | A boolean arm in each (D-5, D-9); AC-2.2, AC-2.3 |
+| A boolean Observation in the evidence column | `groups`, line row | `summary` gives "Yes" / "No"; `mono` false (AC-2.8) |
+| A boolean Observation on an Evidence graph card and in `EvidenceBridgeEdgeSummary` | `ObservationValueDisplay.string` | D-11, AC-4.1 |
+| A stored negative boolean (crafted catalog) | composer dialog; `observations.updateOne` | Checkbox shows, checked (AC-3.3); saving it still negative is refused with `observations.invalid` through the composer's existing save-error path (AC-1.6); clearing it saves |
+| A boolean Property in Properties create | `PropertiesView` create picker | Offered once D-1 lands; Holds several hidden by S14-39 |
+| A re-commit of the same Property in any dialog | `applyObservationProperty` | Value and polarity kept (AC-2.6) |
 
 ### Scale
 
-None — no list, loop or write path changes; a boolean Observation saves through the existing calls with one more field.
+None — no list, loop or write path changes; one comparison per Observation write, one bit per value-type row.
 
 ### Edges
 
-- **Assumptions.** `isEmptyDraft` treats every empty field as an untouched draft: `valueBoolean == nil` joins it, so a draft with only a Property picked and no answer is still "touched" by its `propertyID` (as today). `propertyValuesComplete` assumes `isDialogValid` covers every offered type: the boolean arm keeps it total (T-2). `PVSegmentedControl` assumes the selection is one of the item values or none: `nil` selects none (T-4 by hand).
-- **Neighbors.** Integer 0/1 is unaffected: integers keep `valueIntegerText`. A text Property keeps its Negative checkbox (AC-3.2). Changing from boolean to another type clears `valueBoolean` (AC-2.5); changing to a boolean resets polarity (AC-2.4); re-committing the same boolean Property keeps a stored negative (T-3).
+- **Assumptions.** `isEmptyDraft` treats an untouched draft as one with no Property and empty values: `valueFields == .init()` includes `valueBoolean == nil` (T-6). `propertyValuesComplete` assumes `isDialogValid` covers every offered type: the boolean arm keeps it total (T-5). `PVSegmentedControl` assumes the selection is one item's value or none: `nil` selects none (manual check 2). `negationAllowed` assumes every stored value type has a rule: the `properties` CHECK and `TestTypes` hold that.
+- **Neighbors.** A negative text, date, name, term, subject or depiction Observation is stored as today (AC-1.7, T-2). Integer 0/1 stays an integer. Changing from boolean to another type clears the answer (AC-2.5); to a boolean resets polarity (AC-2.4); the same Property keeps both (AC-2.6).
 - **Removed inputs.** None — no rule reads a deleted or excluded input.
-- **Real data.** None — no seed drives the rule; no seed Property is boolean.
+- **Real data.** `propertymeta.Types` is the whole table: `TestTypes` pins all eight rows' three flags.
 - **Untrusted size.** None — one optional bit per row.
 
 ### Schema
 
-None — no catalog change (S14-36 added the columns).
+None — no catalog change.
 
 ### Go core
 
 | Package | Change |
 | --- | --- |
 | `core/propertymeta` | D-1 |
+| `core/database/observations` | D-2 |
 
-Errors: `properties.invalid` for AC-1.3 (S14-36's `cardinalityAllowed`). No new codes.
+Errors: `observations.invalid` (AC-1.5, AC-1.6), `properties.invalid` (AC-1.3). No new codes.
 
 ### FFI
 
-None — the wire carries the flip in `value_types` (S14-36 D-10).
+`api/proto/engine.proto` `PropertyValueTypeRule.negatable = 4`; `api/ffi/handlers/subject_defs.go` sets it. Regenerate with `./scripts/generate-proto.sh` (needs `protoc`, `protoc-gen-go`, `protoc-gen-swift`); commit `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`.
 
 ### macOS
 
@@ -209,65 +235,77 @@ From the S14-D8 inventory.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Value field | `PVField` | `CitationComposerAuthoringBox.swift` `CitationPropertyFields.valueControls` | BV-1; label "Value" unchanged |
-| Yes / No control | `PVSegmentedControl<Bool?>` (Ship) | same | D-7; BV-1, BV-2, BV-7 |
-| Property observation form | `CitationPropertyFields` (Extend) | same | D-7, D-8 |
-| Negative checkbox | `PVCheckbox` (Ship) | same | D-8; BV-4 |
-| Dialog Save | existing footer `PVButton` | `CitationComposerAuthoringBox.swift` | Disabled while `propertyValuesComplete` is false; BV-3, BV-5 |
+| Value field | `PVField` | `CitationComposerAuthoringBox.swift` `CitationPropertyFields.valueControls` | BV-1 |
+| Yes / No control | `PVSegmentedControl<Bool?>` (Extend: `focus:`) | same; kit in `macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift` | D-9, D-10 |
+| Property observation form | `CitationPropertyFields` (Extend) | same | D-9 |
+| Negative checkbox | `PVCheckbox` (Ship) | same | D-6, D-9; BV-4 |
+| Dialog Save | existing footer `PVButton` | `CitationComposerAuthoringBox.swift` | Disabled while `authoringCanConfirm` is false; BV-3, BV-5 |
 | Saved line | line row (Ship) | `CitationComposerSubjectGroups.swift` | Text from `summary`; BV-6 |
 
 Frames, in words (from the brief; refresh from the agreed board):
 
 1. **New yes/no observation.** Subject John Robins, Property Can read. Under them, the Value field holds a full-width two-segment control, "Yes" then "No", small size, neither selected. No Negative checkbox; the dialog is shorter by its height. Save disabled.
-2. **Answer chosen.** As 1, with No selected (the kit's selected chip). Save enabled.
+2. **Answer chosen.** As 1, with No selected. Save enabled.
 3. **Text Property.** Property Occupation: the text input and the Negative checkbox, as today.
 4. **Edit a saved answer.** Opens with Yes selected and Save enabled.
 5. **Evidence column.** John: "Occupation Carpenter", "Can read Yes", "Can write Yes"; Mary: "Can read No", "Can write No". Value in the body face, no Badge.
 6. **Negative line from elsewhere.** Mary's "Can read": "not", "Yes" and the Negative Badge; its Edit dialog shows the Negative checkbox, checked.
 7. **Dark mode** of 1 and 5. 8. **Wide** of 2 and 5: unchanged arrangement.
 
-States: nothing chosen → Save disabled; chosen → enabled. Accessibility: the group is labelled "Value"; each segment reads "Yes" or "No" with the selected trait (`PVChip`); Tab from Property reaches Yes (D-9).
+States: nothing chosen → Save disabled; chosen → enabled; a refused save shows the existing save error. Accessibility: the group is labelled "Value"; each segment reads "Yes" or "No" with the selected trait; Tab from Property lands on Yes (D-9, D-10).
 
 ### Strings
 
-None new (D-12). Reused: `L10n.Properties.valueBooleanYes`, `L10n.Properties.valueBooleanNo` *(S14-36)*, `L10n.CitationComposer.valueLabel`.
+None new. Removed: `citationComposer.negateObservation`, `citationComposer.affirmObservation` (D-8). Reused: `L10n.Properties.valueBooleanYes`, `valueBooleanNo`, `L10n.CitationComposer.valueLabel`.
 
 ## 7. Steps
 
-**STEP-1 — Boolean is researcher-creatable**
-Files: `core/propertymeta/propertymeta.go`, `core/propertymeta/propertymeta_test.go`, `core/database/properties/properties_test.go`.
-Do: D-1. In `TestTypes`, boolean's expected row becomes creatable. In `TestValueTypeRules`, the row "Create boolean → `ErrInvalid`" becomes "Create boolean, cardinality "" → created, single" and a row "Create boolean, cardinality multiple → `ErrInvalid`" is added (T-1).
-Check: `go test ./core/propertymeta/` and `CGO_ENABLED=1 go test -tags fts5 ./core/database/properties/ ./api/ffi/...` pass.
+**STEP-1 — Go: boolean is creatable and cannot be negated**
+Files: `core/propertymeta/propertymeta.go`, `propertymeta_test.go`; `core/database/observations/observations.go`, `update.go`, `observations_test.go`; `core/database/properties/properties_test.go`. Skill: `add-match-rule`, `add-catalog-query`.
+Do: D-1, D-2. `TestTypes`' `flags` table gains a `negatable` column (true for every row but boolean) and boolean's creatable becomes true. In `TestValueTypeRules`, "create boolean is not researcher-creatable yet" becomes "create boolean empty cardinality is single" (created, single) and a row "create boolean multiple is refused" is added. Add T-2.
+Check: `go test ./core/propertymeta/` and `CGO_ENABLED=1 go test -tags fts5 ./core/database/...` pass.
 
-**STEP-2 — The composer carries a boolean value**
-Files: `macos/App/Features/CitationComposer/CitationObservationRows.swift`, `CitationObservationValue.swift`, `CitationComposerModel+Authoring.swift`, `CitationComposerVocabulary.swift`; `macos/App/Platform/FakeStore.swift`. Skill: `add-swift-test`.
-Do: D-3, D-4, D-5, D-6, D-8 (the `applyObservationProperty` half), D-11.
-Check: the app builds; `rg -n "valueIntegerText: (row|values)\.valueIntegerText" macos/App` finds one hit, inside `Fields.init(_:)`.
+**STEP-2 — The rule reaches the app**
+Files: `api/proto/engine.proto`, `api/proto/engine/engine.pb.go`, `macos/App/Platform/Generated/engine.pb.swift`, `api/ffi/handlers/subject_defs.go`, `subject_defs_test.go`; `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`; `macos/ProvenenciaTests/PropertiesModelTests.swift`. Skill: `add-ffi-handler`.
+Do: D-3; run `./scripts/generate-proto.sh`. `TestGetPropertiesWorkspaceValueTypes` compares `GetNegatable()` too and asserts the boolean row by name (T-1).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes; the app builds.
 
-**STEP-3 — The Yes / No control and the Negative checkbox**
-Files: `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift`. Skill: `add-ui-component`.
-Do: D-7, D-8 (the view half), D-9.
-Check: the app builds with no Swift warning; in the app, a boolean Property shows Yes / No with neither selected and no Negative checkbox (manual check 2).
+**STEP-3 — One copy of the composer's value fields; dead paths go**
+Files: `macos/App/Features/CitationComposer/CitationObservationRows.swift`, `CitationObservationValue.swift`, `CitationComposerModel.swift`, `CitationComposerModel+Authoring.swift`, `CitationComposerModel+Depiction.swift`, `CitationComposerAuthoring.swift`, `CitationComposerAuthoringBox.swift`; `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`; `macos/ProvenenciaTests/CitationComposerModelTests.swift`, `CitationComposerDepictionTests.swift`. Skill: `add-localized-string` (removal).
+Do: D-4 and D-8 only; no boolean yet. Rename by compiling: every error names a site.
+Check: Xcode tests pass unchanged except the deleted test; `rg -n "values\.(valueText|valueIntegerText|valueTermID|valueSubjectID|dateDraft|nameDraft|depictionDraft)\b" macos/App macos/ProvenenciaTests` finds nothing; `rg -n "togglePolarity|polarityMenuTitle|negateObservation|affirmObservation|fields\(from:" macos` finds nothing.
 
-**STEP-4 — Cards read Yes / No**
-Files: `macos/App/Features/EvidenceGraph/ObservationValueDisplay.swift`.
+**STEP-4 — The composer carries a boolean value**
+Files: `CitationObservationValue.swift`, `CitationObservationRows.swift`, `CitationComposerModel+Authoring.swift`, `CitationComposerVocabulary.swift`; `macos/ProvenenciaTests/CitationComposerModelTests.swift`. Skill: `add-swift-test`.
+Do: D-5, D-6, D-7. In `makeStore`, append the Can read row **last** in `propertiesByProject` (`canReadPropertyID = "prop-can-read"`, key `can_read`, label "Can read", value type `boolean`, index 8) and append `field(store.propertiesByProject[projectDir]![8], 2)` to the Person binding; seed `store.valueTypeRules` with `text` and `boolean` rows (boolean `negatable: false`). Add `canReadObservation(id:ref:citationID:value:polarity:)` beside `occupationObservation` (`valueBoolean:` directly after `valueInteger:`, `propertyValueType: "boolean"`, `valueText: ""`). Add T-3 – T-6.
+Check: Xcode tests pass.
+
+**STEP-5 — The segmented control takes a focus handle**
+Files: `macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift`, `macos/App/DesignSystem/README.md`. Skill: `add-ui-component`.
 Do: D-10.
-Check: T-5 passes.
+Check: the app builds; every existing `PVSegmentedControl` call site compiles unchanged.
 
-**STEP-5 — Tests**
-Files: `macos/ProvenenciaTests/CitationComposerModelTests.swift`, `macos/ProvenenciaTests/ObservationValueDisplayTests.swift`. Skill: `add-swift-test`.
-Do: in `makeStore`, add `canReadPropertyID = "prop-can-read"` (key `can_read`, label "Can read", value type `boolean`) to `propertiesByProject` and bind it to the Person type after Occupation. Add T-2 – T-5.
-Check: `scripts/check-pr.sh` passes the Xcode tests.
+**STEP-6 — The Yes / No control and the Negative checkbox**
+Files: `macos/App/Features/CitationComposer/CitationComposerAuthoringBox.swift`. Skill: `add-ui-component`.
+Do: D-9. Then run manual checks 2 and 3 before STEP-7.
+Check: the app builds with no Swift warning; manual checks 2 and 3 pass.
 
-**STEP-6 — Docs**
+**STEP-7 — Cards read Yes / No**
+Files: `macos/App/Features/EvidenceGraph/ObservationValueDisplay.swift`, `macos/ProvenenciaTests/ObservationValueDisplayTests.swift`.
+Do: D-11. Add T-7.
+Check: T-7 passes.
+
+**STEP-8 — Docs and version**
 Files:
-- `docs/interpretation-layer-data-model.md`: the value-type list's boolean entry reads "single only; researcher-creatable" (drop "from S14-37").
-- `.agents/skills/add-seeded-vocabulary/SKILL.md`: the Create sentence lists boolean among the creatable types (drop "boolean from S14-37").
+- `docs/interpretation-layer-data-model.md` (~630, ~632): the `Types` sentence reads "with which a researcher may create, which are single-valued only, and which may be negative"; the boolean paragraph's last sentence becomes "A researcher creates boolean Properties; no seeded Property is boolean. A boolean Observation is never negative: No is the value that says it (`observations` refuses a negative one)."
+- `.agents/skills/add-seeded-vocabulary/SKILL.md` (~60): the Create sentence reads "(text, integer, date, name, subject, boolean)".
+- `.agents/skills/add-match-rule/SKILL.md` (~61): "A new value type adds a row to `propertymeta.Types`" gains "and says whether it is researcher-creatable, single-only and negatable".
+- `docs/ideas/structural-debt.md`: add the FakeStore row (`appendFakeObservations` near-copies `fakeObservation`, with an engine-like `displayText` chain; S14-37 review M-7); add `CitationObservationValue.summary` to S14-36's display row.
 - `../deployment-plan.md`: S14-37 row status.
-- `../completed.md`, this plan; `../design/S14-D8-composer-boolean-value.md` → `../design/archive/`, `../design/README.md` row moved to Archived.
+- `../completed.md`; this plan; `../design/S14-D8-composer-boolean-value.md` → `../design/archive/`; `../design/README.md` row → Archived.
 - `VERSION`, `core/version.go`, `MARKETING_VERSION`: the minor bump.
 Do: per the Definition of done.
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-37-boolean-value-type-ui.md` reports no errors; `rg -n "from S14-37" docs .agents` finds nothing.
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-14/prs/S14-37-boolean-value-type-ui.md` reports no errors; `rg -n "S14-37" docs/interpretation-layer-data-model.md .agents/skills` finds nothing.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
@@ -275,14 +313,16 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/propertymeta/propertymeta_test.go` `TestTypes`; `core/database/properties/properties_test.go` `TestValueTypeRules` (rows changed / added) | `Rule("boolean")` creatable, single-only; Create boolean "" → single; Create boolean multiple → `ErrInvalid`; T-11 of S14-36 stays green | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1 |
-| T-2 | Swift | `CitationComposerModelTests` `booleanAnswerSavesOnlyOnceChosen` *(new)* | draft Subject + Can read → not complete, `valueBoolean` nil; set false, save → recorded add call, saved row `valueBoolean == false`; `summary` of the saved row "No" | AC-2.1, AC-2.2, AC-2.3, D-3, D-5, D-6, D-11 |
-| T-3 | Swift | `CitationComposerModelTests` `switchingToABooleanResetsPolarityAndValue` *(new)* | Occupation + negative → Can read: positive, nil; Can read + true → Occupation: nil, ""; a loaded negative Can read row re-committed to Can read → stays negative | AC-2.4, AC-2.5, D-8 |
-| T-4 | Swift | `CitationComposerModelTests` `editingABooleanOpensOnItsAnswer` *(new)* | seeded Can read Yes Observation, Edit → `valueBoolean == true`, not dirty, Save calls no `updateObservation`; seeded negative → `isNegated` | AC-2.6, AC-3.3 |
-| T-5 | Swift | `ObservationValueDisplayTests` `booleanReadsYesOrNo` *(new)*; `CitationComposerModelTests` `booleanSummaryReadsYesNoOrNothing` *(new)* | `valueBoolean` true → "Yes", false → "No", nil → ""; `summary` true/false/nil → "Yes"/"No"/"" | AC-2.7, AC-4.1, AC-4.2, D-10 |
-| — | manual | §10 steps 2 – 5 | `showsNegative`, Tab order, VoiceOver | AC-3.1, AC-3.2, AC-4.3, D-7, D-9 |
+| T-1 | Go | `core/propertymeta/propertymeta_test.go` `TestTypes`; `core/database/properties/properties_test.go` `TestValueTypeRules` (rows changed / added); `api/ffi/handlers/subject_defs_test.go` `TestGetPropertiesWorkspaceValueTypes` (+ `negatable`, + boolean row by name) | boolean creatable, single-only, not negatable, others negatable; Create boolean "" → single; Create boolean multiple → `ErrInvalid`; wire boolean `researcher_creatable` true, `negatable` false | AC-1.1, AC-1.2, AC-1.3, AC-1.4, D-1, D-3 |
+| T-2 | Go | `core/database/observations/observations_test.go` `TestNegationFollowsTheValueType` *(new)*, table-driven | negative boolean add → `ErrInvalid`, no row; raw-SQL negative boolean updated still negative → `ErrInvalid`, row unchanged; same update positive → ok; negative text add → stored | AC-1.5, AC-1.6, AC-1.7, D-2 |
+| T-3 | Swift | `CitationComposerModelTests` `booleanAnswerSavesOnlyOnceChosen` *(new)* | Subject + Can read → `authoringCanConfirm` false, `valueBoolean` nil; set false, save → `addObservationsToCitation` prefix in `recordedCalls`, `observationsByGraph[graphID]` Can read row `valueBoolean == false`; saved row summary "No" | AC-2.1, AC-2.2, AC-2.3, D-5, D-6 |
+| T-4 | Swift | `CitationComposerModelTests` `propertyChangeResetsOnlyWhenThePropertyChanges` *(new)* | Occupation + negative → Can read: positive, nil; Can read + true → Occupation: nil, ""; Can read + true → Can read again: true | AC-2.4, AC-2.5, AC-2.6, D-7 |
+| T-5 | Swift | `CitationComposerModelTests` `editingABooleanOpensOnItsAnswer` *(new)* | seeded `canReadObservation(value: true)`, Edit → `valueBoolean == true`, `state == .saved`, save records no `updateObservation` | AC-2.7 |
+| T-6 | Swift | `CitationComposerModelTests` `negativeIsOfferedByGoRule` *(new)*, `booleanSummaryReadsYesNoOrNothing` *(new)* | `offersNegative` Can read positive → false, Occupation → true, Can read negative → true, no rules → true; `summary` true/false/nil → "Yes"/"No"/""; a fresh draft `isEmptyDraft` | AC-2.8, AC-3.1, AC-3.2, AC-3.3, AC-3.4, D-4 |
+| T-7 | Swift | `ObservationValueDisplayTests` `booleanReadsYesOrNo` *(new)* | `valueBoolean` true → "Yes", false → "No", nil → "" | AC-4.1, AC-4.2, D-11 |
+| — | manual | §10 steps 2 – 6 | Yes / No drawing, Tab, VoiceOver, Wide, Conclusion detail | AC-4.3, AC-5.1, AC-5.2, D-9, D-10 |
 
-Assert copy with `L10n.string(L10n.Properties.valueBooleanYes)` and `valueBooleanNo`, not literals. Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` tests that count the Person type's offered Properties, `PropertiesModelTests` (S14-36 T-12 seeds its own rules and stays as written), `TestTypes`.
+Assert copy with `L10n.string(L10n.Properties.valueBooleanYes)` and `valueBooleanNo`, not literals. Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `CitationComposerModelTests` and `CitationComposerDepictionTests` (the STEP-3 rename), `TestTypes`, `TestGetPropertiesWorkspaceValueTypes`, `PropertiesModelTests`, `scripts/check-localizable-xcstrings.py`.
 
 ## 9. Definition of done
 
@@ -291,27 +331,27 @@ Assert copy with `L10n.string(L10n.Properties.valueBooleanYes)` and `valueBoolea
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
-- [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none new)
-- [ ] Sweep: `rg -n "from S14-37" docs .agents .cursor/rules` finds nothing; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (two removed)
+- [ ] Sweep: `rg -n "togglePolarity|polarityMenuTitle|negateObservation|affirmObservation|applyProperty\(rowID|fields\(from:" .agents .cursor/rules docs/*.md macos` finds nothing; `rg -n "S14-37" docs/interpretation-layer-data-model.md .agents/skills` finds nothing; `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none)
-- [ ] UI matches the S14-D8 board and inventory; no new kit primitive
+- [ ] UI matches the S14-D8 board and inventory; the only kit change is D-10
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — minor
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: S14-37 row status Landed #N; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated
-- [ ] Domain doc and skill updated per STEP-6
+- [ ] Domain doc, skills and structural debt updated per STEP-8
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
 ## 10. Manual check
 
-On a new project, with S14-36 and S14-39 landed:
+On a new project, with S14-39 landed:
 
 1. Properties → Create: the picker offers boolean. Create "Can read", bind it to Person. Holds offers one value only (S14-39). (AC-1.2)
 2. Open a Source's Citation composer, add an observation for a Person, pick Can read. The Value field shows Yes / No, neither chosen; no Negative checkbox; Save disabled. Pick Occupation: the Negative checkbox is back. (AC-2.2, AC-3.1, AC-3.2)
-3. From the Property combo box, press Tab: focus lands on Yes. Space chooses it. VoiceOver reads "Value", "Yes", selected. (D-9, BV-7)
-4. Save "Can read: No". The evidence column reads "Can read No". Edit it: No is selected. (AC-2.3, AC-2.6)
-5. On a second Citation, save "Can read: No" for the same Person. Open the Evidence graph: the card reads "No". Promote; on the Person's Conclusion detail, Can read reads "No", merged. Cite "Yes" on a third: it reads mixed. (AC-4.1, AC-4.3)
+3. Pick Can read again and press Tab: focus lands on Yes. Space chooses it. VoiceOver reads "Value", "Yes", selected. (AC-5.1, AC-5.2)
+4. Save "Can read: No". The evidence column reads "Can read No". Edit it: No is selected. (AC-2.3, AC-2.7)
+5. On a second Citation, save "Can read: No" for the same Person. The Evidence graph card reads "No". Promote; on the Person's Conclusion detail, Can read reads "No", merged. Cite "Yes" on a third: it reads mixed. (AC-4.1, AC-4.3)
 6. Widen the window past 1600pt of pane: the dialog and evidence column look the same. (BV-W1)
 
 This is the slice 7e Check: bar outcome 31 on a new project.
@@ -320,21 +360,22 @@ This is the slice 7e Check: bar outcome 31 on a new project.
 
 | Risk | Mitigation |
 | --- | --- |
-| S14-36 lands with different names | Redo §4 on landing (plan-pr "Refresh"); Stop condition below |
-| A hidden Negative tick saves a negative boolean | D-8 resets polarity on Property change; T-3 |
-| Tab skips the segmented control | D-9; manual check 3; Stop condition below |
+| The STEP-3 rename changes behaviour | It is a type change only; the compiler finds every site; STEP-3's check runs the whole suite before any boolean code |
+| A hidden Negative tick saves a negative boolean | D-7 resets polarity; D-2 refuses it in Go; T-2, T-4 |
+| The focus handle does not land on a segment | STEP-6 runs manual check 3 before going on; Stop condition below |
 
 **Stop and report if:**
 
-- At your base, any *(S14-36)* name in §4 does not exist or has another shape (`propertymeta.Types`, `PropertyValueType.booleanText`, `CatalogObservation.valueBoolean`, `CatalogObservationDraft.valueBoolean`, `L10n.Properties.valueBooleanYes`).
+- `rg -n "INSERT INTO observations|UPDATE observations SET" core --type go -g '!*_test.go'` finds a writer outside `core/database/observations` and `core/database/graphcache/graphcachetest` (D-2 would not cover it).
 - S14-39 has not landed (the create form would still offer Holds several for boolean).
-- Tab from the Property combo box does not reach the Yes segment (it lands on the footer or skips the control). The fix is a focus binding on `PVSegmentedControl`, a kit change for the user to decide.
+- With `focus:` applied, Tab from the Property combo box does not land on the Yes segment, or `focus.apply` on a `PVChip` does not take keyboard focus.
 - `PVSegmentedControl` with a `nil` selection draws a selected segment.
+- STEP-3 needs any change other than the rename and D-8's deletions to keep the suite green.
 - The agreed S14-D8 board differs from §6 macOS frames in anything but wording.
 
 ## 12. Open questions
 
-None from the code. The plan stays Blocked until S14-36 and S14-39 land and the S14-D8 board is agreed; then §4 and §6 macOS are refreshed and `review-plan` runs again.
+None from the code. The plan stays Blocked until S14-39 lands and the S14-D8 board is agreed; then §4 and §6 macOS are refreshed and `review-plan` runs round 2.
 
 ## 13. PR
 

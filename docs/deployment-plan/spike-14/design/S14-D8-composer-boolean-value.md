@@ -5,7 +5,7 @@
 **View:** the Citation composer: the observation dialog's Value field and Negative checkbox, and the saved lines in the evidence column
 **Implements later as:** PR **S14-37** (Boolean value type (UI))
 **Board:** — (not drawn yet). Draw on the Claude Design project [*Citation Composer*](https://claude.ai/design/p/8b120853-4ba4-4c0d-8492-75e76b9f9b7a?via=share), file *Citation Composer.dc.html*, as a new section "S14-D8 · Yes / no value", beside the S14-D6 frames.
-**Depends on:** S14-36 (the engine stores, reconciles and sends a `boolean` value; it reads "Yes" and "No").
+**Depends on:** S14-36 (landed [#733](https://github.com/mendahu/provenencia/pull/733): the engine stores, reconciles and sends a `boolean` value; it reads "Yes" and "No").
 **Related:** [`../deployment-plan.md`](../deployment-plan.md) working rule "(Batch 7) Boolean is a first-class value type in two PRs", bar outcome 31; dogfood note [`../ux/2026-10-25-boolean-property-value-type.md`](../ux/2026-10-25-boolean-property-value-type.md); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S14-37-boolean-value-type-ui.md`](../prs/S14-37-boolean-value-type-ui.md). The Properties page (offering the type, its pill, Holds) is brief S14-D9 and PR S14-39, not this board.
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
 **Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
@@ -96,7 +96,7 @@ Census and register columns record yes/no facts: "Can read", "Can write", "Veter
 | A yes/no Property | A Property whose value type is `boolean`. Its type label is "Yes / no"; its values read "Yes" and "No" everywhere in the app. Examples: Can read, Can write, Veteran, Owns home. |
 | One answer | A yes/no Property holds one value per Subject. Two Sources that disagree show as mixed on the Person page; this board does not draw that. |
 | No is a recorded fact | "Can read: No" is what the census says. It is not the same as a column left blank, which the researcher simply does not cite. So the control starts with nothing chosen: a click the researcher never made must not save a No. |
-| Negative | Every other Property has a Negative checkbox: "The record says this is not so" (a record that denies a birth date, say). A yes/no Property already says No with its value, so the checkbox is hidden for it. A catalog made outside the app can still hold a negative yes/no line: then the checkbox shows, checked, so the researcher can see it and clear it. |
+| Negative | Every other Property has a Negative checkbox: "The record says this is not so" (a record that denies a birth date, say). A yes/no Property already says No with its value, so the engine marks the type as one that is never negative, and the dialog hides the checkbox for it. A catalog made outside the app can still hold a negative yes/no line: then the checkbox shows, checked, so the researcher can see it and clear it. |
 | The observation dialog | Opens from the evidence column's Add and from a saved line's Edit. New and edit share the same fields. Save is the footer's primary Button; it is disabled while a required value is missing. |
 | The evidence column | Lists this Citation's saved lines, grouped by Subject. Each line: Property label (secondary, 12pt), value (body, or mono for integers and dates), a "not" word and Negative Badge on a negative line, and hover actions. |
 | Two widths | The composer has three panes side by side on a wide window (viewer, evidence, observations) and two on a narrower one. The dialog keeps its width at both. |
@@ -165,7 +165,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Value field | Component | Ship | `PVField` in `Features/CitationComposer/CitationComposerAuthoringBox.swift` `CitationPropertyFields.valueControls` | BV-1. Same label "Value". |
-| Yes / No control | Component | Ship | `DesignSystem/Components/Chip/PVSegmentedControl.swift` | BV-1, BV-2, BV-7. Two items, small size, no selection until chosen. **Yes / No → Segmented control, not a Checkbox, Switch, Radio pair or Select.** |
+| Yes / No control | Component | **Extend** | `DesignSystem/Components/Chip/PVSegmentedControl.swift` | BV-1, BV-2, BV-7. Two items, small size, no selection until chosen. Gains the kit's field focus handle (the one `Input`, `Select` and `ComboBox` take) so Tab lands on its first segment; nothing visible changes. **Yes / No → Segmented control, not a Checkbox, Switch, Radio pair or Select.** |
 | Property observation form | Snowflake | **Extend** | `CitationComposerAuthoringBox.swift` `CitationPropertyFields` | BV-1, BV-4. One new value case; the Negative checkbox is conditional. Not a second form. |
 | Negative checkbox | Component | Ship | `PVCheckbox` in `CitationPropertyFields` | BV-4. Hidden for a yes/no Property unless already checked. |
 | Dialog Save | Component | Ship | the observation dialog's Save `PVButton` | BV-3, BV-5. Disabled state only. |
@@ -180,7 +180,7 @@ This table is **binding**. Instance the Ship kit rows. Paths from `macos/App/` u
 | A "Clear" or "Unknown" segment | A blank column is not cited; changing the Property clears the answer (BV-2). |
 | A hint, Callout or caption saying "choose Yes or No" | Save's disabled state says it, as for every other empty value (BV-3). |
 | A coloured, iconed or badged Yes / No in the evidence column | The value reads as text like every other value (BV-6). |
-| A new kit primitive (a "boolean field" or toggle group) | One call site; the Segmented control already does it. |
+| A new kit primitive (a "boolean field" or toggle group) | One call site; the Segmented control already does it. Its focus handle is an invisible extension, not a new control. |
 | Any change to the composer's panes at Wide | BV-W1. |
 
 ---
