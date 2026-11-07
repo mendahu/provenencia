@@ -40,7 +40,7 @@ What this version leaves out is in [Open](#open), still open for a later version
 
 ## Scale
 
-A person with 50 Evidence graphs has 1,225 graph pairs; each compares only the Subjects the two graphs share (a household's few people, an obituary's few dozen at most). Most people have 5 – 20 graphs. A place or event with thousands of member records needs bounding when Event and Place pages adopt this.
+A person with 50 Evidence graphs has 1,225 graph pairs; each compares only the Subjects the two graphs share (a household's few people, an obituary's few dozen at most). Most people have 5 – 20 graphs. A read of one person is bounded as a whole by `recordlinks.MaxReadWork`, beside each pair's `MaxPairWork`. A place or event with thousands of member records needs bounding when Event and Place pages adopt this.
 
 ## Refused
 

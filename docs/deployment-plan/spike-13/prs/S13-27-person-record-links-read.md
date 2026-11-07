@@ -1,6 +1,6 @@
 # S13-27 — Person record links read
 
-**Status:** Planned
+**Status:** Landed in [#743](https://github.com/mendahu/provenencia/pull/743) (2026-11-07)
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine read, an RPC, a store method and a cache key; no view reads them until S13-28)
@@ -28,6 +28,8 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+**Landed note.** Differences from the plan: (1) D-2's grouping key is a named struct (`pairKey{a, b int}`), not `[2]int`, because the numbers guard allows no literal 2 in `core/recordlinks`; (2) D-11's `readWork(page, graphs, h, cfg, limit)` is a thin wrapper over an internal `readPlan` that also returns the shared pairs, so `Pairs` indexes once; (3) `Pairs` returns nil, not an empty slice, when no pair shares a person; (4) D-3's value is 640,000 from a measured 50-graph work of 31,850 (`ReadWork`); `BenchmarkPairsAtCap` finds m = 7 graphs on the names axis at 12.8 s per op on the implementer's M1; (5) the T-8 handler test files the four registers itself with `evidencelayertest.Open` and `promotetest.Save` inside one `catalogsession.Do`. Every other Decision landed as written.
 
 ## 1. Objective
 
