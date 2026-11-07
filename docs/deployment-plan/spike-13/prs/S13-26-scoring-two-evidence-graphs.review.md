@@ -1,6 +1,6 @@
 # Review — S13-26 Scoring two Evidence graphs
 
-**Verdict:** Fits with changes / Ready with changes after two rounds; every finding Fixed except M-2 and M-5, which are To user (below).
+**Verdict:** Fits with changes / Ready with changes after two rounds; every finding Fixed; M-2 and M-5 went To user and were answered 2026-11-07 (below). Plan status Planned.
 
 Plan: [`S13-26-scoring-two-evidence-graphs.md`](S13-26-scoring-two-evidence-graphs.md)
 
@@ -61,5 +61,5 @@ Loop closed at round 2 (the cap). No blocker open.
 
 ## To user
 
-1. **M-2 — both-recorded spouse links.** When both records hold a marriage on one entity and also write the spouse link down, the plan counts one fact (`kinship.SameShape` without `CountedOnce`'s gate) and rewrites the working rule "A matching link counts" to say so. Recommendation: one fact, as the user's 2026-11-07 refusal of double counting reads. Pending the user's answer.
-2. **M-5 — one link type from the loader.** Recommendation: S13-29's scope entry says the shared loader yields `[]kinship.Link` and `graphalign.Bridge` becomes `kinship.Link`, so S13-27 hands the loader's output to `NewGraph` with no conversion. A map change to a preparatory PR. Pending the user's answer.
+1. **M-2 — both-recorded spouse links.** When both records hold a marriage on one entity and also write the spouse link down, the plan counts one fact (`kinship.SameShape` without `CountedOnce`'s gate) and rewrites the working rule "A matching link counts" to say so. Recommendation: one fact. **Answered 2026-11-07: one fact.** §5 Rules this plan bends records it; STEP-8 (e) updates the rule.
+2. **M-5 — one link type from the loader.** Recommendation: S13-29's scope entry says the shared loader yields `[]kinship.Link` and `graphalign.Bridge` becomes `kinship.Link`, so S13-27 hands the loader's output to `NewGraph` with no conversion. A map change to a preparatory PR. **Answered 2026-11-07: yes.** S13-29's map row and scope entry say so.

@@ -1,6 +1,6 @@
 # S13-26 — Scoring two Evidence graphs
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a pure Go layer package; nothing reads it until S13-27, and nothing draws it until S13-28)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/match-rules.mdc`, `.cursor/rules/go-tests.mdc`
 **Context:** [`../evidence-graph-comparison.md`](../evidence-graph-comparison.md) (Requirement 1, First version); working rules "Scoring and the view are two concerns", "Slice 7 starts with a simple count", "Each PR updates what it makes false" (slice 7); [conclusion §5.1](../../../conclusion-layer-data-model.md#51-two-lenses); [`matching-model.md`](../../../matching-model.md) (The stack, Knob inventory)
 **Planned:** 2026-11-07 against `main` @ `aaf3b15`
-**Review:** [`S13-26-scoring-two-evidence-graphs.review.md`](S13-26-scoring-two-evidence-graphs.review.md) — round 1: Fits with changes / Ready with changes; round 2: Fits with changes / Ready with changes, every finding Fixed; two To user items
+**Review:** [`S13-26-scoring-two-evidence-graphs.review.md`](S13-26-scoring-two-evidence-graphs.review.md) — round 1: Fits with changes / Ready with changes; round 2: Fits with changes / Ready with changes, every finding Fixed; two To user items answered 2026-11-07
 
 ### Implementer — read this first
 
@@ -96,7 +96,7 @@ The Person page will draw a person's Evidence graphs around a circle with one ar
 | Out | Home |
 | --- | --- |
 | Loading graphs, members, values and links from the catalog; the RPC | S13-27 (with the shared loader, S13-29) |
-| One link type from the loader (`graphalign.Bridge` and `kinship.Link`) | S13-29, if the user agrees (review M-5) |
+| One link type from the loader (`graphalign.Bridge` folded into `kinship.Link`) | S13-29 (user, 2026-11-07; review M-5) |
 | The circular link diagram | S13-28 (brief S13-D10) |
 | Listing what a line counted, collecting conflicts, conflicts or Source quality changing a weight | [`../evidence-graph-comparison.md`](../evidence-graph-comparison.md) Open (later version) |
 | Lines for shared events or places | [`../evidence-graph-comparison.md`](../evidence-graph-comparison.md) Open |
@@ -152,7 +152,7 @@ The Person page will draw a person's Evidence graphs around a circle with one ar
 | D-11 | Tests live in the external package `recordlinks_test`. `core/recordlinks/recordlinks_test.go` holds the builders and `TestLines`; `invariants_test.go` uses the same builders. Links are built as the loader builds them: keys from `segmentcomparetest.PartKeys` / `RelKeys` *(new)*, edges as `kinship.Link`s added to `kinship.NewLinkSet()`, then `WithImplied(segmentcomparetest.Terms(), matchregistry.Default().Kinship)` and `Links()`. Values from `propertycomparetest`; metas from `subjectcomparetest.Metas()`, which gains `religion`. The config is `matchregistry.Default().RecordLinksConfig()`; AC-3.2 edits `StrongAt` on its own copy | Implied links in the tests are the ones the loader produces. One builder for test keys instead of a third copy (review M-3); the seed pin covers `religion` (review M-4) | Hand-built `Recording`s — they could disagree with `Derive`. A test-local metas copy — drifts from the seed without failing |
 | D-12 | `segmentcomparetest.PartKeys(role vocabkey.BridgeTerm, eventType vocabkey.EventType) (person, event vocabkey.BridgeKey)` and `RelKeys(term vocabkey.BridgeTerm) (person, relatedTo vocabkey.BridgeKey)` *(new)* take no `t` and build as `align_test.go` does today: `segmentcompare.Key(segmentcompare.Link{…}, Terms())` from each end (participation: `End` person / `Other` event, then the reverse, with `EventType`; relationship: `End` person / `Other` related_to, then the reverse, `SameType: true`). `align_test.go`'s `partKeys` and `relKeys` become one-line calls to them; `kinship_test.go`'s `part` and `rel` call them for their keys (and keep `t` for their other uses). No caller's signature changes. `TestKeysMatchSeededBridges` *(new, T-10)* holds them equal to `segmentcompare.Keys(Bridge(t, …), …, Terms())` | The shared builder home for test keys is `segmentcomparetest`. Taking no `t` keeps `partLink` / `relLink` and their 25 call sites as they are (review M-8, X-13); T-10 ties the hand-built link to the seeded bridge's endpoint order | Threading `t` through `align_test`'s builders — about 25 call-site edits. Leaving the copies — a change to `Key` or the seeded terms is fixed in three places |
 
-**Rules this plan bends.** The map's working rule "A matching link counts" names `kinship.CountedOnce` as what keeps a marriage and the spouse link it implies one fact; D-8 uses `kinship.SameShape` without `CountedOnce`'s only-implied gate. The behavior is the user's answer of 2026-11-07 ("counting a marriage and the spouse link it implies as two facts" refused), which does not depend on whether the spouse link is also written down; the planner named `CountedOnce` before checking that it never skips two recorded links. STEP-8 rewrites the rule and the S13-26 scope entry to name `SameShape` and the both-recorded case. The conclusion doc's §5.1 aim (count conflicts, show reasons as sentences) is a design aim, not a rule; STEP-8 rewrites it to say the first version does neither and keeps the aim for later.
+**Rules this plan bends.** The map's working rule "A matching link counts" names `kinship.CountedOnce` as what keeps a marriage and the spouse link it implies one fact; D-8 uses `kinship.SameShape` without `CountedOnce`'s only-implied gate. The behavior is the user's answer of 2026-11-07 ("counting a marriage and the spouse link it implies as two facts" refused), which does not depend on whether the spouse link is also written down; the planner named `CountedOnce` before checking that it never skips two recorded links. The user confirmed on 2026-11-07 that a shared marriage and a spouse link both records write down are one fact. STEP-8 rewrites the rule and the S13-26 scope entry to name `SameShape` and the both-recorded case. The conclusion doc's §5.1 aim (count conflicts, show reasons as sentences) is a design aim, not a rule; STEP-8 rewrites it to say the first version does neither and keeps the aim for later.
 
 ## 6. Design
 
