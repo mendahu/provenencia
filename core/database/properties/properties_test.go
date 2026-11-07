@@ -320,4 +320,13 @@ func TestBooleanCardinalityStaysSingle(t *testing.T) {
 	if err != nil || got.Cardinality != propertymeta.CardinalitySingle {
 		t.Fatalf("row changed: %v %+v", err, got)
 	}
+
+	// The table holds the rule too, not only the Go write paths.
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE properties SET cardinality = 'multiple' WHERE id = ?`, id); err == nil {
+		t.Fatal("the table accepted a multiple-valued boolean Property")
+	}
 }

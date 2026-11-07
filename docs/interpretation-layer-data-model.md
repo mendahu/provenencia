@@ -606,6 +606,7 @@ CREATE TABLE properties (
     label           TEXT NOT NULL,
     description     TEXT,
     value_type      TEXT NOT NULL,
+    cardinality     TEXT NOT NULL DEFAULT 'single' CHECK (cardinality IN ('single', 'multiple')),
 
     UNIQUE (key, origin),
     CHECK (value_type IN (
@@ -617,7 +618,8 @@ CREATE TABLE properties (
         'term',
         'depiction',
         'boolean'
-    ))
+    )),
+    CHECK (value_type <> 'boolean' OR cardinality = 'single')
 ) STRICT;
 ```
 

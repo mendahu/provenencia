@@ -17,7 +17,8 @@ CREATE TABLE properties__new (
 	UNIQUE (key, origin),
 	CHECK (value_type IN (
 		'text', 'integer', 'date', 'name', 'subject', 'term', 'depiction', 'boolean'
-	))
+	)),
+	CHECK (value_type <> 'boolean' OR cardinality = 'single')
 ) STRICT;
 
 INSERT INTO properties__new (id, key, origin, label, description, value_type, cardinality)
