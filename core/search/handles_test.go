@@ -7,14 +7,11 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -197,10 +194,7 @@ func (f *handleFixture) locatedBirth(toponym string, forms ...string) (person, e
 	f.T.Helper()
 	t := f.T
 	person = f.person(forms...)
-	birth, err := propertyterms.Lookup(f.C, f.Prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
+	birth := f.Term("event_type", "birth")
 	event = f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.Prop("event_type").ID, ValueTermID: birth.ID},
@@ -215,39 +209,8 @@ func (f *handleFixture) locatedBirth(toponym string, forms ...string) (person, e
 			t.Fatal(err)
 		}
 	}
-	role, err := propertyterms.Lookup(f.C, f.Prop("role").ID, "subject", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	personProp := f.Prop("person").ID
-	eventProp := f.Prop("event").ID
-	roleProp := f.Prop("role").ID
-	if _, err := writes.Call(f.C, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
-			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: evidencelayertest.Locator},
-			Observations: []observations.Input{
-				{PropertyID: personProp, ValueSubjectID: person.ID},
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: roleProp, ValueTermID: role.ID},
-			},
-		})
-	}); err != nil {
-		t.Fatal(err)
-	}
-	placeProp := f.Prop("place").ID
-	if _, err := writes.Call(f.C, writes.Op{Action: "create_cited_bridge", UserID: f.user}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, f.user, connect.CreateInput{
-			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
-			Citation: citations.CreateInput{ArtifactID: f.artifact, LocatorJSON: evidencelayertest.Locator},
-			Observations: []observations.Input{
-				{PropertyID: eventProp, ValueSubjectID: event.ID},
-				{PropertyID: placeProp, ValueSubjectID: place.ID},
-			},
-		})
-	}); err != nil {
-		t.Fatal(err)
-	}
+	f.Participation(f.Source, f.Artifact, person, event, "subject")
+	f.Locate(f.Source, f.Artifact, event, place)
 	return person, event, place
 }
 
@@ -344,10 +307,7 @@ func TestAlternateToponymIsMatchContext(t *testing.T) {
 
 func TestHandleSearchEventsAndPlaces(t *testing.T) {
 	f := newHandleFixture(t)
-	birth, err := propertyterms.Lookup(f.C, f.Prop("event_type").ID, "birth", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
+	birth := f.Term("event_type", "birth")
 	event := f.promote(f.subject("event", func(s subjects.Subject) []observations.Input {
 		return []observations.Input{
 			{SubjectID: s.ID, PropertyID: f.Prop("event_type").ID, ValueTermID: birth.ID},

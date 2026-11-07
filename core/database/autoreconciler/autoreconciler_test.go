@@ -90,14 +90,10 @@ func newFixture(t *testing.T) *fixture {
 	_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, f.types["person"].ID, ageID)
 	must(t, err)
 	for _, k := range []string{"female", "male"} {
-		term, err := propertyterms.Lookup(c, f.props["sex_at_birth"].ID, k, vocabkey.OriginProvenencia)
-		must(t, err)
-		f.terms[k] = term
+		f.terms[k] = f.Term("sex_at_birth", k)
 	}
 	for _, k := range []string{"birth", "death"} {
-		term, err := propertyterms.Lookup(c, f.props["event_type"].ID, k, vocabkey.OriginProvenencia)
-		must(t, err)
-		f.terms[k] = term
+		f.terms[k] = f.Term("event_type", k)
 	}
 	return f
 }
@@ -184,13 +180,6 @@ func place(f *fixture, s subjects.Subject, x, y int64) error {
 		return subjectpositions.Set(tx, s.ID, x, y)
 	})
 	return err
-}
-
-func mustProp(f *fixture, key string) properties.Property {
-	f.T.Helper()
-	p, err := properties.Lookup(f.C, key, vocabkey.OriginProvenencia)
-	must(f.T, err)
-	return p
 }
 
 func associationOf(f *fixture, typeKey string) []byte {
@@ -1331,7 +1320,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			person, event := f.subject("person"), f.subject("event")
 			must(f.T, place(f, person, 0, 0))
 			must(f.T, place(f, event, 2, 0))
-			personProp := mustProp(f, "person")
+			personProp := f.Prop("person")
 			bridge := f.Participation(f.Source, f.Artifact, person, event, "subject")
 			personHandle := f.promote(person)
 			f.promote(event)

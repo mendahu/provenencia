@@ -268,7 +268,7 @@ func TestForEntityGroupsOutcomesByShownValue(t *testing.T) {
 func TestForEntityFieldsFollowTheRecords(t *testing.T) {
 	f := newFixture(t)
 	a, b := f.personOn(f.source("Register")), f.personOn(f.source("Census"))
-	f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
+	f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: f.sex.ID, ValueTermID: f.Term("sex_at_birth", "male").ID})
 	f.cite(a, f.nameIn(a, "given=James|surname=Robins"))
 	h := f.promote(a, nil)
 	if d := f.detail(h); len(d.Fields) != 2 || d.Fields[0].PropertyKey != "name" || d.Fields[1].PropertyKey != "sex_at_birth" {
@@ -504,7 +504,7 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	for i := 0; i < 12; i++ {
 		f.cite(big, f.nameIn(big, fmt.Sprintf("given=Name%d|surname=Lee", i)))
 	}
-	f.cite(big, observations.Input{SubjectID: big.ID, PropertyID: f.sex.ID, ValueTermID: termID(t, f, "male")})
+	f.cite(big, observations.Input{SubjectID: big.ID, PropertyID: f.sex.ID, ValueTermID: f.Term("sex_at_birth", "male").ID})
 	hb := f.promote(big, nil)
 
 	g := f.C.Graph()
@@ -568,15 +568,6 @@ func TestDetailValuesFollowAnEdit(t *testing.T) {
 	if len(after.Outcomes) == 0 || after.Outcomes[0].Recorded.Name == nil || after.Outcomes[0].Recorded.Name.Form != "Anne Lee" {
 		t.Fatalf("why %+v", after.Outcomes)
 	}
-}
-
-func termID(t *testing.T, f *fixture, key string) []byte {
-	t.Helper()
-	db, err := f.C.DB()
-	must(t, err)
-	var id []byte
-	must(t, db.QueryRow(`SELECT id FROM property_terms WHERE property_id = ? AND key = ?`, f.sex.ID, key).Scan(&id))
-	return id
 }
 
 func (f *fixture) dateIn(s subjects.Subject, year int) observations.Input {

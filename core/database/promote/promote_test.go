@@ -7,23 +7,18 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+var userID = evidencelayertest.UserID
 
 func TestSave(t *testing.T) {
 	tests := []struct {
@@ -259,37 +254,10 @@ func lastRevisionChanges(t *testing.T, c *database.Catalog) string {
 
 func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subject) {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := users.Upsert(c, userID, "Tester", r); err != nil {
-		t.Fatal(err)
-	}
-	if err := subjectvocab.Install(c); err != nil {
-		t.Fatal(err)
-	}
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
-		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c, func(key string) subjects.Subject {
+	r := evidencelayertest.New(t)
+	graph := r.Graph(r.Source)
+	return r.C, func(key string) subjects.Subject {
 		t.Helper()
-		graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
-		s := subjectstest.On(t, c, userID, graph, key, "")
-		return s
+		return subjectstest.On(t, r.C, userID, graph, key, "")
 	}
 }

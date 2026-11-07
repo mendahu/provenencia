@@ -9,14 +9,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -38,8 +36,7 @@ func (f *fixture) birthAt(src sources.Source, toponyms ...observations.Input) ([
 	f.at(place, 8, 0)
 	f.cite(person, f.nameIn(person, "form:Ann Lee"))
 	eventType := f.Prop("event_type")
-	term, err := propertyterms.Lookup(f.C, eventType.ID, "birth", vocabkey.OriginProvenencia)
-	must(f.T, err)
+	term := f.Term("event_type", "birth")
 	f.cite(birth, observations.Input{SubjectID: birth.ID, PropertyID: eventType.ID, ValueTermID: term.ID})
 	for _, in := range toponyms {
 		in.SubjectID, in.PropertyID = place.ID, f.Prop("toponym").ID
