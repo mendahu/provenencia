@@ -52,4 +52,4 @@ Reviewers: CON (CON-1 was a Fix-now major). Not sent back: UX. UX-1 and UX-2 wer
 CON-1 **Resolved** (reviewer confirmed the Landed note and that no Decision or AC changed). No new blockers. Verdict: Clean.
 
 ## Result
-Gate PASS at `047bb78e` · CI pending at this commit · open: none · follow-ups: none · to user: Forward's about 338pt at the minimum window, judged at §10 step 3. Manual check not run; it is the user's.
+Gate PASS at `047bb78e` · CI green at `c90e75e9` (Go tests, macOS tests) · open: none · follow-ups: none · to user: Forward's about 338pt at the minimum window, judged at §10 step 3. Manual check not run; it is the user's.
