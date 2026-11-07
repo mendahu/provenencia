@@ -9,7 +9,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
 | [S14-D8](S14-D8-composer-boolean-value.md) | Citation composer: the Yes / no value editor (segmented, nothing chosen at first; no Negative checkbox for a boolean) | Agreed 2026-11-07 in the [Citation Composer project](https://claude.ai/artifact/3GSFQZjqdQjL8v2rpgMiDc) | S14-37 |
-| S14-D9 | Properties page: a single-only value type offers no Holds several; boolean pill colour | — (written just before S14-39) | S14-39 |
+| [S14-D9](S14-D9-properties-single-only.md) | Properties page: a single-only value type's Holds reads one value, read-only in create and locked in the inspector; boolean pill colour | — (to draw on the [Properties View project](https://claude.ai/artifact/XRS4WQDZbaDa7jAzVKYQdc)) | S14-39 |
 
 ## Archived
 
