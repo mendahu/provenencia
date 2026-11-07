@@ -33,15 +33,7 @@ struct ObservationRow: Identifiable, Equatable {
     var persistedID: String? { saved?.id }
     var persistedRef: String? { saved?.ref }
 
-    var subjectID: String {
-        get { values.subjectID }
-        set { values.subjectID = newValue }
-    }
-
-    var propertyID: String {
-        get { values.propertyID }
-        set { values.propertyID = newValue }
-    }
+    var propertyID: String { values.propertyID }
 
     var canSave: Bool {
         switch state {
@@ -53,10 +45,6 @@ struct ObservationRow: Identifiable, Equatable {
         case .saved:
             return false
         }
-    }
-
-    var isNegated: Bool {
-        values.polarity == ObservationPolarity.negative.rawValue
     }
 
     mutating func deriveState() {
@@ -72,15 +60,6 @@ struct ObservationRow: Identifiable, Equatable {
         saved = written
         baseline = values
         state = .saved
-    }
-
-    static func draft(subjectID: String = "") -> ObservationRow {
-        ObservationRow(
-            id: UUID(),
-            values: ObservationRowValues(subjectID: subjectID),
-            baseline: nil,
-            state: .draft
-        )
     }
 
     static func loaded(from observation: CatalogObservation) -> ObservationRow {
