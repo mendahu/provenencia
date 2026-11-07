@@ -1,6 +1,6 @@
 # Deployment plan — Spike 14
 
-Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. It also takes four Spike 10 likeness-audit leftovers that edit the same code: the gallery's image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03) (user, 2026-10-27, while planning Spike 12's audit fixes). Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer"). Batches 4 and 5 are what remained of Spike 12 when it closed (user, 2026-10-29): the last Evidence graph work, and the app-health audit fixes that were not descoped. The two audits moved here with them: [`app-health-audit.md`](app-health-audit.md), [`app-health-audit-2.md`](app-health-audit-2.md). **Batch 7** (user, 2026-11-04) pulls dogfood UX fixes that can run while Spike 13 continues: PDF page sync, polygon vertex edit, Evidence graph polish, Persons sort and history menu width, and a boolean Property value type. Structure shortcuts stay in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md).
+Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"). It takes small features, UX refinements and fixes in batches; each batch is a slice with its own Check. The first batch pulls the "other keys" item and the transparent-polygon item from [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md), and adds thumbnail parity and rectangle-only depiction drawing. It also takes four Spike 10 likeness-audit leftovers that edit the same code: the gallery's image source (S14-01) and the composer's drawing feedback, captions and cap announcement (S14-03) (user, 2026-10-27, while planning Spike 12's audit fixes). Batch 1 is cut by layer (engine, app, drawing) because almost all of it reuses Person behavior that already exists (working rule "Batch 1 is cut by layer"). Batches 4 and 5 are what remained of Spike 12 when it closed (user, 2026-10-29): the last Evidence graph work, and the app-health audit fixes that were not descoped. The two audits moved here with them: [`app-health-audit.md`](app-health-audit.md), [`app-health-audit-2.md`](app-health-audit-2.md). **Batch 7** (user, 2026-11-04) pulls dogfood UX fixes that can run while Spike 13 continues: PDF page sync, polygon vertex edit, Evidence graph polish, Persons sort and history menu width, and a boolean Property value type. Structure shortcuts stay in [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md). **Batch 8** (user, 2026-11-07) replaces the hand-written inverse of the summary reads with a recorded read index, so a write finds the derived rows it moved by lookup; it came out of planning S14-38, which it unblocks ([design](derived-read-index.md)).
 
 **A brief covers one view.** A PR that changes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -13,6 +13,12 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 ## Goal (dogfood bar)
 
 **By spike close**, each of these is true on a real project. A batch adds its outcomes here when it is cut.
+
+**Batch 8 — Derived rows know what they read** (user, 2026-11-07; [design](derived-read-index.md)):
+
+32. **Unpromote leaves no stale hit.** Unpromote James, who has a filed birth participation: the omnibar finds the birth as "Unspecified birth", the Events list agrees, and an open page for the birth or for its place reloads.
+33. **Deleting a link leaves nothing stale and stays cheap.** Delete the location of one birth at a city with 6,000 events: that birth's hit and an open city page update, and no other event at the city is rewritten.
+34. **One way to find what a write moved.** No hand-written inverse of the summary reads is left (`Dependents`, `AssociationEndpoints`, `linkEnds`, `subjects.Delete`'s snapshot), Subject delete runs on `writes.Run`, and a test holds every derived row's recorded reads to the row composed alone.
 
 **Batch 7 — Dogfood UX** (user, 2026-11-04; notes in [`ux/`](ux/)):
 
@@ -93,6 +99,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted 2026-11-06; landed #723) | S14-33 | — |
 | Dogfood 2026-10-15: Persons sort ignores honorifics (note deleted 2026-11-06; landed #727) | S14-34 | — |
 | Dogfood 2026-10-29: history jump menu truncates breadcrumb tails (note deleted 2026-11-06; landed #730; leftovers in [`shared-list-helpers.md`](../../ideas/shared-list-helpers.md)) | S14-35 | — |
+| S14-38 planning and review (user, 2026-11-07): stale search documents after Unpromote; three new invalidation pieces still left bridge delete half-fixed. [`ideas/structural-debt.md`](../../ideas/structural-debt.md) rows "`subjects.Delete` calls `Dependents` directly" and the Subject delete part of "catalog graph cache leftovers" | S14-40 – S14-43; S14-38 re-planned after them | — |
 | [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-39, S14-37 | S14-D9, S14-D8 |
 
 **Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here. [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): wedding / birth / residence shortcuts and paste-a-cluster (considered for Batch 7; left out 2026-11-04 as too large for this batch).
@@ -139,6 +146,12 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts, so "Mrs. Smith" sorts with Smith. Go owns list order. The working-label fallback is not stripped of titles: no code path writes a Person label (descoped by the user, 2026-11-06). Binds S14-34.
 - **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
 - **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI. The UI is two PRs, one per view (user, 2026-11-07): the Properties page reads the single-only rule (S14-39, brief S14-D9), then the composer takes the value and Go marks boolean creatable (S14-37, brief S14-D8). Researcher-creatable like `text` and `integer` from S14-37. The composer's editor is a Yes / No segmented control with nothing chosen at first, and a boolean Property has no Negative checkbox: No is how the record says it (user, 2026-11-07). Stored in a dedicated `value_boolean` column. Single cardinality only. Go owns the value-type rules (`propertymeta.Types`: creatable, single-only, negatable; a negative boolean is refused, user 2026-11-07) and sends them to the app on the Properties workspace read; Swift keeps no copy (user, 2026-11-07). Binds S14-36, S14-37, S14-39.
+- **(Batch 8) The structural fix comes before the patch.** When a bug comes from a mechanism that has to be patched at each call site, the mechanism is replaced first and the bug's tests become its acceptance tests (user, 2026-11-07, after S14-38's plan added three invalidation pieces and left bridge delete half-fixed). S14-38's plan is blocked rather than shipped. Binds S14-38, S14-40 – S14-43.
+- **(Batch 8) Derived rows record what they read; invalidation is a lookup.** A summary row and a search document record every handle value, link and association they read while composed, and a write rebuilds the rows that read what it changed. No PR adds to the hand-written inverse (`conclusionsummaries.Dependents`, `AssociationEndpoints`, `linkEnds`) meanwhile, and S14-42 and S14-43 delete it ([design](derived-read-index.md#shape)). Binds S14-40 – S14-43.
+- **(Batch 8) A read is a handle's values, one bridge's links at one end, or an association's values.** `Graph.Node` records values, `Graph.Follow` records the link key for its hop and each association it returns, and `Nodes` (a prefetch) records nothing. Keying links by bridge and end is what keeps the 6,000-event city out of a location write ([design](derived-read-index.md#what-a-read-is)). Binds S14-40, S14-41.
+- **(Batch 8) Reads are attributed per row inside the batch, and isolated composition is the oracle.** Composers keep composing in batches; each row runs under its own read scope and `placeGraph` records the chain members a row consumes. A test composes each row alone with a recorder on the graph reads and requires the same sets, on the scenario fixtures and the `TestLargeSourceBudgets` fixture. Binds S14-40.
+- **(Batch 8) One read index in the catalog.** Written in the same transaction as the search documents it describes, rebuilt by `searchindex.RebuildAll`, compared by the rebuild-equals-upkeep tests, and read by the graph cache's display drops too. An association records itself as a reader of its ends' link keys, so a deleted link's ends are a lookup. Binds S14-41, S14-42.
+- **(Batch 8) Every write tells the app what it moved through `summary_handles`.** The rebuilt readers and the ends of each changed link; no new wire field. Subject delete moves onto `writes.Run` like every other write. Binds S14-42, S14-43.
 
 ## PR map
 
@@ -177,12 +190,16 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-31 | Tab reaches a following text area | 7c | Kit-wide: Tab / Shift-Tab between `PVInput` and a following `PVTextArea` in forms and dialogs | — | — | [S14-31-tab-reaches-text-area.md](prs/S14-31-tab-reaches-text-area.md) | Landed #718 |
 | S14-32 | Place relationship inverse labels | 7c | Composer place-relationship rows use Contains / Succeeded on the far end | — | — | [S14-32-place-relationship-inverse-labels.md](prs/S14-32-place-relationship-inverse-labels.md) | Landed #720 |
 | S14-33 | Auto-file bridges between handles | 7c | `CreateCitedBridge` files every bridge kind when both ends already resolve to handles | — | — | [S14-33-auto-file-bridges.md](prs/S14-33-auto-file-bridges.md) | Landed #723 |
-| S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote, the search documents of the ends of the links it takes back stay stale; one read of a bridge's ends for Unpromote and bridge delete, which stops walking from a place end | — | — | [S14-38-unpromote-stale-search-documents.md](prs/S14-38-unpromote-stale-search-documents.md) | Draft |
+| S14-38 | Unpromote leaves stale search documents | 7c | After Unpromote, the search documents of the ends of the links it takes back stay stale; one read of a bridge's ends for Unpromote and bridge delete, which stops walking from a place end | — | — | [S14-38-unpromote-stale-search-documents.md](prs/S14-38-unpromote-stale-search-documents.md) | Blocked — re-plan after S14-42, S14-43 |
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Landed #730 |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; Go's value-type rules table sent to the app; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | [S14-36-boolean-value-type-engine.md](prs/S14-36-boolean-value-type-engine.md) | Landed #733 |
 | S14-39 | Properties page reads single-only | 7e | The Properties page hides Holds several for a single-only value type (create form and inspector, from the snapshot's `singleOnly`); the boolean value-type pill colour | [S14-D9](design/archive/S14-D9-properties-single-only.md) | S14-36, S14-D9 | [S14-39-properties-single-only.md](prs/S14-39-properties-single-only.md) | Landed #737 |
 | S14-37 | Boolean value type (UI) | 7e | Go marks boolean researcher-creatable and never negative; the composer's Yes / No value editor, with no Negative checkbox for a boolean; one copy of the composer's value fields; a focus handle on the kit segmented control; Yes / No text on composer lines and Evidence graph cards | [S14-D8](design/archive/S14-D8-composer-boolean-value.md) | S14-36, S14-39, S14-D8 | [S14-37-boolean-value-type-ui.md](prs/S14-37-boolean-value-type-ui.md) | Landed #739 |
+| S14-40 | Composers record what each row reads | 8 | Per-row read scopes in the person, event and place composers (`Node`, `Follow`, `placeGraph` chains), keyed per working rule "A read is …"; the isolated-composition oracle test and the agreement check with `Dependents`; no behavior change | — | — | — | Scoped |
+| S14-41 | The read index | 8 | A catalog table of reader → read keys, written with each search document and by `RebuildAll`; associations record their ends; rebuild-equals-upkeep compares it; still not used for invalidation | — | S14-40 | — | Scoped |
+| S14-42 | Writes invalidate by lookup | 8 | `writes.Run` finds the rows to rebuild in the index and reports them, with changed links' ends, in `summary_handles`; graph cache display drops use it; `Dependents`, `AssociationEndpoints`, `linkEnds` and `movedRoots` deleted; S14-38's Unpromote scenarios pass | — | S14-41 | — | Scoped |
+| S14-43 | Subject delete on `writes.Run` | 8 | `subjects.Delete` drops its snapshot (`linkedHandles`, `Dependents`) and its own `RecomputeTx`; a bridge delete reaches its event and names its place through the index | — | S14-42 | — | Scoped |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -251,7 +268,7 @@ SLICE 7c — Evidence graph polish (batch 7)
   S14-31  Tab reaches a following text area
   S14-32  Place relationship inverse labels
   S14-33  Auto-file bridges between handles
-  S14-38  Unpromote leaves stale search documents
+  S14-38  Unpromote leaves stale search documents   (blocked; re-planned after slice 8)
   Check: bar outcomes 25 – 28.
 
 SLICE 7d — List and nav polish (batch 7)
@@ -267,10 +284,18 @@ SLICE 7e — Boolean value type (batch 7)
   S14-37  Boolean value type (UI)
   Check: bar outcome 31 on a new project.
 
+SLICE 8 — Derived rows know what they read (batch 8)
+  S14-40  Composers record what each row reads
+  S14-41  The read index                  (after S14-40)
+  S14-42  Writes invalidate by lookup     (after S14-41)
+  S14-43  Subject delete on writes.Run    (after S14-42)
+  S14-38  re-planned on the index: what is left of it  (after S14-43)
+  Check: bar outcomes 32 – 34.
+
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code. Batch 7's slices are independent of each other except 7b after 7a, and in 7e the engine, then the Properties page, then the composer; they can run beside Spike 13 and the remaining Batch 5 PRs (S14-20, S14-26).
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code. Batch 7's slices are independent of each other except 7b after 7a, and in 7e the engine, then the Properties page, then the composer; they can run beside Spike 13 and the remaining Batch 5 PRs (S14-20, S14-26). Batch 8 is one chain, S14-40 to S14-43, then S14-38; no open Spike 13 PR changes the summary composers, the effects registry or `subjects.Delete`.
 
 ### Dependencies at a glance
 
@@ -294,7 +319,8 @@ S14-28 ──▶ S14-29             (Batch 7)
 S14-36 ──▶ S14-39 ──▶ S14-37
 S14-D9 ──▶ S14-39
 S14-D8 ──▶ S14-37
-S14-30, S14-31, S14-32, S14-33, S14-34, S14-35, S14-38  (independent)
+S14-30, S14-31, S14-32, S14-33, S14-34, S14-35  (independent)
+S14-40 ──▶ S14-41 ──▶ S14-42 ──▶ S14-43 ──▶ S14-38   (Batch 8)
 ```
 
 ---
@@ -534,10 +560,9 @@ One PR (user, 2026-11-01).
 
 #### S14-38 — Unpromote leaves stale search documents
 
-**Ships.** After Unpromote, the search documents and stored rows of the ends of the links it takes back are rewritten, not left as they were. Bug, found in the S14-33 ship loop; it predates S14-33. Probe: 234 stale documents over 451 unpromotes. Cause: the association's value rows go by CASCADE inside the write, so `conclusionsummaries.AssociationEndpoints` finds no ends. The deleted bridge claim names its read ends through the effects registry (`effects.LinkEndHandles`), and bridge delete reads the same ends, so it no longer walks from a location's place end (S14-33 FU-4). The unread ends are marked on `connectrules.Endpoint`. Every end of a link an Unpromote takes back, a place included, is named to the app (`Set.Reload` → `summary_handles`) without a walk, so an open place page reloads (user, 2026-11-07); after a bridge delete the place is not named (`docs/ideas/structural-debt.md`). Bridge delete already rewrote its ends, and display rows were correct in the planning probe.
-**Not this PR.** Reprojection cost (`docs/ideas/structural-debt.md`).
-**Check.** Unpromote a person who has a filed participation, then search for the event: its document matches a rebuild.
-**Context.** S14-33 ship log (`FU-1`, `FU-4`); `core/database/effects`, `core/database/conclusionsummaries/dependents.go`, `core/database/subjects`.
+**Blocked — re-plan after S14-42 and S14-43** (user, 2026-11-07; working rule "The structural fix comes before the patch"). After Unpromote, the search documents of the ends of the links it takes back stay stale (234 over 451 unpromotes in the S14-33 probe): the association's value rows go by CASCADE inside the write, so `AssociationEndpoints` finds no ends. Its plan ([`prs/S14-38-unpromote-stale-search-documents.md`](prs/S14-38-unpromote-stale-search-documents.md)) patched this with a shared ends reader, an unread-end mark and a reload list, and still could not name the place after a bridge delete; it is not built. Its scenarios (T-1 – T-6, T-10) become S14-42's and S14-43's acceptance tests. What is left after S14-43, if anything, is re-planned with `plan-pr`; if nothing is, it is descoped into S14-42.
+**Check.** Bar outcome 32.
+**Context.** S14-33 ship log (`FU-1`, `FU-4`); [design](derived-read-index.md); S14-38's plan and review log.
 
 ### Slice 7d — List and nav polish
 
@@ -577,3 +602,33 @@ One PR (user, 2026-11-01).
 **Not this PR.** Engine path (S14-36); the Properties page (S14-39).
 **Check.** Bar outcome 31: create a boolean Property, cite Yes and No on Subjects, see them on Conclusion detail.
 **Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; plan [`prs/S14-37-boolean-value-type-ui.md`](prs/S14-37-boolean-value-type-ui.md).
+
+### Slice 8 — Derived rows know what they read
+
+#### S14-40 — Composers record what each row reads
+
+**Ships.** Each person, event and place row composed in `conclusionsummaries` runs under a read scope that records its handle values, link keys (bridge and end) and associations, through `Graph.Node`, `Graph.Follow` and the `placeGraph` chain lookups; batches stay batches. A test composes each row alone with a recorder on the graph reads and requires the same sets, on the scenario fixtures and the `TestLargeSourceBudgets` fixture; it also checks the inverse of the recorded sets against `Dependents` (identical on 300 handles in the planning probe). No stored change, no behavior change; composition time on the large fixture measured before and after.
+**Not this PR.** Storing the sets (S14-41); using them (S14-42).
+**Check.** The oracle test passes on the large fixture; `TestLargeSourceBudgets` budgets unchanged.
+**Context.** [Design § Attribution inside a batch](derived-read-index.md#attribution-inside-a-batch); working rules "A read is …", "Reads are attributed per row …"; `core/database/conclusionsummaries/compose.go`, `placechains.go`, `core/database/graphcache/graph.go`, `follow.go`.
+
+#### S14-41 — The read index
+
+**Ships.** A catalog table of reader → read key with an index on the read side (`add-catalog-migration`, `add-catalog-model`, `add-catalog-query`), written in the same transaction as each search document (`searchindex.ReprojectHandles`) and rebuilt by `RebuildAll`; layer 1 records each association as a reader of its ends' link keys. The rebuild-equals-upkeep tests compare the table with a rebuild. Fan-out at the map's Scale: one delete-and-insert of a row's few keys per reprojected document (median 5 reads per row; about 97,000 rows on the large fixture).
+**Not this PR.** Invalidation from the index (S14-42).
+**Check.** `TestRebuildEqualsUpkeep_*` compare the index and pass; `RebuildAll` time on the large fixture is measured before and after and reported in the PR.
+**Context.** [Design § Storage](derived-read-index.md#storage), [§ An association records its ends](derived-read-index.md#an-association-records-its-ends); working rule "One read index in the catalog".
+
+#### S14-42 — Writes invalidate by lookup
+
+**Ships.** After the recompute, `writes.Run` collects the changed keys (moved values, deleted and merged handles, the link keys of changed associations, from the index for a deleted one), looks up their readers, reprojects them, drops their displays, and reports them with the changed links' ends in `summary_handles`. `graphcache.SetDisplayDeps` reads the index. `conclusionsummaries.Dependents`, `AssociationEndpoints`, `linkEnds` and the `movedRoots` narrowing are deleted, and their tests move onto the index. S14-38's Unpromote scenarios (its T-1 – T-6, T-10) are this PR's acceptance tests. The S14-33 budgets hold, with an Unpromote at the city added.
+**Not this PR.** `subjects.Delete` (S14-43); kinship memos (`docs/ideas/structural-debt.md`).
+**Check.** Bar outcome 32.
+**Context.** [Design § Invalidation](derived-read-index.md#invalidation); working rules "Derived rows record what they read …", "Every write tells the app …"; `core/writes/run.go`, `core/database/autoreconciler/autoreconciler.go`, `core/database/conclusionsummaries/dependents.go`, `core/database/graphcache/commit.go`, `display.go`; `core/database/effects/README.md` and `core/writes/README.md` updated.
+
+#### S14-43 — Subject delete on `writes.Run`
+
+**Ships.** `subjects.Delete` stops snapshotting (`linkedHandles`, `Dependents`) and calling `RecomputeTx` itself; `writes.Run` finds the rows a Subject delete moved through the index, so a bridge delete rewrites its event and names its place to the app without walking the place's events. `docs/catalog-deletes.md`, `core/writes/README.md` and the structural-debt rows it closes are updated.
+**Not this PR.** Seed `Upsert`s that still reproject by hand (the rest of the "catalog graph cache leftovers" row).
+**Check.** Bar outcome 33.
+**Context.** [Design § Invalidation](derived-read-index.md#invalidation); working rule "Every write tells the app …"; `core/database/subjects/subjects.go` `Delete`; `add-catalog-delete`.
