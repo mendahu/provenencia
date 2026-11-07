@@ -8,10 +8,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/kinship"
 )
 
 // LayerBridges exposes the bridges the loader reads for one Evidence graph.
-func LayerBridges(c *database.Catalog, graphID []byte) ([]graphalign.Bridge, error) {
+func LayerBridges(c *database.Catalog, graphID []byte) ([]kinship.Link, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err

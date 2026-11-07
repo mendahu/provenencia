@@ -1084,8 +1084,8 @@ func TestProposeHoldsAnUnshortlistedHandle(t *testing.T) {
 // A Source that records a spouse relationship and a marriage has one spouse
 // bridge, with every association behind it; a marriage alone has an implied one.
 func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
-	spouses := func(bs []graphalign.Bridge) []graphalign.Bridge {
-		var out []graphalign.Bridge
+	spouses := func(bs []kinship.Link) []kinship.Link {
+		var out []kinship.Link
 		for _, b := range bs {
 			if b.KeyA.Type == vocabkey.BridgeRelationship && b.KeyA.Term == "spouse" {
 				out = append(out, b)
@@ -1093,7 +1093,7 @@ func TestLayerBridgesMergeKinshipShapes(t *testing.T) {
 		}
 		return out
 	}
-	build := func(withRelationship bool) []graphalign.Bridge {
+	build := func(withRelationship bool) []kinship.Link {
 		f := newFixture(t)
 		ann := f.Person(f.source, f.artifact, "Ann Ames")
 		bob := f.Person(f.source, f.artifact, "Bob Ames")

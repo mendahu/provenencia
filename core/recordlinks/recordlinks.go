@@ -59,12 +59,10 @@ type Config struct {
 
 // Member is one Subject of an Evidence graph.
 type Member struct {
-	ID []byte
+	subjectcompare.Subject
 	// Entity is the canonical entity of the member's accepted Identity Claim,
 	// nil when it has none; the caller sets it.
 	Entity []byte
-	Kind   vocabkey.SubjectType
-	Values subjectcompare.Values
 }
 
 // Graph is one Evidence graph indexed once for comparison. The zero Graph is

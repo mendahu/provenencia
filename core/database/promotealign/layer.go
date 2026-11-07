@@ -157,7 +157,7 @@ var hopPersonToEvent = hops.MustHop(vocabkey.BridgeParticipation, vocabkey.Prope
 // kinship.LinkSet, so links with the same ends and keys merge, and the links
 // the kinship patterns imply follow the recorded ones (with no association of
 // their own beyond those they were made from).
-func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]graphalign.Bridge, []participation, error) {
+func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props map[string]graphcache.VocabProperty, vocabTerms map[string]graphcache.VocabTerm, primary map[string]primarySubject, byKind map[string][][]byte, terms segmentcompare.Terms) ([]kinship.Link, []participation, error) {
 	var parts []participation
 	set := kinship.NewLinkSet()
 	for _, b := range connectrules.Bridges() {
@@ -216,9 +216,5 @@ func loadLayerBridges(g *graphcache.Graph, eg graphcache.EvidenceGraph, props ma
 		}
 	}
 	set.WithImplied(terms, matchregistry.Default().Kinship)
-	var out []graphalign.Bridge
-	for _, l := range set.Links() {
-		out = append(out, graphalign.Bridge{Edge: l.Edge, Recording: l.Recording})
-	}
-	return out, parts, nil
+	return set.Links(), parts, nil
 }

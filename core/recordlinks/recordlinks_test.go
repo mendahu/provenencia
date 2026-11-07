@@ -48,14 +48,14 @@ func idB(n byte) []byte { return []byte{0xB0 + n} }
 func evA(n byte) []byte { return []byte{0xA8 + n} }
 func evB(n byte) []byte { return []byte{0xB8 + n} }
 func person(id, entity []byte, v ...subjectcompare.Values) recordlinks.Member {
-	m := recordlinks.Member{ID: id, Entity: entity, Kind: vocabkey.Person}
+	m := recordlinks.Member{Subject: subjectcompare.Subject{ID: id, Kind: vocabkey.Person}, Entity: entity}
 	if len(v) > 0 {
 		m.Values = v[0]
 	}
 	return m
 }
 func event(id, entity []byte) recordlinks.Member {
-	return recordlinks.Member{ID: id, Entity: entity, Kind: vocabkey.Event}
+	return recordlinks.Member{Subject: subjectcompare.Subject{ID: id, Kind: vocabkey.Event}, Entity: entity}
 }
 
 type vals = subjectcompare.Values
