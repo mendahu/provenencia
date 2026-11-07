@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc` (Evidence graph walks and graph-cache memos), `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`
 **Context:** working rules "Scoring and the view are two concerns" (slice 7), "Slice 7 starts with a simple count" (slice 7, "A matching link counts"); S13-26 plan [D-2](S13-26-scoring-two-evidence-graphs.md) and its review M-5; [`promote-graph-alignment.md`](../../../promote-graph-alignment.md) §8 (Caching and decisions)
 **Planned:** 2026-11-07 against `main` @ `97e6f30f`
-**Review:** [`S13-29-one-loader-for-comparable-values.review.md`](S13-29-one-loader-for-comparable-values.review.md) — round 1: Fits with changes / Not ready; findings Fixed; one To user item open
+**Review:** [`S13-29-one-loader-for-comparable-values.review.md`](S13-29-one-loader-for-comparable-values.review.md) — round 1: Fits with changes / Not ready; findings Fixed; M-5 answered by the user 2026-11-07 (move the fixture in this PR)
 
 ### Implementer — read this first
 
@@ -30,7 +30,7 @@
 
 ## 1. Objective
 
-The Person page's record links (S13-27) need, for each Evidence graph a person is in, every primary Subject's comparable values and the graph's links, recorded and implied. Promote already builds exactly that per Evidence graph and memoizes it, inside `promotealign`. This PR moves that loader into a shared `core/database` package, `evidencelayer`, so Promote and the Person page read one memo built once per graph, with links as `kinship.Link` (the type S13-26's `recordlinks.NewGraph` takes) and Subjects as one shared pure type. Promote's proposals do not change.
+The Person page's record links (S13-27) need, for each Evidence graph a person is in, every primary Subject's comparable values and the graph's links, recorded and implied. Promote already builds exactly that per Evidence graph and memoizes it, inside `promotealign`. This PR moves that loader into a shared `core/database` package, `evidencelayer`, so Promote and the Person page read one memo built once per graph, with links as `kinship.Link` (the type S13-26's `recordlinks.NewGraph` takes) and Subjects as one shared pure type. The Source-building test fixture moves with it into a shared test package, so the loader's tests sit beside the loader and S13-27 builds its records with the same helpers. Promote's proposals do not change.
 
 **Why now.** S13-27 depends on it. Without it S13-27 would add a third loader of member values beside `promotealign`'s layer memo and its canon profiler (map review K-27), or import graph alignment's types into the Person page (refused, S13-26 D-2). Having `persondetail` call Promote's loader instead was refused on 2026-11-07 (map scope entry).
 
@@ -44,13 +44,13 @@ The Person page's record links (S13-27) need, for each Evidence graph a person i
 | --- | --- | --- |
 | AC-1.1 | A Promote proposal ran on Source B's Evidence graph; then `evidencelayer.Load(g, graph, namePattern)` is called | It returns the memoized layer: `&got.Subjects[0]` is the memo's, and no graph query is issued |
 | AC-1.2 | `core/database/evidencelayer`'s own production imports | Hold neither `core/graphalign` nor `core/database/promotealign`, and `core/matchregistry`'s guard test fails if one is added |
-| AC-1.3 | A Source records Ann and Bob's marriage and a spouse relationship between them; the layer of its graph | `Links` holds one spouse link, a `kinship.Link` with 3 associations and one shape, not `OnlyImplied` (`TestLayerBridgesMergeKinshipShapes`, today's rows) |
+| AC-1.3 | A Source records Ann and Bob's marriage and a spouse relationship between them; the layer of its graph | `Links` holds one spouse link, a `kinship.Link` with 3 associations and one shape, not `OnlyImplied` (`TestLoadMergesKinshipShapes`, moved from `TestLayerBridgesMergeKinshipShapes` with today's rows) |
 
 **US-2.** As a researcher, when I press Promote on any Source after this PR, I see the same rows, suggestions and connections as before it.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | Every `promotealign` and `graphalign` test, with only the type changes STEP-2 and STEP-4 name | Pass with their assertions unchanged |
+| AC-2.1 | Every `promotealign` and `graphalign` test, with only the type changes and fixture renames STEP-1, STEP-3 and STEP-5 name | Pass with their assertions unchanged |
 | AC-2.2 | `TestLargeSourceBudgets` (Source of 100 new people) | Each subtest within its budget in `perf_test.go` (`budgetWarm` 375 ms and the rest), unchanged |
 | AC-2.3 | `PROVENENCIA_GRAPH_VERIFY=1` over `./core/database/...` | Passes: `TestMemoFollowsCommit` drops the layer memo on the same commits as today |
 
@@ -58,20 +58,23 @@ The Person page's record links (S13-27) need, for each Evidence graph a person i
 
 | In | Covered by |
 | --- | --- |
-| `subjectcompare.Subject` *(new)*; `graphalign.Subject` becomes an alias of it (D-2) | STEP-2, AC-2.1 |
-| `graphalign.Bridge` is deleted; `graphalign.Layer.Bridges` becomes `[]kinship.Link` (D-7) | STEP-2, AC-2.1 |
-| `lifeEvent` moves to `subjectprofile.LifeEventOf` (D-6) | STEP-1, T-1 |
-| `loadMetas` moves to `valuerules.Metas` (D-5) | STEP-3 |
-| New package `core/database/evidencelayer`: `Load` (memoized), `Layer`, `Layer.Subject`, `Decode`; the loader code from `core/database/promotealign/layer.go`, `core/database/promotealign/terms.go` and the Evidence half of `core/database/promotealign/profiles.go` moves there (D-1 – D-5) | STEP-3, AC-1.1, AC-1.3 |
-| `promotealign` reads `evidencelayer.Load`; `primarySubject`, `layerMemo`, `layerMemoKey` and the moved functions go (D-8, D-9) | STEP-4, AC-2.1 – AC-2.3 |
-| The guard learns a forbidden-import rule, with rows for `evidencelayer` and `recordlinks` (D-11) | STEP-5, T-2 |
-| The shared-memo test (T-3) | STEP-5 |
-| Docs and comments that name the moved symbols (D-12) | STEP-7 |
+| `subjectcompare.Subject` *(new)*; `graphalign.Subject` becomes an alias of it (D-2) | STEP-3, AC-2.1 |
+| `graphalign.Bridge` is deleted; `graphalign.Layer.Bridges` becomes `[]kinship.Link` (D-7) | STEP-3, AC-2.1 |
+| `lifeEvent` moves to `subjectprofile.LifeEventOf` (D-6) | STEP-2, T-1 |
+| `loadMetas` moves to `valuerules.Metas` (D-5) | STEP-4 |
+| New package `core/database/evidencelayer`: `Load` (memoized), `Layer`, `Layer.Subject`, `Decode`; the loader code from `core/database/promotealign/layer.go`, `core/database/promotealign/terms.go` and the Evidence half of `core/database/promotealign/profiles.go` moves there (D-1 – D-5) | STEP-4, AC-1.1, AC-1.3 |
+| `promotealign` reads `evidencelayer.Load`; `primarySubject`, `layerMemo`, `layerMemoKey` and the moved functions go (D-8, D-9) | STEP-5, AC-2.1 – AC-2.3 |
+| `core/database/evidencelayer/evidencelayertest` *(new)*: the Source-building fixture from `core/database/promotealign/promotealign_test.go` (user, 2026-11-07; review M-5) (D-13) | STEP-1, AC-2.1 |
+| The two loader tests move into `core/database/evidencelayer`; the `LayerBridges` hook goes (D-12) | STEP-6, AC-1.3 |
+| The guard learns a forbidden-import rule, with rows for `evidencelayer` and `recordlinks` (D-11) | STEP-6, T-2 |
+| The shared-memo test (T-3) | STEP-6 |
+| Docs and comments that name the moved symbols (D-14) | STEP-8 |
 
 | Out | Home |
 | --- | --- |
 | The record-links read, `GetPersonRecordLinks`, and any `persondetail` caller of `Load`; `persondetail`'s guard row | S13-27 |
-| Moving the Source fixture into a shared test package and the loader's tests into `evidencelayer` | To user (review M-5); recommendation in §12 |
+| Moving the copies of the same helpers in `grapheventtitles`, `canonicalgraph`, `conclusionsummaries`, `promote` (`batch_test.go`) and `graphcache` (`evidence_graph_walk_test.go`) onto the shared fixture | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md) (STEP-8 adds the entry) |
+| Promote-only fixture helpers (`promote`, `propose`, `done`, `join`, `namedMembers`, `filedBirth`, `proposeConnections`, `placeRelationships`) | stay in `promotealign`'s tests (D-13) |
 | Folding `graphalign.Handle` into `subjectcompare.Subject`, and `graphalign.CanonEdge` into `kinship.Link` | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md) (review M-3, M-10) |
 | `recordlinks.Member` embedding `subjectcompare.Subject` | S13-26 (its plan's call; not this PR) |
 | Profile memos for canon handles; the canon profiler | [`docs/ideas/promote-ranking.md`](../../../ideas/promote-ranking.md) |
@@ -95,9 +98,10 @@ The Person page's record links (S13-27) need, for each Evidence graph a person i
 | Guard | `core/matchregistry/guard_test.go` `layerPackages`, `checkPure`, `TestLayerPackages` | One walker over pure layer packages (no `core/database`, no numbers); no forbidden-import rule for a reader package |
 | Test hooks | `core/database/promotealign/export_test.go` `LayerBridges`, `MemoSnapshot{Layer, LayerKind, LayerOK}`, `MemoSnapshotForTest` | `LayerBridges` calls the unmemoized `loadLayer`; `MemoSnapshotForTest` reads `layerMemoKey`/`layerMemo`. `LayerKind` is read only through `memoJSON` |
 | Tests | `core/database/promotealign/memo_test.go` `TestMemoIsNotMutated`, `TestMemoFollowsCommit`, `TestProposeWarmIssuesNoQuery`; `core/database/promotealign/promotealign_test.go` `TestLayerBridgesMergeKinshipShapes` (helpers typed `[]graphalign.Bridge`), `TestLayerBridgesCoverEveryConnectRule`; `core/database/promotealign/perf_test.go` `TestLargeSourceBudgets`; `core/graphalign/align_test.go` helpers `bridge`, `implied`, `canonOf`, `side`; `core/graphalign/invariants_test.go` | Build or hold `graphalign.Bridge` values; pin the memo's identity and invalidation |
+| Fixture | `core/database/promotealign/promotealign_test.go` `fixture{t, c, source, artifact, y}`, `newFixture`, `must`, `userID`, `locator`, and the record builders `newSource`, `prop`, `term`, `bare`, `cite`, `person`, `birth`, `place`, `participation`, `locate`, `placeRel`, `relationship`, `sexOnly`, `graph`, `marriage`, `eventOn`, `datedOn`, `datedBirth` | Package `promotealign_test`; used about 400 times across `promotealign_test.go`, `memo_test.go`, `perf_test.go`, `bench_test.go`, `source_store_test.go`. `core/database/evidencegraphs/evidencegraphstest` is imported by in-package tests of `connect`, `citations`, `subjects`, `sourcecopy` and `graphprogress`, so it cannot import `connect` or `citations` without an import cycle |
 | Docs | `.agents/skills/add-match-rule/SKILL.md` line 15 ("`core/database/promotealign` builds each side with the profile builder") and line 33 (`graphalign.Bridge` twice); `docs/ideas/matching-test-suite.md` (names `neighborTypeProperty` in `layer.go`); `docs/ideas/promote-ranking.md` (names `loadLayerMemo`); `core/graphalign/types.go` `Bridge` comment | Name what this PR moves or deletes |
 
-**Precedent.** `a8dc05b4` "Move the link merge into core/kinship so every reader shares one." moved Promote's `links.go` (deleted) into `core/kinship/links.go` and pointed Promote at it. Copy its shape: move, re-point, delete the old file in the same commit. `core/database/canonlinks` is the precedent for the package's role: a `core/database` reader that "matching and later readers share", imported by both `promotealign` and `persondetail`. The guard's table shape (`layerPackages`, one walker) is the precedent for D-11.
+**Precedent.** `a8dc05b4` "Move the link merge into core/kinship so every reader shares one." moved Promote's `links.go` (deleted) into `core/kinship/links.go` and pointed Promote at it. Copy its shape: move, re-point, delete the old file in the same commit. `core/database/canonlinks` is the precedent for the package's role: a `core/database` reader that "matching and later readers share", imported by both `promotealign` and `persondetail`. The guard's table shape (`layerPackages`, one walker) is the precedent for D-11. `core/database/graphcache/graphcachetest` ("builds catalogs and canonical graphs for tests of the graph cache and of the packages that read it") is the precedent for D-13: a `<pkg>test` package under the package it serves, taking `testing.TB`.
 
 ## 5. Decisions
 
@@ -114,7 +118,9 @@ The Person page's record links (S13-27) need, for each Evidence graph a person i
 | D-9 | `mergeFixed(g, graphID, layer evidencelayer.Layer, caller)`, `checkFixed(g, layer, f)` and `pageEnds(promoted, layer, caller, rows, only)` take the Evidence layer. Existence and kind read `layer.Subject(id)`; the two `for sk := range primary` loops become `for _, s := range layer.Subjects { sk := string(s.ID) … }`; `mergeFixed`'s capacity uses `len(layer.Subjects)` | `primarySubject` was a second index of the same Subjects. Output order is unchanged (map output; sorted output) | A `primary` map rebuilt per call |
 | D-10 | Inside `evidencelayer`, the build keeps an unexported local `primary map[string]subjectcompare.Subject` and `byKind map[string][][]byte` as today's `loadLayer` does; `links(g, eg, props, vocabTerms, primary, byKind, terms) ([]kinship.Link, []participation, error)` returns `set.Links()`. `byID` is filled after the Ref sort, `byID[string(s.ID)] = i`. `participation` and `neighborTypeProperty` move into the package; `hopPersonToEvent` moves from `layer.go` to `profiles.go`, beside its only readers | Moves the code as it is; only the value types change | Reshaping the walk |
 | D-11 | `core/matchregistry/guard_test.go` gains `readerPackages = []struct{ dir string; forbids []string }` and `TestReaderPackages`, run by a `checkForbids` beside `checkPure` that reads each package's **direct** production imports (`pkg.Imports`) through the same `go/build` context and module root. Rows: `{"core/database/evidencelayer", {"core/graphalign", "core/database/promotealign"}}`, `{"core/recordlinks", {"core/graphalign"}}` — the second only if `core/recordlinks` exists at the base (S13-26 may land first; otherwise S13-26 adds it). S13-27 adds `persondetail` | One guard table instead of a second walker (review M-1). Direct imports, because `matchregistry` itself imports `graphalign` (`Registry.Alignment`), so every registry reader reaches it transitively (review X-1); the working rule is about the reader's own use of graph alignment's types | A transitive rule — fails on `matchregistry`. A test in `evidencelayer` with its own walker |
-| D-12 | Tests: `TestLayerBridgesMergeKinshipShapes` and `TestLayerBridgesCoverEveryConnectRule` stay in `promotealign_test.go`; `LayerBridges` returns `([]kinship.Link, error)` and calls `evidencelayer.Load(c.Graph(), graphID, namePattern)` with `loadConfig`'s name pattern. Reading through the memo is fine for these tests: each builds a fresh fixture. `MemoSnapshot` loses `LayerKind`; `Layer` becomes `evidencelayer.Layer` | Keeps today's fixture where it is until the user answers §12 | Moving the fixture here (§12) |
+| D-12 | `TestLayerBridgesMergeKinshipShapes` and `TestLayerBridgesCoverEveryConnectRule` move to `core/database/evidencelayer/evidencelayer_test.go` *(new)*, package `evidencelayer_test`, renamed `TestLoadMergesKinshipShapes` and `TestLoadCoversEveryConnectRule`, assertions unchanged. They build with `evidencelayertest`, read the name pattern with `valuerules.Load(c.Graph(), db)`, and call `evidencelayer.Load`; each builds a fresh catalog, so the memo does not carry between them. `promotealign`'s `LayerBridges` hook is deleted. `MemoSnapshot` loses `LayerKind`; `Layer` becomes `evidencelayer.Layer` | The tests sit with the code they test, as `a8dc05b4` did (review M-5; user, 2026-11-07) | Keeping them in Promote through a forwarding hook (round 1 draft) |
+| D-13 | `core/database/evidencelayer/evidencelayertest` *(new)*, one file `evidencelayertest.go`. Package doc: "Package evidencelayertest builds catalogs whose Sources hold people, events, places and the bridges between them, for tests of the Evidence layer and the packages that read it." `type Records struct { T testing.TB; C *database.Catalog; Source sources.Source; Artifact artifacts.Artifact; y int64 }`; `func New(t testing.TB) *Records` (today's `newFixture` body); `var UserID = []byte{1, …, 16}` and `const Locator` (today's values); `func Must(t testing.TB, err error)`. Methods, exported, bodies unchanged: `NewSource`, `Prop`, `Term`, `Bare`, `Cite`, `Person`, `Birth`, `Place`, `Participation`, `Locate`, `PlaceRel`, `Relationship`, `SexOnly`, `Graph`, `Marriage`, `EventOn`, `DatedOn`, `DatedBirth`. `promotealign_test`'s `fixture` embeds `*evidencelayertest.Records` and keeps its own `c`, `source`, `artifact` fields, set from the Records in `newFixture`, so their reads do not change; `userID = evidencelayertest.UserID`, `must = evidencelayertest.Must`, `locator = evidencelayertest.Locator`. Call sites of the moved methods are renamed mechanically, one `gofmt -r` per method (`gofmt -r 'f.person(a, b, c) -> f.Person(a, b, c)' -w core/database/promotealign/`, and the same for each arity and receiver name the files use, such as `lf.fixture`, `w.f`) | A shared Evidence-side fixture beside the Evidence layer, the way `graphcachetest` serves the canon side. `evidencegraphstest` cannot hold it (import cycle, §4). Keeping `c`, `source`, `artifact` as fields bounds the diff to the moved method names | Extending `evidencegraphstest` — cycles. Lower-case wrappers in `promotealign` forwarding to the exported methods — a second copy of every name. Renaming every `f.c` to `f.C` — a large diff with no reader gain |
+| D-14 | Docs: see STEP-8 | Every doc that names a moved or deleted symbol is updated in this PR (review M-6) | — |
 
 **Rules this plan bends.** None.
 
@@ -132,10 +138,12 @@ Searched: "Evidence layer", "layer memo", `EvidenceGraphMemo` callers, `decode`/
 | `evidencelayer.Decode`, `valuerules.Metas`, `subjectprofile.LifeEventOf` *(new names)* | func | `promotealign.decode`, `loadMetas`, `lifeEvent` | Moved (D-5, D-6) |
 | `readerPackages`, `checkForbids`, `TestReaderPackages` *(new)* | test helper | `guard_test.go` `layerPackages`, `checkPure` | Extends the one guard (D-11) |
 | `TestLifeEventOf`, `TestLoadSharesPromotesMemo` *(new)* | test | `memo_test.go` `TestMemoIsNotMutated` | New cases for moved code |
+| `evidencelayertest.Records`, `New`, its builder methods *(new)* | test helper | `promotealign_test.go` `fixture`; `graphcachetest`; `evidencegraphstest`; the copies in five other packages (Out) | Moved from `promotealign`; `evidencegraphstest` cannot hold it (D-13) |
+| `TestLoadMergesKinshipShapes`, `TestLoadCoversEveryConnectRule` *(new names)* | test | `TestLayerBridges*` | Moved (D-12) |
 
 **Builds on.** `graphcache.Graph.EvidenceGraphMemo` / `SetEvidenceGraphMemo` (the memo drops with its graph, `.cursor/rules/catalog-queries.mdc`); `kinship.LinkSet`; `subjectprofile.ForSubject`; `canonlinks.LoadTerms`; the `matchregistry` guard table.
-**Deletes.** `core/database/promotealign/layer.go` and `core/database/promotealign/terms.go` (whole files); from `core/database/promotealign/profiles.go`: `decode`, `layerValues`, `loadMetas`, `lifeEvent`; `primarySubject`, `layerMemo`, `layerMemoKey`; `inputs.primary`; `MemoSnapshot.LayerKind`; `graphalign.Bridge`; `graphalign.Subject`'s struct body (now an alias).
-**Next adds.** S13-27 calls `evidencelayer.Load` per graph and `valuerules.Metas` once, passes `Links` to `recordlinks.NewGraph`, and adds a `persondetail` row to `readerPackages`.
+**Deletes.** `core/database/promotealign/layer.go` and `core/database/promotealign/terms.go` (whole files); from `core/database/promotealign/profiles.go`: `decode`, `layerValues`, `loadMetas`, `lifeEvent`; `primarySubject`, `layerMemo`, `layerMemoKey`; `inputs.primary`; `MemoSnapshot.LayerKind`; the `LayerBridges` hook; the moved fixture code in `promotealign_test.go`; `graphalign.Bridge`; `graphalign.Subject`'s struct body (now an alias).
+**Next adds.** S13-27 calls `evidencelayer.Load` per graph and `valuerules.Metas` once, passes `Links` to `recordlinks.NewGraph`, adds a `persondetail` row to `readerPackages`, and builds its handler test's records with `evidencelayertest`.
 
 ### Reach
 
@@ -198,38 +206,43 @@ None — no user-facing copy.
 
 ## 7. Steps
 
-**STEP-1 — `LifeEventOf` in subjectprofile**
+**STEP-1 — The shared Source fixture**
+Files: `core/database/evidencelayer/evidencelayertest/evidencelayertest.go` *(new)*, `core/database/promotealign/promotealign_test.go`, `core/database/promotealign/memo_test.go`, `core/database/promotealign/perf_test.go`, `core/database/promotealign/bench_test.go`, `core/database/promotealign/source_store_test.go`. Rule: `.cursor/rules/go-tests.mdc`.
+Do: D-13. Move the builders, then rename call sites with `gofmt -r`. No test body changes beyond the renamed calls.
+Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` passes, and `go test -tags fts5 -run XXX -bench . -benchtime 1x ./core/database/promotealign/` compiles and runs; `rg -n 'func \(f \*fixture\) (person|birth|place|participation|relationship|marriage)\(' core/database/promotealign` prints nothing.
+
+**STEP-2 — `LifeEventOf` in subjectprofile**
 Files: `core/subjectprofile/subjectprofile.go`, `core/subjectprofile/lifeevent_test.go` *(new)*, `core/database/promotealign/profiles.go`, `core/database/promotealign/layer.go`. Skill: `add-match-rule` (Rules that hold everywhere).
 Do: D-6; point both callers at it; add T-1.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/subjectprofile/... ./core/matchregistry/... ./core/database/promotealign/...` passes.
 
-**STEP-2 — One Subject type and one link type**
+**STEP-3 — One Subject type and one link type**
 Files: `core/subjectcompare/subjectcompare.go`, `core/graphalign/types.go`, `core/graphalign/align_test.go`, `core/graphalign/invariants_test.go`, `core/database/promotealign/layer.go`, `core/database/promotealign/export_test.go`, `core/database/promotealign/promotealign_test.go`.
 Do: D-2 (the type and the alias) and D-7. In `layer.go`, `loadLayerBridges` returns `set.Links()` as `[]kinship.Link`. `LayerBridges` returns `([]kinship.Link, error)`; `TestLayerBridgesMergeKinshipShapes`'s `spouses` and `build` take `[]kinship.Link`; the `graphalign` test helpers `bridge`, `implied`, `canonOf`, `side` and the `bridges` table fields use `kinship.Link`. No assertion changes.
 Check: `rg -n 'graphalign\.Bridge\b' core api` prints nothing; `CGO_ENABLED=1 go test -tags fts5 ./core/subjectcompare/... ./core/graphalign/... ./core/matchregistry/... ./core/database/promotealign/...` passes.
 
-**STEP-3 — The evidencelayer package and `valuerules.Metas`**
+**STEP-4 — The evidencelayer package and `valuerules.Metas`**
 Files: `core/database/evidencelayer/evidencelayer.go` *(new)*, `core/database/evidencelayer/values.go` *(new)*, `core/database/valuerules/valuerules.go`. Rule: `.cursor/rules/catalog-queries.mdc`.
 Do: D-1, D-3, D-5 (`Metas` and `Decode`), D-10. Nothing calls `Load` yet.
 Check: `CGO_ENABLED=1 go build -tags fts5 ./core/...` and `CGO_ENABLED=1 go vet -tags fts5 ./core/database/evidencelayer/... ./core/database/valuerules/...` pass.
 
-**STEP-4 — Promote reads the shared loader**
+**STEP-5 — Promote reads the shared loader**
 Files: `core/database/promotealign/promotealign.go`, `core/database/promotealign/connections.go`, `core/database/promotealign/profiles.go`, `core/database/promotealign/index.go`, `core/database/promotealign/export_test.go`; delete `core/database/promotealign/layer.go` and `core/database/promotealign/terms.go`.
-Do: D-8, D-9, D-12; `reconciled` calls `evidencelayer.Decode`; `index.go` calls `valuerules.Metas`; `hopPersonToEvent` moves to `profiles.go`. Fix the `profiles.go` header comment to "The canon side's profile loader: each handle is built here, once per match index, with the profile builder; the Evidence side is built by core/database/evidencelayer."
+Do: D-8, D-9, the `MemoSnapshot` half of D-12; `reconciled` calls `evidencelayer.Decode`; `index.go` calls `valuerules.Metas`; `hopPersonToEvent` moves to `profiles.go`. Fix the `profiles.go` header comment to "The canon side's profile loader: each handle is built here, once per match index, with the profile builder; the Evidence side is built by core/database/evidencelayer."
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/promotealign/...` passes with no assertion edited.
 
-**STEP-5 — Guard and shared-memo tests**
-Files: `core/matchregistry/guard_test.go`, `core/database/promotealign/memo_test.go`.
-Do: D-11 (copy `checkPure`'s module-root lookup, `filepath.Join("..", "..")`, and its `go/build` context); add T-2's rows and T-3.
-Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestReaderPackages|TestLayerPackages' ./core/matchregistry/` and `-run TestLoadSharesPromotesMemo ./core/database/promotealign/` pass; adding `_ "github.com/mendahu/provenencia/core/graphalign"` to `evidencelayer.go` makes `TestReaderPackages` fail (then remove it).
+**STEP-6 — Guard, shared-memo and loader tests**
+Files: `core/matchregistry/guard_test.go`, `core/database/promotealign/memo_test.go`, `core/database/evidencelayer/evidencelayer_test.go` *(new)*, `core/database/promotealign/promotealign_test.go`, `core/database/promotealign/export_test.go`.
+Do: D-11 (copy `checkPure`'s module-root lookup, `filepath.Join("..", "..")`, and its `go/build` context); add T-2's rows and T-3; D-12 (move the two loader tests, delete `LayerBridges`).
+Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestReaderPackages|TestLayerPackages' ./core/matchregistry/` and `-run TestLoadSharesPromotesMemo ./core/database/promotealign/` and `./core/database/evidencelayer/...` pass; `rg -n LayerBridges core` prints nothing; adding `_ "github.com/mendahu/provenencia/core/graphalign"` to `evidencelayer.go` makes `TestReaderPackages` fail (then remove it).
 
-**STEP-6 — Budgets and verify mode**
+**STEP-7 — Budgets and verify mode**
 Files: none changed.
 Do: run the budget test on this branch and on `main` in a second worktree (`git worktree add ../provenencia-main main`), same machine, back to back.
 Check: `CGO_ENABLED=1 go test -tags fts5 -run TestLargeSourceBudgets -v ./core/database/promotealign/` passes on the branch, and both runs' `t.Logf` lines go in the PR description; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/...` passes.
 
-**STEP-7 — Docs**
-Files: `.agents/skills/add-match-rule/SKILL.md` (line 15: "`core/database/evidencelayer` builds an Evidence graph's side and `core/database/promotealign` the canon's, each with the profile builder"; line 33: both `graphalign.Bridge` mentions become `kinship.Link`), `docs/promote-graph-alignment.md` §8 (one bullet: "**The Evidence layer memo** (`evidencelayer.Load`) holds one Evidence graph's primary Subjects, values and links; Promote and the Person page share it, and it drops with the Evidence graph memo"), `docs/ideas/matching-test-suite.md` (`neighborTypeProperty` now in `core/database/evidencelayer/evidencelayer.go` *(new)*), `docs/ideas/promote-ranking.md` (`loadLayerMemo` → `evidencelayer.Load`), `docs/ideas/structural-debt.md` (one entry: `graphalign.Handle` → `subjectcompare.Subject`, `graphalign.CanonEdge` → `kinship.Link`), `docs/deployment-plan/spike-13/deployment-plan.md` (map row), `docs/deployment-plan/spike-13/completed.md`, this plan (status).
+**STEP-8 — Docs**
+Files: `.agents/skills/add-match-rule/SKILL.md` (line 15: "`core/database/evidencelayer` builds an Evidence graph's side and `core/database/promotealign` the canon's, each with the profile builder"; line 33: both `graphalign.Bridge` mentions become `kinship.Link`), `docs/promote-graph-alignment.md` §8 (one bullet: "**The Evidence layer memo** (`evidencelayer.Load`) holds one Evidence graph's primary Subjects, values and links; Promote and the Person page share it, and it drops with the Evidence graph memo"), `docs/ideas/matching-test-suite.md` (`neighborTypeProperty` now in `core/database/evidencelayer/evidencelayer.go` *(new)*), `docs/ideas/promote-ranking.md` (`loadLayerMemo` → `evidencelayer.Load`), `docs/ideas/structural-debt.md` (two entries: `graphalign.Handle` → `subjectcompare.Subject` and `graphalign.CanonEdge` → `kinship.Link`; the five packages that still copy the Source-building helpers move onto `evidencelayertest`), `docs/deployment-plan/spike-13/deployment-plan.md` (map row), `docs/deployment-plan/spike-13/completed.md`, this plan (status).
 Do: per the Definition of done.
 Check: `python3 scripts/check-guidance-names.py` passes; links resolve.
 
@@ -242,7 +255,8 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-1 | Go | `core/subjectprofile/lifeevent_test.go` `TestLifeEventOf` *(new)* | Table, values built with `helpers_test.go` `vcand`: positive `event_type` "birth" and negative "death" → `EventType` birth; positive `date`, `start_date`, `end_date` → all three in `Dates` in that key order; a negative date → left out; no type → empty `EventType`; role passed through | D-6 |
 | T-2 | Go | `core/matchregistry/guard_test.go` `TestReaderPackages` *(new)* | Each `readerPackages` row → its direct production imports hold none of its `forbids` | AC-1.2, D-11 |
 | T-3 | Go | `core/database/promotealign/memo_test.go` `TestLoadSharesPromotesMemo` *(new)* | Warm fixture: Propose on Source B's graph; then, with `SetQueryCounterForTest` counting, `evidencelayer.Load(g, graph, namePattern)` → 0 queries, and a second `Load` returns the same `&Subjects[0]` | AC-1.1, D-3, D-4 |
-| T-4 | Go | `core/database/promotealign/promotealign_test.go` `TestLayerBridgesMergeKinshipShapes`, `TestLayerBridgesCoverEveryConnectRule` (types only) | Unchanged rows, now over `[]kinship.Link` | AC-1.3, D-7, D-12 |
+| T-4 | Go | `core/database/evidencelayer/evidencelayer_test.go` `TestLoadMergesKinshipShapes`, `TestLoadCoversEveryConnectRule` *(new)*, moved | Today's rows, over `evidencelayer.Load`'s `Links` | AC-1.3, D-7, D-12 |
+| T-8 | Go | every `core/database/promotealign` test and benchmark on `evidencelayertest` | As today | AC-2.1, D-13 |
 | T-5 | Go | `core/database/promotealign/memo_test.go` `TestMemoIsNotMutated`, `TestMemoFollowsCommit`, `TestProposeWarmIssuesNoQuery` (unchanged assertions) | As today | AC-2.1, AC-2.3, D-8, D-9 |
 | T-6 | Go | `core/database/promotealign/perf_test.go` `TestLargeSourceBudgets` (unchanged) | As today | AC-2.2 |
 | T-7 | Go | `core/graphalign` all tests (types only) | As today | AC-2.1, D-2, D-7 |
@@ -258,7 +272,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] PROVENENCIA_GRAPH_VERIFY=1 go test -tags fts5 ./core/database/... passes
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left — none in this PR
-- [ ] Sweep: `rg` across `.agents/`, `.cursor/rules/`, `docs/` (recursive, `docs/ideas/` included) and `L10n.swift` finds no hit for `graphalign.Bridge`, `loadLayerMemo`, `loadLayerBridges`, `promotealign.layer`, `layerMemoKey`, `primarySubject`, `promotealign/layer.go`, `promotealign/terms.go`, `promotealign.decode`, `promotealign.loadMetas`, and no doc that places `neighborTypeProperty`, `observedTerms`, `layerValues` or `lifeEvent` in `promotealign`; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Sweep: `rg` across `.agents/`, `.cursor/rules/`, `docs/` (recursive, `docs/ideas/` included) and `L10n.swift` finds no hit for `graphalign.Bridge`, `loadLayerMemo`, `loadLayerBridges`, `promotealign.layer`, `layerMemoKey`, `primarySubject`, `promotealign/layer.go`, `promotealign/terms.go`, `promotealign.decode`, `promotealign.loadMetas`, `LayerBridges`, and no doc that places `neighborTypeProperty`, `observedTerms`, `layerValues` or `lifeEvent` in `promotealign`; `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated — none
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New — no UI
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
@@ -290,11 +304,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - A non-test file outside `core/database/promotealign/layer.go` constructs `graphalign.Bridge`.
 - `TestLargeSourceBudgets` fails a budget on the branch that passes on `main` in the back-to-back run.
 - Any `promotealign` or `graphalign` test needs an assertion change, not only a type change.
+- `evidencelayertest` cannot build without an import cycle (a package it imports has an in-package test that imports it).
 - `evidencelayer` cannot build without a direct import of `core/graphalign` or `core/database/promotealign`.
 
 ## 12. Open questions
 
-1. **Where the loader's tests live (review M-5).** The two loader tests stay in `promotealign` through a test hook, because the Source fixture (about 200 lines) lives there and is already copied in five packages. Recommendation: keep them there in this PR, and add a line to S13-27's scope entry: S13-27 moves the Evidence-graph fixture into a shared test package (beside `graphcache/graphcachetest`), since its handler test needs the same fixture, and moves the two loader tests into `core/database/evidencelayer`, deleting the hook. Alternative: a preparatory PR for the fixture before S13-27.
+None.
 
 ## 13. PR
 
