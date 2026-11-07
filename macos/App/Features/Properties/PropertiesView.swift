@@ -512,7 +512,13 @@ private struct PropertiesContent: View {
 
     @ViewBuilder
     private func holdsRow(_ property: CatalogProperty) -> some View {
-        if model.canEditCardinality {
+        if let reason = model.holdsLockReason(valueType: property.valueType, origin: property.origin) {
+            inspectorMetaRow(label: L10n.Properties.holds) {
+                PropertiesLockedValue(reason: reason) {
+                    holdsValueText(property.cardinality)
+                }
+            }
+        } else {
             VStack(alignment: .leading, spacing: PVSpacing.space3) {
                 Text(L10n.Properties.holds)
                     .font(PVFont.body(size: PVTypeScale.caption))
@@ -549,12 +555,6 @@ private struct PropertiesContent: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityLabel(Text(verbatim: L10n.Properties.holdsGroup(label: property.label)))
-        } else if let reason = model.holdsLockReason(valueType: property.valueType, origin: property.origin) {
-            inspectorMetaRow(label: L10n.Properties.holds) {
-                PropertiesLockedValue(reason: reason) {
-                    holdsValueText(property.cardinality)
-                }
-            }
         }
     }
 
@@ -727,6 +727,7 @@ private struct PropertiesCreateHost: View {
                     confirm: L10n.Properties.createSubmit,
                     cancel: L10n.Properties.createCancel
                 ),
+                width: 560,
                 isRunning: model.isSaving,
                 isDirty: draft != model.draft,
                 confirmDisabled: !model.canSubmitCreate(draft),
@@ -772,6 +773,8 @@ private struct PropertiesCreateHost: View {
                     PropertiesLockedValue(reason: reason, speaksReason: false) {
                         holdsValueText(draft?.cardinality ?? PropertyCardinality.single.rawValue)
                     }
+                    .accessibilityLabel(Text(L10n.Properties.holds))
+                    .accessibilityValue(Text(holdsValueLabel(draft?.cardinality ?? PropertyCardinality.single.rawValue)))
                     .accessibilityIdentifier("properties.create.holds.locked")
                 }
             }
@@ -940,11 +943,17 @@ private struct PropertiesCreateHost: View {
         .accessibilityLabel(type.label)
         .accessibilityAddTraits(on ? [.isSelected] : [])
         .accessibilityIdentifier("properties.create.bind.\(type.key)")
-    }}
+    }
+}
+
+/// A property's cardinality as its One / Several words.
+fileprivate func holdsValueLabel(_ cardinality: String) -> LocalizedStringResource {
+    cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne
+}
 
 /// A property's cardinality as its One / Several value.
 fileprivate func holdsValueText(_ cardinality: String) -> some View {
-    Text(cardinality == PropertyCardinality.multiple.rawValue ? L10n.Properties.holdsSeveral : L10n.Properties.holdsOne)
+    Text(holdsValueLabel(cardinality))
         .font(PVFont.body(size: PVTypeScale.bodySmall))
         .foregroundStyle(PVColor.textPrimary)
 }
@@ -963,21 +972,9 @@ fileprivate struct PropertiesLockedValue<Content: View>: View {
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(PVColor.textFaint)
                 .help(reason)
-                .modifier(LockSpeech(reason: speaksReason ? reason : nil))
+                .accessibilityLabel(Text(verbatim: reason))
+                .accessibilityHidden(!speaksReason)
         }
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// Speaks the lock's reason, or hides the lock when a hint speaks it.
-fileprivate struct LockSpeech: ViewModifier {
-    let reason: String?
-
-    func body(content: Content) -> some View {
-        if let reason {
-            content.accessibilityLabel(Text(verbatim: reason))
-        } else {
-            content.accessibilityHidden(true)
-        }
     }
 }

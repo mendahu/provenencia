@@ -10,7 +10,7 @@ enum PropertyCardinality: String, Sendable {
     case multiple
 }
 
-enum PropertyValueType: String, Sendable {
+enum PropertyValueType: String, Sendable, CaseIterable {
     case text
     case integer
     case date

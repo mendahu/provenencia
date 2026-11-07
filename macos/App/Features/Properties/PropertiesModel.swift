@@ -402,7 +402,7 @@ final class PropertiesModel {
         }
     }
 
-    /// Saves Holds immediately. The value already stored is a no-op. Seeded and plugin Properties stay fixed.
+    /// Saves Holds immediately. The value already stored is a no-op. Seeded, plugin and single-only Properties stay fixed.
     @discardableResult
     func setCardinality(_ cardinality: String) async -> Bool {
         guard canEditCardinality, let property = selectedProperty, !isSaving else { return false }
