@@ -1,6 +1,6 @@
 # S13-29 — One loader for a Subject's comparable values
 
-**Status:** Planned
+**Status:** Landed in [#741](https://github.com/mendahu/provenencia/pull/741) (2026-11-07)
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a Go-only move with no behavior change; nothing on screen reads the new package until S13-28)
