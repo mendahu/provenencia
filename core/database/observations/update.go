@@ -64,7 +64,7 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		in.PropertyID,
 		polarity,
 		database.NullString(resolved.Text),
-		nullInt64(resolved.Integer),
+		database.NullInt64(resolved.Integer),
 		database.NullBool(resolved.Boolean),
 		database.NullBlob(resolved.DateID),
 		database.NullBlob(resolved.NameID),

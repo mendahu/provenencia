@@ -570,7 +570,6 @@ func acceptedEntities(q Querier, ids [][]byte) (map[string][]byte, error) {
 func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Value) error {
 	var (
 		text, sortKey  any
-		integer        any
 		termID         any
 		valueEntity    any
 		imageFileID    any
@@ -580,8 +579,9 @@ func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Val
 	if row.HasText {
 		text = row.Text
 	}
+	var integer *int64
 	if row.HasInteger {
-		integer = row.Integer
+		integer = &row.Integer
 	}
 	var boolean *bool
 	if row.HasBoolean {
@@ -615,7 +615,7 @@ func insertRow(q Querier, g *group, row graphcache.TruthRow, v autoreconcile.Val
 	if k, ok := autoreconcile.SortKey(g.valueType, v); ok {
 		sortKey = k
 	}
-	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, integer, database.NullBool(boolean), termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
+	_, err := q.Exec(sqlInsert, g.entityID, g.propertyID, row.Rank, text, database.NullInt64(integer), database.NullBool(boolean), termID, valueEntity, dateBlob, name, imageFileID, dateLo, dateHi, sortKey,
 		row.Support, row.Against, row.Reason)
 	return err
 }

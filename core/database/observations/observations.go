@@ -349,7 +349,7 @@ func insertOne(tx *sql.Tx, citationID []byte, in Input, opts InsertOptions) (Obs
 			in.PropertyID,
 			polarity,
 			database.NullString(resolved.Text),
-			nullInt64(resolved.Integer),
+			database.NullInt64(resolved.Integer),
 			database.NullBool(resolved.Boolean),
 			database.NullBlob(resolved.DateID),
 			database.NullBlob(resolved.NameID),
@@ -776,13 +776,6 @@ func getPropertyTx(tx *sql.Tx, id []byte) (properties.Property, error) {
 		return properties.Property{}, ErrInvalid
 	}
 	return p, err
-}
-
-func nullInt64(p *int64) any {
-	if p == nil {
-		return nil
-	}
-	return *p
 }
 
 func mapConstraint(err error) error {
