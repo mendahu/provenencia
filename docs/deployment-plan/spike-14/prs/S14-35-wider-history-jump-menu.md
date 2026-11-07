@@ -1,6 +1,6 @@
 # S14-35 — Wider history jump menu
 
-**Status:** Planned
+**Status:** Landed in #730 (2026-11-06)
 **Spike / slice:** Spike 14 · Slice 7d — List and nav polish
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the map scopes Batch 7's other PRs as ungated; the panel keeps its rows, components and copy, and only its width changes)
@@ -11,7 +11,7 @@
 **Version bump:** patch — a researcher-visible layout bug fix in the Mac app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md), [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md) (read only: the jump menu is part of navigation history; nothing in it changes)
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
-**Context:** working rule "(Batch 7) History jump menu is wider first"; bar outcome 30; [`ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md`](../ux/2026-10-29-nav-history-menu-truncates-breadcrumb.md) (its "How it works today" predates S14-14: row leaves now come from `WorkspaceLocationLabels`, see §4)
+**Context:** working rule "(Batch 7) History jump menu is wider first"; bar outcome 30; [`ideas/shared-list-helpers.md`](../../../ideas/shared-list-helpers.md) § History menu row labels (the dogfood note's "How it works today" predated S14-14: row leaves now come from `WorkspaceLocationLabels`, see §4)
 **Planned:** 2026-11-06 against `main` @ `f48846c`
 **Review:** [`S14-35-wider-history-jump-menu.review.md`](S14-35-wider-history-jump-menu.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker
 
