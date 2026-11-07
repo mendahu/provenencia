@@ -68,90 +68,109 @@ func (f *fixture) recordLinks(id []byte) persondetail.PersonRecordLinks {
 	return rl
 }
 
-func TestRecordLinks(t *testing.T) {
-	f := newFixture(t)
+// world is the base of every TestRecordLinks row: the four registers, the son
+// promoted on all of them, the father on A and B, the mother on A and C, and the
+// birth on A and B.
+type world struct {
+	s, father, mother, birth canonicalentities.Entity
+	// names reads an entity in a summary.
+	names map[string]string
+}
+
+// newWorld files the four registers on f.
+func newWorld(f *fixture) world {
 	a := f.registerOf("A register", "William Smith", "Mary Ann Jones", true)
 	b := f.registerOf("B register", "William Smith", "", true)
 	c := f.registerOf("C register", "", "Mary Jones", false)
 	d := f.registerOf("D register", "", "", false)
-	s := f.promote(a.son, nil)
+	w := world{s: f.promote(a.son, nil)}
 	for _, r := range []register{b, c, d} {
-		f.promote(r.son, s.ID)
+		f.promote(r.son, w.s.ID)
 	}
-	father := f.promote(a.father, nil)
-	f.promote(b.father, father.ID)
-	birthE := f.promote(a.birth, nil)
-	f.promote(b.birth, birthE.ID)
-	mother := f.promote(a.mother, nil)
-	f.promote(c.mother, mother.ID)
-	names := map[string]string{string(s.ID): "S", string(father.ID): "F", string(mother.ID): "M"}
+	w.father = f.promote(a.father, nil)
+	f.promote(b.father, w.father.ID)
+	w.birth = f.promote(a.birth, nil)
+	f.promote(b.birth, w.birth.ID)
+	w.mother = f.promote(a.mother, nil)
+	f.promote(c.mother, w.mother.ID)
+	w.names = map[string]string{string(w.s.ID): "S", string(w.father.ID): "F", string(w.mother.ID): "M"}
+	return w
+}
 
-	t.Run("AC-1.1 and AC-1.2", func(t *testing.T) {
-		graphs, pairs := summary(f.recordLinks(s.ID), names)
-		if want := []string{"A register", "B register", "C register", "D register"}; !reflect.DeepEqual(graphs, want) {
-			t.Fatalf("graphs %v, want %v", graphs, want)
-		}
-		if want := []string{"A register-B register: F/2/strong", "A register-C register: M/1/weak"}; !reflect.DeepEqual(pairs, want) {
-			t.Fatalf("pairs %v, want %v (no line names S)", pairs, want)
-		}
-	})
-
-	t.Run("AC-1.3 a member with no accepted claim draws no line", func(t *testing.T) {
-		e1 := f.registerOf("E register", "William Smith", "", false)
-		f.promote(e1.son, s.ID)
-		f.provisional(e1.father, father)
-		e2 := f.registerOf("F register", "William Smith", "", false)
-		f.promote(e2.son, s.ID)
-		graphs, pairs := summary(f.recordLinks(s.ID), names)
-		if len(graphs) != 6 {
-			t.Fatalf("graphs %v, want six", graphs)
-		}
-		if want := []string{"A register-B register: F/2/strong", "A register-C register: M/1/weak"}; !reflect.DeepEqual(pairs, want) {
-			t.Fatalf("pairs %v, want %v", pairs, want)
-		}
-	})
-
-	t.Run("AC-1.5 two Subjects of one graph list it once", func(t *testing.T) {
-		src := f.source("G register")
-		second := f.Person(src, f.arts[string(src.ID)], "Tom Smith")
-		first := f.Person(src, f.arts[string(src.ID)], "Thomas Smith")
-		f.promote(first, s.ID)
-		f.promote(second, s.ID)
-		n := 0
-		for _, g := range f.recordLinks(s.ID).Graphs {
-			if g.SourceTitle == "G register" {
-				n++
+func TestRecordLinks(t *testing.T) {
+	cases := []struct {
+		name string
+		run  func(t *testing.T, f *fixture, w world)
+	}{
+		{"AC-1.1 and AC-1.2", func(t *testing.T, f *fixture, w world) {
+			graphs, pairs := summary(f.recordLinks(w.s.ID), w.names)
+			if want := []string{"A register", "B register", "C register", "D register"}; !reflect.DeepEqual(graphs, want) {
+				t.Fatalf("graphs %v, want %v", graphs, want)
 			}
-		}
-		if n != 1 {
-			t.Fatalf("G register listed %d times", n)
-		}
-	})
-
-	t.Run("AC-1.6 an id that is no Person", func(t *testing.T) {
-		for name, id := range map[string][]byte{
-			"event handle":  birthE.ID,
-			"random id":     {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 99},
-			"short id":      {1, 2, 3},
-			"unknown nil":   nil,
-			"merged person": mergedHandle(t, f),
-		} {
-			if _, err := persondetail.RecordLinks(f.C, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
-				t.Errorf("%s: error %v, want ErrNotFound", name, err)
+			if want := []string{"A register-B register: F/2/strong", "A register-C register: M/1/weak"}; !reflect.DeepEqual(pairs, want) {
+				t.Fatalf("pairs %v, want %v (no line names S)", pairs, want)
 			}
-		}
-	})
-
-	t.Run("AC-2.6 a warm repeat issues no graph-cache query", func(t *testing.T) {
-		f.recordLinks(s.ID)
-		var n int
-		f.C.Graph().SetQueryCounterForTest(func() { n++ })
-		defer f.C.Graph().SetQueryCounterForTest(nil)
-		f.recordLinks(s.ID)
-		if n != 0 {
-			t.Fatalf("the warm read issued %d queries", n)
-		}
-	})
+		}},
+		{"AC-1.3 a member with no accepted claim draws no line", func(t *testing.T, f *fixture, w world) {
+			e1 := f.registerOf("E register", "William Smith", "", false)
+			f.promote(e1.son, w.s.ID)
+			f.provisional(e1.father, w.father)
+			e2 := f.registerOf("F register", "William Smith", "", false)
+			f.promote(e2.son, w.s.ID)
+			graphs, pairs := summary(f.recordLinks(w.s.ID), w.names)
+			if len(graphs) != 6 {
+				t.Fatalf("graphs %v, want six", graphs)
+			}
+			if want := []string{"A register-B register: F/2/strong", "A register-C register: M/1/weak"}; !reflect.DeepEqual(pairs, want) {
+				t.Fatalf("pairs %v, want %v", pairs, want)
+			}
+		}},
+		{"AC-1.5 two Subjects of one graph list it once", func(t *testing.T, f *fixture, w world) {
+			src := f.source("G register")
+			second := f.Person(src, f.arts[string(src.ID)], "Tom Smith")
+			first := f.Person(src, f.arts[string(src.ID)], "Thomas Smith")
+			f.promote(first, w.s.ID)
+			f.promote(second, w.s.ID)
+			n := 0
+			for _, g := range f.recordLinks(w.s.ID).Graphs {
+				if g.SourceTitle == "G register" {
+					n++
+				}
+			}
+			if n != 1 {
+				t.Fatalf("G register listed %d times", n)
+			}
+		}},
+		{"AC-1.6 an id that is no Person", func(t *testing.T, f *fixture, w world) {
+			for name, id := range map[string][]byte{
+				"event handle":  w.birth.ID,
+				"random id":     {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 99},
+				"short id":      {1, 2, 3},
+				"unknown nil":   nil,
+				"merged person": mergedHandle(t, f),
+			} {
+				if _, err := persondetail.RecordLinks(f.C, id); !errors.Is(err, conclusiondetails.ErrNotFound) {
+					t.Errorf("%s: error %v, want ErrNotFound", name, err)
+				}
+			}
+		}},
+		{"AC-2.6 a warm repeat issues no graph-cache query", func(t *testing.T, f *fixture, w world) {
+			f.recordLinks(w.s.ID)
+			var n int
+			f.C.Graph().SetQueryCounterForTest(func() { n++ })
+			defer f.C.Graph().SetQueryCounterForTest(nil)
+			f.recordLinks(w.s.ID)
+			if n != 0 {
+				t.Fatalf("the warm read issued %d queries", n)
+			}
+		}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			c.run(t, f, newWorld(f))
+		})
+	}
 }
 
 // mergedHandle is a Person handle merged into another.
