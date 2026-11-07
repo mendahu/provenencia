@@ -946,6 +946,8 @@ struct CatalogPropertyValueTypeRule: Sendable, Equatable {
     var researcherCreatable: Bool
     /// A Property of this type cannot hold several values.
     var singleOnly: Bool
+    /// An Observation of this type may be negative; a yes/no says No with its value.
+    var negatable: Bool
 }
 
 struct CatalogProperty: Sendable, Equatable, Identifiable {

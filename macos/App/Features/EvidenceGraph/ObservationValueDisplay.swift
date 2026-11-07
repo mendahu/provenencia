@@ -31,6 +31,10 @@ enum ObservationValueDisplay {
             )
         }
 
+        if let value = observation.valueBoolean {
+            return PropertyValueType.booleanText(value)
+        }
+
         let text = observation.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty {
             return text

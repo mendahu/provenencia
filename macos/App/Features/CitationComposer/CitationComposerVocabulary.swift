@@ -5,6 +5,7 @@ struct CitationComposerVocabulary: Equatable {
     static let supportedValueTypes: Set<String> = [
         PropertyValueType.text.rawValue,
         PropertyValueType.integer.rawValue,
+        PropertyValueType.boolean.rawValue,
         PropertyValueType.date.rawValue,
         PropertyValueType.term.rawValue,
         PropertyValueType.name.rawValue,
@@ -21,6 +22,8 @@ struct CitationComposerVocabulary: Equatable {
         return true
     }
 
+    /// What the Properties page loaded, including Go's value-type rules.
+    var fields: PropertiesSnapshot
     var propertiesByID: [String: CatalogProperty]
     var propertiesByTypeID: [String: [CatalogProperty]]
     var graphSubjects: [CitationComposerModel.GraphSubjectOption]
@@ -34,6 +37,7 @@ struct CitationComposerVocabulary: Equatable {
     var termComboOptionsByPropertyID: [String: [PVComboBoxOption]]
 
     static let empty = CitationComposerVocabulary(
+        fields: .empty,
         propertiesByID: [:],
         propertiesByTypeID: [:],
         graphSubjects: [],
@@ -111,6 +115,7 @@ struct CitationComposerVocabulary: Equatable {
             )
         }
         return CitationComposerVocabulary(
+            fields: fields,
             propertiesByID: propertiesByID,
             propertiesByTypeID: propertiesByTypeID,
             graphSubjects: graphSubjects,
@@ -167,6 +172,17 @@ struct CitationComposerVocabulary: Equatable {
         return options
     }
 
+    func valueType(propertyID: String) -> PropertyValueType? {
+        property(id: propertyID).flatMap { PropertyValueType(rawValue: $0.valueType) }
+    }
+
+    /// Whether the Negative checkbox is drawn, and a negative is saved, for the
+    /// Property. Go's rule decides; with no rules loaded it is offered.
+    func offersNegative(propertyID: String) -> Bool {
+        valueType(propertyID: propertyID)
+            .flatMap { fields.valueTypeRule($0.rawValue) }?.negatable ?? true
+    }
+
     func isDepiction(propertyID: String) -> Bool {
         property(id: propertyID)?.valueType == PropertyValueType.depiction.rawValue
     }
@@ -200,13 +216,5 @@ struct CitationComposerVocabulary: Equatable {
 
     func property(key: String) -> CatalogProperty? {
         propertiesByID.values.first { $0.key == key }
-    }
-
-    func termLabel(termID: String, propertyID: String) -> String? {
-        guard let term = termsByPropertyID[propertyID]?.first(where: { $0.id == termID }) else {
-            return nil
-        }
-        let propertyKey = propertiesByID[propertyID]?.key ?? ""
-        return PropertyTermDisplay.name(term: term, propertyKey: propertyKey)
     }
 }

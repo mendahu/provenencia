@@ -333,16 +333,11 @@ enum CitationComposerAuthoring {
         nameOrders: NameFormatOrders = NameFormatOrders()
     ) -> [CitationSubjectGroup] {
         var lines: [CitationSavedLine] = []
-        for row in observations where row.persistedID != nil {
-            guard let persistedID = row.persistedID, !row.subjectID.isEmpty else { continue }
+        for row in observations {
+            guard let saved = row.saved, !row.subjectID.isEmpty else { continue }
+            let persistedID = saved.id
             let property = vocabulary.property(id: row.propertyID)
-            let termLabel = vocabulary.termLabel(termID: row.valueTermID, propertyID: row.propertyID)
-            let valueText = CitationObservationValue.summary(
-                valueType: property?.valueType ?? "",
-                fields: row.valueFields(),
-                termLabel: termLabel,
-                orders: nameOrders
-            )
+            let valueText = ObservationValueDisplay.string(for: saved, orders: nameOrders)
             let label = property?.label ?? ""
             let mono = property?.valueType == PropertyValueType.integer.rawValue
                 || property?.valueType == PropertyValueType.date.rawValue
@@ -359,9 +354,9 @@ enum CitationComposerAuthoring {
                     body: [label, valueText].filter { !$0.isEmpty }.joined(separator: " "),
                     negative: row.isNegated,
                     markKey: nil,
-                    imageRelPath: row.depictionDraft.imageRelPath.isEmpty
+                    imageRelPath: row.values.valueFields.depictionDraft.imageRelPath.isEmpty
                         ? nil
-                        : row.depictionDraft.imageRelPath
+                        : row.values.valueFields.depictionDraft.imageRelPath
                 )
             )
         }

@@ -5,6 +5,8 @@ enum CitationObservationValue {
     struct Fields: Equatable {
         var valueText: String = ""
         var valueIntegerText: String = ""
+        /// nil is "not chosen"; a yes/no is saved only once one is picked.
+        var valueBoolean: Bool?
         var valueTermID: String = ""
         var valueSubjectID: String = ""
         var dateDraft: DateValueDraft = .empty()
@@ -18,61 +20,24 @@ enum CitationObservationValue {
         case unsupported
     }
 
-    static func fields(from row: ObservationRow) -> Fields {
-        Fields(
-            valueText: row.valueText,
-            valueIntegerText: row.valueIntegerText,
-            valueTermID: row.valueTermID,
-            valueSubjectID: row.valueSubjectID,
-            dateDraft: row.dateDraft,
-            nameDraft: row.nameDraft,
-            depictionDraft: row.depictionDraft
-        )
-    }
-
-    static func summary(
-        valueType: String,
-        fields: Fields,
-        termLabel: String?,
-        orders: NameFormatOrders = NameFormatOrders()
-    ) -> String {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
-            return fields.valueText
-        case PropertyValueType.integer.rawValue:
-            return fields.valueIntegerText
-        case PropertyValueType.term.rawValue:
-            return termLabel ?? fields.valueTermID
-        case PropertyValueType.date.rawValue:
-            return dateSummary(fields.dateDraft)
-        case PropertyValueType.name.rawValue:
-            return nameSummary(fields.nameDraft, orders: orders)
-        case PropertyValueType.depiction.rawValue:
-            return ""
-        case PropertyValueType.subject.rawValue:
-            let trimmed = fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? fields.valueSubjectID : trimmed
-        default:
-            return ""
-        }
-    }
-
     /// Dialog confirm. Subject values are saved from loaded rows, not picked in the dialog.
     static func isDialogValid(valueType: String, fields: Fields) -> Bool {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
+        switch PropertyValueType(rawValue: valueType) {
+        case .text:
             return !fields.valueText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case PropertyValueType.integer.rawValue:
+        case .integer:
             return Int64(fields.valueIntegerText.trimmingCharacters(in: .whitespacesAndNewlines)) != nil
-        case PropertyValueType.term.rawValue:
+        case .boolean:
+            return fields.valueBoolean != nil
+        case .term:
             return !fields.valueTermID.isEmpty
-        case PropertyValueType.date.rawValue:
+        case .date:
             return fields.dateDraft.isValid
-        case PropertyValueType.name.rawValue:
+        case .name:
             return fields.nameDraft.isValid
-        case PropertyValueType.depiction.rawValue:
+        case .depiction:
             return fields.depictionDraft.hasRegion
-        default:
+        case .subject, nil:
             return false
         }
     }
@@ -83,29 +48,32 @@ enum CitationObservationValue {
         fields: Fields,
         to draft: inout CatalogObservationDraft
     ) -> Failure? {
-        switch valueType {
-        case PropertyValueType.text.rawValue:
+        switch PropertyValueType(rawValue: valueType) {
+        case .text:
             draft.valueText = fields.valueText
-        case PropertyValueType.integer.rawValue:
+        case .integer:
             guard let value = Int64(fields.valueIntegerText) else { return .invalidInteger }
             draft.valueInteger = value
-        case PropertyValueType.term.rawValue:
+        case .boolean:
+            guard let value = fields.valueBoolean else { return .unsupported }
+            draft.valueBoolean = value
+        case .term:
             draft.valueTermID = fields.valueTermID
-        case PropertyValueType.date.rawValue:
+        case .date:
             guard fields.dateDraft.isValid else { return .invalidDate }
             draft.date = fields.dateDraft.toInput()
-        case PropertyValueType.name.rawValue:
+        case .name:
             guard fields.nameDraft.isValid else { return .unsupported }
             let input = fields.nameDraft.toInput()
             draft.nameForm = input.form
             draft.nameParts = input.parts
-        case PropertyValueType.subject.rawValue:
+        case .subject:
             guard !fields.valueSubjectID.isEmpty else { return .unsupported }
             draft.valueSubjectID = fields.valueSubjectID
-        case PropertyValueType.depiction.rawValue:
+        case .depiction:
             // The model attaches the rendered image after this (it cannot render here).
             guard fields.depictionDraft.hasRegion else { return .unsupported }
-        default:
+        case nil:
             return .unsupported
         }
         return nil
@@ -120,25 +88,5 @@ enum CitationObservationValue {
         case .unsupported:
             return L10n.string(L10n.CitationComposer.unsupportedValueTypeError)
         }
-    }
-
-    /// Natural display order. Parts win over the stored form; no parts falls back to the form.
-    private static func nameSummary(_ draft: NameValueDraft, orders: NameFormatOrders) -> String {
-        NameValueDisplay.string(
-            for: CatalogNameValue(
-                form: draft.form,
-                parts: draft.parts.map { CatalogNameValuePart(value: $0.value, type: $0.type) }
-            ),
-            style: .natural,
-            orders: orders
-        )
-    }
-
-    private static func dateSummary(_ draft: DateValueDraft) -> String {
-        let formatted = DateValueDisplay.string(for: draft)
-        if formatted.isEmpty {
-            return L10n.string(L10n.CitationComposer.dateUnset)
-        }
-        return formatted
     }
 }

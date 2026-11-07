@@ -1,12 +1,13 @@
 # Review — S14-37 Boolean value type (UI)
 
 **Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1 (round 2 runs once S14-39 lands and the S14-D8 board is agreed). **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan and brief S14-D8.
+**Rounds:** 2. The plan was refreshed against S14-39's head (`39d8ea4c`, #737, stacked: user 2026-11-07) before round 2. **Reviewers:** maintainability (opus), executability (sonnet). Both read the plan and brief S14-D8.
 
 ## To user
 
 - **M-1** Nest the composer's value fields in this PR, a preparatory PR, or log it? Writer recommended this PR. **Answered (2026-11-07): this PR.** → D-4, STEP-3.
 - **M-2** Where does "a boolean has no Negative" live? Writer recommended one Swift function. **Answered (2026-11-07): a Go `TypeRule` field.** S14-36 had merged, so the field is added here, and the plan was refreshed against `main` @ `aaf3b15`. → D-1, D-2, D-3, D-6.
+- **M-9** Collapse the two text paths for a saved Observation in this PR, or log it? Writer recommended this PR. **Answered (2026-11-07): this PR**, accepting the three edge-case changes in the evidence column. → D-14, AC-4.4, STEP-4.
 - **M-4** Give `PVSegmentedControl` a focus handle, or rely on the key-view loop? Writer recommended the kit change. **Answered (2026-11-07): the kit change.** → D-9, D-10, STEP-5.
 
 ## Writer's own calls
@@ -32,7 +33,7 @@
 
 **M-2 · major · The no-Negative rule is split between the view and the model, and can't be unit-tested.** **Answer:** To user, then Fixed per the answer:
 - The rule now lives in Go: `TypeRule.Negatable` (D-1), enforced by `observations.negationAllowed` (D-2) and sent on the wire (D-3).
-- Swift has one reader, `CitationComposerVocabulary.offersNegative` (D-6). Both the view (D-9) and the Property change (D-7) call it.
+- Swift has one reader, `CitationComposerVocabulary.offersNegative` (D-6). The view (D-9) and `asDraft` (D-6) call it; D-7 no longer does, since the board check.
 - AC-3.1 – AC-3.4 are unit tests (T-6).
 
 **M-3 · major · Dead `fields(from:)` and twin mutation paths.** **Answer:** Fixed. D-8 deletes `fields(from:)`, `applyProperty`, `applyInteger`, `applyTerm`, `togglePolarity`, `polarityMenuTitle` and their two strings and one test. `applyText` stays (test-driven; see Writer's calls). The DoD sweep names them.
@@ -83,3 +84,43 @@
 **X-13 · minor · Width and checkbox placement.** **Answer:** Fixed. D-9 says no extra frame, and puts the checkbox in an `if` so the `VStack` closes up.
 
 **X-14 · nit.** Logged. The §4 Fake row is now verified against the landed code.
+
+## Round 2
+
+Reviewers: maintainability (opus), executability (sonnet), fresh. Plan refreshed first: `Types`' stale comment (D-1), the `goValueTypeRules` tuple shape (D-3), the stack in the header and Stop conditions, 0.3.9 → 0.4.0.
+
+### Maintainability
+
+- **M-1, M-4, M-5, M-7:** the answers hold. M-4: the README Field focus row and `PVFieldFocus`'s doc comment also name the fields; D-10 and STEP-6 now cover them.
+- **M-2:** the answer holds; the log line above is corrected.
+- **M-6:** overtaken. `valueType(propertyID:)` gains real callers through D-15.
+
+**M-3 · major · reopened · D-8 left dead code behind `applyProperty(rowID:)`.** **Answer:** Fixed. D-8 also deletes `dialogPropertyRequired`, `propertyError`, the `polarity` forwarder and `applyText`; the two row-edit tests move to `replaceValues`. This reverses the writer's round-1 call on `applyText`.
+
+**M-9 · blocker · Three "value as text" mechanisms; the plan added to two and moved the debt to an Out row.** Overrides round 1's M-8. **Answer:** To user, then Fixed per the answer: D-14, AC-4.4, T-8, STEP-4. Old STEP-7 folds into STEP-4. `ReconciledValueDisplay` stays logged: its input differs and this PR does not touch it. The differences the reviewer named were checked against the code: term text agrees (both use `PropertyTermDisplay.name`); date, subject and depiction are AC-4.4.
+
+**M-10 · blocker · The fourth stringly `switch valueType` gets another arm.** **Answer:** Fixed. D-15; `summary` is gone, so three switches.
+
+### Executability
+
+**X-1 · major · A hand-edited negative boolean is not repaired by an untouched Save.** **Answer:** Fixed in Reach: an untouched Save writes nothing; a changed answer saves positive. No app path writes such a row, so no repair path is added.
+
+**X-2 · major · `asCatalogObservation`'s new argument breaks `CitationComposerDepictionTests`.** **Answer:** Fixed. STEP-5 lists the file and names `vocabulary: .empty`.
+
+**X-3 · major · T-2's raw-SQL fixture is unspecified.** **Answer:** Fixed. T-2 names the fixture, the update call and the raw `UPDATE`.
+
+**X-4 · minor · Test rows lack a label and key.** **Answer:** Fixed in STEP-1.
+
+**X-5 · minor · Person's offered-Property counts.** **Answer:** Fixed. STEP-5 says to change that number only.
+
+**X-6 · minor · `loaded(from:)` is not a mechanical rename.** **Answer:** Fixed in D-4.
+
+**X-7 · minor · `valueType(propertyID:)` and `offersNegative` types.** **Answer:** Fixed in D-6.
+
+**X-8 · minor · Storing the whole snapshot widens `Equatable`.** **Answer:** Declined. `rg "vocabulary ==|vocabulary !=|onChange\(of: .*vocabulary" macos/App/Features` finds nothing, so no code path compares it; D-6 keeps S14-39's one lookup.
+
+**X-9 · minor · Focus placement.** **Answer:** Fixed in D-10.
+
+**X-10 · nit.** Logged. Also taken: the two stale §4 rows, and STEP-3's commit split.
+
+**Verdict after round 2:** no open blocker; Planned. D-14 and D-15 are new text after the round; the cap is two rounds, so `ship-pr`'s review covers them.

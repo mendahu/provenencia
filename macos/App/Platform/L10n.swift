@@ -3555,18 +3555,6 @@ enum L10n {
             comment: "Spoken status for a saved connection without a ref yet"
         )
 
-        static let negateObservation = LocalizedStringResource(
-            "citationComposer.negateObservation",
-            defaultValue: "Negate observation",
-            comment: "Row menu item that flips a positive Observation to negative"
-        )
-
-        static let affirmObservation = LocalizedStringResource(
-            "citationComposer.affirmObservation",
-            defaultValue: "Remove negation",
-            comment: "Row menu item that flips a negative Observation to positive"
-        )
-
         static let connectionRelationship = LocalizedStringResource(
             "citationComposer.connectionRelationship",
             defaultValue: "Relationship",
@@ -4292,12 +4280,6 @@ enum L10n {
             comment: "Label field when minting a custom Property term"
         )
 
-        static let dateUnset = LocalizedStringResource(
-            "citationComposer.dateUnset",
-            defaultValue: "No date set",
-            comment: "Summary when a date Observation has no valid DateValue yet"
-        )
-
         static let artifactKindPDF = LocalizedStringResource(
             "citationComposer.artifactKindPDF",
             defaultValue: "PDF",
@@ -4458,12 +4440,6 @@ enum L10n {
             "citationComposer.needArtifact",
             defaultValue: "Choose an Artifact before saving.",
             comment: "Validation when Save is pressed without an Artifact"
-        )
-
-        static let dialogPropertyRequired = LocalizedStringResource(
-            "citationComposer.dialogPropertyRequired",
-            defaultValue: "Pick the Property this observation is about.",
-            comment: "Inline error under Property in the Add observation dialog"
         )
 
         static let dialogValuePickPropertyFirst = LocalizedStringResource(

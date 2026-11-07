@@ -12600,18 +12600,6 @@
         }
       }
     },
-    "citationComposer.dateUnset": {
-      "comment": "Summary when a date Observation has no valid DateValue yet",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No date set"
-          }
-        }
-      }
-    },
     "dates.display.about": {
       "comment": "DateValue summary prefix for ABT; argument is the formatted point date",
       "extractionState": "manual",
@@ -12956,18 +12944,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose an Artifact before saving."
-          }
-        }
-      }
-    },
-    "citationComposer.dialogPropertyRequired": {
-      "comment": "Inline error under Property in the Add observation dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick the Property this observation is about."
           }
         }
       }
@@ -14982,30 +14958,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved"
-          }
-        }
-      }
-    },
-    "citationComposer.negateObservation": {
-      "comment": "Row menu item that flips a positive Observation to negative",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Negate observation"
-          }
-        }
-      }
-    },
-    "citationComposer.affirmObservation": {
-      "comment": "Row menu item that flips a negative Observation to positive",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove negation"
           }
         }
       }

@@ -129,15 +129,7 @@ extension CitationComposerModel {
         guard let property = vocabulary.property(id: values.propertyID) else { return false }
         return CitationObservationValue.isDialogValid(
             valueType: property.valueType,
-            fields: CitationObservationValue.Fields(
-                valueText: values.valueText,
-                valueIntegerText: values.valueIntegerText,
-                valueTermID: values.valueTermID,
-                valueSubjectID: values.valueSubjectID,
-                dateDraft: values.dateDraft,
-                nameDraft: values.nameDraft,
-                depictionDraft: values.depictionDraft
-            )
+            fields: values.valueFields
         )
     }
 
@@ -231,6 +223,7 @@ extension CitationComposerModel {
     }
 
     func applyObservationProperty(_ propertyID: String, values: inout ObservationRowValues) {
+        guard propertyID != values.propertyID else { return }
         values.propertyID = propertyID
         values.clearValue()
     }
@@ -302,8 +295,8 @@ extension CitationComposerModel {
             {
                 // The copy owns its own image: it keeps the region, not the saved value.
                 var values = row.values
-                values.depictionDraft.valueDepictionID = ""
-                values.depictionDraft.imageRelPath = ""
+                values.valueFields.depictionDraft.valueDepictionID = ""
+                values.valueFields.depictionDraft.imageRelPath = ""
                 self.authoring = .property(
                     CitationPropertyDraft(
                         values: values,
@@ -521,10 +514,9 @@ extension CitationComposerModel {
             persistedRef: nil,
             values: draft.values,
             baseline: nil,
-            state: .draft,
-            propertyError: nil
+            state: .draft
         )
-        let (draftOrNil, draftError) = row.asDraft(property: property)
+        let (draftOrNil, draftError) = row.asDraft(property: property, vocabulary: vocabulary)
         if let draftError {
             draft.error = draftError
             authoring = .property(draft)

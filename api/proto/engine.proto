@@ -2326,6 +2326,7 @@ message PropertyValueTypeRule {
   string value_type = 1;
   bool researcher_creatable = 2;
   bool single_only = 3;
+  bool negatable = 4;
 }
 
 message GetPropertiesWorkspaceResponse {

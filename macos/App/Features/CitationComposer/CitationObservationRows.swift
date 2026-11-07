@@ -13,23 +13,11 @@ struct ObservationRowValues: Equatable {
     var subjectID: String = ""
     var propertyID: String = ""
     var polarity: String = ObservationPolarity.positive.rawValue
-    var valueText: String = ""
-    var valueIntegerText: String = ""
-    var valueTermID: String = ""
-    var valueSubjectID: String = ""
-    var dateDraft: DateValueDraft = .empty()
-    var nameDraft: NameValueDraft = .empty()
-    var depictionDraft: DepictionValueDraft = .empty()
+    var valueFields = CitationObservationValue.Fields()
 
     /// Resets every value field; subject, property, and polarity stay.
     mutating func clearValue() {
-        valueText = ""
-        valueIntegerText = ""
-        valueTermID = ""
-        valueSubjectID = ""
-        dateDraft = .empty()
-        nameDraft = .empty()
-        depictionDraft = .empty()
+        valueFields = .init()
     }
 }
 
@@ -40,7 +28,9 @@ struct ObservationRow: Identifiable, Equatable {
     var values: ObservationRowValues
     var baseline: ObservationRowValues?
     var state: ObservationRowState
-    var propertyError: String?
+    /// The catalog row this row was loaded from; nil on a draft. The saved
+    /// line reads its value text from it.
+    var saved: CatalogObservation?
 
     var subjectID: String {
         get { values.subjectID }
@@ -52,56 +42,10 @@ struct ObservationRow: Identifiable, Equatable {
         set { values.propertyID = newValue }
     }
 
-    var polarity: String {
-        get { values.polarity }
-        set { values.polarity = newValue }
-    }
-
-    var valueText: String {
-        get { values.valueText }
-        set { values.valueText = newValue }
-    }
-
-    var valueIntegerText: String {
-        get { values.valueIntegerText }
-        set { values.valueIntegerText = newValue }
-    }
-
-    var valueTermID: String {
-        get { values.valueTermID }
-        set { values.valueTermID = newValue }
-    }
-
-    var valueSubjectID: String {
-        get { values.valueSubjectID }
-        set { values.valueSubjectID = newValue }
-    }
-
-    var dateDraft: DateValueDraft {
-        get { values.dateDraft }
-        set { values.dateDraft = newValue }
-    }
-
-    var nameDraft: NameValueDraft {
-        get { values.nameDraft }
-        set { values.nameDraft = newValue }
-    }
-
-    var depictionDraft: DepictionValueDraft {
-        get { values.depictionDraft }
-        set { values.depictionDraft = newValue }
-    }
-
     var isEmptyDraft: Bool {
         baseline == nil
             && values.propertyID.isEmpty
-            && values.valueText.isEmpty
-            && values.valueIntegerText.isEmpty
-            && values.valueTermID.isEmpty
-            && values.valueSubjectID.isEmpty
-            && values.dateDraft == .empty()
-            && values.nameDraft == .empty()
-            && values.depictionDraft == .empty()
+            && values.valueFields == .init()
     }
 
     var canSave: Bool {
@@ -111,7 +55,6 @@ struct ObservationRow: Identifiable, Equatable {
         case .draft, .edited, .error:
             return !values.subjectID.isEmpty
                 && !values.propertyID.isEmpty
-                && propertyError == nil
         case .saved:
             return false
         }
@@ -119,13 +62,6 @@ struct ObservationRow: Identifiable, Equatable {
 
     var isNegated: Bool {
         values.polarity == ObservationPolarity.negative.rawValue
-    }
-
-    var polarityMenuTitle: String {
-        if isNegated {
-            return L10n.string(L10n.CitationComposer.affirmObservation)
-        }
-        return L10n.string(L10n.CitationComposer.negateObservation)
     }
 
     mutating func deriveState() {
@@ -141,7 +77,6 @@ struct ObservationRow: Identifiable, Equatable {
         persistedID = id
         persistedRef = ref
         baseline = values
-        propertyError = nil
         state = .saved
     }
 
@@ -152,29 +87,32 @@ struct ObservationRow: Identifiable, Equatable {
             persistedRef: nil,
             values: ObservationRowValues(subjectID: subjectID),
             baseline: nil,
-            state: .draft,
-            propertyError: nil
+            state: .draft
         )
     }
 
     static func loaded(from observation: CatalogObservation) -> ObservationRow {
-        var values = ObservationRowValues(
-            subjectID: observation.subjectID,
-            propertyID: observation.propertyID,
-            polarity: observation.polarity.isEmpty
-                ? ObservationPolarity.positive.rawValue
-                : observation.polarity,
+        var fields = CitationObservationValue.Fields(
             valueText: observation.valueText,
             valueIntegerText: observation.valueInteger.map(String.init) ?? "",
+            valueBoolean: observation.valueBoolean,
             valueTermID: observation.valueTermID,
             valueSubjectID: observation.valueSubjectID,
             dateDraft: observation.date.map(DateValueDraft.init(from:)) ?? .empty(),
             nameDraft: NameValueDraft(from: observation),
             depictionDraft: DepictionValueDraft(from: observation)
         )
-        if values.valueText.isEmpty, !observation.nameForm.isEmpty {
-            values.valueText = observation.nameForm
+        if fields.valueText.isEmpty, !observation.nameForm.isEmpty {
+            fields.valueText = observation.nameForm
         }
+        let values = ObservationRowValues(
+            subjectID: observation.subjectID,
+            propertyID: observation.propertyID,
+            polarity: observation.polarity.isEmpty
+                ? ObservationPolarity.positive.rawValue
+                : observation.polarity,
+            valueFields: fields
+        )
         return ObservationRow(
             id: UUID(),
             persistedID: observation.id,
@@ -182,23 +120,14 @@ struct ObservationRow: Identifiable, Equatable {
             values: values,
             baseline: values,
             state: .saved,
-            propertyError: nil
+            saved: observation
         )
     }
 
-    func valueFields() -> CitationObservationValue.Fields {
-        CitationObservationValue.Fields(
-            valueText: values.valueText,
-            valueIntegerText: values.valueIntegerText,
-            valueTermID: values.valueTermID,
-            valueSubjectID: values.valueSubjectID,
-            dateDraft: values.dateDraft,
-            nameDraft: values.nameDraft,
-            depictionDraft: values.depictionDraft
-        )
-    }
-
-    func asDraft(property: CatalogProperty) -> (CatalogObservationDraft?, String?) {
+    func asDraft(
+        property: CatalogProperty,
+        vocabulary: CitationComposerVocabulary
+    ) -> (CatalogObservationDraft?, String?) {
         if values.subjectID.isEmpty {
             return (nil, L10n.string(L10n.CitationComposer.subjectRequiredError))
         }
@@ -206,12 +135,13 @@ struct ObservationRow: Identifiable, Equatable {
             subjectID: values.subjectID,
             propertyID: property.id,
             polarity: values.polarity == ObservationPolarity.negative.rawValue
+                && vocabulary.offersNegative(propertyID: property.id)
                 ? ObservationPolarity.negative.rawValue
                 : ObservationPolarity.positive.rawValue
         )
         if let failure = CitationObservationValue.apply(
             valueType: property.valueType,
-            fields: valueFields(),
+            fields: values.valueFields,
             to: &draft
         ) {
             return (nil, CitationObservationValue.message(for: failure))
@@ -219,11 +149,14 @@ struct ObservationRow: Identifiable, Equatable {
         return (draft, nil)
     }
 
-    func asCatalogObservation(property: CatalogProperty) -> (CatalogObservation?, String?) {
+    func asCatalogObservation(
+        property: CatalogProperty,
+        vocabulary: CitationComposerVocabulary
+    ) -> (CatalogObservation?, String?) {
         guard let persistedID, let persistedRef else {
             return (nil, L10n.string(L10n.CitationComposer.missingPropertyError))
         }
-        let (draft, message) = asDraft(property: property)
+        let (draft, message) = asDraft(property: property, vocabulary: vocabulary)
         if let message { return (nil, message) }
         guard let draft else { return (nil, message) }
         return (
@@ -236,6 +169,7 @@ struct ObservationRow: Identifiable, Equatable {
                 polarity: draft.polarity,
                 valueText: draft.valueText,
                 valueInteger: draft.valueInteger,
+                valueBoolean: draft.valueBoolean,
                 valueDateID: draft.valueDateID,
                 date: draft.date,
                 valueNameID: draft.valueNameID,
@@ -246,7 +180,7 @@ struct ObservationRow: Identifiable, Equatable {
                 propertyKey: property.key,
                 propertyLabel: property.label,
                 propertyValueType: property.valueType,
-                valueDepictionID: values.depictionDraft.valueDepictionID
+                valueDepictionID: values.valueFields.depictionDraft.valueDepictionID
             ),
             nil
         )
@@ -303,7 +237,6 @@ final class CitationObservationRows {
             return
         }
         rows[index].values = rows[index].baseline!
-        rows[index].propertyError = nil
         rows[index].state = .saved
     }
 
@@ -312,50 +245,9 @@ final class CitationObservationRows {
         await performDelete(rowID: rowID, context: context)
     }
 
-    func applyProperty(rowID: UUID, propertyID: String) {
-        mutate(rowID) { row in
-            row.propertyID = propertyID
-            row.values.clearValue()
-            row.propertyError = propertyID.isEmpty
-                ? L10n.string(L10n.CitationComposer.dialogPropertyRequired)
-                : nil
-            row.deriveState()
-        }
-    }
-
-    func applyText(rowID: UUID, text: String) {
-        mutate(rowID) { row in
-            row.valueText = text
-            row.deriveState()
-        }
-    }
-
-    func applyInteger(rowID: UUID, text: String) {
-        mutate(rowID) { row in
-            row.valueIntegerText = text
-            row.deriveState()
-        }
-    }
-
-    func applyTerm(rowID: UUID, termID: String) {
-        mutate(rowID) { row in
-            row.valueTermID = termID
-            row.deriveState()
-        }
-    }
-
     func replaceValues(rowID: UUID, values: ObservationRowValues) {
         mutate(rowID) { row in
             row.values = values
-            row.deriveState()
-        }
-    }
-
-    func togglePolarity(rowID: UUID) {
-        mutate(rowID) { row in
-            row.polarity = row.polarity == ObservationPolarity.negative.rawValue
-                ? ObservationPolarity.positive.rawValue
-                : ObservationPolarity.negative.rawValue
             row.deriveState()
         }
     }
@@ -405,7 +297,7 @@ final class CitationObservationRows {
             markError(rowID: rowID, message: L10n.string(L10n.CitationComposer.missingPropertyError))
             return
         }
-        let (draftOrNil, draftError) = row.asDraft(property: property)
+        let (draftOrNil, draftError) = row.asDraft(property: property, vocabulary: context.vocabulary)
         if let draftError {
             markError(rowID: rowID, message: draftError)
             return
@@ -428,7 +320,7 @@ final class CitationObservationRows {
                 }
                 context.applyWrite(written.1)
             } else {
-                let (observationOrNil, updateError) = row.asCatalogObservation(property: property)
+                let (observationOrNil, updateError) = row.asCatalogObservation(property: property, vocabulary: context.vocabulary)
                 if let updateError {
                     markError(rowID: rowID, message: updateError)
                     return
