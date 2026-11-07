@@ -353,11 +353,13 @@ struct CitationPropertyFields: View {
             if let error {
                 PVCallout(tone: .danger, title: L10n.CitationComposer.rowStateError, message: error)
             }
-            PVCheckbox(
-                L10n.CitationComposer.negativeLabel,
-                description: L10n.CitationComposer.negativeDescription,
-                isChecked: negativeBinding
-            )
+            if model.vocabulary.offersNegative(propertyID: values.propertyID) {
+                PVCheckbox(
+                    L10n.CitationComposer.negativeLabel,
+                    description: L10n.CitationComposer.negativeDescription,
+                    isChecked: negativeBinding
+                )
+            }
         }
         .accessibilityIdentifier("\(identifierPrefix).propertyForm")
     }
@@ -366,8 +368,8 @@ struct CitationPropertyFields: View {
     private var valueControls: some View {
         let property = model.vocabulary.property(id: values.propertyID)
         PVField(label: L10n.CitationComposer.valueLabel) {
-            switch property?.valueType {
-            case PropertyValueType.text.rawValue:
+            switch model.vocabulary.valueType(propertyID: values.propertyID) {
+            case .text:
                 PVInput(
                     text: textBinding,
                     size: .sm,
@@ -375,7 +377,7 @@ struct CitationPropertyFields: View {
                     focus: PVFieldFocus(focus, equals: .value)
                 )
                 .accessibilityIdentifier("\(identifierPrefix).text")
-            case PropertyValueType.integer.rawValue:
+            case .integer:
                 PVInput(
                     text: integerBinding,
                     size: .sm,
@@ -383,7 +385,7 @@ struct CitationPropertyFields: View {
                     suffix: property?.key == "age" ? L10n.string(L10n.CitationComposer.yearsSuffix) : nil,
                     focus: PVFieldFocus(focus, equals: .value)
                 )
-            case PropertyValueType.term.rawValue:
+            case .term:
                 HStack(spacing: PVSpacing.space4) {
                     PVComboBox(
                         selection: termBinding,
@@ -402,7 +404,7 @@ struct CitationPropertyFields: View {
                         )
                     }
                 }
-            case PropertyValueType.name.rawValue:
+            case .name:
                 inlineValue {
                     NameValueEditorForm(
                         draft: nameBinding,
@@ -410,7 +412,7 @@ struct CitationPropertyFields: View {
                         formFocus: PVFieldFocus(focus, equals: .value)
                     )
                 }
-            case PropertyValueType.date.rawValue:
+            case .date:
                 inlineValue {
                     DateValueEditorForm(
                         draft: dateBinding,
@@ -418,9 +420,29 @@ struct CitationPropertyFields: View {
                         yearFocus: PVFieldFocus(focus, equals: .value)
                     )
                 }
-            case PropertyValueType.depiction.rawValue:
+            case .depiction:
                 CitationDepictionValueArea(model: model, draft: values.valueFields.depictionDraft, focus: focus)
-            default:
+            case .boolean:
+                PVSegmentedControl<Bool?>(
+                    L10n.CitationComposer.valueLabel,
+                    items: [
+                        .init(
+                            L10n.Properties.valueBooleanYes,
+                            value: true,
+                            accessibilityIdentifier: "\(identifierPrefix).boolean.yes"
+                        ),
+                        .init(
+                            L10n.Properties.valueBooleanNo,
+                            value: false,
+                            accessibilityIdentifier: "\(identifierPrefix).boolean.no"
+                        ),
+                    ],
+                    selection: values.valueFields.valueBoolean,
+                    size: .sm,
+                    focus: PVFieldFocus(focus, equals: .value),
+                    select: { values.valueFields.valueBoolean = $0 }
+                )
+            case .subject, nil:
                 PVInput(
                     text: .constant(""),
                     size: .sm,
