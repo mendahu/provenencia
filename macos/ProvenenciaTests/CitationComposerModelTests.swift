@@ -266,7 +266,7 @@ struct CitationComposerModelTests {
         #expect(persistedID == "obs-1")
         #expect(values.subjectID == subjectID)
         #expect(values.propertyID == occupationPropertyID)
-        #expect(values.valueText == "miller")
+        #expect(values.valueFields.valueText == "miller")
         #expect(model.activeCitationID == "cit-1")
         #expect(model.editSession?.isDirty == false)
     }
@@ -279,7 +279,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         #expect(store.recordedCalls.contains { $0.hasPrefix("createCitationWithObservations graph=\(graphID) observations=0") })
@@ -313,7 +313,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "weaver"
+            $0.values.valueFields.valueText = "weaver"
         }
         store.recordedCalls = []
         await model.saveAuthoring()
@@ -328,7 +328,9 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store, citationID: "cit-1")
         await model.prepare()
         let rowID = model.observations[0].id
-        model.observationRows.applyText(rowID: rowID, text: "changed")
+        var changed = model.observations[0].values
+        changed.valueFields.valueText = "changed"
+        model.observationRows.replaceValues(rowID: rowID, values: changed)
         #expect(model.observations[0].state == .edited)
         store.recordedCalls = []
         await model.observationRows.commit(rowID: rowID, citation: model.fields.values)
@@ -345,9 +347,11 @@ struct CitationComposerModelTests {
         model.discardAuthoring()
         #expect(model.observations.count == 1)
         let rowID = model.observations[0].id
-        model.observationRows.applyText(rowID: rowID, text: "changed")
+        var changed = model.observations[0].values
+        changed.valueFields.valueText = "changed"
+        model.observationRows.replaceValues(rowID: rowID, values: changed)
         model.observationRows.revert(rowID: rowID)
-        #expect(model.observations[0].valueText == "miller")
+        #expect(model.observations[0].values.valueFields.valueText == "miller")
         #expect(model.observations[0].state == .saved)
     }
 
@@ -575,7 +579,7 @@ struct CitationComposerModelTests {
         jones.beginPropertyDraft(subjectID: subjectID)
         jones.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         store.nextWriteEffects = CatalogWriteEffects(
             reads: [CatalogWriteEffectsRead(read: .citations, ids: [graphID])], lists: [.propertyUsage]
@@ -600,7 +604,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         model.selectAuthoringSubject(eventID, field: .propertySubject)
         guard case .property(let draft) = model.authoring else {
@@ -609,7 +613,7 @@ struct CitationComposerModelTests {
         }
         #expect(draft.values.subjectID == eventID)
         #expect(draft.values.propertyID.isEmpty)
-        #expect(draft.values.valueText.isEmpty)
+        #expect(draft.values.valueFields.valueText.isEmpty)
         #expect(model.authoringCanConfirm == false)
     }
 
@@ -639,12 +643,12 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "weaver"
+            $0.values.valueFields.valueText = "weaver"
         }
         await model.saveAuthoring()
         let creates = store.recordedCalls.filter { $0.hasPrefix("createCitationWithObservations") }
@@ -917,15 +921,6 @@ struct CitationComposerModelTests {
         )
     }
 
-    @Test func polarityMenuTitleFollowsPolarity() {
-        var row = ObservationRow.draft(subjectID: subjectID)
-        #expect(!row.isNegated)
-        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.negateObservation))
-        row.polarity = ObservationPolarity.negative.rawValue
-        #expect(row.isNegated)
-        #expect(row.polarityMenuTitle == L10n.string(L10n.CitationComposer.affirmObservation))
-    }
-
     @Test func nameRowUsesDisplayOrderNotTheStoredForm() {
         let fields = CitationObservationValue.Fields(
             nameDraft: NameValueDraft(
@@ -1183,7 +1178,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         #expect(model.transcription == "edited before save")
@@ -1289,7 +1284,7 @@ struct CitationComposerModelTests {
         await model.confirmCustomTerm()
         #expect(model.customTermDraft == nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueTermID.isEmpty == false)
+            #expect(draft.values.valueFields.valueTermID.isEmpty == false)
         } else {
             Issue.record("the term should land on the draft")
         }
@@ -1343,7 +1338,7 @@ struct CitationComposerModelTests {
         #expect(properties.isStale || store.getPropertiesWorkspaceCalls > propertiesBefore)
         #expect(model.customTermDraft == nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueTermID.isEmpty == false)
+            #expect(draft.values.valueFields.valueTermID.isEmpty == false)
         } else {
             Issue.record("the term should land on the draft")
         }
@@ -1483,19 +1478,19 @@ struct CitationComposerModelTests {
         #expect(store.recordedCalls.isEmpty)
         if case .property(let draft) = model.authoring {
             #expect(draft.isDuplicate)
-            #expect(draft.values.valueText == "miller")
+            #expect(draft.values.valueFields.valueText == "miller")
         } else {
             Issue.record("duplicate should open a property draft")
         }
-        model.mutateProperty { $0.values.valueText = "changed" }
+        model.mutateProperty { $0.values.valueFields.valueText = "changed" }
         model.duplicate(line: line!)
         #expect(model.pendingLeave != nil)
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueText == "changed")
+            #expect(draft.values.valueFields.valueText == "changed")
         }
         model.discardLeaveChanges()
         if case .property(let draft) = model.authoring {
-            #expect(draft.values.valueText == "miller")
+            #expect(draft.values.valueFields.valueText == "miller")
         } else {
             Issue.record("confirm should replace the dirty draft")
         }
@@ -1557,13 +1552,13 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         await model.saveAuthoring()
         if case .property(let draft) = model.authoring {
             #expect(draft.values.subjectID == subjectID)
             #expect(draft.values.propertyID.isEmpty)
-            #expect(draft.values.valueText.isEmpty)
+            #expect(draft.values.valueFields.valueText.isEmpty)
             #expect(draft.holdsLeave == false)
         } else {
             Issue.record("the box should stay open on the subject")
@@ -2161,7 +2156,7 @@ struct CitationComposerModelTests {
         model.beginPropertyDraft(subjectID: subjectID)
         model.mutateProperty {
             $0.values.propertyID = occupationPropertyID
-            $0.values.valueText = "miller"
+            $0.values.valueFields.valueText = "miller"
         }
         model.beginAddCustomTerm(propertyID: occupationPropertyID)
         model.customTermDraft?.label = "Weaver"
@@ -2187,7 +2182,7 @@ struct CitationComposerModelTests {
         let model = makeModel(store: store)
         await model.prepare()
         model.beginPropertyDraft(subjectID: subjectID)
-        model.mutateProperty { $0.values.valueText = "miller" }
+        model.mutateProperty { $0.values.valueFields.valueText = "miller" }
         model.beginAddCustomTerm(propertyID: occupationPropertyID)
         model.customTermDraft?.label = "Weaver"
         #expect(model.shouldHoldNavigation(.back))
@@ -2206,7 +2201,7 @@ struct CitationComposerModelTests {
         #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
         model.mutateEdit { session in
             guard case .property(var values, let id, let ref) = session.kind else { return }
-            values.valueText = "changed"
+            values.valueFields.valueText = "changed"
             session.kind = .property(values: values, persistedID: id, persistedRef: ref)
         }
         #expect(model.shouldHoldNavigation(.back))
@@ -2218,7 +2213,7 @@ struct CitationComposerModelTests {
         model.keepEditingAfterLeave()
         #expect(model.presented == .edit)
         if case .property(let values, _, _) = model.editSession?.kind {
-            #expect(values.valueText == "changed")
+            #expect(values.valueFields.valueText == "changed")
         } else {
             Issue.record("the edit session should still hold the draft")
         }
@@ -2259,7 +2254,7 @@ struct CitationComposerModelTests {
         #expect(model.beginEdit(observationID: "obs-1", subjectID: subjectID))
         model.mutateEdit { session in
             guard case .property(var values, let id, let ref) = session.kind else { return }
-            values.valueText = "changed"
+            values.valueFields.valueText = "changed"
             session.kind = .property(values: values, persistedID: id, persistedRef: ref)
         }
         store.recordedCalls = []

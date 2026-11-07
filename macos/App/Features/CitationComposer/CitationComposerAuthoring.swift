@@ -336,10 +336,10 @@ enum CitationComposerAuthoring {
         for row in observations where row.persistedID != nil {
             guard let persistedID = row.persistedID, !row.subjectID.isEmpty else { continue }
             let property = vocabulary.property(id: row.propertyID)
-            let termLabel = vocabulary.termLabel(termID: row.valueTermID, propertyID: row.propertyID)
+            let termLabel = vocabulary.termLabel(termID: row.values.valueFields.valueTermID, propertyID: row.propertyID)
             let valueText = CitationObservationValue.summary(
                 valueType: property?.valueType ?? "",
-                fields: row.valueFields(),
+                fields: row.values.valueFields,
                 termLabel: termLabel,
                 orders: nameOrders
             )
@@ -359,9 +359,9 @@ enum CitationComposerAuthoring {
                     body: [label, valueText].filter { !$0.isEmpty }.joined(separator: " "),
                     negative: row.isNegated,
                     markKey: nil,
-                    imageRelPath: row.depictionDraft.imageRelPath.isEmpty
+                    imageRelPath: row.values.valueFields.depictionDraft.imageRelPath.isEmpty
                         ? nil
-                        : row.depictionDraft.imageRelPath
+                        : row.values.valueFields.depictionDraft.imageRelPath
                 )
             )
         }

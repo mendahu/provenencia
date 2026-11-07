@@ -254,11 +254,11 @@ struct CitationComposerDepictionTests {
         let region = rect(0.1, 0.2, 0.5, 0.6)
         var observation = likenessObservation(region: regionJSON(region, page: 2))
         let row = ObservationRow.loaded(from: observation)
-        #expect(row.depictionDraft.locator.region == region)
-        #expect(row.depictionDraft.locator.page == 2)
-        #expect(row.depictionDraft.valueDepictionID == "dep-1")
-        #expect(row.depictionDraft.imageRelPath == savedRelPath)
-        #expect(!row.depictionDraft.regionHidden)
+        #expect(row.values.valueFields.depictionDraft.locator.region == region)
+        #expect(row.values.valueFields.depictionDraft.locator.page == 2)
+        #expect(row.values.valueFields.depictionDraft.valueDepictionID == "dep-1")
+        #expect(row.values.valueFields.depictionDraft.imageRelPath == savedRelPath)
+        #expect(!row.values.valueFields.depictionDraft.regionHidden)
         let property = CatalogProperty(
             id: likenessID, key: "likeness", origin: "provenencia", label: "Likeness",
             description: "", valueType: "depiction"
@@ -268,7 +268,7 @@ struct CitationComposerDepictionTests {
 
         observation.depiction = CatalogDepictionValue(regionJSON: "", imageRelPath: savedRelPath)
         let hidden = ObservationRow.loaded(from: observation)
-        #expect(hidden.depictionDraft.regionHidden)
+        #expect(hidden.values.valueFields.depictionDraft.regionHidden)
     }
 
     @Test func depictionNeedsARegionToSave() async throws {
@@ -277,7 +277,7 @@ struct CitationComposerDepictionTests {
         await model.prepare()
         openLikenessDraft(model)
         #expect(!model.authoringCanConfirm)
-        model.mutateProperty { $0.values.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
+        model.mutateProperty { $0.values.valueFields.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
         #expect(model.authoringCanConfirm)
     }
 
@@ -321,7 +321,7 @@ struct CitationComposerDepictionTests {
         #expect(model.armedRegionTool == .rectangle)
         let face = rect(0.25, 0.25, 0.75, 0.75)
         #expect(model.commitViewerRegion(face))
-        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == face)
         #expect(model.locator.region == citationRegion)
         #expect(model.presented == .authoring)
         #expect(model.viewerRegion == face)
@@ -334,7 +334,7 @@ struct CitationComposerDepictionTests {
 
         model.startDepictionDrawing()
         model.cancelDepictionDrawing()
-        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == face)
         #expect(model.presented == .authoring)
         #expect(model.armedRegionTool == nil)
     }
@@ -348,7 +348,7 @@ struct CitationComposerDepictionTests {
         model.startDepictionDrawing()
         #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
         #expect(model.locator.page == 2)
-        #expect(draftValues(model)?.depictionDraft.locator.page == 2)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.page == 2)
     }
 
     @Test func existingPDFCitationKeepsItsPage() async throws {
@@ -367,7 +367,7 @@ struct CitationComposerDepictionTests {
         #expect(model.depictionWrongPage)
         #expect(!model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
         #expect(model.depictionWrongPage)
-        #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+        #expect(draftValues(model)?.valueFields.depictionDraft.hasRegion == false)
         #expect(model.presented == .drawingDepiction(over: .authoring))
         model.artifactViewer.setPage(1)
         #expect(!model.depictionWrongPage)
@@ -451,16 +451,16 @@ struct CitationComposerDepictionTests {
 
         model.setAuthoringCitation("cit-2")
         #expect(model.pendingLeave?.keepDraft == true)
-        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == face)
         model.keepEditingAfterLeave()
         #expect(model.activeCitationID == "cit-1")
-        #expect(draftValues(model)?.depictionDraft.locator.region == face)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == face)
 
         model.setAuthoringCitation("cit-2")
         model.discardLeaveChanges()
         await model.awaitIdentitySwitch()
         #expect(model.activeCitationID == "cit-2")
-        #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+        #expect(draftValues(model)?.valueFields.depictionDraft.hasRegion == false)
     }
 
     @Test func drawingDisablesCitationControlsAndLeaveReturns() async throws {
@@ -599,7 +599,7 @@ struct CitationComposerDepictionTests {
         let values = try #require(draftValues(model))
         #expect(values.propertyID == likenessID)
         #expect(values.subjectID.isEmpty)
-        #expect(!values.depictionDraft.hasRegion)
+        #expect(!values.valueFields.depictionDraft.hasRegion)
         #expect(model.presented == .authoring)
         #expect(
             CitationAuthoringNavigation.initialPropertyFocus(
@@ -639,7 +639,7 @@ struct CitationComposerDepictionTests {
             return
         }
         #expect(draft.error == L10n.Errors.message(for: refusal))
-        #expect(draft.values.depictionDraft.locator.region == face)
+        #expect(draft.values.valueFields.depictionDraft.locator.region == face)
         #expect(!draft.isSaving)
         #expect(model.presented == .authoring)
         #expect(isMissing(store.recordedDepictionPaths))
@@ -686,9 +686,9 @@ struct CitationComposerDepictionTests {
         #expect(values.subjectID == benID)
         #expect(values.propertyID == likenessID)
         #expect(values.polarity == ObservationPolarity.negative.rawValue)
-        #expect(values.depictionDraft.locator.region == rect(0.1, 0.1, 0.4, 0.4))
-        #expect(values.depictionDraft.valueDepictionID.isEmpty)
-        #expect(values.depictionDraft.imageRelPath.isEmpty)
+        #expect(values.valueFields.depictionDraft.locator.region == rect(0.1, 0.1, 0.4, 0.4))
+        #expect(values.valueFields.depictionDraft.valueDepictionID.isEmpty)
+        #expect(values.valueFields.depictionDraft.imageRelPath.isEmpty)
         #expect(
             CitationAuthoringNavigation.initialPropertyFocus(
                 subjectID: values.subjectID,
@@ -703,11 +703,11 @@ struct CitationComposerDepictionTests {
         seedCitation(store, observations: [likenessObservation(region: "")])
         let model = makeModel(store: store, projectDir: projectDir, citationID: "cit-1", observationID: "obs-1")
         await model.prepare()
-        #expect(editValues(model)?.depictionDraft.regionHidden == true)
+        #expect(editValues(model)?.valueFields.depictionDraft.regionHidden == true)
         #expect(!model.editCanConfirm)
         model.startDepictionDrawing()
         #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
-        #expect(editValues(model)?.depictionDraft.regionHidden == false)
+        #expect(editValues(model)?.valueFields.depictionDraft.regionHidden == false)
         #expect(model.editCanConfirm)
     }
 
@@ -795,7 +795,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(model)
         model.startDepictionDrawing()
         #expect(model.commitViewerRegion(rect(0.25, 0.25, 0.75, 0.75)))
-        let first = try #require(draftValues(model)).depictionDraft
+        let first = try #require(draftValues(model)).valueFields.depictionDraft
         model.startDepictionDrawing()
         #expect(model.commitViewerRegion(rect(0, 0, 1, 1)))
         _ = await model.depictionImage(for: first)
@@ -836,7 +836,7 @@ struct CitationComposerDepictionTests {
         await model.prepare()
         openLikenessDraft(model)
         #expect(caption(model) == L10n.string(L10n.CitationComposer.depictionCaptionEmpty))
-        model.mutateProperty { $0.values.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
+        model.mutateProperty { $0.values.valueFields.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
         #expect(caption(model) == L10n.string(L10n.CitationComposer.depictionCaptionBox))
 
         let (editModel, _) = try await editingSavedLikeness()
@@ -893,7 +893,7 @@ struct CitationComposerDepictionTests {
         await model.prepare()
         openLikenessDraft(model)
         #expect(model.useDepictionRegion(.whole))
-        let draft = try #require(draftValues(model)?.depictionDraft)
+        let draft = try #require(draftValues(model)?.valueFields.depictionDraft)
         #expect(draft.locator.region?.points == rect(0, 0, 1, 1).points)
         #expect(draft.locator.region?.kind == .rectangle)
         #expect(draft.hasRegion)
@@ -923,7 +923,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(model)
         #expect(model.useDepictionRegion(.whole))
         #expect(model.artifactViewer.page == 2)
-        let locator = try #require(draftValues(model)?.depictionDraft.locator)
+        let locator = try #require(draftValues(model)?.valueFields.depictionDraft.locator)
         #expect(locator.page == 2)
         #expect(locator.region == rect(0, 0, 1, 1))
     }
@@ -936,7 +936,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(model)
         #expect(model.useDepictionRegion(.whole))
         #expect(model.locator.page == 2)
-        #expect(draftValues(model)?.depictionDraft.locator.page == 2)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.page == 2)
     }
 
     @Test func regionButtonsFollowDraw() async throws {
@@ -947,7 +947,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(pdf)
         #expect(pdf.depictionNeedsPage)
         #expect(!pdf.useDepictionRegion(.whole))
-        #expect(draftValues(pdf)?.depictionDraft.hasRegion == false)
+        #expect(draftValues(pdf)?.valueFields.depictionDraft.hasRegion == false)
 
         let (projectDir, store) = try seeded()
         let model = makeModel(store: store, projectDir: projectDir)
@@ -955,7 +955,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(model)
         model.transcriptions.isTranscribing = true
         #expect(!model.useDepictionRegion(.whole))
-        #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+        #expect(draftValues(model)?.valueFields.depictionDraft.hasRegion == false)
     }
 
     @Test func citationRegionIsCopied() async throws {
@@ -967,7 +967,7 @@ struct CitationComposerDepictionTests {
         openLikenessDraft(model)
         #expect(model.depictionCitationRegion == saved)
         #expect(model.useDepictionRegion(saved))
-        #expect(draftValues(model)?.depictionDraft.locator.region == saved)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == saved)
         #expect(model.authoringCanConfirm)
         model.discardAuthoring()
 
@@ -987,7 +987,7 @@ struct CitationComposerDepictionTests {
         let citationRegion = try #require(model.depictionCitationRegion)
         #expect(model.useDepictionRegion(citationRegion))
         #expect(model.artifactViewer.page == 1)
-        let locator = try #require(draftValues(model)?.depictionDraft.locator)
+        let locator = try #require(draftValues(model)?.valueFields.depictionDraft.locator)
         #expect(locator.page == 1)
         #expect(locator.region == region)
     }
@@ -1074,7 +1074,7 @@ struct CitationComposerDepictionTests {
             #expect(model.viewerArmedRegionTool == nil)
             #expect(!model.isDrawingDepiction)
             #expect(!model.isDrawingRegion)
-            #expect(draftValues(model)?.depictionDraft.hasRegion == false)
+            #expect(draftValues(model)?.valueFields.depictionDraft.hasRegion == false)
 
             model.viewerArmedRegionTool = .rectangle
             #expect(model.presented == .drawingDepiction(over: .authoring))
@@ -1114,7 +1114,7 @@ struct CitationComposerDepictionTests {
             #expect(abs(point.x - want.x) < 1e-6 && abs(point.y - want.y) < 1e-6)
         }
         #expect(model.useDepictionRegion(box))
-        #expect(draftValues(model)?.depictionDraft.locator.region == box)
+        #expect(draftValues(model)?.valueFields.depictionDraft.locator.region == box)
     }
 
     @Test func drawWaitsForACuttableFile() async throws {
@@ -1132,7 +1132,7 @@ struct CitationComposerDepictionTests {
         model.startDepictionDrawing()
         #expect(model.presented == .authoring)
 
-        model.mutateProperty { $0.values.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
+        model.mutateProperty { $0.values.valueFields.depictionDraft.locator.region = rect(0.25, 0.25, 0.75, 0.75) }
         #expect(model.depictionPreviewKey == nil)
         #expect(model.depictionPreviewState == .unavailable)
         #expect(model.depictionImageBlocksSave)

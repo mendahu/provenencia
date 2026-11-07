@@ -419,7 +419,7 @@ struct CitationPropertyFields: View {
                     )
                 }
             case PropertyValueType.depiction.rawValue:
-                CitationDepictionValueArea(model: model, draft: values.depictionDraft, focus: focus)
+                CitationDepictionValueArea(model: model, draft: values.valueFields.depictionDraft, focus: focus)
             default:
                 PVInput(
                     text: .constant(""),
@@ -498,23 +498,23 @@ struct CitationPropertyFields: View {
     }
 
     private var textBinding: Binding<String> {
-        Binding(get: { values.valueText }, set: { values.valueText = $0 })
+        Binding(get: { values.valueFields.valueText }, set: { values.valueFields.valueText = $0 })
     }
 
     private var integerBinding: Binding<String> {
-        Binding(get: { values.valueIntegerText }, set: { values.valueIntegerText = $0 })
+        Binding(get: { values.valueFields.valueIntegerText }, set: { values.valueFields.valueIntegerText = $0 })
     }
 
     private var termBinding: Binding<String> {
-        Binding(get: { values.valueTermID }, set: { values.valueTermID = $0 })
+        Binding(get: { values.valueFields.valueTermID }, set: { values.valueFields.valueTermID = $0 })
     }
 
     private var dateBinding: Binding<DateValueDraft> {
-        Binding(get: { values.dateDraft }, set: { values.dateDraft = $0 })
+        Binding(get: { values.valueFields.dateDraft }, set: { values.valueFields.dateDraft = $0 })
     }
 
     private var nameBinding: Binding<NameValueDraft> {
-        Binding(get: { values.nameDraft }, set: { values.nameDraft = $0 })
+        Binding(get: { values.valueFields.nameDraft }, set: { values.valueFields.nameDraft = $0 })
     }
 
     private var negativeBinding: Binding<Bool> {

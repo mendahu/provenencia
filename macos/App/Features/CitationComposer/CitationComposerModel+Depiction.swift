@@ -108,7 +108,7 @@ extension CitationComposerModel {
     }
 
     var currentDepictionDraft: DepictionValueDraft? {
-        currentDepictionValues?.depictionDraft
+        currentDepictionValues?.valueFields.depictionDraft
     }
 
     /// What the viewer shows as the committed region: the open depiction
@@ -220,7 +220,7 @@ extension CitationComposerModel {
         guard let session = editSession, case .property(let values, _, _) = session.kind else {
             return false
         }
-        return values.depictionDraft.locator != session.propertyBaseline.depictionDraft.locator
+        return values.valueFields.depictionDraft.locator != session.propertyBaseline.valueFields.depictionDraft.locator
     }
 
     var depictionCaptionState: DepictionCaptionState {
@@ -433,11 +433,11 @@ extension CitationComposerModel {
     private func writeDepictionDraft(_ draft: DepictionValueDraft) {
         switch dialogBase() {
         case .authoring:
-            mutateProperty { $0.values.depictionDraft = draft }
+            mutateProperty { $0.values.valueFields.depictionDraft = draft }
         case .edit:
             mutateEdit { session in
                 guard case .property(var values, let id, let ref) = session.kind else { return }
-                values.depictionDraft = draft
+                values.valueFields.depictionDraft = draft
                 session.kind = .property(values: values, persistedID: id, persistedRef: ref)
             }
         case .none:
@@ -454,7 +454,7 @@ extension CitationComposerModel {
         for values: ObservationRowValues,
         perform: (CatalogDepictionValueInput) async throws -> T
     ) async throws -> T {
-        guard let rendered = await depictionImage(for: values.depictionDraft)
+        guard let rendered = await depictionImage(for: values.valueFields.depictionDraft)
         else { throw DepictionRenderFailed() }
         let url: URL
         do {
@@ -465,7 +465,7 @@ extension CitationComposerModel {
         defer { try? FileManager.default.removeItem(at: url) }
         return try await perform(
             CatalogDepictionValueInput(
-                regionJSON: values.depictionDraft.locator.encodeJSON(),
+                regionJSON: values.valueFields.depictionDraft.locator.encodeJSON(),
                 imagePath: url.path
             )
         )

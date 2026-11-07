@@ -18,18 +18,6 @@ enum CitationObservationValue {
         case unsupported
     }
 
-    static func fields(from row: ObservationRow) -> Fields {
-        Fields(
-            valueText: row.valueText,
-            valueIntegerText: row.valueIntegerText,
-            valueTermID: row.valueTermID,
-            valueSubjectID: row.valueSubjectID,
-            dateDraft: row.dateDraft,
-            nameDraft: row.nameDraft,
-            depictionDraft: row.depictionDraft
-        )
-    }
-
     static func summary(
         valueType: String,
         fields: Fields,

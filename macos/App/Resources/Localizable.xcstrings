@@ -12960,18 +12960,6 @@
         }
       }
     },
-    "citationComposer.dialogPropertyRequired": {
-      "comment": "Inline error under Property in the Add observation dialog",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick the Property this observation is about."
-          }
-        }
-      }
-    },
     "citationComposer.dialogValuePickPropertyFirst": {
       "comment": "Placeholder in the value slot before a Property is chosen",
       "extractionState": "manual",
@@ -14982,30 +14970,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saved"
-          }
-        }
-      }
-    },
-    "citationComposer.negateObservation": {
-      "comment": "Row menu item that flips a positive Observation to negative",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Negate observation"
-          }
-        }
-      }
-    },
-    "citationComposer.affirmObservation": {
-      "comment": "Row menu item that flips a negative Observation to positive",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remove negation"
           }
         }
       }
