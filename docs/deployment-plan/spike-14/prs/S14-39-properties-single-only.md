@@ -13,6 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc` (Go wire vocabulary is a typed enum; views and models use the typed cases)
 **Context:** working rule "(Batch 7) Boolean is a first-class value type in two PRs" (Go owns the value-type rules; Swift keeps no copy); working rule "(Batch 5) FakeStore is a seeded fake, not a second engine"; bar outcome 31; S14-36 plan D-11 (`singleOnly` mapped, read here) and its **Landed** note
 **Planned:** 2026-11-07 against `main` @ `aaf3b15`
+**Landed:** [#737](https://github.com/mendahu/provenencia/pull/737), 2026-11-07. Differences from the plan: (1) `holdsValueText(_:)`, a `fileprivate` helper the plan did not name, sits beside `PropertiesLockedValue` (and `holdsValueLabel(_:)` under it). (2) `holdsRow` reads `holdsLockReason` once, not the shape D-6 spells (user, 2026-11-07). (3) The create dialog passes `width: 560`, the board's frame width. (4) `valueTypeImmutable`'s default is now "Cannot be changed once the property exists". (5) `PropertyValueType` gained `CaseIterable`, so T-4 can list the cases. (6) Scope's `chooseValueType(_:singleOnly:)` is `chooseValueType(_:holdsLocked:)`, as D-3 says. Decisions, Scope and ACs stand as written.
 **Review:** [`S14-39-properties-single-only.review.md`](S14-39-properties-single-only.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; no To user item open
 
 ### Implementer — read this first
