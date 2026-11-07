@@ -93,7 +93,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 | Dogfood 2026-11-02: relationship between promoted subjects does not file (note deleted 2026-11-06; landed #723) | S14-33 | — |
 | Dogfood 2026-10-15: Persons sort ignores honorifics (note deleted 2026-11-06; landed #727) | S14-34 | — |
 | Dogfood 2026-10-29: history jump menu truncates breadcrumb tails (note deleted 2026-11-06; landed #730; leftovers in [`shared-list-helpers.md`](../../ideas/shared-list-helpers.md)) | S14-35 | — |
-| [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-37 | S14-D8 |
+| [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md) | S14-36, S14-39, S14-37 | S14-D9, S14-D8 |
 
 **Back in the ideas folder** — [`ideas/depictions-and-likenesses.md`](../../ideas/depictions-and-likenesses.md): signature and the Spike 10 audit leftovers not taken here. [`ideas/evidence-graph-structure-shortcuts.md`](../../ideas/evidence-graph-structure-shortcuts.md): wedding / birth / residence shortcuts and paste-a-cluster (considered for Batch 7; left out 2026-11-04 as too large for this batch).
 
@@ -138,7 +138,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 - **(Batch 7) Creating a bridge files it when both ends are already handles.** `connect.CreateCitedBridge` (or the write that finishes it) calls the same `FileBridgesTx` / `fileBridge` path Promote uses, for **every** bridge kind (`relationship`, `participation`, `location`, `place_relationship`, …). Soft refusals (self-link, place cycle) do not fail the connect write. Idempotent when already filed. Binds S14-33.
 - **(Batch 7) Persons list sort omits honorific prefixes.** Sort keys ignore `prefix` parts, so "Mrs. Smith" sorts with Smith. Go owns list order. The working-label fallback is not stripped of titles: no code path writes a Person label (descoped by the user, 2026-11-06). Binds S14-34.
 - **(Batch 7) History jump menu is wider first.** Raise `HistoryJumpMenuPanel`'s `PVContextMenuPanel` width so typical deep-place titles fit; richer breadcrumb labels and truncation-mode changes wait on a later look. Binds S14-35.
-- **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI (composer checkbox, Properties create, Conclusion display). Researcher-creatable like `text` and `integer` from S14-37. Stored in a dedicated `value_boolean` column. Single cardinality only. Go owns the value-type rules (`propertymeta.Types`: creatable, single-only) and sends them to the app on the Properties workspace read; Swift keeps no copy (user, 2026-11-07). Binds S14-36, S14-37.
+- **(Batch 7) Boolean is a first-class value type in two PRs.** Engine (schema, storage, compare, wire) then UI. The UI is two PRs, one per view (user, 2026-11-07): the Properties page reads the single-only rule (S14-39, brief S14-D9), then the composer takes the value and Go marks boolean creatable (S14-37, brief S14-D8). Researcher-creatable like `text` and `integer` from S14-37. The composer's editor is a Yes / No segmented control with nothing chosen at first, and a boolean Property has no Negative checkbox: No is how the record says it (user, 2026-11-07). Stored in a dedicated `value_boolean` column. Single cardinality only. Go owns the value-type rules (`propertymeta.Types`: creatable, single-only) and sends them to the app on the Properties workspace read; Swift keeps no copy (user, 2026-11-07). Binds S14-36, S14-37, S14-39.
 
 ## PR map
 
@@ -181,12 +181,13 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-34 | Persons sort ignores honorifics | 7d | Persons list sort omits prefix name parts | — | — | [S14-34-persons-sort-ignores-honorifics.md](prs/S14-34-persons-sort-ignores-honorifics.md) | Landed #727 |
 | S14-35 | Wider history jump menu | 7d | Raise the Back / Forward history panel width so typical titles are not truncated | — | — | [S14-35-wider-history-jump-menu.md](prs/S14-35-wider-history-jump-menu.md) | Landed #730 |
 | S14-36 | Boolean value type (engine) | 7e | `boolean` value type: migration, observation / conclusion storage, compare, proto / FFI; Go's value-type rules table sent to the app; pin Swift `SourceSurface` to Go `workspacelocation.Surface*` in `swift_vocabulary_test.go` | — | — | [S14-36-boolean-value-type-engine.md](prs/S14-36-boolean-value-type-engine.md) | Landed #733 |
-| S14-37 | Boolean value type (UI) | 7e | Researcher-creatable boolean Properties (flip `ResearcherCreatable`; hide Holds several for a single-only type); composer checkbox; Conclusion display | [S14-D8](design/README.md) | S14-36, S14-D8 | — | Scoped |
+| S14-39 | Properties page reads single-only | 7e | The Properties page hides Holds several for a single-only value type (create form and inspector, from the snapshot's `singleOnly`); the boolean value-type pill colour | [S14-D9](design/README.md) | S14-36, S14-D9 | — | Scoped |
+| S14-37 | Boolean value type (UI) | 7e | Go marks boolean researcher-creatable; the composer's Yes / No value editor, with no Negative checkbox for a boolean; Yes / No text on composer lines and Evidence graph cards | [S14-D8](design/S14-D8-composer-boolean-value.md) | S14-36, S14-39, S14-D8 | [S14-37-boolean-value-type-ui.md](prs/S14-37-boolean-value-type-ui.md) | Blocked — on S14-39, board S14-D8 |
 | S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
 
-[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. **S14-D6** (the Citation composer's depiction drawing feedback) gates S14-03: it changes how the composer looks, so it waits on a board like any other view (user, 2026-10-31), drawn on the *Citation Composer* project beside S10-D15. **S14-D7** (the Promote page's error notices and Try again) gates S14-20: the map had scoped it as no new chrome, but its notices and load callout change how the page looks, so it waits on a board (user, 2026-11-03), drawn on the *Promote flow* project beside S13-D11. **S14-D8** (boolean value editor in the Citation composer) gates S14-37; written just before that PR. Batch 7's other PRs change behaviour without new chrome and are not gated.
+[`design/README.md`](design/README.md). **S14-D1** (Wide layout in the design system) put Page columns in the Claude Design kit; board agreed and brief archived 2026-10-29. Spike 13's S13-D1 draws the Person page frame from it, and S13-10 builds it in Swift. Four briefs gate S14-02, one per view it changes (user, 2026-10-30): **S14-D2** the Event page and **S14-D3** the Place page (Pictures section, header thumb, choosing a thumbnail), **S14-D4** the Events list and **S14-D5** the Places list (the lead picture in the row thumb), each drawn as its own turn on the *Person Detail* project beside S13-D1. S14-02 reuses the Person page's gallery, portrait controls and list thumbnail, but every view whose look changes has a board. **S14-D6** (the Citation composer's depiction drawing feedback) gates S14-03: it changes how the composer looks, so it waits on a board like any other view (user, 2026-10-31), drawn on the *Citation Composer* project beside S10-D15. **S14-D7** (the Promote page's error notices and Try again) gates S14-20: the map had scoped it as no new chrome, but its notices and load callout change how the page looks, so it waits on a board (user, 2026-11-03), drawn on the *Promote flow* project beside S13-D11. **S14-D8** (the Yes / no value editor in the Citation composer) gates S14-37, drawn on the *Citation Composer* project beside S14-D6. **S14-D9** (the Properties page for a single-only value type) gates S14-39; written just before that PR (user, 2026-11-07: one brief per view). Batch 7's other PRs change behaviour without new chrome and are not gated.
 
 ## Slices
 
@@ -260,14 +261,16 @@ SLICE 7d — List and nav polish (batch 7)
 
 SLICE 7e — Boolean value type (batch 7)
   S14-36  Boolean value type (engine)
-  ✎ S14-D8  Citation composer: boolean value editor
+  ✎ S14-D9  Properties page: single-only value types
+  S14-39  Properties page reads single-only
+  ✎ S14-D8  Citation composer: Yes / no value editor
   S14-37  Boolean value type (UI)
   Check: bar outcome 31 on a new project.
 
 S14-99 — Dogfood close / docs
 ```
 
-S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code. Batch 7's slices are independent of each other except 7b after 7a and 7e UI after engine; they can run beside Spike 13 and the remaining Batch 5 PRs (S14-20, S14-26).
+S14-01 and S14-03 can run in parallel; S14-02 follows S14-01. S14-03 waits on S14-13 (was Spike 12's S12-28), which changes in place the one predicate that says whether the viewer can cut a file; S14-03 gates Draw on it. S14-08 is independent of batch 1. S14-09 is independent of the other batches; S14-26 follows it and S14-18, which changes the same fold code. Batch 7's slices are independent of each other except 7b after 7a, and in 7e the engine, then the Properties page, then the composer; they can run beside Spike 13 and the remaining Batch 5 PRs (S14-20, S14-26).
 
 ### Dependencies at a glance
 
@@ -288,7 +291,8 @@ S14-18 ──▶ S14-26
 S14-08  (independent)
 S14-D1 ──▶ S13-D1, S13-10      (Spike 13)
 S14-28 ──▶ S14-29             (Batch 7)
-S14-36 ──▶ S14-37
+S14-36 ──▶ S14-39 ──▶ S14-37
+S14-D9 ──▶ S14-39
 S14-D8 ──▶ S14-37
 S14-30, S14-31, S14-32, S14-33, S14-34, S14-35, S14-38  (independent)
 ```
@@ -556,13 +560,20 @@ One PR (user, 2026-11-01).
 #### S14-36 — Boolean value type (engine)
 
 **Ships.** `ValueTypeBoolean`; migration expanding `properties.value_type` CHECK and observation / conclusion storage (**decide in `plan-pr`:** dedicated `value_boolean` vs `value_integer` 0/1 — note prefers dedicated); value-type rules declared in `propertymeta` and sent to the app on `GetPropertiesWorkspace` (boolean single-only, not yet creatable); valuecompare / autoreconcile module; proto `ConclusionValue` bool arm and observation draft field; `swift_vocabulary_test` row for boolean. Also pins Swift's `SourceSurface` raw values to Go's `workspacelocation.Surface*` constants in the same test (structural debt from S12-15 ship log — same file, same guard pattern). Docs: `seeded-vocabulary.md` §3.2, `interpretation-layer-data-model.md`. Skills: `add-catalog-migration`, `add-catalog-model`, `add-ffi-handler`.
-**Not this PR.** Composer / Properties / Conclusion UI (S14-37), including marking boolean creatable; omnibar indexing of booleans (not planned).
+**Not this PR.** Properties page UI (S14-39); composer UI and marking boolean creatable (S14-37); omnibar indexing of booleans (not planned).
 **Check.** Handler and domain tests create, read and compare a boolean Property; existing catalogs migrate; the `SourceSurface` / `Surface*` vocabulary row fails if either side drifts.
 **Context.** Working rule "Boolean is a first-class value type in two PRs"; [`ux/2026-10-25-boolean-property-value-type.md`](ux/2026-10-25-boolean-property-value-type.md); [`ideas/structural-debt.md`](../../ideas/structural-debt.md) SourceSurface row.
 
+#### S14-39 — Properties page reads single-only
+
+**Ships.** The Properties page reads `singleOnly` from the snapshot's value-type rules (S14-36): a single-only type's create form and inspector offer no Holds several; `PropertiesTypeChrome.valueTypeForeground` gains boolean's pill colour; the create picker's look once boolean is offered. Decide in S14-D9 whether the type pill and the picker show the raw key `boolean` or `PropertyValueType.label` ("Yes / no"), because today the label reaches VoiceOver only (S14-36 review, moved here from S14-37). Gated by S14-D9 (Properties page board, written just before this PR). Split out of S14-37 so each PR changes one view (user, 2026-11-07).
+**Not this PR.** Marking boolean creatable and the composer (S14-37).
+**Check.** On a catalog holding a boolean Property (made through `Upsert` in a test, or after S14-37), its inspector shows Holds as one value, with no Holds several; every other type's Holds works as before.
+**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-36 plan Out rows; `PropertiesView.holdsRow`, the create form's Holds field, `PropertiesSnapshot.valueTypeRules`.
+
 #### S14-37 — Boolean value type (UI)
 
-**Ships.** Go marks boolean researcher-creatable (one `propertymeta.Types` flag), so Properties create offers it; the Properties page hides Holds several for a single-only type; composer value field is a checkbox / toggle (`PVCheckbox` or kit equivalent); Conclusion / reconciled display shows a clear true/false. Decide in S14-D8 whether the type pill and the picker show the raw key `boolean` or `PropertyValueType.label` ("Yes / no"), because today the label reaches VoiceOver only. Strings through `add-localized-string`. Gated by S14-D8 for the composer editor chrome.
-**Not this PR.** Engine path (S14-36).
-**Check.** Bar outcome 31: create a boolean Property, cite true/false on a Subject, see it on Conclusion detail.
-**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; `CitationObservationValue`, `propertymeta.Types`, `PropertiesSnapshot.creatableValueTypes`, `ReconciledValueDisplay`.
+**Ships.** Go marks boolean researcher-creatable (one `propertymeta.Types` flag), so Properties create offers it; the composer's Value field is a Yes / No segmented control with nothing chosen at first, and a boolean Property has no Negative checkbox (S14-D8); composer lines and Evidence graph cards read "Yes" / "No". Conclusion detail already reads them (S14-36). Strings through `add-localized-string`.
+**Not this PR.** Engine path (S14-36); the Properties page (S14-39).
+**Check.** Bar outcome 31: create a boolean Property, cite Yes and No on Subjects, see them on Conclusion detail.
+**Context.** Working rule "Boolean is a first-class value type in two PRs"; S14-D8; plan [`prs/S14-37-boolean-value-type-ui.md`](prs/S14-37-boolean-value-type-ui.md).
