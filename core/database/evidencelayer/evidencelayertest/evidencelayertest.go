@@ -116,7 +116,13 @@ func (r *Records) Term(propKey, termKey string) propertyterms.Term {
 // placed below the last one.
 func (r *Records) Bare(src sources.Source, kind string) subjects.Subject {
 	r.T.Helper()
-	s := subjectstest.On(r.T, r.C, UserID, r.Graph(src), kind, "")
+	return r.Labelled(src, kind, "")
+}
+
+// Labelled is Bare with a label.
+func (r *Records) Labelled(src sources.Source, kind, label string) subjects.Subject {
+	r.T.Helper()
+	s := subjectstest.On(r.T, r.C, UserID, r.Graph(src), kind, label)
 	_, err := writes.Call(r.C, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, 0, r.y)
 	})

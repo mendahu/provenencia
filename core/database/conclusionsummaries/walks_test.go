@@ -5,13 +5,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
-	"github.com/mendahu/provenencia/core/database/connect"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
@@ -26,141 +21,96 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 )
 
-func (f *fixture) cite(s subjects.Subject, in ...observations.Input) {
-	f.t.Helper()
-	f.citeOn(f.artifact, s, in...)
-}
-
-// citeOn is cite on art's own Source graph.
-func (f *fixture) citeOn(art artifacts.Artifact, s subjects.Subject, in ...observations.Input) {
-	f.t.Helper()
-	for i := range in {
-		in[i].SubjectID = s.ID
-	}
-	graph := evidencegraphstest.SoleGraph(f.t, f.c, art.SourceID).ID
-	_, _, err := observationstest.Cite(f.c, userID, graph, art.ID, locator, in...)
-	must(f.t, err)
-}
-
 func (f *fixture) at(s subjects.Subject, x, y int64) {
-	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
+	f.T.Helper()
+	_, err := writes.Call(f.C, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
 		return subjectpositions.Set(tx, s.ID, x, y)
 	})
-	must(f.t, err)
+	must(f.T, err)
 }
 
 func (f *fixture) promoteSubject(s subjects.Subject) []byte {
-	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	f.T.Helper()
+	res := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
-func (f *fixture) participation(person, event subjects.Subject, role string) {
-	f.t.Helper()
-	f.bridge("participation", person, event, []observations.Input{
-		{PropertyID: f.prop("person").ID, ValueSubjectID: person.ID},
-		{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
-		{PropertyID: f.prop("role").ID, ValueTermID: f.term("role", role).ID},
-	})
-}
-
-func (f *fixture) location(event, place subjects.Subject) {
-	f.t.Helper()
-	f.bridge("location", event, place, []observations.Input{
-		{PropertyID: f.prop("event").ID, ValueSubjectID: event.ID},
-		{PropertyID: f.prop("place").ID, ValueSubjectID: place.ID},
-	})
-}
-
-func (f *fixture) bridge(kind string, from, to subjects.Subject, obs []observations.Input) {
-	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-			Citation:     citations.CreateInput{ArtifactID: f.artifact.ID, LocatorJSON: locator},
-			Observations: obs,
-		})
-	})
-	must(f.t, err)
-}
-
 func (f *fixture) named(s subjects.Subject, form string) {
-	f.t.Helper()
-	f.cite(s, observations.Input{PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
+	f.T.Helper()
+	f.Cite(f.Artifact, s, observations.Input{PropertyID: f.name.ID, Name: namevaluetest.Western(form)})
 }
 
 func TestCanonicalWalks(t *testing.T) {
 	f := newFixture(t)
-	james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	james := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(james, "James Robins")
 	f.at(james, 0, 0)
-	mary := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	mary := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(mary, "Mary Smith")
 	f.at(mary, 0, 2)
-	ann := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	ann := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(ann, "Ann Lee")
 	f.at(ann, 0, 4)
-	unnamed := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	unnamed := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.at(unnamed, 0, 6)
-	witness := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+	witness := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 	f.named(witness, "Witness Webb")
 	f.at(witness, 0, 8)
 
-	birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(birth,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID},
-		observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
+	birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, birth,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID},
+		observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1817, 0, 0)},
 	)
 	f.at(birth, 4, 0)
-	death := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(death,
-		observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "death").ID},
-		observations.Input{PropertyID: f.prop("start_date").ID, Date: datevaluetest.YMD(1880, 0, 0)},
+	death := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, death,
+		observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "death").ID},
+		observations.Input{PropertyID: f.Prop("start_date").ID, Date: datevaluetest.YMD(1880, 0, 0)},
 	)
 	f.at(death, 4, 2)
-	marriage := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(marriage, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "marriage").ID})
+	marriage := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, marriage, observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "marriage").ID})
 	f.at(marriage, 4, 4)
-	census := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(census, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "census").ID})
+	census := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, census, observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "census").ID})
 	f.at(census, 4, 6)
-	baptism := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(baptism, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "baptism").ID})
+	baptism := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, baptism, observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "baptism").ID})
 	f.at(baptism, 4, 8)
-	eventTypeID := f.prop("event_type").ID
-	fireTerm, _, err := writes.Run(f.c, writes.Op{Action: "create_property_term", UserID: userID},
+	eventTypeID := f.Prop("event_type").ID
+	fireTerm, _, err := writes.Run(f.C, writes.Op{Action: "create_property_term", UserID: userID},
 		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
 			return propertyterms.Create(tx, userID, eventTypeID, "Fire", "")
 		})
 	must(t, err)
-	fire := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-	f.cite(fire, observations.Input{PropertyID: f.prop("event_type").ID, ValueTermID: fireTerm.ID})
+	fire := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+	f.Cite(f.Artifact, fire, observations.Input{PropertyID: f.Prop("event_type").ID, ValueTermID: fireTerm.ID})
 	f.at(fire, 4, 10)
 
-	york := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
-	f.cite(york,
-		observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("York")},
-		observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("Tkaronto")},
+	york := subjectstest.On(f.T, f.C, userID, f.graph, "place", "")
+	f.Cite(f.Artifact, york,
+		observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("York")},
+		observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Tkaronto")},
 	)
 	f.at(york, 8, 0)
-	toronto := subjectstest.On(f.t, f.c, userID, f.graph, "place", "")
-	f.cite(toronto, observations.Input{PropertyID: f.prop("toponym").ID, Scalar: propertymeta.TextScalar("Toronto")})
+	toronto := subjectstest.On(f.T, f.C, userID, f.graph, "place", "")
+	f.Cite(f.Artifact, toronto, observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Toronto")})
 	f.at(toronto, 8, 2)
 
-	f.participation(james, birth, "subject")
-	f.participation(witness, birth, "witness")
-	f.participation(james, death, "subject")
-	f.participation(james, marriage, "subject")
-	f.participation(mary, marriage, "subject")
-	f.participation(james, census, "subject")
-	f.participation(mary, census, "subject")
-	f.participation(ann, census, "subject")
-	f.participation(unnamed, baptism, "subject")
-	f.location(birth, york)
-	f.location(birth, toronto)
-	f.location(death, toronto)
-	f.location(fire, york)
+	f.Participation(f.Source, f.Artifact, james, birth, "subject")
+	f.Participation(f.Source, f.Artifact, witness, birth, "witness")
+	f.Participation(f.Source, f.Artifact, james, death, "subject")
+	f.Participation(f.Source, f.Artifact, james, marriage, "subject")
+	f.Participation(f.Source, f.Artifact, mary, marriage, "subject")
+	f.Participation(f.Source, f.Artifact, james, census, "subject")
+	f.Participation(f.Source, f.Artifact, mary, census, "subject")
+	f.Participation(f.Source, f.Artifact, ann, census, "subject")
+	f.Participation(f.Source, f.Artifact, unnamed, baptism, "subject")
+	f.Locate(f.Source, f.Artifact, birth, york)
+	f.Locate(f.Source, f.Artifact, birth, toronto)
+	f.Locate(f.Source, f.Artifact, death, toronto)
+	f.Locate(f.Source, f.Artifact, fire, york)
 
 	jamesID := f.promoteSubject(james)
 	f.promoteSubject(mary)
@@ -300,7 +250,7 @@ func TestCanonicalWalks(t *testing.T) {
 		t.Fatal("subject order moved")
 	}
 
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	deps, err := conclusionsummaries.Dependents(db, [][]byte{yorkID})
 	must(t, err)
@@ -398,19 +348,19 @@ func TestCompetingLifeEvents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
-			james := subjectstest.On(f.t, f.c, userID, f.graph, "person", "")
+			james := subjectstest.On(f.T, f.C, userID, f.graph, "person", "")
 			f.named(james, "James Robins")
 			f.at(james, 0, 0)
 			var births []subjects.Subject
 			for i, year := range tt.years {
-				birth := subjectstest.On(f.t, f.c, userID, f.graph, "event", "")
-				in := []observations.Input{{PropertyID: f.prop("event_type").ID, ValueTermID: f.term("event_type", "birth").ID}}
+				birth := subjectstest.On(f.T, f.C, userID, f.graph, "event", "")
+				in := []observations.Input{{PropertyID: f.Prop("event_type").ID, ValueTermID: f.Term("event_type", "birth").ID}}
 				if year != 0 {
-					in = append(in, observations.Input{PropertyID: f.prop("date").ID, Date: datevaluetest.YMD(year, 0, 0)})
+					in = append(in, observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(year, 0, 0)})
 				}
-				f.cite(birth, in...)
+				f.Cite(f.Artifact, birth, in...)
 				f.at(birth, 4, int64(2*i))
-				f.participation(james, birth, "subject")
+				f.Participation(f.Source, f.Artifact, james, birth, "subject")
 				births = append(births, birth)
 			}
 			jamesID := f.promoteSubject(james)

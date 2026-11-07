@@ -5,36 +5,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/artifacts"
-	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
-	"github.com/mendahu/provenencia/core/database/citations"
-	"github.com/mendahu/provenencia/core/database/connect"
 	"github.com/mendahu/provenencia/core/database/dbtest"
-	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
-	"github.com/mendahu/provenencia/core/database/properties"
-	"github.com/mendahu/provenencia/core/database/propertyterms"
-	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sourcetypes"
-	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
-	"github.com/mendahu/provenencia/core/database/subjectvocab"
-	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/hops"
-	"github.com/mendahu/provenencia/core/ref"
-	"github.com/mendahu/provenencia/core/vocabkey"
-	"github.com/mendahu/provenencia/core/writes"
 )
 
-var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
-
-const locator = `{"version":1,"selectors":[{"type":"page","artifact_page":1}]}`
+var userID = evidencelayertest.UserID
 
 var subjectRole = &hops.TermFilter{PropertyKey: "role", TermKey: "subject"}
 
@@ -74,90 +54,26 @@ func TestNewHop(t *testing.T) {
 }
 
 type fixture struct {
-	t     *testing.T
-	c     *database.Catalog
-	src   sources.Source
-	art   artifacts.Artifact
-	graph []byte // the Source's one Evidence graph
-	y     int64
+	*evidencelayertest.Records
 }
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	c, err := database.Create(t.TempDir(), "t.provenencia")
-	must(t, err)
-	t.Cleanup(func() { _ = c.Close() })
-	r, err := ref.Mint(ref.PrefixUser)
-	must(t, err)
-	must(t, users.Upsert(c, userID, "Tester", r))
-	must(t, subjectvocab.Install(c))
-	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
-	must(t, err)
-	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
-	})
-	must(t, err)
-	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
-	must(t, err)
-	return &fixture{t: t, c: c, src: src, art: art, graph: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
-}
-
-func (f *fixture) subject(kind string) subjects.Subject {
-	f.t.Helper()
-	s := subjectstest.On(f.t, f.c, userID, f.graph, kind, "")
-	_, err := writes.Call(f.c, writes.Op{}, func(tx *database.Tx) (subjectpositions.Position, []rowchange.Change, error) {
-		return subjectpositions.Set(tx, s.ID, 0, f.y)
-	})
-	must(f.t, err)
-	f.y += 2
-	return s
-}
-
-func (f *fixture) prop(key string) []byte {
-	f.t.Helper()
-	p, err := properties.Lookup(f.c, key, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	return p.ID
-}
-
-func (f *fixture) bridge(kind string, from, to subjects.Subject, obs ...observations.Input) {
-	f.t.Helper()
-	_, err := writes.Call(f.c, writes.Op{Action: "create_cited_bridge", UserID: userID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
-		return connect.CreateCitedBridge(tx, userID, connect.CreateInput{
-			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: kind,
-			Citation:     citations.CreateInput{ArtifactID: f.art.ID, LocatorJSON: locator},
-			Observations: obs,
-		})
-	})
-	must(f.t, err)
-}
-
-func (f *fixture) participation(person, event subjects.Subject, role string) {
-	f.t.Helper()
-	term, err := propertyterms.Lookup(f.c, f.prop("role"), role, vocabkey.OriginProvenencia)
-	must(f.t, err)
-	f.bridge("participation", person, event,
-		observations.Input{PropertyID: f.prop("person"), ValueSubjectID: person.ID},
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: event.ID},
-		observations.Input{PropertyID: f.prop("role"), ValueTermID: term.ID},
-	)
+	return &fixture{evidencelayertest.New(t)}
 }
 
 func (f *fixture) promote(s subjects.Subject) []byte {
-	f.t.Helper()
-	res := promotetest.Save(f.t, f.c, userID, promote.Input{SubjectID: s.ID})
+	f.T.Helper()
+	res := promotetest.Save(f.T, f.C, userID, promote.Input{SubjectID: s.ID})
 	return res.Entity.ID
 }
 
 func TestWalk(t *testing.T) {
 	f := newFixture(t)
-	james, birth, wedding, york := f.subject("person"), f.subject("event"), f.subject("event"), f.subject("place")
-	f.participation(james, birth, "subject")
-	f.participation(james, wedding, "witness")
-	f.bridge("location", birth, york,
-		observations.Input{PropertyID: f.prop("event"), ValueSubjectID: birth.ID},
-		observations.Input{PropertyID: f.prop("place"), ValueSubjectID: york.ID},
-	)
+	james, birth, wedding, york := f.Bare(f.Source, "person"), f.Bare(f.Source, "event"), f.Bare(f.Source, "event"), f.Bare(f.Source, "place")
+	f.Participation(f.Source, f.Artifact, james, birth, "subject")
+	f.Participation(f.Source, f.Artifact, james, wedding, "witness")
+	f.Locate(f.Source, f.Artifact, birth, york)
 	jamesID, birthID, weddingID, yorkID := f.promote(james), f.promote(birth), f.promote(wedding), f.promote(york)
 
 	participates := hops.MustHop("participation", "person", "event", nil)
@@ -179,7 +95,7 @@ func TestWalk(t *testing.T) {
 		{name: "a hop from the wrong kind finds nothing", hop: located, from: [][]byte{jamesID}},
 		{name: "no handles, no edges", hop: participates},
 	}
-	db, err := f.c.DB()
+	db, err := f.C.DB()
 	must(t, err)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
