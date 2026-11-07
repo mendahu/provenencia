@@ -236,3 +236,16 @@ func TestResultSimilarity(t *testing.T) {
 		t.Errorf("Similarity = %v, want 0.75", got)
 	}
 }
+
+func TestOutcomeMatches(t *testing.T) {
+	for o, want := range map[propertycompare.Outcome]bool{
+		propertycompare.OutcomeAgree:    true,
+		propertycompare.OutcomePartial:  true,
+		propertycompare.OutcomeConflict: false,
+		propertycompare.OutcomeUnknown:  false,
+	} {
+		if got := o.Matches(); got != want {
+			t.Errorf("%s.Matches() = %v; want %v", o, got, want)
+		}
+	}
+}

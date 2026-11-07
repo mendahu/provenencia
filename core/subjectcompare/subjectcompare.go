@@ -119,10 +119,9 @@ func Compare(kind vocabkey.SubjectType, a, b Values, metas Metas, rules Rules, v
 		pr := PropertyResult{Key: key, Result: res}
 		pr.Points = Points(res, w)
 		score += max(pr.Points, 0)
-		switch res.Outcome {
-		case propertycompare.OutcomeAgree, propertycompare.OutcomePartial:
+		if res.Outcome.Matches() {
 			counted += w.Agree
-		case propertycompare.OutcomeConflict:
+		} else if res.Outcome == propertycompare.OutcomeConflict {
 			counted += w.Conflict
 		}
 		out.Evidence += pr.Points

@@ -36,6 +36,10 @@ const (
 	OutcomeUnknown  Outcome = "unknown"
 )
 
+// Matches reports whether the outcome supports the two Subjects being the same:
+// agree or partial.
+func (o Outcome) Matches() bool { return o == OutcomeAgree || o == OutcomePartial }
+
 // Cause is why an outcome came out as it did.
 type Cause string
 

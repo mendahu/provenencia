@@ -15,7 +15,6 @@ import (
 	"slices"
 
 	"github.com/mendahu/provenencia/core/kinship"
-	"github.com/mendahu/provenencia/core/propertycompare"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/subjectcompare"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -166,7 +165,7 @@ func properties(x, y Member, metas subjectcompare.Metas, cfg Config) []vocabkey.
 	var out []vocabkey.PropertyKey
 	for _, key := range slices.Sorted(maps.Keys(keys)) {
 		res := subjectcompare.CompareProperty(vocabkey.Person, key, x.Values, y.Values, metas, cfg.Subject, cfg.Value)
-		if res.Outcome == propertycompare.OutcomeAgree || res.Outcome == propertycompare.OutcomePartial {
+		if res.Outcome.Matches() {
 			out = append(out, key)
 		}
 	}
