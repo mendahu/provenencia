@@ -11,5 +11,7 @@ func defaultRecordLinks() recordlinks.Rules {
 		MaxEntityMembers: 10,
 		// decided: user, 2026-11-07 (S13-26 SEC-1): more than twenty values for one property is malformed; real records hold a few
 		MaxUnitValues: 20,
+		// decided: user, 2026-11-07 (S13-26 SEC-1): a high cap a researcher never reaches, so a crafted catalog cannot hang a read
+		MaxPairWork: 25_000,
 	}
 }

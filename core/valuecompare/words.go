@@ -409,3 +409,19 @@ func alignWords(a, b, fa, fb []string, w WordRules) (pairs []wordPair, onlyA, on
 	slices.Reverse(onlyB)
 	return pairs, onlyA, onlyB, sims
 }
+
+// WordCount is how many words v holds for the word comparers: the words of a
+// name's parts, the words of a text, and one for any other value. It is at
+// least one.
+func WordCount(v Value) int {
+	n := 0
+	switch {
+	case v.Name != nil:
+		for _, p := range v.Name.Parts {
+			n += len(RawTokens(p.Value))
+		}
+	case v.Text != "":
+		n = len(RawTokens(v.Text))
+	}
+	return max(n, 1)
+}

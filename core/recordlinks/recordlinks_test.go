@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
@@ -267,6 +268,14 @@ func TestLines(t *testing.T) {
 			build([]recordlinks.Member{pageB, person(idB(2), entF), event(evB(1), entE)},
 				part(idB(2), evB(1), "mother", birth, 1), part(idB(1), evB(1), "subject", birth, 2)),
 			0, nil, lines(want{entF, 1, weak})},
+		{"each pivot's entity is counted on its own",
+			build([]recordlinks.Member{pageA, person(idA(2), entF), event(evA(1), entM), event(evA(2), entE)},
+				part(idA(2), evA(1), "subject", marriage, 1), part(idA(1), evA(1), "subject", marriage, 2),
+				part(idA(2), evA(2), "father", birth, 3), part(idA(1), evA(2), "subject", birth, 4)),
+			build([]recordlinks.Member{pageB, person(idB(2), entF), event(evB(1), entM), event(evB(2), entE)},
+				part(idB(2), evB(1), "subject", marriage, 1), part(idB(1), evB(1), "subject", marriage, 2),
+				part(idB(2), evB(2), "mother", birth, 3), part(idB(1), evB(2), "subject", birth, 4)),
+			0, nil, lines(want{entF, 2, strong})},
 		{"pivot on one entity, roles differ, parent also written down",
 			build([]recordlinks.Member{pageA, person(idA(2), entF), event(evA(1), entE)},
 				part(idA(2), evA(1), "father", birth, 1), part(idA(1), evA(1), "subject", birth, 2), rel(idA(2), idA(1), "parent", 3)),
@@ -421,6 +430,12 @@ func TestLinesBounds(t *testing.T) {
 			build(one(pageB, person(idB(2), entF, vals{name: {john}}), event(evB(1), entE)),
 				part(idB(2), evB(1), "subject", birth, 1)),
 			lines(want{entF, 1, weak})},
+		{"pivot entity over the bound counts its link and does not skip the pivoted one",
+			build(with(one(pageA, person(idA(2), entF)), events(evA, entM, maxMembers+1)),
+				part(idA(2), evA(1), "subject", marriage, 1), part(idA(1), evA(1), "subject", marriage, 2)),
+			build(one(pageB, person(idB(2), entF), event(evB(1), entM)),
+				part(idB(2), evB(1), "subject", marriage, 1), part(idB(1), evB(1), "subject", marriage, 2)),
+			lines(want{entF, 1, weak})},
 		{"values at the bound in A",
 			build(one(pageA, person(idA(2), entF, vals{name: repeat(john, maxValues), sex: {male}}))),
 			build(one(pageB, person(idB(2), entF, vals{name: {john}, sex: {male}}))),
@@ -458,36 +473,222 @@ func TestLinesBounds(t *testing.T) {
 	}
 }
 
-// BenchmarkLinesAtBounds is one pair of graphs at the worst input the bounds
-// allow: ten people on one entity and ten events on another in each graph,
-// every person in every event, and every person holding twenty names and
-// twenty religions that mostly differ between the graphs.
-func BenchmarkLinesAtBounds(b *testing.B) {
+const interests = vocabkey.PropertyKey("interests")
+
+// words returns n distinct words, tagged so no two tags share one.
+func words(tag string, n int) string {
+	w := make([]string, n)
+	for i := range w {
+		w[i] = fmt.Sprintf("%s%d", tag, i)
+	}
+	return strings.Join(w, " ")
+}
+
+// axis is one way a pair of graphs can be costly, at a size n. The graphs
+// differ in every long value, so the long values compare at full cost, and
+// every shared person agrees on sex, so a pair that compares counts a fact for
+// each.
+type axis struct {
+	name  string
+	most  int // the largest n that stays inside the other bounds
+	build func(n int) (a, b recordlinks.Graph)
+}
+
+// pair builds both graphs from one function of the graph's tag.
+func pair(graph func(tag string, id func(byte) []byte, ev func(byte) []byte) recordlinks.Graph) (a, b recordlinks.Graph) {
+	return graph("a", idA, evA), graph("b", idB, evB)
+}
+
+// solo is one shared person on entF, one member in each graph, holding n values
+// of the given words for key.
+func solo(key vocabkey.PropertyKey, text func(string) propertycompare.Value, wordsEach int) func(n int) (recordlinks.Graph, recordlinks.Graph) {
+	return func(n int) (recordlinks.Graph, recordlinks.Graph) {
+		return pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			v := vals{sex: {pt.Term("male")}}
+			for j := range n {
+				v[key] = append(v[key], text(words(fmt.Sprintf("%s%d_", tag, j), wordsEach)))
+			}
+			return build([]recordlinks.Member{person(id(1), entP), person(id(2), entF, v)})
+		})
+	}
+}
+
+// crowd is people shared people, each on its own entity, with members members
+// in each graph, each with one name of the longest exact pairing.
+func crowd(cfg recordlinks.Config, people, members int) (a, b recordlinks.Graph) {
+	return pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+		ms := []recordlinks.Member{person(id(1), entP)}
+		for i := range people {
+			for j := range members {
+				ms = append(ms, person(append(id(byte(2+j)), byte(i), byte(i>>8)), []byte{100, byte(i), byte(i >> 8)}, vals{
+					sex:  {pt.Term("male")},
+					name: {pt.Name(words(fmt.Sprintf("%s%d_%d_", tag, i, j), cfg.Value.Words.MaxExactPairing))}}))
+			}
+		}
+		return build(ms)
+	})
+}
+
+// marriages is two people married to each other n times, each marriage an event
+// on its own entity.
+func marriages(n int) (a, b recordlinks.Graph) {
+	return pair(func(_ string, id, ev func(byte) []byte) recordlinks.Graph {
+		ms := []recordlinks.Member{person(id(1), entP), person(id(2), entF), person(id(3), entS)}
+		var edges []kinship.Edge
+		for i := range n {
+			e := append(ev(0), byte(i), byte(i>>8))
+			ms = append(ms, event(e, []byte{120, byte(i), byte(i >> 8)}))
+			edges = append(edges, part(id(2), e, "subject", marriage, 1), part(id(3), e, "subject", marriage, 2))
+		}
+		return build(ms, edges...)
+	})
+}
+
+func axes(cfg recordlinks.Config) []axis {
+	exact, text := cfg.Value.Words.MaxExactPairing, cfg.Value.Text.MaxWords
+	return []axis{
+		{"names", cfg.RecordLinks.MaxUnitValues, solo(name, pt.Name, exact)},
+		{"interests", cfg.RecordLinks.MaxUnitValues, solo(interests, pt.Text, text)},
+		{"shared people", 1000, func(n int) (recordlinks.Graph, recordlinks.Graph) { return crowd(cfg, n, 1) }},
+		{"shapes", 2000, marriages},
+	}
+}
+
+// underCap is the largest n on the axis whose pair does not pass the cap.
+func underCap(t testing.TB, ax axis, cfg recordlinks.Config) int {
+	t.Helper()
+	n := 0
+	for lo, hi := 1, ax.most; lo <= hi; {
+		mid := (lo + hi) / 2
+		a, b := ax.build(mid)
+		if recordlinks.PairWork(entP, a, b, cfg) <= cfg.RecordLinks.MaxPairWork {
+			n, lo = mid, mid+1
+		} else {
+			hi = mid - 1
+		}
+	}
+	if n == 0 || n == ax.most {
+		t.Fatalf("axis %s: the cap sits at %d, outside 1 to %d", ax.name, n, ax.most)
+	}
+	return n
+}
+
+// obituary is the two graphs of a 41-Subject obituary written twice: the
+// deceased and forty relatives, each with a three-word name, a sex and a
+// religion, linked to the deceased and to the relative before them.
+func obituary() (a, b recordlinks.Graph) {
+	graph := func(tag byte) recordlinks.Graph {
+		id := func(i int) []byte { return []byte{tag, byte(i)} }
+		ms := []recordlinks.Member{person(id(100), entP)}
+		var edges []kinship.Edge
+		terms := []vocabkey.BridgeTerm{"parent", "child", "spouse", "sibling"}
+		for i := range 41 {
+			ms = append(ms, person(id(i), ent(byte(30+i)), vals{
+				name:     {pt.Name(fmt.Sprintf("Given%d Middle%d Family", i, i))},
+				sex:      {pt.Term("male")},
+				religion: {pt.Term(fmt.Sprintf("faith%d", i%3))},
+			}))
+			if i > 0 {
+				edges = append(edges, kinshiptest.Rel(id(i), id(0), terms[i%4], []byte{byte(i)}))
+				if i > 1 {
+					edges = append(edges, kinshiptest.Rel(id(i), id(i-1), "parent", []byte{byte(100 + i)}))
+				}
+			}
+		}
+		return build(ms, edges...)
+	}
+	return graph('a'), graph('b')
+}
+
+// TestLinesWorkCap holds the cap on the work of one graph pair: a pair over it
+// on any axis alone gives every shared person a line with 0 facts, in both
+// argument orders and fast; a pair just under it counts as usual, and so does a
+// 41-Subject obituary with room to spare.
+func TestLinesWorkCap(t *testing.T) {
 	cfg := matchregistry.Default().RecordLinksConfig()
 	metas := subjectcomparetest.Metas()
-	graph := func(tag string) recordlinks.Graph {
-		id := func(n byte) []byte { return []byte{'p', tag[0], n} }
-		evID := func(n byte) []byte { return []byte{'e', tag[0], n} }
-		members := []recordlinks.Member{person(id(1), entP)} // ids from 2 up are the people
-		var edges []kinship.Edge
-		for i := range cfg.RecordLinks.MaxEntityMembers {
-			v := vals{}
-			for j := range cfg.RecordLinks.MaxUnitValues {
-				v[name] = append(v[name], pt.Name(fmt.Sprintf("Given%s%d Surname%d", tag, j, i)))
-				v[religion] = append(v[religion], pt.Term(fmt.Sprintf("faith%s%d", tag, j)))
+	check := func(t *testing.T, a, b recordlinks.Graph, people int, counts bool) {
+		t.Helper()
+		for _, swap := range []bool{false, true} {
+			x, y := a, b
+			if swap {
+				x, y = y, x
 			}
-			members = append(members, person(id(byte(2+i)), entF, v), event(evID(byte(1+i)), entE))
-		}
-		for i := range cfg.RecordLinks.MaxEntityMembers {
-			for j := range cfg.RecordLinks.MaxEntityMembers {
-				edges = append(edges, part(id(byte(2+i)), evID(byte(1+j)), "subject", birth, byte(i*16+j)))
+			start := time.Now()
+			got := recordlinks.Lines(entP, x, y, metas, cfg)
+			if took := time.Since(start); !counts && took > time.Second {
+				t.Errorf("Lines (swapped %v) took %v over the cap", swap, took)
+			}
+			if len(got) != people {
+				t.Fatalf("Lines (swapped %v) = %d lines; want %d", swap, len(got), people)
+			}
+			for _, l := range got {
+				if counts != (l.Facts > 0) {
+					t.Errorf("Lines (swapped %v): %x has %d facts; counts %v", swap, l.Entity, l.Facts, counts)
+				}
+			}
+			if counts {
+				return // an order is enough; TestLinesInvariants holds the symmetry
 			}
 		}
-		return build(members, edges...)
 	}
-	ga, gb := graph("a"), graph("b")
-	b.ResetTimer()
-	for range b.N {
-		recordlinks.Lines(entP, ga, gb, metas, cfg)
+	for _, ax := range axes(cfg) {
+		t.Run(ax.name, func(t *testing.T) {
+			n := underCap(t, ax, cfg)
+			people := map[string]int{"shared people": n, "shapes": 2}[ax.name]
+			people = max(people, 1)
+			a, b := ax.build(n)
+			check(t, a, b, people, true)
+			a, b = ax.build(n + 1)
+			if ax.name == "shared people" {
+				people = n + 1
+			}
+			check(t, a, b, people, false)
+		})
+	}
+	t.Run("reviewer's inputs", func(t *testing.T) {
+		most := cfg.RecordLinks.MaxEntityMembers
+		a, b := pair(func(tag string, id, _ func(byte) []byte) recordlinks.Graph {
+			ms := []recordlinks.Member{person(id(1), entP)}
+			for j := range most {
+				v := vals{sex: {pt.Term("male")}}
+				for k := range cfg.RecordLinks.MaxUnitValues {
+					v[interests] = append(v[interests], pt.Text(words(fmt.Sprintf("%s%d_%d_", tag, j, k), cfg.Value.Text.MaxWords)))
+				}
+				ms = append(ms, person(id(byte(2+j)), entF, v))
+			}
+			return build(ms)
+		})
+		t.Run("20 long interests at 10 by 10 members", func(t *testing.T) { check(t, a, b, 1, false) })
+		a, b = crowd(cfg, 64, most)
+		t.Run("64 shared people at 10 by 10 members", func(t *testing.T) { check(t, a, b, 64, false) })
+		a, b = marriages(800)
+		t.Run("800 marriages", func(t *testing.T) { check(t, a, b, 2, false) })
+	})
+	t.Run("obituary", func(t *testing.T) {
+		a, b := obituary()
+		if work, cap := recordlinks.PairWork(entP, a, b, cfg), cfg.RecordLinks.MaxPairWork; work*20 > cap {
+			t.Errorf("a 41-Subject obituary does %d work; the cap %d is under 20 times that", work, cap)
+		}
+		got := recordlinks.Lines(entP, a, b, metas, cfg)
+		if len(got) != 41 || got[0].Facts == 0 {
+			t.Errorf("Lines = %d lines, first %v; want 41 counted", len(got), got[:1])
+		}
+	})
+}
+
+// BenchmarkLinesAtCap is the slowest pair the cap lets through, one
+// sub-benchmark for each axis of cost, each at the largest size under the cap.
+func BenchmarkLinesAtCap(b *testing.B) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	for _, ax := range axes(cfg) {
+		b.Run(ax.name, func(b *testing.B) {
+			ga, gb := ax.build(underCap(b, ax, cfg))
+			b.ResetTimer()
+			for range b.N {
+				recordlinks.Lines(entP, ga, gb, metas, cfg)
+			}
+		})
 	}
 }
