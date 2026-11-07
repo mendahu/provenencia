@@ -181,15 +181,26 @@ type linkFact struct {
 
 // links returns the link facts the two members share. For each far entity both
 // have links to, a pair of links that correspond counts once when any such pair
-// is not skipped; a pair is skipped when kinship.SameShape matches their shapes
-// at pivots filed on one entity in both graphs, because that fact counts
-// through the pivot.
+// is not skipped. A pair is skipped when kinship.SameShape matches their shapes
+// at pivots filed on one entity E in both graphs and the two members' links to
+// E hold a corresponding pair: the pivot's own fact is then counted, and this
+// one counts through it. A pivot link that is itself skipped counts through its
+// own pivot, so shapes end at a recorded participation or parent link.
 func links(x, y Member, a, b Graph) []linkFact {
+	byX, byY := a.links[string(x.ID)], b.links[string(y.ID)]
+	counted := map[string]bool{} // by pivot entity: the members' links to it correspond
 	same := func(pa, pb []byte) bool {
 		ea, eb := a.entityOf[string(pa)], b.entityOf[string(pb)]
-		return ea != nil && eb != nil && bytes.Equal(ea, eb)
+		if ea == nil || !bytes.Equal(ea, eb) {
+			return false
+		}
+		v, ok := counted[string(ea)]
+		if !ok {
+			v = anyCorresponds(byX[string(ea)], byY[string(ea)])
+			counted[string(ea)] = v
+		}
+		return v
 	}
-	byX, byY := a.links[string(x.ID)], b.links[string(y.ID)]
 	var out []linkFact
 	for _, e := range slices.Sorted(maps.Keys(byX)) {
 		seen := map[vocabkey.BridgeKey]bool{}
@@ -204,4 +215,11 @@ func links(x, y Member, a, b Graph) []linkFact {
 		}
 	}
 	return out
+}
+
+// anyCorresponds reports whether a link of xs and a link of ys correspond.
+func anyCorresponds(xs, ys []memberLink) bool {
+	return slices.ContainsFunc(xs, func(lx memberLink) bool {
+		return slices.ContainsFunc(ys, func(ly memberLink) bool { return segmentcompare.Corresponds(lx.key, ly.key) })
+	})
 }
