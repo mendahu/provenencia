@@ -37,10 +37,10 @@ func newWarmFixture(t *testing.T) *warmFixture {
 	t.Helper()
 	f := newFixture(t)
 	member, _, ph, bh := f.filedBirth(f.source, f.artifact, "John Smith", 1817, nil, nil)
-	srcB, artB := f.newSource("Obituary")
-	bPerson := f.person(srcB, artB, "John Smith")
-	bBirth := f.datedBirth(srcB, artB, 1817)
-	f.participation(srcB, artB, bPerson, bBirth, "subject")
+	srcB, artB := f.NewSource("Obituary")
+	bPerson := f.Person(srcB, artB, "John Smith")
+	bBirth := f.DatedBirth(srcB, artB, 1817)
+	f.Participation(srcB, artB, bPerson, bBirth, "subject")
 	return &warmFixture{f: f, srcB: srcB, artB: artB, member: member, bPerson: bPerson, bBirth: bBirth, personHandle: ph, birthHandle: bh}
 }
 
@@ -48,10 +48,10 @@ func newWarmFixture(t *testing.T) *warmFixture {
 // issues no query through the graph. The first built the shortlist index.
 func TestProposeWarmIssuesNoQuery(t *testing.T) {
 	w := newWarmFixture(t)
-	cold := w.f.propose(w.f.graph(w.srcB), nil)
+	cold := w.f.propose(w.f.Graph(w.srcB), nil)
 	n := 0
 	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
-	warm := w.f.propose(w.f.graph(w.srcB), nil)
+	warm := w.f.propose(w.f.Graph(w.srcB), nil)
 	if n != 0 {
 		t.Fatalf("the second Propose issued %d graph queries", n)
 	}
@@ -67,11 +67,11 @@ func TestMemoFollowsCommit(t *testing.T) {
 	// output changed, and equals what a cold graph reads.
 	compare := func(t *testing.T, w *warmFixture, commit func()) {
 		t.Helper()
-		beforeP := w.f.propose(w.f.graph(w.srcB), nil)
+		beforeP := w.f.propose(w.f.Graph(w.srcB), nil)
 		commit()
-		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil, nil)
+		warmP, _, warmPErr := promotealign.Propose(w.f.c, w.f.Graph(w.srcB), nil, nil)
 		w.f.c.Graph().Drop()
-		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.graph(w.srcB), nil, nil)
+		freshP, _, freshPErr := promotealign.Propose(w.f.c, w.f.Graph(w.srcB), nil, nil)
 		if !sameErr(warmPErr, freshPErr) {
 			t.Fatalf("errors differ: warm %v, fresh %v", warmPErr, freshPErr)
 		}
@@ -91,7 +91,7 @@ func TestMemoFollowsCommit(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, l := range listed {
-				if l.PropertyID == nil || string(l.PropertyID) != string(w.f.prop("name").ID) {
+				if l.PropertyID == nil || string(l.PropertyID) != string(w.f.Prop("name").ID) {
 					continue
 				}
 				_, err := writes.Call(w.f.c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
@@ -111,7 +111,7 @@ func TestMemoFollowsCommit(t *testing.T) {
 	t.Run("a handle merged", func(t *testing.T) {
 		w := newWarmFixture(t)
 		compare(t, w, func() {
-			other := w.f.person(w.f.source, w.f.artifact, "Somebody Else")
+			other := w.f.Person(w.f.source, w.f.artifact, "Somebody Else")
 			into := w.f.promote(other).Entity.ID
 			db, err := w.f.c.DB()
 			if err != nil {
@@ -140,14 +140,14 @@ func sameErr(a, b error) bool {
 // reader: Propose leaves them as they were stored.
 func TestMemoIsNotMutated(t *testing.T) {
 	w := newWarmFixture(t)
-	w.f.propose(w.f.graph(w.srcB), nil)
+	w.f.propose(w.f.Graph(w.srcB), nil)
 	first := w.snapshot(t)
 	if !first.LayerOK || len(first.Layer.Subjects) == 0 {
 		t.Fatalf("nothing was memoized: %+v", first)
 	}
 	before := memoJSON(t, w)
 	for i := 0; i < 2; i++ {
-		w.f.propose(w.f.graph(w.srcB), []graphalign.Fixed{{SubjectID: w.bPerson.ID, HandleID: w.personHandle}})
+		w.f.propose(w.f.Graph(w.srcB), []graphalign.Fixed{{SubjectID: w.bPerson.ID, HandleID: w.personHandle}})
 		if after := memoJSON(t, w); after != before {
 			t.Fatalf("a read changed the memo:\nbefore %s\nafter  %s", before, after)
 		}
@@ -162,7 +162,7 @@ func TestMemoIsNotMutated(t *testing.T) {
 // snapshot is the memoized layer of the incoming Source's graph.
 func (w *warmFixture) snapshot(t *testing.T) promotealign.MemoSnapshot {
 	t.Helper()
-	return promotealign.MemoSnapshotForTest(w.f.c, w.f.graph(w.srcB))
+	return promotealign.MemoSnapshotForTest(w.f.c, w.f.Graph(w.srcB))
 }
 
 func memoJSON(t *testing.T, w *warmFixture) string {
@@ -183,16 +183,16 @@ func TestProfilesLiveWithTheMatchIndex(t *testing.T) {
 	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
 		t.Fatal("a dropped graph holds a match index")
 	}
-	w.f.propose(w.f.graph(w.srcB), nil)
+	w.f.propose(w.f.Graph(w.srcB), nil)
 	kept, ok := promotealign.ProfilesKeptForTest(w.f.c)
 	if !ok || kept == 0 {
 		t.Fatalf("after Propose the index holds %d profiles (index %v)", kept, ok)
 	}
-	w.f.propose(w.f.graph(w.srcB), nil)
+	w.f.propose(w.f.Graph(w.srcB), nil)
 	if again, _ := promotealign.ProfilesKeptForTest(w.f.c); again != kept {
 		t.Fatalf("a second Propose changed the kept profiles from %d to %d", kept, again)
 	}
-	w.f.join(w.f.person(w.f.source, w.f.artifact, "John Smith"), w.personHandle)
+	w.f.join(w.f.Person(w.f.source, w.f.artifact, "John Smith"), w.personHandle)
 	if _, ok := promotealign.ProfilesKeptForTest(w.f.c); ok {
 		t.Fatal("a handle commit left the match index and its profiles")
 	}
@@ -208,13 +208,13 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 	}{
 		{"no commit", func(*warmFixture) []byte { return nil }},
 		{"a handle commit", func(w *warmFixture) []byte {
-			srcC, artC := w.f.newSource("Parish register")
+			srcC, artC := w.f.NewSource("Parish register")
 			_, _, ph, _ := w.f.filedBirth(srcC, artC, "John Smith", 1817, nil, nil)
 			return ph
 		}},
 		{"a Source edit", func(w *warmFixture) []byte {
-			w.f.cite(w.artB, w.bPerson, observations.Input{
-				PropertyID: w.f.prop("name").ID, Name: namevaluetest.Western("Johnny Smith"),
+			w.f.Cite(w.artB, w.bPerson, observations.Input{
+				PropertyID: w.f.Prop("name").ID, Name: namevaluetest.Western("Johnny Smith"),
 			})
 			return nil
 		}},
@@ -222,7 +222,7 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			w := newWarmFixture(t)
-			graph := w.f.graph(w.srcB)
+			graph := w.f.Graph(w.srcB)
 			w.f.propose(graph, nil)
 			newHandle := tc.change(w)
 			warm := w.f.propose(graph, nil)
@@ -261,7 +261,7 @@ func TestWarmBuildsTheIndex(t *testing.T) {
 		t.Fatal("Warm built no index")
 	}
 	graphcachetest.AssertKindsLoaded(t, c, "person", "event")
-	w.f.propose(w.f.graph(w.srcB), nil)
+	w.f.propose(w.f.Graph(w.srcB), nil)
 	if got := promotealign.MatchIndexGenForTest(g); got != gen {
 		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
 	}
