@@ -48,6 +48,8 @@ struct PersonSourcesContent: Equatable {
         var subjectRef: String
         /// "Open Household 214, record Johann Weber, CPR-7Q2KD".
         var accessibilityLabel: String
+        /// "Unpromote Household 214, record Johann Weber, CPR-7Q2KD".
+        var unpromoteAccessibilityLabel: String
         var location: WorkspaceLocation
     }
 
@@ -89,6 +91,9 @@ struct PersonSourcesContent: Equatable {
                     subjectName: subjectName,
                     subjectRef: claim.subject.ref,
                     accessibilityLabel: L10n.Conclusions.sourcesOpenGraph(
+                        graph: title, subject: subjectName, ref: claim.subject.ref
+                    ),
+                    unpromoteAccessibilityLabel: L10n.Conclusions.sourcesUnpromoteAccessibility(
                         graph: title, subject: subjectName, ref: claim.subject.ref
                     ),
                     location: SourcesListNavigation.canvasLocation(
@@ -134,5 +139,16 @@ struct PersonSourcesContent: Equatable {
         rows = fold.shown
         hiddenRowCount = fold.hidden
         firstRevealedRowLineID = ConclusionFold.firstRevealed(all, limit: Self.rowFoldLimit, minimumHidden: 1)?.lines.first?.id
+    }
+
+    /// The claim id of the line to focus once the line of Subject `subjectID` is gone: the next
+    /// visible line in reading order (Sources in order, their visible lines in order), else the
+    /// previous one, else nil. A line folded away is never returned. A Subject has one accepted
+    /// claim, so its id names one line.
+    func lineAfterRemoving(subjectID: String) -> String? {
+        let lines = rows.flatMap(\.lines)
+        guard let index = lines.firstIndex(where: { $0.subjectID == subjectID }) else { return nil }
+        if index + 1 < lines.count { return lines[index + 1].id }
+        return index > 0 ? lines[index - 1].id : nil
     }
 }

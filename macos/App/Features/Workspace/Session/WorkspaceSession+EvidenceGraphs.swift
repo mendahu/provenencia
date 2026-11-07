@@ -174,4 +174,25 @@ extension WorkspaceSession {
         let linked = index.linkedArtifactIDsBySource[sourceID] ?? []
         return Set(artifactIDs.filter { !linked.contains($0) })
     }
+
+    /// One graph as a snapshot: its rows, the Subject types and the connect
+    /// rules, each warmed when cold or stale and awaited. Nil when the rows
+    /// could not be read; missing types or rules read as empty.
+    func evidenceGraphSnapshot(graphID: String) async -> EvidenceGraphSnapshot? {
+        let graphKey = CatalogQueryKey.evidenceGraph(project: projectKey, graphId: graphID)
+        let propertiesKey = CatalogQueryKey.propertiesWorkspace(project: projectKey)
+        let rulesKey = CatalogQueryKey.connectRules(project: projectKey)
+        let _: QueryHandle<EvidenceGraphRows> = query(graphKey)
+        let _: QueryHandle<PropertiesSnapshot> = query(propertiesKey)
+        let _: QueryHandle<[CatalogConnectRule]> = query(rulesKey)
+        let rows: EvidenceGraphRows? = await readyValue(graphKey)
+        let properties: PropertiesSnapshot? = await readyValue(propertiesKey)
+        let rules: [CatalogConnectRule]? = await readyValue(rulesKey)
+        guard let rows else { return nil }
+        return EvidenceGraphSnapshot.build(
+            rows: rows,
+            types: properties?.types ?? [],
+            rules: rules ?? []
+        )
+    }
 }

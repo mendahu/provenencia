@@ -5,6 +5,8 @@ import SwiftUI
 /// their own content; the page does not know which kind it is.
 enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     case loading
+    /// The handle no longer exists (deleted or merged), not a failure that may pass; the page leaves.
+    case gone
     case failed(String)
     case content(Content, refreshing: Bool)
 
@@ -17,7 +19,11 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
         case .loaded(let value):
             self = .content(content(value), refreshing: isFetching)
         case .failed(let error):
-            self = .failed(L10n.Errors.message(for: error))
+            if (error as? CoreInvokeError)?.engineCode == .conclusionNotFound {
+                self = .gone
+            } else {
+                self = .failed(L10n.Errors.message(for: error))
+            }
         case .loading:
             self = .loading
         }
@@ -490,9 +496,11 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     }
 
     var body: some View {
+        let presentation = presentation
         Group {
             switch presentation {
-            case .loading:
+            case .loading, .gone:
+                // A handle that is gone leaves for its list; the Callout never paints.
                 ConclusionDetailPage<Content, Secondary, PageSections>.loadingPage
             case .failed(let message):
                 PVPageColumns(primary: {
@@ -534,6 +542,14 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                 )
             }
         }
+        .onChange(of: presentation == .gone, initial: true) { _, gone in
+            if gone {
+                session.noticeToast = VocabularyToast(
+                    title: L10n.string(L10n.Errors.conclusionDetailsNotFound), body: "", tone: .info
+                )
+            }
+        }
+        .leavesForSectionRoot(when: presentation == .gone)
     }
 }
 

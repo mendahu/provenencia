@@ -17,7 +17,7 @@ struct PersonDetailView: View {
             userID: userID,
             make: { PersonDetailContent(detail: $0, orders: session.nameFormat) },
             secondary: { PersonDetailLifeLines(lines: $0.lifeLines) },
-            pageSections: { PersonDetailSections(entityId: entityId, content: $0, context: $1) }
+            pageSections: { PersonDetailSections(entityId: entityId, userID: userID, content: $0, context: $1) }
         )
     }
 }
@@ -26,6 +26,7 @@ struct PersonDetailView: View {
 /// arrives later). The page owns which section is open and passes it in the context.
 private struct PersonDetailSections: View {
     let entityId: String
+    let userID: String
     let content: PersonDetailContent
     let context: ConclusionDetailPageSectionsContext
 
@@ -61,7 +62,7 @@ private struct PersonDetailSections: View {
         case .timeline:
             PersonTimelineSection(entityId: entityId)
         case .sources:
-            PersonSourcesSection(entityId: entityId)
+            PersonSourcesSection(entityId: entityId, userID: userID)
         }
     }
 }

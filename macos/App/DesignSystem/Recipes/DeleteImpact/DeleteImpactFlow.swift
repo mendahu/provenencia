@@ -82,9 +82,6 @@ final class DeleteImpactFlow {
     }
 
     static func isInUse(_ error: Error) -> Bool {
-        if case .coded(_, let code, _, _) = error as? CoreInvokeError {
-            return code.hasSuffix(".in_use")
-        }
-        return false
+        (error as? CoreInvokeError)?.code?.hasSuffix(".in_use") ?? false
     }
 }

@@ -127,17 +127,15 @@ struct EvidenceGraphModelTests {
         )
     }
 
-    /// Session graph payload. `types` is ignored — vocabulary lives on `propertiesWorkspace`.
+    /// Session graph payload.
     private func graphRows(
         graphId: String,
         subjects: [CatalogSubject],
         positions: [CatalogSubjectPosition],
-        types: [CatalogSubjectType] = [],
         observations: [CatalogObservation] = [],
         memberships: [CatalogSubjectMembership] = []
     ) -> EvidenceGraphRows {
-        _ = types
-        return EvidenceGraphRows(
+        EvidenceGraphRows(
             graphId: graphId,
             subjects: subjects,
             positions: positions,
@@ -551,8 +549,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 1),
                     CatalogSubjectPosition(subjectID: "e1", gridX: 5, gridY: 1),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -609,8 +606,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
         model.toggleConnect()
@@ -654,8 +650,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "pl1", gridX: 4, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -705,8 +700,7 @@ struct EvidenceGraphModelTests {
                 positions: [
                     CatalogSubjectPosition(subjectID: "e1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "e2", gridX: 2, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
 
@@ -740,8 +734,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 1, gridY: 2)]
             )
         )
 
@@ -779,8 +772,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [bridge],
-                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 2)]
             )
         )
         model.beginEdit(subjectID: "b1")
@@ -1235,8 +1227,7 @@ struct EvidenceGraphModelTests {
                     CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0),
                     CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
                     CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
-                ],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                ]
             )
         )
         await model.beginDelete(subjectID: "b1")
@@ -1445,7 +1436,6 @@ struct EvidenceGraphModelTests {
                     CatalogSubjectPosition(subjectID: "e1", gridX: 4, gridY: 0),
                     CatalogSubjectPosition(subjectID: "b1", gridX: 2, gridY: 0),
                 ],
-                types: store.subjectTypesByProject[projectDir] ?? [],
                 observations: edges
             )
         )
@@ -1668,8 +1658,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 2, gridY: 3)]
             )
         )
         model.selectSubject(id: "p1")
@@ -1700,8 +1689,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: [person],
-                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)],
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: [CatalogSubjectPosition(subjectID: "p1", gridX: 0, gridY: 0)]
             )
         )
         let location = model.performCardAction(
@@ -1868,8 +1856,9 @@ struct EvidenceGraphModelTests {
 
     /// The household of D-17: James, John, Mary, the 1881 census event; son-of
     /// (James-John), participation (James in the event), and spouse (John-Mary),
-    /// every Subject filed except, with `fileSonOf: false`, the son-of bridge.
-    private func householdModel(fileSonOf: Bool = true) async -> (FakeStore, EvidenceGraphModel) {
+    /// every Subject filed, and the engine's preflight for James naming the son-of
+    /// and participation bridges.
+    private func householdModel() async -> (FakeStore, EvidenceGraphModel) {
         let store = makeStore()
         func subject(_ id: String, _ prefix: String, _ typeID: String, _ label: String, x: Int64, y: Int64) -> CatalogSubject {
             store.subjectPositionsBySubject[id] = CatalogSubjectPosition(subjectID: id, gridX: x, gridY: y)
@@ -1904,9 +1893,10 @@ struct EvidenceGraphModelTests {
             handleMembership("b2-part", ref: "CPA-5RN7K", typeID: "type-participation", kind: "participation"),
             handleMembership("b3-spouse", ref: "REL-6HX2D", typeID: "type-relationship", kind: "relationship"),
         ]
-        if fileSonOf {
-            memberships.append(handleMembership("b1-sonof", ref: "REL-3AB91", typeID: "type-relationship", kind: "relationship"))
-        }
+        memberships.append(handleMembership("b1-sonof", ref: "REL-3AB91", typeID: "type-relationship", kind: "relationship"))
+        store.unpromoteImpactBySubject["s-james"] = CatalogUnpromoteImpact(
+            deletes: nil, unpromotedBridgeSubjectIDs: ["b1-sonof", "b2-part"]
+        )
         for m in memberships { store.membershipBySubject[m.subjectID] = m }
         let model = makeModel(store: store)
         await model.prepare()
@@ -1963,9 +1953,9 @@ struct EvidenceGraphModelTests {
         #expect(names[index + 1] == "Unpromote")
         let action = try #require(content.namedActions(for: filed).first { $0.name == "Unpromote" })
         action.run()
-        let opened = await waitUntil(timeout: .seconds(5)) { model.pendingUnpromote != nil }
+        let opened = await waitUntil(timeout: .seconds(5)) { model.unpromote.pending != nil }
         #expect(opened)
-        #expect(model.pendingUnpromote?.id == "s-james")
+        #expect(model.unpromote.pending?.id == "s-james")
 
         var unfiled = james
         unfiled.membership = nil
@@ -1978,15 +1968,11 @@ struct EvidenceGraphModelTests {
         let location = model.performCardAction(subjectID: "s-james", actionID: EvidenceSubjectCard.unpromoteActionID)
         #expect(location == nil)
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
-        let opened = await waitUntil(timeout: .seconds(5)) { model.pendingUnpromote != nil }
+        let opened = await waitUntil(timeout: .seconds(5)) { model.unpromote.pending != nil }
         #expect(opened)
-        #expect(model.pendingUnpromote?.name == "James Robins")
-        #expect(model.pendingUnpromote?.bridges == [sonOfSentence, participationSentence])
-        #expect(model.pendingUnpromote?.error == nil)
-
-        let (_, unfiledSonOf) = await householdModel(fileSonOf: false)
-        await unfiledSonOf.beginUnpromote(subjectID: "s-james")
-        #expect(unfiledSonOf.pendingUnpromote?.bridges == [participationSentence])
+        #expect(model.unpromote.pending?.name == "James Robins")
+        #expect(model.unpromote.pending?.connections == .listed([sonOfSentence, participationSentence]))
+        #expect(model.unpromote.pending?.error == nil)
     }
 
     @Test func unpromoteWithNoBridgesHasEmptyDetail() async throws {
@@ -2000,17 +1986,17 @@ struct EvidenceGraphModelTests {
         }
         #expect(loaded)
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.pendingUnpromote?.bridges == [])
+        #expect(model.unpromote.pending?.connections == .listed([]))
 
         let (_, unfiled) = await promotableModel()
         await unfiled.beginUnpromote(subjectID: "s-james")
-        #expect(unfiled.pendingUnpromote == nil)
+        #expect(unfiled.unpromote.pending == nil)
     }
 
     @Test func confirmUnpromoteRefreshesToPromote() async {
         let (store, model) = await householdModel()
         await model.beginUnpromote(subjectID: "s-james")
-        model.pendingUnpromote = nil
+        model.unpromote.cancel()
         #expect(!store.recordedCalls.contains { $0.hasPrefix("unpromoteSubject") })
 
         await model.beginUnpromote(subjectID: "s-james")
@@ -2018,9 +2004,9 @@ struct EvidenceGraphModelTests {
         store.nextWriteEffects = CatalogWriteEffects(
             handles: removed, evidenceGraphs: [graphID], handleScopes: removed
         )
-        await model.confirmUnpromote()
+        _ = await model.unpromote.confirm(session: model.session, userID: "user-1")
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
-        #expect(model.pendingUnpromote == nil)
+        #expect(model.unpromote.pending == nil)
         let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
         let refreshed = await waitUntil(timeout: .seconds(5)) {
             let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
@@ -2056,12 +2042,12 @@ struct EvidenceGraphModelTests {
         let failure = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
         store.unpromoteSubjectError = failure
         await model.beginUnpromote(subjectID: "s-james")
-        await model.confirmUnpromote()
-        #expect(model.pendingUnpromote != nil)
-        #expect(model.pendingUnpromote?.error == L10n.Errors.message(for: failure))
-        #expect(!model.isUnpromoting)
+        _ = await model.unpromote.confirm(session: model.session, userID: "user-1")
+        #expect(model.unpromote.pending != nil)
+        #expect(model.unpromote.pending?.error == L10n.Errors.message(for: failure))
+        #expect(!model.unpromote.isBusy)
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.pendingUnpromote?.error == nil)
+        #expect(model.unpromote.pending?.error == nil)
     }
 
     @Test func unpromoteLastRecordNamesTheDeletedHandle() async {
@@ -2072,8 +2058,8 @@ struct EvidenceGraphModelTests {
             total: 1,
             listed: [
                 CatalogDeleteImpactListed(
-                    id: "h-james", ref: "PER-7KD45", title: "PER-7KD45",
-                    location: WorkspaceLocation(section: .persons, entityId: "h-james")
+                    id: "ent-s-james", ref: "PER-7KD45", title: "PER-7KD45",
+                    location: WorkspaceLocation(section: .persons, entityId: "ent-s-james")
                 ),
             ]
         )
@@ -2081,22 +2067,24 @@ struct EvidenceGraphModelTests {
             deletes: group, unpromotedBridgeSubjectIDs: []
         )
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.pendingUnpromote?.deletedHandles?.listed.first?.ref == "PER-7KD45")
-        #expect(model.pendingUnpromote?.kind == .person)
-        #expect(model.pendingUnpromote?.error == nil)
+        #expect(model.unpromote.pending?.deletedHandles?.listed.first?.ref == "PER-7KD45")
+        #expect(model.unpromote.pending?.kind == .person)
+        #expect(model.unpromote.pending?.error == nil)
+        #expect(model.unpromote.pending?.message == L10n.Unpromote.confirmMessageDeletes(kind: .person, ref: "PER-7KD45"))
     }
 
     @Test func unpromotePreflightFailureStaysInTheConfirm() async {
         let (store, model) = await householdModel()
         store.getUnpromoteImpactError = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
         await model.beginUnpromote(subjectID: "s-james")
-        #expect(model.pendingUnpromote != nil)
-        #expect(model.pendingUnpromote?.deletedHandles == nil)
-        #expect(model.pendingUnpromote?.impactCheckFailed == true)
-        #expect(model.pendingUnpromote?.confirmTone == .danger)
-        #expect(model.pendingUnpromote?.error != nil)
+        #expect(model.unpromote.pending != nil)
+        #expect(model.unpromote.pending?.deletedHandles == nil)
+        #expect(model.unpromote.pending?.impactCheckFailed == true)
+        #expect(model.unpromote.pending?.connections == .unlisted)
+        #expect(model.unpromote.pending?.confirmTone == .danger)
+        #expect(model.unpromote.pending?.error != nil)
         store.getUnpromoteImpactError = nil
-        await model.confirmUnpromote()
+        _ = await model.unpromote.confirm(session: model.session, userID: "user-1")
         #expect(store.recordedCalls.contains("unpromoteSubject id=s-james"))
     }
 
@@ -2431,8 +2419,7 @@ struct EvidenceGraphModelTests {
             value: graphRows(
                 graphId: graphID,
                 subjects: subjects,
-                positions: positions,
-                types: store.subjectTypesByProject[projectDir] ?? []
+                positions: positions
             )
         )
         return (store, model)

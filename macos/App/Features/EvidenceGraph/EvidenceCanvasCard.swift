@@ -129,7 +129,7 @@ struct EvidenceCanvasCardContent {
                 }))
             }
             if placed.membership != nil {
-                named.append((L10n.string(L10n.EvidenceGraph.unpromote), {
+                named.append((L10n.string(L10n.Unpromote.button), {
                     Task { await model.beginUnpromote(subjectID: placed.id) }
                 }))
             }

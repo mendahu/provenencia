@@ -10,28 +10,6 @@ final class EvidenceGraphModel {
         var description: String = ""
     }
 
-    /// What the Unpromote confirm names: the subject, and the bridge sentences
-    /// that come off with it. Built fresh on open, so `error` starts nil.
-    struct PendingUnpromote: Identifiable, Equatable {
-        /// The subject's id.
-        let id: String
-        let name: String
-        let kind: EvidencePrimaryKind
-        let bridges: [String]
-        /// Handles the preflight reports this Unpromote deletes; nil when every handle stays.
-        var deletedHandles: CatalogDeleteImpactGroup?
-        /// The impact check failed; confirming may still delete the primary handle.
-        var impactCheckFailed = false
-        var error: String?
-
-        var confirmTone: PVConfirmTone {
-            if deletedHandles != nil || impactCheckFailed || error != nil {
-                return .danger
-            }
-            return .irreversible
-        }
-    }
-
     /// The Evidence graph this canvas shows. Its Source reads (`sourceRow`,
     /// citation counts, the Source page) stay on `sourceID`.
     let graphID: String
@@ -77,11 +55,8 @@ final class EvidenceGraphModel {
         value: EvidenceGraphSnapshot,
         text: EvidenceGraphText
     )?
-    /// Subject whose filing the Unpromote confirm names (`.pvConfirm(item:)`).
-    var pendingUnpromote: PendingUnpromote?
-    @ObservationIgnored
-    private var unpromoteOpenGeneration = 0
-    var isUnpromoting = false
+    /// The Unpromote confirm's state, bound with `.unpromoteConfirm(flow:…)`.
+    let unpromote = UnpromoteFlow()
     /// Subject pending DeleteImpact confirm or notice.
     let deleteImpact = DeleteImpactFlow()
     var pendingImpact: PVDeleteImpactRequest? {
@@ -984,65 +959,22 @@ final class EvidenceGraphModel {
 
     // MARK: Unpromote (S10-44)
 
-    /// Opens the Unpromote confirm for a promoted primary. The bridge list is
-    /// the inverse of Promote's forecast, read from the same snapshot fields:
-    /// filed bridges that have this subject as an end. The engine recomputes
-    /// the authoritative set in the write. Does nothing otherwise.
+    /// Opens the Unpromote confirm for a promoted primary. The connections it
+    /// lists come from the engine's preflight (`UnpromoteFlow.open`). Does
+    /// nothing otherwise.
     func beginUnpromote(subjectID: String) async {
         guard let snapshot = currentSnapshot(),
               let placed = primary(in: snapshot, id: subjectID),
               placed.membership != nil
         else { return }
-        let bridges = snapshot.bridges
-            .filter { ($0.endpointAID == subjectID || $0.endpointBID == subjectID) && $0.membership != nil }
-            .sorted { $0.id < $1.id }
-            .map { EvidenceBridgeEdgeSummary.sentence(for: $0, in: snapshot, orders: session.nameFormat) }
-        let openGeneration = beginUnpromoteOpen()
-        var pending = PendingUnpromote(
-            id: placed.id,
+        await unpromote.open(
+            subjectID: placed.id,
             name: placed.displayName(orders: session.nameFormat),
             kind: placed.kind,
-            bridges: bridges,
-            deletedHandles: nil
+            handleID: placed.membership?.entity.id,
+            graphID: graphID,
+            session: session
         )
-        do {
-            let impact = try await store.getUnpromoteImpact(
-                projectDir: session.projectKey.projectDir,
-                subjectID: subjectID
-            )
-            if let group = impact.deletes, group.total > 0 {
-                pending.deletedHandles = group
-            }
-        } catch {
-            pending.impactCheckFailed = true
-            pending.error = L10n.Errors.message(for: error)
-        }
-        guard unpromoteOpenGeneration == openGeneration else { return }
-        pendingUnpromote = pending
-    }
-
-    private func beginUnpromoteOpen() -> Int {
-        unpromoteOpenGeneration += 1
-        return unpromoteOpenGeneration
-    }
-
-    /// Writes the Unpromote. Success refreshes through the write's effects and
-    /// closes the confirm; a failure stays in the confirm as its error.
-    func confirmUnpromote() async {
-        guard let pending = pendingUnpromote, !isUnpromoting else { return }
-        isUnpromoting = true
-        defer { isUnpromoting = false }
-        do {
-            let effects = try await store.unpromoteSubject(
-                projectDir: session.projectKey.projectDir,
-                userID: userID,
-                subjectID: pending.id
-            )
-            session.apply(effects)
-            pendingUnpromote = nil
-        } catch {
-            pendingUnpromote?.error = L10n.Errors.message(for: error)
-        }
     }
 
     /// Location of a promoted subject's handle page. Persons, Events, and

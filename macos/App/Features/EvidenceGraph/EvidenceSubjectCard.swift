@@ -220,7 +220,7 @@ enum EvidenceSubjectCard {
 
     private static func unpromoteTarget(frame: CGRect) -> GraphCanvasActionTarget {
         GraphCanvasActionTarget(
-            id: unpromoteActionID, frame: frame, help: L10n.string(L10n.EvidenceGraph.unpromote)
+            id: unpromoteActionID, frame: frame, help: L10n.string(L10n.Unpromote.button)
         )
     }
 

@@ -65,7 +65,8 @@ struct PromoteModelTests {
         let entry = PromoteEntry(location: .promote(
             sourceId: sourceID, graphId: graphID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
         ))!
-        // The graph key was never warmed, so readyValue has nothing to give.
+        struct Boom: Error {}
+        store.listSubjectsError = Boom()
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         await model.load()
         #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
@@ -469,12 +470,12 @@ struct PromoteModelTests {
         let entry = PromoteEntry(location: .promote(
             sourceId: sourceID, graphId: graphID, subjectId: "a", kind: .person, ref: "CPR-A", title: "Ada", sourceTitle: "Census"
         ))!
+        struct Boom: Error {}
+        store.listSubjectsError = Boom()
         let model = PromoteModel(entry: entry, session: session, store: store, userID: "user-1")
         await model.load()
         #expect(model.loadError == L10n.string(L10n.Promote.graphUnavailable))
-        let _: QueryHandle<EvidenceGraphRows> = session.query(model.graphKey)
-        let _: QueryHandle<PropertiesSnapshot> = session.query(model.propertiesKey)
-        let _: QueryHandle<[CatalogConnectRule]> = session.query(model.rulesKey)
+        store.listSubjectsError = nil
         model.retryLoad()
         #expect(await waitUntil { !model.isLoading })
         #expect(model.loadError == nil)

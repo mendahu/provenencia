@@ -7,6 +7,7 @@ import SwiftUI
 /// its page and a record on its graph, with that Subject selected.
 struct PersonSourcesSection: View {
     let entityId: String
+    let userID: String
 
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -15,6 +16,8 @@ struct PersonSourcesSection: View {
     @State private var expanded: Set<String> = []
     /// Whether the Sources past the fold are shown. Starts folded on every mount, so a restored section opens folded.
     @State private var rowsExpanded = false
+    /// The Unpromote confirm; another person's page is another view, so it starts fresh.
+    @State private var unpromote = UnpromoteFlow()
 
     var body: some View {
         let orders = session.nameFormat
@@ -44,10 +47,50 @@ struct PersonSourcesSection: View {
                 content: content,
                 open: { navigation.go(to: $0) },
                 expand: { self.expanded.insert($0) },
-                expandRows: { self.rowsExpanded = true }
+                expandRows: { self.rowsExpanded = true },
+                unpromote: unpromote,
+                beginUnpromote: begin,
+                confirmUnpromote: confirm
             )
         }
     }
+
+    /// Opens the Unpromote confirm for a record's Subject.
+    private func begin(_ line: PersonSourcesContent.Line) {
+        Task {
+            await unpromote.open(
+                subjectID: line.subjectID,
+                name: line.subjectName,
+                kind: .person,
+                handleID: entityId,
+                graphID: line.graphID,
+                session: session
+            )
+        }
+    }
+
+    /// Writes the Unpromote. When the write deleted this person, the app leaves for the Persons
+    /// list as the session applies the effects, so nothing reloads a handle that is gone.
+    private func confirm() async -> Bool {
+        // The ref is read before the write closes the confirm; it is the person's own row of the preflight.
+        let deletedRef = unpromote.pending?.deletedHandles?.listed.first { $0.id == entityId }?.ref
+        return await unpromote.confirm(session: session, userID: userID) { effects in
+            guard effects.deletedHandles.contains(entityId) else {
+                session.apply(effects)
+                return
+            }
+            session.apply(effects, leavingPage: navigation.fallbackToSectionRoot)
+            if let deletedRef {
+                AccessibilityAnnouncement.post(L10n.Conclusions.sourcesPersonDeletedAnnouncement(ref: deletedRef))
+            }
+        }
+    }
+}
+
+/// What on a record's line takes keyboard focus: its graph link, or its Unpromote button.
+enum PersonSourcesFocus: Hashable {
+    case graph(claimID: String)
+    case unpromote(claimID: String)
 }
 
 /// The widths the header line and every Source row share: Citation (fills) · Type · Date ·
@@ -85,9 +128,18 @@ struct PersonSourcesList: View {
     let open: (WorkspaceLocation) -> Void
     let expand: (String) -> Void
     let expandRows: () -> Void
+    let unpromote: UnpromoteFlow
+    let beginUnpromote: (PersonSourcesContent.Line) -> Void
+    let confirmUnpromote: () async -> Bool
 
-    /// The graph link with the keyboard.
-    @FocusState private var focusedLine: String?
+    /// The graph link or the Unpromote button with the keyboard.
+    @FocusState private var focus: PersonSourcesFocus?
+    /// The line to focus once the Unpromote's reload drops the removed one: captured before the
+    /// write, so a reload that beats the write's return cannot miss it.
+    @State private var pendingFocus: (subjectID: String, target: String?)?
+    /// The Unpromote button that had the keyboard when its confirm opened, so Keep gives it back.
+    /// Nil after a mouse click, which draws no focus ring.
+    @State private var returnFocus: PersonSourcesFocus?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -95,23 +147,68 @@ struct PersonSourcesList: View {
             PVDivider(color: PVColor.borderStrong)
             ForEach(Array(content.rows.enumerated()), id: \.element.id) { index, row in
                 if index > 0 { PVDivider() }
-                PersonSourcesRowView(row: row, open: open, expand: { unfold(row) }, focused: $focusedLine)
+                PersonSourcesRowView(
+                    row: row, open: open, expand: { unfold(row) }, focused: $focus,
+                    unpromoteDisabled: unpromote.isBusy,
+                    beginUnpromote: { line in
+                        returnFocus = focus == .unpromote(claimID: line.id) ? focus : nil
+                        beginUnpromote(line)
+                    }
+                )
             }
             if content.hiddenRowCount > 0 {
                 ConclusionShowMoreRow(count: content.hiddenRowCount) {
                     expandRows()
-                    Task { @MainActor in focusedLine = content.firstRevealedRowLineID }
+                    Task { @MainActor in focus = content.firstRevealedRowLineID.map { .graph(claimID: $0) } }
                 }
                 .padding(.vertical, PVSpacing.space3)
                 .accessibilityIdentifier("persons.detail.sources.more")
             }
+        }
+        .unpromoteConfirm(
+            flow: unpromote,
+            accessibilityIdentifierPrefix: "persons.detail.sources.unpromote",
+            onConfirm: confirmAndTrackFocus
+        )
+        .onChange(of: content) { _, new in applyPendingFocus(in: new) }
+        .onChange(of: unpromote.pending?.id) { _, id in
+            if id == nil { restoreFocusAfterKeep() }
+        }
+    }
+
+    /// Notes where focus goes after the removed line, then writes.
+    private func confirmAndTrackFocus() {
+        guard !unpromote.isRunning, let subjectID = unpromote.pending?.id else { return }
+        pendingFocus = (subjectID, content.lineAfterRemoving(subjectID: subjectID))
+        Task { if await !confirmUnpromote() { pendingFocus = nil } }
+    }
+
+    /// The confirm closed: after Keep promotion, focus returns to the button that opened it. After a
+    /// write, `applyPendingFocus` places it.
+    private func restoreFocusAfterKeep() {
+        defer { returnFocus = nil }
+        guard pendingFocus == nil, let returnFocus,
+              case .unpromote(let claimID) = returnFocus,
+              content.rows.contains(where: { $0.lines.contains { $0.id == claimID } })
+        else { return }
+        FocusClaim.claim($focus, returnFocus)
+    }
+
+    /// Moves focus to the next line's Unpromote once the content no longer holds the removed line.
+    private func applyPendingFocus(in new: PersonSourcesContent) {
+        guard let pending = pendingFocus,
+              !new.rows.contains(where: { $0.lines.contains { $0.subjectID == pending.subjectID } })
+        else { return }
+        pendingFocus = nil
+        if let target = pending.target {
+            FocusClaim.claim($focus, .unpromote(claimID: target))
         }
     }
 
     /// Unfolds a Source and, once its lines are drawn, focuses the first one it added.
     private func unfold(_ row: PersonSourcesContent.Row) {
         expand(row.id)
-        Task { @MainActor in focusedLine = row.firstRevealedLineID }
+        Task { @MainActor in focus = row.firstRevealedLineID.map { .graph(claimID: $0) } }
     }
 
     private var header: some View {
@@ -133,7 +230,9 @@ private struct PersonSourcesRowView: View {
     let row: PersonSourcesContent.Row
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
-    var focused: FocusState<String?>.Binding
+    var focused: FocusState<PersonSourcesFocus?>.Binding
+    let unpromoteDisabled: Bool
+    let beginUnpromote: (PersonSourcesContent.Line) -> Void
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: PersonSourcesColumns.spacing) {
@@ -172,7 +271,10 @@ private struct PersonSourcesRowView: View {
             .help(row.helpTitle)
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 ForEach(row.lines) { line in
-                    PersonSourcesLineView(line: line, open: open, focused: focused)
+                    PersonSourcesLineView(
+                        line: line, open: open, focused: focused,
+                        unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
+                    )
                 }
                 if row.hiddenCount > 0 {
                     ConclusionShowMoreRow(count: row.hiddenCount, expand: expand)
@@ -198,7 +300,9 @@ private struct PersonSourcesRowView: View {
 private struct PersonSourcesLineView: View {
     let line: PersonSourcesContent.Line
     let open: (WorkspaceLocation) -> Void
-    var focused: FocusState<String?>.Binding
+    var focused: FocusState<PersonSourcesFocus?>.Binding
+    let unpromoteDisabled: Bool
+    let beginUnpromote: (PersonSourcesContent.Line) -> Void
 
     var body: some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
@@ -206,8 +310,8 @@ private struct PersonSourcesLineView: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .help(line.graphTitle)
-                .focused(focused, equals: line.id)
-                .pvActivatesOnReturn(when: focused.wrappedValue == line.id) { open(line.location) }
+                .focused(focused, equals: .graph(claimID: line.id))
+                .pvActivatesOnReturn(when: focused.wrappedValue == .graph(claimID: line.id)) { open(line.location) }
                 .accessibilityLabel(line.accessibilityLabel)
                 .accessibilityIdentifier("persons.detail.sources.graph.\(line.id)")
             Group {
@@ -229,6 +333,18 @@ private struct PersonSourcesLineView: View {
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textSecondary)
             .accessibilityHidden(true)
+            PVButton(L10n.Unpromote.button, variant: .ghost, size: .sm, icon: .unpromote) {
+                beginUnpromote(line)
+            }
+            .fixedSize()
+            .padding(.leading, PVSpacing.space3)
+            .disabled(unpromoteDisabled)
+            .focused(focused, equals: .unpromote(claimID: line.id))
+            .pvActivatesOnReturn(
+                when: focused.wrappedValue == .unpromote(claimID: line.id) && !unpromoteDisabled
+            ) { beginUnpromote(line) }
+            .accessibilityLabel(line.unpromoteAccessibilityLabel)
+            .accessibilityIdentifier("persons.detail.sources.unpromote.\(line.id)")
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("persons.detail.sources.line.\(line.id)")
@@ -241,6 +357,7 @@ private struct PersonSourcesPreview: View {
     let groups: [CatalogPersonClaimGroup]
     var expandedAtStart: Set<String> = []
 
+    @State private var unpromote = UnpromoteFlow()
     @State private var expanded: Set<String> = []
     @State private var rowsExpanded = false
 
@@ -256,7 +373,10 @@ private struct PersonSourcesPreview: View {
                 ),
                 open: { _ in },
                 expand: { expanded.insert($0) },
-                expandRows: { rowsExpanded = true }
+                expandRows: { rowsExpanded = true },
+                unpromote: unpromote,
+                beginUnpromote: { _ in },
+                confirmUnpromote: { false }
             )
         }
         .frame(width: 1102, height: 700)

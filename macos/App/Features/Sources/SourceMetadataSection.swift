@@ -261,9 +261,7 @@ final class SourceMetadataSection {
 
     /// `sourcemetadata.invalid` stays on the value field; I/O goes to `pageError`.
     func applySetError(_ error: Error, fieldID: String?) {
-        if case .coded(_, let code, _, _) = error as? CoreInvokeError,
-           code == "sourcemetadata.invalid"
-        {
+        if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid {
             let message = L10n.Errors.message(for: error)
             if isAdding {
                 addValueError = message

@@ -133,6 +133,30 @@
         }
       }
     },
+    "conclusions.sources.personDeletedAnnouncement": {
+      "comment": "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ deleted."
+          }
+        }
+      }
+    },
+    "conclusions.sources.unpromoteAccessibility": {
+      "comment": "Spoken label of the Unpromote button on a record's line on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpromote %1$@, record %2$@, %3$@"
+          }
+        }
+      }
+    },
     "designSystem.field.requiredMarker": {
       "comment": "Marks a required PVField as required, shown beside its label",
       "extractionState": "manual",
@@ -15988,7 +16012,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.person": {
+    "unpromote.confirmMessageDeletes.person": {
       "comment": "Unpromote confirm when the Person handle is deleted; argument is its ref",
       "extractionState": "manual",
       "localizations": {
@@ -16000,7 +16024,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.event": {
+    "unpromote.confirmMessageDeletes.event": {
       "comment": "Unpromote confirm when the Event handle is deleted; argument is its ref",
       "extractionState": "manual",
       "localizations": {
@@ -16012,7 +16036,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmMessageDeletes.place": {
+    "unpromote.confirmMessageDeletes.place": {
       "comment": "Unpromote confirm when the Place handle is deleted; argument is its ref",
       "extractionState": "manual",
       "localizations": {
@@ -16072,8 +16096,8 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromote": {
-      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, and the confirm button, that takes its promotion back",
+    "unpromote.button": {
+      "comment": "Footer icon button's tooltip and VoiceOver action on a promoted card, the confirm button, and the Person page's button on a record's line, that takes its promotion back",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -16084,7 +16108,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteKeep": {
+    "unpromote.keep": {
       "comment": "Cancel button of the Unpromote confirm",
       "extractionState": "manual",
       "localizations": {
@@ -16096,7 +16120,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmTitle": {
+    "unpromote.confirmTitle": {
       "comment": "Title of the Unpromote confirm; argument is the subject's name",
       "extractionState": "manual",
       "localizations": {
@@ -16108,7 +16132,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.person": {
+    "unpromote.confirmPreflightFailed.person": {
       "comment": "Unpromote confirm when GetUnpromoteImpact fails for a person",
       "extractionState": "manual",
       "localizations": {
@@ -16120,7 +16144,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.event": {
+    "unpromote.confirmPreflightFailed.event": {
       "comment": "Unpromote confirm when GetUnpromoteImpact fails for an event",
       "extractionState": "manual",
       "localizations": {
@@ -16132,7 +16156,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmPreflightFailed.place": {
+    "unpromote.confirmPreflightFailed.place": {
       "comment": "Unpromote confirm when GetUnpromoteImpact fails for a place",
       "extractionState": "manual",
       "localizations": {
@@ -16144,7 +16168,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmMessage": {
+    "unpromote.confirmMessage": {
       "comment": "Message of the Unpromote confirm",
       "extractionState": "manual",
       "localizations": {
@@ -16156,7 +16180,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmBridgesHeader": {
+    "unpromote.confirmBridgesHeader": {
       "comment": "Header over the relationships, participations, and locations the Unpromote confirm lists",
       "extractionState": "manual",
       "localizations": {
@@ -16168,7 +16192,7 @@
         }
       }
     },
-    "evidenceGraph.subject.unpromoteConfirmBridgesNote": {
+    "unpromote.confirmBridgesNote": {
       "comment": "Note under the list in the Unpromote confirm",
       "extractionState": "manual",
       "localizations": {
@@ -16176,6 +16200,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "The other end of each stays promoted."
+          }
+        }
+      }
+    },
+    "unpromote.confirmBridgesUnlisted": {
+      "comment": "Unpromote confirm, in place of the connection list, when the engine or the graph could not supply it",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connections that come off with it could not be listed. The other end of each stays promoted."
           }
         }
       }

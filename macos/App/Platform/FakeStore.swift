@@ -130,6 +130,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// The graph id of each `listSubjects` call, in order.
     var listSubjectsGraphIDs: [String] = []
     var getSourceWorkspaceCalls = 0
+    var listPersonSummariesCalls = 0
     var getPropertiesWorkspaceCalls = 0
     var listEvidenceGraphProgressCalls = 0
     /// The graph id of each `citationCountsByEvidenceGraph` call, in order.
@@ -200,6 +201,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var unpromoteImpactBySubject: [String: CatalogUnpromoteImpact] = [:]
     var getUnpromoteImpactError: Error?
     var getUnpromoteImpactCalls = 0
+    /// While on, `getUnpromoteImpact` suspends after recording the call.
+    let getUnpromoteImpactHold = FakeHold()
+    /// While on, `unpromoteSubject` suspends after recording the call.
+    let unpromoteSubjectHold = FakeHold()
     /// When set, `setPreferredLikeness` throws (the portrait model shows a danger toast).
     var setPreferredLikenessError: Error?
     /// When set, `setSubjectPosition` throws (Evidence graph drag should revert).
@@ -1419,9 +1424,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func getUnpromoteImpact(projectDir: String, subjectID: String) async throws -> CatalogUnpromoteImpact {
-        try withState {
+        withState {
             markCatalogSessionHeld(projectDir)
             getUnpromoteImpactCalls += 1
+        }
+        await getUnpromoteImpactHold.wait()
+        return try withState {
             if let getUnpromoteImpactError { throw getUnpromoteImpactError }
             return unpromoteImpactBySubject[subjectID]
                 ?? CatalogUnpromoteImpact(deletes: nil, unpromotedBridgeSubjectIDs: [])
@@ -1435,9 +1443,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         userID _: String,
         subjectID: String
     ) async throws -> CatalogWriteEffects {
-        try withState {
+        withState {
             markCatalogSessionHeld(projectDir)
             recordedCalls.append("unpromoteSubject id=\(subjectID)")
+        }
+        await unpromoteSubjectHold.wait()
+        return try withState {
             if let unpromoteSubjectError { throw unpromoteSubjectError }
             guard let graphID = graphOfSubject(subjectID) else {
                 throw CoreInvokeError.coded(status: 1, code: "promote.invalid", kind: .user, params: [])
@@ -1628,6 +1639,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     func listPersonSummaries(projectDir: String) async throws -> [CatalogPersonSummary] {
         // A read: no `recordedCalls`.
         return withState {
+            listPersonSummariesCalls += 1
             markCatalogSessionHeld(projectDir)
             return personSummaries()
         }

@@ -159,6 +159,7 @@ private struct ListContent: View {
 **Master–detail selection** (fields/types): `reconcileSelection(for:)` on
 `onChange(of: navigation.currentLocation)` + `onChange(of: handle.status/value)` —
 sync apply from history after list is ready; `fallbackToSectionRoot()` if deep id missing.
+A page whose read reports its entity gone applies `.leavesForSectionRoot(when:)`; a write that deletes the shown entity applies its effects with `session.apply(_:_:leavingPage:)`. That is for a page the deleted entity is the whole of (the Person page, the Source page); a master–detail page keeps its list on screen and applies as usual.
 
 **Source-style detail:** `SourcePageView` pattern — the host remounts it per Source through `viewIdentity`; a plain `.task` warms the workspace key;
 `@Bindable workspaceHandle` syncs into section models; fingerprint skips redundant section resets.

@@ -12,5 +12,5 @@ Behavior: `docs/deployment-plan/archive/spike-3/navigation-history.md`.
 - Committed places (sidebar, deep pages, master–detail selection, omnibar/breadcrumb targets) use `WorkspaceLocation` + `WorkspaceNavigation.go(to:)` (environment-injected).
 - Do not set `selectedSection` or open/close/select as the sole navigation path.
 - Do not use SwiftUI `NavigationStack` / `NavigationPath` for workspace place.
-- Destinations apply `navigation.currentLocation` on appear/change; prune missing deep ids with `fallbackToSectionRoot()`.
+- Destinations apply `navigation.currentLocation` on appear/change; prune missing deep ids with `fallbackToSectionRoot()`. A page whose read reports its entity gone applies `.leavesForSectionRoot(when:)`; a write that deletes the shown entity applies its effects with `session.apply(_:_:leavingPage:)`, for a page the deleted entity is the whole of (not a master–detail page, whose list stays on screen).
 - `WorkspaceModel` is sidebar chrome only (collapse); do not put history back on it.

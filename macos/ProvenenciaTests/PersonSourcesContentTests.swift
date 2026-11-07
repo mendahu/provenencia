@@ -74,6 +74,10 @@ struct PersonSourcesContentTests {
         #expect(first.title == .name("Hamburg census 1867"))
         #expect(first.location == SourcesListNavigation.pageLocation(sourceId: "src-1", ref: "SRC-9TQ2M", title: "Hamburg census 1867"))
         #expect(first.accessibilityLabel == "Hamburg census 1867, Census, date not recorded, SRC-9TQ2M")
+        #expect(
+            first.lines[0].unpromoteAccessibilityLabel
+                == "Unpromote Household 214, record jw, CPR-7Q2KD"
+        )
         #expect(first.lines[1].graphRef == "EVG-5MD8R")
         #expect(first.lines[1].graphID == "g-388")
         #expect(first.lines[1].location == SourcesListNavigation.canvasLocation(
@@ -112,6 +116,27 @@ struct PersonSourcesContentTests {
         #expect(seven.lines.count == 5 && seven.hiddenCount == 2)
         let open = content(group(9), expanded: ["src"]).rows[0]
         #expect(open.lines.count == 9 && open.hiddenCount == 0 && open.firstRevealedLineID == "c6")
+    }
+
+    @Test func lineAfterRemoving() {
+        let page = content(groups)
+        // A middle line: the next one.
+        #expect(page.lineAfterRemoving(subjectID: "s1") == "c2")
+        // A Source's last line: the first line of the next Source.
+        #expect(page.lineAfterRemoving(subjectID: "s2") == "c3")
+        // The page's last line: the previous one.
+        #expect(page.lineAfterRemoving(subjectID: "s4") == "c3")
+        // The only line of the only Source: nothing.
+        let only = content([groups[2]])
+        #expect(only.lineAfterRemoving(subjectID: "s4") == nil)
+        #expect(page.lineAfterRemoving(subjectID: "missing") == nil)
+        // A line folded away is never returned.
+        let folded = content([CatalogPersonClaimGroup(
+            sourceID: "src", sourceRef: "SRC-1", title: "Adressbuch", sourceTypeID: "type-census",
+            claims: (1...9).map { claim("c\($0)", graph: "g\($0)", graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)")) }
+        )])
+        #expect(folded.lineAfterRemoving(subjectID: "s5") == "c4")
+        #expect(folded.lineAfterRemoving(subjectID: "s4") == "c5")
     }
 
     @Test func foldPastFiftySources() {

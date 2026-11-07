@@ -242,11 +242,7 @@ private struct SourcePageContent: View {
             flow: model.deleteImpact,
             accessibilityIdentifierPrefix: "sources.page.deleteImpact",
             onConfirm: {
-                Task {
-                    if await model.confirmResourceDelete() {
-                        navigation.fallbackToSectionRoot()
-                    }
-                }
+                Task { await model.confirmResourceDelete(leaving: navigation.fallbackToSectionRoot) }
             },
             onNavigate: { location in
                 navigation.go(to: location)
@@ -254,10 +250,8 @@ private struct SourcePageContent: View {
         )
         .onChange(of: workspaceHandle.status) {
             model.sync(from: workspaceHandle)
-            if case .failed = workspaceHandle.read {
-                navigation.fallbackToSectionRoot()
-            }
         }
+        .leavesForSectionRoot(when: workspaceHandle.read.isFailed)
         .onChange(of: workspaceHandle.value) { _, newValue in
             guard newValue != nil else { return }
             model.sync(from: workspaceHandle)
