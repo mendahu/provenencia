@@ -1,6 +1,6 @@
 # S13-26 — Scoring two Evidence graphs
 
-**Status:** Planned
+**Status:** Landed in #736 (2026-11-07)
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a pure Go layer package; nothing reads it until S13-27, and nothing draws it until S13-28)
@@ -14,6 +14,14 @@
 **Context:** [`../evidence-graph-comparison.md`](../evidence-graph-comparison.md) (Requirement 1, First version); working rules "Scoring and the view are two concerns", "Slice 7 starts with a simple count", "Each PR updates what it makes false" (slice 7); [conclusion §5.1](../../../conclusion-layer-data-model.md#51-two-lenses); [`matching-model.md`](../../../matching-model.md) (The stack, Knob inventory)
 **Planned:** 2026-11-07 against `main` @ `aaf3b15`
 **Review:** [`S13-26-scoring-two-evidence-graphs.review.md`](S13-26-scoring-two-evidence-graphs.review.md) — round 1: Fits with changes / Ready with changes; round 2: Fits with changes / Ready with changes, every finding Fixed; two To user items answered 2026-11-07
+
+**Landed note.** One difference: `TestLines` AC-2.2 builds "Amy" with `pt.Given("Amy")`, not `pt.Name("Amy")`, because `Name` reads a one-word form as a surname and the name compare then conflicts (the graphalign test builds it the same way). Review round 1 changed these, by Decision (the Decisions and Edges above are kept as planned):
+
+- **D-5 and Edges "Untrusted size":** one `Lines` call is now bounded. `recordlinks.Rules` gains `MaxEntityMembers` = 10 and `MaxUnitValues` = 20 (user, 2026-11-07), each with an inventory row. A person on an entity with more members of any kind in either graph keeps its line at 0 facts; links to such an entity count nothing; a property where either member holds more values (pooled ones added) counts nothing. `BenchmarkLinesAtBounds` is the worst input the bounds allow.
+- **D-6:** `Rules.Unit` is `Rules.CountsUnder`, `CompareProperty`'s `unit` parameter and `Side`'s `lead` are `key`, and `propertycompare.Outcome.Matches` is the one reading of agree or partial for `recordlinks`, `graphalign` and `subjectcompare`.
+- **D-7 and D-8:** a pair of links is skipped through a pivot only when the pivot's own fact counted: the pivot is filed on one entity E in both graphs, E is within the member bound, and the two members' links to E hold a corresponding pair. This supersedes the skip rule in D-7 and corrects D-8's Why ("the pivot's own fact always counts"): father on one record and mother on the other no longer lose the parent link.
+- **D-11 and D-12:** edge fixtures for participations and relationships are `kinshiptest.Part` and `kinshiptest.Rel` (a new package, a `layerPackages` row), used by `core/kinship`, `core/recordlinks` and `core/graphalign` tests; `part`, `rel` and `link` in `core/kinship` tests no longer take `t`, and `graphalign`'s `partKeys` and `relKeys` are gone.
+- **Pinned:** a gender no pooled term maps counts nothing (decided, as for Promote), the first member of an id wins, and `FuzzLines` holds symmetry over random graphs.
 
 ### Implementer — read this first
 

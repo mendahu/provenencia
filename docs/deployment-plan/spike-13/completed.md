@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S13-26 — Scoring two Evidence graphs
+
+**Landed 2026-11-07** in [#736](https://github.com/mendahu/provenencia/pull/736). A new pure package, `core/recordlinks`, takes two Evidence graphs of one person and returns one line for each other person both hold on one canonical entity, with the number of facts the two records share about them (agreeing properties and corresponding links to the same entity, a fact recorded through a shared marriage or birth counted once) and a weak or strong weight (`recordlinks.StrongAt` = 2); one call reads at most ten members per entity and twenty values per property, and counts nothing past them. Nothing calls it until S13-27. Subject compare's property step is now `subjectcompare.CompareProperty`, and `kinship.SameShape` is the shape rule `CountedOnce` is built on.
+
 ## S13-17 — Remove a claim
 
 **Landed 2026-11-06** in [#729](https://github.com/mendahu/provenencia/pull/729). A Person's Sources section has an Unpromote button at the end of each record's line, through the same confirm as the Evidence graph's: its connection list now comes from the engine's preflight, and the single-handle deletes sentence approved for S13-08 is shown (on the graph too). Removing a person's last record says first that the person is deleted, and the app lands on the Persons list as the session applies the effects (`apply(_:_:leavingPage:)`), announcing the deletion to VoiceOver. `UnpromoteFlow` and the `PVUnpromoteConfirm` recipe replace the graph model's Unpromote state; a Conclusion page whose read reports `conclusiondetails.not_found` leaves for its list with a Toast (`leavesForSectionRoot`, also used by the Source page and the graph), so Back to a deleted person does not stop on a Callout. `WorkspaceSession.evidenceGraphSnapshot(graphID:)` is the one snapshot read Promote shares, and `CoreInvokeError.engineCode` (`EngineErrorCode`) is the one typed read of the coded errors the client branches on. Not yet run in the app: §10 items 1 – 4.
