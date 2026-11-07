@@ -424,6 +424,13 @@ struct PropertiesModelTests {
         draft.chooseValueType("integer", holdsLocked: reason != nil)
         #expect(draft.valueType == "integer")
         #expect(draft.cardinality == "single")
+        var back = draft
+        back.chooseValueType(
+            "name",
+            holdsLocked: model.holdsLockReason(valueType: "name", origin: CatalogOrigin.user) != nil
+        )
+        #expect(back.valueType == "name")
+        #expect(back.cardinality == "single")
 
         let location = await model.submitCreate(draft)
         #expect(location?.title == "Score")
@@ -446,6 +453,10 @@ struct PropertiesModelTests {
         #expect(!model.canEditCardinality)
         #expect(
             model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user)
+                == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))
+        )
+        #expect(
+            model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.provenencia)
                 == L10n.Properties.holdsSingleOnly(typeLabel: L10n.string(L10n.Properties.valueTypeInteger))
         )
         #expect(await model.setCardinality("multiple") == false)
@@ -471,19 +482,33 @@ struct PropertiesModelTests {
         #expect(model.holdsLockReason(valueType: "integer", origin: CatalogOrigin.user) == nil)
     }
 
-    @Test func valueTypeInksAreDistinct() {
-        let types: [PropertyValueType] = [.text, .integer, .date, .name, .subject, .term, .depiction, .boolean]
-        for name in [NSAppearance.Name.aqua, .darkAqua] {
-            let appearance = NSAppearance(named: name)!
+    @Test func valueTypeInksAreDistinct() throws {
+        let table: [(type: PropertyValueType, light: Color, dark: Color)] = [
+            (.text, PVPalette.paper700, PVPalette.paper300),
+            (.integer, PVPalette.copper700, PVPalette.copper300),
+            (.date, PVPalette.lapis700, PVPalette.lapis300),
+            (.name, PVPalette.iron700, PVPalette.iron300),
+            (.subject, PVPalette.plum700, PVPalette.plum300),
+            (.term, PVPalette.ochre900, PVPalette.ochre300),
+            (.boolean, PVPalette.verdigris700, PVPalette.verdigris300),
+            (.depiction, PVPalette.madder700, PVPalette.madder300),
+        ]
+        #expect(Set(table.map(\.type)) == Set(PropertyValueType.allCases))
+
+        func key(_ color: NSColor) throws -> String {
+            let rgb = try #require(color.usingColorSpace(.sRGB))
+            return String(format: "%.3f/%.3f/%.3f", rgb.redComponent, rgb.greenComponent, rgb.blueComponent)
+        }
+        for (name, isDark) in [(NSAppearance.Name.aqua, false), (.darkAqua, true)] {
+            let appearance = try #require(NSAppearance(named: name))
             var inks: Set<String> = []
-            appearance.performAsCurrentDrawingAppearance {
-                for type in types {
-                    let ink = NSColor(PropertiesTypeChrome.valueTypeForeground(type.rawValue))
-                        .usingColorSpace(.sRGB)!
-                    inks.insert(String(format: "%.3f/%.3f/%.3f", ink.redComponent, ink.greenComponent, ink.blueComponent))
-                }
+            for row in table {
+                let ink = try key(PVPainter.color(PropertiesTypeChrome.valueTypeForeground(row.type.rawValue), in: appearance))
+                let want = try key(PVPainter.color(isDark ? row.dark : row.light, in: appearance))
+                #expect(ink == want, "\(row.type.rawValue) \(name.rawValue)")
+                inks.insert(ink)
             }
-            #expect(inks.count == types.count, "\(name.rawValue)")
+            #expect(inks.count == table.count, "\(name.rawValue)")
         }
         #expect(PropertiesTypeChrome.valueTypeForeground("nope") == PVColor.textSecondary)
     }
