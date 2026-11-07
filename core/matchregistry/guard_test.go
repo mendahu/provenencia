@@ -49,6 +49,44 @@ var layerPackages = []struct {
 	{"core/vocabkey", false},
 }
 
+// readerPackages are the packages that read the matching layers' inputs and
+// must not use graph alignment's types. A row lists the packages its direct
+// production imports may not hold. The check is on direct imports because
+// core/matchregistry itself imports core/graphalign, so every reader of the
+// registry reaches it transitively. A new reader of this kind adds a row.
+var readerPackages = []struct {
+	dir     string
+	forbids []string
+}{
+	{"core/database/evidencelayer", []string{"core/graphalign", "core/database/promotealign"}},
+	{"core/recordlinks", []string{"core/graphalign"}},
+}
+
+func TestReaderPackages(t *testing.T) {
+	root := filepath.Join("..", "..")
+	for _, p := range readerPackages {
+		t.Run(p.dir, func(t *testing.T) { checkForbids(t, root, p.dir, p.forbids) })
+	}
+}
+
+// checkForbids fails when a non-test file of the package imports one of the
+// forbidden packages directly.
+func checkForbids(t *testing.T, root, dir string, forbids []string) {
+	ctx := build.Default
+	ctx.BuildTags = nil
+	pkg, err := ctx.ImportDir(filepath.Join(root, dir), 0)
+	if err != nil {
+		t.Fatalf("%s: %v", dir, err)
+	}
+	for _, imp := range pkg.Imports {
+		for _, f := range forbids {
+			if imp == modulePath+f {
+				t.Errorf("%s imports %s", dir, f)
+			}
+		}
+	}
+}
+
 func TestLayerPackages(t *testing.T) {
 	root := filepath.Join("..", "..")
 	for _, p := range layerPackages {
