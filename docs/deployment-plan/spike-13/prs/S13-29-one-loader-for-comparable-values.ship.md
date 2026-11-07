@@ -1,7 +1,7 @@
 # Ship log — S13-29 One loader for a Subject's comparable values
 
 **Plan:** [`S13-29-one-loader-for-comparable-values.md`](S13-29-one-loader-for-comparable-values.md) · **Branch:** `s13-29-one-loader-for-comparable-values` · **PR:** #741
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Head `c9462e27`. Gate PASS (run by the orchestrator on the pushed head). Report: STEP-7's `main` budget run used `git checkout main` in this checkout, not a second worktree (the user's standing rule; orchestrator's instruction); D-13's GNU sed replaced by an equivalent perl rename (BSD sed has no `\u`); STEP-3's `rg` still prints two `connectrules.Bridge{}` lines, a different type; `promotealign_test.go` dropped its redundant `graphfill` blank import; `docs/ideas/structural-debt.md` S14-36 entry's `promotealign.decode` became `evidencelayer.Decode` (DoD sweep); §10 manual check not run in the app.
@@ -76,3 +76,37 @@ Check: scripts/check-pr.sh PASS.
 
 ## Round 1 — fix
 Head `921f8f13`. F-1 to F-8 done. F-1's largest walk in `TestLargeSourceBudgets`' fixture is 60 edges, so `maxWalkEdges` (50,000) sits about 800× above it. F-2's mutant fails the rewritten test. F-3 moved `grapheventtitles`, `canonicalgraph`, `conclusionsummaries`, `promote`, `graphcache`, `autoreconciler`, `conclusiondetails`, `persondetail` and `search` onto `evidencelayertest.Records`, added `Records.Labelled`, and made `Locate` return the bridge; helpers kept with a reason: `promote/bridges_test.go`'s `connect.Result` family, `conclusionsummaries` `placeRel`, the `cite`s and thin `source` wrappers that pick the Artifact from the Subject's Source, `observations_test.go`'s `booleanFixture.cite`, `canonlinks`' `relationship`. Deviations: F-7 extended the existing S13-16 PRF-2 debt entry rather than adding a second; `completed.md` gained one sentence on the cap.
+
+## Round 2 — review
+Base `986d304f`, head `20f4ad41`, scope `c9462e27...20f4ad41`. Reviewers: CON, MNT, SEC+PRF (each had a Fix-now blocker or major). Skipped: UX (still no matching path).
+
+Round 1 follow-through: CON-1, CON-2, CON-3 / MNT-1, SEC-1 **Resolved**. MNT-3, MNT-4, CON-5, PRF-1 **Resolved** (read in the fix commits; CON checked them by mutant or test too). MNT-2 **Not resolved**: exact copies remain in files F-3 moved.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-2 | SEC+PRF | blocker | Associations per link × children per parent run `Load` to 21 GB on 32,002 rows, under the walk cap | Fix now → F-9 | Read `kinship.chains`: each grandchild's chain copies the up link's associations; `set.Add` merged them first, so `MaxPairSteps` sees one step, and `MaxPivotEnd` limits parents only. The memo holds the result. Canon callers run `Derive` per pivot (`canonlinks/reader.go`), so a per-`Derive` total cap is safe there. One high total cap, per the user's S13-26 SEC-1 answer |
+| MNT-2 (remainder) | MNT | major | `search/handles_test.go` `locatedBirth`, `autoreconciler` `mustProp`, `conclusiondetails` `termID` and hand-written `propertyterms.Lookup`s are copies F-3 left, with no debt entry | Fix now → F-10 | Reviewer proved the `search` swap passes under an overlay. Rides on Fix plan 2 because round 1's major must close before the PR is ready; it is not a new round-2 finding |
+
+Nits (logged): `CON-8 · evidence_graph_walk_test.go · TestWalkEvidenceGraphEdgeCap has no filtered case and does not pin the exact cap` · `CON-9 · plan Landed note · kept list omits canonlinks' relationship and search's bridge calls (F-10 settles it)`
+
+Note: CON saw `TestLargeSourceBudgets/warm` at 470 ms against 375 ms in one run that overlapped its mutant builds; three runs alone passed, and so did the verify run. The fix commits add one O(reaches) count to the walk.
+
+### Fix plan 2
+
+**F-9 — Bound what one Derive's chains copy before it builds one** (from SEC-2)
+Files: `core/kinship/kinship.go`, `core/kinship/kinship_test.go`, `core/matchregistry/kinship.go`, `docs/matching-model.md`. Skill: `add-match-rule`.
+Failing test first: `TestDeriveChainWorkCap` — one grandparent-to-middle link holding A associations and one middle with C children, A × C over the cap → no chain implied; just under → every chain implied. Today the over-cap case implies C chains.
+Do: add `MaxChainWork int` to `kinship.Rules`, doc in the shape of `recordlinks.Rules.MaxPairWork`: the most association copies one Derive's chains may make before they read as malformed and imply nothing; counted before any chain. In `chains`, first run the same loops as the build (same `maxPivotEnd` and `bytes.Equal` skips) and sum, per chain, `len(Associations)` of every kept step of both pairs, read from `idx.byPair` without building `from`. Over the cap, return nil. Then build. Pass the new rule from `Derive`. Set `MaxChainWork: 100_000` in `defaultKinship`, with a `decided: user, 2026-11-07 (S13-26 SEC-1 rule, S13-29 SEC-2)` comment: one high total cap for a cost only a crafted catalog reaches. Add its row to the knob inventory in `docs/matching-model.md` beside `kinship.MaxPairSteps`, and run the matching skill's guard and any registry test that walks the knobs. State the largest count `TestLargeSourceBudgets`' fixture reaches in your report (a throwaway run, not committed).
+Check: the test passes; `TestDeriveBound`, `core/matchregistry` and `core/database/canonlinks` tests pass; `TestLargeSourceBudgets` passes; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/...` passes; scripts/check-pr.sh PASS.
+
+**F-10 — Move the last builder copies onto the shared records** (from MNT-2)
+Files: `core/search/handles_test.go`, `core/database/autoreconciler/autoreconciler_test.go`, `core/database/conclusiondetails/conclusiondetails_test.go`, `core/database/conclusiondetails/placerecords_test.go`, `core/database/promote/promote_test.go`, the plan's Landed note.
+Failing test first: none (test-only refactor); assertions unchanged.
+Do: `locatedBirth` calls `f.Participation(f.Source, f.Artifact, person, event, "subject")` and `f.Locate(f.Source, f.Artifact, event, place)`; drop imports left unused. `mustProp` goes (use `f.Prop`). `termID` goes (use `f.Term("sex_at_birth", key).ID`). `propertyterms.Lookup` at `handles_test.go:200,218,347` and `placerecords_test.go:41` become `Term`. Try `promote_test.go:260` `newCatalog` on `evidencelayertest.New`; if it cannot move, name why. Extend the plan's Landed note: the `MaxChainWork` cap, which corrects the Untrusted size line again; the kept list gains `canonlinks`' `relationship` and anything F-10 keeps. Update the PR body's deviations to match.
+Check: `grep -rn 'mustProp\|termID(' core --include='*_test.go'` and `grep -rn 'propertyterms.Lookup' core --include='*_test.go'` print only what your report lists, each with a reason; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `38da3443`. F-9 and F-10 done. F-9: `kinship.MaxChainWork` 100,000; `chains` and its count share one walk, `eachChain`; the largest count in `TestLargeSourceBudgets`' fixture is 4; `TestDeriveManyAssociations` dropped from n = 20,000 to 4,000 to stay under the shipped cap, assertions unchanged; `TestDeriveChainWorkCap` was written with the field, so it had no red run. Read by the orchestrator: the count runs before any chain, and canon callers run `Derive` per pivot. F-10: the named copies are gone and `promote`'s `newCatalog` moved onto `evidencelayertest.New`; 19 one-off `propertyterms.Lookup` calls in `citations`, `connect`, `deleteimpact`, `effects`, `observations`, `subjects` and `subjectvocab` tests stay, named in the Landed note. No round 3: the fix commits for F-9 and F-10 had no fresh review.
+
+## Result
+Gate PASS on `38da3443` (orchestrator) · budgets pass on the final head (warm proposal 96 ms of 375 ms) · CI pending · open: none · follow-ups: none (debt went where the plan named: `structural-debt.md` S13-16 PRF-2 entry, S13-27 Check) · to user: —
