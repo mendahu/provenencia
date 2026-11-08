@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
@@ -301,11 +302,13 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	t.Run("compose every summary", func(t *testing.T) {
 		g := f.c.Graph()
+		db, err := f.c.DB()
+		must(t, err)
 		w := conclusionsummaries.Want{
-			Persons: idsOfKind(t, lf, vocabkey.Person),
-			Events:  idsOfKind(t, lf, vocabkey.Event),
+			Persons: conclusionsummariestest.HandleIDs(t, db, vocabkey.Person),
+			Events:  conclusionsummariestest.HandleIDs(t, db, vocabkey.Event),
 		}
-		_, err := conclusionsummaries.RowsForSearch(g, w)
+		_, err = conclusionsummaries.RowsForSearch(g, w)
 		must(t, err)
 		d := databasetest.Fastest(3, func() time.Duration {
 			return databasetest.Since(func() {
@@ -315,25 +318,42 @@ func TestLargeSourceBudgets(t *testing.T) {
 		})
 		databasetest.WithinBudget(t, "compose every person and event row", d, budgetComposeAll)
 	})
-}
 
-// idsOfKind returns the ids of every unmerged canonical entity of a subject
-// type key, in id order.
-func idsOfKind(t *testing.T, f *largeFixture, kind string) [][]byte {
-	t.Helper()
-	db, err := f.c.DB()
-	must(t, err)
-	rows, err := db.Query(`SELECT e.id FROM canonical_entities e
-		JOIN subject_types st ON st.id = e.subject_type_id
-		WHERE st.key = ? AND e.merged_into_id IS NULL ORDER BY e.id`, kind)
-	must(t, err)
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		must(t, rows.Scan(&id))
-		out = append(out, id)
+	handles := func(t *testing.T, limit int) map[string][][]byte {
+		db, err := f.c.DB()
+		must(t, err)
+		ids := map[string][][]byte{}
+		for _, kind := range conclusionsummariestest.Kinds {
+			all := conclusionsummariestest.HandleIDs(t, db, kind)
+			if limit > 0 && len(all) > limit {
+				all = all[:limit]
+			}
+			ids[kind] = all
+		}
+		return ids
 	}
-	must(t, rows.Err())
-	return out
+
+	t.Run("inputs match isolated composition", func(t *testing.T) {
+		db, err := f.c.DB()
+		must(t, err)
+		stats := conclusionsummariestest.CheckMatchIsolated(t, db, handles(t, 0))
+		for _, kind := range conclusionsummariestest.Kinds {
+			s := stats[kind]
+			t.Logf("%s: %d rows, %d keys, median %d, max %d", kind, s.Rows, s.Keys, s.Median(), s.Max)
+		}
+	})
+
+	t.Run("inputs cover Dependents", func(t *testing.T) {
+		db, err := f.c.DB()
+		must(t, err)
+		// Rows are composed for every handle, and Dependents is asked of the
+		// first 100 of each kind.
+		all := handles(t, 0)
+		var probe [][]byte
+		for _, ids := range handles(t, 100) {
+			probe = append(probe, ids...)
+		}
+		extras, excused := conclusionsummariestest.CheckCoversDependents(t, db, all, probe)
+		t.Logf("rows the index reaches beyond Dependents, by kind: %v; persons excused (non-canonical birth or death): %d", extras, excused)
+	})
 }

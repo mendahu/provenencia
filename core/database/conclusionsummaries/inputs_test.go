@@ -209,6 +209,6 @@ func TestInputsCoverDependents(t *testing.T) {
 	for _, kind := range conclusionsummariestest.Kinds {
 		probe = append(probe, ids[kind]...)
 	}
-	extras := conclusionsummariestest.CheckCoversDependents(t, db, ids, probe)
-	t.Logf("rows the index reaches beyond Dependents, by kind: %v", extras)
+	extras, excused := conclusionsummariestest.CheckCoversDependents(t, db, ids, probe)
+	t.Logf("rows the index reaches beyond Dependents, by kind: %v; persons excused (non-canonical birth or death): %d", extras, excused)
 }
