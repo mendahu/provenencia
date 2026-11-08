@@ -602,9 +602,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 			return nil, nil, err
 		}
 		lives[string(id)] = life{births, deaths}
-		for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
-			pickIDs = append(pickIDs, pick.event.ID)
-		}
+		pickIDs = append(pickIDs, lifeEvents(births, deaths)...)
 	}
 	pg, err := eventPlaceGraph(g, v, pickIDs)
 	if err != nil {
@@ -622,17 +620,9 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 		if err != nil {
 			return nil, nil, err
 		}
-		var seeds [][]byte
-		for _, pick := range append(append([]lifePick(nil), l.births...), l.deaths...) {
-			locations, err := follow(in, pick.event.ID, hops.PlacesOfEvent)
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, loc := range locations {
-				seeds = append(seeds, loc.Neighbor)
-			}
+		if err := pg.addChains(in, rec, lifeEvents(l.births, l.deaths)); err != nil {
+			return nil, nil, err
 		}
-		rec.addClosure(in, pg, seeds)
 		inputs[string(id)] = in.Keys()
 		fresh[string(id)] = h
 		if store {
@@ -782,7 +772,11 @@ func leadLife(in *graphcache.InputScope, v vocab, pg *placeGraph, items []lifePi
 			lead = item
 		}
 	}
-	places, err := eventPlaces(in, v, pg, lead.event)
+	locations, err := follow(in, lead.event.ID, hops.PlacesOfEvent)
+	if err != nil {
+		return LifeFacts{}, err
+	}
+	places, err := eventPlaces(in, v, pg, lead.event, locations)
 	if err != nil {
 		return LifeFacts{}, err
 	}
@@ -818,11 +812,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	var eventIDs [][]byte
-	for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
-		eventIDs = append(eventIDs, pick.event.ID)
-	}
-	pg, err := eventPlaceGraph(g, v, eventIDs)
+	pg, err := eventPlaceGraph(g, v, lifeEvents(births, deaths))
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
@@ -838,25 +828,52 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 // eventPlaceGraph builds the placeGraph for every Place of the given events,
 // skipping events with no node.
 func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
-	var placeIDs [][]byte
-	in := g.NoInputs()
+	var withNode [][]byte
 	for _, id := range eventIDs {
 		n, err := g.Node(id)
 		if err != nil {
 			return nil, err
 		}
-		if n == nil {
-			continue
+		if n != nil {
+			withNode = append(withNode, id)
 		}
+	}
+	placeIDs, err := placesOfEvents(g.NoInputs(), withNode)
+	if err != nil {
+		return nil, err
+	}
+	return buildPlaceGraph(g, v, placeIDs)
+}
+
+// lifeEvents are the ids of the births' and then the deaths' events.
+func lifeEvents(births, deaths []lifePick) [][]byte {
+	out := make([][]byte, 0, len(births)+len(deaths))
+	for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
+		out = append(out, pick.event.ID)
+	}
+	return out
+}
+
+// placesOfEvents follows each event's locations through in and returns the
+// places at their far ends.
+func placesOfEvents(in *graphcache.InputScope, eventIDs [][]byte) ([][]byte, error) {
+	var out [][]byte
+	for _, id := range eventIDs {
 		locations, err := follow(in, id, hops.PlacesOfEvent)
 		if err != nil {
 			return nil, err
 		}
-		for _, l := range locations {
-			placeIDs = append(placeIDs, l.Neighbor)
-		}
+		out = append(out, neighborsOf(locations)...)
 	}
-	return buildPlaceGraph(g, v, placeIDs)
+	return out, nil
+}
+
+func neighborsOf(links []graphcache.Link) [][]byte {
+	out := make([][]byte, len(links))
+	for i, l := range links {
+		out[i] = l.Neighbor
+	}
+	return out
 }
 
 func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
@@ -886,7 +903,7 @@ func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []life
 			dated[string(pick.event.ID)] = true
 			out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
 		}
-		places, err := eventPlaces(in, v, pg, pick.event)
+		places, err := eventPlaces(in, v, pg, pick.event, linksOf[string(pick.event.ID)])
 		if err != nil {
 			return LifeOwners{}, err
 		}
@@ -920,6 +937,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	need := needed[EventSummary](g, nodes, store)
 	var personIDs, placeIDs [][]byte
 	scopes := map[string]*graphcache.InputScope{}
+	locationsOf := map[string][]graphcache.Link{}
 	collect := g.NoInputs()
 	for _, n := range need {
 		scopes[string(n.ID)] = g.Inputs(n.ID)
@@ -930,13 +948,12 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 		for _, l := range subjects {
 			personIDs = append(personIDs, l.Neighbor)
 		}
-		locations, err := follow(collect, n.ID, hops.PlacesOfEvent)
+		locations, err := follow(scopes[string(n.ID)], n.ID, hops.PlacesOfEvent)
 		if err != nil {
 			return nil, nil, err
 		}
-		for _, l := range locations {
-			placeIDs = append(placeIDs, l.Neighbor)
-		}
+		locationsOf[string(n.ID)] = locations
+		placeIDs = append(placeIDs, neighborsOf(locations)...)
 	}
 	if err := g.Nodes(append(append([][]byte(nil), personIDs...), placeIDs...)); err != nil {
 		return nil, nil, err
@@ -957,19 +974,12 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	inputs := map[string][]graphcache.InputKey{}
 	for _, n := range need {
 		in := scopes[string(n.ID)]
-		h, err := oneEvent(in, v, pg, n)
+		locations := locationsOf[string(n.ID)]
+		h, err := oneEvent(in, v, pg, n, locations)
 		if err != nil {
 			return nil, nil, err
 		}
-		locations, err := follow(in, n.ID, hops.PlacesOfEvent)
-		if err != nil {
-			return nil, nil, err
-		}
-		var seeds [][]byte
-		for _, l := range locations {
-			seeds = append(seeds, l.Neighbor)
-		}
-		rec.addClosure(in, pg, seeds)
+		rec.addClosure(in, pg, neighborsOf(locations))
 		inputs[string(n.ID)] = in.Keys()
 		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
@@ -980,7 +990,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	return displayed(g, nodes, fresh, func(h EventSummary) EventSummary { return finishEvent(v, h) }), inputs, nil
 }
 
-func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.Node) (EventSummary, error) {
+func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.Node, locations []graphcache.Link) (EventSummary, error) {
 	h := EventSummary{Entity: entityOf(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
 	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
@@ -994,7 +1004,7 @@ func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.
 	if h.EndDate, h.EndDateCount, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return EventSummary{}, err
 	}
-	h.Places, err = eventPlaces(in, v, pg, n)
+	h.Places, err = eventPlaces(in, v, pg, n, locations)
 	if err != nil {
 		return EventSummary{}, err
 	}
@@ -1171,13 +1181,11 @@ func birthKeyOf(h PersonSummary) dateKey {
 	return dateKeyOf(h.Birth.Date, h.Entity.Ref)
 }
 
-func eventPlaces(in *graphcache.InputScope, v vocab, pg *placeGraph, ev *graphcache.Node) ([]ChainedPlace, error) {
+// eventPlaces are the event's Places, folded at its date; locations are the
+// links the caller followed from the event.
+func eventPlaces(in *graphcache.InputScope, v vocab, pg *placeGraph, ev *graphcache.Node, locations []graphcache.Link) ([]ChainedPlace, error) {
 	var raw []ChainedPlace
 	seen := map[string]bool{}
-	locations, err := follow(in, ev.ID, hops.PlacesOfEvent)
-	if err != nil {
-		return nil, err
-	}
 	for _, l := range locations {
 		if seen[string(l.Neighbor)] {
 			continue
