@@ -25,7 +25,7 @@
 **Answer:** Fixed — STEP-6 says the review log exists from planning, `ship-pr` writes the ship log, and a missing ship log is skipped.
 
 ### X-3 · major · `check-pr.sh` cannot pass without Xcode
-**Answer:** Declined — `scripts/check-pr.sh` lines 120 – 125 skip `xcode-test` and `swift-warnings` off macOS. STEP-6 now says a SKIP there is a pass for this PR.
+**Answer:** Declined in round 1 on wrong evidence; reopened as X-10 in round 2 and fixed there.
 
 ### X-4 · major · L-3 and L-4 point at a README that may not state the rule
 **Answer:** Fixed — the exact replacements are in §4, and they link `README.md#decisions`. The Decisions bullet "Family is grouped in Go and shaped as a family tree's first step" states the engine rule. Stop condition 4 now covers only links outside L-1 – L-13.
@@ -65,3 +65,20 @@
 
 ### M-7 · nit · Line 332 of the conclusion doc
 **Answer:** Fixed (user, 2026-11-08) — STEP-4 and AC-2.4.
+
+## Round 2
+
+### X-10 · blocker · `check-pr.sh` fails off macOS by design, so the X-3 answer was false
+**Answer:** Fixed — the finding is right (`scripts/check-pr.sh` lines 123 – 127 add `xcode-test (needs macOS)` to the failures). STEP-6 and the DoD now want PASS on a Mac; off macOS the implementer reports the FAIL line with every other step passing, and the gate runs on a Mac before the PR leaves draft.
+
+### X-11 · major · L-1's old string starts with `(`, not `[`
+**Answer:** Fixed — L-1's pair starts `[Spike 13's design](`.
+
+### X-12 · minor · `check-plan-docs.py` has two errors before STEP-3
+**Answer:** Fixed — the stop condition applies after STEP-3 and names the two errors it deletes.
+
+### X-13 · minor · The kept-doc matching-model link has no line number
+**Answer:** Fixed — line 19.
+
+### X-14 · minor · No commit is named when there is no ship log
+**Answer:** Fixed — the other two files go in commit 2 all the same.

@@ -121,8 +121,8 @@ Found with `rg -n 'spike-13/' --glob '!docs/deployment-plan/spike-13/**' .` at t
 Each pair below is an exact string replacement on that line: the first line of a pair is the text today, the second is what it becomes. Nothing else on the line changes.
 
 ```text
-L-1   (Spike 13's design](deployment-plan/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
-      (Spike 13's design](deployment-plan/archive/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
+L-1   [Spike 13's design](deployment-plan/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
+      [Spike 13's design](deployment-plan/archive/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
 L-2   ](../deployment-plan/spike-13/evidence-graph-comparison.md)
       ](../deployment-plan/archive/spike-13/evidence-graph-comparison.md)
 L-3   ([person detail](../deployment-plan/spike-13/person-detail.md#2-family))
@@ -242,7 +242,7 @@ Provisional claims at Promote ([`provisional-identity-claims.md`](../../../ideas
   ```
 
 - Line 7: the link target `../../conclusion-layer-data-model.md` gains one `../`.
-- The link target `../../matching-model.md` gains one `../`.
+- Line 19: the link target `../../matching-model.md` gains one `../`.
 - Line 30: this exact text
 
   ```markdown
@@ -319,8 +319,8 @@ Check: `rg -n 'Spike 13' docs/deployment-plan/README.md` hits two lines: line 11
 
 **STEP-6 — Delete this plan**
 Files: `docs/deployment-plan/spike-13/prs/S13-99-dogfood-close.md`, `S13-99-dogfood-close.review.md`, `S13-99-dogfood-close.ship.md`.
-Do: the review log exists from planning (the **Review:** line links it); `ship-pr` writes the ship log on this branch. In the commit that records the ship log, `git rm` all three; if the ship log is not there because the PR was built without `ship-pr`, `git rm` the other two. `docs/deployment-plan/spike-13/` is then gone. Any deviation goes in the PR body, not a Landed note.
-Check: `ls docs/deployment-plan/spike-13` fails; `ls docs/deployment-plan/archive/spike-13` lists `README.md` and `evidence-graph-comparison.md`; `scripts/check-pr.sh` prints `check-pr: PASS` (off macOS it reports `SKIP` for the two Xcode steps, lines 120 – 125, which is a pass for this docs-only PR).
+Do: the review log exists from planning (the **Review:** line links it); `ship-pr` writes the ship log on this branch. In the commit that records the ship log, `git rm` all three; if the ship log is not there because the PR was built without `ship-pr`, `git rm` the other two in commit 2 all the same. `docs/deployment-plan/spike-13/` is then gone. Any deviation goes in the PR body, not a Landed note.
+Check: `ls docs/deployment-plan/spike-13` fails; `ls docs/deployment-plan/archive/spike-13` lists `README.md` and `evidence-graph-comparison.md`; `scripts/check-pr.sh` prints `check-pr: PASS` on a Mac. Off macOS the script ends `check-pr: FAIL  xcode-test (needs macOS)` by design (lines 120 – 127); report that line with every other step passing, and the gate is run on a Mac before the PR leaves draft.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
@@ -342,7 +342,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [ ] scripts/check-pr.sh prints check-pr: PASS on a Mac (off macOS: FAIL only on xcode-test (needs macOS), every other step passing, as STEP-6 says)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] Sweep: T-2's command passes; `rg -n 'spike-13' .agents .cursor core api macos scripts` has no hit
 - [ ] No VERSION bump (docs only)
@@ -367,7 +367,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to
 
 - A Spike 13 map row is not Landed or Descoped on `main`.
 - `rg -n 'spike-13' .agents .cursor core api macos scripts` finds a hit: a skill or code reads a file this PR deletes.
-- `check-plan-docs.py` with no arguments reports an error that is not a link into `spike-13/`. That error is not this PR's to fix.
+- After STEP-3, `check-plan-docs.py` with no arguments reports an error that is not a link into `spike-13/`. That error is not this PR's to fix. (Before STEP-3 it reports two errors in the S13-23 and S13-25 plans, which STEP-3 deletes.)
 - A link into `spike-13/` that is not L-1 – L-13 points at a requirement or rule (an `R-` id or a working rule) that the decisions note does not state.
 
 ## 12. Open questions
