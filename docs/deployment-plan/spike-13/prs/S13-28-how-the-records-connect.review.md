@@ -1,6 +1,6 @@
 # Review — S13-28 How the records connect
 
-Plan: [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md). Brief log: [`../design/S13-D10-how-the-records-connect.review.md`](../design/S13-D10-how-the-records-connect.review.md). Lint clean but for the missing review logs before round 1. The plan is Blocked on the board; "(board)" values were out of scope for both reviewers.
+Plan: [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md). Brief log: [`../design/S13-D10-how-the-records-connect.review.md`](../design/archive/S13-D10-how-the-records-connect.review.md). Lint clean but for the missing review logs before round 1. The plan is Blocked on the board; "(board)" values were out of scope for both reviewers.
 
 ## Round 1 (2026-11-07)
 

@@ -1,9 +1,9 @@
 # S13-28 — How the records connect
 
-**Status:** Planned
+**Status:** Landed in [#744](https://github.com/mendahu/provenencia/pull/744) (2026-11-08)
 **Spike / slice:** Spike 13 · Slice 7 — How a person's records connect
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S13-D10](../design/S13-D10-how-the-records-connect.md), board agreed 2026-11-07
+**Brief:** [S13-D10](../design/archive/S13-D10-how-the-records-connect.md), board agreed 2026-11-07
 **Board:** [Person Detail canvas](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ), page "Person Detail - Sources", turn 15 "S13-D10 · How the records connect" (frames 15a – 15z; the turn's decision list RL-1 – RL-13 and RL-W). The frames are also in words in §6 → Frames in words; where this plan and the board differ, this plan wins (see **Rules this plan bends**)
 **Depends on:** S13-16 (landed [#722](https://github.com/mendahu/provenencia/pull/722)), S13-17 (landed [#729](https://github.com/mendahu/provenencia/pull/729)), S13-27 ([#743](https://github.com/mendahu/provenencia/pull/743), same branch), S13-D10
 **Blocks:** —
@@ -15,6 +15,7 @@
 **Context:** [`evidence-graph-comparison.md`](../evidence-graph-comparison.md) Requirement 2; working rules "The view is a circular link diagram", "Scoring and the view are two concerns", "Sections are places", "A full-width section keeps its states in the band"; dogfood bar 10; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide)
 **Planned:** 2026-11-07 against `s13-27-plan` @ `cc03d7f9` (S13-27's code is on this branch, not yet on `main`)
 **Review:** [`S13-28-how-the-records-connect.review.md`](S13-28-how-the-records-connect.review.md)
+**Landed:** differences from the plan: `PersonSourcesPreviewData.previewSession` takes `entityId:recordLinks:failure:` (nil links answer an hour late) instead of a `delay:`; the diagram's side column is `PersonRecordLinksColumn` in its own file; `ConclusionPageSectionHost.emptyTitle` is optional (nil by default) rather than an empty string, and `emptyMessage` defaults to ""; nodes are placed with `.position`, so the one unmeasured frame is off by the dot's inset; the 700pt check was a hosted-window render, the manual check in the app is the product owner's.
 
 ### Implementer — read this first
 

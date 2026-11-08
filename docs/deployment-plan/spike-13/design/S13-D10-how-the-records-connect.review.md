@@ -1,6 +1,6 @@
 # Review — S13-D10 How the records connect
 
-Brief: [`S13-D10-how-the-records-connect.md`](S13-D10-how-the-records-connect.md). Reviewed with its plan; plan log: [`../prs/S13-28-how-the-records-connect.review.md`](../prs/S13-28-how-the-records-connect.review.md). Placement (beside the rows at both widths, pinned) answered by the user before review, 2026-11-07.
+Brief: [`S13-D10-how-the-records-connect.md`](archive/S13-D10-how-the-records-connect.md). Reviewed with its plan; plan log: [`../prs/S13-28-how-the-records-connect.review.md`](../prs/S13-28-how-the-records-connect.review.md). Placement (beside the rows at both widths, pinned) answered by the user before review, 2026-11-07.
 
 ## Round 1 (2026-11-07)
 
