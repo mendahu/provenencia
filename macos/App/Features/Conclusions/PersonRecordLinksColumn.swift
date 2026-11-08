@@ -16,7 +16,7 @@ struct PersonRecordLinksColumn: View {
     @State private var width: CGFloat = 0
     @State private var headerHeight: CGFloat = 0
 
-    private var single: Bool { content.nodes.count == 1 }
+    private var single: Bool { content.dataset.nodes.count == 1 }
 
     /// The height left for the drawing under the title block while the page is in view.
     private var fitting: CGFloat? {
@@ -25,7 +25,7 @@ struct PersonRecordLinksColumn: View {
     }
 
     var body: some View {
-        if !content.nodes.isEmpty {
+        if !content.dataset.nodes.isEmpty {
             VStack(alignment: .leading, spacing: PVSpacing.space4) {
                 VStack(alignment: .leading, spacing: PVSpacing.space2) {
                     Text(L10n.Conclusions.recordLinksTitle)
@@ -41,16 +41,12 @@ struct PersonRecordLinksColumn: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
                 if width > 0 {
                     CircularLinkDiagram(
-                        nodes: content.nodes,
-                        arcs: content.arcs,
-                        style: .standard,
+                        dataset: content.dataset,
                         width: width,
-                        diameter: single ? nil : CircularLinkLayout<String>.diameter(
-                            width: width, fitting: fitting, style: .standard
-                        ),
+                        fittingHeight: fitting,
                         hover: hover,
                         focusedID: focusedGraphID,
-                        accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.nodes.count),
+                        accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.dataset.nodes.count),
                         accessibilityIdentifierRoot: "persons.detail.sources",
                         onOpen: open,
                         focus: focus
@@ -79,11 +75,10 @@ private struct PersonRecordLinksPreview: View {
     var body: some View {
         let content = PersonRecordLinksContent(links: links, graphLocations: [:])
         CircularLinkDiagram(
-            nodes: content.nodes,
-            arcs: content.arcs,
+            dataset: content.dataset,
             width: width,
             hover: hover,
-            accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.nodes.count),
+            accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.dataset.nodes.count),
             accessibilityIdentifierRoot: "preview",
             focus: { _ in PVFieldFocus(isActive: { false }, focus: {}, resign: {}, apply: { $0 }) }
         )

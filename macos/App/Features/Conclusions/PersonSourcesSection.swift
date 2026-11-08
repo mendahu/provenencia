@@ -201,7 +201,7 @@ struct PersonSourcesList: View {
             entityId: entityId,
             queryKey: ConclusionPageSection.sources.companionQueryKey(project: project, entityId: entityId),
             placement: .column(
-                loadingHeight: CircularLinkDiagramStyle.standard.minimumDiameter + 2 * CircularLinkDiagramStyle.standard.verticalRoom
+                loadingHeight: CircularLinkDiagramStyle.standard.minimumHeight
             ),
             errorTitle: L10n.Conclusions.recordLinksErrorTitle,
             make: {

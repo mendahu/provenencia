@@ -15,31 +15,95 @@ struct CircularLinkNode<ID: Hashable>: Identifiable, Equatable {
 }
 
 /// One arc between two nodes. Several arcs on one unordered pair are the pair's "amount": the
-/// layout groups them by pair, in input order, and fans them side by side.
+/// dataset groups them by pair, in input order, and the layout fans them side by side.
 struct CircularLinkArc<ID: Hashable>: Equatable {
     var from: ID
     var to: ID
     var lineWidth: CGFloat
-    /// Nil: the style's `arcColor`.
-    var color: Color? = nil
+    /// Nil: the style's `arcColor`. A highlighted arc draws in `style.highlightedArcColor` instead.
+    var color: Color? = nil}
 
-    /// The nodes sharing an arc with `id`: the other end of each of its arcs.
-    static func neighbors(of id: ID, in arcs: [Self]) -> Set<ID> {
-        var result = Set<ID>()
-        for arc in arcs where arc.from != arc.to {
-            if arc.from == id { result.insert(arc.to) } else if arc.to == id { result.insert(arc.from) }
-        }
-        return result
+/// An unordered pair of node indexes.
+private struct CircularLinkPair: Hashable {
+    var low: Int
+    var high: Int
+}
+
+/// A diagram's nodes and arcs, resolved once: the one place an arc's ends are found, an arc
+/// that names no node or one node is skipped, an arc gets its place among those on its pair,
+/// and each node's neighbours are collected. The layout and the highlight both read it, so
+/// neither finds a node by id again.
+struct CircularLinkDataset<ID: Hashable>: Equatable {
+    /// An arc whose two ends are different nodes.
+    struct ResolvedArc: Equatable {
+        /// The arc's index in the input `arcs`.
+        var arcIndex: Int
+        /// The node indexes of its ends.
+        var from: Int
+        var to: Int
+        /// Its place among the arcs on its unordered pair, in input order, and how many there are.
+        var slot: Int
+        var slots: Int
+        /// True when it runs against its pair's reference direction, the first arc's `from` to `to`.
+        var flipped: Bool
+        var lineWidth: CGFloat
+        var color: Color?
     }
 
-    /// Every node's neighbours, in one pass over the arcs.
-    static func neighborSets(in arcs: [Self]) -> [ID: Set<ID>] {
-        var result: [ID: Set<ID>] = [:]
-        for arc in arcs where arc.from != arc.to {
-            result[arc.from, default: []].insert(arc.to)
-            result[arc.to, default: []].insert(arc.from)
+    /// A duplicate id keeps the first.
+    private(set) var nodes: [CircularLinkNode<ID>]
+    /// In input order.
+    let resolvedArcs: [ResolvedArc]
+    private let indexes: [ID: Int]
+    private let neighborSets: [Set<Int>]
+
+    init(nodes input: [CircularLinkNode<ID>], arcs: [CircularLinkArc<ID>]) {
+        var nodes: [CircularLinkNode<ID>] = []
+        var indexes: [ID: Int] = [:]
+        for node in input where indexes[node.id] == nil {
+            indexes[node.id] = nodes.count
+            nodes.append(node)
         }
-        return result
+        var counts: [CircularLinkPair: Int] = [:]
+        var references: [CircularLinkPair: Int] = [:]
+        var resolved: [(arc: Int, from: Int, to: Int, slot: Int, pair: CircularLinkPair)] = []
+        var neighbors = [Set<Int>](repeating: [], count: nodes.count)
+        for (arcIndex, arc) in arcs.enumerated() {
+            guard let from = indexes[arc.from], let to = indexes[arc.to], from != to else { continue }
+            let pair = CircularLinkPair(low: min(from, to), high: max(from, to))
+            if references[pair] == nil { references[pair] = from }
+            resolved.append((arcIndex, from, to, counts[pair, default: 0], pair))
+            counts[pair, default: 0] += 1
+            neighbors[from].insert(to)
+            neighbors[to].insert(from)
+        }
+        self.nodes = nodes
+        self.indexes = indexes
+        neighborSets = neighbors
+        resolvedArcs = resolved.map { item in
+            ResolvedArc(
+                arcIndex: item.arc, from: item.from, to: item.to, slot: item.slot,
+                slots: counts[item.pair] ?? 1, flipped: references[item.pair] != item.from,
+                lineWidth: arcs[item.arc].lineWidth, color: arcs[item.arc].color
+            )
+        }
+    }
+
+    /// The node indexes sharing an arc with the node at `index`.
+    func neighbors(ofIndex index: Int) -> Set<Int> { neighborSets[index] }
+
+    /// How many nodes share an arc with the node `id`; zero for an id that is no node.
+    func neighborCount(of id: ID) -> Int { indexes[id].map { neighborSets[$0].count } ?? 0 }
+
+    /// The index of the node `id`.
+    func index(of id: ID) -> Int? { indexes[id] }
+
+    /// The same dataset with each node replaced by `transform(index, node)`, for a node's text
+    /// that reads this dataset's neighbours. The transform keeps the id.
+    func mappingNodes(_ transform: (Int, CircularLinkNode<ID>) -> CircularLinkNode<ID>) -> Self {
+        var copy = self
+        copy.nodes = nodes.enumerated().map { transform($0.offset, $0.element) }
+        return copy
     }
 }
 

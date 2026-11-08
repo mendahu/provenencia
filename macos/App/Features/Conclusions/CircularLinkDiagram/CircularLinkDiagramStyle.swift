@@ -31,6 +31,10 @@ struct CircularLinkDiagramStyle: Equatable {
     var overlayLabelBackground: Color = PVColor.surfacePage
     var nodePadding: CGSize = CGSize(width: 4, height: 2)
     var nodeHoverFill: Color = PVColor.surfaceHover
+    var nodeCornerRadius: CGFloat = PVRadius.md
+    /// The padding either side of a label drawn over the circle (many nodes), and the corner radius of its background.
+    var overlayLabelPadding: CGFloat = 3
+    var overlayLabelCornerRadius: CGFloat = PVRadius.sm
     /// Room kept outside the circle, left and right of it.
     var sideRoom: CGFloat = 84
     /// Room kept outside the circle, above and below it.
@@ -42,6 +46,9 @@ struct CircularLinkDiagramStyle: Equatable {
     /// Where a single node's dot sits, and the height of the region it is drawn in.
     var singleNodeY: CGFloat = 24
     var singleNodeHeight: CGFloat = 64
+
+    /// The shortest diagram: the smallest circle and the room above and below it.
+    var minimumHeight: CGFloat { minimumDiameter + 2 * verticalRoom }
 
     static let standard = CircularLinkDiagramStyle()
 }

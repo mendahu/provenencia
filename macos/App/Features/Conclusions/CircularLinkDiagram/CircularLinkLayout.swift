@@ -7,7 +7,7 @@ enum CircularLinkLabelSide: Equatable {
 }
 
 /// The geometry of a circular link diagram: nodes on a circle, clockwise from the top, and a
-/// quadratic curve for each arc. Pure and free of what a node is: it takes ids, arcs, a width
+/// quadratic curve for each arc. Pure and free of what a node is: it takes a resolved dataset, a width
 /// and a style, so it is tested without a view.
 struct CircularLinkLayout<ID: Hashable>: Equatable {
     typealias LabelSide = CircularLinkLabelSide
@@ -58,19 +58,14 @@ struct CircularLinkLayout<ID: Hashable>: Equatable {
 
     var radius: CGFloat { diameter / 2 }
 
-    private struct Pair: Hashable {
-        var low: Int
-        var high: Int
-    }
-
     init(
-        nodes ids: [ID], arcs: [CircularLinkArc<ID>], width: CGFloat, diameter: CGFloat? = nil,
+        dataset: CircularLinkDataset<ID>, width: CGFloat, diameter: CGFloat? = nil,
         style: CircularLinkDiagramStyle = .standard
     ) {
         let diameter = diameter ?? Self.diameter(width: width, fitting: nil, style: style)
         let radius = diameter / 2
         let center = CGPoint(x: width / 2, y: style.verticalRoom + radius)
-        let nodeCount = ids.count
+        let nodeCount = dataset.nodes.count
         self.diameter = diameter
         self.center = center
         size = CGSize(width: width, height: nodeCount == 1 ? style.singleNodeHeight : diameter + 2 * style.verticalRoom)
@@ -91,26 +86,11 @@ struct CircularLinkLayout<ID: Hashable>: Equatable {
         }
         self.nodes = nodes
 
-        var indexes: [ID: Int] = [:]
-        for (index, id) in ids.enumerated() where indexes[id] == nil { indexes[id] = index }
-        // The arcs that name two different nodes, each with its place among those on its pair.
-        var ends: [(arc: Int, from: Int, to: Int)] = []
-        var counts: [Pair: Int] = [:]
-        var slotOf: [Int] = []
-        for (arcIndex, arc) in arcs.enumerated() {
-            guard let from = indexes[arc.from], let to = indexes[arc.to], from != to else { continue }
-            let pair = Pair(low: min(from, to), high: max(from, to))
-            slotOf.append(counts[pair, default: 0])
-            counts[pair, default: 0] += 1
-            ends.append((arcIndex, from, to))
-        }
         var curves: [Curve] = []
-        curves.reserveCapacity(ends.count)
-        for (position, end) in ends.enumerated() {
-            let arc = arcs[end.arc]
-            let slots = counts[Pair(low: min(end.from, end.to), high: max(end.from, end.to))] ?? 1
-            let from = nodes[end.from].point
-            let to = nodes[end.to].point
+        curves.reserveCapacity(dataset.resolvedArcs.count)
+        for arc in dataset.resolvedArcs {
+            let from = nodes[arc.from].point
+            let to = nodes[arc.to].point
             let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
             // Pulled toward the chord's midpoint from the centre: the curve bows toward the middle of the circle.
             var control = CGPoint(
@@ -121,13 +101,15 @@ struct CircularLinkLayout<ID: Hashable>: Equatable {
             let dy = to.y - from.y
             let length = (dx * dx + dy * dy).squareRoot()
             if length > 0 {
-                let offset = (CGFloat(slotOf[position]) - CGFloat(slots - 1) / 2)
-                    * Self.spacing(radius: radius, slots: slots, style: style)
+                // Along the normal of the pair's reference direction, so a reversed arc takes its own place in the fan.
+                let direction: CGFloat = arc.flipped ? -1 : 1
+                let offset = direction * (CGFloat(arc.slot) - CGFloat(arc.slots - 1) / 2)
+                    * Self.spacing(radius: radius, slots: arc.slots, style: style)
                 control.x += -dy / length * offset
                 control.y += dx / length * offset
             }
             curves.append(Curve(
-                arcIndex: end.arc, fromNode: end.from, toNode: end.to, lineWidth: arc.lineWidth, color: arc.color,
+                arcIndex: arc.arcIndex, fromNode: arc.from, toNode: arc.to, lineWidth: arc.lineWidth, color: arc.color,
                 from: from, to: to, control: control
             ))
         }

@@ -1,12 +1,10 @@
 import Foundation
 
 /// What the record links diagram shows for a Person: the one Person-aware piece, the adapter
-/// over the S13-27 read and the claims content. Pure; the diagram takes only nodes and arcs.
+/// over the S13-27 read and the claims content. Pure; the diagram takes only a dataset of nodes and arcs.
 struct PersonRecordLinksContent: Equatable {
-    /// Keyed by graph id.
-    let nodes: [CircularLinkNode<String>]
-    /// One per line of a pair.
-    let arcs: [CircularLinkArc<String>]
+    /// The nodes, keyed by graph id, and one arc per line of a pair, resolved once.
+    let dataset: CircularLinkDataset<String>
     /// Where a click on a graph's node opens its record; a graph the claims read has not named is absent.
     let locations: [String: WorkspaceLocation]
 
@@ -50,14 +48,17 @@ struct PersonRecordLinksContent: Equatable {
                 }
             }
         }
-        let neighbors = CircularLinkArc.neighborSets(in: arcs)
-        nodes = graphs.map { graph in
+        let bare = CircularLinkDataset(
+            nodes: graphs.map { CircularLinkNode(id: $0.graphID, label: "") }, arcs: arcs
+        )
+        dataset = bare.mappingNodes { index, _ in
+            let graph = graphs[index]
             let name = graph.graphName.trimmedNonEmpty
             let ref = graph.graphRef.trimmedNonEmpty
             let graphTitle = name ?? ref ?? ""
             let sourceTitle = graph.sourceTitle.trimmedNonEmpty ?? graphSourceRefs[graph.graphID] ?? ""
             let label = ref ?? name ?? ""
-            let connected = neighbors[graph.graphID]?.count ?? 0
+            let connected = bare.neighborCount(of: graph.graphID)
             return CircularLinkNode(
                 id: graph.graphID,
                 label: label,
@@ -70,7 +71,6 @@ struct PersonRecordLinksContent: Equatable {
                 isEnabled: graphLocations[graph.graphID] != nil
             )
         }
-        self.arcs = arcs
         locations = graphLocations.filter { ids.contains($0.key) }
     }
 

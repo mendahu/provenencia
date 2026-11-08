@@ -2,16 +2,17 @@ import SwiftUI
 
 /// A circular link diagram: each node on a circle, an arc per link between two nodes. Arcs
 /// carry no data and take no pointer; a node highlights with its arcs and opens. Generic over
-/// the caller's node id: it takes nodes and arcs, the hover, the node that has the keyboard,
+/// the caller's node id: it takes a dataset, the hover, the node that has the keyboard,
 /// the style, and closures for open and each node's focus handle. It reads no hover itself:
-/// its layout is built once per nodes, arcs, size and style.
+/// its layout is built once per dataset, size and style.
 struct CircularLinkDiagram<ID: Hashable>: View {
-    let nodes: [CircularLinkNode<ID>]
-    let arcs: [CircularLinkArc<ID>]
+    let dataset: CircularLinkDataset<ID>
     var style: CircularLinkDiagramStyle = .standard
-    /// The column's width; the circle is `CircularLinkLayout.diameter(width:fitting:style:)` unless `diameter` is given.
+    /// The column's width.
     let width: CGFloat
-    var diameter: CGFloat?
+    /// The height left for the drawing; the circle shrinks to it, never below the style's
+    /// minimum. Nil: the circle fills the width.
+    var fittingHeight: CGFloat?
     let hover: CircularLinkHover<ID>
     /// The node that has the keyboard; the hover wins while the pointer is on a node.
     var focusedID: ID?
@@ -24,9 +25,11 @@ struct CircularLinkDiagram<ID: Hashable>: View {
     var focus: ((ID) -> PVFieldFocus)?
 
     var body: some View {
-        let layout = CircularLinkLayout(nodes: nodes.map(\.id), arcs: arcs, width: width, diameter: diameter, style: style)
+        let diameter = dataset.nodes.count == 1 ? nil
+            : CircularLinkLayout<ID>.diameter(width: width, fitting: fittingHeight, style: style)
+        let layout = CircularLinkLayout(dataset: dataset, width: width, diameter: diameter, style: style)
         CircularLinkHighlightedLayers(
-            layout: layout, nodes: nodes, arcs: arcs, style: style, hover: hover, focusedID: focusedID,
+            layout: layout, dataset: dataset, style: style, hover: hover, focusedID: focusedID,
             identifierRoot: accessibilityIdentifierRoot, open: onOpen, focus: focus
         )
         .frame(width: width, height: layout.size.height, alignment: .topLeading)
@@ -38,8 +41,7 @@ struct CircularLinkDiagram<ID: Hashable>: View {
 /// The circle, the arcs and the nodes: the one view that reads the hover.
 private struct CircularLinkHighlightedLayers<ID: Hashable>: View {
     let layout: CircularLinkLayout<ID>
-    let nodes: [CircularLinkNode<ID>]
-    let arcs: [CircularLinkArc<ID>]
+    let dataset: CircularLinkDataset<ID>
     let style: CircularLinkDiagramStyle
     let hover: CircularLinkHover<ID>
     let focusedID: ID?
@@ -48,9 +50,10 @@ private struct CircularLinkHighlightedLayers<ID: Hashable>: View {
     let focus: ((ID) -> PVFieldFocus)?
 
     var body: some View {
+        let nodes = dataset.nodes
         let highlightedID = hover.id ?? focusedID
-        let highlighted = highlightedID.flatMap { id in nodes.firstIndex { $0.id == id } }
-        let neighbors = highlighted.map { CircularLinkArc.neighbors(of: nodes[$0].id, in: arcs) } ?? []
+        let highlighted = highlightedID.flatMap { dataset.index(of: $0) }
+        let neighbors = highlighted.map { dataset.neighbors(ofIndex: $0) } ?? []
         ZStack(alignment: .topLeading) {
             if nodes.count > 1 {
                 Circle()
@@ -75,7 +78,7 @@ private struct CircularLinkHighlightedLayers<ID: Hashable>: View {
             ForEach(Array(nodes.enumerated()), id: \.element.id) { index, node in
                 let state: CircularLinkNodeState = highlighted == nil ? .rest
                     : index == highlighted ? .highlighted
-                    : neighbors.contains(node.id) ? .neighbor : .receded
+                    : neighbors.contains(index) ? .neighbor : .receded
                 let handle = focus?(node.id)
                 CircularLinkNodeButton(
                     node: node,
@@ -165,12 +168,16 @@ private struct CircularLinkNodeButton<ID: Hashable>: View {
 
     var body: some View {
         let button = Button { open(node.id) } label: { label }
-            .buttonStyle(CircularLinkNodeStyle(hoverFill: style.nodeHoverFill, onHover: onHover))
+            .buttonStyle(CircularLinkNodeStyle(
+                hoverFill: style.nodeHoverFill, cornerRadius: style.nodeCornerRadius, onHover: onHover
+            ))
             .disabled(!node.isEnabled)
             .pvActivatesOnReturn(when: node.isEnabled) { open(node.id) }
-            .help(node.help ?? "")
+            .modifier(CircularLinkOptionalHelp(help: node.help))
             .accessibilityLabel(Text(verbatim: node.accessibilityLabel ?? node.label))
-            .accessibilityIdentifier(identifierRoot.map { "\($0).node.\(String(describing: node.id))" } ?? "")
+            .modifier(CircularLinkOptionalIdentifier(
+                identifier: identifierRoot.map { "\($0).node.\(String(describing: node.id))" }
+            ))
             .fixedSize()
             .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
         let placed = focus.map { $0.apply(AnyView(button)) } ?? AnyView(button)
@@ -218,8 +225,8 @@ private struct CircularLinkNodeButton<ID: Hashable>: View {
                 dotView.overlay(alignment: overlayAlignment) {
                     if showsLabel {
                         labelView
-                            .padding(.horizontal, 3)
-                            .background(style.overlayLabelBackground, in: RoundedRectangle(cornerRadius: PVRadius.sm))
+                            .padding(.horizontal, style.overlayLabelPadding)
+                            .background(style.overlayLabelBackground, in: RoundedRectangle(cornerRadius: style.overlayLabelCornerRadius))
                             .alignmentGuide(overlayHorizontalGuide) { [side] d in CircularLinkLabelGuides.shift(d, side: side, gap: gap) }
                             .alignmentGuide(overlayVerticalGuide) { [side] d in CircularLinkLabelGuides.shiftVertical(d, side: side, gap: gap) }
                     }
@@ -275,20 +282,44 @@ private enum CircularLinkLabelGuides {
     }
 }
 
+/// `.help` only when the node has a tooltip.
+private struct CircularLinkOptionalHelp: ViewModifier {
+    let help: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let help { content.help(help) } else { content }
+    }
+}
+
+/// `.accessibilityIdentifier` only when the diagram was given an identifier root.
+private struct CircularLinkOptionalIdentifier: ViewModifier {
+    let identifier: String?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let identifier { content.accessibilityIdentifier(identifier) } else { content }
+    }
+}
+
 /// The kit's hover and focus chrome on a node: a hover fill and the focus ring around the
 /// whole button, reporting hover to the diagram through the one tracker.
 private struct CircularLinkNodeStyle: ButtonStyle {
     let hoverFill: Color
+    let cornerRadius: CGFloat
     let onHover: (Bool) -> Void
 
     func makeBody(configuration: Configuration) -> some View {
-        CircularLinkNodeStyleBody(configuration: configuration, hoverFill: hoverFill, onHover: onHover)
+        CircularLinkNodeStyleBody(
+            configuration: configuration, hoverFill: hoverFill, cornerRadius: cornerRadius, onHover: onHover
+        )
     }
 }
 
 private struct CircularLinkNodeStyleBody: View {
     let configuration: ButtonStyleConfiguration
     let hoverFill: Color
+    let cornerRadius: CGFloat
     let onHover: (Bool) -> Void
 
     /// Read here, in the button's focus scope (see `PVButtonBody`).
@@ -299,9 +330,9 @@ private struct CircularLinkNodeStyleBody: View {
             configuration.label
                 .background(
                     (showHover ? hoverFill : Color.clear),
-                    in: RoundedRectangle(cornerRadius: PVRadius.md, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 )
-                .pvFocusRing(isFocused, cornerRadius: PVRadius.md)
+                .pvFocusRing(isFocused, cornerRadius: cornerRadius)
         }
     }
 }
@@ -316,11 +347,11 @@ private struct CircularLinkDiagramPreview: View {
 
     var body: some View {
         CircularLinkDiagram(
-            nodes: nodes, arcs: arcs, style: style, width: width, hover: hover,
+            dataset: CircularLinkDataset(nodes: nodes, arcs: arcs), style: style, width: width, hover: hover,
             accessibilityLabel: "Preview"
         )
         .padding()
-        .background(PVColor.surfacePage)
+        .background(style.overlayLabelBackground)
     }
 
     static func numbered(_ count: Int) -> [CircularLinkNode<String>] {
