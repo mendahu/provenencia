@@ -3,6 +3,7 @@ package conclusionsummaries
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -152,11 +153,13 @@ func entityOf(n *graphcache.Node) canonicalentities.Entity {
 	}
 }
 
-func follow(g *graphcache.Graph, id []byte, hop hops.Hop) ([]graphcache.Link, error) {
-	if g == nil {
+// follow reads a hop through a scope, so a row's inputs record it. A nil scope
+// follows nothing.
+func follow(in *graphcache.InputScope, id []byte, hop hops.Hop) ([]graphcache.Link, error) {
+	if in == nil {
 		return nil, nil
 	}
-	return g.Follow(id, hop)
+	return in.Follow(id, hop)
 }
 
 func keptName(n *graphcache.Node, propID []byte) (*namevalue.Value, int, error) {
@@ -226,7 +229,7 @@ func toponyms(n *graphcache.Node, propID []byte) []string {
 
 // ListPersons returns every unmerged Person's summary in list order.
 func ListPersons(c *database.Catalog) ([]PersonSummary, error) {
-	out, err := persons(c.Graph(), nil, true, true)
+	out, _, err := persons(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -252,6 +255,15 @@ type Summaries struct {
 	persons map[string]PersonSummary
 	events  map[string]EventSummary
 	places  map[string]PlaceSummary
+	// inputs are the keys each composed row was read from, by the entity's
+	// raw id. Only RowsForSearch fills them.
+	inputs map[string][]graphcache.InputKey
+}
+
+// Inputs are the handles, links and associations the row with id was composed
+// from, without the row's own values. A row that was not composed has none.
+func (h Summaries) Inputs(id []byte) []graphcache.InputKey {
+	return h.inputs[string(id)]
 }
 
 // Person is the summary of the Person with id, or false when it was not read.
@@ -353,36 +365,37 @@ func PersonsByIDs(c *database.Catalog, ids [][]byte) ([]PersonSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
-	return persons(c.Graph(), ids, false, true)
+	out, _, err := persons(c.Graph(), ids, false, true)
+	return out, err
 }
 
-func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummary, error) {
+func persons(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PersonSummary, map[string][]graphcache.InputKey, error) {
 	if g == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	v, err := vocabulary(g)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	nodes, err := nodesOf(g, v.typeID[vocabkey.Person], ids, all)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	out, err := composePersons(g, v, nodes, store)
+	out, inputs, err := composePersons(g, v, nodes, store)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	loaded, err := nameformats.LoadFor(g, g)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sortPersons(out, loaded.Profile)
-	return out, nil
+	return out, inputs, nil
 }
 
 // ListEvents returns every unmerged Event's summary in list order.
 func ListEvents(c *database.Catalog) ([]EventSummary, error) {
-	out, err := events(c.Graph(), nil, true, true)
+	out, _, err := events(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +412,8 @@ func EventsByIDs(c *database.Catalog, ids [][]byte) ([]EventSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
-	return events(c.Graph(), ids, false, true)
+	out, _, err := events(c.Graph(), ids, false, true)
+	return out, err
 }
 
 // RowsForSearch composes the three summary kinds on one graph. Search
@@ -408,48 +422,55 @@ func RowsForSearch(g *graphcache.Graph, w Want) (Summaries, error) {
 	var ps []PersonSummary
 	var es []EventSummary
 	var pl []PlaceSummary
+	inputs := map[string][]graphcache.InputKey{}
 	var err error
+	var more map[string][]graphcache.InputKey
 	if len(w.Persons) > 0 {
-		if ps, err = persons(g, w.Persons, false, false); err != nil {
+		if ps, more, err = persons(g, w.Persons, false, false); err != nil {
 			return Summaries{}, err
 		}
+		maps.Copy(inputs, more)
 	}
 	if len(w.Events) > 0 {
-		if es, err = events(g, w.Events, false, false); err != nil {
+		if es, more, err = events(g, w.Events, false, false); err != nil {
 			return Summaries{}, err
 		}
+		maps.Copy(inputs, more)
 	}
 	if len(w.Places) > 0 {
-		if pl, err = places(g, w.Places, false, false); err != nil {
+		if pl, more, err = places(g, w.Places, false, false); err != nil {
 			return Summaries{}, err
 		}
+		maps.Copy(inputs, more)
 	}
-	return NewSummaries(ps, es, pl), nil
+	s := NewSummaries(ps, es, pl)
+	s.inputs = inputs
+	return s, nil
 }
 
-func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventSummary, error) {
+func events(g *graphcache.Graph, ids [][]byte, all, store bool) ([]EventSummary, map[string][]graphcache.InputKey, error) {
 	if g == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	v, err := vocabulary(g)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	nodes, err := nodesOf(g, v.typeID[vocabkey.Event], ids, all)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	out, err := composeEvents(g, v, nodes, store)
+	out, inputs, err := composeEvents(g, v, nodes, store)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sortEvents(out)
-	return out, nil
+	return out, inputs, nil
 }
 
 // ListPlaces returns every unmerged Place's summary in list order.
 func ListPlaces(c *database.Catalog) ([]PlaceSummary, error) {
-	out, err := places(c.Graph(), nil, true, true)
+	out, _, err := places(c.Graph(), nil, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -466,27 +487,28 @@ func PlacesByIDs(c *database.Catalog, ids [][]byte) ([]PlaceSummary, error) {
 	if len(database.UniqueBlobIDs(ids)) == 0 {
 		return nil, nil
 	}
-	return places(c.Graph(), ids, false, true)
+	out, _, err := places(c.Graph(), ids, false, true)
+	return out, err
 }
 
-func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceSummary, error) {
+func places(g *graphcache.Graph, ids [][]byte, all, store bool) ([]PlaceSummary, map[string][]graphcache.InputKey, error) {
 	if g == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	v, err := vocabulary(g)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	nodes, err := nodesOf(g, v.typeID[vocabkey.Place], ids, all)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	out, err := composePlaces(g, v, nodes, store)
+	out, inputs, err := composePlaces(g, v, nodes, store)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sortPlaces(out)
-	return out, nil
+	return out, inputs, nil
 }
 
 func nodesOf(g *graphcache.Graph, typeID []byte, ids [][]byte, all bool) ([]*graphcache.Node, error) {
@@ -544,46 +566,77 @@ func displayed[H any](g *graphcache.Graph, nodes []*graphcache.Node, fresh map[s
 	return out
 }
 
-func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PersonSummary, error) {
+func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PersonSummary, map[string][]graphcache.InputKey, error) {
 	var need [][]byte
 	var eventIDs [][]byte
+	byID := map[string]*graphcache.Node{}
+	for _, n := range nodes {
+		byID[string(n.ID)] = n
+	}
+	scopes := map[string]*graphcache.InputScope{}
+	collect := g.NoInputs()
 	for _, n := range needed[PersonSummary](g, nodes, store) {
 		need = append(need, n.ID)
-		links, err := follow(g, n.ID, hops.EventsOfSubject)
+		scopes[string(n.ID)] = g.Inputs(n.ID)
+		links, err := follow(collect, n.ID, hops.EventsOfSubject)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, l := range links {
 			eventIDs = append(eventIDs, l.Neighbor)
 		}
 	}
 	if err := g.Nodes(eventIDs); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	pg, err := eventPlaceGraph(g, v, eventIDs)
+	// A person's places are those of its birth and death events only.
+	type life struct{ births, deaths []lifePick }
+	lives := map[string]life{}
+	var pickIDs [][]byte
+	for _, id := range need {
+		births, deaths, err := lifePicks(scopes[string(id)], v, byID[string(id)])
+		if err != nil {
+			return nil, nil, err
+		}
+		lives[string(id)] = life{births, deaths}
+		for _, pick := range append(append([]lifePick(nil), births...), deaths...) {
+			pickIDs = append(pickIDs, pick.event.ID)
+		}
+	}
+	pg, err := eventPlaceGraph(g, v, pickIDs)
 	if err != nil {
-		return nil, err
-	}
-	byID := map[string]*graphcache.Node{}
-	for _, n := range nodes {
-		byID[string(n.ID)] = n
+		return nil, nil, err
 	}
 	leads, err := leadPictures(g, need)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fresh := map[string]PersonSummary{}
+	inputs := map[string][]graphcache.InputKey{}
 	for _, id := range need {
-		h, err := onePerson(v, byID[string(id)], g, pg, leads[string(id)])
+		in, l := scopes[string(id)], lives[string(id)]
+		h, err := onePerson(v, byID[string(id)], in, pg, leads[string(id)], l.births, l.deaths)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		var seeds [][]byte
+		for _, pick := range append(append([]lifePick(nil), l.births...), l.deaths...) {
+			locations, err := follow(in, pick.event.ID, hops.PlacesOfEvent)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, loc := range locations {
+				seeds = append(seeds, loc.Neighbor)
+			}
+		}
+		in.Add(pg.closure(seeds)...)
+		inputs[string(id)] = in.Keys()
 		fresh[string(id)] = h
 		if store {
 			g.SetDisplay(id, h)
 		}
 	}
-	return displayed(g, nodes, fresh, func(h PersonSummary) PersonSummary { return finishPerson(v, h) }), nil
+	return displayed(g, nodes, fresh, func(h PersonSummary) PersonSummary { return finishPerson(v, h) }), inputs, nil
 }
 
 // finishPerson fills the read-time labels of a stored person row.
@@ -609,7 +662,7 @@ func leadPictures(g *graphcache.Graph, ids [][]byte) (map[string][]byte, error) 
 	return out, nil
 }
 
-func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph, lead []byte) (PersonSummary, error) {
+func onePerson(v vocab, n *graphcache.Node, in *graphcache.InputScope, pg *placeGraph, lead []byte, births, deaths []lifePick) (PersonSummary, error) {
 	h := PersonSummary{Entity: entityOf(n), PictureImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
@@ -618,15 +671,11 @@ func onePerson(v vocab, n *graphcache.Node, g *graphcache.Graph, pg *placeGraph,
 	h.Name, h.NameValueCount = name, count
 	h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))
 	h.SexAtBirth = keptTermFacts(n, v.prop(vocabkey.PropertySexAtBirth))
-	births, deaths, err := lifePicks(g, v, n)
-	if err != nil {
-		return PersonSummary{}, err
-	}
 	var errLife error
-	if h.Birth, errLife = leadLife(g, v, pg, births); errLife != nil {
+	if h.Birth, errLife = leadLife(in, v, pg, births); errLife != nil {
 		return PersonSummary{}, errLife
 	}
-	if h.Death, errLife = leadLife(g, v, pg, deaths); errLife != nil {
+	if h.Death, errLife = leadLife(in, v, pg, deaths); errLife != nil {
 		return PersonSummary{}, errLife
 	}
 	return h, nil
@@ -646,8 +695,8 @@ type lifePick struct {
 // product's own types), in the
 // order the person's links give them. It loads the events at once, so its
 // graph queries do not grow with their number.
-func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths []lifePick, err error) {
-	lifeLinks, err := follow(g, n.ID, hops.EventsOfSubject)
+func lifePicks(in *graphcache.InputScope, v vocab, n *graphcache.Node) (births, deaths []lifePick, err error) {
+	lifeLinks, err := follow(in, n.ID, hops.EventsOfSubject)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -655,11 +704,11 @@ func lifePicks(g *graphcache.Graph, v vocab, n *graphcache.Node) (births, deaths
 	for _, l := range lifeLinks {
 		eventIDs = append(eventIDs, l.Neighbor)
 	}
-	if err := g.Nodes(eventIDs); err != nil {
+	if err := in.Nodes(eventIDs); err != nil {
 		return nil, nil, err
 	}
 	for _, l := range lifeLinks {
-		ev, err := g.Node(l.Neighbor)
+		ev, err := in.Node(l.Neighbor)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -720,7 +769,7 @@ func eventDate(v vocab, ev *graphcache.Node) (dating eventDated, count int, prop
 	return dating, count, propID, nil
 }
 
-func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (LifeFacts, error) {
+func leadLife(in *graphcache.InputScope, v vocab, pg *placeGraph, items []lifePick) (LifeFacts, error) {
 	if len(items) == 0 {
 		return LifeFacts{}, nil
 	}
@@ -730,7 +779,7 @@ func leadLife(g *graphcache.Graph, v vocab, pg *placeGraph, items []lifePick) (L
 			lead = item
 		}
 	}
-	places, err := eventPlaces(g, v, pg, lead.event)
+	places, err := eventPlaces(in, v, pg, lead.event)
 	if err != nil {
 		return LifeFacts{}, err
 	}
@@ -761,7 +810,8 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	births, deaths, err := lifePicks(g, v, n)
+	in := g.NoInputs()
+	births, deaths, err := lifePicks(in, v, n)
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
@@ -773,10 +823,10 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	if birth, err = lifeOwners(g, v, pg, births); err != nil {
+	if birth, err = lifeOwners(in, v, pg, births); err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	if death, err = lifeOwners(g, v, pg, deaths); err != nil {
+	if death, err = lifeOwners(in, v, pg, deaths); err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
 	return birth, death, nil
@@ -786,6 +836,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 // skipping events with no node.
 func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
 	var placeIDs [][]byte
+	in := g.NoInputs()
 	for _, id := range eventIDs {
 		n, err := g.Node(id)
 		if err != nil {
@@ -794,7 +845,7 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGra
 		if n == nil {
 			continue
 		}
-		locations, err := follow(g, id, hops.PlacesOfEvent)
+		locations, err := follow(in, id, hops.PlacesOfEvent)
 		if err != nil {
 			return nil, err
 		}
@@ -805,7 +856,7 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGra
 	return buildPlaceGraph(g, v, placeIDs)
 }
 
-func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
+func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
 	sortByDateKey(picks, func(p lifePick) dateKey { return p.key })
 	var out LifeOwners
 	listed := map[string]bool{}
@@ -815,7 +866,7 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 	var assocIDs [][]byte
 	linksOf := map[string][]graphcache.Link{}
 	for _, pick := range picks {
-		links, err := follow(g, pick.event.ID, hops.PlacesOfEvent)
+		links, err := follow(in, pick.event.ID, hops.PlacesOfEvent)
 		if err != nil {
 			return LifeOwners{}, err
 		}
@@ -824,7 +875,7 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 			assocIDs = append(assocIDs, l.Association)
 		}
 	}
-	if err := g.Nodes(assocIDs); err != nil {
+	if err := in.Nodes(assocIDs); err != nil {
 		return LifeOwners{}, err
 	}
 	for _, pick := range picks {
@@ -832,7 +883,7 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 			dated[string(pick.event.ID)] = true
 			out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
 		}
-		places, err := eventPlaces(g, v, pg, pick.event)
+		places, err := eventPlaces(in, v, pg, pick.event)
 		if err != nil {
 			return LifeOwners{}, err
 		}
@@ -845,7 +896,7 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 					return LifeOwners{}, fmt.Errorf("conclusionsummaries: location link of event %x to place %x has no association", pick.event.ID, l.Neighbor)
 				}
 				listed[string(l.Association)] = true
-				assoc, err := g.Node(l.Association)
+				assoc, err := in.Node(l.Association)
 				if err != nil {
 					return LifeOwners{}, err
 				}
@@ -862,31 +913,34 @@ func lifeOwners(g *graphcache.Graph, v vocab, pg *placeGraph, picks []lifePick) 
 	return out, nil
 }
 
-func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventSummary, error) {
+func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]EventSummary, map[string][]graphcache.InputKey, error) {
 	need := needed[EventSummary](g, nodes, store)
 	var personIDs, placeIDs [][]byte
+	scopes := map[string]*graphcache.InputScope{}
+	collect := g.NoInputs()
 	for _, n := range need {
-		subjects, err := follow(g, n.ID, hops.SubjectsOfEvent)
+		scopes[string(n.ID)] = g.Inputs(n.ID)
+		subjects, err := follow(collect, n.ID, hops.SubjectsOfEvent)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, l := range subjects {
 			personIDs = append(personIDs, l.Neighbor)
 		}
-		locations, err := follow(g, n.ID, hops.PlacesOfEvent)
+		locations, err := follow(collect, n.ID, hops.PlacesOfEvent)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for _, l := range locations {
 			placeIDs = append(placeIDs, l.Neighbor)
 		}
 	}
 	if err := g.Nodes(append(append([][]byte(nil), personIDs...), placeIDs...)); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pg, err := buildPlaceGraph(g, v, placeIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	needIDs := make([][]byte, len(need))
 	for i, n := range need {
@@ -894,24 +948,36 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	}
 	leads, err := leadPictures(g, needIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fresh := map[string]EventSummary{}
+	inputs := map[string][]graphcache.InputKey{}
 	for _, n := range need {
-		h, err := oneEvent(g, v, pg, n)
+		in := scopes[string(n.ID)]
+		h, err := oneEvent(in, v, pg, n)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+		locations, err := follow(in, n.ID, hops.PlacesOfEvent)
+		if err != nil {
+			return nil, nil, err
+		}
+		var seeds [][]byte
+		for _, l := range locations {
+			seeds = append(seeds, l.Neighbor)
+		}
+		in.Add(pg.closure(seeds)...)
+		inputs[string(n.ID)] = in.Keys()
 		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
 		if store {
 			g.SetDisplay(n.ID, h)
 		}
 	}
-	return displayed(g, nodes, fresh, func(h EventSummary) EventSummary { return finishEvent(v, h) }), nil
+	return displayed(g, nodes, fresh, func(h EventSummary) EventSummary { return finishEvent(v, h) }), inputs, nil
 }
 
-func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) (EventSummary, error) {
+func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.Node) (EventSummary, error) {
 	h := EventSummary{Entity: entityOf(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
 	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
@@ -925,12 +991,12 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 	if h.EndDate, h.EndDateCount, err = keptDateAt(n, v.prop(vocabkey.PropertyEndDate)); err != nil {
 		return EventSummary{}, err
 	}
-	h.Places, err = eventPlaces(g, v, pg, n)
+	h.Places, err = eventPlaces(in, v, pg, n)
 	if err != nil {
 		return EventSummary{}, err
 	}
 	seen := map[string]bool{}
-	subjectLinks, err := follow(g, n.ID, hops.SubjectsOfEvent)
+	subjectLinks, err := follow(in, n.ID, hops.SubjectsOfEvent)
 	if err != nil {
 		return EventSummary{}, err
 	}
@@ -939,7 +1005,7 @@ func oneEvent(g *graphcache.Graph, v vocab, pg *placeGraph, n *graphcache.Node) 
 			continue
 		}
 		seen[string(l.Neighbor)] = true
-		person, err := g.Node(l.Neighbor)
+		person, err := in.Node(l.Neighbor)
 		if err != nil {
 			return EventSummary{}, err
 		}
@@ -1102,10 +1168,10 @@ func birthKeyOf(h PersonSummary) dateKey {
 	return dateKeyOf(h.Birth.Date, h.Entity.Ref)
 }
 
-func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.Node) ([]ChainedPlace, error) {
+func eventPlaces(in *graphcache.InputScope, v vocab, pg *placeGraph, ev *graphcache.Node) ([]ChainedPlace, error) {
 	var raw []ChainedPlace
 	seen := map[string]bool{}
-	locations, err := follow(g, ev.ID, hops.PlacesOfEvent)
+	locations, err := follow(in, ev.ID, hops.PlacesOfEvent)
 	if err != nil {
 		return nil, err
 	}
@@ -1114,7 +1180,7 @@ func eventPlaces(g *graphcache.Graph, v vocab, pg *placeGraph, ev *graphcache.No
 			continue
 		}
 		seen[string(l.Neighbor)] = true
-		n, err := g.Node(l.Neighbor)
+		n, err := in.Node(l.Neighbor)
 		if err != nil {
 			return nil, err
 		}
@@ -1138,7 +1204,7 @@ func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
 	return dating.value, err
 }
 
-func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceSummary, error) {
+func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool) ([]PlaceSummary, map[string][]graphcache.InputKey, error) {
 	need := needed[PlaceSummary](g, nodes, store)
 	needIDs := make([][]byte, len(need))
 	for i, n := range need {
@@ -1146,13 +1212,13 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	}
 	leads, err := leadPictures(g, needIDs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fresh := map[string]PlaceSummary{}
 	for _, n := range need {
 		h, err := placeShell(n, v)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
@@ -1175,9 +1241,9 @@ func placeShell(n *graphcache.Node, v vocab) (PlaceSummary, error) {
 	return h, nil
 }
 
-func finishPlaces(g *graphcache.Graph, v vocab, summaries []PlaceSummary) ([]PlaceSummary, error) {
+func finishPlaces(g *graphcache.Graph, v vocab, summaries []PlaceSummary) ([]PlaceSummary, map[string][]graphcache.InputKey, error) {
 	if len(summaries) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	ids := make([][]byte, len(summaries))
 	for i := range summaries {
@@ -1185,16 +1251,21 @@ func finishPlaces(g *graphcache.Graph, v vocab, summaries []PlaceSummary) ([]Pla
 	}
 	pg, err := buildPlaceGraph(g, v, ids)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	today := TodayDate()
+	inputs := make(map[string][]graphcache.InputKey, len(summaries))
 	for i := range summaries {
-		pg.byID[string(summaries[i].Entity.ID)] = summaries[i]
-		pg.period[string(summaries[i].Entity.ID)] = periodWindow(summaries[i].StartDate, summaries[i].EndDate)
+		id := summaries[i].Entity.ID
+		pg.byID[string(id)] = summaries[i]
+		pg.period[string(id)] = periodWindow(summaries[i].StartDate, summaries[i].EndDate)
 		at := chainQueryDate(summaries[i], today)
-		summaries[i].Parents, summaries[i].ParentsAreCandidates = pg.ParentChain(summaries[i].Entity.ID, &at)
+		summaries[i].Parents, summaries[i].ParentsAreCandidates = pg.ParentChain(id, &at)
+		in := g.Inputs(id)
+		in.Add(pg.closure([][]byte{id})...)
+		inputs[string(id)] = in.Keys()
 	}
-	return summaries, nil
+	return summaries, inputs, nil
 }
 
 func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph, error) {
@@ -1209,13 +1280,25 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 		seen[string(id)] = true
 	}
 	linked := map[string]bool{}
+	// Each place is read through a scope of its own, so pg.closure can hand a
+	// row the reads of the places its chain reaches.
+	scopes := map[string]*graphcache.InputScope{}
+	scopeOf := func(id []byte) *graphcache.InputScope {
+		in, ok := scopes[string(id)]
+		if !ok {
+			in = g.Inputs(nil)
+			scopes[string(id)] = in
+		}
+		return in
+	}
 	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
 		if err := g.Nodes(frontier); err != nil {
 			return nil, err
 		}
 		var assoc, next [][]byte
 		for _, id := range frontier {
-			n, err := g.Node(id)
+			in := scopeOf(id)
+			n, err := in.Node(id)
 			if err != nil {
 				return nil, err
 			}
@@ -1228,7 +1311,7 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			}
 			pg.byID[string(id)] = shell
 			pg.period[string(id)] = periodWindow(shell.StartDate, shell.EndDate)
-			links, err := follow(g, id, hops.ParentsOfPlace)
+			links, err := follow(in, id, hops.ParentsOfPlace)
 			if err != nil {
 				return nil, err
 			}
@@ -1244,24 +1327,28 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 			return nil, err
 		}
 		for _, id := range frontier {
-			n, err := g.Node(id)
+			in := scopeOf(id)
+			n, err := in.Node(id)
 			if err != nil {
 				return nil, err
 			}
 			if n == nil {
 				continue
 			}
-			links, err := follow(g, id, hops.ParentsOfPlace)
+			links, err := follow(in, id, hops.ParentsOfPlace)
 			if err != nil {
 				return nil, err
 			}
 			for _, l := range links {
-				if err := rememberPlaceLink(pg, g, v, id, l, true, linked); err != nil {
+				if err := rememberPlaceLink(pg, in, v, id, l, true, linked); err != nil {
 					return nil, err
 				}
 			}
 		}
 		frontier = next
+	}
+	for id, in := range scopes {
+		pg.inputs[id] = in.Keys()
 	}
 	return pg, nil
 }
@@ -1285,6 +1372,7 @@ func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph
 		return nil, err
 	}
 	linked := map[string]bool{}
+	in := g.NoInputs()
 	var neighbors, assocs [][]byte
 	type pending struct {
 		id   []byte
@@ -1293,7 +1381,7 @@ func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph
 	}
 	var wait []pending
 	for _, hop := range hopList {
-		links, err := follow(g, id, hop)
+		links, err := follow(in, id, hop)
 		if err != nil {
 			return nil, err
 		}
@@ -1314,7 +1402,7 @@ func placeStep(c *database.Catalog, id []byte, hopList ...hops.Hop) (*placeGraph
 		}
 	}
 	for _, p := range wait {
-		if err := rememberPlaceLink(pg, g, v, p.id, p.l, p.part, linked); err != nil {
+		if err := rememberPlaceLink(pg, in, v, p.id, p.l, p.part, linked); err != nil {
 			return nil, err
 		}
 	}
@@ -1338,7 +1426,7 @@ func rememberShell(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte) erro
 	return nil
 }
 
-func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, l graphcache.Link, part bool, linked map[string]bool) error {
+func rememberPlaceLink(pg *placeGraph, in *graphcache.InputScope, v vocab, id []byte, l graphcache.Link, part bool, linked map[string]bool) error {
 	from, to := id, l.Neighbor
 	if !l.FromEnd {
 		from, to = l.Neighbor, id
@@ -1348,7 +1436,7 @@ func rememberPlaceLink(pg *placeGraph, g *graphcache.Graph, v vocab, id []byte, 
 		return nil
 	}
 	linked[key] = true
-	assoc, err := g.Node(l.Association)
+	assoc, err := in.Node(l.Association)
 	if err != nil {
 		return err
 	}

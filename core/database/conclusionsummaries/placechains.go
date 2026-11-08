@@ -7,6 +7,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -29,6 +30,10 @@ type placeGraph struct {
 	succFrom map[string][]placeLink // predecessor id → successors
 	succTo   map[string][]placeLink // successor id → predecessors
 	period   map[string]valuecompare.Window
+	// inputs are the keys the build recorded reading each place it expanded,
+	// by place id: its values, its part_of links at the part end, and those
+	// links' associations.
+	inputs map[string][]graphcache.InputKey
 }
 
 func newPlaceGraph() *placeGraph {
@@ -39,7 +44,36 @@ func newPlaceGraph() *placeGraph {
 		succFrom: map[string][]placeLink{},
 		succTo:   map[string][]placeLink{},
 		period:   map[string]valuecompare.Window{},
+		inputs:   map[string][]graphcache.InputKey{},
 	}
+}
+
+// closure is the union of the keys recorded for every place a walk up part_of
+// from seeds expands: the same rounds buildPlaceGraph runs, over the links it
+// kept. It records nothing of its own, so a read added to the build reaches
+// every row that walks through it.
+func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
+	seeds = database.UniqueBlobIDs(seeds)
+	frontier := append([][]byte(nil), seeds...)
+	seen := map[string]bool{}
+	for _, id := range seeds {
+		seen[string(id)] = true
+	}
+	var keys []graphcache.InputKey
+	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
+		var next [][]byte
+		for _, id := range frontier {
+			keys = append(keys, g.inputs[string(id)]...)
+			for _, l := range g.partFrom[string(id)] {
+				if !seen[string(l.to)] {
+					seen[string(l.to)] = true
+					next = append(next, l.to)
+				}
+			}
+		}
+		frontier = next
+	}
+	return keys
 }
 
 type assocDates struct {

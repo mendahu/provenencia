@@ -21,7 +21,7 @@ func checkDisplay(g *graphcache.Graph, id []byte, stored any) error {
 	}
 	switch row := stored.(type) {
 	case PersonSummary:
-		got, err := persons(g, [][]byte{id}, false, false)
+		got, _, err := persons(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
@@ -29,7 +29,7 @@ func checkDisplay(g *graphcache.Graph, id []byte, stored any) error {
 			return fmt.Errorf("conclusionsummaries: stored person %x does not match a fresh row", id)
 		}
 	case EventSummary:
-		got, err := events(g, [][]byte{id}, false, false)
+		got, _, err := events(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func checkDisplay(g *graphcache.Graph, id []byte, stored any) error {
 			return fmt.Errorf("conclusionsummaries: stored event %x does not match a fresh row", id)
 		}
 	case PlaceSummary:
-		got, err := places(g, [][]byte{id}, false, false)
+		got, _, err := places(g, [][]byte{id}, false, false)
 		if err != nil {
 			return err
 		}
