@@ -1,7 +1,7 @@
 # Ship log — S13-28 How the records connect
 
 **Plan:** [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md) · **Branch:** `s13-28-how-the-records-connect` (stacked on `s13-27-plan`, #743) · **PR:** #744
-**State:** review 2
+**State:** ready
 
 Stacked PR: the base branch is `s13-27-plan`, not `main` (the user, 2026-11-08). The gate runs `scripts/check-pr.sh --base origin/s13-27-plan`, and reviewers diff against the `s13-27-plan` head.
 
@@ -126,3 +126,19 @@ Head `f3e2e17a` (commits `af360965`, `4813b1c6`, `c439fd3e`, `f3e2e17a`). Gate P
 
 ## Round 2 — review
 Reviewers: CON (CON-1 major), MNT (MNT-1 blocker, MNT-2 and MNT-3 majors), SEC+PRF (PRF-1 and SEC-1 blockers). Scope `d788a00e...f3e2e17a`. Skipped: UX (minors only, resolved above).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 / MNT-1 | CON, MNT | blocker | Neighbour set computed three times | Resolved | one `RecordLinksArc.neighbors(of:in:)`, called from `init` and `RecordLinksHighlightedLayers`; T-4 points at it |
+| MNT-2 | MNT | major | Diagram placed one node itself | Resolved | `RecordLinksLayout` returns (w/2, 24) and height 64; no `nodes.count == 1` in the diagram |
+| MNT-3 | MNT | major | README missing the side-column pieces | Resolved | README line 192 |
+| PRF-1 | PRF | blocker | Every hover re-strokes every arc | Resolved (by reading) | `RecordLinksRestArcs(layout:).equatable()`, hover in `RecordLinksHover`; 147 strokes per hover at Scale, not 3,675. `_printChanges` not run; moved to the manual check |
+| SEC-1 | SEC | blocker | No bound on arcs or nodes drawn | Resolved | `maxArcs = 75_000`, `maxNodes = 1_000`; `arcsAndNodesStopAtTheCap` |
+| PRF-4 (CON, MNT, PRF outside lens) | PRF | minor | `PersonRecordLinksContent.init` calls `neighbors(of:in:)` once per node, so O(nodes × arcs) | Follow-up | measured by PRF: 0.36 ms at Scale (50 × 3,675), 70 ms `-O` at the caps; only a crafted catalog reaches the caps. Round 2 fixes blockers only |
+
+Nits (logged): `CON-7 · S13-28 plan T-4 and D-4/D-5/D-6 still name neighbors(of: Int), highlightedGraphID, onHover; the Landed note records the change` · `CON-8 · docs/macos-client-patterns.md:104 · says placement: .column, now .column(loadingHeight:)`
+
+No Fix plan 2: round 2 raised no blocker.
+
+## Result
+Gate PASS (`f3e2e17a`) · CI see PR · open: none · follow-ups: PRF-4, PRF-3 runtime check (manual), CON-8 doc line · to user: —
