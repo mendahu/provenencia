@@ -1,10 +1,10 @@
 # How a person's records connect
 
-**Status:** requirements, captured 2026-10-29 (user); the first version decided 2026-11-07 (user, [below](#first-version-2026-11-07)). Spike 13 slice 7 (S13-26 – S13-29) runs after the Promote cleanup, the pin removal and the Person page.
+**Status:** the design behind how a person's records connect, which Spike 13 built (2026-10-29 – 2026-11-08). Kept as the reasoning behind [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.1 and [`matching-model.md`](../../../matching-model.md); where they differ, the model and the code win. Spike 13's decisions: [README](README.md).
 
 ## The problem
 
-Genealogy's core work is linking records: showing that a mention in one record and a mention in another are the same person, event or place. The genealogical proof standard (GPS) asks for those links to be correlated and their conflicts resolved. Identity Claim pins tried to record that fact by fact and were dropped ([`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §5). Nothing yet shows a researcher how well a handle's records hold together, which record stands alone, or whether two groups of records may be two different people.
+Genealogy's core work is linking records: showing that a mention in one record and a mention in another are the same person, event or place. The genealogical proof standard (GPS) asks for those links to be correlated and their conflicts resolved. Identity Claim pins tried to record that fact by fact and were dropped ([`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5). Nothing yet shows a researcher how well a handle's records hold together, which record stands alone, or whether two groups of records may be two different people.
 
 The work splits into two concerns, built and reviewed separately: **scoring** a connection between two records, and **visualizing** the connections.
 
@@ -16,7 +16,7 @@ A function takes two Evidence graphs and says how strongly they connect, in a wa
 - **Quantity of shared Subjects.** Two graphs connect through the Subjects they have in common: pairs of Subjects, one in each graph, filed on the same canonical entity. Primary entities (people, events, places) and relationship entities (participations, locations, relationships, place relationships) both count.
 - **Strength of each shared Subject.** A shared Subject is not binary. A pair that agrees on a single first name is weaker than one that agrees on a name, a gender and a religion.
 - **Conflicts and contested values.** A pair that disagrees on a fact, or whose values are contested across the handle's records, weakens or breaks the connection, and the result says where.
-- **Derived structure.** The same fact recorded in different shapes must compare across: one record gives two people a spouse relationship, the other gives them a shared marriage event (the implied links matching already derives, [`matching-model.md`](../../matching-model.md)).
+- **Derived structure.** The same fact recorded in different shapes must compare across: one record gives two people a spouse relationship, the other gives them a shared marriage event (the implied links matching already derives, [`matching-model.md`](../../../matching-model.md)).
 - **The page's own entity.** On a handle's page every pair of its graphs shares that handle, so the connection between two graphs is read from what they share other than it, while the handle's own pair stays visible as the thing being proved.
 - **Constraints:** pure, layered and driven by the match registry like matching, so its knobs are tuned in one place; Subject compare is the starting point to draw on; it reads none of graph alignment's weights, band or accept bar (Promote keeps ranking with those, unseen).
 - **Computed, never stored.** Nothing is added to the catalog. Each Identity Claim keeps its status; it carries no argument (2026-10-29). Knowledge outside the records enters as a cited Source.
@@ -27,7 +27,7 @@ Given Requirement 1's results for a handle, show its Evidence graphs and their c
 
 ## First version (2026-11-07)
 
-Start as simple as possible, build it, and look at many people in the dogfood projects before designing anything richer. The decisions are working rules in the [map](deployment-plan.md#slice-7--how-a-persons-records-connect): "Slice 7 starts with a simple count" and "The view is a circular link diagram". In short:
+Start as simple as possible, build it, and look at many people in the dogfood projects before designing anything richer. The [decisions](README.md#decisions) say it in two lines, the record links and Refused. In short:
 
 - **This is not Promote's job.** Promote's suggestions guess which Subjects might match; here the researcher has already joined both members to one entity, and the question is how much evidence the two records share. So the derived lifespan, a suggestion helper, is not counted, and nothing reads graph alignment's scoring.
 - **One line per shared person.** Two graphs get a line for each other person both name. Events, places and the page's own person are not lines.

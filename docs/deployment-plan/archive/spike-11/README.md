@@ -29,7 +29,7 @@ Name frequency weighting. A `spouse` participation role. Damped multi-hop credit
 | Item | Home |
 | --- | --- |
 | Quote nicknames and add former surnames (S11-29, planned, never built) | Spike 14, S14-09 |
-| The claim evidence sheet, pins and evidence query; a related person's lines and the evidence button's hover (S11-52, S11-34, descoped) | Removed by [Spike 13 slice 0](../../spike-13/deployment-plan.md); membership comparison in [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.1 |
+| The claim evidence sheet, pins and evidence query; a related person's lines and the evidence button's hover (S11-52, S11-34, descoped) | Removed by [Spike 13](../spike-13/README.md#decisions); membership comparison in [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §5.1 |
 | The rest of the matching test suite; matcher calibration | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |
 | Merge hints and weak-claim review views | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) § Remember researcher decisions |
 | Term affinity, Daitch–Mokotoff, the place gazetteer | [`international-names.md`](../../../ideas/international-names.md), [`place-gazetteer-service.md`](../../../ideas/place-gazetteer-service.md) |

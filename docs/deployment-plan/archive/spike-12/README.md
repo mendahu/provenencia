@@ -29,7 +29,7 @@ Nested Sources and derivation links; per-graph credibility; moving Subjects betw
 | Graph alignment conflicts after a decision, Promote's performance at scale, names compared however written | [`promote-ranking.md`](../../../ideas/promote-ranking.md) |
 | Crafted name keys, alias tables and kinship fan-out | [`share-packages.md`](../../../ideas/share-packages.md) "Harden before sharing" |
 | Search kind columns, canvas state enums | [`structural-debt.md`](../../../ideas/structural-debt.md) |
-| The evidence sheet's New-row opener, the sheet's pins, the typed band | Removed with Identity Claim pins ([Spike 13 slice 0](../../spike-13/deployment-plan.md)) |
+| The evidence sheet's New-row opener, the sheet's pins, the typed band | Removed with Identity Claim pins ([Spike 13](../spike-13/README.md#decisions)) |
 | Nested Sources, derivation links, templates, per-graph credibility, layered citations | [`source-structure-later.md`](../../spike-15/source-structure-later.md) |
 | `source` Subjects, `mentions` and `remark` | [`source-to-source-relationships.md`](../../../ideas/source-to-source-relationships.md) |
 | Ship-log follow-ups: composer load error placement, a silent Open failure, a card edit dropped without asking; a thumbnails test fixture; recount order | Spike 14 S14-14, S14-12, S14-16 |

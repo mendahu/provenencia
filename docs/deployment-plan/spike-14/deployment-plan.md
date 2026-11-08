@@ -66,7 +66,7 @@ Spike 14 is an odds-and-ends spike (working rule "Even spikes are odds and ends"
 3. **The pages show them.** The Place and Event pages show a Pictures section with the crop, captioned with its Source; a tile opens its record, as a likeness tile does on the Person page.
 4. **A depiction is a rectangle.** Drawing a likeness or a picture shows the rectangle tool alone; a Citation's own region still offers all seven tools. "Use the citation's region" on a circled entry sets the depiction to the circle's bounding rectangle.
 5. **An event or place has a thumbnail.** The Event and Place page headers lead with the earliest picture; choosing another tile as the thumbnail (or going back to the earliest) works as a Person's portrait does, and the Events and Places lists lead with the same picture.
-6. ~~**Promote says picture.**~~ Dropped 2026-10-29: the evidence sheet it worded is removed by Spike 13's [S13-23](../spike-13/deployment-plan.md#s13-23--promote-stops-asking-for-pins).
+6. ~~**Promote says picture.**~~ Dropped 2026-10-29: the evidence sheet it worded is removed by Spike 13's S13-23 ([decisions](../archive/spike-13/README.md#decisions)).
 7. **Likenesses are unchanged.** A Person's likeness, gallery and portrait work as before.
 8. **A tile shows its own picture.** Every gallery tile, and the header or list thumbnail it leads, shows the image stored with its own record; an edited reconciler cache row cannot show another picture.
 12. **Every JPEG gets a thumbnail.** An 11,000 × 18,000 scan, over the 64-megapixel decode budget, shows a thumbnail instead of the missing-image glyph and can be used as a cover, through Go code that a Windows build reuses. (Moved from Spike 12, 2026-10-29.)

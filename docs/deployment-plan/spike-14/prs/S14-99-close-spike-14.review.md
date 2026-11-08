@@ -97,3 +97,35 @@ S13-D1:14 and S13-D4:19 link deleted briefs; code-span hits in S13-10:169, S13-1
 **Answer:** Fixed — T-10 greps one literal per change, each expected once.
 
 Base fact corrected from round 2: the base has 90 broken links, not about 110 (D-9, Out rows).
+
+## Refresh — after the Spike 13 close (2026-11-08)
+
+The user chose to land S13-99 (#753) first. #753 deleted the Spike 13 folder, rewrote `archive-docs` § Retarget (a whole-folder grep and two link forms) and moved Spike 13 to Completed. The plan was refreshed against `s13-99-dogfood-close` @ `9f150572`, then reviewed again by fresh maintainability and executability reviewers. It rides #753 to `main`.
+
+**Refresh edits.** The nine Retarget rows into Spike 13 files and the D-7 "Not edited" line were dropped. AC-2.3, which linted two deleted S13 plans, was dropped, and AC-2.4 became AC-2.3. §4 Inbound links, Index, Lint (41 broken links at the base, 13 outside `spike-14/`) and Close skill were re-measured. D-7 now follows `archive-docs` § Retarget's two forms. Index text, AC-1.3 and T-6 put Spike 14 above Spike 13 in Completed. Manual check 4 no longer opens a deleted plan. `ship-pr` "Hand off" became § 8 "Finish". Change 4 and change 8 name Spike 13's kept doc.
+
+**Verdicts:** Maintainability: Fits with changes. Executability: Ready with changes. No blocker, so there is no second refresh round.
+
+### M-1 · major · The audit retarget form is missing from `archive-docs`
+**Answer:** Fixed. Change 9 adds the audit form to § Retarget, and T-10 greps `An app-health audit becomes plain text`.
+
+### M-2 / X-6 · major · A 40-line floor that Spike 12 (37 lines) and Spike 13 (32) miss
+**Answer:** Fixed. Change 5 now reads "~30–80 lines" and "Match the headings of" Spike 12. AC-1.4 and T-7 read 30 – 80.
+
+### M-3 / X-5 · major · The comparison block makes a git worktree every close
+**Answer:** Fixed. Change 6 uses `git archive "$base" | tar -x -C "$tmp"` and cleans up with `rm -rf "$tmp" "$tmp.base" "$tmp.branch"`. The untracked `scripts/__pycache__/` came from the writer's own probe and was removed, so the plan needs no line about it.
+
+### M-4 / X-3 · minor · T-10 cites AC-2.4
+**Answer:** Fixed. It now cites AC-2.3.
+
+### M-5 · minor · D-7 leaves out the `#decisions` anchor
+**Answer:** Fixed. D-7 says "the note's `#decisions`". The depictions row targets `…/archive/spike-14/README.md#decisions`, and manual check 4 matches.
+
+### X-1 · major · #753's `structural-debt.md:37` row, which STEP-1 half builds, is not decided
+**Answer:** Fixed. §6 Ideas made stale gains a row 37 rewrite: `--links` exists, but anchors and a `docs/**` gate are still open. §4 Stale ideas and T-11 cover it.
+
+### X-2 · major · plan-docs fails after STEP-8 if this plan is in the branch diff
+**Answer:** Fixed. D-12 states that this plan reaches `main` with #753, before the branch is cut, and the implementer does not edit it, so the plan-docs step never lints it.
+
+### X-4 · minor · Change 7's insertion point
+**Answer:** Fixed. The sentence is appended at the end of that line, after the `archive-docs` link's closing parenthesis and full stop, with a space before it.

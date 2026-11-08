@@ -11,9 +11,9 @@
 **Version bump:** none — docs, skills and a lint script only; no product change ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md)
 **Rules that bind:** —
-**Context:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md) "Spike close — checklist"; [`ship-pr`](../../../../.agents/skills/ship-pr/SKILL.md) "Hand off" step 2 (the close's last commit); precedent commits `878b45ea` (Spike 11 close) and `35ec7443` (Spike 12 close); [`archive/spike-12/README.md`](../../archive/spike-12/README.md) (shape to match); working rule "Even spikes are odds and ends"
-**Planned:** 2026-11-08 against `main` @ `2ac041a4`
-**Review:** [`S14-99-close-spike-14.review.md`](S14-99-close-spike-14.review.md) — Fits with changes / Ready with changes, two rounds, no blocker open
+**Context:** [`archive-docs`](../../../../.agents/skills/archive-docs/SKILL.md) "Spike close — checklist"; [`ship-pr`](../../../../.agents/skills/ship-pr/SKILL.md) § 8 "Finish" step 2 (the close's last commit); precedent commits `878b45ea` (Spike 11 close) and `35ec7443` (Spike 12 close); [`archive/spike-12/README.md`](../../archive/spike-12/README.md) (shape to match); working rule "Even spikes are odds and ends"
+**Planned:** 2026-11-08 against `main` @ `2ac041a4`; refreshed 2026-11-08 against `s13-99-dogfood-close` @ `9f150572` ([#753](https://github.com/mendahu/provenencia/pull/753), the Spike 13 close, which this plan lands after)
+**Review:** [`S14-99-close-spike-14.review.md`](S14-99-close-spike-14.review.md) — Fits with changes / Ready with changes, two rounds plus a refresh round after #753, no blocker open
 
 ### Implementer — read this first
 
@@ -34,7 +34,7 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 
 **Why now.** S14-42 (#748) was the last open row. Spike 16, the next odds-and-ends spike, is being planned and takes one-off work from here on (user, 2026-11-08).
 
-**What stays.** No product code, test, string or schema changes. Code comments that name a brief id (`S14-D1` in `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift` and `macos/App/DesignSystem/README.md`, `S14-D9` in `macos/App/DesignSystem/Tokens/PVColor.swift`) stay: they name an id and link nothing. Code-span mentions of `spike-14/` paths in dated Spike 13 logs and landed plans stay for the same reason (D-7). The dogfood bar pass is skipped (user, 2026-11-08).
+**What stays.** No product code, test, string or schema changes. Code comments that name a brief id (`S14-D1` in `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift` and `macos/App/DesignSystem/README.md`, `S14-D9` in `macos/App/DesignSystem/Tokens/PVColor.swift`) stay: they name an id and link nothing. The dogfood bar pass is skipped (user, 2026-11-08).
 
 ## 2. User stories
 
@@ -44,8 +44,8 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | --- | --- | --- |
 | AC-1.1 | `ls docs/deployment-plan/archive/spike-14/` *(new)* | Exactly `README.md` and `summary-inputs.md` |
 | AC-1.2 | `ls docs/deployment-plan/spike-14/` after STEP-8 | Only `prs/` with the S14-99 plan and its logs; `ship-pr` step 2 removes the folder |
-| AC-1.3 | `docs/deployment-plan/README.md` § Current and § Completed | Spike 14 is the first Completed row, linking `archive/spike-14/`; Current holds Spike 13, Spike 15 and the Spike 16 line of §6 Index text, and no Spike 14 |
-| AC-1.4 | The note (`archive/spike-14/README.md`, new) | 40 – 80 lines; headings Decisions, Refused, Leftovers |
+| AC-1.3 | `docs/deployment-plan/README.md` § Current and § Completed | Spike 14 is the first Completed row, above Spike 13, linking `archive/spike-14/`; Current holds Spike 15 and the Spike 16 line of §6 Index text, and no Spike 13 or Spike 14 |
+| AC-1.4 | The note (`archive/spike-14/README.md`, new) | 30 – 80 lines; headings Decisions, Refused, Leftovers |
 
 **US-2.** As a contributor, when I follow any link in the repo, it does not land on a deleted Spike 14 file, and from the docs that teach the input index I reach its design.
 
@@ -53,8 +53,7 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | --- | --- | --- |
 | AC-2.1 | T-1 at STEP-9 | No broken link the base did not already have, outside `docs/deployment-plan/spike-14/` |
 | AC-2.2 | T-2 at STEP-9 | No Markdown link target outside `docs/deployment-plan/spike-14/` contains `spike-14/` without `archive/spike-14` |
-| AC-2.3 | `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-10-header-and-sections.md docs/deployment-plan/spike-13/prs/S13-14-gallery-section.md` | 0 errors |
-| AC-2.4 | `rg -l "archive/spike-14/summary-inputs.md" core/database/effects/README.md docs/catalog-deletes.md .agents/skills/add-searchable-kind/SKILL.md docs/ideas/structural-debt.md` | All four files listed |
+| AC-2.3 | `rg -l "archive/spike-14/summary-inputs.md" core/database/effects/README.md docs/catalog-deletes.md .agents/skills/add-searchable-kind/SKILL.md docs/ideas/structural-debt.md` | All four files listed |
 
 **US-3.** As a contributor, no follow-up a Spike 14 review raised disappears with the ship logs, and the ideas files list only open work.
 
@@ -78,10 +77,10 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | --- | --- |
 | `check-plan-docs.py --links` mode | STEP-1, AC-4.1, AC-4.2 |
 | Decisions note `archive/spike-14/README.md` *(new)* | STEP-3, AC-1.1, AC-1.4 |
-| `summary-inputs.md` moved, stripped of plan ids, linked from four docs | STEP-2, STEP-5, AC-1.1, AC-2.4 |
+| `summary-inputs.md` moved, stripped of plan ids, linked from four docs | STEP-2, STEP-5, AC-1.1, AC-2.3 |
 | Open ship-log follow-ups re-homed in ideas files | STEP-4, AC-3.1 |
 | Ideas lines Spike 14 finished, removed or put in the present tense; `docs/ideas/README.md` summaries | STEP-4, AC-3.3 |
-| Inbound links retargeted | STEP-5, AC-2.1 – AC-2.3 |
+| Inbound links retargeted | STEP-5, AC-2.1, AC-2.2 |
 | `docs/deployment-plan/README.md` Current and Completed | STEP-6, AC-1.3 |
 | `archive-docs`, `ship-pr` step 2 and `archive/README.md` changes | STEP-7, AC-4.3 |
 | Delete the rest of `spike-14/`: map, map review log, `completed.md`, `README.md`, both audits, `event-place-pictures.md`, `oversized-jpeg-thumbnails.md`, `design/`, `ux/`, the 35 other plans with their review and ship logs | STEP-8, AC-1.2 |
@@ -90,13 +89,13 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | --- | --- |
 | The dogfood bar pass | Not planned (user, 2026-11-08: skipped) |
 | Triage of the audits' unscheduled items (audit 1 L-1 – L-17 and nits, audit 2 B-25 – B-39) | Not planned (user, 2026-11-08: deleted without triage; git history keeps them) |
-| Links broken before this PR that point outside `spike-14/` (S13-23 and S13-25 to `matching-test-suite.md`, and the rest of the base's 90) | Spike 13's close and later sweeps; T-1 compares against the base |
+| Links broken before this PR that point outside `spike-14/` (the 13 of §4 Lint: the `plan-pr` template's placeholders, the line-3 links of `archive/spike-4` – `spike-7`, `archive/spike-9/README.md:21`, two in `spike-15/`) | Not planned here: a later sweep; T-1 compares against the base, so they do not count |
 | Opening Spike 16's folder or map | Spike 16's `plan-spike` (being planned, user 2026-11-08) |
 | Fixing any re-homed follow-up | The ideas file that holds it |
-| Running `--links` as a `check-pr.sh` gate | Not planned: the base holds 90 broken links, so a repo-wide gate would fail every PR |
+| Running `--links` as a `check-pr.sh` gate | Not planned: the base holds 41 broken links (13 outside `spike-14/`), so a repo-wide gate would fail every PR |
 | A `--links --base REF` mode that does the comparison itself | Not planned: the comparison command lives in `archive-docs` (D-9) |
 | A link to `summary-inputs.md` from `.cursor/rules/catalog-queries.mdc` | Not planned: the rule names `graphcache.InputScope`, and the skill it pairs with (`add-searchable-kind`) gets the link |
-| Removing `docs/deployment-plan/spike-14/` and the S14-99 plan, review log and ship log | `ship-pr` "Hand off" step 2 (D-11), not the implementer |
+| Removing `docs/deployment-plan/spike-14/` and the S14-99 plan, review log and ship log | `ship-pr` § 8 "Finish" step 2 (D-11), not the implementer |
 
 ## 4. Current state
 
@@ -107,14 +106,14 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | Live design doc | `docs/deployment-plan/spike-14/summary-inputs.md` | The only full description of the input index. Line 3 links the map and tells the PR story; lines 44 and 123 link `../../ideas/structural-debt.md`; lines 11, 24, 31, 32, 75, 78, 106, 114, 123 and 125 cite S14 plan, test and decision ids. Linked only from files inside `spike-14/` |
 | Docs that teach the index | `core/database/effects/README.md:15` ("`Run` sets `Set.SummaryDeps` from the input index (`searchindex.ReprojectChanged` …"), `docs/catalog-deletes.md:46` ("come from the input index."), `.agents/skills/add-searchable-kind/SKILL.md:31` (`graphcache.InputScope`), `docs/ideas/structural-debt.md:35` (source cell "Spike 14 Batch 8 design") | Name the mechanism; link nothing |
 | Graduated docs | `event-place-pictures.md`, `oversized-jpeg-thumbnails.md` | Their contract is in `docs/conclusion-layer-data-model.md`, `docs/seeded-vocabulary.md` and `core/raster/jpegdc.go`. Their "Stays later" / "Not this design" items have no other home except signature and the Timeline picture |
-| Audits | `app-health-audit.md`, `app-health-audit-2.md` | Linked for provenance from `docs/ideas/structural-debt.md:3`, `promote-ranking.md:5`, `share-packages.md:49` and `docs/deployment-plan/archive/spike-12/source-structure.md:68`; named in code spans in the S13-12 ship log and S13-25 review log. The ideas rows describe themselves |
-| Inbound links | The 16 files of §6 Retarget, plus `docs/ideas/depictions-and-likenesses.md:3` and `docs/ideas/structural-debt.md:35` (in §6 Ideas made stale) | S13-D1:14 and S13-D4:19 are already broken at the base (one `../` too few); the rest break when `spike-14/` goes (measured by deleting it on a scratch worktree) |
-| Stale ideas | `docs/ideas/structural-debt.md:18,25,35,36`, `docs/ideas/provisional-identity-claims.md:34,51`, `docs/ideas/depictions-and-likenesses.md:3`, `docs/ideas/README.md:21,50,57` | Rows struck through as done, or future tense about S14-16, S14-22, S14-42 (all landed) |
-| Index | `docs/deployment-plan/README.md:50-58` | § Current: Spike 13 (open), Spike 14 (open, four links into `spike-14/`), Spike 15 (not yet planned). § Completed starts at Spike 12 |
-| Lint | `scripts/check-plan-docs.py`: `LINK_RE`, `prose_lines`, `check_links`, `main` | `check_links` checks relative links of plans and briefs only; `main` skips any other file with a warning. Run over every `*.md` at the base, `check_links` finds 90 broken links. No other link check exists in `scripts/`, `.agents/` or `.cursor/` |
+| Audits | `app-health-audit.md`, `app-health-audit-2.md` | Linked for provenance from `docs/ideas/structural-debt.md:3`, `promote-ranking.md:5`, `share-packages.md:49` and `docs/deployment-plan/archive/spike-12/source-structure.md:68`. The ideas rows describe themselves |
+| Inbound links | `rg -n 'spike-14/' --glob '!docs/deployment-plan/spike-14/**' .` at the refreshed base: `docs/deployment-plan/README.md:52`, `docs/dogfood/README.md:15`, `docs/deployment-plan/archive/spike-12/source-structure.md:68`, `docs/ideas/depictions-and-likenesses.md:3`, `docs/ideas/structural-debt.md:3`, `docs/ideas/promote-ranking.md:5`, `docs/ideas/share-packages.md:49` | Each breaks when `spike-14/` goes. #753 deleted the Spike 13 folder with the nine Spike 13 links into `spike-14/` the first version of this plan retargeted; `archive/spike-13/` links nothing in `spike-14/`. Rows in §6 Retarget and §6 Ideas made stale |
+| Stale ideas | `docs/ideas/structural-debt.md:18,25,35,36,37`, `docs/ideas/provisional-identity-claims.md:34,51`, `docs/ideas/depictions-and-likenesses.md:3`, `docs/ideas/README.md:21,50,57` | Rows struck through as done, or future tense about S14-16, S14-22, S14-42 (all landed). Row 37 (#753) asks for what STEP-1 half builds |
+| Index | `docs/deployment-plan/README.md:50-58` | § Current: Spike 14 (open, line 52, four links into `spike-14/`), Spike 15 (not yet planned, line 54). § Completed starts at Spike 13 (#753) |
+| Lint | `scripts/check-plan-docs.py`: `LINK_RE`, `prose_lines`, `check_links`, `main` | `check_links` checks relative links of plans and briefs only; `main` skips any other file with a warning. Run over every tracked `*.md` at the refreshed base, `check_links` finds 41 broken links: 28 inside `spike-14/` (27 in `design/archive/`), 13 outside (six placeholders in `.agents/skills/plan-pr/template.md`, line 3 of `archive/spike-4` – `spike-7/README.md`, `archive/spike-9/README.md:21`, two in `spike-15/source-structure-later.md`). No other link check exists in `scripts/`, `.agents/` or `.cursor/` |
 | PR gate | `scripts/check-pr.sh` | Runs diff-check, gofmt, go vet, go test, localizable, guidance-names, plan-docs (changed plans and briefs only), xcode-test and swift-warnings. xcode-test fails off macOS by design |
-| Close skill | `.agents/skills/archive-docs/SKILL.md` (`.claude/skills` is a symlink to `.agents/skills`) | Checklist line 46 and "Keep (live contract)" (line 57) keep only a live contract, and line 68 says delete a graduated essay; yet Spikes 11, 12 keep a design-reasoning file that defers to domain docs. The note template (line 83 on) has Decisions only and points at the 15-line Spike 7 note; Spikes 10 – 12 use Decisions, Refused, Leftovers (37 – 44 lines). Delete line (47 – 48) names no audits and no `ux/`. Retarget names no command |
-| Last commit | `.agents/skills/ship-pr/SKILL.md` "Hand off" step 2 | A spike close's ship-log commit runs `git rm -r docs/deployment-plan/spike-N`, subject "Record the S#-99 ship log and remove the Spike N folder." Nothing reruns a link check after it |
+| Close skill | `.agents/skills/archive-docs/SKILL.md` (`.claude/skills` is a symlink to `.agents/skills`) | Checklist line 46 and "Keep (live contract)" (line 57) keep only a live contract, and line 68 says delete a graduated essay; yet Spikes 11, 12 keep a design-reasoning file that defers to domain docs. The note template (line 83 on) has Decisions only and points at the 15-line Spike 7 note; Spikes 10 – 13 use Decisions, Refused, Leftovers (32 – 44 lines). Delete line (47 – 48) names no audits and no `ux/`. § Retarget (line 114 on, rewritten by #753) gives a grep over the whole spike folder and two link forms (map or feature doc → the note's `#decisions`; plan, brief, review or ship log → plain text naming it and its PR), but no comparison of broken links |
+| Last commit | `.agents/skills/ship-pr/SKILL.md` § 8 "Finish" step 2 | A spike close's ship-log commit runs `git rm -r docs/deployment-plan/spike-N`, subject "Record the S#-99 ship log and remove the Spike N folder." Nothing reruns a link check after it |
 | Archive index | `docs/deployment-plan/archive/README.md:5` | Keeps a file only "when it is still the contract" |
 
 **Precedent.** `878b45ea` "Close Spike 11 as a decisions note." and `35ec7443` "Close Spike 12: …". Copy their shape: one `archive/spike-N/README.md` with Decisions, Refused, Leftovers; one kept design doc beside it, whose line 3 says the domain docs and code win (`archive/spike-12/source-structure.md:3`); everything else deleted; the index's Completed row is one line. Do not copy Spike 12 moving its audits to another spike: here they are deleted (D-4).
@@ -129,12 +128,12 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 | D-4 | Both audits are deleted with no triage of their unscheduled items. Their provenance links become date-and-commit text. | User, 2026-11-08. | Moving the audits to the archive; re-homing each low item |
 | D-5 | No bar pass. | User, 2026-11-08. | Walking bar outcomes 1 – 34 |
 | D-6 | § Current gets the Spike 16 line of §6 Index text. If a `spike-16/` folder exists under `docs/deployment-plan/` on the branch's base, the words "Spike 16 — Odds and ends" are one link to `spike-16/`; otherwise no link. | User, 2026-11-08: Spike 16 is being planned and arrives soon. | Opening a Spike 16 skeleton here |
-| D-7 | Retargets follow §6 Retarget exactly. A link to the map or a plan goes to the note; a link to a brief becomes the plain brief id, or the note where no live doc is linked beside it. Code-span mentions in dated logs and landed plans are not edited. | Briefs are deleted at close; the boards live in Claude Design. Logs and landed plans are records, and a code span links nothing. | Linking git commits for deleted files; rewriting dated logs |
+| D-7 | Retargets follow §6 Retarget exactly, in the two forms of `archive-docs` § Retarget: a link to the map or a feature doc goes to the note's `#decisions`; a link to a plan, brief, review log, ship log or audit becomes plain text with no link. A miss T-1 finds is fixed by the same two forms. | Plans, briefs and audits have no archive copy, so a note link would land where the cited text is not (#753 wrote this rule into `archive-docs`). | Linking git commits for deleted files; linking the note for a plan or brief |
 | D-8 | `docs/dogfood/README.md:15` is deleted, not retargeted. | The notes shipped (S14-28, S14-36, S14-37, S14-39) and the folder goes. | Pointing it at the archive |
-| D-9 | `check-plan-docs.py` gets a `--links FILE ...` mode that runs the existing `check_links` on any Markdown file. The base-versus-branch comparison is one command block in `archive-docs` "Retarget" (§6 Skill changes, change 6), which T-1 and `ship-pr` step 2 run. | One link rule for plans and closes; one written comparison the next closes copy. The base has 90 broken links, so the comparison, not a gate, is the check. | An inline pipeline per close; a repo-wide gate; a `--base REF` mode (more script for a twice-a-month job) |
-| D-10 | `archive-docs` is brought in line with practice by replacing its Keep section, checklist keep line and note template, not by appending beside them; `archive/README.md:5` and `ship-pr` step 2 change with it (§6 Skill changes). | Appending would leave the skill contradicting itself (live contract only vs. the design-reasoning files Spikes 11, 12 and 14 keep; a Decisions-only template vs. the Refused and Leftovers sections Spikes 10 – 12 use). | Appending four lines; leaving the skill as it is |
-| D-11 | Commits: STEP-1 "Check the links of any Markdown file with check-plan-docs."; STEP-2 to STEP-8 "Close Spike 14 as a decisions note."; a STEP-9 fix is its own commit. The last commit is `ship-pr` "Hand off" step 2's, which records the ship log and removes `docs/deployment-plan/spike-14/` (this plan and its logs with it), then reruns the link comparison with nothing excluded. The implementer does not delete this plan. | `ship-pr` already owns that commit; `archive-docs` says the close deletes its plan in the commit that records the ship log. | A separate implementer commit deleting the plan (a second mechanism beside `ship-pr` step 2) |
-| D-12 | PR-gate evidence: on macOS, `scripts/check-pr.sh` prints `check-pr: PASS`. Elsewhere, every step except xcode-test and swift-warnings passes, and CI's macOS job is green on the PR. | No Swift changes; xcode-test fails off macOS by design. | Requiring a Mac for a docs PR |
+| D-9 | `check-plan-docs.py` gets a `--links FILE ...` mode that runs the existing `check_links` on any Markdown file. The base-versus-branch comparison is one command block in `archive-docs` "Retarget" (§6 Skill changes, change 6), which T-1 and `ship-pr` step 2 run. | One link rule for plans and closes; one written comparison the next closes copy. The base has 41 broken links, so the comparison, not a gate, is the check. | An inline pipeline per close; a repo-wide gate; a `--base REF` mode (more script for a twice-a-month job) |
+| D-10 | `archive-docs` is brought in line with practice by replacing its Keep section, checklist keep line and note template, not by appending beside them; `archive/README.md:5` and `ship-pr` step 2 change with it (§6 Skill changes). | Appending would leave the skill contradicting itself (live contract only vs. the design-reasoning files Spikes 11 – 14 keep; a Decisions-only template vs. the Refused and Leftovers sections Spikes 10 – 12 use). | Appending four lines; leaving the skill as it is |
+| D-11 | Commits: STEP-1 "Check the links of any Markdown file with check-plan-docs."; STEP-2 to STEP-8 "Close Spike 14 as a decisions note."; a STEP-9 fix is its own commit. The last commit is `ship-pr` § 8 "Finish" step 2's, which records the ship log and removes `docs/deployment-plan/spike-14/` (this plan and its logs with it), then reruns the link comparison with nothing excluded. The implementer does not delete this plan. | `ship-pr` already owns that commit; `archive-docs` says the close deletes its plan in the commit that records the ship log. | A separate implementer commit deleting the plan (a second mechanism beside `ship-pr` step 2) |
+| D-12 | This plan reaches `main` with #753, before the branch is cut, and the implementer does not edit it, so `check-pr.sh`'s plan-docs step (changed plans only) never lints its links into the deleted map. PR-gate evidence: on macOS, `scripts/check-pr.sh` prints `check-pr: PASS`. Elsewhere, every step except xcode-test and swift-warnings passes, and CI's macOS job is green on the PR. | No Swift changes; xcode-test fails off macOS by design. | Requiring a Mac for a docs PR |
 
 **Rules this plan bends.** None. D-10 changes `archive-docs` and `ship-pr` in this PR (STEP-7) to match how Spikes 10 – 12 were closed; no rule is set aside.
 
@@ -149,7 +148,7 @@ Spike 14 is finished: every PR in its map has landed or been descoped. This PR c
 
 **Builds on.** `archive-docs` spike-close checklist; `ship-pr` step 2; the Spike 11 and 12 close commits; `check_links`.
 **Deletes.** Everything in `docs/deployment-plan/spike-14/` except `summary-inputs.md` (moved). The Spike 14 paragraph in `docs/deployment-plan/README.md`. `docs/dogfood/README.md:15`. Rows 18 and 25 of `docs/ideas/structural-debt.md`. `archive-docs`'s old Keep section, keep checklist line and note template (replaced).
-**Next adds.** Spike 13's and Spike 16's closes follow `archive-docs` and run its comparison command.
+**Next adds.** Spike 16's and later closes follow `archive-docs` and run its comparison command.
 
 ### Reach
 
@@ -301,10 +300,11 @@ Already resolved (no action): S14-01 UX-1 and UX-2 (S14-02), S14-03 UX-6 (S14-14
 | `docs/ideas/structural-debt.md:18` | Struck-through `SourceSurface` row, "Done in S14-36" | Row deleted |
 | `docs/ideas/structural-debt.md:25` | Struck-through `subjects.Delete` row, "→ Spike 14 S14-42" | Row deleted |
 | `docs/ideas/structural-debt.md:35` | Source cell "Spike 14 Batch 8 design"; "once the input index is used for invalidation (S14-42) they can record" | Source cell: link "Spike 14 input index" → `../deployment-plan/archive/spike-14/summary-inputs.md`; "now that the input index drives invalidation, they can record" |
+| `docs/ideas/structural-debt.md:37` (#753's row, source cell "S13-99 review M-5") | "`scripts/check-plan-docs.py` `check_links` resolves relative links only in plans and open briefs (`default_targets`), so nothing checks links or anchors in `docs/*.md`, `docs/ideas/` or `docs/deployment-plan/archive/`, and each spike close sweeps them by hand with `rg`. Let `check_links` run over every `docs/**/*.md`, anchors included, from `scripts/check-pr.sh`." | "`scripts/check-plan-docs.py --links FILE ...` checks the relative links of any Markdown file, and a spike close compares them against its base (`archive-docs` § Retarget), but nothing checks anchors, and no gate runs it over `docs/**/*.md`: the base still has broken links of its own. Fix those, then let `check-pr.sh` run `--links`, anchors included, over every `docs/**/*.md`." |
 | `docs/ideas/structural-debt.md:36` | "A term key could become a fourth input kind once S14-42 lands." | "A term key could become a fourth input kind." |
 | `docs/ideas/provisional-identity-claims.md:34` | "S14-16 rewrites … Whichever lands second carries the `status` field through the rewrite." | "S14-16 (landed) rewrote `ApplyPromoteGraphAlignment`'s handler and Swift mapping; this work carries the `status` field through the rewritten code." |
 | `docs/ideas/provisional-identity-claims.md:51` | "If that slot is reclaimed first (a candidate for S14-22), the board's placement needs redrawing." | "S14-22 (landed) left the slot as it was; if it is reclaimed first, the board's placement needs redrawing." |
-| `docs/ideas/depictions-and-likenesses.md:3` | "… are " + link "Spike 14" → `../deployment-plan/spike-14/` + " batch 1." | "… shipped in " + link "Spike 14" → `../deployment-plan/archive/spike-14/` + "." |
+| `docs/ideas/depictions-and-likenesses.md:3` | "… are " + link "Spike 14" → `../deployment-plan/spike-14/` + " batch 1." | "… shipped in " + link "Spike 14" → `../deployment-plan/archive/spike-14/README.md#decisions` + "." |
 | `docs/ideas/README.md:21` | "card image memory, upward shadows, P3 color drift, keyboard multi-select" | append ", reloading sign" |
 | `docs/ideas/README.md:50` | "… term management (direction / inverses)" | append ", failed bind after create" |
 | `docs/ideas/README.md:57` | "… Source section counts" | append ", silent sidebar recount" |
@@ -315,18 +315,8 @@ Already resolved (no action): S14-01 UX-1 and UX-2 (S14-02), S14-03 UX-6 (S14-14
 
 | File:line | Today | Becomes |
 | --- | --- | --- |
-| `docs/deployment-plan/README.md:54` | Spike 14 open paragraph | Removed; see STEP-6 |
+| `docs/deployment-plan/README.md:52` | Spike 14 open paragraph | Removed; see STEP-6 |
 | `docs/deployment-plan/archive/spike-12/source-structure.md:68` | Link "audit" → `../../spike-14/app-health-audit.md` | Plain "the 2026-10-27 app-health audit", no link |
-| `docs/deployment-plan/spike-13/deployment-plan.md:61` | "brief" + link "S14-D1" → `../spike-14/design/archive/S14-D1-wide-layout.md` | Plain "brief S14-D1" (`macos-client-patterns.md` § 9 is linked beside it) |
-| `docs/deployment-plan/spike-13/deployment-plan.md:355` | Link "S14-D1" → same brief | "S14-D1 (" + link "Spike 14 decisions" → `../archive/spike-14/README.md` + ")" |
-| `docs/deployment-plan/spike-13/deployment-plan.md:474` | Link "S14-02" → `../spike-14/deployment-plan.md#s14-02--pictures-in-the-app` | "S14-02 (" + link "Spike 14 decisions" → `../archive/spike-14/README.md` + ")" |
-| `docs/deployment-plan/spike-13/person-detail.md:102` | Link "Spike 14" → `../spike-14/deployment-plan.md` | Link "Spike 14" → `../archive/spike-14/README.md` |
-| `docs/deployment-plan/spike-13/design/archive/S13-D1-person-page-frame.md:14` | A link to `../../spike-14/design/archive/S14-D1-wide-layout.md` (broken at the base) | Its label as plain text, no link |
-| `docs/deployment-plan/spike-13/design/archive/S13-D4-timeline-section.md:19` | A link to `../../spike-14/design/archive/S14-D4-events-list-thumbnail.md` (broken at the base) | Its label as plain text, no link |
-| `docs/deployment-plan/spike-13/design/archive/S13-D5-gallery-and-viewer.md:8` | "the S14-D2 Pictures section, " + link "archived brief" → `../../../spike-14/design/archive/S14-D2-event-page-pictures.md` | "the S14-D2 Pictures section" (link and comma removed) |
-| `docs/deployment-plan/spike-13/design/archive/S13-D5-gallery-and-viewer.md:9` | Link with code label `../../spike-14/deployment-plan.md` → `../../../spike-14/deployment-plan.md#working-rules` | Link "Spike 14 decisions" → `../../../archive/spike-14/README.md` |
-| `docs/deployment-plan/spike-13/prs/S13-10-header-and-sections.md:6` | Link "S14-D1" → `../../spike-14/design/archive/S14-D1-wide-layout.md` | Link "S14-D1" → `../../archive/spike-14/README.md` |
-| `docs/deployment-plan/spike-13/prs/S13-14-gallery-section.md:15` | "the S14-02 plan (" + link → `../../spike-14/prs/S14-02-pictures-in-the-app.md` + ") D-1 – D-5" | "the S14-02 plan's D-1 – D-5 (now in " + link "Spike 14 decisions" → `../../archive/spike-14/README.md` + ")" |
 | `docs/dogfood/README.md:15` | Batch 7 notes line | Line deleted (D-8) |
 | `docs/ideas/structural-debt.md:3` | "Refactors from the first app-health audit, now at " + link → `../deployment-plan/spike-14/app-health-audit.md` + ", with no user-visible change." | "Refactors from the first app-health audit (2026-10-27, at `731e423`; deleted when Spike 14 closed, in git history), with no user-visible change." |
 | `docs/ideas/promote-ranking.md:5` | "Audit items below are from the second app-health audit, now at " + link → `…/app-health-audit-2.md` + "." | "Audit items below are from the second app-health audit (2026-10-28, at `3cc609c`; deleted when Spike 14 closed, in git history)." |
@@ -335,15 +325,13 @@ Already resolved (no action): S14-01 UX-1 and UX-2 (S14-02), S14-03 UX-6 (S14-14
 | `docs/catalog-deletes.md:46` | "come from the input index." | "come from the " + link "input index" → `deployment-plan/archive/spike-14/summary-inputs.md` + "." |
 | `.agents/skills/add-searchable-kind/SKILL.md:31` | "…records its inputs through `graphcache.InputScope`." | "…records its inputs through `graphcache.InputScope` (" + link "design" → `../../../docs/deployment-plan/archive/spike-14/summary-inputs.md` + ")." |
 
-Not edited (D-7): code-span paths in `docs/deployment-plan/spike-13/prs/S13-10-header-and-sections.md:169`, `S13-12-family-section.ship.md:16`, `S13-25-the-pin-table-goes.review.md:40`, `S13-31-header-data-becomes-summaries.md:136` (landed).
-
 ### Index text
 
-`docs/deployment-plan/README.md` § Current keeps the Spike 13 and Spike 15 paragraphs as they are, deletes the Spike 14 paragraph, and adds this line after the Spike 15 paragraph (D-6 for the link):
+`docs/deployment-plan/README.md` § Current keeps the Spike 15 paragraph as it is, deletes the Spike 14 paragraph (line 52), and adds this line after the Spike 15 paragraph (D-6 for the link):
 
 > Spike 16 — Odds and ends is being planned. Until its map is open, a one-off PR waits for it.
 
-§ Completed gets, as its first row, with "Spike 14" linked to `archive/spike-14/`:
+§ Completed gets, as its first row (above the Spike 13 row #753 added), with "Spike 14" linked to `archive/spike-14/`:
 
 `| Spike 14 | Odds and ends in batches: Event and Place pictures, effects on every write, a boolean value type. Summary rows record their inputs. |`
 
@@ -373,7 +361,7 @@ All in STEP-7. Text in fences is final; a link in it is relative to the edited f
 Keep a sibling file in the archive folder in one of two cases, and delete it otherwise:
 
 - **A live contract:** skills or code still implement against it as behavior, not history (Spike 3: [`navigation-history.md`](../../../docs/deployment-plan/archive/spike-3/navigation-history.md), [`omnibar-search.md`](../../../docs/deployment-plan/archive/spike-3/omnibar-search.md)). Strip its “PR sequence / board handoff / incremental delivery” sections; leave stack rules, what counts as an entry, out-of-scope.
-- **The design reasoning behind a domain doc:** the rules live in named `docs/*.md`, a skill or the code, and the file keeps the why (Spike 11 [`comparison-layers.md`](../../../docs/deployment-plan/archive/spike-11/comparison-layers.md), Spike 12 [`source-structure.md`](../../../docs/deployment-plan/archive/spike-12/source-structure.md), Spike 14 [`summary-inputs.md`](../../../docs/deployment-plan/archive/spike-14/summary-inputs.md)). Its first lines name those docs and say they win where they differ, and the docs that teach the mechanism link it, or nothing leads a reader to it once the spike folder goes.
+- **The design reasoning behind a domain doc:** the rules live in named `docs/*.md`, a skill or the code, and the file keeps the why (Spike 11 [`comparison-layers.md`](../../../docs/deployment-plan/archive/spike-11/comparison-layers.md), Spike 12 [`source-structure.md`](../../../docs/deployment-plan/archive/spike-12/source-structure.md), Spike 13 [`evidence-graph-comparison.md`](../../../docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md), Spike 14 [`summary-inputs.md`](../../../docs/deployment-plan/archive/spike-14/summary-inputs.md)). Its first lines name those docs and say they win where they differ, and the docs that teach the mechanism link it, or nothing leads a reader to it once the spike folder goes.
 
 Either way the kept file cites no plan, test or decision id from the deleted plans. An essay whose rules have graduated and whose reasoning no domain doc needs is deleted, and its readers point at the domain doc.
 ```
@@ -381,7 +369,7 @@ Either way the kept file cites no plan, test or decision id from the deleted pla
 **Change 5** — section "Distilled spike README": the line "Target: **~40–80 lines**. Match [`archive/spike-7/README.md`](…)." and the template fence after it are replaced by:
 
 ````markdown
-Target: **~40–80 lines**. Match [`archive/spike-12/README.md`](../../../docs/deployment-plan/archive/spike-12/README.md).
+Target: **~30–80 lines**. Match the headings of [`archive/spike-12/README.md`](../../../docs/deployment-plan/archive/spike-12/README.md).
 
 ```markdown
 # Spike N — short name
@@ -411,24 +399,32 @@ Find what a close breaks by comparing broken links on the base and on the branch
 
 ```bash
 base=$(git merge-base origin/main HEAD); tmp=$(cd "$(mktemp -d)" && pwd -P)
-git worktree add -q "$tmp" "$base"
+git archive "$base" | tar -x -C "$tmp"
 python3 scripts/check-plan-docs.py --links $(git -C "$tmp" ls-files '*.md' | sed "s|^|$tmp/|") \
   | grep 'broken link' | sed -E "s|^$tmp/||; s|:[0-9]+: | |" | sort -u > "$tmp.base"
 python3 scripts/check-plan-docs.py --links $(git ls-files '*.md') \
   | grep 'broken link' | sed -E "s|:[0-9]+: | |" | sort -u > "$tmp.branch"
 comm -13 "$tmp.base" "$tmp.branch"
-git worktree remove "$tmp"
+rm -rf "$tmp" "$tmp.base" "$tmp.branch"
 ```
 
-It prints each new broken link as `file error: broken link: target`; line numbers are dropped so edits that shift lines do not show. A link to a deleted brief becomes the plain brief id; a link to the map or a plan goes to the decisions note.
+It prints each new broken link as `file error: broken link: target`; line numbers are dropped so edits that shift lines do not show. Fix each by the two forms above.
 ````
 
-**Change 7** — `.agents/skills/ship-pr/SKILL.md` "Hand off" step 2: after the sentence ending "…remove the Spike N folder." and its parenthesized `archive-docs` link, append the sentence: "Then run the link comparison in `archive-docs` \"Retarget\"; a new broken link is fixed in its own commit before step 3."
+**Change 7** — `.agents/skills/ship-pr/SKILL.md` § 8 "Finish" step 2: at the end of that line (it ends with the parenthesized `archive-docs` link, its closing parenthesis and a full stop), append a space and the sentence: "Then run the link comparison in `archive-docs` \"Retarget\"; a new broken link is fixed in its own commit before step 3."
 
 **Change 8** — `docs/deployment-plan/archive/README.md:5` becomes:
 
 ```markdown
-A file stays next to a note when it is still the contract (Spike 3: [`navigation-history.md`](spike-3/navigation-history.md), [`omnibar-search.md`](spike-3/omnibar-search.md)) or when it is the design reasoning a domain doc links (Spikes 11, 12 and 14). Domain rules stay in [`docs/`](../../).
+A file stays next to a note when it is still the contract (Spike 3: [`navigation-history.md`](spike-3/navigation-history.md), [`omnibar-search.md`](spike-3/omnibar-search.md)) or when it is the design reasoning a domain doc links (Spikes 11 – 14). Domain rules stay in [`docs/`](../../).
+```
+
+**Change 9** — section "Retarget", the paragraph #753 wrote (it ends "…would land where the cited text is not."): append, on a new line inside the paragraph, wrapped at about 80 columns like it:
+
+```markdown
+An app-health audit becomes plain text with its date and the commit it was
+written at: `the second app-health audit (2026-10-28, at 3cc609c; deleted when
+Spike 14 closed, in git history)`.
 ```
 
 ## 7. Steps
@@ -456,7 +452,7 @@ Check: T-5; T-11.
 **STEP-5 — Retarget inbound links**
 Files: every file in §6 Retarget except `docs/deployment-plan/README.md`.
 Do: each row, exactly.
-Check: AC-2.3; AC-2.4.
+Check: AC-2.3; T-2.
 
 **STEP-6 — The deployment-plan index**
 Files: `docs/deployment-plan/README.md`.
@@ -465,7 +461,7 @@ Check: T-6.
 
 **STEP-7 — Skills and the archive index**
 Files: `.agents/skills/archive-docs/SKILL.md`, `.agents/skills/ship-pr/SKILL.md`, `docs/deployment-plan/archive/README.md`. Skill: `archive-docs`.
-Do: §6 Skill changes 1 – 8.
+Do: §6 Skill changes 1 – 9.
 Check: T-10; `python3 scripts/check-guidance-names.py` passes; `--links` on the three files exits 0.
 
 **STEP-8 — Delete the spike folder's contents**
@@ -486,17 +482,17 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | --- | --- | --- | --- | --- |
 | T-1 | Script | The comparison block of §6 Skill changes, change 6, then `grep -v '^docs/deployment-plan/spike-14/'` on its output | Prints nothing | AC-2.1, D-7, D-9 |
 | T-2 | Script | `rg --hidden -n '\]\([^)]*spike-14/' --glob '!.git/**' --glob '!docs/deployment-plan/archive/spike-14/**' --glob '!docs/deployment-plan/spike-14/**' .` | Every hit's target contains `archive/spike-14` | AC-2.2 |
-| T-3 | Script | `scripts/check-pr.sh` | D-12 (no exclusion: it lints only changed plans and briefs) | AC-2.3, D-12 |
+| T-3 | Script | `scripts/check-pr.sh` | D-12 (no exclusion: it lints only changed plans and briefs) | D-12 |
 | T-4 | Script | `ls docs/deployment-plan/archive/spike-14/` and, after STEP-8, `find docs/deployment-plan/spike-14 -type f` | AC-1.1; only the S14-99 plan and review log | AC-1.1, AC-1.2 |
 | T-5 | Script | `rg -F -c` each Key of §6 Leftovers in its file | 1 each | AC-3.1, D-3 |
-| T-6 | Script | `sed -n '/^## Current/,/^## Completed/p' docs/deployment-plan/README.md` and the first table row under `## Completed` | Current: Spike 13, Spike 15, Spike 16, no "Spike 14"; first Completed row is Spike 14 | AC-1.3, D-6 |
-| T-7 | Script | `wc -l` and `grep '^## '` on the note *(new)* | 40 – 80 lines; Decisions, Refused, Leftovers | AC-1.4, D-2 |
+| T-6 | Script | `sed -n '/^## Current/,/^## Completed/p' docs/deployment-plan/README.md` and the first table row under `## Completed` | Current: Spike 15, Spike 16, no "Spike 13" or "Spike 14"; first Completed row is Spike 14, second Spike 13 | AC-1.3, D-6 |
+| T-7 | Script | `wc -l` and `grep '^## '` on the note *(new)* | 30 – 80 lines; Decisions, Refused, Leftovers | AC-1.4, D-2 |
 | T-8 | Script | `rg -F` each §6 Drop phrase in the note *(new)* | Each found | AC-3.2, D-3 |
 | T-9 | Script | `check-plan-docs.py --links` on `docs/ideas/README.md`, and on a temp file outside the repo holding one link to a missing file | Exit 0 with no error line; exit 1 with `broken link` | AC-4.1, AC-4.2, D-9 |
-| T-10 | Script | `rg -F -c` for `app-health audits (once`, `S#-99 plan carries`, `The design reasoning behind a domain doc`, `## Refused`, `check-plan-docs.py --links $(git ls-files` in `.agents/skills/archive-docs/SKILL.md`; `run the link comparison in` in `.agents/skills/ship-pr/SKILL.md`; `the design reasoning a domain doc links` in `docs/deployment-plan/archive/README.md`; `rg -l archive/spike-14/summary-inputs.md` on the four files of AC-2.4 | 1 each; four files listed | AC-4.3, AC-2.4, D-1, D-10 |
-| T-11 | Script | `rg -n '~~' docs/ideas/structural-debt.md`; `rg -n 'once S14|lands second|candidate for S14' docs/ideas` | No Spike 14 row struck through; no hit | AC-3.3 |
+| T-10 | Script | `rg -F -c` for `app-health audits (once`, `S#-99 plan carries`, `The design reasoning behind a domain doc`, `## Refused`, `check-plan-docs.py --links $(git ls-files`, `An app-health audit becomes plain text` in `.agents/skills/archive-docs/SKILL.md`; `run the link comparison in` in `.agents/skills/ship-pr/SKILL.md`; `the design reasoning a domain doc links` in `docs/deployment-plan/archive/README.md`; `rg -l archive/spike-14/summary-inputs.md` on the four files of AC-2.3 | 1 each; four files listed | AC-4.3, AC-2.3, D-1, D-10 |
+| T-11 | Script | `rg -n '~~' docs/ideas/structural-debt.md`; `rg -n 'once S14|lands second|candidate for S14' docs/ideas`; `rg -c 'check-plan-docs.py --links FILE' docs/ideas/structural-debt.md` | No Spike 14 row struck through; no hit; 1 | AC-3.3 |
 
-Must stay green: everything `scripts/check-pr.sh` runs (D-12). Most likely to break: plan-docs on S13-10 and S13-14, and guidance-names on the skill edits.
+Must stay green: everything `scripts/check-pr.sh` runs (D-12). Most likely to break: guidance-names on the skill edits.
 
 ## 9. Definition of done
 
@@ -509,7 +505,7 @@ Must stay green: everything `scripts/check-pr.sh` runs (D-12). Most likely to br
 - [ ] Version bump: none
 - [ ] Note matches §6 text; Leftovers table matches §6
 - [ ] Every Re-home and Ideas made stale row applied; every Drop phrase in the note
-- [ ] Skill changes 1 – 8 applied; check-plan-docs.py has --links
+- [ ] Skill changes 1 – 9 applied; check-plan-docs.py has --links
 - [ ] This plan and its review log are left in place for ship-pr step 2; no Landed note, no completed.md paragraph, no map status change (archive-docs)
 - [ ] PR description: what shipped, AC evidence, deviations, the Drop list, and that the bar pass was skipped (user, 2026-11-08)
 ```
@@ -519,7 +515,7 @@ Must stay green: everything `scripts/check-pr.sh` runs (D-12). Most likely to br
 1. Open `docs/deployment-plan/README.md` on the branch in GitHub's file view. Spike 14 is the first Completed row and its link opens the decisions note.
 2. In the note, open each Live models link and the `summary-inputs.md` link. Each opens.
 3. Open `docs/catalog-deletes.md` and follow the "input index" link. It opens `summary-inputs.md`, whose line 3 says the domain docs and code win.
-4. Open `docs/deployment-plan/spike-13/prs/S13-14-gallery-section.md` and follow the Spike 14 decisions link. It opens the note, which states the gallery slot decision.
+4. Open `docs/ideas/depictions-and-likenesses.md` and follow the Spike 14 link on line 3. It opens the note's Decisions, which state the gallery slot decision.
 
 ## 11. Risks and stop conditions
 
