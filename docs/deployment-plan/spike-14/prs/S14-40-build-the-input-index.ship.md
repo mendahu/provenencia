@@ -1,7 +1,7 @@
 # Ship log — S14-40 Build the input index
 
 **Plan:** [`S14-40-build-the-input-index.md`](S14-40-build-the-input-index.md) · **Branch:** `s14-40-build-the-input-index` · **PR:** #746
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Base `main` @ `78f26812` (plan was cut against `26ada55`). Local head `f6fc77d6`, unpushed, plus uncommitted T-9/T-10 in `core/database/promotealign/perf_test.go` and the single-graph isolator in `conclusionsummaries/conclusionsummariestest/inputs.go`. Gate not run. STEP-1 through STEP-6 committed; STEP-7 stopped; STEP-8 and STEP-9 not started.
@@ -193,3 +193,15 @@ Check: `scripts/check-plan-docs.py` on the plan passes.
 - F-1: on the large fixture the largest 500-row call counts 1,000 closure keys and holds 3,500 keys in all (events; persons 3,044; places 51); a whole-fixture call counts 16,102. `maxInputKeysPerCall` is 250,000 (the plan's floor; it is above 50 times 3,500).
 - F-5: T-8, compose every person and event row, 184 ms (was 203 ms; budget 500 ms), single run on a noisy machine.
 - T-10 still excuses 9,987 persons; extras: event 100, person 100, place 52.
+
+## Round 1 — fix
+Head `4edc866e`. The orchestrator ran the gate: PASS. F-1 through F-9 are done; none was dropped as Not reproduced.
+
+Deviations:
+- F-2 stops `parentChain` at 7 named ancestors (`summaryChainDepth-1`), so the batch matches the isolated read. `isAncestor` keeps 8 levels, so its level-8 edge reads P8's period.
+- F-5 uses a nil-able `*inputBudget` instead of `record bool`.
+- F-1's cap counts closure keys before dedup; the large fixture's largest call counts 3,500. The cap is 250,000.
+- New test seams: `Graph.SetScopeCounterForTest` and `SetInputKeyCapForTest`.
+
+## Round 2 — review
+Scope `251cd6c0...4edc866e`. Reviewers: CON (CON-1 major), MNT (MNT-1 and MNT-2 majors), SEC+PRF (SEC-1 blocker).
