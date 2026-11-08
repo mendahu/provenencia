@@ -37,7 +37,7 @@ Each promoted row on the Promote page gets a **status**, **Accepted** (the defau
 
 ### Design (board agreed 2026-10-29)
 
-Drawn on the [Promote flow board](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames 30, 30b, 30W and 31, from brief [S13-D11](../deployment-plan/spike-13/design/archive/S13-D11-promote-without-assessment.md) §4.1. Those frames are marked descoped, not deleted.
+Drawn on the [Promote flow board](https://claude.ai/design/p/bc84685e-bbc3-4053-a5c9-0f5ac7a13ccd?via=share), frames 30, 30b, 30W and 31, from brief S13-D11 §4.1 (in git with #633). Those frames are marked descoped, not deleted.
 
 | ID | Requirement |
 | --- | --- |

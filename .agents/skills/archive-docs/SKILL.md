@@ -47,7 +47,7 @@ Do **not** run this on an **open** spike (Spike 8 while it still has a plan).
 - [ ] Delete: completed.md, deployment-plan.md, design/ (briefs + indexes), prs/ (PR plans), *.review.md (review-plan logs), *.ship.md (ship-pr logs),
       dogfood how-tos, PR-sequence diagrams, suggested-PR-title tables
 - [ ] Delete shipped ideas this spike finished; re-home any open leftovers (idea / spike / domain doc / skill)
-- [ ] Grep inbound links; retarget to the README or the live domain doc
+- [ ] Grep inbound links; retarget each one (§ Retarget): to the archive README, a kept doc, or the live domain doc, or to plain text naming the PR
 - [ ] Slim docs/deployment-plan/README.md completed row (one line, no file list)
 - [ ] Update docs/ideas/README.md if an idea moved
 - [ ] Every ship log's follow-ups triaged before the logs are deleted: an idea file, a row in the next spike's map, or dropped with a reason. A follow-up left only in a ship log disappears with it
@@ -116,6 +116,8 @@ When an idea in `docs/ideas/` is finished or dropped:
 Grep the old paths (`completed.md`, `design/archive/S*-D*`, `deployment-plan.md`
 under that spike). Code comments may name old brief ids (`S7-D4`); that is fine
 if they do not **link** to a deleted file. Skills and `docs/` links must work.
+
+A link to the spike's map or a feature doc that is deleted becomes a link to the archive README's `#decisions` (or to the live domain doc that now holds the rule). A link to a PR plan, brief, review log or ship log becomes plain text that names it and its PR, `S13-03 ship log (in git with #666)`, with no link: it has no archive copy, and a README link would land where the cited text is not.
 
 ## After close
 
