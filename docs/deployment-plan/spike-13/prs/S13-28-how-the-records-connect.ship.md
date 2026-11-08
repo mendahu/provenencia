@@ -141,4 +141,8 @@ Nits (logged): `CON-7 · S13-28 plan T-4 and D-4/D-5/D-6 still name neighbors(of
 No Fix plan 2: round 2 raised no blocker.
 
 ## Result
-Gate PASS (`f3e2e17a`) · CI see PR · open: none · follow-ups: PRF-4, PRF-3 runtime check (manual), CON-8 doc line · to user: —
+Gate PASS (`f3e2e17a`) · CI not run (workflows trigger on PRs into `main`; runs once #743 merges and #744 retargets) · open: none · to user: —
+Follow-ups, placed by the user (2026-11-08):
+- PRF-4 → `docs/ideas/structural-debt.md` (the S13-28 ship log PRF-4 row).
+- PRF-3 → checked in the app by the user; the pinned column does not re-measure the rows on scroll. No change.
+- CON-8 → fixed on this PR (`docs/macos-client-patterns.md:104`).
