@@ -580,7 +580,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	collect := g.NoInputs()
 	for _, n := range needed[PersonSummary](g, nodes, store) {
 		need = append(need, n.ID)
-		scopes[string(n.ID)] = g.Inputs(n.ID)
+		scopes[string(n.ID)] = rec.scope(g, n.ID)
 		links, err := follow(collect, n.ID, hops.EventsOfSubject)
 		if err != nil {
 			return nil, nil, err
@@ -604,7 +604,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 		lives[string(id)] = life{births, deaths}
 		pickIDs = append(pickIDs, lifeEvents(births, deaths)...)
 	}
-	pg, err := eventPlaceGraph(g, v, pickIDs)
+	pg, err := eventPlaceGraph(g, v, pickIDs, rec)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -623,7 +623,7 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 		if err := pg.addChains(in, rec, lifeEvents(l.births, l.deaths)); err != nil {
 			return nil, nil, err
 		}
-		inputs[string(id)] = in.Keys()
+		rec.keep(inputs, id, in)
 		fresh[string(id)] = h
 		if store {
 			g.SetDisplay(id, h)
@@ -812,7 +812,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
-	pg, err := eventPlaceGraph(g, v, lifeEvents(births, deaths))
+	pg, err := eventPlaceGraph(g, v, lifeEvents(births, deaths), nil)
 	if err != nil {
 		return LifeOwners{}, LifeOwners{}, err
 	}
@@ -827,7 +827,7 @@ func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOw
 
 // eventPlaceGraph builds the placeGraph for every Place of the given events,
 // skipping events with no node.
-func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGraph, error) {
+func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte, rec *inputBudget) (*placeGraph, error) {
 	var withNode [][]byte
 	for _, id := range eventIDs {
 		n, err := g.Node(id)
@@ -842,7 +842,7 @@ func eventPlaceGraph(g *graphcache.Graph, v vocab, eventIDs [][]byte) (*placeGra
 	if err != nil {
 		return nil, err
 	}
-	return buildPlaceGraph(g, v, placeIDs)
+	return buildPlaceGraph(g, v, placeIDs, rec)
 }
 
 // lifeEvents are the ids of the births' and then the deaths' events.
@@ -940,7 +940,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	locationsOf := map[string][]graphcache.Link{}
 	collect := g.NoInputs()
 	for _, n := range need {
-		scopes[string(n.ID)] = g.Inputs(n.ID)
+		scopes[string(n.ID)] = rec.scope(g, n.ID)
 		subjects, err := follow(collect, n.ID, hops.SubjectsOfEvent)
 		if err != nil {
 			return nil, nil, err
@@ -958,7 +958,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err := g.Nodes(append(append([][]byte(nil), personIDs...), placeIDs...)); err != nil {
 		return nil, nil, err
 	}
-	pg, err := buildPlaceGraph(g, v, placeIDs)
+	pg, err := buildPlaceGraph(g, v, placeIDs, rec)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -980,7 +980,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 			return nil, nil, err
 		}
 		rec.addClosure(in, pg, neighborsOf(locations))
-		inputs[string(n.ID)] = in.Keys()
+		rec.keep(inputs, n.ID, in)
 		h.PictureImageFileID = leads[string(n.ID)]
 		fresh[string(n.ID)] = h
 		if store {
@@ -1260,7 +1260,7 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 	for i := range summaries {
 		ids[i] = summaries[i].Entity.ID
 	}
-	pg, err := buildPlaceGraph(g, v, ids)
+	pg, err := buildPlaceGraph(g, v, ids, rec)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1272,14 +1272,14 @@ func finishPlaces(g *graphcache.Graph, v vocab, rec *inputBudget, summaries []Pl
 		pg.period[string(id)] = periodWindow(summaries[i].StartDate, summaries[i].EndDate)
 		at := chainQueryDate(summaries[i], today)
 		summaries[i].Parents, summaries[i].ParentsAreCandidates = pg.ParentChain(id, &at)
-		in := g.Inputs(id)
+		in := rec.scope(g, id)
 		rec.addClosure(in, pg, [][]byte{id})
-		inputs[string(id)] = in.Keys()
+		rec.keep(inputs, id, in)
 	}
 	return summaries, inputs, nil
 }
 
-func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph, error) {
+func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte, rec *inputBudget) (*placeGraph, error) {
 	pg := newPlaceGraph()
 	seeds = database.UniqueBlobIDs(seeds)
 	if len(seeds) == 0 {
@@ -1297,7 +1297,7 @@ func buildPlaceGraph(g *graphcache.Graph, v vocab, seeds [][]byte) (*placeGraph,
 	scopeOf := func(id []byte) *graphcache.InputScope {
 		in, ok := scopes[string(id)]
 		if !ok {
-			in = g.Inputs(nil)
+			in = rec.scope(g, nil)
 			scopes[string(id)] = in
 		}
 		return in

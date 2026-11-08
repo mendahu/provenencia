@@ -48,6 +48,9 @@ type InputScope struct {
 // Inputs returns a scope that records the keys read for dependent and leaves
 // out dependent's own values. Inputs(nil) records every key.
 func (g *Graph) Inputs(dependent []byte) *InputScope {
+	if g.scopeCounter != nil {
+		g.scopeCounter()
+	}
 	return &InputScope{g: g, self: cloneID(dependent), keys: map[string]InputKey{}}
 }
 
@@ -180,4 +183,13 @@ func (g *Graph) SetInputRecorderForTest(fn func(InputKey)) {
 		return
 	}
 	g.inputRecorder = fn
+}
+
+// SetScopeCounterForTest reports every recording scope Inputs creates on this
+// graph. Tests only.
+func (g *Graph) SetScopeCounterForTest(fn func()) {
+	if g == nil {
+		return
+	}
+	g.scopeCounter = fn
 }

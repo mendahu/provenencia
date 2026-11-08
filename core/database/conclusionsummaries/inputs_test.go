@@ -321,3 +321,34 @@ func TestInputsHoldEveryShownParent(t *testing.T) {
 		}
 	}
 }
+
+// TestListsRecordNoInputs: only RowsForSearch records inputs; the list and
+// by-id reads compose through scopes that record nothing.
+func TestListsRecordNoInputs(t *testing.T) {
+	f := newFixture(t)
+	w := buildInputsWorld(f)
+	scopes := 0
+	f.C.Graph().SetScopeCounterForTest(func() { scopes++ })
+	var want conclusionsummaries.Want
+	want.Add(vocabkey.Person, w.james)
+	want.Add(vocabkey.Event, w.birth)
+	want.Add(vocabkey.Place, w.town)
+	for name, read := range map[string]func() error{
+		"ListPersons": func() error { _, err := conclusionsummaries.ListPersons(f.C); return err },
+		"ListEvents":  func() error { _, err := conclusionsummaries.ListEvents(f.C); return err },
+		"ListPlaces":  func() error { _, err := conclusionsummaries.ListPlaces(f.C); return err },
+		"ByIDs":       func() error { _, err := conclusionsummaries.ByIDs(f.C, want); return err },
+	} {
+		scopes = 0
+		must(t, read())
+		if scopes != 0 {
+			t.Errorf("%s created %d recording scopes, want 0", name, scopes)
+		}
+	}
+	scopes = 0
+	_, err := conclusionsummaries.RowsForSearch(f.C.Graph(), want)
+	must(t, err)
+	if scopes == 0 {
+		t.Error("RowsForSearch created no recording scope")
+	}
+}

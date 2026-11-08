@@ -74,6 +74,8 @@ type Graph struct {
 
 	// inputRecorder, when set by a test, hears every key Node and Follow read.
 	inputRecorder func(InputKey)
+	// scopeCounter, when set by a test, hears every recording scope Inputs makes.
+	scopeCounter func()
 }
 
 // Node is one canonical entity. Kind is not stored: callers look the type

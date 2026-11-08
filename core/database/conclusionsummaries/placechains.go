@@ -101,20 +101,34 @@ func (g *placeGraph) addChains(in *graphcache.InputScope, rec *inputBudget, even
 
 // inputBudget counts the keys one RowsForSearch call records for the place
 // chains of all its rows. Over inputKeyCap the call counts nothing: it stops
-// recording and hands back no inputs for any row.
+// recording and hands back no inputs for any row. A nil budget is a read that
+// records nothing: every method then does nothing and its scopes record
+// nothing.
 type inputBudget struct {
 	used int
 	over bool
 }
 
+// scope is the scope a row for dependent is composed through: recording with a
+// budget, and recording nothing without one.
+func (b *inputBudget) scope(g *graphcache.Graph, dependent []byte) *graphcache.InputScope {
+	if b == nil {
+		return g.NoInputs()
+	}
+	return g.Inputs(dependent)
+}
+
+// keep files the keys in recorded for the row id, when the call records.
+func (b *inputBudget) keep(into map[string][]graphcache.InputKey, id []byte, in *graphcache.InputScope) {
+	if b != nil {
+		into[string(id)] = in.Keys()
+	}
+}
+
 // addClosure records the closure of seeds on in, unless that would take the
 // call past the cap. It counts the closure before it builds it.
 func (b *inputBudget) addClosure(in *graphcache.InputScope, pg *placeGraph, seeds [][]byte) {
-	if b == nil {
-		in.Add(pg.closure(seeds)...)
-		return
-	}
-	if b.over {
+	if b == nil || b.over {
 		return
 	}
 	if b.used += pg.closureSize(seeds); b.used > inputKeyCap {
@@ -385,7 +399,7 @@ func placeNeighborhood(c *database.Catalog, ids [][]byte) (*placeGraph, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildPlaceGraph(g, v, ids)
+	return buildPlaceGraph(g, v, ids, nil)
 }
 
 // AttachPlaceRelationships fills PartOf / Contains / Predecessors /
