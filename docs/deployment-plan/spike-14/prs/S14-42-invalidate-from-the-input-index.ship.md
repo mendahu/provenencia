@@ -1,7 +1,7 @@
 # Ship log — S14-42 Invalidate from the input index
 
 **Plan:** [`S14-42-invalidate-from-the-input-index.md`](S14-42-invalidate-from-the-input-index.md) · **Branch:** `s14-42-invalidate-from-the-input-index` (stacked on `s14-40-build-the-input-index`, #746) · **PR:** #748
-**State:** fixing 2
+**State:** ready
 
 ## Round 0 — implement
 Base `f55bf6c1` (S14-40's head). Head `573b5669`. The orchestrator re-ran the gate on this head (see below).
@@ -141,3 +141,13 @@ Do:
 Check:
 - `rg -n 'rows\.Scan\(&id\)' core/database/searchindex` prints only `listIDs` (`searchindex.go`) and the `dependentsOfHandles` `sqlbatch.Query` callback (`inputs.go`).
 - `scripts/check-pr.sh` PASS.
+
+## Round 2 — fix
+Head `203f96d8`. The orchestrator ran the gate: PASS. F-7 is done. `rg -n 'rows\.Scan\(&id\)' core/database/searchindex` prints only `listIDs` and the `dependentsOfHandles` callback, so MNT-1 is resolved.
+
+The implementer's first gate run failed once on `TestLargeSourceBudgets/warm_at_open` (2.76 s against 2.5 s) while the Xcode build ran beside it. The rerun passed. F-7 does not touch that package.
+
+## Result
+- **Gate:** PASS on `203f96d8`. The base `s14-40-build-the-input-index` is unchanged at `f55bf6c1`, and `origin/main` has not moved since `78f26812`.
+- **CI:** see #748.
+- **Open, follow-ups and to-user items:** none.
