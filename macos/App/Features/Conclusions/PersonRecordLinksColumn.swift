@@ -6,8 +6,8 @@ import SwiftUI
 /// scroll with the page. Draws nothing for a person with no records on the read.
 struct PersonRecordLinksColumn: View {
     let content: PersonRecordLinksContent
-    let highlightedGraphID: String?
-    let onHover: (String?) -> Void
+    let hover: RecordLinksHover
+    let focusedGraphID: String?
     let open: (String) -> Void
     let focus: (String) -> PVFieldFocus
 
@@ -43,10 +43,11 @@ struct PersonRecordLinksColumn: View {
                     RecordLinksDiagram(
                         nodes: content.nodes,
                         arcs: content.arcs,
-                        highlightedGraphID: highlightedGraphID,
+                        hover: hover,
+                        focusedGraphID: focusedGraphID,
                         width: width,
                         diameter: single ? nil : RecordLinksLayout.diameter(width: width, fitting: fitting),
-                        onHover: onHover,
+                        idRoot: "persons.detail.sources",
                         open: open,
                         focus: focus
                     )

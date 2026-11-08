@@ -153,14 +153,15 @@ struct PersonSourcesList: View {
     /// The Unpromote button that had the keyboard when its confirm opened, so Keep gives it back.
     /// Nil after a mouse click, which draws no focus ring.
     @State private var returnFocus: PersonSourcesFocus?
-    /// The graph the pointer is on, on its node or on any part of its line.
-    @State private var hoveredGraphID: String?
+    /// The graph the pointer is on, on its node or on any part of its line. Read by the rows, the
+    /// nodes and the highlighted arcs and not by this view, so a hover rebuilds none of the diagram's
+    /// content or layout.
+    @State private var hover = RecordLinksHover()
 
     @Environment(WorkspaceSession.self) private var session
 
-    /// The graph to highlight: the hovered one, else the graph of what has the keyboard.
-    private var highlightedGraphID: String? {
-        if let hoveredGraphID { return hoveredGraphID }
+    /// The graph of what has the keyboard; the hovered graph, when there is one, wins over it.
+    private var focusedGraphID: String? {
         switch focus {
         case .graph(let claimID), .unpromote(let claimID): return content.claimGraphs[claimID]
         case .node(let graphID): return graphID
@@ -179,7 +180,11 @@ struct PersonSourcesList: View {
             accessibilityIdentifierPrefix: "persons.detail.sources.unpromote",
             onConfirm: confirmAndTrackFocus
         )
-        .onChange(of: content) { _, new in applyPendingFocus(in: new) }
+        .onChange(of: content) { _, new in
+            applyPendingFocus(in: new)
+            // A line that left or moved never reports the pointer gone; clear what it held.
+            if let id = hover.graphID, !new.claimGraphs.values.contains(id) { hover.graphID = nil }
+        }
         .onChange(of: unpromote.pending?.id) { _, id in
             if id == nil { restoreFocusAfterKeep() }
         }
@@ -189,12 +194,15 @@ struct PersonSourcesList: View {
     /// drawn while it loads, fails or reloads.
     private var diagram: some View {
         let project = session.projectKey
-        let highlighted = highlightedGraphID
+        let focused = focusedGraphID
+        let hover = hover
         return ConclusionPageSectionHost<CatalogPersonRecordLinks, PersonRecordLinksContent, PersonRecordLinksColumn>(
             section: .sources,
             entityId: entityId,
             queryKey: ConclusionPageSection.sources.companionQueryKey(project: project, entityId: entityId),
-            placement: .column,
+            placement: .column(
+                loadingHeight: RecordLinksLayout.minimumDiameter + 2 * RecordLinksLayout.verticalRoom
+            ),
             errorTitle: L10n.Conclusions.recordLinksErrorTitle,
             make: {
                 PersonRecordLinksContent(
@@ -206,8 +214,8 @@ struct PersonSourcesList: View {
         ) { links in
             PersonRecordLinksColumn(
                 content: links,
-                highlightedGraphID: highlighted,
-                onHover: { hoveredGraphID = $0 },
+                hover: hover,
+                focusedGraphID: focused,
                 open: { id in
                     if let location = links.nodes.first(where: { $0.id == id })?.location { open(location) }
                 },
@@ -224,8 +232,8 @@ struct PersonSourcesList: View {
                 if index > 0 { PVDivider() }
                 PersonSourcesRowView(
                     row: row, open: open, expand: { unfold(row) }, focused: $focus,
-                    highlightedGraphID: highlightedGraphID,
-                    hover: { hoveredGraphID = $0 },
+                    hover: hover,
+                    focusedGraphID: focusedGraphID,
                     unpromoteDisabled: unpromote.isBusy,
                     beginUnpromote: { line in
                         returnFocus = focus == .unpromote(claimID: line.id) ? focus : nil
@@ -299,8 +307,8 @@ private struct PersonSourcesRowView: View {
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
-    let highlightedGraphID: String?
-    let hover: (String?) -> Void
+    let hover: RecordLinksHover
+    let focusedGraphID: String?
     let unpromoteDisabled: Bool
     let beginUnpromote: (PersonSourcesContent.Line) -> Void
 
@@ -349,11 +357,12 @@ private struct PersonSourcesRowView: View {
 
     /// The record lines span the whole row less their indent.
     private var lines: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+        let highlightedGraphID = hover.graphID ?? focusedGraphID
+        return VStack(alignment: .leading, spacing: PVSpacing.space2) {
             ForEach(row.lines) { line in
                 PersonSourcesLineView(
                     line: line, open: open, focused: focused,
-                    highlighted: line.graphID == highlightedGraphID, hover: hover,
+                    highlighted: line.graphID == highlightedGraphID, hover: { hover.graphID = $0 },
                     unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
                 )
             }

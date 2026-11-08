@@ -8,19 +8,17 @@ import SwiftUI
 /// The id root is `persons.detail.<section>`: `.error`, `.empty`, and the root
 /// itself on the content. A second host over a section's companion read
 /// (`ConclusionPageSection.companionQueryKey`) draws in its own region: it passes
-/// `queryKey` and `placement: .column`, and its id root gains `.column`.
+/// `queryKey` and `placement: .column(loadingHeight:)`, and its id root gains `.column`.
 struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     /// Where the host draws its states.
     enum Placement {
         /// The section's own region: states keep the page band, an empty read has an EmptyState.
         case band
-        /// A column beside the section's rows: the spinner centred in the column's height, a
-        /// compact danger Callout, and no empty state.
-        case column
+        /// A column beside the section's rows: the spinner centred in `loadingHeight` (the
+        /// height the column draws at, so it does not jump), a compact danger Callout, and no
+        /// empty state.
+        case column(loadingHeight: CGFloat)
     }
-
-    /// The height the column's spinner is centred in (the diagram's smallest drawing).
-    static var columnLoadingHeight: CGFloat { 232 }
 
     let section: ConclusionPageSection
     let entityId: String
@@ -66,8 +64,13 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         return key
     }
 
+    private var columnLoadingHeight: CGFloat? {
+        if case .column(let height) = placement { return height }
+        return nil
+    }
+
     private var idRoot: String {
-        "persons.detail.\(section.rawValue)" + (placement == .column ? ".column" : "")
+        "persons.detail.\(section.rawValue)" + (columnLoadingHeight == nil ? "" : ".column")
     }
 
     var body: some View {
@@ -91,10 +94,10 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
                 .frame(maxWidth: .infinity)
                 .pvKeepsPageBand()
                 .padding(.top, 96)
-        case .column:
+        case .column(let height):
             ProgressView()
                 .frame(maxWidth: .infinity)
-                .frame(height: Self.columnLoadingHeight)
+                .frame(height: height)
         }
     }
 
@@ -128,7 +131,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         case .failed(let message):
             error(message)
         case .content(let value, _):
-            if placement == .band, let emptyTitle, isEmpty(value) {
+            if case .band = placement, let emptyTitle, isEmpty(value) {
                 PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
                     .pvKeepsPageBand()
                     .accessibilityIdentifier("\(idRoot).empty")

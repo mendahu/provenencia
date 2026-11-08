@@ -171,6 +171,20 @@ enum PersonSourcesPreviewData {
         return links(graphs: manyClaims(graphs: graphs), pairs: pairs)
     }
 
+    /// The Scale of S13-27's household person: every pair of the first `graphs` records shares
+    /// three people, so `graphs` = 50 is 1,225 pairs and 3,675 arcs; graph `g-m<i>`.
+    static func householdRecordLinks(graphs: Int) -> CatalogPersonRecordLinks {
+        var pairs: [CatalogRecordLinksPair] = []
+        for i in 1...max(1, graphs) {
+            for j in (i + 1)...max(i + 1, graphs) where j <= graphs {
+                pairs.append(pair("g-m\(i)", "g-m\(j)", [
+                    ("ent-\(i)-\(j)-a", .strong), ("ent-\(i)-\(j)-b", .weak), ("ent-\(i)-\(j)-c", .weak),
+                ]))
+            }
+        }
+        return links(graphs: manyClaims(graphs: graphs), pairs: pairs)
+    }
+
     /// A session over a `FakeStore` that serves the record links of `entityId`: the given
     /// links, a failure, or (with neither) an answer an hour late, so the column shows its
     /// spinner.

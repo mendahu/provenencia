@@ -15,7 +15,7 @@
 **Context:** [`evidence-graph-comparison.md`](../evidence-graph-comparison.md) Requirement 2; working rules "The view is a circular link diagram", "Scoring and the view are two concerns", "Sections are places", "A full-width section keeps its states in the band"; dogfood bar 10; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide)
 **Planned:** 2026-11-07 against `s13-27-plan` @ `cc03d7f9` (S13-27's code is on this branch, not yet on `main`)
 **Review:** [`S13-28-how-the-records-connect.review.md`](S13-28-how-the-records-connect.review.md)
-**Landed:** differences from the plan: `PersonSourcesPreviewData.previewSession` takes `entityId:recordLinks:failure:` (nil links answer an hour late) instead of a `delay:`; the diagram's side column is `PersonRecordLinksColumn` in its own file; `ConclusionPageSectionHost.emptyTitle` is optional (nil by default) rather than an empty string, and `emptyMessage` defaults to ""; nodes are placed with `.position`, so the one unmeasured frame is off by the dot's inset; the 700pt check was a hosted-window render, the manual check in the app is the product owner's.
+**Landed:** differences from the plan: `PersonSourcesPreviewData.previewSession` takes `entityId:recordLinks:failure:` (nil links answer an hour late) instead of a `delay:`; the diagram's side column is `PersonRecordLinksColumn` in its own file; `ConclusionPageSectionHost.emptyTitle` is optional (nil by default) rather than an empty string, and `emptyMessage` defaults to ""; nodes are placed with `.position`, so the one unmeasured frame is off by the dot's inset; the 700pt check was a hosted-window render, the manual check in the app is the product owner's. Round 1: the arcs are two layers (the rest on an `Equatable` `Canvas` dimmed by opacity, the highlighted node's arcs above), and the hover is `RecordLinksHover`, an observable the rows, nodes and arcs read, so a hover does not run the content's init or the layout; each `Curve` carries its arc; the 50-graph household preview is `householdRecordLinks(graphs: 50)`; `maxArcs` and `maxNodes` cap the content; `RecordLinksArc.neighbors(of:in:)` is the one neighbour function; `RecordLinksLayout` owns the one-node geometry; `PVPageColumnsMetrics.sideColumnWidths(proposal:mainMin:)` and `fallbackPane` hold the width fallback; `placement` is `.column(loadingHeight:)` and the diagram takes `idRoot`; a node with no location is disabled and a focused node shows its ref.
 
 ### Implementer — read this first
 
@@ -199,7 +199,7 @@ The board's stacked gap (frame 15t: 40pt under the rows) → `space9` (32pt), th
 
 ### Scale
 
-At the map's Scale (50 graphs, about 120 arcs at most for a household person): one `Canvas` redraw per highlight change; the layout is computed once per value and size. The read is S13-27's (37.9 ms cold at 50 graphs). The 50-graph preview (D-10) is the visual check; T-4 builds content for it.
+At the map's Scale (50 graphs; a household person is S13-27's fixture, 1,225 pairs and 3,675 arcs): the arcs are drawn once for the layout and a highlight change redraws only the highlighted node's arcs; the layout is computed once per value and size. The read is S13-27's (37.9 ms cold at 50 graphs). The 50-graph preview (D-10) is the visual check; T-4 builds content for it.
 
 ### Edges
 
@@ -207,7 +207,7 @@ At the map's Scale (50 graphs, about 120 arcs at most for a household person): o
 - **Neighbors.** 0, 1, 2 nodes (D-5); a graph sharing with all others; a person whose rows are shorter than the diagram (the side column's height wins, D-7).
 - **Removed inputs.** Remove on a line reloads both reads (S13-27's key follows the person's handle and the graph); the node leaves with its last record.
 - **Real data.** None — no table-driven rule.
-- **Untrusted size.** Arcs per pair from the read: the fan never grows wider than the radius (D-5's cap), drawing is linear in arcs, bounded by S13-27's `MaxReadWork`.
+- **Untrusted size.** Arcs per pair from the read: the fan never grows wider than the radius (D-5's cap), drawing is linear in arcs, bounded by S13-27's `MaxReadWork`; the content keeps at most `maxArcs` (75,000, strong first) and `maxNodes` (1,000), 20 times the household Scale, since a read past `MaxReadWork` still lists every pair's lines.
 - **Short and narrow windows.** A window under the 172pt floor unpins the column (D-7); a pane under 1078pt stacks it (D-3). Both are layout only: one `Layout` keeps view identity (D-3), so hover, focus, the scroll position and the read hold across them, as across 1600 (RL-W3).
 
 ### Schema
