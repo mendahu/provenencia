@@ -1,7 +1,7 @@
 # Ship log — S13-28 How the records connect
 
 **Plan:** [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md) · **Branch:** `s13-28-how-the-records-connect` (stacked on `s13-27-plan`, #743) · **PR:** #744
-**State:** fixing 1
+**State:** review 2
 
 Stacked PR: the base branch is `s13-27-plan`, not `main` (the user, 2026-11-08). The gate runs `scripts/check-pr.sh --base origin/s13-27-plan`, and reviewers diff against the `s13-27-plan` head.
 
@@ -110,3 +110,19 @@ Do:
 - `showsRef` is true also when the node's own button has focus (D-5 "highlighted or focused"), read in the button through the focus handle or `isFocused`.
 - In `PersonSourcesList`'s `.onChange(of: content)`, clear `hoveredGraphID` when the new content's `claimGraphs` no longer holds it.
 Check: `check-pr.sh` PASS. In the 50-graph preview, Tab to a node while the pointer rests on another line: the focused node's ref shows.
+
+## Round 1 — fix
+Head `f3e2e17a` (commits `af360965`, `4813b1c6`, `c439fd3e`, `f3e2e17a`). Gate PASS (orchestrator run, xcode-test 57s).
+- F-1 to F-8 are done.
+- Only F-4's test was seen failing first. The F-1, F-2, F-3 and F-6 tests use new symbols, so they could not compile before the fix.
+- **F-1:** hover moved into `@Observable RecordLinksHover`. The list, the host and `make` don't read it, so a hover no longer rebuilds content or layout. The rest arcs are an `Equatable` `RecordLinksRestArcs` Canvas, dimmed with `.opacity(0.18)`. `RecordLinksAccentArcs` draws only the highlighted node's arcs. The `_printChanges` check was not run, because the implementer can't drive the app.
+- **F-6, PRF-3:** not checked. It needs the running app, so it moves to the manual check and is not marked Not reproduced.
+- **Other changes:** `ConclusionPageSectionHost.Placement` is no longer `Equatable`. `RecordLinksArc.touches(_:)` was added for the accent layer.
+- **UX minors (F-8):** resolved. I read them in the diff:
+  - `.disabled(node.location == nil)` and `pvActivatesOnReturn(when: node.location != nil)`.
+  - `showsRef … || handle.isActive()`.
+  - `onChange(of: content)` clears `hover.graphID`.
+  UX does not go to round 2.
+
+## Round 2 — review
+Reviewers: CON (CON-1 major), MNT (MNT-1 blocker, MNT-2 and MNT-3 majors), SEC+PRF (PRF-1 and SEC-1 blockers). Scope `d788a00e...f3e2e17a`. Skipped: UX (minors only, resolved above).
