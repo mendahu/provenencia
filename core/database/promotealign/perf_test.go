@@ -10,12 +10,14 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
@@ -46,6 +48,11 @@ const (
 	// events are not reprojected. S14-33 measured 2.75 s before movedRoots
 	// followed only the associations that moved.
 	budgetSecondPartOfAtCity = 500 * time.Millisecond
+	// budgetComposeAll: composing every person and every event row once, warm.
+	// S14-40 measured 220 ms before the rows recorded their inputs; 500 ms
+	// allows the recording plus a slow runner and fails a per-row place graph,
+	// which costs four times as much.
+	budgetComposeAll = 500 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -272,7 +279,8 @@ func TestLargeSourceBudgets(t *testing.T) {
 		// The first part_of mints the association; it moves rows and is not timed.
 		first := f.Place(lf.other, lf.otherA, "City")
 		f.join(first, lf.city)
-		f.PlaceRel(lf.other, lf.otherA, first, region, "part_of")
+		firstPartOf := databasetest.Since(func() { f.PlaceRel(lf.other, lf.otherA, first, region, "part_of") })
+		t.Logf("first part_of from the city (untimed by the budget): %v", firstPartOf)
 		type pair struct{ from, to subjects.Subject }
 		var pairs []pair
 		for i := 0; i < 3; i++ {
@@ -290,4 +298,42 @@ func TestLargeSourceBudgets(t *testing.T) {
 		})
 		databasetest.WithinBudget(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
 	})
+
+	t.Run("compose every summary", func(t *testing.T) {
+		g := f.c.Graph()
+		w := conclusionsummaries.Want{
+			Persons: idsOfKind(t, lf, vocabkey.Person),
+			Events:  idsOfKind(t, lf, vocabkey.Event),
+		}
+		_, err := conclusionsummaries.RowsForSearch(g, w)
+		must(t, err)
+		d := databasetest.Fastest(3, func() time.Duration {
+			return databasetest.Since(func() {
+				_, err := conclusionsummaries.RowsForSearch(g, w)
+				must(t, err)
+			})
+		})
+		databasetest.WithinBudget(t, "compose every person and event row", d, budgetComposeAll)
+	})
+}
+
+// idsOfKind returns the ids of every unmerged canonical entity of a subject
+// type key, in id order.
+func idsOfKind(t *testing.T, f *largeFixture, kind string) [][]byte {
+	t.Helper()
+	db, err := f.c.DB()
+	must(t, err)
+	rows, err := db.Query(`SELECT e.id FROM canonical_entities e
+		JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE st.key = ? AND e.merged_into_id IS NULL ORDER BY e.id`, kind)
+	must(t, err)
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		must(t, rows.Scan(&id))
+		out = append(out, id)
+	}
+	must(t, rows.Err())
+	return out
 }
