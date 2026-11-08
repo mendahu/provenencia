@@ -11,6 +11,7 @@ The second odds-and-ends spike ([odd and even spikes](../README.md#odd-and-even-
 | Doc | Role |
 | --- | --- |
 | [**Deployment plan**](deployment-plan.md) | Goal, working rules, PR map, order |
+| [Map review](deployment-plan.review.md) | The map review's findings and answers; what is left for the user |
 | [**Person page audit**](person-page-audit.md) | The 2026-11-08 findings behind Batch 1's `P-n` items, with evidence and failing tests |
 | [**Completed**](completed.md) | Finished steps |
 | [**Design briefs**](design/README.md) | Claude Design briefs, written just before the PR they gate |

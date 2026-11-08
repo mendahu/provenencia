@@ -44,7 +44,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`provenance.md`](provenance.md) — cap records drawn in a provenance table; load records when the sheet opens
 - [`person-page-performance.md`](person-page-performance.md) — record links memo and a household-sized budget, Timeline participants sent once, section content memoised, lazy Timeline cards, siblings sent once
-- [`person-page-followups.md`](person-page-followups.md) — folded record line on hover, Person page wording, a birth and death events plural, Back keeping a section's place, Timeline scale after a date edit
+- [`person-page-followups.md`](person-page-followups.md) — folded record line on hover, Person page wording, a birth and death events plural, Back keeping a section's place, Timeline scale after a date edit, the Conclusion lists' silent refresh failure
 - [`wide-layout.md`](wide-layout.md) — pages still waiting for a Wide / Page columns frame
 
 ### Properties, vocabulary, Sources

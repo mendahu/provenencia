@@ -23,3 +23,8 @@ Walking the family or the timeline person to person and pressing Back lands at t
 ## The Timeline keeps an old scale after a date edit (P-20)
 
 `PersonTimelineList.rebuild` (`PersonTimelineSection.swift` about 139) keeps the chosen scale while the item ids and the viewport height stay the same. A date edit from another window keeps the ids, so the old points-per-year is applied to the new range: a short life drawn dense, then an event moved decades away, gives a line many times its usual height. **Shape:** key the kept scale on the line's year range too.
+
+## The Conclusion lists hide a refresh failure too (map review K-2)
+
+`ConclusionListPresentation` (`ConclusionListPage.swift` 5–24), behind the Persons, Events and Places lists, is built from `QueryHandle.read` and `isFetching` like the detail page was, so a failed reload behind a list keeps the old rows and says nothing, and its error `PVCallout` (158–159) has nothing to press. Spike 16's S16-04 adds a `QueryHandle` reading with the refresh failure beside the value and moves the Conclusion detail page onto it; the lists adopt the same reading and the kit's `PVRetryCallout`. It changes chrome on three list pages, so it needs a brief.
+

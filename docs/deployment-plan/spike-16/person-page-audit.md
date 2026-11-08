@@ -12,26 +12,28 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 
 - **P-1 and P-5 – P-7 and P-10 – P-14 proceed.**
 - **P-2 – P-4 are capped, not engineered.** They need a crafted or badly broken project; a simple cap checked before the work is enough.
-- **P-7 is a render cap.** The Timeline builds what its folds show and unfolds a page at a time; no memo of the section's content.
+- **P-7 is a render cap.** The Timeline builds what its folds show and every fold unfolds a page at a time; no memo of the section's content.
+- **The map review re-cut four items** (2026-11-08, [review](deployment-plan.review.md)): P-2 has its own PR after Spike 14's S14-40; P-6 has its own PR, ungated; P-14 and P-7's pages share one fold PR; P-16 is scheduled with P-12.
 - **P-8 and P-9 are descoped** to [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md).
-- **P-15 – P-27 are parked** in idea files (table below).
+- **P-15 and P-17 – P-27 are parked** in idea files (table below).
 
 ## Scheduled
 
 | Item | Title | Priority | Lens | PR |
 | --- | --- | --- | --- | --- |
 | P-1 | A missing death sits after a burial | High | CON | S16-02 |
-| P-2 | Folding an event's places is quadratic, on project open too | High | SEC | S16-01 |
+| P-2 | Folding an event's places is quadratic, on project open too | High | SEC | S16-08 |
 | P-3 | The Family read is quadratic in a crafted wide family | High | SEC | S16-01 |
 | P-4 | The claims read rescans its graph for each record | High | SEC | S16-01 |
 | P-5 | A failed refresh is silent and the old rows stay | Medium | UX | S16-04 |
-| P-6 | Vitals and Gallery keep old Source, Citation and Artifact words | Medium | CON | S16-04 |
-| P-7 | The Timeline builds every event, not the 50 it shows | Medium | PRF, SEC | S16-02 |
+| P-6 | Vitals and Gallery keep old Source, Citation and Artifact words | Medium | CON | S16-09 |
+| P-7 | The Timeline builds every event, not the 50 it shows | Medium | PRF, SEC | S16-07, S16-02 |
 | P-10 | The diagram silently draws uncounted links as weak | Medium | SEC, UX | S16-01, S16-05 |
 | P-11 | Switching sections is silent and drops focus | Medium | UX | S16-06 |
 | P-12 | A Remove that keeps the person is not announced | Medium | UX | S16-06 |
 | P-13 | Section plumbing: seven switches, three ways to find the open section | Medium | MNT | S16-03 |
-| P-14 | Fold focus is copied per section, and Family drops it | Medium | MNT, UX | S16-06 |
+| P-14 | Fold focus is copied per section, and Family drops it | Medium | MNT, UX | S16-07 |
+| P-16 | The leave-on-delete decision is not tested | Low | CON | S16-06 |
 
 ## Descoped and parked
 
@@ -40,7 +42,6 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | P-8 | Timeline participants' summaries are sent once per event | [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md) |
 | P-9 | The record links read recomputes every pair, with no memo | [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md) |
 | P-15 | Hovering a node whose record line is folded highlights nothing | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
-| P-16 | The leave-on-delete decision is not tested | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
 | P-17 | "handle", "members" and "This record no longer exists" on the Person page | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
 | P-18 | Birth and death event counts have no plural; the catalog check skips them | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
 | P-19 | Back resets a section's scroll, folds and focus | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
@@ -87,7 +88,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** Seed test for `placechains_internal_test.go`: 5,000 unlinked places through `FoldLocations` must finish under a second.
 
-**Fix (capped, per the decision).** Before folding, keep at most a fixed number of an event's places, in link order (rule "Crafted fan-out is capped, not engineered"). A real event names one to three.
+**Fix (capped, per the decision).** One helper reads an event's places, drops duplicates and keeps at most a fixed number in link order, and the four reads of an event's places in `compose.go` (`eventPlaceGraph` 797, `lifeOwners` 818, `composeEvents` 876, `eventPlaces` 1108) use it (rule "Crafted fan-out is capped, not engineered"). A real event names one to three.
 
 **Origin.** Older than Spike 13 (`e951c0f7`, 2026-10-07); Spike 13 reaches it from the Timeline (S13-05) and the header.
 
@@ -99,7 +100,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** Seed test: `persondetail.PersonFamily` on 1,000 and 4,000 children; the larger must not take more than 8× the smaller. A `kinship` test with 30,000 shared parents through `Siblings` → `KinOf` → `FamilyUnits` under a second.
 
-**Fix (capped).** Keep at most a fixed number of relatives per role from the person's kin, in link order, before their links load; derive no implied siblings through a person with more than `kinship.Rules.MaxPivotEnd` parents (the bound `parentUnits` already uses to stop pairing).
+**Fix (capped).** Keep at most a fixed number of relatives per role from the person's kin, in link order, in one capped kin that both of `Families`' loops use (the relatives it loads, then `Around` and `FamilyUnits`), so no relative is read that was not loaded; derive no implied siblings through a person with more than `kinship.Rules.MaxPivotEnd` parents (the bound `parentUnits` already uses to stop pairing).
 
 **Origin.** `forLinks`' walk predates Spike 13 (S11-49); S13-04 (#671) runs it once per relative and added `partnerUnits`; S13-03 (#666) added one shape per parent.
 
@@ -147,7 +148,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** `PersonTimelineLifelineTests.oneHundredTwentyEvents` asserts a folded line has 120 marks. Budget test: build `PersonTimelineContent` from 2,000 events × 50 participants at Wide; the build touches only the shown rows and cards.
 
-**Fix (render cap, per the decision).** Build rows and cards only for what the folds show; folded rows keep their id, span and spoken label for the lifeline and the markers. Each "Show N more" reveals one page. The lifeline makes a click target only for a shown row's mark. Not here: memoising the content per revision, and the Sources diagram's rebuild on focus ([`ideas/person-page-performance.md`](../../ideas/person-page-performance.md)).
+**Fix (render cap, per the decision).** `ConclusionFold` reveals a page at a time for every section (S16-07). The Timeline builds rows and cards only for what the folds show; folded rows keep their id, span and spoken label for the lifeline and the markers. The lifeline makes a click target only for a shown row's mark (S16-02). Not here: memoising the content per revision, and the Sources diagram's rebuild on focus ([`ideas/person-page-performance.md`](../../ideas/person-page-performance.md)).
 
 **Origin.** S13-13 (#691).
 
@@ -159,7 +160,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** Census-sized households of 12 people with implied sibling links are estimated at 52–78% of `MaxReadWork` (performance lens), so a large real person comes near the edge. Handler test: a read past `MaxReadWork` returns lines with 0 facts and nothing that says so.
 
-**Fix.** Go caps the lines it sends at the number the diagram draws, strong lines first, and the response says when it did not count facts or dropped lines (S16-01). The diagram column shows a note in that case instead of drawing uncounted arcs as weak (S16-05, brief S16-D1).
+**Fix.** `Pairs` reports whether it counted; `persondetail.RecordLinks` caps the lines it sends at the number the diagram draws, strong lines first, says when it did not count or dropped lines, and Swift's own arc cap goes (S16-01). The diagram column shows one note when the read did not count, Go dropped lines or the circle dropped graphs past its 1,000-node cap, instead of drawing uncounted arcs as weak (S16-05, brief S16-D1).
 
 **Origin.** S13-27 (#743) and S13-28 (#744).
 
@@ -171,7 +172,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** No `pvAnnounce` or `AccessibilityAnnouncement` in the page or the switcher. Manual: VoiceOver and Full Keyboard Access on; on Family, Tab to a tile, press ⌘3; nothing is spoken and the next Tab leaves the section.
 
-**Fix.** Announce the chosen section's label on change (not on first appear); give the switcher a focus handle and claim the selected segment when the old focus is gone.
+**Fix.** Announce the chosen section's label on change (not on first appear); give the switcher a focus handle and claim the selected segment when the old focus is gone. `PVSegmentedControl` puts its handle on the first enabled segment today, so the component changes to the selected one.
 
 **Origin.** S13-10 (#634).
 
@@ -183,7 +184,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** S13-17 fixed "deleting a person is silent" and kept RC-6's no-Toast answer ([ship log](../spike-13/prs/S13-17-remove-a-claim.ship.md)); the keep-person path was not raised. Manual: VoiceOver on, Unpromote one of two records.
 
-**Fix.** A spoken-only string ("{name} unpromoted.") posted on the branch where the person stays. No Toast.
+**Fix.** A spoken-only string ("{name} unpromoted.") posted on the branch where the person stays. No Toast. The leave-or-stay decision moves out of the view into a function a unit test reaches, which also closes P-16.
 
 **Origin.** S13-17 (#729).
 
@@ -203,9 +204,19 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Problem.** "Show N more moves focus to the first revealed item" and "focus survives a width change" are solved privately per section, with two mechanisms in one file. Family has none: when its Show more row disappears, keyboard focus is lost. Sources keeps its folds as a `Set<String>` plus a `Bool`, beside the other sections' fold enums.
 
-**Fix.** `ConclusionShowMoreRow` takes the item it reveals and claims it through `FocusClaim` after expanding; Family, Timeline and Sources use it. One focus keeper holds focus across a width change for Gallery and Timeline. Sources' folds become an enum.
+**Fix.** `ConclusionFold`'s `firstRevealed` names the first item of the page just revealed and `ConclusionShowMoreRow` claims it through `FocusClaim`; Family, Timeline and Sources use it with one fold state type. One focus keeper in `Platform/`, beside `FocusClaim`, holds focus across a width change for Gallery and Timeline.
 
 **Origin.** S13-13 (#691) wrote the Timeline copy; S13-16 (#722) copied it (its MNT-5 was fixed by matching); S13-17 (#729) added `FocusClaim` beside it.
+
+### P-16 · The leave-on-delete decision is not tested
+
+**Where:** `macos/App/Features/Conclusions/PersonSourcesSection.swift` `confirm` (75–88); `macos/ProvenenciaTests/UnpromoteFlowTests.swift` `confirmReportsTheEffects` (228–232).
+
+**Problem.** R-39's "land on the Persons list" decision (leave when the write deleted this person, else stay) is inline in a View, and the test rewrites it in its own `apply:` closure. Breaking `PersonSourcesSection.confirm`, say by always calling `session.apply(effects)`, fails no test; S13-17's AC-2.4 and AC-2.5 rest on the manual check. P-12 adds an announcement to the same branch.
+
+**Fix.** Move the decision into a function on `UnpromoteFlow` or a static helper that returns leave, or stay with the announcement text, and test both branches against a `WorkspaceNavigation`. Scheduled with P-12 (map review K-8).
+
+**Origin.** S13-17 (#729).
 
 ## Close the loop
 
