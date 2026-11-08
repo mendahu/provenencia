@@ -102,6 +102,16 @@ Probe on the `TestLargeSourceBudgets` fixture: 8,115 persons, 10,067 events, 51 
 | Composing every row in one batch | 267 ms warm |
 | Composing every row alone with recording | 2.27 s, so production attributes inside the batch, and isolated composition is only the test oracle |
 
+Final counts from S14-40 (T-9, the recorder-checked index on the same fixture, every row):
+
+| Kind | Rows | Keys | Median | Max |
+| --- | --- | --- | --- | --- |
+| Person | 8,117 | 32,365 | 3 | 17 |
+| Event | 10,070 | 86,386 | 10 | 10 |
+| Place | 52 | 55 | 1 | 4 |
+
+A person's keys are fewer than planned because its place graph now comes from its birth and death events only. Against `Dependents`, T-10 found 9,987 persons excused as reached only through a birth or death event with no accepted member (D-13); the fixture's `bulkCanon` events have no accepted claims.
+
 At the map's Scale (37,000 Subjects) the index is a few hundred thousand rows.
 
 ## What stays

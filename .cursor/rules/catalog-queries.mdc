@@ -13,6 +13,6 @@ Follow the project skill `.agents/skills/add-catalog-query/SKILL.md`.
 - DDL still goes through catalog migrations, not query packages. The same PR registers the table and its FKs in `catalogmodel` — `.agents/skills/add-catalog-model/SKILL.md`.
 - Official resource / vocab `Delete` goes through `deleteimpact` — see `.agents/skills/add-catalog-delete/SKILL.md` and `.cursor/rules/catalog-deletes.mdc`.
 - Researcher callers obtain `*database.Catalog` from `catalogsession.Do` / FFI `withProjectCatalog`, not open-per-call. See `.agents/skills/use-catalog-session/SKILL.md`.
-- An open-catalog read of the canonical graph follows a `hops.Hop` with `graphcache.Graph.Follow`. Do not hand-write the association join in SQL; the bridge shape lives in the connectrules registry.
+- An open-catalog read of the canonical graph follows a `hops.Hop` with `graphcache.Graph.Follow`; a summary composer reads other handles through its `graphcache.InputScope` (`Node`, `Follow`) so its inputs are recorded, and a raw query in a composer reads no other handle. Do not hand-write the association join in SQL; the bridge shape lives in the connectrules registry.
 - `canonicalgraph.Walk` stays for dependent discovery and for any walk that must see rows the cache has not loaded, including inside a write. One Evidence graph is walked in memory with `graphcache.Graph.WalkEvidenceGraph` on its loaded `EvidenceGraph`.
 - A per-node result derived from the graph cache registers a `graphcache.NodeMemo` (`RegisterNodeMemo`, with its `Deps` and `Check`); never add a map field on `Graph` for one.
