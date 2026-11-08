@@ -13,7 +13,7 @@
 **Rules that bind:** —
 **Context:** [`archive-docs` § Spike close — checklist](../../../../.agents/skills/archive-docs/SKILL.md#spike-close--checklist), precedent [`archive/spike-12/README.md`](../../archive/spike-12/README.md) and [`archive/spike-11/README.md`](../../archive/spike-11/README.md); the user's close answers (2026-11-08) in **Decisions**
 **Planned:** 2026-11-08 against `main` @ `2ac041a4`
-**Review:** — (not reviewed yet)
+**Review:** [`S13-99-dogfood-close.review.md`](S13-99-dogfood-close.review.md) — round 2 pending
 
 ### Implementer — read this first
 
@@ -51,6 +51,8 @@ Spike 13 is done: the user has checked the dogfood bar on their own people and a
 | --- | --- | --- |
 | AC-2.1 | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | Every hit's target, resolved from its file's folder, is one of the two files the PR creates in the archive folder (new) |
 | AC-2.2 | `python3 scripts/check-plan-docs.py` with no arguments (every plan and open brief of every open spike) | No errors |
+| AC-2.4 | Read `docs/conclusion-layer-data-model.md` line 332 | It reads `\| **Inferred** \| no accepted Identity Claim; at least one accepted Reconciliation Claim with Observation pins \|` |
+| AC-2.5 | Read the last row of `docs/ideas/structural-debt.md` | It is the row in §6 **Debt row** |
 | AC-2.3 | Read `docs/deployment-plan/README.md` | **Current** does not name Spike 13 (line 11's "From Spike 13, odd-numbered spikes" sentence stays); **Completed** has a Spike 13 row at the top that links `archive/spike-13/` |
 
 **US-3.** As a contributor, nothing operational from Spike 13 is left in `docs/`.
@@ -68,15 +70,17 @@ Spike 13 is done: the user has checked the dogfood bar on their own people and a
 | Move `evidence-graph-comparison.md` into the archive, with a new Status line and fixed links | STEP-2, AC-1.2 |
 | Delete the rest of `spike-13/` except this PR's own plan, review log and ship log | STEP-3, AC-3.1 |
 | Retarget the 13 inbound links in §4 **Inbound links** | STEP-4, AC-2.1, AC-2.2 |
+| `docs/conclusion-layer-data-model.md` line 332: "Reconciliation" → "Reconciliation Claim" (user, 2026-11-08) | STEP-4, AC-2.4 |
+| One row in `docs/ideas/structural-debt.md`: a link check over all of `docs/` (user, 2026-11-08) | STEP-4, AC-2.5 |
 | `docs/deployment-plan/README.md`: the Current paragraphs and a Completed row | STEP-5, AC-2.3 |
 | Last commit deletes this plan, its review log and its ship log | STEP-6, AC-3.1, AC-3.2 |
 
 | Out | Home |
 | --- | --- |
 | Running the dogfood bar or any PR's unrun §10 manual check | Not planned: the user has checked the bar (D-1) |
-| Ship-log and review follow-ups (26 substantive items, among them 7 flaky tests) and about 135 logged nits, including S13-23 UX-5's "A stronger match is %@" copy | Dropped (user, 2026-11-08, D-3); the decisions note's Leftovers table says so in one row |
-| Event and Place pages adopting the sections, the provenance sheet and record links; deleting their Why accordion and its own record table; Event and Place pictures still opening the Citation; the Event `TermFacts` wire; record-link scoring after the first version | The user carries these into later spikes (user, 2026-11-08, D-4); one Leftovers row names them. No idea file is created |
-| Fixing `docs/conclusion-layer-data-model.md` line 332 ("Observation pins" means Reconciliation pins, S13-25 CON-1) | Dropped with the nits (D-3) |
+| Ship-log and review follow-ups (26 substantive items, among them 7 flaky tests) and about 135 logged nits | Dropped (user, 2026-11-08, D-3); the decisions note's Leftovers table names them in one row |
+| Event and Place pages adopting the sections, the provenance sheet or record links | Not planned and not a leftover: those pages are correct as built (user, 2026-11-08, D-4) |
+| Building the all-docs link check that the new `structural-debt.md` row describes | The row itself (STEP-4) |
 | Rewording what a landed Spike 14 plan says beyond its link targets, including the backticked `spike-13` paths at lines 332 and 368 of `S14-02-pictures-in-the-app.md` | Not planned: Spike 14's own close deletes those plans |
 | Prose that names a deleted plan, ship log or review id without linking it (`docs/ideas/structural-debt.md` rows cite "S13-37 plan", "S13-16 PRF-2" and others) | Stays as written: an id with no link breaks nothing, as `archive-docs` § Retarget allows |
 
@@ -132,9 +136,9 @@ L-6   Related: [S13-36 ship log](../deployment-plan/spike-13/prs/S13-36-provenan
 L-7   Related: [S13-06 ship log](../deployment-plan/spike-13/prs/S13-06-derived-rows-carry-their-records.ship.md) (PRF-1, PRF-2), [S13-11 ship log](../deployment-plan/spike-13/prs/S13-11-provenance-sheet.ship.md).
       Related: the S13-06 ship log (in git with #640), PRF-1 and PRF-2; the S13-11 ship log (in git with #650).
 L-8   [Spike 13 slice 0](../../spike-13/deployment-plan.md)
-      [Spike 13](../spike-13/README.md)
+      [Spike 13](../spike-13/README.md#decisions)
 L-9   [Spike 13 slice 0](../../spike-13/deployment-plan.md)
-      [Spike 13](../spike-13/README.md)
+      [Spike 13](../spike-13/README.md#decisions)
 L-10  Spike 13's [S13-23](../spike-13/deployment-plan.md#s13-23--promote-stops-asking-for-pins).
       Spike 13's S13-23 ([decisions](../archive/spike-13/README.md#decisions)).
 L-11  Spike 13's [S13-10 plan](../../spike-13/prs/S13-10-header-and-sections.md) D-3
@@ -153,11 +157,11 @@ Lines 332 and 368 of `S14-02-pictures-in-the-app.md` name `spike-13` in backtick
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | No bar pass is run in this PR. The decisions note says the bar was checked by the user on 2026-11-08 and that what shipped is accepted as built, bar line 6 included (Source rows with a line per Evidence graph record, not Subject cards; board S13-D6 rev 2) | The user's answer (2026-11-08): "Everything's been checked. We can just close it."; "Everything as shipped is fine." | Re-running each PR's unrun §10 — because the user has done the check |
+| D-1 | No bar pass is run in this PR. The decisions note says the bar was checked by the user on 2026-11-08 and that what shipped is accepted as built, bar line 6 included (Source rows with a line per Evidence graph record, not Subject cards, as the agreed Sources board drew them) | The user's answer (2026-11-08): "Everything's been checked. We can just close it."; "Everything as shipped is fine." | Re-running each PR's unrun §10 — because the user has done the check |
 | D-2 | Keep `evidence-graph-comparison.md` in `archive/spike-13/` as the reasoning behind the record-link count; delete `person-detail.md` and `provenance-sheet.md` | A domain doc links its anchor (L-1), and Spike 11 kept `comparison-layers.md` the same way. `provenance-sheet.md`'s boundary has graduated to three docs (§4); `person-detail.md` is requirements nobody links | Keeping `person-detail.md` — because no skill or code reads it, and `archive-docs` keeps only live contracts |
-| D-3 | Every unhomed ship-log or review follow-up and every logged nit is dropped, not re-homed; one Leftovers row records it | User, 2026-11-08: "You can drop all these." `archive-docs` asks that each follow-up be homed or dropped with a reason; the reason is the user's answer | Homing them in idea files — because the user declined |
-| D-4 | The Event and Place redesign cluster and the record-link scoring questions get no new file; one Leftovers row names them as the user's for later spikes, and the kept `evidence-graph-comparison.md` keeps its **Open** and **Later** lists unchanged | User, 2026-11-08: "I'll handle those in later spikes." | A new `ideas/event-and-place-pages.md` — because the user declined |
-| D-5 | A link to a file this PR deletes (a plan, a brief, a ship log) becomes plain text that names the PR number, never a link to git history | The archive policy keeps that history in git; a GitHub URL to a deleted path breaks on renames, and Spike 11 and 12 retargeted the same way | Links to blob URLs at a commit — because nothing else in `docs/` does it |
+| D-3 | Every unhomed ship-log or review follow-up and every logged nit is dropped, not re-homed, flaky suites included. One Leftovers row names them so git can find them once the logs are deleted | User, 2026-11-08: "You can drop all these", then "Name them, drop flakes" after the review (M-2). `archive-docs` asks that each follow-up be homed or dropped with a reason, and the Spike 11 and 12 Dropped rows name their items | A `structural-debt.md` row for the flaky suites — because the user dropped it |
+| D-4 | The Event and Place pages are not a leftover: they are correct as built, and a later redesign owes nothing now. The decisions note has no row for them and no idea file changes. The record-link scoring questions after the first version are homed in `docs/conclusion-layer-data-model.md` §13 item 4 (a domain doc, which already says "conflicts, reasons and Source quality are open there"), and Promote ranking with that scoring in `docs/ideas/promote-ranking.md` | User, 2026-11-08, after the review (M-1): "The existing events and places detail pages are built as planned. They're just going to change later, further down the line, and I don't need to write that down anywhere. They work right now. They're correct. There's nothing to fix." `archive-docs` homes open leftovers only, so nothing bends | A row in `wide-layout.md` or a new idea file — because the user said there is nothing to record |
+| D-5 | A link to a doc this PR deletes takes one of two forms. A link to the map or a feature doc (`deployment-plan.md`, `person-detail.md`) becomes a link to `README.md#decisions` in the archive (L-3, L-4, L-8 – L-10). A link to a plan, a brief or a ship log becomes plain text that names the PR number, with no link (L-5 – L-7, L-11 – L-13) | The decisions note is where a map or feature-doc reader now finds the decision. A plan or ship log has no archive copy, so a README link would land somewhere that does not hold what it cited. This departs from Spike 11, which linked such files to its README (`878b45ea`) | Linking every deleted file to the README — because it lands the reader on a page that does not hold the cited text |
 | D-6 | Two commits. Commit 1, "Close Spike 13 as a decisions note.", does STEP-1 – STEP-5. Commit 2 records the ship log and deletes this plan, its review log and its ship log (STEP-6) | `archive-docs`: "The close PR (S#-99) deletes its own plan, review log, and ship log in its last commit, the one that records the ship log." | One commit — because `ship-pr` writes the ship log during the run |
 
 **Rules this plan bends.** None.
@@ -170,6 +174,7 @@ Lines 332 and 368 of `S14-02-pictures-in-the-app.md` name `spike-13` in backtick
 | --- | --- | --- | --- |
 | `docs/deployment-plan/archive/spike-13/README.md` *(new)* | file | `docs/deployment-plan/archive/spike-12/README.md` | Same shape, one per closed spike |
 | `docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md` *(new)*, moved | file | `docs/deployment-plan/archive/spike-11/comparison-layers.md` | A `git mv` of the existing file |
+| One `docs/ideas/structural-debt.md` row *(new)* | doc row | The S13-16 PRF-2 row in the same table | Same table, one more row |
 
 **Builds on.** `archive-docs`; the Spike 11 and 12 closes.
 **Deletes.** `docs/deployment-plan/spike-13/` whole: `README.md`, `completed.md`, `deployment-plan.md`, `deployment-plan.review.md`, `person-detail.md`, `provenance-sheet.md`, `design/` with `design/archive/`, `prs/` (and, in STEP-6, this plan, `S13-99-dogfood-close.review.md` and `S13-99-dogfood-close.ship.md`).
@@ -202,7 +207,7 @@ STEP-1 writes this text into `docs/deployment-plan/archive/spike-13/README.md` (
 - **One sectioned Conclusion page, not a Person fork.** `ConclusionDetailPage` on Page columns serves Person, Event and Place; the Person page passes five sections. A section is a history place (`WorkspaceLocation.pageSection`), so Back, Forward and restore return to it.
 - **Each section reads its own query** (claims, family, timeline, record links, beside the detail read), served from the graph cache and refreshed by one per-person invalidation spec.
 - **Canonical only, filtered in Go.** Nothing unpromoted appears on the page.
-- **The provenance sheet is a kit recipe** (a record row, a record table, the sheet), filled by a pure assembler from the wire records, and it reports a link for the caller to map to a place. It replaces the Why on the Person page only; Event and Place keep the Why accordion, drawing the recipe's parts, until they adopt sections.
+- **The provenance sheet is a kit recipe** (a record row, a record table, the sheet), filled by a pure assembler from the wire records, and it reports a link for the caller to map to a place. It replaces the Why on the Person page only; Event and Place keep the Why accordion, drawing the recipe's parts, until they adopt sections. The sheet leaves room for manual Reconciliation Claims ([conclusion §13](../../../conclusion-layer-data-model.md) item 5), so they slot in without a redesign.
 - **A derived row carries its owner's records:** birth and death date and place show every surviving event's or Place's records, grouped by owner.
 - **Family is grouped in Go** and shaped as a family tree's first step: units over a list of ids, each link saying what it rests on. Siblings from a shared parent are page-only; matching and Promote are unchanged.
 - **The Timeline is direct participation, any role,** on a lifeline drawn to scale: birth and death always have a marker (a placeholder when unrecorded), undated events sit before death, and a date known only by its end ("bef. 1880") is dated and ordered at that end everywhere.
@@ -212,18 +217,18 @@ STEP-1 writes this text into `docs/deployment-plan/archive/spike-13/README.md` (
 
 ## Refused
 
-Provisional claims at Promote ([`provisional-identity-claims.md`](../../../ideas/provisional-identity-claims.md)); a claim review sheet (replaced by record links); Subject cards in the Sources section (Source rows with a line per record instead, board S13-D6 rev 2); a compact header on scroll; stored, researcher-chosen links between records and a research log; unpromoted Subjects anywhere on the page.
+Provisional claims at Promote ([`provisional-identity-claims.md`](../../../ideas/provisional-identity-claims.md)); a claim review sheet (replaced by record links); Subject cards in the Sources section (Source rows with a line per record instead); a compact header on scroll; stored, researcher-chosen links between records and a research log; unpromoted Subjects anywhere on the page.
 
 ## Leftovers
 
 | Item | Home |
 | --- | --- |
 | The Source date and standard citations | Spike 15: [`source-provenance-date.md`](../../spike-15/source-provenance-date.md), [`citation-formats.md`](../../spike-15/citation-formats.md) |
-| Event and Place pages adopting the sections, the provenance sheet and record links; deleting their Why accordion and its own record table; their pictures still opening the Citation; the Event summary's term facts on the wire | Later spikes (user, 2026-11-08) |
-| Record links after the first version: conflicts, reasons, a richer weight, Source quality and independence, events and places as lines, Promote ranking with this scoring | Later spikes (user, 2026-11-08); the questions are in [`evidence-graph-comparison.md`](evidence-graph-comparison.md#open) |
+| Record links after the first version: conflicts, reasons, a richer weight, Source quality and independence, events and places as lines | [conclusion §13](../../../conclusion-layer-data-model.md) item 4; the questions are in [`evidence-graph-comparison.md`](evidence-graph-comparison.md#open) |
+| Promote ranking with the record-link scoring | [`promote-ranking.md`](../../../ideas/promote-ranking.md) |
 | Kinship beyond the nuclear family; sibling evidence for matching | [`kinship-view.md`](../../../ideas/kinship-view.md) |
 | Remember researcher decisions | [`matching-test-suite.md`](../../../ideas/matching-test-suite.md) |
-| Ship-log and review follow-ups not already in an idea file or `structural-debt.md`, and every logged nit | Dropped (user, 2026-11-08) |
+| Ship-log and review follow-ups not already in an idea file or `structural-debt.md`: flaky macOS suites (`SourceGraphFormModelTests`, `SourcesModelTests`, `SourcePageModelTests`, `PVWidthClassTests`, `PVSegmentedControlTests`, the graph-progress `waitUntil` tests); gallery and likeness viewer focus and VoiceOver details; Family's "Show N more" focus; the Timeline card id namespace; `edgeKey`'s missing separator; the gallery's unbounded tile count; `DateRowDisplay` letting a date with no year win; a test seam for kit Return and focus; a wider `observationstest.Cite`; `productKey(of:)`, the summary-state rule and hand-rolled dividers as copies; the via term derived in Swift; the "A stronger match is %@" copy; and every logged nit | Dropped (user, 2026-11-08) |
 ```
 
 ### Kept doc
@@ -251,6 +256,14 @@ Provisional claims at Promote ([`provisional-identity-claims.md`](../../../ideas
   ```
 
 - Every other line stays, including **Open** and **Later** (D-4).
+
+### Debt row
+
+STEP-4 appends this row to the table in `docs/ideas/structural-debt.md`:
+
+```markdown
+| — | S13-99 review M-5 | `scripts/check-plan-docs.py` `check_links` resolves relative links only in plans and open briefs (`default_targets`), so nothing checks links or anchors in `docs/*.md`, `docs/ideas/` or `docs/deployment-plan/archive/`, and each spike close sweeps them by hand with `rg`. Let `check_links` run over every `docs/**/*.md`, anchors included, from `scripts/check-pr.sh`. |
+```
 
 ### Schema
 
@@ -289,9 +302,9 @@ Files: `docs/deployment-plan/spike-13/` (everything except `prs/S13-99-dogfood-c
 Do: `git rm` the files listed under **Deletes**.
 Check: `git ls-files docs/deployment-plan/spike-13` lists only the three S13-99 files.
 
-**STEP-4 — Retarget inbound links**
-Files: the 11 files in §4 **Inbound links**.
-Do: apply L-1 – L-13 as written; change nothing else on those lines.
+**STEP-4 — Retarget inbound links, and two small doc fixes**
+Files: the 11 files in §4 **Inbound links**; `docs/ideas/structural-debt.md`.
+Do: apply L-1 – L-13 as written; change nothing else on those lines. In `docs/conclusion-layer-data-model.md` line 332, replace `accepted Reconciliation with Observation pins` with `accepted Reconciliation Claim with Observation pins`. Append the §6 **Debt row** to the end of the `structural-debt.md` table.
 Check: `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` lists only links whose target, resolved from the file's own folder, is `docs/deployment-plan/archive/spike-13/README.md` (new) or `docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md` (new), plus links inside the three S13-99 files. `python3 scripts/check-plan-docs.py` with no arguments reports no errors (warnings are allowed).
 
 **STEP-5 — The index**
@@ -319,6 +332,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-2 | Docs | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | After STEP-6 → every hit's target, resolved from its file's folder, is one of the two archive files | AC-2.1, AC-1.2 |
 | T-3 | Docs | `wc -l` and `rg -n '^## ' docs/deployment-plan/archive/spike-13/README.md` | 30 – 80 lines; headings Decisions, Refused, Leftovers | AC-1.1, D-3, D-4 |
 | T-4 | Docs | `ls docs/deployment-plan/spike-13 docs/deployment-plan/archive/spike-13` | First fails; second lists two files | AC-3.1, AC-3.2, D-2 |
+| T-6 | Docs | `sed -n 332p docs/conclusion-layer-data-model.md`; `tail -1 docs/ideas/structural-debt.md` | Line 332 says "Reconciliation Claim with Observation pins"; the last row starts `\| — \| S13-99 review M-5 \|` | AC-2.4, AC-2.5 |
 | T-5 | Docs | `rg -n 'Spike 13' docs/deployment-plan/README.md` | Two hits: line 11 (unchanged) and the Completed row | AC-2.3 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to break is `check-plan-docs.py` on a Spike 14 plan whose link STEP-4 missed.
