@@ -1,6 +1,7 @@
 # S14-42 — Invalidate from the input index
 
-**Status:** Planned
+**Status:** Landed in #748 (2026-11-08)
+**Landed:** Version 0.4.1 as planned. Differences from the plan: `HandlesObservingSubject` had five test callers in `core/database/effects/conclusion_handles_test.go` the plan did not list, so that file now holds the same query as `observerHandles` and the production function is deleted; the `autoreconciler` test fixture gained a `row` counter to place the Subjects its new scenarios file (a cited bridge needs positions); the D-11 citations are a second toponym "Yorke" on York, a name "Jim Robins" on James, a date 1818 on the birth and "Upper Canada" on Ontario, and each reported the ids the plan expected.
 **Spike / slice:** Spike 14 · Slice 8 — Summary rows know their inputs
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the app reloads what `summary_handles` names, as today; no view looks different)

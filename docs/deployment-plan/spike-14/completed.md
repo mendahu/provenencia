@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-42 — Invalidate from the input index
+
+**Landed 2026-11-08** in [#748](https://github.com/mendahu/provenencia/pull/748), stacked on #746. A write finds the search documents and stored displays it moved by looking them up in `catalog_search_inputs` (`searchindex.ReprojectChanged`) instead of walking a hand-written inverse of the summary reads, so unpromoting either end of a filed link, or deleting a link, no longer leaves the other end's search hit stale ("Birth of James Robins" after James is unpromoted). `catalog_search_inputs` marks an association's end rows so a deleted link's ends can be found; `Run` reports the rows found plus the changed links' ends in `summary_handles`; stored displays drop from that set alone, and `subjects.Delete` recomputes nothing itself. `Dependents`, `AssociationEndpoints`, `RecomputeTx`, `HandlesObservingSubject` and the display-walk hooks are deleted. Deleting a location at a city of 6,000 events takes 42 ms, down from 1.27 s. Version 0.4.1.
+
 ## S14-40 — Build the input index
 
 **Landed 2026-11-08** in [#746](https://github.com/mendahu/provenencia/pull/746). Every person, event and place summary row records the handles, links and associations it was composed from (`graphcache.InputScope`), and `searchindex` stores them in `catalog_search_inputs` beside the search documents, with each association's ends; an open catalog fills it through `ProjectionVersion` 11. Nothing reads it yet (S14-42 does). A person's place graph now comes from its birth and death events only, a row shows part_of ancestors only as far as its inputs cover, one search batch records at most 250,000 place-chain keys (over that it records none, which only a crafted catalog reaches), the list and by-id reads record nothing, and `ReprojectHandles` composes on one graph per call: the first part_of from a 6,000-event city fell from 2.25 s to 1.33 s.
