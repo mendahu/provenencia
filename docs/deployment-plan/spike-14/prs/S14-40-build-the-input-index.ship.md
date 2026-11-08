@@ -1,7 +1,7 @@
 # Ship log — S14-40 Build the input index
 
 **Plan:** [`S14-40-build-the-input-index.md`](S14-40-build-the-input-index.md) · **Branch:** `s14-40-build-the-input-index` · **PR:** #746
-**State:** review 2
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `78f26812` (plan was cut against `26ada55`). Local head `f6fc77d6`, unpushed, plus uncommitted T-9/T-10 in `core/database/promotealign/perf_test.go` and the single-graph isolator in `conclusionsummaries/conclusionsummariestest/inputs.go`. Gate not run. STEP-1 through STEP-6 committed; STEP-7 stopped; STEP-8 and STEP-9 not started.
@@ -205,3 +205,22 @@ Deviations:
 
 ## Round 2 — review
 Scope `251cd6c0...4edc866e`. Reviewers: CON (CON-1 major), MNT (MNT-1 and MNT-2 majors), SEC+PRF (SEC-1 blocker).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major (r1) | Shown ancestors past depth 8 | Resolved | `TestInputsHoldEveryShownParent` passes at head. With 88f099fb's `placechains.go` hunk reversed, it fails |
+| MNT-1 | MNT | major (r1) | Bridge-origin default copies | Resolved | One `Bridge.OriginKey`; every bridge reader calls it |
+| MNT-2 | MNT | major (r1) | Places-of-events and life-merge copies | Resolved | `lifeEvents`, `placesOfEvents`, `addChains`; every closure goes through `inputBudget.addClosure` |
+| SEC-1 | SEC+PRF | blocker (r1) | Unbounded closure keys | Resolved | One per-call cap, sized before copying. Over the cap, the call records nothing. `TestInputsCapCountsNothing` |
+| PRF-1 | PRF | minor (r1) | Lists record inputs | Resolved (orchestrator) | List and ByIDs paths pass a nil `*inputBudget` (`compose.go:232`, `:368`, `:398`, `:415`, `:476`, `:493`). `TestListsRecordNoInputs` |
+| CON-3 | CON | minor (r1) | AC-1.2 partial asserts | Resolved (orchestrator) | The James table asserts the location and part_of associations and the City and Region `place_relationship` ends |
+| MNT-3 | MNT | minor (r1) | Excuse re-derives Canonical | Resolved (orchestrator) | `rg 'identity_claims\|sqlBirthOrDeath' conclusionsummariestest/` finds nothing |
+| MNT-4 | MNT | minor (r1) | `InputKey` equality copies | Resolved (orchestrator) | `sameKeys`, `holds` and `hasRow` are thin wrappers over `slices.*Func` and `InputKey.Equal` |
+| CON-2 | CON | minor (r1) | Fixture reason wrong | Resolved (orchestrator) | `summary-inputs.md:114` gives the `bulkCanon` reason. One clause is repeated (nit) |
+
+No new blockers in round 2.
+
+Nits (logged): `CON-5 · conclusionsummaries/inputs_test.go:240 · TestInputsCapCountsNothing checks event rows only for "rows unchanged"` · `summary-inputs.md:114 · "the fixture's bulkCanon events have no accepted claims" said twice`
+
+## Result
+Gate PASS on `d55fb493`. `origin/main` is unchanged since the branch was cut (`78f26812`). CI: see PR #746. Open: none. Follow-ups: none. To user: D-13 (answered 2026-11-08, "Exclude them in D-13").
