@@ -58,3 +58,7 @@ The composer dialog stays as the quick path while transcribing. Terms made there
 6. **Seeded terms are listed by hand in Swift** (`Seeded…Term` enums, `L10n.PropertyTerm`); carrying terms on the wire would retire the hand lists (S11-20 ship log).
 
 **What it would touch:** Go `propertyterms.Create` / `Update` accept `directed` and `inverse_key`; FFI term messages carry both; Swift store methods, a term list and editor, the `propertyTerms` query key, and L10n.
+
+## A failed bind after a Property create
+
+When the bind after a Property create fails, the dialog stays open and Retry calls `createProperty` again, which fails on the duplicate key (`PropertiesModel.swift`). Retry binds the Property already made.

@@ -56,3 +56,7 @@ S12-17 ship log; dogfood 2026-10-29. Typing a letter in an action menu can highl
 ## Source page section counts differ
 
 S12-11 review M-8; dogfood 2026-10-25. Source page section counts: Notes shows a bare number, Artifacts and Evidence graphs a localized count. One count presentation for every Source page section.
+
+## A failed sidebar recount is silent
+
+`WorkspaceView` reads `lastRefreshError` only in its first `.task`, so a sidebar recount that fails after a write says nothing. Observe it with `.onChange` and show it where the counts are.

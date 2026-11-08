@@ -31,6 +31,7 @@ add-design-brief:
 
 Usage:
   python3 scripts/check-plan-docs.py [FILE ...]
+  python3 scripts/check-plan-docs.py --links FILE ...   relative links of any Markdown file
 
 With no FILE, checks every plan in prs/ and every brief in design/ (not
 design/archive/) of each open spike. Exit status 1 when any error is found.
@@ -331,12 +332,20 @@ def default_targets() -> list[Path]:
 
 
 def main(argv: list[str]) -> int:
+    links_only = bool(argv) and argv[0] == "--links"
+    if links_only:
+        argv = argv[1:]
+        if not argv:
+            print("usage: check-plan-docs.py --links FILE ...", file=sys.stderr)
+            return 2
     targets = [Path(a).resolve() for a in argv] or default_targets()
     errors = warnings = 0
     for path in targets:
         report = Report(path)
         if not path.exists():
             report.error(0, "no such file")
+        elif links_only:
+            check_links(report, path.read_text(encoding="utf-8").splitlines())
         elif PLAN_NAME_RE.match(path.name) and path.parent.name == "prs":
             check_plan(report, path.read_text(encoding="utf-8"))
         elif BRIEF_NAME_RE.match(path.name):

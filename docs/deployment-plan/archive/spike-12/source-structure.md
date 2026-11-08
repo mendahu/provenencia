@@ -65,7 +65,7 @@ The exact `ON DELETE` classes and `catalogmodel` buckets are set by the schema P
 - **A graph has a `GPH-` ref, a name and an optional description.** Name and description are editable. Graphs are listed alphabetically by name.
 - **A graph with Subjects can't be deleted.** An empty graph that is not the last one can.
 - **Graphs are fully isolated.** A Subject belongs to exactly one graph and never moves. An Observation's Subject, the Subject it points at (relationships, participations), and its Citation's Artifact must all be in, or linked to, that one graph. Go refuses anything else at write time.
-- **Artifacts and graphs are many-to-many. The Artifact is the parent** (amended 2026-10-27, [audit](../../spike-14/app-health-audit.md) slice 5): an Artifact may stand in no graph; a graph needs at least one Artifact.
+- **Artifacts and graphs are many-to-many. The Artifact is the parent** (amended 2026-10-27, the 2026-10-27 app-health audit, slice 5): an Artifact may stand in no graph; a graph needs at least one Artifact.
   - A graph created by the researcher needs at least one linked Artifact. Its form starts with the Artifacts that are in no graph checked when there are any, otherwise with every Artifact checked (amended 2026-10-27).
   - The Default graph may have none until the Source's first Artifact, which links to it automatically. "Add graph" is unavailable until the Source has an Artifact.
   - A new Artifact starts linked to the graphs checked when it is added: all of them by default, or none (amended 2026-10-27; it was every graph).

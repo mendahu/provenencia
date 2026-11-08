@@ -186,7 +186,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Problem.** On the common path the confirm closes and focus moves to the next line's Unpromote; VoiceOver reads that button, which sounds as if nothing happened.
 
-**Evidence.** S13-17 fixed "deleting a person is silent" and kept RC-6's no-Toast answer ([ship log](../spike-13/prs/S13-17-remove-a-claim.ship.md)); the keep-person path was not raised. Manual: VoiceOver on, Unpromote one of two records.
+**Evidence.** S13-17 fixed "deleting a person is silent" and kept RC-6's no-Toast answer (S13-17 ship log, in git with #729); the keep-person path was not raised. Manual: VoiceOver on, Unpromote one of two records.
 
 **Fix.** A spoken-only string ("{name} unpromoted.") posted on the branch where the person stays. No Toast. The leave-or-stay decision moves out of the view into a function a unit test reaches, which also closes P-16.
 

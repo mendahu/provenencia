@@ -22,7 +22,7 @@ The user accepted this risk on 2026-11-03 (S13-36 review SEC-1).
 
 **Before pulling it in:** Take a Release figure at 300 and 1,200 records, and count the records on the largest Place name in a real project.
 
-Related: [S13-36 ship log](../deployment-plan/spike-13/prs/S13-36-provenance-sheet-in-the-kit.ship.md) (SEC-1, F-11).
+Related: the S13-36 ship log (in git with #702), SEC-1 and F-11.
 
 ## Load records when the sheet opens
 
@@ -47,4 +47,4 @@ Raised as S13-06 review PRF-1 and deferred by the user on 2026-10-30; looked at 
 
 **Before pulling it in:** Measure the current read on a heavily researched person at the map's **Scale**. Do it only if that number shows the page load is too slow. Settle the life-row owners first: S13-11 moved birth and death place rows to their event–place links.
 
-Related: [S13-06 ship log](../deployment-plan/spike-13/prs/S13-06-derived-rows-carry-their-records.ship.md) (PRF-1, PRF-2), [S13-11 ship log](../deployment-plan/spike-13/prs/S13-11-provenance-sheet.ship.md).
+Related: the S13-06 ship log (in git with #640), PRF-1 and PRF-2; the S13-11 ship log (in git with #650).

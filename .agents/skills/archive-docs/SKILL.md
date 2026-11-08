@@ -43,30 +43,26 @@ Do **not** run this on an **open** spike (Spike 8 while it still has a plan).
 ```
 - [ ] Spike is actually done (or explicitly stopped). Honesty in the README.
 - [ ] Write/replace archive/spike-N/README.md as a **decisions** note (below)
-- [ ] Keep a file only if it is still a **live contract** (not “how we shipped”)
+- [ ] Keep a file only if it is a live contract or the design reasoning a domain doc links ([Keep](#keep)); not “how we shipped”
 - [ ] Delete: completed.md, deployment-plan.md, design/ (briefs + indexes), prs/ (PR plans), *.review.md (review-plan logs), *.ship.md (ship-pr logs),
-      dogfood how-tos, PR-sequence diagrams, suggested-PR-title tables
+      dogfood how-tos, PR-sequence diagrams, suggested-PR-title tables, app-health audits (once their items are triaged or the user drops them), shipped dogfood notes (`ux/`)
 - [ ] Delete shipped ideas this spike finished; re-home any open leftovers (idea / spike / domain doc / skill)
-- [ ] Grep inbound links; retarget to the README or the live domain doc
+- [ ] Grep inbound links; retarget each one (§ Retarget): to the archive README, a kept doc, or the live domain doc, or to plain text naming the PR
 - [ ] Slim docs/deployment-plan/README.md completed row (one line, no file list)
 - [ ] Update docs/ideas/README.md if an idea moved
 - [ ] Every ship log's follow-ups triaged before the logs are deleted: an idea file, a row in the next spike's map, or dropped with a reason. A follow-up left only in a ship log disappears with it
 - [ ] The close PR (S#-99) deletes its own plan, review log, and ship log in its last commit, the one that records the ship log. It writes no Landed note and no completed.md paragraph; the PR body carries any deviation
+- [ ] The S#-99 plan carries the note's text and the Leftovers triage, so the implementer transcribes them
 ```
 
-### Keep (live contract)
+### Keep
 
-Keep a sibling file in the archive folder only when **skills or code still
-implement against it** as behavior, not history. Spike 3 examples:
+Keep a sibling file in the archive folder in one of two cases, and delete it otherwise:
 
-- [`navigation-history.md`](../../../docs/deployment-plan/archive/spike-3/navigation-history.md)
-- [`omnibar-search.md`](../../../docs/deployment-plan/archive/spike-3/omnibar-search.md)
+- **A live contract:** skills or code still implement against it as behavior, not history (Spike 3: [`navigation-history.md`](../../../docs/deployment-plan/archive/spike-3/navigation-history.md), [`omnibar-search.md`](../../../docs/deployment-plan/archive/spike-3/omnibar-search.md)). Strip its “PR sequence / board handoff / incremental delivery” sections; leave stack rules, what counts as an entry, out-of-scope.
+- **The design reasoning behind a domain doc:** the rules live in named `docs/*.md`, a skill or the code, and the file keeps the why (Spike 11 [`comparison-layers.md`](../../../docs/deployment-plan/archive/spike-11/comparison-layers.md), Spike 12 [`source-structure.md`](../../../docs/deployment-plan/archive/spike-12/source-structure.md), Spike 13 [`evidence-graph-comparison.md`](../../../docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md), Spike 14 [`summary-inputs.md`](../../../docs/deployment-plan/archive/spike-14/summary-inputs.md)). Its first lines name those docs and say they win where they differ, and the docs that teach the mechanism link it, or nothing leads a reader to it once the spike folder goes.
 
-Strip that file’s “PR sequence / board handoff / incremental delivery” sections.
-Leave stack rules, what counts as an entry, out-of-scope.
-
-If the contract has already graduated to `docs/*.md` or a skill, **delete** the
-idea/spike essay and point there.
+Either way the kept file cites no plan, test or decision id from the deleted plans. An essay whose rules have graduated and whose reasoning no domain doc needs is deleted, and its readers point at the domain doc.
 
 ### Delete (operational)
 
@@ -74,24 +70,34 @@ idea/spike essay and point there.
 - `deployment-plan.md` gates, ASCII PR trees, dogfood bars
 - `design/` and `design/archive/` Claude Design prompts
 - `prs/` PR plans (their Landed notes feed the decisions note first)
+- App-health audits, once their items are triaged or the user drops them
+- Shipped dogfood notes (`ux/`)
 - Per-PR “In / Out / Testable / Depends on” tables
 - Numbered leftover lists once every item is re-homed (one leftover table on
   the distilled note is enough)
 
 ## Distilled spike README
 
-Target: **~40–80 lines**. Match [`archive/spike-7/README.md`](../../../docs/deployment-plan/archive/spike-7/README.md).
+Target: **~30–80 lines**. Match the headings of [`archive/spike-12/README.md`](../../../docs/deployment-plan/archive/spike-12/README.md).
 
 ```markdown
 # Spike N — short name
 
-**Done.** One sentence on what the spike proved. Live models: [links].
+**Done** (closed YYYY-MM-DD). One sentence on what the spike proved. Live models: [links]. Design reasoning: [kept file], if any.
 
 ## Decisions
 
 - Durable product/engine choice (not “S7-08 shipped the thin composer”).
-- What we **refused** (descoped) if someone will ask again.
-- Pointer to the next spike only if it owns a leftover (e.g. composer rethink → 8).
+
+## Refused
+
+What was refused or descoped, if someone will ask again.
+
+## Leftovers
+
+| Item | Home |
+| --- | --- |
+| Open item | idea file, next spike's map row, or "Dropped: reason" |
 ```
 
 Do **not** list every PR id. Do not paste the dogfood bar. “Composer is Option B”
@@ -113,9 +119,42 @@ When an idea in `docs/ideas/` is finished or dropped:
 
 ## Retarget
 
-Grep the old paths (`completed.md`, `design/archive/S*-D*`, `deployment-plan.md`
-under that spike). Code comments may name old brief ids (`S7-D4`); that is fine
+Grep the whole spike folder from outside it, so plans, review logs, ship logs,
+briefs and feature docs are all found, not only the map:
+`rg -n 'spike-N/' --glob '!docs/deployment-plan/spike-N/**' .`
+Code comments may name old brief ids (`S7-D4`); that is fine
 if they do not **link** to a deleted file. Skills and `docs/` links must work.
+
+A link to the spike's map or a feature doc that is deleted becomes a link to
+the archive README's `#decisions` (or to the live domain doc that now holds the
+rule). A link to a PR plan, brief, review log or ship log becomes plain text
+that names it and its PR, `S13-03 ship log (in git with #666)`, with no link:
+it has no archive copy, and a README link would land where the cited text is
+not.
+An app-health audit becomes plain text with its date and the commit it was
+written at: `the second app-health audit (2026-10-28, at 3cc609c; deleted when
+Spike 14 closed, in git history)`.
+
+Find what a close breaks by comparing broken links on the base and on the branch: the base has broken links of its own, so only new ones count. Run from the repo root on the close branch, after committing: both sides are read from git, so ignored and uncommitted files do not count:
+
+```bash
+(
+  set -eu
+  base=$(git merge-base origin/main HEAD)
+  tmp=$(mktemp -d); tmp=$(cd "$tmp" && pwd -P)
+  for rev in "$base" HEAD; do
+    mkdir "$tmp/$rev"
+    git archive "$rev" | tar -x -C "$tmp/$rev"
+    (cd "$tmp/$rev" && find . -name '*.md' | sed "s|^\./|$tmp/$rev/|") \
+      | xargs python3 scripts/check-plan-docs.py --links \
+      | grep 'broken link' | sed -E "s|^$tmp/$rev/||; s|:[0-9]+: | |" | sort -u > "$tmp/$rev.txt"
+  done
+  comm -13 "$tmp/$base.txt" "$tmp/HEAD.txt"
+  rm -rf "$tmp"
+)
+```
+
+It prints each new broken link as `file error: broken link: target`; line numbers are dropped so edits that shift lines do not show. Fix each by the forms above.
 
 ## After close
 

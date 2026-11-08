@@ -18,7 +18,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Evidence graph and canvas
 
-- [`evidence-graph-followups.md`](evidence-graph-followups.md) — card image memory, upward shadows, P3 color drift, keyboard multi-select
+- [`evidence-graph-followups.md`](evidence-graph-followups.md) — card image memory, upward shadows, P3 color drift, keyboard multi-select, reloading sign
 - [`evidence-graph-structure-shortcuts.md`](evidence-graph-structure-shortcuts.md) — place or paste a common cluster; field hints from transcription
 - [`graph-canvas-second-host.md`](graph-canvas-second-host.md) — what a family-tree canvas host still needs from GraphCanvas
 - [`artifact-outside-graph-marker.md`](artifact-outside-graph-marker.md) — name, in a graph delete's confirm, the Artifacts it leaves in no Evidence graph; the card marker went to Spike 12 (S12-38)
@@ -49,14 +49,14 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Properties, vocabulary, Sources
 
-- [`properties-and-terms.md`](properties-and-terms.md) — binding order, event-type-scoped properties, Occupation seed, term management (direction / inverses)
+- [`properties-and-terms.md`](properties-and-terms.md) — binding order, event-type-scoped properties, Occupation seed, term management (direction / inverses), failed bind after create
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar; access unproven
 - [`share-packages.md`](share-packages.md) — also holds the crafted-project hardening parked when Spike 12 closed
 
 ### Kit and structural debt
 
-- [`shared-list-helpers.md`](shared-list-helpers.md) — empty search state, catalog querier, popup dismissal / list, history menu rows, type-select on disabled menus, Source section counts
+- [`shared-list-helpers.md`](shared-list-helpers.md) — empty search state, catalog querier, popup dismissal / list, history menu rows, type-select on disabled menus, Source section counts, silent sidebar recount
 - [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change; leftover test artifact and Subject fixtures
 
 Closed spikes (decisions, not PR order): [`docs/deployment-plan/archive/`](../deployment-plan/archive/).
