@@ -1,7 +1,7 @@
 # Review — S13-99 Dogfood close and docs
 
-**Verdict:** pending round 2
-**Rounds:** 1 so far. **Reviewers:** maintainability (inherit), executability (sonnet)
+**Verdict:** Fits / Ready
+**Rounds:** 2. **Reviewers:** maintainability (inherit), executability (sonnet)
 
 ## To user
 
@@ -82,3 +82,12 @@
 
 ### X-14 · minor · No commit is named when there is no ship log
 **Answer:** Fixed — the other two files go in commit 2 all the same.
+
+### M-8 · blocker · Three open record-link questions would live only in the archived doc
+**Answer:** Fixed — STEP-4 widens conclusion §13 item 4 to all five questions (AC-2.6, T-7). The Leftovers row now points at §13 item 4 alone.
+
+### M-9 · blocker · D-5 is a retarget rule `archive-docs` does not teach
+**Answer:** Fixed — STEP-5 writes D-5's two forms into `archive-docs` § Retarget and its checklist line (§6 **Skill text**, AC-2.7, T-8).
+
+### Nit (logged) · Conclusion doc lines 333 – 334 say "Reconciliations"
+Not changed: the user chose line 332 only (2026-11-08).
