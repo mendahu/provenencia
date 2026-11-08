@@ -36,13 +36,24 @@ const (
 	sqlAllHandles = `SELECT id FROM canonical_entities ORDER BY id`
 )
 
+// newGraph builds the graph one ReprojectHandles call composes its rows on.
+// Tests count its calls.
+var newGraph = graphcache.Over
+
 // ReprojectHandles rewrites the search documents of the given handles from
-// the auto-reconciler cache. Merged handles, unknown ids, and handles of
-// kinds without a document are removed.
+// the auto-reconciler cache, and the inputs of their summaries beside them.
+// Merged handles, unknown ids, and handles of kinds without a document are
+// removed. One graph serves every batch, so a place many events share loads
+// once. A reprojection writes documents and inputs, not the value rows the
+// graph caches, so the graph stays right for the whole call.
 func ReprojectHandles(q Querier, entityIDs [][]byte) error {
 	ids := database.UniqueBlobIDs(entityIDs)
+	if len(ids) == 0 {
+		return nil
+	}
+	g := newGraph(q)
 	return sqlbatch.Each(ids, func(batch [][]byte) error {
-		return reprojectHandleBatch(q, batch)
+		return reprojectHandleBatch(q, g, batch)
 	})
 }
 
@@ -63,7 +74,7 @@ type handleHead struct {
 // handleText values for one handle: Property key → values in rank order.
 type handleValues map[string][]string
 
-func reprojectHandleBatch(q Querier, ids [][]byte) error {
+func reprojectHandleBatch(q Querier, g *graphcache.Graph, ids [][]byte) error {
 	in := database.SQLInPlaceholders(len(ids)) + `)`
 	args := database.BlobArgs(ids)
 
@@ -98,7 +109,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 	if err != nil {
 		return err
 	}
-	summaries, err := loadHandleSummaries(q, heads)
+	summaries, err := loadHandleSummaries(g, heads)
 	if err != nil {
 		return err
 	}
@@ -127,7 +138,7 @@ func reprojectHandleBatch(q Querier, ids [][]byte) error {
 			return err
 		}
 	}
-	return nil
+	return writeInputs(q, g, ids, heads, summaries)
 }
 
 func loadHandleValues(q Querier, in string, args []any) (map[string]handleValues, error) {
@@ -185,7 +196,7 @@ func loadHandleValues(q Querier, in string, args []any) (map[string]handleValues
 	return out, rows.Err()
 }
 
-func loadHandleSummaries(q Querier, heads map[string]handleHead) (conclusionsummaries.Summaries, error) {
+func loadHandleSummaries(g *graphcache.Graph, heads map[string]handleHead) (conclusionsummaries.Summaries, error) {
 	var w conclusionsummaries.Want
 	for key, h := range heads {
 		if h.merged {
@@ -193,7 +204,7 @@ func loadHandleSummaries(q Querier, heads map[string]handleHead) (conclusionsumm
 		}
 		w.Add(h.kind, []byte(key))
 	}
-	return conclusionsummaries.RowsForSearch(graphcache.Over(q), w)
+	return conclusionsummaries.RowsForSearch(g, w)
 }
 
 // handleDocument is match text from the summary the lists use. Other cached

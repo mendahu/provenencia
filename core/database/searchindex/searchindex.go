@@ -37,7 +37,8 @@ const (
 //	9: Evidence graphs, with their Source in the parent columns (S12-15).
 //	10: a folded column for spellings FTS indexes differently, and a Person's
 //	    nicknames that fold into its shown name (S14-21).
-const ProjectionVersion = 10
+//	11: summary inputs beside the handle documents (S14-40).
+const ProjectionVersion = 11
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -241,7 +242,7 @@ func foldedWords(texts ...string) string {
 	return strings.Join(out, " ")
 }
 
-// ClearAll wipes the projection (FTS + docs). Meta version is left unchanged.
+// ClearAll wipes the projection (FTS + docs + summary inputs). Meta version is left unchanged.
 func ClearAll(q Querier) error {
 	if _, err := q.Exec(`INSERT INTO catalog_search_fts(catalog_search_fts) VALUES('delete-all')`); err != nil {
 		return err
@@ -249,7 +250,10 @@ func ClearAll(q Querier) error {
 	if _, err := q.Exec(`INSERT INTO catalog_search_fts_trigram(catalog_search_fts_trigram) VALUES('delete-all')`); err != nil {
 		return err
 	}
-	_, err := q.Exec(`DELETE FROM catalog_search_docs`)
+	if _, err := q.Exec(`DELETE FROM catalog_search_docs`); err != nil {
+		return err
+	}
+	_, err := q.Exec(`DELETE FROM catalog_search_inputs`)
 	return err
 }
 
