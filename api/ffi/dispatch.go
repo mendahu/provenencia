@@ -104,6 +104,7 @@ const (
 	MethodListPersonClaims                  = int32(engine.Method_METHOD_LIST_PERSON_CLAIMS)
 	MethodGetPersonFamily                   = int32(engine.Method_METHOD_GET_PERSON_FAMILY)
 	MethodListPersonEvents                  = int32(engine.Method_METHOD_LIST_PERSON_EVENTS)
+	MethodGetPersonRecordLinks              = int32(engine.Method_METHOD_GET_PERSON_RECORD_LINKS)
 	MethodGetUnpromoteImpact                = int32(engine.Method_METHOD_GET_UNPROMOTE_IMPACT)
 	MethodListEventSummaries                = int32(engine.Method_METHOD_LIST_EVENT_SUMMARIES)
 	MethodListPlaceSummaries                = int32(engine.Method_METHOD_LIST_PLACE_SUMMARIES)
@@ -319,6 +320,8 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.GetPersonFamily(in)
 	case MethodListPersonEvents:
 		return handlers.ListPersonEvents(in)
+	case MethodGetPersonRecordLinks:
+		return handlers.GetPersonRecordLinks(in)
 	case MethodListEventSummaries:
 		return handlers.ListEventSummaries(in)
 	case MethodListPlaceSummaries:

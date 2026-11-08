@@ -1,6 +1,7 @@
 package recordlinks_test
 
 import (
+	"bytes"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -205,6 +206,80 @@ func TestLinesInvariants(t *testing.T) {
 		for _, l := range recordlinks.Lines(p, ga, ga, metas, cfg) {
 			if l.Facts < 1 {
 				t.Fatalf("round %d: Lines(a, a) gives entity %x %d facts", round, l.Entity, l.Facts)
+			}
+		}
+	}
+}
+
+// TestPairsInvariants holds Pairs to the one-pair count: each pair of a read
+// equals the lines over the same two graphs, and a pair is present exactly when
+// those lines are not empty.
+func TestPairsInvariants(t *testing.T) {
+	r := rand.New(rand.NewSource(2))
+	base := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	people := [][]byte{ent(1), ent(2), ent(3), ent(4), ent(5), ent(6)}
+	events := [][]byte{ent(20), ent(21), ent(22)}
+	p := people[0]
+	prefixes := []byte{0xA0, 0xB0, 0xC0, 0xD0}
+
+	for round := range 300 {
+		var graphs []recordlinks.Graph
+		for i, prefix := range prefixes {
+			ms, es := materialize(genGraph(r, p, people, events), prefix, 0x10*byte(i+1))
+			graphs = append(graphs, build(ms, es...))
+		}
+		// Each round sets the read's cap anywhere from nothing to just over
+		// its work, and one round in three the pair's cap below forty, so the
+		// caps are held over generated input.
+		cfg := base
+		if r.Intn(3) == 0 {
+			cfg.RecordLinks.MaxPairWork = r.Intn(40)
+		}
+		work := recordlinks.ReadWork(p, graphs, cfg)
+		cfg.RecordLinks.MaxReadWork = r.Intn(work + 3)
+
+		got := recordlinks.Pairs(p, graphs, metas, cfg)
+		if back, want := recordlinks.Pairs(p, reversed(graphs), metas, cfg), mirror(got, len(graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
+			t.Fatalf("round %d: the reversed read = %+v, want the mirrored read %+v", round, back, want)
+		}
+		byPair := map[[2]int][]recordlinks.Line{}
+		for _, pair := range got {
+			if pair.A >= pair.B {
+				t.Fatalf("round %d: pair %d-%d is not ascending", round, pair.A, pair.B)
+			}
+			byPair[[2]int{pair.A, pair.B}] = pair.Lines
+		}
+		var lines int
+		for a := range graphs {
+			for b := a + 1; b < len(graphs); b++ {
+				lines += len(recordlinks.Lines(p, graphs[a], graphs[b], metas, cfg))
+			}
+		}
+		if lines > cfg.RecordLinks.MaxReadWork {
+			if got != nil {
+				t.Fatalf("round %d: %d lines pass the cap %d but Pairs = %+v", round, lines, cfg.RecordLinks.MaxReadWork, got)
+			}
+			continue
+		}
+		for a := range graphs {
+			for b := a + 1; b < len(graphs); b++ {
+				want := recordlinks.Lines(p, graphs[a], graphs[b], metas, cfg)
+				have, present := byPair[[2]int{a, b}]
+				if present != (len(want) != 0) {
+					t.Fatalf("round %d pair %d-%d: Pairs = %s (present %v), Lines = %s", round, a, b, show(have), present, show(want))
+				}
+				if work <= cfg.RecordLinks.MaxReadWork {
+					if present && !reflect.DeepEqual(have, want) {
+						t.Fatalf("round %d pair %d-%d: Pairs = %s, Lines = %s", round, a, b, show(have), show(want))
+					}
+					continue
+				}
+				for i, l := range have {
+					if !bytes.Equal(l.Entity, want[i].Entity) || l.Facts != 0 || l.Strength != recordlinks.StrengthWeak {
+						t.Fatalf("round %d pair %d-%d: past the read's cap line %d = %+v; want %x at 0 facts, weak", round, a, b, i, l, want[i].Entity)
+					}
+				}
 			}
 		}
 	}

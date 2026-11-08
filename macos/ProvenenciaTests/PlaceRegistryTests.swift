@@ -290,6 +290,17 @@ struct PlaceRegistryTests {
         ])
     }
 
+    @Test func personDetailOnSourcesWarmsTheRecordLinks() {
+        let sources = resolve(WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna").withPageSection(.sources))
+        #expect(sources?.placeID == .personDetail)
+        #expect(sources?.queryKeys == [
+            .conclusionDetail(project: project, entityId: "per-1"),
+            .personClaims(project: project, entityId: "per-1"),
+            .personRecordLinks(project: project, entityId: "per-1"),
+            .sourceTypesList(project: project),
+        ])
+    }
+
     @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)

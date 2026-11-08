@@ -9,6 +9,9 @@ struct PVHoverEffect<Content: View>: View {
     /// Defaults to snappy timing; `PVButtonBody` passes `PVMotion.fastStandard`
     /// to keep its existing feel.
     var hoverAnimation: Animation = PVMotion.instantStandard
+    /// Told when the pointer enters or leaves, so a caller that also reports hover needs no
+    /// second tracker.
+    var onHoverChange: ((Bool) -> Void)? = nil
     @ViewBuilder var content: (_ showHover: Bool) -> Content
 
     @State private var isHovering = false
@@ -22,6 +25,9 @@ struct PVHoverEffect<Content: View>: View {
             .scaleEffect(isPressed && !reduceMotion ? PVMotion.pressScale : 1)
             .pvAnimation(hoverAnimation, value: isHovering)
             .pvAnimation(PVMotion.instantStandard, value: isPressed)
-            .onHover { isHovering = $0 }
+            .onHover {
+                isHovering = $0
+                onHoverChange?($0)
+            }
     }
 }

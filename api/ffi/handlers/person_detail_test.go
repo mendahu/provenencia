@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 
@@ -9,10 +10,19 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/promote/promotetest"
+	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/onboarding"
+	"github.com/mendahu/provenencia/core/recordlinks"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
@@ -408,5 +418,112 @@ func TestListPersonEvents(t *testing.T) {
 		if !errors.As(err, &ae) || ae.Code() != apperr.CodeConclusionDetailsNotFound {
 			t.Fatalf("id %q: err = %v, want %s", id, err, apperr.CodeConclusionDetailsNotFound)
 		}
+	}
+}
+
+// TestRecordLinkStrengthProto: every strength the engine can give a line has a
+// wire value, so a new one cannot reach the app as unspecified.
+func TestRecordLinkStrengthProto(t *testing.T) {
+	for _, s := range []recordlinks.Strength{recordlinks.StrengthWeak, recordlinks.StrengthStrong} {
+		if recordLinkStrengthProto(s) == engine.RecordLinkStrength_RECORD_LINK_STRENGTH_UNSPECIFIED {
+			t.Errorf("strength %q maps to unspecified", s)
+		}
+	}
+}
+
+// TestGetPersonRecordLinks covers AC-1.1 and AC-1.6 through the wire: four
+// registers of one son, the father named in the first two and the mother in
+// the first and third, read as four graphs and two pairs.
+func TestGetPersonRecordLinks(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	created, err := onboarding.Complete(t.TempDir(), t.TempDir(), "Jake", "Robins")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := created.ProjectDir
+	type record struct {
+		title string
+		src   sources.Source
+		graph evidencegraphs.Graph
+	}
+	var records []record
+	var son, father, mother, birth []byte
+	err = catalogsession.Do(dir, func(c *database.Catalog) error {
+		r := evidencelayertest.Open(t, c)
+		save := func(s subjects.Subject, onto []byte) []byte {
+			return promotetest.Save(t, c, evidencelayertest.UserID, promote.Input{SubjectID: s.ID, EntityID: onto}).Entity.ID
+		}
+		file := func(title string, fatherName, motherName string, withBirth bool) (sonS, fatherS, motherS, birthS subjects.Subject) {
+			src, art := r.NewSource(title)
+			sonS = r.Person(src, art, "Thomas Smith")
+			if fatherName != "" {
+				fatherS = r.Person(src, art, fatherName)
+			}
+			if withBirth {
+				birthS = r.Birth(src, art)
+				r.Participation(src, art, fatherS, birthS, "subject")
+			}
+			if motherName != "" {
+				motherS = r.Person(src, art, motherName)
+			}
+			records = append(records, record{title, src, evidencegraphstest.SoleGraph(t, c, src.ID)})
+			return
+		}
+		aSon, aFather, aMother, aBirth := file("A register", "William Smith", "Mary Ann Jones", true)
+		bSon, bFather, _, bBirth := file("B register", "William Smith", "", true)
+		cSon, _, cMother, _ := file("C register", "", "Mary Jones", false)
+		dSon, _, _, _ := file("D register", "", "", false)
+		son = save(aSon, nil)
+		for _, s := range []subjects.Subject{bSon, cSon, dSon} {
+			save(s, son)
+		}
+		father = save(aFather, nil)
+		save(bFather, father)
+		birth = save(aBirth, nil)
+		save(bBirth, birth)
+		mother = save(aMother, nil)
+		save(cMother, mother)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var got engine.GetPersonRecordLinksResponse
+	mustRPC(t, GetPersonRecordLinks, &engine.GetPersonRecordLinksRequest{ProjectDir: dir, EntityId: database.UUIDString(son)}, &got)
+	if len(got.Graphs) != 4 {
+		t.Fatalf("%d graphs, want 4: %+v", len(got.Graphs), got.Graphs)
+	}
+	for i, g := range got.Graphs {
+		r := records[i]
+		if g.GetGraphId() != database.UUIDString(r.graph.ID) || g.GetGraphRef() != r.graph.Ref || g.GetGraphName() != r.graph.Name ||
+			g.GetSourceId() != database.UUIDString(r.src.ID) || g.GetSourceTitle() != r.title ||
+			g.GetSourceTypeId() != database.UUIDString(r.src.SourceTypeID) {
+			t.Errorf("graph %d = %+v, want the %s", i, g, r.title)
+		}
+	}
+	a, b, c := got.Graphs[0].GetGraphId(), got.Graphs[1].GetGraphId(), got.Graphs[2].GetGraphId()
+	type line struct {
+		entity   string
+		strength engine.RecordLinkStrength
+	}
+	gotPairs := map[[2]string][]line{}
+	for _, p := range got.Pairs {
+		for _, l := range p.Lines {
+			k := [2]string{p.GetGraphAId(), p.GetGraphBId()}
+			gotPairs[k] = append(gotPairs[k], line{l.GetEntityId(), l.GetStrength()})
+		}
+	}
+	want := map[[2]string][]line{
+		{a, b}: {{database.UUIDString(father), engine.RecordLinkStrength_RECORD_LINK_STRENGTH_STRONG}},
+		{a, c}: {{database.UUIDString(mother), engine.RecordLinkStrength_RECORD_LINK_STRENGTH_WEAK}},
+	}
+	if len(got.Pairs) != 2 || !reflect.DeepEqual(gotPairs, want) {
+		t.Fatalf("pairs %+v, want %+v", got.Pairs, want)
+	}
+
+	err = rpc(t, GetPersonRecordLinks, &engine.GetPersonRecordLinksRequest{ProjectDir: dir, EntityId: database.UUIDString(birth)}, &engine.GetPersonRecordLinksResponse{})
+	if !errors.Is(err, conclusiondetails.ErrNotFound) {
+		t.Fatalf("an Event id: error %v, want conclusiondetails.not_found", err)
 	}
 }

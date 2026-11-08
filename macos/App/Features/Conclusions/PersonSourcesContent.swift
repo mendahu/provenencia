@@ -55,6 +55,13 @@ struct PersonSourcesContent: Equatable {
 
     /// The rows shown: every Source, or the first `rowFoldLimit` until unfolded.
     let rows: [Row]
+    /// The location of each graph's first line, folded or not, by graph id: where a node of the
+    /// record links diagram opens.
+    let graphLocations: [String: WorkspaceLocation]
+    /// The graph of each claim, by claim id, folded or not.
+    let claimGraphs: [String: String]
+    /// The ref of the Source each graph is on, by graph id.
+    let graphSourceRefs: [String: String]
     /// The Sources the row fold leaves out.
     let hiddenRowCount: Int
     /// The first line of the first Source an unfold adds, whether or not the rows are unfolded; nil when the rows do not fold.
@@ -70,6 +77,9 @@ struct PersonSourcesContent: Equatable {
         expanded: Set<String>,
         rowsExpanded: Bool = false
     ) {
+        var graphLocations: [String: WorkspaceLocation] = [:]
+        var claimGraphs: [String: String] = [:]
+        var graphSourceRefs: [String: String] = [:]
         let all = groups.map { group in
             let lines = group.claims.map { claim -> Line in
                 let name = claim.graphName.trimmedNonEmpty
@@ -82,6 +92,18 @@ struct PersonSourcesContent: Equatable {
                     eventTitle: nil,
                     orders: orders
                 )
+                let location = SourcesListNavigation.canvasLocation(
+                    sourceId: group.sourceID,
+                    sourceRef: group.sourceRef,
+                    sourceTitle: group.title,
+                    graphId: claim.graphID,
+                    subjectId: claim.subject.id
+                )
+                if graphLocations[claim.graphID] == nil {
+                    graphLocations[claim.graphID] = location
+                    graphSourceRefs[claim.graphID] = group.sourceRef
+                }
+                claimGraphs[claim.claimID] = claim.graphID
                 return Line(
                     id: claim.claimID,
                     subjectID: claim.subject.id,
@@ -96,13 +118,7 @@ struct PersonSourcesContent: Equatable {
                     unpromoteAccessibilityLabel: L10n.Conclusions.sourcesUnpromoteAccessibility(
                         graph: title, subject: subjectName, ref: claim.subject.ref
                     ),
-                    location: SourcesListNavigation.canvasLocation(
-                        sourceId: group.sourceID,
-                        sourceRef: group.sourceRef,
-                        sourceTitle: group.title,
-                        graphId: claim.graphID,
-                        subjectId: claim.subject.id
-                    )
+                    location: location
                 )
             }
             let fold = ConclusionFold.shown(
@@ -137,6 +153,9 @@ struct PersonSourcesContent: Equatable {
         }
         let fold = ConclusionFold.shown(all, limit: Self.rowFoldLimit, minimumHidden: 1, expanded: rowsExpanded)
         rows = fold.shown
+        self.graphLocations = graphLocations
+        self.claimGraphs = claimGraphs
+        self.graphSourceRefs = graphSourceRefs
         hiddenRowCount = fold.hidden
         firstRevealedRowLineID = ConclusionFold.firstRevealed(all, limit: Self.rowFoldLimit, minimumHidden: 1)?.lines.first?.id
     }

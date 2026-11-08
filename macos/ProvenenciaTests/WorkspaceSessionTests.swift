@@ -1133,6 +1133,23 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
     }
 
+    /// A `.personRecordLinks` key whose first load is in flight follows every
+    /// graph; once it holds a value it follows only the graphs it holds.
+    @Test func personRecordLinksFollowEveryGraphUntilLoaded() {
+        let session = makeSession()
+        let project = session.projectKey
+        let key = CatalogQueryKey.personRecordLinks(project: project, entityId: "e1")
+        let _: QueryHandle<CatalogPersonRecordLinks> = session.query(key)
+        #expect((session.queryHandle(key) as QueryHandle<CatalogPersonRecordLinks>?)?.value == nil)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])) == [key])
+
+        session.setQueryValue(key, value: CatalogPersonRecordLinks(graphs: [
+            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: "", sourceTypeID: ""),
+        ]))
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
+    }
+
     /// T-12 (AC-2.7): the Evidence graph and list keys declare the slots they
     /// follow, so a write reloads the graphs it names and every list it touches.
     @Test func effectSlotsRevalidateTheirKeys() {

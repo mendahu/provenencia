@@ -6,12 +6,26 @@ import SwiftUI
 /// around the section's `content`. Only the content differs between sections.
 ///
 /// The id root is `persons.detail.<section>`: `.error`, `.empty`, and the root
-/// itself on the content.
+/// itself on the content. A second host over a section's companion read
+/// (`ConclusionPageSection.companionQueryKey`) draws in its own region: it passes
+/// `queryKey` and `placement: .column(loadingHeight:)`, and its id root gains `.column`.
 struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
+    /// Where the host draws its states.
+    enum Placement {
+        /// The section's own region: states keep the page band, an empty read has an EmptyState.
+        case band
+        /// A column beside the section's rows: the spinner centred in `loadingHeight` (the
+        /// height the column draws at, so it does not jump), a compact danger Callout, and no
+        /// empty state.
+        case column(loadingHeight: CGFloat)
+    }
+
     let section: ConclusionPageSection
     let entityId: String
+    let queryKey: CatalogQueryKey?
+    let placement: Placement
     let errorTitle: LocalizedStringResource
-    let emptyTitle: LocalizedStringResource
+    let emptyTitle: LocalizedStringResource?
     let emptyMessage: String
     let make: (Value) -> Content
     let isEmpty: (Content) -> Bool
@@ -22,15 +36,19 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     init(
         section: ConclusionPageSection,
         entityId: String,
+        queryKey: CatalogQueryKey? = nil,
+        placement: Placement = .band,
         errorTitle: LocalizedStringResource,
-        emptyTitle: LocalizedStringResource,
-        emptyMessage: String,
+        emptyTitle: LocalizedStringResource? = nil,
+        emptyMessage: String = "",
         make: @escaping (Value) -> Content,
-        isEmpty: @escaping (Content) -> Bool,
+        isEmpty: @escaping (Content) -> Bool = { _ in false },
         @ViewBuilder body: @escaping (Content) -> Body
     ) {
         self.section = section
         self.entityId = entityId
+        self.queryKey = queryKey
+        self.placement = placement
         self.errorTitle = errorTitle
         self.emptyTitle = emptyTitle
         self.emptyMessage = emptyMessage
@@ -40,13 +58,20 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     }
 
     private var key: CatalogQueryKey {
-        guard let key = section.queryKey(project: session.projectKey, entityId: entityId) else {
+        guard let key = queryKey ?? section.queryKey(project: session.projectKey, entityId: entityId) else {
             preconditionFailure("\(section.rawValue) reads no query of its own")
         }
         return key
     }
 
-    private var idRoot: String { "persons.detail.\(section.rawValue)" }
+    private var columnLoadingHeight: CGFloat? {
+        if case .column(let height) = placement { return height }
+        return nil
+    }
+
+    private var idRoot: String {
+        "persons.detail.\(section.rawValue)" + (columnLoadingHeight == nil ? "" : ".column")
+    }
 
     var body: some View {
         Group {
@@ -61,17 +86,32 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         }
     }
 
+    @ViewBuilder
     private var loading: some View {
-        ProgressView()
-            .frame(maxWidth: .infinity)
-            .pvKeepsPageBand()
-            .padding(.top, 96)
+        switch placement {
+        case .band:
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .pvKeepsPageBand()
+                .padding(.top, 96)
+        case .column(let height):
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+        }
     }
 
+    @ViewBuilder
     private func error(_ message: String) -> some View {
-        PVCallout(tone: .danger, title: errorTitle, message: message)
-            .pvKeepsPageBand()
-            .accessibilityIdentifier("\(idRoot).error")
+        switch placement {
+        case .band:
+            PVCallout(tone: .danger, title: errorTitle, message: message)
+                .pvKeepsPageBand()
+                .accessibilityIdentifier("\(idRoot).error")
+        case .column:
+            PVCallout(tone: .danger, title: errorTitle, message: message, compact: true)
+                .accessibilityIdentifier("\(idRoot).error")
+        }
     }
 
     @ViewBuilder
@@ -91,7 +131,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         case .failed(let message):
             error(message)
         case .content(let value, _):
-            if isEmpty(value) {
+            if case .band = placement, let emptyTitle, isEmpty(value) {
                 PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
                     .pvKeepsPageBand()
                     .accessibilityIdentifier("\(idRoot).empty")

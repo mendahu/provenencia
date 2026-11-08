@@ -9493,6 +9493,62 @@ enum L10n {
             comment: "Title of the empty Timeline section of a Person page"
         )
 
+        static let recordLinksTitle = LocalizedStringResource(
+            "conclusions.recordLinks.title",
+            defaultValue: "How the records connect",
+            comment: "Title of the diagram beside a Person's Sources rows"
+        )
+
+        static let recordLinksCaption = LocalizedStringResource(
+            "conclusions.recordLinks.caption",
+            defaultValue: "An arc per shared person · thick when 2+ facts agree",
+            comment: "Caption under the record links diagram's title"
+        )
+
+        static let recordLinksErrorTitle = LocalizedStringResource(
+            "conclusions.recordLinks.errorTitle",
+            defaultValue: "The connections could not be read",
+            comment: "Title of the Callout shown when a Person's record links could not be read"
+        )
+
+        static let recordLinksOneRecord = LocalizedStringResource(
+            "conclusions.recordLinks.oneRecord",
+            defaultValue: "One record — nothing to connect yet",
+            comment: "Line under the record links diagram of a person with one record"
+        )
+
+        static func recordLinksNodeHelp(graph: String, source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.recordLinks.nodeHelp",
+                defaultValue: "%1$@ — %2$@",
+                comment: "Help tag of a record in the record links diagram; arguments are the graph's name (else ref) and the Source's title (else ref)"
+            ), graph, source)
+        }
+
+        static func recordLinksGroupAccessibility(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.recordLinks.groupAccessibility",
+                defaultValue: "How the records connect, %#@records@",
+                comment: "Spoken label of the record links diagram; argument is the number of records"
+            ), count)
+        }
+
+        static func recordLinksNodeAccessibility(ref: String, graph: String, source: String, connected: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.recordLinks.nodeAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@, connected to %#@records@",
+                comment: "Spoken label of a record in the record links diagram that shares a person with others; arguments are the node's label, the graph's name, the Source's title and the number of records it connects to"
+            ), ref, graph, source, connected)
+        }
+
+        static func recordLinksNodeApartAccessibility(ref: String, graph: String, source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.recordLinks.nodeApartAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@, shares no one",
+                comment: "Spoken label of a record in the record links diagram that shares no person with another; arguments are the node's label, the graph's name and the Source's title"
+            ), ref, graph, source)
+        }
+
         static let sourcesColumnSource = LocalizedStringResource(
             "conclusions.sources.columnSource",
             defaultValue: "Source",

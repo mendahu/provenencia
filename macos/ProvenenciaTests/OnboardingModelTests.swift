@@ -617,6 +617,9 @@ private struct ThrowingStore: GenealogyStore {
     func listPersonEvents(projectDir _: String, entityID _: String) async throws -> CatalogPersonTimeline {
         throw StoreBoom.boom
     }
+    func getPersonRecordLinks(projectDir _: String, entityID _: String) async throws -> CatalogPersonRecordLinks {
+        throw StoreBoom.boom
+    }
     func deleteSubject(projectDir _: String, userID _: String, subjectID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }

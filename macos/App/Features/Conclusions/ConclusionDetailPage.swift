@@ -492,7 +492,11 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     /// The open section is reloading behind a value it already shows. Its first load
     /// is the section's own spinner and does not count.
     private var sectionRefreshing: Bool {
-        pageSection?.queryKey(project: session.projectKey, entityId: entityId).map(session.isRefreshing) ?? false
+        guard let pageSection else { return false }
+        return [
+            pageSection.queryKey(project: session.projectKey, entityId: entityId),
+            pageSection.companionQueryKey(project: session.projectKey, entityId: entityId),
+        ].contains { $0.map(session.isRefreshing) ?? false }
     }
 
     var body: some View {

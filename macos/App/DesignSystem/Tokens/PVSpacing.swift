@@ -41,6 +41,9 @@ enum PVSpacing {
     /// The widest a page's secondary column grows beside a 1180pt primary
     /// (`PVPageColumns`); the column sits between `widthInspector` and this.
     static let widthSecondaryMax: CGFloat = 480
+    /// The widest a side column grows inside a full-width section, beside its rows
+    /// (`ConclusionPinnedSideColumn`); not the page's secondary column.
+    static let widthSideColumnMax: CGFloat = 720
     /// Pane width at and above which a page is Wide. Compared with the width of
     /// the workspace pane (`PVWidthClass`), not the window or the screen: a
     /// collapsed sidebar changes the space a page has.

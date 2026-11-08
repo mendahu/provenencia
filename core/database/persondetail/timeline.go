@@ -5,7 +5,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
-	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -89,8 +88,7 @@ func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) 
 // that is no Person, is conclusiondetails.ErrNotFound.
 func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsummaries.Summaries, error) {
 	none := conclusionsummaries.Summaries{}
-	n, err := conclusiondetails.Handle(c, entityID)
-	if err != nil {
+	if _, err := personNode(c, entityID); err != nil {
 		return Timeline{}, none, err
 	}
 	g := c.Graph()
@@ -100,9 +98,6 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	}
 	types := v.TypeIDsByKey()
 	personType, eventType := types[vocabkey.Person], types[vocabkey.Event]
-	if !n.Is(personType) {
-		return Timeline{}, none, conclusiondetails.ErrNotFound
-	}
 	label, err := conclusionsummaries.TermLabeler(c)
 	if err != nil {
 		return Timeline{}, none, err

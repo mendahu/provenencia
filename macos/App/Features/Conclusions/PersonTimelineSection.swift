@@ -468,21 +468,17 @@ private struct PersonTimelineTethers: View {
     let spans: [String: ClosedRange<CGFloat>]
     let height: CGFloat
 
-    @Environment(\.pvPageViewportSize) private var viewportSize
-    /// The section's frame in the page's scroll space: where the viewport sits over it.
-    @State private var sectionFrame: CGRect = .zero
-
     var body: some View {
-        let visible = CGRect(
-            x: -sectionFrame.minX, y: -sectionFrame.minY, width: viewportSize.width, height: viewportSize.height
-        )
+        PVPageVisibleRect { visible, _ in
+            tethersBody(visible: visible)
+        }
+    }
+
+    private func tethersBody(visible: CGRect) -> some View {
         let tethers = lifeline.tethers(anchors: anchors, spans: spans, visible: visible)
-        Color.clear
+        return Color.clear
             .frame(width: PersonTimelineLifeline.columnWidth)
             .frame(height: height)
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)) } action: {
-                sectionFrame = $0
-            }
             .overlay(alignment: .topLeading) {
                 Canvas { context, _ in
                     context.translateBy(x: 0, y: PersonTimelineDrawing.pad)

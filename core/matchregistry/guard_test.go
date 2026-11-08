@@ -60,6 +60,7 @@ var readerPackages = []struct {
 }{
 	{"core/database/evidencelayer", []string{"core/graphalign", "core/database/promotealign"}},
 	{"core/recordlinks", []string{"core/graphalign"}},
+	{"core/database/persondetail", []string{"core/graphalign", "core/database/promotealign"}},
 }
 
 func TestReaderPackages(t *testing.T) {

@@ -1,6 +1,146 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "conclusions.recordLinks.title": {
+      "comment": "Title of the diagram beside a Person's Sources rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How the records connect"
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.caption": {
+      "comment": "Caption under the record links diagram's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An arc per shared person · thick when 2+ facts agree"
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.errorTitle": {
+      "comment": "Title of the Callout shown when a Person's record links could not be read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connections could not be read"
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.oneRecord": {
+      "comment": "Line under the record links diagram of a person with one record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One record — nothing to connect yet"
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.nodeHelp": {
+      "comment": "Help tag of a record in the record links diagram; arguments are the graph's name (else ref) and the Source's title (else ref)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.groupAccessibility": {
+      "comment": "Spoken label of the record links diagram; argument is the number of records",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How the records connect, %#@records@"
+          },
+          "substitutions": {
+            "records": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg record"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.nodeAccessibility": {
+      "comment": "Spoken label of a record in the record links diagram that shares a person with others; arguments are the node's label, the graph's name, the Source's title and the number of records it connects to",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@, connected to %#@records@"
+          },
+          "substitutions": {
+            "records": {
+              "argNum": 4,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg record"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg records"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.nodeApartAccessibility": {
+      "comment": "Spoken label of a record in the record links diagram that shares no person with another; arguments are the node's label, the graph's name and the Source's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@, shares no one"
+          }
+        }
+      }
+    },
     "conclusions.sources.columnDate": {
       "comment": "Column heading over the publication date of each Source on a Person's Sources section",
       "extractionState": "manual",

@@ -127,6 +127,7 @@ enum Method {
   METHOD_GET_PERSON_FAMILY = 113;
   METHOD_LIST_PERSON_EVENTS = 114;
   METHOD_GET_UNPROMOTE_IMPACT = 115;
+  METHOD_GET_PERSON_RECORD_LINKS = 116;
 }
 
 message PingRequest {
@@ -1616,6 +1617,58 @@ message PersonEvent {
   repeated EventParticipant participants = 3;
   TimelineSpan span = 5;
   AgeRange age = 6;
+}
+
+// GetPersonRecordLinksRequest names one Person. An unknown or merged handle, or
+// one that is no Person, is conclusiondetails.not_found.
+message GetPersonRecordLinksRequest {
+  string project_dir = 1;
+  string entity_id = 2;
+}
+
+// GetPersonRecordLinksResponse is how a person's records connect: the Evidence
+// graphs that hold an accepted member of the person, in the order the Sources
+// section lists them (Source title, then graph name, each with its ref as the
+// tie-break), and for each pair of graphs that share another person, a line for
+// each such person. Pairs are ordered by graph order, graph_a_id first, and
+// hold only pairs with a line. The facts a line counted are not sent. Computed
+// on each read, never stored.
+message GetPersonRecordLinksResponse {
+  repeated RecordLinksGraph graphs = 1;
+  repeated RecordLinksPair pairs = 2;
+}
+
+// RecordLinksGraph is one Evidence graph of the person and its Source. Ids are
+// UUID strings; graph_ref is empty for a graph with no ref.
+message RecordLinksGraph {
+  string graph_id = 1;
+  string graph_ref = 2;
+  string graph_name = 3;
+  string source_id = 4;
+  string source_title = 5;
+  string source_type_id = 6;
+}
+
+// RecordLinksPair is the lines between two graphs of the response, by graph id.
+// Lines are ordered by entity id bytes.
+message RecordLinksPair {
+  string graph_a_id = 1;
+  string graph_b_id = 2;
+  repeated RecordLink lines = 3;
+}
+
+// RecordLink is one other person both graphs name, by canonical entity id (a
+// UUID string), and how heavily the two records agree about them.
+message RecordLink {
+  string entity_id = 1;
+  RecordLinkStrength strength = 2;
+}
+
+// RecordLinkStrength is how heavily a record link weighs.
+enum RecordLinkStrength {
+  RECORD_LINK_STRENGTH_UNSPECIFIED = 0;
+  RECORD_LINK_STRENGTH_WEAK = 1;
+  RECORD_LINK_STRENGTH_STRONG = 2;
 }
 
 // EventParticipant is one other canonical person on an event and their roles.

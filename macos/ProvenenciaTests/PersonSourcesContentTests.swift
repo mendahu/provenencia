@@ -186,4 +186,24 @@ struct PersonSourcesContentTests {
         let placed = try #require(snapshot.subjects.first)
         #expect(placed.displayName(orders: orders) == line[0].subjectName)
     }
+
+    @Test func graphLocationsClaimGraphsAndSourceRefsCoverFoldedLines() throws {
+        let folded = PersonSourcesPreviewData.folded
+        let all = content(folded)
+        #expect(all.rows[0].lines.count == 5)
+        #expect(all.graphLocations.count == 7)
+        #expect(all.claimGraphs.count == 7)
+        for claim in folded[0].claims {
+            #expect(all.claimGraphs[claim.claimID] == claim.graphID)
+            #expect(all.graphSourceRefs[claim.graphID] == "SRC-6P3VD")
+            let location = try #require(all.graphLocations[claim.graphID])
+            #expect(location == SourcesListNavigation.canvasLocation(
+                sourceId: "src-4", sourceRef: "SRC-6P3VD", sourceTitle: "Kirchenbuch St. Michaelis",
+                graphId: claim.graphID, subjectId: claim.subject.id
+            ))
+        }
+        let regular = content(PersonSourcesPreviewData.regular)
+        #expect(regular.graphLocations["g-214"] == regular.rows[0].lines[0].location)
+        #expect(Set(regular.graphLocations.keys) == ["g-214", "g-388", "g-a"])
+    }
 }

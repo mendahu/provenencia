@@ -1,7 +1,7 @@
 //go:build cgo
 
-// Package databasetest holds test helpers that watch a catalog's SQLite
-// connection.
+// Package databasetest holds catalog test helpers: watching a catalog's SQLite
+// connection and timing work against a budget.
 package databasetest
 
 import (

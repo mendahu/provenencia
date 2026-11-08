@@ -777,6 +777,47 @@ struct CatalogPersonTimeline: Sendable, Equatable {
     var death = CatalogLifeMarker()
 }
 
+/// How heavily a record link weighs. Facts are not sent.
+enum CatalogRecordLinkStrength: Sendable, Equatable {
+    case weak
+    case strong
+}
+
+/// One other person two records both name, by canonical entity id, and how
+/// heavily the records agree about them.
+struct CatalogRecordLink: Sendable, Equatable {
+    var entityID: String
+    var strength: CatalogRecordLinkStrength
+}
+
+/// One Evidence graph of a Person and its Source. `graphRef` is empty for a
+/// graph with no ref.
+struct CatalogRecordLinksGraph: Sendable, Equatable, Identifiable {
+    var graphID: String
+    var graphRef: String
+    var graphName: String
+    var sourceID: String
+    var sourceTitle: String
+    var sourceTypeID: String
+
+    var id: String { graphID }
+}
+
+/// The lines between two graphs of a read, by graph id.
+struct CatalogRecordLinksPair: Sendable, Equatable {
+    var graphAID: String
+    var graphBID: String
+    var lines: [CatalogRecordLink]
+}
+
+/// How a Person's records connect: their Evidence graphs in the Sources
+/// section's order, and for each pair of graphs that name another person in
+/// common, a line for each (S13-27).
+struct CatalogPersonRecordLinks: Sendable, Equatable {
+    var graphs: [CatalogRecordLinksGraph] = []
+    var pairs: [CatalogRecordLinksPair] = []
+}
+
 /// One other canonical person on an event and their role terms.
 struct CatalogEventParticipant: Sendable, Equatable {
     var person: CatalogPersonSummary
@@ -1542,6 +1583,10 @@ protocol GenealogyStore: Sendable {
     /// order (S13-05). Throws `conclusiondetails.not_found` for an unknown or
     /// merged handle, or one that is no Person.
     func listPersonEvents(projectDir: String, entityID: String) async throws -> CatalogPersonTimeline
+    /// A Person's Evidence graphs and the lines between them, computed on each
+    /// read (S13-27). Throws `conclusiondetails.not_found` for an unknown or
+    /// merged handle, or one that is no Person.
+    func getPersonRecordLinks(projectDir: String, entityID: String) async throws -> CatalogPersonRecordLinks
     func listSubjects(projectDir: String, graphID: String) async throws -> [CatalogSubject]
     func setSubjectPosition(
         projectDir: String,

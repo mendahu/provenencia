@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ClaimGroup is the accepted claims of one Person that come from one Source.
@@ -42,6 +43,29 @@ func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
 	if err != nil {
 		return nil, err
 	}
+	return claims(c, n)
+}
+
+// personNode is the handle's node when it is a Person, the one place that
+// decides whether an id is a Person page's. An unknown or merged handle, or one
+// that is no Person, is conclusiondetails.ErrNotFound.
+func personNode(c *database.Catalog, entityID []byte) (*graphcache.Node, error) {
+	n, err := conclusiondetails.Handle(c, entityID)
+	if err != nil {
+		return nil, err
+	}
+	v, err := c.Graph().Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	if !n.Is(v.TypeIDsByKey()[vocabkey.Person]) {
+		return nil, conclusiondetails.ErrNotFound
+	}
+	return n, nil
+}
+
+// claims is Claims for a handle already read.
+func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 	members, err := memberGraphs(c, n)
 	if err != nil {
 		return nil, err

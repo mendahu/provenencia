@@ -11,7 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -124,25 +123,6 @@ func newLargeFixture(t *testing.T) *largeFixture {
 	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, pageArt: pageArt, other: otherSrc, otherA: otherArt, city: cityID, citySubject: city}
 }
 
-// fastest is the least of n timed runs of run; each run's own setup stays
-// outside the time it returns.
-func fastest(n int, run func() time.Duration) time.Duration {
-	best := time.Duration(-1)
-	for i := 0; i < n; i++ {
-		if d := run(); best < 0 || d < best {
-			best = d
-		}
-	}
-	return best
-}
-
-// since times one call.
-func since(call func()) time.Duration {
-	start := time.Now()
-	call()
-	return time.Since(start)
-}
-
 // TestLargeSourceBudgets holds Promote to the times of S11-21 D-1 on a catalog
 // of 4,000 persons and 8,000 events (one city with 6,000), so a change that
 // makes it slow fails here instead of in a dogfood session. Subtests share one
@@ -152,18 +132,6 @@ func TestLargeSourceBudgets(t *testing.T) {
 	f := lf.fixture
 	aGraph := f.Graph(lf.a)
 	propose := func() graphalign.Proposal { return f.propose(aGraph, nil) }
-	over := func(t *testing.T, what string, got, budget time.Duration) {
-		t.Helper()
-		t.Logf("%s: %v (budget %v)", what, got, budget)
-		// Verify mode rebuilds the cache on every commit; budgets are measured without it.
-		if graphcache.VerifyMode() {
-			return
-		}
-		if got > budget {
-			t.Errorf("%s took %v, over the %v budget", what, got, budget)
-		}
-	}
-
 	t.Run("fixture", func(t *testing.T) {
 		p := propose()
 		var handles, strong int
@@ -184,21 +152,21 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// What the open spinner covers: the alias index, name format, shortlist
 	// kinds and name index.
 	t.Run("warm at open", func(t *testing.T) {
-		d := fastest(2, func() time.Duration {
+		d := databasetest.Fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
-			return since(func() { must(t, catalogsession.WarmOnOpen(f.c)) })
+			return databasetest.Since(func() { must(t, catalogsession.WarmOnOpen(f.c)) })
 		})
-		over(t, "warm at open", d, budgetWarmOnOpen)
+		databasetest.WithinBudget(t, "warm at open", d, budgetWarmOnOpen)
 	})
 
 	// The first proposal after an open.
 	t.Run("cold", func(t *testing.T) {
-		d := fastest(2, func() time.Duration {
+		d := databasetest.Fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
 			must(t, catalogsession.WarmOnOpen(f.c))
-			return since(func() { propose() })
+			return databasetest.Since(func() { propose() })
 		})
-		over(t, "cold proposal", d, budgetCold)
+		databasetest.WithinBudget(t, "cold proposal", d, budgetCold)
 	})
 
 	// A warm proposal rebuilds the canon each time, about 120 MB of short-lived
@@ -210,11 +178,11 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// docs/ideas/promote-ranking.md#narrower-canon-walk.
 	t.Run("warm", func(t *testing.T) {
 		propose()
-		d := fastest(5, func() time.Duration {
+		d := databasetest.Fastest(5, func() time.Duration {
 			runtime.GC()
-			return since(func() { propose() })
+			return databasetest.Since(func() { propose() })
 		})
-		over(t, "warm proposal", d, budgetWarm)
+		databasetest.WithinBudget(t, "warm proposal", d, budgetWarm)
 	})
 
 	t.Run("memo matches a fresh run", func(t *testing.T) {
@@ -228,12 +196,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	t.Run("after a handle commit", func(t *testing.T) {
 		n := 0
-		d := fastest(2, func() time.Duration {
+		d := databasetest.Fastest(2, func() time.Duration {
 			n++
 			f.promote(f.Person(lf.other, lf.otherA, "Added "+letters(n)+" Person"))
-			return since(func() { propose() })
+			return databasetest.Since(func() { propose() })
 		})
-		over(t, "proposal after a handle commit", d, budgetAfterCommit)
+		databasetest.WithinBudget(t, "proposal after a handle commit", d, budgetAfterCommit)
 	})
 
 	t.Run("warm queries", func(t *testing.T) {
@@ -255,18 +223,18 @@ func TestLargeSourceBudgets(t *testing.T) {
 	proposeOnePlace := func() { f.propose(onePlaceGraph, nil) }
 
 	t.Run("births at one place cold", func(t *testing.T) {
-		d := fastest(2, func() time.Duration {
+		d := databasetest.Fastest(2, func() time.Duration {
 			f.c.Graph().Drop()
 			must(t, catalogsession.WarmOnOpen(f.c))
-			return since(proposeOnePlace)
+			return databasetest.Since(proposeOnePlace)
 		})
-		over(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
+		databasetest.WithinBudget(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
 	})
 
 	t.Run("births at one place warm", func(t *testing.T) {
 		proposeOnePlace()
-		d := fastest(3, func() time.Duration { return since(proposeOnePlace) })
-		over(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
+		d := databasetest.Fastest(3, func() time.Duration { return databasetest.Since(proposeOnePlace) })
+		databasetest.WithinBudget(t, "warm proposal on the one-place Source", d, budgetOnePlaceWarm)
 	})
 
 	t.Run("join a place onto the city", func(t *testing.T) {
@@ -275,12 +243,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 			joining = append(joining, f.Place(lf.other, lf.otherA, "City"))
 		}
 		i := 0
-		d := fastest(3, func() time.Duration {
+		d := databasetest.Fastest(3, func() time.Duration {
 			s := joining[i]
 			i++
-			return since(func() { f.join(s, lf.city) })
+			return databasetest.Since(func() { f.join(s, lf.city) })
 		})
-		over(t, "join a place onto the city", d, budgetJoinOntoCity)
+		databasetest.WithinBudget(t, "join a place onto the city", d, budgetJoinOntoCity)
 	})
 
 	t.Run("locate an event at the city", func(t *testing.T) {
@@ -291,12 +259,12 @@ func TestLargeSourceBudgets(t *testing.T) {
 			events = append(events, e)
 		}
 		i := 0
-		d := fastest(3, func() time.Duration {
+		d := databasetest.Fastest(3, func() time.Duration {
 			e := events[i]
 			i++
-			return since(func() { f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
+			return databasetest.Since(func() { f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject) })
 		})
-		over(t, "file one location at the city", d, budgetLocateAtCity)
+		databasetest.WithinBudget(t, "file one location at the city", d, budgetLocateAtCity)
 	})
 	t.Run("second part_of from the city", func(t *testing.T) {
 		region := f.Place(lf.other, lf.otherA, "Region")
@@ -315,11 +283,11 @@ func TestLargeSourceBudgets(t *testing.T) {
 			pairs = append(pairs, pair{from, to})
 		}
 		i := 0
-		d := fastest(3, func() time.Duration {
+		d := databasetest.Fastest(3, func() time.Duration {
 			p := pairs[i]
 			i++
-			return since(func() { f.PlaceRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
+			return databasetest.Since(func() { f.PlaceRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
 		})
-		over(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
+		databasetest.WithinBudget(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
 	})
 }

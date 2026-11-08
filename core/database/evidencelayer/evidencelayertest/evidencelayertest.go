@@ -67,10 +67,19 @@ func New(t testing.TB) *Records {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	Must(t, err)
 	t.Cleanup(func() { _ = c.Close() })
+	Must(t, subjectvocab.Install(c))
+	return Open(t, c)
+}
+
+// Open is Records on a catalog that already exists, such as a project's; the
+// catalog must hold the seeded vocabulary. It upserts UserID beside any user
+// the catalog has, creates the Source ("Register") and its Artifact ("Scan"),
+// and registers no close: the caller owns c.
+func Open(t testing.TB, c *database.Catalog) *Records {
+	t.Helper()
 	r, err := ref.Mint(ref.PrefixUser)
 	Must(t, err)
 	Must(t, users.Upsert(c, UserID, "Tester", r))
-	Must(t, subjectvocab.Install(c))
 	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
 	Must(t, err)
 	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: UserID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
