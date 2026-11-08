@@ -284,18 +284,18 @@ func bridgePredicates() (types, props [][2]string) {
 	seenT := map[string]bool{}
 	seenP := map[string]bool{}
 	for _, b := range connectrules.Bridges() {
-		tk := b.BridgeTypeKey + "\x00" + b.Origin
+		tk := b.BridgeTypeKey + "\x00" + b.OriginKey()
 		if !seenT[tk] {
 			seenT[tk] = true
-			types = append(types, [2]string{b.BridgeTypeKey, b.Origin})
+			types = append(types, [2]string{b.BridgeTypeKey, b.OriginKey()})
 		}
 		for _, e := range b.Endpoints {
-			pk := e.PropertyKey + "\x00" + b.Origin
+			pk := e.PropertyKey + "\x00" + b.OriginKey()
 			if seenP[pk] {
 				continue
 			}
 			seenP[pk] = true
-			props = append(props, [2]string{e.PropertyKey, b.Origin})
+			props = append(props, [2]string{e.PropertyKey, b.OriginKey()})
 		}
 	}
 	if len(types) == 0 {

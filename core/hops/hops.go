@@ -6,7 +6,6 @@ package hops
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -39,11 +38,7 @@ func NewHop(bridgeTypeKey, fromProperty, toProperty string, filter *TermFilter) 
 	if filter != nil && (b.Disambiguation != filter.PropertyKey || filter.TermKey == "") {
 		return Hop{}, fmt.Errorf("hops: %s does not disambiguate by %s", bridgeTypeKey, filter.PropertyKey)
 	}
-	origin := strings.TrimSpace(b.Origin)
-	if origin == "" {
-		origin = vocabkey.OriginProvenencia
-	}
-	h := Hop{origin: origin, bridge: b.BridgeTypeKey, from: fromProperty, to: toProperty}
+	h := Hop{origin: b.OriginKey(), bridge: b.BridgeTypeKey, from: fromProperty, to: toProperty}
 	if filter != nil {
 		f := *filter
 		h.filter = &f

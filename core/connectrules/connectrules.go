@@ -40,6 +40,15 @@ type Bridge struct {
 	AcyclicTerms []vocabkey.BridgeTerm
 }
 
+// OriginKey is the origin the bridge's vocabulary is filed under: Origin
+// trimmed, or the product's when it is empty.
+func (b Bridge) OriginKey() string {
+	if origin := strings.TrimSpace(b.Origin); origin != "" {
+		return origin
+	}
+	return vocabkey.OriginProvenencia
+}
+
 // Rule is one allowed (or refused) connect endpoint pair after expansion.
 type Rule struct {
 	Origin         string
@@ -118,10 +127,7 @@ func loadProduct() {
 func rebuild() {
 	out := make([]Rule, 0, len(bridges)*2+len(refusals))
 	for _, b := range bridges {
-		origin := strings.TrimSpace(b.Origin)
-		if origin == "" {
-			origin = vocabkey.OriginProvenencia
-		}
+		origin := b.OriginKey()
 		disamb := b.Disambiguation
 		if disamb == "" {
 			disamb = DisambiguationNone
@@ -339,10 +345,7 @@ func BridgeBindings() []Binding {
 			continue
 		}
 		seen[b.BridgeTypeKey] = true
-		origin := strings.TrimSpace(b.Origin)
-		if origin == "" {
-			origin = vocabkey.OriginProvenencia
-		}
+		origin := b.OriginKey()
 		order := 0
 		for _, e := range b.Endpoints {
 			out = append(out, Binding{
