@@ -16,6 +16,7 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 - **The map review re-cut four items** (2026-11-08, [review](deployment-plan.review.md)): P-2 has its own PR after Spike 14's S14-40; P-6 has its own PR, ungated; P-14 and P-7's pages share one fold PR; P-16 is scheduled with P-12.
 - **P-8 and P-9 are descoped** to [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md).
 - **Eight parked items ride with the PRs that touch their files** (user, later on 2026-11-08): P-15, P-17 (with the wording the audit proposed), P-20, P-21, P-24, part of P-22 and part of P-26, and the unused `CatalogQueryStalePolicy` from [`ideas/structural-debt.md`](../../ideas/structural-debt.md) (S16-09).
+- **The PRs were combined once more to cut review cycles** (user, later on 2026-11-08): P-2 joins the other caps in S16-01, P-10's note joins the notices in S16-04, and part of P-22 moves to S16-12, which changes the same message.
 - **P-18, P-19, P-23, P-25, P-27 and the rest of P-22 and P-26 stay parked** in idea files (table below).
 
 ## Scheduled
@@ -23,13 +24,13 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | Item | Title | Priority | Lens | PR |
 | --- | --- | --- | --- | --- |
 | P-1 | A missing death sits after a burial | High | CON | S16-02 |
-| P-2 | Folding an event's places is quadratic, on project open too | High | SEC | S16-08 |
+| P-2 | Folding an event's places is quadratic, on project open too | High | SEC | S16-01 |
 | P-3 | The Family read is quadratic in a crafted wide family | High | SEC | S16-01 |
 | P-4 | The claims read rescans its graph for each record | High | SEC | S16-01 |
 | P-5 | A failed refresh is silent and the old rows stay | Medium | UX | S16-04 |
 | P-6 | Vitals and Gallery keep old Source, Citation and Artifact words | Medium | CON | S16-09 |
 | P-7 | The Timeline builds every event, not the 50 it shows | Medium | PRF, SEC | S16-07, S16-02 |
-| P-10 | The diagram silently draws uncounted links as weak | Medium | SEC, UX | S16-01, S16-05 |
+| P-10 | The diagram silently draws uncounted links as weak | Medium | SEC, UX | S16-01, S16-04 |
 | P-11 | Switching sections is silent and drops focus | Medium | UX | S16-06 |
 | P-12 | A Remove that keeps the person is not announced | Medium | UX | S16-06 |
 | P-13 | Section plumbing: seven switches, three ways to find the open section | Medium | MNT | S16-03 |
@@ -39,7 +40,7 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | P-17 | "handle", "members" and "This record no longer exists" on the Person page | Low | UX | S16-04, S16-06 |
 | P-20 | The Timeline keeps an old scale after a date edit | Low | PRF | S16-02 |
 | P-21 | `ListPersonClaims` answers for a non-Person handle | Low | MNT, CON | S16-01 |
-| P-22 (part) | The record links wire's unread fields and missing `source_ref` | Low | MNT | S16-01 |
+| P-22 (part) | The record links wire's unread fields and missing `source_ref` | Low | MNT | S16-12 |
 | P-24 | `edgeKey` joins ids with no separator | Low | SEC | S16-16 |
 | P-26 (part) | `ConclusionDetailPage.swift` holds 15 types | Low | MNT | S16-03 |
 
@@ -163,7 +164,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Evidence.** Census-sized households of 12 people with implied sibling links are estimated at 52–78% of `MaxReadWork` (performance lens), so a large real person comes near the edge. Handler test: a read past `MaxReadWork` returns lines with 0 facts and nothing that says so.
 
-**Fix.** `Pairs` reports whether it counted; `persondetail.RecordLinks` caps the lines it sends at the number the diagram draws, strong lines first, says when it did not count or dropped lines, and Swift's own arc cap goes (S16-01). The diagram column shows one note when the read did not count, Go dropped lines or the circle dropped graphs past its 1,000-node cap, instead of drawing uncounted arcs as weak (S16-05, brief S16-D1).
+**Fix.** `Pairs` reports whether it counted; `persondetail.RecordLinks` caps the lines it sends at the number the diagram draws, strong lines first, says when it did not count or dropped lines, and Swift's own arc cap goes (S16-01). The diagram column shows one note when the read did not count, Go dropped lines or the circle dropped graphs past its 1,000-node cap, instead of drawing uncounted arcs as weak (S16-04, brief S16-D1).
 
 **Origin.** S13-27 (#743) and S13-28 (#744).
 
@@ -265,7 +266,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Problem.** The wire repeats the claims read's graph rows but not `source_ref`, so the Sources section hands `graphSourceRefs` to the diagram's adapter, and the "name, else ref" and "title, else ref" fallbacks are written twice. `source_id` and `source_type_id` are decoded and never read.
 
-**Fix.** Add `source_ref`, drop the two unread fields and the handoff, and write each fallback once. With S16-01, which changes the same message. The rest (the claims read owning every graph label) stays in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
+**Fix.** Add `source_ref`, drop the two unread fields and the handoff, and write each fallback once. With S16-12, which changes the same message (moved from S16-01 when the PRs were combined). The rest (the claims read owning every graph label) stays in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
 
 **Origin.** S13-27 (#743), S13-28 (#744).
 

@@ -1,15 +1,15 @@
 # Review — Spike 16 map (Batches 1 and 2)
 
-**Verdict:** Round 1 (Batch 1): Fits with changes. Round 2 (the whole map with Batch 2): Reshape for slices 2a – 2d, answered by reshaping them; Batch 1 and slice 2e fit with changes. No blocker open.
+**Verdict:** Round 1 (Batch 1): Fits with changes. Round 2 (the whole map with Batch 2): Reshape for slices 2a – 2d, answered by reshaping them; Batch 1 and slice 2e fit with changes. No blocker open. Then combined from 33 PRs to 25 to cut review cycles (user, 2026-11-08; [Consolidation](#consolidation-2026-11-08)).
 **Rounds:** 2. **Reviewers:** maintainability (map review, [`review-plan`](../../../.agents/skills/review-plan/SKILL.md) "Map review").
 
 ## To user
 
-- **The re-cut narrows two consolidations.** You asked for PRs that overlap in scope, domain or files to be merged. The review split two back out, and I applied both, recommending you keep them: P-2 (the places cap) left S16-01 for its own PR, S16-08, because it is not a Person read, lives in another package, and would have made S16-01 and then S16-05 wait on Spike 14's S14-40 (K-3); P-6 (stale Source words) left S16-04 for its own PR, S16-09, because it shares no file with the failed-reload notice and would have waited on brief S16-D1 for no reason (K-7). The review also merged two (K-1: the Timeline's pages and the fold focus are now one PR, S16-07), so Batch 1 is nine PRs. Say if you would rather re-merge either split.
+- **The re-cut narrows two consolidations.** You asked for PRs that overlap in scope, domain or files to be merged. The review split two back out, and I applied both, recommending you keep them: P-2 (the places cap) left S16-01 for its own PR, S16-08, because it is not a Person read, lives in another package, and would have made S16-01 and then S16-05 wait on Spike 14's S14-40 (K-3); P-6 (stale Source words) left S16-04 for its own PR, S16-09, because it shares no file with the failed-reload notice and would have waited on brief S16-D1 for no reason (K-7). The review also merged two (K-1: the Timeline's pages and the fold focus are now one PR, S16-07), so Batch 1 is nine PRs. Say if you would rather re-merge either split. **Later the same day:** with S14-40 landed, S16-08 went back into S16-01, and S16-05 into S16-04 ([Consolidation](#consolidation-2026-11-08)). P-6 stays its own PR, S16-09, which now also carries stale-while-refreshing and so waits on S16-04.
 - ~~**Where the death stub sits between a baptism and a burial** (P-1's neighbour).~~ **Answered (user, 2026-11-08): just before the burial.** A placeholder death sits just before the earliest dated burial or funeral whenever one is recorded; the marker rule, bar 1, S16-02, the audit's P-1, R-24a and Spike 13's lifeline rule say so.
 
 - **Kinship is composed, not indexed (K-20, applied).** You approved "indexes for the walks", which named a kinship index. Round 2 showed the existing per-event kinship memos are already exact, and only the two slots that store composed answers (`for`, `siblings`) empty on every write. S16-16 now composes a person's implied links and siblings from those memos at read time: no catalog-wide index, no reverse map, no warm at open, 10–20 MB less, and a term edit drops only the memos it touches. The cost is a few map reads per `For` call, which S16-16 measures against Promote's budgets. Recommendation: keep it composed; if that measures slow, the index comes back as a follow-up.
-- **Batch 2 is 24 PRs, not 20 (K-22, applied).** Four PRs were past the ~10-step plan size and split: the records tier (S16-13) from its readers (S16-30); the place entries (S16-18) from the composers that read them (S16-31); the match index (S16-20) from the narrowed re-rank (S16-32); and a preparatory canon view (S16-33) ahead of the walk's removal (S16-22). The kinship PR shrank instead (K-20).
+- **Batch 2 is 24 PRs, not 20 (K-22, applied).** Four PRs were past the ~10-step plan size and split: the records tier (S16-13) from its readers (S16-30); the place entries (S16-18) from the composers that read them (S16-31); the match index (S16-20) from the narrowed re-rank (S16-32); and a preparatory canon view (S16-33) ahead of the walk's removal (S16-22). The kinship PR shrank instead (K-20). **Later the same day** two of those splits were undone to cut review cycles (S16-31 into S16-19, S16-33 into S16-21), and four more PRs merged, so Batch 2 is 18 PRs ([Consolidation](#consolidation-2026-11-08)).
 
 ## Writer's own calls
 
@@ -123,3 +123,26 @@ Apply fed only `effects.Set` would re-derive the roots `OnCommit` already comput
 
 The plan branch was rebased onto `main` @ 2ac041a, which merged S14-40 and S14-42 (#746, #748); S14-42 took two more review rounds after the branch this review read, changing only `searchindex` (`inputs.go`, `searchindex.go`), tests and docs, and its ship log hands nothing forward. Every claim the map and design rest on still holds on `main`: the write path's `newGraph = graphcache.Over` (`searchindex/handles.go:42`); `canonicalgraph` with only a test caller (`conclusionsummaries/inputs_test.go:164`), so S16-10 still deletes it; the two `DropOnHandleCommit` slots (`canonlinks/reader.go:69`, `:75`); `dropMatchIndex` on any handle commit (`commit.go:41`); `dropDerived` from `SetAliasIndex`, `SetNameFormat` and vocabulary commits; the three `gallery.ForEntities` callers; `graphsOfSource` on a Source's title or type. Two things moved and the docs follow: an event's places are now read through `placesOfEvents` (S14-40), which `eventPlaceGraph` uses, plus `leadLife`, `lifeOwners` and `composeEvents`, so S16-08 caps `placesOfEvents` and moves the other three onto it; `summaryChainDepth` now lives in `placechains.go` with `Dependents` gone. The S14-40 and S14-42 dependencies are met, so S16-08, S16-10, S16-11 and S16-33 have none open.
 
+## Consolidation (2026-11-08)
+
+The user asked for one more pass over the PR list to cut review cycles, combining PRs with significant domain or file overlap. Eight merges take the map from 33 PRs to 25 (Batch 1: 7; Batch 2: 18). Each merged ID keeps its row as "Descoped (2026-11-08) → survivor"; its scope entry is folded into the survivor's, which says what it absorbed.
+
+| Survivor | Takes in | Why one PR |
+| --- | --- | --- |
+| S16-01 | S16-08 | Both are rule "Crafted fan-out is capped, not engineered" in Go reads. K-3 split them so S16-01 would not wait on Spike 14's S14-40, which has since landed (#746). P-22's part moves out to S16-12, which changes the same message, so S16-01 stays near its size. |
+| S16-04 | S16-05 | One brief (S16-D1), one diagram column, two notices of the same kind; S16-05 already had to land after S16-04. About 11 steps. |
+| S16-09 | S16-23 | The same `.conclusionDetail` and per-entity descriptors in `CatalogQueryRegistry.swift`, reviewed once. The cost: S16-09 now waits on S16-04, and so on brief S16-D1, which K-7 had avoided. Its stale-while-refreshing half is Batch 2 work, so rule "The point of this batch is simpler code" binds it. |
+| S16-13 | S16-14 | The records tier lands with its one reader instead of "no reader yet". S16-13 now waits on S16-15 for the catalog's graph order, so S16-30 and S16-32 do too. |
+| S16-16 | S16-17 | The same `canonlinks` reader: the Family read is the composed answer's page reader, and its loaders go with the slots. |
+| S16-19 | S16-31 | The same composers in `compose.go`, changed under the same rule (inputs to the row). K-22 split them for size; together they are about 11 steps. |
+| S16-21 | S16-33 | Both prepare `graphalign` for S16-22, in the same package; S16-21 waits on S16-18 as before. |
+| S16-25 | S16-28 | The key's selectors are written once, on the plain-value key, instead of twice. |
+
+Left apart, and why:
+- **S16-02 and S16-07.** K-1 already merged the Timeline's pages into the fold PR; S16-02 adds a proto change and the lifeline, and together they pass the plan size.
+- **S16-04 and S16-06.** They share `ConclusionDetailPage.swift` and P-17's wording, but S16-04 is already about 11 steps, and S16-06 would then wait on the brief.
+- **S16-03 with anything.** It is preparatory and gates S16-04, S16-06, S16-25, S16-27 and S16-29.
+- **S16-11 and S16-30.** They share `conclusiondetails.go`, but S16-30 waits on S16-12 and S16-13, which would hold S16-11 behind the records stream.
+- **S16-12 and S16-13**, **S16-18 and S16-19**, **S16-20 and S16-32**: different stores or K-22's size splits; each pair together is near 20 steps.
+- **S16-24 and S16-25.** A Go half and a Swift half; S16-25 already carries S16-28.
+- **S16-26, S16-27, S16-29.** Separate concerns: the lists' merged read, a derived-value primitive, and prefetch.
