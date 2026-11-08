@@ -5,9 +5,9 @@
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the app reloads what `summary_handles` names, as today; no view looks different)
 **Board:** —
-**Depends on:** S14-40 (on the same branch, [#746](https://github.com/mendahu/provenencia/pull/746), not merged)
+**Depends on:** S14-40 ([#746](https://github.com/mendahu/provenencia/pull/746), not merged; this PR is stacked on it)
 **Blocks:** —
-**Branch:** `s14-40-build-the-input-index` — the same PR as S14-40 (user, 2026-11-08: "S14-42 on the same pr")
+**Branch:** `s14-42-invalidate-from-the-input-index`, cut from `s14-40-build-the-input-index`; the draft PR's base is `s14-40-build-the-input-index` (a stacked PR, user, 2026-11-08)
 **Version bump:** patch — a researcher-visible bugfix (stale search hits after Unpromote and after a link delete) ([`docs/versioning.md`](../../../versioning.md)): `0.4.0` → `0.4.1`
 **Skills to load:** [`add-catalog-migration`](../../../../.agents/skills/add-catalog-migration/SKILL.md) (an unreleased step is amended), [`add-catalog-delete`](../../../../.agents/skills/add-catalog-delete/SKILL.md) (`subjects.Delete`), [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/versioning.mdc`
@@ -263,7 +263,7 @@ Files and edits:
 - `core/writes/README.md` line 15: the sentence that begins "Subject delete still calls `RecomputeTx`" goes; "Summary dependents are still outside the registry" becomes "Summary dependents come from `catalog_search_inputs`."
 - `docs/catalog-deletes.md` line 46 → "Handles come from the released changes. `effects.Handles` reads them and `Run` recomputes them; the rows that read a released link come from the input index."
 - `docs/deployment-plan/spike-14/summary-inputs.md` § Invalidation: its opening names `autoreconciler.RecomputeReported` → `searchindex.ReprojectChanged` and the callers it serves (`Run`, the kit); line 91 is replaced whole: `Rebuild` recomputes and calls `ReprojectHandles` for every handle, and `ReprojectChanged` reprojects through `reprojectOn` on its own graph, with D-4's flag telling an association's end rows apart.
-- `docs/deployment-plan/spike-14/deployment-plan.md`: the working rule "One input index, owned by `searchindex`" (see **Rules this plan bends**); S14-42 row `Landed #746`.
+- `docs/deployment-plan/spike-14/deployment-plan.md`: the working rule "One input index, owned by `searchindex`" (see **Rules this plan bends**); S14-42 row `Landed #N` (this PR's number).
 - `docs/ideas/structural-debt.md` row 19: the Subject delete clause goes, the seed `Upsert` part stays.
 - `VERSION`, `core/version.go`, `MARKETING_VERSION` → `0.4.1`.
 - `completed.md`, this plan.
@@ -301,7 +301,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (none)
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New (no UI)
 - [ ] Version bump 0.4.1 (VERSION, core/version.go, MARKETING_VERSION together)
-- [ ] This plan: Status → Landed in #746 (date); a Landed note lists every difference from the plan
+- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (no brief)
 - [ ] Domain doc updated: docs/catalog-deletes.md, summary-inputs.md § Invalidation
@@ -335,5 +335,5 @@ None.
 
 ## 13. PR
 
-**Title:** S14-40 and S14-42 — Build the input index and invalidate from it
-**Body:** S14-40's body, plus: objective in one sentence; what shipped against each US; AC evidence; deviations; manual check; the STEP-1 / STEP-8 figures; `Plan: docs/deployment-plan/spike-14/prs/S14-42-invalidate-from-the-input-index.md`.
+**Title:** S14-42 — Invalidate from the input index
+**Body:** stacked on #746 (say so first, and that it merges after #746); objective in one sentence; what shipped against each US; AC evidence; deviations; manual check; the STEP-1 / STEP-8 figures; `Plan: docs/deployment-plan/spike-14/prs/S14-42-invalidate-from-the-input-index.md`.
