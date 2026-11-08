@@ -16,8 +16,9 @@ struct RecordLinksLayout: Equatable {
         var side: LabelSide
     }
 
-    /// One arc as a quadratic curve from `from` to `to`.
+    /// One arc as a quadratic curve from `from` to `to`, with the arc it draws.
     struct Curve: Equatable {
+        var arc: RecordLinksArc
         var from: CGPoint
         var to: CGPoint
         var control: CGPoint
@@ -30,6 +31,10 @@ struct RecordLinksLayout: Equatable {
     static let sideRoom: CGFloat = 84
     /// Room kept outside the circle, above and below it.
     static let verticalRoom: CGFloat = 30
+    /// Where a single record's dot sits, and the height of the region it is drawn in: no
+    /// circle, so just the dot and its ref.
+    static let singleDotY: CGFloat = 24
+    static let singleHeight: CGFloat = 64
     /// A node is labelled beside its dot when its dot is this far, as a fraction of the radius,
     /// from the vertical through the centre.
     private static let sideThreshold: CGFloat = 0.35
@@ -57,9 +62,9 @@ struct RecordLinksLayout: Equatable {
         let center = CGPoint(x: width / 2, y: Self.verticalRoom + radius)
         self.diameter = diameter
         self.center = center
-        size = CGSize(width: width, height: diameter + 2 * Self.verticalRoom)
+        size = CGSize(width: width, height: nodeCount == 1 ? Self.singleHeight : diameter + 2 * Self.verticalRoom)
         nodes = (0..<max(0, nodeCount)).map { index in
-            guard nodeCount > 1 else { return Node(point: center, side: .right) }
+            guard nodeCount > 1 else { return Node(point: CGPoint(x: width / 2, y: Self.singleDotY), side: .right) }
             let angle = 2 * Double.pi * Double(index) / Double(nodeCount)
             let dx = CGFloat(sin(angle))
             let dy = CGFloat(-cos(angle))
@@ -103,6 +108,6 @@ struct RecordLinksLayout: Equatable {
             control.x += -dy / length * offset
             control.y += dx / length * offset
         }
-        return Curve(from: from, to: to, control: control)
+        return Curve(arc: arc, from: from, to: to, control: control)
     }
 }

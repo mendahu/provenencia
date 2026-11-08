@@ -27,7 +27,8 @@ struct RecordLinksLayoutTests {
     @Test func zeroOneAndTwoNodes() {
         #expect(RecordLinksLayout(nodeCount: 0, arcs: [], width: 340).nodes.isEmpty)
         let one = RecordLinksLayout(nodeCount: 1, arcs: [], width: 340)
-        #expect(one.nodes.map(\.point) == [one.center])
+        #expect(one.nodes.map(\.point) == [CGPoint(x: 170, y: 24)])
+        #expect(one.size == CGSize(width: 340, height: 64))
         let two = RecordLinksLayout(nodeCount: 2, arcs: [], width: 340)
         #expect(distance(two.nodes[0].point, CGPoint(x: 170, y: 30)) < 0.001)
         #expect(distance(two.nodes[1].point, CGPoint(x: 170, y: 202)) < 0.001)
@@ -57,6 +58,13 @@ struct RecordLinksLayoutTests {
     @Test func arcsWithUnknownNodesAreSkipped() {
         let layout = RecordLinksLayout(nodeCount: 2, arcs: [arc(0, 5), arc(1, 1)], width: 340)
         #expect(layout.curves.isEmpty)
+    }
+
+    @Test func eachCurveKeepsItsArc() {
+        let kept = RecordLinksArc(a: 1, b: 2, strong: true, slot: 0, slots: 1)
+        let layout = RecordLinksLayout(nodeCount: 3, arcs: [arc(0, 5), kept], width: 340)
+        #expect(layout.curves.count == 1)
+        #expect(layout.curves[0].arc == kept)
     }
 
     @Test(arguments: [
