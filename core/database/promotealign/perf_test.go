@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
@@ -15,10 +16,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
@@ -44,6 +48,12 @@ const (
 	// moves no row of the city's other 6,000 events, so none is reprojected.
 	// S14-33 measured 3.2 s before it walked from the event alone.
 	budgetLocateAtCity = 500 * time.Millisecond
+	// budgetUnpromoteAtCity and budgetDeleteLocationAtCity: unpromoting a
+	// located event, and deleting the Subject of one event's location, touch
+	// the same rows as filing one location at the city: one event, one
+	// association, and the city reported but not reprojected (S14-42).
+	budgetUnpromoteAtCity      = 500 * time.Millisecond
+	budgetDeleteLocationAtCity = 500 * time.Millisecond
 	// budgetSecondPartOfAtCity: a second record's part_of from the city joins
 	// the association already filed, which moves no row, so the city's 6,000
 	// events are not reprojected. S14-33 measured 2.75 s before movedRoots
@@ -274,6 +284,53 @@ func TestLargeSourceBudgets(t *testing.T) {
 		})
 		databasetest.WithinBudget(t, "file one location at the city", d, budgetLocateAtCity)
 	})
+	t.Run("unpromote an event at the city", func(t *testing.T) {
+		var events []subjects.Subject
+		for i := 0; i < 3; i++ {
+			e := f.Birth(lf.onePlace, lf.pageArt)
+			f.promote(e)
+			f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject)
+			events = append(events, e)
+		}
+		i := 0
+		d := databasetest.Fastest(3, func() time.Duration {
+			e := events[i]
+			i++
+			return databasetest.Since(func() {
+				_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := promote.Unpromote(tx, userID, e.ID)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			})
+		})
+		t.Logf("unpromote one located event at the city: %v", d)
+		databasetest.WithinBudget(t, "unpromote one event at the city", d, budgetUnpromoteAtCity)
+	})
+
+	t.Run("delete a location at the city", func(t *testing.T) {
+		var locations []subjects.Subject
+		for i := 0; i < 3; i++ {
+			e := f.Birth(lf.onePlace, lf.pageArt)
+			f.promote(e)
+			locations = append(locations, f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject))
+		}
+		i := 0
+		d := databasetest.Fastest(3, func() time.Duration {
+			loc := locations[i]
+			i++
+			return databasetest.Since(func() {
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := subjects.Delete(tx, userID, loc.ID)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			})
+		})
+		t.Logf("delete one location at the city: %v", d)
+		databasetest.WithinBudget(t, "delete one location at the city", d, budgetDeleteLocationAtCity)
+	})
+
 	t.Run("second part_of from the city", func(t *testing.T) {
 		region := f.Place(lf.other, lf.otherA, "Region")
 		regionID := f.promote(region).Entity.ID
