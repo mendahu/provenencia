@@ -591,21 +591,7 @@ func ReprojectSourcesForType(q Querier, typeID []byte) error {
 	if len(typeID) != 16 {
 		return nil
 	}
-	rows, err := q.Query(`SELECT id FROM sources WHERE source_type_id = ?`, typeID)
-	if err != nil {
-		return err
-	}
-	var ids [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
+	ids, err := listIDs(q, `SELECT id FROM sources WHERE source_type_id = ?`, typeID)
 	if err != nil {
 		return err
 	}
@@ -622,20 +608,7 @@ func SourceIDsForFile(q Querier, fileID []byte) ([][]byte, error) {
 	if len(fileID) != 16 {
 		return nil, nil
 	}
-	rows, err := q.Query(`SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, fileID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
+	return listIDs(q, `SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, fileID)
 }
 
 // EnsureCatalog rebuilds when needed. Prefer calling after Open/Create ensures.

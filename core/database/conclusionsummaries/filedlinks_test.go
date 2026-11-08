@@ -64,7 +64,7 @@ func TestFiledLocationReportsOnlyItsEvent(t *testing.T) {
 	}
 }
 
-// A filed part_of names both places and walks from the part: the events at the
+// A filed part_of names both places and reports the part: the events at the
 // part and at its descendants, and their birth or death people, are reached;
 // the events at the whole are not.
 func TestFiledPartOfReportsThePart(t *testing.T) {
