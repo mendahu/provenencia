@@ -6,7 +6,7 @@
 ## To user
 
 - **The re-cut narrows two consolidations.** You asked for PRs that overlap in scope, domain or files to be merged. The review split two back out, and I applied both, recommending you keep them: P-2 (the places cap) left S16-01 for its own PR, S16-08, because it is not a Person read, lives in another package, and would have made S16-01 and then S16-05 wait on Spike 14's S14-40 (K-3); P-6 (stale Source words) left S16-04 for its own PR, S16-09, because it shares no file with the failed-reload notice and would have waited on brief S16-D1 for no reason (K-7). The review also merged two (K-1: the Timeline's pages and the fold focus are now one PR, S16-07), so Batch 1 is nine PRs. Say if you would rather re-merge either split.
-- **Where the death stub sits between a baptism and a burial** (P-1's neighbour). With a dated baptism and burial but no death, R-24a puts "Death unknown" right after the baptism, so the lifeline draws the whole adult life after the death. The rule is followed, but it reads oddly. Should the death stub hug the burial instead (just before it)? S16-02 can be planned either way; recommendation: keep R-24a as written for this PR and revisit after dogfooding.
+- ~~**Where the death stub sits between a baptism and a burial** (P-1's neighbour).~~ **Answered (user, 2026-11-08): just before the burial.** A placeholder death sits just before the earliest dated burial or funeral whenever one is recorded; the marker rule, bar 1, S16-02, the audit's P-1, R-24a and Spike 13's lifeline rule say so.
 
 ## Writer's own calls
 

@@ -76,7 +76,7 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 
 Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
-**Fix.** Go says where the marker goes when no row qualifies for `Beside`: the first dated after-death row the death sits before (the mirror for birth). Swift inserts the marker before that row, and the lifeline puts the stub at that row's `from`. Add the Go case and the Swift test.
+**Fix.** Go says where the marker goes: a placeholder death sits just before the earliest dated after-death row whenever one is dated, else beside the last dated row (the mirror for birth). Swift inserts the marker before that row, and the lifeline puts the stub at that row's `from`. Add the Go cases and the Swift test. The user chose "just before the burial" on 2026-11-08 for the neighbour too: with a dated baptism and burial, R-24a as written put the death right after the baptism and drew the life between them after the death.
 
 **Origin.** S13-33 (#687) returned one empty value for both reasons; S13-13 (#691) D-5 read it as "last". The S13-13 plan's neighbours asked the question and the Decision answered it for one reason only.
 
