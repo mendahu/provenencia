@@ -133,20 +133,26 @@ An app-health audit becomes plain text with its date and the commit it was
 written at: `the second app-health audit (2026-10-28, at 3cc609c; deleted when
 Spike 14 closed, in git history)`.
 
-Find what a close breaks by comparing broken links on the base and on the branch: the base has broken links of its own, so only new ones count. Run from the repo root on the close branch:
+Find what a close breaks by comparing broken links on the base and on the branch: the base has broken links of its own, so only new ones count. Run from the repo root on the close branch, after committing: both sides are read from git, so ignored and uncommitted files do not count:
 
 ```bash
-base=$(git merge-base origin/main HEAD); tmp=$(cd "$(mktemp -d)" && pwd -P)
-git archive "$base" | tar -x -C "$tmp"
-python3 scripts/check-plan-docs.py --links $(cd "$tmp" && find . -name '*.md' | sed "s|^\./|$tmp/|") \
-  | grep 'broken link' | sed -E "s|^$tmp/||; s|:[0-9]+: | |" | sort -u > "$tmp.base"
-python3 scripts/check-plan-docs.py --links $(git ls-files '*.md') \
-  | grep 'broken link' | sed -E "s|:[0-9]+: | |" | sort -u > "$tmp.branch"
-comm -13 "$tmp.base" "$tmp.branch"
-rm -rf "$tmp" "$tmp.base" "$tmp.branch"
+(
+  set -eu
+  base=$(git merge-base origin/main HEAD)
+  tmp=$(mktemp -d); tmp=$(cd "$tmp" && pwd -P)
+  for rev in "$base" HEAD; do
+    mkdir "$tmp/$rev"
+    git archive "$rev" | tar -x -C "$tmp/$rev"
+    (cd "$tmp/$rev" && find . -name '*.md' | sed "s|^\./|$tmp/$rev/|") \
+      | xargs python3 scripts/check-plan-docs.py --links \
+      | grep 'broken link' | sed -E "s|^$tmp/$rev/||; s|:[0-9]+: | |" | sort -u > "$tmp/$rev.txt"
+  done
+  comm -13 "$tmp/$base.txt" "$tmp/HEAD.txt"
+  rm -rf "$tmp"
+)
 ```
 
-It prints each new broken link as `file error: broken link: target`; line numbers are dropped so edits that shift lines do not show. Fix each by the two forms above.
+It prints each new broken link as `file error: broken link: target`; line numbers are dropped so edits that shift lines do not show. Fix each by the forms above.
 
 ## After close
 
