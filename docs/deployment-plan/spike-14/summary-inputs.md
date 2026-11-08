@@ -79,7 +79,7 @@ The graph cache's display rows are composed by the same composers and use the sa
 
 ### Invalidation
 
-After layer 1's recompute, `writes.Run`:
+After layer 1's recompute, `searchindex.ReprojectChanged` (called by `autoreconciler.RecomputeReported`, which `writes.Run` and the `graphcachetest` kit call) does the following for a write:
 1. Collects the changed keys: the values of every handle in `Set.Handles` that moved, deleted and merged handles, and the link keys of each created, deleted or moved association. A deleted association's link keys come from the index.
 2. Looks up their dependents.
 3. Reprojects those search documents, plus every handle in `Set.Handles` (a row is its own input), and records their new inputs.
@@ -88,7 +88,7 @@ After layer 1's recompute, `writes.Run`:
 
 This replaces `Dependents`, `AssociationEndpoints`, `linkEnds`, `movedRoots` and `SetDisplayDeps`. `subjects.Delete` stops snapshotting and recomputing on its own; the write around it finds what it moved.
 
-The other callers of `RecomputeTx` keep their documents: `autoreconciler.Rebuild` and the `graphcachetest` kit. S14-42's plan says where handle reprojection and the index write live after the move, so those still rebuild documents.
+`autoreconciler.Rebuild` recomputes and calls `ReprojectHandles` for every handle, and `ReprojectChanged` reprojects through `reprojectOn` on its own graph, with the `dependent_is_association` flag telling an association's end rows apart.
 
 ## Measured at planning (2026-11-07)
 
