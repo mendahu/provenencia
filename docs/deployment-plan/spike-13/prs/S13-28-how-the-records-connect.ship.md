@@ -1,7 +1,7 @@
 # Ship log — S13-28 How the records connect
 
 **Plan:** [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md) · **Branch:** `s13-28-how-the-records-connect` (stacked on `s13-27-plan`, #743) · **PR:** #744
-**State:** ready
+**State:** fixing 3 (user-requested refactor)
 
 Stacked PR: the base branch is `s13-27-plan`, not `main` (the user, 2026-11-08). The gate runs `scripts/check-pr.sh --base origin/s13-27-plan`, and reviewers diff against the `s13-27-plan` head.
 
@@ -146,3 +146,175 @@ Follow-ups, placed by the user (2026-11-08):
 - PRF-4 → `docs/ideas/structural-debt.md` (the S13-28 ship log PRF-4 row).
 - PRF-3 → checked in the app by the user; the pinned column does not re-measure the rows on scroll. No change.
 - CON-8 → fixed on this PR (`docs/macos-client-patterns.md:104`).
+
+## Round 3 — user-requested refactor (2026-11-08)
+
+The user asked for this round, after the PR was ready: "I want the graph component built completely agnostic to the data. It should be a generic thing that just takes in nodes and the amounts and qualities of arcs between them … similar to what you'd expect from a graphing chart library, where you can give it the props for colors, thickness, labels". It stays in `Features/Conclusions`; it does not move into the kit. Nothing a researcher sees changes: same geometry, colours, thicknesses, labels, hover, focus and spoken text. This round also takes PRF-4 (O(nodes × arcs) neighbour counting), which the user had parked in `docs/ideas/structural-debt.md`, because the adapter is being rewritten anyway; its row there is removed.
+
+The term is the map's own: a **circular link diagram** (working rule "The view is a circular link diagram"), with **nodes** and **arcs**.
+
+### Fix plan 3
+
+**F-9 — A generic circular link diagram, its layout and its style** (user)
+Files *(new)*:
+- `macos/App/Features/Conclusions/CircularLinkDiagram/CircularLinkDiagram.swift`
+- `CircularLinkDiagram/CircularLinkLayout.swift`
+- `CircularLinkDiagram/CircularLinkDiagramStyle.swift`
+- `CircularLinkDiagram/CircularLinkData.swift`
+
+Deleted: `RecordLinksDiagram.swift`, `RecordLinksLayout.swift`. The project uses synchronized folders, so no `project.pbxproj` edit is needed. Skills: `add-ui-component`, `add-swift-test`.
+
+Nothing under `CircularLinkDiagram/` may name a Person, a graph, a Source, `WorkspaceLocation`, `Catalog*`, `L10n` or a `persons.*` id. The Check greps for it.
+
+Data, in `CircularLinkData.swift`:
+```swift
+struct CircularLinkNode<ID: Hashable>: Identifiable, Equatable {
+    var id: ID
+    var label: String                  // printed beside the dot
+    var help: String? = nil            // the native .help tooltip; nil draws none
+    var accessibilityLabel: String? = nil   // nil reads `label`
+    var isEnabled: Bool = true         // false: drawn, not clickable, no Return (D-4)
+}
+struct CircularLinkArc<ID: Hashable>: Equatable {
+    var from: ID
+    var to: ID
+    var lineWidth: CGFloat
+    var color: Color? = nil            // nil: style.arcColor
+}
+@MainActor @Observable final class CircularLinkHover<ID: Hashable> { var id: ID? }
+```
+The caller passes arcs one at a time. Several arcs on one unordered pair are the "amount": the layout groups them by pair, in input order, and fans them. Callers no longer pass `slot` or `slots`. An arc whose end is not a node, or whose ends are the same node, is skipped.
+
+Neighbours (PRF-4 and MNT-1's single function), static on `CircularLinkArc`:
+- `static func neighbors(of: ID, in: [Self]) -> Set<ID>`, used by the diagram for the one highlighted node.
+- `static func neighborSets(in: [Self]) -> [ID: Set<ID>]`, one pass over the arcs, used by adapters that need every node's count.
+
+Both are tested.
+
+Style, in `CircularLinkDiagramStyle.swift`: `struct CircularLinkDiagramStyle: Equatable` holds every number and colour the diagram draws with today, under the names below. Its `static let standard` gives exactly today's values (D-5 and the board):
+
+| Prop | Today's value |
+| --- | --- |
+| `circleColor` | `PVColor.borderSubtle` |
+| `circleLineWidth` | 1 |
+| `arcColor` | `PVColor.borderStrong` |
+| `highlightedArcColor` | `PVColor.accentLine` |
+| `dimmedArcOpacity` | 0.18 |
+| `arcCurvature` | 0.3, the control point's fraction from the centre toward the chord's midpoint |
+| `arcSpacingFraction` | 0.06 |
+| `arcSpacingRange` | 7...14 |
+| `dotSize` | 8 |
+| `dotRingWidth` | 1.5 |
+| `nodeColor` | `PVColor.textSecondary` |
+| `highlightedNodeColor` | `PVColor.accent` |
+| `neighborNodeFill` | `PVColor.accentSoft` |
+| `neighborNodeRing` | `PVColor.accentLine` |
+| `recededNodeOpacity` | 0.35 |
+| `labelFont` | `PVFont.mono(size: PVTypeScale.caption, weight: .regular)` |
+| `highlightedLabelFont` | the semibold variant of `labelFont` |
+| `labelColor` | `PVColor.textSecondary` |
+| `highlightedLabelColor` | `PVColor.accent` |
+| `neighborLabelColor` | `PVColor.textPrimary` |
+| `labelGap` | `PVSpacing.space3` |
+| `labelsShownUpTo` | 30, past which only the highlighted or focused node prints its label |
+| `overlayLabelBackground` | `PVColor.surfacePage` |
+| `nodePadding` | 4 × 2 |
+| `nodeHoverFill` | `PVColor.surfaceHover` |
+| `sideRoom` | 84 |
+| `verticalRoom` | 30 |
+| `minimumDiameter` | 172 |
+| `labelSideThreshold` | 0.35 |
+| `singleNodeY` | 24 |
+| `singleNodeHeight` | 64 |
+
+The kit tokens are only the standard style's defaults.
+
+Layout, in `CircularLinkLayout.swift`: `struct CircularLinkLayout<ID: Hashable>: Equatable`.
+- It is today's `RecordLinksLayout` with these changes:
+  - It is built from `nodes: [ID]`, `arcs: [CircularLinkArc<ID>]`, `width`, `diameter: CGFloat?` and `style`.
+  - It computes slots itself.
+  - Each `Curve` carries its arc's index into the input `arcs`, plus `lineWidth` and `color`.
+  - `curves` are ordered thinnest first, then by input order. This generalises "thick above thin".
+  - `static func diameter(width:fitting:style:)` replaces the two-argument one.
+- The geometry for the standard style is unchanged to the point: today's layout tests keep their numbers.
+
+View, in `CircularLinkDiagram.swift`: `struct CircularLinkDiagram<ID: Hashable>: View`. Its props are:
+- `nodes`, `arcs`
+- `style: CircularLinkDiagramStyle = .standard`
+- `width: CGFloat`, `diameter: CGFloat? = nil`
+- `hover: CircularLinkHover<ID>`
+- `focusedID: ID? = nil`
+- `accessibilityLabel: String`, the group's spoken label, passed in
+- `accessibilityIdentifierRoot: String? = nil`, giving node ids `<root>.node.<String(describing: id)>`; nil sets none
+- `onOpen: (ID) -> Void = { _ in }`
+- `focus: ((ID) -> PVFieldFocus)? = nil`, where nil gives the nodes no focus binding
+
+The body is today's diagram with every literal and token read from `style`, and with:
+- `node.isEnabled` in place of `location != nil`
+- `node.help` and `node.accessibilityLabel ?? node.label`
+- `style.labelsShownUpTo` in place of `refHidingThreshold`
+
+These keep round 1's performance shape, so the PRF-1 reasoning still holds:
+- The at-rest arcs are an `Equatable` Canvas on the layout alone (and the style), dimmed by opacity.
+- An accent Canvas draws only the highlighted node's arcs, each in `highlightedArcColor`.
+- Only the inner layers read `hover.id`.
+
+Each arc at rest strokes `curve.color ?? style.arcColor` at `curve.lineWidth`, with round caps.
+
+Previews in this file use synthetic data only:
+- "Six nodes": letters A–F, mixed widths, one pair with three arcs, and one node with no arcs.
+- "One node".
+- "Custom style": other colours, a thicker arc and a larger dot, showing the props work.
+- "300 arcs, 40 nodes".
+
+Failing test first, in `macos/ProvenenciaTests/CircularLinkLayoutTests.swift` *(new; replaces `RecordLinksLayoutTests.swift`, whose cases move here rewritten for ids)*:
+- `arcsOnOnePairFanInInputOrder`: three arcs A–B, B–A, A–B get slots 0, 1 and 2 of 3, and pairs are unordered.
+- `curvesDrawThinnestFirst`.
+- `arcsNamingNoNodeOrOneNodeAreSkipped`.
+- `eachCurveKeepsItsArcIndex`.
+- `aStyleMovesTheGeometry`: `sideRoom: 50` at width 340 gives diameter 240.
+- `neighborSetsMatchNeighborsOfEachNode`.
+
+Plus every existing layout case, ported, with the same numbers.
+
+Check:
+- `rg -n "Person|Graph|Source|WorkspaceLocation|Catalog|L10n|persons\." macos/App/Features/Conclusions/CircularLinkDiagram` prints nothing.
+- `rg -n "RecordLinksDiagram|RecordLinksLayout|RecordLinksArc|RecordLinksNode|RecordLinksHover" macos` prints nothing.
+- The tests pass.
+
+**F-10 — The Person adapter and column on the generic diagram** (user)
+Files: `PersonRecordLinksContent.swift`, `PersonRecordLinksColumn.swift`, `PersonSourcesSection.swift`, `macos/ProvenenciaTests/PersonRecordLinksContentTests.swift`; `docs/ideas/structural-debt.md` (remove the S13-28 PRF-4 row).
+Do:
+- `PersonRecordLinksContent` becomes the only Person-aware piece. It produces:
+  - `nodes: [CircularLinkNode<String>]`, keyed by graph id. Each has the label (ref, else name), the help string, the spoken label as today, and `isEnabled = location != nil`.
+  - `arcs: [CircularLinkArc<String>]`, one per line. `lineWidth` is `Self.strongLineWidth` (3) or `Self.weakLineWidth` (1.25), both new static constants on the adapter and both the board's values.
+  - `locations: [String: WorkspaceLocation]`, for `open`.
+- It keeps the caps (`maxArcs`, `maxNodes`, strong lines first) and the duplicate-id and unknown-pair rules.
+- Each node's connected count comes from one `CircularLinkArc.neighborSets(in:)` pass.
+- `RecordLinksNode.connected` goes away; only the spoken label used it.
+- `PersonRecordLinksColumn` renders `CircularLinkDiagram` with:
+  - `style: .standard`
+  - `accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count:)`
+  - `accessibilityIdentifierRoot: "persons.detail.sources"`, so node ids are unchanged
+  - `diameter: CircularLinkLayout<String>.diameter(width:fitting:style:)`
+- The Person previews ("Johann", "One graph", "50 household graphs, Wide", "50 graphs, Wide") move from the old diagram file to `PersonRecordLinksColumn.swift`.
+- `PersonSourcesSection`:
+  - `hover` becomes `CircularLinkHover<String>`.
+  - `open` looks up `links.locations[id]`.
+  - The column's `loadingHeight` is `CircularLinkDiagramStyle.standard.minimumDiameter + 2 * CircularLinkDiagramStyle.standard.verticalRoom`, still 232.
+- Port the content tests to the new types, keeping every case and number.
+- Add `strongAndWeakLinesMapToTheBoardsWidths`.
+- `aGraphWithNoLocationIsDrawnAndNotClickable` asserts `isEnabled == false`.
+
+Check:
+- The tests pass.
+- `rg -n "slot" macos/App/Features/Conclusions/Person*` prints nothing.
+- `scripts/check-pr.sh --base origin/s13-27-plan` PASS.
+
+**F-11 — Docs** (user)
+Files:
+- the plan's Landed note: one paragraph saying the diagram is a generic `CircularLinkDiagram` with a style, under the Person adapter, at the user's request (2026-11-08), and that D-4, D-5 and D-6 name the old types
+- the `completed.md` S13-28 paragraph: the type names
+- `docs/macos-client-patterns.md`, if it names `RecordLinksDiagram` or `RecordLinksLayout` (`rg` first)
+
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-28-how-the-records-connect.md` reports no errors.
