@@ -341,6 +341,9 @@ func TestLargeSourceBudgets(t *testing.T) {
 			s := stats[kind]
 			t.Logf("%s: %d rows, %d keys, median %d, max %d", kind, s.Rows, s.Keys, s.Median(), s.Max)
 		}
+		// The cap on keys one call records (conclusionsummaries
+		// maxInputKeysPerCall) is set from the largest 500-row call here.
+		t.Logf("largest keys in one 500-row call, by kind: %v", conclusionsummariestest.LargestBatch(t, db, handles(t, 0), 500))
 	})
 
 	t.Run("inputs cover Dependents", func(t *testing.T) {

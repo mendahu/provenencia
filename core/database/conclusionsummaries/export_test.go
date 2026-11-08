@@ -39,3 +39,11 @@ var (
 	SortPersons = sortPersons
 	SortPlaces  = sortPlaces
 )
+
+// SetInputKeyCapForTest lowers the per-call input key cap and returns the
+// function that restores it.
+func SetInputKeyCapForTest(n int) (restore func()) {
+	old := inputKeyCap
+	inputKeyCap = n
+	return func() { inputKeyCap = old }
+}

@@ -48,22 +48,19 @@ func newPlaceGraph() *placeGraph {
 	}
 }
 
-// closure is the union of the keys recorded for every place a walk up part_of
-// from seeds expands: the same rounds buildPlaceGraph runs, over the links it
-// kept. It records nothing of its own, so a read added to the build reaches
-// every row that walks through it.
-func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
+// reach visits, once each, the places a walk up part_of from seeds expands:
+// the same rounds buildPlaceGraph runs, over the links it kept.
+func (g *placeGraph) reach(seeds [][]byte, visit func(id []byte)) {
 	seeds = database.UniqueBlobIDs(seeds)
 	frontier := append([][]byte(nil), seeds...)
 	seen := map[string]bool{}
 	for _, id := range seeds {
 		seen[string(id)] = true
 	}
-	var keys []graphcache.InputKey
 	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
 		var next [][]byte
 		for _, id := range frontier {
-			keys = append(keys, g.inputs[string(id)]...)
+			visit(id)
 			for _, l := range g.partFrom[string(id)] {
 				if !seen[string(l.to)] {
 					seen[string(l.to)] = true
@@ -73,7 +70,47 @@ func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
 		}
 		frontier = next
 	}
+}
+
+// closure is the union of the keys recorded for every place a walk up part_of
+// from seeds expands. It records nothing of its own, so a read added to the
+// build reaches every row that walks through it.
+func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
+	var keys []graphcache.InputKey
+	g.reach(seeds, func(id []byte) { keys = append(keys, g.inputs[string(id)]...) })
 	return keys
+}
+
+// closureSize is len(closure(seeds)) without building it.
+func (g *placeGraph) closureSize(seeds [][]byte) int {
+	n := 0
+	g.reach(seeds, func(id []byte) { n += len(g.inputs[string(id)]) })
+	return n
+}
+
+// inputBudget counts the keys one RowsForSearch call records for the place
+// chains of all its rows. Over inputKeyCap the call counts nothing: it stops
+// recording and hands back no inputs for any row.
+type inputBudget struct {
+	used int
+	over bool
+}
+
+// addClosure records the closure of seeds on in, unless that would take the
+// call past the cap. It counts the closure before it builds it.
+func (b *inputBudget) addClosure(in *graphcache.InputScope, pg *placeGraph, seeds [][]byte) {
+	if b == nil {
+		in.Add(pg.closure(seeds)...)
+		return
+	}
+	if b.over {
+		return
+	}
+	if b.used += pg.closureSize(seeds); b.used > inputKeyCap {
+		b.over = true
+		return
+	}
+	in.Add(pg.closure(seeds)...)
 }
 
 type assocDates struct {

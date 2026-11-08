@@ -166,6 +166,29 @@ func CheckMatchIsolated(t testing.TB, q Querier, ids map[string][][]byte) map[st
 	return stats
 }
 
+// LargestBatch composes each kind's ids in calls of size rows and returns, per
+// kind, the largest number of keys one call's rows hold together.
+func LargestBatch(t testing.TB, q Querier, ids map[string][][]byte, size int) map[string]int {
+	t.Helper()
+	out := map[string]int{}
+	for _, kind := range Kinds {
+		list := ids[kind]
+		for start := 0; start < len(list); start += size {
+			chunk := list[start:min(start+size, len(list))]
+			rows, err := conclusionsummaries.RowsForSearch(graphcache.Over(q), want(kind, chunk))
+			if err != nil {
+				t.Fatal(err)
+			}
+			total := 0
+			for _, id := range chunk {
+				total += len(rows.Inputs(id))
+			}
+			out[kind] = max(out[kind], total)
+		}
+	}
+	return out
+}
+
 func show(keys []graphcache.InputKey) string {
 	var b bytes.Buffer
 	b.WriteString("[")

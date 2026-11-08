@@ -17,6 +17,20 @@ import (
 // the reverse of that read walks back down. The place neighborhood uses the same bound.
 const summaryChainDepth = 8
 
+// maxInputKeysPerCall caps the place-chain keys one RowsForSearch call
+// records across all its rows, counted before the keys are copied. On the large
+// fixture the largest 500-row call counts 1,000 and holds 3,500 keys in all (a
+// whole-fixture call counts 16,102); the cap is above 50 times the larger. Only a
+// crafted catalog reaches it, such as a dense part_of mesh whose every row
+// copies its whole place closure. Over the cap the call counts nothing: no
+// row of that batch has inputs, so its index entries are empty and an edit to
+// its places does not invalidate it. S14-42 inherits that miss for a crafted
+// catalog only.
+const maxInputKeysPerCall = 250000
+
+// inputKeyCap is maxInputKeysPerCall; a test lowers it.
+var inputKeyCap = maxInputKeysPerCall
+
 // Dependents is the reverse of the summary reads. A place reaches its
 // descendants to summaryChainDepth, the events located at those places, and
 // the people whose birth or death that event is. A person reaches the events

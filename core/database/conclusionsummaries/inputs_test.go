@@ -2,6 +2,7 @@ package conclusionsummaries_test
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
@@ -211,4 +212,61 @@ func TestInputsCoverDependents(t *testing.T) {
 	}
 	extras, excused := conclusionsummariestest.CheckCoversDependents(t, db, ids, probe)
 	t.Logf("rows the index reaches beyond Dependents, by kind: %v; persons excused (non-canonical birth or death): %d", extras, excused)
+}
+
+// TestInputsCapCountsNothing: over the per-call cap on recorded keys, no row
+// of the call has inputs, and the rows themselves do not change.
+func TestInputsCapCountsNothing(t *testing.T) {
+	f := newFixture(t)
+	// A complete part_of DAG: each place is part of every earlier one.
+	var places []subjects.Subject
+	for i := 0; i < 6; i++ {
+		p := f.placeSubject("Place "+string(rune('A'+i)), nil, nil, int64(2*i), 0)
+		for _, whole := range places {
+			f.placeRel(p, whole, propertyterms.KeyPartOf, nil, nil)
+		}
+		places = append(places, p)
+	}
+	deepest := places[len(places)-1]
+	var eventIDs [][]byte
+	for i := 0; i < 3; i++ {
+		e := f.eventOf("birth", 1900+i)
+		f.Locate(f.Source, f.Artifact, e, deepest)
+		eventIDs = append(eventIDs, f.promoteSubject(e))
+	}
+	for _, p := range places {
+		f.promoteSubject(p)
+	}
+	db, err := f.C.DB()
+	must(t, err)
+	var w conclusionsummaries.Want
+	for _, id := range eventIDs {
+		w.Add(vocabkey.Event, id)
+	}
+	for _, id := range conclusionsummariestest.HandleIDs(t, db, vocabkey.Place) {
+		w.Add(vocabkey.Place, id)
+	}
+	full, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), w)
+	must(t, err)
+	for _, id := range eventIDs {
+		if len(full.Inputs(id)) == 0 {
+			t.Fatal("an uncapped call recorded no inputs for an event")
+		}
+	}
+
+	defer conclusionsummaries.SetInputKeyCapForTest(20)()
+	capped, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), w)
+	must(t, err)
+	for _, id := range append(append([][]byte(nil), eventIDs...), w.Places...) {
+		if got := capped.Inputs(id); len(got) != 0 {
+			t.Errorf("row %x has %d inputs over the cap, want none", id, len(got))
+		}
+	}
+	for _, id := range eventIDs {
+		a, _ := full.Event(id)
+		b, _ := capped.Event(id)
+		if !reflect.DeepEqual(a, b) {
+			t.Errorf("event %x changed under the cap", id)
+		}
+	}
 }
