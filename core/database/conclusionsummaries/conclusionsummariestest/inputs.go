@@ -243,8 +243,13 @@ func CheckCoversDependents(t testing.TB, q Querier, ids map[string][][]byte, pro
 		}
 	}
 	extras = map[string]int{}
-	lifeEvent := map[string]bool{}
-	canonical := map[string]bool{}
+	g := graphcache.Over(q)
+	vocab, err := g.Vocabulary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	eventType := vocab.TypeIDsByKey()[vocabkey.Event]
+	typeProp := vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)
 	// excusable reports whether person d, missing for a dependent set deps,
 	// is reached only through birth or death events that are not canonical.
 	excusable := func(d []byte, isDep map[string]bool) bool {
@@ -257,31 +262,18 @@ func CheckCoversDependents(t testing.TB, q Querier, ids map[string][][]byte, pro
 			if !isDep[string(e)] {
 				continue
 			}
-			life, ok := lifeEvent[string(e)]
-			if !ok {
-				var n int
-				if err := q.QueryRow(`SELECT COUNT(*) FROM auto_reconciler_values v
-					JOIN properties p ON p.id = v.property_id AND p.key = 'event_type' AND p.origin = 'provenencia'
-					JOIN property_terms tt ON tt.id = v.value_term_id AND tt.key IN ('birth', 'death')
-					WHERE v.entity_id = ? AND v.rank = 1 AND v.reason = 'kept'`, e).Scan(&n); err != nil {
-					t.Fatal(err)
-				}
-				life = n > 0
-				lifeEvent[string(e)] = life
+			n, err := g.Node(e)
+			if err != nil {
+				t.Fatal(err)
 			}
-			if !life {
+			if n == nil {
 				continue
 			}
-			can, ok := canonical[string(e)]
-			if !ok {
-				var n int
-				if err := q.QueryRow(`SELECT COUNT(*) FROM identity_claims WHERE entity_id = ? AND status = 'accepted'`, e).Scan(&n); err != nil {
-					t.Fatal(err)
-				}
-				can = n > 0
-				canonical[string(e)] = can
+			row, ok := graphcache.Rank1(n.Kept(typeProp))
+			if !ok || (row.TermKey != string(vocabkey.EventBirth) && row.TermKey != string(vocabkey.EventDeath)) {
+				continue
 			}
-			if can {
+			if n.Canonical(eventType) {
 				return false
 			}
 			found = true
