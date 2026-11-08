@@ -156,7 +156,7 @@ struct PersonSourcesList: View {
     /// The graph the pointer is on, on its node or on any part of its line. Read by the rows, the
     /// nodes and the highlighted arcs and not by this view, so a hover rebuilds none of the diagram's
     /// content or layout.
-    @State private var hover = RecordLinksHover()
+    @State private var hover = CircularLinkHover<String>()
 
     @Environment(WorkspaceSession.self) private var session
 
@@ -183,7 +183,7 @@ struct PersonSourcesList: View {
         .onChange(of: content) { _, new in
             applyPendingFocus(in: new)
             // A line that left or moved never reports the pointer gone; clear what it held.
-            if let id = hover.graphID, !new.claimGraphs.values.contains(id) { hover.graphID = nil }
+            if let id = hover.id, !new.claimGraphs.values.contains(id) { hover.id = nil }
         }
         .onChange(of: unpromote.pending?.id) { _, id in
             if id == nil { restoreFocusAfterKeep() }
@@ -201,7 +201,7 @@ struct PersonSourcesList: View {
             entityId: entityId,
             queryKey: ConclusionPageSection.sources.companionQueryKey(project: project, entityId: entityId),
             placement: .column(
-                loadingHeight: RecordLinksLayout.minimumDiameter + 2 * RecordLinksLayout.verticalRoom
+                loadingHeight: CircularLinkDiagramStyle.standard.minimumDiameter + 2 * CircularLinkDiagramStyle.standard.verticalRoom
             ),
             errorTitle: L10n.Conclusions.recordLinksErrorTitle,
             make: {
@@ -217,7 +217,7 @@ struct PersonSourcesList: View {
                 hover: hover,
                 focusedGraphID: focused,
                 open: { id in
-                    if let location = links.nodes.first(where: { $0.id == id })?.location { open(location) }
+                    if let location = links.locations[id] { open(location) }
                 },
                 focus: { PVFieldFocus($focus, equals: .node(graphID: $0)) }
             )
@@ -307,7 +307,7 @@ private struct PersonSourcesRowView: View {
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
-    let hover: RecordLinksHover
+    let hover: CircularLinkHover<String>
     let focusedGraphID: String?
     let unpromoteDisabled: Bool
     let beginUnpromote: (PersonSourcesContent.Line) -> Void
@@ -357,12 +357,12 @@ private struct PersonSourcesRowView: View {
 
     /// The record lines span the whole row less their indent.
     private var lines: some View {
-        let highlightedGraphID = hover.graphID ?? focusedGraphID
+        let highlightedGraphID = hover.id ?? focusedGraphID
         return VStack(alignment: .leading, spacing: PVSpacing.space2) {
             ForEach(row.lines) { line in
                 PersonSourcesLineView(
                     line: line, open: open, focused: focused,
-                    highlighted: line.graphID == highlightedGraphID, hover: { hover.graphID = $0 },
+                    highlighted: line.graphID == highlightedGraphID, hover: { hover.id = $0 },
                     unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
                 )
             }

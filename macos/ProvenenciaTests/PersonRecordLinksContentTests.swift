@@ -22,24 +22,26 @@ struct PersonRecordLinksContentTests {
         #expect(content.nodes.map(\.label) == [
             "EVG-2K7PQ", "EVG-5MD8R", "EVG-8TZ4N", "EVG-1QR9D", "EVG-6WB3M", "EVG-4PL7T", "EVG-9CN2H",
         ])
-        #expect(content.nodes.map(\.connected) == [3, 2, 0, 2, 2, 1, 0])
-        #expect(content.nodes.allSatisfy { $0.location != nil })
+        let sets = CircularLinkArc.neighborSets(in: content.arcs)
+        #expect(content.nodes.map { sets[$0.id, default: []].count } == [3, 2, 0, 2, 2, 1, 0])
+        #expect(content.nodes.allSatisfy { $0.isEnabled })
         #expect(content.nodes[0].help == "Household 214 — Hamburg census 1867")
     }
 
-    @Test func johannHasEightArcsWithSlotsOnSharedPairs() {
-        let arcs = johann().arcs
+    @Test func johannHasEightArcsOnSharedPairs() {
+        let content = johann()
+        let arcs = content.arcs
+        let index = Dictionary(uniqueKeysWithValues: content.nodes.enumerated().map { ($1.id, $0) })
         #expect(arcs.count == 8)
-        #expect(arcs.map { [$0.a, $0.b] } == [[0, 1], [0, 1], [0, 3], [0, 3], [1, 3], [0, 4], [4, 5], [4, 5]])
-        #expect(arcs.map(\.slot) == [0, 1, 0, 1, 0, 0, 0, 1])
-        #expect(arcs.map(\.slots) == [2, 2, 2, 2, 1, 1, 2, 2])
-        #expect(arcs.map(\.strong) == [true, false, true, true, false, true, false, false])
+        #expect(arcs.map { [index[$0.from]!, index[$0.to]!] } == [[0, 1], [0, 1], [0, 3], [0, 3], [1, 3], [0, 4], [4, 5], [4, 5]])
+        #expect(arcs.map { $0.lineWidth == PersonRecordLinksContent.strongLineWidth }
+            == [true, false, true, true, false, true, false, false])
     }
 
-    @Test func neighborsAreTheOtherEndsOfANodesArcs() {
-        let content = johann()
-        #expect(RecordLinksArc.neighbors(of: 0, in: content.arcs) == [1, 3, 4])
-        #expect(RecordLinksArc.neighbors(of: 2, in: content.arcs).isEmpty)
+    @Test func strongAndWeakLinesMapToTheBoardsWidths() {
+        #expect(PersonRecordLinksContent.strongLineWidth == 3)
+        #expect(PersonRecordLinksContent.weakLineWidth == 1.25)
+        #expect(Set(johann().arcs.map(\.lineWidth)) == [3, 1.25])
     }
 
     @Test func aNodeThatSharesNoOneIsSpokenAsApart() {
@@ -47,7 +49,7 @@ struct PersonRecordLinksContentTests {
         #expect(content.nodes[2].accessibilityLabel == "EVG-8TZ4N, Volume 3, Hamburger Adressbuch 1861, shares no one")
         #expect(content.nodes[0].accessibilityLabel
             == "EVG-2K7PQ, Household 214, Hamburg census 1867, connected to 3 records")
-        #expect(content.nodes[5].accessibilityLabel.hasSuffix("connected to 1 record"))
+        #expect(content.nodes[5].accessibilityLabel?.hasSuffix("connected to 1 record") == true)
     }
 
     @Test func aGraphWithNoRefIsLabelledWithItsName() {
@@ -65,8 +67,9 @@ struct PersonRecordLinksContentTests {
     @Test func aGraphWithNoLocationIsDrawnAndNotClickable() {
         let content = johann(removing: "g-388")
         #expect(content.nodes.count == 7)
-        #expect(content.nodes[1].location == nil)
-        #expect(content.nodes[0].location != nil)
+        #expect(content.nodes[1].isEnabled == false)
+        #expect(content.nodes[0].isEnabled)
+        #expect(content.locations["g-388"] == nil)
     }
 
     @Test func aDuplicateGraphIDKeepsTheFirst() {
@@ -94,7 +97,8 @@ struct PersonRecordLinksContentTests {
         )
         #expect(content.nodes.count == 50)
         #expect(content.arcs.count == 91)
-        #expect(content.nodes.suffix(3).allSatisfy { $0.connected == 0 })
+        let sets = CircularLinkArc.neighborSets(in: content.arcs)
+        #expect(content.nodes.suffix(3).allSatisfy { sets[$0.id] == nil })
     }
 
     @Test func householdScale() {
@@ -123,8 +127,8 @@ struct PersonRecordLinksContentTests {
         )
         #expect(strong > 0)
         #expect(over.arcs.count == PersonRecordLinksContent.maxArcs)
-        #expect(over.arcs.filter { $0.strong }.count == strong)
-        #expect(over.arcs.prefix(strong).allSatisfy { $0.strong })
+        #expect(over.arcs.filter { $0.lineWidth == PersonRecordLinksContent.strongLineWidth }.count == strong)
+        #expect(over.arcs.prefix(strong).allSatisfy { $0.lineWidth == PersonRecordLinksContent.strongLineWidth })
 
         let ids = (0..<(PersonRecordLinksContent.maxNodes + 5)).map { "g\($0)" }
         let wide = PersonRecordLinksContent(
@@ -142,6 +146,7 @@ struct PersonRecordLinksContentTests {
         )
         #expect(wide.nodes.count == PersonRecordLinksContent.maxNodes)
         #expect(wide.arcs.count == 1)
-        #expect(wide.arcs.allSatisfy { $0.a < wide.nodes.count && $0.b < wide.nodes.count })
+        let kept = Set(wide.nodes.map(\.id))
+        #expect(wide.arcs.allSatisfy { kept.contains($0.from) && kept.contains($0.to) })
     }
 }

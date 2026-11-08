@@ -6,7 +6,7 @@ import SwiftUI
 /// scroll with the page. Draws nothing for a person with no records on the read.
 struct PersonRecordLinksColumn: View {
     let content: PersonRecordLinksContent
-    let hover: RecordLinksHover
+    let hover: CircularLinkHover<String>
     let focusedGraphID: String?
     let open: (String) -> Void
     let focus: (String) -> PVFieldFocus
@@ -40,15 +40,19 @@ struct PersonRecordLinksColumn: View {
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { headerHeight = $0 }
                 if width > 0 {
-                    RecordLinksDiagram(
+                    CircularLinkDiagram(
                         nodes: content.nodes,
                         arcs: content.arcs,
-                        hover: hover,
-                        focusedGraphID: focusedGraphID,
+                        style: .standard,
                         width: width,
-                        diameter: single ? nil : RecordLinksLayout.diameter(width: width, fitting: fitting),
-                        idRoot: "persons.detail.sources",
-                        open: open,
+                        diameter: single ? nil : CircularLinkLayout<String>.diameter(
+                            width: width, fitting: fitting, style: .standard
+                        ),
+                        hover: hover,
+                        focusedID: focusedGraphID,
+                        accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.nodes.count),
+                        accessibilityIdentifierRoot: "persons.detail.sources",
+                        onOpen: open,
                         focus: focus
                     )
                     if single {
@@ -65,3 +69,44 @@ struct PersonRecordLinksColumn: View {
         }
     }
 }
+
+#if DEBUG
+private struct PersonRecordLinksPreview: View {
+    let links: CatalogPersonRecordLinks
+    var width: CGFloat = 340
+    @State private var hover = CircularLinkHover<String>()
+
+    var body: some View {
+        let content = PersonRecordLinksContent(links: links, graphLocations: [:])
+        CircularLinkDiagram(
+            nodes: content.nodes,
+            arcs: content.arcs,
+            width: width,
+            hover: hover,
+            accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.nodes.count),
+            accessibilityIdentifierRoot: "preview",
+            focus: { _ in PVFieldFocus(isActive: { false }, focus: {}, resign: {}, apply: { $0 }) }
+        )
+        .padding()
+        .background(PVColor.surfacePage)
+    }
+}
+
+#Preview("Johann") {
+    PersonRecordLinksPreview(links: PersonSourcesPreviewData.johannRecordLinks)
+}
+
+#Preview("One graph") {
+    PersonRecordLinksPreview(links: CatalogPersonRecordLinks(
+        graphs: [PersonSourcesPreviewData.johannRecordLinks.graphs[0]], pairs: []
+    ))
+}
+
+#Preview("50 household graphs, Wide") {
+    PersonRecordLinksPreview(links: PersonSourcesPreviewData.householdRecordLinks(graphs: 50), width: 720)
+}
+
+#Preview("50 graphs, Wide") {
+    PersonRecordLinksPreview(links: PersonSourcesPreviewData.manyRecordLinks(graphs: 50), width: 720)
+}
+#endif
