@@ -72,6 +72,20 @@ struct PVPageColumnsTests {
         #expect(widths == PVPageSideColumnWidths(main: main, side: side, group: group, stacked: stacked))
     }
 
+    @Test func sideColumnWidthsFromAProposal() {
+        let mainMin = PersonSourcesColumns.minWidth
+        let fallback = PVPageColumnsMetrics.fallbackPane - 2 * PVSpacing.gutterPage
+        let expected = PVPageColumnsMetrics.sideColumnWidths(available: fallback, mainMin: mainMin)
+        for width in [nil, CGFloat.infinity] as [CGFloat?] {
+            #expect(PVPageColumnsMetrics.sideColumnWidths(
+                proposal: ProposedViewSize(width: width, height: nil), mainMin: mainMin
+            ) == expected)
+        }
+        #expect(PVPageColumnsMetrics.sideColumnWidths(
+            proposal: ProposedViewSize(width: 1038, height: nil), mainMin: mainMin
+        ) == PVPageColumnsMetrics.sideColumnWidths(available: 1038, mainMin: mainMin))
+    }
+
     @Test func theSideColumnBreakpointIsOneThousandFourteen() {
         #expect(PersonSourcesColumns.minWidth == 642)
     }

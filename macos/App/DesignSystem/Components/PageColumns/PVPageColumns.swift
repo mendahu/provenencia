@@ -85,6 +85,18 @@ enum PVPageColumnsMetrics {
         return PVPageSideColumnWidths(main: split.main, side: split.side, group: split.group, stacked: false)
     }
 
+    /// The width a layout with no finite proposal is sized for: the content and its gutters.
+    static let fallbackPane = PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage
+
+    /// `sideColumnWidths(available:mainMin:)` for a layout proposed `proposal`. An unspecified
+    /// or infinite width is the `fallbackPane` less its gutters.
+    static func sideColumnWidths(proposal: ProposedViewSize, mainMin: CGFloat) -> PVPageSideColumnWidths {
+        sideColumnWidths(
+            available: proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? fallbackPane - 2 * PVSpacing.gutterPage,
+            mainMin: mainMin
+        )
+    }
+
     /// The pane and the column widths for a layout proposed `proposal`. An
     /// unspecified or infinite width is sized as if the pane were as wide as
     /// the content and its gutters; the pane is then the group itself, and
@@ -97,7 +109,7 @@ enum PVPageColumnsMetrics {
     ) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
         let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
         let widths = columnWidths(
-            pane: proposed ?? (PVSpacing.widthContentMax + 2 * PVSpacing.gutterPage),
+            pane: proposed ?? fallbackPane,
             widthClass: widthClass,
             hasSecondary: hasSecondary,
             primaryFill: primaryFill && proposed != nil

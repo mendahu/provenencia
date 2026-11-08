@@ -24,12 +24,11 @@ struct ConclusionPinnedSideColumn<Main: View, Side: View>: View {
 
     var body: some View {
         PVPageVisibleRect { visible, size in
-            let stacked = PVPageColumnsMetrics.sideColumnWidths(available: size.width, mainMin: mainMin).stacked
+            let stacked = PVPageColumnsMetrics.sideColumnWidths(
+                proposal: ProposedViewSize(width: size.width, height: nil), mainMin: mainMin
+            ).stacked
             PVPageColumnsLayout(widths: { [mainMin] proposal in
-                PVPageColumnsMetrics.sideColumnWidths(
-                    available: proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? PVSpacing.widthContentMax,
-                    mainMin: mainMin
-                )
+                PVPageColumnsMetrics.sideColumnWidths(proposal: proposal, mainMin: mainMin)
             }) {
                 main
                 side
