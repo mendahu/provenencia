@@ -70,6 +70,8 @@ Either way the kept file cites no plan, test or decision id from the deleted pla
 - `deployment-plan.md` gates, ASCII PR trees, dogfood bars
 - `design/` and `design/archive/` Claude Design prompts
 - `prs/` PR plans (their Landed notes feed the decisions note first)
+- App-health audits, once their items are triaged or the user drops them
+- Shipped dogfood notes (`ux/`)
 - Per-PR “In / Out / Testable / Depends on” tables
 - Numbered leftover lists once every item is re-homed (one leftover table on
   the distilled note is enough)

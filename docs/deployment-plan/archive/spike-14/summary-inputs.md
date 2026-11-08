@@ -111,7 +111,7 @@ Final counts (the recorder-checked index on the same fixture, every row):
 | Event | 10,070 | 86,386 | 10 | 10 |
 | Place | 52 | 55 | 1 | 4 |
 
-No person row on this fixture holds a place key: the fixture's `bulkCanon` events have no accepted member, so no person has a life pick and its place graph is empty. A person's place inputs are proven by the scenario-world tests only, on the scenario worlds. Against `Dependents`, the rebuild test found 9,987 persons excused as reached only through a birth or death event with no accepted member; the fixture's `bulkCanon` events have no accepted claims.
+No person row on this fixture holds a place key: the fixture's `bulkCanon` events have no accepted member, so no person has a life pick and its place graph is empty. A person's place inputs are proven by the scenario-world tests only. Against `Dependents`, the rebuild test found 9,987 persons excused as reached only through a birth or death event with no accepted member; the fixture's `bulkCanon` events have no accepted claims.
 
 At the map's Scale (37,000 Subjects) the index is a few hundred thousand rows.
 
