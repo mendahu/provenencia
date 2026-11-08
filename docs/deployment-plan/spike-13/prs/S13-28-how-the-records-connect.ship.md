@@ -1,7 +1,7 @@
 # Ship log — S13-28 How the records connect
 
 **Plan:** [`S13-28-how-the-records-connect.md`](S13-28-how-the-records-connect.md) · **Branch:** `s13-28-how-the-records-connect` (stacked on `s13-27-plan`, #743) · **PR:** #744
-**State:** fixing 3 (user-requested refactor)
+**State:** ready
 
 Stacked PR: the base branch is `s13-27-plan`, not `main` (the user, 2026-11-08). The gate runs `scripts/check-pr.sh --base origin/s13-27-plan`, and reviewers diff against the `s13-27-plan` head.
 
@@ -456,3 +456,13 @@ Check:
 - `rg -n "neighborSets|neighbors\(of:" macos/App` prints nothing.
 - The tests pass.
 - `scripts/check-pr.sh --base origin/s13-27-plan` PASS.
+
+### Round 5 — fix
+Head `1d9662ba`. F-16 done; the orchestrator read the diff and it matches the fix plan.
+
+Gate: the orchestrator's own run PASSed. The implementer's first run failed two unrelated tests and passed on a re-run with no code change; this round does not touch them:
+- `PVSegmentedControlTests.selectSendsTheItemValue()`
+- `PVSegmentedControlTests.disabledItemDoesNotSelect()`
+
+## Result (after the user-requested refactor)
+Gate PASS (`1d9662ba`) · CI not run (workflows trigger on PRs into `main`) · open: none · to user: the `PVSegmentedControlTests` flake (where it goes).
