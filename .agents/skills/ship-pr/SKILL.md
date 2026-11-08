@@ -250,7 +250,7 @@ the user).
 1. Update the PR body: what shipped against each user story, AC evidence,
    review summary by lens, follow-ups, deviations, the plan's **Manual check**,
    and links to the plan, its review log, and the ship log (for a spike close, S#-99, the plan path and "deleted in this PR").
-2. Commit the final ship log on the branch ("Record the S#-NN ship log.") and push. A spike close (S#-99) removes the spike folder in that same commit, `git rm -r docs/deployment-plan/spike-N`, subject "Record the S#-99 ship log and remove the Spike N folder." ([`archive-docs`](../archive-docs/SKILL.md)).
+2. Commit the final ship log on the branch ("Record the S#-NN ship log.") and push. A spike close (S#-99) removes the spike folder in that same commit, `git rm -r docs/deployment-plan/spike-N`, subject "Record the S#-99 ship log and remove the Spike N folder." ([`archive-docs`](../archive-docs/SKILL.md)). Then run the link comparison in `archive-docs` "Retarget"; a new broken link is fixed in its own commit before step 3.
 3. `gh pr ready <n>`. CI runs on non-draft PRs. `gh pr checks <n> --watch`.
    A red CI check is a gate failure: one fix round, then back to the user if
    it stays red.

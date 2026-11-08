@@ -1,6 +1,6 @@
 # Depictions and likenesses — later
 
-**Status:** idea, not scheduled. Spike 10 shipped the `depiction` value type, the `likeness` property, the composer row, the Person gallery, and a preferred portrait ([decisions](../deployment-plan/archive/spike-10/)). Promote comparing two likenesses is Spike 11 (S11-20). Event and Place pictures (`event_picture`, `place_picture`) a chosen Event or Place thumbnail, and rectangle-only depiction drawing are [Spike 14](../deployment-plan/spike-14/) batch 1.
+**Status:** idea, not scheduled. Spike 10 shipped the `depiction` value type, the `likeness` property, the composer row, the Person gallery, and a preferred portrait ([decisions](../deployment-plan/archive/spike-10/)). Promote comparing two likenesses is Spike 11 (S11-20). Event and Place pictures (`event_picture`, `place_picture`) a chosen Event or Place thumbnail, and rectangle-only depiction drawing shipped in [Spike 14](../deployment-plan/archive/spike-14/README.md#decisions).
 
 ## Still open
 
@@ -9,6 +9,10 @@
 - **Confirm before a Citation page change when depictions are saved on it.** A likeness is drawn on the Citation's PDF page. Moving the Citation to another page leaves the saved likenesses pointing at a region that no longer matches; Go hides it and the edit dialog asks for a redraw, but nothing warns before the page changes (deferred from S10-34; dogfood 2026-10-17).
 - **A hidden value's reason and support.** A hidden reconciler row takes its first entry's reason and counts every entry's Source, so a value carried by an accepted weak photo reads `provisional` when a provisional member's copy of the same picture ranks above it. The gallery reads each record's own outcome instead (S10-60); other readers of `auto_reconciler_values.reason` still see the row's.
 - **Windows.** That client draws the PDF region with its own stack before it sends the image. Spike 10 draws it with PDFKit on the Mac.
+- **Depiction captions.** While the viewer loads, the composer's depiction caption falls through to the empty case ("use a region button") and needs a loading string; `depictionDrawingHint` says "tools above" though a depiction has one tool. Both wait for the composer board's next pass.
+- **EXIF orientation.** No JPEG honours EXIF orientation; a fix covers every JPEG, not only the oversized ones the reduced decoder reads.
+- **A larger cover derivative.** Whether a 256 px thumbnail is enough for a Source cover cut from a very large scan.
+- **Pictures as matching evidence.** `subjectcompare` gives an Event's or Place's pictures no weight.
 
 
 ## From the 2026-10-18 likeness audit

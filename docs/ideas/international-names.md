@@ -8,6 +8,7 @@
 - **Beider–Morse.** Language-aware phonetics. More precise than Daitch–Mokotoff, and a larger rule set. Still later than the Daitch–Mokotoff section below.
 - **Calendars and double dating.** Julian vs Gregorian (the 1752 switch in Britain and its colonies, at different times elsewhere) and "1717/18" double dating. Matching ignores both today. They vary by place and church.
 - **Impossible calendar days.** Date validation accepts day 31 in any month (`datevalue` `dayOK`), so 30 February saves, but value compare finds no usable bound for it and matching silently ignores the date (Spike 11 S11-04 ship log; dogfood 2026-10-29). Refuse a day past the month's length when the date is entered.
+- **Hyphenated folded spellings.** "Soby-Kirke" (hyphen, no ø) does not find "Søby Kirke register": the search document's folded phrases split on spaces only.
 
 ## Names this product does not pattern yet
 

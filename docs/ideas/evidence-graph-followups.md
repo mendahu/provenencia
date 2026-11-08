@@ -40,3 +40,7 @@ S11-21 ship log; dogfood 2026-10-29. Check by eye before fixing. Cached card ima
 ## No keyboard way to add one card to a multi-selection
 
 Deferred from S10-57; dogfood 2026-10-17. Shift-click adds or removes one card, but keyboard and VoiceOver users have no way to do the same. Wanted: a keyboard (and VoiceOver) path that toggles the focused card in the selection the way Shift-click does. When GraphCanvas grows a shared selection type ([`graph-canvas-second-host.md`](graph-canvas-second-host.md)), put the additive key there so every host gets it.
+
+## No reloading sign on a revisited canvas
+
+`isRereadingGraph` is drawn only in the error callout (`EvidenceGraphView.swift`), so a revisited stale canvas shows its old cards with no sign that it is rereading. Needs a brief.

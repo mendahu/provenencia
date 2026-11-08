@@ -31,7 +31,7 @@ Each promoted row on the Promote page gets a **status**, **Accepted** (the defau
 - **Reads:** a provisional-only Subject counts as unpromoted wherever "promoted" is read: the Evidence graph card's membership, the graph's status and progress counts, and Promote's anchors.
 - **Proposal:** it returns a provisional Subject's record as the row's target with its status, so the page preselects it. After S13-24 this is one more field on `graphalign.RowStart` (`Status`) and one more branch in `Row.Start`.
 - **Swift:** the row's status control, Accepted by default; Done sends the status; a provisional end is a connection's "waits for a named end" state; the proposal's provisional preselect maps onto the row.
-- **Ordering with Spike 14:** S14-16 rewrites `ApplyPromoteGraphAlignment`'s handler and Swift mapping. Whichever lands second carries the `status` field through the rewrite.
+- **Ordering with Spike 14:** S14-16 (landed) rewrote `ApplyPromoteGraphAlignment`'s handler and Swift mapping; this work carries the `status` field through the rewritten code.
 
 **Check:** a row filed Provisional leaves its Subject unpromoted on the card and in the graph's counts, files none of its connections, and comes back preselected and Provisional on the next Promote. Accepting it then files its connections, and the record's auto-reconciled values are unchanged by the provisional claim.
 
@@ -48,7 +48,7 @@ Drawn on the [Promote flow board](https://claude.ai/design/p/bc84685e-bbc3-4053-
 | PS-5 | The footer counts a Provisional row as promoted, and the board adds an optional "1 provisional" part to the summary. |
 | PS-6 | VoiceOver reads the control as "Status for Mary Smith, Accepted" (or Provisional), and a waiting subrow as today. |
 
-The slot PS-1 uses is still on every Promote row: empty on a working row, holding "Promoted from this Source earlier" on an Already promoted row (`macos/App/Features/Promote/PromoteView.swift`, the `freed:` slot). If that slot is reclaimed first (a candidate for S14-22), the board's placement needs redrawing.
+The slot PS-1 uses is still on every Promote row: empty on a working row, holding "Promoted from this Source earlier" on an Already promoted row (`macos/App/Features/Promote/PromoteView.swift`, the `freed:` slot). S14-22 (landed) left the slot as it was; if it is reclaimed first, the board's placement needs redrawing.
 
 ## Open questions
 
