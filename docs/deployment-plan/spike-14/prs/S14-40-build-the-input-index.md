@@ -1,6 +1,7 @@
 # S14-40 — Build the input index
 
-**Status:** Planned
+**Status:** Landed in #746 (2026-11-08)
+**Landed:** No version bump. D-13 was amended by the user on 2026-11-08 to excuse persons reached only through a non-canonical birth or death event (9,987 on the large fixture). Differences from the plan: the shared test helpers live in `core/database/conclusionsummaries/conclusionsummariestest`; the test isolator reuses one graph for all rows; `InputScope` calls the exported `Graph.Node` and `Graph.Follow` so the recorder also hears `NoInputs()` reads; `writeInputs` uses `INSERT OR IGNORE` in 200-row statements; `lifeOwners` takes an `*InputScope`; `perf_test.go` uses `databasetest.Fastest/Since/WithinBudget` after the base moved. Manual check §10: none.
 **Spike / slice:** Spike 14 · Slice 8 — Summary rows know their inputs
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: engine only; every row and document is composed as before)

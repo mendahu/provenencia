@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S14-40 — Build the input index
+
+**Landed 2026-11-08** in [#746](https://github.com/mendahu/provenencia/pull/746). Every person, event and place summary row records the handles, links and associations it was composed from (`graphcache.InputScope`), and `searchindex` stores them in `catalog_search_inputs` beside the search documents, with each association's ends; an open catalog fills it through `ProjectionVersion` 11. Nothing reads it yet (S14-42 does). A person's place graph now comes from its birth and death events only, and `ReprojectHandles` composes on one graph per call: the first part_of from a 6,000-event city fell from 2.25 s to 1.33 s.
+
 ## S14-37 — Boolean value type (UI)
 
 **Landed 2026-11-07** in [#739](https://github.com/mendahu/provenencia/pull/739). A researcher can create a yes/no Property and cite it from the Citation composer, whose Value field is a Yes / No segmented control with nothing chosen at first, so a No is always one the researcher picked. Go marks boolean researcher-creatable and not negatable (`propertymeta.TypeRule.Negatable`, sent to the app as `PropertyValueTypeRule.negatable`) and `observations` refuses a negative one on add and update; the composer reads the rule (`CitationComposerVocabulary.offersNegative`), draws no Negative checkbox and saves a yes/no positive. A saved answer reads "Yes" or "No" in the evidence column and on Evidence graph cards, because the evidence column now reads `ObservationValueDisplay` like the cards (a date with no value no longer reads "No date set", a subject with no text no longer shows its ID). The composer row keeps its value fields in one `CitationObservationValue.Fields`, the unused row-edit paths and four strings are gone, and `PVSegmentedControl` takes a `focus:` handle so Tab from Property lands on Yes. Version 0.4.0.
