@@ -1,7 +1,7 @@
 # Ship log — S14-42 Invalidate from the input index
 
 **Plan:** [`S14-42-invalidate-from-the-input-index.md`](S14-42-invalidate-from-the-input-index.md) · **Branch:** `s14-42-invalidate-from-the-input-index` (stacked on `s14-40-build-the-input-index`, #746) · **PR:** #748
-**State:** review 2
+**State:** fixing 2
 
 ## Round 0 — implement
 Base `f55bf6c1` (S14-40's head). Head `573b5669`. The orchestrator re-ran the gate on this head (see below).
@@ -120,3 +120,24 @@ Minors and nits, checked by the orchestrator:
 
 ## Round 2 — review
 Scope `573b5669...c6849e1d`. Reviewers: MNT (MNT-1 blocker, MNT-2 major) and SEC+PRF (PRF-1 major).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | blocker (r1) | Second id scan | Not fully resolved → F-7 | `scanDependents` is gone, but the same body remains in `searchindex.go` `ReprojectSourcesForType` (line 594) and `SourceIDsForFile` (line 626). Fix plan 1's check grepped by name, not by body. A same-pass cleanup: this PR changed `listIDs` |
+| MNT-2 | MNT | major (r1) | `ContainsBlobID` copies | Resolved | `rg -nE 'func (holds\|holdsID)\(' core` finds only the `InputKey` matcher in `conclusionsummaries/inputs_test.go:129`, which is a different helper |
+| PRF-1 | PRF | major (r1) | Per-handle loads | Resolved | `g.Nodes(written)` then `g.Cached`; `TestReprojectChangedLoadsWrittenInBatches` < 40 queries at 1,200 ids |
+
+The round-2 reviewers raised no new findings. Nit (logged, rides on F-7): `conclusionsummaries/filedlinks_test.go:67` doc still says "walks from the part".
+
+### Fix plan 2
+
+**F-7 — `searchindex`'s last id-scan copies use `listIDs`** (from MNT-1, round 2)
+Files: `core/database/searchindex/searchindex.go`, `core/database/conclusionsummaries/filedlinks_test.go`.
+Do:
+- `ReprojectSourcesForType` gets its ids from `listIDs(q, `SELECT id FROM sources WHERE source_type_id = ?`, typeID)`.
+- `SourceIDsForFile` returns `listIDs(q, `SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, fileID)`.
+- Keep their 16-byte guards.
+- `filedlinks_test.go`'s comment above `TestFiledPartOfReportsThePart` says "reports" in place of "walks from the part".
+Check:
+- `rg -n 'rows\.Scan\(&id\)' core/database/searchindex` prints only `listIDs` (`searchindex.go`) and the `dependentsOfHandles` `sqlbatch.Query` callback (`inputs.go`).
+- `scripts/check-pr.sh` PASS.
