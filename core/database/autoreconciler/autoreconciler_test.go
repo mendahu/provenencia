@@ -1108,6 +1108,7 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	db, err := f.C.DB()
 	must(f.T, err)
 	got := handleDocs(f.T, db)
+	gotInputs := inputRows(f.T, db)
 	tx, err := db.Begin()
 	must(f.T, err)
 	defer func() { _ = tx.Rollback() }()
@@ -1115,6 +1116,27 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	if want := handleDocs(f.T, tx); !reflect.DeepEqual(got, want) {
 		f.T.Fatalf("%s: handle search docs differ from a rebuild:\n upkeep  %v\n rebuild %v", at, got, want)
 	}
+	// So must the summary inputs beside them.
+	if want := inputRows(f.T, tx); !reflect.DeepEqual(gotInputs, want) {
+		f.T.Fatalf("%s: summary inputs differ from a rebuild:\n upkeep  %v\n rebuild %v", at, gotInputs, want)
+	}
+}
+
+// inputRows is every row of catalog_search_inputs, as text, sorted.
+func inputRows(t testing.TB, q autoreconciler.Querier) []string {
+	t.Helper()
+	rows, err := q.Query(`SELECT hex(dependent_id), hex(input_id), bridge, endpoint FROM catalog_search_inputs
+		ORDER BY dependent_id, input_id, bridge, endpoint`)
+	must(t, err)
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var dep, input, bridge, endpoint string
+		must(t, rows.Scan(&dep, &input, &bridge, &endpoint))
+		out = append(out, dep+"|"+input+"|"+bridge+"|"+endpoint)
+	}
+	must(t, rows.Err())
+	return out
 }
 
 // handleDocs is every person / event / place search document, as text.
