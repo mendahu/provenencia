@@ -38,8 +38,8 @@ struct PersonRecordLinksContentTests {
 
     @Test func neighborsAreTheOtherEndsOfANodesArcs() {
         let content = johann()
-        #expect(content.neighbors(of: 0) == [1, 3, 4])
-        #expect(content.neighbors(of: 2).isEmpty)
+        #expect(RecordLinksArc.neighbors(of: 0, in: content.arcs) == [1, 3, 4])
+        #expect(RecordLinksArc.neighbors(of: 2, in: content.arcs).isEmpty)
     }
 
     @Test func aNodeThatSharesNoOneIsSpokenAsApart() {
@@ -95,5 +95,53 @@ struct PersonRecordLinksContentTests {
         #expect(content.nodes.count == 50)
         #expect(content.arcs.count == 91)
         #expect(content.nodes.suffix(3).allSatisfy { $0.connected == 0 })
+    }
+
+    @Test func householdScale() {
+        let content = PersonRecordLinksContent(
+            links: PersonSourcesPreviewData.householdRecordLinks(graphs: 50), graphLocations: [:]
+        )
+        #expect(content.nodes.count == 50)
+        #expect(content.arcs.count == 3_675)
+    }
+
+    @Test func arcsAndNodesStopAtTheCap() {
+        func graph(_ id: String) -> CatalogRecordLinksGraph {
+            CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
+        }
+        // Ten strong lines among more thin ones than the cap holds: every strong one stays.
+        let lines = (0..<(PersonRecordLinksContent.maxArcs + 500)).map {
+            CatalogRecordLink(entityID: "e\($0)", strength: $0 % 7_000 == 3 ? .strong : .weak)
+        }
+        let strong = lines.filter { $0.strength == .strong }.count
+        let over = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: [graph("a"), graph("b")],
+                pairs: [CatalogRecordLinksPair(graphAID: "a", graphBID: "b", lines: lines)]
+            ),
+            graphLocations: [:]
+        )
+        #expect(strong > 0)
+        #expect(over.arcs.count == PersonRecordLinksContent.maxArcs)
+        #expect(over.arcs.filter { $0.strong }.count == strong)
+        #expect(over.arcs.prefix(strong).allSatisfy { $0.strong })
+
+        let ids = (0..<(PersonRecordLinksContent.maxNodes + 5)).map { "g\($0)" }
+        let wide = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: ids.map(graph),
+                pairs: [
+                    CatalogRecordLinksPair(graphAID: "g0", graphBID: "g1", lines: [CatalogRecordLink(entityID: "x", strength: .weak)]),
+                    CatalogRecordLinksPair(
+                        graphAID: "g0", graphBID: ids[PersonRecordLinksContent.maxNodes + 2],
+                        lines: [CatalogRecordLink(entityID: "y", strength: .strong)]
+                    ),
+                ]
+            ),
+            graphLocations: [:]
+        )
+        #expect(wide.nodes.count == PersonRecordLinksContent.maxNodes)
+        #expect(wide.arcs.count == 1)
+        #expect(wide.arcs.allSatisfy { $0.a < wide.nodes.count && $0.b < wide.nodes.count })
     }
 }
