@@ -11,7 +11,7 @@ In order.
 | Brief | View | Gates |
 | --- | --- | --- |
 | S13-D7 | Claim review sheet | Descoped 2026-10-29 with S13-18 |
-| [S13-D10](S13-D10-how-the-records-connect.md) | Person page: how the records connect (brief written 2026-11-07; board not drawn) | S13-28 |
+| [S13-D10](S13-D10-how-the-records-connect.md) | Person page: how the records connect (brief written 2026-11-07; board agreed 2026-11-07, turn 15 on the [Person Detail canvas](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ)) | S13-28 |
 | S13-D8 | Source page: the Source date | Descoped 2026-10-31 with S13-21 ([`spike-15/source-provenance-date.md`](../../spike-15/source-provenance-date.md)) |
 | S13-D9 | Sources list: the Source date | Descoped 2026-10-31 with S13-22 ([`spike-15/source-provenance-date.md`](../../spike-15/source-provenance-date.md)) |
 

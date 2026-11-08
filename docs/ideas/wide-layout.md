@@ -14,3 +14,9 @@ Spike 14's Batch 6 gives every page a Regular / Wide width class (1600pt of pane
 | Evidence graph | Canvas with the inspector docked open | |
 
 Promote widened in S13-23: its list goes to 1600 pt and its target menu to 460 pt at Wide (S13-D11 frame 27W).
+
+## Narrow panes
+
+The window can be as narrow as 700pt (a pane of about 436pt). Pages are drawn at Regular and Wide; below the Regular frame some do not fit:
+
+- **Person page, Sources rows.** The Source rows' fixed Type, Date and Ref columns (442pt with their gaps, `PersonSourcesColumns`) do not fit the 372pt column of a 436pt pane, so the citation column has no room. Found on the S13-D10 board (frame 15r, 2026-11-07); the rows are S13-D6's layout, and their narrow arrangement waits for the next change to the Sources section (user, 2026-11-07).

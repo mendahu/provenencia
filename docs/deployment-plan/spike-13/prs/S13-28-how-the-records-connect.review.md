@@ -57,6 +57,45 @@ Maintainability (opus): **Fits with changes**, two new blockers. Executability (
 | X-26 | nit | One unmeasured frame | **Fixed.** Stated in D-7 |
 | M (minors) | minor | `verticalPadding` both lines; `pinOffset` home; Next adds wording; the visible-rect reader holding its state | **Fixed.** D-7 `PVPageVisibleRect` holds the state; Next adds reworded |
 
+## Refresh after the board (2026-11-07)
+
+The S13-D10 board was agreed (turn 15). The planner checked it against the brief and the code, asked the user four questions (header at Wide: keep it centred; the 1078pt breakpoint: accepted; the narrow rows: an idea file, `docs/ideas/wide-layout.md` § Narrow panes; the board reaches the implementer by its artifact link), and copied the values into D-3, D-5, D-7, D-9, §6 and the tests. Then one round with both reviewers.
+
+Maintainability (opus): **Fits with changes**, three blockers. Executability (sonnet): **Not ready**, one blocker.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| X-27 | blocker | The graph lines sit in the citation cell (204pt at Regular), not under the whole row as the board's note says | **Fixed.** D-3: the lines move out of the citation cell to span the row, as the board draws them; the row becomes a `VStack` of the cells and the lines |
+| M-13 | blocker | `sideColumnWidths` repeats `columnWidths`' Wide split; `widthClass` changes nothing | **Fixed.** D-3: `split(available:sideMax:)` taken out of `columnWidths`; `sideColumnWidths(available:mainMin:)` adds only the stack |
+| M-14 | blocker | An `HStack`/`VStack` branch drops state at 1078pt; the kit places columns with a `Layout` | **Fixed.** D-3: `ConclusionSideColumnLayout`, the `PVPageColumnsLayout` shape; stacked gap `space9` (Rules this plan bends). Also answers X-35 |
+| M-15 | blocker | Pinning decided by the diagram's layout but applied by the column | **Fixed.** D-7: `pinOffset` returns 0 when the side is taller than the visible area; `diameter` returns only a size |
+| X-28 | major | Line hover: width, shape, padding, API | **Fixed.** D-6 |
+| X-29 | major | Previews have no session; FakeStore cannot hold a read loading or failed | **Fixed.** D-11 |
+| X-30 | major | 1366 × 600 does not reach the unpin by the stated formula | **Fixed.** D-7 names the visible height (the viewport under the pinned header and switcher, about 290pt there); AC-3.3 split into Wide shrink and Regular unpin |
+| X-31 | minor | T-5 two-arc spacing | **Fixed.** 1 × spacing apart |
+| X-32 | minor | Empty name or title in help and accessibility strings | **Fixed.** D-9 fallbacks |
+| X-33 | minor | Focus mapping for the highlight; Unpromote focus | **Fixed.** D-6 `claimGraphs`; Unpromote focus counts |
+| X-34 | minor | Second host's empty arguments, ids, `key` name, error title, spinner | **Fixed.** D-8 |
+| X-35 | minor | Identity across the stack switch | **Fixed** by M-14 |
+| M-16 | minor | Node hover: two trackers; nearest styles not named | **Fixed.** `PVHoverEffect.onHoverChange`; Codebase fit rows |
+| M-17 | minor | 720 outside the width tokens | **Fixed.** `PVSpacing.widthSideColumnMax` |
+| M-18 | minor | 200pt citation minimum bare | **Fixed.** `PersonSourcesColumns.citationMin`, `minWidth` |
+| M-19, X-36, X-37 | nit | "chip" wording; frame id ranges; `graphLocations` loop shape | **Fixed** (first two); the loop is the implementer's |
+
+### Refresh, round 2 (2026-11-07)
+
+Maintainability (opus): **Fits with changes**, two new blockers. Executability (sonnet): **Not ready**, two new blockers. Every refresh round-1 answer was confirmed against the code.
+
+| ID | Severity | Finding | Answer |
+| --- | --- | --- | --- |
+| M-20 | blocker | `ConclusionSideColumnLayout` copies `PVPageColumnsLayout` | **Fixed.** D-3: the kit's Layout is made internal and takes its widths as an input; the side column is its second caller |
+| M-21 | blocker | D-7 still pins inside an `HStack` and reads the section's height twice | **Fixed.** D-7: `PVPageVisibleRect` hands its content its size too; only `sideHeight` is read apart |
+| X-38 | blocker | The 50-graph fixture gives 89 arcs, not 91 | **Fixed.** D-10: graphs 48 – 50 apart (97 − 6 = 91) |
+| X-39 | blocker | No data for the Source-ref fallback | **Fixed.** D-6: `graphSourceRefs` from `group.sourceRef`; T-6 |
+| X-40 | major | `PersonSourcesList` has no `entityId` | **Fixed.** STEP-8 |
+| X-41 | minor | Placing the dot on the node point | **Fixed.** D-5: measured offset |
+| X-42, M (nits) | nit | T-6 step; `PVPageVisibleRect` case; FakeStore hook naming; "layout unchanged"; 646pt wording; empty defaults on the host | **Fixed**, except the host's empty defaults, kept: only `.column` omits them, and a band section without an empty state is caught in review |
+
 ## Verdict
 
-After round 2: no reviewer blocker open in the plan's own decisions. Open: the board values, including RL-W5 and RL-W2's lines (X-17, X-18), which the S13-D10 board answers with the user. Status stays **Blocked — on board S13-D10**; STEP-0 copies the answers, and the plan is reviewed again then.
+After the refresh (two rounds): no blocker open, no To user item open. The board's values are in the plan; the user answered the header, breakpoint, narrow-rows and board-link questions. Status **Planned**.
