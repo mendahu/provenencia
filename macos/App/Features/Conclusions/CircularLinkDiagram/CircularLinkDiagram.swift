@@ -25,8 +25,7 @@ struct CircularLinkDiagram<ID: Hashable>: View {
     var focus: ((ID) -> PVFieldFocus)?
 
     var body: some View {
-        let diameter = dataset.nodes.count == 1 ? nil
-            : CircularLinkLayout<ID>.diameter(width: width, fitting: fittingHeight, style: style)
+        let diameter = CircularLinkLayout<ID>.diameter(width: width, fitting: fittingHeight, style: style)
         let layout = CircularLinkLayout(dataset: dataset, width: width, diameter: diameter, style: style)
         CircularLinkHighlightedLayers(
             layout: layout, dataset: dataset, style: style, hover: hover, focusedID: focusedID,
@@ -351,7 +350,7 @@ private struct CircularLinkDiagramPreview: View {
             accessibilityLabel: "Preview"
         )
         .padding()
-        .background(style.overlayLabelBackground)
+        .background(PVColor.surfacePage)
     }
 
     static func numbered(_ count: Int) -> [CircularLinkNode<String>] {

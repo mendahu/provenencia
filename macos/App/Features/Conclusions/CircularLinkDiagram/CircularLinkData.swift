@@ -21,7 +21,8 @@ struct CircularLinkArc<ID: Hashable>: Equatable {
     var to: ID
     var lineWidth: CGFloat
     /// Nil: the style's `arcColor`. A highlighted arc draws in `style.highlightedArcColor` instead.
-    var color: Color? = nil}
+    var color: Color? = nil
+}
 
 /// An unordered pair of node indexes.
 private struct CircularLinkPair: Hashable {
@@ -55,7 +56,7 @@ struct CircularLinkDataset<ID: Hashable>: Equatable {
     /// In input order.
     let resolvedArcs: [ResolvedArc]
     private let indexes: [ID: Int]
-    private let neighborSets: [Set<Int>]
+    private let adjacency: [Set<Int>]
 
     init(nodes input: [CircularLinkNode<ID>], arcs: [CircularLinkArc<ID>]) {
         var nodes: [CircularLinkNode<ID>] = []
@@ -79,7 +80,7 @@ struct CircularLinkDataset<ID: Hashable>: Equatable {
         }
         self.nodes = nodes
         self.indexes = indexes
-        neighborSets = neighbors
+        adjacency = neighbors
         resolvedArcs = resolved.map { item in
             ResolvedArc(
                 arcIndex: item.arc, from: item.from, to: item.to, slot: item.slot,
@@ -90,19 +91,23 @@ struct CircularLinkDataset<ID: Hashable>: Equatable {
     }
 
     /// The node indexes sharing an arc with the node at `index`.
-    func neighbors(ofIndex index: Int) -> Set<Int> { neighborSets[index] }
+    func neighbors(ofIndex index: Int) -> Set<Int> { adjacency[index] }
 
     /// How many nodes share an arc with the node `id`; zero for an id that is no node.
-    func neighborCount(of id: ID) -> Int { indexes[id].map { neighborSets[$0].count } ?? 0 }
+    func neighborCount(of id: ID) -> Int { indexes[id].map { adjacency[$0].count } ?? 0 }
 
     /// The index of the node `id`.
     func index(of id: ID) -> Int? { indexes[id] }
 
     /// The same dataset with each node replaced by `transform(index, node)`, for a node's text
-    /// that reads this dataset's neighbours. The transform keeps the id.
+    /// that reads this dataset's neighbours. The id is put back after the transform.
     func mappingNodes(_ transform: (Int, CircularLinkNode<ID>) -> CircularLinkNode<ID>) -> Self {
         var copy = self
-        copy.nodes = nodes.enumerated().map { transform($0.offset, $0.element) }
+        copy.nodes = nodes.enumerated().map { index, node in
+            var mapped = transform(index, node)
+            mapped.id = node.id
+            return mapped
+        }
         return copy
     }
 }

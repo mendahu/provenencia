@@ -48,11 +48,12 @@ struct PersonRecordLinksContent: Equatable {
                 }
             }
         }
+        let graphsByID = Dictionary(uniqueKeysWithValues: graphs.map { ($0.graphID, $0) })
         let bare = CircularLinkDataset(
             nodes: graphs.map { CircularLinkNode(id: $0.graphID, label: "") }, arcs: arcs
         )
-        dataset = bare.mappingNodes { index, _ in
-            let graph = graphs[index]
+        dataset = bare.mappingNodes { _, node in
+            guard let graph = graphsByID[node.id] else { return node }
             let name = graph.graphName.trimmedNonEmpty
             let ref = graph.graphRef.trimmedNonEmpty
             let graphTitle = name ?? ref ?? ""
