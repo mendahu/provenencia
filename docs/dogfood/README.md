@@ -11,5 +11,3 @@ Friction found while using Provenencia on **real research**, not a planned featu
 | [**UX entries**](ux/) | One file per finding (`ux/YYYY-MM-DD-<slug>.md`). Add here first. |
 
 When a note is big enough to park longer-term, or when you decide to fix a cluster, move it to `ideas/` or into a spike and delete it here.
-
-Batch 7 dogfood that was pulled into Spike 14 lives under [`deployment-plan/spike-14/ux/`](../deployment-plan/spike-14/ux/).

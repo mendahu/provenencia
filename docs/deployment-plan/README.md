@@ -49,9 +49,9 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 ## Current
 
-[Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md). Batch 7 (2026-11-04) is dogfood UX (PDF page sync, polygon edit, graph polish, boolean value type).
-
 [Spike 15 — Sources and citations](spike-15/) is not yet planned: its design docs (the Source date, citation formats, moving an Artifact, Source structure leftovers, privacy, credibility UX, metadata rethink) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
+
+Spike 16 — Odds and ends is being planned. Until its map is open, a one-off PR waits for it.
 
 Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md).
 
@@ -59,6 +59,7 @@ Ideas: [`ideas/`](../ideas/). Claude Design briefs: [`add-design-brief`](../../.
 
 | Spike | What we decided |
 | --- | --- |
+| [Spike 14](archive/spike-14/) | Odds and ends in batches: Event and Place pictures, effects on every write, a boolean value type. Summary rows record their inputs. |
 | [Spike 13](archive/spike-13/) | The Person page is one sectioned Conclusion page: provenance sheet, family, timeline, gallery, sources. Identity Claims are membership only. A person's records connect by a computed count. |
 | [Spike 12](archive/spike-12/) | A Source holds several isolated Evidence graphs; Copy Source for citable parts. Agreement and credibility stay per Source. |
 | [Spike 11](archive/spike-11/) | Matching is six pure layers over one registry. Bands come from evidence; frequency weighting is gone. Kinship matches in any shape through implied links. |

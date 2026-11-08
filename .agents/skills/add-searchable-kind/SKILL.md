@@ -28,7 +28,7 @@ Authoritative behavior: [`docs/deployment-plan/archive/spike-3/omnibar-search.md
 - [ ] FTS projector in core/database/searchindex (Upsert/Delete/Rebuild; unicode61 **and** trigram indexes)
 - [ ] A `fieldValuesForKind` case (`core/search/fts.go`) mapping the document's columns onto every registry field the kind declares.
 - [ ] Write-path reproject on domain mutators (same tx when practical)
-- [ ] A handle kind's composer records its inputs through `graphcache.InputScope`.
+- [ ] A handle kind's composer records its inputs through `graphcache.InputScope` ([design](../../../docs/deployment-plan/archive/spike-14/summary-inputs.md)).
 - [ ] Tagged Source body rollup when contributing child text (`note:` / `metadata:` / `filename:`)
 - [ ] Swift `CatalogSearchKind` case (`TestSwiftVocabularyMatchesGo` fails without it); the compiler then asks for its `kindLabel` and `leadThumbnail`
 - [ ] FakeStore returns seeded hits for the kind in seeded order, filtered only by the requested kinds; markCatalogSessionHeld. It ranks and scores nothing: ranking is Go's and is tested in `core/search` (`.cursor/rules/swift-tests.mdc`). The compiler does not ask for the fake hits

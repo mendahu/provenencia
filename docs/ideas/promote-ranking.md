@@ -2,7 +2,7 @@
 
 **Status:** parked 2026-10-29 when Spike 12 closed; consolidated 2026-11-04 from this file plus `name-index-on-commit.md`, `narrower-canon-walk.md` and `coverage-aware-similarity.md`. Promote's suggestions are still ranked by graph alignment's score, unseen since Spike 13's S13-23 ([`conclusion-layer-data-model.md`](../conclusion-layer-data-model.md) §5.3). This note collects the matching work that waits until that ranking is rebuilt, likely on the Evidence graph scoring of [Spike 13's requirements](../deployment-plan/archive/spike-13/evidence-graph-comparison.md) once it has proven itself.
 
-Audit items below are from the second app-health audit, now at [`deployment-plan/spike-14/app-health-audit-2.md`](../deployment-plan/spike-14/app-health-audit-2.md). Budgets were to be measured at Spike 12's Scale: 37,000 canonical records, 100 member Sources on one record, 100 new people on one Source, 6,000 events on one place.
+Audit items below are from the second app-health audit (2026-10-28, at `3cc609c`; deleted when Spike 14 closed, in git history). Budgets were to be measured at Spike 12's Scale: 37,000 canonical records, 100 member Sources on one record, 100 new people on one Source, 6,000 events on one place.
 
 ## The direction
 
