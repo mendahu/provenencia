@@ -221,20 +221,6 @@ func TestInputsMatchIsolatedComposition(t *testing.T) {
 	}
 }
 
-func TestInputsCoverDependents(t *testing.T) {
-	f := newFixture(t)
-	buildInputsWorld(f)
-	db, err := f.C.DB()
-	must(t, err)
-	ids := handleIDs(t, f)
-	var probe [][]byte
-	for _, kind := range conclusionsummariestest.Kinds {
-		probe = append(probe, ids[kind]...)
-	}
-	extras, excused := conclusionsummariestest.CheckCoversDependents(t, db, ids, probe)
-	t.Logf("rows the index reaches beyond Dependents, by kind: %v; persons excused (non-canonical birth or death): %d", extras, excused)
-}
-
 // TestInputsCapCountsNothing: over the per-call cap on recorded keys, no row
 // of the call has inputs, and the rows themselves do not change.
 func TestInputsCapCountsNothing(t *testing.T) {

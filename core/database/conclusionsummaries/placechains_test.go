@@ -434,19 +434,18 @@ func TestAttachPlaceRelationshipsIrelandMembershipSpan(t *testing.T) {
 	}
 }
 
-func TestDependentsIncludeChildPlaces(t *testing.T) {
+// A second toponym cited on a parent place reports the places filed under it.
+func TestPlaceRenameReachesChildPlaces(t *testing.T) {
 	f := newFixture(t)
 	toronto := f.placeSubject("Toronto", nil, nil, 0, 0)
 	ontario := f.placeSubject("Ontario", nil, nil, 2, 0)
 	f.placeRel(toronto, ontario, propertyterms.KeyPartOf, nil, nil)
 	torontoID := f.promoteSubject(toronto)
-	ontarioID := f.promoteSubject(ontario)
-	db, err := f.C.DB()
-	must(t, err)
-	deps, err := conclusionsummaries.Dependents(db, [][]byte{ontarioID})
-	must(t, err)
+	f.promoteSubject(ontario)
+	f.Cite(f.Artifact, ontario, observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Upper Canada")})
+	deps := f.Reported
 	if !database.ContainsBlobID(deps, torontoID) {
-		t.Fatalf("parent dependents missing child: %d", len(deps))
+		t.Fatalf("a toponym cited on the parent did not report its child: %d ids", len(deps))
 	}
 }
 

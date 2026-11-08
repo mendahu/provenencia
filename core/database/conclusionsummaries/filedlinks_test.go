@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
@@ -12,22 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 )
-
-// filedLinkDeps recomputes the association handle of the last bridge of type
-// kind, as the write that filed it does, and returns what the walk reported.
-func (f *fixture) filedLinkDeps(kind string) [][]byte {
-	f.T.Helper()
-	db, err := f.C.DB()
-	must(f.T, err)
-	var assoc []byte
-	must(f.T, db.QueryRow(`SELECT ic.entity_id FROM identity_claims ic
-		JOIN subjects s ON s.id = ic.subject_id
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.key = ?
-		WHERE ic.status = 'accepted' ORDER BY s.id DESC LIMIT 1`, kind).Scan(&assoc))
-	deps, err := autoreconciler.RecomputeReported(db, [][]byte{assoc})
-	must(f.T, err)
-	return deps
-}
 
 // promotedBirth promotes a person and their birth event, files the
 // participation, and files the location at place unless place is the zero Subject.
@@ -71,7 +54,7 @@ func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
 		}
 		_, event, h := f.promotedBirth(subjects.Subject{})
 		f.Locate(f.Source, f.Artifact, event, place)
-		deps := f.filedLinkDeps("location")
+		deps := f.Reported
 		if countIn(deps, h[1], placeID) != 2 {
 			t.Fatalf("%d siblings: deps lack an end of the link", siblings)
 		}
@@ -95,8 +78,8 @@ func TestFiledPartOfWalksFromThePart(t *testing.T) {
 	_, _, hPart := f.promotedBirth(part)
 	_, _, hSub := f.promotedBirth(sub)
 	_, _, hWhole := f.promotedBirth(whole)
-	f.placeRel(part, whole, propertyterms.KeyPartOf, nil, nil)
-	deps := f.filedLinkDeps("place_relationship")
+	f.PlaceRel(f.Source, f.Artifact, part, whole, propertyterms.KeyPartOf)
+	deps := f.Reported
 	if countIn(deps, wholeID, partID) != 2 {
 		t.Fatalf("deps lack an end of the link")
 	}

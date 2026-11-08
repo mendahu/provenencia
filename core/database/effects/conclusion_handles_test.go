@@ -37,6 +37,30 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 )
 
+// observerHandles are the handles whose members' Observations point at
+// subjectID as a subject-valued end: the oracle the claim cases compare
+// effects.Handles with.
+func observerHandles(tx *sql.Tx, subjectID []byte) ([][]byte, error) {
+	rows, err := tx.Query(`SELECT DISTINCT ic.entity_id
+		FROM observations o
+		JOIN identity_claims ic ON ic.subject_id = o.subject_id
+			AND ic.status IN ('accepted', 'provisional')
+		WHERE o.value_subject_id = ?`, subjectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // TestConclusionHandleSets builds the change lists promote, claim create,
 // credibility, and a cardinality edit actually produce, on a transaction that
 // rolls back, and checks effects.Handles covers the set those writes recompute
@@ -237,7 +261,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		obs, err := autoreconciler.HandlesObservingSubject(tx.Tx, bob.ID)
+		obs, err := observerHandles(tx.Tx, bob.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -263,7 +287,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		obs, err := autoreconciler.HandlesObservingSubject(tx.Tx, bob.ID)
+		obs, err := observerHandles(tx.Tx, bob.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -294,7 +318,7 @@ func TestConclusionHandleSets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		obs, err := autoreconciler.HandlesObservingSubject(tx.Tx, birth.ID)
+		obs, err := observerHandles(tx.Tx, birth.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -327,11 +351,11 @@ func TestConclusionHandleSets(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		bobObs, err := autoreconciler.HandlesObservingSubject(tx.Tx, bob.ID)
+		bobObs, err := observerHandles(tx.Tx, bob.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
-		birthObs, err := autoreconciler.HandlesObservingSubject(tx.Tx, birth.ID)
+		birthObs, err := observerHandles(tx.Tx, birth.ID)
 		if err != nil {
 			t.Fatal(err)
 		}

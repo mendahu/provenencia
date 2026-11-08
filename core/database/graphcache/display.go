@@ -1,16 +1,6 @@
 package graphcache
 
-// DepsFunc lists handles whose composed row reads one of ids.
-// conclusionsummaries registers it. The graph does not import that package.
-type DepsFunc func(q Querier, ids [][]byte) ([][]byte, error)
-
-var (
-	depsFn    DepsFunc
-	displayFn MemoCheck
-)
-
-// SetDisplayDeps registers the reverse of the summary reads.
-func SetDisplayDeps(fn DepsFunc) { depsFn = fn }
+var displayFn MemoCheck
 
 // SetDisplayCheck registers the stored-row comparison Verify runs.
 func SetDisplayCheck(fn MemoCheck) { displayFn = fn }
@@ -70,19 +60,4 @@ func (g *Graph) dropDisplays(ids [][]byte) {
 	for _, id := range ids {
 		g.dropDisplay(id)
 	}
-}
-
-// forgetDisplays drops stored rows for roots and for every handle the summary
-// rules say reads them. A save calls this after the nodes have been reloaded.
-func (g *Graph) forgetDisplays(roots [][]byte) error {
-	g.dropDisplays(roots)
-	if depsFn == nil || len(roots) == 0 {
-		return nil
-	}
-	deps, err := depsFn(g, roots)
-	if err != nil {
-		return err
-	}
-	g.dropDisplays(deps)
-	return nil
 }

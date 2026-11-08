@@ -8,9 +8,6 @@ import (
 )
 
 func init() {
-	graphcache.SetDisplayDeps(func(q graphcache.Querier, ids [][]byte) ([][]byte, error) {
-		return Dependents(q, ids)
-	})
 	graphcache.SetDisplayCheck(checkDisplay)
 }
 

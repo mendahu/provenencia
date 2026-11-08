@@ -1,9 +1,11 @@
 package searchindex_test
 
 import (
+	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -51,6 +53,12 @@ func TestReprojectHandlesBuildsOneGraph(t *testing.T) {
 	}
 	if calls != 0 {
 		t.Fatalf("no ids built %d graphs, want 0", calls)
+	}
+	if _, err := searchindex.ReprojectChanged(db, ids, ids[:10]); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("one ReprojectChanged call built %d graphs, want 1", calls)
 	}
 }
 
@@ -175,5 +183,99 @@ func TestReprojectWritesInputs(t *testing.T) {
 	var n int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_inputs`).Scan(&n); err != nil || n != 0 {
 		t.Fatalf("ClearAll left %d input rows, err %v", n, err)
+	}
+}
+
+// filedWorld is James Robins and a birth, both promoted, and a participation
+// filed between them (role subject), with the index current.
+type filedWorld struct {
+	r                        *evidencelayertest.Records
+	db                       *sql.DB
+	james, birth             subjects.Subject
+	jamesID, birthID, partID []byte
+}
+
+func newFiledWorld(t *testing.T) filedWorld {
+	t.Helper()
+	r := evidencelayertest.New(t)
+	db, err := r.C.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	james := r.Bare(r.Source, "person")
+	r.Cite(r.Artifact, james, observations.Input{PropertyID: r.Prop("name").ID, Name: namevaluetest.Western("James Robins")})
+	birth := r.Bare(r.Source, "event")
+	r.Cite(r.Artifact, birth, observations.Input{PropertyID: r.Prop("event_type").ID, ValueTermID: r.Term("event_type", "birth").ID})
+	r.Participation(r.Source, r.Artifact, james, birth, "subject")
+	save := func(s subjects.Subject) []byte {
+		return promotetest.Save(t, r.C, evidencelayertest.UserID, promote.Input{SubjectID: s.ID}).Entity.ID
+	}
+	w := filedWorld{r: r, db: db, james: james, birth: birth, jamesID: save(james), birthID: save(birth)}
+	if err := db.QueryRow(`SELECT e.id FROM canonical_entities e JOIN subject_types st ON st.id = e.subject_type_id
+		WHERE st.key = 'participation'`).Scan(&w.partID); err != nil {
+		t.Fatal(err)
+	}
+	return w
+}
+
+func holds(ids [][]byte, id []byte) bool {
+	return slices.ContainsFunc(ids, func(x []byte) bool { return bytes.Equal(x, id) })
+}
+
+func TestIndexReads(t *testing.T) {
+	w := newFiledWorld(t)
+	byValues, err := searchindex.DependentsOfForTest(w.db, []graphcache.InputKey{{ID: w.jamesID}})
+	if err != nil || !holds(byValues, w.birthID) {
+		t.Fatalf("rows composed from James's values %x, err %v: want the birth", byValues, err)
+	}
+	byLink, err := searchindex.DependentsOfForTest(w.db, []graphcache.InputKey{{ID: w.birthID, Bridge: "participation", Endpoint: "event"}})
+	if err != nil || !holds(byLink, w.birthID) {
+		t.Fatalf("rows composed from the birth's participation link %x, err %v: want the birth", byLink, err)
+	}
+	byHandle, err := searchindex.DependentsOfHandlesForTest(w.db, [][]byte{w.partID})
+	if err != nil || !holds(byHandle, w.birthID) || !holds(byHandle, w.jamesID) {
+		t.Fatalf("rows composed from the participation %x, err %v: want the birth and James", byHandle, err)
+	}
+	ends, err := searchindex.OldEndsForTest(w.db, [][]byte{w.partID, w.birthID, make([]byte, 16)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := ends[string(w.partID)]; len(got) != 2 || !hasKey(got, w.jamesID, "participation", "person") || !hasKey(got, w.birthID, "participation", "event") {
+		t.Fatalf("the participation's old ends %+v, want James and the birth", got)
+	}
+	if len(ends) != 1 {
+		t.Fatalf("old ends of a summary row and an unknown id: %+v, want none", ends)
+	}
+}
+
+func hasKey(keys []graphcache.InputKey, id []byte, bridge, endpoint string) bool {
+	want := graphcache.InputKey{ID: id, Bridge: bridge, Endpoint: endpoint}
+	return slices.ContainsFunc(keys, func(k graphcache.InputKey) bool { return k.Equal(want) })
+}
+
+func TestUnpromoteReportsTheDeletedLinksEnds(t *testing.T) {
+	w := newFiledWorld(t)
+	user := evidencelayertest.UserID
+	_, res, err := writes.Run(w.r.C, writes.Op{Action: "unpromote_subject", UserID: user}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := promote.Unpromote(tx, user, w.james.ID)
+		return struct{}{}, ch, err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if deps := res.Effects.SummaryDeps; !holds(deps, w.birthID) || !holds(deps, w.jamesID) {
+		t.Fatalf("SummaryDeps %x, want the birth and James", deps)
+	}
+	for _, id := range [][]byte{w.jamesID, w.partID} {
+		if rows := inputRowsOf(t, w.db, id); len(rows) != 0 {
+			t.Fatalf("a gone handle kept inputs %+v", rows)
+		}
+	}
+	var title string
+	if err := w.db.QueryRow(`SELECT title FROM catalog_search_docs WHERE entity_id = ?`, database.UUIDString(w.birthID)).Scan(&title); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(title, "James") {
+		t.Fatalf("the birth's search title %q still names James", title)
 	}
 }

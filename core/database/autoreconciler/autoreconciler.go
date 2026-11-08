@@ -12,10 +12,12 @@
 // (fixed-seed sequences plus named scenarios) hold them equal — an upkeep miss
 // is otherwise silent.
 //
-// Upkeep goes through writes.Run, which calls RecomputeTx with the handles
-// effects.Resolve named. Subject delete calls RecomputeTx once more after the
-// rows are gone, so summary documents see the cleared values. HandlesFor* are
-// the sets the registry fixtures compare. Claim status has no edit path yet.
+// Upkeep goes through writes.Run, which calls RecomputeReported with the
+// handles effects.Resolve named. RecomputeReported recomputes them and hands
+// the ids that moved to searchindex.ReprojectChanged, which reprojects them and
+// the rows composed from them. Subject delete recomputes nothing itself: Run
+// recomputes the handles its released changes name. HandlesFor* are the sets
+// the registry fixtures compare. Claim status has no edit path yet.
 //
 // Recompute is per handle: all of a handle's Properties are rewritten together.
 // Narrowing to (handle, Property) waits for timings that need it.
@@ -39,7 +41,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -157,13 +158,6 @@ const (
 	sqlAcceptedEntities = `SELECT subject_id, entity_id FROM identity_claims
 		WHERE status = 'accepted' AND subject_id IN (`
 
-	// Handles whose members cite subjectID as a subject-valued end.
-	sqlHandlesObservingSubject = `SELECT DISTINCT ic.entity_id
-		FROM observations o
-		JOIN identity_claims ic ON ic.subject_id = o.subject_id
-			AND ic.status IN ('accepted', 'provisional')
-		WHERE o.value_subject_id = ?`
-
 	sqlHandlesForSubjects = `SELECT DISTINCT entity_id FROM identity_claims
 		WHERE status IN ('accepted', 'provisional') AND subject_id IN (`
 
@@ -186,85 +180,32 @@ const (
 	sqlAllEntities = `SELECT id FROM canonical_entities ORDER BY id`
 )
 
-// RecomputeTx rewrites the cached rows of the given handles from truth tables.
-// A handle with no members (or no cacheable values) ends with no rows. The
-// handles' search documents, and the documents of handles whose summaries read
-// them, are reprojected in the same transaction. Subject delete passes the
-// released handles, observers, linked handles, and summary dependents through
-// this call after the rows are gone, so a removed member updates the rows
-// that named it.
-func RecomputeTx(q Querier, entityIDs [][]byte) error {
-	_, err := RecomputeReported(q, entityIDs)
-	return err
-}
-
-// RecomputeReported is RecomputeTx plus the summary dependents that walk found.
-// The commit drops stored rows for those ids and does not walk again.
+// RecomputeReported rewrites the cached rows of the given handles from truth
+// tables. A handle with no members (or no cacheable values) ends with no rows.
+// The handles' search documents, and the documents of the rows composed from
+// what moved, are reprojected in the same transaction
+// (searchindex.ReprojectChanged). It returns those rows plus the ends of the
+// links that changed: the handles whose stored rows and open pages the commit
+// drops. A removed member updates the rows that named it because Run passes the
+// released handles through this call after the rows are gone.
 func RecomputeReported(q Querier, entityIDs [][]byte) ([][]byte, error) {
 	ids := database.UniqueBlobIDs(entityIDs)
-	beforeEnds, beforeWalk, err := conclusionsummaries.AssociationEndpoints(q, ids)
+	moved, err := recompute(q, ids)
 	if err != nil {
 		return nil, err
 	}
-	var moved [][]byte
-	if err := sqlbatch.Each(ids, func(batch [][]byte) error {
+	return searchindex.ReprojectChanged(q, ids, moved)
+}
+
+// recompute rewrites the rows of ids, a batch at a time, and returns the ids
+// whose displayed rows differ from the ones it replaced.
+func recompute(q Querier, ids [][]byte) (moved [][]byte, err error) {
+	err = sqlbatch.Each(ids, func(batch [][]byte) error {
 		m, err := recomputeBatch(q, batch)
 		moved = append(moved, m...)
 		return err
-	}); err != nil {
-		return nil, err
-	}
-	afterEnds, afterWalk, err := conclusionsummaries.AssociationEndpoints(q, ids)
-	if err != nil {
-		return nil, err
-	}
-	roots := append([][]byte(nil), ids...)
-	for _, walk := range []map[string][][]byte{beforeWalk, afterWalk} {
-		for _, ends := range walk {
-			roots = append(roots, ends...)
-		}
-	}
-	roots = database.UniqueBlobIDs(roots)
-	deps, err := conclusionsummaries.Dependents(q, roots)
-	if err != nil {
-		return nil, err
-	}
-	// A link names both its ends, so the client reloads a cached page of
-	// either, though no walk starts at a place end.
-	ends := append(append([][]byte(nil), beforeEnds...), afterEnds...)
-	deps = database.UniqueBlobIDs(append(deps, ends...))
-	// Dependents' search text reads only the roots' displayed rows, so a root
-	// whose rows did not move needs none of its dependents reprojected. An
-	// association that did not move, such as a second record of a link already
-	// filed, adds none of its ends. deps stays the full walk: the graph cache
-	// drops displays that read a label.
-	reproject := deps
-	if len(moved) < len(ids) {
-		movedRoots := append([][]byte(nil), moved...)
-		for _, id := range moved {
-			movedRoots = append(movedRoots, beforeWalk[string(id)]...)
-			movedRoots = append(movedRoots, afterWalk[string(id)]...)
-		}
-		movedRoots = database.UniqueBlobIDs(movedRoots)
-		reproject, err = conclusionsummaries.Dependents(q, movedRoots)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if err := searchindex.ReprojectHandles(q, append(append(roots, ends...), reproject...)); err != nil {
-		return nil, err
-	}
-	return deps, nil
-}
-
-// HandlesObservingSubject returns handles whose members' Observations point
-// at subjectID. A claim create or a subject delete recomputes them so a
-// subject-valued end tracks the handle it resolved to.
-func HandlesObservingSubject(q Querier, subjectID []byte) ([][]byte, error) {
-	if len(subjectID) != 16 {
-		return nil, nil
-	}
-	return listIDs(q, sqlHandlesObservingSubject, subjectID)
+	})
+	return moved, err
 }
 
 // HandlesForSubjects is the handle list a subject-membership change recomputes.
@@ -301,7 +242,9 @@ func HandlesForProperty(q Querier, propertyID []byte) ([][]byte, error) {
 	return listIDs(q, sqlHandlesForProperty, propertyID)
 }
 
-// Rebuild clears the table, recomputes every handle, and stores CacheVersion.
+// Rebuild clears the table, recomputes every handle, reprojects every handle's
+// search document (every row moved, so the input index has nothing to find
+// outside the ids), and stores CacheVersion.
 func Rebuild(q Querier) error {
 	if _, err := q.Exec(`DELETE FROM auto_reconciler_values`); err != nil {
 		return err
@@ -313,7 +256,10 @@ func Rebuild(q Querier) error {
 	if err != nil {
 		return err
 	}
-	if err := RecomputeTx(q, ids); err != nil {
+	if _, err := recompute(q, ids); err != nil {
+		return err
+	}
+	if err := searchindex.ReprojectHandles(q, ids); err != nil {
 		return err
 	}
 	_, err = q.Exec(`UPDATE auto_reconciler_meta SET cache_version = ? WHERE id = 1`, CacheVersion)

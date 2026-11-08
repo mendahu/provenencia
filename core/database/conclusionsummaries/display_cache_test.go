@@ -7,13 +7,14 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
-	"github.com/mendahu/provenencia/core/writes"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // A country three steps above a town is a dependent of that town, of a birth
@@ -41,20 +42,12 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	f.Participation(f.Source, f.Artifact, person, birth, "subject")
 	f.Locate(f.Source, f.Artifact, birth, town)
 
-	countryID := f.promoteSubject(country)
+	f.promoteSubject(country)
 	f.promoteSubject(region)
 	f.promoteSubject(city)
 	townID := f.promoteSubject(town)
 	personID := f.promoteSubject(person)
 	birthID := f.promoteSubject(birth)
-
-	db, err := f.C.DB()
-	must(t, err)
-	deps, err := conclusionsummaries.Dependents(db, [][]byte{countryID})
-	must(t, err)
-	if !database.ContainsBlobID(deps, townID) || !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, personID) {
-		t.Fatalf("country dependents missing the town, the birth, or the person (%d ids)", len(deps))
-	}
 
 	before := personSummary(t, f, personID)
 	if !sameSet(before.Birth.Places[0].Parents, []string{"City", "Region", "Country"}) {
@@ -66,13 +59,16 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 
 	toponymID := f.Prop("toponym").ID
 	obsID := observationID(t, f.C, country.ID, toponymID)
-	_, err = writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-		return observations.Update(tx, userID, observations.Input{
+	deps := f.Run("update_observation", func(tx *database.Tx) ([]rowchange.Change, error) {
+		_, ch, err := observations.Update(tx, userID, observations.Input{
 			ID: obsID, SubjectID: country.ID, PropertyID: toponymID,
 			Scalar: propertymeta.TextScalar("Renamed"),
 		})
+		return ch, err
 	})
-	must(t, err)
+	if !database.ContainsBlobID(deps, townID) || !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, personID) {
+		t.Fatalf("the country rename reported %d ids, missing the town, the birth, or the person", len(deps))
+	}
 
 	after := personSummary(t, f, personID)
 	if !sameSet(after.Birth.Places[0].Parents, []string{"City", "Region", "Renamed"}) {
@@ -87,6 +83,29 @@ func TestDisplayCacheFollowsAPlaceThreeStepsUp(t *testing.T) {
 	must(t, conclusionsummaries.AttachPlaceRelationships(f.C, &towns[0]))
 	if len(towns[0].PartOf) != 1 || towns[0].PartOf[0].Title != "City" {
 		t.Fatalf("town part of %+v", towns[0].PartOf)
+	}
+}
+
+// A person row reads its birth, so merging the birth into another drops the
+// stored person row, though only the birth's own handle was committed.
+func TestKitMergeDropsReadersDisplays(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	k := graphcachetest.NewCanon(t, c)
+	person := k.Person()
+	birth, _ := k.Birth(person, nil, nil)
+	other := k.Event(vocabkey.EventBirth)
+	k.Commit(person, birth, other)
+
+	if _, err := conclusionsummaries.PersonsByIDs(c, [][]byte{person}); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := c.Graph().Display(person); !ok {
+		t.Fatal("listing the person stored no display row")
+	}
+	k.Merge(birth, other)
+	k.Commit(birth)
+	if _, ok := c.Graph().Display(person); ok {
+		t.Fatal("the person's stored display survived a merge of the birth it read")
 	}
 }
 
@@ -120,18 +139,15 @@ func TestBirthBecomingMarriageDropsThePerson(t *testing.T) {
 	eventTypeID := f.Prop("event_type").ID
 	marriageID := f.Term("event_type", "marriage").ID
 	obsID := observationID(t, f.C, birth.ID, eventTypeID)
-	_, err = writes.Call(f.C, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
-		return observations.Update(tx, userID, observations.Input{
+	deps := f.Run("update_observation", func(tx *database.Tx) ([]rowchange.Change, error) {
+		_, ch, err := observations.Update(tx, userID, observations.Input{
 			ID: obsID, SubjectID: birth.ID, PropertyID: eventTypeID,
 			ValueTermID: marriageID,
 		})
+		return ch, err
 	})
-	must(t, err)
-
-	deps, err := conclusionsummaries.Dependents(db, [][]byte{birthID})
-	must(t, err)
 	if !database.ContainsBlobID(deps, personID) {
-		t.Fatal("a marriage that was a birth did not reach its subject")
+		t.Fatal("a marriage that was a birth did not report its subject")
 	}
 	after := personSummary(t, f, personID)
 	if after.Birth.Event != nil {

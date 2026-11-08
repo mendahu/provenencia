@@ -20,8 +20,9 @@ import (
 
 // Handle documents (Conclusion layer) are match text from the summary
 // composers: the title the list shows, plus the secondary line (a Person's
-// life, a Place's names and chain). autoreconciler.RecomputeTx reprojects
-// the handles it rewrites and their summary dependents, in the same transaction.
+// life, a Place's names and chain). autoreconciler.RecomputeReported reprojects
+// the handles it rewrites and the rows searchindex.ReprojectChanged finds in
+// the input index, in the same transaction.
 const (
 	sqlHandleHeads = `SELECT e.id, e.ref, COALESCE(e.label, ''), st.key, st.origin, e.merged_into_id IS NOT NULL
 		FROM canonical_entities e JOIN subject_types st ON st.id = e.subject_type_id
@@ -51,7 +52,13 @@ func ReprojectHandles(q Querier, entityIDs [][]byte) error {
 	if len(ids) == 0 {
 		return nil
 	}
-	g := newGraph(q)
+	return reprojectOn(q, newGraph(q), ids)
+}
+
+// reprojectOn is ReprojectHandles on a graph the caller built, so a write that
+// has already read the graph composes its rows on it.
+func reprojectOn(q Querier, g *graphcache.Graph, ids [][]byte) error {
+	ids = database.UniqueBlobIDs(ids)
 	return sqlbatch.Each(ids, func(batch [][]byte) error {
 		return reprojectHandleBatch(q, g, batch)
 	})

@@ -250,28 +250,25 @@ func TestCanonicalWalks(t *testing.T) {
 		t.Fatal("subject order moved")
 	}
 
-	db, err := f.C.DB()
-	must(t, err)
-	deps, err := conclusionsummaries.Dependents(db, [][]byte{yorkID})
-	must(t, err)
-	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) || database.ContainsBlobID(deps, deathID) {
-		t.Fatalf("place dependents missing birth/fire/james or included the death")
+	// A write reports the rows composed from what it moved. A toponym cited on
+	// York reaches the events held there and the people they are about.
+	f.Cite(f.Artifact, york, observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Yorke")})
+	deps := f.Reported
+	if !database.ContainsBlobID(deps, birthID) || !database.ContainsBlobID(deps, fireID) || !database.ContainsBlobID(deps, jamesID) {
+		t.Fatalf("a toponym cited on York did not report the birth, the fire and James (%d ids)", len(deps))
 	}
-	// The witness is not a subject of the birth, so the place walk does not reach them.
-	fromJames, err := conclusionsummaries.Dependents(db, [][]byte{jamesID})
-	must(t, err)
+	// A name cited on James reaches the events he is a subject of.
+	f.Cite(f.Artifact, james, observations.Input{PropertyID: f.Prop("name").ID, Name: namevaluetest.Western("Jim Robins")})
+	fromJames := f.Reported
 	if !database.ContainsBlobID(fromJames, birthID) || !database.ContainsBlobID(fromJames, deathID) || !database.ContainsBlobID(fromJames, marriageID) || !database.ContainsBlobID(fromJames, censusID) {
-		t.Fatal("person dependents missed an event")
+		t.Fatal("a name cited on James missed an event he is a subject of")
 	}
-	if database.ContainsBlobID(fromJames, yorkID) || database.ContainsBlobID(fromJames, baptismID) {
-		t.Fatal("person walk reached a place or someone else's event")
-	}
-	// James's summary embeds his birth's date: a change to the birth must
-	// reach him. The witness is not a subject, so they are not reached.
-	fromBirth, err := conclusionsummaries.Dependents(db, [][]byte{birthID})
-	must(t, err)
-	if !database.ContainsBlobID(fromBirth, jamesID) || database.ContainsBlobID(fromBirth, birthID) || database.ContainsBlobID(fromBirth, yorkID) {
-		t.Fatalf("event dependents %d: missing James, or included the event or its place", len(fromBirth))
+	// James's summary embeds his birth's date: a date cited on the birth
+	// reaches him.
+	f.Cite(f.Artifact, birth, observations.Input{PropertyID: f.Prop("date").ID, Date: datevaluetest.YMD(1818, 0, 0)})
+	fromBirth := f.Reported
+	if !database.ContainsBlobID(fromBirth, jamesID) {
+		t.Fatalf("a date cited on the birth did not report James (%d ids)", len(fromBirth))
 	}
 }
 

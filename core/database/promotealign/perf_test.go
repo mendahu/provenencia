@@ -56,7 +56,7 @@ const (
 	budgetDeleteLocationAtCity = 500 * time.Millisecond
 	// budgetSecondPartOfAtCity: a second record's part_of from the city joins
 	// the association already filed, which moves no row, so the city's 6,000
-	// events are not reprojected. S14-33 measured 2.75 s before movedRoots
+	// events are not reprojected. S14-33 measured 2.75 s before the walk
 	// followed only the associations that moved.
 	budgetSecondPartOfAtCity = 500 * time.Millisecond
 	// budgetComposeAll: composing every person and every event row once, warm.
@@ -401,19 +401,5 @@ func TestLargeSourceBudgets(t *testing.T) {
 		// The cap on keys one call records (conclusionsummaries
 		// maxInputKeysPerCall) is set from the largest 500-row call here.
 		t.Logf("largest keys in one 500-row call, by kind: %v", conclusionsummariestest.LargestBatch(t, db, handles(t, 0), 500))
-	})
-
-	t.Run("inputs cover Dependents", func(t *testing.T) {
-		db, err := f.c.DB()
-		must(t, err)
-		// Rows are composed for every handle, and Dependents is asked of the
-		// first 100 of each kind.
-		all := handles(t, 0)
-		var probe [][]byte
-		for _, ids := range handles(t, 100) {
-			probe = append(probe, ids...)
-		}
-		extras, excused := conclusionsummariestest.CheckCoversDependents(t, db, all, probe)
-		t.Logf("rows the index reaches beyond Dependents, by kind: %v; persons excused (non-canonical birth or death): %d", extras, excused)
 	})
 }

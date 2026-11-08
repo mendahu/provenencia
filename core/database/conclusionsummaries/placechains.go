@@ -13,6 +13,26 @@ import (
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
+// summaryChainDepth is how far a place row's parent chain climbs. The place
+// neighborhood, closure, ParentChain and isAncestor (so FoldLocations) use the
+// same bound, so a row composed in a batch shows no ancestor its recorded
+// inputs lack.
+const summaryChainDepth = 8
+
+// maxInputKeysPerCall caps the place-chain keys one RowsForSearch call
+// records across all its rows, counted before the keys are copied. On the large
+// fixture the largest 500-row call counts 1,000 and holds 3,500 keys in all (a
+// whole-fixture call counts 16,102); the cap is above 50 times the larger. Only a
+// crafted catalog reaches it, such as a dense part_of mesh whose every row
+// copies its whole place closure. Over the cap the call counts nothing: no
+// row of that batch has inputs, so its index entries are empty and an edit to
+// its places does not invalidate it. S14-42 inherits that miss for a crafted
+// catalog only.
+const maxInputKeysPerCall = 250000
+
+// inputKeyCap is maxInputKeysPerCall; a test lowers it.
+var inputKeyCap = maxInputKeysPerCall
+
 // placeLink is one filed place_relationship edge with its membership dates.
 type placeLink struct {
 	from, to    []byte

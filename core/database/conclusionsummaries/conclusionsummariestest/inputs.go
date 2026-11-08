@@ -1,7 +1,6 @@
 // Package conclusionsummariestest checks the inputs the summary composers
-// record: against the reads of each row composed alone, and against the
-// hand-written Dependents walk. The scenario worlds and the large fixture
-// share it.
+// record against the reads of each row composed alone. The scenario worlds and
+// the large fixture share it.
 package conclusionsummariestest
 
 import (
@@ -10,10 +9,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -204,107 +201,4 @@ func hex8(id []byte) string {
 		out = append(out, digits[c>>4], digits[c&15])
 	}
 	return string(out)
-}
-
-// CheckCoversDependents fails when, for a handle X in probe, the rows whose
-// inputs hold X (its values or any of its link keys) miss an id
-// conclusionsummaries.Dependents([X]) returns, except X's immediate part_of
-// parents and its succession neighbours, the hops a detail page reads. The
-// extras are returned, counted per kind. A missing person is excused (D-13)
-// when every birth or death event in Dependents([X]) that it is a subject of
-// has no accepted member: Dependents reads the kept event type alone, and a
-// person row reads only a canonical event's places. The excused count is
-// returned apart from the extras. ids is every row composed, by kind.
-func CheckCoversDependents(t testing.TB, q Querier, ids map[string][][]byte, probe [][]byte) (extras map[string]int, excused int) {
-	t.Helper()
-	rows := Rows(t, q, ids)
-	kindOf := map[string]string{}
-	holders := map[string]map[string]bool{}
-	for _, kind := range Kinds {
-		for _, id := range ids[kind] {
-			kindOf[string(id)] = kind
-			for _, k := range rows.Inputs(id) {
-				if holders[string(k.ID)] == nil {
-					holders[string(k.ID)] = map[string]bool{}
-				}
-				holders[string(k.ID)][string(id)] = true
-			}
-		}
-	}
-	extras = map[string]int{}
-	g := graphcache.Over(q)
-	vocab, err := g.Vocabulary()
-	if err != nil {
-		t.Fatal(err)
-	}
-	eventType := vocab.TypeIDsByKey()[vocabkey.Event]
-	typeProp := vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia)
-	// excusable reports whether person d, missing for a dependent set deps,
-	// is reached only through birth or death events that are not canonical.
-	excusable := func(d []byte, isDep map[string]bool) bool {
-		edges, err := canonicalgraph.Walk(q, hops.EventsOfSubject, [][]byte{d})
-		if err != nil {
-			t.Fatal(err)
-		}
-		found := false
-		for _, e := range canonicalgraph.Targets(edges) {
-			if !isDep[string(e)] {
-				continue
-			}
-			n, err := g.Node(e)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if n == nil {
-				continue
-			}
-			row, ok := graphcache.Rank1(n.Kept(typeProp))
-			if !ok || (row.TermKey != string(vocabkey.EventBirth) && row.TermKey != string(vocabkey.EventDeath)) {
-				continue
-			}
-			if n.Canonical(eventType) {
-				return false
-			}
-			found = true
-		}
-		return found
-	}
-	for _, x := range probe {
-		deps, err := conclusionsummaries.Dependents(q, [][]byte{x})
-		if err != nil {
-			t.Fatal(err)
-		}
-		isDep := map[string]bool{}
-		for _, d := range deps {
-			isDep[string(d)] = true
-		}
-		skip := map[string]bool{}
-		for _, hop := range []hops.Hop{hops.ParentsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace} {
-			edges, err := canonicalgraph.Walk(q, hop, [][]byte{x})
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, to := range canonicalgraph.Targets(edges) {
-				skip[string(to)] = true
-			}
-		}
-		for _, d := range deps {
-			if skip[string(d)] || kindOf[string(d)] == "" {
-				continue
-			}
-			if !holders[string(x)][string(d)] {
-				if kindOf[string(d)] == vocabkey.Person && excusable(d, isDep) {
-					excused++
-					continue
-				}
-				t.Errorf("%s %x is a dependent of %x by Dependents, and its inputs do not hold it", kindOf[string(d)], d, x)
-			}
-		}
-		for d := range holders[string(x)] {
-			if !isDep[d] {
-				extras[kindOf[d]]++
-			}
-		}
-	}
-	return extras, excused
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -49,7 +48,30 @@ type Records struct {
 	C        *database.Catalog
 	Source   sources.Source
 	Artifact artifacts.Artifact
+	// Reported is the SummaryDeps of the last write a Records helper made.
+	Reported [][]byte
 	y        int64
+}
+
+// run is writes.Run with the action, recording the write's SummaryDeps in
+// r.Reported.
+func run[T any](r *Records, action string, fn func(tx *database.Tx) (T, []rowchange.Change, error)) T {
+	r.T.Helper()
+	v, res, err := writes.Run(r.C, writes.Op{Action: action, UserID: UserID}, fn)
+	Must(r.T, err)
+	r.Reported = res.Effects.SummaryDeps
+	return v
+}
+
+// Run makes one write of the action through writes.Run, as the app does, and
+// returns the handles it reported as moved (Result.Effects.SummaryDeps).
+func (r *Records) Run(action string, fn func(tx *database.Tx) ([]rowchange.Change, error)) [][]byte {
+	r.T.Helper()
+	run(r, action, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		ch, err := fn(tx)
+		return struct{}{}, ch, err
+	})
+	return r.Reported
 }
 
 // Must fails the test on err.
@@ -146,8 +168,9 @@ func (r *Records) Cite(art artifacts.Artifact, s subjects.Subject, in ...observa
 	for i := range in {
 		in[i].SubjectID = s.ID
 	}
-	_, _, err := observationstest.Cite(r.C, UserID, s.GraphID, art.ID, Locator, in...)
-	Must(r.T, err)
+	run(r, "create_citation_with_observations", func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, UserID, citations.CreateInput{ArtifactID: art.ID, GraphID: s.GraphID, LocatorJSON: Locator}, in)
+	})
 }
 
 // Person is a person named name.
@@ -188,7 +211,7 @@ func (r *Records) Participation(src sources.Source, art artifacts.Artifact, pers
 	eventProp := r.Prop("event").ID
 	roleProp := r.Prop("role").ID
 	roleTerm := r.Term("role", role).ID
-	res, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res := run(r, "create_cited_bridge", func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, UserID, connect.CreateInput{
 			FromSubjectID: person.ID, ToSubjectID: event.ID, BridgeTypeKey: "participation",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: Locator},
@@ -199,7 +222,6 @@ func (r *Records) Participation(src sources.Source, art artifacts.Artifact, pers
 			},
 		})
 	})
-	Must(r.T, err)
 	return res.Subject
 }
 
@@ -208,7 +230,7 @@ func (r *Records) Locate(src sources.Source, art artifacts.Artifact, event, plac
 	r.T.Helper()
 	eventProp := r.Prop("event").ID
 	placeProp := r.Prop("place").ID
-	res, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res := run(r, "create_cited_bridge", func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, UserID, connect.CreateInput{
 			FromSubjectID: event.ID, ToSubjectID: place.ID, BridgeTypeKey: "location",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: Locator},
@@ -218,7 +240,6 @@ func (r *Records) Locate(src sources.Source, art artifacts.Artifact, event, plac
 			},
 		})
 	})
-	Must(r.T, err)
 	return res.Subject
 }
 
@@ -229,7 +250,7 @@ func (r *Records) PlaceRel(src sources.Source, art artifacts.Artifact, from, to 
 	toProp := r.Prop("to").ID
 	typeProp := r.Prop("place_relationship_type").ID
 	kindTerm := r.Term("place_relationship_type", kind).ID
-	res, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res := run(r, "create_cited_bridge", func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, UserID, connect.CreateInput{
 			FromSubjectID: from.ID, ToSubjectID: to.ID, BridgeTypeKey: "place_relationship",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: Locator},
@@ -240,7 +261,6 @@ func (r *Records) PlaceRel(src sources.Source, art artifacts.Artifact, from, to 
 			},
 		})
 	})
-	Must(r.T, err)
 	return res.Subject
 }
 
@@ -251,7 +271,7 @@ func (r *Records) Relationship(src sources.Source, art artifacts.Artifact, perso
 	relatedProp := r.Prop("related_to").ID
 	typeProp := r.Prop("relationship_type").ID
 	typTerm := r.Term("relationship_type", typ).ID
-	res, err := writes.Call(r.C, writes.Op{Action: "create_cited_bridge", UserID: UserID}, func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
+	res := run(r, "create_cited_bridge", func(tx *database.Tx) (connect.Result, []rowchange.Change, error) {
 		return connect.CreateCitedBridge(tx, UserID, connect.CreateInput{
 			FromSubjectID: person.ID, ToSubjectID: related.ID, BridgeTypeKey: "relationship",
 			Citation: citations.CreateInput{ArtifactID: art.ID, LocatorJSON: Locator},
@@ -262,7 +282,6 @@ func (r *Records) Relationship(src sources.Source, art artifacts.Artifact, perso
 			},
 		})
 	})
-	Must(r.T, err)
 	return res.Subject
 }
 

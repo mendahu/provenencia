@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -62,6 +63,8 @@ type fixture struct {
 	types map[string]subjecttypes.Type
 	props map[string]properties.Property
 	terms map[string]propertyterms.Term
+	// row is the next free position for a Subject placed on the Evidence graph.
+	row int64
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -1098,12 +1101,78 @@ func TestLoaderQueryCountIsConstant(t *testing.T) {
 	}
 }
 
+// unpromote runs promote.Unpromote through writes.Run and returns the handles
+// the write reported.
+func (f *fixture) unpromote(s subjects.Subject) [][]byte {
+	f.T.Helper()
+	return f.Run("unpromote_subject", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return promote.Unpromote(tx, userID, s.ID)
+	})
+}
+
+// deleteSubject runs subjects.Delete through writes.Run and returns the
+// handles the write reported.
+func (f *fixture) deleteSubject(s subjects.Subject) [][]byte {
+	f.T.Helper()
+	return f.Run("delete_subject", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return subjects.Delete(tx, userID, s.ID)
+	})
+}
+
+// jamesAndBirth is James Robins and a birth dated 1885-05, both promoted, with
+// a participation (role subject) filed between them.
+func (f *fixture) jamesAndBirth() (james, birth subjects.Subject, jamesID, birthID []byte) {
+	f.T.Helper()
+	james, birth = f.subject("person"), f.subject("event")
+	f.cite(nameIn(james, f.props["name"], "given=James|surname=Robins"))
+	f.cite(termIn(birth, f.props["event_type"], f.terms["birth"]), dateIn(birth, f.props["date"], 1885, ip(5), nil))
+	must(f.T, place(f, james, 0, 0))
+	must(f.T, place(f, birth, 2, 0))
+	f.Participation(f.Source, f.Artifact, james, birth, "subject")
+	return james, birth, f.promote(james), f.promote(birth)
+}
+
+// promotedPlace is a place named name, promoted.
+func (f *fixture) promotedPlace(name string) (subjects.Subject, []byte) {
+	f.T.Helper()
+	p := f.subject("place")
+	f.cite(textIn(p, f.props["toponym"], name))
+	f.row += 2
+	must(f.T, place(f, p, 8, f.row))
+	return p, f.promote(p)
+}
+
+// promotedBirth is a birth dated in year, promoted.
+func (f *fixture) promotedBirth(year int) (subjects.Subject, []byte) {
+	f.T.Helper()
+	e := f.subject("event")
+	f.cite(termIn(e, f.props["event_type"], f.terms["birth"]), dateIn(e, f.props["date"], year, nil, nil))
+	f.row += 2
+	must(f.T, place(f, e, 4, f.row))
+	return e, f.promote(e)
+}
+
+// docOf is a handle's search document, as one string of its title and
+// secondary line.
+func (f *fixture) docOf(kind string, id []byte) (title, secondary string) {
+	f.T.Helper()
+	db, err := f.C.DB()
+	must(f.T, err)
+	must(f.T, db.QueryRow(`SELECT title, secondary FROM catalog_search_docs WHERE kind = ? AND entity_id = ?`,
+		kind, database.UUIDString(id)).Scan(&title, &secondary))
+	return title, secondary
+}
+
+func holdsID(ids [][]byte, want []byte) bool {
+	return slices.ContainsFunc(ids, func(id []byte) bool { return bytes.Equal(id, want) })
+}
+
 // assertUpkeepEqualsRebuild fails when the incrementally maintained table
 // differs from a full rebuild (taken in a rolled-back transaction).
 func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 	f.T.Helper()
 	autoreconcilertest.AssertCacheMatchesRebuild(f.T, f.C)
-	// The handle search documents ride on the same upkeep (RecomputeTx), so
+	// The handle search documents ride on the same upkeep (RecomputeReported), so
 	// they must equal a full search rebuild too.
 	db, err := f.C.DB()
 	must(f.T, err)
@@ -1378,6 +1447,100 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 				})
 				must(f.T, err)
 			}
+		}},
+		{"unpromote james leaves the birth unnamed", func(f *fixture) {
+			james, _, _, birthID := f.jamesAndBirth()
+			if title, _ := f.docOf("event", birthID); !strings.Contains(title, "James Robins") {
+				f.T.Fatalf("before: birth title %q does not name James", title)
+			}
+			reported := f.unpromote(james)
+			f.assertUpkeepEqualsRebuild("after unpromoting james")
+			if title, _ := f.docOf("event", birthID); title != "Unspecified birth" {
+				f.T.Fatalf("birth title %q, want Unspecified birth", title)
+			}
+			if !holdsID(reported, birthID) {
+				f.T.Fatalf("the write reported %x, want the birth", reported)
+			}
+		}},
+		{"unpromote the birth leaves james undated", func(f *fixture) {
+			_, birth, jamesID, _ := f.jamesAndBirth()
+			if _, secondary := f.docOf("person", jamesID); !strings.Contains(secondary, "1885") {
+				f.T.Fatalf("before: James's document %q does not hold the birth's date", secondary)
+			}
+			reported := f.unpromote(birth)
+			f.assertUpkeepEqualsRebuild("after unpromoting the birth")
+			if _, secondary := f.docOf("person", jamesID); strings.Contains(secondary, "1885") {
+				f.T.Fatalf("James's document %q still holds the birth's date", secondary)
+			}
+			if !holdsID(reported, jamesID) {
+				f.T.Fatalf("the write reported %x, want James", reported)
+			}
+		}},
+		{"unpromote the place end of a location", func(f *fixture) {
+			york, _ := f.promotedPlace("York")
+			event, _ := f.promotedBirth(1890)
+			f.Locate(f.Source, f.Artifact, event, york)
+			f.assertUpkeepEqualsRebuild("filed")
+			f.unpromote(york)
+			f.assertUpkeepEqualsRebuild("after unpromoting the place")
+		}},
+		{"unpromote the whole of a part_of", func(f *fixture) {
+			whole, _ := f.promotedPlace("Ontario")
+			part, _ := f.promotedPlace("Toronto")
+			event, _ := f.promotedBirth(1890)
+			f.Locate(f.Source, f.Artifact, event, part)
+			f.PlaceRel(f.Source, f.Artifact, part, whole, propertyterms.KeyPartOf)
+			f.assertUpkeepEqualsRebuild("filed")
+			f.unpromote(whole)
+			f.assertUpkeepEqualsRebuild("after unpromoting the whole")
+		}},
+		{"unpromote either end of a succeeded_by", func(f *fixture) {
+			for _, endOfLink := range []string{"from", "to"} {
+				before, _ := f.promotedPlace("Berlin " + endOfLink)
+				after, _ := f.promotedPlace("Germany " + endOfLink)
+				event, _ := f.promotedBirth(1890)
+				f.Locate(f.Source, f.Artifact, event, before)
+				f.PlaceRel(f.Source, f.Artifact, before, after, propertyterms.KeySucceededBy)
+				f.assertUpkeepEqualsRebuild("filed " + endOfLink)
+				if endOfLink == "from" {
+					f.unpromote(before)
+				} else {
+					f.unpromote(after)
+				}
+				f.assertUpkeepEqualsRebuild("after unpromoting the " + endOfLink + " end")
+			}
+		}},
+		{"delete a location at a place with other events", func(f *fixture) {
+			york, yorkID := f.promotedPlace("York")
+			var events [][]byte
+			var locations []subjects.Subject
+			for i := 0; i < 3; i++ {
+				e, id := f.promotedBirth(1890 + i)
+				events = append(events, id)
+				locations = append(locations, f.Locate(f.Source, f.Artifact, e, york))
+			}
+			f.assertUpkeepEqualsRebuild("filed")
+			reported := f.deleteSubject(locations[0])
+			f.assertUpkeepEqualsRebuild("after deleting one location")
+			if !holdsID(reported, events[0]) || !holdsID(reported, yorkID) {
+				f.T.Fatalf("the write reported %x, want the event and the place", reported)
+			}
+			if holdsID(reported, events[1]) || holdsID(reported, events[2]) {
+				f.T.Fatalf("the write reported another event at the place: %x", reported)
+			}
+		}},
+		{"preferred picture rebuilds the lead", func(f *fixture) {
+			pr, pc := f.photo(f.Source), f.photo(f.other)
+			a, b := f.subject("person"), f.subjectOn(f.other, "person")
+			f.citeOn(pr, f.likenessIn(a, 100))
+			ob := f.citeOn(pc, f.likenessIn(b, 200))[0]
+			h := f.promote(a)
+			f.join(b, h)
+			f.assertUpkeepEqualsRebuild("before")
+			f.Run("set_preferred_likeness", func(tx *database.Tx) ([]rowchange.Change, error) {
+				return canonicalentities.SetPreferredLikeness(tx, userID, h, ob.ID)
+			})
+			f.assertUpkeepEqualsRebuild("after choosing the second picture")
 		}},
 	}
 	for _, sc := range scenarios {
@@ -1909,7 +2072,8 @@ func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
 	}
 	tx, err := db.Begin()
 	must(t, err)
-	must(t, autoreconciler.RecomputeTx(tx, [][]byte{h}))
+	_, err = autoreconciler.RecomputeReported(tx, [][]byte{h})
+	must(t, err)
 	must(t, tx.Commit())
 	var stored int
 	must(t, db.QueryRow(`SELECT value_boolean FROM auto_reconciler_values WHERE entity_id = ? AND property_id = ?`, h, id).Scan(&stored))

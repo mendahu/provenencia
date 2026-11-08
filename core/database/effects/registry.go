@@ -146,12 +146,11 @@ type Set struct {
 	Lists []List
 	// Structure is set when the graph cache drops whole; it is not a list.
 	Structure bool
-	// SummaryDeps are handles whose stored rows read Handles. Run fills this
-	// from the walk RecomputeTx already did. SummaryDepsWalked says that walk
-	// happened, including when it found nobody, so a commit drops those rows
-	// and does not walk again.
-	SummaryDeps       [][]byte
-	SummaryDepsWalked bool
+	// SummaryDeps are the rows the input index found for the handles the write
+	// moved, plus the ends of the links that changed
+	// (searchindex.ReprojectChanged). Run fills it. The graph cache drops
+	// their stored rows with Handles', and the app reloads their pages.
+	SummaryDeps [][]byte
 }
 
 // Effect is what a change to one table touches. An empty field means that job
