@@ -1125,15 +1125,16 @@ func (f *fixture) assertUpkeepEqualsRebuild(at string) {
 // inputRows is every row of catalog_search_inputs, as text, sorted.
 func inputRows(t testing.TB, q autoreconciler.Querier) []string {
 	t.Helper()
-	rows, err := q.Query(`SELECT hex(dependent_id), hex(input_id), bridge, endpoint FROM catalog_search_inputs
+	rows, err := q.Query(`SELECT hex(dependent_id), hex(input_id), bridge, endpoint, dependent_is_association FROM catalog_search_inputs
 		ORDER BY dependent_id, input_id, bridge, endpoint`)
 	must(t, err)
 	defer rows.Close()
 	var out []string
 	for rows.Next() {
 		var dep, input, bridge, endpoint string
-		must(t, rows.Scan(&dep, &input, &bridge, &endpoint))
-		out = append(out, dep+"|"+input+"|"+bridge+"|"+endpoint)
+		var association int
+		must(t, rows.Scan(&dep, &input, &bridge, &endpoint, &association))
+		out = append(out, fmt.Sprintf("%s|%s|%s|%s|%d", dep, input, bridge, endpoint, association))
 	}
 	must(t, rows.Err())
 	return out

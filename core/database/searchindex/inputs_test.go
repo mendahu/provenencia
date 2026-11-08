@@ -54,11 +54,14 @@ func TestReprojectHandlesBuildsOneGraph(t *testing.T) {
 	}
 }
 
-type inputRow struct{ input, bridge, endpoint string }
+type inputRow struct {
+	input, bridge, endpoint string
+	association             bool
+}
 
 func inputRowsOf(t *testing.T, db *sql.DB, dependent []byte) []inputRow {
 	t.Helper()
-	rows, err := db.Query(`SELECT input_id, bridge, endpoint FROM catalog_search_inputs WHERE dependent_id = ?`, dependent)
+	rows, err := db.Query(`SELECT input_id, bridge, endpoint, dependent_is_association FROM catalog_search_inputs WHERE dependent_id = ?`, dependent)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +70,7 @@ func inputRowsOf(t *testing.T, db *sql.DB, dependent []byte) []inputRow {
 	for rows.Next() {
 		var id []byte
 		var r inputRow
-		if err := rows.Scan(&id, &r.bridge, &r.endpoint); err != nil {
+		if err := rows.Scan(&id, &r.bridge, &r.endpoint, &r.association); err != nil {
 			t.Fatal(err)
 		}
 		r.input = string(id)
@@ -119,12 +122,23 @@ func TestReprojectWritesInputs(t *testing.T) {
 	if err := searchindex.ReprojectHandles(db, [][]byte{birthID, partID}); err != nil {
 		t.Fatal(err)
 	}
-	if rows := inputRowsOf(t, db, birthID); !hasRow(rows, jamesID, "", "") {
-		t.Fatalf("the birth's inputs %+v miss James", rows)
+	birthRows := inputRowsOf(t, db, birthID)
+	if !hasRow(birthRows, jamesID, "", "") {
+		t.Fatalf("the birth's inputs %+v miss James", birthRows)
+	}
+	for _, r := range birthRows {
+		if r.association {
+			t.Fatalf("the birth's row %+v is flagged as an association's end", r)
+		}
 	}
 	ends := inputRowsOf(t, db, partID)
 	if len(ends) != 2 || !hasRow(ends, jamesID, "participation", "person") || !hasRow(ends, birthID, "participation", "event") {
 		t.Fatalf("the participation's inputs %+v, want its two ends", ends)
+	}
+	for _, r := range ends {
+		if !r.association {
+			t.Fatalf("the participation's row %+v is not flagged as an association's end", r)
+		}
 	}
 
 	// A handle that is merged keeps no rows as a dependent.

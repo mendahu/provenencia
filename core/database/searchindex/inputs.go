@@ -14,9 +14,9 @@ import (
 // same transaction, and clears and rebuilds it with them.
 const (
 	sqlDeleteInputs     = `DELETE FROM catalog_search_inputs WHERE dependent_id IN (`
-	sqlInsertInputsHead = `INSERT OR IGNORE INTO catalog_search_inputs (dependent_id, input_id, bridge, endpoint) VALUES `
+	sqlInsertInputsHead = `INSERT OR IGNORE INTO catalog_search_inputs (dependent_id, input_id, bridge, endpoint, dependent_is_association) VALUES `
 	// inputRowsPerInsert keeps one statement under SQLite's variable limit.
-	inputRowsPerInsert = 200
+	inputRowsPerInsert = 160
 )
 
 // writeInputs replaces the inputs of every id in the batch as a dependent: the
@@ -26,12 +26,10 @@ func writeInputs(q Querier, g *graphcache.Graph, ids [][]byte, heads map[string]
 	if _, err := q.Exec(sqlDeleteInputs+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...); err != nil {
 		return err
 	}
-	var rows []graphcache.InputKey
-	var deps [][]byte
-	add := func(dep []byte, keys []graphcache.InputKey) {
+	var rows []inputRow
+	add := func(dep []byte, keys []graphcache.InputKey, association bool) {
 		for _, k := range keys {
-			rows = append(rows, k)
-			deps = append(deps, dep)
+			rows = append(rows, inputRow{dep: dep, key: k, association: association})
 		}
 	}
 	var assocs [][]byte
@@ -44,25 +42,38 @@ func writeInputs(q Querier, g *graphcache.Graph, ids [][]byte, heads map[string]
 			assocs = append(assocs, id)
 			continue
 		}
-		add(id, s.Inputs(id))
+		add(id, s.Inputs(id), false)
 	}
 	ends, err := g.AssociationInputs(assocs)
 	if err != nil {
 		return err
 	}
 	for _, id := range assocs {
-		add(id, ends[string(id)])
+		add(id, ends[string(id)], true)
 	}
 	for start := 0; start < len(rows); start += inputRowsPerInsert {
 		end := min(start+inputRowsPerInsert, len(rows))
-		marks := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?), ", end-start), ", ")
-		args := make([]any, 0, 4*(end-start))
-		for i := start; i < end; i++ {
-			args = append(args, deps[i], rows[i].ID, rows[i].Bridge, rows[i].Endpoint)
+		marks := strings.TrimSuffix(strings.Repeat("(?, ?, ?, ?, ?), ", end-start), ", ")
+		args := make([]any, 0, 5*(end-start))
+		for _, r := range rows[start:end] {
+			flag := 0
+			if r.association {
+				flag = 1
+			}
+			args = append(args, r.dep, r.key.ID, r.key.Bridge, r.key.Endpoint, flag)
 		}
 		if _, err := q.Exec(sqlInsertInputsHead+marks, args...); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// inputRow is one row of the index: dep was composed from key. association
+// marks the rows that are an association's ends, which a summary's link keys
+// look like.
+type inputRow struct {
+	dep         []byte
+	key         graphcache.InputKey
+	association bool
 }
