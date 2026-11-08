@@ -15,7 +15,8 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 - **P-7 is a render cap.** The Timeline builds what its folds show and every fold unfolds a page at a time; no memo of the section's content.
 - **The map review re-cut four items** (2026-11-08, [review](deployment-plan.review.md)): P-2 has its own PR after Spike 14's S14-40; P-6 has its own PR, ungated; P-14 and P-7's pages share one fold PR; P-16 is scheduled with P-12.
 - **P-8 and P-9 are descoped** to [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md).
-- **P-15 and P-17 – P-27 are parked** in idea files (table below).
+- **Eight parked items ride with the PRs that touch their files** (user, later on 2026-11-08): P-15, P-17 (with the wording the audit proposed), P-20, P-21, P-24, part of P-22 and part of P-26, and the unused `CatalogQueryStalePolicy` from [`ideas/structural-debt.md`](../../ideas/structural-debt.md) (S16-09).
+- **P-18, P-19, P-23, P-25, P-27 and the rest of P-22 and P-26 stay parked** in idea files (table below).
 
 ## Scheduled
 
@@ -34,6 +35,13 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | P-13 | Section plumbing: seven switches, three ways to find the open section | Medium | MNT | S16-03 |
 | P-14 | Fold focus is copied per section, and Family drops it | Medium | MNT, UX | S16-07 |
 | P-16 | The leave-on-delete decision is not tested | Low | CON | S16-06 |
+| P-15 | Hovering a node whose record line is folded highlights nothing | Low | CON | S16-07 |
+| P-17 | "handle", "members" and "This record no longer exists" on the Person page | Low | UX | S16-04, S16-06 |
+| P-20 | The Timeline keeps an old scale after a date edit | Low | PRF | S16-02 |
+| P-21 | `ListPersonClaims` answers for a non-Person handle | Low | MNT, CON | S16-01 |
+| P-22 (part) | The record links wire's unread fields and missing `source_ref` | Low | MNT | S16-01 |
+| P-24 | `edgeKey` joins ids with no separator | Low | SEC | S16-01 |
+| P-26 (part) | `ConclusionDetailPage.swift` holds 15 types | Low | MNT | S16-03 |
 
 ## Descoped and parked
 
@@ -41,17 +49,12 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | --- | --- | --- |
 | P-8 | Timeline participants' summaries are sent once per event | [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md) |
 | P-9 | The record links read recomputes every pair, with no memo | [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md) |
-| P-15 | Hovering a node whose record line is folded highlights nothing | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
-| P-17 | "handle", "members" and "This record no longer exists" on the Person page | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
 | P-18 | Birth and death event counts have no plural; the catalog check skips them | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
 | P-19 | Back resets a section's scroll, folds and focus | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
-| P-20 | The Timeline keeps an old scale after a date edit | [`ideas/person-page-followups.md`](../../ideas/person-page-followups.md) |
-| P-21 | `ListPersonClaims` answers for a non-Person handle | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
-| P-22 | The record links wire repeats the claims read's graph rows | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
+| P-22 (the rest) | The claims read could own every graph label the record links diagram shows | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
 | P-23 | The family response sends each sibling two or three times | [`ideas/person-page-performance.md`](../../ideas/person-page-performance.md) |
-| P-24 | `edgeKey` joins ids with no separator | [`ideas/share-packages.md`](../../ideas/share-packages.md) |
 | P-25 | A fourth hover-and-focus-ring button body (A-41 grew) | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) (A-41) |
-| P-26 | File and layer tidy-ups in `Features/Conclusions` | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
+| P-26 (the rest) | Layer tidy-ups in `Features/Conclusions` | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
 | P-27 | Per-key copies of registry tests and FakeStore reads | [`ideas/structural-debt.md`](../../ideas/structural-debt.md) |
 
 ## Items
@@ -217,6 +220,74 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 **Fix.** Move the decision into a function on `UnpromoteFlow` or a static helper that returns leave, or stay with the announcement text, and test both branches against a `WorkspaceNavigation`. Scheduled with P-12 (map review K-8).
 
 **Origin.** S13-17 (#729).
+
+### P-15 · Hovering a node whose record line is folded highlights nothing
+
+**Where:** `macos/App/Features/Conclusions/PersonSourcesSection.swift` (356–365: only drawn lines take the highlight); `PersonSourcesContent.swift` (13–17: lines fold past five).
+
+**Problem.** The diagram and the Sources rows highlight each other (Spike 13 rule "The view is a circular link diagram"), but a Source with more than five of the person's graphs folds its sixth line on, so hovering or focusing that graph's node shows nothing in the list. A parish register filed one graph per entry reaches it.
+
+**Fix.** When the highlighted graph's line is folded, that row's Show more takes the highlight; the content already maps folded claims to graphs (`claimGraphs`). With S16-07, which rewrites the Sources folds.
+
+**Origin.** S13-28 (#744) on S13-16 (#722).
+
+### P-17 · "handle", "members" and "This record no longer exists" on the Person page
+
+**Where:** `unpromote.confirmMessage` (`macos/App/Platform/L10n.swift` about 8387); `conclusions.memberCount` (about 10181), read by `PersonDetailContent`, `EventDetailContent` and `PlaceDetailContent`; `error.conclusiondetails.not_found` (about 10638), shown by `ConclusionDetailPage.swift` (552) and `ConclusionPageSectionHost.swift` (130).
+
+**Problem.** The confirm ends "…, and the handle stays", the only user-facing "handle"; the header counts "members" while Sources and the confirms say records; a deleted person's page says "This record no longer exists", where "record" names the person on a page where it names a claim.
+
+**Fix (user, 2026-11-08).** The count reads records on every Conclusion page; the confirm ends "…, and the person stays", per kind like `confirmMessageDeletes` (S16-06); a Person page's not-found line is "This person no longer exists", supplied by the kind (S16-04). Rule "A person's records are records".
+
+**Origin.** The count is S9's; "records" came with S13-08 and S13-16; the Person page's not-found Toast with S13-17.
+
+### P-20 · The Timeline keeps an old scale after a date edit
+
+**Where:** `macos/App/Features/Conclusions/PersonTimelineSection.swift` `PersonTimelineList.rebuild` (139).
+
+**Problem.** The chosen scale is kept while the item ids and the viewport height stay the same. A date edit from another window keeps the ids, so the old points per year apply to the new range: a short life drawn dense, then an event moved decades away, gives a line many times its usual height.
+
+**Fix.** Key the kept scale on the line's year range too. With S16-02.
+
+**Origin.** S13-13 (#691).
+
+### P-21 · `ListPersonClaims` answers for a non-Person handle
+
+**Where:** `core/database/persondetail/claims.go` `Claims` (41–47) checks only `conclusiondetails.Handle`; `personNode` (52–65), "the one place that decides whether an id is a Person page's", gates `RecordLinks` and `PersonEvents`; `family.go` re-derives the check.
+
+**Fix.** Every `persondetail` read goes through `personNode`; the proto comments say one sentence; each table test gains a non-Person handle. With S16-01.
+
+**Origin.** S13-01 (#655), S13-04 (#671), S13-27 (#743).
+
+### P-22 (part) · The record links wire's unread fields and missing `source_ref`
+
+**Where:** `api/proto/engine.proto` `RecordLinksGraph` (1643–1650); `core/database/persondetail/recordlinks.go` (185–198); `macos/App/Features/Conclusions/PersonRecordLinksContent.swift` (20–26, 55–75); `PersonSourcesContent.swift` (58–64, 85–87, 130); `PersonSourcesSection.swift` (207–212).
+
+**Problem.** The wire repeats the claims read's graph rows but not `source_ref`, so the Sources section hands `graphSourceRefs` to the diagram's adapter, and the "name, else ref" and "title, else ref" fallbacks are written twice. `source_id` and `source_type_id` are decoded and never read.
+
+**Fix.** Add `source_ref`, drop the two unread fields and the handoff, and write each fallback once. With S16-01, which changes the same message. The rest (the claims read owning every graph label) stays in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
+
+**Origin.** S13-27 (#743), S13-28 (#744).
+
+### P-24 · `edgeKey` joins ids with no separator
+
+**Where:** `core/database/canonlinks/reader.go` `edgeKey` (623), used at 606–612 to merge the sibling edges `kinship.Siblings` reads (616).
+
+**Problem.** The key concatenates the two ends and the associations with no separator, and ids are not length-checked when loaded, so a crafted catalog can give two links one key and hide a sibling or a link's source. Logged in the S13-03 ship log (SEC-2) and tracked nowhere until this audit.
+
+**Fix.** Prefix each part with its length (or skip ids that are not 16 bytes). With S16-01, beside its sibling cap.
+
+**Origin.** S13-03 (#666).
+
+### P-26 (part) · `ConclusionDetailPage.swift` holds 15 types
+
+**Where:** `macos/App/Features/Conclusions/ConclusionDetailPage.swift`: the Place relationship model (33–56), the gallery model with `LeadCopy` and `ViewerCopy` (90–240), the Vitals rows and their provenance sheet presenter (414–462), the Place relationship section (625–662).
+
+**Problem.** The file grew from 484 to 736 lines in Spike 13; S16-03, S16-04 and S16-06 all edit it.
+
+**Fix.** Move the gallery model to `ConclusionGallerySection.swift`, `ConclusionDetailRowsSection` beside `ReconciledValueRow`, and the Place relationship model and section beside `PlaceRelationshipRow`, in S16-03 before its other steps. The other tidy-ups stay in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
+
+**Origin.** S13-09, S13-10, S13-11, S13-14 and S13-15.
 
 ## Close the loop
 

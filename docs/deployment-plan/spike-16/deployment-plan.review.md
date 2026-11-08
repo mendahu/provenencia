@@ -16,7 +16,7 @@ Decisions no source dictated, so you can veto them:
 - Past a crafted cap, the reads drop the rest silently; only the record links diagram says so.
 - Every fold pages at 50, in every section, not only the Timeline: one fold rule (K-1). Real data only meets it on a long Timeline, where 150 hidden events take three clicks instead of one. You suggested "maybe the first 10 participants"; the participant fold already shows the first 5 at Regular and 12 at Wide (your call of 2026-11-03), so those stay.
 - One brief, S16-D1, draws both notices (the failed reload and the partial diagram), since both are Person page notices.
-- K-3's optional rider (dropping the unread `RecordLinksGraph` fields in S16-01) is declined: P-22 stays parked, as you asked for the low items.
+- K-3's optional rider (dropping the unread `RecordLinksGraph` fields in S16-01) was declined at first, to keep the low items parked; later the same day you folded it in with seven other parked items that touch Batch 1's files (map, "Where the notes went").
 
 ## Round 1
 

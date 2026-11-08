@@ -52,7 +52,6 @@ Parked 2026-10-29 when Spike 12 closed: defenses that matter once a project or p
 | --- | --- | --- |
 | B-4, B-5 | S12-42 | A name holding the name key's separators makes ambiguous keys, and an alias table with 100,000 sets for one name is loaded unchecked; keys should be unambiguous and fuzzed, and alias tables checked on load against registry bounds. Also: a researcher term and a seeded term may share a key on one Property, and the canon term loader keeps whichever row comes last. |
 | B-6 | S12-49 | A family with thousands of duplicate parent links makes grandparent derivation quadratic; chains should share each pair's edges and be bounded per middle person by a registry value. Also: implied-kinship shapes on one link are bounded by the number of pivots joining a pair, not per pivot, and `ParentStep` recomputes its keys on every edge. |
-| P-24 | S13-03 ship log SEC-2; [Person page audit](../deployment-plan/spike-16/person-page-audit.md) (2026-11-08) | `canonlinks` `edgeKey` (`core/database/canonlinks/reader.go` about 623) joins an edge's two ends and its associations with no separator, and ids are not length-checked when loaded, so a crafted catalog can give two links one key and hide a sibling or a link's source. Prefix each part with its length, or skip ids that are not 16 bytes. |
 
 ## Explicitly out of scope for this note
 
