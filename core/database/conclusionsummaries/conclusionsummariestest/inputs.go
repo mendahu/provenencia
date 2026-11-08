@@ -6,6 +6,7 @@ package conclusionsummariestest
 
 import (
 	"bytes"
+	"slices"
 	"sort"
 	"testing"
 
@@ -71,7 +72,7 @@ func newIsolator(t testing.TB, q Querier) *isolator {
 		if k.Bridge == "" && bytes.Equal(k.ID, iso.id) {
 			return
 		}
-		iso.seen[string(k.ID)+"\x00"+k.Bridge+"\x00"+k.Endpoint] = graphcache.InputKey{
+		iso.seen[k.Key()] = graphcache.InputKey{
 			ID: append([]byte(nil), k.ID...), Bridge: k.Bridge, Endpoint: k.Endpoint,
 		}
 	})
@@ -92,18 +93,6 @@ func (iso *isolator) row(kind string, id []byte) []graphcache.InputKey {
 	}
 	graphcache.SortInputKeys(out)
 	return out
-}
-
-func sameKeys(a, b []graphcache.InputKey) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if !bytes.Equal(a[i].ID, b[i].ID) || a[i].Bridge != b[i].Bridge || a[i].Endpoint != b[i].Endpoint {
-			return false
-		}
-	}
-	return true
 }
 
 // Stats is how many keys the rows of each kind hold.
@@ -151,7 +140,7 @@ func CheckMatchIsolated(t testing.TB, q Querier, ids map[string][][]byte) map[st
 		st := stats[kind]
 		for _, id := range ids[kind] {
 			got, want := rows.Inputs(id), iso.row(kind, id)
-			if !sameKeys(got, want) {
+			if !slices.EqualFunc(got, want, graphcache.InputKey.Equal) {
 				t.Errorf("%s %x: batch inputs %s, composed alone %s", kind, id, show(got), show(want))
 			}
 			st.Rows++

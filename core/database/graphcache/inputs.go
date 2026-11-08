@@ -18,7 +18,13 @@ type InputKey struct {
 	Bridge, Endpoint string
 }
 
-func (k InputKey) mapKey() string { return string(k.ID) + "\x00" + k.Bridge + "\x00" + k.Endpoint }
+// Key is a string that names the key and nothing else, for a map or a set.
+func (k InputKey) Key() string { return string(k.ID) + "\x00" + k.Bridge + "\x00" + k.Endpoint }
+
+// Equal reports whether o is the same key.
+func (k InputKey) Equal(o InputKey) bool {
+	return bytes.Equal(k.ID, o.ID) && k.Bridge == o.Bridge && k.Endpoint == o.Endpoint
+}
 
 // nodeKey is the key a read of id's values records.
 func nodeKey(id []byte) InputKey { return InputKey{ID: id} }
@@ -93,7 +99,7 @@ func (s *InputScope) Add(keys ...InputKey) {
 		if s.self != nil && k.Bridge == "" && bytes.Equal(k.ID, s.self) {
 			continue
 		}
-		mk := k.mapKey()
+		mk := k.Key()
 		if _, ok := s.keys[mk]; ok {
 			continue
 		}

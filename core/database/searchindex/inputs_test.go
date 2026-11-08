@@ -1,9 +1,9 @@
 package searchindex_test
 
 import (
-	"bytes"
 	"crypto/rand"
 	"database/sql"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -80,12 +80,10 @@ func inputRowsOf(t *testing.T, db *sql.DB, dependent []byte) []inputRow {
 }
 
 func hasRow(rows []inputRow, id []byte, bridge, endpoint string) bool {
-	for _, r := range rows {
-		if bytes.Equal([]byte(r.input), id) && r.bridge == bridge && r.endpoint == endpoint {
-			return true
-		}
-	}
-	return false
+	want := graphcache.InputKey{ID: id, Bridge: bridge, Endpoint: endpoint}
+	return slices.ContainsFunc(rows, func(r inputRow) bool {
+		return graphcache.InputKey{ID: []byte(r.input), Bridge: r.bridge, Endpoint: r.endpoint}.Equal(want)
+	})
 }
 
 func TestReprojectWritesInputs(t *testing.T) {

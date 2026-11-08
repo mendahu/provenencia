@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/canonicalgraph"
@@ -126,12 +127,8 @@ func inputsOf(t *testing.T, f *fixture, kind string, id []byte) []graphcache.Inp
 }
 
 func holds(keys []graphcache.InputKey, id []byte, bridge, endpoint string) bool {
-	for _, k := range keys {
-		if bytes.Equal(k.ID, id) && k.Bridge == bridge && k.Endpoint == endpoint {
-			return true
-		}
-	}
-	return false
+	want := graphcache.InputKey{ID: id, Bridge: bridge, Endpoint: endpoint}
+	return slices.ContainsFunc(keys, want.Equal)
 }
 
 func holdsAny(keys []graphcache.InputKey, id []byte) bool {

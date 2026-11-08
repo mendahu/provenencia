@@ -3,6 +3,7 @@ package graphcache_test
 import (
 	"bytes"
 	"database/sql"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -18,13 +19,8 @@ func keyOf(id []byte, bridge, endpoint string) graphcache.InputKey {
 func sameKeys(t *testing.T, what string, got, want []graphcache.InputKey) {
 	t.Helper()
 	graphcache.SortInputKeys(want)
-	if len(got) != len(want) {
+	if !slices.EqualFunc(got, want, graphcache.InputKey.Equal) {
 		t.Fatalf("%s: got %+v, want %+v", what, got, want)
-	}
-	for i := range got {
-		if !bytes.Equal(got[i].ID, want[i].ID) || got[i].Bridge != want[i].Bridge || got[i].Endpoint != want[i].Endpoint {
-			t.Fatalf("%s: got %+v, want %+v", what, got, want)
-		}
 	}
 }
 
