@@ -318,3 +318,106 @@ Files:
 - `docs/macos-client-patterns.md`, if it names `RecordLinksDiagram` or `RecordLinksLayout` (`rg` first)
 
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-13/prs/S13-28-how-the-records-connect.md` reports no errors.
+
+### Round 3 — fix
+Head `09fa41ee` (commits `96904754`, `09fa41ee`). Gate PASS (orchestrator run, xcode-test 73s). F-9, F-10 and F-11 are done.
+
+Deviations the implementer reported:
+- **`Curve` fields:** `Curve` also carries `fromNode` and `toNode`.
+- **`LabelSide`:** it is now the top-level `CircularLinkLabelSide`.
+- **Empty values:** help and the identifier are set to `""` when nil.
+- **Slots:** the layout now numbers a pair's arcs from the arcs it receives. Two cases differ, and only a crafted catalog reaches either: past the cap, and a pair listed twice.
+
+### Round 3 — review
+Reviewers: CON, MNT, SEC+PRF. Skipped: UX (no copy and no visible change; CON checked the spoken labels, tooltips and identifiers line by line).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major | Reversed arcs on one pair draw on top of each other | Fix now → F-12 | verified by arithmetic: at width 340 with 4 nodes, A→B slot 0/2 and B→A slot 1/2 both give control (185.37, 100.63). The offset's normal follows each arc's own direction |
+| MNT-3 | MNT | major | Two neighbour functions whose rule differs from the layout's | Fix now → F-12 | `CircularLinkData.swift:27-43` keeps arcs to ids that are not nodes; `CircularLinkLayout.swift:101` skips them |
+| MNT-4 | MNT | minor | Duplicate node ids are not handled by the generic diagram | Fix now → F-12 | the layout places every entry, but `ForEach` is keyed by id |
+| PRF-5 | PRF | minor | Arc grouping moved into the layout and reruns, string-keyed, on every focus change and resize frame | Fix now → F-12 | measured by PRF: layout init went from 0.027 ms to 1.19 ms at Scale. F-12 resolves the ids once, in the data, and groups on ints. The host still rebuilds the adapter when the Sources list's body reruns; that cost is round 1's, and F-12 shrinks it |
+| MNT-1 | MNT | major | Three drawing values are still literals | Fix now → F-13 | `CircularLinkDiagram.swift:221-222, 302, 304` |
+| MNT-2 | MNT | major | Callers compute the diagram's size and pass the style twice | Fix now → F-14 | `PersonRecordLinksColumn.swift:46-50`, `PersonSourcesSection.swift:204` |
+| CON-3 / MNT-5 | CON, MNT | nit | Empty help and identifier are set where the docs say "none" | Fix now → F-15 | one-line guards in a file this round adds |
+| MNT-7 | MNT | nit | A highlighted arc ignores its per-arc colour, and nothing says so | Fix now → F-15 | doc comment |
+| CON-4 | CON | nit | No end-to-end check that the Person geometry is unchanged | Fix now → F-15 | Johann control-point test |
+| CON-2 | CON | minor | Past `maxArcs`, a pair's slots are the kept arcs' order | Rejected (accepted drift) | only a crafted catalog reaches it; reintroducing caller slots would undo the round's goal. The Landed note records it (F-15) |
+
+Nits (logged): `MNT-6 · PersonRecordLinksContentTests · strength recovered from lineWidth == strongLineWidth`
+
+### Fix plan 4
+
+**F-12 — A dataset value that resolves the arcs once** (from CON-1, MNT-3, MNT-4, PRF-5)
+Files:
+- `CircularLinkDiagram/CircularLinkData.swift`
+- `CircularLinkDiagram/CircularLinkLayout.swift`
+- `CircularLinkDiagram/CircularLinkDiagram.swift`
+- `PersonRecordLinksContent.swift`
+- `PersonRecordLinksColumn.swift`
+- `macos/ProvenenciaTests/CircularLinkLayoutTests.swift`
+- `PersonRecordLinksContentTests.swift`
+
+Failing tests first:
+- `CircularLinkLayoutTests.reversedArcsOnOnePairFanApart`: arcs A→B and B→A on 4 nodes at width 340 have control points 7pt apart.
+- `CircularLinkDataTests.duplicateNodeIDsKeepTheFirst`.
+- `CircularLinkDataTests.neighborsSkipArcsToNoNode`: an arc A→Z, where Z is not a node, gives A no neighbours.
+- `CircularLinkDataTests.slotsAreAssignedPerUnorderedPairInInputOrder`, moved from the layout tests.
+- Fix the comment in `arcsOnOnePairFanInInputOrder`.
+
+Do:
+- Add `struct CircularLinkDataset<ID: Hashable>: Equatable` in `CircularLinkData.swift`, built with `init(nodes: [CircularLinkNode<ID>], arcs: [CircularLinkArc<ID>])`. It is the one place the arcs are resolved:
+  - It drops duplicate node ids, keeping the first.
+  - It resolves each arc to node indexes, skipping an arc whose end is not a node or whose ends are the same node. This is the one skip rule.
+  - It groups arcs by unordered index pair, keyed on ints, giving each its slot and slot count in input order.
+  - It records each pair's reference direction, the first arc's from → to. Each resolved arc stores `flipped: Bool` so the layout takes the offset's normal from the reference direction.
+  - It builds `neighbors: [Set<Int>]` (index adjacency) in the same pass.
+- It exposes:
+  - `nodes`
+  - `resolvedArcs`, each with `from`, `to`, `slot`, `slots`, `flipped`, the source arc's `lineWidth` and `color`, and its index into the input arcs
+  - `neighbors(ofIndex:)`
+  - `neighborCount(of id: ID)`
+- Delete `CircularLinkArc.neighbors(of:in:)` and `neighborSets(in:)`.
+- `CircularLinkLayout` becomes geometry only: `init(dataset:width:diameter:style:)`, with no dictionaries and no grouping.
+- `CircularLinkDiagram` takes `dataset: CircularLinkDataset<ID>` in place of `nodes` and `arcs`. Its highlight reads `dataset.neighbors(ofIndex:)`.
+- `PersonRecordLinksContent` builds one dataset in its init (caps first, as today) and stores it as `dataset`. Its connected count reads `dataset.neighborCount(of:)`. The column passes `content.dataset`.
+
+Check:
+- The tests pass, and every old layout and Johann number is unchanged.
+- `rg -n "neighborSets|neighbors\(of:" macos/App` prints nothing.
+
+**F-13 — The last literals become style props** (from MNT-1)
+Files: `CircularLinkDiagramStyle.swift`, `CircularLinkDiagram.swift`.
+Do:
+- Add three props, with defaults equal to today's values:
+  - `overlayLabelPadding: CGFloat = 3`
+  - `overlayLabelCornerRadius: CGFloat = PVRadius.sm`
+  - `nodeCornerRadius: CGFloat = PVRadius.md`
+- The view reads them. `nodeCornerRadius` goes into the node button style for both the hover fill and `pvFocusRing`.
+
+Check:
+- `rg -n "PVRadius|PVSpacing|PVColor|PVFont|PVTypeScale" macos/App/Features/Conclusions/CircularLinkDiagram/CircularLinkDiagram.swift` prints nothing. The tokens live only in the style's defaults.
+- A scan for bare numeric literals in the diagram file prints only 0, 1, 2 and the opacity arithmetic.
+
+**F-14 — The diagram sizes itself** (from MNT-2)
+Files: `CircularLinkDiagram.swift`, `CircularLinkDiagramStyle.swift`, `PersonRecordLinksColumn.swift`, `PersonSourcesSection.swift`.
+Do:
+- Replace the `diameter: CGFloat?` prop with `fittingHeight: CGFloat? = nil`. The diagram calls `CircularLinkLayout.diameter(width:fitting:style:)` with its own style, and handles a single node itself.
+- Add a computed `var minimumHeight: CGFloat { minimumDiameter + 2 * verticalRoom }` on the style.
+- The column passes `fittingHeight: fitting` and drops `single ? nil :` and its second `.standard`.
+- The section's `loadingHeight` reads `CircularLinkDiagramStyle.standard.minimumHeight`, which is 232.
+
+Check:
+- `rg -n "CircularLinkLayout" macos/App/Features/Conclusions/Person*` prints nothing.
+- `check-pr.sh` PASS.
+
+**F-15 — Nits and notes** (from CON-3, MNT-5, MNT-7, CON-4, CON-2)
+Do:
+- Apply `.help` only when `help` is non-nil, and `.accessibilityIdentifier` only when the root is non-nil. Use a small `@ViewBuilder` or modifier; do not pass empty strings.
+- Doc comment on `CircularLinkArc.color`: a highlighted arc draws in `style.highlightedArcColor`.
+- Add `CircularLinkLayoutTests.johannGeometryIsUnchanged`. Take the Johann dataset at width 340 and assert the two-arc pairs' control points. Compute them from the f4e8589a formula with slot 0/1 and 1/2, and write them down as literals.
+- The plan's Landed note gets two lines:
+  - The dataset type.
+  - Past the 75,000-arc cap, a pair's slots count only the kept arcs (CON-2, accepted).
+
+Check: the tests pass; `scripts/check-pr.sh --base origin/s13-27-plan` PASS.
