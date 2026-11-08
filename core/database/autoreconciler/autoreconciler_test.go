@@ -1163,10 +1163,6 @@ func (f *fixture) docOf(kind string, id []byte) (title, secondary string) {
 	return title, secondary
 }
 
-func holdsID(ids [][]byte, want []byte) bool {
-	return slices.ContainsFunc(ids, func(id []byte) bool { return bytes.Equal(id, want) })
-}
-
 // assertUpkeepEqualsRebuild fails when the incrementally maintained table
 // differs from a full rebuild (taken in a rolled-back transaction).
 func (f *fixture) assertUpkeepEqualsRebuild(at string) {
@@ -1458,7 +1454,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			if title, _ := f.docOf("event", birthID); title != "Unspecified birth" {
 				f.T.Fatalf("birth title %q, want Unspecified birth", title)
 			}
-			if !holdsID(reported, birthID) {
+			if !database.ContainsBlobID(reported, birthID) {
 				f.T.Fatalf("the write reported %x, want the birth", reported)
 			}
 		}},
@@ -1472,7 +1468,7 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			if _, secondary := f.docOf("person", jamesID); strings.Contains(secondary, "1885") {
 				f.T.Fatalf("James's document %q still holds the birth's date", secondary)
 			}
-			if !holdsID(reported, jamesID) {
+			if !database.ContainsBlobID(reported, jamesID) {
 				f.T.Fatalf("the write reported %x, want James", reported)
 			}
 		}},
@@ -1522,10 +1518,10 @@ func TestRebuildEqualsUpkeep_Scenarios(t *testing.T) {
 			f.assertUpkeepEqualsRebuild("filed")
 			reported := f.deleteSubject(locations[0])
 			f.assertUpkeepEqualsRebuild("after deleting one location")
-			if !holdsID(reported, events[0]) || !holdsID(reported, yorkID) {
+			if !database.ContainsBlobID(reported, events[0]) || !database.ContainsBlobID(reported, yorkID) {
 				f.T.Fatalf("the write reported %x, want the event and the place", reported)
 			}
-			if holdsID(reported, events[1]) || holdsID(reported, events[2]) {
+			if database.ContainsBlobID(reported, events[1]) || database.ContainsBlobID(reported, events[2]) {
 				f.T.Fatalf("the write reported another event at the place: %x", reported)
 			}
 		}},
@@ -2090,5 +2086,140 @@ func TestOutOfDomainBooleanReadsAbsent(t *testing.T) {
 	}
 	if _, err := conclusiondetails.ForEntity(f.C, h); err != nil {
 		t.Fatalf("conclusion detail: %v", err)
+	}
+}
+
+// TestRebuildEqualsUpkeep_SeededLinks is the seeded sequence for links: it
+// files participations, locations and place relations between promoted and
+// unpromoted Subjects, and unpromotes, promotes, cites and deletes link
+// Subjects, with the same fixed seeds.
+func TestRebuildEqualsUpkeep_SeededLinks(t *testing.T) {
+	for seed := int64(1); seed <= 4; seed++ {
+		t.Run(fmt.Sprint("seed ", seed), func(t *testing.T) {
+			f := newFixture(t)
+			rng := rand.New(rand.NewSource(seed))
+			tolerate := func(err error) {
+				t.Helper()
+				var ae *apperr.Error
+				if err != nil && !(errors.As(err, &ae) && ae.Kind() != apperr.KindInternal) {
+					t.Fatal(err)
+				}
+			}
+			byKind := map[string][]subjects.Subject{}
+			var bridges []subjects.Subject
+			pairs := map[string]bool{}
+			mk := func(kind string) subjects.Subject {
+				s := f.subject(kind)
+				switch kind {
+				case "person":
+					f.cite(nameIn(s, f.props["name"], []string{"given=James|surname=Robins", "given=Mary|surname=Smith", "given=Ann|surname=Lee"}[rng.Intn(3)]))
+				case "event":
+					f.cite(termIn(s, f.props["event_type"], f.terms[[]string{"birth", "death"}[rng.Intn(2)]]), dateIn(s, f.props["date"], 1800+rng.Intn(100), ip(1+rng.Intn(12)), nil))
+				case "place":
+					f.cite(textIn(s, f.props["toponym"], []string{"York", "Toronto", "Ontario", "Canada"}[rng.Intn(4)]))
+				}
+				f.row += 2
+				must(t, place(f, s, int64(rng.Intn(3))*4, f.row))
+				byKind[kind] = append(byKind[kind], s)
+				return s
+			}
+			promoteS := func(s subjects.Subject) {
+				_, err := writes.Call(f.C, writes.Op{Action: "promote_subject", UserID: userID}, func(tx *database.Tx) (promote.Result, []rowchange.Change, error) {
+					return promote.Save(tx, userID, promote.Input{SubjectID: s.ID})
+				})
+				tolerate(err)
+			}
+			for i := 0; i < 3; i++ {
+				for _, k := range []string{"person", "event", "place"} {
+					promoteS(mk(k))
+				}
+			}
+			pick := func(k string) subjects.Subject { l := byKind[k]; return l[rng.Intn(len(l))] }
+			for step := 1; step <= 60; step++ {
+				op := rng.Intn(9)
+				label := ""
+				switch op {
+				case 0:
+					k := []string{"person", "event", "place"}[rng.Intn(3)]
+					s := mk(k)
+					if rng.Intn(2) == 0 {
+						promoteS(s)
+					}
+					label = "new " + k
+				case 1:
+					p, e := pick("person"), pick("event")
+					key := "p" + string(p.ID) + string(e.ID)
+					if pairs[key] {
+						continue
+					}
+					pairs[key] = true
+					bridges = append(bridges, f.Participation(f.Source, f.Artifact, p, e, []string{"subject", "father"}[rng.Intn(2)]))
+					label = "participation"
+				case 2:
+					e, pl := pick("event"), pick("place")
+					key := "l" + string(e.ID)
+					if pairs[key] {
+						continue
+					}
+					pairs[key] = true
+					bridges = append(bridges, f.Locate(f.Source, f.Artifact, e, pl))
+					label = "locate"
+				case 3:
+					ps := byKind["place"]
+					i, j := rng.Intn(len(ps)), rng.Intn(len(ps))
+					if i >= j {
+						continue
+					}
+					kind := []string{propertyterms.KeyPartOf, propertyterms.KeySucceededBy}[rng.Intn(2)]
+					key := "r" + string(ps[i].ID) + string(ps[j].ID)
+					if pairs[key] {
+						continue
+					}
+					pairs[key] = true
+					bridges = append(bridges, f.PlaceRel(f.Source, f.Artifact, ps[i], ps[j], kind))
+					label = "placerel " + kind
+				case 4, 5:
+					k := []string{"person", "event", "place"}[rng.Intn(3)]
+					s := pick(k)
+					_, err := writes.Call(f.C, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						ch, err := promote.Unpromote(tx, userID, s.ID)
+						return struct{}{}, ch, err
+					})
+					tolerate(err)
+					label = "unpromote " + k
+				case 6:
+					promoteS(pick([]string{"person", "event", "place"}[rng.Intn(3)]))
+					label = "promote"
+				case 7:
+					if len(bridges) == 0 {
+						continue
+					}
+					i := rng.Intn(len(bridges))
+					b := bridges[i]
+					_, err := writes.Call(f.C, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						ch, err := subjects.Delete(tx, userID, b.ID)
+						return struct{}{}, ch, err
+					})
+					tolerate(err)
+					if err == nil {
+						bridges = append(bridges[:i], bridges[i+1:]...)
+					}
+					label = "delete bridge"
+				case 8:
+					k := []string{"person", "event", "place"}[rng.Intn(3)]
+					s := pick(k)
+					switch k {
+					case "person":
+						f.cite(nameIn(s, f.props["name"], "given=Jim|surname=Robins"))
+					case "event":
+						f.cite(dateIn(s, f.props["date"], 1700+rng.Intn(100), nil, nil))
+					case "place":
+						f.cite(textIn(s, f.props["toponym"], "Yorke"))
+					}
+					label = "cite " + k
+				}
+				f.assertUpkeepEqualsRebuild(fmt.Sprintf("seed %d step %d %s", seed, step, label))
+			}
+		})
 	}
 }
