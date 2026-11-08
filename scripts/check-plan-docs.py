@@ -335,6 +335,9 @@ def main(argv: list[str]) -> int:
     links_only = bool(argv) and argv[0] == "--links"
     if links_only:
         argv = argv[1:]
+        if not argv:
+            print("usage: check-plan-docs.py --links FILE ...", file=sys.stderr)
+            return 2
     targets = [Path(a).resolve() for a in argv] or default_targets()
     errors = warnings = 0
     for path in targets:
