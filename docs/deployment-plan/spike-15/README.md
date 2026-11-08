@@ -19,6 +19,19 @@ The theme: give Sources the fields a standard genealogical citation needs, start
 | [**Credibility field UX**](2026-10-18-credibility-field-truncates-and-ignores-enter.md) | Credibility argument truncates and ignores Enter (dogfood 2026-10-18) |
 | [**Rethink Source metadata**](2026-10-25-rethink-source-metadata-and-type-suggestions.md) | Whether Source metadata and type→field suggestions stay, shrink, or go; footprint map (dogfood 2026-10-25) |
 
+## Working rules
+
+Carry these into `deployment-plan.md` as spike-wide working rules when the spike is planned, and into every PR plan that touches citations.
+
+**Evidence Explained: follow the style, never copy the book (user, 2026-11-08).** A citation style is a method, and building citations that follow it is fine. The book's text is not ours to reuse. So:
+
+- **Templates are our own.** Write every formatter template from our understanding of the style's rules: element order, punctuation, layers, the three forms. Never transcribe a QuickCheck model, or the book's wording for one, into code, tests, docs, help or UI copy.
+- **Examples are invented.** Every example citation, in docs, tests, fixtures, previews, onboarding and marketing, uses made-up people, places, records and numbers written for Provenencia. Never use an example from the book, even with names changed.
+- **Our own names.** Patterns, element kinds and UI labels get Provenencia's names ("Census", "Local record book"), not the book's chapter or model titles copied as a set. Organizing the set the same way the book does is a compilation risk.
+- **No endorsement implied.** In the product, help and marketing, refer to the style only factually (for example, "citations in the *Evidence Explained* style") or generically ("standard genealogical citations"). Never put the name or the book's branding in a product or feature name, and never call anything "official" or "certified". The book's title may be a trademark of its publisher.
+- **Check against the book; don't copy from it.** The team checks templates against a purchased copy of the current edition. Notes taken from it are paraphrased into rules, not quoted.
+- **Before selling:** an IP lawyer reviews the template set and the marketing wording, and we consider asking the publisher (Evidence Explained, Inc. / Elizabeth Shown Mills) for permission or an endorsement for using the name. Guidance given 2026-11-08 was general, not legal advice.
+
 ## Open questions
 
 Gathered from the three core docs; each doc keeps its own context.

@@ -8,6 +8,7 @@
 
 - **Edition.** The list follows the chapter layout of *Evidence Explained: Citing History Sources from Artifacts to Cyberspace* (Elizabeth Shown Mills), 3rd edition. It was written from knowledge of the book, not from a copy beside the keyboard. Check the chapter list and the record kinds against the edition on hand before the formatter's templates are written, and add any kind this list misses to its pattern.
 - **Not a copy of the book.** EE has hundreds of "QuickCheck" models, many of them variants of the same shape. This doc does not reproduce them. It names the record kinds and paraphrases the shape each one shares. Every example citation here is invented for this doc (made-up people, records and numbers) and is written in EE style, not taken from the book.
+- **Keep it that way.** Every later doc, template, test and UI string follows the spike's working rule on *Evidence Explained* ([`README.md`](README.md#working-rules)): our own templates, invented examples, our own names, no implied endorsement.
 - **Patterns, not models.** The formatter needs one template per *pattern* (about 17), with small per-kind variations, not one per EE model. The catalog in § 2 maps each record kind to its pattern.
 
 ## Contents
