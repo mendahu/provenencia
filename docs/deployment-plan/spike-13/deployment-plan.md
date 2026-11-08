@@ -167,7 +167,7 @@ These are the calls for this spike. PR plans treat them as binding. The product 
 | S13-28 | How the records connect | 7 | The circular link diagram of the person's Evidence graphs on the Person page, with hover highlighting shared with the Sources list; no line data is shown | S13-D10 | S13-16, S13-27 | [S13-28](prs/S13-28-how-the-records-connect.md) | Landed #744 |
 | S13-21 | Source date on the Source page | 8 | Set and show the Source date where the board puts it | S13-D8 | S13-20 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
 | S13-22 | Source date on the Sources list | 8 | Each Sources list row shows the date; the list sorts by it, undated last | S13-D9 | S13-20 | — | Descoped (2026-10-31): [`spike-15/source-provenance-date.md`](../spike-15/source-provenance-date.md), Spike 15 |
-| S13-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
+| S13-99 | Dogfood close / docs | — | Bar pass (the user checked the bar, 2026-11-08), [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | [S13-99](prs/S13-99-dogfood-close.md) | Planned |
 
 ## Design track
 
