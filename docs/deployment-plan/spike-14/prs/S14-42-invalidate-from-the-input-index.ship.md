@@ -1,7 +1,7 @@
 # Ship log — S14-42 Invalidate from the input index
 
 **Plan:** [`S14-42-invalidate-from-the-input-index.md`](S14-42-invalidate-from-the-input-index.md) · **Branch:** `s14-42-invalidate-from-the-input-index` (stacked on `s14-40-build-the-input-index`, #746) · **PR:** #748
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Base `f55bf6c1` (S14-40's head). Head `573b5669`. The orchestrator re-ran the gate on this head (see below).
@@ -101,3 +101,22 @@ Do:
 - Rename `TestFiledLocationWalksOnlyFromItsEvent` → `TestFiledLocationReportsOnlyItsEvent`.
 - Rename `TestFiledPartOfWalksFromThePart` → `TestFiledPartOfReportsThePart`.
 Check: `scripts/check-pr.sh` PASS.
+
+## Round 1 — fix
+Head `c6849e1d`. The orchestrator ran the gate: PASS. F-1 through F-6 are done.
+
+Deviations:
+- **F-1.** The gone check uses the existing `Graph.Cached` after `g.Nodes(written)`, because a missing id is never cached and `Node` would reload it. The test went from 2,404 queries to under 40.
+- **F-4.** Runs 4 seeds × 60 writes, not 12, to stay under 2× the existing seeded test (1.68 s against 1.95 s).
+- **Commits are split by file**, not by fix item.
+
+Minors and nits, checked by the orchestrator:
+
+| ID | Result | Evidence |
+| --- | --- | --- |
+| CON-1 | Resolved | `TestRebuildEqualsUpkeep_SeededLinks` (`autoreconciler_test.go:2096`) |
+| MNT-3 | Resolved | `rg 'func sortedIDs'` prints nothing; `ReprojectChanged` sorts its return value once |
+| CON-3, CON-4 | Resolved | `summary-inputs.md` diff; the renamed tests |
+
+## Round 2 — review
+Scope `573b5669...c6849e1d`. Reviewers: MNT (MNT-1 blocker, MNT-2 major) and SEC+PRF (PRF-1 major).
