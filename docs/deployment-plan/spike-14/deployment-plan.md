@@ -202,7 +202,7 @@ These are the calls for this spike. PR plans treat them as binding. A rule names
 | S14-41 | The input index | 8 | Merged into S14-40 (user, 2026-11-07) | — | — | — | Descoped (2026-11-07) → S14-40 |
 | S14-42 | Invalidate from the input index | 8 | `writes.Run` finds the rows to rebuild in the index, always rebuilds the written handles themselves, and reports both with changed links' ends in `summary_handles`; displays drop from `SummaryDeps` only; Subject delete recomputes nothing itself; `Dependents`, `AssociationEndpoints`, `linkEnds`, `movedRoots`, `SetDisplayDeps` and `subjects.Delete`'s snapshot deleted; S14-38's scenarios are its acceptance tests | — | S14-40 | [S14-42-invalidate-from-the-input-index.md](prs/S14-42-invalidate-from-the-input-index.md) | Landed #748 |
 | S14-43 | Subject delete on `writes.Run` | 8 | Merged into S14-42 (user, 2026-11-07): S14-42 cannot delete `Dependents` while `subjects.Delete` calls it | — | — | — | Descoped (2026-11-07) → S14-42 |
-| S14-99 | Dogfood close / docs | — | Bar pass, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
+| S14-99 | Dogfood close / docs | — | Close as a decisions note with [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md): keep `summary-inputs.md`, re-home ship-log follow-ups, retarget links, delete the audits untriaged; bring `archive-docs` in line with practice and add `check-plan-docs.py --links`. No bar pass (user, 2026-11-08) | — | all | [S14-99-close-spike-14.md](prs/S14-99-close-spike-14.md) | Planned |
 
 ## Design track
 
