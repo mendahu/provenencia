@@ -2,6 +2,7 @@ package conclusionsummaries_test
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -267,6 +268,56 @@ func TestInputsCapCountsNothing(t *testing.T) {
 		b, _ := capped.Event(id)
 		if !reflect.DeepEqual(a, b) {
 			t.Errorf("event %x changed under the cap", id)
+		}
+	}
+}
+
+// TestInputsHoldEveryShownParent: in a batch, an event shows part_of
+// ancestors no deeper than an isolated composition does, and its inputs hold
+// every place whose name it shows as a parent.
+func TestInputsHoldEveryShownParent(t *testing.T) {
+	f := newFixture(t)
+	const n = 11
+	var chain []subjects.Subject
+	for i := 0; i < n; i++ {
+		p := f.placeSubject(fmt.Sprintf("P%d", i), nil, nil, int64(2*i), 0)
+		if i > 0 {
+			f.placeRel(chain[i-1], p, propertyterms.KeyPartOf, nil, nil)
+		}
+		chain = append(chain, p)
+	}
+	a, b := f.eventOf("birth", 1900), f.eventOf("birth", 1901)
+	f.Locate(f.Source, f.Artifact, a, chain[0])
+	f.Locate(f.Source, f.Artifact, b, chain[3])
+	idOf := map[string][]byte{}
+	for i, p := range chain {
+		idOf[fmt.Sprintf("P%d", i)] = f.promoteSubject(p)
+	}
+	aID, bID := f.promoteSubject(a), f.promoteSubject(b)
+	db, err := f.C.DB()
+	must(t, err)
+
+	var both, alone conclusionsummaries.Want
+	both.Add(vocabkey.Event, aID)
+	both.Add(vocabkey.Event, bID)
+	alone.Add(vocabkey.Event, aID)
+	batch, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), both)
+	must(t, err)
+	isolated, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), alone)
+	must(t, err)
+
+	got, _ := batch.Event(aID)
+	want, _ := isolated.Event(aID)
+	if len(got.Places) != 1 || len(want.Places) != 1 {
+		t.Fatalf("A has %d places in the batch, %d alone, want 1", len(got.Places), len(want.Places))
+	}
+	if !reflect.DeepEqual(got.Places[0].Parents, want.Places[0].Parents) {
+		t.Errorf("A's parents in a batch %v, composed alone %v", got.Places[0].Parents, want.Places[0].Parents)
+	}
+	keys := batch.Inputs(aID)
+	for _, name := range got.Places[0].Parents {
+		if !holds(keys, idOf[name], "", "") {
+			t.Errorf("A shows parent %s but its inputs do not hold it", name)
 		}
 	}
 }

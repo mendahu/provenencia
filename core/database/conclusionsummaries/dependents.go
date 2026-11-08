@@ -14,7 +14,9 @@ import (
 )
 
 // summaryChainDepth is how far a place row's parent chain climbs, and how far
-// the reverse of that read walks back down. The place neighborhood uses the same bound.
+// the reverse of that read walks back down. The place neighborhood, closure,
+// ParentChain and isAncestor (so FoldLocations) use the same bound, so a row
+// composed in a batch shows no ancestor its recorded inputs lack.
 const summaryChainDepth = 8
 
 // maxInputKeysPerCall caps the place-chain keys one RowsForSearch call

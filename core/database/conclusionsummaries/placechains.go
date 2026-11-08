@@ -234,7 +234,7 @@ func (g *placeGraph) displayName(id []byte) string {
 // nearest-first ancestors. Several parents at a level are every candidate
 // (candidates=true; no nature preference). Cycle-guarded.
 func (g *placeGraph) ParentChain(placeID []byte, at *datevalue.Value) (names []string, candidates bool) {
-	return g.parentChain(placeID, at, map[string]bool{string(placeID): true})
+	return g.parentChain(placeID, at, map[string]bool{string(placeID): true}, 0)
 }
 
 // ParentChainNames is ParentChain's names only.
@@ -243,7 +243,15 @@ func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalue.Value) []str
 	return names
 }
 
-func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[string]bool) ([]string, bool) {
+// parentChain shows ancestors only as far as the build expanded places: the
+// build reads the shells of summaryChainDepth places up from a seed, the seed
+// first, so the highest ancestor with a name is summaryChainDepth-1 levels
+// above it. A name the build did not read must not appear because another row
+// of the batch happened to read it.
+func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[string]bool, depth int) ([]string, bool) {
+	if depth+1 >= summaryChainDepth {
+		return nil, false
+	}
 	parents := g.ImmediateParents(placeID, at)
 	if len(parents) == 0 {
 		return nil, false
@@ -263,7 +271,7 @@ func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[s
 	}
 	seen[string(p)] = true
 	name := g.displayName(p)
-	rest, _ := g.parentChain(p, at, seen)
+	rest, _ := g.parentChain(p, at, seen, depth+1)
 	if name == "" {
 		return rest, false
 	}
@@ -271,26 +279,29 @@ func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[s
 }
 
 // isAncestor reports whether ancestor reaches descendant via holding
-// part_of links at at (cycle-guarded BFS upward from descendant).
+// part_of links at at (cycle-guarded BFS upward from descendant), through
+// links of at most summaryChainDepth places: the ones the build expanded.
 func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalue.Value) bool {
 	if bytes.Equal(ancestor, descendant) {
 		return false
 	}
 	seen := map[string]bool{string(descendant): true}
-	queue := [][]byte{append([]byte(nil), descendant...)}
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		for _, p := range g.ImmediateParents(cur, at) {
-			if bytes.Equal(p, ancestor) {
-				return true
+	level := [][]byte{append([]byte(nil), descendant...)}
+	for depth := 0; depth < summaryChainDepth && len(level) > 0; depth++ {
+		var next [][]byte
+		for _, cur := range level {
+			for _, p := range g.ImmediateParents(cur, at) {
+				if bytes.Equal(p, ancestor) {
+					return true
+				}
+				if seen[string(p)] {
+					continue
+				}
+				seen[string(p)] = true
+				next = append(next, p)
 			}
-			if seen[string(p)] {
-				continue
-			}
-			seen[string(p)] = true
-			queue = append(queue, p)
 		}
+		level = next
 	}
 	return false
 }
