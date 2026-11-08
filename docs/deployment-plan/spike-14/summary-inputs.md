@@ -8,13 +8,13 @@ The noun is **input**, not "read": `core/database/effects` already uses `Read`, 
 
 The catalog keeps three layers of derived data:
 
-| Layer | Built from | How a write finds what to rebuild today |
+| Layer | Built from | How a write found what to rebuild before S14-42 |
 | --- | --- | --- |
 | 1. Handle values (`auto_reconciler_values`, `auto_reconciler_outcomes`) | Members' Observations | The effects registry (`core/database/effects`): declarative paths from the changed row forward, using a deleted row's old fields. This layer works and does not change |
 | 2. Summary rows (graph cache displays) and handle search documents (`catalog_search_docs`) | Layer 1, through `graphcache.Graph` `Node`, `Nodes` and `Follow` in `core/database/conclusionsummaries/compose.go`; plus raw reads of the row's own handle (`gallery.ForEntities` for the lead picture; `searchindex/handles.go` `sqlHandleHeads`, `sqlHandleValues`) | A hand-written inverse of the summary reads, run after the write against the data as it now is |
 | 3. App pages and lists | Layers 1 and 2 | `WriteEffects.handles` and `summary_handles` |
 
-Layer 2's inverse is spread over:
+Layer 2's inverse was spread over:
 - `conclusionsummaries.Dependents` with `walkDepth` and `birthOrDeath`: the reverse of each read, written by hand.
 - `conclusionsummaries.AssociationEndpoints`, called before and after the recompute in `autoreconciler.RecomputeReported`, plus `linkEnds`: which ends of a link to walk from.
 - The `movedRoots` narrowing in `RecomputeReported`.
@@ -60,7 +60,8 @@ Composers work in batches. `composePersons` prefetches every row's events, build
 So inputs are attributed per row explicitly:
 - The scope is a `graphcache.Graph` API keyed by a dependent id, not a private type in `conclusionsummaries`. The kinship memo slots (`canonlinks`) can become its next users instead of building a second recorder.
 - Each row is composed under its scope.
-- For place chains, the batch's `placeGraph` reads each place through its own scope and keeps those keys per place; a row takes the union over the places within the chain depth of its own places, so no key is written by hand. That is the same set composing the row alone reads, so the oracle holds.
+- For place chains, the batch's `placeGraph` reads each place through its own scope and keeps those keys per place; a row takes the union over the places within the chain depth of its own places, so no key is written by hand. That is the same set composing the row alone reads, so the oracle holds. A row shows ancestors only as far as the build expanded places, so a batch never shows a parent its inputs lack.
+- One `RowsForSearch` call counts the place-chain keys it records (`maxInputKeysPerCall`, 250,000). Over the cap the call records no inputs for any row; only a crafted catalog, such as a dense part_of mesh, reaches it.
 - A person's place graph is built from its birth and death events only, as `PersonLifeOwners` does, so a marriage's place is not a person's input.
 - Shared prefetches record nothing.
 
@@ -78,7 +79,7 @@ The graph cache's display rows are composed by the same composers and use the sa
 
 ### Invalidation
 
-After layer 1's recompute, `writes.Run`:
+After layer 1's recompute, `searchindex.ReprojectChanged` (called by `autoreconciler.RecomputeReported`, which `writes.Run` and the `graphcachetest` kit call) does the following for a write:
 1. Collects the changed keys: the values of every handle in `Set.Handles` that moved, deleted and merged handles, and the link keys of each created, deleted or moved association. A deleted association's link keys come from the index.
 2. Looks up their dependents.
 3. Reprojects those search documents, plus every handle in `Set.Handles` (a row is its own input), and records their new inputs.
@@ -87,7 +88,7 @@ After layer 1's recompute, `writes.Run`:
 
 This replaces `Dependents`, `AssociationEndpoints`, `linkEnds`, `movedRoots` and `SetDisplayDeps`. `subjects.Delete` stops snapshotting and recomputing on its own; the write around it finds what it moved.
 
-The other callers of `RecomputeTx` keep their documents: `autoreconciler.Rebuild` and the `graphcachetest` kit. S14-42's plan says where handle reprojection and the index write live after the move, so those still rebuild documents.
+`autoreconciler.Rebuild` recomputes and calls `ReprojectHandles` for every handle, and `ReprojectChanged` reprojects through `reprojectOn` on its own graph, with the `dependent_is_association` flag telling an association's end rows apart.
 
 ## Measured at planning (2026-11-07)
 
@@ -101,6 +102,16 @@ Probe on the `TestLargeSourceBudgets` fixture: 8,115 persons, 10,067 events, 51 
 | Against `Dependents` | identical on 300 sampled handles (100 each kind). With finer keys, the index's inverse is expected to be a subset: `Dependents` also returns a place's parents and succession neighbors "so a later place detail is covered", which are detail pages, not rows. Those are the ends of the changed link, which step 5 reports |
 | Composing every row in one batch | 267 ms warm |
 | Composing every row alone with recording | 2.27 s, so production attributes inside the batch, and isolated composition is only the test oracle |
+
+Final counts from S14-40 (T-9, the recorder-checked index on the same fixture, every row):
+
+| Kind | Rows | Keys | Median | Max |
+| --- | --- | --- | --- | --- |
+| Person | 8,117 | 32,365 | 3 | 17 |
+| Event | 10,070 | 86,386 | 10 | 10 |
+| Place | 52 | 55 | 1 | 4 |
+
+No person row on this fixture holds a place key: the fixture's `bulkCanon` events have no accepted member, so no person has a life pick and its place graph is empty. A person's place inputs are proven by T-2 and T-3 only, on the scenario worlds. Against `Dependents`, T-10 found 9,987 persons excused as reached only through a birth or death event with no accepted member (D-13); the fixture's `bulkCanon` events have no accepted claims.
 
 At the map's Scale (37,000 Subjects) the index is a few hundred thousand rows.
 

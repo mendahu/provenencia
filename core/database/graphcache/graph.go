@@ -71,6 +71,11 @@ type Graph struct {
 	valueTable  string
 
 	count func()
+
+	// inputRecorder, when set by a test, hears every key Node and Follow read.
+	inputRecorder func(InputKey)
+	// scopeCounter, when set by a test, hears every recording scope Inputs makes.
+	scopeCounter func()
 }
 
 // Node is one canonical entity. Kind is not stored: callers look the type
@@ -291,6 +296,15 @@ func (g *Graph) Nodes(ids [][]byte) error {
 // Node returns the cached node, loading it on first read. A missing entity
 // is (nil, nil).
 func (g *Graph) Node(id []byte) (*Node, error) {
+	n, err := g.node(id)
+	if err == nil && g != nil && g.inputRecorder != nil {
+		g.inputRecorder(nodeKey(id))
+	}
+	return n, err
+}
+
+// node is Node without the test recorder.
+func (g *Graph) node(id []byte) (*Node, error) {
 	if g == nil || len(id) != 16 {
 		return nil, nil
 	}

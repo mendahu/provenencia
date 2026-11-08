@@ -13,10 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
-	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
-	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/subjectpositions"
 	"github.com/mendahu/provenencia/core/ref"
@@ -203,10 +200,9 @@ func Update(tx *database.Tx, userID, id []byte, label, description string) ([]ro
 
 // Delete erases a Subject when Impact allows it. Connection facets (edge +
 // disambiguation rows on a bridge) are released first. Positions CASCADE.
-// Handles the released changes name, handles that observed this Subject, linked
-// handles, and their summary dependents are recomputed here in one call.
-// Summary documents are written at the end of that call, so they have to see
-// the released values already gone. Run recomputes the returned changes again.
+// Delete recomputes nothing itself: writes.Run resolves the handles the
+// released changes name (an identity claim names its handle, and a released
+// link's handle names its ends) and recomputes them once the rows are gone.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(id) != 16 {
 		return nil, ErrInvalid
@@ -231,36 +227,11 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}); err != nil {
 		return nil, err
 	}
-	// Summary dependents are snapshotted while the link still exists. The
-	// recompute itself runs after the rows are gone, and it includes the
-	// handles effects.Handles reads off the released changes: RecomputeTx
-	// writes summary search documents after it clears values, so those
-	// documents have to be in the same call.
-	inbound, err := autoreconciler.HandlesObservingSubject(tx.Tx, id)
-	if err != nil {
-		return nil, err
-	}
-	ends, err := linkedHandles(tx.Tx, id)
-	if err != nil {
-		return nil, err
-	}
-	deps, err := conclusionsummaries.Dependents(tx.Tx, ends)
-	if err != nil {
-		return nil, err
-	}
 	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindSubject, id)
 	if err != nil {
 		return nil, err
 	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
-		return nil, err
-	}
-	releasedHandles, err := effects.Handles(tx.Tx, released)
-	if err != nil {
-		return nil, err
-	}
-	touched := append(append(releasedHandles, inbound...), ends...)
-	if err := autoreconciler.RecomputeTx(tx.Tx, append(touched, deps...)); err != nil {
 		return nil, err
 	}
 	fields := map[string]rowchange.FieldDiff{
@@ -347,28 +318,6 @@ func requireTypePrefix(tx *sql.Tx, typeID []byte) (string, error) {
 		return "", ErrInvalid
 	}
 	return prefix, nil
-}
-
-// linkedHandles are accepted handles of Subjects this one points at.
-func linkedHandles(tx *sql.Tx, subjectID []byte) ([][]byte, error) {
-	rows, err := tx.Query(`
-		SELECT DISTINCT ic.entity_id
-		FROM observations o
-		JOIN identity_claims ic ON ic.subject_id = o.value_subject_id AND ic.status = 'accepted'
-		WHERE o.subject_id = ?`, subjectID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
 }
 
 func mapConstraint(err error) error {

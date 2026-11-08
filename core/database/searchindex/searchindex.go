@@ -37,7 +37,8 @@ const (
 //	9: Evidence graphs, with their Source in the parent columns (S12-15).
 //	10: a folded column for spellings FTS indexes differently, and a Person's
 //	    nicknames that fold into its shown name (S14-21).
-const ProjectionVersion = 10
+//	11: summary inputs beside the handle documents (S14-40).
+const ProjectionVersion = 11
 
 // Tagged body line prefixes for Source rollups (parsed by core/search for
 // match field codes + snippets).
@@ -241,7 +242,7 @@ func foldedWords(texts ...string) string {
 	return strings.Join(out, " ")
 }
 
-// ClearAll wipes the projection (FTS + docs). Meta version is left unchanged.
+// ClearAll wipes the projection (FTS + docs + summary inputs). Meta version is left unchanged.
 func ClearAll(q Querier) error {
 	if _, err := q.Exec(`INSERT INTO catalog_search_fts(catalog_search_fts) VALUES('delete-all')`); err != nil {
 		return err
@@ -249,7 +250,10 @@ func ClearAll(q Querier) error {
 	if _, err := q.Exec(`INSERT INTO catalog_search_fts_trigram(catalog_search_fts_trigram) VALUES('delete-all')`); err != nil {
 		return err
 	}
-	_, err := q.Exec(`DELETE FROM catalog_search_docs`)
+	if _, err := q.Exec(`DELETE FROM catalog_search_docs`); err != nil {
+		return err
+	}
+	_, err := q.Exec(`DELETE FROM catalog_search_inputs`)
 	return err
 }
 
@@ -587,21 +591,7 @@ func ReprojectSourcesForType(q Querier, typeID []byte) error {
 	if len(typeID) != 16 {
 		return nil
 	}
-	rows, err := q.Query(`SELECT id FROM sources WHERE source_type_id = ?`, typeID)
-	if err != nil {
-		return err
-	}
-	var ids [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			rows.Close()
-			return err
-		}
-		ids = append(ids, id)
-	}
-	err = rows.Err()
-	rows.Close()
+	ids, err := listIDs(q, `SELECT id FROM sources WHERE source_type_id = ?`, typeID)
 	if err != nil {
 		return err
 	}
@@ -618,20 +608,7 @@ func SourceIDsForFile(q Querier, fileID []byte) ([][]byte, error) {
 	if len(fileID) != 16 {
 		return nil, nil
 	}
-	rows, err := q.Query(`SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, fileID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, id)
-	}
-	return out, rows.Err()
+	return listIDs(q, `SELECT DISTINCT source_id FROM artifacts WHERE file_id = ?`, fileID)
 }
 
 // EnsureCatalog rebuilds when needed. Prefer calling after Open/Create ensures.
@@ -658,8 +635,8 @@ func EnsureCatalog(c *database.Catalog) error {
 	return tx.Commit()
 }
 
-func listIDs(q Querier, query string) ([][]byte, error) {
-	rows, err := q.Query(query)
+func listIDs(q Querier, query string, args ...any) ([][]byte, error) {
+	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}

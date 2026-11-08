@@ -86,7 +86,6 @@ func Run[T any](c *database.Catalog, op Op, fn func(tx *database.Tx) (T, []rowch
 			return zero, Result{}, err
 		}
 		set.SummaryDeps = deps
-		set.SummaryDepsWalked = true
 	}
 	if len(set.Search) > 0 {
 		if err := searchindex.Reproject(tx.Tx, set.Search); err != nil {

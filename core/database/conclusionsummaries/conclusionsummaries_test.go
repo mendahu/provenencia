@@ -270,7 +270,8 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 			must(t, err)
 			db, err := f.C.DB()
 			must(t, err)
-			must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
+			_, err = autoreconciler.RecomputeReported(db, [][]byte{handle.ID})
+			must(t, err)
 			tt.check(t, f, handle.ID)
 		})
 	}
@@ -1169,7 +1170,8 @@ func TestPersonSummaryTerms(t *testing.T) {
 				must(t, err)
 				db, err := f.C.DB()
 				must(t, err)
-				must(t, autoreconciler.RecomputeTx(db, [][]byte{handle.ID}))
+				_, err = autoreconciler.RecomputeReported(db, [][]byte{handle.ID})
+				must(t, err)
 				return handle.ID
 			},
 		},

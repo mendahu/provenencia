@@ -8,14 +8,21 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
+	"github.com/mendahu/provenencia/core/database/promote"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
+	"github.com/mendahu/provenencia/core/vocabkey"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 // The budgets of S11-21 D-1. They assume go test runs packages in parallel on
@@ -41,11 +48,22 @@ const (
 	// moves no row of the city's other 6,000 events, so none is reprojected.
 	// S14-33 measured 3.2 s before it walked from the event alone.
 	budgetLocateAtCity = 500 * time.Millisecond
+	// budgetUnpromoteAtCity and budgetDeleteLocationAtCity: unpromoting a
+	// located event, and deleting the Subject of one event's location, touch
+	// the same rows as filing one location at the city: one event, one
+	// association, and the city reported but not reprojected (S14-42).
+	budgetUnpromoteAtCity      = 500 * time.Millisecond
+	budgetDeleteLocationAtCity = 500 * time.Millisecond
 	// budgetSecondPartOfAtCity: a second record's part_of from the city joins
 	// the association already filed, which moves no row, so the city's 6,000
-	// events are not reprojected. S14-33 measured 2.75 s before movedRoots
+	// events are not reprojected. S14-33 measured 2.75 s before the walk
 	// followed only the associations that moved.
 	budgetSecondPartOfAtCity = 500 * time.Millisecond
+	// budgetComposeAll: composing every person and every event row once, warm.
+	// S14-40 measured 220 ms before the rows recorded their inputs; 500 ms
+	// allows the recording plus a slow runner and fails a per-row place graph,
+	// which costs four times as much.
+	budgetComposeAll = 500 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
@@ -266,13 +284,61 @@ func TestLargeSourceBudgets(t *testing.T) {
 		})
 		databasetest.WithinBudget(t, "file one location at the city", d, budgetLocateAtCity)
 	})
+	t.Run("unpromote an event at the city", func(t *testing.T) {
+		var events []subjects.Subject
+		for i := 0; i < 3; i++ {
+			e := f.Birth(lf.onePlace, lf.pageArt)
+			f.promote(e)
+			f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject)
+			events = append(events, e)
+		}
+		i := 0
+		d := databasetest.Fastest(3, func() time.Duration {
+			e := events[i]
+			i++
+			return databasetest.Since(func() {
+				_, err := writes.Call(f.c, writes.Op{Action: "unpromote_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := promote.Unpromote(tx, userID, e.ID)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			})
+		})
+		t.Logf("unpromote one located event at the city: %v", d)
+		databasetest.WithinBudget(t, "unpromote one event at the city", d, budgetUnpromoteAtCity)
+	})
+
+	t.Run("delete a location at the city", func(t *testing.T) {
+		var locations []subjects.Subject
+		for i := 0; i < 3; i++ {
+			e := f.Birth(lf.onePlace, lf.pageArt)
+			f.promote(e)
+			locations = append(locations, f.Locate(lf.onePlace, lf.pageArt, e, lf.citySubject))
+		}
+		i := 0
+		d := databasetest.Fastest(3, func() time.Duration {
+			loc := locations[i]
+			i++
+			return databasetest.Since(func() {
+				_, err := writes.Call(f.c, writes.Op{Action: "delete_subject", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := subjects.Delete(tx, userID, loc.ID)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			})
+		})
+		t.Logf("delete one location at the city: %v", d)
+		databasetest.WithinBudget(t, "delete one location at the city", d, budgetDeleteLocationAtCity)
+	})
+
 	t.Run("second part_of from the city", func(t *testing.T) {
 		region := f.Place(lf.other, lf.otherA, "Region")
 		regionID := f.promote(region).Entity.ID
 		// The first part_of mints the association; it moves rows and is not timed.
 		first := f.Place(lf.other, lf.otherA, "City")
 		f.join(first, lf.city)
-		f.PlaceRel(lf.other, lf.otherA, first, region, "part_of")
+		firstPartOf := databasetest.Since(func() { f.PlaceRel(lf.other, lf.otherA, first, region, "part_of") })
+		t.Logf("first part_of from the city (untimed by the budget): %v", firstPartOf)
 		type pair struct{ from, to subjects.Subject }
 		var pairs []pair
 		for i := 0; i < 3; i++ {
@@ -289,5 +355,51 @@ func TestLargeSourceBudgets(t *testing.T) {
 			return databasetest.Since(func() { f.PlaceRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
 		})
 		databasetest.WithinBudget(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
+	})
+
+	t.Run("compose every summary", func(t *testing.T) {
+		g := f.c.Graph()
+		db, err := f.c.DB()
+		must(t, err)
+		w := conclusionsummaries.Want{
+			Persons: conclusionsummariestest.HandleIDs(t, db, vocabkey.Person),
+			Events:  conclusionsummariestest.HandleIDs(t, db, vocabkey.Event),
+		}
+		_, err = conclusionsummaries.RowsForSearch(g, w)
+		must(t, err)
+		d := databasetest.Fastest(3, func() time.Duration {
+			return databasetest.Since(func() {
+				_, err := conclusionsummaries.RowsForSearch(g, w)
+				must(t, err)
+			})
+		})
+		databasetest.WithinBudget(t, "compose every person and event row", d, budgetComposeAll)
+	})
+
+	handles := func(t *testing.T, limit int) map[string][][]byte {
+		db, err := f.c.DB()
+		must(t, err)
+		ids := map[string][][]byte{}
+		for _, kind := range conclusionsummariestest.Kinds {
+			all := conclusionsummariestest.HandleIDs(t, db, kind)
+			if limit > 0 && len(all) > limit {
+				all = all[:limit]
+			}
+			ids[kind] = all
+		}
+		return ids
+	}
+
+	t.Run("inputs match isolated composition", func(t *testing.T) {
+		db, err := f.c.DB()
+		must(t, err)
+		stats := conclusionsummariestest.CheckMatchIsolated(t, db, handles(t, 0))
+		for _, kind := range conclusionsummariestest.Kinds {
+			s := stats[kind]
+			t.Logf("%s: %d rows, %d keys, median %d, max %d", kind, s.Rows, s.Keys, s.Median(), s.Max)
+		}
+		// The cap on keys one call records (conclusionsummaries
+		// maxInputKeysPerCall) is set from the largest 500-row call here.
+		t.Logf("largest keys in one 500-row call, by kind: %v", conclusionsummariestest.LargestBatch(t, db, handles(t, 0), 500))
 	})
 }

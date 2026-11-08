@@ -152,3 +152,15 @@ func TestBridgeAuthoredOnce(t *testing.T) {
 		t.Fatalf("participation should expand to 2 directed pairs, got %d", participationPairs)
 	}
 }
+
+func TestBridgeOriginKey(t *testing.T) {
+	for _, c := range []struct{ origin, want string }{
+		{"", vocabkey.OriginProvenencia},
+		{" plugin ", "plugin"},
+		{"x", "x"},
+	} {
+		if got := (Bridge{Origin: c.origin}).OriginKey(); got != c.want {
+			t.Errorf("Origin %q: OriginKey %q, want %q", c.origin, got, c.want)
+		}
+	}
+}

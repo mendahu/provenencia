@@ -122,6 +122,7 @@ var Tables = []Table{
 	{Name: "audit_transaction_scopes", Bucket: BucketSkip},
 	{Name: "catalog_search_docs", Bucket: BucketSkip},
 	{Name: "catalog_search_meta", Bucket: BucketSkip},
+	{Name: "catalog_search_inputs", Bucket: BucketSkip},
 	{Name: "auto_reconciler_values", Bucket: BucketSkip},
 	{Name: "auto_reconciler_meta", Bucket: BucketSkip},
 	{Name: "auto_reconciler_outcomes", Bucket: BucketSkip},

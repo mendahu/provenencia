@@ -101,27 +101,21 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		return err
 	}
 	roots = uniqueIDs(roots)
-	if err := g.dropCommittedDisplays(roots, set); err != nil {
-		return err
-	}
+	g.dropCommittedDisplays(roots, set)
 	if err := g.dropMemos(roots); err != nil {
 		return err
 	}
 	return g.verifyIfSet()
 }
 
-// dropCommittedDisplays forgets stored rows for roots. When the write already
-// walked dependents, those ids are dropped too and the walk is not repeated.
-// An empty display map has nothing to forget.
-func (g *Graph) dropCommittedDisplays(roots [][]byte, set effects.Set) error {
+// dropCommittedDisplays forgets stored rows for roots and for the rows the
+// write's input-index lookup found (set.SummaryDeps). An empty display map has
+// nothing to forget.
+func (g *Graph) dropCommittedDisplays(roots [][]byte, set effects.Set) {
 	if len(g.displays) == 0 {
-		return nil
+		return
 	}
-	if set.SummaryDepsWalked {
-		g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.SummaryDeps...)))
-		return nil
-	}
-	return g.forgetDisplays(roots)
+	g.dropDisplays(uniqueIDs(append(append([][]byte(nil), roots...), set.SummaryDeps...)))
 }
 
 func (g *Graph) entityNeedsReload(row entityRow) bool {

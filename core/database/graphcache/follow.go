@@ -10,7 +10,19 @@ import (
 // Follow returns this node's links that match hop. The node is loaded on
 // first read. Link order is the node's order: association ref, then neighbor ref.
 func (g *Graph) Follow(id []byte, hop hops.Hop) ([]Link, error) {
-	n, err := g.Node(id)
+	out, err := g.follow(id, hop)
+	if err == nil && g != nil && g.inputRecorder != nil {
+		for _, k := range followKeys(id, hop, out) {
+			g.inputRecorder(k)
+		}
+	}
+	return out, err
+}
+
+// follow is Follow without the test recorder; it reads the node through node,
+// so it reports no node values.
+func (g *Graph) follow(id []byte, hop hops.Hop) ([]Link, error) {
+	n, err := g.node(id)
 	if err != nil || n == nil {
 		return nil, err
 	}

@@ -361,6 +361,32 @@ func TestRebuildIndexesHandles(t *testing.T) {
 	}
 }
 
+func TestRebuildIndexesSummaryInputs(t *testing.T) {
+	f := newHandleFixture(t)
+	f.promote(f.person("James Robins"), nil)
+	db, err := f.C.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := searchindex.ClearAll(db); err != nil {
+		t.Fatal(err)
+	}
+	if err := searchindex.SetProjectionVersion(db, 10); err != nil {
+		t.Fatal(err)
+	}
+	if err := searchindex.EnsureCatalog(f.C); err != nil {
+		t.Fatal(err)
+	}
+	// A person row records at least its EventsOfSubject end, links or not.
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_inputs`).Scan(&n); err != nil || n == 0 {
+		t.Fatalf("the rebuild wrote %d input rows, err %v", n, err)
+	}
+	if v, err := searchindex.ProjectionVersionStored(db); err != nil || v != 11 {
+		t.Fatalf("projection version %d, err %v, want 11", v, err)
+	}
+}
+
 func TestKindPriorityIsATenthOfTheScore(t *testing.T) {
 	equal := []Hit{
 		{Kind: KindSourceType, Title: "T", Score: 10},

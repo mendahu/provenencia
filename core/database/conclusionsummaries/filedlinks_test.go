@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
@@ -12,22 +11,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 )
-
-// filedLinkDeps recomputes the association handle of the last bridge of type
-// kind, as the write that filed it does, and returns what the walk reported.
-func (f *fixture) filedLinkDeps(kind string) [][]byte {
-	f.T.Helper()
-	db, err := f.C.DB()
-	must(f.T, err)
-	var assoc []byte
-	must(f.T, db.QueryRow(`SELECT ic.entity_id FROM identity_claims ic
-		JOIN subjects s ON s.id = ic.subject_id
-		JOIN subject_types st ON st.id = s.subject_type_id AND st.key = ?
-		WHERE ic.status = 'accepted' ORDER BY s.id DESC LIMIT 1`, kind).Scan(&assoc))
-	deps, err := autoreconciler.RecomputeReported(db, [][]byte{assoc})
-	must(f.T, err)
-	return deps
-}
 
 // promotedBirth promotes a person and their birth event, files the
 // participation, and files the location at place unless place is the zero Subject.
@@ -59,7 +42,7 @@ func countIn(ids [][]byte, want ...[]byte) int {
 
 // A filed location names its event and its place, and reaches no other event
 // at the place, however many there are: no row reads a link through the place end.
-func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
+func TestFiledLocationReportsOnlyItsEvent(t *testing.T) {
 	for _, siblings := range []int{3, 12} {
 		f := newFixture(t)
 		place := f.placeSubject("Leeds", nil, nil, 2, 0)
@@ -71,7 +54,7 @@ func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
 		}
 		_, event, h := f.promotedBirth(subjects.Subject{})
 		f.Locate(f.Source, f.Artifact, event, place)
-		deps := f.filedLinkDeps("location")
+		deps := f.Reported
 		if countIn(deps, h[1], placeID) != 2 {
 			t.Fatalf("%d siblings: deps lack an end of the link", siblings)
 		}
@@ -81,10 +64,10 @@ func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
 	}
 }
 
-// A filed part_of names both places and walks from the part: the events at the
+// A filed part_of names both places and reports the part: the events at the
 // part and at its descendants, and their birth or death people, are reached;
 // the events at the whole are not.
-func TestFiledPartOfWalksFromThePart(t *testing.T) {
+func TestFiledPartOfReportsThePart(t *testing.T) {
 	f := newFixture(t)
 	whole := f.placeSubject("Ontario", nil, nil, 4, 0)
 	part := f.placeSubject("Toronto", nil, nil, 2, 0)
@@ -95,8 +78,8 @@ func TestFiledPartOfWalksFromThePart(t *testing.T) {
 	_, _, hPart := f.promotedBirth(part)
 	_, _, hSub := f.promotedBirth(sub)
 	_, _, hWhole := f.promotedBirth(whole)
-	f.placeRel(part, whole, propertyterms.KeyPartOf, nil, nil)
-	deps := f.filedLinkDeps("place_relationship")
+	f.PlaceRel(f.Source, f.Artifact, part, whole, propertyterms.KeyPartOf)
+	deps := f.Reported
 	if countIn(deps, wholeID, partID) != 2 {
 		t.Fatalf("deps lack an end of the link")
 	}

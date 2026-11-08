@@ -49,11 +49,13 @@ func OpenCatalog(t testing.TB) *database.Catalog {
 // the cache equal to the catalog. A Subject has the id of its entity. Rows go
 // in directly, not through a write, so nothing reaches the graph until Commit.
 type Canon struct {
-	t        testing.TB
-	c        *database.Catalog
-	db       *sql.DB
-	n        int
-	rev      int64
+	t   testing.TB
+	c   *database.Catalog
+	db  *sql.DB
+	n   int
+	rev int64
+	// pending is what observe's recomputes reported since the last Commit.
+	pending  [][]byte
 	citation []byte
 	graph    []byte
 	source   []byte
@@ -158,9 +160,11 @@ func (k *Canon) observe(entity []byte, propKey, column string, value []byte) {
 	k.t.Helper()
 	k.exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, `+column+`) VALUES (?, ?, ?, ?, ?, ?)`,
 		k.next(4), fmt.Sprintf("OBS-TST-%d", k.n), k.citation, entity, k.propID(propKey), value)
-	if err := autoreconciler.RecomputeTx(k.db, [][]byte{entity}); err != nil {
+	reported, err := autoreconciler.RecomputeReported(k.db, [][]byte{entity})
+	if err != nil {
 		k.t.Fatal(err)
 	}
+	k.pending = append(k.pending, reported...)
 }
 
 // Term sets the kept term of one property of an entity to a term of the
@@ -310,10 +314,19 @@ func (k *Canon) Retype(entity []byte, propKey, termKey string) {
 	k.Term(entity, propKey, termKey)
 }
 
-// Commit tells the graph that ids were written, as a commit's effects do.
+// Commit tells the graph that ids were written, as a commit's effects do. It
+// recomputes ids, which sees the raw Remove, Merge and Provisional writes, and
+// commits the rows that recompute and every observe since the last Commit
+// reported, as Run's SummaryDeps.
 func (k *Canon) Commit(ids ...[]byte) {
 	k.t.Helper()
-	k.commit(effects.Set{Handles: ids})
+	reported, err := autoreconciler.RecomputeReported(k.db, ids)
+	if err != nil {
+		k.t.Fatal(err)
+	}
+	deps := append(k.pending, reported...)
+	k.pending = nil
+	k.commit(effects.Set{Handles: ids, SummaryDeps: deps})
 }
 
 // CommitVocabulary tells the graph that a Property-side vocabulary label was written.

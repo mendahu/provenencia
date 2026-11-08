@@ -7,10 +7,31 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
+
+// summaryChainDepth is how far a place row's parent chain climbs. The place
+// neighborhood, closure, ParentChain and isAncestor (so FoldLocations) use the
+// same bound, so a row composed in a batch shows no ancestor its recorded
+// inputs lack.
+const summaryChainDepth = 8
+
+// maxInputKeysPerCall caps the place-chain keys one RowsForSearch call
+// records across all its rows, counted before the keys are copied. On the large
+// fixture the largest 500-row call counts 1,000 and holds 3,500 keys in all (a
+// whole-fixture call counts 16,102); the cap is above 50 times the larger. Only a
+// crafted catalog reaches it, such as a dense part_of mesh whose every row
+// copies its whole place closure. Over the cap the call counts nothing: no
+// row of that batch has inputs, so its index entries are empty and an edit to
+// its places does not invalidate it. S14-42 inherits that miss for a crafted
+// catalog only.
+const maxInputKeysPerCall = 250000
+
+// inputKeyCap is maxInputKeysPerCall; a test lowers it.
+var inputKeyCap = maxInputKeysPerCall
 
 // placeLink is one filed place_relationship edge with its membership dates.
 type placeLink struct {
@@ -29,6 +50,10 @@ type placeGraph struct {
 	succFrom map[string][]placeLink // predecessor id → successors
 	succTo   map[string][]placeLink // successor id → predecessors
 	period   map[string]valuecompare.Window
+	// inputs are the keys the build recorded reading each place it expanded,
+	// by place id: its values, its part_of links at the part end, and those
+	// links' associations.
+	inputs map[string][]graphcache.InputKey
 }
 
 func newPlaceGraph() *placeGraph {
@@ -39,7 +64,98 @@ func newPlaceGraph() *placeGraph {
 		succFrom: map[string][]placeLink{},
 		succTo:   map[string][]placeLink{},
 		period:   map[string]valuecompare.Window{},
+		inputs:   map[string][]graphcache.InputKey{},
 	}
+}
+
+// reach visits, once each, the places a walk up part_of from seeds expands:
+// the same rounds buildPlaceGraph runs, over the links it kept.
+func (g *placeGraph) reach(seeds [][]byte, visit func(id []byte)) {
+	seeds = database.UniqueBlobIDs(seeds)
+	frontier := append([][]byte(nil), seeds...)
+	seen := map[string]bool{}
+	for _, id := range seeds {
+		seen[string(id)] = true
+	}
+	for round := 0; round < summaryChainDepth && len(frontier) > 0; round++ {
+		var next [][]byte
+		for _, id := range frontier {
+			visit(id)
+			for _, l := range g.partFrom[string(id)] {
+				if !seen[string(l.to)] {
+					seen[string(l.to)] = true
+					next = append(next, l.to)
+				}
+			}
+		}
+		frontier = next
+	}
+}
+
+// closure is the union of the keys recorded for every place a walk up part_of
+// from seeds expands. It records nothing of its own, so a read added to the
+// build reaches every row that walks through it.
+func (g *placeGraph) closure(seeds [][]byte) []graphcache.InputKey {
+	var keys []graphcache.InputKey
+	g.reach(seeds, func(id []byte) { keys = append(keys, g.inputs[string(id)]...) })
+	return keys
+}
+
+// closureSize is len(closure(seeds)) without building it.
+func (g *placeGraph) closureSize(seeds [][]byte) int {
+	n := 0
+	g.reach(seeds, func(id []byte) { n += len(g.inputs[string(id)]) })
+	return n
+}
+
+// addChains follows each event's locations through in and records the closure
+// of their places, through the call's cap.
+func (g *placeGraph) addChains(in *graphcache.InputScope, rec *inputBudget, eventIDs [][]byte) error {
+	seeds, err := placesOfEvents(in, eventIDs)
+	if err != nil {
+		return err
+	}
+	rec.addClosure(in, g, seeds)
+	return nil
+}
+
+// inputBudget counts the keys one RowsForSearch call records for the place
+// chains of all its rows. Over inputKeyCap the call counts nothing: it stops
+// recording and hands back no inputs for any row. A nil budget is a read that
+// records nothing: every method then does nothing and its scopes record
+// nothing.
+type inputBudget struct {
+	used int
+	over bool
+}
+
+// scope is the scope a row for dependent is composed through: recording with a
+// budget, and recording nothing without one.
+func (b *inputBudget) scope(g *graphcache.Graph, dependent []byte) *graphcache.InputScope {
+	if b == nil {
+		return g.NoInputs()
+	}
+	return g.Inputs(dependent)
+}
+
+// keep files the keys in recorded for the row id, when the call records.
+func (b *inputBudget) keep(into map[string][]graphcache.InputKey, id []byte, in *graphcache.InputScope) {
+	if b != nil {
+		into[string(id)] = in.Keys()
+	}
+}
+
+// addClosure records the closure of seeds on in, unless that would take the
+// call past the cap. It counts the closure before it builds it.
+func (b *inputBudget) addClosure(in *graphcache.InputScope, pg *placeGraph, seeds [][]byte) {
+	if b == nil || b.over {
+		return
+	}
+	if b.used += pg.closureSize(seeds); b.used > inputKeyCap {
+		b.over = true
+		return
+	}
+	in.Add(pg.closure(seeds)...)
 }
 
 type assocDates struct {
@@ -163,7 +279,7 @@ func (g *placeGraph) displayName(id []byte) string {
 // nearest-first ancestors. Several parents at a level are every candidate
 // (candidates=true; no nature preference). Cycle-guarded.
 func (g *placeGraph) ParentChain(placeID []byte, at *datevalue.Value) (names []string, candidates bool) {
-	return g.parentChain(placeID, at, map[string]bool{string(placeID): true})
+	return g.parentChain(placeID, at, map[string]bool{string(placeID): true}, 0)
 }
 
 // ParentChainNames is ParentChain's names only.
@@ -172,7 +288,15 @@ func (g *placeGraph) ParentChainNames(placeID []byte, at *datevalue.Value) []str
 	return names
 }
 
-func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[string]bool) ([]string, bool) {
+// parentChain shows ancestors only as far as the build expanded places: the
+// build reads the shells of summaryChainDepth places up from a seed, the seed
+// first, so the highest ancestor with a name is summaryChainDepth-1 levels
+// above it. A name the build did not read must not appear because another row
+// of the batch happened to read it.
+func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[string]bool, depth int) ([]string, bool) {
+	if depth+1 >= summaryChainDepth {
+		return nil, false
+	}
 	parents := g.ImmediateParents(placeID, at)
 	if len(parents) == 0 {
 		return nil, false
@@ -192,7 +316,7 @@ func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[s
 	}
 	seen[string(p)] = true
 	name := g.displayName(p)
-	rest, _ := g.parentChain(p, at, seen)
+	rest, _ := g.parentChain(p, at, seen, depth+1)
 	if name == "" {
 		return rest, false
 	}
@@ -200,26 +324,29 @@ func (g *placeGraph) parentChain(placeID []byte, at *datevalue.Value, seen map[s
 }
 
 // isAncestor reports whether ancestor reaches descendant via holding
-// part_of links at at (cycle-guarded BFS upward from descendant).
+// part_of links at at (cycle-guarded BFS upward from descendant), through
+// links of at most summaryChainDepth places: the ones the build expanded.
 func (g *placeGraph) isAncestor(ancestor, descendant []byte, at *datevalue.Value) bool {
 	if bytes.Equal(ancestor, descendant) {
 		return false
 	}
 	seen := map[string]bool{string(descendant): true}
-	queue := [][]byte{append([]byte(nil), descendant...)}
-	for len(queue) > 0 {
-		cur := queue[0]
-		queue = queue[1:]
-		for _, p := range g.ImmediateParents(cur, at) {
-			if bytes.Equal(p, ancestor) {
-				return true
+	level := [][]byte{append([]byte(nil), descendant...)}
+	for depth := 0; depth < summaryChainDepth && len(level) > 0; depth++ {
+		var next [][]byte
+		for _, cur := range level {
+			for _, p := range g.ImmediateParents(cur, at) {
+				if bytes.Equal(p, ancestor) {
+					return true
+				}
+				if seen[string(p)] {
+					continue
+				}
+				seen[string(p)] = true
+				next = append(next, p)
 			}
-			if seen[string(p)] {
-				continue
-			}
-			seen[string(p)] = true
-			queue = append(queue, p)
 		}
+		level = next
 	}
 	return false
 }
@@ -292,7 +419,7 @@ func placeNeighborhood(c *database.Catalog, ids [][]byte) (*placeGraph, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buildPlaceGraph(g, v, ids)
+	return buildPlaceGraph(g, v, ids, nil)
 }
 
 // AttachPlaceRelationships fills PartOf / Contains / Predecessors /
