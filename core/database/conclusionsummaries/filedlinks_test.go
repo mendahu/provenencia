@@ -42,7 +42,7 @@ func countIn(ids [][]byte, want ...[]byte) int {
 
 // A filed location names its event and its place, and reaches no other event
 // at the place, however many there are: no row reads a link through the place end.
-func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
+func TestFiledLocationReportsOnlyItsEvent(t *testing.T) {
 	for _, siblings := range []int{3, 12} {
 		f := newFixture(t)
 		place := f.placeSubject("Leeds", nil, nil, 2, 0)
@@ -67,7 +67,7 @@ func TestFiledLocationWalksOnlyFromItsEvent(t *testing.T) {
 // A filed part_of names both places and walks from the part: the events at the
 // part and at its descendants, and their birth or death people, are reached;
 // the events at the whole are not.
-func TestFiledPartOfWalksFromThePart(t *testing.T) {
+func TestFiledPartOfReportsThePart(t *testing.T) {
 	f := newFixture(t)
 	whole := f.placeSubject("Ontario", nil, nil, 4, 0)
 	part := f.placeSubject("Toronto", nil, nil, 2, 0)

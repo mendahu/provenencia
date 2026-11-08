@@ -8,13 +8,13 @@ The noun is **input**, not "read": `core/database/effects` already uses `Read`, 
 
 The catalog keeps three layers of derived data:
 
-| Layer | Built from | How a write finds what to rebuild today |
+| Layer | Built from | How a write found what to rebuild before S14-42 |
 | --- | --- | --- |
 | 1. Handle values (`auto_reconciler_values`, `auto_reconciler_outcomes`) | Members' Observations | The effects registry (`core/database/effects`): declarative paths from the changed row forward, using a deleted row's old fields. This layer works and does not change |
 | 2. Summary rows (graph cache displays) and handle search documents (`catalog_search_docs`) | Layer 1, through `graphcache.Graph` `Node`, `Nodes` and `Follow` in `core/database/conclusionsummaries/compose.go`; plus raw reads of the row's own handle (`gallery.ForEntities` for the lead picture; `searchindex/handles.go` `sqlHandleHeads`, `sqlHandleValues`) | A hand-written inverse of the summary reads, run after the write against the data as it now is |
 | 3. App pages and lists | Layers 1 and 2 | `WriteEffects.handles` and `summary_handles` |
 
-Layer 2's inverse is spread over:
+Layer 2's inverse was spread over:
 - `conclusionsummaries.Dependents` with `walkDepth` and `birthOrDeath`: the reverse of each read, written by hand.
 - `conclusionsummaries.AssociationEndpoints`, called before and after the recompute in `autoreconciler.RecomputeReported`, plus `linkEnds`: which ends of a link to walk from.
 - The `movedRoots` narrowing in `RecomputeReported`.
