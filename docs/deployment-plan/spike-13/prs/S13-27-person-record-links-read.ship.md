@@ -1,7 +1,7 @@
 # Ship log — S13-27 Person record links read
 
 **Plan:** [`S13-27-person-record-links-read.md`](S13-27-person-record-links-read.md) · **Branch:** `s13-27-plan` (the plan PR's branch, by the user's choice, 2026-11-07; the plan header names `s13-27-person-record-links-read`) · **PR:** #743
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `fa3dbb91` (8 commits on `cf7a27ca`). Gate PASS (implementer, then orchestrator on the pushed head). Report deviations: `pairKey{a, b int}` instead of `[2]int` (the numbers guard); `readWork` wraps an internal `readPlan` that also returns the shared pairs; `Pairs` returns nil with no shared person; T-8 files its registers with `evidencelayertest.Open` and `promotetest.Save` directly; Landed docs written for #743.
@@ -62,3 +62,24 @@ Do: `TestRecordLinks` becomes a table of `{name, build func(f *fixture) (person 
 Check: `go test -run TestRecordLinks ./core/database/persondetail/` passes; each row passes alone (`-run 'TestRecordLinks/<row>'`).
 
 ## Round 1 — fix
+Stopped on F-1 (head unchanged `fa3dbb91`; F-1 – F-3 coded in the working tree, uncommitted; F-4 – F-6 not started). The walk charge works: the "unshared links" rows fail before (6.87 s, ReadWork 2,016) and pass after. But it raises the obituary's pair work from 1,029 to 2,215, so `MaxPairWork` 25,000 is under 20 × it (44,300), against the user's rule for that value. Household `ReadWork(householdGraphs(50))` rises from 31,850 to 53,900, so D-3 gives `MaxReadWork` 1,100,000. **To user:** raise `MaxPairWork` to 45,000 (and `MaxReadWork` to 1,100,000), or change the charge.
+
+### To user — answered 2026-11-07
+- **F-1's caps:** the user: raise the caps. `MaxPairWork` → 45,000 (comment `// decided: user, 2026-11-07 (S13-27 SEC-1): the walk charge counts each member's links and properties, so the cap keeps 20 times an obituary's work (2,215)`) and `MaxReadWork` → 1,100,000 (20 × 53,900, D-3's rule). F-1 resumes with these values in place of its stop.
+
+## Round 1 — fix (resumed)
+Head `82f57ad8` (`ecfed852` F-1 – F-3 in one commit, interleaved hunks; `cb8b0afe` F-4; `044aca54` F-5; `82f57ad8` F-6). Gate PASS (implementer, then orchestrator). Caps: `MaxPairWork` 45,000, `MaxReadWork` 1,100,000. Measured (M1, 1x): `BenchmarkPairsAtCap` names m = 7, 23.9 s/op; unshared links m = 7, 0.52 s/op. `BenchmarkLinesAtCap`: names 1.01 s, interests 6.4 ms, shared people 1.12 s, shapes 0.14 ms, unshared links 19 ms, longest values 342 ms. `TestRecordLinksBudgets`: cold 37.9 ms, repeat 27.9 ms, 65-graph repeat 61.6 ms. Deviations: the "unshared links" axis `most` is 40,000; "longest values" no longer reaches `MaxPairWork` (`MaxUnitValues` stops it first), so `underCap` accepts n = `most` for it and `TestLinesWorkCap` skips its n + 1 check there.
+
+Minors read by the orchestrator: F-2 Resolved (`overWork(` only in its definition and `pairLines`); F-3 Resolved (no `readWork`); F-4 Resolved (`graphIDs` compared); F-5 Resolved (random caps, 300 rounds); F-6 Resolved (each row on its own `newFixture`).
+
+## Round 2 — review
+Reviewers: SEC+PRF (round 1 blocker SEC-1). Scope `fa3dbb91...82f57ad8`. CON, MNT not sent: their findings were minors, read above. UX had none.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-1 | SEC+PRF | blocker | (round 1) | Resolved | every link and property a compare walks is charged before any compare; the reviewer's probe at the shipped caps: 1,000 – 30,000 links per member, the largest read within `MaxReadWork` takes 46 µs – 423 ms (57.7 s in round 1) |
+
+No new findings. No Fix plan 2.
+
+## Result
+Gate PASS on `82f57ad8` (orchestrator) · `origin/main` unmoved since the branch was rebased · CI: see the PR · open: none · follow-ups: none · to user: F-1's caps, answered 2026-11-07 (raise `MaxPairWork` to 45,000, `MaxReadWork` 1,100,000). The slowest crafted read under the caps is 23.9 s (`BenchmarkPairsAtCap` names, m = 7), under the plan's 60 s stop.
