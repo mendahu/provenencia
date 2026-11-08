@@ -170,5 +170,25 @@ enum PersonSourcesPreviewData {
         }
         return links(graphs: manyClaims(graphs: graphs), pairs: pairs)
     }
+
+    /// A session over a `FakeStore` that serves the record links of `entityId`: the given
+    /// links, a failure, or (with neither) an answer an hour late, so the column shows its
+    /// spinner.
+    @MainActor
+    static func previewSession(
+        entityId: String, recordLinks: CatalogPersonRecordLinks?, failure: Bool
+    ) -> WorkspaceSession {
+        let store = FakeStore()
+        if failure {
+            store.getPersonRecordLinksError = CoreInvokeError.coded(
+                status: 1, code: "catalog.already_open", kind: .user, params: []
+            )
+        } else if let recordLinks {
+            store.seededPersonRecordLinks[entityId] = recordLinks
+        } else {
+            store.personRecordLinksDelayNanoseconds = 3_600_000_000_000
+        }
+        return WorkspaceSession(projectKey: ProjectKey(projectDir: "/tmp/preview.provenencia"), store: store)
+    }
 }
 #endif

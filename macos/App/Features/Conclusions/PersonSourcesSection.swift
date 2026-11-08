@@ -45,6 +45,7 @@ struct PersonSourcesSection: View {
         ) { content in
             PersonSourcesList(
                 content: content,
+                entityId: entityId,
                 open: { navigation.go(to: $0) },
                 expand: { self.expanded.insert($0) },
                 expandRows: { self.rowsExpanded = true },
@@ -87,10 +88,12 @@ struct PersonSourcesSection: View {
     }
 }
 
-/// What on a record's line takes keyboard focus: its graph link, or its Unpromote button.
+/// What takes keyboard focus: a record's graph link, its Unpromote button, or a node of the
+/// record links diagram.
 enum PersonSourcesFocus: Hashable {
     case graph(claimID: String)
     case unpromote(claimID: String)
+    case node(graphID: String)
 }
 
 /// The widths the header line and every Source row share: Citation (fills) · Type · Date ·
@@ -100,8 +103,8 @@ enum PersonSourcesColumns {
     static let typeWidth: CGFloat = 176
     static let dateWidth: CGFloat = 120
     static let refWidth: CGFloat = 104
-    /// A graph line's indent under the title.
-    static let lineIndent: CGFloat = 20
+    /// A graph line's indent under the title; the line's own 4pt padding makes the text 20pt in.
+    static let lineIndent: CGFloat = 16
     /// The columns that never shrink (Type, Date, Ref and the three gaps between the four).
     static let fixedWidth: CGFloat = typeWidth + dateWidth + refWidth + 3 * spacing
     /// The narrowest the Citation column is drawn.
@@ -128,9 +131,13 @@ private extension View {
     }
 }
 
-/// The header line and the Source rows.
+/// The header line and the Source rows, with the record links diagram beside them, pinned
+/// while they scroll (`ConclusionPinnedSideColumn`). It owns the interaction state of both:
+/// the one keyboard focus and the one hovered graph, so a node and a graph line highlight
+/// each other.
 struct PersonSourcesList: View {
     let content: PersonSourcesContent
+    let entityId: String
     let open: (WorkspaceLocation) -> Void
     let expand: (String) -> Void
     let expandRows: () -> Void
@@ -146,8 +153,70 @@ struct PersonSourcesList: View {
     /// The Unpromote button that had the keyboard when its confirm opened, so Keep gives it back.
     /// Nil after a mouse click, which draws no focus ring.
     @State private var returnFocus: PersonSourcesFocus?
+    /// The graph the pointer is on, on its node or on any part of its line.
+    @State private var hoveredGraphID: String?
+
+    @Environment(WorkspaceSession.self) private var session
+
+    /// The graph to highlight: the hovered one, else the graph of what has the keyboard.
+    private var highlightedGraphID: String? {
+        if let hoveredGraphID { return hoveredGraphID }
+        switch focus {
+        case .graph(let claimID), .unpromote(let claimID): return content.claimGraphs[claimID]
+        case .node(let graphID): return graphID
+        case nil: return nil
+        }
+    }
 
     var body: some View {
+        ConclusionPinnedSideColumn(mainMin: PersonSourcesColumns.minWidth) {
+            rows
+        } side: {
+            diagram
+        }
+        .unpromoteConfirm(
+            flow: unpromote,
+            accessibilityIdentifierPrefix: "persons.detail.sources.unpromote",
+            onConfirm: confirmAndTrackFocus
+        )
+        .onChange(of: content) { _, new in applyPendingFocus(in: new) }
+        .onChange(of: unpromote.pending?.id) { _, id in
+            if id == nil { restoreFocusAfterKeep() }
+        }
+    }
+
+    /// The diagram column: a second host over the section's companion read, so the rows stay
+    /// drawn while it loads, fails or reloads.
+    private var diagram: some View {
+        let project = session.projectKey
+        let highlighted = highlightedGraphID
+        return ConclusionPageSectionHost<CatalogPersonRecordLinks, PersonRecordLinksContent, PersonRecordLinksColumn>(
+            section: .sources,
+            entityId: entityId,
+            queryKey: ConclusionPageSection.sources.companionQueryKey(project: project, entityId: entityId),
+            placement: .column,
+            errorTitle: L10n.Conclusions.recordLinksErrorTitle,
+            make: {
+                PersonRecordLinksContent(
+                    links: $0,
+                    graphLocations: content.graphLocations,
+                    graphSourceRefs: content.graphSourceRefs
+                )
+            }
+        ) { links in
+            PersonRecordLinksColumn(
+                content: links,
+                highlightedGraphID: highlighted,
+                onHover: { hoveredGraphID = $0 },
+                open: { id in
+                    if let location = links.nodes.first(where: { $0.id == id })?.location { open(location) }
+                },
+                focus: { PVFieldFocus($focus, equals: .node(graphID: $0)) }
+            )
+        }
+    }
+
+    private var rows: some View {
         VStack(alignment: .leading, spacing: 0) {
             header
             PVDivider(color: PVColor.borderStrong)
@@ -155,6 +224,8 @@ struct PersonSourcesList: View {
                 if index > 0 { PVDivider() }
                 PersonSourcesRowView(
                     row: row, open: open, expand: { unfold(row) }, focused: $focus,
+                    highlightedGraphID: highlightedGraphID,
+                    hover: { hoveredGraphID = $0 },
                     unpromoteDisabled: unpromote.isBusy,
                     beginUnpromote: { line in
                         returnFocus = focus == .unpromote(claimID: line.id) ? focus : nil
@@ -170,15 +241,6 @@ struct PersonSourcesList: View {
                 .padding(.vertical, PVSpacing.space3)
                 .accessibilityIdentifier("persons.detail.sources.more")
             }
-        }
-        .unpromoteConfirm(
-            flow: unpromote,
-            accessibilityIdentifierPrefix: "persons.detail.sources.unpromote",
-            onConfirm: confirmAndTrackFocus
-        )
-        .onChange(of: content) { _, new in applyPendingFocus(in: new) }
-        .onChange(of: unpromote.pending?.id) { _, id in
-            if id == nil { restoreFocusAfterKeep() }
         }
     }
 
@@ -237,12 +299,30 @@ private struct PersonSourcesRowView: View {
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
+    let highlightedGraphID: String?
+    let hover: (String?) -> Void
     let unpromoteDisabled: Bool
     let beginUnpromote: (PersonSourcesContent.Line) -> Void
 
     var body: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            columns
+            lines
+        }
+        // The row as one element; the title link and the lines follow as controls.
+        .overlay(alignment: .topLeading) {
+            Color.clear.frame(width: 1, height: 1)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(row.accessibilityLabel)
+        }
+        .padding(.vertical, PVSpacing.space3)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("persons.detail.sources.row.\(row.id)")
+    }
+
+    private var columns: some View {
         HStack(alignment: .firstTextBaseline, spacing: PersonSourcesColumns.spacing) {
-            citation.personSourcesCitationCell()
+            title.personSourcesCitationCell()
             typeCell.personSourcesTypeCell().accessibilityHidden(true)
             Text(L10n.Conclusions.sourcesDateNone)
                 .font(PVFont.body(size: PVTypeScale.caption))
@@ -256,39 +336,33 @@ private struct PersonSourcesRowView: View {
                 .personSourcesRefCell()
                 .accessibilityHidden(true)
         }
-        // The row as one element; the title link and the lines follow as controls.
-        .overlay(alignment: .topLeading) {
-            Color.clear.frame(width: 1, height: 1)
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(row.accessibilityLabel)
-        }
-        .padding(.vertical, PVSpacing.space3)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("persons.detail.sources.row.\(row.id)")
     }
 
-    private var citation: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space2) {
-            PVInkLink(ink: .primary, action: { open(row.location) }) {
-                PVTitleText(row.title, style: .rowLink, lineLimit: 2)
-            }
-            .accessibilityLabel(Text(verbatim: L10n.Conclusions.sourcesOpenSource(row.helpTitle)))
-            .accessibilityIdentifier("persons.detail.sources.title.\(row.id)")
-            .help(row.helpTitle)
-            VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                ForEach(row.lines) { line in
-                    PersonSourcesLineView(
-                        line: line, open: open, focused: focused,
-                        unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
-                    )
-                }
-                if row.hiddenCount > 0 {
-                    ConclusionShowMoreRow(count: row.hiddenCount, expand: expand)
-                        .accessibilityIdentifier("persons.detail.sources.more.\(row.id)")
-                }
-            }
-            .padding(.leading, PersonSourcesColumns.lineIndent)
+    private var title: some View {
+        PVInkLink(ink: .primary, action: { open(row.location) }) {
+            PVTitleText(row.title, style: .rowLink, lineLimit: 2)
         }
+        .accessibilityLabel(Text(verbatim: L10n.Conclusions.sourcesOpenSource(row.helpTitle)))
+        .accessibilityIdentifier("persons.detail.sources.title.\(row.id)")
+        .help(row.helpTitle)
+    }
+
+    /// The record lines span the whole row less their indent.
+    private var lines: some View {
+        VStack(alignment: .leading, spacing: PVSpacing.space2) {
+            ForEach(row.lines) { line in
+                PersonSourcesLineView(
+                    line: line, open: open, focused: focused,
+                    highlighted: line.graphID == highlightedGraphID, hover: hover,
+                    unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
+                )
+            }
+            if row.hiddenCount > 0 {
+                ConclusionShowMoreRow(count: row.hiddenCount, expand: expand)
+                    .accessibilityIdentifier("persons.detail.sources.more.\(row.id)")
+            }
+        }
+        .padding(.leading, PersonSourcesColumns.lineIndent)
     }
 
     @ViewBuilder
@@ -307,6 +381,9 @@ private struct PersonSourcesLineView: View {
     let line: PersonSourcesContent.Line
     let open: (WorkspaceLocation) -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
+    /// The line's graph is the one highlighted, from a node or from the line itself.
+    let highlighted: Bool
+    let hover: (String?) -> Void
     let unpromoteDisabled: Bool
     let beginUnpromote: (PersonSourcesContent.Line) -> Void
 
@@ -352,15 +429,30 @@ private struct PersonSourcesLineView: View {
             .accessibilityLabel(line.unpromoteAccessibilityLabel)
             .accessibilityIdentifier("persons.detail.sources.unpromote.\(line.id)")
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 2)
+        .padding(.horizontal, PVSpacing.space2)
+        .background(
+            highlighted ? PVColor.surfaceSelected : Color.clear,
+            in: RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+        )
+        .contentShape(Rectangle())
+        .onHover { hover($0 ? line.graphID : nil) }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("persons.detail.sources.line.\(line.id)")
     }
 }
 
 #if DEBUG
-/// The Sources section over a fixture, with its folds working.
+/// The Sources section over a fixture, with its folds working and its two reads served by a
+/// preview session.
 private struct PersonSourcesPreview: View {
+    static let entityId = "preview-person"
+
     let groups: [CatalogPersonClaimGroup]
+    var recordLinks: CatalogPersonRecordLinks?
+    var failure = false
+    var width: CGFloat = 1102
     var expandedAtStart: Set<String> = []
 
     @State private var unpromote = UnpromoteFlow()
@@ -377,6 +469,7 @@ private struct PersonSourcesPreview: View {
                     expanded: expanded,
                     rowsExpanded: rowsExpanded
                 ),
+                entityId: Self.entityId,
                 open: { _ in },
                 expand: { expanded.insert($0) },
                 expandRows: { rowsExpanded = true },
@@ -385,13 +478,36 @@ private struct PersonSourcesPreview: View {
                 confirmUnpromote: { false }
             )
         }
-        .frame(width: 1102, height: 700)
+        .environment(PersonSourcesPreviewData.previewSession(
+            entityId: Self.entityId, recordLinks: recordLinks, failure: failure
+        ))
+        .environment(\.pvWidthClass, width >= PVSpacing.widthWideBreakpoint ? .wide : .regular)
+        .frame(width: width, height: 700)
         .background(PVColor.surfacePage)
         .onAppear { expanded = expandedAtStart }
     }
 }
 
 #Preview("Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular) }
+#Preview("Johann") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.johannClaims, recordLinks: PersonSourcesPreviewData.johannRecordLinks
+    )
+}
+#Preview("Johann, Wide") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.johannClaims, recordLinks: PersonSourcesPreviewData.johannRecordLinks,
+        width: 2296
+    )
+}
+#Preview("Many") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.manyClaims(graphs: 50),
+        recordLinks: PersonSourcesPreviewData.manyRecordLinks(graphs: 50)
+    )
+}
+#Preview("Diagram loading") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular) }
+#Preview("Diagram error") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular, failure: true) }
 #Preview("Untitled Source") { PersonSourcesPreview(groups: PersonSourcesPreviewData.untitled) }
 #Preview("Folded") { PersonSourcesPreview(groups: PersonSourcesPreviewData.folded) }
 #Preview("Many Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.manySources) }

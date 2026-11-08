@@ -101,6 +101,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededPersonEvents: [String: CatalogPersonTimeline] = [:]
     /// A Person's record links by entity id; an unseeded id throws `conclusiondetails.not_found`.
     var seededPersonRecordLinks: [String: CatalogPersonRecordLinks] = [:]
+    /// When set, `getPersonRecordLinks` throws it instead of answering.
+    var getPersonRecordLinksError: Error?
+    /// Optional delay before each `getPersonRecordLinks` answers (previews of the loading state).
+    var personRecordLinksDelayNanoseconds: UInt64 = 0
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
@@ -1713,8 +1717,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getPersonRecordLinks(projectDir: String, entityID: String) async throws -> CatalogPersonRecordLinks {
         // A read: no `recordedCalls`.
-        try withState {
+        let delay = withState { personRecordLinksDelayNanoseconds }
+        if delay > 0 {
+            try await Task.sleep(nanoseconds: delay)
+        }
+        return try withState {
             markCatalogSessionHeld(projectDir)
+            if let getPersonRecordLinksError { throw getPersonRecordLinksError }
             guard let seeded = seededPersonRecordLinks[entityID] else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
