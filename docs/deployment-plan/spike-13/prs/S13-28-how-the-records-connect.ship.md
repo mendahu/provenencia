@@ -465,4 +465,4 @@ Gate: the orchestrator's own run PASSed. The implementer's first run failed two 
 - `PVSegmentedControlTests.disabledItemDoesNotSelect()`
 
 ## Result (after the user-requested refactor)
-Gate PASS (`1d9662ba`) · CI not run (workflows trigger on PRs into `main`) · open: none · to user: the `PVSegmentedControlTests` flake (where it goes).
+Gate PASS (`1d9662ba`) · CI not run (workflows trigger on PRs into `main`) · open: none · to user: none (the `PVSegmentedControlTests` flake: the user said to ignore it, 2026-11-08).
