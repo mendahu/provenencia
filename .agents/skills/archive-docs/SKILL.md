@@ -138,7 +138,7 @@ Find what a close breaks by comparing broken links on the base and on the branch
 ```bash
 base=$(git merge-base origin/main HEAD); tmp=$(cd "$(mktemp -d)" && pwd -P)
 git archive "$base" | tar -x -C "$tmp"
-python3 scripts/check-plan-docs.py --links $(git -C "$tmp" ls-files '*.md' | sed "s|^|$tmp/|") \
+python3 scripts/check-plan-docs.py --links $(cd "$tmp" && find . -name '*.md' | sed "s|^\./|$tmp/|") \
   | grep 'broken link' | sed -E "s|^$tmp/||; s|:[0-9]+: | |" | sort -u > "$tmp.base"
 python3 scripts/check-plan-docs.py --links $(git ls-files '*.md') \
   | grep 'broken link' | sed -E "s|:[0-9]+: | |" | sort -u > "$tmp.branch"
