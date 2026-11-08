@@ -421,3 +421,38 @@ Do:
   - Past the 75,000-arc cap, a pair's slots count only the kept arcs (CON-2, accepted).
 
 Check: the tests pass; `scripts/check-pr.sh --base origin/s13-27-plan` PASS.
+
+### Round 4 — fix
+Head `61cea33a`. Gate PASS (orchestrator run, xcode-test 74s). F-12 to F-15 are done.
+- `reversedArcsOnOnePairFanApart` was seen failing first (0 against 7).
+- **Additions the plan did not name:** `CircularLinkDataset.index(of:)`, which the highlight uses, and `mappingNodes(_:)`, which builds the adapter's spoken text from the neighbour counts without resolving the arcs twice.
+- `PersonRecordLinksContent` now stores only `dataset` and `locations`.
+
+### Round 4 — re-review (CON, MNT; fix commits only)
+- **CON:** clean. F-12 to F-15 are resolved.
+  - CON-1: reversed arcs now sit 7pt apart.
+  - The Person geometry is pinned to f4e8589a. The reviewer checked the `johannGeometryIsUnchanged` literals by script against the old formula.
+  - Colours, fonts, hover, focus, disabled nodes, spoken labels, tooltips, identifiers and the 232pt loading height are unchanged.
+- **MNT:** clean. MNT-1 to MNT-4 are resolved.
+
+Nits (logged):
+- `MNT-8 / CON-5 · CircularLinkData.swift:24` · closing brace on the property's line.
+- `MNT-9 · CircularLinkDiagram.swift:28` · the one-node nil diameter repeats what the layout already does.
+- `MNT-10 / CON-7 · CircularLinkDiagram.swift` preview · the preview borrows `style.overlayLabelBackground` as its page background.
+- `MNT-11 · CircularLinkData.swift:103, PersonRecordLinksContent.swift:54` · `mappingNodes` should keep each node's id by construction, and the adapter should look up graphs by `node.id`.
+- `CON-6 · CircularLinkData.swift:58` · the private property `neighborSets` makes F-12's grep print hits.
+
+### Fix plan 5 (nits, no re-review; the orchestrator reads the diff)
+**F-16 — Tidy the dataset** (from MNT-8, MNT-9, MNT-10, MNT-11, CON-6)
+Do:
+- `mappingNodes` puts back each node's original `id` after the transform.
+- `PersonRecordLinksContent` looks up each graph by `node.id` (a `[String: CatalogRecordLinksGraph]` it already has, or one built beside `graphs`), not by index.
+- Rename the dataset's private `neighborSets` to `adjacency`.
+- Move the closing brace at `CircularLinkData.swift:24` onto its own line.
+- The diagram always passes the fitted diameter; the layout ignores it for one node.
+- The preview's page background is `PVColor.surfacePage` (preview-only, under `#if DEBUG`), not a style prop.
+
+Check:
+- `rg -n "neighborSets|neighbors\(of:" macos/App` prints nothing.
+- The tests pass.
+- `scripts/check-pr.sh --base origin/s13-27-plan` PASS.
