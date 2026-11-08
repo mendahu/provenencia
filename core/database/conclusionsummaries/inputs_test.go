@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -14,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -161,6 +163,21 @@ func TestInputsMatchIsolatedComposition(t *testing.T) {
 	if holds(got, w.james, "", "") {
 		t.Error("James holds his own values")
 	}
+	assoc := func(h hops.Hop, from, to []byte) []byte {
+		edges, err := canonicalgraph.Walk(db, h, [][]byte{from})
+		must(t, err)
+		for _, e := range edges {
+			if bytes.Equal(e.To, to) {
+				return e.Association
+			}
+		}
+		t.Fatalf("no %s association from %x to %x", h.Bridge(), from, to)
+		return nil
+	}
+	birthLocation := assoc(hops.PlacesOfEvent, w.birth, w.town)
+	townCity := assoc(hops.ParentsOfPlace, w.town, w.city)
+	cityRegion := assoc(hops.ParentsOfPlace, w.city, w.region)
+	regionCountry := assoc(hops.ParentsOfPlace, w.region, w.country)
 	for _, c := range []struct {
 		name         string
 		id           []byte
@@ -174,6 +191,12 @@ func TestInputsMatchIsolatedComposition(t *testing.T) {
 		{"region values", w.region, "", "", true},
 		{"country values", w.country, "", "", true},
 		{"town part_of end", w.town, "place_relationship", "from", true},
+		{"city part_of end", w.city, "place_relationship", "from", true},
+		{"region part_of end", w.region, "place_relationship", "from", true},
+		{"birth location association", birthLocation, "", "", true},
+		{"town to city association", townCity, "", "", true},
+		{"city to region association", cityRegion, "", "", true},
+		{"region to country association", regionCountry, "", "", true},
 		{"death location end", w.death, "location", "event", true},
 		{"old town values", w.oldTown, "", "", true},
 		{"new shire values", w.newShire, "", "", true},
