@@ -42,16 +42,16 @@ Spike 13 is done: the user has checked the dogfood bar on their own people and a
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Open `archive/spike-13/README.md` (new) | It has 40 – 80 lines and the headings `## Decisions`, `## Refused` and `## Leftovers`, with the content in §6 **Decisions note**. It lists no PR map and pastes no dogfood bar |
+| AC-1.1 | Open `archive/spike-13/README.md` (new) | It has 30 – 80 lines and the headings `## Decisions`, `## Refused` and `## Leftovers`, with the content in §6 **Decisions note**. It lists no PR map and pastes no dogfood bar |
 | AC-1.2 | Follow the link in `docs/conclusion-layer-data-model.md` §5.1 ("Spike 13's design") | It opens `archive/spike-13/evidence-graph-comparison.md` (new) at the heading "First version (2026-11-07)" |
 
 **US-2.** As a contributor, no link in `docs/`, `.agents/` or `.cursor/` points into the deleted `spike-13/` folder.
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-2.1 | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | Every hit's target is under `archive/spike-13/`, and that file exists |
+| AC-2.1 | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | Every hit's target, resolved from its file's folder, is one of the two files the PR creates in the archive folder (new) |
 | AC-2.2 | `python3 scripts/check-plan-docs.py` with no arguments (every plan and open brief of every open spike) | No errors |
-| AC-2.3 | Read `docs/deployment-plan/README.md` | **Current** does not name Spike 13; **Completed** has a Spike 13 row at the top that links `archive/spike-13/` |
+| AC-2.3 | Read `docs/deployment-plan/README.md` | **Current** does not name Spike 13 (line 11's "From Spike 13, odd-numbered spikes" sentence stays); **Completed** has a Spike 13 row at the top that links `archive/spike-13/` |
 
 **US-3.** As a contributor, nothing operational from Spike 13 is left in `docs/`.
 
@@ -77,7 +77,8 @@ Spike 13 is done: the user has checked the dogfood bar on their own people and a
 | Ship-log and review follow-ups (26 substantive items, among them 7 flaky tests) and about 135 logged nits, including S13-23 UX-5's "A stronger match is %@" copy | Dropped (user, 2026-11-08, D-3); the decisions note's Leftovers table says so in one row |
 | Event and Place pages adopting the sections, the provenance sheet and record links; deleting their Why accordion and its own record table; Event and Place pictures still opening the Citation; the Event `TermFacts` wire; record-link scoring after the first version | The user carries these into later spikes (user, 2026-11-08, D-4); one Leftovers row names them. No idea file is created |
 | Fixing `docs/conclusion-layer-data-model.md` line 332 ("Observation pins" means Reconciliation pins, S13-25 CON-1) | Dropped with the nits (D-3) |
-| Rewording what a landed Spike 14 plan says beyond its link targets | Not planned: Spike 14's own close deletes those plans |
+| Rewording what a landed Spike 14 plan says beyond its link targets, including the backticked `spike-13` paths at lines 332 and 368 of `S14-02-pictures-in-the-app.md` | Not planned: Spike 14's own close deletes those plans |
+| Prose that names a deleted plan, ship log or review id without linking it (`docs/ideas/structural-debt.md` rows cite "S13-37 plan", "S13-16 PRF-2" and others) | Stays as written: an id with no link breaks nothing, as `archive-docs` § Retarget allows |
 
 ## 4. Current state
 
@@ -97,21 +98,52 @@ Spike 13 is done: the user has checked the dogfood bar on their own people and a
 
 Found with `rg -n 'spike-13/' --glob '!docs/deployment-plan/spike-13/**' .` at the planning base. Code, skills and `.cursor/` have none.
 
-| # | File:line | Link today | Becomes |
-| --- | --- | --- | --- |
-| L-1 | `docs/conclusion-layer-data-model.md:213` | `deployment-plan/spike-13/evidence-graph-comparison.md#first-version-2026-11-07` | `deployment-plan/archive/spike-13/evidence-graph-comparison.md#first-version-2026-11-07` |
-| L-2 | `docs/ideas/promote-ranking.md:3` | `../deployment-plan/spike-13/evidence-graph-comparison.md` | `../deployment-plan/archive/spike-13/evidence-graph-comparison.md` |
-| L-3 | `docs/ideas/kinship-view.md:5` | `../deployment-plan/spike-13/person-detail.md#2-family` | `../deployment-plan/archive/spike-13/README.md` |
-| L-4 | `docs/ideas/kinship-view.md:9` | `../deployment-plan/spike-13/deployment-plan.md#engine` | `../deployment-plan/archive/spike-13/README.md` |
-| L-5 | `docs/ideas/provisional-identity-claims.md:40` | link to brief `S13-D11-promote-without-assessment.md` | Plain text: `brief S13-D11 (in git with #633)`, no link |
-| L-6 | `docs/ideas/provenance.md:25` | link to the S13-36 ship log | Plain text: `S13-36 review (#702) SEC-1, F-11`, no link |
-| L-7 | `docs/ideas/provenance.md:48` | links to the S13-06 and S13-11 ship logs | Plain text: `S13-06 review (#640) PRF-1, PRF-2; S13-11 (#650)`, no links |
-| L-8 | `docs/deployment-plan/archive/spike-11/README.md:32` | `../../spike-13/deployment-plan.md` | `../spike-13/README.md` |
-| L-9 | `docs/deployment-plan/archive/spike-12/README.md:32` | `../../spike-13/deployment-plan.md` | `../spike-13/README.md` |
-| L-10 | `docs/deployment-plan/spike-14/deployment-plan.md:69` | `../spike-13/deployment-plan.md#s13-23--promote-stops-asking-for-pins` | `../archive/spike-13/README.md` |
-| L-11 | `docs/deployment-plan/spike-14/prs/S14-02-pictures-in-the-app.md:15` | link to the S13-10 plan | Plain text: `Spike 13's S13-10 plan (in git with #634) D-3, D-4, D-5, D-10, D-16` |
-| L-12 | `docs/deployment-plan/spike-14/prs/S14-19-merge-leaves-no-stale-link.md:14` | link to the S13-03 ship log | Plain text: `the S13-03 ship log follow-up (in git with #666)`, keeping the quoted test name |
-| L-13 | `docs/deployment-plan/spike-14/prs/S14-22-promote-wire-says-what-go-decided.md:15` | link to the S13-23 plan | Plain text: `S13-23 plan **Next adds** (in git with #633)` |
+| # | File:line |
+| --- | --- |
+| L-1 | `docs/conclusion-layer-data-model.md:213` |
+| L-2 | `docs/ideas/promote-ranking.md:3` |
+| L-3 | `docs/ideas/kinship-view.md:5` |
+| L-4 | `docs/ideas/kinship-view.md:9` |
+| L-5 | `docs/ideas/provisional-identity-claims.md:40` |
+| L-6 | `docs/ideas/provenance.md:25` |
+| L-7 | `docs/ideas/provenance.md:48` |
+| L-8 | `docs/deployment-plan/archive/spike-11/README.md:32` |
+| L-9 | `docs/deployment-plan/archive/spike-12/README.md:32` |
+| L-10 | `docs/deployment-plan/spike-14/deployment-plan.md:69` |
+| L-11 | `docs/deployment-plan/spike-14/prs/S14-02-pictures-in-the-app.md:15` |
+| L-12 | `docs/deployment-plan/spike-14/prs/S14-19-merge-leaves-no-stale-link.md:14` |
+| L-13 | `docs/deployment-plan/spike-14/prs/S14-22-promote-wire-says-what-go-decided.md:15` |
+
+Each pair below is an exact string replacement on that line: the first line of a pair is the text today, the second is what it becomes. Nothing else on the line changes.
+
+```text
+L-1   (Spike 13's design](deployment-plan/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
+      (Spike 13's design](deployment-plan/archive/spike-13/evidence-graph-comparison.md#first-version-2026-11-07)
+L-2   ](../deployment-plan/spike-13/evidence-graph-comparison.md)
+      ](../deployment-plan/archive/spike-13/evidence-graph-comparison.md)
+L-3   ([person detail](../deployment-plan/spike-13/person-detail.md#2-family))
+      ([decisions](../deployment-plan/archive/spike-13/README.md#decisions))
+L-4   ([working rule](../deployment-plan/spike-13/deployment-plan.md#engine))
+      ([decision](../deployment-plan/archive/spike-13/README.md#decisions))
+L-5   from brief [S13-D11](../deployment-plan/spike-13/design/archive/S13-D11-promote-without-assessment.md) §4.1.
+      from brief S13-D11 §4.1 (in git with #633).
+L-6   Related: [S13-36 ship log](../deployment-plan/spike-13/prs/S13-36-provenance-sheet-in-the-kit.ship.md) (SEC-1, F-11).
+      Related: the S13-36 ship log (in git with #702), SEC-1 and F-11.
+L-7   Related: [S13-06 ship log](../deployment-plan/spike-13/prs/S13-06-derived-rows-carry-their-records.ship.md) (PRF-1, PRF-2), [S13-11 ship log](../deployment-plan/spike-13/prs/S13-11-provenance-sheet.ship.md).
+      Related: the S13-06 ship log (in git with #640), PRF-1 and PRF-2; the S13-11 ship log (in git with #650).
+L-8   [Spike 13 slice 0](../../spike-13/deployment-plan.md)
+      [Spike 13](../spike-13/README.md)
+L-9   [Spike 13 slice 0](../../spike-13/deployment-plan.md)
+      [Spike 13](../spike-13/README.md)
+L-10  Spike 13's [S13-23](../spike-13/deployment-plan.md#s13-23--promote-stops-asking-for-pins).
+      Spike 13's S13-23 ([decisions](../archive/spike-13/README.md#decisions)).
+L-11  Spike 13's [S13-10 plan](../../spike-13/prs/S13-10-header-and-sections.md) D-3
+      Spike 13's S13-10 plan (in git with #634) D-3
+L-12  ([`../../spike-13/prs/S13-03-siblings-from-a-shared-parent.ship.md`](../../spike-13/prs/S13-03-siblings-from-a-shared-parent.ship.md), "fails
+      (in git with #666, "fails
+L-13  ([`S13-23-promote-stops-asking-for-pins.md`](../../spike-13/prs/S13-23-promote-stops-asking-for-pins.md))
+      (in git with #633)
+```
 
 Lines 332 and 368 of `S14-02-pictures-in-the-app.md` name `spike-13` in backticks inside a landed plan's steps. They are not links and stay (Out: Spike 14's close deletes them).
 
@@ -176,7 +208,7 @@ STEP-1 writes this text into `docs/deployment-plan/archive/spike-13/README.md` (
 - **The Timeline is direct participation, any role,** on a lifeline drawn to scale: birth and death always have a marker (a placeholder when unrecorded), undated events sit before death, and a date known only by its end ("bef. 1880") is dated and ordered at that end everywhere.
 - **Display is decoupled from content.** The person card (`PVTileCard`, `PVPersonCard`) and gender treatment are design-system pieces; name, date, place and title formatting live in `Platform/`; a built-in term reads with the app's name everywhere.
 - **One Unpromote flow** for the Evidence graph and the Person page. Removing a handle's last member deletes the handle in the same revision through `deleteimpact`, and a write's effects name the ids it deleted.
-- **How a person's records connect is computed, never stored.** The first version counts what two Evidence graphs share about each other person they both name, weak or strong at two facts (`recordlinks.StrongAt`), drawn as a circular link diagram beside the Sources rows. It is not Promote's alignment score.
+- **How a person's records connect is computed, never stored.** The first version counts what two Evidence graphs share about each other person they both name, weak or strong at two facts (the match registry's `RecordLinks.StrongAt`), drawn as a circular link diagram beside the Sources rows. It is not Promote's alignment score.
 
 ## Refused
 
@@ -206,10 +238,16 @@ Provisional claims at Promote ([`provisional-identity-claims.md`](../../../ideas
 
 - Line 7: the link target `../../conclusion-layer-data-model.md` gains one `../`.
 - The link target `../../matching-model.md` gains one `../`.
-- Line 30: the link to the map's slice 7 rules, with its two quoted rule names, is replaced by the text below; the rest of the sentence stays.
+- Line 30: this exact text
 
   ```markdown
-  [decisions](README.md#decisions)
+  The decisions are working rules in the [map](deployment-plan.md#slice-7--how-a-persons-records-connect): "Slice 7 starts with a simple count" and "The view is a circular link diagram". In short:
+  ```
+
+  becomes
+
+  ```markdown
+  The [decisions](README.md#decisions) say it in two lines, the record links and Refused. In short:
   ```
 
 - Every other line stays, including **Open** and **Later** (D-4).
@@ -238,8 +276,8 @@ None — no copy change.
 
 **STEP-1 — Decisions note**
 Files: `docs/deployment-plan/archive/spike-13/README.md` (new). Skill: `archive-docs`.
-Do: write the text in §6 **Decisions note**. Before writing, check each code name it uses on `main` (`rg -n 'pageSection|StrongAt|PVTileCard|PVPersonCard' core macos`).
-Check: `wc -l` gives 40 – 80; each relative link resolves (`ls` each target from the archive folder).
+Do: write the text in §6 **Decisions note**. Before writing, check each code name it uses on `main`: `rg -n 'pageSection|StrongAt|PVTileCard|PVPersonCard|PVPageColumns|ConclusionDetailPage' core macos` and `ls core/database/deleteimpact`, and that `identity_claim_evidence` appears in no `CREATE TABLE` after `core/database/migrations/000058.sql`. A name or fact that fails is fixed in the note and reported.
+Check: `wc -l` gives 30 – 80; each relative link resolves (`ls` each target from the archive folder).
 
 **STEP-2 — Move the kept doc**
 Files: `docs/deployment-plan/spike-13/evidence-graph-comparison.md` → `docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md` (new).
@@ -254,7 +292,7 @@ Check: `git ls-files docs/deployment-plan/spike-13` lists only the three S13-99 
 **STEP-4 — Retarget inbound links**
 Files: the 11 files in §4 **Inbound links**.
 Do: apply L-1 – L-13 as written; change nothing else on those lines.
-Check: `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` shows only targets under `archive/spike-13/` plus the three S13-99 files' own links. `python3 scripts/check-plan-docs.py` with no arguments reports no errors (warnings are allowed).
+Check: `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` lists only links whose target, resolved from the file's own folder, is `docs/deployment-plan/archive/spike-13/README.md` (new) or `docs/deployment-plan/archive/spike-13/evidence-graph-comparison.md` (new), plus links inside the three S13-99 files. `python3 scripts/check-plan-docs.py` with no arguments reports no errors (warnings are allowed).
 
 **STEP-5 — The index**
 Files: `docs/deployment-plan/README.md`.
@@ -264,12 +302,12 @@ Do: delete the Spike 13 paragraph under **Current**. In the Spike 14 paragraph, 
 | [Spike 13](archive/spike-13/) | The Person page is one sectioned Conclusion page: provenance sheet, family, timeline, gallery, sources. Identity Claims are membership only. A person's records connect by a computed count. |
 ```
 
-Check: `rg -n 'Spike 13' docs/deployment-plan/README.md` hits only the Completed row. Commit 1 (D-6).
+Check: `rg -n 'Spike 13' docs/deployment-plan/README.md` hits two lines: line 11 ("From Spike 13, odd-numbered spikes", which stays) and the new Completed row. Commit 1 (D-6).
 
 **STEP-6 — Delete this plan**
 Files: `docs/deployment-plan/spike-13/prs/S13-99-dogfood-close.md`, `S13-99-dogfood-close.review.md`, `S13-99-dogfood-close.ship.md`.
-Do: in the commit that records the ship log, `git rm` all three; `docs/deployment-plan/spike-13/` is then gone. Any deviation goes in the PR body, not a Landed note.
-Check: `ls docs/deployment-plan/spike-13` fails; `ls docs/deployment-plan/archive/spike-13` lists `README.md` and `evidence-graph-comparison.md`; `scripts/check-pr.sh` prints `check-pr: PASS`.
+Do: the review log exists from planning (the **Review:** line links it); `ship-pr` writes the ship log on this branch. In the commit that records the ship log, `git rm` all three; if the ship log is not there because the PR was built without `ship-pr`, `git rm` the other two. `docs/deployment-plan/spike-13/` is then gone. Any deviation goes in the PR body, not a Landed note.
+Check: `ls docs/deployment-plan/spike-13` fails; `ls docs/deployment-plan/archive/spike-13` lists `README.md` and `evidence-graph-comparison.md`; `scripts/check-pr.sh` prints `check-pr: PASS` (off macOS it reports `SKIP` for the two Xcode steps, lines 120 – 125, which is a pass for this docs-only PR).
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
 
@@ -278,10 +316,10 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
 | T-1 | Docs | `scripts/check-plan-docs.py` (no arguments) | Every plan and open brief of Spikes 14 and 15 after STEP-4 → no errors | AC-2.2, D-5 |
-| T-2 | Docs | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | After STEP-6 → every hit targets `archive/spike-13/README.md` or `archive/spike-13/evidence-graph-comparison.md` | AC-2.1, AC-1.2 |
-| T-3 | Docs | `wc -l` and `rg -n '^## ' docs/deployment-plan/archive/spike-13/README.md` | 40 – 80 lines; headings Decisions, Refused, Leftovers | AC-1.1, D-3, D-4 |
+| T-2 | Docs | `rg -n '\]\([^)]*spike-13/' docs .agents .cursor` | After STEP-6 → every hit's target, resolved from its file's folder, is one of the two archive files | AC-2.1, AC-1.2 |
+| T-3 | Docs | `wc -l` and `rg -n '^## ' docs/deployment-plan/archive/spike-13/README.md` | 30 – 80 lines; headings Decisions, Refused, Leftovers | AC-1.1, D-3, D-4 |
 | T-4 | Docs | `ls docs/deployment-plan/spike-13 docs/deployment-plan/archive/spike-13` | First fails; second lists two files | AC-3.1, AC-3.2, D-2 |
-| T-5 | Docs | `rg -n 'Spike 13' docs/deployment-plan/README.md` | One hit, the Completed row | AC-2.3 |
+| T-5 | Docs | `rg -n 'Spike 13' docs/deployment-plan/README.md` | Two hits: line 11 (unchanged) and the Completed row | AC-2.3 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to break is `check-plan-docs.py` on a Spike 14 plan whose link STEP-4 missed.
 
@@ -292,7 +330,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to
 - [ ] Every T-# in §8 exists and passes
 - [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
-- [ ] Sweep: `rg -n 'spike-13/' docs .agents .cursor` hits only archive/spike-13 links and the two landed S14-02 backtick lines named in §4
+- [ ] Sweep: T-2's command passes; `rg -n 'spike-13' .agents .cursor core api macos scripts` has no hit
 - [ ] No VERSION bump (docs only)
 - [ ] No Landed note, no completed.md paragraph, no map status for S13-99: the map and this plan are deleted (archive-docs)
 - [ ] PR description: what shipped, AC evidence, deviations from the plan, manual check
@@ -316,7 +354,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. The suite most likely to
 - A Spike 13 map row is not Landed or Descoped on `main`.
 - `rg -n 'spike-13' .agents .cursor core api macos scripts` finds a hit: a skill or code reads a file this PR deletes.
 - `check-plan-docs.py` with no arguments reports an error that is not a link into `spike-13/`. That error is not this PR's to fix.
-- A new link into `spike-13/` points at a requirement or rule (an `R-` id or a working rule) that the decisions note does not state.
+- A link into `spike-13/` that is not L-1 – L-13 points at a requirement or rule (an `R-` id or a working rule) that the decisions note does not state.
 
 ## 12. Open questions
 
