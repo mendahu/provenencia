@@ -32,7 +32,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Promote, matching, names
 
-- [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on Evidence graph scoring; name index on commit, narrower canon walk, coverage-aware similarity
+- [`promote-ranking.md`](promote-ranking.md) — rebuild Promote's ranking on Evidence graph scoring; coverage-aware similarity; alike-pair memo (name index on commit and the narrower canon walk went to Spike 16 Batch 2)
 - [`provisional-identity-claims.md`](provisional-identity-claims.md) — Promote Accepted / Provisional status; possible values from provisional members on conclusion pages
 - [`matching-test-suite.md`](matching-test-suite.md) — scenario goldens, invariants, simulated world, scoreboard, labeler; remember researcher decisions
 - [`international-names.md`](international-names.md) — other name patterns, transliteration, calendars, impossible dates, Daitch–Mokotoff
@@ -43,7 +43,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 ### Conclusion pages and provenance
 
 - [`provenance.md`](provenance.md) — cap records drawn in a provenance table; load records when the sheet opens
-- [`person-page-performance.md`](person-page-performance.md) — record links memo and a household-sized budget, Timeline participants sent once, section content memoised, lazy Timeline cards, siblings sent once
+- [`person-page-performance.md`](person-page-performance.md) — record links memo and a household-sized budget, Timeline participants sent once, lazy Timeline cards, siblings sent once
 - [`person-page-followups.md`](person-page-followups.md) — a birth and death events plural, Back keeping a section's place, the Conclusion lists' silent refresh failure
 - [`wide-layout.md`](wide-layout.md) — pages still waiting for a Wide / Page columns frame
 

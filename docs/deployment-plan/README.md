@@ -53,7 +53,7 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 [Spike 14 — Odds and ends](spike-14/) is open. Plan: [`spike-14/deployment-plan.md`](spike-14/deployment-plan.md). Batch 1 is Event and Place pictures; Batches 4 and 5 are what remained of Spike 12, with the [app-health audit](spike-14/app-health-audit.md) and the [second audit](spike-14/app-health-audit-2.md). Batch 7 (2026-11-04) is dogfood UX (PDF page sync, polygon edit, graph polish, boolean value type) while Spike 13 continues.
 
-[Spike 16 — Odds and ends](spike-16/) is open. Plan: [`spike-16/deployment-plan.md`](spike-16/deployment-plan.md). Batch 1 (2026-11-08) is the fixes from the [Person page audit](spike-16/person-page-audit.md) of Spike 13's Person page.
+[Spike 16 — Odds and ends](spike-16/) is open. Plan: [`spike-16/deployment-plan.md`](spike-16/deployment-plan.md). Batch 1 (2026-11-08) is the fixes from the [Person page audit](spike-16/person-page-audit.md) of Spike 13's Person page; Batch 2 (2026-11-08) is the [cache architecture](spike-16/cache-architecture.md), after Spike 14's S14-42.
 
 [Spike 15 — Sources and citations](spike-15/) is not yet planned: its design docs (the Source date, citation formats, moving an Artifact, Source structure leftovers, privacy, credibility UX, metadata rethink) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
 

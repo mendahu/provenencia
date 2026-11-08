@@ -35,6 +35,8 @@ Raised as S13-06 review PRF-1 and deferred by the user on 2026-10-30; looked at 
 - **Cache.** Swift keeps a detail for the session until a write clears it. The cost falls on the first open and on each open after an edit.
 - **Who uses it.** Most visits never open a provenance sheet. The researcher may be on the way to Family, Timeline or Gallery, and the records are read anyway.
 
+**Since Spike 16 Batch 2** (S16-11, S16-13) the records compose from memory (the node's outcome rows, Subject records, Source records) instead of SQL, so this idea is only about the size of the page read's payload; measure that before pulling it in.
+
 **Shape:** Load a row's records only when its provenance sheet opens.
 
 - The page read keeps a summary per field (Source count, "1 record disagrees", counts on other values, whether any records exist). Go returns those as counts from one grouped query that skips Citation / Artifact / Source joins, locator decode, and date and name lookups.

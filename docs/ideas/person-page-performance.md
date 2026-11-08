@@ -26,12 +26,6 @@ If time follows work, the richer shapes take about 185–440 ms a read, with eve
 
 **Shape.** Send each distinct person once on `ListPersonEventsResponse` and give `EventParticipant` a person id and roles; Swift builds one card content per person. Pull it in with the next Timeline wire change.
 
-## Section content is rebuilt on every pass of its host (P-7, the part a render cap leaves)
-
-`ConclusionPageSectionHost` calls its `make` inside `body`, and the host observes the session's handle table and `isFetching`, so a section's content is rebuilt when its value arrives, at the start and end of every refetch, on every fold change, and whenever any key in the session is inserted or evicted. After S16-02 the Timeline builds only shown rows, which bounds each pass but does not remove the repeats. The Sources section reads its focus in `body`, so every Tab rebuilds `PersonRecordLinksContent` and the circular layout over every arc (S13-28 ship log PRF-5).
-
-**Shape.** Memoise `make` in the host, keyed by `QueryHandle.revision` with the fold set, width class and name orders; the same for the record links adapter. A session test counts `make` calls across one `apply(effects)` and expects one per revision.
-
 ## An unfolded Timeline lays out every card at once (P-7)
 
 After an unfold, every shown row and its cards are laid out in one non-lazy pass (`PersonTimelineStack`), each card's `CachedThumbnail` starting its `.task` together. Card rows are a fixed height (`PVTileCardSize.compact.height`), so a row's card block could be sized without laying it out and its cards mounted only near the viewport.

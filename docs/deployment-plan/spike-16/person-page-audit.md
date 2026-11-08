@@ -40,7 +40,7 @@ User, 2026-11-08. They are the map's Batch 1 working rules.
 | P-20 | The Timeline keeps an old scale after a date edit | Low | PRF | S16-02 |
 | P-21 | `ListPersonClaims` answers for a non-Person handle | Low | MNT, CON | S16-01 |
 | P-22 (part) | The record links wire's unread fields and missing `source_ref` | Low | MNT | S16-01 |
-| P-24 | `edgeKey` joins ids with no separator | Low | SEC | S16-01 |
+| P-24 | `edgeKey` joins ids with no separator | Low | SEC | S16-16 |
 | P-26 (part) | `ConclusionDetailPage.swift` holds 15 types | Low | MNT | S16-03 |
 
 ## Descoped and parked
@@ -275,7 +275,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Problem.** The key concatenates the two ends and the associations with no separator, and ids are not length-checked when loaded, so a crafted catalog can give two links one key and hide a sibling or a link's source. Logged in the S13-03 ship log (SEC-2) and tracked nowhere until this audit.
 
-**Fix.** Prefix each part with its length (or skip ids that are not 16 bytes). With S16-01, beside its sibling cap.
+**Fix.** Prefix each part with its length (or skip ids that are not 16 bytes). With S16-16, whose kinship index rewrites `canonlinks`' loading (moved from S16-01 when Batch 2 was cut).
 
 **Origin.** S13-03 (#666).
 
