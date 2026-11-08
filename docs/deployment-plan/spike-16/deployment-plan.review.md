@@ -1,12 +1,15 @@
-# Review — Spike 16 map (Batch 1)
+# Review — Spike 16 map (Batches 1 and 2)
 
-**Verdict:** Fits with changes — all findings answered; no blocker open.
-**Rounds:** 1. **Reviewers:** maintainability (map review, [`review-plan`](../../../.agents/skills/review-plan/SKILL.md) "Map review").
+**Verdict:** Round 1 (Batch 1): Fits with changes. Round 2 (the whole map with Batch 2): Reshape for slices 2a – 2d, answered by reshaping them; Batch 1 and slice 2e fit with changes. No blocker open.
+**Rounds:** 2. **Reviewers:** maintainability (map review, [`review-plan`](../../../.agents/skills/review-plan/SKILL.md) "Map review").
 
 ## To user
 
 - **The re-cut narrows two consolidations.** You asked for PRs that overlap in scope, domain or files to be merged. The review split two back out, and I applied both, recommending you keep them: P-2 (the places cap) left S16-01 for its own PR, S16-08, because it is not a Person read, lives in another package, and would have made S16-01 and then S16-05 wait on Spike 14's S14-40 (K-3); P-6 (stale Source words) left S16-04 for its own PR, S16-09, because it shares no file with the failed-reload notice and would have waited on brief S16-D1 for no reason (K-7). The review also merged two (K-1: the Timeline's pages and the fold focus are now one PR, S16-07), so Batch 1 is nine PRs. Say if you would rather re-merge either split.
 - ~~**Where the death stub sits between a baptism and a burial** (P-1's neighbour).~~ **Answered (user, 2026-11-08): just before the burial.** A placeholder death sits just before the earliest dated burial or funeral whenever one is recorded; the marker rule, bar 1, S16-02, the audit's P-1, R-24a and Spike 13's lifeline rule say so.
+
+- **Kinship is composed, not indexed (K-20, applied).** You approved "indexes for the walks", which named a kinship index. Round 2 showed the existing per-event kinship memos are already exact, and only the two slots that store composed answers (`for`, `siblings`) empty on every write. S16-16 now composes a person's implied links and siblings from those memos at read time: no catalog-wide index, no reverse map, no warm at open, 10–20 MB less, and a term edit drops only the memos it touches. The cost is a few map reads per `For` call, which S16-16 measures against Promote's budgets. Recommendation: keep it composed; if that measures slow, the index comes back as a follow-up.
+- **Batch 2 is 24 PRs, not 20 (K-22, applied).** Four PRs were past the ~10-step plan size and split: the records tier (S16-13) from its readers (S16-30); the place entries (S16-18) from the composers that read them (S16-31); the match index (S16-20) from the narrowed re-rank (S16-32); and a preparatory canon view (S16-33) ahead of the walk's removal (S16-22). The kinship PR shrank instead (K-20).
 
 ## Writer's own calls
 
@@ -72,3 +75,47 @@ A display bound is not a matching tunable, and `Pairs` must count every line bef
 
 ### K-16 · nit · S16-05's Context and the parallel-run note
 **Answer:** Fixed — `CircularLinkDiagram/` left S16-05's Context (it does not edit it, so A-41 stays parked); the parallel-run note says S16-04 lands before S16-05.
+
+## Round 2 — the whole map with Batch 2 (2026-11-08)
+
+A fresh maintainability reviewer read the whole map, the design doc and the S14-40 and S14-42 branches. Every code claim the map and design make held (the write path's `graphcache.Over`; `canonicalgraph`'s test-only caller after S14-42; `DropOnHandleCommit`'s two users; `dropMatchIndex` on any handle commit; the `effects.Set` fields; `graphsOfSource`; `graphprogress`'s scans; `PersonLifeOwners`; `claims.go` reading the graph's Source fields; `conclusiondetails.go:8`; `promotealign.Warm` loading every node), as did the cross-spike dependencies in both maps and the Batch 1–2 orderings. Writer's calls added in round 2: the records tier's own cap, Source records and the graph catalog filled on first read rather than at open, and three wire lists for inputs.
+
+### K-17 · blocker · The registry's contract does not fit most of the caches it is meant to hold
+Apply fed only `effects.Set` would re-derive the roots `OnCommit` already computes; no field says "drop when another cache changes" (`dropDerived` on `SetAliasIndex` and `SetNameFormat`; profiles keyed on the name pattern); only a whole Build exists, though kinship pivots, profiles and places are results per key; `Activity` goes unmentioned.
+**Answer:** Fixed — rule "One cache registry, two ways to fill": per-key (today's `NodeMemo` folds in) and whole fills; Apply(g, roots, set) after the reload with `dropMemos`' roots; declared Reads replace `DropOnVocabulary` and `dropDerived`; a lifetime; `Activity`, displays and labels stay typed fields, explained in `docs/catalog-caches.md`. S16-10 and the design § One cache registry.
+
+### K-18 · blocker · S16-13 and S16-20 each build their own per-graph cache that outlives the 64-graph LRU
+`EvidenceGraph` already holds Subjects and Observations, and the candidates memo is an Evidence-graph memo.
+**Answer:** Fixed — rule "Per-graph records live in the Evidence-graph store": a records tier per graph (Subject records and memos that outlive the loaded graph), one drop path, filled from a loaded graph or a split-out `graphfill` step under graphfill's check. S16-13 builds it; S16-32 keeps Promote's candidates there.
+
+### K-19 · blocker · Profiles as a node memo and the shortlist index as a registry entry work out "what changed" three times
+`dropMemos` deletes a profile before an Apply can read its old keys; profiles are catalog-wide anyway.
+**Answer:** Fixed — S16-20 is one match index entry (profiles, keys and postings by handle); Apply re-profiles the roots and their events' people once, diffs keys, patches postings and records the changed keys for S16-32.
+
+### K-20 · blocker · The kinship index swaps exact memos for a whole-catalog build
+**Answer:** Fixed, and listed under To user — S16-16 composes `For` and siblings from the existing exact pivot memos; no index, reverse map, warm or Apply; bar 9 reads "kinship pivots".
+
+### K-21 · blocker · The place index's whole Build runs on every reprojecting write
+**Answer:** Fixed — rule "A write's one-shot graph fills only what it reads": S16-18's place entries are per key, filled a frontier at a time by a narrow load that skips location links, and on a write's graph only the chains it composes fill; `graphcache` exports `nodeKey` and `followKeys` so entries record what `InputScope` would.
+
+### K-22 · major · Five Batch 2 PRs are bigger than one plan of about 10 steps
+**Answer:** Fixed — S16-13 / S16-30, S16-18 / S16-31, S16-20 / S16-32 and S16-33 / S16-22 split; S16-16 shrank with K-20 (listed under To user).
+
+### K-23 · major · `claims.go` and `recordlinks.go` are rewritten by five PRs, and the graph misses real dependencies
+**Answer:** Fixed — S16-15's claims and record links ordering moved into S16-14 (S16-15 → S16-14); S16-01 → S16-12; S16-24 now depends on S16-30, S16-14 and S16-19 beside S16-17; S16-12 → S16-25, whose Ships names S16-12's `.source` follows; the shared-files note lists each file's order.
+
+### K-24 · major · S16-11's "`gallery.ForEntities` goes" misses a caller on the write path
+**Answer:** Fixed — S16-11 names `SetPreferredLikeness`'s check (`canonicalentities.go:275`), which composes through the node on `graphcache.Over(tx)`, and measures open time and a write at the 6,000-event city beside memory.
+
+### K-25 · major · Docs and skills made false that no PR names
+**Answer:** Fixed — each PR's Context names them: S16-10 (`.cursor/rules/catalog-queries.mdc`, `use-catalog-session`), S16-12 (`effects/README.md`), S16-16 (`add-match-rule` lines 88 and 91, `matching-model.md`), S16-20 (`use-catalog-session`), S16-33 and S16-22 (`add-match-rule` line 33, `matching-model.md` line 31, `promote-graph-alignment.md` §7 and §12), S16-26 (`macos-client-patterns.md` rule 2 and "Conclusion keys", `add-workspace-place` Refresh), S16-27 (`add-workspace-place`, `macos-client-patterns.md` rule 5), S16-29 (`add-workspace-place`).
+
+### K-26 · major · Apply adds work to every commit, and no PR states its fan-out
+**Answer:** Fixed — rule "Apply states its fan-out" (per commit at Scale and at bar 2's crafted sizes, capped where crafted fan-out reaches it); S16-11, S16-15, S16-16, S16-18 and S16-20 name their case in Check. The open-versus-first-read contradiction is settled: only the match index fills at open (rule "Warm only what every proposal needs"); Source records and the catalog fill on first read.
+
+### K-27 · major · S16-29's prefetch keys make a second list beside S16-03's section reads
+**Answer:** Fixed — S16-29 adds a `prefetch` tag to S16-03's list of section reads, declared by Family and Timeline, and depends on S16-03.
+
+### K-28 · minor · Put Batch 1's caps where Batch 2 keeps them, and keep `InputKey` to one job
+**Answer:** Fixed — S16-01 caps relatives per role in `kinship.KinOf` and records per graph in one function (Batch 1 rule and S16-01 Ships); rule "Batch 1's caps stay where S16-01 and S16-08 put them" says the place entries hold place-to-place links and the composers keep S16-08's helper; S16-24 sends graphs and Sources as their own wire lists and leaves `graphcache.InputKey` with its one kind.
+
