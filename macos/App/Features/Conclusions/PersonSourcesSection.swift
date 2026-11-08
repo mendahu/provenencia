@@ -102,6 +102,12 @@ enum PersonSourcesColumns {
     static let refWidth: CGFloat = 104
     /// A graph line's indent under the title.
     static let lineIndent: CGFloat = 20
+    /// The columns that never shrink (Type, Date, Ref and the three gaps between the four).
+    static let fixedWidth: CGFloat = typeWidth + dateWidth + refWidth + 3 * spacing
+    /// The narrowest the Citation column is drawn.
+    static let citationMin: CGFloat = 200
+    /// The narrowest a row is drawn; a pane with less room puts the diagram under the rows.
+    static let minWidth: CGFloat = fixedWidth + citationMin
 }
 
 private extension View {

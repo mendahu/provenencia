@@ -8,6 +8,24 @@ enum PVPageColumnsMetrics {
     static let topAnchor = "pv.pageColumns.top"
     /// The scroll view's coordinate space, for a section that measures its rows in it.
     static let scrollSpace = "pv.pageColumns.scroll"
+    /// The padding above and below the page's columns, and the distance a pinned
+    /// column keeps from the top of the visible area.
+    static let verticalPadding: CGFloat = PVSpacing.space8
+
+    /// How far a side column is pushed down so it stays `inset` below the top of the
+    /// visible area: 0 when it is taller than the visible area less the two insets (it
+    /// then scrolls with the page), else the visible top plus `inset`, held so the column's
+    /// bottom never passes the section's. All in the section's own coordinates.
+    static func pinOffset(
+        visibleMinY: CGFloat,
+        visibleHeight: CGFloat,
+        sectionHeight: CGFloat,
+        sideHeight: CGFloat,
+        inset: CGFloat
+    ) -> CGFloat {
+        guard sideHeight <= visibleHeight - 2 * inset else { return 0 }
+        return max(0, min(visibleMinY + inset, sectionHeight - sideHeight))
+    }
 
     /// The primary column, the secondary column (nil when there is none), the
     /// group that holds them and the band the header takes, for a pane `pane`
@@ -36,14 +54,35 @@ enum PVPageColumnsMetrics {
             let primary = max(0, min(PVSpacing.widthContentMax, pane - 2 * PVSpacing.gutterPage))
             return (primary, hasSecondary ? primary : nil, primary, primary)
         }
-        let available = pane - 2 * PVSpacing.gutterPage - PVSpacing.space9
-        let primary = max(0, min(PVSpacing.widthContentMax, available - PVSpacing.widthInspector))
-        let secondary = min(
-            PVSpacing.widthSecondaryMax,
-            max(PVSpacing.widthInspector, available - primary)
-        )
-        let group = primary + PVSpacing.space9 + secondary
-        return (primary, secondary, group, group)
+        let split = split(available: pane - 2 * PVSpacing.gutterPage, sideMax: PVSpacing.widthSecondaryMax)
+        return (split.main, split.side, split.group, split.group)
+    }
+
+    /// A main column beside a side column in `available` width: the main keeps up to
+    /// `widthContentMax` while the side takes what is left, between `widthInspector`
+    /// and `sideMax`. `group` is the two and the gap between them.
+    static func split(available: CGFloat, sideMax: CGFloat) -> (main: CGFloat, side: CGFloat, group: CGFloat) {
+        let room = available - PVSpacing.space9
+        let main = max(0, min(PVSpacing.widthContentMax, room - PVSpacing.widthInspector))
+        let side = min(sideMax, max(PVSpacing.widthInspector, room - main))
+        return (main, side, main + PVSpacing.space9 + side)
+    }
+
+    /// The widths of a main column and a side column inside `available` (the section's
+    /// width between the gutters), at any width class. Beside each other while the main
+    /// column keeps `mainMin` and the side column keeps `widthInspector`; stacked, the side
+    /// column under the main at its own width up to `widthSideColumnMax`, when it does not.
+    static func sideColumnWidths(available: CGFloat, mainMin: CGFloat) -> PVPageSideColumnWidths {
+        if available < mainMin + PVSpacing.space9 + PVSpacing.widthInspector {
+            return PVPageSideColumnWidths(
+                main: available,
+                side: min(available, PVSpacing.widthSideColumnMax),
+                group: available,
+                stacked: true
+            )
+        }
+        let split = split(available: available, sideMax: PVSpacing.widthSideColumnMax)
+        return PVPageSideColumnWidths(main: split.main, side: split.side, group: split.group, stacked: false)
     }
 
     /// The pane and the column widths for a layout proposed `proposal`. An
@@ -64,6 +103,23 @@ enum PVPageColumnsMetrics {
             primaryFill: primaryFill && proposed != nil
         )
         return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group, widths.band)
+    }
+}
+
+/// The widths of a main column and its side column, and whether the side column
+/// sits under the main instead of beside it.
+struct PVPageSideColumnWidths: Equatable {
+    let main: CGFloat
+    /// Nil for a page with no side column.
+    let side: CGFloat?
+    let group: CGFloat
+    let stacked: Bool
+
+    init(main: CGFloat, side: CGFloat?, group: CGFloat, stacked: Bool) {
+        self.main = main
+        self.side = side
+        self.group = group
+        self.stacked = stacked
     }
 }
 
@@ -136,7 +192,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                 }
                 PVColor.borderDefault.frame(height: 1)
                 scroll {
-                    columns.padding(.vertical, PVSpacing.space8)
+                    columns.padding(.vertical, PVPageColumnsMetrics.verticalPadding)
                 }
             }
         } else {
@@ -150,13 +206,24 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
                     }
                     columns
                 }
-                .padding(.vertical, PVSpacing.space8)
+                .padding(.vertical, PVPageColumnsMetrics.verticalPadding)
             }
         }
     }
 
     private var columns: some View {
-        PVPageColumnsLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
+        let (widthClass, hasSecondary, primaryFill) = (widthClass, hasSecondary, primaryFill)
+        return PVPageColumnsLayout(widths: { proposal in
+            let w = PVPageColumnsMetrics.columnWidths(
+                proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
+            )
+            return PVPageSideColumnWidths(
+                main: w.primary,
+                side: w.secondary,
+                group: w.group,
+                stacked: hasSecondary && widthClass != .wide
+            )
+        }) {
             VStack(alignment: .leading, spacing: 0) { primary }
             if hasSecondary {
                 VStack(alignment: .leading, spacing: 0) { secondary }
@@ -225,56 +292,78 @@ extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
     }
 }
 
-/// Places the primary and, when there is one, the secondary column: side by
-/// side at Wide, stacked at Regular, the group centered in the pane. Sizes
-/// itself from the proposed width alone, so it holds no state and crossing the
-/// Wide breakpoint keeps the page's scroll and focus.
-private struct PVPageColumnsLayout: Layout {
-    let widthClass: PVWidthClass
-    let hasSecondary: Bool
-    let primaryFill: Bool
+/// Hands its content the part of the page's scroll view that is in view, in the
+/// content's own coordinates (its top-left is the origin), and the content's size. It
+/// holds the reading itself, so a section that needs to know what is in view reads it
+/// here and nowhere else. Outside a `PVPageColumns` the visible rectangle is empty.
+struct PVPageVisibleRect<Content: View>: View {
+    private let content: (_ visible: CGRect, _ size: CGSize) -> Content
 
-    private func widths(_ proposal: ProposedViewSize) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
-        PVPageColumnsMetrics.columnWidths(
-            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
-        )
+    @Environment(\.pvPageViewportSize) private var viewportSize
+    /// The content's frame in the page's scroll space: where the viewport sits over it.
+    @State private var frame: CGRect = .zero
+
+    init(@ViewBuilder content: @escaping (_ visible: CGRect, _ size: CGSize) -> Content) {
+        self.content = content
     }
 
-    private var sideBySide: Bool { widthClass == .wide && hasSecondary }
+    var body: some View {
+        let visible = CGRect(
+            x: -frame.minX, y: -frame.minY, width: viewportSize.width, height: viewportSize.height
+        )
+        content(visible, frame.size)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(PVPageColumnsMetrics.scrollSpace)) } action: {
+                frame = $0
+            }
+    }
+}
+
+/// Places a main column and, when there is one, a side column: side by side, the
+/// group centered, or stacked, the side under the main. Sizes itself from the
+/// proposed width alone, so it holds no state and crossing a breakpoint keeps the
+/// page's scroll and focus. `widths` decides the columns for the proposal: the
+/// page's primary and secondary (`columnWidths`), or a section's main and side column
+/// (`sideColumnWidths`).
+struct PVPageColumnsLayout: Layout {
+    let widths: @Sendable (ProposedViewSize) -> PVPageSideColumnWidths
+
+    private func pane(_ proposal: ProposedViewSize, _ w: PVPageSideColumnWidths) -> CGFloat {
+        proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? w.group
+    }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
         let w = widths(proposal)
-        let primary = subviews[0].sizeThatFits(ProposedViewSize(width: w.primary, height: nil))
-        var height = primary.height
-        if let secondaryWidth = w.secondary {
-            let secondary = subviews[1].sizeThatFits(ProposedViewSize(width: secondaryWidth, height: nil))
-            height = sideBySide
-                ? max(primary.height, secondary.height)
-                : primary.height + PVSpacing.space9 + secondary.height
+        let main = subviews[0].sizeThatFits(ProposedViewSize(width: w.main, height: nil))
+        var height = main.height
+        if let sideWidth = w.side {
+            let side = subviews[1].sizeThatFits(ProposedViewSize(width: sideWidth, height: nil))
+            height = w.stacked
+                ? main.height + PVSpacing.space9 + side.height
+                : max(main.height, side.height)
         }
-        return CGSize(width: w.pane, height: height)
+        return CGSize(width: pane(proposal, w), height: height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
         let w = widths(ProposedViewSize(width: bounds.width, height: nil))
         let x = bounds.minX + (bounds.width - w.group) / 2
-        let primary = subviews[0].sizeThatFits(ProposedViewSize(width: w.primary, height: nil))
+        let main = subviews[0].sizeThatFits(ProposedViewSize(width: w.main, height: nil))
         subviews[0].place(
             at: CGPoint(x: x, y: bounds.minY),
             anchor: .topLeading,
-            proposal: ProposedViewSize(width: w.primary, height: primary.height)
+            proposal: ProposedViewSize(width: w.main, height: main.height)
         )
-        guard let secondaryWidth = w.secondary else { return }
-        let secondary = subviews[1].sizeThatFits(ProposedViewSize(width: secondaryWidth, height: nil))
-        let origin = sideBySide
-            ? CGPoint(x: x + w.primary + PVSpacing.space9, y: bounds.minY)
-            : CGPoint(x: x, y: bounds.minY + primary.height + PVSpacing.space9)
+        guard let sideWidth = w.side else { return }
+        let side = subviews[1].sizeThatFits(ProposedViewSize(width: sideWidth, height: nil))
+        let origin = w.stacked
+            ? CGPoint(x: x, y: bounds.minY + main.height + PVSpacing.space9)
+            : CGPoint(x: x + w.main + PVSpacing.space9, y: bounds.minY)
         subviews[1].place(
             at: origin,
             anchor: .topLeading,
-            proposal: ProposedViewSize(width: secondaryWidth, height: secondary.height)
+            proposal: ProposedViewSize(width: sideWidth, height: side.height)
         )
     }
 }

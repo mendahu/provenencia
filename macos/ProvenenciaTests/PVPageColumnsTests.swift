@@ -57,6 +57,42 @@ struct PVPageColumnsTests {
         #expect(widths.group == group)
     }
 
+    @Test(arguments: [
+        (1038, 666, 340, 1038, false),
+        (1014, 642, 340, 1014, false),
+        (1013, 1013, 720, 1013, true),
+        (372, 372, 372, 372, true),
+        (2232, 1180, 720, 1932, false),
+        (1536, 1164, 340, 1536, false),
+    ] as [(CGFloat, CGFloat, CGFloat, CGFloat, Bool)])
+    func sideColumnWidthsStackBelowTheMainMinimum(
+        available: CGFloat, main: CGFloat, side: CGFloat, group: CGFloat, stacked: Bool
+    ) {
+        let widths = PVPageColumnsMetrics.sideColumnWidths(available: available, mainMin: PersonSourcesColumns.minWidth)
+        #expect(widths == PVPageSideColumnWidths(main: main, side: side, group: group, stacked: stacked))
+    }
+
+    @Test func theSideColumnBreakpointIsOneThousandFourteen() {
+        #expect(PersonSourcesColumns.minWidth == 642)
+    }
+
+    @Test(arguments: [
+        (-300, 800, 2000, 400, 0),
+        (300, 800, 2000, 400, 324),
+        (1800, 800, 2000, 400, 1600),
+        (0, 800, 300, 400, 0),
+        (300, 400, 2000, 400, 0),
+        (300, 448, 2000, 400, 324),
+    ] as [(CGFloat, CGFloat, CGFloat, CGFloat, CGFloat)])
+    func pinOffsetHoldsTheColumnInView(
+        visibleMinY: CGFloat, visibleHeight: CGFloat, sectionHeight: CGFloat, sideHeight: CGFloat, offset: CGFloat
+    ) {
+        #expect(PVPageColumnsMetrics.pinOffset(
+            visibleMinY: visibleMinY, visibleHeight: visibleHeight, sectionHeight: sectionHeight,
+            sideHeight: sideHeight, inset: PVPageColumnsMetrics.verticalPadding
+        ) == offset)
+    }
+
     @Test func unboundedProposalSizesToTheGroup() {
         for width in [nil, CGFloat.infinity] as [CGFloat?] {
             let widths = PVPageColumnsMetrics.columnWidths(
