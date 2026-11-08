@@ -3,7 +3,7 @@ package searchindex
 import (
 	"bytes"
 	"database/sql"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -113,31 +113,34 @@ func ReprojectChanged(q Querier, written, moved [][]byte) ([][]byte, error) {
 		return nil, nil
 	}
 	g := newGraph(q)
+	if err := g.Nodes(written); err != nil {
+		return nil, err
+	}
 	var gone [][]byte
 	isGone := map[string]bool{}
 	for _, id := range written {
-		n, err := g.Node(id)
-		if err != nil {
-			return nil, err
-		}
+		// Nodes loaded every entity that exists; Cached never loads, so an
+		// absent id is gone without a query of its own.
+		n, _ := g.Cached(id)
 		if n == nil || n.Merged {
 			gone = append(gone, id)
 			isGone[string(id)] = true
 		}
 	}
 	var keys []graphcache.InputKey
-	changed := append([][]byte(nil), gone...)
+	var movedLive [][]byte
 	for _, id := range database.UniqueBlobIDs(moved) {
 		if !isGone[string(id)] {
 			keys = append(keys, graphcache.InputKey{ID: id})
-			changed = append(changed, id)
+			movedLive = append(movedLive, id)
 		}
 	}
+	changed := append(append([][]byte(nil), gone...), movedLive...)
 	old, err := oldEnds(q, changed)
 	if err != nil {
 		return nil, err
 	}
-	fresh, err := g.AssociationInputs(changed)
+	fresh, err := g.AssociationInputs(movedLive)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +165,9 @@ func ReprojectChanged(q Querier, written, moved [][]byte) ([][]byte, error) {
 	if err := reprojectOn(q, g, append(append([][]byte(nil), written...), dependents...)); err != nil {
 		return nil, err
 	}
-	return sortedIDs(append(dependents, ends...)), nil
+	out := database.UniqueBlobIDs(append(dependents, ends...))
+	slices.SortFunc(out, bytes.Compare)
+	return out, nil
 }
 
 // dependentsOf is the rows whose inputs hold any of the exact keys.
@@ -183,30 +188,13 @@ func dependentsOf(q Querier, keys []graphcache.InputKey) ([][]byte, error) {
 		for _, k := range batch {
 			args = append(args, k.ID, k.Bridge, k.Endpoint)
 		}
-		ids, err := scanDependents(q, sqlDependentsOfKeys+marks+`)`, args)
+		ids, err := listIDs(q, sqlDependentsOfKeys+marks+`)`, args...)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, ids...)
 	}
-	return sortedIDs(out), nil
-}
-
-func scanDependents(q Querier, query string, args []any) ([][]byte, error) {
-	rows, err := q.Query(query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out [][]byte
-	for rows.Next() {
-		var id []byte
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		out = append(out, append([]byte(nil), id...))
-	}
-	return out, rows.Err()
+	return database.UniqueBlobIDs(out), nil
 }
 
 // dependentsOfHandles is the rows whose inputs hold any key of the handles.
@@ -217,13 +205,13 @@ func dependentsOfHandles(q Querier, ids [][]byte) ([][]byte, error) {
 		if err := rows.Scan(&id); err != nil {
 			return err
 		}
-		out = append(out, append([]byte(nil), id...))
+		out = append(out, id)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return sortedIDs(out), nil
+	return database.UniqueBlobIDs(out), nil
 }
 
 // oldEnds is the ends the index recorded for each association in ids, by raw
@@ -236,7 +224,7 @@ func oldEnds(q Querier, ids [][]byte) (map[string][]graphcache.InputKey, error) 
 		if err := rows.Scan(&dep, &input, &k.Bridge, &k.Endpoint); err != nil {
 			return err
 		}
-		k.ID = append([]byte(nil), input...)
+		k.ID = input
 		out[string(dep)] = append(out[string(dep)], k)
 		return nil
 	})
@@ -247,10 +235,4 @@ func oldEnds(q Querier, ids [][]byte) (map[string][]graphcache.InputKey, error) 
 		graphcache.SortInputKeys(ks)
 	}
 	return out, nil
-}
-
-func sortedIDs(ids [][]byte) [][]byte {
-	out := database.UniqueBlobIDs(ids)
-	sort.Slice(out, func(i, j int) bool { return bytes.Compare(out[i], out[j]) < 0 })
-	return out
 }

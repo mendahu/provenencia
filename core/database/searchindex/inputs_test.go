@@ -1,7 +1,6 @@
 package searchindex_test
 
 import (
-	"bytes"
 	"crypto/rand"
 	"database/sql"
 	"slices"
@@ -20,6 +19,35 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
+
+func TestReprojectChangedLoadsWrittenInBatches(t *testing.T) {
+	r := evidencelayertest.New(t)
+	db, err := r.C.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	queries := 0
+	restore := searchindex.SetNewGraphForTest(func(q graphcache.Querier) *graphcache.Graph {
+		g := graphcache.Over(q)
+		g.SetQueryCounterForTest(func() { queries++ })
+		return g
+	})
+	defer restore()
+
+	ids := make([][]byte, 1200)
+	for i := range ids {
+		ids[i] = make([]byte, 16)
+		if _, err := rand.Read(ids[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := searchindex.ReprojectChanged(db, ids, nil); err != nil {
+		t.Fatal(err)
+	}
+	if queries >= 40 {
+		t.Fatalf("1,200 written ids cost %d graph queries, want under 40", queries)
+	}
+}
 
 func TestReprojectHandlesBuildsOneGraph(t *testing.T) {
 	r := evidencelayertest.New(t)
@@ -218,22 +246,18 @@ func newFiledWorld(t *testing.T) filedWorld {
 	return w
 }
 
-func holds(ids [][]byte, id []byte) bool {
-	return slices.ContainsFunc(ids, func(x []byte) bool { return bytes.Equal(x, id) })
-}
-
 func TestIndexReads(t *testing.T) {
 	w := newFiledWorld(t)
 	byValues, err := searchindex.DependentsOfForTest(w.db, []graphcache.InputKey{{ID: w.jamesID}})
-	if err != nil || !holds(byValues, w.birthID) {
+	if err != nil || !database.ContainsBlobID(byValues, w.birthID) {
 		t.Fatalf("rows composed from James's values %x, err %v: want the birth", byValues, err)
 	}
 	byLink, err := searchindex.DependentsOfForTest(w.db, []graphcache.InputKey{{ID: w.birthID, Bridge: "participation", Endpoint: "event"}})
-	if err != nil || !holds(byLink, w.birthID) {
+	if err != nil || !database.ContainsBlobID(byLink, w.birthID) {
 		t.Fatalf("rows composed from the birth's participation link %x, err %v: want the birth", byLink, err)
 	}
 	byHandle, err := searchindex.DependentsOfHandlesForTest(w.db, [][]byte{w.partID})
-	if err != nil || !holds(byHandle, w.birthID) || !holds(byHandle, w.jamesID) {
+	if err != nil || !database.ContainsBlobID(byHandle, w.birthID) || !database.ContainsBlobID(byHandle, w.jamesID) {
 		t.Fatalf("rows composed from the participation %x, err %v: want the birth and James", byHandle, err)
 	}
 	ends, err := searchindex.OldEndsForTest(w.db, [][]byte{w.partID, w.birthID, make([]byte, 16)})
@@ -263,7 +287,7 @@ func TestUnpromoteReportsTheDeletedLinksEnds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if deps := res.Effects.SummaryDeps; !holds(deps, w.birthID) || !holds(deps, w.jamesID) {
+	if deps := res.Effects.SummaryDeps; !database.ContainsBlobID(deps, w.birthID) || !database.ContainsBlobID(deps, w.jamesID) {
 		t.Fatalf("SummaryDeps %x, want the birth and James", deps)
 	}
 	for _, id := range [][]byte{w.jamesID, w.partID} {

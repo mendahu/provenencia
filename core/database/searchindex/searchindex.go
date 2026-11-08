@@ -662,8 +662,8 @@ func EnsureCatalog(c *database.Catalog) error {
 	return tx.Commit()
 }
 
-func listIDs(q Querier, query string) ([][]byte, error) {
-	rows, err := q.Query(query)
+func listIDs(q Querier, query string, args ...any) ([][]byte, error) {
+	rows, err := q.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
