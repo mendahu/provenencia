@@ -60,7 +60,8 @@ Composers work in batches. `composePersons` prefetches every row's events, build
 So inputs are attributed per row explicitly:
 - The scope is a `graphcache.Graph` API keyed by a dependent id, not a private type in `conclusionsummaries`. The kinship memo slots (`canonlinks`) can become its next users instead of building a second recorder.
 - Each row is composed under its scope.
-- For place chains, the batch's `placeGraph` reads each place through its own scope and keeps those keys per place; a row takes the union over the places within the chain depth of its own places, so no key is written by hand. That is the same set composing the row alone reads, so the oracle holds.
+- For place chains, the batch's `placeGraph` reads each place through its own scope and keeps those keys per place; a row takes the union over the places within the chain depth of its own places, so no key is written by hand. That is the same set composing the row alone reads, so the oracle holds. A row shows ancestors only as far as the build expanded places, so a batch never shows a parent its inputs lack.
+- One `RowsForSearch` call counts the place-chain keys it records (`maxInputKeysPerCall`, 250,000). Over the cap the call records no inputs for any row; only a crafted catalog, such as a dense part_of mesh, reaches it.
 - A person's place graph is built from its birth and death events only, as `PersonLifeOwners` does, so a marriage's place is not a person's input.
 - Shared prefetches record nothing.
 
@@ -110,7 +111,7 @@ Final counts from S14-40 (T-9, the recorder-checked index on the same fixture, e
 | Event | 10,070 | 86,386 | 10 | 10 |
 | Place | 52 | 55 | 1 | 4 |
 
-A person's keys are fewer than planned because its place graph now comes from its birth and death events only. Against `Dependents`, T-10 found 9,987 persons excused as reached only through a birth or death event with no accepted member (D-13); the fixture's `bulkCanon` events have no accepted claims.
+No person row on this fixture holds a place key: the fixture's `bulkCanon` events have no accepted member, so no person has a life pick and its place graph is empty. A person's place inputs are proven by T-2 and T-3 only, on the scenario worlds. Against `Dependents`, T-10 found 9,987 persons excused as reached only through a birth or death event with no accepted member (D-13); the fixture's `bulkCanon` events have no accepted claims.
 
 At the map's Scale (37,000 Subjects) the index is a few hundred thousand rows.
 

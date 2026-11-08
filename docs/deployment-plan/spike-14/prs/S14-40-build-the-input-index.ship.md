@@ -187,3 +187,9 @@ Do:
 - Add the same line to the plan's **Landed** note.
 
 Check: `scripts/check-plan-docs.py` on the plan passes.
+
+### Fix round 1 — figures
+
+- F-1: on the large fixture the largest 500-row call counts 1,000 closure keys and holds 3,500 keys in all (events; persons 3,044; places 51); a whole-fixture call counts 16,102. `maxInputKeysPerCall` is 250,000 (the plan's floor; it is above 50 times 3,500).
+- F-5: T-8, compose every person and event row, 184 ms (was 203 ms; budget 500 ms), single run on a noisy machine.
+- T-10 still excuses 9,987 persons; extras: event 100, person 100, place 52.

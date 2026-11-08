@@ -4,7 +4,7 @@ One short paragraph per landed PR, newest first. Written by the PR that lands it
 
 ## S14-40 — Build the input index
 
-**Landed 2026-11-08** in [#746](https://github.com/mendahu/provenencia/pull/746). Every person, event and place summary row records the handles, links and associations it was composed from (`graphcache.InputScope`), and `searchindex` stores them in `catalog_search_inputs` beside the search documents, with each association's ends; an open catalog fills it through `ProjectionVersion` 11. Nothing reads it yet (S14-42 does). A person's place graph now comes from its birth and death events only, and `ReprojectHandles` composes on one graph per call: the first part_of from a 6,000-event city fell from 2.25 s to 1.33 s.
+**Landed 2026-11-08** in [#746](https://github.com/mendahu/provenencia/pull/746). Every person, event and place summary row records the handles, links and associations it was composed from (`graphcache.InputScope`), and `searchindex` stores them in `catalog_search_inputs` beside the search documents, with each association's ends; an open catalog fills it through `ProjectionVersion` 11. Nothing reads it yet (S14-42 does). A person's place graph now comes from its birth and death events only, a row shows part_of ancestors only as far as its inputs cover, one search batch records at most 250,000 place-chain keys (over that it records none, which only a crafted catalog reaches), the list and by-id reads record nothing, and `ReprojectHandles` composes on one graph per call: the first part_of from a 6,000-event city fell from 2.25 s to 1.33 s.
 
 ## S14-37 — Boolean value type (UI)
 
