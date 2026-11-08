@@ -85,13 +85,13 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 ### P-2 · Folding an event's places is quadratic, on project open too
 
-**Where:** `core/database/conclusionsummaries/placechains.go` `FoldLocations` (233–258), `isAncestor` (204–225); `compose.go` `eventPlaces` (1105–1135), which removes duplicate ids and nothing else. Callers: every event summary, every person's birth and death row, the Timeline (`EventsByIDs`), the Events list and Event pages. Open path: `core/catalogsession/session.go` `ReconcileOnOpen` (54–68) → `searchindex.EnsureCatalog` (`core/database/searchindex/searchindex.go:638`) → `NeedsRebuild` (277) → `reprojectAllHandles` (`handles.go:50`) → `RowsForSearch`.
+**Where:** `core/database/conclusionsummaries/placechains.go` `FoldLocations` (233–258), `isAncestor` (204–225); `compose.go` `eventPlaces` (1105–1135), which removes duplicate ids and nothing else. Since S14-40 landed (#746), an event's places are read in `placesOfEvents` (used by `eventPlaceGraph`), `leadLife`, `lifeOwners` and `composeEvents`, and `eventPlaces` takes its caller's links; `summaryChainDepth` moved to `placechains.go`. Callers: every event summary, every person's birth and death row, the Timeline (`EventsByIDs`), the Events list and Event pages. Open path: `core/catalogsession/session.go` `ReconcileOnOpen` (54–68) → `searchindex.EnsureCatalog` (`core/database/searchindex/searchindex.go:638`) → `NeedsRebuild` (277) → `reprojectAllHandles` (`handles.go:50`) → `RowsForSearch`.
 
 **Problem.** `FoldLocations` checks every ordered pair of an event's places, each with a fresh upward search that allocates. Nothing bounds how many places an event names. An event with 5,000–10,000 location links means 25–100 million searches: minutes. A crafted catalog that also fails `NeedsRebuild` (an old projection version) runs it on every open. `summaryChainDepth` bounds how far a chain climbs, not how many places an event names.
 
 **Evidence.** Seed test for `placechains_internal_test.go`: 5,000 unlinked places through `FoldLocations` must finish under a second.
 
-**Fix (capped, per the decision).** One helper reads an event's places, drops duplicates and keeps at most a fixed number in link order, and the four reads of an event's places in `compose.go` (`eventPlaceGraph` 797, `lifeOwners` 818, `composeEvents` 876, `eventPlaces` 1108) use it (rule "Crafted fan-out is capped, not engineered"). A real event names one to three.
+**Fix (capped, per the decision).** `placesOfEvents` drops duplicates and keeps at most a fixed number in link order, and the other reads of an event's places (`leadLife`, `lifeOwners`, `composeEvents`) move onto it (rule "Crafted fan-out is capped, not engineered"). A real event names one to three.
 
 **Origin.** Older than Spike 13 (`e951c0f7`, 2026-10-07); Spike 13 reaches it from the Timeline (S13-05) and the header.
 

@@ -96,7 +96,7 @@ These are the calls for this spike. PR plans treat them as binding.
 ### Batch 1 — Person page audit fixes
 
 - **(Batch 1) Crafted fan-out is capped, not engineered** (user, 2026-11-08). A cost that only a crafted or badly broken project reaches gets a fixed cap checked before the work, not a faster algorithm. Real data never reaches a cap. Past a cap a read keeps the first items in the order it already reads them and drops the rest without saying so; the record links read is the exception (rule "The record links read is bounded and says so"). The caps:
-  - an event's places, 20, applied in one helper that the four reads of an event's places in `conclusionsummaries/compose.go` (`eventPlaceGraph`, `lifeOwners`, `composeEvents`, `eventPlaces`) all use, so no read walks the rest (S16-08);
+  - an event's places, 20, applied in `placesOfEvents`, the shared read of an event's places S14-40 added (which `eventPlaceGraph` uses), that `leadLife`, `lifeOwners` and `composeEvents` in `conclusionsummaries/compose.go` move onto, so no read walks the rest; `eventPlaces` takes its caller's links (S16-08);
   - the relatives per role (parents, children, spouses, siblings) a person's kin holds, 100, applied in `kinship.KinOf`, so both of `Families`' loops (the relatives it loads, and `Around` and `FamilyUnits`) and every later reader of a person's kin get it (S16-01; map review K-28);
   - implied siblings only through a person with at most `kinship.Rules.MaxPivotEnd` parents, the bound `parentUnits` already uses to stop pairing (S16-01);
   - a person's records per Evidence graph, `recordlinks` `Rules.MaxEntityMembers` (10, user 2026-11-07: "malformed"), applied by one function the claims read calls (S16-01; S16-14 keeps calling it).
@@ -137,7 +137,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S16-01 | Cap the Person page reads against crafted projects | 1a | Go: the Family read's relatives per role and implied siblings, and a person's records per graph in the claims read, capped before the work; the record links read sends at most 75,000 lines and says when it did not count or dropped lines, and Swift's own arc cap goes; one Person check for every read, and `source_ref` on the record links wire in place of two unread fields | — | — | — | Scoped |
-| S16-08 | Cap the places an event folds | 1a | Go: one helper for an event's places, deduped and capped at 20, used by the four reads in `conclusionsummaries` | — | S14-40 (Spike 14) | — | Scoped |
+| S16-08 | Cap the places an event folds | 1a | Go: S14-40's `placesOfEvents` caps an event's places at 20, and the three reads that still follow them directly move onto it | — | S14-40 (Spike 14, landed #746) | — | Scoped |
 | S16-07 | One paged fold that moves focus | 1a | Preparatory, Swift: `ConclusionFold` reveals a page of 50 at a time in every section, one fold state type, Show more moves focus to the first revealed item (Family gains it), one focus keeper across width changes; hovering a graph whose record line is folded lights up its Show more | — | — | — | Scoped |
 | S16-02 | The Timeline places a missing death and builds what it shows | 1a | Go and Swift: a placeholder life marker sits beside or before one row, so a missing death precedes a burial; the Timeline builds rows and cards only for what the folds show and makes click targets only for shown rows; a date edit rescales the lifeline | — | S16-07 | — | Scoped |
 | S16-09 | Conclusion pages follow the Sources their records cite | 1b | Swift: `.conclusionDetail` refreshes when a write names a Source its records cite, so Vitals, the Gallery and the viewer show today's Source, Citation and Artifact words; the unused `CatalogQueryStalePolicy` goes | — | — | — | Scoped |
@@ -145,8 +145,8 @@ These are the calls for this spike. PR plans treat them as binding.
 | S16-04 | A failed reload keeps the rows and says so | 1b | A `QueryHandle` reading with a refresh failure beside the value; the page and each section show an announced Try again notice above stale rows and on a first-load failure; a deleted person's page says the person no longer exists | S16-D1 | S16-03, S16-D1 | — | Scoped |
 | S16-05 | The record links diagram says when it is partial | 1b | Swift: the diagram column shows a note when the read did not count facts, Go dropped lines, or the circle dropped graphs | S16-D1 | S16-01, S16-D1 | — | Scoped |
 | S16-06 | Section switches and removals are spoken | 1c | Swift: ⌘1–⌘5 announces the section and focus lands on the selected segment (a `PVSegmentedControl` fix); a Remove that keeps the person is announced, from a leave-or-stay decision a unit test reaches; the header counts records and the Remove confirm says the person stays | — | S16-03 | — | Scoped |
-| S16-10 | One cache registry | 2a | Preparatory, Go: one registry with per-key and whole fills, Apply on the reloaded roots, declared Reads, lifetime, Check and cap; node memos, the match index, alias index, name format and `canonlinks` slots move onto it; `canonicalgraph` goes; `docs/catalog-caches.md` lists every cache; no behavior change | — | S14-42 (Spike 14) | — | Scoped |
-| S16-11 | Outcome records live on the canonical node | 2b | Go: each node holds its outcome rows and chosen likeness; the detail read's reconciler SQL and `gallery.ForEntities` go, and every gallery reader, the likeness write's check included, composes from the node | — | S14-42 (Spike 14) | — | Scoped |
+| S16-10 | One cache registry | 2a | Preparatory, Go: one registry with per-key and whole fills, Apply on the reloaded roots, declared Reads, lifetime, Check and cap; node memos, the match index, alias index, name format and `canonlinks` slots move onto it; `canonicalgraph` goes; `docs/catalog-caches.md` lists every cache; no behavior change | — | S14-42 (Spike 14, landed #748) | — | Scoped |
+| S16-11 | Outcome records live on the canonical node | 2b | Go: each node holds its outcome rows and chosen likeness; the detail read's reconciler SQL and `gallery.ForEntities` go, and every gallery reader, the likeness write's check included, composes from the node | — | S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-12 | Source records in the graph cache | 2b | Go and Swift: one record per Source (words, type, cover, credibility, Artifacts), updated from `SourceScopes`; graphs stop copying Source words, a rename stops evicting graphs, and the claims and record links keys follow `.source` | — | S16-10, S16-01 | — | Scoped |
 | S16-13 | The Evidence-graph store keeps a records tier | 2b | Go: per graph, Subject records with their claims and Observations, and the memos that must outlive the graph, under their own cap and dropped with the graph; filled from a loaded graph or a split-out `graphfill` step; no reader yet | — | S16-12 | — | Scoped |
 | S16-30 | Provenance records compose from cached records | 2b | Go: a provenance record is the node's outcome row, the Subject record and the Source record; `sqlOutcomes`, `toponymsOf`, the detail's date and name lookups and `PersonDerivedRows`' second pass go | — | S16-11, S16-13 | — | Scoped |
@@ -154,7 +154,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S16-14 | The Sources section reads the records tier | 2b | Go: the claims read composes from the records tier and Source records and orders graphs from the catalog, loading and rescanning no whole graph, keeping S16-01's cap | — | S16-13, S16-15, S16-01 | — | Scoped |
 | S16-16 | Kinship answers are composed from the pivots | 2c | Go: a person's implied links and siblings are composed at read time from the exact pivot memos; the `for` and `siblings` slots, `DropOnHandleCommit` and `dropHandleMemos` go; `edgeKey` made unambiguous | — | S16-10, S16-01 | — | Scoped |
 | S16-17 | The Family read is one pass | 2c | Go: `Families` reads each person's kin once, through S16-01's capped `KinOf`; the `canonlinks` loaders only it used go | — | S16-16 | — | Scoped |
-| S16-18 | Place entries | 2c | Go: per-place entries (shell, `part_of` and `succeeded_by` links, input keys) filled a frontier at a time by a narrow load that skips location links; the Places list and the place steps read them; key constructors exported | — | S16-10, S14-42 (Spike 14) | — | Scoped |
+| S16-18 | Place entries | 2c | Go: per-place entries (shell, `part_of` and `succeeded_by` links, input keys) filled a frontier at a time by a narrow load that skips location links; the Places list and the place steps read them; key constructors exported | — | S16-10, S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-31 | Summary composers read the place entries | 2c | Go: the event and life composers read chains from the place entries and hand their keys to the row, with S14-40's input cap; `buildPlaceGraph`, `eventPlaceGraph`, `rememberShell` and `rememberPlaceLink` go | — | S16-18, S16-08 | — | Scoped |
 | S16-19 | Summary rows carry their life owners and participants | 2c | Go: person rows keep their birth and death owners, event rows their date's Property and participants by role; `PersonLifeOwners` goes and the Timeline reads participants from rows; one event–person shape | — | S16-31, S16-02 | — | Scoped |
 | S16-20 | One match index that Apply keeps current | 2d | Go: profiles, lookup keys and shortlist postings in one registry entry filled at open; Apply re-profiles the commit's roots and their events' people once and patches the postings; `graphalign.Handle` folds onto `subjectcompare.Subject` | — | S16-10 | — | Scoped |
@@ -164,9 +164,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S16-22 | Promote reads each handle's neighbourhood instead of walking the catalog | 2d | Go: the session-graph view serves profiles and links per handle from the match index and the kinship pivots; `loadCanon`'s walk and its link merge go; results held equal on the large fixture | — | S16-16, S16-20, S16-21, S16-33 | — | Scoped |
 | S16-23 | Conclusion pages show their last value while they refresh | 2e | Swift: per-entity Conclusion keys mark stale instead of evicting; only deleted entities are evicted; hidden ones capped at 50 | — | S16-04 | — | Scoped |
 | S16-28 | Cache keys as plain values | 2e | Preparatory, Swift: `CatalogQueryKey` becomes a value of kind, project and ids, with the same factories; the key enum's switches and `guard case` blocks go | — | — | — | Scoped |
-| S16-24 | Person, Event and Place reads report their inputs | 2e | Go: the detail and section reads return the handles, graphs and Sources they were built from, as three wire lists | — | S16-17, S16-30, S16-14, S16-19, S14-42 (Spike 14) | — | Scoped |
+| S16-24 | Person, Event and Place reads report their inputs | 2e | Go: the detail and section reads return the handles, graphs and Sources they were built from, as three wire lists | — | S16-17, S16-30, S16-14, S16-19, S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-25 | Swift keys follow the inputs their values report | 2e | Swift: one `.followsInputs` refresh replaces `personSection`, `personGraphsSection`, the per-kind id closures and the `.source` follows of S16-09 and S16-12 | — | S16-24, S16-28, S16-03, S16-09, S16-12 | — | Scoped |
-| S16-26 | Conclusion lists merge the rows a write touched | 2e | Go and Swift: the Persons, Events and Places lists re-read only the touched rows by id with Go's sort key, through the existing merged read | — | S14-42 (Spike 14) | — | Scoped |
+| S16-26 | Conclusion lists merge the rows a write touched | 2e | Go and Swift: the Persons, Events and Places lists re-read only the touched rows by id with Go's sort key, through the existing merged read | — | S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-27 | One primitive for values derived from cached data | 2e | Swift: `session.derived` builds a value once per change of its inputs; the four hand memos and the section host's per-pass build move onto it | — | S16-03, S16-07 | — | Scoped |
 | S16-29 | Prefetch a person's other sections and a hovered person | 2e | Swift: a `prefetch` tag in the section read list warms Family and Timeline after the open section settles; a 250 ms hover on a person warms their page | — | S16-23, S16-25, S16-03 | — | Scoped |
 | S16-99 | Dogfood close / docs | — | Bar pass; the ship logs' follow-ups triaged; the audit's [Close the loop](person-page-audit.md#close-the-loop) classes added to the lenses' Known traps; [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
@@ -186,7 +186,7 @@ BATCH 1 — Person page audit fixes
 
 SLICE 1a — Bounded reads, folds and the Timeline
   S16-01  Cap the Person page reads against crafted projects
-  S16-08  Cap the places an event folds                      (after S14-40)
+  S16-08  Cap the places an event folds
   S16-07  One paged fold that moves focus                   (preparatory)
   S16-02  The Timeline places a missing death and builds what it shows
   Check: bar 1, 2 and 3.
@@ -205,11 +205,11 @@ SLICE 1c — Keyboard and VoiceOver
 BATCH 2 — Cache architecture
 
 SLICE 2a — One home for caches
-  S16-10  One cache registry                                     (preparatory; after S14-42)
+  S16-10  One cache registry                                     (preparatory)
   Check: bar 15's table; no behavior change.
 
 SLICE 2b — Entity records
-  S16-11  Outcome records live on the canonical node             (after S14-42)
+  S16-11  Outcome records live on the canonical node
   S16-12  Source records in the graph cache
   S16-13  The Evidence-graph store keeps a records tier           (preparatory)
   S16-30  Provenance records compose from cached records
@@ -220,7 +220,7 @@ SLICE 2b — Entity records
 SLICE 2c — Walks
   S16-16  Kinship answers are composed from the pivots
   S16-17  The Family read is one pass
-  S16-18  Place entries                                           (after S14-42)
+  S16-18  Place entries
   S16-31  Summary composers read the place entries
   S16-19  Summary rows carry their life owners and participants
   Check: bar 13, and bar 9 for the Family section.
@@ -246,12 +246,12 @@ SLICE 2e — The app's cache
 S16-99 — Dogfood close / docs
 ```
 
-S16-01, S16-07, S16-09 and S16-03 can start together; S16-08 waits for Spike 14's S14-40. Shared files, so whichever lands second rebases:
+S16-01, S16-07, S16-09, S16-03 and S16-08 can start together (Spike 14's S14-40 landed in #746). Shared files, so whichever lands second rebases:
 - S16-01 and S16-02 both change `api/proto/engine.proto` and its `GoStore` mapping (and regenerate the protobuf).
 - S16-03, S16-04 and S16-06 all edit `ConclusionDetailPage.swift`; S16-03 and S16-07 both edit `PersonSourcesSection.swift` and `PersonTimelineSection.swift`.
 - S16-04 and S16-05 both change the Sources diagram column (`PersonSourcesSection` `diagram`, `PersonRecordLinksColumn`): S16-04 lands first, and S16-05 places its note beside S16-04's notice.
 
-Batch 2 waits for Spike 14's S14-42. After S16-10, slices 2b, 2c and 2d run as three streams (records, walks, Promote) that meet at S16-22 and S16-32; S16-33 can start at any time. Slice 2e's Swift PRs start as their prerequisites land. Shared files, so whichever lands second rebases:
+Spike 14's S14-42 landed in #748, so Batch 2 can start: S16-10, S16-11 and S16-33 have no open dependency. After S16-10, slices 2b, 2c and 2d run as three streams (records, walks, Promote) that meet at S16-22 and S16-32; S16-33 can start at any time. Slice 2e's Swift PRs start as their prerequisites land. Shared files, so whichever lands second rebases:
 - `persondetail/claims.go` and `recordlinks.go`: S16-01, then S16-12, S16-14 and S16-24, in that order.
 - `conclusiondetails/conclusiondetails.go`: S16-11, S16-30, S16-19, S16-24.
 - `conclusionsummaries/compose.go`: S16-08, S16-11 (`leadPictures`), S16-31, S16-19; `persondetail/timeline.go`: S16-02, then S16-19.
@@ -320,10 +320,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Each names its a
 
 #### S16-08 — Cap the places an event folds
 
-**Ships.** One helper reads an event's places, drops duplicate ids and keeps at most 20 in link order, and the four reads in `conclusionsummaries/compose.go` (`eventPlaceGraph`, `lifeOwners`, `composeEvents`, `eventPlaces`) use it, so `FoldLocations` and the place graph never see more (P-2). A timing test folds an event with 10,000 places under a second.
+**Ships.** `placesOfEvents`, the shared read of an event's places that S14-40 added and `eventPlaceGraph` uses, drops duplicate ids and keeps at most 20 in link order; `leadLife`, `lifeOwners` and `composeEvents`, which still follow `PlacesOfEvent` themselves, move onto it, so `FoldLocations` and the place graph never see more (P-2). `eventPlaces` takes the links its caller read. A timing test folds an event with 10,000 places under a second.
 **Not this PR.** A linear `FoldLocations` (refused); the Person reads (S16-01).
 **Check.** Bar 2 for the places axis, including a project whose search projection is rebuilt on open; the summary tests unchanged.
-**Context.** Audit P-2; rule "Crafted fan-out is capped, not engineered"; `core/database/conclusionsummaries/compose.go`, `placechains.go`. **Depends on S14-40** (Spike 14, Planned), which adds input scopes to these reads and routes them through one scope `follow`; its map names this PR.
+**Context.** Audit P-2; rule "Crafted fan-out is capped, not engineered"; `core/database/conclusionsummaries/compose.go`, `placechains.go`. **Depends on S14-40** (Spike 14, landed #746), which added input scopes to these reads and `placesOfEvents`; its map names this PR.
 
 #### S16-07 — One paged fold that moves focus
 
@@ -389,7 +389,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** `graphcache`'s cache registry: an entry declares its fill (per key with Fill and `Deps`, or whole with a lazy Build), Apply(g, roots, set) run after `OnCommit`'s reload with the roots `dropMemos` gets today, Reads (vocabulary, alias index, name format, another entry), a lifetime (graph or catalog connection), Check and Cap. `RegisterNodeMemo` folds into it; the match index, alias index, name format and the three `canonlinks` slots move onto it with today's behavior (the match index still drops on a handle commit until S16-20, the `for` and `siblings` slots until S16-16); `DropOnVocabulary` and `dropDerived` become declared Reads. `canonicalgraph` goes (its last production caller left with S14-42; the inputs test keeps its oracle query inline). `docs/catalog-caches.md` (new) lists every Go and Swift cache with its key, fill, updating signal, cap and size at Scale, and why `Activity`, displays and labels stay typed fields; the maintainability lens gains the Known trap "a cache that empties on any write".
 **Not this PR.** Any new cache (S16-11 on).
 **Check.** Bar 15's table; Verify passes with every moved entry checked; Promote's and the lists' budgets unchanged; a test that setting the name format drops exactly the entries that Read it.
-**Context.** [Design § One cache registry](cache-architecture.md#one-cache-registry-two-ways-to-fill-s16-10); rules "One cache registry, two ways to fill", "Every cache names the signal that updates it"; `core/database/graphcache/graph.go`, `commit.go`, `memo.go`, `verify.go`, `core/database/canonlinks/reader.go`, `core/database/namealiases`, `core/database/nameformats`, `core/database/promotealign/index.go`, `core/catalogsession/session.go`, `core/database/canonicalgraph`. Makes false and updates: `.cursor/rules/catalog-queries.mdc` (its `canonicalgraph.Walk` line and "`NodeMemo` is the one way"), [`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md) (the warm list and `WarmNeeded`), [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §8 and its stale "S9-28 caches it as canonical edges" (§7), [`.agents/skills/review-pr/lenses/maintainability.md`](../../../.agents/skills/review-pr/lenses/maintainability.md). **Depends on S14-42** (Spike 14), which last changed `commit.go`; its map names this batch.
+**Context.** [Design § One cache registry](cache-architecture.md#one-cache-registry-two-ways-to-fill-s16-10); rules "One cache registry, two ways to fill", "Every cache names the signal that updates it"; `core/database/graphcache/graph.go`, `commit.go`, `memo.go`, `verify.go`, `core/database/canonlinks/reader.go`, `core/database/namealiases`, `core/database/nameformats`, `core/database/promotealign/index.go`, `core/catalogsession/session.go`, `core/database/canonicalgraph`. Makes false and updates: `.cursor/rules/catalog-queries.mdc` (its `canonicalgraph.Walk` line and "`NodeMemo` is the one way"), [`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md) (the warm list and `WarmNeeded`), [`promote-graph-alignment.md`](../../promote-graph-alignment.md) §8 and its stale "S9-28 caches it as canonical edges" (§7), [`.agents/skills/review-pr/lenses/maintainability.md`](../../../.agents/skills/review-pr/lenses/maintainability.md). **Depends on S14-42** (Spike 14, landed #748), which last changed `commit.go`; its map names this batch.
 
 ### Slice 2b — Entity records
 
@@ -398,7 +398,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** `Node` holds each Property's outcome rows (Observation, Subject, reason, value rank, denied by, vote) and the chosen likeness, loaded in one more batched query beside `Values` and reloaded with the node from `Set.Handles`. The detail read takes them from the node: `sqlPropertyIDs` and the reconciler half of `sqlOutcomes` go, and the record shells (Citation, Artifact, Source) stay one SQL read keyed by Observation until S16-30. `gallery.ForEntities` goes: the detail page's pictures, the summaries' lead picture and `SetPreferredLikeness`'s validation (`canonicalentities.go:275`, through the node on `graphcache.Over(tx)`) compose from the node, so one gallery rule remains. Verify's node truth check covers the outcomes.
 **Not this PR.** The record shells (S16-12, S16-13, S16-30); any wire change.
 **Check.** Bar 11 in part: a warm Person open runs no reconciler or gallery SQL (query counter); the detail, summary and likeness tests unchanged; nodes at 16,000 persons measured (under 6 MB more), and open time and a write at the 6,000-event city measured against today, since every node load now carries outcomes.
-**Context.** [Design § Entity records](cache-architecture.md#entity-records); rules "Cache entities and results per key; compose answers", "Apply states its fan-out"; `core/database/graphcache/graph.go`, `load.go`, `verify.go`, `core/database/conclusiondetails/conclusiondetails.go`, `core/database/gallery`, `core/database/canonicalentities/canonicalentities.go`, `core/database/conclusionsummaries/compose.go` (`leadPictures`); [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §2.7 (a node now carries outcomes), [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §10. Check first whether `value_image_file_id` is already limited to readable images. **Depends on S14-42** (same `compose.go`).
+**Context.** [Design § Entity records](cache-architecture.md#entity-records); rules "Cache entities and results per key; compose answers", "Apply states its fan-out"; `core/database/graphcache/graph.go`, `load.go`, `verify.go`, `core/database/conclusiondetails/conclusiondetails.go`, `core/database/gallery`, `core/database/canonicalentities/canonicalentities.go`, `core/database/conclusionsummaries/compose.go` (`leadPictures`); [`conclusion-layer-data-model.md`](../../conclusion-layer-data-model.md) §2.7 (a node now carries outcomes), [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) §10. Check first whether `value_image_file_id` is already limited to readable images. **Depends on S14-42** (landed #748; same `compose.go`).
 
 #### S16-12 — Source records in the graph cache
 
@@ -456,7 +456,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** A per-key registry entry per place: its shell, its `part_of` and `succeeded_by` links with decoded dates in both directions, and the `InputKey`s it was built from. Entries fill a frontier at a time by a narrow load that skips location links; on the session graph Apply refreshes a place only when its shell or place-relationship links move; on a write's one-shot graph only the chains the write composes fill. `graphcache` exports its key constructors (`nodeKey`, `followKeys`) so entries record the keys `InputScope` would. The Places list (`finishPlaces`), `placeStep` and `placeNeighborhood` read the entries; date-dependent chains stay functions over them.
 **Not this PR.** The event and life composers (S16-31); Promote's checks (S16-21).
 **Check.** Bar 13's city: reading a city's chain loads none of its location links (counter); the Places list stops rebuilding chains on each read; the place and Places tests unchanged; Apply's work stated for a 6,000-event city and a crafted `part_of` mesh.
-**Context.** [Design § Results per key](cache-architecture.md#results-per-key-for-the-walks); rules "A write's one-shot graph fills only what it reads", "A cache a composer reads hands its inputs to the row"; `core/database/conclusionsummaries/placechains.go`, `compose.go`, `graphcache`'s `inputs.go` (S14-40). **Depends on S14-42** (Spike 14).
+**Context.** [Design § Results per key](cache-architecture.md#results-per-key-for-the-walks); rules "A write's one-shot graph fills only what it reads", "A cache a composer reads hands its inputs to the row"; `core/database/conclusionsummaries/placechains.go`, `compose.go`, `graphcache`'s `inputs.go` (S14-40). **Depends on S14-42** (Spike 14, landed #748).
 
 #### S16-31 — Summary composers read the place entries
 
@@ -530,7 +530,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** The detail, claims, family, timeline and record links reads return their inputs as three wire lists — handles (recorded through an `InputScope`, and the kinship pivots for the family), graphs and Sources — beside their value; `GoStore` decodes them and nothing reads them yet. `graphcache.InputKey` keeps its one kind, since the persisted input index stores it.
 **Not this PR.** Following them in Swift (S16-25).
 **Check.** Handler tests: each read's inputs include every relative, co-participant, graph and cited Source its value shows.
-**Context.** [Design § Swift](cache-architecture.md#swift); rule "Swift caches one value per view…"; `core/database/persondetail`, `core/database/conclusiondetails`, `api/ffi/handlers`, `api/proto/engine.proto`; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md). Lands after the reads it instruments are rewritten (S16-17, S16-30, S16-14, S16-19). **Depends on S14-42**.
+**Context.** [Design § Swift](cache-architecture.md#swift); rule "Swift caches one value per view…"; `core/database/persondetail`, `core/database/conclusiondetails`, `api/ffi/handlers`, `api/proto/engine.proto`; [`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md). Lands after the reads it instruments are rewritten (S16-17, S16-30, S16-14, S16-19). **Depends on S14-42** (landed #748).
 
 #### S16-25 — Swift keys follow the inputs their values report
 
@@ -544,7 +544,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** `ListPersonSummaries`, `ListEventSummaries` and `ListPlaceSummaries` take an id filter and return each row's sort key; the three lists' refresh becomes the existing `.merged` read (replace, remove deleted or merged, insert by Go's sort key) and they revalidate while hidden.
 **Not this PR.** The lists' failure notice ([idea](../../ideas/person-page-followups.md)).
 **Check.** Bar 12's lists: a write re-reads only its touched rows (session test); the list order matches a full reload on the large fixture.
-**Context.** `core/database/conclusionsummaries`, `api/ffi/handlers`, `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` (`.merged`, S14-11). Makes false and updates [`macos-client-patterns.md`](../../macos-client-patterns.md) rule 2 ("One save made away from a list reloads no list") and "Conclusion keys" (the lists), and [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) Refresh. **Depends on S14-42**, which makes the touched set exact.
+**Context.** `core/database/conclusionsummaries`, `api/ffi/handlers`, `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` (`.merged`, S14-11). Makes false and updates [`macos-client-patterns.md`](../../macos-client-patterns.md) rule 2 ("One save made away from a list reloads no list") and "Conclusion keys" (the lists), and [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md) Refresh. **Depends on S14-42** (landed #748), which makes the touched set exact.
 
 #### S16-27 — One primitive for values derived from cached data
 
