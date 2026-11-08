@@ -1,7 +1,7 @@
 # Review — S14-99 Close Spike 14 as a decisions note
 
-**Verdict:** round 1: Fits with changes — Not ready; round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes (every round-2 finding Fixed; no blocker open)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -13,6 +13,8 @@ None.
 - Retarget rule (D-7): a link to a brief becomes the plain brief id; a link to the map or a plan goes to the decisions note; code-span mentions in dated Spike 13 logs and landed plans are left as they are.
 - `check-plan-docs.py --links` is added as a manual tool, not a `check-pr.sh` gate (D-9): the base has about 110 broken links.
 - The note leaves out the four Spike 12 decisions Spike 14 built (one line points at Spike 12 instead).
+- `archive-docs` is rewritten in place (Keep section, keep checklist line, note template now Decisions / Refused / Leftovers pointing at Spike 12's note), and `ship-pr` step 2 gains a post-delete link rerun (D-10). These change two skills to match how Spikes 10 – 12 were closed.
+- The base-versus-branch comparison lives as one command block in `archive-docs`, not as a `--base` script mode (D-9).
 
 ## Round 1
 
@@ -61,3 +63,37 @@ S13-D1:14 and S13-D4:19 link deleted briefs; code-span hits in S13-10:169, S13-1
 
 ### M-6 · minor · The note repeats Spike 12's decisions
 **Answer:** Fixed — three decisions and one Refused item removed; one line in the note's opening points at Spike 12.
+
+## Round 2
+
+### X-10 · blocker · Two S14 ids in the moved doc are not in the edit table (lines 24, 31)
+**Answer:** Fixed — §6 Moved design doc gains rows 24 and 31; §4 line list corrected.
+
+### X-11 · blocker · STEP-2's note link check fails before the doc is moved
+**Answer:** Fixed — the move is STEP-2 and the note STEP-3; STEP-2's check expects only the note link missing, STEP-3 checks both files.
+
+### X-12 · major · Weak or unrunnable checks
+**Answer:** Fixed — T-10 greps one literal per change; T-1 uses a space, not `\t`; T-2 runs `rg --hidden`; T-5 greps a Key column given per Re-home row; T-3 runs unexcluded (it lints changed plans only); PR body cites T-1 – T-11.
+
+### X-13 · minor · Choices left open
+**Answer:** Fixed — effects README: "input index" becomes the link text, existing parenthesis kept; the three ideas intros are given as whole sentences; D-6 links "Spike 16 — Odds and ends" to `spike-16/`; moved doc line 3 and every skill change are final Markdown in fences; change 2 names its place (end of line 48).
+
+### X-14 · minor · Current state counts
+**Answer:** Fixed — §4 Inbound links names the 16 Retarget files plus the two in Ideas made stale.
+
+### M-7 · blocker · STEP-10 builds a last-commit mechanism beside ship-pr step 2
+**Answer:** Fixed — STEP-10 removed. D-11: `ship-pr` "Hand off" step 2 makes the last commit and removes the folder with this plan; change 7 adds the link rerun there. The implementer's last step is STEP-9's sweep with `spike-14/` excluded.
+
+### M-8 · blocker · archive-docs additions contradict its Keep rule and template
+**Answer:** Fixed — D-10: changes 1, 4 and 5 replace the keep checklist line, the Keep section (two cases: live contract, design reasoning a domain doc links) and the note template (Decisions, Refused, Leftovers; Match Spike 12); change 8 updates `archive/README.md:5`. No rule is bent: the skill is changed to match four closes of practice.
+
+### M-9 · blocker · Moved doc keeps S14 ids (lines 24, 31)
+**Answer:** Fixed — same as X-10, with the reviewer's wording.
+
+### M-10 · blocker · The comparison is still a script each close rewrites
+**Answer:** Fixed — option (b): the exact command block is change 6 in `archive-docs` "Retarget"; T-1 and `ship-pr` step 2 run it. It uses `pwd -P` so macOS's `/private/var` temp path strips correctly. A `--base REF` mode is an Out row.
+
+### M-11 · blocker · T-10 cannot verify the skill changes
+**Answer:** Fixed — T-10 greps one literal per change, each expected once.
+
+Base fact corrected from round 2: the base has 90 broken links, not about 110 (D-9, Out rows).
