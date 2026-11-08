@@ -197,6 +197,7 @@ struct PlaceRegistry: Sendable {
                 guard let entityId = location.entityId else { return [] }
                 return [.conclusionDetail(project: project, entityId: entityId)]
                     + (location.pageSection?.queryKey(project: project, entityId: entityId).map { [$0] } ?? [])
+                    + (location.pageSection?.companionQueryKey(project: project, entityId: entityId).map { [$0] } ?? [])
                     + (location.pageSection?.supportingQueryKeys(project: project, entityId: entityId) ?? [])
             },
             viewIdentity: { $0.entityId }

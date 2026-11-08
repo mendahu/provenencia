@@ -57,12 +57,24 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// A second per-entity read the section draws in its own region (the Sources
+    /// section's record links beside its rows). The place warms it right after
+    /// `queryKey` and the page's refresh follows it; unlike `supportingQueryKeys` it is
+    /// not a catalog-wide vocabulary, so its reload shows Refreshing. Nil for a section
+    /// with none.
+    func companionQueryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
+        switch self {
+        case .sources: return .personRecordLinks(project: project, entityId: entityId)
+        case .vitals, .family, .timeline, .gallery: return nil
+        }
+    }
+
     /// The section opts into Page columns' full-width mode: at Wide it fills the pane
     /// between the gutters while the header keeps its measure.
     var fillsWidth: Bool {
         switch self {
-        case .timeline, .gallery: return true
-        case .vitals, .family, .sources: return false
+        case .timeline, .gallery, .sources: return true
+        case .vitals, .family: return false
         }
     }
 

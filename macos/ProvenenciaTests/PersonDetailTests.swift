@@ -476,7 +476,9 @@ struct PersonDetailTests {
                 == (section == .sources ? [.sourceTypesList(project: project)] : []))
         }
         for section in ConclusionPageSection.allCases {
-            #expect(section.fillsWidth == (section == .timeline || section == .gallery))
+            #expect(section.fillsWidth == (section == .timeline || section == .gallery || section == .sources))
+            #expect(section.companionQueryKey(project: project, entityId: "e1")
+                == (section == .sources ? .personRecordLinks(project: project, entityId: "e1") : nil))
         }
     }
 
