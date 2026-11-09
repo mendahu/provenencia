@@ -1,6 +1,7 @@
 package persondetail_test
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -69,11 +70,14 @@ func TestPersonFamilyQueryCount(t *testing.T) {
 		}
 	})
 	t.Run("AC-2.3", func(t *testing.T) {
-		count := func(copies int) int {
+		count := func(copies, unknown int) int {
 			w := newKinWorld(t)
 			var ids [][]byte
 			for i := 0; i < copies; i++ {
 				ids = append(ids, w.shape(string(rune('x'+i)), 1, 1, false))
+			}
+			for i := 0; i < unknown; i++ {
+				ids = append(ids, bytes.Repeat([]byte{byte(0xA0 + i)}, 16))
 			}
 			var queries int
 			w.c.Graph().SetQueryCounterForTest(func() { queries++ })
@@ -86,9 +90,12 @@ func TestPersonFamilyQueryCount(t *testing.T) {
 			}
 			return queries
 		}
-		a, b := count(1), count(3)
+		a, b := count(1, 0), count(3, 0)
 		if a == 0 || a != b {
 			t.Fatalf("queries: one person %d, three people %d", a, b)
+		}
+		if c := count(3, 2); c != b {
+			t.Fatalf("queries: three people %d, three people and two unknown ids %d", b, c)
 		}
 	})
 }

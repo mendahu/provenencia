@@ -17,7 +17,7 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Rules is what Derive reads from the registry.
+// Rules is the kinship section of the registry: what Derive reads, and the page's bounds on a person's kin.
 type Rules struct {
 	// MaxPivotEnd bounds what one pivot can imply: a pivot (an event, or the
 	// parent between in a chain) with more participants than this at either
@@ -34,6 +34,9 @@ type Rules struct {
 	// counted before any chain is built. It bounds a crafted catalog whose
 	// links hold many associations and whose middle person has many children.
 	MaxChainWork int
+	// MaxKinPerRole is the most links KinOf keeps in one role; more is crafted
+	// data, and the page shows the first ones.
+	MaxKinPerRole int
 }
 
 // Edge is one link between two primary Subjects: its two ends, the link read

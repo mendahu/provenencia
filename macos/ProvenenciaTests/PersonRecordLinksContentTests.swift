@@ -106,26 +106,20 @@ struct PersonRecordLinksContentTests {
         #expect(content.dataset.resolvedArcs.count == 3_675)
     }
 
-    @Test func arcsAndNodesStopAtTheCap() {
+    @Test func allLinesDrawAndNodesStopAtTheCap() {
         func graph(_ id: String) -> CatalogRecordLinksGraph {
             CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
         }
-        // Ten strong lines among more thin ones than the cap holds: every strong one stays.
-        let lines = (0..<(PersonRecordLinksContent.maxArcs + 500)).map {
-            CatalogRecordLink(entityID: "e\($0)", strength: $0 % 7_000 == 3 ? .strong : .weak)
-        }
-        let strong = lines.filter { $0.strength == .strong }.count
-        let over = PersonRecordLinksContent(
+        // Go owns the line bound: every line it sends is an arc, however many.
+        let lines = (0..<80_000).map { CatalogRecordLink(entityID: "e\($0)", strength: .weak) }
+        let many = PersonRecordLinksContent(
             links: CatalogPersonRecordLinks(
                 graphs: [graph("a"), graph("b")],
                 pairs: [CatalogRecordLinksPair(graphAID: "a", graphBID: "b", lines: lines)]
             ),
             graphLocations: [:]
         )
-        #expect(strong > 0)
-        #expect(over.dataset.resolvedArcs.count == PersonRecordLinksContent.maxArcs)
-        #expect(over.dataset.resolvedArcs.filter { $0.lineWidth == PersonRecordLinksContent.strongLineWidth }.count == strong)
-        #expect(over.dataset.resolvedArcs.prefix(strong).allSatisfy { $0.lineWidth == PersonRecordLinksContent.strongLineWidth })
+        #expect(many.dataset.resolvedArcs.count == 80_000)
 
         let ids = (0..<(PersonRecordLinksContent.maxNodes + 5)).map { "g\($0)" }
         let wide = PersonRecordLinksContent(
@@ -144,5 +138,23 @@ struct PersonRecordLinksContentTests {
         #expect(wide.dataset.nodes.count == PersonRecordLinksContent.maxNodes)
         #expect(wide.dataset.resolvedArcs.count == 1)
         #expect(wide.dataset.resolvedArcs.map { [wide.dataset.nodes[$0.from].id, wide.dataset.nodes[$0.to].id] } == [["g0", "g1"]])
+    }
+
+    @Test func catalogRecordLinksDefaultsToAnOrdinaryRead() {
+        let links = CatalogPersonRecordLinks()
+        #expect(!links.notCounted)
+        #expect(!links.linesDropped)
+    }
+
+    @Test func goStoreCarriesThePartialFlags() {
+        var resp = Provenencia_Engine_V1_GetPersonRecordLinksResponse()
+        resp.notCounted = true
+        resp.linesDropped = true
+        let partial = GoStore.mapPersonRecordLinks(resp)
+        #expect(partial.notCounted)
+        #expect(partial.linesDropped)
+        let ordinary = GoStore.mapPersonRecordLinks(Provenencia_Engine_V1_GetPersonRecordLinksResponse())
+        #expect(!ordinary.notCounted)
+        #expect(!ordinary.linesDropped)
     }
 }

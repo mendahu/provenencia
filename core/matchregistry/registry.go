@@ -27,7 +27,7 @@ type Registry struct {
 	Segment segmentcompare.Rules
 	// Alignment is layer 6: candidates, the accept bar, bands and settling.
 	Alignment graphalign.Rules
-	// Kinship is the bound on what one pivot of a kinship pattern implies.
+	// Kinship bounds what one pivot of a kinship pattern implies and how much of a person's kin the page reads.
 	Kinship kinship.Rules
 	// RecordLinks is the record-links comparison: how many shared facts make a
 	// line between two Evidence graphs strong.

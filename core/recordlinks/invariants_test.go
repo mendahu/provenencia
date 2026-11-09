@@ -239,8 +239,9 @@ func TestPairsInvariants(t *testing.T) {
 		work := recordlinks.ReadWork(p, graphs, cfg)
 		cfg.RecordLinks.MaxReadWork = r.Intn(work + 3)
 
-		got := recordlinks.Pairs(p, graphs, metas, cfg)
-		if back, want := recordlinks.Pairs(p, reversed(graphs), metas, cfg), mirror(got, len(graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
+		got, _ := recordlinks.Pairs(p, graphs, metas, cfg)
+		back, _ := recordlinks.Pairs(p, reversed(graphs), metas, cfg)
+		if want := mirror(got, len(graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
 			t.Fatalf("round %d: the reversed read = %+v, want the mirrored read %+v", round, back, want)
 		}
 		byPair := map[[2]int][]recordlinks.Line{}

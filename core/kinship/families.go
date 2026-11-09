@@ -73,8 +73,10 @@ func (k Kin) Around(person []byte) [][]byte {
 }
 
 // KinOf reads person's links through nuclearRoles: each link is in every role
-// whose key it carries from person's end. Any other link is in no role.
-func KinOf(person []byte, links []Link, terms segmentcompare.Terms) Kin {
+// whose key it carries from person's end, while the role holds fewer than
+// rules.MaxKinPerRole links, so each role keeps its first links in link order.
+// Any other link is in no role.
+func KinOf(person []byte, links []Link, terms segmentcompare.Terms, rules Rules) Kin {
 	kin := Kin{}
 	for _, row := range nuclearRoles {
 		keyFirst, keySecond, ok := relationshipKeys(row.term, terms)
@@ -90,6 +92,9 @@ func KinOf(person []byte, links []Link, terms segmentcompare.Terms) Kin {
 			stands := first
 			if row.at == atSecond {
 				stands = second
+			}
+			if len(kin[row.role]) >= rules.MaxKinPerRole {
+				break
 			}
 			if bytes.Equal(person, stands) || undirected && (bytes.Equal(person, first) || bytes.Equal(person, second)) {
 				kin[row.role] = append(kin[row.role], l)
@@ -166,7 +171,9 @@ func FamilyUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) []Un
 // More parents than rules.MaxPivotEnd read as malformed data: none is paired
 // with another, and a sibling is placed once, with the first parent it shares
 // (in parent order), or in the siblings unit when it shares none. That keeps
-// what is shown linear in the data.
+// what is shown linear in the data. With the registry rules Siblings implies no
+// sibling past the bound, so that placement is a defence for a sibling link
+// that carries shared-parent shapes from elsewhere.
 func parentUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) ([]Unit, Unit) {
 	parents := kin[RoleParent]
 	ids := make([][]byte, len(parents))

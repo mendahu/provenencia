@@ -5164,7 +5164,8 @@ public nonisolated struct Provenencia_Engine_V1_GetConclusionDetailRequest: Send
 }
 
 /// ListPersonClaimsRequest asks for a canonical person's accepted identity
-/// claims. An unknown or merged handle is conclusiondetails.not_found.
+/// claims. An unknown or merged handle, or one that is no Person, is
+/// conclusiondetails.not_found.
 public nonisolated struct Provenencia_Engine_V1_ListPersonClaimsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5251,7 +5252,8 @@ public nonisolated struct Provenencia_Engine_V1_PersonClaim: Sendable {
 }
 
 /// GetPersonFamilyRequest asks for a canonical person's nuclear family. An
-/// unknown or merged handle is conclusiondetails.not_found.
+/// unknown or merged handle, or one that is no Person, is
+/// conclusiondetails.not_found.
 public nonisolated struct Provenencia_Engine_V1_GetPersonFamilyRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5488,7 +5490,10 @@ public nonisolated struct Provenencia_Engine_V1_GetPersonRecordLinksRequest: Sen
 /// tie-break), and for each pair of graphs that share another person, a line for
 /// each such person. Pairs are ordered by graph order, graph_a_id first, and
 /// hold only pairs with a line. The facts a line counted are not sent. Computed
-/// on each read, never stored.
+/// on each read, never stored. not_counted is true when the read passed its work
+/// bound and compared nothing (every line weak, or no pair when the lines alone
+/// passed it); lines_dropped is true when more lines were found than
+/// `persondetail.maxRecordLinkLines` sent, strong lines sent first.
 public nonisolated struct Provenencia_Engine_V1_GetPersonRecordLinksResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5497,6 +5502,10 @@ public nonisolated struct Provenencia_Engine_V1_GetPersonRecordLinksResponse: Se
   public var graphs: [Provenencia_Engine_V1_RecordLinksGraph] = []
 
   public var pairs: [Provenencia_Engine_V1_RecordLinksPair] = []
+
+  public var notCounted: Bool = false
+
+  public var linesDropped: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -17078,7 +17087,7 @@ nonisolated extension Provenencia_Engine_V1_GetPersonRecordLinksRequest: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_GetPersonRecordLinksResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetPersonRecordLinksResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}graphs\0\u{1}pairs\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}graphs\0\u{1}pairs\0\u{3}not_counted\0\u{3}lines_dropped\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17088,6 +17097,8 @@ nonisolated extension Provenencia_Engine_V1_GetPersonRecordLinksResponse: SwiftP
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.graphs) }()
       case 2: try { try decoder.decodeRepeatedMessageField(value: &self.pairs) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.notCounted) }()
+      case 4: try { try decoder.decodeSingularBoolField(value: &self.linesDropped) }()
       default: break
       }
     }
@@ -17100,12 +17111,20 @@ nonisolated extension Provenencia_Engine_V1_GetPersonRecordLinksResponse: SwiftP
     if !self.pairs.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.pairs, fieldNumber: 2)
     }
+    if self.notCounted != false {
+      try visitor.visitSingularBoolField(value: self.notCounted, fieldNumber: 3)
+    }
+    if self.linesDropped != false {
+      try visitor.visitSingularBoolField(value: self.linesDropped, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_GetPersonRecordLinksResponse, rhs: Provenencia_Engine_V1_GetPersonRecordLinksResponse) -> Bool {
     if lhs.graphs != rhs.graphs {return false}
     if lhs.pairs != rhs.pairs {return false}
+    if lhs.notCounted != rhs.notCounted {return false}
+    if lhs.linesDropped != rhs.linesDropped {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

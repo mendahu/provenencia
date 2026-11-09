@@ -15,6 +15,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/matchregistry"
+	"github.com/mendahu/provenencia/core/recordlinks"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -236,4 +238,56 @@ func TestRecordLinksFewGraphs(t *testing.T) {
 	if rl := f.recordLinks(s.ID); len(rl.Graphs) != 2 || len(rl.Pairs) != 0 {
 		t.Fatalf("two graphs naming no one else: %d graphs, %d pairs", len(rl.Graphs), len(rl.Pairs))
 	}
+}
+
+// TestRecordLinksSaysWhenPartial: the read says when it did not count or
+// dropped lines (S16-01 AC-2.4, AC-2.5), on four household graphs.
+func TestRecordLinksSaysWhenPartial(t *testing.T) {
+	f := newFixture(t)
+	son := households(f, 4) // 6 pairs of 3 strong lines: 18 lines
+	read := func(maxReadWork, most int) persondetail.PersonRecordLinks {
+		t.Helper()
+		cfg := matchregistry.Default().RecordLinksConfig()
+		if maxReadWork > 0 {
+			cfg.RecordLinks.MaxReadWork = maxReadWork
+		}
+		rl, err := persondetail.RecordLinksWith(f.C, son, cfg, most)
+		must(t, err)
+		return rl
+	}
+	lines := func(rl persondetail.PersonRecordLinks) (n, strong int) {
+		for _, p := range rl.Pairs {
+			for _, l := range p.Lines {
+				n++
+				if l.Strength == recordlinks.StrengthStrong {
+					strong++
+				}
+			}
+		}
+		return n, strong
+	}
+	t.Run("an ordinary read", func(t *testing.T) {
+		rl := read(0, 75_000)
+		if n, strong := lines(rl); rl.NotCounted || rl.LinesDropped || n != 18 || strong != 18 {
+			t.Fatalf("not counted %v, dropped %v, %d lines, %d strong", rl.NotCounted, rl.LinesDropped, n, strong)
+		}
+	})
+	t.Run("past the work bound by pair work", func(t *testing.T) {
+		rl := read(18, 75_000)
+		if n, strong := lines(rl); !rl.NotCounted || rl.LinesDropped || len(rl.Pairs) != 6 || n != 18 || strong != 0 {
+			t.Fatalf("not counted %v, dropped %v, %d pairs, %d lines, %d strong", rl.NotCounted, rl.LinesDropped, len(rl.Pairs), n, strong)
+		}
+	})
+	t.Run("past the work bound by the lines alone", func(t *testing.T) {
+		rl := read(1, 75_000)
+		if !rl.NotCounted || rl.LinesDropped || len(rl.Pairs) != 0 {
+			t.Fatalf("not counted %v, dropped %v, %d pairs", rl.NotCounted, rl.LinesDropped, len(rl.Pairs))
+		}
+	})
+	t.Run("past the line cap", func(t *testing.T) {
+		rl := read(0, 5)
+		if n, _ := lines(rl); rl.NotCounted || !rl.LinesDropped || n != 5 {
+			t.Fatalf("not counted %v, dropped %v, %d lines", rl.NotCounted, rl.LinesDropped, n)
+		}
+	})
 }

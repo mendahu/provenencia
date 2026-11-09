@@ -23,15 +23,22 @@ func Parents(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rule
 // only implied links; LinkSet merges them with a recorded sibling link. It is
 // for the page; matching never calls it.
 //
-// It has no MaxPivotEnd bound: a family of eleven children is real data. Rules
-// .MaxPairSteps keeps the work linear in the edges when a pair is filed many
-// times.
+// A family of eleven children is real data, so the number of other children is
+// not bounded. More parents than Rules.MaxPivotEnd is malformed and implies no
+// sibling, the bound parentUnits uses to stop pairing. A child of one of those
+// parents still implies that person as a sibling through the shared parent,
+// since its read does not see the person's other parents, so siblinghood is
+// one-sided there; crafted data only. Rules.MaxPairSteps keeps the work linear
+// in the edges when a pair is filed many times.
 func Siblings(person []byte, edges []Edge, terms segmentcompare.Terms, rules Rules) []Implied {
 	first, second, ok := relationshipKeys(vocabkey.TermSibling, terms)
 	if !ok {
 		return nil
 	}
 	idx := indexSteps(stepsOf(edges, terms), rules.MaxPairSteps)
+	if len(idx.parentsOf[string(person)]) > rules.MaxPivotEnd {
+		return nil
+	}
 	var out []Implied
 	for _, q := range idx.parentsOf[string(person)] {
 		mine := idx.edgesOf(stepPair{string(q), string(person)})

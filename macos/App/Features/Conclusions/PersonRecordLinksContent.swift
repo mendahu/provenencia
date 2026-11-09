@@ -12,8 +12,6 @@ struct PersonRecordLinksContent: Equatable {
     static let strongLineWidth: CGFloat = 3
     static let weakLineWidth: CGFloat = 1.25
 
-    // decided: S13-28 round 1 (SEC-1), the caps-for-adversarial-only rule: a high total cap a researcher never reaches, so a crafted catalog cannot send a million lines to a main-thread draw; 20 times the 3,675 arcs of S13-27's 50-graph household Scale
-    static let maxArcs = 75_000
     // decided: S13-28 round 1 (SEC-1), same rule: 20 times the 50 graphs of that Scale
     static let maxNodes = 1_000
 
@@ -31,21 +29,14 @@ struct PersonRecordLinksContent: Equatable {
             ids.insert(graph.graphID)
             graphs.append(graph)
         }
-        // Past `maxArcs` the strong lines are kept first, then the thin ones, each in the read's order.
-        var valid = 0
-        for pair in links.pairs where Self.isKept(pair, in: ids) { valid += pair.lines.count }
+        // Go sends at most `persondetail.maxRecordLinkLines` lines, strong first; every line it sends is an arc, in the read's order.
         var arcs: [CircularLinkArc<String>] = []
-        arcs.reserveCapacity(min(valid, Self.maxArcs))
-        let passes: [CatalogRecordLinkStrength?] = valid <= Self.maxArcs ? [nil] : [.strong, .weak]
-        for pass in passes {
-            for pair in links.pairs where Self.isKept(pair, in: ids) {
-                for line in pair.lines where pass == nil || line.strength == pass {
-                    guard arcs.count < Self.maxArcs else { break }
-                    arcs.append(CircularLinkArc(
-                        from: pair.graphAID, to: pair.graphBID,
-                        lineWidth: line.strength == .strong ? Self.strongLineWidth : Self.weakLineWidth
-                    ))
-                }
+        for pair in links.pairs where Self.isKept(pair, in: ids) {
+            for line in pair.lines {
+                arcs.append(CircularLinkArc(
+                    from: pair.graphAID, to: pair.graphBID,
+                    lineWidth: line.strength == .strong ? Self.strongLineWidth : Self.weakLineWidth
+                ))
             }
         }
         let graphsByID = Dictionary(uniqueKeysWithValues: graphs.map { ($0.graphID, $0) })

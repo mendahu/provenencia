@@ -209,35 +209,43 @@ func GetPersonRecordLinks(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, g := range links.Graphs {
-			out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
-				GraphId:      database.UUIDString(g.GraphID),
-				GraphRef:     g.GraphRef,
-				GraphName:    g.GraphName,
-				SourceId:     database.UUIDString(g.SourceID),
-				SourceTitle:  g.SourceTitle,
-				SourceTypeId: database.UUIDString(g.SourceTypeID),
-			})
-		}
-		for _, p := range links.Pairs {
-			pair := &engine.RecordLinksPair{
-				GraphAId: database.UUIDString(links.Graphs[p.A].GraphID),
-				GraphBId: database.UUIDString(links.Graphs[p.B].GraphID),
-			}
-			for _, l := range p.Lines {
-				pair.Lines = append(pair.Lines, &engine.RecordLink{
-					EntityId: database.UUIDString(l.Entity),
-					Strength: recordLinkStrengthProto(l.Strength),
-				})
-			}
-			out.Pairs = append(out.Pairs, pair)
-		}
+		out = recordLinksProto(links)
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 	return proto.Marshal(out)
+}
+
+// recordLinksProto maps a record links read to the wire, with the two flags
+// that say it is partial.
+func recordLinksProto(links persondetail.PersonRecordLinks) *engine.GetPersonRecordLinksResponse {
+	out := &engine.GetPersonRecordLinksResponse{NotCounted: links.NotCounted, LinesDropped: links.LinesDropped}
+	for _, g := range links.Graphs {
+		out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
+			GraphId:      database.UUIDString(g.GraphID),
+			GraphRef:     g.GraphRef,
+			GraphName:    g.GraphName,
+			SourceId:     database.UUIDString(g.SourceID),
+			SourceTitle:  g.SourceTitle,
+			SourceTypeId: database.UUIDString(g.SourceTypeID),
+		})
+	}
+	for _, p := range links.Pairs {
+		pair := &engine.RecordLinksPair{
+			GraphAId: database.UUIDString(links.Graphs[p.A].GraphID),
+			GraphBId: database.UUIDString(links.Graphs[p.B].GraphID),
+		}
+		for _, l := range p.Lines {
+			pair.Lines = append(pair.Lines, &engine.RecordLink{
+				EntityId: database.UUIDString(l.Entity),
+				Strength: recordLinkStrengthProto(l.Strength),
+			})
+		}
+		out.Pairs = append(out.Pairs, pair)
+	}
+	return out
 }
 
 // recordLinkStrengthProto maps a line's weight to the wire.

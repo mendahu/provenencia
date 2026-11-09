@@ -9,6 +9,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 )
 
 // Project creates an empty catalog in a new temp folder, closes it, and
@@ -65,4 +66,17 @@ func Hold(t testing.TB, projectDir string) (release func()) {
 	}
 	t.Cleanup(release)
 	return release
+}
+
+// Cold times read against c after its graph cache is dropped and warmed, the
+// fastest of runs.
+func Cold(t testing.TB, c *database.Catalog, runs int, read func()) time.Duration {
+	t.Helper()
+	return databasetest.Fastest(runs, func() time.Duration {
+		c.Graph().Drop()
+		if err := catalogsession.WarmOnOpen(c); err != nil {
+			t.Fatal(err)
+		}
+		return databasetest.Since(read)
+	})
 }

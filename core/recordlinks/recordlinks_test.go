@@ -948,7 +948,7 @@ func TestPairs(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := recordlinks.Pairs(entP, c.graphs, metas, cfg)
+			got, _ := recordlinks.Pairs(entP, c.graphs, metas, cfg)
 			if !reflect.DeepEqual(got, c.want) {
 				t.Fatalf("Pairs = %+v, want %+v", got, c.want)
 			}
@@ -1059,12 +1059,12 @@ func TestPairsReadCap(t *testing.T) {
 			run := cfg
 			run.RecordLinks.MaxReadWork = c.cap(recordlinks.ReadWork(entP, c.graphs, cfg))
 			start := time.Now()
-			got := recordlinks.Pairs(entP, c.graphs, metas, run)
+			got, _ := recordlinks.Pairs(entP, c.graphs, metas, run)
 			if took := time.Since(start); took > time.Second {
 				t.Errorf("Pairs took %v", took)
 			}
 			c.check(t, got)
-			back := recordlinks.Pairs(entP, reversed(c.graphs), metas, run)
+			back, _ := recordlinks.Pairs(entP, reversed(c.graphs), metas, run)
 			if want := mirror(got, len(c.graphs)); !reflect.DeepEqual(back, want) && (len(back) != 0 || len(want) != 0) {
 				t.Fatalf("reversed read = %+v, want %+v", back, want)
 			}
@@ -1076,7 +1076,7 @@ func TestPairsAtScale(t *testing.T) {
 	cfg := matchregistry.Default().RecordLinksConfig()
 	graphs := householdGraphs(50)
 	t.Logf("ReadWork at 50 households = %d (MaxReadWork %d)", recordlinks.ReadWork(entP, graphs, cfg), cfg.RecordLinks.MaxReadWork)
-	got := recordlinks.Pairs(entP, graphs, subjectcomparetest.Metas(), cfg)
+	got, _ := recordlinks.Pairs(entP, graphs, subjectcomparetest.Metas(), cfg)
 	if len(got) != 1225 {
 		t.Fatalf("pairs = %d, want 1225", len(got))
 	}
@@ -1125,9 +1125,141 @@ func BenchmarkPairsAtCap(b *testing.B) {
 			gs := graphs(m)
 			b.ResetTimer()
 			for range b.N {
-				recordlinks.Pairs(entP, gs, metas, cfg)
+				_, _ = recordlinks.Pairs(entP, gs, metas, cfg)
 			}
 			b.ReportMetric(float64(m), "graphs")
 		})
 	}
+}
+
+// TestPairsCounted: Pairs says whether the read's work stayed within MaxReadWork.
+func TestPairsCounted(t *testing.T) {
+	cfg := matchregistry.Default().RecordLinksConfig()
+	metas := subjectcomparetest.Metas()
+	graphs := householdGraphs(3) // 3 pairs of 3 strong lines: 9 lines
+	work := recordlinks.ReadWork(entP, graphs, cfg)
+	read := func(gs []recordlinks.Graph, limit int) ([]recordlinks.Pair, bool) {
+		run := cfg
+		run.RecordLinks.MaxReadWork = limit
+		return recordlinks.Pairs(entP, gs, metas, run)
+	}
+	t.Run("AC-2.1 at the limit", func(t *testing.T) {
+		pairs, counted := read(graphs, work)
+		if !counted || len(pairs) != 3 || pairs[0].Lines[0].Facts == 0 {
+			t.Fatalf("counted %v, %d pairs, first line %+v", counted, len(pairs), pairs[0].Lines[0])
+		}
+	})
+	t.Run("AC-2.2 past it by pair work", func(t *testing.T) {
+		pairs, counted := read(graphs, work-1)
+		if counted || len(pairs) != 3 {
+			t.Fatalf("counted %v, %d pairs, want not counted and every pair", counted, len(pairs))
+		}
+		for _, p := range pairs {
+			for _, l := range p.Lines {
+				if l.Facts != 0 {
+					t.Fatalf("a line has %d facts, want 0", l.Facts)
+				}
+			}
+		}
+	})
+	t.Run("AC-2.3 past it by the lines alone", func(t *testing.T) {
+		if pairs, counted := read(graphs, 8); counted || pairs != nil {
+			t.Fatalf("counted %v, pairs %v, want not counted and none", counted, pairs)
+		}
+	})
+	t.Run("no graph", func(t *testing.T) {
+		if pairs, counted := read(nil, 0); !counted || len(pairs) != 0 {
+			t.Fatalf("counted %v, pairs %v", counted, pairs)
+		}
+	})
+}
+
+// TestCapLines: CapLines keeps strong lines first and the rest in read order.
+func TestCapLines(t *testing.T) {
+	line := func(id byte, s recordlinks.Strength) recordlinks.Line {
+		return recordlinks.Line{Entity: []byte{id}, Strength: s}
+	}
+	pairs := []recordlinks.Pair{
+		{A: 0, B: 1, Lines: []recordlinks.Line{line(1, weak), line(2, weak)}},
+		{A: 0, B: 2, Lines: []recordlinks.Line{line(3, weak), line(4, weak)}},
+		{A: 1, B: 2, Lines: []recordlinks.Line{line(5, weak), line(6, strong)}},
+	}
+	ids := func(ps []recordlinks.Pair) [][]byte {
+		var out [][]byte
+		for _, p := range ps {
+			for _, l := range p.Lines {
+				out = append(out, l.Entity)
+			}
+		}
+		return out
+	}
+	t.Run("at the most nothing is dropped", func(t *testing.T) {
+		got, dropped := recordlinks.CapLines(pairs, 6)
+		if dropped || !reflect.DeepEqual(got, pairs) {
+			t.Fatalf("dropped %v, %+v", dropped, got)
+		}
+	})
+	t.Run("one fewer drops the last weak line", func(t *testing.T) {
+		got, dropped := recordlinks.CapLines(pairs, 5)
+		if !dropped || !reflect.DeepEqual(ids(got), [][]byte{{1}, {2}, {3}, {4}, {6}}) {
+			t.Fatalf("dropped %v, lines %v", dropped, ids(got))
+		}
+		if got[2].A != 1 || got[2].B != 2 || len(got[2].Lines) != 1 {
+			t.Fatalf("the last pair = %+v", got[2])
+		}
+	})
+	t.Run("strong lines at the end of the read win; empty pairs go", func(t *testing.T) {
+		more := append(append([]recordlinks.Pair(nil), pairs...), recordlinks.Pair{A: 2, B: 3, Lines: []recordlinks.Line{line(7, strong)}})
+		got, dropped := recordlinks.CapLines(more, 2)
+		if !dropped || !reflect.DeepEqual(ids(got), [][]byte{{6}, {7}}) || len(got) != 2 {
+			t.Fatalf("dropped %v, pairs %+v", dropped, got)
+		}
+	})
+	t.Run("20 times the cap", func(t *testing.T) {
+		const most, pairCount, perPair = 75_000, 1_500, 1_000
+		big := make([]recordlinks.Pair, pairCount)
+		var strongAt int
+		for i := range big {
+			lines := make([]recordlinks.Line, perPair)
+			for j := range lines {
+				lines[j] = recordlinks.Line{Entity: []byte{byte(i), byte(i >> 8), byte(j), byte(j >> 8)}, Strength: weak}
+			}
+			if i%150 == 0 {
+				lines[perPair/2].Strength = strong
+				strongAt++
+			}
+			big[i] = recordlinks.Pair{A: i, B: i + 1, Lines: lines}
+		}
+		start := time.Now()
+		got, dropped := recordlinks.CapLines(big, most)
+		if took := time.Since(start); took > time.Second {
+			t.Errorf("CapLines took %v, want under a second", took)
+		}
+		if !dropped {
+			t.Fatal("nothing dropped")
+		}
+		// Expected: every strong line, and the first most-10 weak lines in read order.
+		var want []recordlinks.Pair
+		weakLeft := most - strongAt
+		for _, p := range big {
+			var keep []recordlinks.Line
+			for _, l := range p.Lines {
+				if l.Strength == strong {
+					keep = append(keep, l)
+				} else if weakLeft > 0 {
+					weakLeft--
+					keep = append(keep, l)
+				}
+			}
+			if len(keep) > 0 {
+				want = append(want, recordlinks.Pair{A: p.A, B: p.B, Lines: keep})
+			}
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatal("the kept lines are not the 10 strong and the first 74,990 weak in read order, each at its place in its pair")
+		}
+		if len(big[0].Lines) != perPair {
+			t.Fatal("the input was modified")
+		}
+	})
 }

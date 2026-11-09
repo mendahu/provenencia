@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"reflect"
 	"slices"
@@ -14,7 +15,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -428,6 +431,43 @@ func TestRecordLinkStrengthProto(t *testing.T) {
 		if recordLinkStrengthProto(s) == engine.RecordLinkStrength_RECORD_LINK_STRENGTH_UNSPECIFIED {
 			t.Errorf("strength %q maps to unspecified", s)
 		}
+	}
+}
+
+// TestRecordLinksProto: the mapper carries the ids and the two flags that say a
+// read is partial (S16-01 AC-2.7).
+func TestRecordLinksProto(t *testing.T) {
+	graph := func(b byte) graphcache.EvidenceGraph {
+		return graphcache.EvidenceGraph{GraphID: bytes.Repeat([]byte{b}, 16), SourceID: bytes.Repeat([]byte{b + 1}, 16), SourceTypeID: bytes.Repeat([]byte{b + 2}, 16)}
+	}
+	read := persondetail.PersonRecordLinks{
+		Graphs: []graphcache.EvidenceGraph{graph(1), graph(4)},
+		Pairs: []recordlinks.Pair{{A: 0, B: 1, Lines: []recordlinks.Line{
+			{Entity: bytes.Repeat([]byte{9}, 16), Strength: recordlinks.StrengthStrong},
+		}}},
+	}
+	for _, tc := range []struct {
+		name                string
+		notCounted, dropped bool
+	}{
+		{"an ordinary read", false, false},
+		{"not counted", true, false},
+		{"lines dropped", false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := read
+			in.NotCounted, in.LinesDropped = tc.notCounted, tc.dropped
+			got := recordLinksProto(in)
+			if got.GetNotCounted() != tc.notCounted || got.GetLinesDropped() != tc.dropped {
+				t.Fatalf("not_counted %v lines_dropped %v, want %v and %v", got.GetNotCounted(), got.GetLinesDropped(), tc.notCounted, tc.dropped)
+			}
+			if len(got.Graphs) != 2 || len(got.Pairs) != 1 ||
+				got.Pairs[0].GetGraphAId() != database.UUIDString(read.Graphs[0].GraphID) ||
+				got.Pairs[0].GetGraphBId() != database.UUIDString(read.Graphs[1].GraphID) ||
+				got.Pairs[0].Lines[0].GetStrength() != engine.RecordLinkStrength_RECORD_LINK_STRENGTH_STRONG {
+				t.Fatalf("graphs and pairs not mapped: %+v", got)
+			}
+		})
 	}
 }
 

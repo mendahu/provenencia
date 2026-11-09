@@ -1499,7 +1499,8 @@ message GetConclusionDetailRequest {
 }
 
 // ListPersonClaimsRequest asks for a canonical person's accepted identity
-// claims. An unknown or merged handle is conclusiondetails.not_found.
+// claims. An unknown or merged handle, or one that is no Person, is
+// conclusiondetails.not_found.
 message ListPersonClaimsRequest {
   string project_dir = 1;
   string entity_id = 2;
@@ -1534,7 +1535,8 @@ message PersonClaim {
 }
 
 // GetPersonFamilyRequest asks for a canonical person's nuclear family. An
-// unknown or merged handle is conclusiondetails.not_found.
+// unknown or merged handle, or one that is no Person, is
+// conclusiondetails.not_found.
 message GetPersonFamilyRequest {
   string project_dir = 1;
   string entity_id = 2;
@@ -1632,10 +1634,15 @@ message GetPersonRecordLinksRequest {
 // tie-break), and for each pair of graphs that share another person, a line for
 // each such person. Pairs are ordered by graph order, graph_a_id first, and
 // hold only pairs with a line. The facts a line counted are not sent. Computed
-// on each read, never stored.
+// on each read, never stored. not_counted is true when the read passed its work
+// bound and compared nothing (every line weak, or no pair when the lines alone
+// passed it); lines_dropped is true when more lines were found than
+// `persondetail.maxRecordLinkLines` sent, strong lines sent first.
 message GetPersonRecordLinksResponse {
   repeated RecordLinksGraph graphs = 1;
   repeated RecordLinksPair pairs = 2;
+  bool not_counted = 3;
+  bool lines_dropped = 4;
 }
 
 // RecordLinksGraph is one Evidence graph of the person and its Source. Ids are

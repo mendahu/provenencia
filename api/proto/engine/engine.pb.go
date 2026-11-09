@@ -11937,7 +11937,8 @@ func (x *GetConclusionDetailRequest) GetEntityId() string {
 }
 
 // ListPersonClaimsRequest asks for a canonical person's accepted identity
-// claims. An unknown or merged handle is conclusiondetails.not_found.
+// claims. An unknown or merged handle, or one that is no Person, is
+// conclusiondetails.not_found.
 type ListPersonClaimsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
@@ -12202,7 +12203,8 @@ func (x *PersonClaim) GetObservations() []*Observation {
 }
 
 // GetPersonFamilyRequest asks for a canonical person's nuclear family. An
-// unknown or merged handle is conclusiondetails.not_found.
+// unknown or merged handle, or one that is no Person, is
+// conclusiondetails.not_found.
 type GetPersonFamilyRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
@@ -12784,11 +12786,16 @@ func (x *GetPersonRecordLinksRequest) GetEntityId() string {
 // tie-break), and for each pair of graphs that share another person, a line for
 // each such person. Pairs are ordered by graph order, graph_a_id first, and
 // hold only pairs with a line. The facts a line counted are not sent. Computed
-// on each read, never stored.
+// on each read, never stored. not_counted is true when the read passed its work
+// bound and compared nothing (every line weak, or no pair when the lines alone
+// passed it); lines_dropped is true when more lines were found than
+// `persondetail.maxRecordLinkLines` sent, strong lines sent first.
 type GetPersonRecordLinksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Graphs        []*RecordLinksGraph    `protobuf:"bytes,1,rep,name=graphs,proto3" json:"graphs,omitempty"`
 	Pairs         []*RecordLinksPair     `protobuf:"bytes,2,rep,name=pairs,proto3" json:"pairs,omitempty"`
+	NotCounted    bool                   `protobuf:"varint,3,opt,name=not_counted,json=notCounted,proto3" json:"not_counted,omitempty"`
+	LinesDropped  bool                   `protobuf:"varint,4,opt,name=lines_dropped,json=linesDropped,proto3" json:"lines_dropped,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12835,6 +12842,20 @@ func (x *GetPersonRecordLinksResponse) GetPairs() []*RecordLinksPair {
 		return x.Pairs
 	}
 	return nil
+}
+
+func (x *GetPersonRecordLinksResponse) GetNotCounted() bool {
+	if x != nil {
+		return x.NotCounted
+	}
+	return false
+}
+
+func (x *GetPersonRecordLinksResponse) GetLinesDropped() bool {
+	if x != nil {
+		return x.LinesDropped
+	}
+	return false
 }
 
 // RecordLinksGraph is one Evidence graph of the person and its Source. Ids are
@@ -20525,10 +20546,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x1bGetPersonRecordLinksRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x1b\n" +
-	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\x9d\x01\n" +
+	"\tentity_id\x18\x02 \x01(\tR\bentityId\"\xe3\x01\n" +
 	"\x1cGetPersonRecordLinksResponse\x12?\n" +
 	"\x06graphs\x18\x01 \x03(\v2'.provenencia.engine.v1.RecordLinksGraphR\x06graphs\x12<\n" +
-	"\x05pairs\x18\x02 \x03(\v2&.provenencia.engine.v1.RecordLinksPairR\x05pairs\"\xcf\x01\n" +
+	"\x05pairs\x18\x02 \x03(\v2&.provenencia.engine.v1.RecordLinksPairR\x05pairs\x12\x1f\n" +
+	"\vnot_counted\x18\x03 \x01(\bR\n" +
+	"notCounted\x12#\n" +
+	"\rlines_dropped\x18\x04 \x01(\bR\flinesDropped\"\xcf\x01\n" +
 	"\x10RecordLinksGraph\x12\x19\n" +
 	"\bgraph_id\x18\x01 \x01(\tR\agraphId\x12\x1b\n" +
 	"\tgraph_ref\x18\x02 \x01(\tR\bgraphRef\x12\x1d\n" +

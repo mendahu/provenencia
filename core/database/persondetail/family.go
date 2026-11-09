@@ -5,6 +5,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -47,25 +48,33 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 			want = append(want, id)
 		}
 	}
-	if err := r.LoadRelationships(want, canonlinks.Options{Siblings: true}); err != nil {
+	// One batched load of the nodes, so an id that is no node costs no query of
+	// its own; only the people among them are read further.
+	if err := g.Nodes(want); err != nil {
+		return nil, err
+	}
+	var people [][]byte
+	for _, id := range want {
+		if n, _ := g.Cached(id); n.Is(typeID) {
+			people = append(people, id)
+		}
+	}
+	if err := r.LoadRelationships(people, canonlinks.Options{Siblings: true}); err != nil {
 		return nil, err
 	}
 
-	// The unfiltered kin of each person that is read, and every relative they name.
-	var people [][]byte
+	// The capped, unfiltered kin of each person that is read, and every relative
+	// they name.
 	var relatives [][]byte
+	kins := map[string]kinship.Kin{}
 	named := map[string]bool{}
-	for _, id := range want {
-		n, _ := g.Cached(id)
-		if !n.Is(typeID) {
-			continue
-		}
-		people = append(people, id)
+	for _, id := range people {
 		links, err := r.Relationships(id, canonlinks.Options{Siblings: true})
 		if err != nil {
 			return nil, err
 		}
-		kin := kinship.KinOf(id, links, terms)
+		kin := kinship.KinOf(id, links, terms, rules)
+		kins[string(id)] = kin
 		for _, role := range kinship.Roles() {
 			for _, l := range kin[role] {
 				if other, _, _ := l.From(id); !named[string(other)] {
@@ -79,37 +88,36 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		return nil, err
 	}
 
-	// kinOf reads id's relationship links, drops those to people who are not
-	// shown, and reads the kin of what is left.
-	kinOf := func(id []byte, opts canonlinks.Options) (kinship.Kin, error) {
-		links, err := r.Relationships(id, opts)
-		if err != nil {
-			return nil, err
-		}
-		var shown []kinship.Link
-		for _, l := range links {
-			other, _, _ := l.From(id)
-			if n, _ := g.Cached(other); n.Canonical(typeID) {
-				shown = append(shown, l)
-			}
-		}
-		return kinship.KinOf(id, shown, terms), nil
-	}
 	out := make([]Family, 0, len(people))
 	for _, id := range people {
-		kin, err := kinOf(id, canonlinks.Options{Siblings: true})
-		if err != nil {
-			return nil, err
-		}
+		kin := shownKin(g, typeID, id, kins[string(id)])
 		around := map[string]kinship.Kin{}
 		for _, other := range kin.Around(id) {
-			if around[string(other)], err = kinOf(other, canonlinks.Options{}); err != nil {
+			links, err := r.Relationships(other, canonlinks.Options{})
+			if err != nil {
 				return nil, err
 			}
+			around[string(other)] = shownKin(g, typeID, other, kinship.KinOf(other, links, terms, rules))
 		}
 		out = append(out, Family{Person: id, Units: kinship.FamilyUnits(id, kin, around, rules)})
 	}
 	return out, nil
+}
+
+// shownKin is kin without the links to people who are not shown: a relative
+// who is not a canonical Person of typeID. The filter is per link, so each role
+// keeps its order.
+func shownKin(g *graphcache.Graph, typeID []byte, id []byte, kin kinship.Kin) kinship.Kin {
+	shown := kinship.Kin{}
+	for role, links := range kin {
+		for _, l := range links {
+			other, _, _ := l.From(id)
+			if n, _ := g.Cached(other); n.Canonical(typeID) {
+				shown[role] = append(shown[role], l)
+			}
+		}
+	}
+	return shown
 }
 
 // OriginSibling is one child of the person's parents, or a sibling recorded
@@ -132,7 +140,7 @@ type OriginSibling struct {
 // (see originSiblings); the person is left out only when its summary was not
 // read.
 func PersonFamily(c *database.Catalog, entityID []byte) (Family, []OriginSibling, conclusionsummaries.Summaries, error) {
-	if _, err := conclusiondetails.Handle(c, entityID); err != nil {
+	if _, err := personNode(c, entityID); err != nil {
 		return Family{}, nil, conclusionsummaries.Summaries{}, err
 	}
 	families, err := Families(c, [][]byte{entityID})
