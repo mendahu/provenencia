@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"strings"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/apperr"
@@ -13,7 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
@@ -365,11 +363,7 @@ func SetSourceDate(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var date *datevalue.Value
-	if d := req.GetDate(); d != nil && strings.TrimSpace(d.GetKind()) != "" {
-		v := valuecodec.DateFromProto(d)
-		date = &v
-	}
+	date := valuecodec.OptionalDateFromProto(req.GetDate())
 	var out *engine.SetSourceDateResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		got, wrote, err := writes.Run(c, writes.Op{Action: "set_source_date", UserID: userID},
