@@ -1,6 +1,6 @@
 # S16-07 — One paged fold that moves focus
 
-**Status:** Planned
+**Status:** Landed in [#761](https://github.com/mendahu/provenencia/pull/761) (2026-11-09)
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S16-D2](../design/archive/S16-D2-person-page-folds.md), board agreed 2026-11-09 (one brief for the Person page's Family, Timeline and Sources folds: FH-1 – FH-5, FH-W1, FH-W2)
@@ -27,6 +27,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- **The focus keeper maps without scrolling (D-11, D-12 amended in review, user, 2026-11-09).** `focusKeeper(...)`, `FocusKeeper.reclaim` and `FocusKeeper.hand` take a pure `map: (Stop) -> Stop` and a `scroll: (Stop) -> Void` in place of `reveal:`; `took` compares against the mapped stop, and only a claim scrolls (through the added `FocusKeeper.claimed(map:scroll:)`, so the rule is testable without a `FocusState`). The Gallery's `reveal` split into `map` and `scroll`; the Timeline passes `{ $0 }` and `{ _ in }`. Review MNT-1.
+- `ConclusionFoldState.reveal(_:pages:)` writes only when it adds pages, so D-10's "greater than the current" lives in the one function (review CON-1).
+- `PersonFamilyContent.tileID(column:group:personID:)` is the one spelling of a Family tile id (review MNT-2); Family's `.id` sits inside the tile's `.offset` so the scroll lands where the tile is drawn (review UX-1).
+- T-6's parent-set case uses 32 sets folded at 30: the plan's "3 sets folded at 1" cannot fold at the fixed limit.
+- The version bump is 0.4.3 → 0.4.4 (main was at 0.4.3).
+- The Show more's scroll fires on a pointer click too; moving it into the row, keyboard only, is in S15-30's scope (review MNT-3, UX-5).
 
 ## 1. Objective
 
