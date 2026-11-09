@@ -20,7 +20,7 @@ enum PersonFamilyRole: Equatable {
 /// family the person formed on the right (each partner with their children).
 /// Laid out from what Go gives, in Go's order, with no regrouping. Each list is
 /// folded at `foldLimit` behind a "Show N more" row until its `Fold` is in
-/// `expanded`; Go returns at most 100 relatives per role (`kinship.KinOf`); here
+/// `expanded`; Go returns at most `kinship.Rules.MaxKinPerRole` relatives per role (`kinship.KinOf`); here
 /// only the first paint is bounded.
 /// Pure; the layout places it and the view draws it.
 struct PersonFamilyContent: Equatable {

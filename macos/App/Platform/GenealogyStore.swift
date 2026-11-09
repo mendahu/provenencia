@@ -818,7 +818,7 @@ struct CatalogPersonRecordLinks: Sendable, Equatable {
     var pairs: [CatalogRecordLinksPair] = []
     /// The read passed its work bound and compared nothing: every line is weak, or no pair is listed.
     var notCounted = false
-    /// More lines were found than the 75,000 Go sends, strong lines first.
+    /// More lines were found than Go sends (`persondetail.maxRecordLinkLines`), strong lines first.
     var linesDropped = false
 }
 

@@ -29,7 +29,7 @@ struct PersonRecordLinksContent: Equatable {
             ids.insert(graph.graphID)
             graphs.append(graph)
         }
-        // Go sends at most 75,000 lines, strong first; every line it sends is an arc, in the read's order.
+        // Go sends at most `persondetail.maxRecordLinkLines` lines, strong first; every line it sends is an arc, in the read's order.
         var arcs: [CircularLinkArc<String>] = []
         for pair in links.pairs where Self.isKept(pair, in: ids) {
             for line in pair.lines {

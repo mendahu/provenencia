@@ -12788,8 +12788,8 @@ func (x *GetPersonRecordLinksRequest) GetEntityId() string {
 // hold only pairs with a line. The facts a line counted are not sent. Computed
 // on each read, never stored. not_counted is true when the read passed its work
 // bound and compared nothing (every line weak, or no pair when the lines alone
-// passed it); lines_dropped is true when more lines were found than the 75,000
-// sent, strong lines sent first.
+// passed it); lines_dropped is true when more lines were found than
+// `persondetail.maxRecordLinkLines` sent, strong lines sent first.
 type GetPersonRecordLinksResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Graphs        []*RecordLinksGraph    `protobuf:"bytes,1,rep,name=graphs,proto3" json:"graphs,omitempty"`
