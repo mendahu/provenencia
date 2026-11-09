@@ -298,10 +298,7 @@ func SetDate(tx *database.Tx, userID, sourceID []byte, date *datevalue.Value) (S
 		}
 		changes = append(changes, dateValueChange(sourceID, prev.DateValueID, nil))
 		ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", held, nil,
-			func() (map[string]any, error) {
-				v, err := datevalues.LookupTx(tx.Tx, prev.DateValueID)
-				return datevalues.RowMap(prev.DateValueID, v), err
-			})
+			datevalues.RowMapTx(tx.Tx, held))
 		if err != nil {
 			return Source{}, nil, err
 		}

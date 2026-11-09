@@ -374,3 +374,13 @@ func LookupManyTx(db interface {
 	}
 	return out, nil
 }
+
+// RowMapTx is the release row-map of the name_values row id for
+// deleteimpact.ReleaseReplaced: it looks the row up when called, then returns
+// its audit row.
+func RowMapTx(tx *sql.Tx, id []byte) func() (map[string]any, error) {
+	return func() (map[string]any, error) {
+		v, err := LookupTx(tx, id)
+		return RowMap(id, v), err
+	}
+}

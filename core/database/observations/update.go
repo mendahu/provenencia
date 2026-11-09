@@ -92,18 +92,9 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 		prevID, newID  []byte
 		rowMap         func() (map[string]any, error)
 	}{
-		{"observations.value_date_id", "date_value", prev.ValueDateID, resolved.DateID, func() (map[string]any, error) {
-			v, err := datevalues.LookupTx(tx.Tx, prev.ValueDateID)
-			return datevalues.RowMap(prev.ValueDateID, v), err
-		}},
-		{"observations.value_name_id", "name_value", prev.ValueNameID, resolved.NameID, func() (map[string]any, error) {
-			v, err := namevalues.LookupTx(tx.Tx, prev.ValueNameID)
-			return namevalues.RowMap(prev.ValueNameID, v), err
-		}},
-		{"observations.value_depiction_id", "depiction_value", prev.ValueDepictionID, resolved.DepictionID, func() (map[string]any, error) {
-			v, err := depictionvalues.LookupTx(tx.Tx, prev.ValueDepictionID)
-			return depictionvalues.RowMap(prev.ValueDepictionID, v), err
-		}},
+		{"observations.value_date_id", "date_value", prev.ValueDateID, resolved.DateID, datevalues.RowMapTx(tx.Tx, prev.ValueDateID)},
+		{"observations.value_name_id", "name_value", prev.ValueNameID, resolved.NameID, namevalues.RowMapTx(tx.Tx, prev.ValueNameID)},
+		{"observations.value_depiction_id", "depiction_value", prev.ValueDepictionID, resolved.DepictionID, depictionvalues.RowMapTx(tx.Tx, prev.ValueDepictionID)},
 	} {
 		ch, err := deleteimpact.ReleaseReplaced(tx, rel.column, rel.entity, rel.prevID, rel.newID, rel.rowMap)
 		if err != nil {
