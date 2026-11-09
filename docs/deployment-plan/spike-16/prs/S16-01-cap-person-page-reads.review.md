@@ -57,3 +57,17 @@
 
 ### X-9 · minor · paperwork
 **Answer:** Fixed. T-14 and T-15 are back in order. Codebase fit names every test. T-2 names its edge builder (`TestSiblingsManyDuplicatesTimesChildren`'s shape). Status stays Draft until round 2.
+
+## Round 2
+
+### X-10 · blocker · the test `kinship.Rules` literals have no `MaxKinPerRole`
+**Answer:** Fixed — D-1: both literals in `core/kinship/kinship_test.go` gain `MaxKinPerRole: 100`; a value below 1 keeps nothing, as every `Rules` bound; STEP-1 lists the file.
+
+### X-11 · major · the DoD sweep hits the spike's own docs
+**Answer:** Fixed — the sweep excludes `docs/deployment-plan/**`.
+
+### X-12 · minor · `linksBetween`'s return shape
+**Answer:** Fixed — D-10 gives `([]recordlinks.Pair, bool, error)`.
+
+### X-13 · minor · the risk row contradicted D-4
+**Answer:** Fixed — §11 now says `Families` keeps `Cached` + `Is` and `personNode` runs once per `PersonFamily`.
