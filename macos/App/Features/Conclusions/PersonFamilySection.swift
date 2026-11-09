@@ -11,19 +11,19 @@ struct PersonFamilySection: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(\.pvWidthClass) private var widthClass
 
-    /// The lists the researcher has unfolded. Reset when the page is another person.
-    @State private var expanded: Set<PersonFamilyContent.Fold> = []
+    /// The pages of each list the researcher has unfolded. Reset when the page is another person.
+    @State private var folds = ConclusionFoldState<PersonFamilyContent.Fold>()
 
     var body: some View {
         let orders = session.nameFormat
-        let expanded = expanded
+        let folds = folds
         ConclusionPageSectionHost<CatalogPersonFamily, PersonFamilyContent, PersonFamilyDiagram>(
             section: .family,
             entityId: entityId,
             errorTitle: L10n.Conclusions.familyErrorTitle,
             emptyTitle: L10n.Conclusions.familyEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.familyEmptyMessage),
-            make: { PersonFamilyContent(family: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders) },
+            make: { PersonFamilyContent(family: $0, folds: folds, locale: .autoupdatingCurrent, orders: orders) },
             isEmpty: \.isEmpty
         ) { content in
             PersonFamilyDiagram(
@@ -31,7 +31,7 @@ struct PersonFamilySection: View {
                 projectDir: session.projectKey.projectDir,
                 widthClass: widthClass,
                 open: { navigation.go(to: $0) },
-                expand: { self.expanded.insert($0) }
+                expand: { self.folds.revealPage($0) }
             )
         }
     }
@@ -48,6 +48,11 @@ struct PersonFamilyDiagram: View {
     var expand: (PersonFamilyContent.Fold) -> Void = { _ in }
 
     @State private var width: CGFloat = 0
+    /// The tile with the keyboard: a tile's id.
+    @FocusState private var focused: String?
+    /// The tile a keyboard Show more just revealed, to scroll into view.
+    @State private var scrollTarget: String?
+    @State private var scrollRequest = 0
 
     var body: some View {
         Group {
@@ -59,6 +64,7 @@ struct PersonFamilyDiagram: View {
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .pvScrollsRowIntoView(scrollTarget, whenRequested: scrollRequest)
     }
 
     private func diagram(_ layout: PersonFamilyLayout) -> some View {
@@ -85,12 +91,24 @@ struct PersonFamilyDiagram: View {
                                 if let location = tile.location { open(location) }
                             }
                             .frame(width: placed.frame.width, height: placed.frame.height)
+                            .focused($focused, equals: placed.id)
                             .offset(x: placed.frame.minX, y: placed.frame.minY)
+                            .id(placed.id)
                             .accessibilityIdentifier("persons.detail.family.tile.\(placed.id)")
                         }
                     }
                     ForEach(group.more, id: \.fold) { more in
-                        ConclusionShowMoreRow(count: more.count) { expand(more.fold) }
+                        let revealed = content.firstRevealed(by: more.fold)
+                        ConclusionShowMoreRow(
+                            hidden: more.count,
+                            fold: PersonFamilyContent.fold,
+                            focus: $focused,
+                            revealed: revealed
+                        ) {
+                            expand(more.fold)
+                            scrollTarget = revealed
+                            scrollRequest += 1
+                        }
                             .frame(width: more.frame.width, height: more.frame.height, alignment: .leading)
                             .offset(x: more.frame.minX, y: more.frame.minY)
                             .accessibilityIdentifier("persons.detail.family.more")

@@ -19,13 +19,13 @@ enum PersonFamilyRole: Equatable {
 /// left (the parent sets, then the siblings with the person among them) and the
 /// family the person formed on the right (each partner with their children).
 /// Laid out from what Go gives, in Go's order, with no regrouping. Each list is
-/// folded at `foldLimit` behind a "Show N more" row until its `Fold` is in
-/// `expanded`; Go returns at most `kinship.Rules.MaxKinPerRole` relatives per role (`kinship.KinOf`); here
+/// folded at `fold.limit` behind a "Show N more" row, then unfolded a page at a time as
+/// `folds` records; Go returns at most `kinship.Rules.MaxKinPerRole` relatives per role (`kinship.KinOf`); here
 /// only the first paint is bounded.
 /// Pure; the layout places it and the view draws it.
 struct PersonFamilyContent: Equatable {
-    /// How many tiles a list shows before it folds.
-    static let foldLimit = 30
+    /// How many tiles a list shows before it folds, and the fewest it hides.
+    static let fold = ConclusionFold(limit: 30, minimumHidden: 1)
 
     /// A list that can be folded. `children` takes the group's index in Go's
     /// order (before the partner fold).
@@ -70,6 +70,12 @@ struct PersonFamilyContent: Equatable {
     var groupsHidden: Int
     /// The right column's one caption, over its first group; nil with no groups.
     var rightCaption: String?
+    /// The focus id of the first tile each fold's next page adds; absent when it hides nothing.
+    private var revealed: [Fold: String] = [:]
+
+    /// The id of the tile that the next "Show more" of `fold` adds first, for the keyboard to
+    /// land on; nil when the list hides nothing.
+    func firstRevealed(by fold: Fold) -> String? { revealed[fold] }
 
     /// Every tile on the page, in reading order.
     var allTiles: [PersonCardLink] {
@@ -85,15 +91,19 @@ struct PersonFamilyContent: Equatable {
 
     init(
         family: CatalogPersonFamily,
-        expanded: Set<Fold> = [],
+        folds: ConclusionFoldState<Fold> = ConclusionFoldState(),
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders()
     ) {
-        let limit = Self.foldLimit
-        /// The first `limit` of a list, or all of it once `fold` is expanded.
+        let rule = Self.fold
+        /// The list as far as the pages revealed for `fold` show it.
         func folded<T>(_ list: [T], _ fold: Fold) -> [T] {
-            ConclusionFold.shown(list, limit: limit, minimumHidden: 1, expanded: expanded.contains(fold)).shown
+            rule.shown(list, pages: folds.pages(fold)).shown
         }
+        func revealedAt<T>(_ list: [T], _ fold: Fold) -> T? {
+            rule.firstRevealed(list, pages: folds.pages(fold))
+        }
+        var revealed: [Fold: String] = [:]
         let focusID = family.person?.entity.id
         func tile(_ member: CatalogFamilyMember, role: PersonFamilyRole, column: String, group: String) -> PersonCardLink {
             let summary = member.person
@@ -111,6 +121,9 @@ struct PersonFamilyContent: Equatable {
         let allParentUnits = family.units.filter { $0.kind == .parents }
         let parentUnits = folded(allParentUnits, .parentSets)
         parentSetsHidden = allParentUnits.count - parentUnits.count
+        if let unit = revealedAt(allParentUnits, .parentSets), let first = unit.partners.first {
+            revealed[.parentSets] = "l-p\(parentUnits.count)-\(first.person.entity.id)"
+        }
         parentSets = parentUnits.enumerated().map { k, unit in
             unit.partners.map { tile($0, role: .parent, column: "l", group: "p\(k)") }
         }
@@ -124,15 +137,19 @@ struct PersonFamilyContent: Equatable {
             }
         }
 
-        // Left: the siblings, once, in Go's order, the person among them. A
-        // fold keeps the person when it falls after the first `limit`.
-        var shownSiblings = folded(family.originSiblings, .siblings)
-        if shownSiblings.count < family.originSiblings.count,
-           let at = family.originSiblings.firstIndex(where: { $0.member.person.entity.id == focusID }),
-           at >= limit {
-            shownSiblings.append(family.originSiblings[at])
+        // Left: the siblings, once, in Go's order, the person among them. The fold runs over
+        // the siblings other than the person, so a page adds exactly its count of tiles; the
+        // person always shows, in Go's place when the sibling before them shows, else last.
+        let focusAt = family.originSiblings.firstIndex { $0.member.person.entity.id == focusID }
+        let otherSiblings = family.originSiblings.filter { $0.member.person.entity.id != focusID }
+        var shownSiblings = folded(otherSiblings, .siblings)
+        siblingsHidden = otherSiblings.count - shownSiblings.count
+        if let first = revealedAt(otherSiblings, .siblings) {
+            revealed[.siblings] = "l-s-\(first.member.person.entity.id)"
         }
-        siblingsHidden = family.originSiblings.count - shownSiblings.count
+        if let focusAt {
+            shownSiblings.insert(family.originSiblings[focusAt], at: min(focusAt, shownSiblings.count))
+        }
         let visibleSets = parentUnits.count
         siblings = shownSiblings.map { origin in
             let summary = origin.member.person
@@ -158,8 +175,16 @@ struct PersonFamilyContent: Equatable {
         let oneParentUnits = family.units.filter { $0.kind == .oneParent }
         let allUnits = partnerUnits + oneParentUnits
         let shownUnits = folded(allUnits, .partners)
+        if let unit = revealedAt(allUnits, .partners) {
+            let index = shownUnits.count
+            let first = unit.kind == .partner ? unit.partners.first : unit.children.first
+            if let first { revealed[.partners] = "r-\(index)-\(first.person.entity.id)" }
+        }
         func children(_ unit: CatalogFamilyUnit, group index: Int) -> (tiles: [PersonCardLink], hidden: Int) {
             let shown = folded(unit.children, .children(index))
+            if let first = revealedAt(unit.children, .children(index)) {
+                revealed[.children(index)] = "r-\(index)-\(first.person.entity.id)"
+            }
             return (shown.map { tile($0, role: .child, column: "r", group: "\(index)") }, unit.children.count - shown.count)
         }
         var groups: [Group] = []
@@ -186,6 +211,7 @@ struct PersonFamilyContent: Equatable {
             }
         }
         self.groups = groups
+        self.revealed = revealed
         groupsHidden = allUnits.count - groups.count
         let anyChildren = allUnits.contains { !$0.children.isEmpty }
         if allUnits.isEmpty {

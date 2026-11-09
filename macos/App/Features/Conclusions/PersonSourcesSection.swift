@@ -12,17 +12,15 @@ struct PersonSourcesSection: View {
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
 
-    /// The Sources whose lines the researcher has unfolded; another person's page is another view.
-    @State private var expanded: Set<String> = []
-    /// Whether the Sources past the fold are shown. Starts folded on every mount, so a restored section opens folded.
-    @State private var rowsExpanded = false
+    /// The pages of each Source's lines and of the Sources the researcher has unfolded; another
+    /// person's page is another view, so it starts folded on every mount.
+    @State private var folds = ConclusionFoldState<PersonSourcesContent.Fold>()
     /// The Unpromote confirm; another person's page is another view, so it starts fresh.
     @State private var unpromote = UnpromoteFlow()
 
     var body: some View {
         let orders = session.nameFormat
-        let expanded = expanded
-        let rowsExpanded = rowsExpanded
+        let folds = folds
         let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
             CatalogQueryKey.sourceTypesList(project: session.projectKey)
         )
@@ -37,8 +35,7 @@ struct PersonSourcesSection: View {
                     groups: $0,
                     sourceTypes: typesHandle?.value ?? [],
                     orders: orders,
-                    expanded: expanded,
-                    rowsExpanded: rowsExpanded
+                    folds: folds
                 )
             },
             isEmpty: \.isEmpty
@@ -47,8 +44,7 @@ struct PersonSourcesSection: View {
                 content: content,
                 entityId: entityId,
                 open: { navigation.go(to: $0) },
-                expand: { self.expanded.insert($0) },
-                expandRows: { self.rowsExpanded = true },
+                expand: { self.folds.revealPage($0) },
                 unpromote: unpromote,
                 beginUnpromote: begin,
                 confirmUnpromote: confirm
@@ -114,6 +110,15 @@ enum PersonSourcesColumns {
 }
 
 private extension View {
+    /// The record line's highlight: a node of the record links diagram is pointed at or focused.
+    /// A Show more standing for folded lines wears it too (S16-D2 FH-1).
+    func personSourcesHighlight(_ on: Bool) -> some View {
+        background(
+            on ? PVColor.surfaceSelected : Color.clear,
+            in: RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+        )
+    }
+
     func personSourcesCitationCell() -> some View {
         frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -139,8 +144,7 @@ struct PersonSourcesList: View {
     let content: PersonSourcesContent
     let entityId: String
     let open: (WorkspaceLocation) -> Void
-    let expand: (String) -> Void
-    let expandRows: () -> Void
+    let expand: (PersonSourcesContent.Fold) -> Void
     let unpromote: UnpromoteFlow
     let beginUnpromote: (PersonSourcesContent.Line) -> Void
     let confirmUnpromote: () async -> Bool
@@ -157,6 +161,9 @@ struct PersonSourcesList: View {
     /// nodes and the highlighted arcs and not by this view, so a hover rebuilds none of the diagram's
     /// content or layout.
     @State private var hover = CircularLinkHover<String>()
+    /// The line a keyboard Show more just revealed, to scroll into view.
+    @State private var scrollTarget: String?
+    @State private var scrollRequest = 0
 
     @Environment(WorkspaceSession.self) private var session
 
@@ -230,8 +237,11 @@ struct PersonSourcesList: View {
             PVDivider(color: PVColor.borderStrong)
             ForEach(Array(content.rows.enumerated()), id: \.element.id) { index, row in
                 if index > 0 { PVDivider() }
+                let fold = PersonSourcesContent.Fold.lines(sourceID: row.id)
                 PersonSourcesRowView(
-                    row: row, open: open, expand: { unfold(row) }, focused: $focus,
+                    row: row, open: open, expand: { unfold(fold) }, focused: $focus,
+                    revealed: content.firstRevealed(by: fold).map { .graph(claimID: $0) },
+                    foldedGraphIDs: content.foldedGraphIDs(by: fold),
                     hover: hover,
                     focusedGraphID: focusedGraphID,
                     unpromoteDisabled: unpromote.isBusy,
@@ -242,14 +252,19 @@ struct PersonSourcesList: View {
                 )
             }
             if content.hiddenRowCount > 0 {
-                ConclusionShowMoreRow(count: content.hiddenRowCount) {
-                    expandRows()
-                    Task { @MainActor in focus = content.firstRevealedRowLineID.map { .graph(claimID: $0) } }
-                }
+                PersonSourcesRowsShowMore(
+                    hidden: content.hiddenRowCount,
+                    focus: $focus,
+                    revealed: content.firstRevealed(by: .rows).map { .graph(claimID: $0) },
+                    foldedGraphIDs: content.foldedGraphIDs(by: .rows),
+                    hover: hover,
+                    focusedGraphID: focusedGraphID
+                ) { unfold(.rows) }
                 .padding(.vertical, PVSpacing.space3)
                 .accessibilityIdentifier("persons.detail.sources.more")
             }
         }
+        .pvScrollsRowIntoView(scrollTarget, whenRequested: scrollRequest)
     }
 
     /// Notes where focus goes after the removed line, then writes.
@@ -281,10 +296,13 @@ struct PersonSourcesList: View {
         }
     }
 
-    /// Unfolds a Source and, once its lines are drawn, focuses the first one it added.
-    private func unfold(_ row: PersonSourcesContent.Row) {
-        expand(row.id)
-        Task { @MainActor in focus = row.firstRevealedLineID.map { .graph(claimID: $0) } }
+    /// Unfolds a page; the Show more row moves the keyboard to the first line it adds, and the
+    /// list scrolls that line just into view.
+    private func unfold(_ fold: PersonSourcesContent.Fold) {
+        let revealed = content.firstRevealed(by: fold)
+        expand(fold)
+        scrollTarget = revealed
+        scrollRequest += 1
     }
 
     private var header: some View {
@@ -301,12 +319,43 @@ struct PersonSourcesList: View {
     }
 }
 
+/// The "Show N more" row under the Sources, which takes the highlight when the diagram's
+/// highlighted graph is on a Source behind it (S16-D2 FH-2). Its own view so only it reads the
+/// hover: a pointer move rebuilds the list's body for nothing else.
+private struct PersonSourcesRowsShowMore: View {
+    let hidden: Int
+    var focus: FocusState<PersonSourcesFocus?>.Binding
+    let revealed: PersonSourcesFocus?
+    /// The graphs of the Sources the fold leaves out.
+    let foldedGraphIDs: Set<String>
+    let hover: CircularLinkHover<String>
+    let focusedGraphID: String?
+    let expand: () -> Void
+
+    var body: some View {
+        let highlighted = hover.highlighted(focused: focusedGraphID).map(foldedGraphIDs.contains) ?? false
+        ConclusionShowMoreRow(
+            hidden: hidden,
+            fold: PersonSourcesContent.rowFold,
+            focus: focus,
+            revealed: revealed,
+            expand: expand
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .personSourcesHighlight(highlighted)
+    }
+}
+
 /// One Source: its title as a link, its type, date and ref, and under the title a line per record.
 private struct PersonSourcesRowView: View {
     let row: PersonSourcesContent.Row
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
+    /// The graph link the next page of this Source's lines starts with; nil when it folds nothing.
+    let revealed: PersonSourcesFocus?
+    /// The graphs whose lines are all behind this Source's Show more.
+    let foldedGraphIDs: Set<String>
     let hover: CircularLinkHover<String>
     let focusedGraphID: String?
     let unpromoteDisabled: Bool
@@ -357,7 +406,7 @@ private struct PersonSourcesRowView: View {
 
     /// The record lines span the whole row less their indent.
     private var lines: some View {
-        let highlightedGraphID = hover.id ?? focusedGraphID
+        let highlightedGraphID = hover.highlighted(focused: focusedGraphID)
         return VStack(alignment: .leading, spacing: PVSpacing.space2) {
             ForEach(row.lines) { line in
                 PersonSourcesLineView(
@@ -365,10 +414,19 @@ private struct PersonSourcesRowView: View {
                     highlighted: line.graphID == highlightedGraphID, hover: { hover.id = $0 },
                     unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
                 )
+                .id(line.id)
             }
             if row.hiddenCount > 0 {
-                ConclusionShowMoreRow(count: row.hiddenCount, expand: expand)
-                    .accessibilityIdentifier("persons.detail.sources.more.\(row.id)")
+                ConclusionShowMoreRow(
+                    hidden: row.hiddenCount,
+                    fold: PersonSourcesContent.lineFold,
+                    focus: focused,
+                    revealed: revealed,
+                    expand: expand
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .personSourcesHighlight(highlightedGraphID.map(foldedGraphIDs.contains) ?? false)
+                .accessibilityIdentifier("persons.detail.sources.more.\(row.id)")
             }
         }
         .padding(.leading, PersonSourcesColumns.lineIndent)
@@ -441,10 +499,7 @@ private struct PersonSourcesLineView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
         .padding(.horizontal, PVSpacing.space2)
-        .background(
-            highlighted ? PVColor.surfaceSelected : Color.clear,
-            in: RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
-        )
+        .personSourcesHighlight(highlighted)
         .contentShape(Rectangle())
         .onHover { hover($0 ? line.graphID : nil) }
         .accessibilityElement(children: .contain)
@@ -462,11 +517,10 @@ private struct PersonSourcesPreview: View {
     var recordLinks: CatalogPersonRecordLinks?
     var failure = false
     var width: CGFloat = 1102
-    var expandedAtStart: Set<String> = []
+    var foldsAtStart = ConclusionFoldState<PersonSourcesContent.Fold>()
 
     @State private var unpromote = UnpromoteFlow()
-    @State private var expanded: Set<String> = []
-    @State private var rowsExpanded = false
+    @State private var folds = ConclusionFoldState<PersonSourcesContent.Fold>()
 
     var body: some View {
         PVPageColumns(primaryFill: true) {
@@ -475,13 +529,11 @@ private struct PersonSourcesPreview: View {
                     groups: groups,
                     sourceTypes: PersonSourcesPreviewData.types,
                     orders: NameFormatOrders(),
-                    expanded: expanded,
-                    rowsExpanded: rowsExpanded
+                    folds: folds
                 ),
                 entityId: Self.entityId,
                 open: { _ in },
-                expand: { expanded.insert($0) },
-                expandRows: { rowsExpanded = true },
+                expand: { folds.revealPage($0) },
                 unpromote: unpromote,
                 beginUnpromote: { _ in },
                 confirmUnpromote: { false }
@@ -493,7 +545,7 @@ private struct PersonSourcesPreview: View {
         .environment(\.pvWidthClass, width >= PVSpacing.widthWideBreakpoint ? .wide : .regular)
         .frame(width: width, height: 700)
         .background(PVColor.surfacePage)
-        .onAppear { expanded = expandedAtStart }
+        .onAppear { folds = foldsAtStart }
     }
 }
 

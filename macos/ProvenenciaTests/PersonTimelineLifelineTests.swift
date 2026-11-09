@@ -7,12 +7,15 @@ struct PersonTimelineLifelineTests {
     private typealias Data = PersonTimelinePreviewData
     private let en = Locale(identifier: "en_US")
 
-    private func content(_ timeline: CatalogPersonTimeline, expanded: Set<PersonTimelineContent.Fold> = []) -> PersonTimelineContent {
-        PersonTimelineContent(timeline: timeline, expanded: expanded, locale: en)
+    private func content(_ timeline: CatalogPersonTimeline, unfolded: [PersonTimelineContent.Fold] = []) -> PersonTimelineContent {
+        var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
+        // A hundred pages shows any list here.
+        for fold in unfolded { folds.reveal(fold, pages: 100) }
+        return PersonTimelineContent(timeline: timeline, folds: folds, locale: en)
     }
 
-    private func lifeline(_ timeline: CatalogPersonTimeline, ppy: CGFloat, expanded: Set<PersonTimelineContent.Fold> = []) -> (PersonTimelineLifeline, PersonTimelineContent) {
-        let content = content(timeline, expanded: expanded)
+    private func lifeline(_ timeline: CatalogPersonTimeline, ppy: CGFloat, unfolded: [PersonTimelineContent.Fold] = []) -> (PersonTimelineLifeline, PersonTimelineContent) {
+        let content = content(timeline, unfolded: unfolded)
         return (PersonTimelineLifeline(content: content, pointsPerYear: ppy), content)
     }
 
@@ -39,14 +42,14 @@ struct PersonTimelineLifelineTests {
         if case .dot = line.mark("4")?.shape {} else { Issue.record("a day is a dot") }
         if case .bar(_, _, let openStart, _) = line.mark("3")?.shape { #expect(!openStart) } else { Issue.record("a year is a bar") }
 
-        let (lise, _) = lifeline(Data.lise, ppy: 41, expanded: [.dated])
+        let (lise, _) = lifeline(Data.lise, ppy: 41, unfolded: [.dated])
         if case .bar(_, _, let openStart, _) = lise.mark("l119")?.shape { #expect(openStart) } else { Issue.record("bef. is a bar") }
         if case .bar(let from, let to, _, _) = lise.mark("l4")?.shape { #expect(to > from) } else { Issue.record("a range is a bar") }
         let spacing = zip(lise.ticks, lise.ticks.dropFirst()).map { $0.1.y - $0.0.y }
         #expect(spacing.allSatisfy { $0 >= 34 } && lise.ticks.allSatisfy { !$0.isQuarter })
         #expect(lise.ticks.compactMap(\.year).prefix(2) == [1801, 1802])
 
-        let (thin, _) = lifeline(Data.lise, ppy: 10, expanded: [.dated])
+        let (thin, _) = lifeline(Data.lise, ppy: 10, unfolded: [.dated])
         #expect(thin.ticks.compactMap(\.year).prefix(2).map { $0 % 5 } == [0, 0])
 
         // A tether leaves a closed bar at its middle, an open bar 8pt in from its known end.
@@ -148,7 +151,7 @@ struct PersonTimelineLifelineTests {
     }
 
     @Test func oneHundredTwentyEvents() {
-        let (line, content) = lifeline(Data.lise, ppy: 41, expanded: [.dated])
+        let (line, content) = lifeline(Data.lise, ppy: 41, unfolded: [.dated])
         let datedIDs = content.allSpans.map(\.id)
         #expect(datedIDs.count == 120)
         #expect(line.marks.map(\.id) == content.items.compactMap { $0.eventRow?.span != nil ? $0.id : nil })

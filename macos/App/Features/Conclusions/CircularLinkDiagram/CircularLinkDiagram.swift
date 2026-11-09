@@ -50,7 +50,7 @@ private struct CircularLinkHighlightedLayers<ID: Hashable>: View {
 
     var body: some View {
         let nodes = dataset.nodes
-        let highlightedID = hover.id ?? focusedID
+        let highlightedID = hover.highlighted(focused: focusedID)
         let highlighted = highlightedID.flatMap { dataset.index(of: $0) }
         let neighbors = highlighted.map { dataset.neighbors(ofIndex: $0) } ?? []
         ZStack(alignment: .topLeading) {
