@@ -436,7 +436,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-30 — The paged fold moves to the kit
 
-**Ships.** Preparatory, Swift: S16-07's fold rule and fold state move from `Features/Conclusions/ConclusionShowMoreRow.swift` to `macos/App/Platform/` beside `FocusClaim`, and its Show more row becomes `DesignSystem/Components/ShowMoreRow/PVShowMoreRow` with a `L10n.DesignSystem` string; the Family, Timeline and Sources sections use them with no visible change.
+**Ships.** Preparatory, Swift: S16-07's fold rule and fold state move from `Features/Conclusions/ConclusionShowMoreRow.swift` to `macos/App/Platform/` beside `FocusClaim`, and its Show more row becomes `DesignSystem/Components/ShowMoreRow/PVShowMoreRow` with a `L10n.DesignSystem` string; the Family, Timeline and Sources sections use them with no visible change. `PVShowMoreRow` also owns the scroll that follows a keyboard Show more (a `ScrollViewReader` in the row scrolls to `revealed` in the same branch that claims focus), so Family's and Sources' `scrollTarget`/`scrollRequest` pairs and their `pvScrollsRowIntoView` go away and a pointer click no longer scrolls (S16-07 ship log MNT-3, UX-5); the Timeline's anchor-top scroll stays its own.
 **Not this PR.** The provenance table's fold (S15-27).
 **Check.** `scripts/check-guidance-names.py` passes; the sections' fold and focus tests pass unchanged.
 **Context.** Rule "The provenance table folds a page at a time"; S16-07; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md); [`design-system-layers.md`](../../design-system-layers.md).
