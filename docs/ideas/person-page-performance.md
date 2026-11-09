@@ -30,6 +30,8 @@ If time follows work, the richer shapes take about 185–440 ms a read, with eve
 
 After an unfold, every shown row and its cards are laid out in one non-lazy pass (`PersonTimelineStack`), each card's `CachedThumbnail` starting its `.task` together. Card rows are a fixed height (`PVTileCardSize.compact.height`), so a row's card block could be sized without laying it out and its cards mounted only near the viewport.
 
+The dated rows after the death marker never fold: every dated row after the person's first own burial or funeral (a later census, a probate, a memorial) is built unfolded, so a crafted person with thousands of such rows builds every one. **Shape:** fold them as the rows before the marker fold, with their own page count (user, 2026-11-09).
+
 ## The family response sends each sibling two or three times (P-23)
 
 Siblings ship as the parents units' children, the siblings unit, and `origin_siblings`, each with a full `PersonSummary` (`api/proto/engine.proto` 1549–1553, 1680–1692; `core/database/persondetail/family.go` 173–241). The app reads only the parents units' partners and `originSiblings` (`PersonFamilyContent.swift` 224–262). Units are the family tree's shape (S13-12 D-3, [`kinship-view.md`](kinship-view.md)), so the tree may read them later. **Shape:** send `origin_siblings` as indexes into one relatives table, or leave the unit children off the page response until a tree reads them.
