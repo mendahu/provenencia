@@ -4,10 +4,9 @@
 
 ## To user
 
-- **K-2 · Preparatory Swift PR S15-26** (the metadata board takes an owner). Added to the map ahead of S15-09, S15-10 and S15-11; a preparatory PR is the user's call. Recommendation: keep it. Without it, three PRs each copy the Source page's board.
-- **K-16 · Which Subject names the item** (`{citation.item}`) when a Citation supports several people. Needed before S15-16 is planned. Recommendation: the Citation label when set; else the event Subject with Observations on the Citation and its principal participant; else the first person Subject by ref; a census head of household only through the label or the graph metadata.
-
-- **K-18 · Format edits and the Person page reads.** A format or field edit reports only `ListSourceVocabulary`, and no Person read (provenance sheet, Sources section) follows a catalog list, today or after S16-24/S16-25's `.followsInputs`. Recommendation: make catalog lists a fourth declared input in Spike 16: a read reports the lists it used (`source_vocabulary` when it rendered citations), `.followsInputs` honours them, and Go cache entries that keep Source type words or formats declare it in S16-10's Reads. That is a change to S16-24 and S16-25's scope (one wire field, one selector branch), so it is your call; the alternative is a separate `.list(.sourceVocabulary)` follow on two keys, a second mechanism. Needed before S15-21 and S15-22 are planned.
+- ~~K-2 · S15-26~~: kept (user, 2026-11-09).
+- ~~K-18 · Format edits and the Person page reads~~: closed by the user's call (2026-11-09) to render citations on demand from SQL with nothing cached; see rule "Citations render on demand, from SQL", which replaces the round-1 answer to K-3. To be measured at Scale in S15-16.
+- **K-16 · `{citation.item}`.** Writer's new recommendation to the user (2026-11-09): per-Citation derivation would give the Citations of one household different items and break grouping; make the item a graph-level metadata field (`item`) typed once per graph, drop `{citation.item}` and its derivation, keep `{citation.label}`. Awaiting the user.
 
 ## Writer's own calls
 

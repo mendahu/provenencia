@@ -16,10 +16,10 @@ Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-e
 
 | Spike 16 | Spike 15 PRs after it | Shared code |
 | --- | --- | --- |
-| S16-12 | S15-05, S15-16, S15-24 | The Source record: S15-05 adds the Source date to it; the move changes a graph's and an Artifact's Source |
-| S16-13 | S15-05, S15-16, S15-22, S15-24 | The records tier and the Sources section read, which renders and groups citations (S15-22) |
+| S16-12 | S15-05, S15-24 | The Source record: S15-05 adds the Source date to it; the move changes a graph's and an Artifact's Source |
+| S16-13 | S15-05, S15-22, S15-24 | The records tier and the Sources section; S15-22 groups citations there, rendered on demand from SQL rather than from the caches |
 | S16-15 | S15-24 | The graph catalog, which a move re-lists for both Sources |
-| S16-30 | S15-21 | The provenance records read, which renders and groups citations |
+| S16-30 | S15-21 | The provenance sheet, which then shows citations rendered on demand from SQL |
 | S16-03, S16-06, S16-07 | S15-05, S15-22 | `PersonSourcesSection.swift`, `PersonSourcesContent.swift` |
 | S16-25 | — | Converts any `CatalogQueryKey` cases Spike 15 adds before it lands (likely S15-11, S15-17, S15-23) along with the rest; Spike 15 keys added after it use the value keys |
 

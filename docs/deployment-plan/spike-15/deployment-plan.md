@@ -57,11 +57,11 @@ These are the calls for this spike. PR plans treat them as binding.
 - **No transforms on metadata.** Values print exactly as typed; only the Source date (a DateValue) has formatting options (`:year`, `:full`). Each field's description says to enter the value as it should appear. Refused: inverting, reversing, abbreviating. Binds S15-14, S15-19.
 - **Formats name fields by id.** `core/citationformat` defines the stored token for a field id and one rewrite of the parse tree between keys and ids; one `metadatafields.ResolveKeysTx(tx, keys, preferOrigin)`, beside `lookupTx`, maps keys to ids, and both the `sourcetypes` format write and `sourcevocab.Install` call it. A field named in any format is in use: its delete is refused by a delete-impact probe over the three format columns, listing the types ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), which gains the text-reference case). Field keys stay unrenamable, as today. Binds S15-14, S15-15, S15-17, S15-20. (K-7.)
 - **One engine, in Go.** `core/citationformat` parses and renders; values go in after parsing, so a `*` or `[` in a value never formats. The app renders only through FFI. Binds S15-14, S15-16, S15-21 – S15-23.
-- **Citations render inside the reads that list them.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key; the provenance records read (S16-30) and the Sources section read (S16-13) call it, so a screen makes no separate render call and Swift keeps no cache of rendered text. The resolver reads each Source, Artifact and graph's values once per batch (300 Citations at Scale) through one batch read by owners. Artifact and graph values are Source-scoped changes, so the reads refresh through Spike 16's declared inputs. A format or field edit reports only `ListSourceVocabulary`, which no Person read follows today; how those reads refresh on it is open (review K-18, to the user) and is settled before S15-21 and S15-22 are planned. Binds S15-16, S15-21 – S15-23. (Map review K-3.)
+- **Citations render on demand, from SQL.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key. It reads the catalog directly in a few batched queries (types and formats; Source, Artifact and graph values through S15-07's batch read by owners; Source titles and dates), not Spike 16's caches, and nothing it produces is cached in Go or Swift: a screen asks for its citations when it shows them (the provenance sheet when it opens, the Sources section when it appears), so a format or field edit needs no refresh signal; a screen already open while a format is edited elsewhere catches up the next time it is shown. Measured at Scale (300 Citations per call) in S15-16; caching is a later decision if it is slow (user, 2026-11-09). This is a deliberate exception to Spike 16's "A Source's words live once". Binds S15-16, S15-21 – S15-23. (Replaces the round-1 answer to K-3; closes K-18.)
 - **One render request for previews.** The editor and the Source page preview through one request: a form, an optional unsaved format, and a target (Citation ids, or a Source for the list form); it returns runs, missing fields and parse diagnostics. Swift never parses a format. Binds S15-16, S15-17, S15-23. (K-10.)
 - **Built-in placeholders are one table.** `core/citationformat` declares each built-in once (name, level, allowed in the list form, options such as `:year`, `:full`); parsing, the list-form rule, missing fields, the resolver and the editor's Insert field list (over FFI) all read it. Binds S15-14, S15-16, S15-17. (K-5.)
 - **Today's line stays the fallback, in Swift.** For a type with no full format the engine returns no text, and the app shows today's localized line from `CitationLineDisplay`, which stays for that and for its other callers (Gallery captions, the likeness viewer, a denier's Source name). Go does not write a second copy. Binds S15-16, S15-21. (K-4.)
-- **Build on Spike 16's caches.** Source words come from the Source records (S16-12), per-graph Subject records from the records tier (S16-13), graph shells from the graph catalog (S16-15) and provenance records from S16-30. Spike 15 PRs that read or move those land after them; the rest run alongside Spike 16 (user, 2026-11-09). Spike 16's map names this spike in **Shared with Spike 15**. Spike 15's new Swift query keys are added to today's `CatalogQueryKey` enum and converted with the rest by S16-25, rather than waiting for it, so slices 1 to 4 can run alongside Spike 16 (user, 2026-11-09). Binds S15-05, S15-16, S15-21, S15-22, S15-24.
+- **Build on Spike 16's caches.** The Person page date comes from the Source records (S16-12, S16-13); the provenance sheet and the Sources section are edited after S16-30 and S16-13 have reshaped them; the move lands after S16-12, S16-13 and S16-15 so their Apply sees it. Citation rendering reads SQL instead (rule "Citations render on demand, from SQL"). Spike 15 PRs that touch those land after them; the rest run alongside Spike 16 (user, 2026-11-09). Spike 16's map names this spike in **Shared with Spike 15**. Spike 15's new Swift query keys are added to today's `CatalogQueryKey` enum and converted with the rest by S16-25, rather than waiting for it, so slices 1 to 4 can run alongside Spike 16 (user, 2026-11-09). Binds S15-05, S15-16, S15-21, S15-22, S15-24.
 - **The seed is the product default.** The 26 types, 62 fields, suggestions and formats of map § 6.8 go into `core/database/sourcevocab` and install at create through `sourcevocab.Install`. No plugin, no opt-out, no install on open, no seed-version row. The dogfood projects are updated by running Install once against them; the PR says how. Binds S15-19, S15-20.
 - **Grouping is by the rendered full citation, computed when read.** Citations whose full citation renders the same are one citation with their Citations beneath; nothing is stored. Binds S15-21, S15-22.
 - **A move is the whole bundle.** The bundle is the closure of the picked Artifact or graph over `evidence_graph_artifacts`. One flow from an Artifact or a graph; one function computes the bundle for the preflight and the write; one transaction updates `source_id` on `artifacts`, `evidence_graphs` and `subjects` with deferred foreign keys, recording per-row changes so audit scopes (both Sources), `Reads`, search and Spike 16's caches all follow from the effects registry, with no hand-written cache update or scope tag; a Source left with no graph gets `evidencegraphs.CreateDefault`. Source-level values are not looked at. Binds S15-24, S15-25. Design: [`move-artifact-between-sources.md`](move-artifact-between-sources.md).
@@ -87,13 +87,13 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-13 | The composer records the printed page | 3 | Swift: `page_label` on the page selector | S15-D8 | S15-D8 | — | Scoped |
 | S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse, render, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | S15-06 | — | Scoped |
 | S15-15 | Source types store citation formats | 4 | Go: migration (three columns), id-keyed storage, delete impact, type read and write | — | S15-14 | — | Scoped |
-| S15-16 | Citations render through their type's formats | 5 | Go: the resolver; one batch render for the reads; one render request for previews; built-ins over FFI | — | S15-08, S15-15, S15-05, S16-12, S16-13 | — | Scoped |
+| S15-16 | Citations render through their type's formats | 4 | Go: the SQL resolver; one batch render RPC; one render request for previews; built-ins over FFI | — | S15-08, S15-15, S15-02 | — | Scoped |
 | S15-17 | The format editor | 5 | Swift: three formats, Insert field by level, live preview, warnings | S15-D6 | S15-16, S15-12, S15-D6 | — | Scoped |
 | S15-18 | A new type can copy another's formats and suggestions | 4 | Go and Swift: one write; **Copy from** in the new type dialog | S15-D7 | S15-15, S15-06, S15-D7 | — | Scoped |
 | S15-19 | Seed the citation types, fields and suggestions | 4 | Go: `sourcevocab` registry and Install for 26 types, 62 fields, levelled suggestions | — | S15-06 | — | Scoped |
 | S15-20 | Seed the citation formats | 4 | Go: each seeded type's three formats; a render test per type | — | S15-19, S15-15 | — | Scoped |
-| S15-21 | The provenance sheet shows formatted citations | 6 | Go and Swift: the provenance read renders and groups; the sheet shows them; Copy citation copies rich text | S15-D9 | S15-16, S16-30, S15-D9 | — | Scoped |
-| S15-22 | The Sources section groups a Source's Citations by citation | 6 | Go and Swift: the Sources section read renders and groups | S15-D3 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
+| S15-21 | The provenance sheet shows formatted citations | 6 | Swift: the sheet renders on demand and groups; Copy citation copies rich text | S15-D9 | S15-16, S16-30, S15-D9 | — | Scoped |
+| S15-22 | The Sources section groups a Source's Citations by citation | 6 | Swift: the section renders on demand and groups | S15-D3 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-23 | The Source page previews its citation | 6 | Swift: preview, missing fields, Copy citation | S15-D1 | S15-16, S15-D1 | — | Scoped |
 | S15-24 | Move a bundle to another Source in the engine | 7 | Go: closure, preflight and move RPCs, one transaction through the effects registry | — | S16-12, S16-13, S16-15 | — | Scoped |
 | S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1 | S15-24, S15-D10, S15-D1 | — | Scoped |
@@ -148,11 +148,11 @@ SLICE 4 — Formats as data                             (alongside Spike 16)
   ✎ S15-D7 ──▶ S15-18  A new type can copy another's formats and suggestions
   S15-19  Seed the citation types, fields and suggestions
   S15-20  Seed the citation formats
-  Check: bar 6 on a new project; bar 5's Copy from.
-
-SLICE 5 — Rendering                                   (after S16-12, S16-13)
-  S15-05  The Person page's Sources section shows each Source's date   (S15-D3)
   S15-16  Citations render through their type's formats
+  Check: bar 6 on a new project; bar 5's Copy from; the census example renders in a handler test.
+
+SLICE 5 — Person page date and the format editor
+  S15-05  The Person page's Sources section shows each Source's date   (S15-D3, after S16-12, S16-13)
   S15-17  The format editor                                            (S15-D6)
   Check: bar 1 on the Person page; bar 5.
 
@@ -170,7 +170,7 @@ SLICE 7 — Move                                        (after S16-12, S16-13, S
 S15-99 — Dogfood close / docs
 ```
 
-**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06 and S15-26 have no dependencies and can start at once, with S15-07 and S15-14 right after S15-06; slice 1's UI waits on S15-D1 and S15-D2. Slice 5 starts when S16-12 and S16-13 land (S15-05 also after S16-03, S16-06 and S16-07, which edit the same Sources section files), slice 6 when S16-30 lands, slice 7 when S16-15 lands as well.
+**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06 and S15-26 have no dependencies and can start at once, with S15-07 and S15-14 right after S15-06; slice 1's UI waits on S15-D1 and S15-D2. In slice 5, S15-17 needs only slice 4; S15-05 waits for S16-12 and S16-13 (and S16-03, S16-06 and S16-07, which edit the same Sources section files); slice 6 when S16-30 lands, slice 7 when S16-15 lands as well.
 
 ### Dependencies at a glance
 
@@ -179,7 +179,6 @@ S15-02 ──▶ S15-03, S15-04, S15-05, S15-16
 S15-06 ──▶ S15-07, S15-08, S15-12, S15-14, S15-18, S15-19
 S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16
 S15-26 ──▶ S15-09, S15-10, S15-11
-S15-05 ──▶ S15-16
 S15-14 ──▶ S15-15 ──▶ S15-16, S15-18, S15-20
 S15-19 ──▶ S15-20
 S15-16 ──▶ S15-17, S15-21, S15-22, S15-23
@@ -188,7 +187,7 @@ S15-05 ──▶ S15-22
 S15-24 ──▶ S15-25
 
 Spike 16:
-S16-12, S16-13 ──▶ S15-05, S15-16
+S16-12, S16-13 ──▶ S15-05
 S16-03, S16-06, S16-07 ──▶ S15-05, S15-22
 S16-30 ──▶ S15-21
 S16-12, S16-13, S16-15 ──▶ S15-24
@@ -352,10 +351,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-16 — Citations render through their type's formats
 
-**Ships.** The catalog resolver for `core/citationformat`: built-ins from the Source record (with the date, S15-05), the Citation's locator and the graph (`{citation.item}` per map § 6.5); metadata at each level with the `meta.` fallback, through S15-07's batch read; one batch render function for the reads (runs, plain text, missing fields, group key per Citation); one render request for previews; the built-ins table over FFI. A type with no full format renders no text.
+**Ships.** The catalog resolver for `core/citationformat`, reading SQL: built-ins from the Source row and its date, the Citation's locator and the graph (`{citation.item}` per map § 6.5); metadata at each level with the `meta.` fallback, through S15-07's batch read; one batch render RPC (runs, plain text, missing fields, group key per Citation); one render request for previews; the built-ins table over FFI. A type with no full format renders no text. Nothing is cached.
 **Not this PR.** Any screen (S15-17, S15-21 – S15-23).
-**Check.** Handler tests: the census example renders from values spread over Source, Artifact and graph; 300 Citations render in one call with each Source, Artifact and graph read once.
-**Context.** Rules "One engine, in Go", "Citations render inside the reads that list them", "One render request for previews", "Today's line stays the fallback", "Build on Spike 16's caches"; map §§ 6.3, 6.5, 6.6.
+**Check.** Handler tests: the census example renders from values spread over Source, Artifact and graph; 300 Citations render in one call in a fixed number of queries, timed at Scale.
+**Context.** Rules "One engine, in Go", "Citations render on demand, from SQL", "One render request for previews", "Today's line stays the fallback"; map §§ 6.3, 6.5, 6.6.
 
 #### S15-17 — The format editor
 
@@ -368,14 +367,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-21 — The provenance sheet shows formatted citations
 
-**Ships.** The provenance records read (S16-30) renders and groups through S15-16's batch function; the sheet shows each record's full citation with its Citations beneath, or today's line when the type has no format. The existing Copy citation (`PVClipboardButton`) copies the full or short form as rich and plain text through one rich-payload write added to `PVClipboardCopyState`. `CitationLineDisplay` stays as the fallback and for its other callers.
+**Ships.** When the provenance sheet opens it asks S15-16's batch render for its Citations and groups them by the returned key; it shows each record's full citation with its Citations beneath, or today's line when the type has no format. Lands after S16-30, which reshapes the sheet's records. The existing Copy citation (`PVClipboardButton`) copies the full or short form as rich and plain text through one rich-payload write added to `PVClipboardCopyState`. `CitationLineDisplay` stays as the fallback and for its other callers.
 **Not this PR.** The Sources section (S15-22).
 **Check.** Bar 4's provenance sheet; bar 7 on the sheet; copying pastes italics into a rich-text editor.
-**Context.** S15-D9; rules "Grouping is by the rendered full citation", "Citations render inside the reads that list them", "Today's line stays the fallback"; S16-30; `PVProvenanceSheetContent.swift`, `PVProvenanceRecordRow.swift`, `PVClipboardCopyState`, `CitationLineDisplay.swift`.
+**Context.** S15-D9; rules "Grouping is by the rendered full citation", "Citations render on demand, from SQL", "Today's line stays the fallback"; S16-30; `PVProvenanceSheetContent.swift`, `PVProvenanceRecordRow.swift`, `PVClipboardCopyState`, `CitationLineDisplay.swift`.
 
 #### S15-22 — The Sources section groups a Source's Citations by citation
 
-**Ships.** The Sources section read (S16-13) renders and groups through S15-16's batch function, and a Source's Citations that render the same full citation show as one citation with the pieces beneath. Lands after S16-03, S16-06 and S16-07.
+**Ships.** When the Sources section appears it asks S15-16's batch render for its Citations, and a Source's Citations with the same group key show as one citation with the pieces beneath. Lands after S16-03, S16-06 and S16-07.
 **Not this PR.** Re-ordering Sources.
 **Check.** Bar 7 in the Sources section, on a person cited 5 times on one household.
 **Context.** S15-D3; rule "Grouping is by the rendered full citation"; `PersonSourcesContent.swift`.
