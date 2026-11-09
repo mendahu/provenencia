@@ -680,7 +680,7 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | Copy and item values | `artifact_metadata`, `evidence_graph_metadata` and their layout tables, reusing the field vocabulary (§ 6.6) | **Schema** |
 | Suggestions per level | `source_type_metadata_fields.level` (`source`, `artifact`, `graph`) | **Schema** |
 | Citation formats | `source_types.citation_full`, `citation_short`, `citation_list` (text, optional) (§ 6.3) | **Schema** |
-| Format engine | `core/citationformat`: parse, resolve, render; replaces `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
+| Format engine | `core/citationformat`: parse, resolve, render; `CitationLineDisplay` stays as the fallback for a type with no format (deployment plan, "Today's line stays the fallback") ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
 | Format editor | On the Source type: the three formats, an insert-field picker grouped by level, a live preview against a real Source, warnings for unknown fields; **Copy from** another type in the new type dialog | UI |
 | Item description | The `{citation.item}` placeholder: the Citation label, else read from the graph (§ 6.5) | Engine |
 | Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
@@ -757,7 +757,7 @@ The **new type** dialog has **Copy from**: pick an existing type, and the new on
 
 ### 6.4 Getting the seed into existing projects
 
-**Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row. `Install` already writes with upserts (`ON CONFLICT (key, origin)` for types and fields, and for suggestions), so the one-off command can run it against an existing catalog: it adds what is missing and resets the product rows' labels, suggestion order and formats to the seed.
+**Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row. `Install` already writes with upserts (`ON CONFLICT (key, origin)` for types and fields, and for suggestions), so the one-off command can run it against an existing catalog: it adds what is missing and resets the product rows' labels, suggestion order and formats to the seed, and restores product rows that were deleted. [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) keeps `Install` out of FFI, Swift and project open, so the run is a developer command or test harness, named in S15-20's plan.
 
 Revisit before release, when existing projects belong to other researchers.
 

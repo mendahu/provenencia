@@ -21,7 +21,7 @@ Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-e
 | S16-15 | S15-24 | The graph catalog, which a move re-lists for both Sources |
 | S16-30 | S15-21 | The provenance records read, which renders and groups citations |
 | S16-03, S16-06, S16-07 | S15-05, S15-22 | `PersonSourcesSection.swift`, `PersonSourcesContent.swift` |
-| S16-25 | — | Converts the `CatalogQueryKey` cases Spike 15 adds in the meantime (S15-09, S15-11, S15-17, S15-23) along with the rest |
+| S16-25 | — | Converts any `CatalogQueryKey` cases Spike 15 adds before it lands (likely S15-11, S15-17, S15-23) along with the rest; Spike 15 keys added after it use the value keys |
 
 Spike 16's Apply for Source records and the graph catalog must handle an Artifact or graph whose `source_id` changes (S15-24): both Sources are in the write's `SourceScopes`.
 

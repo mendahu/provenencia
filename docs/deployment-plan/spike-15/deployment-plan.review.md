@@ -1,11 +1,13 @@
 # Review — Spike 15 PR map
 
-**Verdict:** Fits with changes (after round 1). **Rounds:** 1. **Reviewers:** maintainability (Opus, fresh context, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
+**Verdict:** Fits with changes (after round 2; one item with the user). **Rounds:** 2. **Reviewers:** maintainability (Opus, fresh context each round, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
 
 ## To user
 
 - **K-2 · Preparatory Swift PR S15-26** (the metadata board takes an owner). Added to the map ahead of S15-09, S15-10 and S15-11; a preparatory PR is the user's call. Recommendation: keep it. Without it, three PRs each copy the Source page's board.
 - **K-16 · Which Subject names the item** (`{citation.item}`) when a Citation supports several people. Needed before S15-16 is planned. Recommendation: the Citation label when set; else the event Subject with Observations on the Citation and its principal participant; else the first person Subject by ref; a census head of household only through the label or the graph metadata.
+
+- **K-18 · Format edits and the Person page reads.** A format or field edit reports only `ListSourceVocabulary`, and no Person read (provenance sheet, Sources section) follows a catalog list, today or after S16-24/S16-25's `.followsInputs`. Recommendation: make catalog lists a fourth declared input in Spike 16: a read reports the lists it used (`source_vocabulary` when it rendered citations), `.followsInputs` honours them, and Go cache entries that keep Source type words or formats declare it in S16-10's Reads. That is a change to S16-24 and S16-25's scope (one wire field, one selector branch), so it is your call; the alternative is a separate `.list(.sourceVocabulary)` follow on two keys, a second mechanism. Needed before S15-21 and S15-22 are planned.
 
 ## Writer's own calls
 
@@ -65,3 +67,32 @@
 
 ### K-17 · minor · Docs and skills each PR makes false are not named
 **Answer:** Fixed — S15-07 (`add-catalog-query` example), S15-15 (`add-catalog-delete` text references), S15-24 (two domain docs), S15-99 (retires the spike's `citation-formats.md` for the new domain doc). Spike 15 adds no cache, so `docs/catalog-caches.md` is untouched.
+
+## Round 2
+
+Fresh reviewer, document plus this log. Round-1 answers: K-2, K-3 (Go shape), K-4, K-5, K-8, K-9, K-10, K-11, K-13, K-14, K-15 hold; K-1, K-6, K-7, K-12, K-17 held only in part and are completed below; K-16 stays with the user.
+
+### K-18 · blocker · A format or field edit has no signal that reaches the Person page's citations
+**Answer:** To user (a change to Spike 16's S16-24 and S16-25 scope), with the recommendation above. The rule "Citations render inside the reads that list them" now says the refresh is open instead of claiming it works.
+
+### K-19 · blocker · The graph form's one write cannot go through `CreateAll` on an existing graph
+**Answer:** Fixed — rule "Metadata saves with its owner's write": drafts save through `sourcemetadata.Apply(tx, owner, draft)`, added in S15-07, with `CreateAll` as its empty-owner case; S15-08 wires it.
+
+### K-20 · blocker · `Level` has no named home, and the format engine starts before it exists
+**Answer:** Fixed — rule "One level type": `Level` lives in `core/vocabkey`; S15-06 adds it; S15-07 and S15-14 depend on S15-06 (map row, slice note, dependency graph).
+
+### K-21 · blocker · Two binding rules contradict each other on `CitationLineDisplay`
+**Answer:** Fixed — the sentence is gone from "One engine, in Go"; the citation map's § 6.2 row and the older `citation-formats.md` "Formatter" row now say it stays as the fallback.
+
+### K-22 · blocker · The key-to-id lookup is put in `sourcetypes`
+**Answer:** Fixed — `metadatafields.ResolveKeysTx(tx, keys, preferOrigin)` beside `lookupTx`, called by the `sourcetypes` format write and `sourcevocab.Install` (rule and S15-15, S15-20).
+
+### K-23 · blocker · The shared date order would be exported from the Conclusion summary composer
+**Answer:** Fixed — rule "One date order": the rule moves to `core/valuecompare` beside `DateEnds`, called by `conclusionsummaries` and `sources` (S15-02).
+
+### Smaller round-2 notes
+- **K-14 follow-up:** Spike 16's "Shared with Spike 15" S16-25 row no longer lists S15-09 (its boards come in the workspace read); Spike 15 keys added after S16-25 use its value keys (S15-17, S15-23 Context). Fixed.
+- **K-17 follow-up:** S15-17 and S15-23 add their keys to `docs/catalog-caches.md` once S16-10 creates it. Fixed.
+- **K-8 note:** what "Used by" counts across Sources, Artifacts, graphs and types is left to S15-08's plan.
+- **S15-20:** the plan names how the dogfood Install run happens (`add-seeded-vocabulary` keeps `Install` out of FFI, Swift and open) and warns that a re-run overwrites edited product rows and restores deleted ones. Fixed in S15-20's Context and the citation map § 6.4.
+- **S15-08:** "six tables probed" corrected: layout rows cascade and do not keep a field. Fixed.

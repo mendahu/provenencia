@@ -47,17 +47,17 @@ These are the calls for this spike. PR plans treat them as binding.
 - **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
 - **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page. No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
 - **Metadata lives at three levels with one vocabulary.** The Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) each hold values and layout, with the same fields from `source_metadata_fields`, which keeps its name. Tables: `artifact_metadata`, `artifact_metadata_layout`, `evidence_graph_metadata`, `evidence_graph_metadata_layout`. Layout rules (order, dismiss) are the Source's at every level. Binds S15-07 – S15-12. Design: map § 6.6.
-- **One level type.** Source, Artifact and graph are one Go `Level` type, used by suggestion rows, metadata owners, format prefixes and the RPCs, with one Swift enum and a row in `api/ffi/swift_vocabulary_test.go`. Binds S15-06 on. (K-6.)
-- **Metadata saves with its owner's write.** Values entered while adding an Artifact or saving the Evidence graph form go in the same transaction as the Artifact or graph (`CreateArtifactRequest`, the graph create and update requests, through the owner form of `sourcemetadata.CreateAll`); the boards on existing owners save per field as the Source page does. Binds S15-08, S15-10, S15-11. (K-1.)
+- **One level type.** Source, Artifact and graph are one Go `Level` type in the pure package `core/vocabkey`, used by suggestion rows, metadata owners, the format prefixes and the built-ins table, and the RPCs, with one Swift enum and a row in `api/ffi/swift_vocabulary_test.go`. S15-06 adds it; S15-14 uses it. (K-6, K-20.)
+- **Metadata saves with its owner's write.** Values entered while adding an Artifact or saving the Evidence graph form go in the same transaction as the Artifact or graph (`CreateArtifactRequest`, the graph create and update requests). Drafts save through one `sourcemetadata.Apply(tx, owner, draft)`, which compares the draft with what is stored and runs the steps `Set`, `Clear`, `DismissSuggestion` and `Reorder` use; `CreateAll` becomes its empty-owner case. Live boards save per field, as the Source page does. (K-1, K-19.) Binds S15-08, S15-10, S15-11. (K-1.)
 - **One metadata board.** The Swift board model and view take an owner (kind, id, its entries and its write operations); the Source page, the Artifact rows, the add flow and the graph form all use it. Binds S15-26, S15-09 – S15-11. (K-2.)
-- **One date order.** The rule for where a date sits in an order (today `conclusionsummaries`' `datePlace` / `dateKeyOf`) is exported and gives each Source a date sort key on the wire; Swift's Sources list sorts by that key, undated last, and never orders dates itself. Binds S15-02, S15-04. (K-12.)
+- **One date order.** The rule for where a date sits in an order (today the private `datePlace`, `dateKeyOf` and `dateKeyLess` in `conclusionsummaries`) moves to `core/valuecompare` beside `DateEnds` as an exported key and comparison, which `conclusionsummaries` and `sources` both call; it gives each Source a date sort key on the wire; Swift's Sources list sorts by that key, undated last, and never orders dates itself. Binds S15-02, S15-04. (K-12.)
 - **Suggestions have a level.** `source_type_metadata_fields.level` is `source`, `artifact` or `graph`, in the table's key. An Artifact's and a graph's suggestions are their Source's type's rows at that level. Binds S15-06, S15-09 – S15-12, S15-19.
 - **Citations carry no metadata.** The composer's only new input is the printed page (`page_label` on the `page` selector, already in the locator). Binds S15-13. Design: map § 6.9.
 - **Citation formats are data on the Source type.** Three nullable columns, `citation_full`, `citation_short`, `citation_list`, in the syntax of map § 6.3: `{level.meta.key}` and `{meta.key}` (graph, else Artifact, else Source), built-ins directly under their level (`{source.title}`, `{source.date:year}`, `{citation.page}`, `{citation.item}` …), `[optional groups]`, `{a|b}`, `*italic*`, backslash escapes. The list form reads the Source only. A type with no full format shows today's citation line. Binds S15-14 – S15-23.
 - **No transforms on metadata.** Values print exactly as typed; only the Source date (a DateValue) has formatting options (`:year`, `:full`). Each field's description says to enter the value as it should appear. Refused: inverting, reversing, abbreviating. Binds S15-14, S15-19.
-- **Formats name fields by id.** `core/citationformat` defines the stored token for a field id and one rewrite of the parse tree between keys and ids; one `sourcetypes` function maps keys to ids (preferring a given origin) and both the type write and `sourcevocab.Install` call it. A field named in any format is in use: its delete is refused by a delete-impact probe over the three format columns, listing the types ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), which gains the text-reference case). Field keys stay unrenamable, as today. Binds S15-14, S15-15, S15-17, S15-20. (K-7.)
-- **One engine, in Go.** `core/citationformat` parses and renders; values go in after parsing, so a `*` or `[` in a value never formats. The app renders only through FFI. `CitationLineDisplay` goes when the provenance sheet moves to the engine. Binds S15-14, S15-16, S15-21 – S15-23.
-- **Citations render inside the reads that list them.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key; the provenance records read (S16-30) and the Sources section read (S16-13) call it, so a screen makes no separate render call and Swift keeps no cache of rendered text. The resolver reads each Source, Artifact and graph's values once per batch (300 Citations at Scale) through one batch read by owners. A format or field edit is signalled as a Source vocabulary change (`ListSourceVocabulary`) and Artifact and graph values as Source-scoped changes, so the reads refresh through Spike 16's declared signals. Binds S15-16, S15-21 – S15-23. (Map review K-3.)
+- **Formats name fields by id.** `core/citationformat` defines the stored token for a field id and one rewrite of the parse tree between keys and ids; one `metadatafields.ResolveKeysTx(tx, keys, preferOrigin)`, beside `lookupTx`, maps keys to ids, and both the `sourcetypes` format write and `sourcevocab.Install` call it. A field named in any format is in use: its delete is refused by a delete-impact probe over the three format columns, listing the types ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), which gains the text-reference case). Field keys stay unrenamable, as today. Binds S15-14, S15-15, S15-17, S15-20. (K-7.)
+- **One engine, in Go.** `core/citationformat` parses and renders; values go in after parsing, so a `*` or `[` in a value never formats. The app renders only through FFI. Binds S15-14, S15-16, S15-21 – S15-23.
+- **Citations render inside the reads that list them.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key; the provenance records read (S16-30) and the Sources section read (S16-13) call it, so a screen makes no separate render call and Swift keeps no cache of rendered text. The resolver reads each Source, Artifact and graph's values once per batch (300 Citations at Scale) through one batch read by owners. Artifact and graph values are Source-scoped changes, so the reads refresh through Spike 16's declared inputs. A format or field edit reports only `ListSourceVocabulary`, which no Person read follows today; how those reads refresh on it is open (review K-18, to the user) and is settled before S15-21 and S15-22 are planned. Binds S15-16, S15-21 – S15-23. (Map review K-3.)
 - **One render request for previews.** The editor and the Source page preview through one request: a form, an optional unsaved format, and a target (Citation ids, or a Source for the list form); it returns runs, missing fields and parse diagnostics. Swift never parses a format. Binds S15-16, S15-17, S15-23. (K-10.)
 - **Built-in placeholders are one table.** `core/citationformat` declares each built-in once (name, level, allowed in the list form, options such as `:year`, `:full`); parsing, the list-form rule, missing fields, the resolver and the editor's Insert field list (over FFI) all read it. Binds S15-14, S15-16, S15-17. (K-5.)
 - **Today's line stays the fallback, in Swift.** For a type with no full format the engine returns no text, and the app shows today's localized line from `CitationLineDisplay`, which stays for that and for its other callers (Gallery captions, the likeness viewer, a denier's Source name). Go does not write a second copy. Binds S15-16, S15-21. (K-4.)
@@ -78,14 +78,14 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | — | Scoped |
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | — | Scoped |
-| S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, plus a batch read by owners; Sources unchanged | — | — | — | Scoped |
+| S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | — | Scoped |
 | S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | — | Scoped |
 | S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | — | Scoped |
 | S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: the Artifact's suggested fields in the add flow | S15-D4 | S15-08, S15-26, S15-D4 | — | Scoped |
 | S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-08, S15-26, S15-D5 | — | Scoped |
 | S15-12 | Source types suggest fields at each level | 2 | Swift: the type page edits three suggestion lists | S15-D6 | S15-06, S15-D6 | — | Scoped |
 | S15-13 | The composer records the printed page | 3 | Swift: `page_label` on the page selector | S15-D8 | S15-D8 | — | Scoped |
-| S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse, render, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | — | — | Scoped |
+| S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse, render, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | S15-06 | — | Scoped |
 | S15-15 | Source types store citation formats | 4 | Go: migration (three columns), id-keyed storage, delete impact, type read and write | — | S15-14 | — | Scoped |
 | S15-16 | Citations render through their type's formats | 5 | Go: the resolver; one batch render for the reads; one render request for previews; built-ins over FFI | — | S15-08, S15-15, S15-05, S16-12, S16-13 | — | Scoped |
 | S15-17 | The format editor | 5 | Swift: three formats, Insert field by level, live preview, warnings | S15-D6 | S15-16, S15-12, S15-D6 | — | Scoped |
@@ -170,13 +170,13 @@ SLICE 7 — Move                                        (after S16-12, S16-13, S
 S15-99 — Dogfood close / docs
 ```
 
-**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06, S15-07, S15-14 and S15-26 have no dependencies and can start at once; slice 1's UI waits on S15-D1 and S15-D2. Slice 5 starts when S16-12 and S16-13 land (S15-05 also after S16-03, S16-06 and S16-07, which edit the same Sources section files), slice 6 when S16-30 lands, slice 7 when S16-15 lands as well.
+**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06 and S15-26 have no dependencies and can start at once, with S15-07 and S15-14 right after S15-06; slice 1's UI waits on S15-D1 and S15-D2. Slice 5 starts when S16-12 and S16-13 land (S15-05 also after S16-03, S16-06 and S16-07, which edit the same Sources section files), slice 6 when S16-30 lands, slice 7 when S16-15 lands as well.
 
 ### Dependencies at a glance
 
 ```text
 S15-02 ──▶ S15-03, S15-04, S15-05, S15-16
-S15-06 ──▶ S15-08, S15-12, S15-18, S15-19
+S15-06 ──▶ S15-07, S15-08, S15-12, S15-14, S15-18, S15-19
 S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16
 S15-26 ──▶ S15-09, S15-10, S15-11
 S15-05 ──▶ S15-16
@@ -218,10 +218,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-02 — Sources carry a date and a not-public flag
 
-**Ships.** One migration adds `sources.date_value_id` and `sources.is_public`; the catalog model, the Source read and write, the FFI `Source` message and the Sources list read carry both, plus a date sort key from the exported date-order rule. Audit picks the columns up through the `sources` effect. The list read joins `date_values` once for the whole list (3,000 Sources at Scale).
+**Ships.** One migration adds `sources.date_value_id` and `sources.is_public`; the catalog model, the Source read and write, the FFI `Source` message and the Sources list read carry both, plus a date sort key from the date-order rule, moved from `conclusionsummaries` to `core/valuecompare`. Audit picks the columns up through the `sources` effect. The list read joins `date_values` once for the whole list (3,000 Sources at Scale).
 **Not this PR.** Any chrome (S15-03, S15-04); the Person page (S15-05); Copy Source carrying either (refused: privacy; the date is a Copy Source question for its plan).
 **Check.** Handler tests: set, read and clear a date and the flag; sort keys order exact, `abt.`, `bef.` and range dates as the Timeline does; an upgraded catalog reads every Source as undated and public.
-**Context.** Rules "The Source date is one optional DateValue", "Not public is a stored switch", "One date order" (`core/database/conclusionsummaries/compose.go` `datePlace`, `dateKeyOf`); [`source-provenance-date.md`](source-provenance-date.md); [privacy note](2026-10-27-source-privacy-toggle.md) "Likely code locations"; skills `add-catalog-migration`, `add-catalog-model`, `add-date-value`, `add-ffi-handler`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.
+**Context.** Rules "The Source date is one optional DateValue", "Not public is a stored switch", "One date order" (`core/database/conclusionsummaries/compose.go` `datePlace`, `dateKeyOf`, `dateKeyLess`; `core/valuecompare/datewindow.go` `DateEnds`); [`source-provenance-date.md`](source-provenance-date.md); [privacy note](2026-10-27-source-privacy-toggle.md) "Likely code locations"; skills `add-catalog-migration`, `add-catalog-model`, `add-date-value`, `add-ffi-handler`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.
 
 #### S15-03 — The Source page shows the date and the not-public switch
 
@@ -241,21 +241,21 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-06 — Type suggestions have a level
 
-**Ships.** One Go `Level` type (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab`, `sourcetypes`, the effects registry and the catalog model read it; the suggestion RPCs take a level, and the Source page's board reads `source` only.
+**Ships.** One `Level` type in `core/vocabkey` (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab`, `sourcetypes`, the effects registry and the catalog model read it; the suggestion RPCs take a level, and the Source page's board reads `source` only.
 **Not this PR.** Artifact and graph values (S15-08); the type page's three lists (S15-12).
 **Check.** The Source page's suggestions are unchanged; handler tests add and list suggestions per level; a field suggested at two levels keeps both rows.
 **Context.** Rule "Suggestions have a level"; map § 6.6; skills `add-catalog-migration`, `add-catalog-model`, `add-seeded-vocabulary` (update its suggestion shape).
 
 #### S15-07 — Metadata operations take an owner
 
-**Ships.** Preparatory: every exported function of `core/database/sourcemetadata` (`Set`, `Clear`, `DismissSuggestion`, `Reorder`, `ListWorkspace`, `ListBySourceTx`, `ListLayoutTx`, `CreateAll` and the rest) takes an owner (`Level` and id) instead of a Source id, with only the Source wired, and one batch read of values by owners is added; `ListWorkspace` reads its fields in one query instead of one per extra value. S15-08 then adds tables, not a second copy of the logic.
+**Ships.** Preparatory: every exported function of `core/database/sourcemetadata` (`Set`, `Clear`, `DismissSuggestion`, `Reorder`, `ListWorkspace`, `ListBySourceTx`, `ListLayoutTx`, `CreateAll` and the rest) takes an owner (`Level` and id) instead of a Source id, with only the Source wired, one batch read of values by owners is added, and `Apply(tx, owner, draft)` saves a form's draft by comparing it with what is stored, with `CreateAll` as its empty-owner case; `ListWorkspace` reads its fields in one query instead of one per extra value. S15-08 then adds tables, not a second copy of the logic.
 **Not this PR.** New tables (S15-08).
 **Check.** Every existing metadata test passes unchanged; the Source page behaves the same.
 **Context.** Rule "Metadata lives at three levels"; [`source-layer-data-model.md`](../../source-layer-data-model.md) § 5.4 (the merge rules); `core/database/sourcecopy` (its callers). Updates the `sourcemetadata.ListLayoutTx` example in [`add-catalog-query`](../../../.agents/skills/add-catalog-query/SKILL.md).
 
 #### S15-08 — Artifacts and graphs hold metadata
 
-**Ships.** The four tables of map § 6.6, wired for the Artifact and graph owners: catalog model, audit under the Source's scope, delete impact (a field in use at any level, six tables probed), release with the Artifact or graph, Copy Source copies a chosen Artifact's values and layout; FFI for the board operations per owner, with suggestions from the Source's type at that level; metadata values on `CreateArtifactRequest` and the graph create and update requests, written in the same transaction; `metadatafields.UsedBy` and the Metadata page's count come from the delete-impact totals. The Source page's workspace read returns its Artifacts' boards in one query (60 Artifacts at Scale).
+**Ships.** The four tables of map § 6.6, wired for the Artifact and graph owners: catalog model, audit under the Source's scope, delete impact (a field in use in any of the three value tables; layout rows cascade and do not keep a field), release with the Artifact or graph, Copy Source copies a chosen Artifact's values and layout; FFI for the board operations per owner, with suggestions from the Source's type at that level; metadata values on `CreateArtifactRequest` and the graph create and update requests, written in the same transaction through `sourcemetadata.Apply`; `metadatafields.UsedBy` and the Metadata page's count come from the delete-impact totals. The Source page's workspace read returns its Artifacts' boards in one query (60 Artifacts at Scale).
 **Not this PR.** Search over Artifact or graph values (not this spike); any chrome (S15-09 – S15-11).
 **Check.** Handler tests per owner: set, clear, dismiss, reorder, list with suggestions; an Artifact created with values is one audited write; a field in use only on a graph refuses delete and its Used by counts it; Copy Source carries Artifact values; a graph delete releases its rows.
 **Context.** Map § 6.6 "Knock-on work"; skills `add-catalog-migration`, `add-catalog-model`, `add-audit-scope`, `add-catalog-delete`, `add-ffi-handler`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md) §§ 5, 7, 7.1 and [`catalog-deletes.md`](../../catalog-deletes.md).
@@ -315,7 +315,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-15 — Source types store citation formats
 
-**Ships.** A migration adds `citation_full`, `citation_short`, `citation_list` to `source_types`; writes resolve `{…meta.key}` to field ids through the one `sourcetypes` key-to-id function, and reads show keys; a delete-impact probe over the format columns refuses deleting a field a format names, listing the types; the type read and write RPCs carry the formats and their diagnostics; the list form rejects non-Source placeholders. A format edit reports `ListSourceVocabulary`.
+**Ships.** A migration adds `citation_full`, `citation_short`, `citation_list` to `source_types`; writes resolve `{…meta.key}` to field ids through `metadatafields.ResolveKeysTx`, and reads show keys; a delete-impact probe over the format columns refuses deleting a field a format names, listing the types; the type read and write RPCs carry the formats and their diagnostics; the list form rejects non-Source placeholders. A format edit reports `ListSourceVocabulary`.
 **Not this PR.** Rendering a Citation (S15-16); the editor (S15-17).
 **Check.** Handler tests: save and read a format; a key held by a product and a user field resolves to the one chosen; relabel a field and the format still reads; delete a field in use is refused with its types.
 **Context.** Rule "Formats name fields by id"; map § 6.3 "Storage"; `core/database/deleteimpact/register.go` (`joinEdge`); skills `add-catalog-migration`, `add-catalog-delete` (gains the text-reference case), `add-ffi-handler`. A format edit refreshes the citations of every Source of the type through the vocabulary signal (500 Sources at Scale).
@@ -339,7 +339,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** Each seeded type's three formats, as in map § 6.8, installed with the types; Install writes them after the fields so keys resolve to ids. Says in the PR how to run Install against an existing dogfood project.
 **Not this PR.** Rendering them in the app (S15-16 on).
 **Check.** A test renders every seeded format in all three forms against an invented Source of its type and compares the expected text.
-**Context.** Rules "Follow the style; never copy the book", "The seed is the product default", "Formats name fields by id" (Install calls the same key-to-id function); map § 6.8 "Formats".
+**Context.** Rules "Follow the style; never copy the book", "The seed is the product default", "Formats name fields by id" (Install calls `metadatafields.ResolveKeysTx`); map § 6.8 "Formats". [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) keeps `Install` out of FFI, Swift and open, so the plan names how the dogfood run happens (a test-harness or developer command against a copy of the catalog) and warns that re-running `Install` overwrites edited product labels and formats and restores deleted product rows.
 
 ### Slice 5 — Rendering
 
@@ -362,7 +362,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** The Source type page edits its three formats with Insert field (the built-ins table and the fields, grouped by level, inserting the prefixed form), a live preview against a Source of that type the researcher picks, and the engine's diagnostics shown at their position. Swift does not parse formats.
 **Not this PR.** Copy from (S15-18).
 **Check.** Bar 5: editing the census full format updates the preview.
-**Context.** S15-D6; map § 6.3 "The editor".
+**Context.** S15-D6; map § 6.3 "The editor". A new query key goes into `docs/catalog-caches.md` (S16-10) and, if it lands after S16-25, uses S16-25's value keys.
 
 ### Slice 6 — Citations in the app
 
@@ -385,7 +385,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** Through the one render request, the Source page shows its list entry and a full citation for one of its Citations, names the fields the format expects and is missing, and offers Copy citation through the same rich-payload write as S15-21.
 **Not this PR.** Editing the format here (it is on the type, S15-17).
 **Check.** Bar 4's Source page half: a census Source with no ED names "Enumeration district" as missing.
-**Context.** S15-D1; map § 6.3 "Empty placeholders outside a group".
+**Context.** S15-D1; map § 6.3 "Empty placeholders outside a group". A new query key goes into `docs/catalog-caches.md` (S16-10) and, if it lands after S16-25, uses S16-25's value keys.
 
 ### Slice 7 — Move
 

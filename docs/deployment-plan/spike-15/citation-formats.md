@@ -73,7 +73,7 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 | **Source date** | Designed, not built: [`source-provenance-date.md`](source-provenance-date.md) (descoped from Spike 13 on 2026-10-31 to land with these fields) | Dates in the note, and the source list order |
 | **Printed page labels** | The locator can hold `page_label`, but the composer writes only `artifact_page` | "p. 23" instead of "image 37"; folio, entry and line numbers |
 | **Entry or line within a page** | Not modeled; a region selector marks where, not which entry | Census line numbers, register entry numbers |
-| **Formatter** | None | A Go package (for example `core/citationformat`) with one template per Source type, driven by a registry like the seeded vocabulary, so the Mac app, exports and any later report share it. It replaces `CitationLineDisplay` |
+| **Formatter** | None | A Go package (for example `core/citationformat`) with one template per Source type, driven by a registry like the seeded vocabulary, so the Mac app, exports and any later report share it. (Superseded: formats are data on Source types, and `CitationLineDisplay` stays as the fallback; see `deployment-plan.md`.) |
 | **Short form and source list entry** | None | Repeated mentions and a bibliography |
 
 ## How it could arrive
