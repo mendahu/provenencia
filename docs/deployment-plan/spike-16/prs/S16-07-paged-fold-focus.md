@@ -1,11 +1,11 @@
 # S16-07 — One paged fold that moves focus
 
-**Status:** Blocked — on board S16-D2
+**Status:** Draft
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S16-D2](../design/S16-D2-person-page-folds.md), board not agreed yet (one brief for the Person page's Family, Timeline and Sources folds: the Sources Show more's highlight, FH-1, FH-2; the page count, FH-3; the focus landing, FH-4; a folded lifeline point, FH-5; Wide, FH-W1, FH-W2)
-**Board:** — (recorded here when S16-D2 is agreed)
-**Depends on:** S16-D2
+**Brief:** [S16-D2](../design/S16-D2-person-page-folds.md), board agreed 2026-11-09 (one brief for the Person page's Family, Timeline and Sources folds: FH-1 – FH-5, FH-W1, FH-W2)
+**Board:** [Claude Design — Person Detail](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ), turn "S16-D2 · Folds" on three pages: *Person Detail - Family* (frames F5a, F5b), *Person Detail - Timeline* (F6a, F6b, F7a, F7b, F8, F9) and *Person Detail - Sources* (F1a, F1b, F1 narrow pane, F2a, F2b, F3a, F3b, F4). The implementer reads it with the Artifact tool's `read` on that link. Each turn's decisions panel restates FH-1 – FH-5 and FH-W2
+**Depends on:** S16-D2 (board agreed 2026-11-09)
 **Blocks:** S16-02, S16-27; Spike 15's S15-30
 **Branch:** `s16-07-paged-fold-focus`
 **Version bump:** patch: a Mac UI fix (long lists unfold a page at a time; Show more keeps the keyboard) with no wire or catalog change ([`docs/versioning.md`](../../../versioning.md))
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-7 (pages), P-14, P-15; working rules "(Batch 1) One paged fold that moves focus", "(Batch 1) The Timeline builds what it shows" (S16-02's half); [`macos-client-patterns.md`](../../../macos-client-patterns.md) "One sectioned detail page" and § 9 Wide rule 5; Spike 15 rule "The provenance table folds a page at a time" ([`../../spike-15/deployment-plan.md`](../../spike-15/deployment-plan.md)), which moves this PR's fold to the kit later (S15-30)
 **Planned:** 2026-11-09 against `main` @ `e22d035`
-**Review:** — (not reviewed yet; review-plan runs once the board is agreed and the Scope takes its frames)
+**Review:** — (not reviewed yet)
 
 ### Implementer — read this first
 
@@ -50,6 +50,7 @@ Every "Show N more" on the Person page reveals one page of at most 50 items, say
 | AC-1.6 | Any section above: press Show more with the keyboard | Focus is on the first revealed item: the Timeline row `d51`, the card `big-p6`, the Sources graph link of the 6th line, the Family tile of the 31st child |
 | AC-1.7 | Family: siblings folded and the person is the 40th sibling (already shown after the fold) | The revealed page skips the person's own tile; focus lands on the first revealed sibling that is not the person |
 | AC-1.8 | Timeline: click a lifeline point whose row is on the 3rd hidden page | The dated fold opens through that page (200 rows shown, not 2,000) and the list scrolls to the row |
+| AC-1.9 | Any section: click Show more with the pointer while focus is elsewhere | The page reveals, and focus stays where it was |
 
 **US-2.** As a keyboard user, when the window crosses the Regular/Wide line, the keyboard stays where it was, so that a resize never strands me.
 
@@ -126,14 +127,15 @@ Every "Show N more" on the Person page reveals one page of at most 50 items, say
 | D-4 | `ConclusionFoldState<Fold: Hashable>` *(new)*, in `ConclusionShowMoreRow.swift` beside `ConclusionFold`: `pages(_:) -> Int`, `mutating revealPage(_:)`, `mutating reveal(_:pages:)` (keeps the larger). Each section holds one in `@State`; content inits take `folds:` in place of `expanded:` | Working rule "one fold state type"; S15-30 moves this file's types to `Platform/` | A dictionary per section; keeping `Set` beside a page count |
 | D-5 | Sources' folds are `PersonSourcesContent.Fold` *(new)*: `.rows`, `.lines(sourceID: String)` | One state type for both of its folds | Keeping `rowsExpanded` |
 | D-6 | `firstRevealed` names the first item the next Show more adds, at the current pages. The section reads it from the content it drew, before revealing | Same contract as today; the content after the press has moved on | Computing it after the press |
-| D-7 | `ConclusionShowMoreRow` becomes generic over the focus value: `ConclusionShowMoreRow<Focus: Hashable>(hidden:minimumHidden:highlighted:focus:revealed:expand:)`; its action runs `expand()`, then `FocusClaim.claim(focus, revealed)` when `revealed` is not nil | Working rule: the row claims focus through `FocusClaim`; the `Task` hops go | A closure per caller that moves focus |
+| D-7 | `ConclusionShowMoreRow` becomes generic over the focus value: `ConclusionShowMoreRow<Focus: Hashable>(hidden:minimumHidden:highlighted:focus:revealed:expand:)`. It holds its own `@FocusState private var hasKeyboard: Bool` on its Button; its action runs `expand()`, then, only when `hasKeyboard` was true at the press and `revealed` is not nil, `FocusClaim.claim(focus, revealed)`. A pointer click leaves focus where it is (board FH-4, Sources and Family turns) | Working rule: the row claims focus through `FocusClaim`; the `Task` hops go. A borderless Button does not take the keyboard on a click, so `hasKeyboard` tells a key press from a click | A closure per caller that moves focus; moving focus on every press (the board says a click leaves it) |
 | D-8 | Family gains `@FocusState focused: String?` in `PersonFamilyDiagram`; each relative's tile gets `.focused($focused, equals: placed.id)`. `PersonFamilyContent.firstRevealed(by:) -> String?` *(new)* names a tile id, skipping the person's own tile (it is not a button) | P-14; AC-1.7 | Focusing the group container |
 | D-9 | A lifeline click on a folded point opens the dated fold through that row's page: `PersonTimelineContent.pages(toShow:) -> Int?` *(new)* and `folds.reveal(.dated, pages:)` (user, 2026-11-09) | AC-1.8 | Opening every row (user chose the page) |
 | D-10 | `FocusKeeper<Stop: Hashable>` *(new)*, `macos/App/Platform/FocusKeeper.swift`, a value type held in `@State`, with the view modifier `focusKeeper(_:focus:fallback:reveal:)` *(new)* that wires `onChange(of: focus)` and `onChange(of: pvWidthClass)` and claims through `FocusClaim`. State: `last` (the last stop, kept one main-actor turn after focus goes nil), `lastFallback`, `pending` (the stop being given back, cleared 400 ms after a claim). On a width change it takes `focus ?? last`; `reveal(stop)` scrolls and returns the stop to claim (the stop itself when it is still shown, else the fallback recorded when it took focus) | Wide rule 5 from one place; Gallery's 400 ms expiry and Timeline's owner fallback become its two parameters | A `DesignSystem` component (it holds no chrome; working rule names `Platform/`); an `@Observable` class (a `FocusState` binding is only valid at call time) |
 | D-11 | Gallery's viewer-close restore uses the same keeper (`keeper.restore(stop)`); the tile `onAppear` re-claim reads `keeper.pending`; the Use as portrait → image rule stays in Gallery's `reveal` closure | One keeper; no second pending state in Gallery | Keeping Gallery's private `pendingFocus` |
 | D-12 | Timeline's fallback for a card is its row's id, recorded when the card takes focus (`content.row(holdingCard:)` *(new)*); `focusedOwner`, `lastFocused` and `keepFocus()` go | After the width change the card is no longer in the content | Parsing the card id |
 | D-13 | Sources highlight: `PersonSourcesContent.Row.foldedGraphIDs: Set<String>` *(new)* = graphs with a folded line and no shown line in that row; `PersonSourcesContent.foldedRowGraphIDs: Set<String>` *(new)* = graphs on Sources past the row fold. A Show more is highlighted when its set contains `hover.id ?? focusedGraphID` | AC-3.1 – AC-3.4; content already maps claims to graphs | Searching the folded lines in the view on every hover |
-| D-14 | The highlighted Show more look is the agreed board's FH-1; until then the plan assumes the recommended `PVColor.surfaceSelected` background with `PVRadius.sm` behind the row, as `PersonSourcesLineView` draws | S16-D2 recommendation | A new token or a Badge |
+| D-14 | The highlighted Show more is drawn as the board's FH-1: `PVColor.surfaceSelected` behind the whole row at the line's full width, `PVRadius.sm` corners, the ghost Button inside unchanged. `PersonSourcesLineView` already uses `PVRadius.sm` (3pt), which the board's "Line" note confirms | Board FH-1 | A new token or a Badge |
+| D-15 | After a keyboard Show more, Family and Sources scroll the revealed item just into view: `pvScrollsRowIntoView(target, whenRequested:)` with `anchor` nil (the least scroll), on the tile's `placed.id` and the line's claim id (`.id(line.id)` on `PersonSourcesLineView`). The Timeline keeps its row fold's scroll to the top (`pendingReveal`, anchor `.top`) and does not scroll for a card | Board FH-4 ("scrolled just into view"; Timeline: "scrolls it to the top") | Relying on focus to scroll (macOS does not scroll a `ScrollView` to a focused view) |
 
 **Rules this plan bends.** None.
 
@@ -243,7 +245,7 @@ Check: the app builds; the Family, Timeline and Sources previews show "Show 50 m
 
 **STEP-3 — Family pages and moves focus**
 Files: `PersonFamilySection.swift`, `PersonFamilyContent.swift`, `PersonFamilyLayout.swift` (only if `PlacedMore` needs the fold's revealed id), `macos/ProvenenciaTests/PersonFamilyContentTests.swift`, `PersonFamilyLayoutTests.swift`.
-Do: D-4, D-8: `folds: ConclusionFoldState<Fold>`, `firstRevealed(by:)`, `.focused` on relative tiles, Show more passes `revealed` and `$focused`.
+Do: D-4, D-8, D-15: `folds: ConclusionFoldState<Fold>`, `firstRevealed(by:)`, `.focused` on relative tiles, Show more passes `revealed` and `$focused`, the revealed tile scrolls just into view.
 Check: T-6 passes; existing Family tests pass with `folds:`.
 
 **STEP-4 — Timeline pages and moves focus**
@@ -253,7 +255,7 @@ Check: T-3, T-4, T-5, T-7 pass; `PersonTimelineLifelineTests` pass unchanged in 
 
 **STEP-5 — Sources pages, moves focus and highlights a folded graph**
 Files: `PersonSourcesSection.swift`, `PersonSourcesContent.swift`, `macos/ProvenenciaTests/PersonSourcesContentTests.swift`, `PersonRecordLinksContentTests.swift`.
-Do: D-5, D-7, D-13: one `@State folds`; `expandRows` goes; both Show mores pass `revealed`, `$focus` and `highlighted`. Remove `ConclusionFold`'s `expanded:` forms (no caller left).
+Do: D-5, D-7, D-13, D-14, D-15: one `@State folds`; `expandRows` goes; both Show mores pass `revealed`, `$focus` and `highlighted`; the revealed line scrolls just into view. Remove `ConclusionFold`'s `expanded:` forms (no caller left).
 Check: T-8, T-9 pass; `rg "expanded: Bool|rowsExpanded|Task \{ @MainActor in focus" macos/App/Features/Conclusions` finds nothing.
 
 **STEP-6 — The focus keeper**
@@ -314,7 +316,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 Use the large fixture or a project with a person who has more than 100 dated events, a Source with more than 10 of their records (one graph each), and an event with more than 60 people.
 
 1. Timeline, Regular: Tab to "Show 50 more" under the 50th row, press Return. 50 rows appear, the keyboard is on the 51st row's title, the list scrolls to it. Bar 3.
-2. Same on an event's participants and on Family's children (30 shown): the keyboard lands on the first revealed card or tile. Bar 7.
+2. Same on an event's participants and on Family's children (30 shown): the keyboard lands on the first revealed card or tile, and Family's tile is scrolled just into view. Click a Show more with the pointer while a title has the keyboard: the list unfolds and the title keeps the keyboard (AC-1.9). Cross 1600 with a Family tile focused: it keeps the keyboard.
 3. Sources: point at a node whose graph's line is folded: the Source's Show more lights up (FH-1); at Wide the node and the row are both on screen (FH-W1). With more than 50 Sources, a node on a folded Source lights the section's Show more (FH-2).
 4. Timeline at Wide, focus the 9th card of an event, narrow the window below 1600: the keyboard is on the event's title. Widen again with the 3rd card focused: it keeps the keyboard.
 5. Gallery: focus a tile, cross the width line both ways: the tile is in view with the keyboard (AC-2.3). Focus a tile's Use as portrait, make it the lead, cross the line: the keyboard is on its image (AC-2.4). Open and close the likeness viewer: the keyboard returns to the tile.
@@ -330,7 +332,8 @@ Use the large fixture or a project with a person who has more than 100 dated eve
 
 **Stop and report if:**
 
-- The agreed S16-D2 board draws FH-1 with anything other than D-14's tokens, or adds a frame this plan has no AC for (frames 1–9 map to US-1 – US-3).
+- The board and this plan disagree on a frame: frames F1–F9 map to US-1 – US-3 and D-14, D-15.
+- `ConclusionShowMoreRow`'s own `@FocusState` cannot tell a key press from a pointer click (D-7), or a Family tile loses the keyboard when the window crosses 1600 (Family has no keeper in this plan).
 - `FocusClaim.claim` does not land on a revealed Timeline row after two turns in manual check 1 (needs a different claim path; do not add a third write).
 - `PVPersonCard` does not take `.focused` for a relative's tile (`PVTileCard` with an `action`).
 - `PersonFamilyLayout` needs to place a Show more differently because of pages (D-3 says only its count changes).
@@ -338,7 +341,7 @@ Use the large fixture or a project with a person who has more than 100 dated eve
 
 ## 12. Open questions
 
-- **Board.** S16-D2 is not agreed. How does the agreed board reach the implementer (exported frames in the repo, screenshots, or a link they can open)? Recommendation: export frames 1a/1b, 3a/3b, 4, 5a/5b, 6a/6b, 7a/7b, 8 and 9 into `design/` beside the brief.
+None.
 
 ## 13. PR
 
