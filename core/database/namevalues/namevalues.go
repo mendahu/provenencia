@@ -69,11 +69,14 @@ func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 		return nil, namevalue.ErrInvalid
 	}
 	v = normalize(v)
-	parts := v.Parts
-	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
+	if err := namevalue.Validate(v); err != nil {
 		return nil, err
 	}
+	return insert(tx, v)
+}
 
+// insert stores a value already normalized and validated.
+func insert(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -82,7 +85,7 @@ func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	if _, err := tx.Exec(sqlInsertValue, idBytes, v.Form); err != nil {
 		return nil, err
 	}
-	for _, p := range parts {
+	for _, p := range v.Parts {
 		partID, err := uuid.NewV7()
 		if err != nil {
 			return nil, err
@@ -107,10 +110,14 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 		return namevalue.ErrInvalid
 	}
 	v = normalize(v)
-	parts := v.Parts
-	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
+	if err := namevalue.Validate(v); err != nil {
 		return err
 	}
+	return update(tx, id, v)
+}
+
+// update rewrites row id with a value already normalized and validated.
+func update(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	var one int
 	if err := tx.QueryRow(sqlValueExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
@@ -124,7 +131,7 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	if _, err := tx.Exec(sqlDeleteParts, id); err != nil {
 		return err
 	}
-	for _, p := range parts {
+	for _, p := range v.Parts {
 		partID, err := uuid.NewV7()
 		if err != nil {
 			return err
@@ -170,11 +177,11 @@ func PutTx(tx *sql.Tx, prevID []byte, v namevalue.Value) (id []byte, ch *rowchan
 		return nil, nil, namevalue.ErrInvalid
 	}
 	v = normalize(v)
-	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: v.Parts}); err != nil {
+	if err := namevalue.Validate(v); err != nil {
 		return nil, nil, err
 	}
 	if len(prevID) != 16 {
-		id, err := InsertTx(tx, v)
+		id, err := insert(tx, v)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -191,7 +198,7 @@ func PutTx(tx *sql.Tx, prevID []byte, v namevalue.Value) (id []byte, ch *rowchan
 	if ch == nil {
 		return append([]byte(nil), prevID...), nil, nil
 	}
-	if err := UpdateTx(tx, prevID, v); err != nil {
+	if err := update(tx, prevID, v); err != nil {
 		return nil, nil, err
 	}
 	return append([]byte(nil), prevID...), ch, nil

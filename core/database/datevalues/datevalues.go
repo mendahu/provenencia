@@ -69,6 +69,13 @@ func InsertTx(q interface {
 	if err := datevalue.Validate(v); err != nil {
 		return nil, err
 	}
+	return insert(q, v)
+}
+
+// insert stores a value already normalized and validated.
+func insert(q interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}, v datevalue.Value) ([]byte, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -112,6 +119,11 @@ func UpdateTx(tx *sql.Tx, id []byte, v datevalue.Value) error {
 	if err := datevalue.Validate(v); err != nil {
 		return err
 	}
+	return update(tx, id, v)
+}
+
+// update rewrites row id with a value already normalized and validated.
+func update(tx *sql.Tx, id []byte, v datevalue.Value) error {
 	var one int
 	if err := tx.QueryRow(sqlExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
@@ -174,7 +186,7 @@ func PutTx(tx *sql.Tx, prevID []byte, v datevalue.Value) (id []byte, ch *rowchan
 		return nil, nil, err
 	}
 	if len(prevID) != 16 {
-		id, err := InsertTx(tx, v)
+		id, err := insert(tx, v)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -191,7 +203,7 @@ func PutTx(tx *sql.Tx, prevID []byte, v datevalue.Value) (id []byte, ch *rowchan
 	if ch == nil {
 		return append([]byte(nil), prevID...), nil, nil
 	}
-	if err := UpdateTx(tx, prevID, v); err != nil {
+	if err := update(tx, prevID, v); err != nil {
 		return nil, nil, err
 	}
 	return append([]byte(nil), prevID...), ch, nil
