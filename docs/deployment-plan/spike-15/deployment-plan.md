@@ -261,6 +261,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** The Sources list (S15-04); the rest of S15-D1's board (S15-09, S15-23, S15-25).
 **Check.** Bar 1 on the Source page; bar 2.
 **Context.** S15-D1; `SourcePageIdentityHeader.swift`, `SourceIdentitySection.swift`, `PVSwitch`; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
+**From S15-02's review.** A date or switch write to a Source deleted in another window returns `sources.invalid` ("Invalid source."), as every Source write does; the page must name the deleted Source and recover (map the missing Source to a not-found code for every Source write, or re-read and say it was deleted) (UX-1). The date field's inline error is today's "Invalid date value."; consider copy that names the field (UX-2).
 
 #### S15-04 — The Sources list shows and sorts by the date
 
