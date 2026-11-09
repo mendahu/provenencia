@@ -307,6 +307,24 @@ struct SourcePageModelTests {
         #expect(!model.credibility.isDirty)
     }
 
+    @Test func saveCredibilityKeepsLineBreaks() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let twoLines = "Census taker was a neighbour.\nAges rounded to 5."
+        model.credibility.selectDraft(key: "high_trust")
+        model.credibility.argumentDraft = twoLines + "\n"
+        await model.credibility.save()
+        #expect(store.credibilityBySource[sourceID]?.argument == twoLines)
+        #expect(model.credibility.hasSavedAssessment)
+        #expect(!model.credibility.isDirty)
+        #expect(!model.credibility.isDirty(argument: twoLines + "\n"))
+        #expect(model.credibility.isDirty(argument: "Census taker was a neighbour.\n\nAges rounded to 5."))
+        model.credibility.argumentDraft = "x"
+        model.credibility.cancel()
+        #expect(model.credibility.argumentDraft == twoLines)
+    }
+
     @Test func notesCRUD() async throws {
         let store = makeStore()
         let model = makeModel(store: store)

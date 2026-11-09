@@ -1,6 +1,6 @@
 # S15-01 — The credibility argument is a text area
 
-**Status:** Planned
+**Status:** Landed in [#758](https://github.com/mendahu/provenencia/pull/758) (2026-11-09)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change beyond the control: the argument becomes the `PVTextArea` the Source page already draws for its description and notes; working rule "The credibility fix is idiomatic and needs no brief")
@@ -27,6 +27,12 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+The version bump is `0.4.3`, not `0.4.2`: `main` had already moved to `0.4.2`, so STEP-5 took the next patch. Otherwise none.
+
+A kit fix rode on this PR: two text areas in one column (the Source description while editing, and the credibility argument) could wrap each other's Tab router and crash with a stack overflow. A text view now keeps the first router that claimed it, and each area finds its own text view by position.
 
 ## 1. Objective
 

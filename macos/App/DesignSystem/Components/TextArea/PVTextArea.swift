@@ -104,6 +104,8 @@ struct PVTextArea: View {
     /// Shared focus host. Its `next` / `previous` neighbours take Tab and
     /// Shift-Tab; without a handle the area keeps its own focus.
     private let focus: PVFieldFocus?
+    /// Spoken name when the area has no enclosing ``PVField`` (or to override it).
+    private let accessibilityLabel: LocalizedStringResource?
 
     init(
         text: Binding<String>,
@@ -113,7 +115,8 @@ struct PVTextArea: View {
         isInvalid: Bool = false,
         activateOnAppear: Bool = false,
         fillsHeight: Bool = false,
-        focus: PVFieldFocus? = nil
+        focus: PVFieldFocus? = nil,
+        accessibilityLabel: LocalizedStringResource? = nil
     ) {
         self._text = text
         self.lineLimit = lineLimit
@@ -123,6 +126,7 @@ struct PVTextArea: View {
         self.activateOnAppear = activateOnAppear
         self.fillsHeight = fillsHeight
         self.focus = focus
+        self.accessibilityLabel = accessibilityLabel
     }
 
     @FocusState private var isFocused: Bool
@@ -179,7 +183,7 @@ struct PVTextArea: View {
                 focus.focus(own: $isFocused)
             }
         }
-        .pvFieldNamed()
+        .pvFieldNamed(own: accessibilityLabel)
     }
 }
 
@@ -303,14 +307,15 @@ private final class PVTextEditorInsetView: NSView {
 
     private var tabRouterRechecks = 0
 
-    /// The clearer is a background of this editor, so the text view is a
-    /// nearby sibling. Stop after a few ancestors so a second area on the
-    /// same screen is left alone.
+    /// The clearer is a background of this editor, so its text view lies under
+    /// the clearer's own frame. Match by position at each ancestor, so a second
+    /// area in the same column is never taken. The hop limit only bounds the climb.
     private func nearestTextView() -> NSTextView? {
+        let midpoint = convert(NSPoint(x: bounds.midX, y: bounds.midY), to: nil)
         var node: NSView? = superview
         var hops = 0
         while let current = node, hops < 4 {
-            if let found = current.firstDescendantTextView() {
+            if let found = current.descendantTextView(containing: midpoint) {
                 return found
             }
             node = current.superview
@@ -342,6 +347,9 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     @MainActor
     func attach(to textView: NSTextView) {
         if textView.delegate === self { return }
+        // A text view has one router, the first that claimed it. Wrapping
+        // another router would let two routers wrap each other.
+        if textView.delegate is PVTextAreaTabRouter { return }
         wrapped = textView.delegate
         textView.delegate = self
     }
@@ -373,13 +381,17 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
 }
 
 extension NSView {
-    /// The first text view below this view that is not a field editor: the
-    /// shared field editor of a neighbouring `TextField` is an `NSTextView`
+    /// The text view below this view, not a field editor, whose scroll view
+    /// (or itself, with none) holds `point`, given in window coordinates.
+    /// The shared field editor of a neighbouring `TextField` is an `NSTextView`
     /// too, and the area's router must never attach to it.
-    func firstDescendantTextView() -> NSTextView? {
-        if let textView = self as? NSTextView, !textView.isFieldEditor { return textView }
+    func descendantTextView(containing point: NSPoint) -> NSTextView? {
+        if let textView = self as? NSTextView, !textView.isFieldEditor {
+            let frame: NSView = textView.enclosingScrollView ?? textView
+            if frame.convert(frame.bounds, to: nil).contains(point) { return textView }
+        }
         for subview in subviews {
-            if let found = subview.firstDescendantTextView() { return found }
+            if let found = subview.descendantTextView(containing: point) { return found }
         }
         return nil
     }

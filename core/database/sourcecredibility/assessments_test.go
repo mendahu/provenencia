@@ -147,6 +147,32 @@ func TestAssessments(t *testing.T) {
 			},
 		},
 		{
+			name: "multi-line argument keeps inner line breaks",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSource(t, c)
+				grades := mustGrades(t, c)
+				in := UpsertInput{
+					SourceID:           src.ID,
+					CredibilityGradeID: grades[2].ID,
+					Argument:           "  Line one\nLine two\n\n",
+				}
+				a, err := writes.Call(c, writes.Op{Action: "create_source_credibility_assessment", UserID: userID}, func(tx *database.Tx) (Assessment, []rowchange.Change, error) {
+					return Upsert(tx, userID, in)
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if a.Argument != "Line one\nLine two" {
+					t.Fatalf("returned %q", a.Argument)
+				}
+				got, err := GetBySource(c, src.ID)
+				if err != nil || got.Argument != "Line one\nLine two" {
+					t.Fatalf("%v %+v", err, got)
+				}
+			},
+		},
+		{
 			name: "reject unknown grade and source",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
