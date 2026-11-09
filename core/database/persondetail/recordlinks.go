@@ -24,7 +24,7 @@ type PersonRecordLinks struct {
 }
 
 // maxRecordLinkLines is the most lines the read sends, strong first.
-// decided: S13-28 round 1 (SEC-1), the caps-for-adversarial-only rule; moved from PersonRecordLinksContent.maxArcs by S16-01 (user, 2026-11-08: Go owns the bound): 20 times the 3,675 lines of S13-27's 50-graph household Scale
+// decided: S13-28 round 1 (SEC-1), the caps-for-adversarial-only rule; moved from the app's arc cap by S16-01 (user, 2026-11-08: Go owns the bound): 20 times the 3,675 lines of S13-27's 50-graph household Scale
 const maxRecordLinkLines = 75_000
 
 // RecordLinks is the Person page's record-links read: every Evidence graph
