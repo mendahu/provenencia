@@ -72,4 +72,17 @@ struct ConclusionFoldTests {
         let lines = ConclusionFold(limit: 5, minimumHidden: 2)
         #expect(lines.pages(toShow: 5, count: 6) == 0)
     }
+
+    @Test func revealThatAddsNothingLeavesStateEqual() {
+        var state = ConclusionFoldState<String>()
+        let empty = state
+        state.reveal("a", pages: 0)
+        #expect(state == empty)
+        state.reveal("a", pages: 2)
+        let two = state
+        state.reveal("a", pages: 1)
+        #expect(state == two)
+        state.reveal("a", pages: 2)
+        #expect(state == two)
+    }
 }

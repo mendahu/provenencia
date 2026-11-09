@@ -90,6 +90,7 @@ struct ConclusionFoldState<Fold: Hashable>: Hashable {
 
     /// Reveals through `pages`, keeping the larger of that and what is revealed.
     mutating func reveal(_ fold: Fold, pages: Int) {
-        revealed[fold] = max(revealed[fold] ?? 0, pages)
+        guard pages > self.pages(fold) else { return }
+        revealed[fold] = pages
     }
 }
