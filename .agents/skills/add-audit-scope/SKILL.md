@@ -41,7 +41,7 @@ An entity whose effect is `None` (`subject_position`, `file_derivative`) is not 
 An all-`None` list commits without a revision. In a mixed list, `Run` drops the `None`
 rows before `Record`, so they are stored with the revision and are not recorded.
 
-An owned value row (`date_value`, `name_value`, `depiction_value`) uses `effects.ownedValue`. A depiction's image `file` row is audited; thumbnails (`file_derivative`) stay `None`. See `add-depiction-value`.
+An owned value row (`date_value`, `name_value`, `depiction_value`) uses `effects.ownedValue`; a value row a second kind of owner holds in its own column (a Source's `sources.date_value_id`) passes that owner's path as the third argument, so an in-place edit reaches that owner's scope (`"date_values": ownedValue("date_value", "value_date_id", inbound("sources", "date_value_id"))`). A depiction's image `file` row is audited; thumbnails (`file_derivative`) stay `None`. See `add-depiction-value`.
 
 Source scopes come from the effect's `SourceScope` path, not a hand resolver. Set `EvidenceGraph` too only when the graph cache loads the table's rows, and `Reads` only when a keyed read (citations, graph progress) does; name only the graphs the change moves, never every graph of the Source.
 

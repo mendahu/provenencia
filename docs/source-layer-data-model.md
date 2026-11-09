@@ -129,11 +129,17 @@ CREATE TABLE sources (
     ref             TEXT UNIQUE NOT NULL,      -- e.g. SRC-F4N2P
     source_type_id  BLOB NOT NULL REFERENCES source_types(id),
     title           TEXT NOT NULL,
-    description     TEXT
+    description     TEXT,
+    date_value_id   BLOB REFERENCES date_values(id),   -- the Source's own date; at most one per Source
+    is_public       INTEGER NOT NULL DEFAULT 1 CHECK (is_public IN (0, 1))
 ) STRICT;
 ```
 
 `source_type_id` provides the broad user-facing classification. `title` is the required human headline for lists and search (always non-empty after trim). More variable catalog information belongs in Source metadata. All Sources have a `ref` with prefix `SRC`; Source *type* (`birth_certificate`, `census`, …) does not change the prefix.
+
+`date_value_id` is the Source's own date: the original publication, or when the record was made. It is one optional shared DateValue ([`structured-date-model.md`](structured-date-model.md)), unique to its Source, owned as an Observation owns its value: set and edited in place by `sources.SetDate`, cleared by releasing the row, and released when the Source is deleted. It is not a `source_metadata` value, which stays text. Sources are ordered by it with `date_sort_key`, the integer `valuecompare.DateKeyOf` gives (absent when undated or when the date has no year).
+
+`is_public` is the researcher's not-public switch (`0` = not public); it defaults to public, so every Source that existed before it is public. It is stored and read back and nothing else in the engine acts on it: no filter, hide or cascade.
 
 `description` is catalog text about the Source itself. Researcher commentary that may accumulate over time belongs in `source_notes` rather than a single inline notes field.
 
@@ -164,7 +170,7 @@ Copy Source makes a new Source from an existing one so a researcher starts from 
 - the credibility assessment (grade and argument);
 - each chosen Artifact, as a new row with its own `ART-` ref and the same label, description and File.
 
-**Never copied:** notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
+**Never copied:** the date and the not-public flag (the copy is undated and public until Copy Source carries the date, S15-32), notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
 
 **Cover.** The copy's cover is reset to the Source type icon (`primary_artifact_id` is empty), even when the original's cover was one of the Artifacts the copy carries.
 
@@ -515,7 +521,7 @@ files
 file_derivatives
 ```
 
-The audit tables are cross-cutting infrastructure and are defined separately in `audit-revision-history.md`. Structured `date_values` are Interpretation / Conclusion infrastructure ([`structured-date-model.md`](structured-date-model.md)), not a Source-layer attachment.
+The audit tables are cross-cutting infrastructure and are defined separately in `audit-revision-history.md`. Structured `date_values` are shared infrastructure ([`structured-date-model.md`](structured-date-model.md)), not a Source-layer table; a Source holds its own date there through `sources.date_value_id`, and its catalog metadata stays text.
 
 ---
 

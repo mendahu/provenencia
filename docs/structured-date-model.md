@@ -6,7 +6,7 @@ Draft architecture notes. This document is the authoritative schema and design r
 
 Structured dates are cross-layer infrastructure. They may be referenced by Interpretations, Claims, Conclusions, and other future domain objects that need to represent genealogical dates faithfully.
 
-They are **not** used on Source-layer catalog metadata. Filing dates (`publication_date`, `issue_date`, and similar) stay as `source_metadata.value_text`. See [`source-layer-data-model.md`](source-layer-data-model.md) §1.2 and §5.
+They are **not** used on Source-layer catalog metadata. Filing dates (`publication_date`, `issue_date`, and similar) stay as `source_metadata.value_text`. A Source's own date (the original publication, or when the record was made) is a different thing: one optional DateValue on `sources.date_value_id` (§4). See [`source-layer-data-model.md`](source-layer-data-model.md) §1.2, §4 and §5.
 
 ---
 
@@ -165,7 +165,7 @@ A DateValue may be phrase-forward (structure sparse or empty) when the evidence 
 
 ## 3.4 The display date of an event
 
-An event shown in a list or on a timeline has one display date: its kept `date`, else its kept `start_date`, whichever has a place (`conclusionsummaries` owns the rule). A date has a place when at least one of its ends is closed: a point, a range, `aft.`, `bef.`, a range with only a start or only an end year. A date with no year, or with both ends open, is undated, and so is an event that has only an end date. The event sorts by the first day of its first end, or of its known end when the start is open (`bef. 1880` sorts at 1 Jan 1880). On the same first day, a `bef.` date sorts first, then a closed date, then an `aft.` date, and ties after that go by ref: `bef. 29 Mar 2011`, `29 Mar 2011`, `aft. 29 Mar 2011`. On a timeline it spans `From` to `To` on the year line, `bef.` and `aft.` spanning their known end with the open side flagged. This is the display order, separate from the reconciler's `sort_key`, which still treats an open start as no key. A year outside `datevalue.MinYear…MaxYear` (-9999 to 9999) is invalid on write and has no place on read, so a stored date outside it is undated. The rule is the engine's: it orders and spans events, and it picks the header's and the Persons list's dates. The Events list row (`DateRowDisplay`) still shows the kept `date` whenever one is set, so a `date` with no year beside a dated `start_date` reads differently there; aligning it is an open follow-up.
+An event shown in a list or on a timeline has one display date: its kept `date`, else its kept `start_date`, whichever has a place (`conclusionsummaries` picks the date; `valuecompare.DateKeyOf` owns the rule). A date has a place when at least one of its ends is closed: a point, a range, `aft.`, `bef.`, a range with only a start or only an end year. A date with no year, or with both ends open, is undated, and so is an event that has only an end date. The event sorts by the first day of its first end, or of its known end when the start is open (`bef. 1880` sorts at 1 Jan 1880). On the same first day, a `bef.` date sorts first, then a closed date, then an `aft.` date, and ties after that go by ref: `bef. 29 Mar 2011`, `29 Mar 2011`, `aft. 29 Mar 2011`. On a timeline it spans `From` to `To` on the year line, `bef.` and `aft.` spanning their known end with the open side flagged. This is the one date order (`valuecompare.DateKeyOf` and `DateKey.Compare`, in `core/valuecompare/dateorder.go`); a Source's `date_sort_key` and the reconciler's stored date `sort_key` read it too (`DateKey.Int64`), so a `bef.` date has a key in all three. A year outside `datevalue.MinYear…MaxYear` (-9999 to 9999) is invalid on write and has no place on read, so a stored date outside it is undated. The rule is the engine's: it orders and spans events, and it picks the header's and the Persons list's dates. The Events list row (`DateRowDisplay`) still shows the kept `date` whenever one is set, so a `date` with no year beside a dated `start_date` reads differently there; aligning it is an open follow-up.
 
 ---
 
@@ -177,7 +177,7 @@ Tables in any domain layer may reference a structured date:
 date_value_id BLOB REFERENCES date_values(id)
 ```
 
-Source catalog dates do **not** use this column. A book’s publication wording or a certificate’s issue date lives on `source_metadata.value_text` only. A later project-wide “when was this evidence created or published” sort is a first-class Source attribute, not a DateValue hanging off an EAV key ([`spike-15/source-provenance-date.md`](deployment-plan/spike-15/source-provenance-date.md), planned for Spike 15).
+Source catalog **metadata** dates do **not** use this column. A book’s publication wording or a certificate’s issue date lives on `source_metadata.value_text` only. A Source's own date, the project-wide “when was this evidence created or published” that the Sources list sorts by, is a first-class Source attribute and does use it: `sources.date_value_id`, at most one per Source, owned by the Source as an Observation owns its value (`datevalues.PutTx` writes it, edits it in place, and `deleteimpact.ReleaseReplaced` releases it on clear; `sources.Delete` releases it too). It is never a DateValue hanging off an EAV key ([`spike-15/source-provenance-date.md`](deployment-plan/spike-15/source-provenance-date.md)).
 
 Interpretation Observations (and later Claims) attach `date_value_id` when the property is a genealogical date:
 
@@ -193,7 +193,7 @@ Refined conclusions should usually be **new** DateValue rows (or later-layer ass
 
 # 5. Architectural rules
 
-1. `date_values` is shared cross-layer infrastructure, not part of the Source layer.
+1. `date_values` is shared cross-layer infrastructure, not part of the Source layer's catalog metadata. A Source owns one optional date of its own (`sources.date_value_id`), and a DateValue row has one owner.
 2. Every DateValue is **one** genealogical date; `range` is a bounded uncertainty window for that date, not an event duration.
 3. Genealogical dates are not reduced to SQL `DATE` / `DATETIME` values.
 4. Precision is carried by whichever optional components the evidence asserts (gaps allowed), not by proliferating kinds (`point` vs `range` only).

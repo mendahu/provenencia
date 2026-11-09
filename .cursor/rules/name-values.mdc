@@ -8,7 +8,7 @@ alwaysApply: false
 
 Follow the project skill `.agents/skills/add-name-value/SKILL.md`. Design notes: `docs/structured-name-model.md`.
 
-- Types, `Validate` and the part-type registry live in `core/namevalue`; use `namevalues.Insert` / `Lookup` for storage; required `form`; optional ordered parts.
+- Types, `Validate` and the part-type registry live in `core/namevalue`; use `namevalues.Insert` / `Lookup` for storage; an owner stores its name through `namevalues.PutTx` (edit in place, audited; `CreateChange` / `UpdateChange` / `RowMap` build the audit rows) and releases a replaced one through `deleteimpact.ReleaseReplaced`; required `form`; optional ordered parts.
 - Part `type` empty or a product registry key (`PartTypes` / `KnownPartType`); `Validate` (and Insert) rejects unknown keys. No free-text types in UI.
 - Do not close `type` in DDL; user-minted part-type tables are a later PR.
 - Schema changes go through catalog migrations; do not invent a parallel name store.
