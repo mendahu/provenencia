@@ -92,8 +92,8 @@ struct PersonFamilyDiagram: View {
                             }
                             .frame(width: placed.frame.width, height: placed.frame.height)
                             .focused($focused, equals: placed.id)
-                            .offset(x: placed.frame.minX, y: placed.frame.minY)
                             .id(placed.id)
+                            .offset(x: placed.frame.minX, y: placed.frame.minY)
                             .accessibilityIdentifier("persons.detail.family.tile.\(placed.id)")
                         }
                     }
