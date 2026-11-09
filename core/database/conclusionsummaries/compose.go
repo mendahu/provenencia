@@ -772,7 +772,7 @@ func leadLife(in *graphcache.InputScope, v vocab, pg *placeGraph, items []lifePi
 			lead = item
 		}
 	}
-	locations, err := follow(in, lead.event.ID, hops.PlacesOfEvent)
+	locations, err := eventLocations(in, lead.event.ID)
 	if err != nil {
 		return LifeFacts{}, err
 	}
@@ -854,12 +854,41 @@ func lifeEvents(births, deaths []lifePick) [][]byte {
 	return out
 }
 
+// maxEventPlaces is the most places one event names to the page; the rest are
+// not read.
+// decided: user, 2026-11-08 (Spike 16 rule "Crafted fan-out is capped, not engineered"): a real event names one to three places
+const maxEventPlaces = 20
+
+// eventLocations follows an event's locations through in and keeps every link
+// whose place is among the first maxEventPlaces distinct places (by
+// Link.Neighbor, whether or not that place's node loads later), in link order.
+// It is the one read of an event's places: the place graph, the folded places
+// and the life owners all agree on it.
+func eventLocations(in *graphcache.InputScope, eventID []byte) ([]graphcache.Link, error) {
+	links, err := follow(in, eventID, hops.PlacesOfEvent)
+	if err != nil {
+		return nil, err
+	}
+	places := map[string]bool{}
+	kept := links[:0:0]
+	for _, l := range links {
+		if !places[string(l.Neighbor)] {
+			if len(places) >= maxEventPlaces {
+				continue
+			}
+			places[string(l.Neighbor)] = true
+		}
+		kept = append(kept, l)
+	}
+	return kept, nil
+}
+
 // placesOfEvents follows each event's locations through in and returns the
 // places at their far ends.
 func placesOfEvents(in *graphcache.InputScope, eventIDs [][]byte) ([][]byte, error) {
 	var out [][]byte
 	for _, id := range eventIDs {
-		locations, err := follow(in, id, hops.PlacesOfEvent)
+		locations, err := eventLocations(in, id)
 		if err != nil {
 			return nil, err
 		}
@@ -886,7 +915,7 @@ func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []life
 	var assocIDs [][]byte
 	linksOf := map[string][]graphcache.Link{}
 	for _, pick := range picks {
-		links, err := follow(in, pick.event.ID, hops.PlacesOfEvent)
+		links, err := eventLocations(in, pick.event.ID)
 		if err != nil {
 			return LifeOwners{}, err
 		}
@@ -948,7 +977,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 		for _, l := range subjects {
 			personIDs = append(personIDs, l.Neighbor)
 		}
-		locations, err := follow(scopes[string(n.ID)], n.ID, hops.PlacesOfEvent)
+		locations, err := eventLocations(scopes[string(n.ID)], n.ID)
 		if err != nil {
 			return nil, nil, err
 		}
