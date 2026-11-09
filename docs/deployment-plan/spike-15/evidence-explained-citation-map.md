@@ -6,10 +6,10 @@
 
 ## Read this first
 
-- **Edition.** The list follows the chapter layout of *Evidence Explained: Citing History Sources from Artifacts to Cyberspace* (Elizabeth Shown Mills), 3rd edition. It was written from knowledge of the book, not from a copy beside the keyboard. Check the chapter list and the record kinds against the edition on hand before the formatter's templates are written, and add any kind this list misses to its pattern.
+- **Edition.** The list follows the chapter layout of *Evidence Explained: Citing History Sources from Artifacts to Cyberspace* (Elizabeth Shown Mills), 3rd edition. It was written from knowledge of the book, not from a copy beside the keyboard. Check the chapter list and the record kinds against the edition on hand before the seeded citation formats are written, and add any kind this list misses to its pattern.
 - **Not a copy of the book.** EE has hundreds of "QuickCheck" models, many of them variants of the same shape. This doc does not reproduce them. It names the record kinds and paraphrases the shape each one shares. Every example citation here is invented for this doc (made-up people, records and numbers) and is written in EE style, not taken from the book.
 - **Keep it that way.** Every later doc, template, test and UI string follows the spike's working rule on *Evidence Explained* ([`README.md`](README.md#working-rules)): our own templates, invented examples, our own names, no implied endorsement.
-- **Patterns, not models.** The formatter needs one template per *pattern* (about 17), with small per-kind variations, not one per EE model. The catalog in § 3 maps each record kind to its pattern.
+- **Patterns, not models.** Each *pattern* (about 17) becomes a seeded Source type with its citation formats as data (§ 6.3), with small per-kind variations, not one per EE model. The catalog in § 3 maps each record kind to its pattern.
 
 ## Contents
 
@@ -41,7 +41,7 @@ The two overlap only by accident: "image 37" means nothing without the file, and
 
 What follows from it:
 
-- **The formatter does not read the locator,** except for the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
+- **Citation formats do not read the locator,** except `{image}`, the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
 - **Missing access details are flagged, never invented.** A scan or download with no provider, URL or film number gets a citation whose copy layer is incomplete, and the preview says so.
 - **Copy details are captured when the Artifact is added,** while the researcher still knows where it came from: the import flow shows the Artifact's metadata fields, not only the Artifact page afterwards. This also raises the value of filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
 - **A physical original has no access path;** `holder` ("privately held by …") is its copy layer.
@@ -51,7 +51,7 @@ What follows from it:
 
 ## 2. How an EE citation is put together
 
-Summarised from [`citation-formats.md`](citation-formats.md) "The convention", with the rules the formatter has to know.
+Summarised from [`citation-formats.md`](citation-formats.md) "The convention", with the rules the seeded formats follow.
 
 **Three forms per record.**
 
@@ -63,7 +63,7 @@ Summarised from [`citation-formats.md`](citation-formats.md) "The convention", w
 
 **Layers.** A full note is up to three layers separated by semicolons: (1) the record and the item in it; (2) how it was seen (the copy: "digital image, Ancestry (URL : accessed date)", or a microfilm); (3) what that copy rests on ("citing …", the repository and its reference). A record seen in the original has layers 1 and 3 only ("…; County Clerk's Office, Minneapolis").
 
-**Order flips between forms.** A source list entry runs from large to small and starts with what it is filed under, often the jurisdiction ("Kansas. Ottawa County. *Deed Book C*."). A note runs small to large ("Ottawa County, Kansas, Deed Book C: 214"). So the formatter must be able to reverse the jurisdiction: written smallest first ("York, Yorkshire, England"), its comma-separated parts are enough.
+**Order flips between forms.** A source list entry runs from large to small and starts with what it is filed under, often the jurisdiction ("Kansas. Ottawa County. *Deed Book C*."). A note runs small to large ("Ottawa County, Kansas, Deed Book C: 214"). Provenencia does not reverse text values (§ 6.3), so a seeded list format prints the jurisdiction as typed; a researcher who wants the large-to-small order there can add a second field for it.
 
 **Title styling.** The title of a published work is italic; a formal title of an unpublished manuscript is in quotation marks; a generic description ("baptisms, 1813–1837", "letter") is plain. The pattern decides which: published patterns style the title, record patterns print it as a description.
 
@@ -306,7 +306,7 @@ The graph supplies the "entry for …" or "baptism of …" part of a full note. 
 
 ### Seed (detailed in § 6)
 
-`M.key` is a value under a **product-seeded metadata field** (`origin = 'provenencia'`) with that key: on the Source (`source_metadata`), or on the Artifact or Evidence graph when it differs per copy or per item (§ 6.6). The formatter takes the most specific one. The type → field suggestions (`source_type_metadata_fields`) give each seeded Source type the fields its pattern reads, so the Source page's existing Suggestions board is what asks the researcher for them.
+`M.key` is a value under a **product-seeded metadata field** (`origin = 'provenencia'`) with that key: on the Source (`source_metadata`), or on the Artifact or Evidence graph when it differs per copy or per item (§ 6.6). The format engine takes the most specific one. The type → field suggestions (`source_type_metadata_fields`) give each seeded Source type the fields its pattern reads, so the Source page's existing Suggestions board is what asks the researcher for them.
 
 Fields already on the horizon list in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.2:
 
@@ -658,14 +658,16 @@ Any Source whose type maps to no pattern, or whose pattern is missing a required
 
 ## 6. Missing fields and how to add them
 
-### 6.1 The approach: the vocabulary we already have
+### 6.1 The approach: metadata plus citation formats as data
 
-Source types, metadata fields and the type → field suggestions between them are already a template system. A citation pattern is a list of fields in an order, and that is what a type's suggestions are. So on the Source side, Spike 15 extends the **seed**, not the schema. The Artifact and the Evidence graph get the same metadata structure, reusing the same fields (§ 6.6).
+**Decision (user, 2026-11-09).** EE's models are conventions for one goal: give enough to identify the record, find it again and judge it. So Provenencia does not code EE's patterns. It stores them as **citation formats**, editable text on each Source type, and seeds the EE formats for the product's types. A researcher's own types get formats the same way.
 
-- **Seeded Source types** for the record kinds in § 3's first set, each with the suggestions its pattern reads, in the order the citation uses them.
-- **Seeded metadata fields** for every `M.` key in § 4, labelled for researchers ("Enumeration district", "Folio", "Accessed").
-- **The formatter reads metadata by product key.** It looks for the field with that key and `origin = 'provenencia'`, and maps a seeded Source type to its pattern in Go. Fields the researcher added under their own keys stay theirs, as filing text the formatter ignores.
-- **The researcher keeps control.** They can file any field on any Source, dismiss suggestions, add their own fields and types, and edit labels. A Source of their own type gets the generic template (§ 6.3), which still reads every product field they filled.
+The pieces:
+
+- **Metadata fields** hold the values, on the Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) (§ 6.6). Values are free text and print exactly as typed.
+- **Source types are templates twice over:** their suggestions say which fields to fill at each level, and their citation formats say how those fields read in a citation (§ 6.3).
+- **The seed** supplies the EE types, fields, suggestions and formats for a new project (§ 6.8). Nothing about EE is in code.
+- **The engine** is one small interpreter: it parses a format, fills each placeholder from the Citation's graph, Artifact and Source, drops empty optional groups, and renders plain and styled text.
 
 This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md)): metadata stays, and becomes what citations are built from.
 
@@ -674,27 +676,73 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | What | Change | Kind |
 | --- | --- | --- |
 | Source date | `sources.date_value_id` ([`source-provenance-date.md`](source-provenance-date.md)) | **Schema** (planned) |
-| Citation fields | About 30 new seeded metadata fields (§ 4 "Fields to add") beside the 36 horizon keys the patterns use | Seed |
-| Source types | Seeded types for the first patterns: census, vital certificate (birth, marriage, death), church register, book, newspaper item, online database; the rest as their patterns are built | Seed |
-| Templates | Type → field suggestions for each seeded type at each level, ordered like its citation (§ 6.8) | Seed |
-| Getting the seed to existing projects | Descoped: create-time install only; a one-off command for the dogfood projects (§ 6.4) | — |
-| Copy and item values | `artifact_metadata`, `evidence_graph_metadata` and their layout tables, reusing the field vocabulary; the formatter reads the graph, then the Artifact, then the Source (§ 6.6) | **Schema** |
-| Templates per level | `source_type_metadata_fields.level` (`source`, `artifact`, `citation`) | **Schema** |
-| Item description | Read from the graph (§ 6.5); `citations.label` overrides | Engine |
+| Copy and item values | `artifact_metadata`, `evidence_graph_metadata` and their layout tables, reusing the field vocabulary (§ 6.6) | **Schema** |
+| Suggestions per level | `source_type_metadata_fields.level` (`source`, `artifact`, `graph`) | **Schema** |
+| Citation formats | `source_types.citation_full`, `citation_short`, `citation_list` (text, optional) (§ 6.3) | **Schema** |
+| Format engine | `core/citationformat`: parse, resolve, render; replaces `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
+| Format editor | On the Source type: the three formats, an insert-field picker, a live preview against a real Source, warnings for unknown fields | UI |
+| Item description | The `{item}` placeholder: the Citation label, else read from the graph (§ 6.5) | Engine |
 | Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
-| Party roles | `role` terms the formatter reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
-| Formatter | `core/citationformat`: one Go template per pattern, three forms each, plus the generic template; replaces `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
+| Seed | Types, fields, suggestions and EE formats for the first types (§ 6.8), installed at create (§ 6.4) | Seed |
+| Party roles | `role` terms the item reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
 
-So the schema changes are the Source date (already planned), four tables for Artifact and Citation values and layout, and a level on the type → field join. If the privacy toggle and moving an Artifact are pulled in, they add `sources.is_public` and possibly `ON UPDATE CASCADE` on the Subjects' composite key ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
+So the schema changes are the Source date (already planned), four tables for Artifact and graph values and layout, a level on the type → field join, and three format columns on `source_types`. If the privacy toggle and moving an Artifact are pulled in, they add `sources.is_public` and possibly `ON UPDATE CASCADE` on the Subjects' composite key ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
 
-### 6.3 How the formatter reads a Source
+### 6.3 Citation formats
 
-1. **Pick the pattern.** A seeded type maps to its pattern in Go. Any other type uses the generic template.
-2. **Read the fields** by product key: the Citation's graph's value, else its Artifact's, else the Source's (§ 6.6). A missing field is left out with its punctuation, never printed as a blank.
-3. **Shape the values it needs to.** `jurisdiction` is written smallest first, as notes use it; the source list reverses the comma-separated parts. `author` prints as written in notes, and the source list uses `author_sort` when it is filled. Dates in metadata (`accessed_date`) print as written; the Source date prints from its DateValue.
-4. **Style the title by pattern.** Published patterns (book, periodical, newspaper, web) italicize or quote as their convention says; record patterns print the title plain, as a description.
-5. **Add the item** from the Citation: `page_label`, the Citation label, or the graph (§ 6.5).
-6. **The generic template** prints, in order, whatever it finds: creator or author, title, `published_in`, jurisdiction, Source date, reference numbers, then the copy layer (`format`, `provider`, `url`, `accessed_date`) and `repository`. It is a readable citation for any Source, and the preview names the fields a seeded type would add.
+#### The forms
+
+Each Source type has up to three formats, one per EE form (§ 2): **full** (first reference note), **short** (subsequent note) and **list** (source list entry). A type with no full format falls back to today's citation line (§ 5 P17).
+
+#### The syntax
+
+A small syntax of our own, modelled on the convention genealogy programs use for editable source templates (fields in brackets, optional text that drops out when its field is empty), with Markdown for italics:
+
+| Syntax | Meaning |
+| --- | --- |
+| `{key}` | The value of the metadata field with that key, as typed |
+| `{a\|b}` | The first of the two that has a value (`{short_title\|title}`, `{author_sort\|author}`) |
+| `[ … ]` | Optional group: removed entirely, its text and punctuation included, if any placeholder inside it is empty. Groups nest |
+| `*…*` | Italic |
+| `\{` `\[` `\*` `\\` | A literal character |
+
+Everything else is literal text, including quotation marks and parentheses.
+
+**Empty placeholders outside a group** print nothing, and the preview names them as missing. So a format says which fields it expects (outside groups) and which are optional (inside groups), and the "missing fields" warning in the citation preview comes from the format itself.
+
+**No transforms on metadata (user, 2026-11-09).** Metadata is free text, so the engine never reorders, inverts or abbreviates it. A researcher who wants "Smith, Alice" in the source list fills `author_sort`; one who wants "Co." in short notes types it that way, or leaves the full form. Each field's description says to enter the value as it should appear.
+
+#### Built-in placeholders
+
+Values that are not metadata, with reserved names a metadata key cannot take:
+
+| Placeholder | Value |
+| --- | --- |
+| `{title}` | The Source title |
+| `{type}` | The Source type label |
+| `{date}`, `{date:year}`, `{date:full}` | The Source date. It is a structured DateValue, so formatting it is safe: the year only, or day-month-year ("3 March 1930") at whatever precision the date has. `{date}` is `{date:full}` |
+| `{page}` | The Citation's printed page (`page_label`) |
+| `{image}` | The Citation's page in the file (`artifact_page`), for the online-image layer ("image 37") |
+| `{item}` | The item: the Citation label, else read from the graph (§ 6.5) |
+
+#### Resolving a placeholder
+
+For a metadata key, the engine reads the value on the Citation's Evidence graph, else on its Artifact, else on the Source (§ 6.6). For the source list, which describes the Source as a whole, only Source values and `{title}`, `{type}`, `{date}` are read.
+
+#### Storage
+
+- Three nullable text columns on `source_types`: `citation_full`, `citation_short`, `citation_list`. Editing them is a Source type edit, audited as one today.
+- **Field references by id.** The editor shows `{enumeration_district}`, but the stored text names the field by id, so renaming a key cannot break a format, and a key held by both a product field and a researcher's field is never ambiguous. The editor resolves a typed key when the format is saved and asks if two fields share it.
+- **Delete impact.** A field named in any type's format is in use: deleting it is refused, with the types that use it listed ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md)).
+- Copy Source copies nothing new here: formats belong to the type, and the copy chooses its type.
+
+#### The engine
+
+`core/citationformat` in Go: `Parse` builds a tree of literal runs, placeholders, groups and italic spans; `Render` fills placeholders through a resolver and returns styled runs, from which plain text and rich text (italic kept) are produced. Values are inserted as literal text after parsing, so a value containing `*` or `[` never changes the formatting. The Mac app renders through FFI (one RPC for a Citation's citation in a form, one for previewing an unsaved format against a chosen Source), so there is one implementation. The parser and renderer are small and tested exhaustively with table tests.
+
+#### The editor
+
+On the Source type's page: the three formats as text fields, an **Insert field** picker (metadata fields and built-ins), a **live preview** against a real Source of that type the researcher picks, and warnings for unknown fields and unbalanced brackets. Researchers should not have to remember the syntax to use it.
 
 ### 6.4 Getting the seed into existing projects
 
@@ -704,12 +752,12 @@ Revisit before release, when existing projects belong to other researchers.
 
 ### 6.5 Reading the item from the graph
 
-This is where "build the graph, get the citation" pays off. For a Citation, the formatter collects the Subjects whose Observations cite it and composes the item part:
+This is where "build the graph, get the citation" pays off. The `{item}` placeholder (§ 6.3) is built for each Citation from the Subjects whose Observations cite it:
 
 1. If the Citation has a `label`, use it (the researcher's override).
 2. Else, find the event Subject with Observations on this Citation: its `event_type` gives "baptism of", its `date` gives the item date, and its principal participant's recorded `name` gives the person.
 3. Else, find a person Subject: "entry for *name*" (P13), or "household of *name*" when the role is head of household (P5).
-4. Else, write the pattern's generic item ("entry", "page").
+4. Else, it is empty, and a group around it drops.
 
 Names and dates are the ones the Source records (Observations), never the canonical person's kept name: a citation describes the record, not the conclusion.
 
@@ -766,7 +814,7 @@ CREATE TABLE evidence_graph_metadata_layout (
 ```
 
 - **Same fields, three levels.** All three levels take any field from the one vocabulary, seeded and researcher-made alike. No new columns on `artifacts` or `citations`.
-- **The most specific value wins.** For each key, the formatter reads the value on the Citation's graph, else on its Artifact, else on the Source. A researcher who files one Source per household never needs the graph level; one who files the whole page as a Source fills line numbers per graph, one graph per household (§ 6.9).
+- **The most specific value wins.** For each key, the format engine reads the value on the Citation's graph, else on its Artifact, else on the Source. A researcher who files one Source per household never needs the graph level; one who files the whole page as a Source fills line numbers per graph, one graph per household (§ 6.9).
 - **Templating follows the Source's type.** An Artifact's and a graph's suggestions are the `artifact` and `graph` rows of their Source's type, so a census Source suggests provider and URL on each Artifact and line, dwelling and family on each graph. The Source types admin edits the three lists the way it edits one today.
 - **Layout works as on the Source.** `ListWorkspace`'s merge rules (dismiss hides an empty suggestion, saved order first, then suggestions, then extras) apply unchanged per Artifact and per graph ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 5.4). The Artifact form and the graph's edit view each get a metadata board built from the Source page's. The Citation composer gets none.
 - **Readers of the join** filter by level: `sourcetypes`, `sourcevocab` (suggestion ops and Install), the `effects` registry and the catalog model.
@@ -780,30 +828,30 @@ CREATE TABLE evidence_graph_metadata_layout (
 | --- | --- |
 | A shared Repository record | `repository` text, carried between siblings by Copy Source |
 | Several authors with roles in order | `author` as written plus `author_sort`; `editor`, `compiler`, `translator` as separate fields |
-| A title-kind flag | The pattern decides the styling |
-| A pattern choice for a researcher's own type | The generic template; mapping a user type to a pattern can come later if dogfooding asks for it |
+| Reordering, inverting or abbreviating values | Enter values as they should appear; `author_sort` and `short_title` give a second form where a format wants one (§ 6.3) |
 
 ### 6.7 Suggested order
 
 Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 
 1. **Source date** and the Source page design that shows it.
-2. **Seed:** the new fields, the first seeded types and their suggestions, installed at create; a one-off command updates the dogfood projects (§ 6.4).
-3. **Artifact and graph metadata:** the value and layout tables, the level on suggestions, a metadata board on the Artifact form and on the graph, and the Artifact's fields in the import flow.
-5. **Printed page labels** in the composer.
-6. **Formatter** with the generic template and the first patterns: P5 census, P4 vital certificate, P6 church register, P10 book, P12 newspaper, P13 web database, with the P14 layer.
+2. **Artifact and graph metadata:** the value and layout tables, the level on suggestions, a metadata board on the Artifact form and on the graph, and the Artifact's fields in the import flow.
+3. **Printed page labels** in the composer.
+4. **Format engine:** `core/citationformat` (parse, resolve, render), the three format columns, the FFI calls, and the provenance sheet's citation line reading the full format, with today's line as the fallback.
+5. **Format editor** on the Source type, with the live preview.
+6. **Seed:** the first types, fields, suggestions and formats (§ 6.8), installed at create; a one-off command updates the dogfood projects (§ 6.4).
 7. **Citation preview** on the Source page, naming missing fields.
-8. **Grouped display:** the provenance sheet and the Person page's Sources section show one full note per resolved citation (§ 6.9).
+8. **Grouped display:** the provenance sheet and the Person page's Sources section show one full note per rendered citation (§ 6.9).
 9. **Copy citation**, full or short.
-10. Remaining patterns, each a seed batch plus its template.
+10. More seeded types and formats, as data, for the remaining patterns in § 5.
 
 ### 6.8 Proposed first seed (for review)
 
-**Status:** a proposal for the product owner to trim (2026-11-09). It covers only the first six patterns from § 6.7; fields that only later patterns need (photographer, interviewer, case number, box, folder, kit number and the rest of § 4) are seeded with their patterns, not now.
+**Status:** a proposal for the product owner to trim (2026-11-09). It covers the first six types (§ 6.7); fields that only later patterns need (photographer, interviewer, case number, box, folder, kit number and the rest of § 4) are seeded with their patterns, not now.
 
 #### Source types
 
-| Type key | Label | Pattern | Note |
+| Type key | Label | EE pattern (§ 5) | Note |
 | --- | --- | --- | --- |
 | `census` | Census | P5 | |
 | `birth_certificate` | Birth certificate | P4 | Already seeded; gains suggestions |
@@ -822,7 +870,7 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 | --- | --- | --- | --- | --- |
 | `creator` | Creator | Source | Horizon | |
 | `author` | Author | Source | Horizon | |
-| `author_sort` | Author (sort as) | Source | New | Yes: the formatter could invert "Alice Smith" itself and get most names right |
+| `author_sort` | Author (sort as) | Source | New | Keep if a source list should read "Smith, Alice": values are never inverted (§ 6.3) |
 | `editor` | Editor | Source | New | |
 | `compiler` | Compiler | Source | New | Yes: rare outside published abstracts |
 | `translator` | Translator | Source | New | Yes: rare |
@@ -833,7 +881,7 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 | `edition` | Edition | Source | Horizon | |
 | `series` | Series | Source | Horizon | |
 | `volume` | Volume | Source | Horizon | |
-| `short_title` | Short title | Source | New | Yes: the formatter can shorten the title |
+| `short_title` | Short title | Source | New | Yes: `{short_title\|title}` falls back to the title |
 | `coverage` | Years covered | Source | New | Yes: can stay in the title |
 | `site_name` | Website | Source | Horizon | |
 | `document_number` | Document number | Source | Have | Serves as the certificate number, so `certificate_number` from the horizon list is not added |
@@ -878,6 +926,70 @@ In citation order. **Every type** also suggests the copy fields on its Artifacts
 
 The page cited is not a field: it is the printed page label the composer writes on the Citation's locator. The year or date is the Source date.
 
+#### Citation formats
+
+Written for Provenencia from the conventions in § 2, not copied from *Evidence Explained* (working rule, [`README.md`](README.md#working-rules)). Each is a starting point the researcher can edit. Lines are wrapped here for reading; a format is one line.
+
+**Census**
+
+```text
+full:  {date:year} [{creator} ]census, {jurisdiction}[, {schedule}][, ED {enumeration_district}]
+       [, p. {page}][, dwelling {dwelling_number}][, family {family_number}][, line {line_number}]
+       [, {item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])][; citing {citing}].
+short: {date:year} [{creator} ]census, {jurisdiction}[, ED {enumeration_district}][, p. {page}]
+       [, dwell. {dwelling_number}][, fam. {family_number}][, {item}].
+list:  {jurisdiction}. {date:year} [{creator} ]census[, {schedule}].[ {format}.][ *{provider}*.][ {url}.]
+```
+
+> 1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (https://www.ancestry.com : accessed 12 March 2025); citing NARA microfilm publication T9, roll 393.
+
+**Birth certificate** (marriage and death certificates are the same, with their own word)
+
+```text
+full:  [{creator}, ]birth certificate[ no. {document_number}][ ({date:full})][, {item}][, vol. {volume}]
+       [, p. {page}][, entry {entry_number}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
+       [; {repository}].
+short: [{creator}, ]birth certificate[ no. {document_number}][, {item}].
+list:  {jurisdiction}.[ {creator}.] Birth certificates.[ {repository}.]
+```
+
+**Church register**
+
+```text
+full:  {creator}[ ({jurisdiction})], *{title}*[, vol. {volume}][, p. {page}][, fol. {folio}]
+       [, no. {entry_number}][, {item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
+       [; film {film_number}[, item {item_number}]][; {repository}].
+short: {creator}, *{short_title|title}*[, vol. {volume}][, p. {page}][, no. {entry_number}].
+list:  {creator}[ ({jurisdiction})]. *{title}*.[ {repository}.]
+```
+
+**Book**
+
+```text
+full:  {author}, *{title}*[, {edition}][, vol. {volume}][ ([{publication_place}: ]{publisher}[, {date:year}])]
+       [, {page}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
+short: {author}, *{short_title|title}*[, {page}].
+list:  {author_sort|author}. *{title}*.[ {edition}.][ [{publication_place}: ]{publisher}[, {date:year}].]
+```
+
+**Newspaper item**
+
+```text
+full:  "{title}," *{published_in}*[ ({jurisdiction})], {date:full}[, p. {page}][, col. {column}]
+       [; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
+short: "{title}," *{published_in}*, {date:full}.
+list:  *{published_in}*[ ({jurisdiction})].
+```
+
+**Website or online database**
+
+```text
+full:  [{creator}, ]"{title}," [{format}, ]*{site_name}*[ ({url}[ : accessed {accessed_date}])]
+       [, {item}][; citing {citing}].
+short: "{title}"[, {item}].
+list:  [{creator}. ]"{title}." [{format}. ]*{site_name}*.[ {url}.]
+```
+
 ### 6.9 One EE citation, many Provenencia Citations
 
 A census row is one EE citation (the household, its dwelling, family and line), but a researcher may draw five Citations on it: the name, the age, the birthplace, the occupation, the relationship column. All five share the item and differ only in their locators.
@@ -891,7 +1003,7 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 **What follows:**
 
 1. **Entering the item:** once, on the graph's metadata board, where its name and description are edited. A census Source's type suggests dwelling, family and line there.
-2. **Showing the item once:** wherever Citations are listed for a reader (the provenance sheet, the Person page's Sources section, an export), Citations with the same graph, Artifact and printed page are one EE citation. The full note shows once, with its Citations (the highlighted cells) beneath it. The same key gives the short note on second mention; a source list groups one level up, by Source. The key is computed when read; nothing new is stored.
+2. **Showing the item once:** wherever Citations are listed for a reader (the provenance sheet, the Person page's Sources section, an export), Citations whose rendered full citation is the same are one EE citation; in practice, the same graph, Artifact and printed page. The full note shows once, with its Citations (the highlighted cells) beneath it. The same key gives the short note on second mention; a source list groups one level up, by Source. The key is computed when read; nothing new is stored.
 3. **Editing the item:** once, on the graph.
 
 **When one graph covers several items.** A researcher who keeps the Default graph for a page with two households of interest gets one set of item fields for both. The answer is the one Spike 12 intended: one graph per household. The Citation label stays the escape hatch ("line 14"), and the citation preview shows the result.
@@ -907,14 +1019,18 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 - **Which patterns first.** The proposed first set in § 6.7 is a guess; the product owner's dogfood Sources decide.
 - ~~Install for existing projects~~: descoped; create-time only, plus a one-off command for the dogfood projects (user, 2026-11-09, § 6.4).
 - **Same key, two origins.** Whether to offer moving a researcher's own `author` (or similar) values into the product field, and when.
-- **Generic template or a pattern choice for user types.** Whether a researcher's own type can pick a pattern later, which would need a column on `source_types`.
+- ~~Generic template or a pattern choice for user types~~: any type has its own editable formats (user, 2026-11-09, § 6.3).
+- **Starting formats for a new type.** Whether a researcher's new type starts blank, or with a copy of a seeded type's formats they choose.
 - **Jurisdiction from the graph.** The graph often has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text would save typing without making the Source depend on interpretation.
 - **Principal Subject.** When a Citation supports several people (a census household, a marriage), which one names the item: head of household, both spouses, the person the researcher opened the composer from?
-- **Editable templates.** Recommendation: researchers fill fields and reorder suggestions only; a per-Source "edited citation" text field if the formatter is wrong for an odd record (one more seeded field, `citation_override`).
+- ~~Editable templates~~: yes, citation formats are data on the type (user, 2026-11-09, § 6.3).
+- **Per-Source override.** Whether a Source can override its type's format for an odd record (a seeded `citation_override` field holding finished text, or a format of its own).
 - ~~Layout at the Artifact and item levels~~: same as the Source, with templating per level (user, 2026-11-09).
 - ~~Where the item lives~~: on the Evidence graph; the composer gets no new fields (user, 2026-11-09, § 6.9).
 - **How much seed.** The proposed first seed in § 6.8 is up for review (user, 2026-11-09).
 - **Field vocabulary name.** Keep `source_metadata_fields` for all three levels, or rename it to `metadata_fields`.
 - **Printed page map.** Whether a per-Artifact page map ("image 37 is page 23") should replace typing the printed page in the composer (§ 6.9).
 - **One graph, several items.** Whether the app should nudge a researcher toward one graph per household when a Source's type suggests item fields at the graph level.
+- **Syntax details.** Whether `{a|b}` is enough, or the syntax needs anything more before the seed is written; how the editor reports an unbalanced bracket.
+- **More forms.** Whether three forms (full, short, list) are enough, or a type needs a fourth (for example, a form for an export).
 - **Edition check.** Verify § 3 against the edition of *Evidence Explained* on hand, including how it treats DNA results and online trees.
