@@ -45,7 +45,7 @@ func TestReleaseSchedulesPurge(t *testing.T) {
 				if _, err := tx.Exec(`UPDATE artifacts SET file_id = NULL WHERE id = ?`, artID); err != nil {
 					t.Fatal(err)
 				}
-				if err := deleteimpact.ReleaseReplaced(tx, "artifacts.file_id", fileID); err != nil {
+				if _, err := deleteimpact.ReleaseReplaced(tx, "artifacts.file_id", "", fileID, nil, nil); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -58,7 +58,7 @@ func TestReleaseSchedulesPurge(t *testing.T) {
 				if _, err := tx.Exec(`UPDATE artifacts SET file_id = NULL WHERE id = ?`, artID); err != nil {
 					t.Fatal(err)
 				}
-				if err := deleteimpact.ReleaseReplaced(tx, "artifacts.file_id", fileID); err != nil {
+				if _, err := deleteimpact.ReleaseReplaced(tx, "artifacts.file_id", "", fileID, nil, nil); err != nil {
 					t.Fatal(err)
 				}
 			},

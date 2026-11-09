@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/depictionvalues"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -66,23 +65,6 @@ func resolveDepiction(tx *sql.Tx, citationID []byte, d *DepictionInput) (resolve
 	if err != nil {
 		return resolvedValue{}, err
 	}
-	changes := append(fileChanges, depictionCreateChange(id, v))
+	changes := append(fileChanges, depictionvalues.CreateChange(id, v))
 	return resolvedValue{DepictionID: id, ValueChanges: changes}, nil
-}
-
-func depictionCreateChange(id []byte, v depictionvalue.Value) rowchange.Change {
-	return rowchange.Change{
-		EntityType: "depiction_value",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields:     rowchange.FullRow(depictionValueMap(id, v)),
-	}
-}
-
-func depictionValueMap(id []byte, v depictionvalue.Value) map[string]any {
-	return map[string]any{
-		"id":            database.UUIDJSON(id),
-		"region_json":   v.RegionJSON,
-		"image_file_id": database.UUIDJSON(v.ImageFileID),
-	}
 }

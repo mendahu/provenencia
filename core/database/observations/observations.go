@@ -457,28 +457,19 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		if in.Date != nil {
-			if existing != nil && len(existing.ValueDateID) == 16 {
-				prev, err := datevalues.LookupTx(tx, existing.ValueDateID)
-				if err != nil {
-					return resolvedValue{}, err
-				}
-				if err := datevalues.UpdateTx(tx, existing.ValueDateID, *in.Date); err != nil {
-					return resolvedValue{}, err
-				}
-				next := *in.Date
-				next.ID = append([]byte(nil), existing.ValueDateID...)
-				resolved := resolvedValue{DateID: append([]byte(nil), existing.ValueDateID...)}
-				if ch := dateUpdateChange(prev, next); ch != nil {
-					resolved.ValueChanges = []rowchange.Change{*ch}
-				}
-				return resolved, nil
+			var prevID []byte
+			if existing != nil {
+				prevID = existing.ValueDateID
 			}
-			dateID, err := datevalues.InsertTx(tx, *in.Date)
+			dateID, ch, err := datevalues.PutTx(tx, prevID, *in.Date)
 			if err != nil {
 				return resolvedValue{}, err
 			}
-			ch := dateCreateChange(dateID, *in.Date)
-			return resolvedValue{DateID: dateID, ValueChanges: []rowchange.Change{ch}}, nil
+			resolved := resolvedValue{DateID: dateID}
+			if ch != nil {
+				resolved.ValueChanges = []rowchange.Change{*ch}
+			}
+			return resolved, nil
 		}
 		if len(in.ValueDateID) != 16 {
 			return resolvedValue{}, ErrInvalid
@@ -489,28 +480,19 @@ func resolveValue(tx *sql.Tx, citationID []byte, valueType string, in Input, exi
 			return resolvedValue{}, ErrInvalid
 		}
 		if in.Name != nil {
-			if existing != nil && len(existing.ValueNameID) == 16 {
-				prev, err := namevalues.LookupTx(tx, existing.ValueNameID)
-				if err != nil {
-					return resolvedValue{}, err
-				}
-				if err := namevalues.UpdateTx(tx, existing.ValueNameID, *in.Name); err != nil {
-					return resolvedValue{}, err
-				}
-				next := *in.Name
-				next.ID = append([]byte(nil), existing.ValueNameID...)
-				resolved := resolvedValue{NameID: append([]byte(nil), existing.ValueNameID...)}
-				if ch := nameUpdateChange(prev, next); ch != nil {
-					resolved.ValueChanges = []rowchange.Change{*ch}
-				}
-				return resolved, nil
+			var prevID []byte
+			if existing != nil {
+				prevID = existing.ValueNameID
 			}
-			nameID, err := namevalues.InsertTx(tx, *in.Name)
+			nameID, ch, err := namevalues.PutTx(tx, prevID, *in.Name)
 			if err != nil {
 				return resolvedValue{}, err
 			}
-			ch := nameCreateChange(nameID, *in.Name)
-			return resolvedValue{NameID: nameID, ValueChanges: []rowchange.Change{ch}}, nil
+			resolved := resolvedValue{NameID: nameID}
+			if ch != nil {
+				resolved.ValueChanges = []rowchange.Change{*ch}
+			}
+			return resolved, nil
 		}
 		if len(in.ValueNameID) != 16 {
 			return resolvedValue{}, ErrInvalid
@@ -782,182 +764,4 @@ func mapConstraint(err error) error {
 		return ErrInvalid
 	}
 	return err
-}
-
-func dateUpdateChange(prev, next datevalue.Value) *rowchange.Change {
-	fields := map[string]rowchange.FieldDiff{}
-	add := func(key string, old, new any) {
-		if old != new {
-			fields[key] = rowchange.FieldDiff{Old: old, New: new}
-		}
-	}
-	add("kind", database.NullString(prev.Kind), database.NullString(next.Kind))
-	add("qualifier", database.NullString(prev.Qualifier), database.NullString(next.Qualifier))
-	add("calendar", database.NullString(prev.Calendar), database.NullString(next.Calendar))
-	add("start_year", intPtrAny(prev.StartYear), intPtrAny(next.StartYear))
-	add("start_month", intPtrAny(prev.StartMonth), intPtrAny(next.StartMonth))
-	add("start_day", intPtrAny(prev.StartDay), intPtrAny(next.StartDay))
-	add("start_hour", intPtrAny(prev.StartHour), intPtrAny(next.StartHour))
-	add("start_minute", intPtrAny(prev.StartMinute), intPtrAny(next.StartMinute))
-	add("start_second", intPtrAny(prev.StartSecond), intPtrAny(next.StartSecond))
-	add("start_millisecond", intPtrAny(prev.StartMillisecond), intPtrAny(next.StartMillisecond))
-	add("start_tz", database.NullString(prev.StartTZ), database.NullString(next.StartTZ))
-	add("end_year", intPtrAny(prev.EndYear), intPtrAny(next.EndYear))
-	add("end_month", intPtrAny(prev.EndMonth), intPtrAny(next.EndMonth))
-	add("end_day", intPtrAny(prev.EndDay), intPtrAny(next.EndDay))
-	add("end_hour", intPtrAny(prev.EndHour), intPtrAny(next.EndHour))
-	add("end_minute", intPtrAny(prev.EndMinute), intPtrAny(next.EndMinute))
-	add("end_second", intPtrAny(prev.EndSecond), intPtrAny(next.EndSecond))
-	add("end_millisecond", intPtrAny(prev.EndMillisecond), intPtrAny(next.EndMillisecond))
-	add("end_tz", database.NullString(prev.EndTZ), database.NullString(next.EndTZ))
-	add("phrase", database.NullString(prev.Phrase), database.NullString(next.Phrase))
-	if len(fields) == 0 {
-		return nil
-	}
-	return &rowchange.Change{
-		EntityType: "date_value",
-		EntityID:   append([]byte(nil), prev.ID...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}
-}
-
-func nameUpdateChange(prev, next namevalue.Value) *rowchange.Change {
-	fields := map[string]rowchange.FieldDiff{}
-	if prev.Form != next.Form {
-		fields["form"] = rowchange.FieldDiff{Old: prev.Form, New: next.Form}
-	}
-	if !namePartsEqual(prev.Parts, next.Parts) {
-		fields["parts"] = rowchange.FieldDiff{Old: namePartsJSON(prev.Parts), New: namePartsJSON(next.Parts)}
-	}
-	if len(fields) == 0 {
-		return nil
-	}
-	id := prev.ID
-	if len(id) != 16 {
-		id = next.ID
-	}
-	return &rowchange.Change{
-		EntityType: "name_value",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionUpdate,
-		Fields:     fields,
-	}
-}
-
-func namePartsEqual(a, b []namevalue.Part) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i].Idx != b[i].Idx || a[i].Value != b[i].Value || a[i].Type != b[i].Type {
-			return false
-		}
-	}
-	return true
-}
-
-func namePartsJSON(parts []namevalue.Part) []map[string]any {
-	out := make([]map[string]any, len(parts))
-	for i, p := range parts {
-		out[i] = map[string]any{
-			"idx":   p.Idx,
-			"value": p.Value,
-			"type":  database.NullString(p.Type),
-		}
-	}
-	return out
-}
-
-func dateValueMap(id []byte, v datevalue.Value) map[string]any {
-	return map[string]any{
-		"id":                database.UUIDJSON(id),
-		"kind":              database.NullString(v.Kind),
-		"qualifier":         database.NullString(v.Qualifier),
-		"calendar":          database.NullString(v.Calendar),
-		"start_year":        intPtrAny(v.StartYear),
-		"start_month":       intPtrAny(v.StartMonth),
-		"start_day":         intPtrAny(v.StartDay),
-		"start_hour":        intPtrAny(v.StartHour),
-		"start_minute":      intPtrAny(v.StartMinute),
-		"start_second":      intPtrAny(v.StartSecond),
-		"start_millisecond": intPtrAny(v.StartMillisecond),
-		"start_tz":          database.NullString(v.StartTZ),
-		"end_year":          intPtrAny(v.EndYear),
-		"end_month":         intPtrAny(v.EndMonth),
-		"end_day":           intPtrAny(v.EndDay),
-		"end_hour":          intPtrAny(v.EndHour),
-		"end_minute":        intPtrAny(v.EndMinute),
-		"end_second":        intPtrAny(v.EndSecond),
-		"end_millisecond":   intPtrAny(v.EndMillisecond),
-		"end_tz":            database.NullString(v.EndTZ),
-		"phrase":            database.NullString(v.Phrase),
-	}
-}
-
-func nameValueMap(id []byte, v namevalue.Value) map[string]any {
-	return map[string]any{
-		"id":    database.UUIDJSON(id),
-		"form":  v.Form,
-		"parts": namePartsJSON(v.Parts),
-	}
-}
-
-func dateCreateChange(id []byte, v datevalue.Value) rowchange.Change {
-	return rowchange.Change{
-		EntityType: "date_value",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields: rowchange.FullRow(map[string]any{
-			"id":                database.UUIDJSON(id),
-			"kind":              database.NullString(v.Kind),
-			"qualifier":         database.NullString(v.Qualifier),
-			"calendar":          database.NullString(v.Calendar),
-			"start_year":        intPtrAny(v.StartYear),
-			"start_month":       intPtrAny(v.StartMonth),
-			"start_day":         intPtrAny(v.StartDay),
-			"start_hour":        intPtrAny(v.StartHour),
-			"start_minute":      intPtrAny(v.StartMinute),
-			"start_second":      intPtrAny(v.StartSecond),
-			"start_millisecond": intPtrAny(v.StartMillisecond),
-			"start_tz":          database.NullString(v.StartTZ),
-			"end_year":          intPtrAny(v.EndYear),
-			"end_month":         intPtrAny(v.EndMonth),
-			"end_day":           intPtrAny(v.EndDay),
-			"end_hour":          intPtrAny(v.EndHour),
-			"end_minute":        intPtrAny(v.EndMinute),
-			"end_second":        intPtrAny(v.EndSecond),
-			"end_millisecond":   intPtrAny(v.EndMillisecond),
-			"end_tz":            database.NullString(v.EndTZ),
-			"phrase":            database.NullString(v.Phrase),
-		}),
-	}
-}
-
-func nameCreateChange(id []byte, v namevalue.Value) rowchange.Change {
-	parts := make([]map[string]any, len(v.Parts))
-	for i, p := range v.Parts {
-		parts[i] = map[string]any{
-			"idx":   p.Idx,
-			"value": p.Value,
-			"type":  database.NullString(p.Type),
-		}
-	}
-	return rowchange.Change{
-		EntityType: "name_value",
-		EntityID:   append([]byte(nil), id...),
-		Action:     rowchange.ActionCreate,
-		Fields: rowchange.FullRow(map[string]any{
-			"id":    database.UUIDJSON(id),
-			"form":  v.Form,
-			"parts": parts,
-		}),
-	}
-}
-
-func intPtrAny(p *int) any {
-	if p == nil {
-		return nil
-	}
-	return *p
 }

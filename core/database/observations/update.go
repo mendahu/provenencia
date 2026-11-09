@@ -94,18 +94,18 @@ func updateOne(tx *database.Tx, citationID []byte, prev Observation, in Input) (
 	}{
 		{"observations.value_date_id", "date_value", prev.ValueDateID, resolved.DateID, func() (map[string]any, error) {
 			v, err := datevalues.LookupTx(tx.Tx, prev.ValueDateID)
-			return dateValueMap(prev.ValueDateID, v), err
+			return datevalues.RowMap(prev.ValueDateID, v), err
 		}},
 		{"observations.value_name_id", "name_value", prev.ValueNameID, resolved.NameID, func() (map[string]any, error) {
 			v, err := namevalues.LookupTx(tx.Tx, prev.ValueNameID)
-			return nameValueMap(prev.ValueNameID, v), err
+			return namevalues.RowMap(prev.ValueNameID, v), err
 		}},
 		{"observations.value_depiction_id", "depiction_value", prev.ValueDepictionID, resolved.DepictionID, func() (map[string]any, error) {
 			v, err := depictionvalues.LookupTx(tx.Tx, prev.ValueDepictionID)
-			return depictionValueMap(prev.ValueDepictionID, v), err
+			return depictionvalues.RowMap(prev.ValueDepictionID, v), err
 		}},
 	} {
-		ch, err := releaseReplacedValue(tx, rel.column, rel.entity, rel.prevID, rel.newID, rel.rowMap)
+		ch, err := deleteimpact.ReleaseReplaced(tx, rel.column, rel.entity, rel.prevID, rel.newID, rel.rowMap)
 		if err != nil {
 			return Observation{}, nil, err
 		}
@@ -189,30 +189,6 @@ func observationUpdateChange(prev, next Observation) *rowchange.Change {
 		Action:     rowchange.ActionUpdate,
 		Fields:     fields,
 	}
-}
-
-// releaseReplacedValue releases the value row an update replaced: the old
-// child of an owned FK, with its own owned children. It does nothing when
-// prevID is empty or still the Observation's value. The delete change is built
-// from rowMap before the release. Call it after the Observation holds the new
-// value.
-func releaseReplacedValue(tx *database.Tx, column, entity string, prevID, newID []byte, rowMap func() (map[string]any, error)) (*rowchange.Change, error) {
-	if len(prevID) != 16 || bytes.Equal(prevID, newID) {
-		return nil, nil
-	}
-	row, err := rowMap()
-	if err != nil {
-		return nil, err
-	}
-	if err := deleteimpact.ReleaseReplaced(tx, column, prevID); err != nil {
-		return nil, err
-	}
-	return &rowchange.Change{
-		EntityType: entity,
-		EntityID:   append([]byte(nil), prevID...),
-		Action:     rowchange.ActionDelete,
-		Fields:     rowchange.DeletedRow(row),
-	}, nil
 }
 
 func stringsTrimPolarity(polarity string) string {

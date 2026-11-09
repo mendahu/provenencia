@@ -13,6 +13,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/depictionvalue"
 )
 
@@ -38,6 +40,25 @@ func InsertTx(tx *sql.Tx, v depictionvalue.Value) ([]byte, error) {
 		return nil, err
 	}
 	return append([]byte(nil), id[:]...), nil
+}
+
+// RowMap is the audit row of a depiction_values row.
+func RowMap(id []byte, v depictionvalue.Value) map[string]any {
+	return map[string]any{
+		"id":            database.UUIDJSON(id),
+		"region_json":   v.RegionJSON,
+		"image_file_id": database.UUIDJSON(v.ImageFileID),
+	}
+}
+
+// CreateChange is the audit change of a new depiction_values row.
+func CreateChange(id []byte, v depictionvalue.Value) rowchange.Change {
+	return rowchange.Change{
+		EntityType: "depiction_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(RowMap(id, v)),
+	}
 }
 
 // LookupTx returns the row with id, or sql.ErrNoRows.

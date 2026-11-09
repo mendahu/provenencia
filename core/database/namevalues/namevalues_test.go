@@ -1,11 +1,13 @@
 package namevalues
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/namevalue"
 )
 
@@ -273,4 +275,55 @@ func TestInsertLookup(t *testing.T) {
 			tt.run(t, c)
 		})
 	}
+}
+
+func TestPutTx(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	name := namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+		{Idx: 0, Value: "James", Type: "given"}, {Idx: 1, Value: "Robins", Type: "surname"},
+	}}
+	id, ch, err := PutTx(tx, nil, name)
+	if err != nil || len(id) != 16 || ch == nil || ch.Action != rowchange.ActionCreate || ch.EntityType != "name_value" {
+		t.Fatalf("no prev: id=%x ch=%+v err=%v", id, ch, err)
+	}
+
+	t.Run("padded form and parts are the same value", func(t *testing.T) {
+		padded := namevalue.Value{Form: "  James Robins ", Parts: []namevalue.Part{
+			{Idx: 0, Value: " James ", Type: "given "}, {Idx: 1, Value: "Robins  ", Type: " surname"},
+		}}
+		got, ch, err := PutTx(tx, id, padded)
+		if err != nil || ch != nil || !bytes.Equal(got, id) {
+			t.Fatalf("id=%x ch=%+v err=%v", got, ch, err)
+		}
+	})
+	t.Run("changed part names parts", func(t *testing.T) {
+		next := namevalue.Value{Form: "James Robins", Parts: []namevalue.Part{
+			{Idx: 0, Value: "Jim", Type: "given"}, {Idx: 1, Value: "Robins", Type: "surname"},
+		}}
+		got, ch, err := PutTx(tx, id, next)
+		if err != nil || !bytes.Equal(got, id) || ch == nil || ch.Action != rowchange.ActionUpdate {
+			t.Fatalf("id=%x ch=%+v err=%v", got, ch, err)
+		}
+		if _, ok := ch.Fields["parts"]; !ok || len(ch.Fields) != 1 {
+			t.Fatalf("fields %+v", ch.Fields)
+		}
+		stored, err := LookupTx(tx, id)
+		if err != nil || stored.Parts[0].Value != "Jim" {
+			t.Fatalf("stored %+v err=%v", stored, err)
+		}
+	})
 }

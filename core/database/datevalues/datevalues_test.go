@@ -1,12 +1,14 @@
 package datevalues
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/datevalue"
 )
 
@@ -679,4 +681,71 @@ func TestInsertLookup(t *testing.T) {
 			tt.run(t, c)
 		})
 	}
+}
+
+func TestPutTx(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	phrased := datevalue.Value{Kind: datevalue.KindPoint, StartYear: intVal(1880), Phrase: "c. spring"}
+	id, ch, err := PutTx(tx, nil, phrased)
+	if err != nil || len(id) != 16 || ch == nil || ch.Action != rowchange.ActionCreate || ch.EntityType != "date_value" {
+		t.Fatalf("no prev: id=%x ch=%+v err=%v", id, ch, err)
+	}
+
+	t.Run("same value writes nothing", func(t *testing.T) {
+		got, ch, err := PutTx(tx, id, phrased)
+		if err != nil || ch != nil || !bytes.Equal(got, id) {
+			t.Fatalf("id=%x ch=%+v err=%v", got, ch, err)
+		}
+	})
+	t.Run("padded strings are the same value", func(t *testing.T) {
+		padded := phrased
+		padded.Kind = " " + datevalue.KindPoint + " "
+		padded.Phrase = "  c. spring "
+		got, ch, err := PutTx(tx, id, padded)
+		if err != nil || ch != nil || !bytes.Equal(got, id) {
+			t.Fatalf("id=%x ch=%+v err=%v", got, ch, err)
+		}
+	})
+	t.Run("changed value updates in place", func(t *testing.T) {
+		next := phrased
+		next.StartMonth = intVal(3)
+		got, ch, err := PutTx(tx, id, next)
+		if err != nil || !bytes.Equal(got, id) || ch == nil || ch.Action != rowchange.ActionUpdate {
+			t.Fatalf("id=%x ch=%+v err=%v", got, ch, err)
+		}
+		if len(ch.Fields) != 1 || ch.Fields["start_month"].New != 3 || ch.Fields["start_month"].Old != nil {
+			t.Fatalf("fields %+v", ch.Fields)
+		}
+		stored, err := LookupTx(tx, id)
+		if err != nil || stored.StartMonth == nil || *stored.StartMonth != 3 {
+			t.Fatalf("stored %+v err=%v", stored, err)
+		}
+	})
+	t.Run("invalid writes nothing", func(t *testing.T) {
+		bad := datevalue.Value{Kind: datevalue.KindPoint, StartYear: intVal(1880), StartMonth: intVal(13)}
+		if _, _, err := PutTx(tx, id, bad); !errors.Is(err, datevalue.ErrInvalid) {
+			t.Fatalf("update: %v", err)
+		}
+		if _, _, err := PutTx(tx, nil, bad); !errors.Is(err, datevalue.ErrInvalid) {
+			t.Fatalf("insert: %v", err)
+		}
+		stored, err := LookupTx(tx, id)
+		if err != nil || *stored.StartMonth != 3 {
+			t.Fatalf("stored %+v err=%v", stored, err)
+		}
+	})
 }
