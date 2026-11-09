@@ -1,18 +1,19 @@
 # Review — S15-02 Sources carry a date and a not-public flag
 
-**Verdict:** Round 1: Fits with changes — Not ready. Round 2: pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
-- **M-6 · A second, older date sort key.** `core/autoreconcile/autoreconcile.go` `SortKey` stores a key for dates in `auto_reconciler_values.sort_key`. It is built from `DateWindow` with no before/after tie-break, so it disagrees with the one date order this PR adopts. No query was found that orders by it. Recommendation: keep it out of S15-02 (it is not Source work), and run it as a separate chore. That chore either moves the date case onto `valuecompare.DateKeyOf` with an autoreconciler stamp bump, or deletes the column if it truly has no reader.
+- **M-6 · A second, older date sort key** in `autoreconcile.SortKey`. Writer recommended a separate chore. **User (2026-11-09): fold into S15-02.** Now D-17: the date case uses `valuecompare.DateKeyOf`, `CacheVersion` 24.
+- **M-10 · Names and depictions keep the private value-row code.** Writer recommended moving them in S15-02. **User (2026-11-09): yes, in S15-02.** Now D-16.
 
 ## Writer's own calls
 
 - **Two RPCs, `SetSourceDate` and `SetSourcePublic`, not new fields on `UpdateSourceRequest` (D-3).** An update request sends every field of the Source, and a protobuf bool left unset reads as false. Any caller that omitted the new field would mark the Source not public.
 - **Batched date read for the list instead of a SQL join (D-6, from M-2).** `LookupManyTx` is the existing batched read with three callers; a join needed a second 20-column scanner. The map's S15-02 scope entry now says "one batched lookup, never one query per row" instead of "joins".
 - **Wire `is_public` keeps the column's name (D-5).** Every Source on the wire is built in one place (`sourceProto`), which always sets it.
-- **The integer sort key lives in `sources.DateSortKey` (D-13).** `valuecompare` holds the order (`DateKey`, `Compare`) but no integer encoding, because that package is guarded against numeric literals.
+- **The integer encoding is `datevalue.OrderInt` (D-4), reached through `valuecompare.DateKey.Int64`.** `valuecompare` is guarded against numeric literals, so the `×3` lives in the pure date package, and `sources` and `autoreconcile` share it.
 - **A date with no year (phrase only) is stored and returned but has no sort key** (AC-3.4). It sorts with the undated Sources.
 - **Copy Source carrying the date** is S15-32, gated by a new brief S15-D13 (user, 2026-11-09: a checkbox on the Copy form).
 
@@ -73,3 +74,22 @@ Executability (Sonnet): no blocker; every round-1 answer checked against the cod
 
 ### X-10 · minor · D-8's `date_value_id` change encoding
 **Answer:** Fixed — D-8 writes both sides with `database.UUIDJSON`, as `SetCover` does, so the unset side is JSON null.
+
+Maintainability (Opus): round-1 answers hold; three new blockers from round-1's new text. Verdict Fits with changes.
+
+### M-8 · blocker · `PutTx` compares and audits the untrimmed input
+**Answer:** Fixed — D-7: one private `normalize` in `datevalues` serves `InsertTx`, `UpdateTx` and `PutTx`; `PutTx` normalizes before comparing and before building a change. T-9 gains the padded-value row. D-16 gives `namevalues` the same.
+
+### M-9 · blocker · Two exported ways to release a replaced owned row
+**Answer:** Fixed with option (a) — `deleteimpact.ReleaseReplaced` itself takes `entity`, `prevID`, `newID` and `rowMap` and returns the audited delete (nil `rowMap` for a File child). `purge_test.go` adapts. STEP-8 updates `add-catalog-delete`, `docs/catalog-deletes.md` rule 2 and `add-depiction-value`.
+
+### M-10 · blocker · Only dates get the shared shape
+**Answer:** To user → answered: in this PR (D-16, STEP-2, T-12).
+
+### Below the bar (not raised)
+- Date attach in four places (`Get`, `getByRef`, `getTx`, `List`): logged. `Get`, `getByRef` and `getTx` share `scanSource`; the implementer may attach there once, which D-6 allows.
+- `DateKey.Side` as a bare int: the integer encoding is now `datevalue.OrderInt`, the one place the −1/0/1 domain is used, with T-10 tying it to `Compare`.
+
+## Writer's note on size
+
+STEP-2 now moves three value kinds and STEP-1 touches the auto-reconciler; the PR stays at 8 Steps, one migration and no view. Both widenings are the user's calls above.
