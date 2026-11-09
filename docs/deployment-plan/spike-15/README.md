@@ -12,7 +12,7 @@ The theme: give Sources the fields a standard genealogical citation needs, start
 | --- | --- |
 | [**Source provenance date**](source-provenance-date.md) | The first-class Source publication date, descoped from Spike 13 (S13-20 – S13-22). Its meaning, storage, backfill and where it shows are settled |
 | [**Citation formats**](citation-formats.md) | What an *Evidence Explained* citation needs, layer by layer, against what the catalog has; a six-step path from Source fields to a Go formatter and Copy citation |
-| [**Evidence Explained citation map**](evidence-explained-citation-map.md) | Every record kind *Evidence Explained* covers, grouped into 17 citation patterns; each pattern's elements mapped to catalog data, graph data or a new field; the full list of missing fields with a recommended implementation |
+| [**Evidence Explained citation map**](evidence-explained-citation-map.md) | Every record kind *Evidence Explained* covers, grouped into 17 citation patterns; each pattern's elements mapped to catalog data, graph data or a seeded metadata field. Built on the existing Source types, metadata fields and type → field suggestions; the only schema change is the Source date (revised 2026-11-09) |
 | [**Move an Artifact to another Source**](move-artifact-between-sources.md) | Move an Artifact, with the Evidence graphs built on it, to another Source; the schema change, which graphs move, side effects |
 | [**Source structure later**](source-structure-later.md) | What Spike 12 parked: nested Sources, derivation links, named templates, per-graph credibility |
 | [**Source privacy toggle**](2026-10-27-source-privacy-toggle.md) | Per-Source "not public" switch; persist and toggle only; no share behaviour yet (dogfood 2026-10-27) |
@@ -43,10 +43,11 @@ Gathered from the three core docs; each doc keeps its own context.
 
 **Citation formats** ([`citation-formats.md`](citation-formats.md))
 
-- Which elements are first-class columns (like the Source date) and which are seeded metadata per Source type.
-- Whether a repository is its own record that many Sources share.
+- ~~Which elements are first-class columns and which are seeded metadata~~: seeded metadata, except the Source date ([`evidence-explained-citation-map.md`](evidence-explained-citation-map.md) § 5, user 2026-11-09).
+- ~~Whether a repository is its own record~~: no, `repository` text, carried by Copy Source.
 - Which Source types to template first: the product owner's dogfood Sources decide.
-- Whether a template's fields live on the Source, the Artifact or the Citation (a census piece number is per Source; a folio is per Citation).
+- ~~Whether a template's fields live on the Source, the Artifact or the Citation~~: the Source; per-item numbers go on fine-grained Sources or the Citation label.
+- How the seed reaches existing projects: once per seed version on open, or an action the researcher runs.
 - Whether researchers can edit a template, or only the fields under it.
 
 **Move an Artifact** ([`move-artifact-between-sources.md`](move-artifact-between-sources.md))
@@ -59,7 +60,7 @@ Gathered from the three core docs; each doc keeps its own context.
 
 **Metadata rethink** ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md))
 
-- Stay, shrink, or remove Source metadata and type suggestions before citation formats lean on them.
+- ~~Stay, shrink, or remove~~: stay. Metadata and type suggestions become what citations are built from (user, 2026-11-09).
 
 ## Not this spike
 

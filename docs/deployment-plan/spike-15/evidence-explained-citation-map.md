@@ -1,8 +1,8 @@
 # Evidence Explained citation map
 
-**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)). It lists the kinds of record *Evidence Explained* (EE) gives citation models for, groups them into the citation patterns Provenencia has to build, and maps each pattern's elements to data the catalog has or will need. The last section lists every missing field with a recommended way to add it. It extends [`citation-formats.md`](citation-formats.md), which sets out the convention and the six-step path; this doc is the inventory behind steps 1, 2 and 4 of that path.
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)). It lists the kinds of record *Evidence Explained* (EE) gives citation models for, groups them into the citation patterns Provenencia has to build, and maps each pattern's elements to data the catalog has or will need. The last section lists every missing field and how to add it. **Revised 2026-11-09 (user):** the first draft added tables and columns for contributors, jurisdiction, repositories, reference parts and Artifact access fields; this version uses the existing Source types, metadata fields and type → field suggestions instead, so the only new column is the planned Source date. It extends [`citation-formats.md`](citation-formats.md), which sets out the convention and the six-step path; this doc is the inventory behind steps 1, 2 and 4 of that path.
 
-**Goal (user, 2026-11-08):** a researcher builds an Evidence graph, promotes its Subjects, and gets a correct EE citation with no further typing. Every field below either already exists, can be read from the graph, or is one the researcher fills once on the Source, Artifact or Citation.
+**Goal (user, 2026-11-08):** a researcher builds an Evidence graph, promotes its Subjects, and gets a correct EE citation with no further typing. Every field below either already exists, can be read from the graph, or is a seeded metadata field the researcher fills once on the Source.
 
 ## Read this first
 
@@ -36,9 +36,9 @@ Summarised from [`citation-formats.md`](citation-formats.md) "The convention", w
 
 **Layers.** A full note is up to three layers separated by semicolons: (1) the record and the item in it; (2) how it was seen (the copy: "digital image, Ancestry (URL : accessed date)", or a microfilm); (3) what that copy rests on ("citing …", the repository and its reference). A record seen in the original has layers 1 and 3 only ("…; County Clerk's Office, Minneapolis").
 
-**Order flips between forms.** A source list entry runs from large to small and starts with what it is filed under, often the jurisdiction ("Kansas. Ottawa County. *Deed Book C*."). A note runs small to large ("Ottawa County, Kansas, Deed Book C: 214"). So the formatter needs the jurisdiction as **ordered parts**, not one string.
+**Order flips between forms.** A source list entry runs from large to small and starts with what it is filed under, often the jurisdiction ("Kansas. Ottawa County. *Deed Book C*."). A note runs small to large ("Ottawa County, Kansas, Deed Book C: 214"). So the formatter must be able to reverse the jurisdiction: written smallest first ("York, Yorkshire, England"), its comma-separated parts are enough.
 
-**Title styling.** The title of a published work is italic; a formal title of an unpublished manuscript is in quotation marks; a generic description ("baptisms, 1813–1837", "letter") is plain. So the formatter must know whether a title is the record's own exact title or the researcher's description of it.
+**Title styling.** The title of a published work is italic; a formal title of an unpublished manuscript is in quotation marks; a generic description ("baptisms, 1813–1837", "letter") is plain. The pattern decides which: published patterns style the title, record patterns print it as a description.
 
 **Names of people.** Authors are written in natural order in notes ("Alice Smith") and inverted for the first author in the source list ("Smith, Alice"). People *in* the record are named as the record names them ("entry for Wm. Robins"), not as the researcher concluded.
 
@@ -48,7 +48,7 @@ Summarised from [`citation-formats.md`](citation-formats.md) "The convention", w
 
 ## 2. The record kinds EE covers
 
-Chapters 1 and 2 of EE are the fundamentals of evidence analysis and of citation; they have no record kinds of their own. Chapters 3 to 14 each cover a family of records. The **Pattern** column names the template in § 4 that each kind uses.
+Chapters 1 and 2 of EE are the fundamentals of evidence analysis and of citation; they have no record kinds of their own. Chapters 3 to 14 each cover a family of records. The **Pattern** column names the template in § 4 that each kind uses; in Provenencia, a pattern is a seeded Source type with its suggested fields (§ 5).
 
 ### Chapter 3 — Archives and artifacts
 
@@ -241,7 +241,7 @@ Kinds EE covers that have no seeded type yet, and that the dogfood Sources will 
 
 ## 3. Where the data comes from: the element codes
 
-Every element in § 4 names its source with one of these codes. **Have** means stored and readable today. **Graph** means readable from the Evidence graph the researcher already built. **Planned** means designed in another Spike 15 doc. **New** means it has to be added; § 5 says how.
+Every element in § 4 names its source with one of these codes. **Have** means stored and readable today. **Graph** means readable from the Evidence graph the researcher already built. **Planned** means designed in another Spike 15 doc. **Seed** means a product-seeded Source metadata field, most of them already on the horizon list; § 5 says how.
 
 ### Have
 
@@ -250,7 +250,7 @@ Every element in § 4 names its source with one of these codes. **Have** means s
 | `S.title` | Source title (required headline) | `sources.title` |
 | `S.description` | Source description | `sources.description` |
 | `S.type` | Source type label and key | `sources.source_type_id` → `source_types` |
-| `S.meta[key]` | Free-text metadata value under a researcher's or seed's key | `source_metadata.value_text`; seeded keys exist only for `birth_certificate` in new catalogs |
+| `S.meta[key]` | Free-text metadata value under a researcher's or seed's key | `source_metadata.value_text`; seeded keys exist only for `birth_certificate` in new catalogs. The `M.` codes below are these values under product keys |
 | `A.label` | Artifact label (headline) | `artifacts.label` |
 | `A.description` | Artifact description | `artifacts.description` |
 | `F.media` | The File's media type (image, PDF, audio) | `files.media_type` |
@@ -277,27 +277,29 @@ The graph supplies the "entry for …" or "baptism of …" part of a full note. 
 | --- | --- | --- |
 | `S.date` | The Source's date: publication, or the date the record was made | `sources` → `date_values`, [`source-provenance-date.md`](source-provenance-date.md) |
 
-### New (detailed in § 5)
+### Seed (detailed in § 5)
 
-| Code | What | Level |
-| --- | --- | --- |
-| `S.title_kind` | Whether `S.title` is the record's exact title or a description of it | Source |
-| `S.contributors` | Creators with roles: author, editor, compiler, translator, creating agency, photographer, interviewer | Source |
-| `S.jurisdiction` | Ordered place parts, largest to smallest | Source |
-| `S.repository` | The holding repository: name and location | Source → shared Repository record |
-| `S.publication` | Place of publication, publisher, edition | Source |
-| `S.container` | The containing work: journal, newspaper, website, book holding the chapter, database | Source |
-| `S.span` | The years a register or collection covers ("1813–1837") | Source |
-| `X.ref[kind]` | A reference part of a given kind (volume, book, folio, page, entry, line, ED, sheet, dwelling, family, piece, schedule, certificate number, case number, record group, series, collection, call number, box, folder, issue, column) | Source, Artifact or Citation, whichever the researcher filled (§ 5.2) |
-| `A.format` | How the copy was seen: original, photocopy, certified copy, microfilm, digital image, database entry, transcript, abstract, recording | Artifact |
-| `A.provider` | Website or provider (Ancestry, FamilySearch, a record office's site) | Artifact |
-| `A.database` | Database or collection title at the provider | Artifact |
-| `A.url` | URL of the image, record page or database | Artifact (Citation can override) |
-| `A.accessed` | Date accessed | Artifact |
-| `A.film` | Microfilm: publication number and roll, or film and item number | Artifact |
-| `A.citing` | What the provider says its copy rests on, as text | Artifact |
-| `A.holder` | Who holds a privately held original, and where | Artifact |
-| `C.item` | Override for the item description when the graph does not give one | Citation (today's `C.label` can serve) |
+`M.key` is a value in `source_metadata` under a **product-seeded metadata field** (`origin = 'provenencia'`) with that key. These are the existing tables; nothing new is stored anywhere else. The type → field suggestions (`source_type_metadata_fields`) give each seeded Source type the fields its pattern reads, so the Source page's existing Suggestions board is what asks the researcher for them.
+
+Fields already on the horizon list in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.2:
+
+| Group | Keys |
+| --- | --- |
+| Who made it | `creator`, `author`, `photographer`, `studio`, `interviewer`, `interviewee`, `testing_company`, `software` |
+| Where | `jurisdiction` (written smallest first: "York, Yorkshire, England") |
+| Publication | `publisher`, `publication_place`, `edition`, `series`, `volume`, `site_name` |
+| Archive | `repository` (name and place: "Kansas Historical Society, Topeka"), `collection`, `record_group`, `call_number`, `box`, `folder` |
+| Reference numbers | `certificate_number`, `enumeration_district`, `sheet`, `line_number`, `dwelling_number`, `family_number`, `roll`, `kit_number`, `match_identifier` |
+| Copy | `medium`, `url`, `accessed_date` |
+
+Fields to add to the seed:
+
+| Group | Keys |
+| --- | --- |
+| Who made it | `author_sort` ("Smith, Alice", for the source list), `editor`, `compiler`, `translator` |
+| Title | `short_title` (override for short notes), `published_in` (journal, newspaper, the book holding a chapter, a statute compilation), `coverage` (span such as "1813–1837") |
+| Reference numbers | `book`, `folio`, `entry_number`, `schedule`, `schedule_number`, `piece`, `case_number`, `issue`, `column`, `page_range`, `section`, `lot`, `chapter`, `record_id`, `item_number` |
+| Copy | `format` (digital image, microfilm, database, photocopy, …), `provider`, `database_title`, `film_publication`, `film_number`, `citing`, `holder` |
 
 ---
 
@@ -319,16 +321,16 @@ National variant (Chapter 11): the creator is the agency, and the archival refer
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Creator of the item (writer, agency, firm) | F S | `S.contributors` (creator), else `G.parties` (writer) | New |
+| Creator of the item (writer, agency, firm) | F S | `M.creator`, else `G.parties` (writer) | Seed |
 | Recipient (letters) | F S | `G.parties` (recipient role) | Graph; needs a `recipient` role term |
-| Item description ("letter", "pension file") | F S | `C.item`, else `S.type` label | Partial |
+| Item description ("letter", "pension file") | F S | `C.label`, else `S.type` label | Partial |
 | Item date | F S | `G.date`, else `S.date` | Graph / Planned |
-| Collection title | L F S | `X.ref[collection]` | New (`S.meta[collection]` horizon key) |
-| Collection span | L F | `S.span` | New |
-| Call or MS number | L F | `X.ref[call_number]` | New |
-| Record group, series | L F | `X.ref[record_group]`, `X.ref[series]` | New |
-| Box, folder, item | F S | `X.ref[box]`, `X.ref[folder]`, `X.ref[item]` | New |
-| Repository and its location | L F | `S.repository` | New |
+| Collection title | L F S | `M.collection` | Seed (horizon key) |
+| Collection span | L F | `M.coverage` | Seed |
+| Call or MS number | L F | `M.call_number` | Seed |
+| Record group, series | L F | `M.record_group`, `M.series` | Seed |
+| Box, folder, item | F S | `M.box`, `M.folder`, `M.item_number` | Seed |
+| Repository and its location | L F | `M.repository` | Seed |
 
 ### P2 — Local record book
 
@@ -342,15 +344,15 @@ A register kept by a public office in book form: deed books, will books, court m
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Jurisdiction | L F S | `S.jurisdiction` | New |
-| Office or court that kept it | L F | `S.contributors` (creating agency) | New |
-| Record series and span ("Deed Records, 1866–1920") | L | `S.title` + `S.span` | Have / New |
-| Book or volume | F S | `X.ref[book]` or `X.ref[volume]` | Partial: often typed into `A.label` today |
+| Jurisdiction | L F S | `M.jurisdiction` | Seed |
+| Office or court that kept it | L F | `M.creator` | Seed |
+| Record series and span ("Deed Records, 1866–1920") | L | `S.title` + `M.coverage` | Have / Seed |
+| Book or volume | F S | `M.book` or `M.volume` | Partial: often typed into `A.label` today |
 | Page (printed) | F S | `C.page_label` | Have, composer gap |
-| Entry, line, folio | F S | `X.ref[entry]`, `X.ref[line]`, `X.ref[folio]` | New |
+| Entry, line, folio | F S | `M.entry_number`, `M.line_number`, `M.folio` | Seed |
 | Parties and nature of the record ("John Smith to William Robins") | F | `G.parties` with roles (grantor, grantee) | Graph; needs role terms |
 | Item date | F | `G.date` | Graph |
-| Repository (the office today) | L F | `S.repository` | New |
+| Repository (the office today) | L F | `M.repository` | Seed |
 
 ### P3 — Case file or loose-paper packet
 
@@ -364,12 +366,12 @@ Court case files, probate packets, original wills, naturalization petitions, lan
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Jurisdiction, court or office | L F S | `S.jurisdiction`, `S.contributors` | New |
-| File type and number | F S | `X.ref[case_number]` | New |
+| Jurisdiction, court or office | L F S | `M.jurisdiction`, `M.creator` | Seed |
+| File type and number | F S | `M.case_number` | Seed |
 | Principal party and year | F S | `G.person` (or parties), `S.date` | Graph / Planned |
-| Document in the file | F S | `C.item`, else `C.label` | Partial |
+| Document in the file | F S | `C.label` | Partial |
 | Document date | F | `G.date` | Graph |
-| Repository | L F | `S.repository` | New |
+| Repository | L F | `M.repository` | Seed |
 
 ### P4 — Vital certificate
 
@@ -383,18 +385,18 @@ An issued civil certificate: birth, death, marriage, delayed birth. In Provenenc
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Issuing authority and jurisdiction | L F S | `S.contributors` (creating agency), `S.jurisdiction` | New |
+| Issuing authority and jurisdiction | L F S | `M.creator`, `M.jurisdiction` | Seed |
 | Certificate type | L F S | `S.type` label | Have |
-| Certificate or file number | F S | `X.ref[certificate_number]` | New (`S.meta[certificate_number]` horizon key) |
-| Registration or volume and page (registers) | F | `X.ref[volume]`, `C.page_label` | New / Have |
+| Certificate or file number | F S | `M.certificate_number` | Seed (horizon key) |
+| Registration or volume and page (registers) | F | `M.volume`, `C.page_label` | Seed / Have |
 | Person named | F S | `G.person` | Graph |
 | Event date | F | `G.date` | Graph |
 | Filing or issue date (delayed certificates) | F | `S.date` | Planned |
-| Repository (issuing office) | L F | `S.repository` | New |
+| Repository (issuing office) | L F | `M.repository` | Seed |
 
 ### P5 — Census
 
-Every census in Chapter 6. The richest set of reference parts.
+Every census in Chapter 6. The richest set of reference numbers.
 
 > **L:** Kansas. Ottawa County. 1880 U.S. census, population schedule. Digital images. Ancestry. https://www.ancestry.com : 2025.
 >
@@ -407,17 +409,17 @@ British variant: "1851 census of England, Yorkshire, York, St Michael le Belfrey
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
 | Census year | L F S | `S.date` (year) | Planned |
-| Census authority ("U.S.", state, "of England") | L F S | `S.contributors` (creating agency) or the jurisdiction's top part | New |
-| Jurisdiction: state, county, civil division | L F S | `S.jurisdiction` | New |
-| Schedule (population, agriculture, mortality, slave) | L F S | `X.ref[schedule]` | New |
-| Enumeration district; district and sub-district (Canada) | F S | `X.ref[ed]` | New |
-| Sheet, page, folio; which numbering is used (stamped, penned) | F S | `X.ref[sheet]` / `C.page_label` / `X.ref[folio]` | Partial |
-| Piece (British) | F | `X.ref[piece]` | New |
-| Schedule number (British household) | F | `X.ref[schedule_number]` | New |
-| Dwelling, family | F S | `X.ref[dwelling]`, `X.ref[family]` | New |
-| Line | F | `X.ref[line]` | New |
+| Census authority ("U.S.", state, "of England") | L F S | `M.creator`, else the jurisdiction's top part | Seed |
+| Jurisdiction: state, county, civil division | L F S | `M.jurisdiction` | Seed |
+| Schedule (population, agriculture, mortality, slave) | L F S | `M.schedule` | Seed |
+| Enumeration district; district and sub-district (Canada) | F S | `M.enumeration_district` | Seed |
+| Sheet, page, folio; which numbering is used (stamped, penned) | F S | `M.sheet` / `C.page_label` / `M.folio` | Partial |
+| Piece (British) | F | `M.piece` | Seed |
+| Schedule number (British household) | F | `M.schedule_number` | Seed |
+| Dwelling, family | F S | `M.dwelling_number`, `M.family_number` | Seed |
+| Line | F | `M.line_number` | Seed |
 | Person or household named | F S | `G.person` (head of household, or the person cited) | Graph |
-| Layer 2 and 3 (image, film, citing) | L F | P14 / P15 | New |
+| Layer 2 and 3 (image, film, citing) | L F | P14 / P15 | Seed |
 
 ### P6 — Church register
 
@@ -429,13 +431,13 @@ British variant: "1851 census of England, Yorkshire, York, St Michael le Belfrey
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Church or congregation (creator) | L F S | `S.contributors` (creating body) | New; an `organization` Subject later ([`organizations.md`](../../ideas/organizations.md)) |
-| Church's place | L F | `S.jurisdiction` | New |
-| Register title or description, and its span | L F S | `S.title` + `S.title_kind` + `S.span` | Have / New |
-| Volume, page, entry number | F S | `X.ref[volume]`, `C.page_label`, `X.ref[entry]` | Partial |
+| Church or congregation (creator) | L F S | `M.creator` | Seed; an `organization` Subject later ([`organizations.md`](../../ideas/organizations.md)) |
+| Church's place | L F | `M.jurisdiction` | Seed |
+| Register title or description, and its span | L F S | `S.title` + `M.coverage` | Have / Seed |
+| Volume, page, entry number | F S | `M.volume`, `C.page_label`, `M.entry_number` | Partial |
 | Event and person ("baptism of Ada Smith") | F | `G.event` + `G.person` | Graph |
 | Event date | F | `G.date` | Graph |
-| Repository (parish chest, diocesan or county archive) | L F | `S.repository` | New |
+| Repository (parish chest, diocesan or county archive) | L F | `M.repository` | Seed |
 
 ### P7 — Cemetery marker
 
@@ -447,11 +449,11 @@ British variant: "1851 census of England, Yorkshire, York, St Michael le Belfrey
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Cemetery name | L F S | `S.title` or `S.contributors` | Have / New |
-| Cemetery location | L F S | `S.jurisdiction` | New |
+| Cemetery name | L F S | `S.title` | Have / Seed |
+| Cemetery location | L F S | `M.jurisdiction` | Seed |
 | Person on the marker | F S | `G.person` | Graph |
-| Section, lot, row | F | `X.ref[section]`, `X.ref[lot]` | New |
-| Who read or photographed it, and when | F | `A.holder` / `S.contributors` (photographer), `A.accessed` or `S.date` | New |
+| Section, lot, row | F | `M.section`, `M.lot` | Seed |
+| Who read or photographed it, and when | F | `M.holder` / `M.photographer`, `M.accessed_date` or `S.date` | Seed |
 
 ### P8 — Private holdings, artifacts and compiled files
 
@@ -467,15 +469,15 @@ DNA variant: "AncestryDNA, autosomal DNA test results for Jane Doe, match list e
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Title or description of the record | L F S | `S.title` + `S.title_kind` | Have / New |
-| Span | L F | `S.span` | New |
-| Creator or compiler (writer, photographer, studio, testing company) | L F S | `S.contributors` | New (horizon keys `photographer`, `studio`, `testing_company`) |
-| Imprint of the containing book (Bible) | L F | `S.container` + `S.publication` | New |
-| Item: page, letter date, match entry | F S | `C.item` / `C.label`, `G.date` | Partial |
-| Medium (cabinet card, tintype) | F | `A.format` | New (horizon key `medium`) |
-| Holder and place, year seen | L F | `A.holder`, `A.accessed` | New |
-| Kit or match identifiers | F | `X.ref[kit]`, `X.ref[match]` | New (horizon keys) |
-| Software and export date (GEDCOM) | F | `X.ref[software]`, `S.date` | New / Planned |
+| Title or description of the record | L F S | `S.title` | Have / Seed |
+| Span | L F | `M.coverage` | Seed |
+| Creator or compiler (writer, photographer, studio, testing company) | L F S | `M.creator`, `M.photographer`, `M.studio`, `M.testing_company` | Seed (horizon keys) |
+| Imprint of the containing book (Bible) | L F | `M.published_in` + `M.publisher`, `M.publication_place` | Seed |
+| Item: page, letter date, match entry | F S | `C.label`, `G.date` | Partial |
+| Medium (cabinet card, tintype) | F | `M.medium` | Seed (horizon key) |
+| Holder and place, year seen | L F | `M.holder`, `M.accessed_date` | Seed |
+| Kit or match identifiers | F | `M.kit_number`, `M.match_identifier` | Seed (horizon keys) |
+| Software and export date (GEDCOM) | F | `M.software`, `S.date` | Seed / Planned |
 
 ### P9 — Interview, oral history and personal correspondence
 
@@ -487,12 +489,12 @@ DNA variant: "AncestryDNA, autosomal DNA test results for Jane Doe, match list e
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Interviewee or writer | L F S | `S.contributors` (interviewee) | New (horizon key `interviewee`) |
-| Interviewer or recipient | L F | `S.contributors` (interviewer) | New |
-| Place | L F | `S.jurisdiction` (place of interview) | New |
+| Interviewee or writer | L F S | `M.interviewee` | Seed (horizon key `interviewee`) |
+| Interviewer or recipient | L F | `M.interviewer` | Seed |
+| Place | L F | `M.jurisdiction` (place of interview) | Seed |
 | Date | L F S | `S.date` | Planned |
-| Where the recording or message is held | L F | `A.holder` | New |
-| Timestamp of the cited passage | F | `C.item`; a time selector later ([`audio-video-sources.md`](../../ideas/audio-video-sources.md)) | Partial |
+| Where the recording or message is held | L F | `M.holder` | Seed |
+| Timestamp of the cited passage | F | `C.label`; a time selector later ([`audio-video-sources.md`](../../ideas/audio-video-sources.md)) | Partial |
 
 ### P10 — Book and other standalone publication
 
@@ -506,15 +508,15 @@ Books, compiled and edited works, chapters, multi-volume works, published abstra
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Authors, editors, compilers, translators, with roles and order | L F S | `S.contributors` | New (horizon key `author` is one string) |
-| Title (italic), subtitle | L F S | `S.title` + `S.title_kind` | Have / New |
-| Short title (short note) | S | Derived from `S.title`, with an override | New (derived) |
-| Edition, volume, series | L F | `S.publication` (edition), `X.ref[volume]`, `X.ref[series]` | New |
-| Place of publication, publisher | L F | `S.publication` | New |
+| Authors, editors, compilers, translators | L F S | `M.author` as written, `M.author_sort` for the source list; `M.editor`, `M.compiler`, `M.translator` | Seed (`author` is a horizon key) |
+| Title (italic), subtitle | L F S | `S.title` | Have / Seed |
+| Short title (short note) | S | Derived from `S.title`; `M.short_title` overrides | Derived / Seed |
+| Edition, volume, series | L F | `M.edition`, `M.volume`, `M.series` | Seed |
+| Place of publication, publisher | L F | `M.publisher`, `M.publication_place` | Seed |
 | Year | L F | `S.date` | Planned |
-| Chapter author and title (essay in an edited book) | L F | `S.contributors` + `S.title`, with the book as `S.container` | New |
+| Chapter author and title (essay in an edited book) | L F | `M.author` + `S.title`, with the book as `M.published_in` | Seed |
 | Page | F S | `C.page_label` | Have, composer gap |
-| Medium (CD-ROM, DVD, map scale) | L F | `A.format` or `S.publication` | New |
+| Medium (CD-ROM, DVD, map scale) | L F | `M.format` | Seed |
 
 ### P11 — Periodical article and broadcast
 
@@ -528,12 +530,12 @@ Journal and magazine articles, newsletters, radio, TV and podcasts.
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Author | L F S | `S.contributors` | New |
+| Author | L F S | `M.author` (+ `M.author_sort`) | Seed |
 | Article title (quoted) | L F S | `S.title` | Have |
-| Periodical title (italic) | L F | `S.container` | New |
-| Volume, issue | L F | `X.ref[volume]`, `X.ref[issue]` | New |
+| Periodical title (italic) | L F | `M.published_in` | Seed |
+| Volume, issue | L F | `M.volume`, `M.issue` | Seed |
 | Issue date | L F | `S.date` | Planned |
-| Article's page range | L F | `X.ref[pages]` | New |
+| Article's page range | L F | `M.page_range` | Seed |
 | Page cited | F S | `C.page_label` | Have, composer gap |
 
 ### P12 — Newspaper item
@@ -548,11 +550,11 @@ Under Spike 12's rule the Source is the item, and Copy Source carries the paper'
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Headline, or a description of an untitled item | F S | `S.title` + `S.title_kind` | Have / New |
-| Newspaper title, with its place in parentheses | L F S | `S.container` + `S.jurisdiction` | New |
+| Headline, or a description of an untitled item | F S | `S.title` | Have / Seed |
+| Newspaper title, with its place in parentheses | L F S | `M.published_in` + `M.jurisdiction` | Seed |
 | Issue date | L F S | `S.date` | Planned |
-| Edition (morning, evening) | F | `S.publication` (edition) | New |
-| Page, column | F | `C.page_label`, `X.ref[column]` | Partial |
+| Edition (morning, evening) | F | `M.edition` | Seed |
+| Page, column | F | `C.page_label`, `M.column` | Partial |
 
 ### P13 — Website, web page and online database
 
@@ -566,15 +568,15 @@ Web pages, blog posts, online indexes and databases, online trees, memorial site
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Creator or owner of the page or tree | L F | `S.contributors` | New |
+| Creator or owner of the page or tree | L F | `M.author` (+ `M.author_sort`) | Seed |
 | Page or database title (quoted) | L F S | `S.title` | Have |
-| Kind of item ("database", "database with images", "blog") | L F | `A.format` | New |
-| Website title (italic) | L F | `S.container` or `A.provider` | New (horizon key `site_name`) |
-| URL | L F | `A.url` | New (horizon key `url`) |
-| Date accessed | L F | `A.accessed` | New (horizon key `accessed_date`) |
+| Kind of item ("database", "database with images", "blog") | L F | `M.format` | Seed |
+| Website title (italic) | L F | `M.site_name` | Seed (horizon key) |
+| URL | L F | `M.url` | Seed (horizon key) |
+| Date accessed | L F | `M.accessed_date` | Seed (horizon key) |
 | Entry for whom | F S | `G.person`, `G.date` | Graph |
-| Memorial, record or profile id | F | `X.ref[record_id]` | New |
-| Citing (the original the database rests on) | F | `A.citing` | New |
+| Memorial, record or profile id | F | `M.record_id` | Seed |
+| Citing (the original the database rests on) | F | `M.citing` | Seed |
 
 ### P14 — Online image layer (layer 2)
 
@@ -584,13 +586,13 @@ Not a standalone pattern: the second layer appended to P1–P12 when the researc
 
 | Element | Source | Status |
 | --- | --- | --- |
-| "digital image" | `A.format` | New |
-| Provider or website | `A.provider` | New |
-| Database or collection title (when cited) | `A.database` | New |
-| URL | `A.url` (a Citation can override with its image URL) | New |
-| Accessed date | `A.accessed` | New |
+| "digital image" | `M.format` | Seed |
+| Provider or website | `M.provider` | Seed |
+| Database or collection title (when cited) | `M.database_title` | Seed |
+| URL | `M.url` | Seed |
+| Accessed date | `M.accessed_date` | Seed |
 | Image number in the online set | `C.page` (page in the file), when the Artifact is the whole image set | Have |
-| Citing | `A.citing`, or the film reference in P15 | New |
+| Citing | `M.citing`, or the film reference in P15 | Seed |
 
 ### P15 — Microfilm layer (layer 2)
 
@@ -598,9 +600,9 @@ Not a standalone pattern: the second layer appended to P1–P12 when the researc
 
 | Element | Source | Status |
 | --- | --- | --- |
-| "microfilm" | `A.format` | New |
-| Who filmed or publishes the film (NARA, FHL, a state archive) | `A.provider` | New |
-| Publication number, roll, film number, item | `A.film` (or `X.ref[roll]`, `X.ref[film]`, `X.ref[item]` on the Artifact) | New (horizon key `roll`) |
+| "microfilm" | `M.format` | Seed |
+| Who filmed or publishes the film (NARA, FHL, a state archive) | `M.provider` | Seed |
+| Publication number, roll, film number, item | `M.film_publication`, `M.roll`, `M.film_number`, `M.item_number` | Seed (`roll` is a horizon key) |
 | Frame or image | `C.page` | Have |
 
 ### P16 — Legal publication
@@ -613,10 +615,10 @@ Statutes, session laws, codes, legislative documents, published court reports. T
 
 | Element | Forms | Source | Status |
 | --- | --- | --- | --- |
-| Jurisdiction | L F S | `S.jurisdiction` | New |
-| Compilation or reporter title, abbreviated | L F S | `S.container` (with an abbreviation) | New |
+| Jurisdiction | L F S | `M.jurisdiction` | Seed |
+| Compilation or reporter title, abbreviated | L F S | `M.published_in` | Seed |
 | Session or year | L F | `S.date` | Planned |
-| Chapter, section, volume, page | F S | `X.ref[chapter]`, `X.ref[section]`, `X.ref[volume]`, `C.page_label` | New / Have |
+| Chapter, section, volume, page | F S | `M.chapter`, `M.section`, `M.volume`, `C.page_label` | Seed / Have |
 | Case name | F S | `S.title` | Have |
 
 ### P17 — Fallback
@@ -627,45 +629,49 @@ Any Source whose type maps to no pattern, or whose pattern is missing a required
 
 ## 5. Missing fields and how to add them
 
-### 5.1 The full list
+### 5.1 The approach: the vocabulary we already have
 
-Each row is one thing the catalog does not hold today. **Patterns** says how widely it is needed.
+Source types, metadata fields and the type → field suggestions between them are already a template system. A citation pattern is a list of fields in an order, and that is what a type's suggestions are. So Spike 15 extends the **seed**, not the schema:
 
-| Field | Level | Patterns | Recommended implementation |
-| --- | --- | --- | --- |
-| Source date | Source | all | **Planned**: `sources.date_value_id` ([`source-provenance-date.md`](source-provenance-date.md)) |
-| Covered span ("1813–1837") | Source | P1, P2, P6, P8 | A second, optional date on `sources` (span end), so the Source date is the span's start. A DateValue `range` is an uncertainty window, not a period ([`structured-date-model.md`](../../structured-date-model.md)), so it cannot hold a span. Alternatively, leave the span in the title text |
-| Title kind (exact title or description) | Source | all | Column `sources.title_kind` (`exact` \| `description`), defaulted by pattern |
-| Contributors (author, editor, compiler, translator, creating agency, photographer, interviewer, interviewee) | Source | all | Table `source_contributors (source_id, position, role, display_name, sort_name)`. Text only, never resolved to Subjects (Source layer stays descriptive). `role` from a compiled product list |
-| Jurisdiction | Source | P2–P7, P9, P12, P16 | Table `source_jurisdiction_parts (source_id, position, name)`, largest first, so the formatter can write either order. Text, not place Subjects (§ 6) |
-| Repository | Source | P1–P7, P8 (holder) | New record `repositories (id, ref REP-…, name, location, url)` and `sources.repository_id`. Shared by many Sources, picked from a list, has its own small page later |
-| Container (journal, newspaper, website, book holding a chapter, statute compilation) | Source | P8, P10–P13, P16 | Column `sources.container_title` (with an optional `container_short`), not a parent Source, which stays parked ([`source-structure-later.md`](source-structure-later.md) "Nested Sources") |
-| Publication (place, publisher, edition) | Source | P8, P10–P12 | Columns `publication_place`, `publisher`, `edition` on `sources`, or reference parts of those kinds (§ 5.2) |
-| Reference parts (volume, book, folio, entry, line, ED, sheet, dwelling, family, schedule, piece, certificate number, case number, record group, series, collection, call number, box, folder, issue, column, section, chapter, roll, item, record id, kit, match) | Source, Artifact or Citation | all | Typed tables `source_ref_parts`, `artifact_ref_parts`, `citation_ref_parts`, each `(owner_id, kind, position, value_text)`. `kind` is a **compiled Go registry** (§ 5.2) |
-| Printed page in the composer | Citation | all | Composer writes `page_label` on the `page` selector; the field already exists ([`citation-formats.md`](citation-formats.md) step 3) |
-| Copy format | Artifact | P8, P13–P15 | Column `artifacts.format` from a compiled list: `original`, `photocopy`, `certified_copy`, `microfilm`, `digital_image`, `database_entry`, `transcript`, `abstract`, `recording`, `photograph` |
-| Provider, database title | Artifact | P13, P14, P15 | Columns `artifacts.provider`, `artifacts.database_title` (text). A shared provider record is not needed yet: the list of providers is short and stable |
-| URL | Artifact (Citation override) | P13, P14 | Column `artifacts.url`; a Citation-level override as a `citation_ref_parts` row of kind `url` |
-| Accessed date | Artifact | P8, P13, P14 | Column `artifacts.accessed_on`, an ISO calendar date. It is always one exact day the researcher knows, so a DateValue's uncertainty buys nothing |
-| Film reference | Artifact | P15 | Reference parts on the Artifact: `film_publication`, `roll`, `film`, `item` |
-| Citing | Artifact | P13, P14 | Column `artifacts.citing_text`. A structured link to the original stays with derivation links ([`source-structure-later.md`](source-structure-later.md)) |
-| Holder of a private original | Artifact | P7, P8, P9 | Column `artifacts.holder_text` ("privately held by Jane Doe, Calgary, Alberta") |
-| Item description | Citation | all | Derived from the graph (§ 5.3); `citations.label` remains the override |
-| Pattern for a Source type | Source type | all | Column `source_types.citation_pattern`. Seeded types come mapped; a researcher's type picks one, default fallback |
-| Role terms for parties | Graph vocabulary | P1, P2, P3 | Seed `role` terms the formatter reads: `grantor`, `grantee`, `writer`, `recipient`, `testator`, `head_of_household` ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) |
-| Formatter | Engine | all | `core/citationformat`: one Go template per pattern, three forms each, replacing `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) |
+- **Seeded Source types** for the record kinds in § 2's first set, each with the suggestions its pattern reads, in the order the citation uses them.
+- **Seeded metadata fields** for every `M.` key in § 3, labelled for researchers ("Enumeration district", "Folio", "Accessed").
+- **The formatter reads metadata by product key.** It looks for the field with that key and `origin = 'provenencia'`, and maps a seeded Source type to its pattern in Go. Fields the researcher added under their own keys stay theirs, as filing text the formatter ignores.
+- **The researcher keeps control.** They can file any field on any Source, dismiss suggestions, add their own fields and types, and edit labels. A Source of their own type gets the generic template (§ 5.3), which still reads every product field they filled.
 
-### 5.2 Recommendations behind the list
+This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md)): metadata stays, and becomes what citations are built from.
 
-**Fill at any level; resolve from the most specific.** The formatter reads each element from the Citation first, then the Artifact, then the Source. That answers the open question "do template fields live on the Source, the Artifact or the Citation" without forcing one grain on every researcher: a researcher who files one Source per census page puts the sheet number on the Source; one who files the whole county as a Source puts it on each Citation. The citation preview shows which level each value came from.
+### 5.2 The full list
 
-**A compiled registry, not seeded vocabulary.** Reference-part kinds, contributor roles, copy formats and patterns are product code, like name part types ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 4.1), not catalog rows. Two reasons: the formatter's templates are code and must know every kind they read, and seeded vocabulary is installed only in new catalogs ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1), so existing projects would never get the fields. A compiled registry reaches every project on upgrade with no healing.
+| What | Change | Kind |
+| --- | --- | --- |
+| Source date | `sources.date_value_id` ([`source-provenance-date.md`](source-provenance-date.md)) | **Schema** (planned) |
+| Citation fields | About 30 new seeded metadata fields (§ 3 "Fields to add") beside the 36 horizon keys the patterns use | Seed |
+| Source types | Seeded types for the first patterns: census, vital certificate (birth, marriage, death), church register, book, newspaper item, online database; the rest as their patterns are built | Seed |
+| Templates | Type → field suggestions for each seeded type, ordered like its citation | Seed |
+| Getting the seed to existing projects | An install step that adds the product types, fields and suggestions to a project that lacks them, run once per seed version (§ 5.4) | Engine |
+| Item description | Read from the graph (§ 5.5); `citations.label` overrides | Engine |
+| Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
+| Party roles | `role` terms the formatter reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
+| Formatter | `core/citationformat`: one Go template per pattern, three forms each, plus the generic template; replaces `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
 
-**Few new columns.** A field gets its own column (or record) only when something other than the formatter uses it: the date (sort), the repository (shared and listed), the jurisdiction (two orders), contributors (roles and sort names), and the Artifact's access fields (one per copy). Everything else is a reference part.
+The only schema change is the Source date, which was already planned. If the privacy toggle and moving an Artifact are pulled in, they add `sources.is_public` and possibly `ON UPDATE CASCADE` on the Subjects' composite key ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
 
-**This settles most of the metadata rethink.** Of the 48 horizon metadata keys in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.2, all but a handful (`isbn`, `language`, `form_number`, `gedcom_version`) become reference parts, contributors, Artifact access fields or the Source date above. What would be left for `source_metadata` is free-form filing text the formatter never reads. That supports shrinking metadata to plain researcher notes-as-fields, or removing it and moving existing values into Source notes or reference parts during the migration ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md)). The type → field suggestions would be replaced by each pattern's list of elements, shown in the citation preview.
+### 5.3 How the formatter reads a Source
 
-### 5.3 Reading the item from the graph
+1. **Pick the pattern.** A seeded type maps to its pattern in Go. Any other type uses the generic template.
+2. **Read the fields** by product key from `source_metadata`. A missing field is left out with its punctuation, never printed as a blank.
+3. **Shape the values it needs to.** `jurisdiction` is written smallest first, as notes use it; the source list reverses the comma-separated parts. `author` prints as written in notes, and the source list uses `author_sort` when it is filled. Dates in metadata (`accessed_date`) print as written; the Source date prints from its DateValue.
+4. **Style the title by pattern.** Published patterns (book, periodical, newspaper, web) italicize or quote as their convention says; record patterns print the title plain, as a description.
+5. **Add the item** from the Citation: `page_label`, the Citation label, or the graph (§ 5.5).
+6. **The generic template** prints, in order, whatever it finds: creator or author, title, `published_in`, jurisdiction, Source date, reference numbers, then the copy layer (`format`, `provider`, `url`, `accessed_date`) and `repository`. It is a readable citation for any Source, and the preview names the fields a seeded type would add.
+
+### 5.4 Getting the seed into existing projects
+
+Today the seed is installed only when a catalog is created ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1), so existing projects, including the product owner's, have only `birth_certificate`. Citation fields have to reach them.
+
+**Recommendation:** an idempotent install that runs once per seed version when a project opens. It adds the product types, fields and suggestions a project lacks by `(key, origin)` and records the version it installed, so a type or field the researcher has deleted is not added back by a later open, only by a later seed version. It never changes a researcher's rows. Where a project already has a field of its own with the same key (`origin = 'user'`, as in the product owner's dogfood catalog), the product field is added beside it; offering to move those values into the product field is a small follow-up.
+
+### 5.5 Reading the item from the graph
 
 This is where "build the graph, get the citation" pays off. For a Citation, the formatter collects the Subjects whose Observations cite it and composes the item part:
 
@@ -676,27 +682,40 @@ This is where "build the graph, get the citation" pays off. For a Citation, the 
 
 Names and dates are the ones the Source records (Observations), never the canonical person's kept name: a citation describes the record, not the conclusion.
 
-### 5.4 Suggested order
+### 5.6 What this gives up, and why that is fine
+
+The first draft's extra schema bought a few things the seed does not. Each has a workaround that matches how researchers already file:
+
+| Given up | Workaround |
+| --- | --- |
+| Fields on the Artifact (two copies of one record seen at two providers) | One Source per copy used, or the copy layer of the one that was cited. EE cites the copy you used, and Copy Source makes the sibling in a few clicks |
+| Fields on the Citation (a census line or register entry per Citation when one Source holds many) | Fine-grained Sources (one per household, entry or item), which Spike 12's Copy Source already supports; or the line in the Citation label |
+| A shared Repository record | `repository` text, carried between siblings by Copy Source |
+| Several authors with roles in order | `author` as written plus `author_sort`; `editor`, `compiler`, `translator` as separate fields |
+| A title-kind flag | The pattern decides the styling |
+| A pattern choice for a researcher's own type | The generic template; mapping a user type to a pattern can come later if dogfooding asks for it |
+
+### 5.7 Suggested order
 
 Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 
-1. **One Source schema pass:** Source date and span, title kind, contributors, jurisdiction parts, repository record, container, `source_types.citation_pattern`, reference-part tables. One migration, one Source page design.
-2. **Artifact access fields:** format, provider, database title, URL, accessed date, citing, holder. Can share the migration; the Artifact edit form needs its own design.
-3. **Printed page labels** in the composer, and Citation reference parts in the composer.
-4. **Formatter** with P17 and the patterns the dogfood Sources need first. Proposed first set: P5 census, P4 vital certificate, P6 church register, P10 book, P12 newspaper, P13 web database, with the P14 layer.
-5. **Citation preview** on the Source page, naming missing elements.
+1. **Source date** and the Source page design that shows it.
+2. **Seed and install:** the new fields, the first seeded types and their suggestions, and the once-per-version install for existing projects.
+3. **Printed page labels** in the composer.
+4. **Formatter** with the generic template and the first patterns: P5 census, P4 vital certificate, P6 church register, P10 book, P12 newspaper, P13 web database, with the P14 layer.
+5. **Citation preview** on the Source page, naming missing fields.
 6. **Copy citation**, full or short.
-7. Remaining patterns, one PR or batch each.
+7. Remaining patterns, each a seed batch plus its template.
 
 ---
 
 ## 6. Open questions
 
-- **Jurisdiction from place Subjects?** A Source's jurisdiction is text here, which keeps the Source layer descriptive. The graph often already has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text parts would save typing without making the Source depend on interpretation.
+- **Which patterns first.** The proposed first set in § 5.7 is a guess; the product owner's dogfood Sources decide.
+- **Install for existing projects.** Once per seed version on open (§ 5.4), or an explicit "Add citation fields" action the researcher runs.
+- **Same key, two origins.** Whether to offer moving a researcher's own `author` (or similar) values into the product field, and when.
+- **Generic template or a pattern choice for user types.** Whether a researcher's own type can pick a pattern later, which would need a column on `source_types`.
+- **Jurisdiction from the graph.** The graph often has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text would save typing without making the Source depend on interpretation.
 - **Principal Subject.** When a Citation supports several people (a census household, a marriage), which one names the item: head of household, both spouses, the person the researcher opened the composer from?
-- **Span: column or text?** A second date on `sources`, or only the title text.
-- **Which patterns first.** The proposed first set in § 5.4 is a guess; the product owner's dogfood Sources decide.
-- **Editable templates.** Whether a researcher can adjust a pattern's wording, or only fill fields. Recommendation: fields only in Spike 15; a per-Source "edited citation" override text field if the formatter is wrong for an odd record.
-- **Provider as a record.** Kept as text on the Artifact here. Revisit if researchers want a list of everything they took from one provider.
-- **Metadata.** Shrink to filing text, or remove and migrate (§ 5.2).
+- **Editable templates.** Recommendation: researchers fill fields and reorder suggestions only; a per-Source "edited citation" text field if the formatter is wrong for an odd record (one more seeded field, `citation_override`).
 - **Edition check.** Verify § 2 against the edition of *Evidence Explained* on hand, including how it treats DNA results and online trees.
