@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"cmp"
 	"errors"
 	"slices"
 	"strings"
@@ -123,7 +124,7 @@ func TestListSources(t *testing.T) {
 					case b.DateSortKey == nil:
 						return -1
 					}
-					return int(*a.DateSortKey - *b.DateSortKey)
+					return cmp.Compare(*a.DateSortKey, *b.DateSortKey)
 				})
 				var titles []string
 				for _, src := range byKey {
