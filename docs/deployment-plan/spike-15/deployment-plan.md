@@ -46,7 +46,7 @@ Spike 15 makes Sources carry what a standard genealogical citation needs and tur
 These are the calls for this spike. PR plans treat them as binding.
 
 - **Follow the *Evidence Explained* style; never copy the book.** Seeded formats, examples, tests, fixtures and UI copy are written for Provenencia; every example uses invented people, places and records; no product or feature name uses the book's name; nothing is called official. The full rule: [`README.md`](README.md#working-rules). Binds S15-14, S15-19, S15-20 and every PR with copy.
-- **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
+- **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. Copy Source carries it only when the Copy form's Date tick is on (S15-32; user, 2026-11-09). The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
 - **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page. No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
 - **Metadata lives at three levels with one vocabulary.** The Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) each hold values and layout, with the same fields from `source_metadata_fields`, which keeps its name. Tables: `artifact_metadata`, `artifact_metadata_layout`, `evidence_graph_metadata`, `evidence_graph_metadata_layout`. Layout rules (order, dismiss) are the Source's at every level. Binds S15-07 – S15-12. Design: map § 6.6.
 - **One level type.** Source, Artifact and graph are one Go `Level` type in the pure package `core/vocabkey`, used by suggestion rows, metadata owners, the format prefixes and the built-ins table, and the RPCs, with one Swift enum and a row in `api/ffi/swift_vocabulary_test.go`. S15-06 adds it; S15-14 uses it. (K-6, K-20.)
@@ -79,7 +79,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S15-01 | The credibility argument is a text area | 1 | Swift: `PVTextArea` with the description's behavior; Save as today | — | — | [plan](prs/S15-01-credibility-argument-text-area.md) | Landed #758 |
-| S15-02 | Sources carry a date and a not-public flag | 1 | Go: one migration (`date_value_id`, `is_public`), Source read and write, a date sort key from the shared date order | — | — | — | Scoped |
+| S15-02 | Sources carry a date and a not-public flag | 1 | Go: one migration (`date_value_id`, `is_public`), Source read and write, a date sort key from the shared date order | — | — | [plan](prs/S15-02-source-date-and-public-flag.md) | Draft |
 | S15-03 | The Source page shows the date and the not-public switch | 1 | Swift: set, change, clear the date; the switch | S15-D1 | S15-02, S15-D1 | — | Scoped |
 | S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | — | Scoped |
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
@@ -109,6 +109,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D9 | S15-28, S15-21, S15-31, S16-09, S15-D9 | — | Scoped |
 | S15-30 | The paged fold moves to the kit | 8 | Preparatory, Swift: S16-07's fold rule and state to `Platform/`, `PVShowMoreRow` in the kit; the Conclusion sections unchanged | — | S16-07 | — | Scoped |
 | S15-31 | Event and Place rows open the provenance sheet | 8 | Swift: `.sheet` provenance on Event and Place pages; the Why accordion and its code go | S15-D11, S15-D12 | S15-D11, S15-D12 | — | Scoped |
+| S15-32 | Copy Source can carry the date | 1 | Go and Swift: a `copy_date` choice on `CopySourceRequest` and `sourcecopy`; a Date tick on the Copy form | S15-D13 | S15-02, S15-D13 | — | Scoped |
 | S15-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, the dogfood Install run, the spike's `citation-formats.md` retired in favour of the domain doc, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -127,6 +128,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-D10 | Move confirm | **S15-25** | The bundle, the target picker, the credibility note |
 | S15-D11 | Event page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D12 | Place page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
+| S15-D13 | Copy Source dialog | **S15-32** | A Date tick beside Description, Metadata and Credibility |
 
 ## Slices
 
@@ -138,7 +140,8 @@ SLICE 1 — Source date, privacy, credibility           (alongside Spike 16)
   S15-02  Sources carry a date and a not-public flag
   ✎ S15-D1 ──▶ S15-03  The Source page shows the date and the not-public switch
   ✎ S15-D2 ──▶ S15-04  The Sources list shows and sorts by the date
-  Check: bar 1 (Source page and list), bar 2, bar 9.
+  ✎ S15-D13 ──▶ S15-32  Copy Source can carry the date
+  Check: bar 1 (Source page and list), bar 2, bar 9; a copied Source keeps the date when its tick is on (S15-32).
 
 SLICE 2 — Metadata at three levels                    (alongside Spike 16)
   S15-06  Type suggestions have a level
@@ -196,7 +199,7 @@ S15-99 — Dogfood close / docs
 ### Dependencies at a glance
 
 ```text
-S15-02 ──▶ S15-03, S15-04, S15-05, S15-16
+S15-02 ──▶ S15-03, S15-04, S15-05, S15-16, S15-32
 S15-06 ──▶ S15-07, S15-08, S15-12, S15-14, S15-18, S15-19
 S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16
 S15-26 ──▶ S15-09, S15-10, S15-11
@@ -248,7 +251,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 #### S15-02 — Sources carry a date and a not-public flag
 
 **Ships.** One migration adds `sources.date_value_id` and `sources.is_public`; the catalog model, the Source read and write, the FFI `Source` message and the Sources list read carry both, plus a date sort key from the date-order rule, moved from `conclusionsummaries` to `core/valuecompare`. Audit picks the columns up through the `sources` effect. The list read joins `date_values` once for the whole list (3,000 Sources at Scale).
-**Not this PR.** Any chrome (S15-03, S15-04); the Person page (S15-05); Copy Source carrying either (refused: privacy; the date is a Copy Source question for its plan).
+**Not this PR.** Any chrome (S15-03, S15-04); the Person page (S15-05); Copy Source carrying either (refused for privacy; the date is S15-32, user 2026-11-09).
 **Check.** Handler tests: set, read and clear a date and the flag; sort keys order exact, `abt.`, `bef.` and range dates as the Timeline does; an upgraded catalog reads every Source as undated and public.
 **Context.** Rules "The Source date is one optional DateValue", "Not public is a stored switch", "One date order" (`core/database/conclusionsummaries/compose.go` `datePlace`, `dateKeyOf`, `dateKeyLess`; `core/valuecompare/datewindow.go` `DateEnds`); [`source-provenance-date.md`](source-provenance-date.md); [privacy note](2026-10-27-source-privacy-toggle.md) "Likely code locations"; skills `add-catalog-migration`, `add-catalog-model`, `add-date-value`, `add-ffi-handler`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.
 
@@ -265,6 +268,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Not this PR.** Filtering by date or by not public.
 **Check.** Bar 1's list half, on a project with dated and undated Sources.
 **Context.** S15-D2; `SourcesListRow.swift`, `SourcesListSettings.swift`, `SourcesModel.swift`.
+
+#### S15-32 — Copy Source can carry the date
+
+**Ships.** `CopySourceRequest` gains `copy_date`; `sourcecopy` reads the original's date into the draft and, when chosen, gives the copy its own `date_values` row through `sources.SetDate`. The Copy form shows a Date tick as S15-D13 draws it, off when the original is undated.
+**Not this PR.** Carrying the not-public flag (refused: the copy starts public).
+**Check.** Copy a dated Source with the tick on: the copy has the same date and its own row; with it off: undated.
+**Context.** S15-D13; rule "The Source date is one optional DateValue"; `core/database/sourcecopy/sourcecopy.go`, `SourceCopyDialog.swift`, `SourceCopyModel.swift`; [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.2.
 
 ### Slice 2 — Metadata at three levels
 
