@@ -265,8 +265,14 @@ func lifeMarkerProto(m persondetail.LifeMarker) *engine.LifeMarker {
 	if len(m.Event) > 0 {
 		out.EventId = database.UUIDString(m.Event)
 	}
-	if len(m.Beside) > 0 {
-		out.BesideEventId = database.UUIDString(m.Beside)
+	if m.Place != nil && len(m.Place.Row) > 0 {
+		id := database.UUIDString(m.Place.Row)
+		switch m.Place.Side {
+		case persondetail.SideAfter:
+			out.Place = &engine.LifeMarker_AfterEventId{AfterEventId: id}
+		case persondetail.SideBefore:
+			out.Place = &engine.LifeMarker_BeforeEventId{BeforeEventId: id}
+		}
 	}
 	return out
 }

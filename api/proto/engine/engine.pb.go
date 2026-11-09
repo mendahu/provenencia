@@ -12659,9 +12659,13 @@ func (x *ListPersonEventsRequest) GetEntityId() string {
 // lifeline's birth and death markers go. Canonical events and participants
 // only. Each marker is always sent. An event_id names the recorded event (the
 // header's birth or death) when it is one of the rows; empty is a placeholder.
-// beside_event_id is set whenever the marker has no span of its own: the dated
-// event it sits beside (a birth beside the first dated event that may follow
-// birth, a death beside the last that may precede death); no date is invented.
+// place is set whenever the marker has no span of its own and an event is
+// dated: the dated event it sits after or before. A placeholder death sits
+// before the earliest dated burial or funeral of the person's own (role
+// subject), else after the last dated event; a placeholder birth sits after the
+// last dated event that may precede birth, else before the first dated event.
+// No date is invented. place is unset when the marker has its own span or
+// nothing is dated.
 type ListPersonEventsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Events        []*PersonEvent         `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
@@ -12725,9 +12729,13 @@ func (x *ListPersonEventsResponse) GetDeath() *LifeMarker {
 // LifeMarker is where a timeline puts a birth or a death. Ids are UUID strings,
 // empty for none.
 type LifeMarker struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	EventId       string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
-	BesideEventId string                 `protobuf:"bytes,2,opt,name=beside_event_id,json=besideEventId,proto3" json:"beside_event_id,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	EventId string                 `protobuf:"bytes,1,opt,name=event_id,json=eventId,proto3" json:"event_id,omitempty"`
+	// Types that are valid to be assigned to Place:
+	//
+	//	*LifeMarker_AfterEventId
+	//	*LifeMarker_BeforeEventId
+	Place         isLifeMarker_Place `protobuf_oneof:"place"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -12769,12 +12777,46 @@ func (x *LifeMarker) GetEventId() string {
 	return ""
 }
 
-func (x *LifeMarker) GetBesideEventId() string {
+func (x *LifeMarker) GetPlace() isLifeMarker_Place {
 	if x != nil {
-		return x.BesideEventId
+		return x.Place
+	}
+	return nil
+}
+
+func (x *LifeMarker) GetAfterEventId() string {
+	if x != nil {
+		if x, ok := x.Place.(*LifeMarker_AfterEventId); ok {
+			return x.AfterEventId
+		}
 	}
 	return ""
 }
+
+func (x *LifeMarker) GetBeforeEventId() string {
+	if x != nil {
+		if x, ok := x.Place.(*LifeMarker_BeforeEventId); ok {
+			return x.BeforeEventId
+		}
+	}
+	return ""
+}
+
+type isLifeMarker_Place interface {
+	isLifeMarker_Place()
+}
+
+type LifeMarker_AfterEventId struct {
+	AfterEventId string `protobuf:"bytes,3,opt,name=after_event_id,json=afterEventId,proto3,oneof"`
+}
+
+type LifeMarker_BeforeEventId struct {
+	BeforeEventId string `protobuf:"bytes,4,opt,name=before_event_id,json=beforeEventId,proto3,oneof"`
+}
+
+func (*LifeMarker_AfterEventId) isLifeMarker_Place() {}
+
+func (*LifeMarker_BeforeEventId) isLifeMarker_Place() {}
 
 // TimelineSpan is where a date sits on a line of years: from to to, a whole
 // year being [y, y+1) and a day its share of the year. An open side (BEF, AFT, a
@@ -20818,11 +20860,13 @@ const file_engine_proto_rawDesc = "" +
 	"\x18ListPersonEventsResponse\x12:\n" +
 	"\x06events\x18\x01 \x03(\v2\".provenencia.engine.v1.PersonEventR\x06events\x127\n" +
 	"\x05birth\x18\x02 \x01(\v2!.provenencia.engine.v1.LifeMarkerR\x05birth\x127\n" +
-	"\x05death\x18\x03 \x01(\v2!.provenencia.engine.v1.LifeMarkerR\x05death\"O\n" +
+	"\x05death\x18\x03 \x01(\v2!.provenencia.engine.v1.LifeMarkerR\x05death\"\x99\x01\n" +
 	"\n" +
 	"LifeMarker\x12\x19\n" +
 	"\bevent_id\x18\x01 \x01(\tR\aeventId\x12&\n" +
-	"\x0fbeside_event_id\x18\x02 \x01(\tR\rbesideEventId\"l\n" +
+	"\x0eafter_event_id\x18\x03 \x01(\tH\x00R\fafterEventId\x12(\n" +
+	"\x0fbefore_event_id\x18\x04 \x01(\tH\x00R\rbeforeEventIdB\a\n" +
+	"\x05placeJ\x04\b\x02\x10\x03R\x0fbeside_event_id\"l\n" +
 	"\fTimelineSpan\x12\x12\n" +
 	"\x04from\x18\x01 \x01(\x01R\x04from\x12\x0e\n" +
 	"\x02to\x18\x02 \x01(\x01R\x02to\x12\x1d\n" +
@@ -22173,6 +22217,10 @@ func file_engine_proto_init() {
 		(*ConclusionValue_Name)(nil),
 		(*ConclusionValue_Depiction)(nil),
 		(*ConclusionValue_Boolean)(nil),
+	}
+	file_engine_proto_msgTypes[179].OneofWrappers = []any{
+		(*LifeMarker_AfterEventId)(nil),
+		(*LifeMarker_BeforeEventId)(nil),
 	}
 	file_engine_proto_msgTypes[246].OneofWrappers = []any{}
 	file_engine_proto_msgTypes[247].OneofWrappers = []any{}
