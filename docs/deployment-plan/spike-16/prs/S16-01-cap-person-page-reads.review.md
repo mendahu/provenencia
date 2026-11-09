@@ -1,7 +1,7 @@
 # Review — S16-01 Cap the Person page reads and an event's places against crafted projects
 
-**Verdict:** round 1: Fits with changes — Ready with changes
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - M-1 (answered 2026-11-09): where the 100-relatives cap lives, since `core/kinship` may hold no number. The user chose the registry knob `kinship.Rules.MaxKinPerRole`. The map rule "Crafted fan-out is capped, not engineered" now says a cap inside a matching layer package is a `Rules` knob.
@@ -71,3 +71,15 @@
 
 ### X-13 · minor · the risk row contradicted D-4
 **Answer:** Fixed — §11 now says `Families` keeps `Cached` + `Is` and `personNode` runs once per `PersonFamily`.
+
+### M-6 · blocker · the knob's inventory row waited for STEP-9
+**Answer:** Fixed. The `kinship.MaxKinPerRole` row moves into STEP-1 with the field and the value, so `TestKnobInventoryMatchesRegistry` passes at STEP-1 (`core/matchregistry/inventory_test.go`). STEP-9 keeps the prose and the meaning edits of the other rows.
+
+### M-7 · blocker · `Canon.Members` copied `Entity`'s Subject and claim inserts
+**Answer:** Fixed. D-15(c) moves both inserts into one private `member` helper, which `Entity` and `Members` both call.
+
+### Round 2 notes below blocker
+- **T-1 and T-2 build edges with `kinshiptest.Rel`:** taken.
+- **Two stale comments:** taken. STEP-1 rewords `kinship.Rules` ("what Derive reads") and `matchregistry.Registry.Kinship`.
+
+Round 2 is the last round. No blocker is open, and To user (M-1) was answered on 2026-11-09.
