@@ -76,7 +76,7 @@ A person with no recorded death and a dated burial or funeral reads "Death unkno
 | The content builds `Row`s and cards only for shown items; folded rows keep id and span (P-7) | STEP-5, AC-2.1 |
 | The lifeline: one click target per shown point, one shared target for the folded points (P-7; user, 2026-11-09) | STEP-5, AC-2.2 – AC-2.4 |
 | The kept scale follows the line's year range too (P-20) | STEP-6, AC-3.1, AC-3.2 |
-| The working rule "The Timeline builds what it shows" updated to the user's answer | STEP-7 |
+| The idea note for the unfolded rows after the death marker | STEP-7 |
 
 | Out | Home |
 | --- | --- |
@@ -132,8 +132,8 @@ A person with no recorded death and a dated burial or funeral reads "Death unkno
 
 **Rules this plan bends.**
 
-- The working rule "(Batch 1) A marker's position is one value" says "beside or before" and "the earliest dated after-death row (burial, funeral)" → the code says after or before ("beside" meant before for a birth and after for a death), and only the person's own burial or funeral counts → user, 2026-11-09: subject only (review M-1); the after/before wording is review M-3 → STEP-7 rewrites the rule.
-- The working rule "(Batch 1) The Timeline builds what it shows" says a folded row keeps its spoken label and the lifeline makes a click target only for a shown row → a folded row keeps only its id and span, and folded points share one click target, because S16-D2's FH-5 (agreed 2026-11-09, after the rule) makes folded points clickable → user, 2026-11-09: one shared target for the folded points (D-11, D-12) → STEP-7 rewrites the rule in `deployment-plan.md`.
+- The working rule "(Batch 1) A marker's position is one value" says "beside or before" and "the earliest dated after-death row (burial, funeral)" → the code says after or before ("beside" meant before for a birth and after for a death), and only the person's own burial or funeral counts → user, 2026-11-09: subject only (review M-1); the after/before wording is review M-3 → updated in `deployment-plan.md` with this plan (2026-11-09).
+- The working rule "(Batch 1) The Timeline builds what it shows" says a folded row keeps its spoken label and the lifeline makes a click target only for a shown row → a folded row keeps only its id and span, and folded points share one click target, because S16-D2's FH-5 (agreed 2026-11-09, after the rule) makes folded points clickable → user, 2026-11-09: one shared target for the folded points (D-11, D-12) → updated in `deployment-plan.md` with this plan (2026-11-09).
 
 ## 6. Design
 
@@ -277,7 +277,7 @@ Do: D-13.
 Check: T-8 passes; `rg ChosenScale macos` finds nothing.
 
 **STEP-7 — Docs**
-Files: the S16-02 map row's Scope cell and the `#### S16-02` scope entry's **Ships** and **Check** in `docs/deployment-plan/spike-16/deployment-plan.md` (say after or before a row, the person's own burial or funeral, `lifelineTypes.markers`, a click target per shown row and one shared target for the folded points, and the years in the kept scale); the map row's Plan cell links this plan), `docs/ideas/person-page-performance.md` (one paragraph under "An unfolded Timeline lays out every card at once (P-7)": the dated rows after the death marker never fold: every dated row after the person's first own burial or funeral (a later census, a probate, a memorial) is built unfolded, so a crafted person with thousands of such rows builds every one; user, 2026-11-09), `docs/deployment-plan/spike-16/deployment-plan.md` (the working rule "(Batch 1) A marker's position is one value": its first sentence becomes "A life marker that has no span of its own sits after one dated row or before one, never both: one `oneof` on the wire (after or before) and one Swift enum, in place of an empty `beside_event_id`.", its second "A placeholder death sits just before the earliest dated burial or funeral of the person's own (role subject) whenever one is dated, else after the last dated row; a placeholder birth mirrors it (just after the last dated before-birth row, else before the first dated row) (user, 2026-11-08: \"just before burial\"; 2026-11-09: a burial the person only witnessed is an ordinary row).", the rest stays; the working rule "(Batch 1) The Timeline builds what it shows": "a folded row keeps its id and span for the lifeline and the markers; the lifeline draws every point, makes a click target for each shown row and one shared target for the folded points, which opens the dated fold through the nearest folded point's page (FH-5; user, 2026-11-09)"; the map row status), `docs/deployment-plan/spike-16/completed.md`, this plan (status, Landed note).
+Files: `docs/ideas/person-page-performance.md` (one paragraph under "An unfolded Timeline lays out every card at once (P-7)": the dated rows after the death marker never fold: every dated row after the person's first own burial or funeral (a later census, a probate, a memorial) is built unfolded, so a crafted person with thousands of such rows builds every one; user, 2026-11-09), `docs/deployment-plan/spike-16/deployment-plan.md` (the map row status; the working rules and the S16-02 scope entry were updated when this plan was written), `docs/deployment-plan/spike-16/completed.md`, this plan (status, Landed note).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` reports no errors; links resolve; `rg -n 'beside or before|lifeMarkers|click targets only for shown rows' docs/deployment-plan/spike-16/deployment-plan.md` finds nothing.
 
@@ -308,7 +308,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none added)
 - [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md`, `docs/deployment-plan/spike-16/` and `L10n.swift` with no hit left (`beside_event_id`, `besideEventId`, `lifeMarkers`, `pointLabels`, `ChosenScale`, `nextRowID`, `previousRowID`); `scripts/check-guidance-names.py` passes (check-pr runs it)
-- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (STEP-7)
+- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (done with the plan, 2026-11-09)
 - [ ] UI matches board S13-D4 and S16-D2; no new kit primitive
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together): 0.4.4 → 0.4.5, or the next patch on main
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
