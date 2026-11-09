@@ -700,14 +700,15 @@ A small syntax of our own, modelled on the convention genealogy programs use for
 
 | Syntax | Meaning |
 | --- | --- |
-| `{source.key}`, `{artifact.key}`, `{graph.key}` | The value of the metadata field with that key **on that level**, as typed: the Source, the Citation's Artifact, or the Citation's Evidence graph |
-| `{key}` | Shorthand: the most specific value, the graph's, else the Artifact's, else the Source's. Seeded formats use it for metadata so they work however finely the researcher files (§ 6.9) |
-| `{a\|b\|…}` | The first that has a value (`{short_title\|source.title}`, `{author_sort\|author}`) |
+| `{source.meta.key}`, `{artifact.meta.key}`, `{graph.meta.key}` | The value of the metadata field with that key **on that level**, as typed: the Source, the Citation's Artifact, or the Citation's Evidence graph |
+| `{meta.key}` | Shorthand: the most specific value, the graph's, else the Artifact's, else the Source's. Seeded formats use it so they work however finely the researcher files (§ 6.9) |
+| `{source.title}` and the other built-ins | Values that are not metadata (below) |
+| `{a\|b\|…}` | The first that has a value (`{meta.short_title\|source.title}`, `{meta.author_sort\|meta.author}`) |
 | `[ … ]` | Optional group: removed entirely, its text and punctuation included, if any placeholder inside it is empty. Groups nest |
 | `*…*` | Italic |
 | `\{` `\[` `\*` `\\` | A literal character |
 
-Everything else is literal text, including quotation marks and parentheses. The level prefix is what lets a format pick a value from a particular level (user, 2026-11-09): `{source.url}` for the site a Source is from, `{artifact.url}` for the image the Citation was drawn on.
+Everything else is literal text, including quotation marks and parentheses. The level prefix is what lets a format pick a value from a particular level (user, 2026-11-09): `{source.meta.url}` for the site a Source is from, `{artifact.meta.url}` for the image the Citation was drawn on. Metadata always sits under `meta.`, so a built-in and a metadata key can never collide, whatever the researcher names their fields (user, 2026-11-09).
 
 **Empty placeholders outside a group** print nothing, and the preview names them as missing. So a format says which fields it expects (outside groups) and which are optional (inside groups), and the "missing fields" warning in the citation preview comes from the format itself.
 
@@ -715,7 +716,7 @@ Everything else is literal text, including quotation marks and parentheses. The 
 
 #### Built-in placeholders
 
-Values that are not metadata, in the same level namespaces. Their names (`title`, `type`, `date`, `label`, `name`, `page`, `image`, `item`) are reserved: a metadata key cannot take them.
+Values that are not metadata, named directly under their level. Metadata keys are under `meta.`, so no name is reserved.
 
 | Placeholder | Value |
 | --- | --- |
@@ -732,14 +733,14 @@ The Citation level has only built-ins: Citations carry no metadata (§ 6.9).
 
 #### Resolving a placeholder
 
-A level-prefixed placeholder reads that level only. An unprefixed key reads the Citation's Evidence graph, else its Artifact, else the Source (§ 6.6). The **list** form describes the Source as a whole, so it reads Source values only: an unprefixed key there means `source.key`, and an `artifact.`, `graph.` or `citation.` placeholder is an error the editor reports.
+A level-prefixed placeholder reads that level only. `{meta.key}` reads the Citation's Evidence graph, else its Artifact, else the Source (§ 6.6). The **list** form describes the Source as a whole, so it reads Source values only: `{meta.key}` there means `{source.meta.key}`, and an `artifact.`, `graph.` or `citation.` placeholder is an error the editor reports.
 
-The editor's **Insert field** picker groups fields by level (Source, Artifact, Evidence graph, Citation) and inserts the prefixed form; the researcher can delete the prefix to get the shorthand.
+The editor's **Insert field** picker groups fields by level (Source, Artifact, Evidence graph, Citation) and inserts the prefixed form (`{graph.meta.line_number}`); the researcher can shorten it to `{meta.line_number}` to read the most specific level.
 
 #### Storage
 
 - Three nullable text columns on `source_types`: `citation_full`, `citation_short`, `citation_list`. Editing them is a Source type edit, audited as one today.
-- **Field references by id.** The editor shows `{graph.enumeration_district}`, but the stored text names the field by id, so renaming a key cannot break a format, and a key held by both a product field and a researcher's field is never ambiguous. The editor resolves a typed key when the format is saved and asks if two fields share it.
+- **Field references by id.** The editor shows `{graph.meta.enumeration_district}`, but the stored text names the field by id, so renaming a key cannot break a format, and a key held by both a product field and a researcher's field is never ambiguous. The editor resolves a typed key when the format is saved and asks if two fields share it.
 - **Delete impact.** A field named in any type's format is in use: deleting it is refused, with the types that use it listed ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md)).
 - Copy Source copies nothing new here: formats belong to the type, and the copy chooses its type.
 
@@ -942,12 +943,12 @@ Written for Provenencia from the conventions in § 2, not copied from *Evidence 
 **Census**
 
 ```text
-full:  {source.date:year} [{creator} ]census, {jurisdiction}[, {schedule}][, ED {enumeration_district}]
-       [, p. {citation.page}][, dwelling {dwelling_number}][, family {family_number}][, line {line_number}]
-       [, {citation.item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])][; citing {citing}].
-short: {source.date:year} [{creator} ]census, {jurisdiction}[, ED {enumeration_district}][, p. {citation.page}]
-       [, dwell. {dwelling_number}][, fam. {family_number}][, {citation.item}].
-list:  {jurisdiction}. {source.date:year} [{creator} ]census[, {schedule}].
+full:  {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, {meta.schedule}][, ED {meta.enumeration_district}]
+       [, p. {citation.page}][, dwelling {meta.dwelling_number}][, family {meta.family_number}][, line {meta.line_number}]
+       [, {citation.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])][; citing {meta.citing}].
+short: {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, ED {meta.enumeration_district}][, p. {citation.page}]
+       [, dwell. {meta.dwelling_number}][, fam. {meta.family_number}][, {citation.item}].
+list:  {meta.jurisdiction}. {source.date:year} [{meta.creator} ]census[, {meta.schedule}].
 ```
 
 > 1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (https://www.ancestry.com : accessed 12 March 2025); citing NARA microfilm publication T9, roll 393.
@@ -955,48 +956,48 @@ list:  {jurisdiction}. {source.date:year} [{creator} ]census[, {schedule}].
 **Birth certificate** (marriage and death certificates are the same, with their own word)
 
 ```text
-full:  [{creator}, ]birth certificate[ no. {document_number}][ ({source.date:full})][, {citation.item}][, vol. {volume}]
-       [, p. {citation.page}][, entry {entry_number}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
-       [; {repository}].
-short: [{creator}, ]birth certificate[ no. {document_number}][, {citation.item}].
-list:  {jurisdiction}.[ {creator}.] Birth certificates.[ {repository}.]
+full:  [{meta.creator}, ]birth certificate[ no. {meta.document_number}][ ({source.date:full})][, {citation.item}][, vol. {meta.volume}]
+       [, p. {citation.page}][, entry {meta.entry_number}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [; {meta.repository}].
+short: [{meta.creator}, ]birth certificate[ no. {meta.document_number}][, {citation.item}].
+list:  {meta.jurisdiction}.[ {meta.creator}.] Birth certificates.[ {meta.repository}.]
 ```
 
 **Church register**
 
 ```text
-full:  {creator}[ ({jurisdiction})], *{source.title}*[, vol. {volume}][, p. {citation.page}][, fol. {folio}]
-       [, no. {entry_number}][, {citation.item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
-       [; film {film_number}[, item {item_number}]][; {repository}].
-short: {creator}, *{short_title|source.title}*[, vol. {volume}][, p. {citation.page}][, no. {entry_number}].
-list:  {creator}[ ({jurisdiction})]. *{source.title}*.[ {repository}.]
+full:  {meta.creator}[ ({meta.jurisdiction})], *{source.title}*[, vol. {meta.volume}][, p. {citation.page}][, fol. {meta.folio}]
+       [, no. {meta.entry_number}][, {citation.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [; film {meta.film_number}[, item {meta.item_number}]][; {meta.repository}].
+short: {meta.creator}, *{meta.short_title|source.title}*[, vol. {meta.volume}][, p. {citation.page}][, no. {meta.entry_number}].
+list:  {meta.creator}[ ({meta.jurisdiction})]. *{source.title}*.[ {meta.repository}.]
 ```
 
 **Book**
 
 ```text
-full:  {author}, *{source.title}*[, {edition}][, vol. {volume}][ ([{publication_place}: ]{publisher}[, {source.date:year}])]
-       [, {citation.page}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
-short: {author}, *{short_title|source.title}*[, {citation.page}].
-list:  {author_sort|author}. *{source.title}*.[ {edition}.][ [{publication_place}: ]{publisher}[, {source.date:year}].]
+full:  {meta.author}, *{source.title}*[, {meta.edition}][, vol. {meta.volume}][ ([{meta.publication_place}: ]{meta.publisher}[, {source.date:year}])]
+       [, {citation.page}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
+short: {meta.author}, *{meta.short_title|source.title}*[, {citation.page}].
+list:  {meta.author_sort|meta.author}. *{source.title}*.[ {meta.edition}.][ [{meta.publication_place}: ]{meta.publisher}[, {source.date:year}].]
 ```
 
 **Newspaper item**
 
 ```text
-full:  "{source.title}," *{published_in}*[ ({jurisdiction})], {source.date:full}[, p. {citation.page}][, col. {column}]
-       [; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
-short: "{source.title}," *{published_in}*, {source.date:full}.
-list:  *{published_in}*[ ({jurisdiction})].
+full:  "{source.title}," *{meta.published_in}*[ ({meta.jurisdiction})], {source.date:full}[, p. {citation.page}][, col. {meta.column}]
+       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
+short: "{source.title}," *{meta.published_in}*, {source.date:full}.
+list:  *{meta.published_in}*[ ({meta.jurisdiction})].
 ```
 
 **Website or online database**
 
 ```text
-full:  [{creator}, ]"{source.title}," [{format}, ]*{site_name}*[ ({url}[ : accessed {accessed_date}])]
-       [, {citation.item}][; citing {citing}].
+full:  [{meta.creator}, ]"{source.title}," [{meta.format}, ]*{meta.site_name}*[ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [, {citation.item}][; citing {meta.citing}].
 short: "{source.title}"[, {citation.item}].
-list:  [{creator}. ]"{source.title}." *{site_name}*.[ {url}.]
+list:  [{meta.creator}. ]"{source.title}." *{meta.site_name}*.[ {meta.url}.]
 ```
 
 ### 6.9 One EE citation, many Provenencia Citations
