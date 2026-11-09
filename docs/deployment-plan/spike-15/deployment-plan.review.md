@@ -1,12 +1,12 @@
 # Review — Spike 15 PR map
 
-**Verdict:** Fits with changes (after round 2; one item with the user). **Rounds:** 2. **Reviewers:** maintainability (Opus, fresh context each round, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
+**Verdict:** Fits with changes (after round 2; every To user item answered 2026-11-09). **Rounds:** 2. **Reviewers:** maintainability (Opus, fresh context each round, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
 
 ## To user
 
 - ~~K-2 · S15-26~~: kept (user, 2026-11-09).
 - ~~K-18 · Format edits and the Person page reads~~: closed by the user's call (2026-11-09) to render citations on demand from SQL with nothing cached; see rule "Citations render on demand, from SQL", which replaces the round-1 answer to K-3. To be measured at Scale in S15-16.
-- **K-16 · `{citation.item}`.** Writer's new recommendation to the user (2026-11-09): per-Citation derivation would give the Citations of one household different items and break grouping; make the item a graph-level metadata field (`item`) typed once per graph, drop `{citation.item}` and its derivation, keep `{citation.label}`. Awaiting the user.
+- ~~K-16 · `{citation.item}`~~: the item is a graph-level metadata field, `item`, typed once per graph; no per-Citation derivation and no primary-subject toggle in this spike (user, 2026-11-09). Rule "The item is a graph field"; map § 6.5.
 
 ## Writer's own calls
 
@@ -62,7 +62,7 @@
 **Answer:** Fixed — Scale line extended; S15-02, S15-08, S15-15 and S15-24 state their fan-out.
 
 ### K-16 · major · S15-16's `{citation.item}` needs a decision first
-**Answer:** To user, with a recommended default (above).
+**Answer:** To user; settled 2026-11-09 (above).
 
 ### K-17 · minor · Docs and skills each PR makes false are not named
 **Answer:** Fixed — S15-07 (`add-catalog-query` example), S15-15 (`add-catalog-delete` text references), S15-24 (two domain docs), S15-99 (retires the spike's `citation-formats.md` for the new domain doc). Spike 15 adds no cache, so `docs/catalog-caches.md` is untouched.
