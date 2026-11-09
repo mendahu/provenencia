@@ -1,7 +1,7 @@
 # Review — S16-02 The Timeline places a missing death and builds what it shows
 
-**Verdict:** Fits with changes — Not ready (round 1), fixed; round 2 pending
-**Rounds:** 1. **Reviewers:** maintainability (Opus, fresh context), executability (Sonnet, fresh context)
+**Verdict:** Fits with changes — Ready with changes (round 2 findings fixed)
+**Rounds:** 2. **Reviewers:** maintainability (Opus, fresh context), executability (Sonnet, fresh context)
 
 ## To user
 - Before the plan: the map's "click targets only for shown rows" contradicts S16-D2 FH-5 (a folded point opens its page). **Answered (user, 2026-11-09):** one shared click target for the folded points; folded points lose their hover name (D-11, D-12; Rules this plan bends).
@@ -53,3 +53,41 @@
 
 ### M-5 · nit · `MarkerSide`'s zero value
 **Answer:** Fixed — D-1 starts at `iota + 1`.
+
+## Round 2
+
+### M-1 · blocker · `Slot.id` is a second copy of `Item.id`
+**Answer:** Fixed — D-10: `Slot` owns the id rule; `Item.id` reads its private `slot`; Codebase fit lists `Slot`.
+
+### M-2 · blocker · `foldedHit` copies the buttons' hit geometry
+**Answer:** Fixed — D-12: `Mark.hit` beside `pointY`; buttons and `foldedHit` read it; `PersonTimelineLine.top(_:)` and `hitHeight(_:)` go (Deletes); T-7 asserts it.
+
+### M-3 · blocker · STEP-8 leaves the map's S16-02 scope text stale
+**Answer:** Fixed — STEP-7 (was STEP-8) rewrites the map row's Scope, the scope entry's Ships and Check, and links the plan; the DoD sweep covers the spike folder.
+
+### X-8 · blocker · STEP-3 leaves the content reading `besideEventId`
+**Answer:** Fixed — STEP-3 takes D-6 and `PersonTimelineContent.swift`; STEP-4 keeps the lifeline (D-7 – D-9).
+
+### X-9 · blocker · STEP-5 breaks the build; T-5 needs STEP-6's targets
+**Answer:** Fixed — the two steps merged into STEP-5 (D-10, D-11, D-12); steps renumbered (7 in all).
+
+### X-10 · major · §6 sketch says `[Mark]`
+**Answer:** Fixed — the sketch declares `Target` and `[Target]`.
+
+### X-11 · major · T-1's mirror literal does not compile
+**Answer:** Fixed — T-1 gives the `EventRole` literal and the `row(n, dated, roles...)` helper.
+
+### X-12 · major · Two `rg` checks cannot pass
+**Answer:** Fixed — STEP-2 excludes `*.pb.go` and names the one expected hit; STEP-7 searches for the stale phrases only.
+
+### X-13 · major · Stale map wording and no Plan link
+**Answer:** Fixed — as M-3.
+
+### X-14 · minor · STEP-4 contradicts itself
+**Answer:** Fixed — STEP-4 names the `unknownEnds` lines that change.
+
+### X-15 · minor · Smaller choices
+**Answer:** Fixed — T-6 names `d60`; AC-3.1 says the range changes; the Out row and the idea paragraph say every dated row after the first own burial or funeral; STEP-2 names the generated Swift case names. How the lifeline stores folded marks is left to the implementer (same result either way, as the reviewer says).
+
+### X-6 · minor (repeated) · No `protoc` or `xcodebuild` in the review sandbox
+**Answer:** Declined — the implementer works on the Mac.

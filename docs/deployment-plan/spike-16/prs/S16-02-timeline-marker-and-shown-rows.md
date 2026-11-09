@@ -1,6 +1,6 @@
 # S16-02 — The Timeline places a missing death and builds what it shows
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the placeholder marker, its dashed stub and the points are drawn as board S13-D4 draws them; only the row a placeholder sits beside changes, a bugfix back to R-24a; user, 2026-11-09)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-1, P-7, P-20; working rules "(Batch 1) A marker's position is one value", "(Batch 1) The Timeline builds what it shows", "(Batch 1) One paged fold that moves focus"; [S16-07 plan](S16-07-paged-fold-focus.md) (its Landed note and D-10); brief [S16-D2](../design/archive/S16-D2-person-page-folds.md) FH-5; Spike 13 [decisions](../../archive/spike-13/README.md#decisions) (the Timeline is a lifeline; its rules and R-24a are in git history)
 **Planned:** 2026-11-09 against `main` @ `462699f`
-**Review:** [`S16-02-timeline-marker-and-shown-rows.review.md`](S16-02-timeline-marker-and-shown-rows.review.md) — Fits with changes — Not ready → fixed, 1 round; no open blocker; To user answered (M-1, X-5)
+**Review:** [`S16-02-timeline-marker-and-shown-rows.review.md`](S16-02-timeline-marker-and-shown-rows.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user answered (FH-5 targets, brief, M-1 subject only, X-5 logged)
 
 ### Implementer — read this first
 
@@ -63,7 +63,7 @@ A person with no recorded death and a dated burial or funeral reads "Death unkno
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | The same items and viewport, one event's year moved from 1850 to 1900 | The kept scale does not apply; a new one is chosen |
+| AC-3.1 | The same items and viewport, the last dated event moved from 1850 to 1900 (the line's range changes) | The kept scale does not apply; a new one is chosen |
 | AC-3.2 | The same items, viewport and years | The kept scale applies |
 
 ## 3. Scope
@@ -74,14 +74,14 @@ A person with no recorded death and a dated burial or funeral reads "Death unkno
 | Wire: `LifeMarker` carries a `oneof place` (`after_event_id`, `before_event_id`); `beside_event_id` goes | STEP-2 |
 | Swift: `CatalogLifeMarker.Place`; the content inserts a marker after or before its row; the lifeline's stub follows the place (P-1) | STEP-3, STEP-4, AC-1.1, AC-1.2 |
 | The content builds `Row`s and cards only for shown items; folded rows keep id and span (P-7) | STEP-5, AC-2.1 |
-| The lifeline: one click target per shown point, one shared target for the folded points (P-7; user, 2026-11-09) | STEP-6, AC-2.2 – AC-2.4 |
-| The kept scale follows the line's year range too (P-20) | STEP-7, AC-3.1, AC-3.2 |
-| The working rule "The Timeline builds what it shows" updated to the user's answer | STEP-8 |
+| The lifeline: one click target per shown point, one shared target for the folded points (P-7; user, 2026-11-09) | STEP-5, AC-2.2 – AC-2.4 |
+| The kept scale follows the line's year range too (P-20) | STEP-6, AC-3.1, AC-3.2 |
+| The working rule "The Timeline builds what it shows" updated to the user's answer | STEP-7 |
 
 | Out | Home |
 | --- | --- |
 | Memoising the content, participants once per read, lazy cards after an unfold | [person page performance idea](../../../ideas/person-page-performance.md) (S16-27 memoises section content) |
-| Folding the dated rows after the death marker (a crafted person with thousands of their own dated burials builds every one) | [person page performance idea](../../../ideas/person-page-performance.md) (user, 2026-11-09) |
+| Folding the dated rows after the death marker (every dated row after the person's first own burial or funeral is built unfolded; a crafted person with thousands of them builds every one) | [person page performance idea](../../../ideas/person-page-performance.md) (user, 2026-11-09) |
 | Adding a before-birth event type to `lifeline.beforeBirth` | not planned |
 | Event and participant fields moving onto summary rows | S16-19 |
 | Back restoring a section's folds (P-19) | [person page follow-ups idea](../../../ideas/person-page-followups.md) |
@@ -132,8 +132,8 @@ A person with no recorded death and a dated burial or funeral reads "Death unkno
 
 **Rules this plan bends.**
 
-- The working rule "(Batch 1) A marker's position is one value" says "beside or before" and "the earliest dated after-death row (burial, funeral)" → the code says after or before ("beside" meant before for a birth and after for a death), and only the person's own burial or funeral counts → user, 2026-11-09: subject only (review M-1); the after/before wording is review M-3 → STEP-8 rewrites the rule.
-- The working rule "(Batch 1) The Timeline builds what it shows" says a folded row keeps its spoken label and the lifeline makes a click target only for a shown row → a folded row keeps only its id and span, and folded points share one click target, because S16-D2's FH-5 (agreed 2026-11-09, after the rule) makes folded points clickable → user, 2026-11-09: one shared target for the folded points (D-11, D-12) → STEP-8 rewrites the rule in `deployment-plan.md`.
+- The working rule "(Batch 1) A marker's position is one value" says "beside or before" and "the earliest dated after-death row (burial, funeral)" → the code says after or before ("beside" meant before for a birth and after for a death), and only the person's own burial or funeral counts → user, 2026-11-09: subject only (review M-1); the after/before wording is review M-3 → STEP-7 rewrites the rule.
+- The working rule "(Batch 1) The Timeline builds what it shows" says a folded row keeps its spoken label and the lifeline makes a click target only for a shown row → a folded row keeps only its id and span, and folded points share one click target, because S16-D2's FH-5 (agreed 2026-11-09, after the rule) makes folded points clickable → user, 2026-11-09: one shared target for the folded points (D-11, D-12) → STEP-7 rewrites the rule in `deployment-plan.md`.
 
 ## 6. Design
 
@@ -241,12 +241,12 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/persondetail/...` passe
 
 **STEP-2 — The wire carries one place**
 Files: `api/proto/engine.proto`, `api/ffi/handlers/person_detail.go`, `api/ffi/handlers/person_detail_test.go`, the generated `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`. Skill: `add-ffi-handler`, `use-catalog-session`.
-Do: D-4, D-14. Run `./scripts/generate-proto.sh` (needs `protoc`, `protoc-gen-go` and `protoc-gen-swift`, as on the Mac the repo's README sets up).
-Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes with T-2; `rg beside_event_id api core` finds only the `reserved` line.
+Do: D-4, D-14. Run `./scripts/generate-proto.sh` (Swift names the oneof cases `.afterEventID` and `.beforeEventID`, which STEP-3's `mapLifeMarker` switches on) (needs `protoc`, `protoc-gen-go` and `protoc-gen-swift`, as on the Mac the repo's README sets up).
+Check: `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes with T-2; `rg -g '!*.pb.go' beside_event_id api core` finds only the `reserved "beside_event_id"` line in `api/proto/engine.proto` (the generated descriptor in `engine.pb.go` keeps the reserved name).
 
 **STEP-3 — Swift reads the place**
-Files: `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `macos/App/Features/Conclusions/PersonTimelinePreviewData.swift`, `PersonTimelineSection.swift` (the "Row sheet" preview), `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`, `PersonTimelineContentTests.swift`, `PersonTimelineLifelineTests.swift`. Skill: `add-swift-test`.
-Do: D-5. Rewrite every `besideEventId:` as the place Go sends under D-2 for that fixture's data:
+Files: `macos/App/Platform/GenealogyStore.swift`, `GoStore.swift`, `macos/App/Features/Conclusions/PersonTimelineContent.swift` (its two `besideEventId` reads), `macos/App/Features/Conclusions/PersonTimelinePreviewData.swift`, `PersonTimelineSection.swift` (the "Row sheet" preview), `macos/ProvenenciaTests/CatalogQueryRegistryTests.swift`, `PersonTimelineContentTests.swift`, `PersonTimelineLifelineTests.swift`. Skill: `add-swift-test`.
+Do: D-5, and D-6 in `PersonTimelineContent.init` (it replaces the two `besideEventId` reads; the lifeline still finds its stub's neighbor by walking items until STEP-4). First add T-4's first case (the audit's test) and see it fail on the old insertion. Rewrite every `besideEventId:` as the place Go sends under D-2 for that fixture's data:
 
 | Site | Birth | Death |
 | --- | --- | --- |
@@ -259,32 +259,27 @@ Do: D-5. Rewrite every `besideEventId:` as the place Go sends under D-2 for that
 | `PersonTimelineContentTests.foldedMarkersStayAfterPagedRun` | `.before(eventId: "d110")` (kept, as above) | unchanged |
 | `CatalogQueryRegistryTests` round trip | `CatalogLifeMarker(eventId: nil, place: .before(eventId: "ev1"))` | `CatalogLifeMarker(eventId: "ev1", place: nil)`; the defaults compare with `CatalogLifeMarker(eventId: nil, place: nil)` |
 
-Check: the app builds; `rg besideEventId macos` finds nothing.
+Check: the app builds; T-4 passes; `rg besideEventId macos` finds nothing.
 
-**STEP-4 — The content and the lifeline place the marker**
+**STEP-4 — The lifeline places the stub**
 Files: `PersonTimelineContent.swift`, `PersonTimelineLifeline.swift`, `PersonTimelineContentTests.swift`, `PersonTimelineLifelineTests.swift`.
-Do: D-6, D-7, D-8, D-9. Today's assertions in `placeholdersAndShortLives` for the funeral case (items `["birth", "c", "death", "f"]`, death above `f`) hold unchanged. First add the audit's test (T-4's first case) and see it fail on the old insertion.
-Check: T-4, T-6 pass; `placeholdersAndShortLives` passes with its death assertions updated to D-8 (§8 T-6).
+Do: D-7, D-8, D-9. In `placeholdersAndShortLives` only the `unknownEnds` death-cap, burial and length lines change (to T-6's values); the funeral case's assertions (items `["birth", "c", "death", "f"]`, death above `f`) hold unchanged.
+Check: T-6 passes; `rg 'nextRowID|previousRowID' macos` finds nothing.
 
-**STEP-5 — The content builds only what it shows**
-Files: `PersonTimelineContent.swift`, `PersonTimelineContentTests.swift`.
-Do: D-10, D-11. Update `pointsAreNamedByTheirRow` to D-11 (allowed under the Stop conditions).
-Check: T-3, T-5 pass; every existing `PersonTimelineContentTests` case passes with unchanged items.
+**STEP-5 — The Timeline builds only what it shows, and the line's targets follow**
+Files: `PersonTimelineContent.swift`, `PersonTimelineLifeline.swift`, `PersonTimelineSection.swift` (`PersonTimelineLine` and its call site in `PersonTimelineList`), `PersonTimelineContentTests.swift`, `PersonTimelineLifelineTests.swift`. Skill: `add-ui-component`.
+Do: D-10, D-11, D-12, in one step, because removing `pointLabels` and the line's `labels` parameter needs the targets that replace them. Update `pointsAreNamedByTheirRow` to D-11 (allowed under the Stop conditions). `PersonTimelineList` passes `select` unchanged.
+Check: T-3, T-5, T-7 pass; every existing `PersonTimelineContentTests` case passes with unchanged items; `rg pointLabels macos` finds nothing; manual check 3.
 
-**STEP-6 — The lifeline makes a target per shown point and one for the folded**
-Files: `PersonTimelineLifeline.swift`, `PersonTimelineSection.swift` (`PersonTimelineLine`), `PersonTimelineLifelineTests.swift`. Skill: `add-ui-component`.
-Do: D-12. `PersonTimelineList` passes `select` unchanged.
-Check: T-7 passes; manual check 3.
-
-**STEP-7 — A date edit rescales the line**
+**STEP-6 — A date edit rescales the line**
 Files: `PersonTimelinePlacement.swift`, `PersonTimelineSection.swift` (`rebuild()`), `macos/ProvenenciaTests/PersonTimelinePlacementTests.swift`.
 Do: D-13.
 Check: T-8 passes; `rg ChosenScale macos` finds nothing.
 
-**STEP-8 — Docs**
-Files: the S16-02 map row's Scope cell and the `#### S16-02` scope entry's **Ships** and **Check** in `docs/deployment-plan/spike-16/deployment-plan.md` (say after or before a row, the person's own burial or funeral, `lifelineTypes.markers`, a click target per shown row and one shared target for the folded points, and the years in the kept scale), `docs/ideas/person-page-performance.md` (one paragraph under "An unfolded Timeline lays out every card at once (P-7)": the dated rows after the death marker never fold; a crafted person with thousands of their own dated burials builds every one; user, 2026-11-09), `docs/deployment-plan/spike-16/deployment-plan.md` (the working rule "(Batch 1) A marker's position is one value": its first sentence becomes "A life marker that has no span of its own sits after one dated row or before one, never both: one `oneof` on the wire (after or before) and one Swift enum, in place of an empty `beside_event_id`.", its second "A placeholder death sits just before the earliest dated burial or funeral of the person's own (role subject) whenever one is dated, else after the last dated row; a placeholder birth mirrors it (just after the last dated before-birth row, else before the first dated row) (user, 2026-11-08: \"just before burial\"; 2026-11-09: a burial the person only witnessed is an ordinary row).", the rest stays; the working rule "(Batch 1) The Timeline builds what it shows": "a folded row keeps its id and span for the lifeline and the markers; the lifeline draws every point, makes a click target for each shown row and one shared target for the folded points, which opens the dated fold through the nearest folded point's page (FH-5; user, 2026-11-09)"; the map row status), `docs/deployment-plan/spike-16/completed.md`, this plan (status, Landed note).
+**STEP-7 — Docs**
+Files: the S16-02 map row's Scope cell and the `#### S16-02` scope entry's **Ships** and **Check** in `docs/deployment-plan/spike-16/deployment-plan.md` (say after or before a row, the person's own burial or funeral, `lifelineTypes.markers`, a click target per shown row and one shared target for the folded points, and the years in the kept scale); the map row's Plan cell links this plan), `docs/ideas/person-page-performance.md` (one paragraph under "An unfolded Timeline lays out every card at once (P-7)": the dated rows after the death marker never fold: every dated row after the person's first own burial or funeral (a later census, a probate, a memorial) is built unfolded, so a crafted person with thousands of such rows builds every one; user, 2026-11-09), `docs/deployment-plan/spike-16/deployment-plan.md` (the working rule "(Batch 1) A marker's position is one value": its first sentence becomes "A life marker that has no span of its own sits after one dated row or before one, never both: one `oneof` on the wire (after or before) and one Swift enum, in place of an empty `beside_event_id`.", its second "A placeholder death sits just before the earliest dated burial or funeral of the person's own (role subject) whenever one is dated, else after the last dated row; a placeholder birth mirrors it (just after the last dated before-birth row, else before the first dated row) (user, 2026-11-08: \"just before burial\"; 2026-11-09: a burial the person only witnessed is an ordinary row).", the rest stays; the working rule "(Batch 1) The Timeline builds what it shows": "a folded row keeps its id and span for the lifeline and the markers; the lifeline draws every point, makes a click target for each shown row and one shared target for the folded points, which opens the dated fold through the nearest folded point's page (FH-5; user, 2026-11-09)"; the map row status), `docs/deployment-plan/spike-16/completed.md`, this plan (status, Landed note).
 Do: per the Definition of done.
-Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` reports no errors; links resolve; `rg -n 'beside' docs/deployment-plan/spike-16/deployment-plan.md api/proto/engine.proto core/database/persondetail` finds no marker wording.
+Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` reports no errors; links resolve; `rg -n 'beside or before|lifeMarkers|click targets only for shown rows' docs/deployment-plan/spike-16/deployment-plan.md` finds nothing.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Place a missing death just before a dated burial on the Timeline.").
 
@@ -292,13 +287,13 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/persondetail/lifeline_test.go` `TestLifeMarkers` | The `typeOf` map gains 6 → `"baptism"` and 7 → `vocabkey.EventBurial`; the `row` helper gives the person the subject role, and a case can give another. Table: "a witness at a burial" (census 2, burial 4 as witness) → death after 4; "subject and witness on one burial" → death before 4; "only a burial dated" (4) → birth before 4, death before 4; "a baptism and a burial" (6, 4) → birth before 6, death before 4; "two burials" (4, 7) → death before 4; "a funeral after a census" → death before 3; "no burial or funeral dated" (census, marriage) → death after the marriage; "no dated row" → both nil; "a recorded birth with no span" → birth `Event` 1, before 2; "a recorded birth with a span" → birth nil place; "a recorded death with no span and a dated funeral" → death `Event` set, before the funeral; "a recorded death with a span" → nil place; with `lifelineTypes{beforeBirth: {"census"}}`: census, marriage dated → birth after the census | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, D-2, D-3 |
+| T-1 | Go | `core/database/persondetail/lifeline_test.go` `TestLifeMarkers` | The `typeOf` map gains 6 → `"baptism"` and 7 → `vocabkey.EventBurial`; the helper becomes `row(n byte, dated bool, roles ...vocabkey.Role) PersonEvent`, giving the person `Roles` terms with `Key` = each role and `Origin` = `vocabkey.OriginProvenencia`, `RoleSubject` when none is passed. Table: "a witness at a burial" (census 2, burial 4 as witness) → death after 4; "subject and witness on one burial" → death before 4; "only a burial dated" (4) → birth before 4, death before 4; "a baptism and a burial" (6, 4) → birth before 6, death before 4; "two burials" (4, 7) → death before 4; "a funeral after a census" → death before 3; "no burial or funeral dated" (census, marriage) → death after the marriage; "no dated row" → both nil; "a recorded birth with no span" → birth `Event` 1, before 2; "a recorded birth with a span" → birth nil place; "a recorded death with no span and a dated funeral" → death `Event` set, before the funeral; "a recorded death with a span" → nil place; with `lifelineTypes{beforeBirth: []subjectcompare.EventRole{{EventType: "census", Role: vocabkey.RoleSubject}}}`: census, marriage dated → birth after the census | AC-1.1, AC-1.2, AC-1.3, AC-1.4, AC-1.5, AC-1.6, AC-1.7, D-2, D-3 |
 | T-2 | Go | `api/ffi/handlers/person_detail_test.go` `TestListPersonEvents` | Birth `event_id` = b1 and no place (`GetPlace() == nil`); death no `event_id`, `GetAfterEventId()` = u (the burial the person witnessed). The `lee` subtest: birth `event_id` = born, no place; death no `event_id`, `GetAfterEventId()` = born | D-4, D-14 |
 | T-9 | Go | `core/database/persondetail/timeline_test.go` `TestPersonEventsLifeline` | Every subtest with D-15's expectation | AC-1.1, AC-1.5, AC-1.6, D-2, D-15 |
 | T-3 | Swift | `PersonTimelineContentTests.swift` `buildsOnlyShownRowsAndCards` *(new)* | 2,000 dated events × 500 participants at Wide, folded: 50 rows in `items`, each with 12 cards; `allSpans.count == 2000`; `items.compactMap(\.spokenLabel).count == 52` (50 rows, the two placeholders); one page: 100 rows. Every event is a `census` (no after-death type), so all 2,000 are counted by the dated fold | AC-2.1, D-10 |
 | T-4 | Swift | `PersonTimelineContentTests.swift` `deathNeverFollowsAnAfterDeathEvent` *(new)* | Audit P-1's case: `b1` burial 1850, `i1`, `i2` undated, birth `.before("b1")`, death `.before("b1")` → `["birth", "undated", "i1", "i2", "death", "b1"]`; baptism + burial, death `.before(burial)` → baptism, death, burial; a recorded death with no span `.before(funeral)` → its row as the marker before the funeral; birth and death both `.after("x")` → x, birth, death; death `.before("unknown")` → last | AC-1.1, AC-1.2, AC-1.4, D-6 |
 | T-5 | Swift | `PersonTimelineContentTests.swift` `pointsAreNamedByTheirRow` (updated) | Every shown row's `Item.spokenLabel` is its row's spoken label; a lifeline's target label is its item's; `lise` folded: no target for `l60`; the `birth` placeholder's label is "Birth unknown" | AC-2.4, D-11 |
-| T-6 | Swift | `PersonTimelineLifelineTests.swift` `placeholdersAndShortLives` (updated) and `aDeathBeforeABurial` *(new)* | `unknownEnds` (death `.before("11")`): birth cap at 18, point 2 at 58 (unchanged); death stub `[base(11.from) + 40, + 80]`, cap at its top, burial 11 at `base(11.from) + 80`. New: baptism 1820, burial 1850, both placeholders → death cap above the burial point by 40pt and below the baptism's point; a baptism and burial both in 1850 → baptism above the death cap, burial below the stub; birth and death both `.before` the one burial → birth stub is the 0th (`[base(at), base(at) + 40]`), death stub the 1st (`[base(at) + 40, base(at) + 80]`), burial at `base(at) + 80`; a death `.after` a folded row → stub at that row's `to`; a death `.before("unknown")` → the content's marker has `place == nil` and the stub sits at the range's end (review M-2) | AC-1.2, AC-1.5, D-8, D-9 |
+| T-6 | Swift | `PersonTimelineLifelineTests.swift` `placeholdersAndShortLives` (updated) and `aDeathBeforeABurial` *(new)* | `unknownEnds` (death `.before("11")`): birth cap at 18, point 2 at 58 (unchanged); death stub `[base(11.from) + 40, + 80]`, cap at its top, burial 11 at `base(11.from) + 80`. New: baptism 1820, burial 1850, both placeholders → death cap above the burial point by 40pt and below the baptism's point; a baptism and burial both in 1850 → baptism above the death cap, burial below the stub; birth and death both `.before` the one burial → birth stub is the 0th (`[base(at), base(at) + 40]`), death stub the 1st (`[base(at) + 40, base(at) + 80]`), burial at `base(at) + 80`; a death `.after("d60")` with 60 dated census rows `d1` – `d60` (folded past 50) → stub at `d60`'s `to`; a death `.before("unknown")` → the content's marker has `place == nil` and the stub sits at the range's end (review M-2) | AC-1.2, AC-1.5, D-8, D-9 |
 | T-7 | Swift | `PersonTimelineLifelineTests.swift` `oneHundredTwentyEvents` (extended) | `lise` folded: `marks.count == 120`, `targets.count` = shown items with a point, `foldedHit` covers the folded marks; `foldedMark(nearest:)` at a folded mark's `pointY` → that mark; above the region → the first folded mark; unfolded: `foldedHit == nil`; a dot's `hit` is `y − 6 … y + 6`, a bar's `from − 6 … to + 6` | AC-2.2, AC-2.3, D-12 |
 | T-8 | Swift | `PersonTimelinePlacementTests.swift` `aDateEditRescales` *(new)* | `KeptScale` from `johann` at 900: same content and height → its scale; event `"11"` (the burial, the last dated row) moved 50 years later under the same ids → nil; another viewport height → nil; another id list → nil | AC-3.1, AC-3.2, D-13 |
 
@@ -313,7 +308,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none added)
 - [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md`, `docs/deployment-plan/spike-16/` and `L10n.swift` with no hit left (`beside_event_id`, `besideEventId`, `lifeMarkers`, `pointLabels`, `ChosenScale`, `nextRowID`, `previousRowID`); `scripts/check-guidance-names.py` passes (check-pr runs it)
-- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (STEP-8)
+- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (STEP-7)
 - [ ] UI matches board S13-D4 and S16-D2; no new kit primitive
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together): 0.4.4 → 0.4.5, or the next patch on main
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
