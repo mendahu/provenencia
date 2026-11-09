@@ -677,10 +677,9 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | Citation fields | About 30 new seeded metadata fields (§ 4 "Fields to add") beside the 36 horizon keys the patterns use | Seed |
 | Source types | Seeded types for the first patterns: census, vital certificate (birth, marriage, death), church register, book, newspaper item, online database; the rest as their patterns are built | Seed |
 | Templates | Type → field suggestions for each seeded type at each level, ordered like its citation (§ 6.8) | Seed |
-| Getting the seed to existing projects | An install step that adds the product types, fields and suggestions to a project that lacks them, run once per seed version (§ 6.4) | Engine |
+| Getting the seed to existing projects | Descoped: create-time install only; a one-off command for the dogfood projects (§ 6.4) | — |
 | Copy and item values | `artifact_metadata`, `evidence_graph_metadata` and their layout tables, reusing the field vocabulary; the formatter reads the graph, then the Artifact, then the Source (§ 6.6) | **Schema** |
 | Templates per level | `source_type_metadata_fields.level` (`source`, `artifact`, `citation`) | **Schema** |
-| Seed version | A `project_settings` row recording the installed seed version (§ 6.4) | Data |
 | Item description | Read from the graph (§ 6.5); `citations.label` overrides | Engine |
 | Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
 | Party roles | `role` terms the formatter reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
@@ -699,9 +698,9 @@ So the schema changes are the Source date (already planned), four tables for Art
 
 ### 6.4 Getting the seed into existing projects
 
-Today the seed is installed only when a catalog is created ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1), so existing projects, including the product owner's, have only `birth_certificate`. Citation fields have to reach them.
+**Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row.
 
-**Recommendation:** an idempotent install that runs once per seed version when a project opens. It adds the product types, fields and suggestions a project lacks by `(key, origin)` and records the version it installed, so a type or field the researcher has deleted is not added back by a later open, only by a later seed version. It never changes a researcher's rows. Where a project already has a field of its own with the same key (`origin = 'user'`, as in the product owner's dogfood catalog), the product field is added beside it; offering to move those values into the product field is a small follow-up.
+Revisit before release, when existing projects belong to other researchers.
 
 ### 6.5 Reading the item from the graph
 
@@ -789,7 +788,7 @@ CREATE TABLE evidence_graph_metadata_layout (
 Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 
 1. **Source date** and the Source page design that shows it.
-2. **Seed and install:** the new fields, the first seeded types and their suggestions, and the once-per-version install for existing projects.
+2. **Seed:** the new fields, the first seeded types and their suggestions, installed at create; a one-off command updates the dogfood projects (§ 6.4).
 3. **Artifact and graph metadata:** the value and layout tables, the level on suggestions, a metadata board on the Artifact form and on the graph, and the Artifact's fields in the import flow.
 5. **Printed page labels** in the composer.
 6. **Formatter** with the generic template and the first patterns: P5 census, P4 vital certificate, P6 church register, P10 book, P12 newspaper, P13 web database, with the P14 layer.
@@ -906,7 +905,7 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 ## 7. Open questions
 
 - **Which patterns first.** The proposed first set in § 6.7 is a guess; the product owner's dogfood Sources decide.
-- **Install for existing projects.** Once per seed version on open (§ 6.4), or an explicit "Add citation fields" action the researcher runs.
+- ~~Install for existing projects~~: descoped; create-time only, plus a one-off command for the dogfood projects (user, 2026-11-09, § 6.4).
 - **Same key, two origins.** Whether to offer moving a researcher's own `author` (or similar) values into the product field, and when.
 - **Generic template or a pattern choice for user types.** Whether a researcher's own type can pick a pattern later, which would need a column on `source_types`.
 - **Jurisdiction from the graph.** The graph often has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text would save typing without making the Source depend on interpretation.

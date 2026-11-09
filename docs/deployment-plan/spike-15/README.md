@@ -47,7 +47,7 @@ Gathered from the three core docs; each doc keeps its own context.
 - ~~Whether a repository is its own record~~: no, `repository` text, carried by Copy Source.
 - Which Source types to template first: the product owner's dogfood Sources decide.
 - ~~Whether a template's fields live on the Source, the Artifact or the Citation~~: Source for the record, Artifact for the copy, Evidence graph for the item; the Citation only locates. The field vocabulary is shared; `artifact_metadata` holds per-copy values and `evidence_graph_metadata` per-item values, and the most specific value wins (user, 2026-11-09).
-- How the seed reaches existing projects: once per seed version on open, or an action the researcher runs.
+- ~~How the seed reaches existing projects~~: create-time install only; the dogfood projects get a one-off command when the seed lands, not product code (user, 2026-11-09).
 - Whether researchers can edit a template, or only the fields under it.
 
 **Move an Artifact** ([`move-artifact-between-sources.md`](move-artifact-between-sources.md))
