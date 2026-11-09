@@ -1269,7 +1269,11 @@ struct GoStore: GenealogyStore {
             method: CoreMethod.getPersonRecordLinks,
             request: req
         )
-        return CatalogPersonRecordLinks(
+        return Self.mapPersonRecordLinks(resp)
+    }
+
+    static func mapPersonRecordLinks(_ resp: Provenencia_Engine_V1_GetPersonRecordLinksResponse) -> CatalogPersonRecordLinks {
+        CatalogPersonRecordLinks(
             graphs: resp.graphs.map {
                 CatalogRecordLinksGraph(
                     graphID: $0.graphID,

@@ -145,4 +145,16 @@ struct PersonRecordLinksContentTests {
         #expect(!links.notCounted)
         #expect(!links.linesDropped)
     }
+
+    @Test func goStoreCarriesThePartialFlags() {
+        var resp = Provenencia_Engine_V1_GetPersonRecordLinksResponse()
+        resp.notCounted = true
+        resp.linesDropped = true
+        let partial = GoStore.mapPersonRecordLinks(resp)
+        #expect(partial.notCounted)
+        #expect(partial.linesDropped)
+        let ordinary = GoStore.mapPersonRecordLinks(Provenencia_Engine_V1_GetPersonRecordLinksResponse())
+        #expect(!ordinary.notCounted)
+        #expect(!ordinary.linesDropped)
+    }
 }
