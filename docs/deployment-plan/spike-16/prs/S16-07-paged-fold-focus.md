@@ -3,7 +3,7 @@
 **Status:** Blocked — on board S16-D2
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S16-D2](../design/S16-D2-sources-fold-highlight.md), board not agreed yet (the Sources Show more's highlight, FH-1, FH-2; the page count, FH-3)
+**Brief:** [S16-D2](../design/S16-D2-person-page-folds.md), board not agreed yet (one brief for the Person page's Family, Timeline and Sources folds: the Sources Show more's highlight, FH-1, FH-2; the page count, FH-3; the focus landing, FH-4; a folded lifeline point, FH-5; Wide, FH-W1, FH-W2)
 **Board:** — (recorded here when S16-D2 is agreed)
 **Depends on:** S16-D2
 **Blocks:** S16-02, S16-27; Spike 15's S15-30
@@ -77,11 +77,11 @@ Every "Show N more" on the Person page reveals one page of at most 50 items, say
 | --- | --- |
 | `ConclusionFold` pages: `pageSize` 50, `shown(…, pages:)`, `nextPageCount`, `firstRevealed(…, pages:)`, `pages(toShow:)` | STEP-1, AC-1.1 – AC-1.5 |
 | `ConclusionFoldState<Fold>`: one fold state type in place of `Set<Fold>` (Family, Timeline), `Set<String>` + `rowsExpanded` (Sources) | STEP-1, STEP-3 – STEP-5 |
-| `ConclusionShowMoreRow` words the page (FH-3), claims focus for the revealed item through `FocusClaim`, and draws a highlighted state (FH-1, FH-2) | STEP-2, AC-1.6, AC-3.x |
-| Family: tiles take focus; content names the first revealed tile; Show more moves focus (P-14) | STEP-3, AC-1.4, AC-1.6, AC-1.7 |
-| Timeline: pages for dated, undated and participants; `Task` hop goes; a folded point opens through its page | STEP-4, AC-1.1, AC-1.5, AC-1.8 |
+| `ConclusionShowMoreRow` words the page (FH-3), claims focus for the revealed item through `FocusClaim` (FH-4), and draws a highlighted state (FH-1, FH-2) | STEP-2, AC-1.6, AC-3.1 |
+| Family: tiles take focus; content names the first revealed tile; Show more moves focus (P-14, FH-4) | STEP-3, AC-1.4, AC-1.6, AC-1.7 |
+| Timeline: pages for dated, undated and participants; `Task` hop goes; a folded point opens through its page (FH-5) | STEP-4, AC-1.1, AC-1.5, AC-1.8 |
 | Sources: pages for lines and rows; `Task` hops go; folded-graph highlight on both Show mores (P-15, FH-1, FH-2) | STEP-5, AC-1.2, AC-1.3, AC-3.x |
-| `FocusKeeper` in `Platform/`: Gallery and Timeline keep focus across a width change (Wide rule 5) | STEP-6, STEP-7, US-2 |
+| `FocusKeeper` in `Platform/`: Gallery and Timeline keep focus across a width change (Wide rule 5, FH-W2) | STEP-6, STEP-7, US-2 |
 | FH-W1: the highlight works the same at Regular and Wide | STEP-5, manual check |
 | Docs: `macos-client-patterns.md` fold and keeper lines | STEP-8 |
 
@@ -330,7 +330,7 @@ Use the large fixture or a project with a person who has more than 100 dated eve
 
 **Stop and report if:**
 
-- The agreed S16-D2 board draws FH-1 with anything other than D-14's tokens, or adds a frame this plan has no AC for.
+- The agreed S16-D2 board draws FH-1 with anything other than D-14's tokens, or adds a frame this plan has no AC for (frames 1–9 map to US-1 – US-3).
 - `FocusClaim.claim` does not land on a revealed Timeline row after two turns in manual check 1 (needs a different claim path; do not add a third write).
 - `PVPersonCard` does not take `.focused` for a relative's tile (`PVTileCard` with an `action`).
 - `PersonFamilyLayout` needs to place a Show more differently because of pages (D-3 says only its count changes).
@@ -338,7 +338,7 @@ Use the large fixture or a project with a person who has more than 100 dated eve
 
 ## 12. Open questions
 
-- **Board.** S16-D2 is not agreed. How does the agreed board reach the implementer (exported frames in the repo, screenshots, or a link they can open)? Recommendation: export frames 1a/1b, 3a/3b and 4 into `design/` beside the brief.
+- **Board.** S16-D2 is not agreed. How does the agreed board reach the implementer (exported frames in the repo, screenshots, or a link they can open)? Recommendation: export frames 1a/1b, 3a/3b, 4, 5a/5b, 6a/6b, 7a/7b, 8 and 9 into `design/` beside the brief.
 
 ## 13. PR
 
