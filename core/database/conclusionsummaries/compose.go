@@ -1076,18 +1076,16 @@ func finishEvent(v vocab, h EventSummary) EventSummary {
 }
 
 type dateKey struct {
-	// key is the first day number of the date's place (datePlace).
-	key int
-	// side breaks a tie on key: before, then closed, then after (placedDate).
-	side int
-	ok   bool
-	ref  string
+	// at is the date's place in date order (valuecompare.DateKeyOf).
+	at  valuecompare.DateKey
+	ok  bool
+	ref string
 }
 
 // dateKeyOf is v's place in date order, with ref breaking ties.
 func dateKeyOf(v *datevalue.Value, ref string) dateKey {
 	p, ok := datePlace(v)
-	return dateKey{key: p.key, side: p.side, ok: ok, ref: strings.ToLower(ref)}
+	return dateKey{at: p.at, ok: ok, ref: strings.ToLower(ref)}
 }
 
 // withRef is k with ref as its tie-break.
@@ -1104,11 +1102,8 @@ func dateKeyLess(a, b dateKey) bool {
 	if a.ok != b.ok {
 		return a.ok
 	}
-	if a.key != b.key {
-		return a.key < b.key
-	}
-	if a.side != b.side {
-		return a.side < b.side
+	if c := a.at.Compare(b.at); c != 0 {
+		return c < 0
 	}
 	return a.ref < b.ref
 }
@@ -1130,43 +1125,32 @@ type TimelineSpan struct {
 	OpenEnd   bool
 }
 
-// placedDate is where a date sits: its order key, its span and the two ends
-// they come from. side breaks a tie on the same key day: -1 for a date open at
-// its start (BEF), 0 for a closed one, 1 for one open at its end (AFT), so
-// "bef. 29 Mar 2011" sorts before "29 Mar 2011" and "aft. 29 Mar 2011" after.
+// placedDate is where a date sits: its place in date order, its span and the
+// two ends they come from.
 type placedDate struct {
-	key         int
-	side        int
+	at          valuecompare.DateKey
 	span        TimelineSpan
 	first, last valuecompare.DateEnd
 }
 
-// datePlace is the one rule for where a date sits: its order key and its span
-// from one valuecompare.DateEnds call, with the ends. The key is the first day
-// of the first end, or of the last end when the first is open. ok is false
-// when v is nil, has no year to place, has both ends open, or has a closed end
-// whose year is outside datevalue.MinYear…MaxYear.
+// datePlace is where a date sits: valuecompare.DateKeyOf's key and ends, and
+// the span drawn from them. ok is false when v is nil or DateKeyOf is not ok.
 func datePlace(v *datevalue.Value) (placedDate, bool) {
 	if v == nil {
 		return placedDate{}, false
 	}
-	first, last, ok := valuecompare.DateEnds(*v)
-	if !ok || (first.Open && last.Open) {
+	at, first, last, ok := valuecompare.DateKeyOf(*v)
+	if !ok {
 		return placedDate{}, false
 	}
-	for _, end := range []valuecompare.DateEnd{first, last} {
-		if !end.Open && !datevalue.YearInWindow(end.Year) {
-			return placedDate{}, false
-		}
-	}
-	p := placedDate{first: first, last: last}
-	switch {
-	case first.Open:
-		p.key, p.side, p.span = last.Lo, -1, TimelineSpan{From: last.From, To: last.To, OpenStart: true}
-	case last.Open:
-		p.key, p.side, p.span = first.Lo, 1, TimelineSpan{From: first.From, To: first.To, OpenEnd: true}
+	p := placedDate{at: at, first: first, last: last}
+	switch at.Side {
+	case -1:
+		p.span = TimelineSpan{From: last.From, To: last.To, OpenStart: true}
+	case 1:
+		p.span = TimelineSpan{From: first.From, To: first.To, OpenEnd: true}
 	default:
-		p.key, p.span = first.Lo, TimelineSpan{From: first.From, To: last.To}
+		p.span = TimelineSpan{From: first.From, To: last.To}
 	}
 	return p, true
 }
@@ -1189,10 +1173,10 @@ type eventDated struct {
 // date once.
 func eventDating(date, start *datevalue.Value) eventDated {
 	if p, ok := datePlace(date); ok {
-		return eventDated{value: date, key: dateKey{key: p.key, side: p.side, ok: true}, span: p.span, first: p.first, last: p.last}
+		return eventDated{value: date, key: dateKey{at: p.at, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
 	if p, ok := datePlace(start); ok {
-		return eventDated{value: start, isStart: true, key: dateKey{key: p.key, side: p.side, ok: true}, span: p.span, first: p.first, last: p.last}
+		return eventDated{value: start, isStart: true, key: dateKey{at: p.at, ok: true}, span: p.span, first: p.first, last: p.last}
 	}
 	if date != nil {
 		return eventDated{value: date}

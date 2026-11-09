@@ -82,7 +82,8 @@ import (
 //	21: a claim's confidence grade no longer weakens or orders its values (S13-24).
 //	22: a fold follows chains to the formal value it reaches; a fold cycle keeps each value (S14-18).
 //	23: a nickname-class fold reappears as a nick part of the assembled name (S14-26).
-const CacheVersion = 23
+//	24: the date sort_key follows the one date order (valuecompare.DateKeyOf) (S15-02).
+const CacheVersion = 24
 
 // ValueRules are the value compare rules reconciling reads: the shipped
 // registry and the product alias seed, never a catalog's own alias rows or name

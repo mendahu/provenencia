@@ -262,7 +262,7 @@ func Carries(valueType string, v Value) bool {
 // SortKey is the text a value sorts by within its Property (the cache's
 // sort_key): normalized form for names, case-folded text, an
 // order-preserving encoding for integers, "0" or "1" for a boolean, and the
-// date window's start.
+// date's place in date order (valuecompare.DateKeyOf).
 // Terms have no sort key here (ok = false): they sort by label.
 func SortKey(valueType string, v Value) (key string, ok bool) {
 	switch valueType {
@@ -294,11 +294,11 @@ func SortKey(valueType string, v Value) (key string, ok bool) {
 		if v.Date == nil {
 			return "", false
 		}
-		w, ok := valuecompare.DateWindow(*v.Date)
-		if !ok || w.Lo == nil {
+		k, _, _, ok := valuecompare.DateKeyOf(*v.Date)
+		if !ok {
 			return "", false
 		}
-		return fmt.Sprintf("%020d", int64(*w.Lo)+dateSortOffset), true
+		return fmt.Sprintf("%020d", k.Int64()+dateSortOffset), true
 	}
 	return "", false
 }
