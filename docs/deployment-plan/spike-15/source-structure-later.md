@@ -1,6 +1,6 @@
 # Source structure: what Spike 12 left for later
 
-**Status:** idea only — not roadmapped. Spike 12 ([design](../deployment-plan/archive/spike-12/source-structure.md)) solved large graphs and the "obituary or newspaper?" confusion with **Copy Source** and **multiple Evidence graphs per Source**. These options were weighed on 2026-10-18 and parked.
+**Status:** idea only — not roadmapped. Spike 12 ([design](../archive/spike-12/source-structure.md)) solved large graphs and the "obituary or newspaper?" confusion with **Copy Source** and **multiple Evidence graphs per Source**. These options were weighed on 2026-10-18 and parked.
 
 ## Nested Sources
 
@@ -15,7 +15,7 @@ A `sources.parent_source_id`: publication → issue → obituary, census → hou
 A FamilySearch index entry is a transcription of an image, which is a film frame of a parish register. That is derivation (copy of), not containment (part of).
 
 - **Today:** one Source for the thing you grabbed; provider, collection, film, URL and accessed date go in its metadata. The original vs derivative judgment lives in the credibility argument.
-- **Later:** a `source_derivations (source_id, derived_from_source_id, kind)` link (`image`, `transcription`, `abstract`, `index`, `translation`) for derivatives that are authored works in their own right (a book of abstracts, a published transcription), pointing at an original that may be a placeholder Source. This is a structural fact about where a record came from, not a cited Observation, which sets it apart from [`source-to-source-relationships.md`](source-to-source-relationships.md).
+- **Later:** a `source_derivations (source_id, derived_from_source_id, kind)` link (`image`, `transcription`, `abstract`, `index`, `translation`) for derivatives that are authored works in their own right (a book of abstracts, a published transcription), pointing at an original that may be a placeholder Source. This is a structural fact about where a record came from, not a cited Observation, which sets it apart from [`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md).
 - **With it:** the GPS original / derivative / authored form as a first-class Source attribute, and Artifact-level access metadata (provider, film or item number, URL, accessed date).
 
 ## Named Source templates

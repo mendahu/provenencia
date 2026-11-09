@@ -49,7 +49,7 @@ Spike 10 and earlier cut each PR as an In / Out / Testable table inside `deploym
 
 ## Current
 
-[Spike 15 — Sources and citations](spike-15/) is not yet planned: its design docs (the Source date, citation formats, moving an Artifact, Source structure leftovers, privacy, credibility UX, metadata rethink) and their open questions are gathered in [`spike-15/README.md`](spike-15/README.md).
+[Spike 15 — Sources and citations](spike-15/) is open. Plan: [`spike-15/deployment-plan.md`](spike-15/deployment-plan.md). Sources gain a date, a not-public switch and metadata on the Artifact and Evidence graph; citation formats become editable data on Source types, seeded with *Evidence Explained*-style formats; Artifacts move between Sources with their graphs. Slices 1 to 4 run alongside Spike 16; the rest build on Spike 16's caches (S16-12, S16-13, S16-15, S16-30).
 
 [Spike 16 — Odds and ends](spike-16/) is open. Plan: [`spike-16/deployment-plan.md`](spike-16/deployment-plan.md). Batch 1 (2026-11-08) is the fixes from the [Person page audit](spike-16/person-page-audit.md) of Spike 13's Person page; Batch 2 (2026-11-08) is the [cache architecture](spike-16/cache-architecture.md), built on Spike 14's input index (S14-40, S14-42). A one-off PR goes to Spike 16, as a new batch.
 
