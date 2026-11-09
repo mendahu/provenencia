@@ -63,3 +63,13 @@
 
 ### M-7 · minor · Hand-built `date_values` effect
 **Answer:** Fixed. D-9 gives `ownedValue` a variadic `owners ...Path` parameter. The registry line stays one call.
+
+## Round 2
+
+Executability (Sonnet): no blocker; every round-1 answer checked against the code and holds. Verdict Ready with changes.
+
+### X-9 · minor · D-4's `dateKeyOf` literal is not `{at: p.at, ok: true}`
+**Answer:** Fixed — D-4 names the two `eventDating` literals and `dateKeyOf`'s own (`ok: ok`, `ref`) separately.
+
+### X-10 · minor · D-8's `date_value_id` change encoding
+**Answer:** Fixed — D-8 writes both sides with `database.UUIDJSON`, as `SetCover` does, so the unset side is JSON null.
