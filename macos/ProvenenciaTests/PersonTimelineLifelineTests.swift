@@ -219,7 +219,7 @@ struct PersonTimelineLifelineTests {
         // After the 60th of 60 rows, which a fold hides: the stub is at that row's end.
         var rows = (1...60).map { Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0))) }
         rows[59] = Data.event("d60", type: "census", when: .year(1860))
-        let folded = timeline(rows, birth: CatalogLifeMarker(), death: CatalogLifeMarker(place: .after(eventId: "d60")))
+        let folded = Data.timeline(rows, birth: CatalogLifeMarker(), death: CatalogLifeMarker(place: .after(eventId: "d60")))
         let (afterFold, foldedContent) = lifeline(folded, ppy: ppy)
         #expect(foldedContent.items.contains(.more(.dated, count: 10)))
         let range = try #require(PersonTimelineLifeline.range(foldedContent))
