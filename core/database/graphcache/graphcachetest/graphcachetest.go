@@ -55,7 +55,9 @@ type Canon struct {
 	n   int
 	rev int64
 	// pending is what observe's recomputes reported since the last Commit.
-	pending  [][]byte
+	pending [][]byte
+	// bulk is the entities Bulk observed and has not recomputed yet; nil outside Bulk.
+	bulk     map[string]bool
 	citation []byte
 	graph    []byte
 	source   []byte
@@ -83,12 +85,13 @@ func NewCanon(t testing.TB, c *database.Catalog) *Canon {
 	return k
 }
 
-// next is the next id of one table family: {family, 1, 0, ..., counter}, with
+// next is the next id of one table family: {family, 1, 0, ..., counter} (a 24-bit counter, so one Canon mints 16,777,216 ids), with
 // the version and variant bits of a version 7 UUID so that a handler parses it.
 func (k *Canon) next(family byte) []byte {
 	k.n++
 	id := make([]byte, 16)
-	id[0], id[1], id[6], id[8], id[14], id[15] = family, 1, 0x70, 0x80, byte(k.n>>8), byte(k.n)
+	id[0], id[1], id[6], id[8] = family, 1, 0x70, 0x80
+	id[13], id[14], id[15] = byte(k.n>>16), byte(k.n>>8), byte(k.n)
 	return id
 }
 
@@ -139,10 +142,68 @@ func (k *Canon) Entity(kind string) []byte {
 	id := k.next(3)
 	ref := fmt.Sprintf("TST-%d", k.n)
 	k.exec(`INSERT INTO canonical_entities (id, subject_type_id, ref) VALUES (?, ?, ?)`, id, typeID, ref)
-	k.exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, ?, ?, ?, ?)`, id, "SUB-"+ref, k.source, k.graph, typeID)
-	k.exec(`INSERT INTO identity_claims (id, subject_id, entity_id, subject_type_id, status) VALUES (?, ?, ?, ?, 'accepted')`,
-		k.next(9), id, id, typeID)
+	k.member(k.db, id, id, typeID, "SUB-"+ref)
 	return id
+}
+
+// execer is the Exec method *sql.DB and *sql.Tx share.
+type execer interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
+// member inserts a Subject that is an accepted member of entityID.
+func (k *Canon) member(x execer, subjectID, entityID, typeID []byte, ref string) {
+	k.t.Helper()
+	if _, err := x.Exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, ?, ?, ?, ?)`, subjectID, ref, k.source, k.graph, typeID); err != nil {
+		k.t.Fatal(err)
+	}
+	if _, err := x.Exec(`INSERT INTO identity_claims (id, subject_id, entity_id, subject_type_id, status) VALUES (?, ?, ?, ?, 'accepted')`,
+		k.next(9), subjectID, entityID, typeID); err != nil {
+		k.t.Fatal(err)
+	}
+}
+
+// Bulk runs build, which adds many entities, without recomputing the kept rows
+// after every Observation: each Observation is written, and when build returns
+// the entities it observed are recomputed once and what that reports is kept
+// for the next Commit, as the per-Observation recomputes would have. Call
+// Commit as usual afterward.
+func (k *Canon) Bulk(build func()) {
+	k.t.Helper()
+	k.bulk = map[string]bool{}
+	build()
+	set := k.bulk
+	k.bulk = nil
+	ids := make([][]byte, 0, len(set))
+	for id := range set {
+		ids = append(ids, []byte(id))
+	}
+	reported, err := autoreconciler.RecomputeReported(k.db, ids)
+	if err != nil {
+		k.t.Fatal(err)
+	}
+	k.pending = append(k.pending, reported...)
+}
+
+// Members adds n more accepted Subjects to entity, with no Observation, in one
+// transaction. Call Commit(entity) afterward.
+func (k *Canon) Members(entity []byte, n int) {
+	k.t.Helper()
+	var typeID []byte
+	if err := k.db.QueryRow(`SELECT subject_type_id FROM canonical_entities WHERE id = ?`, entity).Scan(&typeID); err != nil {
+		k.t.Fatal(err)
+	}
+	tx, err := k.db.Begin()
+	if err != nil {
+		k.t.Fatal(err)
+	}
+	for i := 0; i < n; i++ {
+		id := k.next(3)
+		k.member(tx, id, entity, typeID, fmt.Sprintf("SUB-M-%d", k.n))
+	}
+	if err := tx.Commit(); err != nil {
+		k.t.Fatal(err)
+	}
 }
 
 func (k *Canon) propID(key string) []byte {
@@ -160,6 +221,10 @@ func (k *Canon) observe(entity []byte, propKey, column string, value []byte) {
 	k.t.Helper()
 	k.exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, `+column+`) VALUES (?, ?, ?, ?, ?, ?)`,
 		k.next(4), fmt.Sprintf("OBS-TST-%d", k.n), k.citation, entity, k.propID(propKey), value)
+	if k.bulk != nil {
+		k.bulk[string(entity)] = true
+		return
+	}
 	reported, err := autoreconciler.RecomputeReported(k.db, [][]byte{entity})
 	if err != nil {
 		k.t.Fatal(err)

@@ -1,0 +1,87 @@
+package persondetail_test
+
+import (
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/persondetail"
+	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
+)
+
+// capBudget is bar 2 of Spike 16: a crafted project's section draws in under a second.
+const capBudget = time.Second
+
+// cold times one read of the catalog after its graph cache is dropped and warmed.
+func (w *kinWorld) cold(read func()) time.Duration {
+	w.t.Helper()
+	return databasetest.Fastest(2, func() time.Duration {
+		w.c.Graph().Drop()
+		if err := catalogsession.WarmOnOpen(w.c); err != nil {
+			w.t.Fatal(err)
+		}
+		return databasetest.Since(read)
+	})
+}
+
+// TestCraftedFamily: a Person with 4,000 children reads in under a second and
+// holds the first MaxKinPerRole of them (S16-01 AC-1.1).
+func TestCraftedFamily(t *testing.T) {
+	const children = 4000
+	max := matchregistry.Default().Kinship.MaxKinPerRole
+	w := newKinWorld(t)
+	pat := w.person("Pat")
+	var kids [][]byte
+	w.k.Bulk(func() {
+		for i := 0; i < children; i++ {
+			kid := w.k.Person()
+			w.k.Parent(pat, kid)
+			kids = append(kids, kid)
+		}
+	})
+	w.k.Commit(append([][]byte{pat}, kids...)...)
+
+	var f persondetail.Family
+	d := w.cold(func() {
+		var err error
+		if f, _, _, err = persondetail.PersonFamily(w.c, pat); err != nil {
+			t.Fatal(err)
+		}
+	})
+	databasetest.WithinBudget(t, "PersonFamily at 4,000 children", d, capBudget)
+
+	// The first MaxKinPerRole children in link order, as the reader returns them.
+	g := w.c.Graph()
+	r, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	if err != nil {
+		t.Fatal(err)
+	}
+	terms, err := canonlinks.LoadTerms(g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	links, err := r.Relationships(pat, canonlinks.Options{Siblings: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]bool{}
+	for _, l := range kinship.KinOf(pat, links, terms, matchregistry.Default().Kinship)[kinship.RoleChild] {
+		other, _, _ := l.From(pat)
+		want[string(other)] = true
+	}
+	got := map[string]bool{}
+	for _, u := range f.Units {
+		if u.Kind == kinship.UnitOneParent {
+			for _, r := range u.Children {
+				got[string(r.ID)] = true
+			}
+		}
+	}
+	if len(got) != max || !reflect.DeepEqual(got, want) {
+		t.Fatalf("the one-parent unit holds %d children, want the first %d in link order (%d)", len(got), max, len(want))
+	}
+}
