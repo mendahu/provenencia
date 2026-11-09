@@ -182,16 +182,9 @@ struct PersonTimelineLifelineTests {
     }
 
     @Test func aDeathBeforeABurial() throws {
-        func timeline(_ events: [CatalogPersonEvent], birth: CatalogLifeMarker, death: CatalogLifeMarker) -> CatalogPersonTimeline {
-            var timeline = Data.ida
-            timeline.events = events
-            timeline.birth = birth
-            timeline.death = death
-            return timeline
-        }
         let ppy: CGFloat = 10
         // A baptism and a burial: the death cap is 40pt above the burial and below the baptism.
-        let life = timeline(
+        let life = Data.timeline(
             [Data.event("bap", type: "baptism", when: .year(1820)), Data.event("bur", type: "burial", when: .year(1850))],
             birth: CatalogLifeMarker(place: .before(eventId: "bap")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
         )
@@ -202,7 +195,7 @@ struct PersonTimelineLifelineTests {
         } else { Issue.record("death placeholder") }
 
         // A baptism and a burial in the same year: the baptism is above the death stub, the burial below it.
-        let infant = timeline(
+        let infant = Data.timeline(
             [
                 Data.event("bap", type: "baptism", when: .day(1850, 3, 1, from: 1850.17, to: 1850.1728)),
                 Data.event("bur", type: "burial", when: .day(1850, 9, 1, from: 1850.67, to: 1850.6728)),
@@ -215,7 +208,7 @@ struct PersonTimelineLifelineTests {
         } else { Issue.record("death placeholder") }
 
         // Both before the one burial: the birth stub is the 0th, the death stub the 1st, the burial after both.
-        let burial = timeline(
+        let burial = Data.timeline(
             [Data.event("bur", type: "burial", when: .day(1850, 9, 1, from: 1850.67, to: 1850.6728))],
             birth: CatalogLifeMarker(place: .before(eventId: "bur")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
         )
@@ -235,7 +228,7 @@ struct PersonTimelineLifelineTests {
         #expect(abs(afterFold.stubs[1].lowerBound - (18 + CGFloat(d60.span.to - range.from) * ppy + 40)) < 0.001)
 
         // A place that is not a dated row: the content drops it and the stub sits at the range's end.
-        let unknown = timeline(
+        let unknown = Data.timeline(
             [Data.event("x", type: "census", when: .year(1850))],
             birth: CatalogLifeMarker(), death: CatalogLifeMarker(place: .before(eventId: "nope"))
         )

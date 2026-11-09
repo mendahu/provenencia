@@ -411,18 +411,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		deathEvent []byte
 		death      *persondetail.MarkerPlace
 	}
-	before := func(id []byte) *persondetail.MarkerPlace {
-		return &persondetail.MarkerPlace{Row: id, Side: persondetail.SideBefore}
-	}
-	after := func(id []byte) *persondetail.MarkerPlace {
-		return &persondetail.MarkerPlace{Row: id, Side: persondetail.SideAfter}
-	}
-	samePlace := func(a, b *persondetail.MarkerPlace) bool {
-		if a == nil || b == nil {
-			return a == b
-		}
-		return a.Side == b.Side && bytes.Equal(a.Row, b.Row)
-	}
+	before, after, samePlace := persondetail.MarkerBefore, persondetail.MarkerAfter, persondetail.SameMarkerPlace
 	check := func(t *testing.T, w *kinWorld, pat []byte, want markers) persondetail.Timeline {
 		t.Helper()
 		tl, summaries := w.timeline(pat)

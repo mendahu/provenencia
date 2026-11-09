@@ -276,29 +276,22 @@ struct PersonTimelineContentTests {
     }
 
     @Test func deathNeverFollowsAnAfterDeathEvent() {
-        func timeline(_ events: [CatalogPersonEvent], birth: CatalogLifeMarker, death: CatalogLifeMarker) -> CatalogPersonTimeline {
-            var timeline = Data.ida
-            timeline.events = events
-            timeline.birth = birth
-            timeline.death = death
-            return timeline
-        }
         // Only a burial dated, two undated events: the audit's case.
-        let burial = timeline(
+        let burial = Data.timeline(
             [Data.event("b1", type: "burial", when: .year(1850)), Data.event("i1", type: "residence"), Data.event("i2", type: "migration")],
             birth: CatalogLifeMarker(place: .before(eventId: "b1")), death: CatalogLifeMarker(place: .before(eventId: "b1"))
         )
         #expect(ids(content(burial)) == ["birth", "undated", "i1", "i2", "death", "b1"])
 
         // A baptism and a burial: the death sits between them.
-        let baptism = timeline(
+        let baptism = Data.timeline(
             [Data.event("bap", type: "baptism", when: .year(1820)), Data.event("bur", type: "burial", when: .year(1850))],
             birth: CatalogLifeMarker(place: .before(eventId: "bap")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
         )
         #expect(ids(content(baptism)) == ["birth", "bap", "death", "bur"])
 
         // A recorded death with no date, before a dated funeral: its row is the marker.
-        let recorded = timeline(
+        let recorded = Data.timeline(
             [Data.event("c", type: "census", when: .year(1851)), Data.event("f", type: "funeral", when: .year(1880)), Data.event("d", type: "death")],
             birth: CatalogLifeMarker(place: .before(eventId: "c")), death: CatalogLifeMarker(eventId: "d", place: .before(eventId: "f"))
         )
@@ -309,14 +302,14 @@ struct PersonTimelineContentTests {
         } else { Issue.record("a recorded death with no date is a marker") }
 
         // Both after the same row: the birth, then the death.
-        let both = timeline(
+        let both = Data.timeline(
             [Data.event("x", type: "census", when: .year(1850))],
             birth: CatalogLifeMarker(place: .after(eventId: "x")), death: CatalogLifeMarker(place: .after(eventId: "x"))
         )
         #expect(ids(content(both)) == ["x", "birth", "death"])
 
         // A place that is not a dated row counts as none.
-        let unknown = timeline(
+        let unknown = Data.timeline(
             [Data.event("x", type: "census", when: .year(1850))],
             birth: CatalogLifeMarker(place: .before(eventId: "nope")), death: CatalogLifeMarker(place: .before(eventId: "nope"))
         )

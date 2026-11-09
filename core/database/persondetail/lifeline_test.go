@@ -9,6 +9,15 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
+func markerBefore(row []byte) *MarkerPlace { return &MarkerPlace{Row: row, Side: SideBefore} }
+func markerAfter(row []byte) *MarkerPlace  { return &MarkerPlace{Row: row, Side: SideAfter} }
+func sameMarkerPlace(a, b *MarkerPlace) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Side == b.Side && bytes.Equal(a.Row, b.Row)
+}
+
 func TestLifeMarkers(t *testing.T) {
 	span := &conclusionsummaries.TimelineSpan{From: 1800, To: 1801}
 	id := func(n byte) []byte { return []byte{n} }
@@ -30,14 +39,9 @@ func TestLifeMarkers(t *testing.T) {
 		}
 		return r
 	}
-	before := func(n byte) *MarkerPlace { return &MarkerPlace{Row: id(n), Side: SideBefore} }
-	after := func(n byte) *MarkerPlace { return &MarkerPlace{Row: id(n), Side: SideAfter} }
-	same := func(a, b *MarkerPlace) bool {
-		if a == nil || b == nil {
-			return a == b
-		}
-		return a.Side == b.Side && bytes.Equal(a.Row, b.Row)
-	}
+	before := func(n byte) *MarkerPlace { return markerBefore(id(n)) }
+	after := func(n byte) *MarkerPlace { return markerAfter(id(n)) }
+	same := sameMarkerPlace
 	cases := []struct {
 		name           string
 		types          lifelineTypes
