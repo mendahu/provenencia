@@ -35,7 +35,7 @@ The two overlap only by accident: "image 37" means nothing without the file, and
 | Level | Your copy (the locator side) | Finding the record again (the metadata side) |
 | --- | --- | --- |
 | Source | — | What the record is and where the original lives: creator, jurisdiction, title, volume, repository |
-| Artifact | The File | How to get this copy again: format, provider, URL, accessed date, film number, citing, holder |
+| Artifact | The File | How to get this copy again: format, provider, URL, accessed date, film number, citing |
 | Evidence graph | — | The item in the record's own numbering: entry, line, dwelling, family, folio, column (§ 6.9) |
 | Citation | Page in the file, region | The printed page (`page_label`), the one item detail that can differ inside a graph |
 
@@ -44,7 +44,7 @@ What follows from it:
 - **Citation formats do not read the locator,** except `{citation.image}`, the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
 - **Missing access details are flagged, never invented.** A scan or download with no provider, URL or film number gets a citation whose copy layer is incomplete, and the preview says so.
 - **Copy details are captured when the Artifact is added,** while the researcher still knows where it came from: the import flow shows the Artifact's metadata fields, not only the Artifact page afterwards. This also raises the value of filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
-- **A physical original has no access path;** `holder` ("privately held by …") is its copy layer.
+- **A physical original has no access path;** `holder` ("privately held by …"), on the Source, takes the place of the copy layer.
 - **One EE citation usually covers several Provenencia Citations.** A researcher draws one Citation per cell or name they want to highlight; EE cites the row or the entry once. § 6.9 covers what that means for data entry and display.
 
 ---
@@ -323,12 +323,13 @@ Fields to add to the seed:
 
 | Group | Keys |
 | --- | --- |
-| Who made it | `author_sort` ("Smith, Alice", for the source list), `editor`, `compiler`, `translator` |
+| Who made it | `author_sort` ("Smith, Alice", for the source list), `editor`, `compiler`, `translator`, `recipient` |
 | Title | `short_title` (override for short notes), `published_in` (journal, newspaper, the book holding a chapter, a statute compilation), `coverage` (span such as "1813–1837") |
 | Reference numbers | `book`, `folio`, `entry_number`, `schedule`, `schedule_number`, `piece`, `case_number`, `issue`, `column`, `page_range`, `section`, `lot`, `chapter`, `record_id`, `item_number` |
-| Copy | `format` (digital image, microfilm, database, photocopy, …), `provider`, `database_title`, `film_publication`, `film_number`, `citing`, `holder` |
+| Copy | `format` (digital image, microfilm, database, photocopy, …), `provider`, `database_title`, `film_publication`, `film_number`, `citing` |
+| Holding | `holder` (who holds a private original, and where) |
 
-The copy fields (`format`, `provider`, `database_title`, `url`, `accessed_date`, `film_publication`, `roll`, `film_number`, `citing`, `holder`) are usually filled on the Artifact, and the item numbers (`line_number`, `dwelling_number`, `family_number`, `schedule_number`, `entry_number`, `folio`, `column`, `record_id`) on the Evidence graph.
+The copy fields (`format`, `provider`, `database_title`, `url`, `accessed_date`, `film_publication`, `roll`, `film_number`, `citing`) are usually filled on the Artifact, and the item numbers (`line_number`, `dwelling_number`, `family_number`, `schedule_number`, `entry_number`, `folio`, `column`, `record_id`) on the Evidence graph.
 
 ---
 
@@ -683,7 +684,7 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | Format editor | On the Source type: the three formats, an insert-field picker grouped by level, a live preview against a real Source, warnings for unknown fields; **Copy from** another type in the new type dialog | UI |
 | Item description | The `{citation.item}` placeholder: the Citation label, else read from the graph (§ 6.5) | Engine |
 | Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
-| Seed | Types, fields, suggestions and EE formats for the first types (§ 6.8), installed at create (§ 6.4) | Seed |
+| Seed | Types, fields, suggestions and EE formats for every pattern (§ 6.8), installed at create (§ 6.4) | Seed |
 | Party roles | `role` terms the item reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
 
 So the schema changes are the Source date (already planned), four tables for Artifact and graph values and layout, a level on the type → field join, and three format columns on `source_types`. If the privacy toggle and moving an Artifact are pulled in, they add `sources.is_public` and possibly `ON UPDATE CASCADE` on the Subjects' composite key ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
@@ -849,116 +850,98 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 3. **Printed page labels** in the composer.
 4. **Format engine:** `core/citationformat` (parse, resolve, render), the three format columns, the FFI calls, and the provenance sheet's citation line reading the full format, with today's line as the fallback.
 5. **Format editor** on the Source type, with the live preview.
-6. **Seed:** the first types, fields, suggestions and formats (§ 6.8), installed at create; a one-off command updates the dogfood projects (§ 6.4).
+6. **Seed:** every type, field, suggestion and format in § 6.8, installed at create; a one-off command updates the dogfood projects (§ 6.4). It is data, so it can land in batches if one PR is too large.
 7. **Citation preview** on the Source page, naming missing fields.
 8. **Grouped display:** the provenance sheet and the Person page's Sources section show one full note per rendered citation (§ 6.9).
 9. **Copy citation**, full or short.
-10. More seeded types and formats, as data, for the remaining patterns in § 5.
 
-### 6.8 Proposed first seed (for review)
+### 6.8 The seed
 
-**Status:** a proposal for the product owner to trim (2026-11-09). It covers the first six types (§ 6.7); fields that only later patterns need (photographer, interviewer, case number, box, folder, kit number and the rest of § 4) are seeded with their patterns, not now.
+**Decision (user, 2026-11-09): seed everything the patterns in § 5 use.** Researchers can delete, rename or edit any type, field, suggestion or format, so the seed does not need trimming. It installs at create (§ 6.4). Written for Provenencia from the conventions in § 2, not copied from *Evidence Explained* (working rule, [`README.md`](README.md#working-rules)); check it against the edition on hand before it is merged.
 
 #### Source types
 
-| Type key | Label | EE pattern (§ 5) | Note |
+26 types. Every horizon type in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.1 is among them. P14 (online image) and P15 (microfilm) are layers inside other types' formats, not types; P17 is the fallback for a type with no format.
+
+| Key | Label | Pattern (§ 5) | Covers |
 | --- | --- | --- | --- |
-| `census` | Census | P5 | |
-| `birth_certificate` | Birth certificate | P4 | Already seeded; gains suggestions |
+| `census` | Census | P5 | Every census and schedule in § 3 |
+| `birth_certificate` | Birth certificate | P4 | Already seeded |
 | `marriage_certificate` | Marriage certificate | P4 | |
 | `death_certificate` | Death certificate | P4 | |
-| `church_register` | Church register | P6 | |
-| `book` | Book | P10 | |
-| `newspaper_item` | Newspaper item | P12 | |
-| `website` | Website or online database | P13 | |
+| `church_register` | Church register | P6 | Parish registers, church books, bishop's transcripts |
+| `record_book` | Record book | P2 | Deed, will, court, marriage and tax books kept by a public office |
+| `passenger_list` | Passenger list | P2 (national) | Manifests and passenger lists |
+| `case_file` | Case file | P3 | Court and probate files, original wills, naturalization, land entry files |
+| `manuscript` | Archived manuscript | P1 | Letters, diaries, business and institutional records held by an archive |
+| `government_file` | Government file | P1 (national) | Military service, pension, draft, passport and agency files |
+| `cemetery_marker` | Grave marker | P7 | Headstones and monuments |
+| `family_bible` | Family Bible | P8 | Bible records |
+| `photograph` | Photograph | P8 | Photographs and portraits in private hands |
+| `private_papers` | Private papers | P8 | Letters, diaries, research reports and compiled family files in private hands |
+| `dna_match_report` | DNA match report | P8 | Test results and match lists |
+| `gedcom_file` | GEDCOM file | P8 | Exported family files |
+| `interview` | Interview | P9 | Recorded or published interviews |
+| `oral_testimony` | Oral testimony | P9 | Informal family testimony |
+| `correspondence` | Correspondence | P9 | Letters and email to the researcher |
+| `book` | Book | P10 | Books, chapters, maps, CDs, films |
+| `journal_article` | Journal article | P11 | Journal, magazine and newsletter articles |
+| `broadcast` | Broadcast | P11 | Radio, television, podcasts |
+| `newspaper_item` | Newspaper item | P12 | Articles, notices, obituaries |
+| `website` | Website or online database | P13 | Web pages, databases, online trees, memorial sites |
+| `statute` | Statute | P16 | Statutes, session laws, codes |
+| `court_report` | Court report | P16 | Published cases |
 
 #### Fields
 
-40 fields. **Have** = already seeded (in new catalogs). **Horizon** = already on the list in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.2, not yet seeded. **New** = not on either list. **Trim?** marks the ones that look easiest to cut.
+62 fields; one (`document_number`) is already seeded. **Usual level** is where a type suggests the field: Source unless listed otherwise. Any field can be filled at any level.
 
-| Key | Label | Usual level | Status | Trim? |
-| --- | --- | --- | --- | --- |
-| `creator` | Creator | Source | Horizon | |
-| `author` | Author | Source | Horizon | |
-| `author_sort` | Author (sort as) | Source | New | Keep if a source list should read "Smith, Alice": values are never inverted (§ 6.3) |
-| `editor` | Editor | Source | New | |
-| `compiler` | Compiler | Source | New | Yes: rare outside published abstracts |
-| `translator` | Translator | Source | New | Yes: rare |
-| `jurisdiction` | Jurisdiction | Source | Horizon | |
-| `published_in` | Published in | Source | New | |
-| `publisher` | Publisher | Source | Horizon | |
-| `publication_place` | Place of publication | Source | Horizon | |
-| `edition` | Edition | Source | Horizon | |
-| `series` | Series | Source | Horizon | |
-| `volume` | Volume | Source | Horizon | |
-| `short_title` | Short title | Source | New | Yes: `{short_title\|title}` falls back to the title |
-| `coverage` | Years covered | Source | New | Yes: can stay in the title |
-| `site_name` | Website | Source | Horizon | |
-| `document_number` | Document number | Source | Have | Serves as the certificate number, so `certificate_number` from the horizon list is not added |
-| `schedule` | Schedule | Source | New | |
-| `enumeration_district` | Enumeration district | Source | Horizon | |
-| `piece` | Piece | Source | New | Yes, unless British censuses are in the dogfood |
-| `repository` | Repository | Source | Horizon | |
-| `call_number` | Call number | Source | Horizon | |
-| `format` | Format | Artifact | New | |
-| `provider` | Provider | Artifact | New | |
-| `database_title` | Database or collection | Artifact | New | |
-| `url` | URL | Artifact | Horizon | |
-| `accessed_date` | Accessed | Artifact | Horizon | |
-| `citing` | Citing | Artifact | New | |
-| `film_publication` | Microfilm publication | Artifact | New | Yes: could merge with `film_number` |
-| `film_number` | Film number | Artifact | New | |
-| `roll` | Roll | Artifact | Horizon | |
-| `item_number` | Item | Artifact | New | Yes: often part of the film number |
-| `line_number` | Line | Graph | Horizon | |
-| `dwelling_number` | Dwelling | Graph | Horizon | |
-| `family_number` | Family | Graph | Horizon | |
-| `schedule_number` | Schedule number | Graph | New | Yes, unless British censuses are in the dogfood |
-| `folio` | Folio | Graph | New | |
-| `entry_number` | Entry | Graph | New | |
-| `column` | Column | Graph | New | |
-| `record_id` | Record ID | Graph | New | |
+| Group | Keys | Usual level |
+| --- | --- | --- |
+| Who made it | `creator`, `author`, `author_sort`, `editor`, `compiler`, `translator`, `photographer`, `studio`, `interviewer`, `interviewee`, `recipient`, `testing_company`, `software` | Source |
+| Where | `jurisdiction` | Source |
+| Publication | `published_in`, `publisher`, `publication_place`, `edition`, `series`, `volume`, `issue`, `page_range`, `site_name`, `short_title`, `coverage` | Source |
+| Archive | `repository`, `collection`, `record_group`, `call_number`, `box`, `folder` | Source |
+| Record numbers | `document_number` (certificate or document number), `book`, `case_number`, `enumeration_district`, `schedule`, `piece`, `chapter`, `section`, `lot`, `kit_number`, `match_identifier` | Source |
+| Holding | `holder` (who holds a private original, and where), `medium` | Source |
+| The copy | `format`, `provider`, `database_title`, `url`, `accessed_date`, `citing`, `film_publication`, `roll`, `film_number`, `item_number` | Artifact |
+| The item | `entry_number`, `line_number`, `dwelling_number`, `family_number`, `schedule_number`, `folio`, `column`, `record_id` | Evidence graph |
 
-The existing seeded `record_date` and `issue_date` on `birth_certificate` overlap the new Source date. Proposal: stop suggesting them; they stay as fields so existing values are kept.
+Not seeded, from the horizon list: the date keys (`publication_date`, `issue_date`, `record_date`, `census_date`, `taken_date`, `interview_date`, `export_date`, `report_date`), which the Source date replaces; `certificate_number` and `registration_number`, which `document_number` covers; and `isbn`, `language`, `form_number`, `gedcom_version`, `civil_division`, `sheet` and `page`, which no format uses. `birth_certificate`'s existing `record_date` and `issue_date` stay as fields so existing values are kept, but are no longer suggested.
 
-#### Suggestions per type
+#### Suggestions
 
-In citation order. **Every type** also suggests the copy fields on its Artifacts: `format`, `provider`, `database_title`, `url`, `accessed_date`, `citing` (and the film fields where noted).
+One rule, so the suggestions and the formats cannot drift: **each type suggests every metadata field its full format uses, at the field's usual level, in the order the format uses them.** Two exceptions:
 
-| Type | Source | Artifact (beyond the copy fields) | Evidence graph |
-| --- | --- | --- | --- |
-| `census` | `jurisdiction`, `schedule`, `enumeration_district`, `piece`, `repository` | `film_publication`, `roll` | `dwelling_number`, `family_number`, `line_number`, `schedule_number`, `folio` |
-| Certificates (3) | `creator`, `jurisdiction`, `document_number`, `volume`, `repository` | — | `entry_number` |
-| `church_register` | `creator`, `jurisdiction`, `coverage`, `volume`, `repository`, `call_number` | `film_number`, `item_number` | `entry_number`, `folio` |
-| `book` | `author`, `editor`, `compiler`, `translator`, `edition`, `volume`, `series`, `publication_place`, `publisher` | — | — |
-| `newspaper_item` | `published_in`, `jurisdiction`, `edition` | — | `column` |
-| `website` | `creator`, `site_name`, `url`, `accessed_date`, `citing` | — | `record_id` |
+- `website` suggests `url` and `accessed_date` on the Source, since the website is the Source.
+- Record types (census, certificates, church register, record book, passenger list, case file, manuscript, government file) suggest the copy fields on the Artifact even where the format reads only some of them.
 
-The page cited is not a field: it is the printed page label the composer writes on the Citation's locator. The year or date is the Source date.
+#### Formats
 
-#### Citation formats
-
-Written for Provenencia from the conventions in § 2, not copied from *Evidence Explained* (working rule, [`README.md`](README.md#working-rules)). Each is a starting point the researcher can edit. Lines are wrapped here for reading; a format is one line.
+Lines are wrapped here for reading; a format is one line. Types that share a pattern differ only where shown.
 
 **Census**
 
 ```text
-full:  {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, {meta.schedule}][, ED {meta.enumeration_district}]
-       [, p. {citation.page}][, dwelling {meta.dwelling_number}][, family {meta.family_number}][, line {meta.line_number}]
-       [, {citation.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])][; citing {meta.citing}].
-short: {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, ED {meta.enumeration_district}][, p. {citation.page}]
-       [, dwell. {meta.dwelling_number}][, fam. {meta.family_number}][, {citation.item}].
+full:  {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, {meta.schedule}]
+       [, ED {meta.enumeration_district}][, piece {meta.piece}][, fol. {meta.folio}][, p. {citation.page}]
+       [, schedule {meta.schedule_number}][, dwelling {meta.dwelling_number}][, family {meta.family_number}]
+       [, line {meta.line_number}][, {citation.item}][; {meta.format}, *{meta.provider}*]
+       [ ({meta.url}[ : accessed {meta.accessed_date}])][; citing {meta.citing}].
+short: {source.date:year} [{meta.creator} ]census, {meta.jurisdiction}[, ED {meta.enumeration_district}]
+       [, fol. {meta.folio}][, p. {citation.page}][, dwell. {meta.dwelling_number}][, fam. {meta.family_number}]
+       [, {citation.item}].
 list:  {meta.jurisdiction}. {source.date:year} [{meta.creator} ]census[, {meta.schedule}].
 ```
 
 > 1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (https://www.ancestry.com : accessed 12 March 2025); citing NARA microfilm publication T9, roll 393.
 
-**Birth certificate** (marriage and death certificates are the same, with their own word)
+**Birth, marriage and death certificates** (each with its own word)
 
 ```text
-full:  [{meta.creator}, ]birth certificate[ no. {meta.document_number}][ ({source.date:full})][, {citation.item}][, vol. {meta.volume}]
-       [, p. {citation.page}][, entry {meta.entry_number}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [; {meta.repository}].
+full:  [{meta.creator}, ]birth certificate[ no. {meta.document_number}][ ({source.date:full})][, {citation.item}]
+       [, vol. {meta.volume}][, p. {citation.page}][, entry {meta.entry_number}][; {meta.format}, *{meta.provider}*]
+       [ ({meta.url}[ : accessed {meta.accessed_date}])][; {meta.repository}].
 short: [{meta.creator}, ]birth certificate[ no. {meta.document_number}][, {citation.item}].
 list:  {meta.jurisdiction}.[ {meta.creator}.] Birth certificates.[ {meta.repository}.]
 ```
@@ -966,38 +949,188 @@ list:  {meta.jurisdiction}.[ {meta.creator}.] Birth certificates.[ {meta.reposit
 **Church register**
 
 ```text
-full:  {meta.creator}[ ({meta.jurisdiction})], *{source.title}*[, vol. {meta.volume}][, p. {citation.page}][, fol. {meta.folio}]
-       [, no. {meta.entry_number}][, {citation.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [; film {meta.film_number}[, item {meta.item_number}]][; {meta.repository}].
-short: {meta.creator}, *{meta.short_title|source.title}*[, vol. {meta.volume}][, p. {citation.page}][, no. {meta.entry_number}].
-list:  {meta.creator}[ ({meta.jurisdiction})]. *{source.title}*.[ {meta.repository}.]
+full:  {meta.creator}[ ({meta.jurisdiction})], *{source.title}*[, vol. {meta.volume}][, p. {citation.page}]
+       [, fol. {meta.folio}][, no. {meta.entry_number}][, {citation.item}][; {meta.format}, *{meta.provider}*]
+       [ ({meta.url}[ : accessed {meta.accessed_date}])][; film {meta.film_number}[, item {meta.item_number}]]
+       [; {meta.repository}].
+short: {meta.creator}, *{meta.short_title|source.title}*[, vol. {meta.volume}][, p. {citation.page}]
+       [, no. {meta.entry_number}].
+list:  {meta.creator}[ ({meta.jurisdiction})]. *{source.title}*[, {meta.coverage}].[ {meta.repository}.]
+```
+
+**Record book**
+
+```text
+full:  {meta.jurisdiction}, [{meta.creator}, ]{meta.book|source.title}[: {citation.page}][, entry {meta.entry_number}]
+       [, {citation.item}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [; film {meta.film_number}][; {meta.repository}].
+short: {meta.jurisdiction}, {meta.book|source.title}[: {citation.page}].
+list:  {meta.jurisdiction}.[ {meta.creator}.] {source.title}[, {meta.coverage}].[ {meta.repository}.]
+```
+
+**Passenger list**
+
+```text
+full:  {source.title}[, p. {citation.page}][, line {meta.line_number}][, {citation.item}]
+       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [; citing {meta.citing}][; {meta.film_publication}[, roll {meta.roll}]].
+short: {meta.short_title|source.title}[, p. {citation.page}][, line {meta.line_number}].
+list:  [{meta.creator}. ]{meta.collection|source.title}.[ {meta.repository}.]
+```
+
+**Case file**
+
+```text
+full:  {meta.jurisdiction}, [{meta.creator}, ]{source.title}[ {meta.case_number}][, {citation.item}]
+       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])][; {meta.repository}].
+short: {meta.jurisdiction}, {meta.short_title|source.title}[ {meta.case_number}][, {citation.item}].
+list:  {meta.jurisdiction}.[ {meta.creator}.] {meta.collection|source.title}.[ {meta.repository}.]
+```
+
+**Archived manuscript**
+
+```text
+full:  [{meta.creator}, ]{source.title}[ ({source.date:full})][, {citation.item}][; {meta.collection}]
+       [, {meta.call_number}][, box {meta.box}][, folder {meta.folder}][; {meta.format}, *{meta.provider}*]
+       [ ({meta.url}[ : accessed {meta.accessed_date}])]; {meta.repository}.
+short: [{meta.creator}, ]{meta.short_title|source.title}[, {meta.collection}][, box {meta.box}][, folder {meta.folder}].
+list:  {meta.collection|source.title}[, {meta.coverage}].[ {meta.call_number}.] {meta.repository}.
+```
+
+**Government file**
+
+```text
+full:  {source.title}[ ({source.date:full})][, {citation.item}][; {meta.collection}][; Record Group {meta.record_group}]
+       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])]
+       [; {meta.film_publication}[, roll {meta.roll}]]; {meta.repository}.
+short: {meta.short_title|source.title}[, {citation.item}].
+list:  {meta.repository}.[ Record Group {meta.record_group}.] {meta.collection|source.title}.
+```
+
+**Grave marker** (`creator` is the cemetery)
+
+```text
+full:  {meta.creator}[ ({meta.jurisdiction})], {citation.item|source.title}[, section {meta.section}][, lot {meta.lot}]
+       [; photographed by {meta.photographer}[, {meta.accessed_date}]].
+short: {meta.creator}[ ({meta.jurisdiction})], {citation.item|source.title}.
+list:  {meta.jurisdiction}. {meta.creator}. Grave markers.
+```
+
+**Family Bible**
+
+```text
+full:  {source.title}[, *{meta.published_in}*][ ([{meta.publication_place}: ]{meta.publisher}[, {source.date:year}])]
+       [, {citation.item}][; {meta.holder}].
+short: {meta.short_title|source.title}[, {citation.item}].
+list:  {source.title}[, {meta.coverage}].[ *{meta.published_in}*.][ {meta.holder}.]
+```
+
+**Photograph**
+
+```text
+full:  {source.title}[, {meta.medium}][, {source.date:full}][, {meta.photographer|meta.studio}][; {meta.holder}].
+short: {meta.short_title|source.title}[, {source.date:year}].
+list:  {source.title}.[ {meta.medium}.][ {meta.holder}.]
+```
+
+**Private papers**
+
+```text
+full:  [{meta.creator}, ]{source.title}[, {source.date:full}][, {citation.item}][; {meta.holder}].
+short: [{meta.creator}, ]{meta.short_title|source.title}[, {citation.item}].
+list:  [{meta.creator}. ]{source.title}[, {meta.coverage}].[ {meta.holder}.]
+```
+
+**DNA match report**
+
+```text
+full:  {meta.testing_company}, {source.title}[, kit {meta.kit_number}][, match {meta.match_identifier}]
+       [, {citation.item}][, report dated {source.date:full}][; {meta.holder}].
+short: {meta.testing_company}, {meta.short_title|source.title}[, match {meta.match_identifier}].
+list:  {meta.testing_company}. {source.title}.[ {meta.holder}.]
+```
+
+**GEDCOM file**
+
+```text
+full:  [{meta.creator}, ]{source.title}[, GEDCOM file exported from {meta.software}][, {source.date:full}]
+       [, {citation.item}][; {meta.holder}].
+short: [{meta.creator}, ]{meta.short_title|source.title}[, {citation.item}].
+list:  [{meta.creator}. ]{source.title}.[ {meta.holder}.]
+```
+
+**Interview** (oral testimony: the same, with `interview by` inside an optional group)
+
+```text
+full:  {meta.interviewee}[ ({meta.jurisdiction})], interview by {meta.interviewer}, {source.date:full}
+       [, {citation.item}][; {meta.holder}].
+short: {meta.interviewee}, interview, {source.date:full}.
+list:  {meta.interviewee}. Interview by {meta.interviewer}.[ {meta.jurisdiction},] {source.date:full}.[ {meta.holder}.]
+```
+
+**Correspondence**
+
+```text
+full:  {meta.creator}[ ({meta.jurisdiction})] to {meta.recipient}, {source.title}, {source.date:full}[; {meta.holder}].
+short: {meta.creator} to {meta.recipient}, {source.date:full}.
+list:  {meta.creator}. Correspondence to {meta.recipient}[, {meta.coverage}].[ {meta.holder}.]
 ```
 
 **Book**
 
 ```text
-full:  {meta.author}, *{source.title}*[, {meta.edition}][, vol. {meta.volume}][ ([{meta.publication_place}: ]{meta.publisher}[, {source.date:year}])]
-       [, {citation.page}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
+full:  {meta.author}[, ed. {meta.editor}][, comp. {meta.compiler}][, trans. {meta.translator}], *{source.title}*
+       [, {meta.edition}][, vol. {meta.volume}][, {meta.series}][ ([{meta.publication_place}: ]{meta.publisher}
+       [, {source.date:year}])][, {citation.page}][; {meta.format}, *{meta.provider}*]
+       [ ({meta.url}[ : accessed {meta.accessed_date}])].
 short: {meta.author}, *{meta.short_title|source.title}*[, {citation.page}].
-list:  {meta.author_sort|meta.author}. *{source.title}*.[ {meta.edition}.][ [{meta.publication_place}: ]{meta.publisher}[, {source.date:year}].]
+list:  {meta.author_sort|meta.author}. *{source.title}*.[ {meta.edition}.][ [{meta.publication_place}: ]{meta.publisher}
+       [, {source.date:year}].]
+```
+
+**Journal article** (broadcast: `published_in` is the programme, `publisher` the network)
+
+```text
+full:  {meta.author}, "{source.title}," *{meta.published_in}*[ {meta.volume}][, no. {meta.issue}][ ({source.date:full})]
+       [: {meta.page_range}][, specifically {citation.page}].
+short: {meta.author}, "{meta.short_title|source.title}"[, {citation.page}].
+list:  {meta.author_sort|meta.author}. "{source.title}." *{meta.published_in}*[ {meta.volume}][, no. {meta.issue}]
+       [ ({source.date:full})][: {meta.page_range}].
 ```
 
 **Newspaper item**
 
 ```text
-full:  "{source.title}," *{meta.published_in}*[ ({meta.jurisdiction})], {source.date:full}[, p. {citation.page}][, col. {meta.column}]
-       [; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
-short: "{source.title}," *{meta.published_in}*, {source.date:full}.
+full:  "{source.title}," *{meta.published_in}*[ ({meta.jurisdiction})], {source.date:full}[, p. {citation.page}]
+       [, col. {meta.column}][; {meta.format}, *{meta.provider}*][ ({meta.url}[ : accessed {meta.accessed_date}])].
+short: "{meta.short_title|source.title}," *{meta.published_in}*, {source.date:full}.
 list:  *{meta.published_in}*[ ({meta.jurisdiction})].
 ```
 
 **Website or online database**
 
 ```text
-full:  [{meta.creator}, ]"{source.title}," [{meta.format}, ]*{meta.site_name}*[ ({meta.url}[ : accessed {meta.accessed_date}])]
-       [, {citation.item}][; citing {meta.citing}].
-short: "{source.title}"[, {citation.item}].
+full:  [{meta.creator}, ]"{source.title}," [{meta.format}, ]*{meta.site_name}*
+       [ ({meta.url}[ : accessed {meta.accessed_date}])][, {citation.item}][; citing {meta.citing}].
+short: "{meta.short_title|source.title}"[, {citation.item}].
 list:  [{meta.creator}. ]"{source.title}." *{meta.site_name}*.[ {meta.url}.]
+```
+
+**Statute**
+
+```text
+full:  {meta.jurisdiction}, *{meta.published_in}*[ {source.date:year}][, vol. {meta.volume}][, chap. {meta.chapter}]
+       [, sec. {meta.section}][, p. {citation.page}].
+short: {meta.jurisdiction}, *{meta.published_in}*[ {source.date:year}][, chap. {meta.chapter}].
+list:  {meta.jurisdiction}. *{meta.published_in}*[, {source.date:year}].
+```
+
+**Court report**
+
+```text
+full:  *{source.title}*, [{meta.volume} ]{meta.published_in} {citation.page|meta.page_range}[ ({source.date:year})].
+short: *{meta.short_title|source.title}*[, {citation.page}].
+list:  *{source.title}*. [{meta.volume} ]{meta.published_in}[ ({source.date:year})].
 ```
 
 ### 6.9 One EE citation, many Provenencia Citations
@@ -1026,7 +1159,7 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 
 ## 7. Open questions
 
-- **Which patterns first.** The proposed first set in § 6.7 is a guess; the product owner's dogfood Sources decide.
+- ~~Which patterns first~~: all of them, as seed data (§ 6.8).
 - ~~Install for existing projects~~: descoped; create-time only, plus a one-off command for the dogfood projects (user, 2026-11-09, § 6.4).
 - **Same key, two origins.** Whether to offer moving a researcher's own `author` (or similar) values into the product field, and when.
 - ~~Generic template or a pattern choice for user types~~: any type has its own editable formats (user, 2026-11-09, § 6.3).
@@ -1037,7 +1170,7 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 - ~~Per-Source override~~: no; `{a|b}` fallbacks and optional groups are enough for now (user, 2026-11-09).
 - ~~Layout at the Artifact and item levels~~: same as the Source, with templating per level (user, 2026-11-09).
 - ~~Where the item lives~~: on the Evidence graph; the composer gets no new fields (user, 2026-11-09, § 6.9).
-- **How much seed.** The proposed first seed in § 6.8 is up for review (user, 2026-11-09).
+- ~~How much seed~~: everything the patterns use; researchers remove what they don't want (user, 2026-11-09, § 6.8).
 - **Field vocabulary name.** Keep `source_metadata_fields` for all three levels, or rename it to `metadata_fields`.
 - **Printed page map.** Whether a per-Artifact page map ("image 37 is page 23") should replace typing the printed page in the composer (§ 6.9).
 - **One graph, several items.** Whether the app should nudge a researcher toward one graph per household when a Source's type suggests item fields at the graph level.
