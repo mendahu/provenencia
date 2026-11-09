@@ -1,6 +1,6 @@
 # Move an Artifact to another Source
 
-**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); planned with the Source schema pass ([`citation-formats.md`](citation-formats.md), [`source-provenance-date.md`](source-provenance-date.md)) (user, 2026-11-01). Once Sources carry the fields a citation needs, which Source an Artifact sits under matters more, and researchers will want to re-file Artifacts they already built Evidence graphs on.
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)); decisions recorded 2026-11-09; planned with the Source schema pass ([`citation-formats.md`](citation-formats.md), [`source-provenance-date.md`](source-provenance-date.md)) (user, 2026-11-01). Once Sources carry the fields a citation needs, which Source an Artifact sits under matters more, and researchers will want to re-file Artifacts they already built Evidence graphs on.
 
 ## Problem
 
@@ -8,7 +8,23 @@ A researcher files an Artifact under one Source, builds an Evidence graph on it 
 
 ## The feature
 
-On an Artifact (its row on the Source page, or its menu), **Move to another Source…**: pick the target Source, confirm, and the Artifact moves together with the Evidence graph or graphs built on it. Nothing is copied: every row keeps its id and ref, so identity claims, Conclusions and the provenance sheet keep pointing at the same records. The Artifact then reads its citation fields (title, date, jurisdiction, repository) from the new Source.
+**Decisions (user, 2026-11-09).**
+
+- **The unit is a bundle.** An Artifact and the Evidence graphs built on it move together: a graph cannot move without its Artifacts, because its Citations point at them. The bundle is the closure: the Artifacts picked, every graph linked to any of them, and every other Artifact linked to those graphs, repeated until nothing new joins.
+- **One flow, wherever it starts.** **Move to another Source…** is offered on an Artifact (its row on the Source page, or its menu) and on an Evidence graph. A preflight reads the bundle and the confirm shows it in full: "These Artifacts and graphs move together", each listed, with the target picked. Moving the whole bundle is the default and only option; there is no refuse-and-name path and no way to split a shared graph.
+- **Nothing is copied.** Every row keeps its id and ref, so identity claims, Conclusions and the provenance sheet keep pointing at the same records.
+- **Source-level values are not looked at.** The move does not compare, copy or warn about the two Sources' metadata. After it, citations simply read the target Source's title, date and metadata and its type's citation formats ([`evidence-explained-citation-map.md`](evidence-explained-citation-map.md) § 6.3). Grouped citations on the provenance sheet and the Person page change accordingly; that is expected.
+- **Artifact and graph metadata travel for free.** `artifact_metadata`, `evidence_graph_metadata` and their layout rows hang off `artifact_id` and `graph_id` (map § 6.6), so the copy details and item numbers move with the bundle. If the target's type suggests different fields at those levels, filled values stay as extra fields.
+- **No undo** in this spike. Moving the bundle back is the way back.
+
+### Merging and splitting Sources
+
+**Decision (user, 2026-11-09): the move is the only tool.** No Merge Sources and no "move to a new Source".
+
+- **Merge:** move each bundle of Source B into Source A, then delete the emptied B with the existing Source delete.
+- **Split:** make the new Source first (Copy Source can prefill it), then move the bundles that belong there.
+
+A split follows bundle lines: Artifacts that share a graph always move together, so separating them means changing the graph's links first.
 
 ## What it touches in the schema
 
@@ -27,31 +43,27 @@ So a move is an update of `source_id` on three tables in one transaction, with n
 2. `evidence_graphs.source_id` for each graph that moves with it.
 3. `subjects.source_id` for every Subject in those graphs.
 
-Citations, Observations, `evidence_graph_artifacts`, locators, depictions and identity claims do not change. The composite key has no `ON UPDATE CASCADE`, so steps 2 and 3 either run with `PRAGMA defer_foreign_keys = ON` inside the transaction, or a migration adds `ON UPDATE CASCADE` to that key ([`add-catalog-migration`](../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../.agents/skills/add-catalog-model/SKILL.md)). Pick one when planning.
+Citations, Observations, `evidence_graph_artifacts`, locators, depictions and identity claims do not change. The composite key has no `ON UPDATE CASCADE`, so steps 2 and 3 either run with `PRAGMA defer_foreign_keys = ON` inside the transaction, or a migration adds `ON UPDATE CASCADE` to that key ([`add-catalog-migration`](../../../.agents/skills/add-catalog-migration/SKILL.md), [`add-catalog-model`](../../../.agents/skills/add-catalog-model/SKILL.md)). Decided (user, 2026-11-09): whichever makes the move work; prefer `PRAGMA defer_foreign_keys` inside the transaction, which needs no migration, unless planning finds a reason not to.
 
 ## Which graphs move
 
-Because the link is many to many, "the Artifact and its graph" is not always a clean pair:
-
-| Case | First answer |
+| Case | What happens |
 | --- | --- |
 | The Artifact is in no graph | Only the Artifact moves |
 | Each of its graphs holds only this Artifact (the common case) | The Artifact and those graphs move |
-| A graph also holds Artifacts that stay | Refuse, and name the other Artifacts; offer to move them together (the move takes a set of Artifacts, closed over their shared graphs) |
-| The graphs moving are all the Source's graphs | The Artifact moves; the old Source gets a fresh empty Default graph so it keeps one (`ErrLastGraph`) |
+| A graph also holds other Artifacts | They join the bundle, and so do their other graphs; the confirm lists everything |
+| The bundle holds all the Source's graphs | It moves; the old Source gets a fresh empty Default graph so it keeps one (`ErrLastGraph`) |
+| The bundle holds all the Source's Artifacts | It moves; the old Source is left empty and is not deleted |
 | A moved graph's name matches one on the target (two "Default"s) | Allowed: graph names are not unique per Source. The researcher can rename it |
-
-Splitting a shared graph (moving only the part built on one Artifact) is out of scope: Subjects can draw on Citations from several Artifacts, so there is no clean cut.
 
 ## Side effects to name in the confirm
 
 - **Credibility.** Assessments are per Source ([`source-structure-later.md`](source-structure-later.md) "Per-graph credibility"), so the moved Observations are scored with the target Source's credibility from then on, and Conclusions that rest on them can re-rank. The confirm says so when the two Sources' assessments differ.
-- **Citation line.** The provenance sheet's citation line, and later the formatter, read the new Source's title and fields.
 - **Empty Source.** If the old Source is left with no Artifacts, say so; do not delete it.
 
 ## Engine notes
 
-- One write through the catalog session ([`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md)) and one FFI handler, for example `MoveArtifactsToSource(artifact_ids, target_source_id)` ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)), plus a read that previews the closure (graphs, Subjects, Artifacts that would have to come along) for the confirm.
+- One write through the catalog session ([`use-catalog-session`](../../../.agents/skills/use-catalog-session/SKILL.md)) and one FFI handler, for example `MoveArtifactsToSource(artifact_ids, target_source_id)` ([`add-ffi-handler`](../../../.agents/skills/add-ffi-handler/SKILL.md)), plus a preflight read that returns the bundle (Artifacts, graphs, Subject counts) and the credibility difference for the confirm; the same closure function drives both, so the confirm and the write cannot disagree.
 - **Audit:** one transaction scoped to **both** Sources, so each Source's history and "Updated" sort show the move ([`add-audit-scope`](../../../.agents/skills/add-audit-scope/SKILL.md)). Earlier transactions keep their old scope.
 - **Refs:** unchanged; `ART-`, `GPH-`, `CIT-` and Subject refs are project-wide.
 - **Search and caches:** re-project the moved rows' search documents if a hit shows its Source title ([`add-searchable-kind`](../../../.agents/skills/add-searchable-kind/SKILL.md)); refresh both Sources' pages, the Sources list counts, and any Person page whose provenance rows name the old Source.
@@ -59,7 +71,9 @@ Splitting a shared graph (moving only the part built on one Artifact) is out of 
 
 ## Open questions
 
-- Whether the entry point is only the Artifact, or also a graph ("move this graph and its Artifacts").
-- Whether moving several Artifacts at once is in the first cut, or only the refuse-and-name path for shared graphs.
-- Whether "move to a **new** Source" (split a Source in two, using Copy Source to prefill it) belongs here or follows.
-- Undo: rely on moving it back, or offer an undo right after the move.
+- ~~Entry point~~: the Artifact and the Evidence graph, one flow (user, 2026-11-09).
+- ~~Several Artifacts at once~~: the move is always the whole bundle, shown in the confirm (user, 2026-11-09).
+- ~~Move to a new Source~~ and ~~Merge Sources~~: not built; the move does both, into an existing Source (user, 2026-11-09).
+- ~~Undo~~: not in this spike (user, 2026-11-09).
+- ~~Subjects' composite key~~: whatever works; prefer deferred foreign keys (user, 2026-11-09).
+- ~~Source-level values~~: not looked at (user, 2026-11-09).

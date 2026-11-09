@@ -44,3 +44,8 @@ Deferred from S10-57; dogfood 2026-10-17. Shift-click adds or removes one card, 
 ## No reloading sign on a revisited canvas
 
 `isRereadingGraph` is drawn only in the error callout (`EvidenceGraphView.swift`), so a revisited stale canvas shows its old cards with no sign that it is rereading. Needs a brief.
+
+## Primary subject
+
+Raised in Spike 15 (2026-11-09). A toggle on a Subject card marking it as the Evidence graph's principal: the person or event the graph is about. Spike 15 chose a graph-level metadata field, `item`, typed once, for the citation's "what in the record" part ([`spike-15/evidence-explained-citation-map.md`](../deployment-plan/spike-15/evidence-explained-citation-map.md) § 6.5). A primary subject could later prefill `item` (a person's recorded name; an event's type, date and principal participant) and serve other features that need to know what a graph is about. Open: a column on `evidence_graphs` or a flag on the Subject; how a household, a marriage or a deed (two parties) is expressed; card chrome on the canvas (a brief).
+

@@ -2,7 +2,7 @@
 
 **Status:** idea only — not roadmapped. Speed work on Spike 13's Person page found by the [2026-11-08 audit](../deployment-plan/spike-16/person-page-audit.md) and descoped by the user the same day: real data has not shown the cost yet. Spike 16 caps the crafted cases instead (working rule "Crafted fan-out is capped, not engineered") and gives the Timeline a render cap (S16-02). Every figure below is an estimate from reading the code; **measure before pulling any of these in.**
 
-Related: [`structural-debt.md`](structural-debt.md) row "S13-16 PRF-2" (a person past 64 Evidence graphs cycles the graph cache on the claims and record links reads); [`provenance.md`](provenance.md) (records drawn in a provenance table).
+Related: [`structural-debt.md`](structural-debt.md) row "S13-16 PRF-2" (a person past 64 Evidence graphs cycles the graph cache on the claims and record links reads); [`spike-15/provenance-loading.md`](../deployment-plan/spike-15/provenance-loading.md) (now Spike 15, S15-27 – S15-29) (records drawn in a provenance table).
 
 ## The record links read recomputes every pair (P-9)
 
