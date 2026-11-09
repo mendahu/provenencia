@@ -9,6 +9,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
 | S16-D1 | Person page: notices for a failed reload (header band, a full-width section, the Sources diagram column) and for a record links diagram that did not count | — | S16-04 |
+| S16-D2 | Person page folds (Family, Timeline, Sources): a page per Show more, focus on what it reveals, a folded record's highlight | [agreed 2026-11-09](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ) | S16-07 |
 
 ## Archived
 

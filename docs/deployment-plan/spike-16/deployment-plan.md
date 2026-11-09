@@ -158,7 +158,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S16-01 | Cap the Person page reads and an event's places against crafted projects | 1a | Go: the Family read's relatives per role and implied siblings, a person's records per graph in the claims read, and an event's places in `eventLocations` (which `placesOfEvents` and the three reads that still follow places read), capped before the work; the record links read sends at most 75,000 lines and says when it did not count or dropped lines, and Swift's own arc cap goes; one Person check for every read | — | S14-40 (Spike 14, landed #746) | [plan](prs/S16-01-cap-person-page-reads.md) | Landed #756 |
 | S16-08 | Cap the places an event folds | 1a | Merged into S16-01 to cut a review cycle (user, 2026-11-08) | — | — | — | Descoped (2026-11-08) → S16-01 |
-| S16-07 | One paged fold that moves focus | 1a | Preparatory, Swift: `ConclusionFold` reveals a page of 50 at a time in every section, one fold state type, Show more moves focus to the first revealed item (Family gains it), one focus keeper across width changes; hovering a graph whose record line is folded lights up its Show more | — | — | — | Scoped |
+| S16-07 | One paged fold that moves focus | 1a | Preparatory, Swift: `ConclusionFold` reveals a page of 50 at a time in every section, one fold state type, Show more moves focus to the first revealed item (Family gains it), one focus keeper across width changes; hovering a graph whose record line is folded lights up its Show more | [S16-D2](design/S16-D2-person-page-folds.md) | S16-D2 | [plan](prs/S16-07-paged-fold-focus.md) | Planned |
 | S16-02 | The Timeline places a missing death and builds what it shows | 1a | Go and Swift: a placeholder life marker sits beside or before one row, so a missing death precedes a burial; the Timeline builds rows and cards only for what the folds show and makes click targets only for shown rows; a date edit rescales the lifeline | — | S16-07 | — | Scoped |
 | S16-03 | One open section and one list of section reads | 1b | Preparatory, Swift only: `WorkspaceLocation.openPageSection` and one read list per `ConclusionPageSection`, read by the place registry, the page, the Person fill and the section hosts; `add-workspace-location` teaches page sections; no visible change; `ConclusionDetailPage.swift` split into the files its types belong to | — | — | — | Scoped |
 | S16-04 | The Person page says when a reload failed or the diagram is partial | 1b | A `QueryHandle` reading with a refresh failure beside the value; the page and each section show an announced Try again notice above stale rows and on a first-load failure; a deleted person's page says the person no longer exists; the record links diagram shows a note when the read did not count facts, Go dropped lines, or the circle dropped graphs | S16-D1 | S16-03, S16-01, S16-D1 | — | Scoped |
@@ -196,6 +196,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
 | S16-D1 | Person page: notices for a failed reload (the header band, a full-width section, the Sources diagram column) and for a record links diagram that is partial | **S16-04** | An enhancement of the Spike 13 Person page boards (S13-D1, S13-D10). Reuses `PVRetryCallout` as the Promote page does (S14-D7). Draws Regular and Wide. The Conclusion page frame is shared, so the board also says the Event and Place pages take the same notice. Copy: the notice titles, Try again, the diagram's partial note |
+| S16-D2 | Person page folds (Family, Timeline, Sources): Show more counts and reveals a page, focus lands on the first revealed item, a folded record's highlight on its Show more, a folded lifeline point opens through its page | **S16-07** | One brief for the three sections, which are one view (user, 2026-11-09). An enhancement of the Spike 13 boards (S13-D3, S13-D4, S13-D6, S13-D10); reuses each item's focus ring and the record line's highlight tokens. Draws Regular and Wide. No new copy key |
 
 ## Slices
 
@@ -206,7 +207,7 @@ BATCH 1 — Person page audit fixes
 
 SLICE 1a — Bounded reads, folds and the Timeline
   S16-01  Cap the Person page reads and an event's places against crafted projects
-  S16-07  One paged fold that moves focus                   (preparatory)
+  ✎ S16-D2 ──▶ S16-07  One paged fold that moves focus     (preparatory)
   S16-02  The Timeline places a missing death and builds what it shows
   Check: bar 1, 2 and 3.
 
@@ -272,7 +273,7 @@ Spike 14's S14-42 landed in #748, so Batch 2 can start: S16-10 and S16-11 have n
 
 ```text
 S14-40 ──▶ S16-01 ──▶ S16-04
-S16-07 ──▶ S16-02
+S16-D2 ──▶ S16-07 ──▶ S16-02
 S16-03 ──▶ S16-04 ──▶ S16-09
 S16-03 ──▶ S16-06
 S16-D1 ──▶ S16-04
@@ -327,6 +328,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Each names its a
 **Ships.** `ConclusionFold` gains a page of 50 and one fold state type that Family, Timeline and Sources use in place of their `Set`s and Sources' `rowsExpanded`; `firstRevealed` names the first item of the page just revealed and `ConclusionShowMoreRow` claims focus for it through `FocusClaim` (Family gains it; the `Task` hops in the Timeline and Sources go) (P-14, P-7's pages). One focus keeper in `macos/App/Platform/` holds focus across a width change for Gallery and Timeline. When the record links diagram highlights a graph whose record line is folded, that Source's Show more takes the highlight (P-15; the content already maps folded claims to graphs in `claimGraphs`).
 **Not this PR.** Building only shown rows and the lifeline's click targets (S16-02); Back restoring a section's folds (P-19, [idea](../../ideas/person-page-followups.md)).
 **Check.** Bar 3's paging and bar 7's fold focus: content tests name the revealed item after each page for every section, Family included; a test unfolds 2,000 hidden items in pages of 50. A content test highlights a folded line's Show more.
+**Brief.** [S16-D2](design/S16-D2-person-page-folds.md) (user, 2026-11-09), one brief for Family, Timeline and Sources, the one view they make up: the page count, the focus landing and the Show more's highlight change how they look. Show more counts the next page, not the whole fold (user, 2026-11-09), and a folded lifeline point opens the fold through its page.
 **Context.** Audit P-7, P-14, P-15; rule "One paged fold that moves focus"; `macos/App/Features/Conclusions/ConclusionShowMoreRow.swift`, `PersonFamilySection.swift`, `PersonFamilyContent.swift`, `PersonTimelineSection.swift`, `PersonTimelineContent.swift`, `PersonSourcesSection.swift`, `PersonSourcesContent.swift`, `ConclusionGallerySection.swift`, `macos/App/Platform/FocusClaim.swift`; [`macos-client-patterns.md`](../../macos-client-patterns.md) "One sectioned detail page" (teaches the fold) and Wide rule 5 (cites the keeper).
 
 #### S16-02 — The Timeline places a missing death and builds what it shows
