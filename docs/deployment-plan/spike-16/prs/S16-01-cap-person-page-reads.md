@@ -1,6 +1,7 @@
 # S16-01 — Cap the Person page reads and an event's places against crafted projects
 
-**Status:** Planned
+**Status:** Landed in #756 (2026-11-09)
+**Landed:** Version 0.4.2 as planned. Differences from the plan: `Families` loads the requested nodes in one batch (`g.Nodes`) and reads relationships only for the people among them, because the new AC-2.3 case (unknown ids add no queries) failed at the base, where `LoadRelationships` read one `For` per unknown id; `linksFor` in `core/kinship/families_test.go` lifts `MaxPivotEnd` for its `Siblings` call so the three over-the-bound `FamilyUnits` cases still feed a sibling with more than ten parents; the `maxRecordLinkLines` comment says "moved from the app's arc cap" so the DoD sweep for `maxArcs` finds nothing.
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Person page draws the same rows and lines on real data; the diagram's partial note is S16-04's, brief S16-D1)
