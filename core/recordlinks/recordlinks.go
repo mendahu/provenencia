@@ -177,20 +177,66 @@ type Pair struct {
 // Each pair's lines are what the one-pair count gives over the two graphs. The
 // whole read is bounded by MaxReadWork, counted before any compare: past it
 // every pair is listed and every line has 0 facts, and when the number of lines
-// alone passes it, no pair is returned.
-func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) []Pair {
+// alone passes it, no pair is returned. counted is false exactly then, when the
+// read's work passes MaxReadWork, and true otherwise, a read of no graph
+// included. A pair over MaxPairWork or an entity over MaxEntityMembers keeps
+// its lines at 0 facts and does not change counted.
+func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) (pairs []Pair, counted bool) {
 	h := holdings{}
 	limit := cfg.RecordLinks.MaxReadWork
 	shared, work := readPlan(string(page), graphs, h, cfg, limit)
 	if shared == nil {
-		return nil
+		return nil, false
 	}
 	skip := work > limit
 	var out []Pair
 	for _, p := range shared {
 		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, skip || p.over)})
 	}
-	return out
+	return out, !skip
+}
+
+// CapLines keeps at most most lines (most is at least 1) of pairs. With at
+// most most lines in all it returns pairs as they are and false. Otherwise it
+// keeps the first most strong lines in read order (pair order, then line
+// order), then, while fewer than most are kept, the first weak lines in read
+// order; each kept line stays in its pair at its place, kept pairs keep their
+// order, a pair left with no line is dropped, and it returns true. It builds
+// new Lines slices and does not modify its input.
+func CapLines(pairs []Pair, most int) ([]Pair, bool) {
+	total, strong := 0, 0
+	for _, p := range pairs {
+		total += len(p.Lines)
+		for _, l := range p.Lines {
+			if l.Strength == StrengthStrong {
+				strong++
+			}
+		}
+	}
+	if total <= most {
+		return pairs, false
+	}
+	strongLeft := min(strong, most)
+	weakLeft := most - strongLeft
+	var out []Pair
+	for _, p := range pairs {
+		var lines []Line
+		for _, l := range p.Lines {
+			switch {
+			case l.Strength == StrengthStrong && strongLeft > 0:
+				strongLeft--
+			case l.Strength != StrengthStrong && weakLeft > 0:
+				weakLeft--
+			default:
+				continue
+			}
+			lines = append(lines, l)
+		}
+		if len(lines) > 0 {
+			out = append(out, Pair{A: p.A, B: p.B, Lines: lines})
+		}
+	}
+	return out, true
 }
 
 // pairKey is the indexes of two graphs, lower first.
