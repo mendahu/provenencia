@@ -82,4 +82,4 @@ Reviewers: MNT (MNT-1 was the round's only Fix-now major). Scope `940f719a...b08
 No new findings. Round-1 minors MNT-2 – MNT-5 confirmed done by the round-2 reviewer (`RowMapTx` ×3, `loadForWrite` ×5, private `insert`/`update`). Verdict: Clean.
 
 ## Result
-`origin/main` unchanged since the branch was cut (`462699f1`); no merge needed. Gate PASS on `b08bfaab` · CI: see PR · open: none · follow-ups: SEC-2 (owner check in `datevalues.PutTx` over every owned FK into `date_values`; home to be chosen by the user) · later PR: UX-1, UX-2 → S15-03 map entry · to user: —
+`origin/main` unchanged since the branch was cut (`462699f1`); no merge needed. Gate PASS on `b08bfaab` · CI: see PR · open: none · follow-ups: SEC-2 → [`docs/ideas/value-row-owner-check.md`](../../../ideas/value-row-owner-check.md) (user, 2026-11-09) · later PR: UX-1, UX-2 → S15-03 map entry · to user: —
