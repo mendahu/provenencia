@@ -405,7 +405,24 @@ func TestPersonEventsQueryCount(t *testing.T) {
 }
 
 func TestPersonEventsLifeline(t *testing.T) {
-	type markers struct{ birthEvent, birthBeside, deathEvent, deathBeside []byte }
+	type markers struct {
+		birthEvent []byte
+		birth      *persondetail.MarkerPlace
+		deathEvent []byte
+		death      *persondetail.MarkerPlace
+	}
+	before := func(id []byte) *persondetail.MarkerPlace {
+		return &persondetail.MarkerPlace{Row: id, Side: persondetail.SideBefore}
+	}
+	after := func(id []byte) *persondetail.MarkerPlace {
+		return &persondetail.MarkerPlace{Row: id, Side: persondetail.SideAfter}
+	}
+	samePlace := func(a, b *persondetail.MarkerPlace) bool {
+		if a == nil || b == nil {
+			return a == b
+		}
+		return a.Side == b.Side && bytes.Equal(a.Row, b.Row)
+	}
 	check := func(t *testing.T, w *kinWorld, pat []byte, want markers) persondetail.Timeline {
 		t.Helper()
 		tl, summaries := w.timeline(pat)
@@ -414,12 +431,17 @@ func TestPersonEventsLifeline(t *testing.T) {
 			got, want []byte
 		}{
 			{"birth.event", tl.Birth.Event, want.birthEvent},
-			{"birth.beside", tl.Birth.Beside, want.birthBeside},
 			{"death.event", tl.Death.Event, want.deathEvent},
-			{"death.beside", tl.Death.Beside, want.deathBeside},
 		} {
 			if !bytes.Equal(c.got, c.want) {
 				t.Errorf("%s = %q, want %q", c.name, w.name(c.got), w.name(c.want))
+			}
+		}
+		for name, c := range map[string]struct{ got, want *persondetail.MarkerPlace }{
+			"birth": {tl.Birth.Place, want.birth}, "death": {tl.Death.Place, want.death},
+		} {
+			if !samePlace(c.got, c.want) {
+				t.Errorf("%s place = %+v, want %+v", name, c.got, c.want)
 			}
 		}
 		// The recorded markers are the header's.
@@ -456,7 +478,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		m := w.event("M", vocabkey.EventMarriage, 1840)
 		w.k.Join(pat, c, "subject")
 		w.k.Join(pat, m, "subject")
-		check(t, w, pat, markers{birthBeside: c, deathBeside: m})
+		check(t, w, pat, markers{birth: before(c), death: after(m)})
 	})
 	t.Run("AC-2.3", func(t *testing.T) {
 		w := newKinWorld(t)
@@ -465,7 +487,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		f := w.event("F", vocabkey.EventFuneral, 1880)
 		w.k.Join(pat, c, "subject")
 		w.k.Join(pat, f, "subject")
-		check(t, w, pat, markers{birthBeside: c, deathBeside: c})
+		check(t, w, pat, markers{birth: before(c), death: before(f)})
 	})
 	t.Run("AC-2.4", func(t *testing.T) {
 		w := newKinWorld(t)
@@ -481,7 +503,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		c := w.event("C", vocabkey.EventType("census"), 1835)
 		w.k.Join(pat, b, "subject")
 		w.k.Join(pat, c, "subject")
-		check(t, w, pat, markers{birthEvent: b, birthBeside: c, deathBeside: c})
+		check(t, w, pat, markers{birthEvent: b, birth: before(c), death: after(c)})
 	})
 	t.Run("AC-2.6", func(t *testing.T) {
 		w := newKinWorld(t)
@@ -490,7 +512,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		b2 := w.event("B2", vocabkey.EventBirth, 1822)
 		w.k.Join(pat, b2, "subject")
 		w.k.Join(pat, b1, "subject")
-		check(t, w, pat, markers{birthEvent: b1, deathBeside: b2})
+		check(t, w, pat, markers{birthEvent: b1, death: after(b2)})
 	})
 	t.Run("a researcher's burial term is not the product's", func(t *testing.T) {
 		w := newKinWorld(t)
@@ -505,16 +527,16 @@ func TestPersonEventsLifeline(t *testing.T) {
 		for _, e := range [][]byte{c, d, u} {
 			w.k.Join(pat, e, "subject")
 		}
-		check(t, w, pat, markers{birthBeside: c, deathEvent: d, deathBeside: u})
+		check(t, w, pat, markers{birth: before(c), deathEvent: d, death: after(u)})
 	})
 	t.Run("lead birth is an open-start date", func(t *testing.T) {
 		w := newKinWorld(t)
 		pat := w.person("Pat")
-		before := w.eventOn("Before", vocabkey.EventBirth, datevaluetest.Before(1820, 0, 0))
+		beforeBirth := w.eventOn("Before", vocabkey.EventBirth, datevaluetest.Before(1820, 0, 0))
 		later := w.event("Later", vocabkey.EventBirth, 1825)
 		w.k.Join(pat, later, "subject")
-		w.k.Join(pat, before, "subject")
-		tl := check(t, w, pat, markers{birthEvent: before, deathBeside: later})
+		w.k.Join(pat, beforeBirth, "subject")
+		tl := check(t, w, pat, markers{birthEvent: beforeBirth, death: after(later)})
 		if tl.Events[0].Span == nil || !tl.Events[0].Span.OpenStart {
 			t.Errorf("first row span %+v", tl.Events[0].Span)
 		}
@@ -540,7 +562,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		b := w.event("B", vocabkey.EventBirth, 1850)
 		w.k.Join(kid, b, "subject")
 		w.k.Join(pat, b, "witness")
-		check(t, w, pat, markers{birthBeside: b, deathBeside: b})
+		check(t, w, pat, markers{birth: before(b), death: after(b)})
 	})
 	t.Run("AC-2.8", func(t *testing.T) {
 		w := newKinWorld(t)
@@ -549,7 +571,7 @@ func TestPersonEventsLifeline(t *testing.T) {
 		c := w.event("C", vocabkey.EventType("census"), 1890)
 		w.k.Join(pat, d, "subject")
 		w.k.Join(pat, c, "subject")
-		tl := check(t, w, pat, markers{deathEvent: d, birthBeside: d})
+		tl := check(t, w, pat, markers{deathEvent: d, birth: before(d)})
 		if tl.Events[1].Span == nil || tl.Events[1].Span.From != 1890 {
 			t.Errorf("census span %+v", tl.Events[1].Span)
 		}
@@ -564,8 +586,8 @@ func TestPersonEventsLifeline(t *testing.T) {
 		w.k.Provisional(b)
 		w.k.Commit(b)
 		tl, summaries := w.timeline(pat)
-		if len(tl.Birth.Event) != 0 || !bytes.Equal(tl.Birth.Beside, c) {
-			t.Fatalf("birth marker %+v, want a placeholder beside the census", tl.Birth)
+		if len(tl.Birth.Event) != 0 || !samePlace(tl.Birth.Place, before(c)) {
+			t.Fatalf("birth marker %+v, want a placeholder before the census", tl.Birth)
 		}
 		if me, _ := summaries.Person(pat); me.Birth.Event != nil {
 			t.Fatal("the header names the non-canonical birth")

@@ -83,7 +83,7 @@ func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) 
 // PersonEvents is the Timeline section's read: every canonical event the
 // person took part in, in any role, in event date order, each with its span on
 // the line of years, the birth and death markers (the header's birth and death
-// when they are among the events, else placed beside a dated event), and the
+// when they are among the events, else placed after or before a dated event), and the
 // summary of every event and participant it names. An unknown or merged handle, or one
 // that is no Person, is conclusiondetails.ErrNotFound.
 func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsummaries.Summaries, error) {
@@ -212,7 +212,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		return ""
 	}
 	t := Timeline{Events: rows}
-	t.Birth, t.Death = lifeMarkers(rows, typeOf, birth, death)
+	t.Birth, t.Death = lifeline.markers(rows, typeOf, birth, death)
 	return t, summaries, nil
 }
 
