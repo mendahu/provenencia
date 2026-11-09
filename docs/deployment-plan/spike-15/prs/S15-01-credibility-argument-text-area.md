@@ -32,6 +32,8 @@
 
 The version bump is `0.4.3`, not `0.4.2`: `main` had already moved to `0.4.2`, so STEP-5 took the next patch. Otherwise none.
 
+A kit fix rode on this PR: two text areas in one column (the Source description while editing, and the credibility argument) could wrap each other's Tab router and crash with a stack overflow. A text view now keeps the first router that claimed it, and each area finds its own text view by position.
+
 ## 1. Objective
 
 On the Source page, the credibility argument is a single-line field: a longer argument scrolls sideways and is cut off, and Return does nothing. After this PR the argument is a multi-line `PVTextArea` like the Source description and the note composer: it wraps, grows with its text up to a bound, then scrolls; Return adds a line; the existing Save button saves it, line breaks included.
