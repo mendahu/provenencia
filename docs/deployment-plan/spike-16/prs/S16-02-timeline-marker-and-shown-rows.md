@@ -35,6 +35,7 @@
 - T-7's nearest-point check compares the found mark's `pointY` with the clicked one: points of one year share a y, and the earlier in item order wins the tie.
 - `PersonTimelinePlacement.KeptScale` keeps its four fields private; its init and `pointsPerYear(for:viewportHeight:)` are the interface the plan names.
 - STEP-1's and STEP-3's failing-first tests were written after the code, in the same commit.
+- Adding a before-birth type (one `EventRole` in `lifelineTypes.beforeBirth`) can place a birth after the `.more(.dated)` item, and then D-9 draws the folded points dated after it inside the birth stub; that add must also shift those folded points (CON-1, S16-02 ship log).
 
 ## 1. Objective
 
