@@ -85,3 +85,39 @@ func TestCraftedFamily(t *testing.T) {
 		t.Fatalf("the one-parent unit holds %d children, want the first %d in link order (%d)", len(got), max, len(want))
 	}
 }
+
+// TestCraftedClaims: a Person with 20,000 records in one Evidence graph reads
+// its claims in under a second, as one group of the first MaxEntityMembers
+// (S16-01 AC-1.4).
+func TestCraftedClaims(t *testing.T) {
+	most := matchregistry.Default().RecordLinks.MaxEntityMembers
+	w := newKinWorld(t)
+	pat := w.person("Pat")
+	w.k.Members(pat, 20_000)
+	w.k.Commit(pat)
+
+	var groups []persondetail.ClaimGroup
+	d := w.cold(func() {
+		var err error
+		if groups, err = persondetail.Claims(w.c, pat); err != nil {
+			t.Fatal(err)
+		}
+	})
+	databasetest.WithinBudget(t, "Claims at 20,000 records in one graph", d, capBudget)
+	if len(groups) != 1 || len(groups[0].Claims) != most {
+		t.Fatalf("%d groups, want one of %d claims", len(groups), most)
+	}
+	n, err := w.c.Graph().Node(pat)
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := map[string]bool{}
+	for _, m := range n.AcceptedMembers()[:most] {
+		first[string(m.SubjectID)] = true
+	}
+	for _, cl := range groups[0].Claims {
+		if !first[string(cl.Subject.ID)] {
+			t.Fatalf("claim %x is not among the first %d members", cl.Subject.ID, most)
+		}
+	}
+}

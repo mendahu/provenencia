@@ -23,6 +23,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/writes"
 
@@ -207,6 +208,7 @@ func TestClaimsMissingAndEmpty(t *testing.T) {
 	merged := f.promote(f.person(graph, "A"), nil)
 	into := f.promote(f.person(graph, "B"), nil)
 	provisionalOnly := f.promote(f.person(graph, "C"), nil)
+	event := f.promote(f.Birth(src, f.arts[string(src.ID)]), nil)
 	db, err := f.C.DB()
 	must(t, err)
 	_, err = db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, into.ID, merged.ID)
@@ -227,6 +229,7 @@ func TestClaimsMissingAndEmpty(t *testing.T) {
 		{"unknown id", make([]byte, 16), conclusiondetails.ErrNotFound, false},
 		{"id that does not parse", []byte{1, 2}, conclusiondetails.ErrNotFound, false},
 		{"merged handle", merged.ID, conclusiondetails.ErrNotFound, false},
+		{"an Event handle", event.ID, conclusiondetails.ErrNotFound, false},
 		{"only a provisional member", provisionalOnly.ID, nil, true},
 	}
 	for _, tt := range tests {
@@ -254,5 +257,49 @@ func TestClaimsWarmReadIssuesNoQuery(t *testing.T) {
 	}
 	if len(second) != len(first) {
 		t.Fatalf("second read %d groups, first %d", len(second), len(first))
+	}
+}
+
+// TestClaimsRecordsPerGraph: a Person's records in one Evidence graph are kept
+// to the registry's recordlinks MaxEntityMembers, the first ones in member order.
+func TestClaimsRecordsPerGraph(t *testing.T) {
+	most := matchregistry.Default().RecordLinks.MaxEntityMembers
+	for _, tc := range []struct {
+		name   string
+		extra  int // records beside the Person's own
+		want   int
+		prefix bool
+	}{
+		{"at the cap", most - 1, most, false},
+		{"one over", most, most, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newKinWorld(t)
+			pat := w.person("Pat")
+			w.k.Members(pat, tc.extra)
+			w.k.Commit(pat)
+			groups, err := persondetail.Claims(w.c, pat)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(groups) != 1 || len(groups[0].Claims) != tc.want {
+				t.Fatalf("%d groups, %d claims in the first, want 1 and %d", len(groups), len(groups[0].Claims), tc.want)
+			}
+			if tc.prefix {
+				n, err := w.c.Graph().Node(pat)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for i, m := range n.AcceptedMembers()[:tc.want] {
+					found := false
+					for _, cl := range groups[0].Claims {
+						found = found || bytes.Equal(cl.Subject.ID, m.SubjectID)
+					}
+					if !found {
+						t.Fatalf("member %d is not among the claims", i)
+					}
+				}
+			}
+		})
 	}
 }

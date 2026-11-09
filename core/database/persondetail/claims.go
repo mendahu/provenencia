@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -35,11 +36,12 @@ type Claim struct {
 
 // Claims returns a Person's accepted claims grouped by Source. Groups are
 // ordered by Source title and claims within a group by graph name, each with
-// the ref as the tie-break. An unknown or merged handle is
-// conclusiondetails.ErrNotFound; a handle with no accepted claim has no
-// groups.
+// the ref as the tie-break. An unknown or merged handle, or one that is no
+// Person, is conclusiondetails.ErrNotFound; a handle with no accepted claim has
+// no groups. A Person's records in one Evidence graph are capped at the
+// registry's recordlinks MaxEntityMembers (see boundedMembers).
 func Claims(c *database.Catalog, entityID []byte) ([]ClaimGroup, error) {
-	n, err := conclusiondetails.Handle(c, entityID)
+	n, err := personNode(c, entityID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +105,25 @@ func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 	return groups, nil
 }
 
+// boundedMembers is n.AcceptedMembers keeping at most the registry's
+// recordlinks MaxEntityMembers per Evidence graph, in member order; every
+// accepted member counts, the person's first record included. More is crafted
+// data: a real person files one or two records in a graph, and the claims read
+// scans the whole graph for each record it keeps.
+func boundedMembers(n *graphcache.Node) []graphcache.Member {
+	most := matchregistry.Default().RecordLinks.MaxEntityMembers
+	perGraph := map[string]int{}
+	var kept []graphcache.Member
+	for _, m := range n.AcceptedMembers() {
+		if perGraph[string(m.GraphID)] >= most {
+			continue
+		}
+		perGraph[string(m.GraphID)]++
+		kept = append(kept, m)
+	}
+	return kept
+}
+
 // memberGraph is one accepted member of a handle with what its Evidence graph
 // says about it.
 type memberGraph struct {
@@ -118,7 +139,7 @@ type memberGraph struct {
 func memberGraphs(c *database.Catalog, n *graphcache.Node) ([]memberGraph, error) {
 	graphs := map[string]graphcache.EvidenceGraph{}
 	var out []memberGraph
-	for _, m := range n.AcceptedMembers() {
+	for _, m := range boundedMembers(n) {
 		eg, ok := graphs[string(m.GraphID)]
 		if !ok {
 			var err error
