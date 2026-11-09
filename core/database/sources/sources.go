@@ -195,16 +195,26 @@ func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryAr
 	}
 }
 
+// loadForWrite reads the Source a write targets: ErrInvalid for a missing
+// transaction, a malformed id, a bad user or a Source that does not exist.
+func loadForWrite(tx *database.Tx, userID, id []byte) (Source, error) {
+	if tx == nil || len(id) != 16 {
+		return Source{}, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Source{}, err
+	}
+	s, err := getTx(tx.Tx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Source{}, ErrInvalid
+	}
+	return s, err
+}
+
 // SetCover pins an Artifact as cover or reverts to the Source type icon.
 // Call NormalizeCover first when mode is CoverModeArtifact. An unchanged cover
 // returns the existing Source and no changes.
 func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArtifactID []byte) (Source, []rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 {
-		return Source{}, nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, nil, err
-	}
 	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
@@ -217,10 +227,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 		return Source{}, nil, ErrInvalid
 	}
 
-	prev, err := getTx(tx.Tx, sourceID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, sourceID)
 	if err != nil {
 		return Source{}, nil, err
 	}
@@ -258,16 +265,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 // returns the Source and no changes. An invalid date is datevalue.ErrInvalid
 // and nothing is written.
 func SetDate(tx *database.Tx, userID, sourceID []byte, date *datevalue.Value) (Source, []rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 {
-		return Source{}, nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, nil, err
-	}
-	prev, err := getTx(tx.Tx, sourceID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, sourceID)
 	if err != nil {
 		return Source{}, nil, err
 	}
@@ -332,16 +330,7 @@ func dateValueChange(sourceID, from, to []byte) rowchange.Change {
 // SetPublic marks the Source public or not public. An unchanged flag returns
 // the Source and no changes.
 func SetPublic(tx *database.Tx, userID, sourceID []byte, isPublic bool) (Source, []rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 {
-		return Source{}, nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, nil, err
-	}
-	prev, err := getTx(tx.Tx, sourceID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, sourceID)
 	if err != nil {
 		return Source{}, nil, err
 	}
@@ -394,13 +383,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 	if len(s.ID) != 16 || len(s.SourceTypeID) != 16 || s.Title == "" {
 		return nil, ErrInvalid
 	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
-	}
-	prev, err := getTx(tx.Tx, s.ID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, s.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -439,16 +422,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 // credibility, and layout CASCADE. Artifacts or Subjects block with ErrInUse.
 // The returned changes include the released facet rows.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
-	if tx == nil || len(id) != 16 {
-		return nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
-	}
-	existing, err := getTx(tx.Tx, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	}
+	existing, err := loadForWrite(tx, userID, id)
 	if err != nil {
 		return nil, err
 	}
