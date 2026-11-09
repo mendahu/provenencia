@@ -53,7 +53,7 @@ Gathered from the three core docs; each doc keeps its own context.
 **Move an Artifact** ([`move-artifact-between-sources.md`](move-artifact-between-sources.md))
 
 - ~~Entry point, several at once, undo, composite key, Source-level values~~: settled 2026-11-09; the move is the whole Artifact-and-graph bundle, from either an Artifact or a graph, with no undo.
-- Whether Merge Sources ships in this spike as a convenience over the move. Splitting into a new Source is deferred.
+- ~~Merge Sources, move to a new Source~~: not built; moving bundles into an existing Source covers merging and splitting (user, 2026-11-09).
 
 **Metadata rethink** ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md))
 

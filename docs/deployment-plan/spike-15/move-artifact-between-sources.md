@@ -17,11 +17,14 @@ A researcher files an Artifact under one Source, builds an Evidence graph on it 
 - **Artifact and graph metadata travel for free.** `artifact_metadata`, `evidence_graph_metadata` and their layout rows hang off `artifact_id` and `graph_id` (map § 6.6), so the copy details and item numbers move with the bundle. If the target's type suggests different fields at those levels, filled values stay as extra fields.
 - **No undo** in this spike. Moving the bundle back is the way back.
 
-### Combining Sources
+### Merging and splitting Sources
 
-Two Sources that should be one (two pages of a census filed separately) are combined by moving each bundle of one into the other: the move already targets an existing Source. **Merge Sources** would be a convenience over that: move every bundle of Source B into Source A in one confirm, then offer to delete the emptied B. Whether it ships in this spike is open; it needs no engine work beyond the move and the existing Source delete.
+**Decision (user, 2026-11-09): the move is the only tool.** No Merge Sources and no "move to a new Source".
 
-**Splitting a Source** (move to a **new** Source, prefilled by Copy Source) is deferred: with the cited item on the Evidence graph, one census page Source with a graph per household already gives each household its own citation (map § 6.9), so splitting is no longer needed for citations.
+- **Merge:** move each bundle of Source B into Source A, then delete the emptied B with the existing Source delete.
+- **Split:** make the new Source first (Copy Source can prefill it), then move the bundles that belong there.
+
+A split follows bundle lines: Artifacts that share a graph always move together, so separating them means changing the graph's links first.
 
 ## What it touches in the schema
 
@@ -50,7 +53,7 @@ Citations, Observations, `evidence_graph_artifacts`, locators, depictions and id
 | Each of its graphs holds only this Artifact (the common case) | The Artifact and those graphs move |
 | A graph also holds other Artifacts | They join the bundle, and so do their other graphs; the confirm lists everything |
 | The bundle holds all the Source's graphs | It moves; the old Source gets a fresh empty Default graph so it keeps one (`ErrLastGraph`) |
-| The bundle holds all the Source's Artifacts | It moves; the old Source is left empty and is not deleted (Merge Sources would offer to) |
+| The bundle holds all the Source's Artifacts | It moves; the old Source is left empty and is not deleted |
 | A moved graph's name matches one on the target (two "Default"s) | Allowed: graph names are not unique per Source. The researcher can rename it |
 
 ## Side effects to name in the confirm
@@ -70,8 +73,7 @@ Citations, Observations, `evidence_graph_artifacts`, locators, depictions and id
 
 - ~~Entry point~~: the Artifact and the Evidence graph, one flow (user, 2026-11-09).
 - ~~Several Artifacts at once~~: the move is always the whole bundle, shown in the confirm (user, 2026-11-09).
-- ~~Move to a new Source~~: deferred; combining is covered by moving into an existing Source (user, 2026-11-09).
-- **Merge Sources.** Whether this spike ships it as a convenience over the move.
+- ~~Move to a new Source~~ and ~~Merge Sources~~: not built; the move does both, into an existing Source (user, 2026-11-09).
 - ~~Undo~~: not in this spike (user, 2026-11-09).
 - ~~Subjects' composite key~~: whatever works; prefer deferred foreign keys (user, 2026-11-09).
 - ~~Source-level values~~: not looked at (user, 2026-11-09).
