@@ -41,7 +41,7 @@ The two overlap only by accident: "image 37" means nothing without the file, and
 
 What follows from it:
 
-- **Citation formats do not read the locator,** except `{image}`, the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
+- **Citation formats do not read the locator,** except `{citation.image}`, the image number in the online-copy layer ("image 37 of 412") when the Artifact is a provider's image set.
 - **Missing access details are flagged, never invented.** A scan or download with no provider, URL or film number gets a citation whose copy layer is incomplete, and the preview says so.
 - **Copy details are captured when the Artifact is added,** while the researcher still knows where it came from: the import flow shows the Artifact's metadata fields, not only the Artifact page afterwards. This also raises the value of filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
 - **A physical original has no access path;** `holder` ("privately held by …") is its copy layer.
@@ -680,8 +680,8 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | Suggestions per level | `source_type_metadata_fields.level` (`source`, `artifact`, `graph`) | **Schema** |
 | Citation formats | `source_types.citation_full`, `citation_short`, `citation_list` (text, optional) (§ 6.3) | **Schema** |
 | Format engine | `core/citationformat`: parse, resolve, render; replaces `CitationLineDisplay` ([`citation-formats.md`](citation-formats.md) step 4) | Engine |
-| Format editor | On the Source type: the three formats, an insert-field picker, a live preview against a real Source, warnings for unknown fields | UI |
-| Item description | The `{item}` placeholder: the Citation label, else read from the graph (§ 6.5) | Engine |
+| Format editor | On the Source type: the three formats, an insert-field picker grouped by level, a live preview against a real Source, warnings for unknown fields; **Copy from** another type in the new type dialog | UI |
+| Item description | The `{citation.item}` placeholder: the Citation label, else read from the graph (§ 6.5) | Engine |
 | Printed page | The composer writes `page_label` on the locator's `page` selector; the field already exists | Engine and UI |
 | Seed | Types, fields, suggestions and EE formats for the first types (§ 6.8), installed at create (§ 6.4) | Seed |
 | Party roles | `role` terms the item reads: grantor, grantee, writer, recipient, testator, head of household ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 3.5) | Seed |
@@ -700,13 +700,14 @@ A small syntax of our own, modelled on the convention genealogy programs use for
 
 | Syntax | Meaning |
 | --- | --- |
-| `{key}` | The value of the metadata field with that key, as typed |
-| `{a\|b}` | The first of the two that has a value (`{short_title\|title}`, `{author_sort\|author}`) |
+| `{source.key}`, `{artifact.key}`, `{graph.key}` | The value of the metadata field with that key **on that level**, as typed: the Source, the Citation's Artifact, or the Citation's Evidence graph |
+| `{key}` | Shorthand: the most specific value, the graph's, else the Artifact's, else the Source's. Seeded formats use it for metadata so they work however finely the researcher files (§ 6.9) |
+| `{a\|b\|…}` | The first that has a value (`{short_title\|source.title}`, `{author_sort\|author}`) |
 | `[ … ]` | Optional group: removed entirely, its text and punctuation included, if any placeholder inside it is empty. Groups nest |
 | `*…*` | Italic |
 | `\{` `\[` `\*` `\\` | A literal character |
 
-Everything else is literal text, including quotation marks and parentheses.
+Everything else is literal text, including quotation marks and parentheses. The level prefix is what lets a format pick a value from a particular level (user, 2026-11-09): `{source.url}` for the site a Source is from, `{artifact.url}` for the image the Citation was drawn on.
 
 **Empty placeholders outside a group** print nothing, and the preview names them as missing. So a format says which fields it expects (outside groups) and which are optional (inside groups), and the "missing fields" warning in the citation preview comes from the format itself.
 
@@ -714,25 +715,31 @@ Everything else is literal text, including quotation marks and parentheses.
 
 #### Built-in placeholders
 
-Values that are not metadata, with reserved names a metadata key cannot take:
+Values that are not metadata, in the same level namespaces. Their names (`title`, `type`, `date`, `label`, `name`, `page`, `image`, `item`) are reserved: a metadata key cannot take them.
 
 | Placeholder | Value |
 | --- | --- |
-| `{title}` | The Source title |
-| `{type}` | The Source type label |
-| `{date}`, `{date:year}`, `{date:full}` | The Source date. It is a structured DateValue, so formatting it is safe: the year only, or day-month-year ("3 March 1930") at whatever precision the date has. `{date}` is `{date:full}` |
-| `{page}` | The Citation's printed page (`page_label`) |
-| `{image}` | The Citation's page in the file (`artifact_page`), for the online-image layer ("image 37") |
-| `{item}` | The item: the Citation label, else read from the graph (§ 6.5) |
+| `{source.title}` | The Source title |
+| `{source.type}` | The Source type label |
+| `{source.date}`, `{source.date:year}`, `{source.date:full}` | The Source date. It is a structured DateValue, so formatting it is safe: the year only, or day-month-year ("3 March 1930") at whatever precision the date has. `{source.date}` is `{source.date:full}` |
+| `{artifact.label}` | The Artifact label |
+| `{graph.name}` | The Evidence graph name |
+| `{citation.page}` | The Citation's printed page (`page_label`) |
+| `{citation.image}` | The Citation's page in the file (`artifact_page`), for the online-image layer ("image 37") |
+| `{citation.item}` | The item: the Citation label, else read from the graph (§ 6.5) |
+
+The Citation level has only built-ins: Citations carry no metadata (§ 6.9).
 
 #### Resolving a placeholder
 
-For a metadata key, the engine reads the value on the Citation's Evidence graph, else on its Artifact, else on the Source (§ 6.6). For the source list, which describes the Source as a whole, only Source values and `{title}`, `{type}`, `{date}` are read.
+A level-prefixed placeholder reads that level only. An unprefixed key reads the Citation's Evidence graph, else its Artifact, else the Source (§ 6.6). The **list** form describes the Source as a whole, so it reads Source values only: an unprefixed key there means `source.key`, and an `artifact.`, `graph.` or `citation.` placeholder is an error the editor reports.
+
+The editor's **Insert field** picker groups fields by level (Source, Artifact, Evidence graph, Citation) and inserts the prefixed form; the researcher can delete the prefix to get the shorthand.
 
 #### Storage
 
 - Three nullable text columns on `source_types`: `citation_full`, `citation_short`, `citation_list`. Editing them is a Source type edit, audited as one today.
-- **Field references by id.** The editor shows `{enumeration_district}`, but the stored text names the field by id, so renaming a key cannot break a format, and a key held by both a product field and a researcher's field is never ambiguous. The editor resolves a typed key when the format is saved and asks if two fields share it.
+- **Field references by id.** The editor shows `{graph.enumeration_district}`, but the stored text names the field by id, so renaming a key cannot break a format, and a key held by both a product field and a researcher's field is never ambiguous. The editor resolves a typed key when the format is saved and asks if two fields share it.
 - **Delete impact.** A field named in any type's format is in use: deleting it is refused, with the types that use it listed ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md)).
 - Copy Source copies nothing new here: formats belong to the type, and the copy chooses its type.
 
@@ -744,6 +751,8 @@ For a metadata key, the engine reads the value on the Citation's Evidence graph,
 
 On the Source type's page: the three formats as text fields, an **Insert field** picker (metadata fields and built-ins), a **live preview** against a real Source of that type the researcher picks, and warnings for unknown fields and unbalanced brackets. Researchers should not have to remember the syntax to use it.
 
+The **new type** dialog has **Copy from**: pick an existing type, and the new one starts with its three formats and its suggestions at every level, ready to edit. Without it, a new type starts blank (user, 2026-11-09).
+
 ### 6.4 Getting the seed into existing projects
 
 **Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row.
@@ -752,7 +761,7 @@ Revisit before release, when existing projects belong to other researchers.
 
 ### 6.5 Reading the item from the graph
 
-This is where "build the graph, get the citation" pays off. The `{item}` placeholder (§ 6.3) is built for each Citation from the Subjects whose Observations cite it:
+This is where "build the graph, get the citation" pays off. The `{citation.item}` placeholder (§ 6.3) is built for each Citation from the Subjects whose Observations cite it:
 
 1. If the Citation has a `label`, use it (the researcher's override).
 2. Else, find the event Subject with Observations on this Citation: its `event_type` gives "baptism of", its `date` gives the item date, and its principal participant's recorded `name` gives the person.
@@ -933,12 +942,12 @@ Written for Provenencia from the conventions in § 2, not copied from *Evidence 
 **Census**
 
 ```text
-full:  {date:year} [{creator} ]census, {jurisdiction}[, {schedule}][, ED {enumeration_district}]
-       [, p. {page}][, dwelling {dwelling_number}][, family {family_number}][, line {line_number}]
-       [, {item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])][; citing {citing}].
-short: {date:year} [{creator} ]census, {jurisdiction}[, ED {enumeration_district}][, p. {page}]
-       [, dwell. {dwelling_number}][, fam. {family_number}][, {item}].
-list:  {jurisdiction}. {date:year} [{creator} ]census[, {schedule}].[ {format}.][ *{provider}*.][ {url}.]
+full:  {source.date:year} [{creator} ]census, {jurisdiction}[, {schedule}][, ED {enumeration_district}]
+       [, p. {citation.page}][, dwelling {dwelling_number}][, family {family_number}][, line {line_number}]
+       [, {citation.item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])][; citing {citing}].
+short: {source.date:year} [{creator} ]census, {jurisdiction}[, ED {enumeration_district}][, p. {citation.page}]
+       [, dwell. {dwelling_number}][, fam. {family_number}][, {citation.item}].
+list:  {jurisdiction}. {source.date:year} [{creator} ]census[, {schedule}].
 ```
 
 > 1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (https://www.ancestry.com : accessed 12 March 2025); citing NARA microfilm publication T9, roll 393.
@@ -946,48 +955,48 @@ list:  {jurisdiction}. {date:year} [{creator} ]census[, {schedule}].[ {format}.]
 **Birth certificate** (marriage and death certificates are the same, with their own word)
 
 ```text
-full:  [{creator}, ]birth certificate[ no. {document_number}][ ({date:full})][, {item}][, vol. {volume}]
-       [, p. {page}][, entry {entry_number}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
+full:  [{creator}, ]birth certificate[ no. {document_number}][ ({source.date:full})][, {citation.item}][, vol. {volume}]
+       [, p. {citation.page}][, entry {entry_number}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
        [; {repository}].
-short: [{creator}, ]birth certificate[ no. {document_number}][, {item}].
+short: [{creator}, ]birth certificate[ no. {document_number}][, {citation.item}].
 list:  {jurisdiction}.[ {creator}.] Birth certificates.[ {repository}.]
 ```
 
 **Church register**
 
 ```text
-full:  {creator}[ ({jurisdiction})], *{title}*[, vol. {volume}][, p. {page}][, fol. {folio}]
-       [, no. {entry_number}][, {item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
+full:  {creator}[ ({jurisdiction})], *{source.title}*[, vol. {volume}][, p. {citation.page}][, fol. {folio}]
+       [, no. {entry_number}][, {citation.item}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])]
        [; film {film_number}[, item {item_number}]][; {repository}].
-short: {creator}, *{short_title|title}*[, vol. {volume}][, p. {page}][, no. {entry_number}].
-list:  {creator}[ ({jurisdiction})]. *{title}*.[ {repository}.]
+short: {creator}, *{short_title|source.title}*[, vol. {volume}][, p. {citation.page}][, no. {entry_number}].
+list:  {creator}[ ({jurisdiction})]. *{source.title}*.[ {repository}.]
 ```
 
 **Book**
 
 ```text
-full:  {author}, *{title}*[, {edition}][, vol. {volume}][ ([{publication_place}: ]{publisher}[, {date:year}])]
-       [, {page}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
-short: {author}, *{short_title|title}*[, {page}].
-list:  {author_sort|author}. *{title}*.[ {edition}.][ [{publication_place}: ]{publisher}[, {date:year}].]
+full:  {author}, *{source.title}*[, {edition}][, vol. {volume}][ ([{publication_place}: ]{publisher}[, {source.date:year}])]
+       [, {citation.page}][; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
+short: {author}, *{short_title|source.title}*[, {citation.page}].
+list:  {author_sort|author}. *{source.title}*.[ {edition}.][ [{publication_place}: ]{publisher}[, {source.date:year}].]
 ```
 
 **Newspaper item**
 
 ```text
-full:  "{title}," *{published_in}*[ ({jurisdiction})], {date:full}[, p. {page}][, col. {column}]
+full:  "{source.title}," *{published_in}*[ ({jurisdiction})], {source.date:full}[, p. {citation.page}][, col. {column}]
        [; {format}, *{provider}*][ ({url}[ : accessed {accessed_date}])].
-short: "{title}," *{published_in}*, {date:full}.
+short: "{source.title}," *{published_in}*, {source.date:full}.
 list:  *{published_in}*[ ({jurisdiction})].
 ```
 
 **Website or online database**
 
 ```text
-full:  [{creator}, ]"{title}," [{format}, ]*{site_name}*[ ({url}[ : accessed {accessed_date}])]
-       [, {item}][; citing {citing}].
-short: "{title}"[, {item}].
-list:  [{creator}. ]"{title}." [{format}. ]*{site_name}*.[ {url}.]
+full:  [{creator}, ]"{source.title}," [{format}, ]*{site_name}*[ ({url}[ : accessed {accessed_date}])]
+       [, {citation.item}][; citing {citing}].
+short: "{source.title}"[, {citation.item}].
+list:  [{creator}. ]"{source.title}." *{site_name}*.[ {url}.]
 ```
 
 ### 6.9 One EE citation, many Provenencia Citations
@@ -1020,17 +1029,17 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 - ~~Install for existing projects~~: descoped; create-time only, plus a one-off command for the dogfood projects (user, 2026-11-09, § 6.4).
 - **Same key, two origins.** Whether to offer moving a researcher's own `author` (or similar) values into the product field, and when.
 - ~~Generic template or a pattern choice for user types~~: any type has its own editable formats (user, 2026-11-09, § 6.3).
-- **Starting formats for a new type.** Whether a researcher's new type starts blank, or with a copy of a seeded type's formats they choose.
+- ~~Starting formats for a new type~~: the researcher chooses. The new type dialog has **Copy from**, which copies another type's three formats and its suggestions (user, 2026-11-09).
 - **Jurisdiction from the graph.** The graph often has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text would save typing without making the Source depend on interpretation.
 - **Principal Subject.** When a Citation supports several people (a census household, a marriage), which one names the item: head of household, both spouses, the person the researcher opened the composer from?
 - ~~Editable templates~~: yes, citation formats are data on the type (user, 2026-11-09, § 6.3).
-- **Per-Source override.** Whether a Source can override its type's format for an odd record (a seeded `citation_override` field holding finished text, or a format of its own).
+- ~~Per-Source override~~: no; `{a|b}` fallbacks and optional groups are enough for now (user, 2026-11-09).
 - ~~Layout at the Artifact and item levels~~: same as the Source, with templating per level (user, 2026-11-09).
 - ~~Where the item lives~~: on the Evidence graph; the composer gets no new fields (user, 2026-11-09, § 6.9).
 - **How much seed.** The proposed first seed in § 6.8 is up for review (user, 2026-11-09).
 - **Field vocabulary name.** Keep `source_metadata_fields` for all three levels, or rename it to `metadata_fields`.
 - **Printed page map.** Whether a per-Artifact page map ("image 37 is page 23") should replace typing the printed page in the composer (§ 6.9).
 - **One graph, several items.** Whether the app should nudge a researcher toward one graph per household when a Source's type suggests item fields at the graph level.
-- **Syntax details.** Whether `{a|b}` is enough, or the syntax needs anything more before the seed is written; how the editor reports an unbalanced bracket.
-- **More forms.** Whether three forms (full, short, list) are enough, or a type needs a fourth (for example, a form for an export).
+- ~~Syntax details~~: `{a|b}` is enough for now (user, 2026-11-09). Still open: how the editor reports an unbalanced bracket.
+- ~~More forms~~: three (full, short, list) are enough for now (user, 2026-11-09).
 - **Edition check.** Verify § 3 against the edition of *Evidence Explained* on hand, including how it treats DNA results and online trees.
