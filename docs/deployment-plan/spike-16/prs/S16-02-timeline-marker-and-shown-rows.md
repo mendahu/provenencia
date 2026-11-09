@@ -1,6 +1,6 @@
 # S16-02 — The Timeline places a missing death and builds what it shows
 
-**Status:** Planned
+**Status:** Landed in [#764](https://github.com/mendahu/provenencia/pull/764) (2026-11-09)
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the placeholder marker, its dashed stub and the points are drawn as board S13-D4 draws them; only the row a placeholder sits beside changes, a bugfix back to R-24a; user, 2026-11-09)
@@ -27,6 +27,14 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The version bump is 0.5.0 → 0.5.1 (main was at 0.5.0, not 0.4.4).
+- T-6's same-year case uses day dates (a baptism in March, a burial in September 1850): two year-wide spans start at the same y, so the baptism cannot sit above the death stub.
+- T-7's nearest-point check compares the found mark's `pointY` with the clicked one: points of one year share a y, and the earlier in item order wins the tie.
+- `PersonTimelinePlacement.KeptScale` keeps its four fields private; its init and `pointsPerYear(for:viewportHeight:)` are the interface the plan names.
+- STEP-1's and STEP-3's failing-first tests were written after the code, in the same commit.
 
 ## 1. Objective
 
