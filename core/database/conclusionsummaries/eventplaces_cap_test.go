@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
@@ -148,19 +148,15 @@ func TestCraftedEventPlaces(t *testing.T) {
 		want.Add(vocabkey.Person, w.pat)
 		cold := func(what string, read func()) {
 			t.Helper()
-			d := databasetest.Fastest(2, func() time.Duration {
-				w.c.Graph().Drop()
-				if err := catalogsession.WarmOnOpen(w.c); err != nil {
-					t.Fatal(err)
-				}
-				return databasetest.Since(read)
-			})
+			d := catalogsessiontest.Cold(t, w.c, 2, read)
 			databasetest.WithinBudget(t, what+" at 4,000 places", d, time.Second)
 		}
 		cold("EventsByIDs", func() { ev = w.event(t) })
 		cold("PersonLifeOwners", func() { owners = w.owners(t) })
+		var rows conclusionsummaries.Summaries
 		cold("RowsForSearch", func() {
-			if _, err := conclusionsummaries.RowsForSearch(w.c.Graph(), want); err != nil {
+			var err error
+			if rows, err = conclusionsummaries.RowsForSearch(w.c.Graph(), want); err != nil {
 				t.Fatal(err)
 			}
 		})
@@ -172,6 +168,10 @@ func TestCraftedEventPlaces(t *testing.T) {
 			if !contains(first, id) {
 				t.Fatalf("place %x is not among the first %d in link order", id, most)
 			}
+		}
+		row, ok := rows.Event(w.birth)
+		if !ok || len(row.Places) > most {
+			t.Fatalf("the search row names %d places (found %v), want at most %d", len(row.Places), ok, most)
 		}
 	})
 }
@@ -215,5 +215,8 @@ func TestEventPlacesCapInputs(t *testing.T) {
 	}
 	if contains(placeIDs(after.Places), w.places[0]) {
 		t.Fatal("the removed place is still named")
+	}
+	if !contains(placeIDs(after.Places), w.places[20]) {
+		t.Fatal("the 21st place did not move in")
 	}
 }

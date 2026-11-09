@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/recordlinks"
@@ -81,11 +81,7 @@ func TestRecordLinksBudgets(t *testing.T) {
 	t.Run("fixture", func(t *testing.T) { threeStrong(t, read(), 50) })
 
 	t.Run("cold", func(t *testing.T) {
-		d := databasetest.Fastest(2, func() time.Duration {
-			f.C.Graph().Drop()
-			must(t, catalogsession.WarmOnOpen(f.C))
-			return databasetest.Since(func() { read() })
-		})
+		d := catalogsessiontest.Cold(t, f.C, 2, func() { read() })
 		databasetest.WithinBudget(t, "cold read at 50 graphs", d, budgetLinksCold)
 	})
 

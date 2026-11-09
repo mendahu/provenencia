@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
@@ -179,11 +180,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	// The first proposal after an open.
 	t.Run("cold", func(t *testing.T) {
-		d := databasetest.Fastest(2, func() time.Duration {
-			f.c.Graph().Drop()
-			must(t, catalogsession.WarmOnOpen(f.c))
-			return databasetest.Since(func() { propose() })
-		})
+		d := catalogsessiontest.Cold(t, f.c, 2, func() { propose() })
 		databasetest.WithinBudget(t, "cold proposal", d, budgetCold)
 	})
 
@@ -241,11 +238,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	proposeOnePlace := func() { f.propose(onePlaceGraph, nil) }
 
 	t.Run("births at one place cold", func(t *testing.T) {
-		d := databasetest.Fastest(2, func() time.Duration {
-			f.c.Graph().Drop()
-			must(t, catalogsession.WarmOnOpen(f.c))
-			return databasetest.Since(proposeOnePlace)
-		})
+		d := catalogsessiontest.Cold(t, f.c, 2, proposeOnePlace)
 		databasetest.WithinBudget(t, "cold proposal on the one-place Source", d, budgetOnePlaceCold)
 	})
 

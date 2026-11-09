@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/persondetail"
@@ -15,18 +15,6 @@ import (
 
 // capBudget is bar 2 of Spike 16: a crafted project's section draws in under a second.
 const capBudget = time.Second
-
-// cold times one read of the catalog after its graph cache is dropped and warmed.
-func (w *kinWorld) cold(read func()) time.Duration {
-	w.t.Helper()
-	return databasetest.Fastest(2, func() time.Duration {
-		w.c.Graph().Drop()
-		if err := catalogsession.WarmOnOpen(w.c); err != nil {
-			w.t.Fatal(err)
-		}
-		return databasetest.Since(read)
-	})
-}
 
 // TestCraftedFamily: a Person with 4,000 children reads in under a second and
 // holds the first MaxKinPerRole of them (S16-01 AC-1.1).
@@ -46,7 +34,7 @@ func TestCraftedFamily(t *testing.T) {
 	w.k.Commit(append([][]byte{pat}, kids...)...)
 
 	var f persondetail.Family
-	d := w.cold(func() {
+	d := catalogsessiontest.Cold(w.t, w.c, 2, func() {
 		var err error
 		if f, _, _, err = persondetail.PersonFamily(w.c, pat); err != nil {
 			t.Fatal(err)
@@ -97,7 +85,7 @@ func TestCraftedClaims(t *testing.T) {
 	w.k.Commit(pat)
 
 	var groups []persondetail.ClaimGroup
-	d := w.cold(func() {
+	d := catalogsessiontest.Cold(w.t, w.c, 2, func() {
 		var err error
 		if groups, err = persondetail.Claims(w.c, pat); err != nil {
 			t.Fatal(err)
