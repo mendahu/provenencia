@@ -71,15 +71,21 @@ struct PVTextAreaTests {
         fieldEditor.isFieldEditor = true
         let plain = NSTextView()
         let both = NSView()
+        both.frame = NSRect(x: 0, y: 0, width: 100, height: 100)
+        fieldEditor.frame = both.bounds
+        plain.frame = both.bounds
         both.addSubview(fieldEditor)
         both.addSubview(plain)
-        #expect(both.firstDescendantTextView() === plain)
+        let point = NSPoint(x: 50, y: 50)
+        #expect(both.descendantTextView(containing: point) === plain)
 
         let only = NSView()
         let editor = NSTextView()
         editor.isFieldEditor = true
+        only.frame = NSRect(x: 0, y: 0, width: 100, height: 100)
+        editor.frame = only.bounds
         only.addSubview(editor)
-        #expect(only.firstDescendantTextView() == nil)
+        #expect(only.descendantTextView(containing: point) == nil)
     }
 
     @Test func twoRoutersOnOneTextViewDoNotLoop() {
@@ -95,6 +101,23 @@ struct PVTextAreaTests {
         let notification = Notification(name: NSText.didChangeNotification, object: fixture.textView)
         _ = fixture.textView.delegate?.perform(selector, with: notification)
         #expect(fixture.spy.changeCount == 1)
+    }
+
+    @Test func textViewSearchPicksTheTextViewUnderTheArea() {
+        let container = NSView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
+        let first = NSTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 80))
+        let second = NSTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 80))
+        let firstScroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 200, height: 80))
+        let secondScroll = NSScrollView(frame: NSRect(x: 0, y: 100, width: 200, height: 80))
+        firstScroll.documentView = first
+        secondScroll.documentView = second
+        container.addSubview(firstScroll)
+        container.addSubview(secondScroll)
+        let marker = NSView(frame: NSRect(x: 0, y: 100, width: 200, height: 80))
+        container.addSubview(marker)
+
+        let midpoint = marker.convert(NSPoint(x: marker.bounds.midX, y: marker.bounds.midY), to: nil)
+        #expect(container.descendantTextView(containing: midpoint) === second)
     }
 
     @Test func routerStillForwardsEditsToTheOriginalDelegate() {
