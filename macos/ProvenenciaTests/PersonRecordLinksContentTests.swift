@@ -6,7 +6,7 @@ struct PersonRecordLinksContentTests {
     private func johann(removing graphID: String? = nil) -> PersonRecordLinksContent {
         let sources = PersonSourcesContent(
             groups: PersonSourcesPreviewData.johannClaims, sourceTypes: PersonSourcesPreviewData.types,
-            orders: NameFormatOrders(), expanded: []
+            orders: NameFormatOrders()
         )
         var locations = sources.graphLocations
         if let graphID { locations[graphID] = nil }

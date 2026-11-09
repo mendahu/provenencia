@@ -118,4 +118,7 @@ struct CircularLinkDataset<ID: Hashable>: Equatable {
 @MainActor @Observable
 final class CircularLinkHover<ID: Hashable> {
     var id: ID?
+
+    /// The highlighted node: the pointer's, else the keyboard's `focused`.
+    func highlighted(focused: ID?) -> ID? { id ?? focused }
 }

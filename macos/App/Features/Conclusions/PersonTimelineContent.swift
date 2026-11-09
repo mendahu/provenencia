@@ -9,14 +9,14 @@ import Foundation
 /// and never sorts or dates anything itself.
 struct PersonTimelineContent: Equatable {
     /// Dated events shown before "Show N more", and likewise the undated ones.
-    static let eventFoldLimit = 50
+    static let eventFold = ConclusionFold(limit: 50, minimumHidden: 1)
 
     /// Other people shown on one event before "Show N more": the board's five
     /// at Regular and twelve at Wide, so a fold is one or two rows of cards.
-    static func participantFoldLimit(_ widthClass: PVWidthClass) -> Int {
+    static func participantFold(_ widthClass: PVWidthClass) -> ConclusionFold {
         switch widthClass {
-        case .regular: 5
-        case .wide: 12
+        case .regular: ConclusionFold(limit: 5, minimumHidden: 1)
+        case .wide: ConclusionFold(limit: 12, minimumHidden: 1)
         }
     }
 
@@ -108,25 +108,49 @@ struct PersonTimelineContent: Equatable {
     /// What each point or cap on the lifeline is called, by item id: a row's or
     /// marker's spoken label, including the rows a fold hides.
     private(set) var pointLabels: [String: String] = [:]
-    /// The first item each fold would reveal, folded or not: a row's id, or a
-    /// participant card's.
+    /// The first item each fold's next page would reveal: a row's id, or a participant
+    /// card's; absent when the fold hides nothing.
     private var revealed: [Fold: String] = [:]
+    /// The ids of the event rows the dated fold counts, in order: the dated rows before the
+    /// death marker, a recorded birth's row among them.
+    private var datedFoldIDs: [String] = []
     let isEmpty: Bool
 
     /// The id of the first item that unfolding `fold` adds, for the focus to land
     /// on; nil when the list has nothing to fold.
     func firstRevealed(by fold: Fold) -> String? { revealed[fold] }
 
+    /// How many pages of the dated fold show the row `eventID`, for a click on its point on
+    /// the lifeline; nil for an id the dated fold never hides (an undated row, a placeholder,
+    /// a row after the death marker).
+    func pages(toShow eventID: String) -> Int? {
+        datedFoldIDs.firstIndex(of: eventID).map {
+            Self.eventFold.pages(toShow: $0, count: datedFoldIDs.count)
+        }
+    }
+
+    /// Whether `id` (a row's event id or a participant card's id) is drawn.
+    func isShown(_ id: String) -> Bool {
+        items.compactMap(\.eventRow).contains { $0.id == id || $0.participants.contains { $0.id == id } }
+    }
+
+    /// The event id of the row that shows the card `id`; nil for a row's title or an unknown id.
+    func row(holdingCard id: String) -> String? {
+        items.compactMap(\.eventRow).first { $0.participants.contains { $0.id == id } }?.id
+    }
+
     init(
         timeline: CatalogPersonTimeline,
-        expanded: Set<Fold> = [],
+        folds: ConclusionFoldState<Fold> = ConclusionFoldState(),
         locale: Locale = .autoupdatingCurrent,
         orders: NameFormatOrders = NameFormatOrders(),
         widthClass: PVWidthClass = .regular
     ) {
         isEmpty = timeline.events.isEmpty
-        let limit = Self.participantFoldLimit(widthClass)
-        let rows = timeline.events.map { Self.row($0, expanded: expanded, limit: limit, locale: locale, orders: orders) }
+        let participantFold = Self.participantFold(widthClass)
+        let rows = timeline.events.map {
+            Self.row($0, folds: folds, fold: participantFold, locale: locale, orders: orders)
+        }
         allSpans = rows.compactMap { row in row.span.map { Span(id: row.id, span: $0, spokenLabel: row.spokenLabel) } }
         guard !rows.isEmpty else { return }
         let rowsByID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -143,7 +167,9 @@ struct PersonTimelineContent: Equatable {
         }
         for event in timeline.events {
             revealed[.participants(eventId: event.event.id)] =
-                ConclusionFold.firstRevealed(event.participants, limit: limit, minimumHidden: 1).map {
+                participantFold.firstRevealed(
+                    event.participants, pages: folds.pages(.participants(eventId: event.event.id))
+                ).map {
                     Self.participantLinkID(eventId: event.event.id, personId: $0.person.id)
                 }
         }
@@ -188,28 +214,25 @@ struct PersonTimelineContent: Equatable {
         // Only event rows count toward the limit; a marker or placeholder among the hidden
         // rows stays where it is, after the one "Show N more" for them.
         let counted = before.filter { $0.eventRow != nil }
-        revealed[.dated] = ConclusionFold.firstRevealed(counted, limit: Self.eventFoldLimit, minimumHidden: 1)?.id
-        if !expanded.contains(.dated) {
-            let fold = ConclusionFold.shown(counted, limit: Self.eventFoldLimit, minimumHidden: 1, expanded: false)
-            if fold.hidden > 0 {
-                let hiddenIDs = Set(counted.dropFirst(fold.shown.count).map(\.id))
-                var placed = false
-                before = before.compactMap { item in
-                    guard item.eventRow != nil, hiddenIDs.contains(item.id) else { return item }
-                    if placed { return nil }
-                    placed = true
-                    return .more(.dated, count: fold.hidden)
-                }
+        datedFoldIDs = counted.map(\.id)
+        revealed[.dated] = Self.eventFold.firstRevealed(counted, pages: folds.pages(.dated))?.id
+        let datedFold = Self.eventFold.shown(counted, pages: folds.pages(.dated))
+        if datedFold.hidden > 0 {
+            let hiddenIDs = Set(counted.dropFirst(datedFold.shown.count).map(\.id))
+            var placed = false
+            before = before.compactMap { item in
+                guard item.eventRow != nil, hiddenIDs.contains(item.id) else { return item }
+                if placed { return nil }
+                placed = true
+                return .more(.dated, count: datedFold.hidden)
             }
         }
 
-        revealed[.undated] = ConclusionFold.firstRevealed(undated, limit: Self.eventFoldLimit, minimumHidden: 1)?.id
+        revealed[.undated] = Self.eventFold.firstRevealed(undated, pages: folds.pages(.undated))?.id
         var undatedItems: [Item] = []
         if !undated.isEmpty {
             undatedItems.append(.undatedHeader)
-            let fold = ConclusionFold.shown(
-                undated, limit: Self.eventFoldLimit, minimumHidden: 1, expanded: expanded.contains(.undated)
-            )
+            let fold = Self.eventFold.shown(undated, pages: folds.pages(.undated))
             undatedItems += fold.shown.map { .row($0) }
             if fold.hidden > 0 { undatedItems.append(.more(.undated, count: fold.hidden)) }
         }
@@ -254,8 +277,8 @@ struct PersonTimelineContent: Equatable {
 
     private static func row(
         _ event: CatalogPersonEvent,
-        expanded: Set<Fold>,
-        limit: Int,
+        folds: ConclusionFoldState<Fold>,
+        fold participantFold: ConclusionFold,
         locale: Locale,
         orders: NameFormatOrders
     ) -> Row {
@@ -270,9 +293,8 @@ struct PersonTimelineContent: Equatable {
         if let tail = ageWords(event.age).spoken {
             spoken = L10n.DesignSystem.spokenJoin(spoken, tail)
         }
-        let fold = Fold.participants(eventId: summary.id)
-        let shown = ConclusionFold.shown(
-            event.participants, limit: limit, minimumHidden: 1, expanded: expanded.contains(fold)
+        let shown = participantFold.shown(
+            event.participants, pages: folds.pages(.participants(eventId: summary.id))
         ).shown
         return Row(
             id: summary.id,

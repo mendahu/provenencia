@@ -4,8 +4,13 @@ import Testing
 
 struct PersonFamilyContentTests {
     private let en = Locale(identifier: "en_US")
-    private func content(_ family: CatalogPersonFamily, expanded: Set<PersonFamilyContent.Fold> = []) -> PersonFamilyContent {
-        PersonFamilyContent(family: family, expanded: expanded, locale: en)
+    private func content(_ family: CatalogPersonFamily, folds: ConclusionFoldState<PersonFamilyContent.Fold> = ConclusionFoldState()) -> PersonFamilyContent {
+        PersonFamilyContent(family: family, folds: folds, locale: en)
+    }
+    private func pages(_ revealed: [PersonFamilyContent.Fold], _ count: Int = 1) -> ConclusionFoldState<PersonFamilyContent.Fold> {
+        var state = ConclusionFoldState<PersonFamilyContent.Fold>()
+        for fold in revealed { state.reveal(fold, pages: count) }
+        return state
     }
     private func names(_ tiles: [PersonCardLink]) -> [String] { tiles.map(\.content.title.text) }
 
@@ -102,7 +107,7 @@ struct PersonFamilyContentTests {
             person: PersonFamilyPreviewData.johann,
             originSiblings: [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [])]
         )
-        let tiles = content(family, expanded: [.children(0)]).groups[0].children
+        let tiles = content(family, folds: pages([.children(0)])).groups[0].children
         #expect(tiles.count == 50 && names(tiles) == (0..<50).map { "Kid \($0)" })
         #expect(Set(tiles.map(\.id)).count == 50)
     }
@@ -110,7 +115,7 @@ struct PersonFamilyContentTests {
     private typealias Data = PersonFamilyPreviewData
 
     @Test func foldsEachListAtThirty() {
-        #expect(PersonFamilyContent.foldLimit == 30)
+        #expect(PersonFamilyContent.fold.limit == 30)
         let kids = (0..<50).map { Data.member("kid\($0)", "Kid \($0)") }
         let children = content(CatalogPersonFamily(
             units: [Data.unit(.partner, partners: [Data.member("sam", "Sam Weber")], children: kids)],
@@ -132,7 +137,8 @@ struct PersonFamilyContentTests {
             units: [Data.unit(.siblings, children: siblings)], person: Data.johann,
             originSiblings: [Data.origin(Data.johannMember, [])] + siblings.dropLast().map { Data.origin($0, []) }
         ))
-        #expect(sibs.siblings.count == 30 && sibs.siblingsHidden == 10)
+        // The person always shows beside the first 30 others.
+        #expect(sibs.siblings.count == 31 && sibs.siblingsHidden == 9)
 
         let partners = (0..<40).map { Data.unit(.partner, partners: [Data.member("mate\($0)", "Mate \($0)")]) }
         let groups = content(CatalogPersonFamily(
@@ -155,12 +161,12 @@ struct PersonFamilyContentTests {
             originSiblings: [Data.origin(Data.johannMember, Array(0..<40))] + siblings.map { Data.origin($0, []) }
         )
         let folded = content(family)
-        #expect(folded.parentSetsHidden == 10 && folded.siblingsHidden == 11 && folded.groupsHidden == 10)
+        #expect(folded.parentSetsHidden == 10 && folded.siblingsHidden == 10 && folded.groupsHidden == 10)
         #expect(folded.groups[0].childrenHidden == 20)
 
-        var everything: Set<PersonFamilyContent.Fold> = [.parentSets, .siblings, .partners]
-        for index in 0..<40 { everything.insert(.children(index)) }
-        let open = content(family, expanded: everything)
+        var everything: [PersonFamilyContent.Fold] = [.parentSets, .siblings, .partners]
+        for index in 0..<40 { everything.append(.children(index)) }
+        let open = content(family, folds: pages(everything))
         #expect(open.parentSets.count == 40 && open.siblings.count == 41 && open.groups.count == 40)
         #expect(open.parentSetsHidden == 0 && open.siblingsHidden == 0 && open.groupsHidden == 0)
         #expect(open.groups.allSatisfy { $0.children.count == 50 && $0.childrenHidden == 0 })
@@ -179,6 +185,67 @@ struct PersonFamilyContentTests {
         #expect(folded.siblings.count == 31 && folded.siblingsHidden == 19)
         #expect(names(folded.siblings.map(\.tile)) == (0..<30).map { "Sib \($0)" } + ["Johann Weber"])
         #expect(folded.siblings.last?.tile.content.isFocus == true)
+    }
+
+    @Test func childrenAndSiblingsPage() {
+        let kids = (0..<100).map { Data.member("kid\($0)", "Kid \($0)") }
+        let hundred = CatalogPersonFamily(
+            units: [Data.unit(.partner, partners: [Data.member("sam", "Sam Weber")], children: kids)],
+            person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        )
+        let counts = (0...2).map { content(hundred, folds: pages([.children(0)], $0)).groups[0].children.count }
+        #expect(counts == [30, 80, 100])
+        let folded = content(hundred)
+        #expect(folded.firstRevealed(by: .children(0)) == "r-0-kid30")
+        #expect(PersonFamilyContent.fold.nextPageCount(hidden: folded.groups[0].childrenHidden) == 50)
+        #expect(content(hundred, folds: pages([.children(0)], 1)).firstRevealed(by: .children(0)) == "r-0-kid80")
+        #expect(content(hundred, folds: pages([.children(0)], 2)).firstRevealed(by: .children(0)) == nil)
+
+        // Thirty-two parent sets with two partners each, folded at thirty.
+        let sets = (0..<32).map {
+            Data.unit(.parents, partners: [Data.member("a\($0)", "A \($0)"), Data.member("b\($0)", "B \($0)")])
+        }
+        let parents = content(CatalogPersonFamily(
+            units: sets, person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        ))
+        #expect(parents.parentSets.count == 30)
+        #expect(parents.firstRevealed(by: .parentSets) == "l-p30-a30")
+
+        // 130 siblings with the person 40th in Go's order: the fold counts the others only.
+        let others = (0..<129).map { Data.member("sib\($0)", "Sib \($0)") }
+        let origin = others[..<39].map { Data.origin($0, []) } + [Data.origin(Data.johannMember, [])]
+            + others[39...].map { Data.origin($0, []) }
+        let family = CatalogPersonFamily(
+            units: [Data.unit(.siblings, children: others)], person: Data.johann, originSiblings: origin
+        )
+        let closed = content(family)
+        #expect(closed.siblings.count == 31 && closed.siblings.last?.tile.content.isFocus == true)
+        #expect(closed.siblingsHidden == 99)
+        #expect(PersonFamilyContent.fold.nextPageCount(hidden: closed.siblingsHidden) == 50)
+        #expect(closed.firstRevealed(by: .siblings) == "l-s-sib30")
+        let paged = content(family, folds: pages([.siblings]))
+        #expect(paged.siblings.count == 81 && paged.siblingsHidden == 49)
+        #expect(paged.siblings[39].tile.content.isFocus)
+        #expect(paged.firstRevealed(by: .siblings) == "l-s-sib80")
+        #expect(paged.firstRevealed(by: .siblings) != paged.siblings[39].tile.id)
+    }
+
+    @Test func partnersFoldNamesTheFirstRevealedUnit() {
+        let tileID = PersonFamilyContent.tileID
+        let partners = (0..<31).map { Data.unit(.partner, partners: [Data.member("sp\($0)", "Spouse \($0)")]) }
+        let partnered = content(CatalogPersonFamily(
+            units: partners, person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        ))
+        #expect(partnered.groups.count == 30)
+        #expect(partnered.firstRevealed(by: .partners) == tileID("r", "30", "sp30"))
+
+        // A unit with no other parent has no partner tile: its first child takes the keyboard.
+        let lone = (0..<30).map { Data.unit(.partner, partners: [Data.member("sp\($0)", "Spouse \($0)")]) }
+            + [Data.unit(.oneParent, children: [Data.member("only", "Only Weber"), Data.member("second", "Second Weber")])]
+        let single = content(CatalogPersonFamily(
+            units: lone, person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        ))
+        #expect(single.firstRevealed(by: .partners) == tileID("r", "30", "only"))
     }
 
     @Test func foldDropsHiddenSetIndexes() {

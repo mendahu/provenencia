@@ -18,11 +18,8 @@ struct ConclusionGallerySection: View {
     @Environment(\.pvWidthClass) private var widthClass
     @Environment(\.pvPageViewportSize) private var viewportSize
     @FocusState private var focused: TileFocus?
-    /// The last stop that had the keyboard, kept to the next main-actor turn after it goes, so a width
-    /// change in the same update still sees it while a click elsewhere clears it.
-    @State private var lastFocused: TileFocus?
-    /// The stop to give the keyboard back once its tile is realized again after the lazy grid let it go.
-    @State private var pendingFocus: TileFocus?
+    /// Keeps the keyboard on a tile across a width change, a lazy grid dropping it and the viewer closing.
+    @State private var keeper = FocusKeeper<TileFocus>()
     @State private var scrollTarget: String?
     @State private var scrollRequest = 0
     /// The picture the likeness viewer shows; nil while it is closed. Not a navigation place.
@@ -48,25 +45,14 @@ struct ConclusionGallerySection: View {
             .pvScrollsRowIntoView(scrollTarget, animated: false, whenRequested: scrollRequest)
             .padding(.top, PVSpacing.space6)
         }
-        .onChange(of: focused) {
-            if let stop = focused {
-                lastFocused = stop
-                // The keyboard went to another stop: the pending one is done. The pending stop itself stays
-                // until the expiry, so its tile's onAppear can still claim it if the lazy grid drops it again.
-                if pendingFocus != stop { pendingFocus = nil }
-            } else if pendingFocus != nil {
-                // The tile dropped after the width update: bring it back and try again.
-                requestScroll()
-                applyPending()
-            } else if lastFocused != nil {
-                Task { @MainActor in
-                    if focused == nil { lastFocused = nil }
-                }
-            }
-        }
-        .onChange(of: widthClass) {
-            if let stop = focused ?? lastFocused { restoreFocus(to: stop) }
-        }
+        .focusKeeper(
+            $keeper,
+            focus: $focused,
+            isShown: { stop in gallery.tiles.contains { $0.id == stop.id } },
+            fallback: { _ in nil },
+            map: map,
+            scroll: scroll
+        )
         .pvSheet(item: $viewing) { item in
             // The shown picture has just left the gallery: draw its first tile until the item catches up.
             if let viewer = gallery.viewer,
@@ -94,7 +80,9 @@ struct ConclusionGallerySection: View {
         .onChange(of: viewing) { old, new in
             if let old, new == nil {
                 // An emptied gallery swaps this section for its EmptyState: there is no tile to focus.
-                if !gallery.tiles.isEmpty { restoreFocus(to: .image(old.shownID)) }
+                if !gallery.tiles.isEmpty {
+                    FocusKeeper.hand(.image(old.shownID), keeper: $keeper, focus: $focused, map: map, scroll: scroll)
+                }
             }
         }
         .onDisappear { lead.viewerClosed() }
@@ -102,38 +90,18 @@ struct ConclusionGallerySection: View {
         .accessibilityLabel(L10n.string(gallery.title))
     }
 
-    /// Crossing the Regular/Wide line rebuilds the lazy grid and drops the focused tile, and closing the
-    /// viewer leaves none focused: scroll the stop's tile into view, then give the stop the keyboard once the tile exists. The pending stop ends at the
-    /// expiry a moment later (a landing does not end it), so a tile that never dropped does not take the
-    /// keyboard back after a click elsewhere.
-    private func restoreFocus(to stop: TileFocus) {
-        pendingFocus = stop
-        requestScroll()
-        Task { @MainActor in
-            await Task.yield()
-            applyPending()
-            try? await Task.sleep(for: .milliseconds(400))
-            if pendingFocus == stop { pendingFocus = nil }
-            if focused == nil { lastFocused = nil }
-        }
-    }
-
-    private func requestScroll() {
-        guard let id = pendingFocus?.id else { return }
-        scrollTarget = id
+    /// Scrolls the stop's tile into view; the keeper calls it when it claims a stop.
+    private func scroll(_ stop: TileFocus) {
+        scrollTarget = stop.id
         scrollRequest += 1
     }
 
-    /// Writes the pending stop. Use as portrait is not there to take it when the tile is now the lead or
-    /// the lead is saving, so the keyboard goes to the tile's image.
-    private func applyPending() {
-        guard let pending = pendingFocus else { return }
-        let tile = gallery.tiles.first { $0.id == pending.id }
-        if case .useAs(let id) = pending, tile?.isLead == true || lead.isSaving {
-            FocusClaim.claim($focused, .image(id))
-        } else {
-            FocusClaim.claim($focused, pending)
-        }
+    /// The stop that takes the keyboard: Use as portrait is not there to take it when the tile is now
+    /// the lead or the lead is saving, so the keyboard goes to the tile's image.
+    private func map(_ stop: TileFocus) -> TileFocus {
+        let tile = gallery.tiles.first { $0.id == stop.id }
+        if case .useAs(let id) = stop, tile?.isLead == true || lead.isSaving { return .image(id) }
+        return stop
     }
 
     private func tileView(_ tile: ConclusionDetailPicture) -> some View {
@@ -186,7 +154,9 @@ struct ConclusionGallerySection: View {
         .frame(width: look.column, alignment: .leading)
         .pvGroupsAccessibility(look.groupsTile)
         .onAppear {
-            if pendingFocus?.id == tile.id { applyPending() }
+            if keeper.pending?.id == tile.id {
+                FocusKeeper.reclaim(keeper: $keeper, focus: $focused, map: map, scroll: scroll)
+            }
         }
     }
 }

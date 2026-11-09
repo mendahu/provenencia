@@ -12,12 +12,12 @@ struct PersonTimelineSection: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(\.pvWidthClass) private var widthClass
 
-    /// The lists the researcher has unfolded. Reset when the page is another person.
-    @State private var expanded: Set<PersonTimelineContent.Fold> = []
+    /// The pages of each list the researcher has unfolded. Reset when the page is another person.
+    @State private var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
 
     var body: some View {
         let orders = session.nameFormat
-        let expanded = expanded
+        let folds = folds
         let widthClass = widthClass
         ConclusionPageSectionHost<CatalogPersonTimeline, PersonTimelineContent, PersonTimelineList>(
             section: .timeline,
@@ -25,14 +25,15 @@ struct PersonTimelineSection: View {
             errorTitle: L10n.Conclusions.timelineErrorTitle,
             emptyTitle: L10n.Conclusions.timelineEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.timelineEmptyMessage),
-            make: { PersonTimelineContent(timeline: $0, expanded: expanded, locale: .autoupdatingCurrent, orders: orders, widthClass: widthClass) },
+            make: { PersonTimelineContent(timeline: $0, folds: folds, locale: .autoupdatingCurrent, orders: orders, widthClass: widthClass) },
             isEmpty: \.isEmpty
         ) { content in
             PersonTimelineList(
                 content: content,
                 projectDir: session.projectKey.projectDir,
                 open: { navigation.go(to: $0) },
-                expand: { self.expanded.insert($0) }
+                expand: { self.folds.revealPage($0) },
+                expandThrough: { self.folds.reveal($0, pages: $1) }
             )
         }
     }
@@ -46,6 +47,8 @@ struct PersonTimelineList: View {
     let projectDir: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
+    /// Unfolds a list through a page (the fewest that show a row a click on the lifeline names).
+    let expandThrough: (PersonTimelineContent.Fold, Int) -> Void
 
     @Environment(\.pvPageViewportSize) private var viewportSize
     @Environment(\.pvWidthClass) private var widthClass
@@ -57,10 +60,8 @@ struct PersonTimelineList: View {
     @State private var chosenScale: ChosenScale?
     /// The first item an unfold added, to scroll into view once it is placed.
     @State private var pendingReveal: String?
-    /// The row that owns the focused card, to return to if the card is gone.
-    @State private var focusedOwner: String?
-    /// The last title or card that had the keyboard, to tell a card taken away from a click elsewhere.
-    @State private var lastFocused: String?
+    /// Keeps the keyboard on a card across a width change or a reload that takes it.
+    @State private var keeper = FocusKeeper<String>()
     /// The items' measured width, after the line column.
     @State private var itemsWidth: CGFloat = 0
     @State private var scrollTarget: String?
@@ -90,6 +91,7 @@ struct PersonTimelineList: View {
                         projectDir: projectDir,
                         stacksPeople: PersonTimelinePlacement.stacksPeople(itemsWidth: itemsWidth, widthClass: widthClass),
                         open: open,
+                        revealed: content.firstRevealed(by:),
                         expand: unfold,
                         focused: $focused
                     )
@@ -113,18 +115,14 @@ struct PersonTimelineList: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .onChange(of: focused) {
-            if let id = focused, let row = content.items.compactMap(\.eventRow).first(where: { $0.id == id || $0.participants.contains { $0.id == id } }) {
-                focusedOwner = row.id
-            }
-            if let id = focused {
-                lastFocused = id
-            } else if let last = lastFocused {
-                lastFocused = nil
-                if let owner = focusedOwner, !isShown(last) { focused = owner }
-            }
-        }
-        .onChange(of: widthClass) { keepFocus() }
+        .focusKeeper(
+            $keeper,
+            focus: $focused,
+            isShown: { content.isShown($0) },
+            fallback: { content.row(holdingCard: $0) },
+            map: { $0 },
+            scroll: { _ in }
+        )
         .onChange(of: heights) { rebuild() }
         .onChange(of: content) { rebuild() }
         .onChange(of: viewportSize.height) { rebuild() }
@@ -148,33 +146,20 @@ struct PersonTimelineList: View {
             scrollTarget = target
             scrollRequest += 1
         }
-        keepFocus()
     }
 
-    /// A card that a width change took away returns the keyboard to its row's title.
-    private func keepFocus() {
-        guard let id = focused, let owner = focusedOwner else { return }
-        if !isShown(id) { focused = owner }
-    }
-
-    private func isShown(_ id: String) -> Bool {
-        content.items.compactMap(\.eventRow).contains { $0.id == id || $0.participants.contains { $0.id == id } }
-    }
-
-    /// "Show N more": the button is gone once the list grows, so the keyboard
-    /// moves to the first item it added; a fold of rows also scrolls it into view
-    /// once placed.
+    /// "Show N more": the Show more row moves the keyboard to the first item it adds; a
+    /// fold of rows also scrolls it into view once placed.
     private func unfold(_ fold: PersonTimelineContent.Fold) {
-        let revealed = content.firstRevealed(by: fold)
-        if case .participants = fold {} else { pendingReveal = revealed }
+        if case .participants = fold {} else { pendingReveal = content.firstRevealed(by: fold) }
         expand(fold)
-        Task { @MainActor in focused = revealed }
     }
 
     /// A click on a point or a cap: the list scrolls the item to the top, again on
-    /// a second click on the same point. A folded row's point unfolds the list first.
+    /// a second click on the same point. A folded row's point unfolds the dated list
+    /// through its page first.
     private func select(_ id: String) {
-        if !content.items.contains(where: { $0.id == id }) { expand(.dated) }
+        if let pages = content.pages(toShow: id) { expandThrough(.dated, pages) }
         scrollTarget = id
         scrollRequest += 1
     }
@@ -208,6 +193,8 @@ private struct PersonTimelineItemView: View {
     let projectDir: String
     let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
+    /// The id of the first item the next page of a fold adds, from the content that was drawn.
+    let revealed: (PersonTimelineContent.Fold) -> String?
     let expand: (PersonTimelineContent.Fold) -> Void
     let focused: FocusState<String?>.Binding
 
@@ -224,10 +211,10 @@ private struct PersonTimelineItemView: View {
     private var content: some View {
         switch item {
         case .row(let row):
-            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, stacksPeople: stacksPeople, open: open, expand: expand, focused: focused)
+            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
         case .marker(let marker):
             if let row = marker.row {
-                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, stacksPeople: stacksPeople, open: open, expand: expand, focused: focused)
+                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
             } else {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
@@ -244,7 +231,12 @@ private struct PersonTimelineItemView: View {
                     .foregroundStyle(PVColor.textMuted)
             }
         case .more(let fold, let count):
-            ConclusionShowMoreRow(count: count) { expand(fold) }
+            ConclusionShowMoreRow(
+                hidden: count,
+                fold: PersonTimelineContent.eventFold,
+                focus: focused,
+                revealed: revealed(fold)
+            ) { expand(fold) }
         }
     }
 }
@@ -260,6 +252,7 @@ private struct PersonTimelineEventRow: View {
     /// The list is too narrow for the people beside the text: they go under it.
     let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
+    let revealed: (PersonTimelineContent.Fold) -> String?
     let expand: (PersonTimelineContent.Fold) -> Void
     let focused: FocusState<String?>.Binding
 
@@ -326,7 +319,12 @@ private struct PersonTimelineEventRow: View {
                 ForEach(row.participants) { card($0) }
             }
             if row.participantsHidden > 0 {
-                ConclusionShowMoreRow(count: row.participantsHidden) {
+                ConclusionShowMoreRow(
+                    hidden: row.participantsHidden,
+                    fold: PersonTimelineContent.participantFold(widthClass),
+                    focus: focused,
+                    revealed: revealed(.participants(eventId: row.id))
+                ) {
                     expand(.participants(eventId: row.id))
                 }
                 .accessibilityIdentifier("persons.detail.timeline.more.\(row.id)")
@@ -570,23 +568,24 @@ private enum PersonTimelineDrawing {
 private struct PersonTimelinePreview: View {
     let timeline: CatalogPersonTimeline
     var width: CGFloat = 1102
-    var expandedAtStart: Set<PersonTimelineContent.Fold> = []
+    var foldsAtStart = ConclusionFoldState<PersonTimelineContent.Fold>()
 
-    @State private var expanded: Set<PersonTimelineContent.Fold> = []
+    @State private var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
 
     var body: some View {
         PVPageColumns(primaryFill: true) {
             PersonTimelineList(
-                content: PersonTimelineContent(timeline: timeline, expanded: expanded, widthClass: width >= PVSpacing.widthWideBreakpoint ? .wide : .regular),
+                content: PersonTimelineContent(timeline: timeline, folds: folds, widthClass: width >= PVSpacing.widthWideBreakpoint ? .wide : .regular),
                 projectDir: "/tmp/none",
                 open: { _ in },
-                expand: { expanded.insert($0) }
+                expand: { folds.revealPage($0) },
+                expandThrough: { folds.reveal($0, pages: $1) }
             )
         }
         .environment(\.pvWidthClass, width >= PVSpacing.widthWideBreakpoint ? .wide : .regular)
         .frame(width: width, height: 900)
         .background(PVColor.surfacePage)
-        .onAppear { expanded = expandedAtStart }
+        .onAppear { folds = foldsAtStart }
     }
 }
 
@@ -606,7 +605,11 @@ private struct PersonTimelinePreview: View {
 }
 #Preview("Large event") { PersonTimelinePreview(timeline: PersonTimelinePreviewData.largeEvent) }
 #Preview("Large event, unfolded") {
-    PersonTimelinePreview(timeline: PersonTimelinePreviewData.largeEvent, expandedAtStart: [.participants(eventId: "big")])
+    PersonTimelinePreview(timeline: PersonTimelinePreviewData.largeEvent, foldsAtStart: {
+        var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
+        folds.revealPage(.participants(eventId: "big"))
+        return folds
+    }())
 }
 #Preview("Long life") { PersonTimelinePreview(timeline: PersonTimelinePreviewData.lise) }
 #Preview("Only undated") { PersonTimelinePreview(timeline: PersonTimelinePreviewData.ida) }

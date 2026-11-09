@@ -9769,7 +9769,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "conclusions.showMore",
                 defaultValue: "Show %lld more",
-                comment: "Button under a folded list on a Conclusion page that shows the rest; argument is how many are hidden"
+                comment: "Button under a folded list on a Conclusion page that shows the next page of it; argument is how many that page adds"
             ), count)
         }
 

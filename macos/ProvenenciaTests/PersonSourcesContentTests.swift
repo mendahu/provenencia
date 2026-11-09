@@ -50,12 +50,13 @@ struct PersonSourcesContentTests {
         ]
     }
 
+    /// `pages` pages revealed of each fold in `revealed`.
     private func content(
-        _ groups: [CatalogPersonClaimGroup], expanded: Set<String> = [], rowsExpanded: Bool = false
+        _ groups: [CatalogPersonClaimGroup], revealed: [PersonSourcesContent.Fold] = [], pages: Int = 1
     ) -> PersonSourcesContent {
-        PersonSourcesContent(
-            groups: groups, sourceTypes: [census], orders: NameFormatOrders(), expanded: expanded, rowsExpanded: rowsExpanded
-        )
+        var folds = ConclusionFoldState<PersonSourcesContent.Fold>()
+        for fold in revealed { folds.reveal(fold, pages: pages) }
+        return PersonSourcesContent(groups: groups, sourceTypes: [census], orders: NameFormatOrders(), folds: folds)
     }
 
     @Test func rowsKeepTheReadsOrder() {
@@ -108,14 +109,15 @@ struct PersonSourcesContentTests {
                 claims: (1...count).map { claim("c\($0)", graph: "g\($0)", graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)")) }
             )]
         }
-        let nine = content(group(9)).rows[0]
-        #expect(nine.lines.count == 5 && nine.hiddenCount == 4 && nine.firstRevealedLineID == "c6")
-        let six = content(group(6)).rows[0]
-        #expect(six.lines.count == 6 && six.hiddenCount == 0 && six.firstRevealedLineID == nil)
+        let lines = PersonSourcesContent.Fold.lines(sourceID: "src")
+        let nine = content(group(9))
+        #expect(nine.rows[0].lines.count == 5 && nine.rows[0].hiddenCount == 4 && nine.firstRevealed(by: lines) == "c6")
+        let six = content(group(6))
+        #expect(six.rows[0].lines.count == 6 && six.rows[0].hiddenCount == 0 && six.firstRevealed(by: lines) == nil)
         let seven = content(group(7)).rows[0]
         #expect(seven.lines.count == 5 && seven.hiddenCount == 2)
-        let open = content(group(9), expanded: ["src"]).rows[0]
-        #expect(open.lines.count == 9 && open.hiddenCount == 0 && open.firstRevealedLineID == "c6")
+        let open = content(group(9), revealed: [lines])
+        #expect(open.rows[0].lines.count == 9 && open.rows[0].hiddenCount == 0 && open.firstRevealed(by: lines) == nil)
     }
 
     @Test func lineAfterRemoving() {
@@ -149,13 +151,68 @@ struct PersonSourcesContentTests {
             }
         }
         let sixty = content(many(60))
-        #expect(sixty.rows.count == 50 && sixty.hiddenRowCount == 10 && sixty.firstRevealedRowLineID == "c51")
+        #expect(sixty.rows.count == 50 && sixty.hiddenRowCount == 10 && sixty.firstRevealed(by: .rows) == "c51")
         let fiftyOne = content(many(51))
         #expect(fiftyOne.rows.count == 50 && fiftyOne.hiddenRowCount == 1)
         let fifty = content(many(50))
-        #expect(fifty.rows.count == 50 && fifty.hiddenRowCount == 0 && fifty.firstRevealedRowLineID == nil)
-        let open = content(many(60), rowsExpanded: true)
+        #expect(fifty.rows.count == 50 && fifty.hiddenRowCount == 0 && fifty.firstRevealed(by: .rows) == nil)
+        let open = content(many(60), revealed: [.rows])
         #expect(open.rows.count == 60 && open.hiddenRowCount == 0)
+    }
+
+    private func manyLines(_ count: Int, graph: (Int) -> String = { "g\($0)" }) -> [CatalogPersonClaimGroup] {
+        [CatalogPersonClaimGroup(
+            sourceID: "src", sourceRef: "SRC-1", title: "Adressbuch", sourceTypeID: "type-census",
+            claims: (1...count).map { claim("c\($0)", graph: graph($0), graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)")) }
+        )]
+    }
+
+    private func manySources(_ count: Int) -> [CatalogPersonClaimGroup] {
+        (1...count).map {
+            CatalogPersonClaimGroup(
+                sourceID: "src-\($0)", sourceRef: "SRC-\($0)", title: "Source \($0)", sourceTypeID: "type-census",
+                claims: [claim("c\($0)", graph: "g\($0)", graphName: "G\($0)", subject: subject("s\($0)", ref: "CPR-\($0)"))]
+            )
+        }
+    }
+
+    @Test func linesAndRowsPage() {
+        let lines = PersonSourcesContent.Fold.lines(sourceID: "src")
+        let counts = (0...3).map { content(manyLines(120), revealed: [lines], pages: $0).rows[0].lines.count }
+        #expect(counts == [5, 55, 105, 120])
+        let hidden = (0...3).map { content(manyLines(120), revealed: [lines], pages: $0).rows[0].hiddenCount }
+        #expect(hidden == [115, 65, 15, 0])
+        #expect(content(manyLines(120)).firstRevealed(by: lines) == "c6")
+        #expect(content(manyLines(120), revealed: [lines], pages: 1).firstRevealed(by: lines) == "c56")
+        #expect(content(manyLines(120), revealed: [lines], pages: 3).firstRevealed(by: lines) == nil)
+        // 56 lines: one press shows them all.
+        #expect(content(manyLines(56), revealed: [lines]).rows[0].hiddenCount == 0)
+
+        #expect([0, 1].map { content(manySources(60), revealed: [.rows], pages: $0).rows.count } == [50, 60])
+        #expect(content(manySources(60)).firstRevealed(by: .rows) == "c51")
+        #expect(content(manySources(60), revealed: [.rows]).firstRevealed(by: .rows) == nil)
+    }
+
+    @MainActor @Test func foldedGraphsTakeTheHighlight() {
+        let lines = PersonSourcesContent.Fold.lines(sourceID: "src")
+        let nine = content(manyLines(9))
+        #expect(nine.foldedGraphIDs(by: lines) == ["g6", "g7", "g8", "g9"])
+        // A graph with a shown line and a folded one keeps its shown line, not the Show more.
+        let shared = content(manyLines(9, graph: { $0 == 7 ? "g3" : "g\($0)" }))
+        #expect(shared.foldedGraphIDs(by: lines) == ["g6", "g8", "g9"])
+        #expect(content(manyLines(9), revealed: [lines]).foldedGraphIDs(by: lines).isEmpty)
+
+        let sixty = content(manySources(60))
+        #expect(sixty.foldedGraphIDs(by: .rows) == Set((51...60).map { "g\($0)" }))
+        #expect(!sixty.foldedGraphIDs(by: .rows).contains("g1") && !sixty.foldedGraphIDs(by: .rows).contains("unknown"))
+        #expect(content(manySources(60), revealed: [.rows]).foldedGraphIDs(by: .rows).isEmpty)
+
+        let hover = CircularLinkHover<String>()
+        hover.id = "g1"
+        #expect(hover.highlighted(focused: "g2") == "g1")
+        hover.id = nil
+        #expect(hover.highlighted(focused: "g2") == "g2")
+        #expect(hover.highlighted(focused: nil) == nil)
     }
 
     @Test func lineNamesTheRecordAsItsCard() throws {

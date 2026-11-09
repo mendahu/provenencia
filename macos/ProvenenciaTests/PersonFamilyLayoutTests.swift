@@ -8,11 +8,13 @@ struct PersonFamilyLayoutTests {
 
     private func layout(
         _ family: CatalogPersonFamily,
-        expanded: Set<PersonFamilyContent.Fold> = [],
+        revealed: [PersonFamilyContent.Fold] = [],
         width: CGFloat = 1038,
         _ widthClass: PVWidthClass = .regular
     ) -> (PersonFamilyContent, PersonFamilyLayout) {
-        let content = PersonFamilyContent(family: family, expanded: expanded, locale: en)
+        var folds = ConclusionFoldState<PersonFamilyContent.Fold>()
+        for fold in revealed { folds.revealPage(fold) }
+        let content = PersonFamilyContent(family: family, folds: folds, locale: en)
         return (content, PersonFamilyLayout(content: content, width: width, widthClass: widthClass))
     }
 
@@ -96,7 +98,7 @@ struct PersonFamilyLayoutTests {
             person: PersonFamilyPreviewData.johann,
             originSiblings: kids.map { PersonFamilyPreviewData.origin($0, [0]) } + [PersonFamilyPreviewData.origin(PersonFamilyPreviewData.johannMember, [0])]
         )
-        let (content, l) = layout(family, expanded: [.siblings])
+        let (content, l) = layout(family, revealed: [.siblings])
         let ids = content.parentSets.flatMap { $0 }.map(\.id) + content.siblings.map(\.tile.id)
         let frames = ids.compactMap { l.frame(ofTile: $0) }
         #expect(frames.count == 52)

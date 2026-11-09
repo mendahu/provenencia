@@ -8,10 +8,24 @@ struct PersonTimelineContentTests {
 
     private func content(
         _ timeline: CatalogPersonTimeline,
-        expanded: Set<PersonTimelineContent.Fold> = [],
+        pages: Int = 0,
+        of unfolded: [PersonTimelineContent.Fold] = [],
         widthClass: PVWidthClass = .regular
     ) -> PersonTimelineContent {
-        PersonTimelineContent(timeline: timeline, expanded: expanded, locale: en, widthClass: widthClass)
+        var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
+        // Every list in `unfolded` is open through `pages` pages (a hundred shows any list here).
+        for fold in unfolded { folds.reveal(fold, pages: max(pages, 100)) }
+        return PersonTimelineContent(timeline: timeline, folds: folds, locale: en, widthClass: widthClass)
+    }
+
+    private func paged(
+        _ timeline: CatalogPersonTimeline,
+        _ revealed: [PersonTimelineContent.Fold: Int],
+        widthClass: PVWidthClass = .regular
+    ) -> PersonTimelineContent {
+        var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
+        for (fold, pages) in revealed { folds.reveal(fold, pages: pages) }
+        return PersonTimelineContent(timeline: timeline, folds: folds, locale: en, widthClass: widthClass)
     }
 
     private func ids(_ content: PersonTimelineContent) -> [String] { content.items.map(\.id) }
@@ -73,7 +87,7 @@ struct PersonTimelineContentTests {
         #expect(Array(ids(lise).suffix(6)) == ["undated", "lu1", "lu2", "l118", "l119", "l120"])
         #expect(lise.allSpans.count == 120)
 
-        let open = content(Data.lise, expanded: [.dated])
+        let open = content(Data.lise, of: [.dated])
         #expect(open.items.count == 120 + 3 && !ids(open).contains("more.dated"))
         #expect(Array(ids(open).dropLast(2).suffix(1)) == ["l118"])
 
@@ -83,8 +97,8 @@ struct PersonTimelineContentTests {
         let wide = content(Data.largeEvent, widthClass: .wide)
         #expect(wide.items.compactMap(\.eventRow).first?.participants.count == 12)
         #expect(wide.items.compactMap(\.eventRow).first?.participantsHidden == 29)
-        #expect(PersonTimelineContent.participantFoldLimit(.regular) == 5 && PersonTimelineContent.participantFoldLimit(.wide) == 12)
-        let all = content(Data.largeEvent, expanded: [.participants(eventId: "big")])
+        #expect(PersonTimelineContent.participantFold(.regular).limit == 5 && PersonTimelineContent.participantFold(.wide).limit == 12)
+        let all = content(Data.largeEvent, of: [.participants(eventId: "big")])
         #expect(all.items.compactMap(\.eventRow).first?.participants.count == 41)
         #expect(all.items.compactMap(\.eventRow).first?.participantsHidden == 0)
         // Go's order is kept: Child, Witness, Informant, Pallbearer, then Mourner.
@@ -94,11 +108,12 @@ struct PersonTimelineContentTests {
         // The first item a fold reveals, for the focus after "Show N more".
         let datedRows = open.items.compactMap(\.eventRow).prefix(51).map(\.id)
         #expect(lise.firstRevealed(by: .dated) == datedRows.last)
-        #expect(open.firstRevealed(by: .dated) == datedRows.last)
+        // Fully unfolded, a fold hides nothing to reveal.
+        #expect(open.firstRevealed(by: .dated) == nil)
         #expect(lise.firstRevealed(by: .undated) == nil)
         #expect(large.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[5].id)
         #expect(wide.firstRevealed(by: .participants(eventId: "big")) == all.items.compactMap(\.eventRow).first?.participants[12].id)
-        #expect(all.firstRevealed(by: .participants(eventId: "big")) == large.firstRevealed(by: .participants(eventId: "big")))
+        #expect(all.firstRevealed(by: .participants(eventId: "big")) == nil)
         #expect(large.firstRevealed(by: .participants(eventId: "other")) == nil)
 
         // One person on two events: distinct ids.
@@ -111,7 +126,7 @@ struct PersonTimelineContentTests {
         timeline.events = (0..<52).map { Data.event("u\($0)", type: "residence") }
         let undated = content(timeline)
         #expect(undated.items.contains(.more(.undated, count: 2)))
-        #expect(content(timeline, expanded: [.undated]).items.compactMap(\.eventRow).count == 52)
+        #expect(content(timeline, of: [.undated]).items.compactMap(\.eventRow).count == 52)
         #expect(undated.firstRevealed(by: .undated) == "u50")
     }
 
@@ -132,7 +147,7 @@ struct PersonTimelineContentTests {
         #expect(foldedOrder.contains("birth"))
         #expect(foldedOrder.firstIndex(of: "more.dated").map { $0 + 1 } == foldedOrder.firstIndex(of: "birth"))
 
-        let open = content(timeline, expanded: [.dated])
+        let open = content(timeline, of: [.dated])
         let order = open.items.map(\.id)
         let birthAt = order.firstIndex(of: "birth")
         #expect(birthAt != nil && birthAt == order.firstIndex(of: "d55").map { $0 - 1 })
@@ -140,9 +155,82 @@ struct PersonTimelineContentTests {
         #expect(folded.firstRevealed(by: .dated) == "d51")
     }
 
+    private func datedEvents(_ count: Int) -> [CatalogPersonEvent] {
+        (1...count).map { Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0 / 20))) }
+    }
+
+    @Test func twoThousandEventsUnfoldInPages() {
+        var timeline = Data.ida
+        timeline.events = datedEvents(2000)
+        timeline.birth = CatalogLifeMarker()
+        timeline.death = CatalogLifeMarker()
+        for pages in 0..<39 {
+            let open = paged(timeline, [.dated: pages])
+            #expect(open.items.compactMap(\.eventRow).count == 50 + 50 * pages)
+            #expect(open.items.contains(.more(.dated, count: 1950 - 50 * pages)))
+            #expect(open.firstRevealed(by: .dated) == "d\(50 * (pages + 1) + 1)")
+        }
+        let all = paged(timeline, [.dated: 39])
+        #expect(all.items.compactMap(\.eventRow).count == 2000)
+        #expect(!all.items.map(\.id).contains("more.dated"))
+        #expect(all.firstRevealed(by: .dated) == nil)
+    }
+
+    @Test func foldedMarkersStayAfterPagedRun() {
+        var timeline = Data.ida
+        timeline.events = datedEvents(120)
+        timeline.birth = CatalogLifeMarker(besideEventId: "d110")
+        timeline.death = CatalogLifeMarker()
+        let order = paged(timeline, [.dated: 1]).items.map(\.id)
+        #expect(order.firstIndex(of: "d100").map { $0 + 1 } == order.firstIndex(of: "more.dated"))
+        #expect(order.firstIndex(of: "more.dated").map { $0 + 1 } == order.firstIndex(of: "birth"))
+        #expect(order.last == "death")
+    }
+
+    @Test func participantsPageAtBothWidths() {
+        var timeline = Data.largeEvent
+        timeline.events[0].participants = (1...500).map {
+            CatalogEventParticipant(person: Data.person("p\($0)", "P \($0) Weber"), roles: [Data.role("mourner")])
+        }
+        let fold = PersonTimelineContent.Fold.participants(eventId: "big")
+        let regular = paged(timeline, [fold: 1])
+        let wide = paged(timeline, [fold: 1], widthClass: .wide)
+        #expect(regular.items.compactMap(\.eventRow).first?.participants.count == 55)
+        #expect(wide.items.compactMap(\.eventRow).first?.participants.count == 62)
+        #expect(regular.firstRevealed(by: fold) == "big-p56")
+        #expect(wide.firstRevealed(by: fold) == "big-p63")
+        #expect(paged(timeline, [:]).firstRevealed(by: fold) == "big-p6")
+    }
+
+    @Test func aCardNamesItsRowAndNothingElseDoes() {
+        var timeline = Data.largeEvent
+        timeline.events[0].participants = (1...20).map {
+            CatalogEventParticipant(person: Data.person("p\($0)", "P \($0) Weber"), roles: [Data.role("mourner")])
+        }
+        let shown = content(timeline)
+        #expect(shown.row(holdingCard: "big-p1") == "big")
+        #expect(shown.row(holdingCard: "big") == nil)
+        #expect(shown.row(holdingCard: "big-p20") == nil)
+        #expect(shown.row(holdingCard: "unknown") == nil)
+    }
+
+    @Test func pointOnFoldedPageOpensThroughIt() {
+        var timeline = Data.ida
+        timeline.events = datedEvents(2000) + [Data.event("u1", type: "residence")]
+        timeline.birth = CatalogLifeMarker()
+        timeline.death = CatalogLifeMarker()
+        let folded = content(timeline)
+        #expect(folded.pages(toShow: "d180") == 3)
+        #expect(folded.pages(toShow: "d1") == 0)
+        let open = paged(timeline, [.dated: 3])
+        #expect(open.isShown("d180") && !open.isShown("d201"))
+        #expect(folded.pages(toShow: "u1") == nil && folded.pages(toShow: "death") == nil)
+        #expect(folded.pages(toShow: "unknown") == nil)
+    }
+
     @Test func pointsAreNamedByTheirRow() {
         for timeline in [Data.johann, Data.lise, Data.unknownEnds] {
-            let all = content(timeline, expanded: [.dated, .undated])
+            let all = content(timeline, of: [.dated, .undated])
             #expect(!all.allSpans.isEmpty)
             for span in all.allSpans {
                 #expect(span.spokenLabel == row(all, span.id)?.spokenLabel)
