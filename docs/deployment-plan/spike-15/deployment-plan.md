@@ -47,7 +47,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 - **Follow the *Evidence Explained* style; never copy the book.** Seeded formats, examples, tests, fixtures and UI copy are written for Provenencia; every example uses invented people, places and records; no product or feature name uses the book's name; nothing is called official. The full rule: [`README.md`](README.md#working-rules). Binds S15-14, S15-19, S15-20 and every PR with copy.
 - **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. Copy Source carries it only when the Copy form's Date tick is on (S15-32; user, 2026-11-09). The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
-- **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page. No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
+- **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page by a switch labeled "Private", off by default (user, 2026-11-09). No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
 - **Metadata lives at three levels with one vocabulary.** The Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) each hold values and layout, with the same fields from `source_metadata_fields`, which keeps its name. Tables: `artifact_metadata`, `artifact_metadata_layout`, `evidence_graph_metadata`, `evidence_graph_metadata_layout`. Layout rules (order, dismiss) are the Source's at every level. Binds S15-07 – S15-12. Design: map § 6.6.
 - **One level type.** Source, Artifact and graph are one Go `Level` type in the pure package `core/vocabkey`, used by suggestion rows, metadata owners, the format prefixes and the built-ins table, and the RPCs, with one Swift enum and a row in `api/ffi/swift_vocabulary_test.go`. S15-06 adds it; S15-14 uses it. (K-6, K-20.)
 - **Metadata saves with its owner's write.** Values entered while adding an Artifact or saving the Evidence graph form go in the same transaction as the Artifact or graph (`CreateArtifactRequest`, the graph create and update requests). Drafts save through one `sourcemetadata.Apply(tx, owner, draft)`, which compares the draft with what is stored and runs the steps `Set`, `Clear`, `DismissSuggestion` and `Reorder` use; `CreateAll` becomes its empty-owner case. Live boards save per field, as the Source page does. (K-1, K-19.) Binds S15-08, S15-10, S15-11. (K-1.)
@@ -80,7 +80,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | S15-01 | The credibility argument is a text area | 1 | Swift: `PVTextArea` with the description's behavior; Save as today | — | — | [plan](prs/S15-01-credibility-argument-text-area.md) | Landed #758 |
 | S15-02 | Sources carry a date and a not-public flag | 1 | Go: one migration (`date_value_id`, `is_public`), Source read and write, a date sort key from the shared date order | — | — | [plan](prs/S15-02-source-date-and-public-flag.md) | Landed #762 |
-| S15-03 | The Source page shows the date and the not-public switch | 1 | Swift: set, change, clear the date; the switch | S15-D1 | S15-02, S15-D1 | — | Scoped |
+| S15-03 | The Source page shows the date and the Private switch | 1 | Swift: set, change, clear the date in a dialog; the Private switch; the page on Page columns. Go: `sources.not_found` for a missing Source | S15-D1 | S15-02, S15-D1 | [plan](prs/S15-03-source-page-date-and-private-switch.md) | Blocked — on board S15-D1 |
 | S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | — | Scoped |
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | — | Scoped |
@@ -138,7 +138,7 @@ These are the calls for this spike. PR plans treat them as binding.
 SLICE 1 — Source date, privacy, credibility           (alongside Spike 16)
   S15-01  The credibility argument is a text area
   S15-02  Sources carry a date and a not-public flag
-  ✎ S15-D1 ──▶ S15-03  The Source page shows the date and the not-public switch
+  ✎ S15-D1 ──▶ S15-03  The Source page shows the date and the Private switch
   ✎ S15-D2 ──▶ S15-04  The Sources list shows and sorts by the date
   ✎ S15-D13 ──▶ S15-32  Copy Source can carry the date
   Check: bar 1 (Source page and list), bar 2, bar 9; a copied Source keeps the date when its tick is on (S15-32).
@@ -255,13 +255,12 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Check.** Handler tests: set, read and clear a date and the flag; sort keys order exact, `abt.`, `bef.` and range dates as the Timeline does; an upgraded catalog reads every Source as undated and public.
 **Context.** Rules "The Source date is one optional DateValue", "Not public is a stored switch", "One date order" (`core/database/conclusionsummaries/compose.go` `datePlace`, `dateKeyOf`, `dateKeyLess`; `core/valuecompare/datewindow.go` `DateEnds`); [`source-provenance-date.md`](source-provenance-date.md); [privacy note](2026-10-27-source-privacy-toggle.md) "Likely code locations"; skills `add-catalog-migration`, `add-catalog-model`, `add-date-value`, `add-ffi-handler`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.
 
-#### S15-03 — The Source page shows the date and the not-public switch
+#### S15-03 — The Source page shows the date and the Private switch
 
-**Ships.** On the Source page, the date is set, changed and cleared with the app's structured date entry where S15-D1 puts it, and the not-public switch is shown and saved.
-**Not this PR.** The Sources list (S15-04); the rest of S15-D1's board (S15-09, S15-23, S15-25).
+**Ships.** On the Source page, the date is set, changed and cleared from the header with the app's structured date form in a FormDialog (user, 2026-11-09), and a switch labeled "Private" (off by default) is shown and saved. The page moves onto Page columns with its header pinned; at Wide Metadata takes the secondary column (user, 2026-11-09: the move rides in this PR). A write to, or a read of, a Source deleted elsewhere returns `sources.not_found` from `sources`, and the page says so and leaves for the Sources list (UX-1; user, 2026-11-09). A refused date says which field is wrong (UX-2).
+**Not this PR.** The Sources list (S15-04); the rest of S15-D1's board (S15-09, S15-23, S15-25); not-found handling for note, metadata and Artifact writes.
 **Check.** Bar 1 on the Source page; bar 2.
-**Context.** S15-D1; `SourcePageIdentityHeader.swift`, `SourceIdentitySection.swift`, `PVSwitch`; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
-**From S15-02's review.** A date or switch write to a Source deleted in another window returns `sources.invalid` ("Invalid source."), as every Source write does; the page must name the deleted Source and recover (map the missing Source to a not-found code for every Source write, or re-read and say it was deleted) (UX-1). The date field's inline error is today's "Invalid date value."; consider copy that names the field (UX-2).
+**Context.** S15-D1; `SourcePageIdentityHeader.swift`, `SourceIdentitySection.swift`, `SourcePageView.swift`, `PVSwitch`, `PVPageColumns`; [`add-localized-string`](../../../.agents/skills/add-localized-string/SKILL.md).
 
 #### S15-04 — The Sources list shows and sorts by the date
 
