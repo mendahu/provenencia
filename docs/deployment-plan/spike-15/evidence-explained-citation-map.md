@@ -1183,6 +1183,6 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 - **Field vocabulary name.** Keep `source_metadata_fields` for all three levels, or rename it to `metadata_fields`.
 - **Printed page map.** Whether a per-Artifact page map ("image 37 is page 23") should replace typing the printed page in the composer (§ 6.9).
 - **One graph, several items.** Whether the app should nudge a researcher toward one graph per household when a Source's type suggests item fields at the graph level.
-- ~~Syntax details~~: `{a|b}` is enough for now (user, 2026-11-09). Still open: how the editor reports an unbalanced bracket.
+- ~~Syntax details~~: `{a|b}` is enough for now (user, 2026-11-09). The engine returns diagnostics with positions, and the editor shows them (map review K-10, [`deployment-plan.md`](deployment-plan.md)).
 - ~~More forms~~: three (full, short, list) are enough for now (user, 2026-11-09).
 - **Edition check.** Verify § 3 against the edition of *Evidence Explained* on hand, including how it treats DNA results and online trees.
