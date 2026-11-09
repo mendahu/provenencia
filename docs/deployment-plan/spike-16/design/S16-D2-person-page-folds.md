@@ -168,8 +168,8 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Show more row | Snowflake | Extend | `macos/App/Features/Conclusions/ConclusionShowMoreRow.swift` `ConclusionShowMoreRow` | Gains a highlighted state (FH-1, FH-2) and the page count (FH-3). Still a small ghost Button; not a link, not a Badge |
-| Record line highlight | Snowflake | Ship | `macos/App/Features/Conclusions/PersonSourcesSection.swift` `PersonSourcesLineView` | `PVColor.surfaceSelected` behind the line, `PVRadius.sm` corners. FH-1's recommended look reuses these tokens; no new token |
+| Show more row | Snowflake | Extend | `macos/App/Features/Conclusions/ConclusionShowMoreRow.swift` `ConclusionShowMoreRow` | Gains the page count (FH-3) only. Still a small ghost Button; not a link, not a Badge. It carries no highlight state: the Sources section draws FH-1 and FH-2 around it |
+| Record line highlight | Snowflake | Ship | `macos/App/Features/Conclusions/PersonSourcesSection.swift` `PersonSourcesLineView` | `PVColor.surfaceSelected` behind the line, `PVRadius.sm` corners. The Sources section draws the same highlight behind its two Show more rows (FH-1, FH-2): one look, owned by the Sources section; no new token |
 | Source row | Snowflake | Ship | `PersonSourcesSection.swift` `PersonSourcesRowView` | Unchanged |
 | Family tile | Recipe | Ship | `macos/App/DesignSystem/Recipes/PersonCard/PVPersonCard.swift` on `PVTileCard` | Its own focus ring (`PVFocusRingButtonStyle`) shows where FH-4 lands; no new ring |
 | Timeline row title and participant card | Snowflake + recipe | Ship | `macos/App/Features/Conclusions/PersonTimelineSection.swift`; `PVPersonCard` `.compact` | Their own focus rings, as today |
