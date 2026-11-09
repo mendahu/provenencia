@@ -1282,7 +1282,9 @@ struct GoStore: GenealogyStore {
             },
             pairs: resp.pairs.map {
                 CatalogRecordLinksPair(graphAID: $0.graphAID, graphBID: $0.graphBID, lines: $0.lines.compactMap(Self.mapRecordLink))
-            }
+            },
+            notCounted: resp.notCounted,
+            linesDropped: resp.linesDropped
         )
     }
 

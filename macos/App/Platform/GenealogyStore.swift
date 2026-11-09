@@ -816,6 +816,10 @@ struct CatalogRecordLinksPair: Sendable, Equatable {
 struct CatalogPersonRecordLinks: Sendable, Equatable {
     var graphs: [CatalogRecordLinksGraph] = []
     var pairs: [CatalogRecordLinksPair] = []
+    /// The read passed its work bound and compared nothing: every line is weak, or no pair is listed.
+    var notCounted = false
+    /// More lines were found than the 75,000 Go sends, strong lines first.
+    var linesDropped = false
 }
 
 /// One other canonical person on an event and their role terms.
