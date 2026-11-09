@@ -1,7 +1,7 @@
 # Review — S16-07 One paged fold that moves focus
 
-**Verdict:** (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 Also reviewed: brief [S16-D2](../design/S16-D2-person-page-folds.md) (maintainability Q1, Q3, Q5, Q6; one finding, folded into M-2).
 
@@ -11,6 +11,7 @@ None.
 ## Writer's own calls
 - D-9: Family's siblings fold counts the siblings other than the person, so a page always adds what its label says (X-5). Neighbor: when the person is within the first 30 in Go's order, 30 others plus the person now show (31 tiles), where today 30 tiles include the person. No board frame draws this boundary.
 - M-6 declined: `ConclusionFoldState` keeps the `Conclusion` prefix to match `ConclusionFold`, which the working rule names; S15-30 moves both to `Platform/` and owns any rename.
+- D-15: `CircularLinkHover.highlighted(focused:)` becomes the one home of "the pointer's graph, else the keyboard's", and `CircularLinkDiagram` uses it too: a one-line change outside the Sources files, taken so the rule is not written a third time.
 - D-11: the keeper also hands focus to the fallback when a focused stop disappears for any reason (a reload as well as a width change), keeping today's Timeline behavior (M-5).
 
 ## Round 1
@@ -83,3 +84,36 @@ None.
 
 ### Current state corrections (executability)
 **Answer:** Fixed. 14 `FocusClaim` calls; five Show more call sites; the `expanded:` counts per test file; the planning base notes no `macos/` change at `55f7f88`.
+
+## Round 2
+
+### M2-1 · blocker · D-15 makes `PersonSourcesList` read the hover and writes the highlight rule a third time
+**Plan:** D-15 had the list compute each row's Show more highlight from `highlightedGraphID`.
+**Codebase:** `PersonSourcesList.hover` is "read by the rows, the nodes and the highlighted arcs and not by this view"; `CircularLinkHover` "redraws only the views that read it"; the rule is in `PersonSourcesRowView.lines` and `CircularLinkDiagram.body` line 53.
+**Answer:** Fixed. D-15: the folded sets go down as data; the row and a new private `PersonSourcesRowsShowMore` read the hover; `CircularLinkHover.highlighted(focused:)` is the rule's one home. Codebase fit rows, STEP-5 files and T-9 updated.
+
+### M2-2 · blocker · D-11/D-12 split Gallery's one claim path into three, two skipping the mapping and the scroll
+**Plan:** D-11 (b) re-claimed `pending` raw; `hand` alone called `reveal`; Gallery's `onAppear` path was unnamed; (a) did not clear another stop's pending.
+**Codebase:** `ConclusionGallerySection.applyPending()` is today's single claim path, used by `restoreFocus(to:)`, the `onChange(of: focused)` nil branch and the tile `onAppear`.
+**Answer:** Fixed. D-11: `FocusKeeper.reclaim` is the one claim of a pending stop and always runs `reveal`; `hand` gives, reclaims and expires; `lost` returns `.reclaim` / `.fallback` / `.none` and the modifier makes every claim; `took` clears a pending stop another stop replaced. D-12: `onAppear` calls `reclaim`. Sketch and T-10 updated.
+
+### X2-1 · blocker · STEP-2 cannot build: the fold constants and Family's focus state come later
+**Answer:** Fixed. STEP-2 adds every D-1 constant beside the old ones and D-8's `@FocusState` in `PersonFamilyDiagram`; the Timeline participants pass `participantFold(widthClass)` from the row's environment; each section step removes its old constants.
+
+### X2-2 · major · Two tests assert constants D-1 deletes
+**Answer:** Fixed. STEP-3 re-points `PersonFamilyContentTests.foldsEachListAtThirty`, STEP-4 the `participantFoldLimit` assertion in `PersonTimelineContentTests`, both allowed under the Stop conditions.
+
+### X2-3 · minor · D-10 needs the dated fold's ids kept on the content
+**Answer:** Fixed. D-10 adds the private `datedFoldIDs` and says which rows it holds.
+
+### X2-4 · minor · Small choices left open
+**Answer:** Fixed. STEP-5: Sources wraps the claim id as `.graph(claimID:)`. D-11: the modifier makes every claim. D-12: `onAppear` calls `reclaim`.
+
+### X2-5 · nit · `PersonSourcesContentTests` has 3 `expanded:` lines
+**Answer:** Fixed in §4.
+
+### Logged (below the blocker bar, round 2 maintainability)
+- D-17 gives Family and Sources a `scrollTarget` / `scrollRequest` pair, the third and fourth in `Features/Conclusions` beside Gallery and Timeline. A shared request type is not in this PR's scope.
+- Sources' Unpromote focus hand-off (`pendingFocus`, `applyPendingFocus`, `lineAfterRemoving`) is another "focus outlived its view" path beside the keeper; the working rule scopes the keeper to Gallery and Timeline.
+
+Round-1 answers: both round-2 reviewers found every answer held, except X-2, X-3, X-6 and X-7, which they reopened as M2-2, X2-2 and X2-1 above, now fixed. The round-2 fixes were not reviewed again (two-round cap).
