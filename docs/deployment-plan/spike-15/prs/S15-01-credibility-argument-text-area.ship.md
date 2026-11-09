@@ -11,7 +11,7 @@ Reviewers: CON, MNT, UX, SEC+PRF. Skipped: none. UX: `macos/App/**`. SEC+PRF: `m
 
 | ID | Lens | Severity | Title | Decision | Evidence / reason |
 | --- | --- | --- | --- | --- | --- |
-| UX-1 | UX | minor | An unsaved argument is lost when the researcher leaves the Source page | Follow-up | Verified: `.onAppear { argumentLocal = model.credibility.argumentDraft }` and `argumentDraft` is set only on Save or `resetDrafts()`. Pre-existing (lines unchanged by this PR; plan § 4 "Local draft … Unchanged"). The fix is a page-wide product call covering description, notes and argument together, which the plan's Out line excludes. Home to be chosen by the user |
+| UX-1 | UX | minor | An unsaved argument is lost when the researcher leaves the Source page | Follow-up → dropped by the user (2026-11-09) | Verified: `.onAppear { argumentLocal = model.credibility.argumentDraft }` and `argumentDraft` is set only on Save or `resetDrafts()`. Pre-existing (lines unchanged by this PR; plan § 4 "Local draft … Unchanged"). The fix is a page-wide product call covering description, notes and argument together, which the plan's Out line excludes. Home to be chosen by the user |
 
 CON: no findings. MNT: no findings. SEC+PRF: no findings (the unbounded argument length was considered and left out: same exposure as the description `PVTextArea`; plan Out line "A Source credibility argument length limit — not planned").
 
@@ -51,4 +51,4 @@ USR-1: **Resolved.** F-1 makes `wrapped` never a router, so no cycle can form; F
 Outside lens (UX, unverified): an area may draw one frame with the default `TextEditor` inset before the first layout match. Logged; it is part of the manual check.
 
 ## Result
-Gate PASS · CI see PR · open: none · follow-ups: UX-1 · to user: — · the app run after the crash fix is with the user
+Gate PASS · CI see PR · open: none · follow-ups: none (UX-1 dropped by the user) · to user: — · the app run after the crash fix is with the user
