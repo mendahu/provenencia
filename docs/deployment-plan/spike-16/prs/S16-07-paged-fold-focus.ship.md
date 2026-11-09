@@ -1,7 +1,7 @@
 # Ship log — S16-07 One paged fold that moves focus
 
 **Plan:** [`S16-07-paged-fold-focus.md`](S16-07-paged-fold-focus.md) · **Branch:** `s16-07-paged-fold-focus` · **PR:** —
-**State:** review 2
+**State:** stopped — finish blocked on push (no network to github.com)
 
 ## Round 0 — implement
 Head `a0837fe4` (local only: `git push` fails, github.com does not resolve from this Mac). Gate: implementer PASS on `4d60b7a1`; orchestrator re-run on `a0837fe4` below.
@@ -87,3 +87,16 @@ Head `b2eb6377` (local only). Gate PASS (orchestrator re-run; xcode-test 87s). F
 
 ## Round 2 — review
 Reviewers: CON, MNT, UX (each had a Fix-now major). Skipped: SEC+PRF (no findings in round 1). Scope `a0837fe4...b2eb6377`.
+
+| ID | Lens | Round-1 item | Result |
+| --- | --- | --- | --- |
+| CON | CON | CON-1 (F-1), CON-4/MNT-1 (F-8), CON-2 (F-4) | Resolved; CON-2's PR-number lines and manual check wait for finish |
+| MNT | MNT | MNT-1 (F-8), MNT-2 (F-3) | Resolved |
+| UX | UX | UX-1 (F-2), UX-4 (F-8) | Resolved in code; UX-1 needs manual check 2 on screen |
+
+Minors: CON-3 (F-5), UX-2 (F-6), CON-5/MNT-5 (F-7) — Resolved (read by the CON, UX and MNT round-2 reviewers).
+New findings: none. No Fix plan 2.
+Nits (logged): `MNT-9 · FocusKeeper.swift:29-34,139 · rename took's revealedPending to mappedPending after F-8`
+
+## Result
+Gate PASS on `b2eb6377` · CI not run (branch not pushed: github.com does not resolve from this Mac) · open: none · follow-ups: none · later PR: MNT-3/UX-5 → S15-30 · to user: MNT-1 (answered: split map and scroll, amends D-11/D-12)
