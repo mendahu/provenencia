@@ -25,7 +25,6 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Citation composer and media
 
-- [`source-type-packages.md`](source-type-packages.md) — citation styles as installable packages of types, fields and formats; raised in Spike 15, which seeds the *Evidence Explained*-style set as the product default
 - [`citation-composer-followups.md`](citation-composer-followups.md) — bridge-mode subject filter; cropped citation preview
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — Spike 10 / 14 leftovers (signature, page-change confirm, PDF Artifact thumbnails, audit items)
 - [`audio-video-sources.md`](audio-video-sources.md)
@@ -50,6 +49,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Properties, vocabulary, Sources
 
+- [`source-type-packages.md`](source-type-packages.md) — citation styles as installable packages of types, fields and formats; raised in Spike 15, which seeds the *Evidence Explained*-style set as the product default
 - [`properties-and-terms.md`](properties-and-terms.md) — binding order, event-type-scoped properties, Occupation seed, term management (direction / inverses), failed bind after create
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)
 - [`registry-source-import.md`](registry-source-import.md) — paste a record URL from Ancestry, FamilySearch and similar; access unproven
