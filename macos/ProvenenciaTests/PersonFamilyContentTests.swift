@@ -230,6 +230,24 @@ struct PersonFamilyContentTests {
         #expect(paged.firstRevealed(by: .siblings) != paged.siblings[39].tile.id)
     }
 
+    @Test func partnersFoldNamesTheFirstRevealedUnit() {
+        let tileID = PersonFamilyContent.tileID
+        let partners = (0..<31).map { Data.unit(.partner, partners: [Data.member("sp\($0)", "Spouse \($0)")]) }
+        let partnered = content(CatalogPersonFamily(
+            units: partners, person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        ))
+        #expect(partnered.groups.count == 30)
+        #expect(partnered.firstRevealed(by: .partners) == tileID("r", "30", "sp30"))
+
+        // A unit with no other parent has no partner tile: its first child takes the keyboard.
+        let lone = (0..<30).map { Data.unit(.partner, partners: [Data.member("sp\($0)", "Spouse \($0)")]) }
+            + [Data.unit(.oneParent, children: [Data.member("only", "Only Weber"), Data.member("second", "Second Weber")])]
+        let single = content(CatalogPersonFamily(
+            units: lone, person: Data.johann, originSiblings: [Data.origin(Data.johannMember, [])]
+        ))
+        #expect(single.firstRevealed(by: .partners) == tileID("r", "30", "only"))
+    }
+
     @Test func foldDropsHiddenSetIndexes() {
         let parents = (0..<31).map { Data.unit(.parents, partners: [Data.member("p\($0)", "Parent \($0)")]) }
         let late = Data.member("late", "Late Weber")

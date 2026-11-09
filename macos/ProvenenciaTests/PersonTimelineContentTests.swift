@@ -202,6 +202,18 @@ struct PersonTimelineContentTests {
         #expect(paged(timeline, [:]).firstRevealed(by: fold) == "big-p6")
     }
 
+    @Test func aCardNamesItsRowAndNothingElseDoes() {
+        var timeline = Data.largeEvent
+        timeline.events[0].participants = (1...20).map {
+            CatalogEventParticipant(person: Data.person("p\($0)", "P \($0) Weber"), roles: [Data.role("mourner")])
+        }
+        let shown = content(timeline)
+        #expect(shown.row(holdingCard: "big-p1") == "big")
+        #expect(shown.row(holdingCard: "big") == nil)
+        #expect(shown.row(holdingCard: "big-p20") == nil)
+        #expect(shown.row(holdingCard: "unknown") == nil)
+    }
+
     @Test func pointOnFoldedPageOpensThroughIt() {
         var timeline = Data.ida
         timeline.events = datedEvents(2000) + [Data.event("u1", type: "residence")]
