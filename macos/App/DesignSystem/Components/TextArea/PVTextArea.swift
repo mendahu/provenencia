@@ -104,6 +104,8 @@ struct PVTextArea: View {
     /// Shared focus host. Its `next` / `previous` neighbours take Tab and
     /// Shift-Tab; without a handle the area keeps its own focus.
     private let focus: PVFieldFocus?
+    /// Spoken name when the area has no enclosing ``PVField`` (or to override it).
+    private let accessibilityLabel: LocalizedStringResource?
 
     init(
         text: Binding<String>,
@@ -113,7 +115,8 @@ struct PVTextArea: View {
         isInvalid: Bool = false,
         activateOnAppear: Bool = false,
         fillsHeight: Bool = false,
-        focus: PVFieldFocus? = nil
+        focus: PVFieldFocus? = nil,
+        accessibilityLabel: LocalizedStringResource? = nil
     ) {
         self._text = text
         self.lineLimit = lineLimit
@@ -123,6 +126,7 @@ struct PVTextArea: View {
         self.activateOnAppear = activateOnAppear
         self.fillsHeight = fillsHeight
         self.focus = focus
+        self.accessibilityLabel = accessibilityLabel
     }
 
     @FocusState private var isFocused: Bool
@@ -179,7 +183,7 @@ struct PVTextArea: View {
                 focus.focus(own: $isFocused)
             }
         }
-        .pvFieldNamed()
+        .pvFieldNamed(own: accessibilityLabel)
     }
 }
 

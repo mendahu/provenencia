@@ -97,9 +97,10 @@ enum PVFieldLabel {
 
 private struct PVFieldNamed: ViewModifier {
     @Environment(\.pvFieldLabel) private var fieldLabel
+    var own: LocalizedStringResource?
 
     func body(content: Content) -> some View {
-        if let name = PVFieldLabel.resolve(own: nil, field: fieldLabel.map(L10n.string)) {
+        if let name = PVFieldLabel.resolve(own: own.map(L10n.string), field: fieldLabel.map(L10n.string)) {
             content.accessibilityLabel(Text(verbatim: name))
         } else {
             content
@@ -108,9 +109,10 @@ private struct PVFieldNamed: ViewModifier {
 }
 
 extension View {
-    /// Gives a kit text control the label of the ``PVField`` around it.
-    func pvFieldNamed() -> some View {
-        modifier(PVFieldNamed())
+    /// Gives a kit text control the label of the ``PVField`` around it, or its
+    /// own label when it has one.
+    func pvFieldNamed(own: LocalizedStringResource? = nil) -> some View {
+        modifier(PVFieldNamed(own: own))
     }
 }
 
