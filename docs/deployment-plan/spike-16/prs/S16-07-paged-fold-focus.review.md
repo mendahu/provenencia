@@ -3,7 +3,7 @@
 **Verdict:** Fits with changes — Ready with changes
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
-Also reviewed: brief [S16-D2](../design/S16-D2-person-page-folds.md) (maintainability Q1, Q3, Q5, Q6; one finding, folded into M-2).
+Also reviewed: brief [S16-D2](../design/archive/S16-D2-person-page-folds.md) (maintainability Q1, Q3, Q5, Q6; one finding, folded into M-2).
 
 ## To user
 None.

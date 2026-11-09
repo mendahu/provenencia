@@ -6,9 +6,9 @@
 **Implements later as:** PR **S16-07** (One paged fold that moves focus)
 **Board:** agreed 2026-11-09 — [Claude Design — Person Detail](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ), turn "S16-D2 · Folds" on the pages *Person Detail - Family* (F5a, F5b), *Person Detail - Timeline* (F6a, F6b, F7a, F7b, F8, F9) and *Person Detail - Sources* (F1a, F1b, F1 narrow pane, F2a, F2b, F3a, F3b, F4). FH-1: the record line's highlight (`surfaceSelected`, `PVRadius.sm`) behind the whole Show more row. FH-4: a pointer click leaves focus where it is; Family and Sources scroll the revealed item just into view
 **Depends on:** the agreed S13-D3, S13-D4, S13-D6 and S13-D10 boards (Family shipped in S13-12, [#676](https://github.com/mendahu/provenencia/pull/676), and Timeline in S13-13, [#691](https://github.com/mendahu/provenencia/pull/691); Sources and record links in S13-16, [#722](https://github.com/mendahu/provenencia/pull/722), and S13-28, [#744](https://github.com/mendahu/provenencia/pull/744))
-**Related:** audit P-15 and P-14 ([`../person-page-audit.md`](../person-page-audit.md)); working rule "One paged fold that moves focus" in [`../deployment-plan.md`](../deployment-plan.md#working-rules); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S16-07-paged-fold-focus.md`](../prs/S16-07-paged-fold-focus.md)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** audit P-15 and P-14 ([`../person-page-audit.md`](../../person-page-audit.md)); working rule "One paged fold that moves focus" in [`../deployment-plan.md`](../../deployment-plan.md#working-rules); [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); plan [`../prs/S16-07-paged-fold-focus.md`](../../prs/S16-07-paged-fold-focus.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -120,7 +120,7 @@ A Source shows five record lines and folds the rest behind "Show N more" (six li
 
 | S16-07 ships | Not S16-07 |
 | --- | --- |
-| FH-1 – FH-5, FH-W1, FH-W2 | Back restoring a section's folds (P-19, [idea](../../../ideas/person-page-followups.md)); the Sources rows' narrow arrangement ([wide layout idea](../../../ideas/wide-layout.md)) |
+| FH-1 – FH-5, FH-W1, FH-W2 | Back restoring a section's folds (P-19, [idea](../../../../ideas/person-page-followups.md)); the Sources rows' narrow arrangement ([wide layout idea](../../../../ideas/wide-layout.md)) |
 
 ---
 
@@ -183,4 +183,4 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 ## 7. Handoff
 
-When the board is agreed: record the frames and the FH-1 look on the **Board** line here, in [`README.md`](README.md) and on the plan's **Board** line; the plan copies FH-1 – FH-5, FH-W1 and FH-W2 into its Scope and moves from `Blocked — on board S16-D2` to `Planned`. When S16-07 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the frames and the FH-1 look on the **Board** line here, in [`README.md`](../README.md) and on the plan's **Board** line; the plan copies FH-1 – FH-5, FH-W1 and FH-W2 into its Scope and moves from `Blocked — on board S16-D2` to `Planned`. When S16-07 lands, the brief moves to the spike's design archive.

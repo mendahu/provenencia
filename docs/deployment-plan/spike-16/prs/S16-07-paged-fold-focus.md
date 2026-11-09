@@ -3,7 +3,7 @@
 **Status:** Planned
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S16-D2](../design/S16-D2-person-page-folds.md), board agreed 2026-11-09 (one brief for the Person page's Family, Timeline and Sources folds: FH-1 – FH-5, FH-W1, FH-W2)
+**Brief:** [S16-D2](../design/archive/S16-D2-person-page-folds.md), board agreed 2026-11-09 (one brief for the Person page's Family, Timeline and Sources folds: FH-1 – FH-5, FH-W1, FH-W2)
 **Board:** [Claude Design — Person Detail](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ), turn "S16-D2 · Folds" on three pages: *Person Detail - Family* (frames F5a, F5b), *Person Detail - Timeline* (F6a, F6b, F7a, F7b, F8, F9) and *Person Detail - Sources* (F1a, F1b, F1 narrow pane, F2a, F2b, F3a, F3b, F4). The implementer reads it with the Artifact tool's `read` on that link. Each turn's decisions panel restates FH-1 – FH-5 and FH-W2
 **Depends on:** S16-D2 (board agreed 2026-11-09)
 **Blocks:** S16-02, S16-27; Spike 15's S15-30
