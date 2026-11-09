@@ -55,9 +55,9 @@ struct PersonTimelineList: View {
     /// Each item's whole height, measured.
     @State private var heights: [String: CGFloat] = [:]
     @State private var placement = PersonTimelinePlacement(content: PersonTimelineContent(timeline: CatalogPersonTimeline()), heights: [:], viewportHeight: 0)
-    /// The scale once every item is measured, kept while the items and the
+    /// The scale once every item is measured, kept while the items, the line's years and the
     /// viewport stay as they were, so an unfold moves only the rows below it.
-    @State private var chosenScale: ChosenScale?
+    @State private var keptScale: PersonTimelinePlacement.KeptScale?
     /// The first item an unfold added, to scroll into view once it is placed.
     @State private var pendingReveal: String?
     /// Keeps the keyboard on a card across a width change or a reload that takes it.
@@ -68,12 +68,6 @@ struct PersonTimelineList: View {
     @State private var scrollRequest = 0
     /// The title button or card with the keyboard: a row's event id or a card's id.
     @FocusState private var focused: String?
-
-    private struct ChosenScale: Equatable {
-        var ids: [String]
-        var viewportHeight: CGFloat
-        var pointsPerYear: CGFloat
-    }
 
     /// Reads no scroll state: the page's scroll moves only `PersonTimelineTethers`.
     var body: some View {
@@ -109,7 +103,7 @@ struct PersonTimelineList: View {
         .overlay(alignment: .topLeading) {
             if let lifeline = placement.lifeline {
                 ZStack(alignment: .topLeading) {
-                    PersonTimelineLine(lifeline: lifeline, height: placement.height, labels: content.pointLabels, select: select)
+                    PersonTimelineLine(lifeline: lifeline, height: placement.height, select: select)
                     PersonTimelineTethers(lifeline: lifeline, anchors: placement.anchors, spans: placement.spans, height: placement.height)
                 }
             }
@@ -134,13 +128,13 @@ struct PersonTimelineList: View {
         let idSet = Set(ids)
         let current = heights.filter { idSet.contains($0.key) }
         if current.count != heights.count { heights = current }
-        let fixed = chosenScale.flatMap { $0.ids == ids && $0.viewportHeight == viewportSize.height ? $0.pointsPerYear : nil }
+        let fixed = keptScale?.pointsPerYear(for: content, viewportHeight: viewportSize.height)
         let next = PersonTimelinePlacement(content: content, heights: current, viewportHeight: viewportSize.height, pointsPerYear: fixed)
         if next != placement { placement = next }
         // The scale is kept only once every item is measured.
         let scale = current.count == ids.count && !ids.isEmpty
-            ? ChosenScale(ids: ids, viewportHeight: viewportSize.height, pointsPerYear: next.pointsPerYear) : nil
-        if scale != chosenScale { chosenScale = scale }
+            ? PersonTimelinePlacement.KeptScale(content: content, viewportHeight: viewportSize.height, pointsPerYear: next.pointsPerYear) : nil
+        if scale != keptScale { keptScale = scale }
         if let target = pendingReveal, current[target] != nil {
             pendingReveal = nil
             scrollTarget = target
@@ -368,8 +362,6 @@ private struct PersonTimelineAgeFlag: View {
 private struct PersonTimelineLine: View {
     let lifeline: PersonTimelineLifeline
     let height: CGFloat
-    /// Each point's name, shown on hover.
-    let labels: [String: String]
     let select: (String) -> Void
 
     private var lineX: CGFloat { PersonTimelineLifeline.lineX }
@@ -387,34 +379,33 @@ private struct PersonTimelineLine: View {
             )
             .offset(y: -PersonTimelineDrawing.pad)
             .allowsHitTesting(false)
-            ForEach(lifeline.marks, id: \.id) { mark in
-                Button { select(mark.id) } label: { Color.clear }
+            // The folded rows' points share one target under the buttons: a click opens the fold
+            // through the nearest point's page. It has no name.
+            if let hit = lifeline.foldedHit {
+                Color.clear
+                    .frame(width: PersonTimelineDrawing.hit, height: hit.upperBound - hit.lowerBound)
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { location in
+                        if let id = lifeline.foldedMark(nearest: hit.lowerBound + location.y) { select(id) }
+                    }
+                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: hit.lowerBound)
+                    .accessibilityIdentifier("persons.detail.timeline.folded")
+            }
+            ForEach(lifeline.targets, id: \.mark.id) { target in
+                let hit = target.mark.hit
+                Button { select(target.mark.id) } label: { Color.clear }
                     .buttonStyle(.plain)
                     .focusable(false)
-                    .frame(width: PersonTimelineDrawing.hit, height: hitHeight(mark))
+                    .frame(width: PersonTimelineDrawing.hit, height: hit.upperBound - hit.lowerBound)
                     .contentShape(Rectangle())
-                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: top(mark) - 6)
-                    .help(labels[mark.id] ?? "")
-                    .accessibilityIdentifier("persons.detail.timeline.point.\(mark.id)")
+                    .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: hit.lowerBound)
+                    .help(target.label)
+                    .accessibilityIdentifier("persons.detail.timeline.point.\(target.mark.id)")
             }
         }
         .frame(width: PersonTimelineLifeline.columnWidth, alignment: .topLeading)
         .accessibilityHidden(true)
         .accessibilityIdentifier("persons.detail.timeline.line")
-    }
-
-    private func top(_ mark: PersonTimelineLifeline.Mark) -> CGFloat {
-        switch mark.shape {
-        case .dot(let y), .cap(let y, _): y
-        case .bar(let from, _, _, _): from
-        }
-    }
-
-    private func hitHeight(_ mark: PersonTimelineLifeline.Mark) -> CGFloat {
-        switch mark.shape {
-        case .bar(let from, let to, _, _): max(12, to - from + 12)
-        case .dot, .cap: 12
-        }
     }
 
     private func draw(into context: inout GraphicsContext) {
@@ -598,8 +589,8 @@ private struct PersonTimelinePreview: View {
         var timeline = PersonTimelinePreviewData.johann
         let sheet = Set(["4", "5", "8", "11", "12", "13"])
         timeline.events = timeline.events.filter { sheet.contains($0.id) }
-        timeline.birth = CatalogLifeMarker(besideEventId: "4")
-        timeline.death = CatalogLifeMarker(besideEventId: "11")
+        timeline.birth = CatalogLifeMarker(place: .before(eventId: "4"))
+        timeline.death = CatalogLifeMarker(place: .before(eventId: "11"))
         return timeline
     }())
 }

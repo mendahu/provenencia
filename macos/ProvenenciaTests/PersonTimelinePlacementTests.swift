@@ -133,4 +133,28 @@ struct PersonTimelinePlacementTests {
         #expect(PersonTimelinePlacement.topPadding(after, after: header) == 14 && !PersonTimelinePlacement.hasDivider(after, after: header))
         #expect(PersonTimelinePlacement.gutterWidth == 56)
     }
+
+    @Test func aDateEditRescales() {
+        let johann = content(Data.johann)
+        let kept = PersonTimelinePlacement.KeptScale(content: johann, viewportHeight: 900, pointsPerYear: 37)
+        #expect(kept.pointsPerYear(for: johann, viewportHeight: 900) == 37)
+        #expect(kept.pointsPerYear(for: johann, viewportHeight: 800) == nil)
+
+        // The last dated event, the burial, moved 50 years later under the same ids: the line's range changes.
+        var moved = Data.johann
+        moved.events = moved.events.map { event in
+            var event = event
+            if event.id == "11", var span = event.span {
+                span.from += 50
+                span.to += 50
+                event.span = span
+            }
+            return event
+        }
+        let later = content(moved)
+        #expect(later.items.map(\.id) == johann.items.map(\.id))
+        #expect(kept.pointsPerYear(for: later, viewportHeight: 900) == nil)
+
+        #expect(kept.pointsPerYear(for: content(Data.unknownEnds), viewportHeight: 900) == nil)
+    }
 }

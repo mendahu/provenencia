@@ -200,3 +200,33 @@ struct PersonTimelinePlacement: Equatable {
         return result
     }
 }
+
+extension PersonTimelinePlacement {
+    /// The scale chosen once every item was measured, kept while the items, the line's years
+    /// and the viewport stay as they were: a date edit that moves the line's range takes a
+    /// new scale.
+    struct KeptScale: Equatable {
+        private var ids: [String]
+        private var years: ClosedRange<Double>?
+        private var viewportHeight: CGFloat
+        private var pointsPerYear: CGFloat
+
+        init(content: PersonTimelineContent, viewportHeight: CGFloat, pointsPerYear: CGFloat) {
+            ids = content.items.map(\.id)
+            years = Self.years(content)
+            self.viewportHeight = viewportHeight
+            self.pointsPerYear = pointsPerYear
+        }
+
+        /// The kept scale; nil when `content` or the viewport is not what it was chosen for.
+        func pointsPerYear(for content: PersonTimelineContent, viewportHeight: CGFloat) -> CGFloat? {
+            guard viewportHeight == self.viewportHeight, years == Self.years(content), ids == content.items.map(\.id)
+            else { return nil }
+            return pointsPerYear
+        }
+
+        private static func years(_ content: PersonTimelineContent) -> ClosedRange<Double>? {
+            PersonTimelineLifeline.range(content).map { $0.from...$0.to }
+        }
+    }
+}

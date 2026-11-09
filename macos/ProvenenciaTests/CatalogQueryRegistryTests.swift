@@ -1583,8 +1583,8 @@ struct CatalogQueryRegistryTests {
         ]
         let timeline = CatalogPersonTimeline(
             events: events,
-            birth: CatalogLifeMarker(eventId: nil, besideEventId: "ev1"),
-            death: CatalogLifeMarker(eventId: "ev1", besideEventId: nil)
+            birth: CatalogLifeMarker(eventId: nil, place: .before(eventId: "ev1")),
+            death: CatalogLifeMarker(eventId: "ev1", place: nil)
         )
         store.seededPersonEvents = ["e1": timeline]
         let session = makeSession(store: store)
@@ -1594,8 +1594,8 @@ struct CatalogQueryRegistryTests {
         await waitForQuery(handle)
         #expect(handle.value == timeline)
         #expect(handle.value?.events.map(\.dated) == [true, false])
-        #expect(CatalogPersonTimeline().birth == CatalogLifeMarker(eventId: nil, besideEventId: nil))
-        #expect(CatalogPersonTimeline().death == CatalogLifeMarker(eventId: nil, besideEventId: nil))
+        #expect(CatalogPersonTimeline().birth == CatalogLifeMarker(eventId: nil, place: nil))
+        #expect(CatalogPersonTimeline().death == CatalogLifeMarker(eventId: nil, place: nil))
         await #expect(throws: CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])) {
             _ = try await store.listPersonEvents(projectDir: projectDir, entityID: "e9")
         }

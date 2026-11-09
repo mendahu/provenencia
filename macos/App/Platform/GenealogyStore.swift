@@ -763,11 +763,13 @@ struct CatalogAgeRange: Sendable, Equatable {
 }
 
 /// Where the timeline puts a birth or a death. `eventId` is the recorded event,
-/// nil for a placeholder; `besideEventId` is the dated event a marker with no
-/// span of its own sits beside, nil for none. No date is invented.
+/// nil for a placeholder; `place` is the dated event a marker with no span of
+/// its own sits after or before, nil for none. No date is invented.
 struct CatalogLifeMarker: Sendable, Equatable {
+    enum Place: Sendable, Equatable { case after(eventId: String), before(eventId: String) }
+
     var eventId: String? = nil
-    var besideEventId: String? = nil
+    var place: Place? = nil
 }
 
 /// A Person's timeline: the events in date order and the birth and death markers.
