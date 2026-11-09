@@ -19,8 +19,11 @@ Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-e
 | S16-12 | S15-05, S15-24 | The Source record: S15-05 adds the Source date to it; the move changes a graph's and an Artifact's Source |
 | S16-13 | S15-05, S15-22, S15-24 | The records tier and the Sources section; S15-22 groups citations there, rendered on demand from SQL rather than from the caches |
 | S16-15 | S15-24 | The graph catalog, which a move re-lists for both Sources |
-| S16-30 | S15-21 | The provenance sheet, which then shows citations rendered on demand from SQL |
+| S16-30 | S15-21, S15-28 | The provenance sheet, which then shows citations rendered on demand from SQL; S15-28 moves its records to an on-open read |
 | S16-03, S16-06, S16-07 | S15-05, S15-22 | `PersonSourcesSection.swift`, `PersonSourcesContent.swift` |
+| S16-04 | S15-29 | The provenance sheet's failed state reuses the `QueryHandle` failure reading and `PVRetryCallout` |
+| S16-07 | S15-27 | The provenance table and the Why accordion fold with `ConclusionFold`'s page of 50 |
+| S16-11, S16-19 | S15-28 | Outcome rows on the node and settled life-row owners, which the per-row records read keys on |
 | S16-25 | — | Converts any `CatalogQueryKey` cases Spike 15 adds before it lands (likely S15-11, S15-17, S15-23) along with the rest; Spike 15 keys added after it use the value keys |
 
 Spike 16's Apply for Source records and the graph catalog must handle an Artifact or graph whose `source_id` changes (S15-24): both Sources are in the write's `SourceScopes`.
@@ -414,7 +417,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Ships.** A provenance record is the node's outcome row (S16-11), the Subject record from the records tier (S16-13) and the Source record (S16-12): `sqlOutcomes`, `toponymsOf` and the detail read's date and name lookups go, and so does the second pass of `PersonDerivedRows`.
 **Not this PR.** The summary rows' life owners (S16-19); the Sources section, which S16-13 already moved.
 **Check.** Bar 11: a warm Person open on Vitals with its provenance sheet issues no SQL (query counter); the provenance and detail tests unchanged.
-**Context.** Rule "A Source's words live once"; `core/database/conclusiondetails/conclusiondetails.go`; [`ideas/provenance.md`](../../ideas/provenance.md) (its "Load records when the sheet opens" now only concerns payload size).
+**Context.** Rule "A Source's words live once"; `core/database/conclusiondetails/conclusiondetails.go`; [`spike-15/provenance-loading.md`](../spike-15/provenance-loading.md), now S15-28 and S15-29 (its "Load records when the sheet opens" now only concerns payload size).
 
 ### Slice 2c — Walks
 

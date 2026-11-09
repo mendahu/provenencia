@@ -19,6 +19,7 @@ Sources gain a date, a not-public switch and metadata at three levels (the Sourc
 | [**Source privacy toggle**](2026-10-27-source-privacy-toggle.md) | Per-Source "not public" switch; persist and toggle only; no share behaviour yet (dogfood 2026-10-27) |
 | [**Credibility field UX**](2026-10-18-credibility-field-truncates-and-ignores-enter.md) | Credibility argument truncates and ignores Enter (dogfood 2026-10-18) |
 | [**Rethink Source metadata**](2026-10-25-rethink-source-metadata-and-type-suggestions.md) | Footprint map of Source metadata (dogfood 2026-10-25). Settled: metadata stays and citations are built from it |
+| [**Provenance loading and drawing**](provenance-loading.md) | Capping the records a provenance table draws, and loading a value's records when its sheet opens; pulled in from `ideas/provenance.md` (2026-11-09) |
 | [**Completed**](completed.md) | Finished steps |
 | [Design briefs](design/) | Claude Design, written just before the PR they gate |
 | [PR plans](prs/) | One per PR, written just before the PR |
