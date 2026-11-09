@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 )
@@ -51,5 +52,19 @@ func TestNameRoundTrip(t *testing.T) {
 	}
 	if _, err := UnmarshalName([]byte{0xff, 0xff}); err == nil {
 		t.Fatal("garbage decoded")
+	}
+}
+
+func TestOptionalDateFromProto(t *testing.T) {
+	if got := OptionalDateFromProto(nil); got != nil {
+		t.Fatalf("nil input = %v, want nil", got)
+	}
+	if got := OptionalDateFromProto(&engine.DateValueInput{Kind: "  "}); got != nil {
+		t.Fatalf("blank kind = %v, want nil", got)
+	}
+	y := int32(1900)
+	got := OptionalDateFromProto(&engine.DateValueInput{Kind: "point", StartYear: &y})
+	if got == nil || got.StartYear == nil || *got.StartYear != 1900 {
+		t.Fatalf("point 1900 = %+v", got)
 	}
 }

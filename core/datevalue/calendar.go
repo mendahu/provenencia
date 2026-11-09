@@ -142,3 +142,9 @@ func CompletedYears(born, on int) int {
 	}
 	return n
 }
+
+// OrderInt is a day number and a side (-1, 0 or 1) as one integer whose order
+// is the day, then the side: three slots per day, so "bef." < the day < "aft.".
+func OrderInt(day, side int) int64 {
+	return int64(day)*3 + int64(side) + 1
+}

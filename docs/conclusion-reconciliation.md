@@ -279,7 +279,7 @@ The auto-reconciler, its cache, the pages that read it, place chains, Promote, a
 | --- | --- |
 | Shared pipeline and simple modules (text, integer, boolean, term); every value cached with its reason | `core/autoreconcile` |
 | Names: parts by type, containment per part type, one name per Person, majority outvotes misspellings only | `core/autoreconcile` |
-| Dates: value compare's span keys and containment fold, ABT as a range; `date_lo` / `date_hi` and `sort_key` as written | `core/autoreconcile` |
+| Dates: value compare's span keys and containment fold, ABT as a range; `date_lo` / `date_hi` as written, and `sort_key` from the one date order (`valuecompare.DateKeyOf`) | `core/autoreconcile` |
 | Per-Property cardinality on that same pipeline | `core/autoreconcile` |
 | Depictions by image File, cached as `value_image_file_id` | `core/autoreconcile`, `core/database/autoreconciler` |
 | Cache, evidence, outcomes, and upkeep (credibility and certainty included) | `core/database/autoreconciler` |

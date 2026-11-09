@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -247,7 +248,32 @@ func TestSortKey(t *testing.T) {
 	if _, ok := SortKey(propertymeta.ValueTypeBoolean, Value{Boolean: true}); ok {
 		t.Fatal("an absent boolean has a sort key")
 	}
-	for _, vt := range []string{propertymeta.ValueTypeDate, propertymeta.ValueTypeTerm, propertymeta.ValueTypeSubject} {
+	dateKeys := []*datevalue.Value{
+		datevaluetest.Before(2011, 3, 29), datevaluetest.YMD(2011, 3, 29), datevaluetest.After(2011, 3, 29),
+	}
+	early := []*datevalue.Value{datevaluetest.YMD(-9999, 0, 0), datevaluetest.Before(1880, 0, 0), datevaluetest.YMD(1880, 0, 0), datevaluetest.Between(1880, 0, 0, 1885, 0, 0)}
+	prevKey := ""
+	for i, d := range append(append([]*datevalue.Value{}, early...), dateKeys...) {
+		k, ok := SortKey(propertymeta.ValueTypeDate, Value{Date: d})
+		if !ok || len(k) != 20 {
+			t.Fatalf("date %d key %q %v", i, k, ok)
+		}
+		// BET 1880 AND 1885 starts on 1 Jan 1880, the same key as 1880.
+		if i == 3 {
+			if k != prevKey {
+				t.Fatalf("range key %q, want %q", k, prevKey)
+			}
+			continue
+		}
+		if i > 0 && k <= prevKey {
+			t.Fatalf("date %d key %q not after %q", i, k, prevKey)
+		}
+		prevKey = k
+	}
+	if _, ok := SortKey(propertymeta.ValueTypeDate, Value{Date: datevaluetest.Phrase("in the reign of Victoria")}); ok {
+		t.Fatal("a phrase-only date has a sort key")
+	}
+	for _, vt := range []string{propertymeta.ValueTypeTerm, propertymeta.ValueTypeSubject} {
 		if _, ok := SortKey(vt, Value{TermID: []byte("x"), SubjectID: []byte("x"), Date: &datevalue.Value{}}); ok {
 			t.Fatalf("%s has no sort key yet", vt)
 		}

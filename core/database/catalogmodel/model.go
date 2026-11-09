@@ -138,6 +138,7 @@ var FKs = []FK{
 
 	{From: "sources", Column: "source_type_id", To: "source_types", OnDelete: "NO ACTION", Bucket: BucketResource},
 	{From: "sources", Column: "primary_artifact_id", To: "artifacts", OnDelete: "SET NULL", Bucket: BucketOptional},
+	{From: "sources", Column: "date_value_id", To: "date_values", OnDelete: "NO ACTION", Bucket: BucketOwnedOutbound},
 	{From: "source_notes", Column: "source_id", To: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "source_metadata", Column: "source_id", To: "sources", OnDelete: "CASCADE", Bucket: BucketFacet, Audited: true},
 	{From: "source_metadata", Column: "field_id", To: "source_metadata_fields", OnDelete: "NO ACTION", Bucket: BucketResource},

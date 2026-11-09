@@ -2,6 +2,8 @@ package sources
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"image"
@@ -18,6 +20,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
@@ -798,6 +802,36 @@ func TestSourceDelete(t *testing.T) {
 		}
 	})
 
+	t.Run("dated source releases its date", func(t *testing.T) {
+		dated, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Dated"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		withDate, err := runSetDate(c, userID, dated.ID, datevaluetest.YMD(1880, 0, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []rowchange.Change
+		if _, err := writes.Call(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := Delete(tx, userID, dated.ID)
+			got = changes
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM date_values WHERE id = ?`, withDate.DateValueID).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if n != 0 {
+			t.Fatalf("date rows left=%d", n)
+		}
+		last := got[len(got)-1]
+		if last.EntityType != "source" || last.Fields["date_value_id"].Old != database.UUIDString(withDate.DateValueID) {
+			t.Fatalf("delete change %+v", last)
+		}
+	})
+
 	missing := make([]byte, 16)
 	if err := runDelete(c, userID, missing); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("missing %v", err)
@@ -888,5 +922,311 @@ func TestCoverArtifactID(t *testing.T) {
 				t.Fatalf("id = %x, want %x", got, id)
 			}
 		})
+	}
+}
+
+func runSetDate(c *database.Catalog, userID, sourceID []byte, d *datevalue.Value) (Source, error) {
+	src, _, err := writes.Run(c, writes.Op{Action: "set_source_date", UserID: userID},
+		func(tx *database.Tx) (Source, []rowchange.Change, error) {
+			return SetDate(tx, userID, sourceID, d)
+		})
+	return src, err
+}
+
+func runSetPublic(c *database.Catalog, userID, sourceID []byte, isPublic bool) (Source, []rowchange.Change, error) {
+	var changes []rowchange.Change
+	src, _, err := writes.Run(c, writes.Op{Action: "set_source_public", UserID: userID},
+		func(tx *database.Tx) (Source, []rowchange.Change, error) {
+			s, ch, err := SetPublic(tx, userID, sourceID, isPublic)
+			changes = ch
+			return s, ch, err
+		})
+	return src, changes, err
+}
+
+// sourceFixture is a catalog with one user and one Source type.
+func sourceFixture(t *testing.T) (c *database.Catalog, userID, typeID []byte) {
+	t.Helper()
+	userID = []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	typeID, err = sourcetypes.Upsert(c, sourcetypes.Type{
+		Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c, userID, typeID
+}
+
+func dateRows(t *testing.T, c *database.Catalog) int {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM date_values`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+func TestSourceDate(t *testing.T) {
+	c, userID, typeID := sourceFixture(t)
+	src, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Parish register"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Census"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if src.Date != nil || src.DateValueID != nil {
+		t.Fatalf("new source is dated: %+v", src)
+	}
+
+	var (
+		firstID []byte
+		changes []rowchange.Change
+	)
+	set := func(d *datevalue.Value) (Source, error) {
+		changes = nil
+		s, _, err := writes.Run(c, writes.Op{Action: "set_source_date", UserID: userID},
+			func(tx *database.Tx) (Source, []rowchange.Change, error) {
+				s, ch, err := SetDate(tx, userID, src.ID, d)
+				changes = ch
+				return s, ch, err
+			})
+		return s, err
+	}
+
+	t.Run("year only", func(t *testing.T) {
+		got, err := set(datevaluetest.YMD(1880, 0, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Date == nil || got.Date.Kind != datevalue.KindPoint || got.Date.StartYear == nil || *got.Date.StartYear != 1880 || len(got.DateValueID) != 16 {
+			t.Fatalf("got %+v", got)
+		}
+		firstID = got.DateValueID
+		read, err := Get(c, src.ID)
+		if err != nil || read.Date == nil || !bytes.Equal(read.Date.ID, firstID) {
+			t.Fatalf("Get %+v err=%v", read, err)
+		}
+		if dateRows(t, c) != 1 {
+			t.Fatalf("date rows %d", dateRows(t, c))
+		}
+		if len(changes) != 2 || changes[0].EntityType != "date_value" || changes[0].Action != rowchange.ActionCreate ||
+			changes[1].EntityType != "source" || changes[1].Fields["date_value_id"].New != database.UUIDString(firstID) {
+			t.Fatalf("changes %+v", changes)
+		}
+	})
+	t.Run("edit in place", func(t *testing.T) {
+		got, err := set(datevaluetest.About(1880, 3, 12))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(got.DateValueID, firstID) || got.Date.Qualifier != datevalue.QualifierABT || *got.Date.StartDay != 12 {
+			t.Fatalf("got %+v", got)
+		}
+		if len(changes) != 1 || changes[0].EntityType != "date_value" || changes[0].Action != rowchange.ActionUpdate {
+			t.Fatalf("changes %+v", changes)
+		}
+		if dateRows(t, c) != 1 {
+			t.Fatalf("date rows %d", dateRows(t, c))
+		}
+	})
+	t.Run("same date writes nothing", func(t *testing.T) {
+		if _, err := set(datevaluetest.About(1880, 3, 12)); err != nil {
+			t.Fatal(err)
+		}
+		if len(changes) != 0 {
+			t.Fatalf("changes %+v", changes)
+		}
+	})
+	t.Run("invalid date keeps the stored one", func(t *testing.T) {
+		bad := &datevalue.Value{Kind: datevalue.KindPoint, StartMonth: datevaluetest.Part(13)}
+		if _, err := set(bad); !errors.Is(err, datevalue.ErrInvalid) {
+			t.Fatalf("err %v", err)
+		}
+		read, err := Get(c, src.ID)
+		if err != nil || read.Date == nil || *read.Date.StartYear != 1880 || !bytes.Equal(read.DateValueID, firstID) {
+			t.Fatalf("Get %+v err=%v", read, err)
+		}
+	})
+	t.Run("clear releases the row", func(t *testing.T) {
+		got, err := set(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got.Date != nil || got.DateValueID != nil || dateRows(t, c) != 0 {
+			t.Fatalf("got %+v, date rows %d", got, dateRows(t, c))
+		}
+		if len(changes) != 2 || changes[0].EntityType != "source" || changes[0].Fields["date_value_id"].New != nil ||
+			changes[1].EntityType != "date_value" || changes[1].Action != rowchange.ActionDelete {
+			t.Fatalf("changes %+v", changes)
+		}
+		if _, err := set(nil); err != nil || len(changes) != 0 {
+			t.Fatalf("clearing an undated source: err=%v changes=%+v", err, changes)
+		}
+	})
+	t.Run("unknown source", func(t *testing.T) {
+		_, err := runSetDate(c, userID, make([]byte, 16), datevaluetest.YMD(1880, 0, 0))
+		if !errors.Is(err, ErrInvalid) {
+			t.Fatalf("err %v", err)
+		}
+		if _, err := runSetDate(c, userID, []byte{1}, nil); !errors.Is(err, ErrInvalid) {
+			t.Fatalf("short id err %v", err)
+		}
+	})
+	t.Run("list carries each date", func(t *testing.T) {
+		if _, err := set(datevaluetest.YMD(1881, 0, 0)); err != nil {
+			t.Fatal(err)
+		}
+		all, err := List(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, s := range all {
+			switch {
+			case bytes.Equal(s.ID, src.ID):
+				if s.Date == nil || *s.Date.StartYear != 1881 || len(s.Date.ID) != 16 {
+					t.Fatalf("dated source %+v", s)
+				}
+			case bytes.Equal(s.ID, other.ID):
+				if s.Date != nil {
+					t.Fatalf("undated source has %+v", s.Date)
+				}
+			}
+		}
+	})
+	t.Run("dangling date row reads undated", func(t *testing.T) {
+		dangle := func() []byte {
+			ctx := context.Background()
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn, err := db.Conn(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+				t.Fatal(err)
+			}
+			defer conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`)
+			id := make([]byte, 16)
+			if _, err := rand.Read(id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := conn.ExecContext(ctx, `UPDATE sources SET date_value_id = ? WHERE id = ?`, id, other.ID); err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		danglingID := dangle()
+		got, err := Get(c, other.ID)
+		if err != nil || got.Date != nil || !bytes.Equal(got.DateValueID, danglingID) {
+			t.Fatalf("Get %+v err=%v", got, err)
+		}
+		set, err := runSetDate(c, userID, other.ID, datevaluetest.YMD(1900, 0, 0))
+		if err != nil || set.Date == nil || *set.Date.StartYear != 1900 || bytes.Equal(set.DateValueID, danglingID) {
+			t.Fatalf("SetDate %+v err=%v", set, err)
+		}
+		dangle()
+		cleared, err := runSetDate(c, userID, other.ID, nil)
+		if err != nil || cleared.DateValueID != nil || cleared.Date != nil {
+			t.Fatalf("clear %+v err=%v", cleared, err)
+		}
+	})
+	t.Run("one date row per source", func(t *testing.T) {
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		cur, err := Get(c, src.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`UPDATE sources SET date_value_id = ? WHERE id = ?`, cur.DateValueID, other.ID); err == nil {
+			t.Fatal("two sources shared one date row")
+		}
+	})
+}
+
+func TestSourcePublic(t *testing.T) {
+	c, userID, typeID := sourceFixture(t)
+	src, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Parish register"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !src.IsPublic {
+		t.Fatal("Create returned a not-public source")
+	}
+	all, err := List(c)
+	if err != nil || len(all) != 1 || !all[0].IsPublic {
+		t.Fatalf("List %+v err=%v", all, err)
+	}
+
+	got, changes, err := runSetPublic(c, userID, src.ID, false)
+	if err != nil || got.IsPublic || len(changes) != 1 || changes[0].Fields["is_public"].Old != 1 || changes[0].Fields["is_public"].New != 0 {
+		t.Fatalf("set false: %+v changes=%+v err=%v", got, changes, err)
+	}
+	read, err := Get(c, src.ID)
+	if err != nil || read.IsPublic {
+		t.Fatalf("Get %+v err=%v", read, err)
+	}
+	if _, changes, err := runSetPublic(c, userID, src.ID, false); err != nil || len(changes) != 0 {
+		t.Fatalf("set false again: changes=%+v err=%v", changes, err)
+	}
+	got, _, err = runSetPublic(c, userID, src.ID, true)
+	if err != nil || !got.IsPublic {
+		t.Fatalf("set true: %+v err=%v", got, err)
+	}
+	if _, _, err := runSetPublic(c, userID, make([]byte, 16), false); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("unknown source err=%v", err)
+	}
+}
+
+func TestDateSortKey(t *testing.T) {
+	ordered := []*datevalue.Value{
+		datevaluetest.YMD(1879, 0, 0),
+		datevaluetest.Before(1880, 0, 0),
+		datevaluetest.YMD(1880, 0, 0),
+		datevaluetest.YMD(1881, 0, 0),
+		datevaluetest.Before(2011, 3, 29),
+		datevaluetest.YMD(2011, 3, 29),
+		datevaluetest.After(2011, 3, 29),
+	}
+	var prev int64
+	for i, d := range ordered {
+		k, ok := DateSortKey(Source{Date: d})
+		if !ok || (i > 0 && k <= prev) {
+			t.Fatalf("date %d key %d ok=%v after %d", i, k, ok, prev)
+		}
+		prev = k
+	}
+	about, _ := DateSortKey(Source{Date: datevaluetest.About(1880, 0, 0)})
+	plain, _ := DateSortKey(Source{Date: datevaluetest.YMD(1880, 0, 0)})
+	if about != plain {
+		t.Fatalf("ABT 1880 key %d, 1880 key %d", about, plain)
+	}
+	if _, ok := DateSortKey(Source{}); ok {
+		t.Fatal("undated source has a key")
+	}
+	if _, ok := DateSortKey(Source{Date: datevaluetest.Phrase("in the reign of Victoria")}); ok {
+		t.Fatal("phrase-only date has a key")
 	}
 }

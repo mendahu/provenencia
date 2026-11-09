@@ -13,6 +13,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
+	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -347,6 +348,80 @@ func SetSourceCover(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
+// SetSourceDate gives the Source a date, edits its date in place, or clears it
+// (no date, or a date with a blank kind).
+func SetSourceDate(in []byte) ([]byte, error) {
+	var req engine.SetSourceDateRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("set_source_date", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	date := valuecodec.OptionalDateFromProto(req.GetDate())
+	var out *engine.SetSourceDateResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		got, wrote, err := writes.Run(c, writes.Op{Action: "set_source_date", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sources.SetDate(tx, userID, sourceID, date)
+			})
+		if err != nil {
+			return err
+		}
+		sp, err := enrichSourceProto(c, got)
+		if err != nil {
+			return err
+		}
+		out = &engine.SetSourceDateResponse{Source: sp, Effects: writeEffectsProto(wrote)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
+// SetSourcePublic marks a Source public or not public.
+func SetSourcePublic(in []byte) ([]byte, error) {
+	var req engine.SetSourcePublicRequest
+	if err := proto.Unmarshal(in, &req); err != nil {
+		return nil, unmarshalErr("set_source_public", err)
+	}
+	userID, err := parseUserID(req.GetUserId())
+	if err != nil {
+		return nil, err
+	}
+	sourceID, err := parseID(req.GetSourceId())
+	if err != nil {
+		return nil, err
+	}
+	var out *engine.SetSourcePublicResponse
+	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
+		got, wrote, err := writes.Run(c, writes.Op{Action: "set_source_public", UserID: userID},
+			func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+				return sources.SetPublic(tx, userID, sourceID, req.GetIsPublic())
+			})
+		if err != nil {
+			return err
+		}
+		sp, err := enrichSourceProto(c, got)
+		if err != nil {
+			return err
+		}
+		out = &engine.SetSourcePublicResponse{Source: sp, Effects: writeEffectsProto(wrote)}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return proto.Marshal(out)
+}
+
 func AddSourceNote(in []byte) ([]byte, error) {
 	var req engine.AddSourceNoteRequest
 	if err := proto.Unmarshal(in, &req); err != nil {
@@ -626,7 +701,7 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 }
 
 func sourceProto(s sources.Source) *engine.Source {
-	return &engine.Source{
+	out := &engine.Source{
 		Id:                database.UUIDString(s.ID),
 		Ref:               s.Ref,
 		SourceTypeId:      database.UUIDString(s.SourceTypeID),
@@ -636,7 +711,15 @@ func sourceProto(s sources.Source) *engine.Source {
 		PrimaryArtifactId: database.UUIDString(s.PrimaryArtifactID),
 		UpdatedRevision:   s.Updated.Revision,
 		UpdatedAt:         s.Updated.At,
+		IsPublic:          s.IsPublic,
 	}
+	if s.Date != nil {
+		out.Date = valuecodec.DateToProto(*s.Date)
+	}
+	if key, ok := sources.DateSortKey(s); ok {
+		out.DateSortKey = &key
+	}
+	return out
 }
 
 func noteProto(n sources.Note) *engine.SourceNote {

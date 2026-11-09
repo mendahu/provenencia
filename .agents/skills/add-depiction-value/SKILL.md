@@ -36,7 +36,7 @@ An owned value row: a region plus an image File, replaced never rewritten (a new
 
 - Staging and request rules are `add-ffi-handler`'s ([Files from the client](../add-ffi-handler/SKILL.md)); the depiction call is `ingest.StageDepictions` through `withStagedDepictions`, which returns `ingest.Staged` stages (`InsertTx` inside the write, `Settle` after it).
 - `observations.Input.Depiction` (`observations.DepictionInput`) carries the value. `resolveDepiction` checks `locator.ValidateDepictionRegion`, inserts the File, then `depictionvalues.InsertTx`, which trims and calls `depictionvalue.Validate`.
-- A redraw releases the old row (`releaseReplacedValue` in `core/database/observations/update.go`). Release follows the `catalogmodel` owned-outbound FKs (`observations.value_depiction_id`, `depiction_values.image_file_id`).
+- `resolveDepiction` audits the new row with `depictionvalues.CreateChange` (`RowMap` is the audit row). A redraw releases the old row through `deleteimpact.ReleaseReplaced` (called in `core/database/observations/update.go`), which returns the audited delete. Release follows the `catalogmodel` owned-outbound FKs (`observations.value_depiction_id`, `depiction_values.image_file_id`).
 - Audit follows [`add-audit-scope`](../add-audit-scope/SKILL.md).
 
 ## Read path

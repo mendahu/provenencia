@@ -1,6 +1,6 @@
 # S15-02 — Sources carry a date and a not-public flag
 
-**Status:** Planned
+**Status:** Landed in [#762](https://github.com/mendahu/provenencia/pull/762) (2026-11-09)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: Go and the wire only; no Swift view reads the new fields until S15-03 and S15-04)
@@ -27,6 +27,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- `TestProductAliasTablesPinCacheVersion`'s pin (`productAliasPin.CacheVersion`) moves 23 to 24 with D-17's `CacheVersion` bump; its hash is unchanged. The plan's Steps did not name `autoreconciler_test.go`.
+- T-9's `TestReleaseReplacedAudits` is in `core/database/deleteimpact/release_audit_test.go` (the external `deleteimpact_test` package), not `release_test.go`: `sourcetypes` imports `deleteimpact`, so the internal test package cannot create the Source type it needs.
+- The version bump is 0.4.4 → 0.5.0 (main was at 0.4.4 after the planning base).
+- T-6, T-7 and T-3 also cover the unknown-Source and short-id errors, and `TestSourceDate` asserts the unique index refuses two Sources sharing one date row.
+- The `add-match-rule` SKILL no longer says sort keys read `DateWindow`; where a date sorts is `valuecompare.DateKeyOf`.
+- Review round 1 also landed: `valuecodec.OptionalDateFromProto` is the one decoder of an optional wire date (F-1); a Source whose date row is missing reads as undated and `SetDate` replaces or clears it (F-2); `ReleaseReplaced` ignores a malformed previous id again (F-3); each value package exports `RowMapTx` for releases (F-4); `sources.loadForWrite` is the one load for a Source write (F-5); `datevalues` and `namevalues` normalize and validate once per write (F-6).
 
 ## 1. Objective
 

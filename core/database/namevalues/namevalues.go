@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/namevalue"
 )
@@ -67,19 +68,15 @@ func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	if tx == nil {
 		return nil, namevalue.ErrInvalid
 	}
-	v.Form = strings.TrimSpace(v.Form)
-	parts := make([]namevalue.Part, len(v.Parts))
-	for i, p := range v.Parts {
-		parts[i] = namevalue.Part{
-			Idx:   p.Idx,
-			Value: strings.TrimSpace(p.Value),
-			Type:  strings.TrimSpace(p.Type),
-		}
-	}
-	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
+	v = normalize(v)
+	if err := namevalue.Validate(v); err != nil {
 		return nil, err
 	}
+	return insert(tx, v)
+}
 
+// insert stores a value already normalized and validated.
+func insert(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -88,7 +85,7 @@ func InsertTx(tx *sql.Tx, v namevalue.Value) ([]byte, error) {
 	if _, err := tx.Exec(sqlInsertValue, idBytes, v.Form); err != nil {
 		return nil, err
 	}
-	for _, p := range parts {
+	for _, p := range v.Parts {
 		partID, err := uuid.NewV7()
 		if err != nil {
 			return nil, err
@@ -112,18 +109,15 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	if tx == nil || len(id) != 16 {
 		return namevalue.ErrInvalid
 	}
-	v.Form = strings.TrimSpace(v.Form)
-	parts := make([]namevalue.Part, len(v.Parts))
-	for i, p := range v.Parts {
-		parts[i] = namevalue.Part{
-			Idx:   p.Idx,
-			Value: strings.TrimSpace(p.Value),
-			Type:  strings.TrimSpace(p.Type),
-		}
-	}
-	if err := namevalue.Validate(namevalue.Value{Form: v.Form, Parts: parts}); err != nil {
+	v = normalize(v)
+	if err := namevalue.Validate(v); err != nil {
 		return err
 	}
+	return update(tx, id, v)
+}
+
+// update rewrites row id with a value already normalized and validated.
+func update(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	var one int
 	if err := tx.QueryRow(sqlValueExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
@@ -137,7 +131,7 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 	if _, err := tx.Exec(sqlDeleteParts, id); err != nil {
 		return err
 	}
-	for _, p := range parts {
+	for _, p := range v.Parts {
 		partID, err := uuid.NewV7()
 		if err != nil {
 			return err
@@ -154,6 +148,128 @@ func UpdateTx(tx *sql.Tx, id []byte, v namevalue.Value) error {
 		}
 	}
 	return nil
+}
+
+// normalize trims the form and each part's value and type: the form every
+// write stores, compares and audits. Parts keep their Idx and carry no id.
+func normalize(v namevalue.Value) namevalue.Value {
+	v.Form = strings.TrimSpace(v.Form)
+	parts := make([]namevalue.Part, len(v.Parts))
+	for i, p := range v.Parts {
+		parts[i] = namevalue.Part{
+			Idx:   p.Idx,
+			Value: strings.TrimSpace(p.Value),
+			Type:  strings.TrimSpace(p.Type),
+		}
+	}
+	v.Parts = parts
+	return v
+}
+
+// PutTx stores v for an owner. With a 16-byte prevID (the name the owner holds)
+// it rewrites that row in place, so the id stays, and returns prevID with an
+// update change naming the fields that differ; when none differs it writes
+// nothing and returns a nil change. With no prevID it inserts a new row and
+// returns its id with the create change. v is normalized before it is compared
+// and audited. An invalid v is namevalue.ErrInvalid and nothing is written.
+func PutTx(tx *sql.Tx, prevID []byte, v namevalue.Value) (id []byte, ch *rowchange.Change, err error) {
+	if tx == nil {
+		return nil, nil, namevalue.ErrInvalid
+	}
+	v = normalize(v)
+	if err := namevalue.Validate(v); err != nil {
+		return nil, nil, err
+	}
+	if len(prevID) != 16 {
+		id, err := insert(tx, v)
+		if err != nil {
+			return nil, nil, err
+		}
+		c := CreateChange(id, v)
+		return id, &c, nil
+	}
+	prev, err := LookupTx(tx, prevID)
+	if err != nil {
+		return nil, nil, err
+	}
+	next := v
+	next.ID = append([]byte(nil), prevID...)
+	ch = UpdateChange(prev, next)
+	if ch == nil {
+		return append([]byte(nil), prevID...), nil, nil
+	}
+	if err := update(tx, prevID, v); err != nil {
+		return nil, nil, err
+	}
+	return append([]byte(nil), prevID...), ch, nil
+}
+
+// RowMap is the audit row of a name_values row: its id, form and parts.
+func RowMap(id []byte, v namevalue.Value) map[string]any {
+	return map[string]any{
+		"id":    database.UUIDJSON(id),
+		"form":  v.Form,
+		"parts": partsJSON(v.Parts),
+	}
+}
+
+// CreateChange is the audit change of a new name_values row.
+func CreateChange(id []byte, v namevalue.Value) rowchange.Change {
+	return rowchange.Change{
+		EntityType: "name_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(RowMap(id, v)),
+	}
+}
+
+// UpdateChange is the audit change from prev to next, naming only the fields
+// that differ (form, parts); nil when none does.
+func UpdateChange(prev, next namevalue.Value) *rowchange.Change {
+	fields := map[string]rowchange.FieldDiff{}
+	if prev.Form != next.Form {
+		fields["form"] = rowchange.FieldDiff{Old: prev.Form, New: next.Form}
+	}
+	if !partsEqual(prev.Parts, next.Parts) {
+		fields["parts"] = rowchange.FieldDiff{Old: partsJSON(prev.Parts), New: partsJSON(next.Parts)}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	id := prev.ID
+	if len(id) != 16 {
+		id = next.ID
+	}
+	return &rowchange.Change{
+		EntityType: "name_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}
+}
+
+func partsEqual(a, b []namevalue.Part) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Idx != b[i].Idx || a[i].Value != b[i].Value || a[i].Type != b[i].Type {
+			return false
+		}
+	}
+	return true
+}
+
+func partsJSON(parts []namevalue.Part) []map[string]any {
+	out := make([]map[string]any, len(parts))
+	for i, p := range parts {
+		out[i] = map[string]any{
+			"idx":   p.Idx,
+			"value": p.Value,
+			"type":  database.NullString(p.Type),
+		}
+	}
+	return out
 }
 
 // Lookup returns the name_values row and ordered parts for id, or sql.ErrNoRows.
@@ -264,4 +380,14 @@ func LookupManyTx(db interface {
 		return nil, err
 	}
 	return out, nil
+}
+
+// RowMapTx is the release row-map of the name_values row id for
+// deleteimpact.ReleaseReplaced: it looks the row up when called, then returns
+// its audit row.
+func RowMapTx(tx *sql.Tx, id []byte) func() (map[string]any, error) {
+	return func() (map[string]any, error) {
+		v, err := LookupTx(tx, id)
+		return RowMap(id, v), err
+	}
 }

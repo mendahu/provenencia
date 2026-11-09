@@ -268,13 +268,18 @@ func valueSource(col string) Path {
 
 // ownedValue is the effect of a value row an Observation owns in col: the
 // change carries the Evidence graphs, the Source and the handles of the
-// Observations that hold it.
-func ownedValue(entity, col string) Effect {
+// Observations that hold it. Each owners path adds a further owner of the row
+// (a Source that holds it in its own column) to the Sources the change reaches.
+func ownedValue(entity, col string, owners ...Path) Effect {
+	source := valueSource(col)
+	if len(owners) > 0 {
+		source = union(append([]Path{source}, owners...)...)
+	}
 	return Effect{
 		Entity:        entity,
 		EvidenceGraph: valueGraph(col),
 		Reads:         []ReadPath{{ReadCitations, valueGraph(col)}},
-		SourceScope:   valueSource(col),
+		SourceScope:   source,
 		Handles:       valueMembers(col),
 		HandleScope:   valueMembers(col),
 	}
@@ -395,7 +400,7 @@ var registry = map[string]Effect{
 		SourceScope: chain(inbound("artifacts", "file_id"), field("source_id")),
 		Search:      []SearchDoc{{Kind: DocSource, Path: chain(inbound("artifacts", "file_id"), field("source_id"))}},
 	},
-	"date_values":      ownedValue("date_value", "value_date_id"),
+	"date_values":      ownedValue("date_value", "value_date_id", inbound("sources", "date_value_id")),
 	"name_values":      ownedValue("name_value", "value_name_id"),
 	"depiction_values": ownedValue("depiction_value", "value_depiction_id"),
 	"source_types": {

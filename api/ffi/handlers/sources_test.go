@@ -1,13 +1,18 @@
 package handlers
 
 import (
+	"cmp"
+	"errors"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -70,6 +75,75 @@ func TestListSources(t *testing.T) {
 				}
 				if len(list.Sources) != 1 || !list.Sources[0].GetHasArtifact() {
 					t.Fatalf("want has_artifact true got %+v", list.Sources)
+				}
+			},
+		},
+		{
+			name: "date and sort key",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID := sourceFixture(t)
+				dates := []struct {
+					title string
+					date  *engine.DateValueInput
+				}{
+					{"1881", pointDate(1881, 0, 0)},
+					{"aft. 29 Mar 2011", qualifiedDate(datevalue.QualifierAFT, 2011, 3, 29)},
+					{"undated", nil},
+					{"1879", pointDate(1879, 0, 0)},
+					{"bef. 1880", qualifiedDate(datevalue.QualifierBEF, 1880, 0, 0)},
+					{"phrase", &engine.DateValueInput{Kind: datevalue.KindPoint, Phrase: "in the reign of Victoria"}},
+					{"29 Mar 2011", pointDate(2011, 3, 29)},
+					{"1880", pointDate(1880, 0, 0)},
+					{"bef. 29 Mar 2011", qualifiedDate(datevalue.QualifierBEF, 2011, 3, 29)},
+				}
+				for _, d := range dates {
+					var created engine.CreateSourceResponse
+					mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+						ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: d.title,
+					}, &created)
+					if d.date != nil {
+						mustRPC(t, SetSourceDate, &engine.SetSourceDateRequest{
+							ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, Date: d.date,
+						}, &engine.SetSourceDateResponse{})
+					}
+				}
+				return &engine.ListSourcesRequest{ProjectDir: dir}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var list engine.ListSourcesResponse
+				if err := proto.Unmarshal(out, &list); err != nil {
+					t.Fatal(err)
+				}
+				byKey := slices.Clone(list.Sources)
+				slices.SortStableFunc(byKey, func(a, b *engine.Source) int {
+					switch {
+					case a.DateSortKey == nil && b.DateSortKey == nil:
+						return 0
+					case a.DateSortKey == nil:
+						return 1
+					case b.DateSortKey == nil:
+						return -1
+					}
+					return cmp.Compare(*a.DateSortKey, *b.DateSortKey)
+				})
+				var titles []string
+				for _, src := range byKey {
+					titles = append(titles, src.GetTitle())
+					if src.GetTitle() == "undated" && (src.GetDate() != nil || src.DateSortKey != nil) {
+						t.Fatalf("undated source %+v", src)
+					}
+					if src.GetTitle() == "phrase" && (src.GetDate().GetPhrase() == "" || src.DateSortKey != nil) {
+						t.Fatalf("phrase-only source %+v", src)
+					}
+					if !src.GetIsPublic() {
+						t.Fatalf("%s is not public", src.GetTitle())
+					}
+				}
+				want := []string{
+					"1879", "bef. 1880", "1880", "1881", "bef. 29 Mar 2011", "29 Mar 2011", "aft. 29 Mar 2011",
+				}
+				if !slices.Equal(titles[:len(want)], want) {
+					t.Fatalf("date order %v, want %v first", titles, want)
 				}
 			},
 		},
@@ -848,6 +922,31 @@ func TestCopySource(t *testing.T) {
 			},
 		},
 		{
+			name: "copy is undated and public",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, typeID, sourceA, _, _ := copySourceFixture(t)
+				mustRPC(t, SetSourceDate, &engine.SetSourceDateRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, Date: pointDate(1880, 3, 12),
+				}, &engine.SetSourceDateResponse{})
+				mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, IsPublic: false,
+				}, &engine.SetSourcePublicResponse{})
+				return &engine.CopySourceRequest{
+					ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy", SourceTypeId: typeID,
+					CopyDescription: true, CopyMetadata: true, CopyCredibility: true,
+				}
+			},
+			after: func(t *testing.T, out []byte, _ proto.Message) {
+				var resp engine.CopySourceResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.Source.GetDate() != nil || resp.Source.DateSortKey != nil || !resp.Source.GetIsPublic() {
+					t.Fatalf("copy %+v", resp.Source)
+				}
+			},
+		},
+		{
 			name: "rejects a malformed artifact id",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID, sourceA, artifactA, _ := copySourceFixture(t)
@@ -872,4 +971,189 @@ func TestCopySource(t *testing.T) {
 			wantErrIs: sources.ErrInvalid,
 		},
 	})
+}
+
+func pointDate(y, m, d int32) *engine.DateValueInput {
+	return qualifiedDate("", y, m, d)
+}
+
+func qualifiedDate(qualifier string, y, m, d int32) *engine.DateValueInput {
+	in := &engine.DateValueInput{Kind: datevalue.KindPoint, Qualifier: qualifier, StartYear: &y}
+	if m != 0 {
+		in.StartMonth = &m
+	}
+	if d != 0 {
+		in.StartDay = &d
+	}
+	return in
+}
+
+func TestSetSourceDate(t *testing.T) {
+	newSource := func(t *testing.T) (dir, userID, sourceID string) {
+		dir, userID, typeID := sourceFixture(t)
+		var created engine.CreateSourceResponse
+		mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+			ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Register",
+		}, &created)
+		return dir, userID, created.Source.Id
+	}
+	set := func(t *testing.T, dir, userID, sourceID string, date *engine.DateValueInput) (*engine.SetSourceDateResponse, error) {
+		t.Helper()
+		var resp engine.SetSourceDateResponse
+		err := rpc(t, SetSourceDate, &engine.SetSourceDateRequest{
+			ProjectDir: dir, UserId: userID, SourceId: sourceID, Date: date,
+		}, &resp)
+		return &resp, err
+	}
+	dateRows := func(t *testing.T, dir string) int {
+		t.Helper()
+		return countCatalogRows(t, dir, "date_values")
+	}
+
+	t.Run("set, edit in place, same, clear", func(t *testing.T) {
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		dir, userID, id := newSource(t)
+
+		resp, err := set(t, dir, userID, id, pointDate(1880, 0, 0))
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := resp.Source.GetDate()
+		if d.GetKind() != datevalue.KindPoint || d.GetStartYear() != 1880 || resp.Source.DateSortKey == nil ||
+			resp.Effects.GetRevision() <= 0 || !slices.Contains(resp.Effects.GetSourceScopes(), id) {
+			t.Fatalf("set %+v effects %+v", resp.Source, resp.Effects)
+		}
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: id}, &ws)
+		if ws.Source.GetDate().GetStartYear() != 1880 || ws.Source.DateSortKey == nil {
+			t.Fatalf("workspace source %+v", ws.Source)
+		}
+		if n := dateRows(t, dir); n != 1 {
+			t.Fatalf("date rows %d", n)
+		}
+
+		if resp, err = set(t, dir, userID, id, qualifiedDate(datevalue.QualifierABT, 1880, 3, 12)); err != nil {
+			t.Fatal(err)
+		}
+		d = resp.Source.GetDate()
+		if d.GetQualifier() != datevalue.QualifierABT || d.GetStartMonth() != 3 || d.GetStartDay() != 12 || dateRows(t, dir) != 1 {
+			t.Fatalf("edit %+v rows=%d", resp.Source, dateRows(t, dir))
+		}
+
+		if resp, err = set(t, dir, userID, id, qualifiedDate(datevalue.QualifierABT, 1880, 3, 12)); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Effects.GetRevision() != 0 || len(resp.Effects.GetSourceScopes()) != 0 {
+			t.Fatalf("same date wrote: %+v", resp.Effects)
+		}
+
+		// A date with a blank kind clears, whatever else it holds.
+		if resp, err = set(t, dir, userID, id, &engine.DateValueInput{Kind: " ", Phrase: "ignored"}); err != nil {
+			t.Fatal(err)
+		}
+		if resp.Source.GetDate() != nil || resp.Source.DateSortKey != nil || dateRows(t, dir) != 0 {
+			t.Fatalf("clear %+v rows=%d", resp.Source, dateRows(t, dir))
+		}
+		if resp.Effects.GetRevision() <= 0 {
+			t.Fatalf("clear effects %+v", resp.Effects)
+		}
+	})
+	t.Run("invalid date keeps the stored one", func(t *testing.T) {
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		dir, userID, id := newSource(t)
+		if _, err := set(t, dir, userID, id, pointDate(1880, 0, 0)); err != nil {
+			t.Fatal(err)
+		}
+		month := int32(13)
+		_, err := set(t, dir, userID, id, &engine.DateValueInput{Kind: datevalue.KindPoint, StartMonth: &month})
+		if !errors.Is(err, datevalue.ErrInvalid) {
+			t.Fatalf("err %v", err)
+		}
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: id}, &ws)
+		if ws.Source.GetDate().GetStartYear() != 1880 {
+			t.Fatalf("stored date %+v", ws.Source.GetDate())
+		}
+	})
+	t.Run("phrase-only date has no sort key", func(t *testing.T) {
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		dir, userID, id := newSource(t)
+		resp, err := set(t, dir, userID, id, &engine.DateValueInput{Kind: datevalue.KindPoint, Phrase: "in the reign of Victoria"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.Source.GetDate().GetPhrase() == "" || resp.Source.DateSortKey != nil {
+			t.Fatalf("source %+v", resp.Source)
+		}
+	})
+	t.Run("unknown source", func(t *testing.T) {
+		t.Cleanup(func() { _ = catalogsession.CloseAll() })
+		dir, userID, _ := newSource(t)
+		_, err := set(t, dir, userID, "00000000-0000-7000-8000-000000000000", pointDate(1880, 0, 0))
+		if !errors.Is(err, sources.ErrInvalid) {
+			t.Fatalf("err %v", err)
+		}
+	})
+	runRPC(t, SetSourceDate, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+	})
+}
+
+func TestSetSourcePublic(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, typeID := sourceFixture(t)
+	var created engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{
+		ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Register",
+	}, &created)
+	id := created.Source.Id
+	if !created.Source.GetIsPublic() {
+		t.Fatalf("created source is not public: %+v", created.Source)
+	}
+
+	var resp engine.SetSourcePublicResponse
+	mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{ProjectDir: dir, UserId: userID, SourceId: id, IsPublic: false}, &resp)
+	if resp.Source.GetIsPublic() || resp.Effects.GetRevision() <= 0 || !slices.Contains(resp.Effects.GetSourceScopes(), id) {
+		t.Fatalf("set false %+v effects %+v", resp.Source, resp.Effects)
+	}
+	var ws engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: id}, &ws)
+	if ws.Source.GetIsPublic() {
+		t.Fatalf("workspace source %+v", ws.Source)
+	}
+	var list engine.ListSourcesResponse
+	mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: dir}, &list)
+	if len(list.Sources) != 1 || list.Sources[0].GetIsPublic() {
+		t.Fatalf("list %+v", list.Sources)
+	}
+
+	var again engine.SetSourcePublicResponse
+	mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{ProjectDir: dir, UserId: userID, SourceId: id, IsPublic: false}, &again)
+	if again.Effects.GetRevision() != 0 {
+		t.Fatalf("unchanged flag wrote: %+v", again.Effects)
+	}
+	mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{ProjectDir: dir, UserId: userID, SourceId: id, IsPublic: true}, &resp)
+	if !resp.Source.GetIsPublic() {
+		t.Fatalf("set true %+v", resp.Source)
+	}
+	runRPC(t, SetSourcePublic, []rpcTest{
+		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
+	})
+}
+
+// countCatalogRows is how many rows table holds.
+func countCatalogRows(t *testing.T, dir, table string) int {
+	t.Helper()
+	var n int
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		db, err := c.DB()
+		if err != nil {
+			return err
+		}
+		return db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return n
 }

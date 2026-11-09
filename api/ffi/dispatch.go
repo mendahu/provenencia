@@ -52,6 +52,8 @@ const (
 	MethodReorderSourceMetadata             = int32(engine.Method_METHOD_REORDER_SOURCE_METADATA)
 	MethodCloseCatalogSession               = int32(engine.Method_METHOD_CLOSE_CATALOG_SESSION)
 	MethodSetSourceCover                    = int32(engine.Method_METHOD_SET_SOURCE_COVER)
+	MethodSetSourceDate                     = int32(engine.Method_METHOD_SET_SOURCE_DATE)
+	MethodSetSourcePublic                   = int32(engine.Method_METHOD_SET_SOURCE_PUBLIC)
 	MethodSearchCatalog                     = int32(engine.Method_METHOD_SEARCH_CATALOG)
 	MethodCreateSubject                     = int32(engine.Method_METHOD_CREATE_SUBJECT)
 	MethodUpdateSubject                     = int32(engine.Method_METHOD_UPDATE_SUBJECT)
@@ -214,6 +216,10 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.CloseCatalogSession(in)
 	case MethodSetSourceCover:
 		return handlers.SetSourceCover(in)
+	case MethodSetSourceDate:
+		return handlers.SetSourceDate(in)
+	case MethodSetSourcePublic:
+		return handlers.SetSourcePublic(in)
 	case MethodSearchCatalog:
 		return handlers.SearchCatalog(in)
 	case MethodCreateSubject:

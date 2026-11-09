@@ -1,12 +1,14 @@
 package deleteimpact
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 )
 
 // OwnedSnapshot is the owned-outbound child ids captured while the parent still
@@ -100,22 +102,43 @@ func releaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object
 }
 
 // ReleaseReplaced releases the old child of an owned FK after an update has
-// pointed the parent at a new one. column is "table.column" of a declared
-// owned-outbound FK. The child is a row (deleted by its PK, its own children
-// released after it) or a File (deleted when nothing else points at it). Call
-// it after the parent row already holds the new value. It schedules the purge
-// of any File it released. An empty oldID is a no-op; a column that is not an
-// owned FK is ErrInvalid.
-func ReleaseReplaced(tx *database.Tx, column string, oldID []byte) error {
+// pointed the parent at a new one (or at none). column is "table.column" of a
+// declared owned-outbound FK; entity is the audit entity type of a row child.
+// The child is a row (deleted by its PK, its own children released after it) or
+// a File (deleted when nothing else points at it). Call it after the parent
+// row already holds the new value. It does nothing, and returns nil, when
+// prevID is not a 16-byte id or equals newID. Otherwise it builds the delete change from
+// rowMap before it releases, schedules the purge of any File it released, and
+// returns the change; a nil rowMap (a File child) returns no change. A column
+// that is not an owned FK is ErrInvalid.
+func ReleaseReplaced(tx *database.Tx, column, entity string, prevID, newID []byte, rowMap func() (map[string]any, error)) (*rowchange.Change, error) {
 	if tx == nil {
-		return ErrInvalid
+		return nil, ErrInvalid
 	}
-	objs, err := releaseReplaced(tx.Tx, productionPlan(), column, oldID)
+	if len(prevID) != 16 || bytes.Equal(prevID, newID) {
+		return nil, nil
+	}
+	var row map[string]any
+	if rowMap != nil {
+		var err error
+		if row, err = rowMap(); err != nil {
+			return nil, err
+		}
+	}
+	objs, err := releaseReplaced(tx.Tx, productionPlan(), column, prevID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	files.PurgeAfterCommit(tx, objs)
-	return nil
+	if rowMap == nil {
+		return nil, nil
+	}
+	return &rowchange.Change{
+		EntityType: entity,
+		EntityID:   append([]byte(nil), prevID...),
+		Action:     rowchange.ActionDelete,
+		Fields:     rowchange.DeletedRow(row),
+	}, nil
 }
 
 func releaseReplaced(tx *sql.Tx, p *ownedPlan, column string, oldID []byte) ([]files.Object, error) {

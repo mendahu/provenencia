@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 )
@@ -64,15 +65,17 @@ func Insert(c *database.Catalog, v datevalue.Value) ([]byte, error) {
 func InsertTx(q interface {
 	Exec(query string, args ...any) (sql.Result, error)
 }, v datevalue.Value) ([]byte, error) {
-	v.Kind = strings.TrimSpace(v.Kind)
-	v.Qualifier = strings.TrimSpace(v.Qualifier)
-	v.Calendar = strings.TrimSpace(v.Calendar)
-	v.Phrase = strings.TrimSpace(v.Phrase)
-	v.StartTZ = strings.TrimSpace(v.StartTZ)
-	v.EndTZ = strings.TrimSpace(v.EndTZ)
+	v = normalize(v)
 	if err := datevalue.Validate(v); err != nil {
 		return nil, err
 	}
+	return insert(q, v)
+}
+
+// insert stores a value already normalized and validated.
+func insert(q interface {
+	Exec(query string, args ...any) (sql.Result, error)
+}, v datevalue.Value) ([]byte, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return nil, err
@@ -112,15 +115,15 @@ func UpdateTx(tx *sql.Tx, id []byte, v datevalue.Value) error {
 	if tx == nil || len(id) != 16 {
 		return datevalue.ErrInvalid
 	}
-	v.Kind = strings.TrimSpace(v.Kind)
-	v.Qualifier = strings.TrimSpace(v.Qualifier)
-	v.Calendar = strings.TrimSpace(v.Calendar)
-	v.Phrase = strings.TrimSpace(v.Phrase)
-	v.StartTZ = strings.TrimSpace(v.StartTZ)
-	v.EndTZ = strings.TrimSpace(v.EndTZ)
+	v = normalize(v)
 	if err := datevalue.Validate(v); err != nil {
 		return err
 	}
+	return update(tx, id, v)
+}
+
+// update rewrites row id with a value already normalized and validated.
+func update(tx *sql.Tx, id []byte, v datevalue.Value) error {
 	var one int
 	if err := tx.QueryRow(sqlExists, id).Scan(&one); err != nil {
 		if err == sql.ErrNoRows {
@@ -153,6 +156,119 @@ func UpdateTx(tx *sql.Tx, id []byte, v datevalue.Value) error {
 		id,
 	)
 	return err
+}
+
+// normalize trims the six string fields: the form every write stores, compares
+// and audits.
+func normalize(v datevalue.Value) datevalue.Value {
+	v.Kind = strings.TrimSpace(v.Kind)
+	v.Qualifier = strings.TrimSpace(v.Qualifier)
+	v.Calendar = strings.TrimSpace(v.Calendar)
+	v.Phrase = strings.TrimSpace(v.Phrase)
+	v.StartTZ = strings.TrimSpace(v.StartTZ)
+	v.EndTZ = strings.TrimSpace(v.EndTZ)
+	return v
+}
+
+// PutTx stores v for an owner. With a 16-byte prevID (the date the owner holds)
+// it rewrites that row in place, so the id stays, and returns prevID with an
+// update change naming the fields that differ; when none differs it writes
+// nothing and returns a nil change. With no prevID it inserts a new row and
+// returns its id with the create change. v is normalized before it is compared
+// and audited, so the audit row equals the stored row. An invalid v is
+// datevalue.ErrInvalid and nothing is written.
+func PutTx(tx *sql.Tx, prevID []byte, v datevalue.Value) (id []byte, ch *rowchange.Change, err error) {
+	if tx == nil {
+		return nil, nil, datevalue.ErrInvalid
+	}
+	v = normalize(v)
+	if err := datevalue.Validate(v); err != nil {
+		return nil, nil, err
+	}
+	if len(prevID) != 16 {
+		id, err := insert(tx, v)
+		if err != nil {
+			return nil, nil, err
+		}
+		c := CreateChange(id, v)
+		return id, &c, nil
+	}
+	prev, err := LookupTx(tx, prevID)
+	if err != nil {
+		return nil, nil, err
+	}
+	next := v
+	next.ID = append([]byte(nil), prevID...)
+	ch = UpdateChange(prev, next)
+	if ch == nil {
+		return append([]byte(nil), prevID...), nil, nil
+	}
+	if err := update(tx, prevID, v); err != nil {
+		return nil, nil, err
+	}
+	return append([]byte(nil), prevID...), ch, nil
+}
+
+// RowMap is the audit row of a date_values row: every column, keyed by name.
+func RowMap(id []byte, v datevalue.Value) map[string]any {
+	return map[string]any{
+		"id":                database.UUIDJSON(id),
+		"kind":              database.NullString(v.Kind),
+		"qualifier":         database.NullString(v.Qualifier),
+		"calendar":          database.NullString(v.Calendar),
+		"start_year":        nullInt(v.StartYear),
+		"start_month":       nullInt(v.StartMonth),
+		"start_day":         nullInt(v.StartDay),
+		"start_hour":        nullInt(v.StartHour),
+		"start_minute":      nullInt(v.StartMinute),
+		"start_second":      nullInt(v.StartSecond),
+		"start_millisecond": nullInt(v.StartMillisecond),
+		"start_tz":          database.NullString(v.StartTZ),
+		"end_year":          nullInt(v.EndYear),
+		"end_month":         nullInt(v.EndMonth),
+		"end_day":           nullInt(v.EndDay),
+		"end_hour":          nullInt(v.EndHour),
+		"end_minute":        nullInt(v.EndMinute),
+		"end_second":        nullInt(v.EndSecond),
+		"end_millisecond":   nullInt(v.EndMillisecond),
+		"end_tz":            database.NullString(v.EndTZ),
+		"phrase":            database.NullString(v.Phrase),
+	}
+}
+
+// CreateChange is the audit change of a new date_values row.
+func CreateChange(id []byte, v datevalue.Value) rowchange.Change {
+	return rowchange.Change{
+		EntityType: "date_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionCreate,
+		Fields:     rowchange.FullRow(RowMap(id, v)),
+	}
+}
+
+// UpdateChange is the audit change from prev to next, naming only the fields
+// that differ; nil when none does.
+func UpdateChange(prev, next datevalue.Value) *rowchange.Change {
+	old, now := RowMap(prev.ID, prev), RowMap(next.ID, next)
+	fields := map[string]rowchange.FieldDiff{}
+	for k, o := range old {
+		if k != "id" && o != now[k] {
+			fields[k] = rowchange.FieldDiff{Old: o, New: now[k]}
+		}
+	}
+	if len(fields) == 0 {
+		return nil
+	}
+	id := prev.ID
+	if len(id) != 16 {
+		id = next.ID
+	}
+	return &rowchange.Change{
+		EntityType: "date_value",
+		EntityID:   append([]byte(nil), id...),
+		Action:     rowchange.ActionUpdate,
+		Fields:     fields,
+	}
 }
 
 // Lookup returns the date_values row for id, or sql.ErrNoRows.
@@ -269,4 +385,14 @@ func scanValue(row interface{ Scan(dest ...any) error }, lead ...any) (datevalue
 	v.EndSecond = intPtr(endS)
 	v.EndMillisecond = intPtr(endMs)
 	return v, nil
+}
+
+// RowMapTx is the release row-map of the date_values row id for
+// deleteimpact.ReleaseReplaced: it looks the row up when called, then returns
+// its audit row.
+func RowMapTx(tx *sql.Tx, id []byte) func() (map[string]any, error) {
+	return func() (map[string]any, error) {
+		v, err := LookupTx(tx, id)
+		return RowMap(id, v), err
+	}
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
@@ -287,6 +288,28 @@ func TestSourceScopes(t *testing.T) {
 					if _, _, err := writes.Run(s.c, writes.Op{Action: "delete_source_note", UserID: scopeUserID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 						changes, err := sources.DeleteNote(tx, scopeUserID, note.ID)
 						return struct{}{}, changes, err
+					}); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+		},
+		{
+			name: "source date set, edit, clear and public flag",
+			run: func(t *testing.T, s scopeSeed) {
+				setDate := func(d *datevalue.Value) {
+					if _, _, err := writes.Run(s.c, writes.Op{Action: "set_source_date", UserID: scopeUserID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+						return sources.SetDate(tx, scopeUserID, s.a.ID, d)
+					}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				s.bumpsA(t, func() { setDate(datevaluetest.YMD(1880, 0, 0)) })
+				s.bumpsA(t, func() { setDate(datevaluetest.About(1880, 3, 12)) })
+				s.bumpsA(t, func() { setDate(nil) })
+				s.bumpsA(t, func() {
+					if _, _, err := writes.Run(s.c, writes.Op{Action: "set_source_public", UserID: scopeUserID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+						return sources.SetPublic(tx, scopeUserID, s.a.ID, false)
 					}); err != nil {
 						t.Fatal(err)
 					}

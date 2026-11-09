@@ -41,6 +41,16 @@ func DateToProto(v datevalue.Value) *engine.DateValueInput {
 	}
 }
 
+// OptionalDateFromProto reads a date a request may leave out: nil when d is
+// nil or its kind is blank, which is how a client says "no date".
+func OptionalDateFromProto(d *engine.DateValueInput) *datevalue.Value {
+	if d == nil || strings.TrimSpace(d.GetKind()) == "" {
+		return nil
+	}
+	v := DateFromProto(d)
+	return &v
+}
+
 // DateFromProto is the inverse of DateToProto. Unset components stay nil
 // (unknown, never zero).
 func DateFromProto(d *engine.DateValueInput) datevalue.Value {

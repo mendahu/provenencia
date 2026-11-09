@@ -293,10 +293,7 @@ func valueInput(
 		in.Boolean = *valueBoolean
 		in.HasBoolean = true
 	}
-	if date != nil && strings.TrimSpace(date.GetKind()) != "" {
-		v := valuecodec.DateFromProto(date)
-		in.Date = &v
-	}
+	in.Date = valuecodec.OptionalDateFromProto(date)
 	if dateID, err := optionalID(valueDateID); err != nil {
 		return err
 	} else if dateID != nil {

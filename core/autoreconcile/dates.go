@@ -19,8 +19,8 @@ import (
 //
 // A phrase with no year is no evidence. Time zones are not compared.
 
-// dateSortOffset shifts a proleptic day number into a zero-padded sort key
-// that still orders dates before year 1.
+// dateSortOffset shifts a date key's integer (valuecompare.DateKey.Int64) into
+// a zero-padded sort key that still orders dates before year 1.
 const dateSortOffset = 100_000_000
 
 type dateModule struct{ rules valuecompare.Rules }

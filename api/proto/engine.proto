@@ -128,6 +128,8 @@ enum Method {
   METHOD_LIST_PERSON_EVENTS = 114;
   METHOD_GET_UNPROMOTE_IMPACT = 115;
   METHOD_GET_PERSON_RECORD_LINKS = 116;
+  METHOD_SET_SOURCE_DATE = 117;
+  METHOD_SET_SOURCE_PUBLIC = 118;
 }
 
 message PingRequest {
@@ -266,6 +268,14 @@ message Source {
   int64 updated_revision = 12;
   // When that revision was recorded (RFC3339 UTC); empty when updated_revision is 0.
   string updated_at = 13;
+  // The Source's own date (original publication, or when the record was made);
+  // absent when undated.
+  DateValueInput date = 14;
+  // Its place in date order (valuecompare.DateKey); absent when undated or not
+  // placeable. Sort ascending, absent last.
+  optional int64 date_sort_key = 15;
+  // False when the researcher marked the Source not public. Stored only.
+  bool is_public = 16;
 }
 
 message SourceNote {
@@ -566,6 +576,30 @@ message SetSourceCoverRequest {
 }
 
 message SetSourceCoverResponse {
+  Source source = 1;
+  WriteEffects effects = 2;
+}
+
+message SetSourceDateRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  DateValueInput date = 4; // absent or blank kind clears
+}
+
+message SetSourceDateResponse {
+  Source source = 1;
+  WriteEffects effects = 2;
+}
+
+message SetSourcePublicRequest {
+  string project_dir = 1;
+  string user_id = 2;
+  string source_id = 3;
+  bool is_public = 4;
+}
+
+message SetSourcePublicResponse {
   Source source = 1;
   WriteEffects effects = 2;
 }

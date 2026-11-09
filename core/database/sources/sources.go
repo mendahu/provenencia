@@ -14,11 +14,14 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
+	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecompare"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
@@ -39,18 +42,20 @@ const (
 		WHERE id = ?`
 	sqlSetCover = `UPDATE sources SET cover_mode = ?, primary_artifact_id = ?
 		WHERE id = ?`
-	sqlGet = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
-		cover_mode, primary_artifact_id
+	sqlSetDateValue = `UPDATE sources SET date_value_id = ? WHERE id = ?`
+	sqlSetPublic    = `UPDATE sources SET is_public = ? WHERE id = ?`
+	sqlGet          = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
+		cover_mode, primary_artifact_id, date_value_id, is_public
 		FROM sources WHERE id = ?`
 	sqlGetByRef = `SELECT id, ref, source_type_id, title, COALESCE(description, ''),
-		cover_mode, primary_artifact_id
+		cover_mode, primary_artifact_id, date_value_id, is_public
 		FROM sources WHERE ref = ?`
 	// Newest-first by UUIDv7 id (create time). The Source's last activity is not
 	// here: List reads it from the display cache (Graph.Activity), so no list
 	// load scans the audit history.
 	// has_artifact gates the Evidence graph zone without a per-row query.
 	sqlList = `SELECT s.id, s.ref, s.source_type_id, s.title, COALESCE(s.description, ''),
-		s.cover_mode, s.primary_artifact_id,
+		s.cover_mode, s.primary_artifact_id, s.date_value_id, s.is_public,
 		EXISTS (SELECT 1 FROM artifacts a WHERE a.source_id = s.id)
 		FROM sources s
 		ORDER BY s.id DESC`
@@ -68,6 +73,14 @@ type Source struct {
 	Description       string
 	CoverMode         string
 	PrimaryArtifactID []byte // nil when CoverModeTypeIcon
+	// DateValueID and Date are the Source's own date (the original publication,
+	// or when the record was made); nil when undated. Date carries its ID. Every
+	// read fills them.
+	DateValueID []byte
+	Date        *datevalue.Value
+	// IsPublic is false when the researcher marked the Source not public. It is
+	// stored and read back; nothing else in the engine acts on it.
+	IsPublic bool
 	// Updated is the latest audit revision of any work scoped to this Source
 	// (its row, children, and evidence graph) and when it was recorded.
 	// Filled by List and by AttachActivity; zero means unset.
@@ -141,6 +154,7 @@ func Create(tx *database.Tx, userID []byte, in CreateInput) (Source, []rowchange
 		Title:        in.Title,
 		Description:  in.Description,
 		CoverMode:    CoverModeTypeIcon,
+		IsPublic:     true,
 	}, changes, nil
 }
 
@@ -181,16 +195,26 @@ func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryAr
 	}
 }
 
+// loadForWrite reads the Source a write targets: ErrInvalid for a missing
+// transaction, a malformed id, a bad user or a Source that does not exist.
+func loadForWrite(tx *database.Tx, userID, id []byte) (Source, error) {
+	if tx == nil || len(id) != 16 {
+		return Source{}, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return Source{}, err
+	}
+	s, err := getTx(tx.Tx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Source{}, ErrInvalid
+	}
+	return s, err
+}
+
 // SetCover pins an Artifact as cover or reverts to the Source type icon.
 // Call NormalizeCover first when mode is CoverModeArtifact. An unchanged cover
 // returns the existing Source and no changes.
 func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArtifactID []byte) (Source, []rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 {
-		return Source{}, nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return Source{}, nil, err
-	}
 	mode = normalizeCoverMode(mode)
 	switch mode {
 	case CoverModeTypeIcon:
@@ -203,10 +227,7 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 		return Source{}, nil, ErrInvalid
 	}
 
-	prev, err := getTx(tx.Tx, sourceID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, sourceID)
 	if err != nil {
 		return Source{}, nil, err
 	}
@@ -239,6 +260,118 @@ func SetCover(tx *database.Tx, userID, sourceID []byte, mode string, primaryArti
 	}}, nil
 }
 
+// SetDate gives the Source a date, edits the one it has in place (its id stays),
+// or clears it when date is nil, releasing the date_values row. The same date
+// returns the Source and no changes. An invalid date is datevalue.ErrInvalid
+// and nothing is written.
+func SetDate(tx *database.Tx, userID, sourceID []byte, date *datevalue.Value) (Source, []rowchange.Change, error) {
+	prev, err := loadForWrite(tx, userID, sourceID)
+	if err != nil {
+		return Source{}, nil, err
+	}
+	// held is the date row the Source owns; a stored id with no row is none.
+	var held []byte
+	if prev.Date != nil {
+		held = prev.DateValueID
+	}
+	var changes []rowchange.Change
+	switch {
+	case date != nil:
+		id, ch, err := datevalues.PutTx(tx.Tx, held, *date)
+		if err != nil {
+			return Source{}, nil, err
+		}
+		if ch != nil {
+			changes = append(changes, *ch)
+		}
+		if !bytes.Equal(id, prev.DateValueID) {
+			if _, err := tx.Exec(sqlSetDateValue, id, sourceID); err != nil {
+				return Source{}, nil, mapConstraint(err)
+			}
+			changes = append(changes, dateValueChange(sourceID, prev.DateValueID, id))
+		}
+	case len(prev.DateValueID) == 16:
+		if _, err := tx.Exec(sqlSetDateValue, nil, sourceID); err != nil {
+			return Source{}, nil, mapConstraint(err)
+		}
+		changes = append(changes, dateValueChange(sourceID, prev.DateValueID, nil))
+		ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", held, nil,
+			datevalues.RowMapTx(tx.Tx, held))
+		if err != nil {
+			return Source{}, nil, err
+		}
+		if ch != nil {
+			changes = append(changes, *ch)
+		}
+	}
+	if len(changes) == 0 {
+		return prev, nil, nil
+	}
+	next, err := getTx(tx.Tx, sourceID)
+	if err != nil {
+		return Source{}, nil, err
+	}
+	return next, changes, nil
+}
+
+// dateValueChange is the source update change that points date_value_id from
+// one date row to another (nil for none).
+func dateValueChange(sourceID, from, to []byte) rowchange.Change {
+	return rowchange.Change{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), sourceID...),
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"date_value_id": {Old: database.UUIDJSON(from), New: database.UUIDJSON(to)},
+		},
+	}
+}
+
+// SetPublic marks the Source public or not public. An unchanged flag returns
+// the Source and no changes.
+func SetPublic(tx *database.Tx, userID, sourceID []byte, isPublic bool) (Source, []rowchange.Change, error) {
+	prev, err := loadForWrite(tx, userID, sourceID)
+	if err != nil {
+		return Source{}, nil, err
+	}
+	if prev.IsPublic == isPublic {
+		return prev, nil, nil
+	}
+	if _, err := tx.Exec(sqlSetPublic, boolInt(isPublic), sourceID); err != nil {
+		return Source{}, nil, mapConstraint(err)
+	}
+	prev.IsPublic = isPublic
+	return prev, []rowchange.Change{{
+		EntityType: "source",
+		EntityID:   append([]byte(nil), sourceID...),
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"is_public": {Old: boolInt(!isPublic), New: boolInt(isPublic)},
+		},
+	}}, nil
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// DateSortKey is the Source's place in date order as one integer, ascending
+// (valuecompare.DateKey.Int64). ok is false when the Source is undated or its
+// date has no place (a phrase with no year).
+func DateSortKey(s Source) (key int64, ok bool) {
+	if s.Date == nil {
+		return 0, false
+	}
+	k, _, _, ok := valuecompare.DateKeyOf(*s.Date)
+	if !ok {
+		return 0, false
+	}
+	return k.Int64(), true
+}
+
 // Update patches title, description, and source_type_id. An unchanged row
 // returns no changes.
 func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error) {
@@ -250,13 +383,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 	if len(s.ID) != 16 || len(s.SourceTypeID) != 16 || s.Title == "" {
 		return nil, ErrInvalid
 	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
-	}
-	prev, err := getTx(tx.Tx, s.ID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	}
+	prev, err := loadForWrite(tx, userID, s.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -295,16 +422,7 @@ func Update(tx *database.Tx, userID []byte, s Source) ([]rowchange.Change, error
 // credibility, and layout CASCADE. Artifacts or Subjects block with ErrInUse.
 // The returned changes include the released facet rows.
 func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
-	if tx == nil || len(id) != 16 {
-		return nil, ErrInvalid
-	}
-	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
-		return nil, err
-	}
-	existing, err := getTx(tx.Tx, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	}
+	existing, err := loadForWrite(tx, userID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -322,7 +440,14 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if err != nil {
 		return nil, err
 	}
+	owned, err := deleteimpact.SnapshotOwned(tx.Tx, catalogmodel.KindSource, id)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := tx.Exec(sqlDelete, id); err != nil {
+		return nil, err
+	}
+	if err := deleteimpact.ReleaseSnapshot(tx, owned); err != nil {
 		return nil, err
 	}
 
@@ -331,9 +456,13 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		"ref":            {Old: existing.Ref, New: nil},
 		"source_type_id": {Old: database.UUIDString(existing.SourceTypeID), New: nil},
 		"title":          {Old: existing.Title, New: nil},
+		"is_public":      {Old: boolInt(existing.IsPublic), New: nil},
 	}
 	if existing.Description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: existing.Description, New: nil}
+	}
+	if len(existing.DateValueID) == 16 {
+		fields["date_value_id"] = rowchange.FieldDiff{Old: database.UUIDJSON(existing.DateValueID), New: nil}
 	}
 	return append(released, rowchange.Change{
 		EntityType: "source",
@@ -352,7 +481,7 @@ func Get(c *database.Catalog, id []byte) (Source, error) {
 	if len(id) != 16 {
 		return Source{}, ErrInvalid
 	}
-	return scanSource(db.QueryRow(sqlGet, id))
+	return getOne(db, sqlGet, id)
 }
 
 // getByRef returns a Source by SRC-… ref, or sql.ErrNoRows.
@@ -365,7 +494,7 @@ func getByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	if ref.Validate(sourceRef) != nil {
 		return Source{}, ErrInvalid
 	}
-	return scanSource(db.QueryRow(sqlGetByRef, sourceRef))
+	return getOne(db, sqlGetByRef, sourceRef)
 }
 
 // List returns Sources newest-first by UUIDv7 id, with HasArtifact filled from
@@ -393,6 +522,21 @@ func List(c *database.Catalog) ([]Source, error) {
 	}
 	// The scan is finished: the catalog has one connection, so the cache's
 	// first load cannot run while rows is open.
+	var dateIDs [][]byte
+	for _, s := range out {
+		if len(s.DateValueID) == 16 {
+			dateIDs = append(dateIDs, s.DateValueID)
+		}
+	}
+	dates, err := datevalues.LookupManyTx(db, dateIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if d, ok := dates[string(out[i].DateValueID)]; ok {
+			out[i].Date = &d
+		}
+	}
 	for i := range out {
 		if out[i].Updated, err = c.Graph().Activity(effects.ScopeSource, out[i].ID); err != nil {
 			return nil, err
@@ -434,11 +578,14 @@ type rowScanner interface {
 
 func scanSource(row rowScanner) (Source, error) {
 	var s Source
-	var primary []byte
-	if err := row.Scan(&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary); err != nil {
+	var primary, dateID []byte
+	var isPublic int64
+	if err := row.Scan(&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary, &dateID, &isPublic); err != nil {
 		return Source{}, err
 	}
 	s.PrimaryArtifactID = primary
+	s.DateValueID = dateID
+	s.IsPublic = isPublic != 0
 	if s.CoverMode == "" {
 		s.CoverMode = CoverModeTypeIcon
 	}
@@ -447,14 +594,17 @@ func scanSource(row rowScanner) (Source, error) {
 
 func scanSourceList(row rowScanner) (Source, error) {
 	var s Source
-	var primary []byte
+	var primary, dateID []byte
+	var isPublic int64
 	if err := row.Scan(
-		&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary,
+		&s.ID, &s.Ref, &s.SourceTypeID, &s.Title, &s.Description, &s.CoverMode, &primary, &dateID, &isPublic,
 		&s.HasArtifact,
 	); err != nil {
 		return Source{}, err
 	}
 	s.PrimaryArtifactID = primary
+	s.DateValueID = dateID
+	s.IsPublic = isPublic != 0
 	if s.CoverMode == "" {
 		s.CoverMode = CoverModeTypeIcon
 	}
@@ -470,7 +620,29 @@ func GetTx(tx *sql.Tx, id []byte) (Source, error) {
 }
 
 func getTx(tx *sql.Tx, id []byte) (Source, error) {
-	return scanSource(tx.QueryRow(sqlGet, id))
+	return getOne(tx, sqlGet, id)
+}
+
+// getOne reads one Source by the query's key and fills its date.
+func getOne(q interface {
+	QueryRow(query string, args ...any) *sql.Row
+}, query string, key any) (Source, error) {
+	s, err := scanSource(q.QueryRow(query, key))
+	if err != nil {
+		return Source{}, err
+	}
+	if len(s.DateValueID) == 16 {
+		d, err := datevalues.LookupTx(q, s.DateValueID)
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			// A date row that is gone reads as undated, as List does.
+		case err != nil:
+			return Source{}, err
+		default:
+			s.Date = &d
+		}
+	}
+	return s, nil
 }
 
 func requireType(tx *sql.Tx, typeID []byte) error {
