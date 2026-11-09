@@ -120,7 +120,8 @@ struct PersonTimelineList: View {
             focus: $focused,
             isShown: { content.isShown($0) },
             fallback: { content.row(holdingCard: $0) },
-            reveal: { $0 }
+            map: { $0 },
+            scroll: { _ in }
         )
         .onChange(of: heights) { rebuild() }
         .onChange(of: content) { rebuild() }

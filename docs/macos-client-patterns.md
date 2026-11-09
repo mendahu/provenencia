@@ -279,7 +279,7 @@ The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-
 
 A full-width section's empty, loading and error states keep the page band: apply `pvKeepsPageBand()` (`Components/PageColumns/PVPageColumns.swift`) to them, so they stay centered at `widthContentMax` instead of stretching across a Wide pane.
 
-`FocusKeeper` (`Platform/FocusKeeper.swift`, applied with `focusKeeper(...)`) is how a view keeps rule 5's focus: it hands the keyboard back to the stop that survived a width change, to a fallback when a card was folded away, and to a tile a lazy grid dropped.
+`FocusKeeper` (`Platform/FocusKeeper.swift`, applied with `focusKeeper(...)`, which takes a pure `map` from a stop to the stop that can take the keyboard and a `scroll` that only a claim calls) is how a view keeps rule 5's focus: it hands the keyboard back to the stop that survived a width change, to a fallback when a card was folded away, and to a tile a lazy grid dropped.
 
 ### Patterns to reach for
 

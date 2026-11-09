@@ -43,4 +43,20 @@ struct FocusKeeperTests {
         keeper.expire("x")
         #expect(keeper.pending == nil)
     }
+
+    @Test func tookDoesNotScroll() {
+        var scrolls = 0
+        var keeper = FocusKeeper<String>()
+        keeper.give("x")
+        let claimed = keeper.claimed(map: { $0 + "!" }, scroll: { _ in scrolls += 1 })
+        #expect(claimed == "x!")
+        #expect(scrolls == 1)
+
+        // Focus landing on the mapped stop, or on another, records it and scrolls nothing.
+        keeper.took("x!", fallback: nil, revealedPending: "x!")
+        keeper.took("y", fallback: nil, revealedPending: "x!")
+        #expect(scrolls == 1)
+        #expect(keeper.claimed(map: { $0 }, scroll: { _ in scrolls += 1 }) == nil)
+        #expect(scrolls == 1)
+    }
 }

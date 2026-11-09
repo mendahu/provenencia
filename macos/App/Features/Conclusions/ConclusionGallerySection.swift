@@ -50,7 +50,8 @@ struct ConclusionGallerySection: View {
             focus: $focused,
             isShown: { stop in gallery.tiles.contains { $0.id == stop.id } },
             fallback: { _ in nil },
-            reveal: reveal
+            map: map,
+            scroll: scroll
         )
         .pvSheet(item: $viewing) { item in
             // The shown picture has just left the gallery: draw its first tile until the item catches up.
@@ -80,7 +81,7 @@ struct ConclusionGallerySection: View {
             if let old, new == nil {
                 // An emptied gallery swaps this section for its EmptyState: there is no tile to focus.
                 if !gallery.tiles.isEmpty {
-                    FocusKeeper.hand(.image(old.shownID), keeper: $keeper, focus: $focused, reveal: reveal)
+                    FocusKeeper.hand(.image(old.shownID), keeper: $keeper, focus: $focused, map: map, scroll: scroll)
                 }
             }
         }
@@ -89,12 +90,15 @@ struct ConclusionGallerySection: View {
         .accessibilityLabel(L10n.string(gallery.title))
     }
 
-    /// Scrolls the stop's tile into view and names the stop that takes the keyboard: Use as portrait is
-    /// not there to take it when the tile is now the lead or the lead is saving, so the keyboard goes to
-    /// the tile's image.
-    private func reveal(_ stop: TileFocus) -> TileFocus {
+    /// Scrolls the stop's tile into view; the keeper calls it when it claims a stop.
+    private func scroll(_ stop: TileFocus) {
         scrollTarget = stop.id
         scrollRequest += 1
+    }
+
+    /// The stop that takes the keyboard: Use as portrait is not there to take it when the tile is now
+    /// the lead or the lead is saving, so the keyboard goes to the tile's image.
+    private func map(_ stop: TileFocus) -> TileFocus {
         let tile = gallery.tiles.first { $0.id == stop.id }
         if case .useAs(let id) = stop, tile?.isLead == true || lead.isSaving { return .image(id) }
         return stop
@@ -151,7 +155,7 @@ struct ConclusionGallerySection: View {
         .pvGroupsAccessibility(look.groupsTile)
         .onAppear {
             if keeper.pending?.id == tile.id {
-                FocusKeeper.reclaim(keeper: $keeper, focus: $focused, reveal: reveal)
+                FocusKeeper.reclaim(keeper: $keeper, focus: $focused, map: map, scroll: scroll)
             }
         }
     }

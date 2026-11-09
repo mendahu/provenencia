@@ -60,16 +60,26 @@ struct FocusKeeper<Stop: Hashable>: Hashable {
         if pending == stop { pending = nil }
     }
 
-    /// Claims the pending stop: `reveal` scrolls it into view and maps it to the stop that can
-    /// take the keyboard, then `FocusClaim` writes it.
+    /// The stop a claim of the pending stop writes: `scroll` brings the pending stop into view,
+    /// then `map` names the stop that can take the keyboard. Nil when nothing is pending. Only
+    /// a claim scrolls; recording a focus move never does.
+    func claimed(map: (Stop) -> Stop, scroll: (Stop) -> Void) -> Stop? {
+        guard let pending else { return nil }
+        scroll(pending)
+        return map(pending)
+    }
+
+    /// Claims the pending stop: `scroll` brings it into view, `map` names the stop that can take
+    /// the keyboard, then `FocusClaim` writes it.
     @MainActor
     static func reclaim(
         keeper: Binding<FocusKeeper>,
         focus: FocusState<Stop?>.Binding,
-        reveal: @escaping (Stop) -> Stop
+        map: @escaping (Stop) -> Stop,
+        scroll: @escaping (Stop) -> Void
     ) {
-        guard let pending = keeper.wrappedValue.pending else { return }
-        FocusClaim.claim(focus, Optional(reveal(pending)))
+        guard let stop = keeper.wrappedValue.claimed(map: map, scroll: scroll) else { return }
+        FocusClaim.claim(focus, Optional(stop))
     }
 
     /// Gives `stop` the keyboard once its view exists, and ends the pending stop a moment later
@@ -80,10 +90,11 @@ struct FocusKeeper<Stop: Hashable>: Hashable {
         _ stop: Stop,
         keeper: Binding<FocusKeeper>,
         focus: FocusState<Stop?>.Binding,
-        reveal: @escaping (Stop) -> Stop
+        map: @escaping (Stop) -> Stop,
+        scroll: @escaping (Stop) -> Void
     ) {
         keeper.wrappedValue.give(stop)
-        reclaim(keeper: keeper, focus: focus, reveal: reveal)
+        reclaim(keeper: keeper, focus: focus, map: map, scroll: scroll)
         DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(400)) {
             keeper.wrappedValue.expire(stop)
         }
@@ -93,16 +104,18 @@ struct FocusKeeper<Stop: Hashable>: Hashable {
 extension View {
     /// Keeps the keyboard across a width change, a lazy view letting a stop go and a reload
     /// that removes the focused stop (see `FocusKeeper`). `isShown` says whether a stop is
-    /// drawn now; `fallback` is where the keyboard goes when a stop is folded away; `reveal`
-    /// scrolls a stop into view and maps it to the stop that can take the keyboard.
+    /// drawn now; `fallback` is where the keyboard goes when a stop is folded away; `map` names
+    /// the stop that can take the keyboard in place of a stop (pure); `scroll` brings a stop into
+    /// view, and only a claim of a pending stop calls it.
     func focusKeeper<Stop: Hashable>(
         _ keeper: Binding<FocusKeeper<Stop>>,
         focus: FocusState<Stop?>.Binding,
         isShown: @escaping (Stop) -> Bool,
         fallback: @escaping (Stop) -> Stop?,
-        reveal: @escaping (Stop) -> Stop
+        map: @escaping (Stop) -> Stop,
+        scroll: @escaping (Stop) -> Void
     ) -> some View {
-        modifier(FocusKeeping(keeper: keeper, focus: focus, isShown: isShown, fallback: fallback, reveal: reveal))
+        modifier(FocusKeeping(keeper: keeper, focus: focus, isShown: isShown, fallback: fallback, map: map, scroll: scroll))
     }
 }
 
@@ -111,7 +124,8 @@ private struct FocusKeeping<Stop: Hashable>: ViewModifier {
     let focus: FocusState<Stop?>.Binding
     let isShown: (Stop) -> Bool
     let fallback: (Stop) -> Stop?
-    let reveal: (Stop) -> Stop
+    let map: (Stop) -> Stop
+    let scroll: (Stop) -> Void
 
     @Environment(\.pvWidthClass) private var widthClass
 
@@ -122,12 +136,12 @@ private struct FocusKeeping<Stop: Hashable>: ViewModifier {
                     keeper.wrappedValue.took(
                         stop,
                         fallback: fallback(stop),
-                        revealedPending: keeper.wrappedValue.pending.map(reveal)
+                        revealedPending: keeper.wrappedValue.pending.map(map)
                     )
                 } else {
                     switch keeper.wrappedValue.lost(isShown: isShown) {
                     case .reclaim:
-                        FocusKeeper.reclaim(keeper: keeper, focus: focus, reveal: reveal)
+                        FocusKeeper.reclaim(keeper: keeper, focus: focus, map: map, scroll: scroll)
                     case .fallback(let stop):
                         FocusClaim.claim(focus, Optional(stop))
                     case .none:
@@ -140,7 +154,7 @@ private struct FocusKeeping<Stop: Hashable>: ViewModifier {
             }
             .onChange(of: widthClass) {
                 if let stop = keeper.wrappedValue.widthStop(current: focus.wrappedValue, isShown: isShown) {
-                    FocusKeeper.hand(stop, keeper: keeper, focus: focus, reveal: reveal)
+                    FocusKeeper.hand(stop, keeper: keeper, focus: focus, map: map, scroll: scroll)
                 }
             }
     }
