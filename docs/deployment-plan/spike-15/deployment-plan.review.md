@@ -1,12 +1,15 @@
 # Review — Spike 15 PR map
 
-**Verdict:** Fits with changes (after round 2; every To user item answered 2026-11-09). **Rounds:** 2. **Reviewers:** maintainability (Opus, fresh context each round, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
+**Verdict:** Fits with changes (after round 2; slice 8 reviewed in round 3; two To user items open). **Rounds:** 3 (round 3 covers slice 8 only, added after round 2). **Reviewers:** maintainability (Opus, fresh context each round, map review per [`review-plan`](../../../.agents/skills/review-plan/SKILL.md)).
 
 ## To user
 
 - ~~K-2 · S15-26~~: kept (user, 2026-11-09).
 - ~~K-18 · Format edits and the Person page reads~~: closed by the user's call (2026-11-09) to render citations on demand from SQL with nothing cached; see rule "Citations render on demand, from SQL", which replaces the round-1 answer to K-3. To be measured at Scale in S15-16.
 - ~~K-16 · `{citation.item}`~~: the item is a graph-level metadata field, `item`, typed once per graph; no per-Citation derivation and no primary-subject toggle in this spike (user, 2026-11-09). Rule "The item is a graph field"; map § 6.5.
+
+- **K-25 · Preparatory PR S15-30** (the paged fold moves to the kit). Added after S16-07 so Spike 16's S16-07 keeps its scope; the alternative is to widen S16-07 to build the fold in `Platform/` and `PVShowMoreRow` directly. A preparatory PR is the user's call. Recommendation: keep S15-30.
+- **K-30 · The deprecated Why accordion.** After S15-28 the detail read carries no records, and the Why on the Event and Place pages reads them. Options: (a) a PR before S15-29 removes the Why and moves Event and Place rows to the provenance sheet, as the Person page does (a visible change to two pages, so briefs); (b) the map states what Event and Place rows show until the Why is removed elsewhere. Recommendation: (a).
 
 ## Writer's own calls
 
@@ -95,3 +98,43 @@ Fresh reviewer, document plus this log. Round-1 answers: K-2, K-3 (Go shape), K-
 - **K-8 note:** what "Used by" counts across Sources, Artifacts, graphs and types is left to S15-08's plan.
 - **S15-20:** the plan names how the dogfood Install run happens (`add-seeded-vocabulary` keeps `Install` out of FFI, Swift and open) and warns that a re-run overwrites edited product rows and restores deleted ones. Fixed in S15-20's Context and the citation map § 6.4.
 - **S15-08:** "six tables probed" corrected: layout rows cascade and do not keep a field. Fixed.
+
+## Round 3 — slice 8 (S15-27, S15-28, S15-29)
+
+Fresh reviewer, slice 8 only. Writer's call to note: the rule "Citations render on demand, from SQL" now lets the provenance sheet hold its on-open call as one `CatalogQueryKey` while it is shown, evicted when hidden, so it gets S16-04's failure reading and the registry's refresh; nothing outlives the sheet (K-26).
+
+### K-24 · blocker · A new grouped SQL query would duplicate facts the node and the wire already carry
+**Answer:** Fixed — rule "Records load when the sheet opens": the detail read keeps `Support`, `Against`, values and state, and adds only `FieldRecordCounts` (record count, a mixed field's distinct Sources) composed from the node and the records tier; no new SQL. S15-29 removes Swift's count rules.
+
+### K-25 · blocker · A kit recipe cannot use the Features fold
+**Answer:** To user (preparatory PR); added as S15-30 after S16-07, with the rule rewritten for the kit fold (`Platform/` state, `PVShowMoreRow`).
+
+### K-26 · blocker · The on-open call had no home for S16-04's reading or refetch while open
+**Answer:** Fixed — the sheet's on-open call is one `CatalogQueryKey` evicted when hidden (S15-21, which now depends on S16-04); S15-28's read reports its inputs and S15-29 refreshes through the registry. The rule "Citations render on demand, from SQL" says so.
+
+### K-27 · major · One (owner, Property) key does not cover spanning or derived rows
+**Answer:** Fixed — the records read takes a row's (owner, Property) pairs, mirroring `RecordsSource`, and returns records grouped by pair.
+
+### K-28 · major · S15-27 re-derives an engine fact in Swift
+**Answer:** Fixed — each outcome carries whether it denied a value and the denier's Source title (S15-28); `deniedSomething` and the denier search go in S15-29; S15-27 is the fold only.
+
+### K-29 · major · Spike 16 PRs slice 8 touches are missing from both maps
+**Answer:** Fixed — S15-28 depends on S16-24, S15-29 on S16-09, S15-21 on S16-04; Spike 16's shared table gains S16-09, S16-24 and S15-21's key under S16-25; S15-29 restates `.conclusionDetail`'s Source follow.
+
+### K-30 · major · The deprecated Why reads the records S15-28 removes
+**Answer:** To user (above).
+
+### K-31 · major · Scale and fan-out at 1,200 records not stated
+**Answer:** Fixed — S15-16 times 300 and 1,200 Citations; S15-28 times the records read at 1,200; S15-29 times a 1,200-record sheet and states one refetch per write touching the read's inputs.
+
+### K-32 · major · Docs and skills S15-28 and S15-29 make false
+**Answer:** Fixed — S15-28: the `conclusiondetails` package comment and `conclusion-reconciliation.md`; S15-29: `macos-client-patterns.md`, `design-system-layers.md`, `add-ui-component`, and retiring `provenance-loading.md`.
+
+### K-33 · minor · The fold's unit
+**Answer:** Fixed — the fold counts citation groups and never splits one (rule and S15-27).
+
+### K-34 · minor · "Summary" already names something else
+**Answer:** Fixed — `FieldRecordCounts`.
+
+### K-35 · nit · `leadOutcomes` will be gone
+**Answer:** Fixed — S15-28 says each `PictureTile.Record` keeps its outcome.

@@ -60,7 +60,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **No transforms on metadata.** Values print exactly as typed; only the Source date (a DateValue) has formatting options (`:year`, `:full`). Each field's description says to enter the value as it should appear. Refused: inverting, reversing, abbreviating. Binds S15-14, S15-19.
 - **Formats name fields by id.** `core/citationformat` defines the stored token for a field id and one rewrite of the parse tree between keys and ids; one `metadatafields.ResolveKeysTx(tx, keys, preferOrigin)`, beside `lookupTx`, maps keys to ids, and both the `sourcetypes` format write and `sourcevocab.Install` call it. A field named in any format is in use: its delete is refused by a delete-impact probe over the three format columns, listing the types ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), which gains the text-reference case). Field keys stay unrenamable, as today. Binds S15-14, S15-15, S15-17, S15-20. (K-7.)
 - **One engine, in Go.** `core/citationformat` parses and renders; values go in after parsing, so a `*` or `[` in a value never formats. The app renders only through FFI. Binds S15-14, S15-16, S15-21 – S15-23.
-- **Citations render on demand, from SQL.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key. It reads the catalog directly in a few batched queries (types and formats; Source, Artifact and graph values through S15-07's batch read by owners; Source titles and dates), not Spike 16's caches, and nothing it produces is cached in Go or Swift: a screen asks for its citations when it shows them (the provenance sheet when it opens, the Sources section when it appears), so a format or field edit needs no refresh signal; a screen already open while a format is edited elsewhere catches up the next time it is shown. Measured at Scale (300 Citations per call) in S15-16; caching is a later decision if it is slow (user, 2026-11-09). This is a deliberate exception to Spike 16's "A Source's words live once". It is the first step of [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens": the sheet's on-open call is the one that idea grows, not a second one. Binds S15-16, S15-21 – S15-23. (Replaces the round-1 answer to K-3; closes K-18.)
+- **Citations render on demand, from SQL.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key. It reads the catalog directly in a few batched queries (types and formats; Source, Artifact and graph values through S15-07's batch read by owners; Source titles and dates), not Spike 16's caches, and nothing it produces is cached in Go or Swift: a screen asks for its citations when it shows them (the provenance sheet when it opens, the Sources section when it appears), so a format or field edit needs no refresh signal; a screen already open while a format is edited elsewhere catches up the next time it is shown. The provenance sheet holds its on-open call as one `CatalogQueryKey` only while it is shown (`whenHidden: .evict`), so it gets S16-04's failure reading and the registry's refresh on the inputs its read reports; nothing outlives the sheet (map review K-26). Measured at Scale (300 Citations per call) in S15-16; caching is a later decision if it is slow (user, 2026-11-09). This is a deliberate exception to Spike 16's "A Source's words live once". It is the first step of [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens": the sheet's on-open call is the one that idea grows, not a second one. Binds S15-16, S15-21 – S15-23. (Replaces the round-1 answer to K-3; closes K-18.)
 - **One render request for previews.** The editor and the Source page preview through one request: a form, an optional unsaved format, and a target (Citation ids, or a Source for the list form); it returns runs, missing fields and parse diagnostics. Swift never parses a format. Binds S15-16, S15-17, S15-23. (K-10.)
 - **Built-in placeholders are one table.** `core/citationformat` declares each built-in once (name, level, allowed in the list form, options such as `:year`, `:full`); parsing, the list-form rule, missing fields, the resolver and the editor's Insert field list (over FFI) all read it. Binds S15-14, S15-16, S15-17. (K-5.)
 - **Today's line stays the fallback, in Swift.** For a type with no full format the engine returns no text, and the app shows today's localized line from `CitationLineDisplay`, which stays for that and for its other callers (Gallery captions, the likeness viewer, a denier's Source name). Go does not write a second copy. Binds S15-16, S15-21. (K-4.)
@@ -69,8 +69,8 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Grouping is by the rendered full citation, computed when read.** Citations whose full citation renders the same are one citation with their Citations beneath; nothing is stored. Binds S15-21, S15-22.
 - **A move is the whole bundle.** The bundle is the closure of the picked Artifact or graph over `evidence_graph_artifacts`. One flow from an Artifact or a graph; one function computes the bundle for the preflight and the write; one transaction updates `source_id` on `artifacts`, `evidence_graphs` and `subjects` with deferred foreign keys, recording per-row changes so audit scopes (both Sources), `Reads`, search and Spike 16's caches all follow from the effects registry, with no hand-written cache update or scope tag; a Source left with no graph gets `evidencegraphs.CreateDefault`. Source-level values are not looked at. Binds S15-24, S15-25. Design: [`move-artifact-between-sources.md`](move-artifact-between-sources.md).
 - **The credibility fix is idiomatic and needs no brief.** The argument becomes the same `PVTextArea` the Source description uses, with the platform's text-area behavior (Return is a new line) and the existing Save button. It adds no new chrome beyond the control the page already uses (user, 2026-11-09). Binds S15-01.
-- **The provenance table folds a page at a time.** `PVProvenanceRecordTable` folds past 50 records with S16-07's `ConclusionFold` page and focus behavior; the assembly builds one set of denying Observation ids per field so it is linear. The Why accordion on the Event and Place pages is deprecated and gets no fold (user, 2026-11-09). Binds S15-27. Design: [`provenance-loading.md`](provenance-loading.md) "Cap".
-- **Records load when the sheet opens.** The detail page read keeps a summary per field (Source count, disagreements, counts on other values, whether records exist) from one grouped query; a value's records come from one read keyed by owner and Property (covering life rows and event–place links) that the sheet calls when it opens, in the same call that renders its citations (S15-21); the gallery keeps its lead records. Binds S15-28, S15-29. Design: [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens".
+- **The provenance table folds a page at a time.** `PVProvenanceRecordTable` folds with the kit's paged fold: S16-07's fold rule and fold state move to `macos/App/Platform/` and its Show more row becomes a kit component, `PVShowMoreRow`, so a recipe can use them (`docs/design-system-layers.md`: a recipe never names a `Features/` type). The fold counts citation groups (a group's full citation with its Citations), never splitting a group, 50 at a time. The Why accordion on the Event and Place pages is deprecated and gets no fold (user, 2026-11-09). Binds S15-30, S15-27. Design: [`provenance-loading.md`](provenance-loading.md) "Cap". (K-25, K-33.)
+- **Records load when the sheet opens.** The detail page read stops carrying each value's records. It keeps what it already sends (`Support`, `Against`, the values and their state) and adds `FieldRecordCounts` per field (the record count and, for a mixed field, the distinct Source count), composed from the node's outcome rows and the records tier after S16-11 and S16-30, with no new SQL query. A sheet's records come from one read that takes the row's (owner, Property) pairs, mirroring `RecordsSource` (`.field`, `.spanning`, `.derived`), and returns them grouped by pair, each outcome carrying whether it denied a value and the denier's Source title; it reports its inputs as S16-24's reads do. The sheet's on-open call (S15-21's key) carries these records with their citations. Swift's `distinctSourceCount`, `recordCount` derivation, `deniedSomething` and denier search go. Binds S15-28, S15-29. Design: [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens". (K-24, K-27, K-28, K-34.)
 - **Refused in this spike.** A shared Repository record; per-Source format overrides; a fourth citation form; source type packages ([idea](../../ideas/source-type-packages.md)); install on open; undo of a move; Merge Sources; moving to a new Source; filling the jurisdiction from the graph; a per-Artifact page map. Each is recorded in the map (§ 7) or the move doc.
 
 ## PR map
@@ -97,15 +97,16 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-18 | A new type can copy another's formats and suggestions | 4 | Go and Swift: one write; **Copy from** in the new type dialog | S15-D7 | S15-15, S15-06, S15-D7 | — | Scoped |
 | S15-19 | Seed the citation types, fields and suggestions | 4 | Go: `sourcevocab` registry and Install for 26 types, 63 fields, levelled suggestions | — | S15-06 | — | Scoped |
 | S15-20 | Seed the citation formats | 4 | Go: each seeded type's three formats; a render test per type | — | S15-19, S15-15 | — | Scoped |
-| S15-21 | The provenance sheet shows formatted citations | 6 | Swift: the sheet renders on demand and groups; Copy citation copies rich text | S15-D9 | S15-16, S16-30, S15-D9 | — | Scoped |
+| S15-21 | The provenance sheet shows formatted citations | 6 | Swift: the sheet's on-open key renders and groups; Copy citation copies rich text | S15-D9 | S15-16, S16-30, S16-04, S15-D9 | — | Scoped |
 | S15-22 | The Sources section groups a Source's Citations by citation | 6 | Swift: the section renders on demand and groups | S15-D3 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-23 | The Source page previews its citation | 6 | Swift: preview, missing fields, Copy citation | S15-D1 | S15-16, S15-D1 | — | Scoped |
 | S15-24 | Move a bundle to another Source in the engine | 7 | Go: closure, preflight and move RPCs, one transaction through the effects registry | — | S16-12, S16-13, S16-15 | — | Scoped |
 | S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1 | S15-24, S15-D10, S15-D1 | — | Scoped |
 | S15-26 | The metadata board takes an owner | 2 | Preparatory, Swift: the board model and view take an owner; the Source page unchanged | — | — | — | Scoped |
-| S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds at 50 with S16-07's fold; linear assembly | S15-D9 | S15-21, S16-07, S15-D9 | — | Scoped |
-| S15-28 | A value's records load on their own | 8 | Go: per-field summaries in the detail read; one records read by owner and Property; FFI | — | S16-11, S16-19, S16-30 | — | Scoped |
-| S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: summaries on the page; the sheet's on-open call carries records and citations; loading, failed, refetch while open | S15-D9 | S15-28, S15-21, S16-04, S15-D9 | — | Scoped |
+| S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds 50 citation groups at a time with the kit fold | S15-D9 | S15-30, S15-21, S15-D9 | — | Scoped |
+| S15-28 | A value's records load on their own | 8 | Go: `FieldRecordCounts` from the node; one records read by (owner, Property) pairs with denial facts; reports its inputs | — | S16-11, S16-19, S16-24, S16-30 | — | Scoped |
+| S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D9 | S15-28, S15-21, S16-09, S15-D9 | — | Scoped |
+| S15-30 | The paged fold moves to the kit | 8 | Preparatory, Swift: S16-07's fold rule and state to `Platform/`, `PVShowMoreRow` in the kit; the Conclusion sections unchanged | — | S16-07 | — | Scoped |
 | S15-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, the dogfood Install run, the spike's `citation-formats.md` retired in favour of the domain doc, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -175,7 +176,8 @@ SLICE 7 — Move                                        (after S16-12, S16-13, S
   ✎ S15-D10 ──▶ S15-25  Move from an Artifact or a graph
   Check: bar 8.
 
-SLICE 8 — Provenance loading                         (after S16-04, S16-07, S16-11, S16-19, S16-30)
+SLICE 8 — Provenance loading                         (after S16-07, S16-09, S16-11, S16-19, S16-24, S16-30)
+  S15-30  The paged fold moves to the kit
   S15-27  The provenance table folds a page at a time                 (S15-D9)
   S15-28  A value's records load on their own
   S15-29  The provenance sheet loads its records when it opens        (S15-D9)
@@ -200,6 +202,7 @@ S15-12 ──▶ S15-17
 S15-05 ──▶ S15-22
 S15-24 ──▶ S15-25
 S15-21 ──▶ S15-27, S15-29
+S15-30 ──▶ S15-27
 S15-28 ──▶ S15-29
 
 Spike 16:
@@ -207,9 +210,10 @@ S16-12, S16-13 ──▶ S15-05
 S16-03, S16-06, S16-07 ──▶ S15-05, S15-22
 S16-30 ──▶ S15-21
 S16-12, S16-13, S16-15 ──▶ S15-24
-S16-07 ──▶ S15-27
-S16-11, S16-19, S16-30 ──▶ S15-28
-S16-04 ──▶ S15-29
+S16-07 ──▶ S15-30
+S16-11, S16-19, S16-24, S16-30 ──▶ S15-28
+S16-04 ──▶ S15-21
+S16-09 ──▶ S15-29
 
 Briefs:
 S15-D1 ──▶ S15-03, S15-09, S15-23, S15-25     S15-D2 ──▶ S15-04
@@ -372,7 +376,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 **Ships.** The catalog resolver for `core/citationformat`, reading SQL: built-ins from the Source row and its date and the Citation's locator and label; metadata at each level with the `meta.` fallback, through S15-07's batch read; one batch render RPC (runs, plain text, missing fields, group key per Citation); one render request for previews; the built-ins table over FFI. A type with no full format renders no text. Nothing is cached.
 **Not this PR.** Any screen (S15-17, S15-21 – S15-23).
-**Check.** Handler tests: the census example renders from values spread over Source, Artifact and graph; 300 Citations render in one call in a fixed number of queries, timed at Scale.
+**Check.** Handler tests: the census example renders from values spread over Source, Artifact and graph; 300 and 1,200 Citations render in one call in a fixed number of queries, timed at both.
 **Context.** Rules "One engine, in Go", "Citations render on demand, from SQL", "One render request for previews", "Today's line stays the fallback"; map §§ 6.3, 6.5, 6.6.
 
 #### S15-17 — The format editor
@@ -386,7 +390,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-21 — The provenance sheet shows formatted citations
 
-**Ships.** When the provenance sheet opens it asks S15-16's batch render for its Citations and groups them by the returned key; it shows each record's full citation with its Citations beneath, or today's line when the type has no format. Lands after S16-30, which reshapes the sheet's records. The existing Copy citation (`PVClipboardButton`) copies the full or short form as rich and plain text through one rich-payload write added to `PVClipboardCopyState`. `CitationLineDisplay` stays as the fallback and for its other callers.
+**Ships.** When the provenance sheet opens it holds one `CatalogQueryKey` (evicted when hidden) that asks S15-16's batch render for its Citations, and groups them by the returned key; loading and failure use S16-04's `QueryHandle` reading and `PVRetryCallout`; it shows each record's full citation with its Citations beneath, or today's line when the type has no format. Lands after S16-30, which reshapes the sheet's records. The existing Copy citation (`PVClipboardButton`) copies the full or short form as rich and plain text through one rich-payload write added to `PVClipboardCopyState`. `CitationLineDisplay` stays as the fallback and for its other callers.
 **Not this PR.** The Sources section (S15-22).
 **Check.** Bar 4's provenance sheet; bar 7 on the sheet; copying pastes italics into a rich-text editor.
 **Context.** S15-D9 (it draws the sheet's loading and failed states for the on-open call); [`provenance-loading.md`](provenance-loading.md) (this PR starts "Load records when the sheet opens"; update its note when it lands); rules "Grouping is by the rendered full citation", "Citations render on demand, from SQL", "Today's line stays the fallback"; S16-30; `PVProvenanceSheetContent.swift`, `PVProvenanceRecordRow.swift`, `PVClipboardCopyState`, `CitationLineDisplay.swift`.
@@ -423,24 +427,30 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 ### Slice 8 — Provenance loading
 
+#### S15-30 — The paged fold moves to the kit
+
+**Ships.** Preparatory, Swift: S16-07's fold rule and fold state move from `Features/Conclusions/ConclusionShowMoreRow.swift` to `macos/App/Platform/` beside `FocusClaim`, and its Show more row becomes `DesignSystem/Components/ShowMoreRow/PVShowMoreRow` with a `L10n.DesignSystem` string; the Family, Timeline and Sources sections use them with no visible change.
+**Not this PR.** The provenance table's fold (S15-27).
+**Check.** `scripts/check-guidance-names.py` passes; the sections' fold and focus tests pass unchanged.
+**Context.** Rule "The provenance table folds a page at a time"; S16-07; [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md); [`design-system-layers.md`](../../design-system-layers.md).
+
 #### S15-27 — The provenance table folds a page at a time
 
-**Ships.** `PVProvenanceRecordTable` shows 50 records and a Show more that reveals the next 50 and moves focus to the first, with S16-07's `ConclusionFold`; `PVProvenanceSheetContent.records(_:)` builds one set of denying Observation ids per field, so the assembly is linear.
-**Not this PR.** Loading records on open (S15-29); the Why accordion on the Event and Place pages (deprecated, user 2026-11-09).
-**Check.** A value with 1,200 records opens on 50 rows; first layout measured in a Release build at 300 and 1,200 records before and after; Tab order holds through the shown rows.
-**Context.** S15-D9; rule "The provenance table folds a page at a time"; [`provenance-loading.md`](provenance-loading.md) "Cap" (its Debug timings and the O(n²) note); `ReconciledValueDisplay.swift`.
+**Ships.** `PVProvenanceRecordTable` shows 50 citation groups and a `PVShowMoreRow` that reveals the next 50 and moves focus to the first, never splitting a group from its Citations.
+**Not this PR.** Loading records on open (S15-29); making the assembly linear (S15-28 and S15-29 send the denial facts); the Why accordion on the Event and Place pages (deprecated, user 2026-11-09).
+**Check.** A value with 1,200 records opens on 50 groups; first layout measured in a Release build at 300 and 1,200 records before and after; Tab order holds through the shown rows.
+**Context.** S15-D9; rule "The provenance table folds a page at a time"; [`provenance-loading.md`](provenance-loading.md) "Cap" (its Debug timings).
 
 #### S15-28 — A value's records load on their own
 
-**Ships.** The detail read returns a summary per field from one grouped query (no Citation, Artifact or Source joins, no locator decode); one new read returns a value's records keyed by owner and Property, covering life rows and event–place links; FFI for both; the gallery keeps `leadOutcomes`.
+**Ships.** The detail read drops each value's records and adds `FieldRecordCounts` per field, composed from the node's outcome rows and the records tier (no new SQL); one records read takes a row's (owner, Property) pairs and returns its records grouped by pair, each outcome with whether it denied a value and the denier's Source title, and reports its inputs as S16-24's reads do; FFI for both. Each picture's record (`PictureTile.Record`) keeps its outcome. At Scale the records read composes up to 1,200 records from the cache.
 **Not this PR.** The app (S15-29).
-**Check.** Handler tests: summaries equal the counts of today's records; the records read for a life row and an event–place link; the Person read's payload measured on a heavily researched person before and after.
-**Context.** Rule "Records load when the sheet opens"; [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens"; `core/database/conclusiondetails`; S16-11, S16-19, S16-30.
+**Check.** Handler tests: the counts equal today's record-derived counts, including a mixed field's distinct Sources; records for a `.field`, a `.spanning` and a `.derived` row; the Person read's payload measured on a heavily researched person before and after; the records read timed at 1,200 records.
+**Context.** Rule "Records load when the sheet opens"; [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens"; `core/database/conclusiondetails` (`ReconciledValue.Support`, `Against`, `Outcome.DeniedBy`); S16-11, S16-19, S16-24, S16-30. Updates the `conclusiondetails` package comment ("The Why stays a SQL read …") and [`conclusion-reconciliation.md`](../../conclusion-reconciliation.md) (the detail read returns outcomes with their evidence).
 
 #### S15-29 — The provenance sheet loads its records when it opens
 
-**Ships.** Person, Event and Place rows draw from the summaries; the sheet's on-open call (S15-21) fetches the value's records and renders their citations together; the sheet shows loading and, on failure, Try again with S16-04's reading; a write that lands while the sheet is open refetches it; `FakeStore` and the Swift tests that build records by hand move to the new read.
-**Not this PR.** The Why accordion on the Event and Place pages (deprecated, user 2026-11-09).
-**Check.** Bar 10: the page loads without records; the sheet loads on open and recovers from a failure.
-**Context.** S15-D9; rule "Records load when the sheet opens"; [`provenance-loading.md`](provenance-loading.md); S16-04; `PVProvenanceSheetContent.swift`, `ConclusionDetailPage.swift`.
-
+**Ships.** Person, Event and Place rows draw their counts from `FieldRecordCounts`; the sheet's key (S15-21) carries the row's records with their citations, keyed by its (owner, Property) pairs, and refreshes through the registry on the inputs the read reports (once per write that touches them); `ReconciledValueDisplay.distinctSourceCount`, `sourceCount`, the `recordCount` derivation, `deniedSomething` and the denier search go, so the assembly is linear. `.conclusionDetail`'s Source follow (S16-09) is restated for a detail that no longer carries records.
+**Not this PR.** The Why accordion on the Event and Place pages (deprecated, user 2026-11-09; see the review log, K-30).
+**Check.** Bar 10: the page loads without records; the sheet loads on open, recovers from a failure, and refetches after a write to a cited Source; a sheet of 1,200 records loads and renders, timed.
+**Context.** S15-D9; rule "Records load when the sheet opens"; S16-04, S16-09, S16-25; `PVProvenanceSheetContent.swift`, `ReconciledValueDisplay.swift`, `ReconciledValueRowModel.swift` (`RecordsSource`). Updates [`macos-client-patterns.md`](../../macos-client-patterns.md) (the detail key no longer carries every outcome; when `provenanceContent()` is built), [`design-system-layers.md`](../../design-system-layers.md) and [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) (recipe content built after an async read), and retires [`provenance-loading.md`](provenance-loading.md).
