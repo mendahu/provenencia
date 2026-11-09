@@ -171,7 +171,9 @@ func FamilyUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) []Un
 // More parents than rules.MaxPivotEnd read as malformed data: none is paired
 // with another, and a sibling is placed once, with the first parent it shares
 // (in parent order), or in the siblings unit when it shares none. That keeps
-// what is shown linear in the data.
+// what is shown linear in the data. With the registry rules Siblings implies no
+// sibling past the bound, so that placement is a defence for a sibling link
+// that carries shared-parent shapes from elsewhere.
 func parentUnits(person []byte, kin Kin, kinOf map[string]Kin, rules Rules) ([]Unit, Unit) {
 	parents := kin[RoleParent]
 	ids := make([][]byte, len(parents))

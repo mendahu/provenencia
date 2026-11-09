@@ -22,6 +22,23 @@ func isEvent(id []byte) bool { return id[0]&0xf0 == 0x20 }
 // with person at an end, and the siblings a shared parent implies.
 func linksFor(t testing.TB, person []byte, edges []kinship.Edge) []kinship.Link {
 	t.Helper()
+	return linksWith(t, person, edges, rules)
+}
+
+// linksPastSiblingBound is linksFor with MaxPivotEnd raised for Siblings. With
+// the registry rules Siblings implies no sibling past MaxPivotEnd parents, so
+// these cases exercise parentUnits' defence for kin that shows more parents
+// than Siblings counted.
+func linksPastSiblingBound(t testing.TB, person []byte, edges []kinship.Edge) []kinship.Link {
+	t.Helper()
+	siblingRules := rules
+	siblingRules.MaxPivotEnd = 1 << 20
+	return linksWith(t, person, edges, siblingRules)
+}
+
+// linksWith is linksFor with Siblings run under siblingRules.
+func linksWith(t testing.TB, person []byte, edges []kinship.Edge, siblingRules kinship.Rules) []kinship.Link {
+	t.Helper()
 	set := kinship.NewLinkSet()
 	var parentEdges []kinship.Edge
 	for _, e := range edges {
@@ -42,11 +59,6 @@ func linksFor(t testing.TB, person []byte, edges []kinship.Edge) []kinship.Link 
 			parentEdges = append(parentEdges, imp.Edge)
 		}
 	}
-	// Siblings implies nothing past MaxPivotEnd parents; these fixtures reach
-	// FamilyUnits' own bound for a sibling that is already linked, so the bound
-	// is lifted here.
-	siblingRules := rules
-	siblingRules.MaxPivotEnd = 1 << 20
 	for _, imp := range kinship.Siblings(person, parentEdges, terms, siblingRules) {
 		set.AddImplied(imp)
 	}
@@ -74,8 +86,19 @@ func unitsOf(t testing.TB, person byte, edges []kinship.Edge, drop ...byte) []ki
 // unitsFor is unitsOf for any person id; drop holds one-byte ids not shown.
 func unitsFor(t testing.TB, person []byte, edges []kinship.Edge, drop []byte) []kinship.Unit {
 	t.Helper()
+	return unitsWith(t, person, edges, drop, linksFor)
+}
+
+// unitsPastSiblingBound is unitsFor over linksPastSiblingBound.
+func unitsPastSiblingBound(t testing.TB, person []byte, edges []kinship.Edge) []kinship.Unit {
+	t.Helper()
+	return unitsWith(t, person, edges, nil, linksPastSiblingBound)
+}
+
+func unitsWith(t testing.TB, person []byte, edges []kinship.Edge, drop []byte, build func(testing.TB, []byte, []kinship.Edge) []kinship.Link) []kinship.Unit {
+	t.Helper()
 	read := func(id []byte) kinship.Kin {
-		return kinship.KinOf(id, withoutPeople(id, linksFor(t, id, edges), drop), terms, rules)
+		return kinship.KinOf(id, withoutPeople(id, build(t, id, edges), drop), terms, rules)
 	}
 	kin := read(person)
 	kinOf := map[string]kinship.Kin{}
@@ -290,23 +313,6 @@ func TestFamilies(t *testing.T) {
 		}()},
 		{"siblings unit comes last", slices.Concat(johnMaryPat, []kinship.Edge{sibling(1, 11, 1), parent(1, 14, 2), spouse(1, 2, 3)}), nil,
 			[]string{"Parents{6,7;}", "Partner{2;}", "OneParent{;14}", "Siblings{;11}"}},
-		{"over the bound a sibling sharing several parents sits with the first", func() []kinship.Edge {
-			var es []kinship.Edge
-			for n := byte(2); n <= 12; n++ {
-				es = append(es, parent(n, 1, n))
-			}
-			return append(es, parent(4, 13, 20), parent(8, 13, 21), sibling(1, 13, 22))
-		}(), nil, func() []string {
-			var out []string
-			for n := 2; n <= 12; n++ {
-				if n == 4 {
-					out = append(out, "Parents{4;13}")
-					continue
-				}
-				out = append(out, fmt.Sprintf("Parents{%d;}", n))
-			}
-			return out
-		}()},
 		{"empty kin", nil, nil, nil},
 	}
 	for _, tc := range cases {
@@ -320,6 +326,25 @@ func TestFamilies(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("over the bound a sibling sharing several parents sits with the first", func(t *testing.T) {
+		var edges []kinship.Edge
+		for n := byte(2); n <= 12; n++ {
+			edges = append(edges, parent(n, 1, n))
+		}
+		edges = append(edges, parent(4, 13, 20), parent(8, 13, 21), sibling(1, 13, 22))
+		var want []string
+		for n := 2; n <= 12; n++ {
+			if n == 4 {
+				want = append(want, "Parents{4;13}")
+				continue
+			}
+			want = append(want, fmt.Sprintf("Parents{%d;}", n))
+		}
+		if got := show(unitsPastSiblingBound(t, p(1), edges)); !reflect.DeepEqual(got, want) {
+			t.Fatalf("got  %v\nwant %v", got, want)
+		}
+	})
 
 	t.Run("links say why", func(t *testing.T) {
 		// AC-1.1: Sam is implied through the marriage; Uma is recorded.
@@ -414,7 +439,7 @@ func placements(units []kinship.Unit) (relatives, shapes int) {
 func TestFamiliesMoreParentsThanMaxPivotEnd(t *testing.T) {
 	const parents, sibs = 11, 20 // one more parent than rules.MaxPivotEnd
 	pat, edges := crowd(t, parents, sibs)
-	units := unitsFor(t, pat, edges, nil)
+	units := unitsPastSiblingBound(t, pat, edges)
 	if len(units) != parents {
 		t.Fatalf("%d units, want %d lone parents", len(units), parents)
 	}
@@ -436,7 +461,7 @@ func TestFamiliesGrowth(t *testing.T) {
 	for _, n := range []int{11, 22} {
 		pat, edges := crowd(t, n, 2*n)
 		input := n * 2 * n
-		relatives, shapes := placements(unitsFor(t, pat, edges, nil))
+		relatives, shapes := placements(unitsPastSiblingBound(t, pat, edges))
 		if shapes > c*input || relatives > c*input {
 			t.Fatalf("%d parents, %d siblings: %d relatives and %d shapes shown from %d input shapes", n, 2*n, relatives, shapes, input)
 		}
@@ -499,7 +524,7 @@ func TestFamiliesGrowthPairs(t *testing.T) {
 	// shown does not multiply by the subsets of parents.
 	for _, parents := range []int{11, 14} {
 		pat, edges, input := pairs(t, parents, 3)
-		partners, children, assocs := shown(unitsFor(t, pat, edges, nil))
+		partners, children, assocs := shown(unitsPastSiblingBound(t, pat, edges))
 		sibs := parents * (parents - 1) / 2
 		if partners != parents || children != sibs {
 			t.Fatalf("%d parents: %d partners and %d children shown, want %d and %d", parents, partners, children, parents, sibs)
