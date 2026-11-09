@@ -346,6 +346,9 @@ final class PVTextAreaTabRouter: NSObject, NSTextViewDelegate {
     @MainActor
     func attach(to textView: NSTextView) {
         if textView.delegate === self { return }
+        // A text view has one router, the first that claimed it. Wrapping
+        // another router would let two routers wrap each other.
+        if textView.delegate is PVTextAreaTabRouter { return }
         wrapped = textView.delegate
         textView.delegate = self
     }

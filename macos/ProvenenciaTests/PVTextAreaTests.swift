@@ -82,6 +82,21 @@ struct PVTextAreaTests {
         #expect(only.firstDescendantTextView() == nil)
     }
 
+    @Test func twoRoutersOnOneTextViewDoNotLoop() {
+        let fixture = RouterFixture()
+        let other = PVTextAreaTabRouter()
+        other.attach(to: fixture.textView)
+        fixture.router.attach(to: fixture.textView)
+
+        let selector = #selector(NSTextDelegate.textDidChange(_:))
+        #expect(fixture.textView.delegate === fixture.router)
+        #expect(fixture.textView.delegate?.responds(to: selector) == true)
+        #expect(fixture.send(#selector(NSResponder.insertTab(_:))) == true)
+        let notification = Notification(name: NSText.didChangeNotification, object: fixture.textView)
+        _ = fixture.textView.delegate?.perform(selector, with: notification)
+        #expect(fixture.spy.changeCount == 1)
+    }
+
     @Test func routerStillForwardsEditsToTheOriginalDelegate() {
         let fixture = RouterFixture()
 
