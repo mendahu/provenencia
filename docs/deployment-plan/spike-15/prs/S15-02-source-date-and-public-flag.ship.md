@@ -1,7 +1,7 @@
 # Ship log — S15-02 Sources carry a date and a not-public flag
 
 **Plan:** [`S15-02-source-date-and-public-flag.md`](S15-02-source-date-and-public-flag.md) · **Branch:** `s15-02-source-date-and-public-flag` · **PR:** #762
-**State:** ready
+**State:** stopped — CI Go budget red twice, to user
 
 ## Round 0 — implement
 Head `940f719a` (PR #762, draft). Gate PASS (orchestrator re-run on `940f719a` against `462699f1`).
@@ -82,4 +82,4 @@ Reviewers: MNT (MNT-1 was the round's only Fix-now major). Scope `940f719a...b08
 No new findings. Round-1 minors MNT-2 – MNT-5 confirmed done by the round-2 reviewer (`RowMapTx` ×3, `loadForWrite` ×5, private `insert`/`update`). Verdict: Clean.
 
 ## Result
-`origin/main` unchanged since the branch was cut (`462699f1`); no merge needed. Gate PASS on `b08bfaab` · CI: see PR · open: none · follow-ups: SEC-2 → [`docs/ideas/value-row-owner-check.md`](../../../ideas/value-row-owner-check.md) (user, 2026-11-09) · later PR: UX-1, UX-2 → S15-03 map entry · to user: —
+`origin/main` unchanged since the branch was cut (`462699f1`); no merge needed. Gate PASS on `b08bfaab` · CI: macOS green; Go red twice on `promotealign` `TestLargeSourceBudgets/compose_every_summary` (568 ms, then 510 ms; budget 500 ms) — local head 208–233 ms vs base 217–333 ms, alone and under the full suite; to user · open: none · follow-ups: SEC-2 → [`docs/ideas/value-row-owner-check.md`](../../../ideas/value-row-owner-check.md) (user, 2026-11-09) · later PR: UX-1, UX-2 → S15-03 map entry · to user: —
