@@ -52,11 +52,8 @@ Gathered from the three core docs; each doc keeps its own context.
 
 **Move an Artifact** ([`move-artifact-between-sources.md`](move-artifact-between-sources.md))
 
-- Whether the entry point is only the Artifact, or also a graph ("move this graph and its Artifacts").
-- Whether moving several Artifacts at once is in the first cut, or only the refuse-and-name path for shared graphs.
-- Whether "move to a **new** Source" (split a Source in two, using Copy Source to prefill it) belongs here or follows.
-- Undo: rely on moving it back, or offer an undo right after the move.
-- How the Subjects' composite key follows a moved graph: `PRAGMA defer_foreign_keys` inside the transaction, or a migration adding `ON UPDATE CASCADE`.
+- ~~Entry point, several at once, undo, composite key, Source-level values~~: settled 2026-11-09; the move is the whole Artifact-and-graph bundle, from either an Artifact or a graph, with no undo.
+- Whether Merge Sources ships in this spike as a convenience over the move. Splitting into a new Source is deferred.
 
 **Metadata rethink** ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md))
 
