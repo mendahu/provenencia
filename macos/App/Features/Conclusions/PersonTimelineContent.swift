@@ -197,6 +197,9 @@ struct PersonTimelineContent: Equatable {
         }
         let birthRowID = recordedID(timeline.birth)
         let deathRowID = recordedID(timeline.death)
+        // Whether a recorded marker is a dated row with its own span.
+        let birthHasSpan = birthRowID.flatMap { events[$0]?.span } != nil
+        let deathHasSpan = deathRowID.flatMap { events[$0]?.span } != nil
 
         // Pass 2: lay out the slots and fold them.
         // (1) The dated rows in the read's order; a recorded marker with a span
@@ -208,22 +211,22 @@ struct PersonTimelineContent: Equatable {
         }
         // The place a marker with a stub names, when it names a dated row.
         let datedIDs = Set(dated.map(\.id))
-        func resolved(_ source: CatalogLifeMarker, rowID: String?) -> CatalogLifeMarker.Place? {
-            if let rowID, events[rowID]?.span != nil { return nil }
+        func resolved(_ source: CatalogLifeMarker, hasSpan: Bool) -> CatalogLifeMarker.Place? {
+            if hasSpan { return nil }
             switch source.place {
             case .after(let id)?, .before(let id)?: return datedIDs.contains(id) ? source.place : nil
             case nil: return nil
             }
         }
-        let birthPlace = resolved(timeline.birth, rowID: birthRowID)
-        let deathPlace = resolved(timeline.death, rowID: deathRowID)
+        let birthPlace = resolved(timeline.birth, hasSpan: birthHasSpan)
+        let deathPlace = resolved(timeline.death, hasSpan: deathHasSpan)
 
         // (2), (3) Any other marker goes next to the row it names, after or before it;
         // with none, the birth first and the death last. The birth is placed first, and a
         // death placed after a row steps past a birth placed right there.
         let birthSlot = Slot.marker(.birth, rowID: birthRowID)
         let deathSlot = Slot.marker(.death, rowID: deathRowID)
-        if birthRowID.flatMap({ events[$0]?.span }) == nil {
+        if !birthHasSpan {
             let at: Int
             switch birthPlace {
             case .before(let id)?: at = dated.firstIndex { $0.id == id } ?? 0
@@ -232,7 +235,7 @@ struct PersonTimelineContent: Equatable {
             }
             dated.insert(birthSlot, at: at)
         }
-        if deathRowID.flatMap({ events[$0]?.span }) == nil {
+        if !deathHasSpan {
             var at = dated.count
             switch deathPlace {
             case .before(let id)?: at = dated.firstIndex { $0.id == id } ?? at
