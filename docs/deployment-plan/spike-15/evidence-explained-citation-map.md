@@ -757,7 +757,7 @@ The **new type** dialog has **Copy from**: pick an existing type, and the new on
 
 ### 6.4 Getting the seed into existing projects
 
-**Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row.
+**Descoped (user, 2026-11-09).** The seed installs at create only, as it does today ([`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 1). Provenencia is not in production, and the only existing projects are a few dogfood catalogs. When the seed PR lands, the product owner gets a one-off command to add the new types, fields and suggestions to their own project. It is not product code: no install on open, no seed-version row. `Install` already writes with upserts (`ON CONFLICT (key, origin)` for types and fields, and for suggestions), so the one-off command can run it against an existing catalog: it adds what is missing and resets the product rows' labels, suggestion order and formats to the seed.
 
 Revisit before release, when existing projects belong to other researchers.
 
@@ -857,7 +857,16 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 
 ### 6.8 The seed
 
-**Decision (user, 2026-11-09): seed everything the patterns in § 5 use.** Researchers can delete, rename or edit any type, field, suggestion or format, so the seed does not need trimming. It installs at create (§ 6.4). Written for Provenencia from the conventions in § 2, not copied from *Evidence Explained* (working rule, [`README.md`](README.md#working-rules)); check it against the edition on hand before it is merged.
+**Decision (user, 2026-11-09): seed everything the patterns in § 5 use.** Researchers can delete, rename or edit any type, field, suggestion or format, so the seed does not need trimming. It installs at create (§ 6.4).
+
+**It is the product default, not a plugin (user, 2026-11-09).** Every new project gets it, with no option to leave it out. Packaging styles as plugins is parked in [`source-type-packages.md`](../../ideas/source-type-packages.md).
+
+**Existing infrastructure.** The product seed already exists: `core/database/sourcevocab/registry.go` lists the seeded types, fields and suggestions; `sourcevocab.Install` writes them with `origin = 'provenencia'`; `core/onboarding/ready.go` calls it when a catalog is created ([`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md)). Spike 15 extends it:
+
+- `seedField` entries for the 62 fields, each with a description that says to enter the value as it should appear.
+- `seedType` entries for the 26 types, each with an icon from the existing set in `core/database/sourcetypes/icons.go` (`type_census`, `type_certificate`, `type_book`, `type_newspaper`, `type_website`, `type_dna`, `type_gedcom`, `type_grave`, `type_photograph`, `type_oral_history`, `type_email`, `type_passport`, `type_folder_archive`, `type_document`, `type_scroll`), and its three formats written with keys.
+- `seedSuggestion` gains a level (`source`, `artifact`, `graph`).
+- `Install` writes the formats after the fields, turning each `{…meta.key}` into the field's id (§ 6.3, Storage). Written for Provenencia from the conventions in § 2, not copied from *Evidence Explained* (working rule, [`README.md`](README.md#working-rules)); check it against the edition on hand before it is merged.
 
 #### Source types
 

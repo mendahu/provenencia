@@ -25,6 +25,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Citation composer and media
 
+- [`source-type-packages.md`](source-type-packages.md) — citation styles as installable packages of types, fields and formats; raised in Spike 15, which seeds the *Evidence Explained*-style set as the product default
 - [`citation-composer-followups.md`](citation-composer-followups.md) — bridge-mode subject filter; cropped citation preview
 - [`depictions-and-likenesses.md`](depictions-and-likenesses.md) — Spike 10 / 14 leftovers (signature, page-change confirm, PDF Artifact thumbnails, audit items)
 - [`audio-video-sources.md`](audio-video-sources.md)

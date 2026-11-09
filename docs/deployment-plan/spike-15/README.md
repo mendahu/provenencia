@@ -64,4 +64,4 @@ Gathered from the three core docs; each doc keeps its own context.
 
 ## Not this spike
 
-Still in [`ideas/`](../../ideas/): relationships between Sources ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); pasting a registry URL to create a Source ([`registry-source-import.md`](../../ideas/registry-source-import.md)). Pull any of them in when the spike is scoped.
+Still in [`ideas/`](../../ideas/): relationships between Sources ([`source-to-source-relationships.md`](../../ideas/source-to-source-relationships.md)); pasting a registry URL to create a Source ([`registry-source-import.md`](../../ideas/registry-source-import.md)); citation styles as installable packages ([`source-type-packages.md`](../../ideas/source-type-packages.md), raised 2026-11-09: Spike 15 seeds the *Evidence Explained*-style set as the product default, with no plugin system and no opt-out). Pull any of them in when the spike is scoped.
