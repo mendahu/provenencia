@@ -108,8 +108,8 @@ struct PersonTimelineContent: Equatable {
     /// What each point or cap on the lifeline is called, by item id: a row's or
     /// marker's spoken label, including the rows a fold hides.
     private(set) var pointLabels: [String: String] = [:]
-    /// The first item each fold would reveal, folded or not: a row's id, or a
-    /// participant card's.
+    /// The first item each fold's next page would reveal: a row's id, or a participant
+    /// card's; absent when the fold hides nothing.
     private var revealed: [Fold: String] = [:]
     /// The ids of the event rows the dated fold counts, in order: the dated rows before the
     /// death marker, a recorded birth's row among them.
