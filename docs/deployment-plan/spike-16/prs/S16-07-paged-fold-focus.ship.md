@@ -1,7 +1,7 @@
 # Ship log — S16-07 One paged fold that moves focus
 
-**Plan:** [`S16-07-paged-fold-focus.md`](S16-07-paged-fold-focus.md) · **Branch:** `s16-07-paged-fold-focus` · **PR:** —
-**State:** stopped — finish blocked on push (no network to github.com)
+**Plan:** [`S16-07-paged-fold-focus.md`](S16-07-paged-fold-focus.md) · **Branch:** `s16-07-paged-fold-focus` · **PR:** [#761](https://github.com/mendahu/provenencia/pull/761)
+**State:** ready
 
 ## Round 0 — implement
 Head `a0837fe4` (local only: `git push` fails, github.com does not resolve from this Mac). Gate: implementer PASS on `4d60b7a1`; orchestrator re-run on `a0837fe4` below.
@@ -99,4 +99,4 @@ New findings: none. No Fix plan 2.
 Nits (logged): `MNT-9 · FocusKeeper.swift:29-34,139 · rename took's revealedPending to mappedPending after F-8`
 
 ## Result
-Gate PASS on `b2eb6377` · CI not run (branch not pushed: github.com does not resolve from this Mac) · open: none · follow-ups: none · later PR: MNT-3/UX-5 → S15-30 · to user: MNT-1 (answered: split map and scroll, amends D-11/D-12)
+Gate PASS on `b2eb6377` (main unmoved since 6da55ff4) · CI see PR #761 · open: none · follow-ups: none · later PR: MNT-3/UX-5 → S15-30 · to user: MNT-1 (answered: split map and scroll, amends D-11/D-12)
