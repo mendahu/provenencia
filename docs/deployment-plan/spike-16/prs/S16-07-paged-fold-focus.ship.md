@@ -1,7 +1,7 @@
 # Ship log — S16-07 One paged fold that moves focus
 
 **Plan:** [`S16-07-paged-fold-focus.md`](S16-07-paged-fold-focus.md) · **Branch:** `s16-07-paged-fold-focus` · **PR:** —
-**State:** fixing 1
+**State:** review 2
 
 ## Round 0 — implement
 Head `a0837fe4` (local only: `git push` fails, github.com does not resolve from this Mac). Gate: implementer PASS on `4d60b7a1`; orchestrator re-run on `a0837fe4` below.
@@ -77,3 +77,13 @@ Files: `macos/App/Platform/FocusKeeper.swift`, `macos/App/Features/Conclusions/C
 Do: replace the `reveal: (Stop) -> Stop` parameter on `focusKeeper(...)`, `FocusKeeper.reclaim` and `FocusKeeper.hand` with two: `map: (Stop) -> Stop` (pure; `took`'s `revealedPending` and the claim use it) and `scroll: (Stop) -> Void` (only `reclaim` calls it, before the claim). Gallery: `map` is today's `.useAs` → `.image` rule; `scroll` sets `scrollTarget` and bumps `scrollRequest`. Timeline: `map: { $0 }`, `scroll: { _ in }` (or its current scroll, if `reveal` did one). Update the doc comment on `focusKeeper(...)` and the `macos-client-patterns.md` keeper sentence to the new names. The plan's D-11/D-12 text stays; the orchestrator records the amendment in the Landed note.
 Failing test first: `FocusKeeperTests/tookDoesNotScroll` — a counting `scroll` closure: `hand` a stop (count 1), then `took` the mapped stop and `took` another stop; count stays 1.
 Check: the test passes; `rg -n "reveal:" macos/App/Platform/FocusKeeper.swift macos/App/Features/Conclusions` prints no keeper call site; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `b2eb6377` (local only). Gate PASS (orchestrator re-run; xcode-test 87s). F-1 – F-8 done.
+- F-1: `revealThatAddsNothingLeavesStateEqual` red first (`["a": 0]` != `[:]`), green after.
+- F-8: `focusKeeper`/`reclaim`/`hand` take `map:` and `scroll:`; `tookDoesNotScroll` red (no compile) first. Deviation: added non-mutating `FocusKeeper.claimed(map:scroll:) -> Stop?` that `reclaim` routes through, so the test can run without a `FocusState`.
+- F-2 not checked on screen (manual check 2).
+- F-4: brief moved to `design/archive/`, README and links updated; PR-number lines left for finish.
+
+## Round 2 — review
+Reviewers: CON, MNT, UX (each had a Fix-now major). Skipped: SEC+PRF (no findings in round 1). Scope `a0837fe4...b2eb6377`.
