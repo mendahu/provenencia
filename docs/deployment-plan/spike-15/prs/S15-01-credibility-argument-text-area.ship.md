@@ -1,7 +1,7 @@
 # Ship log — S15-01 The credibility argument is a text area
 
 **Plan:** [`S15-01-credibility-argument-text-area.md`](S15-01-credibility-argument-text-area.md) · **Branch:** `s15-01-credibility-argument-text-area` · **PR:** #758
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `d77bd4b6`. Gate PASS (orchestrator run). Report: version bump is 0.4.3, not 0.4.2 (`main` was already at 0.4.2; STEP-5 says next patch). Manual § 10 checks not run (app not launched).
@@ -39,3 +39,16 @@ Files: `macos/App/DesignSystem/Components/TextArea/PVTextArea.swift`, `macos/Pro
 Failing test first: `PVTextAreaTests.textViewSearchPicksTheTextViewUnderTheArea`. Build a container `NSView` holding two text views, each in an `NSScrollView` and stacked vertically with no overlap, plus a marker view whose frame covers the second one. The search from the marker returns the second text view. Today it returns the first.
 Do: replace "first descendant within 4 hops" in `PVTextEditorInsetView.nearestTextView()` with a search that, at each ancestor, returns the non-field-editor descendant text view whose enclosing scroll view frame (or its own frame when it has none), converted to window coordinates, contains the clearer's frame midpoint in window coordinates. Put the geometric match in an `NSView` extension beside `firstDescendantTextView()`, for example `descendantTextView(containing point: NSPoint)`, reusing its field-editor skip so the test calls it directly. Keep the hop limit as a bound only, and rewrite the comment so it no longer claims the hop limit protects a second area. If `firstDescendantTextView()` is then unused outside tests, fold it into the new search and move `textViewSearchSkipsAFieldEditor` onto the new function. Do not leave two searches.
 Check: the test passes; `scripts/check-pr.sh` PASS; the plan's Landed note records the kit fix (two text areas in one column could crash).
+
+## Round 1 — fix
+Head `0f792ee2`. Gate PASS (orchestrator run). F-1 done (red: the test host crashed with the stack overflow); F-2 done (red: the search returned the first text view). `firstDescendantTextView()` removed; `rg` finds no reference.
+
+## Round 2 — review
+Reviewers: CON (fresh). USR-1 was the only Fix-now blocker; the other lenses had none. Scope `6550b09b...0f792ee2`.
+
+USR-1: **Resolved.** F-1 makes `wrapped` never a router, so no cycle can form; F-2 matches by the clearer's midpoint in window coordinates. Edge cases checked: zero-size frames before layout return nil and recover on `layout()`/`updateNSView`; other `PVTextArea` callers do not regress. No new blockers.
+
+Outside lens (UX, unverified): an area may draw one frame with the default `TextEditor` inset before the first layout match. Logged; it is part of the manual check.
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: UX-1 · to user: — · the app run after the crash fix is with the user
