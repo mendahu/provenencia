@@ -53,6 +53,14 @@ func TestReleaseReplacedAudits(t *testing.T) {
 				v, err := datevalues.LookupTx(tx.Tx, dateID)
 				return datevalues.RowMap(dateID, v), err
 			}
+			t.Run("malformed prev id is a no op", func(t *testing.T) {
+				called := false
+				ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", []byte{1, 2, 3}, nil,
+					func() (map[string]any, error) { called = true; return nil, nil })
+				if ch != nil || err != nil || called {
+					t.Fatalf("ch=%+v err=%v rowMap called=%v", ch, err, called)
+				}
+			})
 			if ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", nil, nil, rowMap); err != nil || ch != nil {
 				t.Fatalf("empty prev: ch=%+v err=%v", ch, err)
 			}

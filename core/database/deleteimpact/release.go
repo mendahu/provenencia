@@ -107,7 +107,7 @@ func releaseOwned(tx *sql.Tx, kind catalogmodel.Kind, id []byte) ([]files.Object
 // The child is a row (deleted by its PK, its own children released after it) or
 // a File (deleted when nothing else points at it). Call it after the parent
 // row already holds the new value. It does nothing, and returns nil, when
-// prevID is empty or equals newID. Otherwise it builds the delete change from
+// prevID is not a 16-byte id or equals newID. Otherwise it builds the delete change from
 // rowMap before it releases, schedules the purge of any File it released, and
 // returns the change; a nil rowMap (a File child) returns no change. A column
 // that is not an owned FK is ErrInvalid.
@@ -115,7 +115,7 @@ func ReleaseReplaced(tx *database.Tx, column, entity string, prevID, newID []byt
 	if tx == nil {
 		return nil, ErrInvalid
 	}
-	if len(prevID) == 0 || bytes.Equal(prevID, newID) {
+	if len(prevID) != 16 || bytes.Equal(prevID, newID) {
 		return nil, nil
 	}
 	var row map[string]any
