@@ -65,7 +65,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		if err != nil {
 			return nil, err
 		}
-		kin := kinship.KinOf(id, links, terms)
+		kin := kinship.KinOf(id, links, terms, rules)
 		for _, role := range kinship.Roles() {
 			for _, l := range kin[role] {
 				if other, _, _ := l.From(id); !named[string(other)] {
@@ -93,7 +93,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 				shown = append(shown, l)
 			}
 		}
-		return kinship.KinOf(id, shown, terms), nil
+		return kinship.KinOf(id, shown, terms, rules), nil
 	}
 	out := make([]Family, 0, len(people))
 	for _, id := range people {

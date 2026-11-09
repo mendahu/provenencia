@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/segmentcompare/segmentcomparetest"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -198,4 +199,57 @@ func TestSiblingsManyDuplicatesTimesChildren(t *testing.T) {
 	if d := time.Since(start); d > time.Second {
 		t.Errorf("Siblings took %v, want under a second", d)
 	}
+}
+
+func TestSiblingsParentBound(t *testing.T) {
+	// Parents 1..n each file the person and one other child of their own.
+	build := func(parents int) []kinship.Edge {
+		var edges []kinship.Edge
+		for i := 0; i < parents; i++ {
+			q := []byte(fmt.Sprintf("q%d", i))
+			a := []byte(fmt.Sprintf("a%d", i))
+			edges = append(edges,
+				kinshiptest.Rel(q, []byte("person"), vocabkey.TermParent, a),
+				kinshiptest.Rel(q, []byte(fmt.Sprintf("c%d", i)), vocabkey.TermParent, a))
+		}
+		return edges
+	}
+	t.Run("MaxPivotEnd parents imply siblings as today", func(t *testing.T) {
+		if got := kinship.Siblings([]byte("person"), build(rules.MaxPivotEnd), terms, rules); len(got) != rules.MaxPivotEnd {
+			t.Fatalf("Siblings made %d links, want %d", len(got), rules.MaxPivotEnd)
+		}
+	})
+	t.Run("one more parent implies none", func(t *testing.T) {
+		if got := kinship.Siblings([]byte("person"), build(rules.MaxPivotEnd+1), terms, rules); len(got) != 0 {
+			t.Fatalf("Siblings made %d links, want none", len(got))
+		}
+	})
+	t.Run("50,000 parents and a sibling sharing them all", func(t *testing.T) {
+		const n = 50_000
+		var edges []kinship.Edge
+		for i := 0; i < n; i++ {
+			q := []byte(fmt.Sprintf("q%d", i))
+			a := []byte(fmt.Sprintf("a%d", i))
+			edges = append(edges,
+				kinshiptest.Rel(q, []byte("person"), vocabkey.TermParent, a),
+				kinshiptest.Rel(q, []byte("sibling"), vocabkey.TermParent, a))
+		}
+		start := time.Now()
+		implied := kinship.Siblings([]byte("person"), edges, terms, rules)
+		var links []kinship.Link
+		for i := 0; i < len(edges); i += 2 {
+			links = append(links, kinship.Link{Edge: edges[i]})
+		}
+		kin := kinship.KinOf([]byte("person"), links, terms, rules)
+		kinship.FamilyUnits([]byte("person"), kin, map[string]kinship.Kin{}, rules)
+		if d := time.Since(start); d > time.Second {
+			t.Errorf("Siblings, KinOf and FamilyUnits took %v, want under a second", d)
+		}
+		if len(implied) != 0 {
+			t.Errorf("Siblings made %d links, want none", len(implied))
+		}
+		if got := len(kin[kinship.RoleParent]); got != rules.MaxKinPerRole {
+			t.Errorf("parents role holds %d links, want %d", got, rules.MaxKinPerRole)
+		}
+	})
 }

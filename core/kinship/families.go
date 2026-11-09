@@ -73,8 +73,10 @@ func (k Kin) Around(person []byte) [][]byte {
 }
 
 // KinOf reads person's links through nuclearRoles: each link is in every role
-// whose key it carries from person's end. Any other link is in no role.
-func KinOf(person []byte, links []Link, terms segmentcompare.Terms) Kin {
+// whose key it carries from person's end, while the role holds fewer than
+// rules.MaxKinPerRole links, so each role keeps its first links in link order.
+// Any other link is in no role.
+func KinOf(person []byte, links []Link, terms segmentcompare.Terms, rules Rules) Kin {
 	kin := Kin{}
 	for _, row := range nuclearRoles {
 		keyFirst, keySecond, ok := relationshipKeys(row.term, terms)
@@ -90,6 +92,9 @@ func KinOf(person []byte, links []Link, terms segmentcompare.Terms) Kin {
 			stands := first
 			if row.at == atSecond {
 				stands = second
+			}
+			if len(kin[row.role]) >= rules.MaxKinPerRole {
+				break
 			}
 			if bytes.Equal(person, stands) || undirected && (bytes.Equal(person, first) || bytes.Equal(person, second)) {
 				kin[row.role] = append(kin[row.role], l)

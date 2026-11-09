@@ -19,7 +19,7 @@ import (
 var terms = segmentcomparetest.Terms()
 
 // rules is the shipped bound, written here because the layer holds no numbers.
-var rules = kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: 100_000}
+var rules = kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: 100_000, MaxKinPerRole: 100}
 
 // Subject ids: people P1.. = 0x11.., events E1.. = 0x21.., bridges b1.. = 0x31...
 func p(n byte) []byte { return []byte{0x10 + n} }
@@ -369,7 +369,7 @@ func TestDeriveChainWorkCap(t *testing.T) {
 		}
 		return edges
 	}
-	capped := kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: cap}
+	capped := kinship.Rules{MaxPivotEnd: 10, MaxPairSteps: 10, MaxChainWork: cap, MaxKinPerRole: 100}
 	// Each chain copies the up link's associations and the down link's one.
 	for _, tc := range []struct {
 		name   string

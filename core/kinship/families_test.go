@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/kinship/kinshiptest"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -41,7 +42,12 @@ func linksFor(t testing.TB, person []byte, edges []kinship.Edge) []kinship.Link 
 			parentEdges = append(parentEdges, imp.Edge)
 		}
 	}
-	for _, imp := range kinship.Siblings(person, parentEdges, terms, rules) {
+	// Siblings implies nothing past MaxPivotEnd parents; these fixtures reach
+	// FamilyUnits' own bound for a sibling that is already linked, so the bound
+	// is lifted here.
+	siblingRules := rules
+	siblingRules.MaxPivotEnd = 1 << 20
+	for _, imp := range kinship.Siblings(person, parentEdges, terms, siblingRules) {
 		set.AddImplied(imp)
 	}
 	return set.Links()
@@ -69,7 +75,7 @@ func unitsOf(t testing.TB, person byte, edges []kinship.Edge, drop ...byte) []ki
 func unitsFor(t testing.TB, person []byte, edges []kinship.Edge, drop []byte) []kinship.Unit {
 	t.Helper()
 	read := func(id []byte) kinship.Kin {
-		return kinship.KinOf(id, withoutPeople(id, linksFor(t, id, edges), drop), terms)
+		return kinship.KinOf(id, withoutPeople(id, linksFor(t, id, edges), drop), terms, rules)
 	}
 	kin := read(person)
 	kinOf := map[string]kinship.Kin{}
@@ -172,7 +178,7 @@ func TestKinOf(t *testing.T) {
 		t.Run(string(term), func(t *testing.T) {
 			l := kinship.Link{Edge: rel(1, 2, term, 1)}
 			for i, person := range []byte{1, 2} {
-				kin := kinship.KinOf(p(person), []kinship.Link{l}, terms)
+				kin := kinship.KinOf(p(person), []kinship.Link{l}, terms, rules)
 				w := want[term].one
 				if i == 1 {
 					w = want[term].two
@@ -191,20 +197,20 @@ func TestKinOf(t *testing.T) {
 	}
 	t.Run("a link to self", func(t *testing.T) {
 		l := kinship.Link{Edge: rel(1, 1, vocabkey.TermParent, 1)}
-		if kin := kinship.KinOf(p(1), []kinship.Link{l}, terms); len(kin) != 0 {
+		if kin := kinship.KinOf(p(1), []kinship.Link{l}, terms, rules); len(kin) != 0 {
 			t.Fatalf("got %v", kin)
 		}
 	})
 	t.Run("a stranger", func(t *testing.T) {
 		l := kinship.Link{Edge: rel(1, 2, vocabkey.TermSpouse, 1)}
-		if kin := kinship.KinOf(p(3), []kinship.Link{l}, terms); len(kin) != 0 {
+		if kin := kinship.KinOf(p(3), []kinship.Link{l}, terms, rules); len(kin) != 0 {
 			t.Fatalf("got %v", kin)
 		}
 	})
 	t.Run("link order within a role", func(t *testing.T) {
 		a := kinship.Link{Edge: rel(2, 1, vocabkey.TermParent, 1)}
 		b := kinship.Link{Edge: rel(3, 1, vocabkey.TermParent, 2)}
-		kin := kinship.KinOf(p(1), []kinship.Link{b, a}, terms)
+		kin := kinship.KinOf(p(1), []kinship.Link{b, a}, terms, rules)
 		if !reflect.DeepEqual(kin[kinship.RoleParent], []kinship.Link{b, a}) {
 			t.Fatalf("got %v", kin[kinship.RoleParent])
 		}
@@ -537,7 +543,7 @@ func TestKinAround(t *testing.T) {
 		{Edge: rel(6, 1, vocabkey.TermParent, 3)},
 		{Edge: rel(1, 8, vocabkey.TermSpouse, 4)},
 	}
-	got := kinship.KinOf(p(1), links, terms).Around(p(1))
+	got := kinship.KinOf(p(1), links, terms, rules).Around(p(1))
 	if !reflect.DeepEqual(got, [][]byte{p(6), p(9)}) {
 		t.Fatalf("got %v", got)
 	}
@@ -574,12 +580,58 @@ func FuzzFamilyUnits(f *testing.F) {
 			}
 		}
 		units := unitsFor(t, p(1), edges, nil)
-		kin := kinship.KinOf(p(1), linksFor(t, p(1), edges), terms)
+		kin := kinship.KinOf(p(1), linksFor(t, p(1), edges), terms, rules)
 		slots := rules.MaxPivotEnd*(rules.MaxPivotEnd-1)/2 + rules.MaxPivotEnd
 		bound := (len(kin[kinship.RoleSibling])+1)*(2*slots+len(kin[kinship.RoleParent])+1) +
 			(len(kin[kinship.RoleChild])+1)*(len(edges)+1) + len(kin[kinship.RoleSpouse])
 		if relatives, _ := placements(units); relatives > bound {
 			t.Fatalf("%d relatives shown, bound %d", relatives, bound)
+		}
+	})
+}
+
+func TestKinOfCap(t *testing.T) {
+	child := func(n int) kinship.Link {
+		return kinship.Link{Edge: kinshiptest.Rel([]byte("person"), []byte(fmt.Sprintf("c%04d", n)), vocabkey.TermParent, []byte{1})}
+	}
+	children := func(n int) []kinship.Link {
+		var links []kinship.Link
+		for i := 0; i < n; i++ {
+			links = append(links, child(i))
+		}
+		return links
+	}
+	max := rules.MaxKinPerRole
+	t.Run("at the cap all are kept", func(t *testing.T) {
+		if got := kinship.KinOf([]byte("person"), children(max), terms, rules)[kinship.RoleChild]; len(got) != max {
+			t.Fatalf("kept %d, want %d", len(got), max)
+		}
+	})
+	t.Run("one over keeps the first in link order", func(t *testing.T) {
+		links := children(max + 1)
+		got := kinship.KinOf([]byte("person"), links, terms, rules)[kinship.RoleChild]
+		if !reflect.DeepEqual(got, links[:max]) {
+			t.Fatalf("kept %d links, want the first %d", len(got), max)
+		}
+	})
+	t.Run("each role has its own cap", func(t *testing.T) {
+		var links []kinship.Link
+		for i := 0; i < max+1; i++ {
+			links = append(links, kinship.Link{Edge: kinshiptest.Rel([]byte(fmt.Sprintf("p%04d", i)), []byte("person"), vocabkey.TermParent, []byte{1})})
+		}
+		for i := 0; i < 3; i++ {
+			links = append(links, kinship.Link{Edge: kinshiptest.Rel([]byte("person"), []byte(fmt.Sprintf("s%d", i)), vocabkey.TermSpouse, []byte{1})})
+		}
+		kin := kinship.KinOf([]byte("person"), links, terms, rules)
+		if len(kin[kinship.RoleParent]) != max || len(kin[kinship.RoleSpouse]) != 3 {
+			t.Fatalf("parents %d spouses %d, want %d and 3", len(kin[kinship.RoleParent]), len(kin[kinship.RoleSpouse]), max)
+		}
+	})
+	t.Run("2,000 children around is the first cap", func(t *testing.T) {
+		kin := kinship.KinOf([]byte("person"), children(2000), terms, rules)
+		around := kin.Around([]byte("person"))
+		if len(around) != max || string(around[0]) != "c0000" || string(around[max-1]) != fmt.Sprintf("c%04d", max-1) {
+			t.Fatalf("Around holds %d, want the first %d children", len(around), max)
 		}
 	})
 }
