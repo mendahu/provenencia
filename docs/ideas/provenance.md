@@ -1,8 +1,10 @@
 # Provenance loading and drawing
 
-**Status:** idea only — not roadmapped. Two related performance follow-ups from Spike 13. Measure before pulling either in. Cap: pick up when Event and Place adopt the provenance sheet. On-demand: only if Person page load is too slow at the map's Scale.
+**Status:** idea only — not roadmapped. Two related performance follow-ups from Spike 13; Spike 15 starts the second (see below). Measure before pulling either in. Cap: pick up when Event and Place adopt the provenance sheet. On-demand: only if Person page load is too slow at the map's Scale.
 
 ## Cap the records a provenance table draws
+
+**Spike 15** (S15-21) shows each record's formatted citation and groups the records that share one, so the table draws fewer rows when a household's Citations group, but the rows it draws are longer. Measure the cap with grouped, formatted rows.
 
 The user accepted this risk on 2026-11-03 (S13-36 review SEC-1).
 
@@ -36,6 +38,8 @@ Raised as S13-06 review PRF-1 and deferred by the user on 2026-10-30; looked at 
 - **Who uses it.** Most visits never open a provenance sheet. The researcher may be on the way to Family, Timeline or Gallery, and the records are read anyway.
 
 **Since Spike 16 Batch 2** (S16-11, S16-30) the records compose from memory (the node's outcome rows, Subject records, Source records) instead of SQL, so this idea is only about the size of the page read's payload; measure that before pulling it in.
+
+**Spike 15 takes the first step** (2026-11-09). Formatted citations are fetched when the provenance sheet opens, not with the page: S15-21 asks one batch render call for the sheet's Citations, which reads SQL in a few batched queries and caches nothing ([`spike-15/deployment-plan.md`](../deployment-plan/spike-15/deployment-plan.md) rule "Citations render on demand, from SQL"; S15-16 measures it at 300 Citations). So the sheet already gains a load-on-open call, its loading and failed states (S15-D9), and the "a write lands while the sheet is open" question for citation text. The records themselves still arrive with the page read; moving them onto the same on-open read is the rest of this idea, and S15-21's call is the place to grow it rather than a second one.
 
 **Shape:** Load a row's records only when its provenance sheet opens.
 
