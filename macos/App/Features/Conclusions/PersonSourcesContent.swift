@@ -56,7 +56,7 @@ struct PersonSourcesContent: Equatable {
         var location: WorkspaceLocation
     }
 
-    /// The rows shown: every Source, or the first `rowFoldLimit` until unfolded.
+    /// The rows shown: every Source, or the first `rowFold.limit` until unfolded, then a page at a time.
     let rows: [Row]
     /// The location of each graph's first line, folded or not, by graph id: where a node of the
     /// record links diagram opens.
