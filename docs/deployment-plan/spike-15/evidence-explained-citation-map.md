@@ -1,8 +1,8 @@
 # Evidence Explained citation map
 
-**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)). It lists the kinds of record *Evidence Explained* (EE) gives citation models for, groups them into the citation patterns Provenencia has to build, and maps each pattern's elements to data the catalog has or will need. The last section lists every missing field and how to add it. **Revised 2026-11-09 (user):** the first draft added tables and columns for contributors, jurisdiction, repositories, reference parts and Artifact access fields; this version uses the existing Source types, metadata fields and type → field suggestions instead. Beyond the planned Source date, the only new schema repeats the Source's metadata structure (values, layout, type templating) on the Artifact (the copy used) and the Citation (the item cited) (§ 6.6). It extends [`citation-formats.md`](citation-formats.md), which sets out the convention and the six-step path; this doc is the inventory behind steps 1, 2 and 4 of that path.
+**Status:** Spike 15 design input, not yet cut into PRs ([`README.md`](README.md)). It lists the kinds of record *Evidence Explained* (EE) gives citation models for, groups them into the citation patterns Provenencia has to build, and maps each pattern's elements to data the catalog has or will need. The last section lists every missing field and how to add it. **Revised 2026-11-09 (user):** the first draft added tables and columns for contributors, jurisdiction, repositories, reference parts and Artifact access fields; this version uses the existing Source types, metadata fields and type → field suggestions instead. Beyond the planned Source date, the only new schema repeats the Source's metadata structure (values, layout, type templating) on the Artifact (the copy used) and the Evidence graph (the item cited) (§ 6.6, § 6.9). The Citation composer gets no new fields. It extends [`citation-formats.md`](citation-formats.md), which sets out the convention and the six-step path; this doc is the inventory behind steps 1, 2 and 4 of that path.
 
-**Goal (user, 2026-11-08):** a researcher builds an Evidence graph, promotes its Subjects, and gets a correct EE citation with no further typing. Every field below either already exists, can be read from the graph, or is a seeded metadata field the researcher fills once: on the Source, or on the Artifact or Citation when it differs per copy or per item.
+**Goal (user, 2026-11-08):** a researcher builds an Evidence graph, promotes its Subjects, and gets a correct EE citation with no further typing. Every field below either already exists, can be read from the graph, or is a seeded metadata field the researcher fills once: on the Source, or on the Artifact or Evidence graph when it differs per copy or per item.
 
 ## Read this first
 
@@ -36,7 +36,8 @@ The two overlap only by accident: "image 37" means nothing without the file, and
 | --- | --- | --- |
 | Source | — | What the record is and where the original lives: creator, jurisdiction, title, volume, repository |
 | Artifact | The File | How to get this copy again: format, provider, URL, accessed date, film number, citing, holder |
-| Citation | Page in the file, region | The item in the record's own numbering: printed page, folio, entry, line, dwelling |
+| Evidence graph | — | The item in the record's own numbering: entry, line, dwelling, family, folio, column (§ 6.9) |
+| Citation | Page in the file, region | The printed page (`page_label`), the one item detail that can differ inside a graph |
 
 What follows from it:
 
@@ -305,7 +306,7 @@ The graph supplies the "entry for …" or "baptism of …" part of a full note. 
 
 ### Seed (detailed in § 6)
 
-`M.key` is a value under a **product-seeded metadata field** (`origin = 'provenencia'`) with that key: on the Source (`source_metadata`), or on the Artifact or Citation when it differs per copy or per item (§ 6.6). The formatter takes the most specific one. The type → field suggestions (`source_type_metadata_fields`) give each seeded Source type the fields its pattern reads, so the Source page's existing Suggestions board is what asks the researcher for them.
+`M.key` is a value under a **product-seeded metadata field** (`origin = 'provenencia'`) with that key: on the Source (`source_metadata`), or on the Artifact or Evidence graph when it differs per copy or per item (§ 6.6). The formatter takes the most specific one. The type → field suggestions (`source_type_metadata_fields`) give each seeded Source type the fields its pattern reads, so the Source page's existing Suggestions board is what asks the researcher for them.
 
 Fields already on the horizon list in [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.2:
 
@@ -327,7 +328,7 @@ Fields to add to the seed:
 | Reference numbers | `book`, `folio`, `entry_number`, `schedule`, `schedule_number`, `piece`, `case_number`, `issue`, `column`, `page_range`, `section`, `lot`, `chapter`, `record_id`, `item_number` |
 | Copy | `format` (digital image, microfilm, database, photocopy, …), `provider`, `database_title`, `film_publication`, `film_number`, `citing`, `holder` |
 
-The copy fields (`format`, `provider`, `database_title`, `url`, `accessed_date`, `film_publication`, `roll`, `film_number`, `citing`, `holder`) are usually filled on the Artifact, and the item numbers (`line_number`, `dwelling_number`, `family_number`, `schedule_number`, `entry_number`, `folio`, `column`, `record_id`) on the Citation.
+The copy fields (`format`, `provider`, `database_title`, `url`, `accessed_date`, `film_publication`, `roll`, `film_number`, `citing`, `holder`) are usually filled on the Artifact, and the item numbers (`line_number`, `dwelling_number`, `family_number`, `schedule_number`, `entry_number`, `folio`, `column`, `record_id`) on the Evidence graph.
 
 ---
 
@@ -659,7 +660,7 @@ Any Source whose type maps to no pattern, or whose pattern is missing a required
 
 ### 6.1 The approach: the vocabulary we already have
 
-Source types, metadata fields and the type → field suggestions between them are already a template system. A citation pattern is a list of fields in an order, and that is what a type's suggestions are. So on the Source side, Spike 15 extends the **seed**, not the schema. The Artifact and Citation need two small value tables that reuse the same fields (§ 6.6).
+Source types, metadata fields and the type → field suggestions between them are already a template system. A citation pattern is a list of fields in an order, and that is what a type's suggestions are. So on the Source side, Spike 15 extends the **seed**, not the schema. The Artifact and the Evidence graph get the same metadata structure, reusing the same fields (§ 6.6).
 
 - **Seeded Source types** for the record kinds in § 3's first set, each with the suggestions its pattern reads, in the order the citation uses them.
 - **Seeded metadata fields** for every `M.` key in § 4, labelled for researchers ("Enumeration district", "Folio", "Accessed").
@@ -677,7 +678,7 @@ This also settles the metadata rethink ([`2026-10-25-rethink-source-metadata-and
 | Source types | Seeded types for the first patterns: census, vital certificate (birth, marriage, death), church register, book, newspaper item, online database; the rest as their patterns are built | Seed |
 | Templates | Type → field suggestions for each seeded type at each level, ordered like its citation (§ 6.8) | Seed |
 | Getting the seed to existing projects | An install step that adds the product types, fields and suggestions to a project that lacks them, run once per seed version (§ 6.4) | Engine |
-| Copy and item values | `artifact_metadata`, `citation_metadata` and their layout tables, reusing the field vocabulary; the formatter reads Citation, then Artifact, then Source (§ 6.6) | **Schema** |
+| Copy and item values | `artifact_metadata`, `evidence_graph_metadata` and their layout tables, reusing the field vocabulary; the formatter reads the graph, then the Artifact, then the Source (§ 6.6) | **Schema** |
 | Templates per level | `source_type_metadata_fields.level` (`source`, `artifact`, `citation`) | **Schema** |
 | Seed version | A `project_settings` row recording the installed seed version (§ 6.4) | Data |
 | Item description | Read from the graph (§ 6.5); `citations.label` overrides | Engine |
@@ -690,7 +691,7 @@ So the schema changes are the Source date (already planned), four tables for Art
 ### 6.3 How the formatter reads a Source
 
 1. **Pick the pattern.** A seeded type maps to its pattern in Go. Any other type uses the generic template.
-2. **Read the fields** by product key: the Citation's value, else the Artifact's, else the Source's (§ 6.6). A missing field is left out with its punctuation, never printed as a blank.
+2. **Read the fields** by product key: the Citation's graph's value, else its Artifact's, else the Source's (§ 6.6). A missing field is left out with its punctuation, never printed as a blank.
 3. **Shape the values it needs to.** `jurisdiction` is written smallest first, as notes use it; the source list reverses the comma-separated parts. `author` prints as written in notes, and the source list uses `author_sort` when it is filled. Dates in metadata (`accessed_date`) print as written; the Source date prints from its DateValue.
 4. **Style the title by pattern.** Published patterns (book, periodical, newspaper, web) italicize or quote as their convention says; record patterns print the title plain, as a description.
 5. **Add the item** from the Citation: `page_label`, the Citation label, or the graph (§ 6.5).
@@ -713,14 +714,14 @@ This is where "build the graph, get the citation" pays off. For a Citation, the 
 
 Names and dates are the ones the Source records (Observations), never the canonical person's kept name: a citation describes the record, not the conclusion.
 
-### 6.6 Artifact and Citation values: where new schema earns its keep
+### 6.6 Artifact and graph values: where new schema earns its keep
 
 Keeping everything on the Source fails in two places, and both come from the app's own model, not from EE:
 
 - **The copy layer belongs to the Artifact.** A Source can hold several representations of one record as separate Artifacts ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 7): a microfilm printout and an Ancestry download of the same register page. EE cites the copy that was used, and a Citation already points at one Artifact. With the provider, URL and accessed date on the Source, one of those two Artifacts is always cited with the wrong copy layer.
-- **Item numbers belong to the Citation.** One census page is one Artifact, and a researcher often cites several households on it, each with its own dwelling, family and line numbers. The same goes for entries on a register page and items on a newspaper page. These cannot be one value on the Source, and putting them in the Citation label leaves the formatter unable to place them.
+- **Item numbers belong below the Source.** One census page is one Artifact, and a researcher often cites several households on it, each with its own dwelling, family and line numbers. The same goes for entries on a register page and items on a newspaper page. These cannot be one value on the Source. They belong to the Evidence graph, one per household or entry (§ 6.9).
 
-**Decision (user, 2026-11-09): the Source's metadata structure, repeated on the Artifact and the Citation.** Values, layout (order and dismiss) and type templating all work the same at the three levels.
+**Decision (user, 2026-11-09): the Source's metadata structure, repeated on the Artifact and the Evidence graph.** Values, layout (order and dismiss) and type templating all work the same at the three levels.
 
 ```sql
 -- Values: one per owner and field, as on the Source.
@@ -732,12 +733,12 @@ CREATE TABLE artifact_metadata (
     UNIQUE (artifact_id, field_id)
 ) STRICT;
 
-CREATE TABLE citation_metadata (
+CREATE TABLE evidence_graph_metadata (
     id          BLOB PRIMARY KEY,
-    citation_id BLOB NOT NULL REFERENCES citations(id) ON DELETE CASCADE,
+    graph_id    BLOB NOT NULL REFERENCES evidence_graphs(id) ON DELETE CASCADE,
     field_id    BLOB NOT NULL REFERENCES source_metadata_fields(id),
     value_text  TEXT,
-    UNIQUE (citation_id, field_id)
+    UNIQUE (graph_id, field_id)
 ) STRICT;
 
 -- Layout: order and dismissed suggestions, as source_metadata_layout.
@@ -749,30 +750,30 @@ CREATE TABLE artifact_metadata_layout (
     PRIMARY KEY (artifact_id, field_id)
 ) STRICT;
 
-CREATE TABLE citation_metadata_layout (
-    citation_id BLOB NOT NULL REFERENCES citations(id) ON DELETE CASCADE,
+CREATE TABLE evidence_graph_metadata_layout (
+    graph_id    BLOB NOT NULL REFERENCES evidence_graphs(id) ON DELETE CASCADE,
     field_id    BLOB NOT NULL REFERENCES source_metadata_fields(id) ON DELETE CASCADE,
     sort_order  INTEGER NOT NULL,
     dismissed   INTEGER NOT NULL DEFAULT 0 CHECK (dismissed IN (0, 1)),
-    PRIMARY KEY (citation_id, field_id)
+    PRIMARY KEY (graph_id, field_id)
 ) STRICT;
 
 -- Templating: a type suggests fields per level.
 -- source_type_metadata_fields gains a level; the table is rebuilt so the
 -- key includes it (a field may be suggested at more than one level).
---   level TEXT NOT NULL DEFAULT 'source' CHECK (level IN ('source', 'artifact', 'citation'))
+--   level TEXT NOT NULL DEFAULT 'source' CHECK (level IN ('source', 'artifact', 'graph'))
 --   PRIMARY KEY (source_type_id, field_id, level)
 -- Existing rows become level = 'source'.
 ```
 
 - **Same fields, three levels.** All three levels take any field from the one vocabulary, seeded and researcher-made alike. No new columns on `artifacts` or `citations`.
-- **The most specific value wins.** For each key, the formatter reads the Citation's value, else its Artifact's, else the Source's. A researcher who files one Source per household never needs the Citation level; one who files the whole page as a Source fills line numbers per Citation.
-- **Templating follows the Source's type.** An Artifact's and a Citation's suggestions are the `artifact` and `citation` rows of their Source's type, so a census Source suggests provider and URL on each Artifact and line, dwelling and family in each Citation. The Source types admin edits the three lists the way it edits one today.
-- **Layout works as on the Source.** `ListWorkspace`'s merge rules (dismiss hides an empty suggestion, saved order first, then suggestions, then extras) apply unchanged per Artifact and per Citation ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 5.4). The Artifact form and the Citation composer each get a metadata board built from the Source page's.
+- **The most specific value wins.** For each key, the formatter reads the value on the Citation's graph, else on its Artifact, else on the Source. A researcher who files one Source per household never needs the graph level; one who files the whole page as a Source fills line numbers per graph, one graph per household (§ 6.9).
+- **Templating follows the Source's type.** An Artifact's and a graph's suggestions are the `artifact` and `graph` rows of their Source's type, so a census Source suggests provider and URL on each Artifact and line, dwelling and family on each graph. The Source types admin edits the three lists the way it edits one today.
+- **Layout works as on the Source.** `ListWorkspace`'s merge rules (dismiss hides an empty suggestion, saved order first, then suggestions, then extras) apply unchanged per Artifact and per graph ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 5.4). The Artifact form and the graph's edit view each get a metadata board built from the Source page's. The Citation composer gets none.
 - **Readers of the join** filter by level: `sourcetypes`, `sourcevocab` (suggestion ops and Install), the `effects` registry and the catalog model.
 - **Name.** `source_metadata_fields` now serves all three levels. Renaming it to `metadata_fields` would be accurate but touches every reader; keeping the name and noting the wider use is the cheaper choice.
 
-**Knock-on work** (each with its skill): register the four tables in the catalog model (`add-catalog-model`); audit them under their Source's scope so the Source's history shows them, with dismiss and reorder audited as on the Source (`add-audit-scope`); add them to the field delete-impact probe, so a field in use on an Artifact or Citation cannot be deleted (`add-catalog-delete`); cascade with their Artifact or Citation. Copy Source copies a chosen Artifact's values and layout with it. Moving an Artifact to another Source carries its values for free, because they hang off `artifact_id`.
+**Knock-on work** (each with its skill): register the four tables in the catalog model (`add-catalog-model`); audit them under their Source's scope so the Source's history shows them, with dismiss and reorder audited as on the Source (`add-audit-scope`); add them to the field delete-impact probe, so a field in use on an Artifact or graph cannot be deleted (`add-catalog-delete`); release them with their Artifact or graph (a graph delete is already audited per facet, [`source-layer-data-model.md`](../../source-layer-data-model.md) § 7.1). Copy Source copies a chosen Artifact's values and layout with it, and copies no graph values, since it copies no graphs. Moving an Artifact to another Source carries its values and its graphs' values for free, because they hang off `artifact_id` and `graph_id`.
 
 **Still given up, with the workaround:**
 
@@ -789,8 +790,7 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 
 1. **Source date** and the Source page design that shows it.
 2. **Seed and install:** the new fields, the first seeded types and their suggestions, and the once-per-version install for existing projects.
-3. **Artifact and Citation metadata:** the value and layout tables, the level on suggestions, a metadata board on the Artifact form and in the Citation composer, and the Artifact's fields in the import flow.
-4. **Same item as…** in the composer, and applying an item edit to the matching Citations (§ 6.9).
+3. **Artifact and graph metadata:** the value and layout tables, the level on suggestions, a metadata board on the Artifact form and on the graph, and the Artifact's fields in the import flow.
 5. **Printed page labels** in the composer.
 6. **Formatter** with the generic template and the first patterns: P5 census, P4 vital certificate, P6 church register, P10 book, P12 newspaper, P13 web database, with the P14 layer.
 7. **Citation preview** on the Source page, naming missing fields.
@@ -853,14 +853,14 @@ Following [`citation-formats.md`](citation-formats.md) "How it could arrive":
 | `film_number` | Film number | Artifact | New | |
 | `roll` | Roll | Artifact | Horizon | |
 | `item_number` | Item | Artifact | New | Yes: often part of the film number |
-| `line_number` | Line | Citation | Horizon | |
-| `dwelling_number` | Dwelling | Citation | Horizon | |
-| `family_number` | Family | Citation | Horizon | |
-| `schedule_number` | Schedule number | Citation | New | Yes, unless British censuses are in the dogfood |
-| `folio` | Folio | Citation | New | |
-| `entry_number` | Entry | Citation | New | |
-| `column` | Column | Citation | New | |
-| `record_id` | Record ID | Citation | New | |
+| `line_number` | Line | Graph | Horizon | |
+| `dwelling_number` | Dwelling | Graph | Horizon | |
+| `family_number` | Family | Graph | Horizon | |
+| `schedule_number` | Schedule number | Graph | New | Yes, unless British censuses are in the dogfood |
+| `folio` | Folio | Graph | New | |
+| `entry_number` | Entry | Graph | New | |
+| `column` | Column | Graph | New | |
+| `record_id` | Record ID | Graph | New | |
 
 The existing seeded `record_date` and `issue_date` on `birth_certificate` overlap the new Source date. Proposal: stop suggesting them; they stay as fields so existing values are kept.
 
@@ -868,7 +868,7 @@ The existing seeded `record_date` and `issue_date` on `birth_certificate` overla
 
 In citation order. **Every type** also suggests the copy fields on its Artifacts: `format`, `provider`, `database_title`, `url`, `accessed_date`, `citing` (and the film fields where noted).
 
-| Type | Source | Artifact (beyond the copy fields) | Citation |
+| Type | Source | Artifact (beyond the copy fields) | Evidence graph |
 | --- | --- | --- | --- |
 | `census` | `jurisdiction`, `schedule`, `enumeration_district`, `piece`, `repository` | `film_publication`, `roll` | `dwelling_number`, `family_number`, `line_number`, `schedule_number`, `folio` |
 | Certificates (3) | `creator`, `jurisdiction`, `document_number`, `volume`, `repository` | — | `entry_number` |
@@ -881,18 +881,25 @@ The page cited is not a field: it is the printed page label the composer writes 
 
 ### 6.9 One EE citation, many Provenencia Citations
 
-A census row is one EE citation (the household, its dwelling, family and line), but a researcher may draw five Citations on it: the name, the age, the birthplace, the occupation, the relationship column. All five carry the same item fields and differ only in their locators. Three things follow (user, 2026-11-09).
+A census row is one EE citation (the household, its dwelling, family and line), but a researcher may draw five Citations on it: the name, the age, the birthplace, the occupation, the relationship column. All five share the item and differ only in their locators.
 
-**1. Entering the item once: "Same item as…" in the composer.** When the composer opens on an Artifact, it lists the distinct items already cited on that Artifact (each distinct set of Citation item values, shown as its short note: "dwell. 112, fam. 118, line 12"). Picking one copies its item values into the new Citation. A new Citation also starts with the values of the last Citation made on the same Artifact, which the researcher clears or changes when they move to the next row. This is the "copy from an existing one" button, aimed at items rather than single Citations so the list stays short.
+**Decision (user, 2026-11-09): the item lives on the Evidence graph.** The Citation composer gets no new fields.
 
-**2. Showing the item once: group by the resolved citation.** Wherever Citations are listed for a reader (the provenance sheet, the Person page's Sources section, an export), Citations whose **resolved metadata** is the same are one EE citation. Resolved metadata is the Source, the Artifact's copy values and the Citation's item values after the Citation → Artifact → Source fallback (§ 6.6), and never the locator, the transcription or the label. The group shows the full note once, with its Citations (the highlighted cells) beneath it. The same key gives the short note on second mention and dedupes a source list, which groups one level up, by Source. The key is computed when read; nothing new is stored.
+- **Why the graph.** An Evidence graph already groups the Subjects drawn from one part of a Source, and Spike 12 made several graphs per Source for exactly this: one per household, entry or article in a large record. Every Citation belongs to one graph and never moves ([`source-layer-data-model.md`](../../source-layer-data-model.md) § 7.1). So the item's numbers are entered once, on the graph, and every Citation drawn in it inherits them.
+- **Why not the Artifact.** An Artifact is one file, and one file often holds several items (a census page with three households, a register page with eight entries), while one item can run onto a second page. Item fields on the Artifact would need one Artifact per household, each repeating the copy fields, and would change what an Artifact means. Graphs and Artifacts are already many-to-many, so a household over two pages is one graph linked to two Artifacts.
+- **Why not the Citation.** It repeats the same values on every Citation of the row, adds input to the composer, which is already the heaviest step in building a graph, and needs tools to keep the copies in step.
 
-**3. Editing the item once: apply to the matching Citations.** Correcting an item value on one Citation (dwelling 112 was 113) would split it from its group. So the edit offers to apply the change to every Citation on the Artifact with the same item values, as one audited write.
+**What follows:**
 
-**Why not a stored item level.** A table of items that Citations belong to (`citation_items`, between Artifact and Citation) would hold each row's numbers once and make 2 and 3 trivial. It is held back because it is a new concept in the composer (pick or make an item before drawing), and the three tools above get most of the benefit on the flat model. **Revisit if** dogfooding shows groups splitting by accident or bulk edits becoming a chore. The move is mechanical: one item per distinct set of item values.
+1. **Entering the item:** once, on the graph's metadata board, where its name and description are edited. A census Source's type suggests dwelling, family and line there.
+2. **Showing the item once:** wherever Citations are listed for a reader (the provenance sheet, the Person page's Sources section, an export), Citations with the same graph, Artifact and printed page are one EE citation. The full note shows once, with its Citations (the highlighted cells) beneath it. The same key gives the short note on second mention; a source list groups one level up, by Source. The key is computed when read; nothing new is stored.
+3. **Editing the item:** once, on the graph.
 
-**Researchers who file finely skip all of this.** If the Source is the household (one Source per household, each with an Artifact of the same page image, which the content-addressed File store already shares), the item values sit on the Source, and every Citation under it resolves to the same citation with no Citation fields at all.
+**When one graph covers several items.** A researcher who keeps the Default graph for a page with two households of interest gets one set of item fields for both. The answer is the one Spike 12 intended: one graph per household. The Citation label stays the escape hatch ("line 14"), and the citation preview shows the result.
 
+**The printed page stays on the Citation,** because it is the one part of the item that can differ inside a graph. It already exists on the locator (`page_label`). If that is still too much input, a later option is a page map per Artifact ("image 37 is page 23"), entered once, so every Citation inherits the printed page from the image it is drawn on (§ 7).
+
+**Researchers who file finely skip the graph level.** If the Source is the household (one Source per household, each with an Artifact of the same page image, which the content-addressed File store already shares), the item values sit on the Source.
 
 ---
 
@@ -905,9 +912,10 @@ A census row is one EE citation (the household, its dwelling, family and line), 
 - **Jurisdiction from the graph.** The graph often has the place chain (town → county → state through `part_of`). Offering "fill jurisdiction from this graph's place" as a one-time copy into the text would save typing without making the Source depend on interpretation.
 - **Principal Subject.** When a Citation supports several people (a census household, a marriage), which one names the item: head of household, both spouses, the person the researcher opened the composer from?
 - **Editable templates.** Recommendation: researchers fill fields and reorder suggestions only; a per-Source "edited citation" text field if the formatter is wrong for an odd record (one more seeded field, `citation_override`).
-- ~~Layout at the Artifact and Citation levels~~: same as the Source, with templating per level (user, 2026-11-09).
+- ~~Layout at the Artifact and item levels~~: same as the Source, with templating per level (user, 2026-11-09).
+- ~~Where the item lives~~: on the Evidence graph; the composer gets no new fields (user, 2026-11-09, § 6.9).
 - **How much seed.** The proposed first seed in § 6.8 is up for review (user, 2026-11-09).
 - **Field vocabulary name.** Keep `source_metadata_fields` for all three levels, or rename it to `metadata_fields`.
-- **A stored item level.** Kept flat for now, with "Same item as…", grouping and apply-to-matching (§ 6.9); revisit if groups split by accident.
-- **Prefill from the last Citation.** Whether a new Citation should start with the last one's item values, or start empty with "Same item as…" one click away.
+- **Printed page map.** Whether a per-Artifact page map ("image 37 is page 23") should replace typing the printed page in the composer (§ 6.9).
+- **One graph, several items.** Whether the app should nudge a researcher toward one graph per household when a Source's type suggests item fields at the graph level.
 - **Edition check.** Verify § 3 against the edition of *Evidence Explained* on hand, including how it treats DNA results and online trees.
