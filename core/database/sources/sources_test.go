@@ -2,6 +2,8 @@ package sources
 
 import (
 	"bytes"
+	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"image"
@@ -1107,6 +1109,46 @@ func TestSourceDate(t *testing.T) {
 					t.Fatalf("undated source has %+v", s.Date)
 				}
 			}
+		}
+	})
+	t.Run("dangling date row reads undated", func(t *testing.T) {
+		dangle := func() []byte {
+			ctx := context.Background()
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn, err := db.Conn(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+				t.Fatal(err)
+			}
+			defer conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`)
+			id := make([]byte, 16)
+			if _, err := rand.Read(id); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := conn.ExecContext(ctx, `UPDATE sources SET date_value_id = ? WHERE id = ?`, id, other.ID); err != nil {
+				t.Fatal(err)
+			}
+			return id
+		}
+		danglingID := dangle()
+		got, err := Get(c, other.ID)
+		if err != nil || got.Date != nil || !bytes.Equal(got.DateValueID, danglingID) {
+			t.Fatalf("Get %+v err=%v", got, err)
+		}
+		set, err := runSetDate(c, userID, other.ID, datevaluetest.YMD(1900, 0, 0))
+		if err != nil || set.Date == nil || *set.Date.StartYear != 1900 || bytes.Equal(set.DateValueID, danglingID) {
+			t.Fatalf("SetDate %+v err=%v", set, err)
+		}
+		dangle()
+		cleared, err := runSetDate(c, userID, other.ID, nil)
+		if err != nil || cleared.DateValueID != nil || cleared.Date != nil {
+			t.Fatalf("clear %+v err=%v", cleared, err)
 		}
 	})
 	t.Run("one date row per source", func(t *testing.T) {

@@ -271,28 +271,33 @@ func SetDate(tx *database.Tx, userID, sourceID []byte, date *datevalue.Value) (S
 	if err != nil {
 		return Source{}, nil, err
 	}
+	// held is the date row the Source owns; a stored id with no row is none.
+	var held []byte
+	if prev.Date != nil {
+		held = prev.DateValueID
+	}
 	var changes []rowchange.Change
 	switch {
 	case date != nil:
-		id, ch, err := datevalues.PutTx(tx.Tx, prev.DateValueID, *date)
+		id, ch, err := datevalues.PutTx(tx.Tx, held, *date)
 		if err != nil {
 			return Source{}, nil, err
 		}
 		if ch != nil {
 			changes = append(changes, *ch)
 		}
-		if len(prev.DateValueID) != 16 {
+		if !bytes.Equal(id, prev.DateValueID) {
 			if _, err := tx.Exec(sqlSetDateValue, id, sourceID); err != nil {
 				return Source{}, nil, mapConstraint(err)
 			}
-			changes = append(changes, dateValueChange(sourceID, nil, id))
+			changes = append(changes, dateValueChange(sourceID, prev.DateValueID, id))
 		}
 	case len(prev.DateValueID) == 16:
 		if _, err := tx.Exec(sqlSetDateValue, nil, sourceID); err != nil {
 			return Source{}, nil, mapConstraint(err)
 		}
 		changes = append(changes, dateValueChange(sourceID, prev.DateValueID, nil))
-		ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", prev.DateValueID, nil,
+		ch, err := deleteimpact.ReleaseReplaced(tx, "sources.date_value_id", "date_value", held, nil,
 			func() (map[string]any, error) {
 				v, err := datevalues.LookupTx(tx.Tx, prev.DateValueID)
 				return datevalues.RowMap(prev.DateValueID, v), err
@@ -657,10 +662,14 @@ func getOne(q interface {
 	}
 	if len(s.DateValueID) == 16 {
 		d, err := datevalues.LookupTx(q, s.DateValueID)
-		if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			// A date row that is gone reads as undated, as List does.
+		case err != nil:
 			return Source{}, err
+		default:
+			s.Date = &d
 		}
-		s.Date = &d
 	}
 	return s, nil
 }
