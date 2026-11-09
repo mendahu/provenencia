@@ -78,7 +78,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| S15-01 | The credibility argument is a text area | 1 | Swift: `PVTextArea` with the description's behavior; Save as today | — | — | — | Scoped |
+| S15-01 | The credibility argument is a text area | 1 | Swift: `PVTextArea` with the description's behavior; Save as today | — | — | [plan](prs/S15-01-credibility-argument-text-area.md) | Planned |
 | S15-02 | Sources carry a date and a not-public flag | 1 | Go: one migration (`date_value_id`, `is_public`), Source read and write, a date sort key from the shared date order | — | — | — | Scoped |
 | S15-03 | The Source page shows the date and the not-public switch | 1 | Swift: set, change, clear the date; the switch | S15-D1 | S15-02, S15-D1 | — | Scoped |
 | S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | — | Scoped |
