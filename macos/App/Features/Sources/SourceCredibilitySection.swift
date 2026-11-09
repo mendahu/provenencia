@@ -35,9 +35,11 @@ final class SourceCredibilitySection {
             ?? grades.first
     }
 
-    var isDirty: Bool {
+    var isDirty: Bool { isDirty(argument: argumentDraft) }
+
+    func isDirty(argument: String) -> Bool {
         draftKey != savedKey
-            || argumentDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+            || argument.trimmingCharacters(in: .whitespacesAndNewlines)
             != savedArgument.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 

@@ -40,10 +40,11 @@ struct SourcePageCredibilityView: View {
             }
             .accessibilityIdentifier("sources.page.credibility.grades")
 
-            PVInput(
+            PVTextArea(
                 text: $argumentLocal,
-                size: .sm,
-                prompt: L10n.Sources.credibilityArgumentPlaceholder
+                lineLimit: 2...12,
+                prompt: L10n.Sources.credibilityArgumentPlaceholder,
+                accessibilityLabel: L10n.Sources.credibilityArgumentPlaceholder
             )
             .accessibilityIdentifier("sources.page.credibility.argument")
 
@@ -52,8 +53,8 @@ struct SourcePageCredibilityView: View {
                     isSaving: model.credibility.isSaving,
                     saveLabel: L10n.Sources.saveAssessment,
                     cancelLabel: L10n.Sources.cancelEdit,
-                    saveDisabled: !isDirty,
-                    showsCancel: isDirty,
+                    saveDisabled: !model.credibility.isDirty(argument: argumentLocal),
+                    showsCancel: model.credibility.isDirty(argument: argumentLocal),
                     accessibilityIdentifierPrefix: "sources.page.credibility",
                     onSave: {
                         model.credibility.argumentDraft = argumentLocal
@@ -65,7 +66,7 @@ struct SourcePageCredibilityView: View {
                     }
                 )
 
-                if !isDirty {
+                if !model.credibility.isDirty(argument: argumentLocal) {
                     Text(
                         model.credibility.hasSavedAssessment
                             ? L10n.Sources.credibilitySavedStatus
@@ -81,11 +82,5 @@ struct SourcePageCredibilityView: View {
             // Sync after load / cancel / successful save (model owns the source of truth).
             argumentLocal = newValue
         }
-    }
-
-    private var isDirty: Bool {
-        model.credibility.draftKey != model.credibility.savedKey
-            || argumentLocal.trimmingCharacters(in: .whitespacesAndNewlines)
-            != model.credibility.savedArgument.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
