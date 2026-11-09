@@ -18,7 +18,6 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 | S15-D8 | Citation composer: the printed page | — | S15-13 |
 | S15-D9 | Provenance sheet: formatted citations, grouping, Copy citation, the on-open loading and failed states, the record table's fold | — | S15-21, S15-27, S15-29 |
 | S15-D10 | Move confirm: the bundle, the target, the credibility note | — | S15-25 |
-| S15-D11 | Event and Place pages: the Why accordion's fold | — | S15-27 |
 
 ## Archived
 

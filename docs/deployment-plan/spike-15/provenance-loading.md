@@ -1,6 +1,6 @@
 # Provenance loading and drawing
 
-**Status:** Spike 15 design input (pulled in from `docs/ideas/provenance.md` on 2026-11-09, user). Two performance follow-ups from Spike 13, now PRs in [`deployment-plan.md`](deployment-plan.md): the cap is **S15-27** (brief S15-D9 for the sheet, S15-D11 for the Why accordion); loading records when the sheet opens is **S15-28** (engine) and **S15-29** (app), growing the on-open call S15-21 adds for citations. The measurements each section asks for are the first step of those PRs' plans.
+**Status:** Spike 15 design input (pulled in from `docs/ideas/provenance.md` on 2026-11-09, user). Two performance follow-ups from Spike 13, now PRs in [`deployment-plan.md`](deployment-plan.md): the cap is **S15-27** (brief S15-D9), for the provenance sheet only: the Why accordion on the Event and Place pages is deprecated (user, 2026-11-09), so the notes below about the Why no longer apply; loading records when the sheet opens is **S15-28** (engine) and **S15-29** (app), growing the on-open call S15-21 adds for citations. The measurements each section asks for are the first step of those PRs' plans.
 
 ## Cap the records a provenance table draws
 
