@@ -127,11 +127,11 @@ The Sort menu holds four options today: Date added (newest first, the default), 
 
 | ID | Requirement |
 | --- | --- |
-| SL-1 | **The date on the second line.** A dated Source's second line reads: (type, narrow lists only) · ref · date · last update. The date is caption-size muted text after a 12pt calendar icon, matching the last update's icon size, so the line reads as one row of facts. It is text, not a Chip or Badge. **The board decides** the icon's tone and the exact spacing. |
+| SL-1 | **The date on the second line.** A dated Source's second line reads: (type, narrow lists only) · ref · date · last update. The date is caption-size muted text after a 12pt calendar icon, matching the last update's icon size, so the line reads as one row of facts. It is the same kit cell as the last update (List detail cell): its icon size, spacing and muted tone. Not a Chip or Badge. |
 | SL-2 | **Undated.** An undated Source shows the same calendar icon and the word "Undated" in the date's place, in the faintest text tone, so a dated row stands out from an undated one at a glance. |
 | SL-3 | **A long date.** A long range or phrase ("bet 12 Mar 1834 and 3 Sep 1840", "in the reign of Victoria, before the fire") truncates with an ellipsis and shows the full date as a tooltip; the ref never truncates; the last update keeps its place. **The board decides** which item gives way first when the line is too narrow (recommended: the type (narrow lists), then the date, then the last update). The row never wraps its second line. |
 | SL-4 | **The Sort menu.** Two options after "Reverse alphabetical": "Source date, oldest first" and "Source date, newest first". The control reads "Sorted by source date, oldest first" when chosen. No icon change. |
-| SL-5 | **The order.** Under "oldest first": `bef. 1830`, `1830`, `abt 1834`, `bet 1834 and 1840`, `1880`, `aft. 1880`, then the undated rows by title. Under "newest first": the dated rows in reverse, then the same undated rows by title. A phrase-only date sits among the undated rows. |
+| SL-5 | **The order.** Under "oldest first": `bef. 1830`, `1830`, then `abt 1834` and `bet 1834 and 1840` (they share a place, 1834, and go by title), `1880`, `aft. 1880`, then the undated rows by title. Under "newest first": the dated rows in reverse, then the same undated rows by title. A phrase-only date sits among the undated rows. |
 | SL-6 | **Empty and filtered.** A filter or search that leaves rows keeps the chosen date sort. The filter-empty state and the catalog-empty state are unchanged. |
 | SL-7 | **Keyboard and VoiceOver.** The row's link reads "1880 U.S. census, Ottawa County, Census, SRC-4KD2P, 1 Jun 1880, updated 2 days ago" (and "Undated" in the date's place for an undated Source). The Sort options are reachable by keyboard as today. |
 | SL-W1 | **Wide: the list fills the width.** At Wide the toolbar, the caption band and the rows run the pane's full width between the page gutters, as lists do. The Source cell takes the extra width; the Type (170pt) and Evidence graph (420pt) cells keep their size; the second line, date included, never stretches its items apart. No second column: the list beside a selected Source is a later redesign. |
@@ -165,18 +165,17 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Sources list row | Snowflake | Extend | `macos/App/Features/Sources/SourcesListRow.swift` `SourcesListRow`, `SourcesLinkLabel` | The date joins `SourcesLinkLabel`'s second line between the ref and the last update. No new cell, no new column |
-| Row date | Snowflake (inside the row) | Extend (the row) | `macos/App/Features/Sources/SourcesListRow.swift` | Icon + caption text through the app's row date display (`DateRowDisplay`), the same text the Source page header shows. Not a Chip, not a Badge, not `PVListDetailCell` (that one is the last update's relative time) |
-| Calendar icon | Component | Ship | `macos/App/DesignSystem/Components/Icon/` `PVIcon(.calendar)` | 12pt, as the last update's icon |
+| Row date | Component | Extend (truncation) | `macos/App/DesignSystem/Components/List/PVList.swift` `PVListDetailCell` | The same cell as the last update, with a calendar icon, the date through the app's row date display (`DateRowDisplay`), faint for Undated, the full date as help. It gains truncation for a long date. Not a Chip, not a Badge, not a hand-drawn icon + text |
 | Separator dot | Snowflake | Ship | `SourcesLinkLabel.separator` | Between each item, as today |
 | Sort control | Component | Ship | `macos/App/DesignSystem/Components/Select/` `PVSelect` | Two more options; no new control |
 | Caption band | Snowflake | Ship | `SourcesListView` `captionBand` | Unchanged: no Date caption |
 | Columns | Snowflake | Ship | `macos/App/Features/Sources/SourcesListColumns.swift` `SourcesListColumns` | Unchanged widths; Wide changes nothing in them |
 | Tooltip | Platform | Ship | `.help` | The full date on a truncated date |
 
-**Non-goals.** No new kit primitive: the date is part of the row's snowflake. No Date column, no Private glyph, no filter control, no group headings.
+**Non-goals.** No new kit primitive: the date is one more List detail cell. No Date column, no Private glyph, no filter control, no group headings.
 
 ---
 
 ## 7. Handoff
 
-When the board is agreed: record the link, the frames and the board's decisions (SL-1's tone and spacing, SL-3's give-way order) on the **Board** line here, in [`README.md`](README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the link, the frames and the board's decisions (SL-3's give-way order, and any frame that differs from the brief) on the **Board** line here, in [`README.md`](README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.

@@ -4,7 +4,7 @@
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D2](../design/S15-D2-sources-list.md), board not drawn yet
-**Board:** — (not drawn yet). When agreed: a Claude Design artifact link, read with the Artifact tool's `read` (user, 2026-11-10); the board's decisions on SL-1 and SL-3 are copied into §6 macOS
+**Board:** — (not drawn yet). When agreed: a Claude Design artifact link, read with the Artifact tool's `read` (user, 2026-11-10); the board's SL-3 give-way order is copied into D-6
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)), S15-D2
 **Blocks:** —
 **Branch:** `s15-04-sources-list-date`
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/macos-client.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "The Source date is one optional DateValue on `sources`", "One date order", "Not public is a stored switch and nothing else" ([`../deployment-plan.md`](../deployment-plan.md#working-rules)); [`../source-provenance-date.md`](../source-provenance-date.md); [`../../../source-layer-data-model.md`](../../../source-layer-data-model.md) § 4 (`date_sort_key`); [`../../../structured-date-model.md`](../../../structured-date-model.md) (the one date order); S15-02's [plan](S15-02-source-date-and-public-flag.md) D-5, D-13; S15-03's [plan](S15-03-source-page-date-and-private-switch.md) D-13 and **Next adds**
 **Planned:** 2026-11-10 against `main` @ `16efd08`
-**Review:** — (not reviewed yet)
+**Review:** [`S15-04-sources-list-date.review.md`](S15-04-sources-list-date.review.md) — round 1: Fits with changes / Ready with changes; every finding Fixed; no open blocker
 
 ### Implementer — read this first
 
@@ -43,7 +43,7 @@ A researcher sees each Source's own date on its Sources list row and sorts the l
 | AC | Given / when | Then |
 | --- | --- | --- |
 | AC-1.1 | A Source dated `abt 12 Mar 1880` | Its row's second line reads `SRC-…` · calendar icon `abt 12 Mar 1880` · last update; the text is `DateRowDisplay.line(date:)` of the Source's date |
-| AC-1.2 | An undated Source | Its second line reads `SRC-…` · calendar icon `Undated` (faint tone) · last update |
+| AC-1.2 | An undated Source, or one whose date gives an empty line | Its second line reads `SRC-…` · calendar icon `Undated` (faint tone) · last update |
 | AC-1.3 | A Source whose date is only the phrase "in the reign of Victoria" | The row reads "in the reign of Victoria" |
 | AC-1.4 | A Source dated on its page while the list is cached | Back on the list, its row shows the new date (the `.updatedSource` patch, no reload) |
 | AC-1.5 | VoiceOver on a dated row's link | The value reads "<title>, <type>, <ref>, 1 Jun 1880, updated …"; undated reads "…, <ref>, Undated, updated …" |
@@ -99,14 +99,14 @@ A researcher sees each Source's own date on its Sources list row and sorts the l
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | `CatalogSource` gains `var dateSortKey: Int64? = nil`; `GoStore.mapSource` sets it to `s.dateSortKey` only when `s.hasDateSortKey` | The wire key is the only order Swift uses (rule "One date order") | Deriving a key from `date` in Swift — a second date order |
+| D-1 | `CatalogSource` gains `var dateSortKey: Int64? = nil`, declared after `date`; `GoStore.mapSource` sets it to `s.dateSortKey` only when `s.hasDateSortKey`, and drops `private` (`static func mapSource`, as `mapObservation` is) so T-7 can call it | The wire key is the only order Swift uses (rule "One date order") | Deriving a key from `date` in Swift — a second date order |
 | D-2 | `Sort` gains `case dateOldest`, `case dateNewest` (raw values `"dateOldest"`, `"dateNewest"`), after `za` in `allCases` | User, 2026-11-10: two options, like A–Z / Z–A; appended so menu order matches SL-4 | One option with a direction toggle — no such control in the toolbar |
-| D-3 | Order: rows with a key first, by key (ascending for `dateOldest`, descending for `dateNewest`); equal keys by `title.localizedCaseInsensitiveCompare` ascending, then `id` descending; rows without a key after, by title ascending then `id` descending, in both directions | "Undated last" from the working rule; a stable, readable tie rule; the undated tail does not flip with direction (SL-5) | Ties by added order — not visible to the researcher |
+| D-3 | Order: rows with a key first, by key (ascending for `dateOldest`, descending for `dateNewest`); equal keys, and the rows without a key after them, by one private `static func titleOrder(_ a: CatalogSource, _ b: CatalogSource) -> Bool` *(new)* in `SourcesModel` (`title.localizedCaseInsensitiveCompare` ascending, then `id` descending), the same in both directions. `.az` and `.za` are not changed | "Undated last" from the working rule; a stable, readable tie rule; the undated tail does not flip with direction (SL-5) | Ties by added order — not visible to the researcher |
 | D-4 | A phrase-only date (date set, key absent) sorts in the undated tail and shows its phrase on the row | The engine gives it no place (structured-date-model); the row still shows what was typed | Hiding the phrase |
-| D-5 | The row date lives in `SourcesLinkLabel` *(extended)* as a `date: CatalogDateValueInput?` input; text is `DateRowDisplay.line(date:)`; undated is `L10n.Sources.listUndated` *(new)* in `PVColor.textFaint`; dated text `PVColor.textMuted`; icon `PVIcon(.calendar, size: 12)`; caption size; `.lineLimit(1)`, `.truncationMode(.tail)`, `.help(line)` on a dated row | Brief SL-1 – SL-3; matches the header's look at row size | A new kit component — one call site (brief non-goals) |
-| D-6 | Second-line order: type (compact) · ref · date · last update. The ref keeps `fixedSize`; the date gets `layoutPriority` below the last update and above the type, so the type truncates first, then the date (brief SL-3 recommendation; the agreed board overrides this one line) | Brief SL-3 | Wrapping the line — the row height is fixed to the graph slot |
-| D-7 | Accessibility: the base string passed to `PVLastUpdated.label` becomes "title, type, ref, date-or-Undated" | SL-7; one spoken join | A separate accessibility element for the date |
-| D-8 | `FakeStore.setSourceDate` sets `dateSortKey = nil` when the date is cleared and leaves it otherwise; tests set keys explicitly through the `source(...)` helper | The fake must not invent a date order; a cleared date has no key | A Swift key formula in the fake |
+| D-5 | The row date is a `PVListDetailCell`, as the last update beside it is. `PVListDetail` *(extended)* gains `var truncates: Bool = false`; when true, `PVListDetailCell` gives its `Text` `.lineLimit(1).truncationMode(.tail)` instead of `.fixedSize()`; every existing caller keeps the default. `SourcesListRow` gains internal `static func dateDetail(_ date: CatalogDateValueInput?) -> PVListDetail` *(new)*: with `line = date.map { DateRowDisplay.line(date: $0) } ?? ""`, a non-empty line gives `PVListDetail(text: line, help: line, icon: .calendar, faint: false, truncates: true)`; an empty line (undated, or a set date whose line is empty, such as a range missing a side) gives `PVListDetail(text: L10n.string(L10n.Dates.rowUndated), help: nil, icon: .calendar, faint: true, truncates: true)`. `SourcesLinkLabel` takes `date: CatalogDateValueInput?` and draws `PVListDetailCell(detail: SourcesListRow.dateDetail(date), width: nil, iconSize: 12)` | Brief SL-1 – SL-3; one cell draws every fact on the line, so spacing, icon size, tones and tooltip cannot drift; S15-05 reuses the builder | A hand-built icon + `Text` (a second copy of the cell); a helper on the `private` `SourcesLinkLabel`, which tests cannot reach |
+| D-6 | Second-line order: type (compact) · ref · date · last update, each separated by the existing `separator`. The date cell gets `.layoutPriority(0.5)` at its call site (outside the cell's own 1); the last update keeps the cell's 1; the type keeps 0; the ref keeps `fixedSize`. So the type truncates first, then the date (brief SL-3 recommendation; the agreed board may reorder these and nothing else) | Brief SL-3 | Wrapping the line — the row height is fixed to the graph slot |
+| D-7 | Accessibility: `SourcesListRow` gains internal `static func spokenBase(title: String, type: String, ref: String, date: CatalogDateValueInput?) -> String` *(new)* = `L10n.DesignSystem.spokenJoin([title, type, ref, dateDetail(date).text]) ?? title`; `sourceLink` passes it to `PVLastUpdated.label` in place of today's interpolated string | SL-7; one spoken join | A separate accessibility element for the date |
+| D-8 | `FakeStore` gains `var nextSourceDateSortKey: Int64?` *(new)*, default nil; `setSourceDate` sets the row's `dateSortKey` to it. Seeded rows set keys through the test helper `source(...)`, which STEP-3 extends with `date:` and `dateSortKey:` | `.cursor/rules/swift-tests.mdc`: the fake scripts what Go composes and does not re-implement it; a set date never keeps an old key | A cleared-means-nil rule or a key formula in the fake |
 | D-9 | No change to `SourcesListSettings` decoding | The existing per-field fallback covers an unknown raw value (AC-2.6) | A migration of the settings file |
 
 **Rules this plan bends.** None.
@@ -119,12 +119,15 @@ A researcher sees each Source's own date on its Sources list row and sorts the l
 | --- | --- | --- | --- |
 | `CatalogSource.dateSortKey` *(new)* | field | `CatalogSource.date`, `updated.revision` | Extends the model; the key is not derivable in Swift |
 | `SourcesModel.Sort.dateOldest`, `.dateNewest` *(new)* | enum cases | `.az`, `.za` | Extends the enum |
-| `L10n.Sources.sortDateOldest`, `sortDateNewest`, `listUndated` *(new)* | L10n keys | `L10n.Sources.sortAZ`; `L10n.Conclusions.timelineUndated` | Same namespace as the other sorts; `timelineUndated` is the Timeline's heading in another namespace and its copy may change on its own |
-| Row date in `SourcesLinkLabel` | view code | `SourcePageIdentityHeader.sourceDate` | Header size, pencil and focus do not belong in a row; the text comes from the shared `DateRowDisplay` |
+| `L10n.Sources.sortDateOldest`, `sortDateNewest` *(new)*; `L10n.Dates.rowUndated` *(new)* | L10n keys | `L10n.Sources.sortAZ`; `L10n.Dates` row strings; `L10n.Conclusions.timelineUndated` | Sorts sit beside the other sorts; "Undated" is a row date value and sits beside `DateRowDisplay`'s strings for S15-05; `timelineUndated` is the Timeline's heading and its copy may change on its own |
+| `PVListDetail.truncates` *(new)* | kit field | `PVListDetailCell` `.fixedSize()` | Extends the kit cell additively; the only gap was truncation (SL-3) |
+| `SourcesListRow.dateDetail`, `spokenBase` *(new)* | static funcs | `PVLastUpdated.detail(_:in:)`, `PVLastUpdated.label`; `SourcePageIdentityHeader.sourceDate` | Same shape as `PVLastUpdated.detail`, in the feature until S15-05 is a second caller; the header keeps its own size, pencil and focus |
+| `FakeStore.nextSourceDateSortKey` *(new)* | test hook | `FakeStore.nextWriteEffects` | The fake's scripting shape |
+| `SourcesModel.titleOrder` *(new)* | private func | `buildVisibleSources` `.az` inline compare | One tie rule for both date sorts |
 
-**Builds on.** `DateRowDisplay` (one date text), the wire key from `sources.DateSortKey`, the `Sort` enum and settings store, the `.updatedSource` row patch.
+**Builds on.** `PVListDetailCell` (the line's one cell), `DateRowDisplay` (one date text), `L10n.DesignSystem.spokenJoin`, the wire key from `sources.DateSortKey`, the `Sort` enum and settings store, the `.updatedSource` row patch.
 **Deletes.** None — nothing becomes dead.
-**Next adds.** S15-05 shows the same `DateRowDisplay.line` on the Person page's Sources section; a later date filter reads `dateSortKey`.
+**Next adds.** S15-05 shows the date on the Person page's Sources section with the same `dateDetail` (promote it to a recipe then).
 
 ### Reach
 
@@ -135,7 +138,7 @@ A researcher sees each Source's own date on its Sources list row and sorts the l
 
 ### Scale
 
-At the map's Scale (3,000 Sources): the sort adds one `Int64?` comparison per pair, inside the existing memoized `buildVisibleSources`, which already sorts by title for A–Z. The row computes `DateRowDisplay.line` once per drawn row inside a `LazyVStack`. T-5 times a 3,000-row date sort to stay under the existing title sort's cost on the same fixture.
+At the map's Scale (3,000 Sources): the sort adds one `Int64?` comparison per pair, inside the existing memoized `buildVisibleSources`, which already sorts by title for A–Z. The row computes `DateRowDisplay.line` once per drawn row inside a `LazyVStack`. T-5 runs the date sort over 3,000 rows and asserts the order and one build; no timing assertion (the cost is one optional-integer comparison per pair beside the title compare A–Z already does).
 
 ### Edges
 
@@ -161,28 +164,27 @@ None — `Source.date_sort_key` is on the wire.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
-| Row date | Snowflake in `SourcesLinkLabel` | `macos/App/Features/Sources/SourcesListRow.swift` | D-5, D-6; brief SL-1 – SL-3 |
-| Calendar icon | `PVIcon(.calendar, size: 12)` | kit | Tone per the board (default `PVColor.textMuted`) |
+| Row date | `PVListDetailCell` (Extend: `truncates`) | `macos/App/DesignSystem/Components/List/PVList.swift`; builder in `macos/App/Features/Sources/SourcesListRow.swift` | D-5, D-6; brief SL-1 – SL-3 |
 | Sort options | `PVSelect` | `SourcesListView.sortMenu` | Options come from `Sort.allCases`; no view change beyond the new cases |
-| Columns | `SourcesListColumns` | unchanged | Wide: no change (SL-W1) |
+| Columns | `SourcesListColumns` | unchanged | Wide: no code change. The list already fills the pane (the Source cell is `maxWidth: .infinity`); manual check 4 confirms it |
 
-States: undated → "Undated" (faint); phrase-only → phrase; long → truncated with tooltip; empty and filter-empty unchanged. Accessibility: D-7; sort options keep `sources.sort.<raw>` identifiers. Row date identifier `sources.row.<id>.date` *(new)*.
+States: undated, or a set date with an empty line → "Undated" (faint); phrase-only → phrase; long → truncated with tooltip; empty and filter-empty unchanged. Accessibility: D-7 (the row link merges its children, so the cell has no identifier of its own); sort options keep `sources.sort.<raw>` identifiers.
 
 ### Strings
 
-L10n keys *(new)*, in `L10n.Sources` and `Localizable.xcstrings`:
-- `sources.list.sort.dateOldest` = "Source date, oldest first"
-- `sources.list.sort.dateNewest` = "Source date, newest first"
-- `sources.list.undated` = "Undated"
+L10n keys *(new)*, in `L10n.swift` and `Localizable.xcstrings`:
+- `L10n.Sources.sortDateOldest`: `sources.list.sort.dateOldest` = "Source date, oldest first"
+- `L10n.Sources.sortDateNewest`: `sources.list.sort.dateNewest` = "Source date, newest first"
+- `L10n.Dates.rowUndated`: `dates.row.undated` = "Undated"
 
 `sortedBy` lowercases the label: "Sorted by source date, oldest first". Removed: none.
 
 ## 7. Steps
 
 **STEP-1 — Map the key.**
-Files: `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`, `macos/App/Platform/FakeStore.swift`.
-Do: D-1, D-8.
-Check: `xcodebuild test` builds; existing `SourcesModelTests` pass.
+Files: `macos/App/Platform/GenealogyStore.swift`, `macos/App/Platform/GoStore.swift`, `macos/App/Platform/FakeStore.swift`, `macos/ProvenenciaTests/SourceMappingTests.swift` *(new)*.
+Do: D-1, D-8. Add T-7.
+Check: T-7 passes; existing `SourcesModelTests` pass.
 
 **STEP-2 — Strings.** Skill: `add-localized-string`.
 Files: `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`.
@@ -191,22 +193,22 @@ Check: `python3 scripts/check-localizable-xcstrings.py` passes.
 
 **STEP-3 — The two sorts.** Skill: `add-swift-test`.
 Files: `macos/App/Features/Sources/SourcesModel.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`, `macos/ProvenenciaTests/SourcesListSettingsTests.swift`.
-Do: D-2, D-3, D-4; labels in `Sort.label`. Add T-1 – T-5.
+Do: D-2, D-3, D-4; labels in `Sort.label`. Extend the test helper `source(id:title:typeID:ref:updatedRevision:)` with `date: CatalogDateValueInput? = nil, dateSortKey: Int64? = nil`. Add T-1 – T-5.
 Check: T-1 – T-5 pass.
 
 **STEP-4 — The row.** Skill: `add-ui-component`.
-Files: `macos/App/Features/Sources/SourcesListRow.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`.
-Do: D-5, D-6, D-7, with the board's SL-1 tone and SL-3 order. Add T-6.
+Files: `macos/App/DesignSystem/Components/List/PVList.swift`, `macos/App/Features/Sources/SourcesListRow.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`.
+Do: D-5, D-6, D-7, with the board's SL-3 order. Add T-6. No Wide code (§6 macOS Columns).
 Check: T-6 passes; the app shows manual checks 1 – 4.
 
 **STEP-5 — Version.**
-Files: `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj` `MARKETING_VERSION`.
-Do: the next minor.
-Check: the three agree.
+Files: `VERSION`, `core/version.go`, every `MARKETING_VERSION` line in `macos/Provenencia.xcodeproj/project.pbxproj` (four at the planning base).
+Do: the minor above `VERSION` on `main` when you branch; if `main` bumps again before merge, rebase and take the next one.
+Check: `VERSION`, `core.Version` and every `MARKETING_VERSION` line agree.
 
 **STEP-6 — Docs.**
 Files: `../completed.md`, `../deployment-plan.md` (map row), this plan (status), `../design/S15-D2-sources-list.md` → `../design/archive/` *(new)*, `../design/README.md`.
-Do: per the Definition of done.
+Do: per the Definition of done. Create the folder `archive` *(new)* under `../design/` and `git mv` the brief into it; in `../design/README.md` move the S15-D2 row from Scheduled to Archived, its link pointing into that folder, its Board cell the board link, its Built by cell "S15-04 (#N)". `completed.md`: one paragraph at the top in the shape of the S15-03 entry (bold title, PR link, what a researcher can now do, product version).
 Check: `python3 scripts/check-plan-docs.py` on this plan passes; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period.
@@ -215,12 +217,13 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Swift | `SourcesModelTests.swift` `sortByDateOldestPutsUndatedLast` *(new)* | AC-2.1's six Sources, `.dateOldest` → k1, k2, k3, k4, Alpha, Bravo | AC-2.1, D-3 |
-| T-2 | Swift | `SourcesModelTests.swift` `sortByDateNewestKeepsUndatedTailAndTies` *(new)* | AC-2.1 plus "Zeta" and "Eta" both at key k5 > k4, and phrase-only "Mill notes"; `.dateNewest` → Eta, Zeta, k4, k3, k2, k1, Alpha, Bravo, Mill notes | AC-2.2, AC-2.3, AC-2.4, D-3, D-4 |
-| T-3 | Swift | `SourcesModelTests.swift` `clearedDateMovesRowToUndatedTail` *(new)* | `.dateOldest`; `setSourceDate(nil)` through the store, apply `.updatedSource` → row moves to the tail | AC-1.4, D-8 |
-| T-4 | Swift | `SourcesListSettingsTests.swift` `dateSortRoundTrips` *(new)*; `SourcesModelTests.swift` `sortControlLabelForDateSort` *(new)* | Save `.dateNewest`, load → `.dateNewest`; label "Sorted by source date, newest first" | AC-2.5, AC-2.6 |
-| T-5 | Swift | `SourcesModelTests.swift` `dateSortAtScaleWithFilter` *(new)* | 3,000 Sources, 100 dated, type filter on half → filtered rows in date order, undated tail by title; build count 1 | AC-2.7, §6 Scale |
-| T-6 | Swift | `SourcesModelTests.swift` `rowDateTextAndAccessibility` *(new)* | `SourcesLinkLabel`'s date text helper (a `static func dateText(_:)` *(new)* on `SourcesLinkLabel`, returning the line or "Undated") for dated, phrase-only and nil; the accessibility base string per D-7 | AC-1.1, AC-1.2, AC-1.3, AC-1.5 |
+| T-1 | Swift | `SourcesModelTests.swift` `sortByDateOldestPutsUndatedLast` *(new)* | `s1` "Delta" key 100, `s2` "Echo" key 200, `s3` "Foxtrot" key 300, `s4` "Golf" key 400, `s5` "Bravo" no date, `s6` "Alpha" no date; `.dateOldest` → s1, s2, s3, s4, s6, s5 | AC-2.1, D-3 |
+| T-2 | Swift | `SourcesModelTests.swift` `sortByDateNewestKeepsUndatedTailAndTies` *(new)* | T-1's six plus `s7` "Zeta" key 500, `s8` "Eta" key 500, `s9` "Mill notes" with `date: CatalogDateValueInput(kind: "point", phrase: "in the reign of Victoria")` and no key, `s10` "Abbey roll" no date; `.dateNewest` → s8, s7, s4, s3, s2, s1, s10, s6, s5, s9; `.dateOldest` → s1, s2, s3, s4, s8, s7, s10, s6, s5, s9 | AC-2.2, AC-2.3, AC-2.4, D-3, D-4 |
+| T-3 | Swift | `SourcesModelTests.swift` `clearedDateMovesRowToUndatedTail` *(new)* | T-1's six, `.dateOldest`; `nextSourceDateSortKey` nil, `store.setSourceDate(…, sourceID: "s1", date: nil)`, apply its result with `.updatedSource` → order s2, s3, s4, s6, s5, s1. Then `nextSourceDateSortKey = 450`, set s5's date to `1 Jun 1880` and apply → s2, s3, s4, s5, s6, s1 | AC-1.4, D-8 |
+| T-4 | Swift | `SourcesListSettingsTests.swift` `dateSortRoundTrips` *(new)*; `SourcesModelTests.swift` `sortControlLabelForDateSort` *(new)* | Save `.dateNewest`, load → `.dateNewest`; `sortControlLabel` → "Sorted by source date, newest first". AC-2.6 stays covered by the existing `unknownFieldValuesFallBack` | AC-2.5 |
+| T-5 | Swift | `SourcesModelTests.swift` `dateSortAtScaleWithFilter` *(new)* | 3,000 Sources `s0000` … `s2999`, title "Source NNNN"; type `t1` for even N, `t2` for odd; each N divisible by 30 dated with key N (100 dated, 50 of them even); type filter `t1`, `.dateOldest` → 1,500 rows: the 50 dated even rows by key, then the 1,450 undated even rows by title; `visibleSourcesBuildCount` rises by 1 | AC-2.7, §6 Scale |
+| T-6 | Swift | `SourcesModelTests.swift` `rowDateDetailAndSpokenBase` *(new)* | `SourcesListRow.dateDetail`: `1 Jun 1880` point → text "1 Jun 1880", help "1 Jun 1880", not faint, truncates; phrase-only → text "in the reign of Victoria"; nil → "Undated", faint, no help; `CatalogDateValueInput(kind: "range", startYear: 1834)` with no end, if its line is empty → "Undated". `spokenBase(title: "T", type: "Census", ref: "SRC-1", date: nil)` → "T, Census, SRC-1, Undated" | AC-1.1, AC-1.2, AC-1.3, AC-1.5, D-5, D-7 |
+| T-7 | Swift | `SourceMappingTests.swift` `mapsDateSortKey` *(new)* | `Provenencia_Engine_V1_Source` with `dateSortKey = 42` → `GoStore.mapSource(_:).dateSortKey == 42`; without it → nil | D-1 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `sortOrdersByAddedUpdatedAndTitle` (if `allCases` order is asserted elsewhere), `listColumnsMatchBoard`.
 
@@ -229,7 +232,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `s
 ```
 - [ ] Every AC in §2 is true: test name or manual check line for each
 - [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks). The Xcode tests and the manual check need macOS: without it, report those boxes "not run (no macOS)"; never mark them done
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
 - [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
@@ -263,11 +266,12 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `s
 - `Provenencia_Engine_V1_Source.hasDateSortKey` does not exist in `engine.pb.swift` at your base.
 - The agreed board puts the date anywhere other than the second line, or adds a Date column (the user chose the second line on 2026-11-10).
 - The board changes the sort labels or the undated copy from §6 Strings.
-- `buildVisibleSources` at 3,000 rows under a date sort costs more than twice the A–Z sort on the same fixture in T-5.
+- At Wide (pane ≥ 1600pt) the list does not fill the pane between the gutters: Wide needs code this plan does not name.
+- Adding `truncates` changes how any existing `PVListDetailCell` caller draws (a Conclusion list snapshot or test moves).
 
 ## 12. Open questions
 
-- **The board.** S15-D2 is not drawn. Recommended: paste the brief into Claude Design, agree the frames, record the link; then copy the board's SL-1 tone and SL-3 order into D-5 / D-6 and move this plan to Planned.
+- **The board.** S15-D2 is not drawn. Recommended: paste the brief into Claude Design, agree the frames, record the link; then copy the board's SL-3 order into D-6 and move this plan to Planned.
 
 ## 13. PR
 
