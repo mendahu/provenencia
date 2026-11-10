@@ -91,3 +91,65 @@
 
 ### X-6 · minor (repeated) · No `protoc` or `xcodebuild` in the review sandbox
 **Answer:** Declined — the implementer works on the Mac.
+
+## Amendment (2026-11-09) — the Timeline order
+
+The user scoped a fix into S16-02 after rounds 0 and 1 of #764 (dogfood: burial "abt 2011", death "29 Mar 2011", funeral "aft 29 Mar 2011" listed Burial, Death, Funeral). Decisions 1 and 2 are the user's (2026-11-09); the plan gains US-4, D-16 – D-22, STEP-8 – STEP-12, T-10 – T-13. Reviewers: maintainability (Opus, fresh context), executability (Sonnet, fresh context), on the amendment only.
+
+### To user
+- None open. M-1's rule bend (the add-date-value skill and `date-values.mdc` say "the one date order … do not write a second order") is answered by the user's decision 1 (Timeline only, in `persondetail.PersonEvents`); it is recorded under Rules this plan bends and D-22, which adds one sentence to each guide.
+
+### Writer's own calls
+- "Overlap" reads each date as written (`valuecompare.DateEnds` → `Window`, ABT not widened), the reading the Timeline's span already uses; so a burial "abt 2010" stays above a death "29 Mar 2011" (D-17, Edges).
+- The birth mirror moves every overlapping row that is not before-birth, in any role (D-2's placeholder-birth mirror); the death pass moves only the person's own burial or funeral (D-16).
+- Ceremony order applies to every after-death row after the death marker, so with a placeholder death the funeral comes before an overlapping burial and the death before both (D-19).
+- Rows moved after the death go right after it, ahead of other rows already there (a census on 30 Mar 2011 ends up after a moved burial) (D-16).
+- The lifeline is unchanged: a moved row draws at its own date, so its point can sit above the death's, its row below it (D-20).
+- No brief: the order fix moves rows and draws nothing new, like the placeholder fix the user already ruled a bugfix.
+
+### Round 1
+
+#### M-1 · blocker · The amendment bends the add-date-value skill and `date-values.mdc`
+**Answer:** Fixed — Rules this plan bends gains the bullet with the user's decision 1; D-22 adds one sentence to each guide; STEP-12 edits both; the DoD sweep checks them.
+
+#### M-2 · major · `EventDays` is a second placing beside `EventSpanAndAge`
+**Answer:** Fixed — D-17: `EventSpanAndAge` returns `days` as its second result from its one `eventDating`; the span loop keeps a `days` map that `daysOf` reads; `EventDays`, its stop condition and T-11's parity check are gone; T-11 is `TestEventSpanDays`.
+
+#### M-3 · major · STEP-12's check fails on the scope entry; a third Swift comment says "date order"
+**Answer:** Fixed — the map's S16-02 Ships sentence says "the first … in the Timeline's order"; D-20 and STEP-11 add the `PersonTimelinePreviewData` comment.
+
+#### M-4 · minor · `order` then `markers` is an unwritten call-order contract
+**Answer:** Fixed — D-16: `lifelineTypes.timeline` runs `order` then `markers`; `PersonEvents` calls only it.
+
+#### M-5 · minor · Passes (1) and (2) are one move
+**Answer:** Fixed — D-16: `moveAfterOverlapping` over a private `lifelineRow` slice, called twice.
+
+#### M-6 · nit · `entry` is vague
+**Answer:** Fixed — D-18 names it `rank`; the type comment says only `afterDeath`'s order is a rank.
+
+#### X-1 · major · Uncommitted doc edits break STEP-10's diff check; STEP-12 leaves the Status string and paragraph source open
+**Answer:** Fixed — STEP-8 starts with committing the plan (it is committed with this log); STEP-10's diff is scoped to `api macos`; STEP-12 sets `Landed #764` and restores the paragraph from `59e4a6a1` with a US-4 sentence.
+
+#### X-2 · major · STEP-12's `rg` check fails on the scope entry
+**Answer:** Fixed — as M-3.
+
+#### X-3 · major · T-10 leaves dates implicit; helpers are closures
+**Answer:** Fixed — T-10 gives the default death and birth dates, says copy the closures (do not hoist), and words AC-4.8's check per `Event`.
+
+#### X-4 · minor · T-12 lacks two marker expectations
+**Answer:** Fixed — AC-4.2 and AC-4.6 subtests give birth before U, death event D, no place; the order is asserted with `eventOrder` on `check`'s `Timeline`.
+
+#### X-5 · minor · Pass (3) semantics
+**Answer:** Fixed — D-16: the slice as it stands at each move; after-death rows still before a recorded death are not in pass (3); moved rows land ahead of rows already after the anchor; T-10 gains "a burial and a funeral both before the death".
+
+#### X-6 · minor · `daysOf` inside the pair loop
+**Answer:** Fixed — D-16: `order` reads each row's window once into `[]lifelineRow`.
+
+#### X-7 · minor · The `lifelineTypes` type comment becomes false
+**Answer:** Fixed — D-18 and STEP-9 name it.
+
+#### X-8 · minor · `check-pr.sh`, `xcodebuild` and the Swift generator version not confirmed
+**Answer:** Fixed in part — a Stop condition: the generate changing a non-comment line. The rest runs on the Mac.
+
+#### X-9 · nit · T-13's day span inexact
+**Answer:** Fixed — `from: 2011.9534, to: 2011.9562`.
