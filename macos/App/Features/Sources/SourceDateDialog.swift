@@ -86,10 +86,13 @@ private struct SourceDateForm: View {
             .disabled(model.isSaving)
             .accessibilityIdentifier("sources.page.sourceDate.clear")
             if model.clears {
-                Text(L10n.Sources.sourceDateClearsCaption)
-                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
-                    .foregroundStyle(PVColor.textMuted)
-                    .accessibilityIdentifier("sources.page.sourceDate.clearsCaption")
+                // Announced: Clear date changes the form without moving focus.
+                PVCallout(
+                    message: L10n.string(L10n.Sources.sourceDateClearsCaption),
+                    compact: true,
+                    announces: true
+                )
+                .accessibilityIdentifier("sources.page.sourceDate.clearsCaption")
             }
         }
     }
