@@ -156,3 +156,53 @@ struct ReconciledValueRow: View {
         .accessibilityLabel(L10n.Conclusions.otherValuesList(model.label))
     }
 }
+
+/// A page's field rows, under a heading with the refreshing spinner when `title` is given.
+/// A page that draws neither (the Person page's Vitals, which shows refreshing in its
+/// section switcher) passes nil.
+struct ConclusionDetailRowsSection: View {
+    let rows: [ReconciledValueRowModel]
+    let refreshing: Bool
+    var title: LocalizedStringResource? = nil
+    var provenance: ReconciledValueRow.Provenance = .why
+
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @Environment(\.pvWidthClass) private var widthClass
+    /// The row whose provenance sheet is open (`.sheet` mode); one presenter for all rows.
+    @State private var provenanceItem: ProvenanceSheetItem?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let title {
+                PVSectionHeader(title: title, aside: {
+                    if refreshing {
+                        ProgressView().controlSize(.small)
+                    }
+                })
+            }
+            ForEach(rows) { row in
+                ReconciledValueRow(
+                    model: row, provenance: provenance,
+                    openProvenance: { provenanceItem = ProvenanceSheetItem(id: row.id) }
+                )
+            }
+        }
+        .pvSheet(item: $provenanceItem) { item in
+            if let row = item.row(in: rows) {
+                PVProvenanceSheet(
+                    content: row.provenanceContent(),
+                    columns: PVProvenanceColumns(widthClass: widthClass),
+                    idPrefix: "conclusion.detail.provenance",
+                    open: { navigation.go(to: .provenance($0, $1)) }
+                )
+                .accessibilityIdentifier("conclusion.detail.provenance.\(row.id)")
+            }
+        }
+        // A row that leaves the page closes its sheet.
+        .onChange(of: rows) {
+            if let item = provenanceItem, item.row(in: rows) == nil {
+                provenanceItem = nil
+            }
+        }
+    }
+}

@@ -459,26 +459,41 @@ struct PersonDetailTests {
         #expect(competing.rows[3].shown.badge == nil && competing.rows[4].shown.badge == nil)
     }
 
-    @Test func sectionQueryKeys() {
+    @Test func sectionIdentifierRoots() {
+        for section in [ConclusionPageSection.family, .timeline, .sources] {
+            #expect(section.accessibilityIdentifierRoot(pageIdentifier: "persons.detail")
+                == "persons.detail.\(section.rawValue)")
+        }
+    }
+
+    @Test func sectionReads() {
         let project = ProjectKey(projectDir: "/tmp/section-keys.provenencia")
-        #expect(ConclusionPageSection.family.queryKey(project: project, entityId: "e1")
-            == .personFamily(project: project, entityId: "e1"))
-        #expect(ConclusionPageSection.timeline.queryKey(project: project, entityId: "e1")
-            == .personEvents(project: project, entityId: "e1"))
-        #expect(ConclusionPageSection.sources.queryKey(project: project, entityId: "e1")
-            == .personClaims(project: project, entityId: "e1"))
-        for section in ConclusionPageSection.allCases
-        where section != .family && section != .timeline && section != .sources {
-            #expect(section.queryKey(project: project, entityId: "e1") == nil)
-        }
+        let own = { (key: CatalogQueryKey) in ConclusionSectionRead(key: key, role: .own) }
+        let expected: [ConclusionPageSection: [ConclusionSectionRead]] = [
+            .vitals: [],
+            .gallery: [],
+            .family: [own(.personFamily(project: project, entityId: "e1"))],
+            .timeline: [own(.personEvents(project: project, entityId: "e1"))],
+            .sources: [
+                own(.personClaims(project: project, entityId: "e1")),
+                .init(key: .personRecordLinks(project: project, entityId: "e1"), role: .companion),
+                .init(key: .sourceTypesList(project: project), role: .supporting),
+            ],
+        ]
         for section in ConclusionPageSection.allCases {
-            #expect(section.supportingQueryKeys(project: project, entityId: "e1")
-                == (section == .sources ? [.sourceTypesList(project: project)] : []))
-        }
-        for section in ConclusionPageSection.allCases {
+            let reads = section.reads(project: project, entityId: "e1")
+            #expect(reads == expected[section])
+            for role in [ConclusionSectionRead.Role.own, .companion, .supporting] {
+                #expect(section.read(role, project: project, entityId: "e1")
+                    == reads.first { $0.role == role }?.key)
+            }
             #expect(section.fillsWidth == (section == .timeline || section == .gallery || section == .sources))
-            #expect(section.companionQueryKey(project: project, entityId: "e1")
-                == (section == .sources ? .personRecordLinks(project: project, entityId: "e1") : nil))
+        }
+        #expect(ConclusionSectionRead.Role.own.showsRefreshing)
+        #expect(ConclusionSectionRead.Role.companion.showsRefreshing)
+        #expect(!ConclusionSectionRead.Role.supporting.showsRefreshing)
+        for role in [ConclusionSectionRead.Role.own, .companion, .supporting] {
+            #expect(role.warmsWithPlace)
         }
     }
 

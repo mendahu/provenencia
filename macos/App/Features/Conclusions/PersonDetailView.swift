@@ -31,8 +31,9 @@ private struct PersonDetailSections: View {
     let context: ConclusionDetailPageSectionsContext
 
     var body: some View {
-        let section = context.pageSection ?? .vitals
-        switch section {
+        switch context.openPageSection {
+        case nil:
+            EmptyView()
         case .vitals:
             ConclusionDetailRowsSection(
                 rows: content.rows,
@@ -58,11 +59,11 @@ private struct PersonDetailSections: View {
                 )
             }
         case .family:
-            PersonFamilySection(entityId: entityId)
+            PersonFamilySection(entityId: entityId, pageIdentifier: context.pageIdentifier)
         case .timeline:
-            PersonTimelineSection(entityId: entityId)
+            PersonTimelineSection(entityId: entityId, pageIdentifier: context.pageIdentifier)
         case .sources:
-            PersonSourcesSection(entityId: entityId, userID: userID)
+            PersonSourcesSection(entityId: entityId, userID: userID, pageIdentifier: context.pageIdentifier)
         }
     }
 }

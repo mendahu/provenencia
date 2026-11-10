@@ -2,10 +2,11 @@ import SwiftUI
 
 /// The Person page's Family section (S13-12, board S13-D3): the person's
 /// parents, siblings, partners and children as person tiles joined by lines.
-/// It reads its own query (`ConclusionPageSection.queryKey`), keeps the diagram
+/// It declares its reads in `ConclusionPageSection.reads`, keeps the diagram
 /// drawn while it reloads, and opens a relative on their Family.
 struct PersonFamilySection: View {
     let entityId: String
+    let pageIdentifier: String
 
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -14,12 +15,15 @@ struct PersonFamilySection: View {
     /// The pages of each list the researcher has unfolded. Reset when the page is another person.
     @State private var folds = ConclusionFoldState<PersonFamilyContent.Fold>()
 
+    private var root: String { ConclusionPageSection.family.accessibilityIdentifierRoot(pageIdentifier: pageIdentifier) }
+
     var body: some View {
         let orders = session.nameFormat
         let folds = folds
         ConclusionPageSectionHost<CatalogPersonFamily, PersonFamilyContent, PersonFamilyDiagram>(
             section: .family,
             entityId: entityId,
+            accessibilityIdentifierRoot: root,
             errorTitle: L10n.Conclusions.familyErrorTitle,
             emptyTitle: L10n.Conclusions.familyEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.familyEmptyMessage),
@@ -30,6 +34,7 @@ struct PersonFamilySection: View {
                 content: content,
                 projectDir: session.projectKey.projectDir,
                 widthClass: widthClass,
+                accessibilityIdentifierRoot: root,
                 open: { navigation.go(to: $0) },
                 expand: { self.folds.revealPage($0) }
             )
@@ -44,6 +49,7 @@ struct PersonFamilyDiagram: View {
     let content: PersonFamilyContent
     let projectDir: String
     let widthClass: PVWidthClass
+    let accessibilityIdentifierRoot: String
     let open: (WorkspaceLocation) -> Void
     var expand: (PersonFamilyContent.Fold) -> Void = { _ in }
 
@@ -94,7 +100,7 @@ struct PersonFamilyDiagram: View {
                             .focused($focused, equals: placed.id)
                             .id(placed.id)
                             .offset(x: placed.frame.minX, y: placed.frame.minY)
-                            .accessibilityIdentifier("persons.detail.family.tile.\(placed.id)")
+                            .accessibilityIdentifier("\(accessibilityIdentifierRoot).tile.\(placed.id)")
                         }
                     }
                     ForEach(group.more, id: \.fold) { more in
@@ -111,7 +117,7 @@ struct PersonFamilyDiagram: View {
                         }
                             .frame(width: more.frame.width, height: more.frame.height, alignment: .leading)
                             .offset(x: more.frame.minX, y: more.frame.minY)
-                            .accessibilityIdentifier("persons.detail.family.more")
+                            .accessibilityIdentifier("\(accessibilityIdentifierRoot).more")
                     }
                 }
                 .frame(width: group.frame.width, height: group.frame.height, alignment: .topLeading)

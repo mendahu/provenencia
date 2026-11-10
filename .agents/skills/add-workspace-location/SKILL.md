@@ -105,7 +105,16 @@ Catalog reads come from `WorkspaceSession` query handles (Spike 4) — see
 [`add-workspace-place`](../add-workspace-place/SKILL.md). Do **not** add `.task {
 load(from:) }` as the primary hydration path.
 
-### 5. Tests
+### 5. Page sections (a sub-place of a record page)
+
+A record page can offer sections (the Person page: Vitals, Family, Timeline, Gallery, Sources). A page section is a sub-place stored on `WorkspaceLocation.pageSection` (the first the kind offers is stored as nil; the raw values of `ConclusionPageSection` are frozen because they are written to history files), changed with `withPageSection(_:)` through `navigation.go(to:)`, so Back returns to the previous section. Two properties, two jobs:
+
+- `openPageSection` is the section the page shows: the stored one, else the first the kind offers. The place registry, the page and the fill all read it; never write `pageSection ?? …` or `offered[0]`.
+- The stored `pageSection` is history identity and the crumb, where the first section adds none (`WorkspaceLocationLabels`).
+
+A kind that adopts sections adds its cases to `ConclusionPageSection.offered(by:)` and `reads(project:entityId:)`, gives its place spec the same open-section line as `.personDetail`, and supplies its own fill. See [`add-workspace-place`](../add-workspace-place/SKILL.md) for the read list.
+
+### 6. Tests
 
 Extend [`WorkspaceNavigationTests`](../../../macos/ProvenenciaTests/WorkspaceNavigationTests.swift)
 ([`add-swift-test`](../add-swift-test/SKILL.md)):

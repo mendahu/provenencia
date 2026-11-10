@@ -848,6 +848,25 @@ struct WorkspaceNavigationTests {
         #expect(try JSONDecoder().decode(WorkspaceLocation.self, from: known).pageSection == .gallery)
     }
 
+    @Test func openPageSectionIsTheStoredOrFirst() throws {
+        #expect(person().openPageSection == .vitals)
+        for section in ConclusionPageSection.allCases {
+            #expect(person(section).openPageSection == section)
+        }
+        let unknown = Data("""
+        {"section":"persons","entityId":"per-1","pageSection":"lineage"}
+        """.utf8)
+        #expect(try JSONDecoder().decode(WorkspaceLocation.self, from: unknown).openPageSection == .vitals)
+        let none: [WorkspaceLocation] = [
+            .eventDetail(entityId: "evt-1", ref: "EVT-1", title: nil),
+            .placeDetail(entityId: "plc-1", ref: "PLC-1", title: nil),
+            .sectionRoot(.persons),
+        ]
+        for location in none {
+            #expect(location.openPageSection == nil)
+        }
+    }
+
     @Test func sectionsOfferedPerKind() {
         #expect(ConclusionPageSection.offered(by: .persons) == [.vitals, .family, .timeline, .gallery, .sources])
         for section in [WorkspaceSection.events, .places, .sources, .sourceTypes, .metadata, .properties] {

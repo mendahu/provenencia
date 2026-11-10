@@ -12,93 +12,6 @@ enum SourceSurface: String, Codable, Sendable, Equatable {
     case promote
 }
 
-/// A section of a record page (the Person page's Vitals, Family, …). The raw
-/// values are written to navigation history files, so they are frozen.
-/// `WorkspaceLocation.pageSection` stores one; the first a kind offers is
-/// stored as nil.
-enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
-    case vitals
-    case family
-    case timeline
-    case gallery
-    case sources
-
-    /// The sections a record page of `section` offers, in order. A kind that
-    /// has none returns `[]`; an Event or Place adopts sections by returning
-    /// cases here.
-    static func offered(by section: WorkspaceSection) -> [ConclusionPageSection] {
-        switch section {
-        case .persons:
-            return allCases
-        case .sources, .events, .places, .sourceTypes, .metadata, .properties:
-            return []
-        }
-    }
-
-    /// The query a section reads for itself, beside the page's detail read. The place
-    /// warms it, the switcher's refresh follows it, and the section reads the same
-    /// key. Nil for a section that reads nothing of its own.
-    func queryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
-        switch self {
-        case .family: return .personFamily(project: project, entityId: entityId)
-        case .timeline: return .personEvents(project: project, entityId: entityId)
-        case .sources: return .personClaims(project: project, entityId: entityId)
-        case .vitals, .gallery: return nil
-        }
-    }
-
-    /// Lists the section reads beside its own query (a catalog-wide vocabulary the
-    /// rows label themselves with). Only the place warms them; the section reads
-    /// each with `session.queryHandle`.
-    func supportingQueryKeys(project: ProjectKey, entityId: String) -> [CatalogQueryKey] {
-        switch self {
-        case .sources: return [.sourceTypesList(project: project)]
-        case .vitals, .family, .timeline, .gallery: return []
-        }
-    }
-
-    /// A second per-entity read the section draws in its own region (the Sources
-    /// section's record links beside its rows). The place warms it right after
-    /// `queryKey` and the page's refresh follows it; unlike `supportingQueryKeys` it is
-    /// not a catalog-wide vocabulary, so its reload shows Refreshing. Nil for a section
-    /// with none.
-    func companionQueryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
-        switch self {
-        case .sources: return .personRecordLinks(project: project, entityId: entityId)
-        case .vitals, .family, .timeline, .gallery: return nil
-        }
-    }
-
-    /// The section opts into Page columns' full-width mode: at Wide it fills the pane
-    /// between the gutters while the header keeps its measure.
-    var fillsWidth: Bool {
-        switch self {
-        case .timeline, .gallery, .sources: return true
-        case .vitals, .family: return false
-        }
-    }
-
-    var label: LocalizedStringResource {
-        switch self {
-        case .vitals: return L10n.Conclusions.pageSectionVitals
-        case .family: return L10n.Conclusions.pageSectionFamily
-        case .timeline: return L10n.Conclusions.pageSectionTimeline
-        case .gallery: return L10n.Conclusions.pageSectionGallery
-        case .sources: return L10n.Conclusions.pageSectionSources
-        }
-    }
-
-    var glyph: PVGlyph {
-        switch self {
-        case .vitals: return .symbol(.account)
-        case .family: return .symbol(.gitBranch)
-        case .timeline: return .symbol(.calendar)
-        case .gallery: return .symbol(.photo)
-        case .sources: return .symbol(.library)
-        }
-    }
-}
-
 /// Result of reconciling a destination model to a navigation `WorkspaceLocation`.
 /// Views map `.missingDeepId` to `navigation.fallbackToSectionRoot()`.
 enum WorkspaceLocationReconcile: Equatable, Sendable {
@@ -162,6 +75,14 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// identity: a section is a place. Nil is the first section the kind offers, so a
     /// link without a section and one to the first section are equal.
     private(set) var pageSection: ConclusionPageSection?
+
+    /// The section the page shows: the stored one, else the first the kind offers. Nil for a
+    /// location with no entity or a kind without sections. The place, the page and the fill
+    /// all read this.
+    var openPageSection: ConclusionPageSection? {
+        guard entityId != nil else { return nil }
+        return pageSection ?? ConclusionPageSection.offered(by: section).first
+    }
 
     enum CodingKeys: String, CodingKey {
         case section, sourceId, graphId, fieldId, typeId, subjectId, citationId, artifactId, observationId

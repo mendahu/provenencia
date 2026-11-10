@@ -2,11 +2,12 @@ import SwiftUI
 
 /// The Person page's Timeline section (S13-13, board S13-D4): the person's
 /// events earliest first beside a lifeline drawn to scale from birth to death.
-/// It reads its own query (`ConclusionPageSection.queryKey`), keeps the list and
+/// It declares its reads in `ConclusionPageSection.reads`, keeps the list and
 /// the line drawn while it reloads, opens an event on its page and a
 /// participant on their Timeline.
 struct PersonTimelineSection: View {
     let entityId: String
+    let pageIdentifier: String
 
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -15,6 +16,8 @@ struct PersonTimelineSection: View {
     /// The pages of each list the researcher has unfolded. Reset when the page is another person.
     @State private var folds = ConclusionFoldState<PersonTimelineContent.Fold>()
 
+    private var root: String { ConclusionPageSection.timeline.accessibilityIdentifierRoot(pageIdentifier: pageIdentifier) }
+
     var body: some View {
         let orders = session.nameFormat
         let folds = folds
@@ -22,6 +25,7 @@ struct PersonTimelineSection: View {
         ConclusionPageSectionHost<CatalogPersonTimeline, PersonTimelineContent, PersonTimelineList>(
             section: .timeline,
             entityId: entityId,
+            accessibilityIdentifierRoot: root,
             errorTitle: L10n.Conclusions.timelineErrorTitle,
             emptyTitle: L10n.Conclusions.timelineEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.timelineEmptyMessage),
@@ -31,6 +35,7 @@ struct PersonTimelineSection: View {
             PersonTimelineList(
                 content: content,
                 projectDir: session.projectKey.projectDir,
+                accessibilityIdentifierRoot: root,
                 open: { navigation.go(to: $0) },
                 expand: { self.folds.revealPage($0) },
                 expandThrough: { self.folds.reveal($0, pages: $1) }
@@ -45,6 +50,7 @@ struct PersonTimelineSection: View {
 struct PersonTimelineList: View {
     let content: PersonTimelineContent
     let projectDir: String
+    let accessibilityIdentifierRoot: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonTimelineContent.Fold) -> Void
     /// Unfolds a list through a page (the fewest that show a row a click on the lifeline names).
@@ -83,6 +89,7 @@ struct PersonTimelineList: View {
                         item: item,
                         previous: index > 0 ? items[index - 1] : nil,
                         projectDir: projectDir,
+                        accessibilityIdentifierRoot: accessibilityIdentifierRoot,
                         stacksPeople: PersonTimelinePlacement.stacksPeople(itemsWidth: itemsWidth, widthClass: widthClass),
                         open: open,
                         revealed: content.firstRevealed(by:),
@@ -90,7 +97,7 @@ struct PersonTimelineList: View {
                         focused: $focused
                     )
                     .id(item.id)
-                    .accessibilityIdentifier("persons.detail.timeline.item.\(item.id)")
+                    .accessibilityIdentifier("\(accessibilityIdentifierRoot).item.\(item.id)")
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
                         if abs((heights[item.id] ?? -1) - height) > 0.01 { heights[item.id] = height }
                     }
@@ -103,7 +110,7 @@ struct PersonTimelineList: View {
         .overlay(alignment: .topLeading) {
             if let lifeline = placement.lifeline {
                 ZStack(alignment: .topLeading) {
-                    PersonTimelineLine(lifeline: lifeline, height: placement.height, select: select)
+                    PersonTimelineLine(lifeline: lifeline, height: placement.height, accessibilityIdentifierRoot: accessibilityIdentifierRoot, select: select)
                     PersonTimelineTethers(lifeline: lifeline, anchors: placement.anchors, spans: placement.spans, height: placement.height)
                 }
             }
@@ -185,6 +192,7 @@ private struct PersonTimelineItemView: View {
     let item: PersonTimelineContent.Item
     let previous: PersonTimelineContent.Item?
     let projectDir: String
+    let accessibilityIdentifierRoot: String
     let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
     /// The id of the first item the next page of a fold adds, from the content that was drawn.
@@ -205,10 +213,10 @@ private struct PersonTimelineItemView: View {
     private var content: some View {
         switch item {
         case .row(let row):
-            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
+            PersonTimelineEventRow(row: row, isUndated: row.span == nil, projectDir: projectDir, accessibilityIdentifierRoot: accessibilityIdentifierRoot, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
         case .marker(let marker):
             if let row = marker.row {
-                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
+                PersonTimelineEventRow(row: row, isUndated: false, projectDir: projectDir, accessibilityIdentifierRoot: accessibilityIdentifierRoot, stacksPeople: stacksPeople, open: open, revealed: revealed, expand: expand, focused: focused)
             } else {
                 Text(verbatim: marker.spokenLabel)
                     .font(PVFont.body(size: PVTypeScale.body, italic: true))
@@ -243,6 +251,7 @@ private struct PersonTimelineEventRow: View {
     /// A row with no date: its flag is dashed.
     let isUndated: Bool
     let projectDir: String
+    let accessibilityIdentifierRoot: String
     /// The list is too narrow for the people beside the text: they go under it.
     let stacksPeople: Bool
     let open: (WorkspaceLocation) -> Void
@@ -281,7 +290,7 @@ private struct PersonTimelineEventRow: View {
                 .buttonStyle(PVFocusRingButtonStyle())
                 .focused(focused, equals: row.id)
                 .pvActivatesOnReturn(when: focused.wrappedValue == row.id) { open(row.location) }
-                .accessibilityIdentifier("persons.detail.timeline.title.\(row.id)")
+                .accessibilityIdentifier("\(accessibilityIdentifierRoot).title.\(row.id)")
                 HStack(spacing: 8) {
                     ForEach(Array(row.roles.enumerated()), id: \.offset) { _, role in
                         PVBadge(text: role.text, tone: .neutral, subtle: role.isSubject)
@@ -321,7 +330,7 @@ private struct PersonTimelineEventRow: View {
                 ) {
                     expand(.participants(eventId: row.id))
                 }
-                .accessibilityIdentifier("persons.detail.timeline.more.\(row.id)")
+                .accessibilityIdentifier("\(accessibilityIdentifierRoot).more.\(row.id)")
             }
         }
         .frame(width: PersonTimelinePlacement.peopleWidth(widthClass), alignment: .leading)
@@ -333,7 +342,7 @@ private struct PersonTimelineEventRow: View {
         }
         .frame(height: PVTileCardSize.compact.height)
         .focused(focused, equals: link.id)
-        .accessibilityIdentifier("persons.detail.timeline.tile.\(link.id)")
+        .accessibilityIdentifier("\(accessibilityIdentifierRoot).tile.\(link.id)")
     }
 }
 
@@ -362,6 +371,7 @@ private struct PersonTimelineAgeFlag: View {
 private struct PersonTimelineLine: View {
     let lifeline: PersonTimelineLifeline
     let height: CGFloat
+    let accessibilityIdentifierRoot: String
     let select: (String) -> Void
 
     private var lineX: CGFloat { PersonTimelineLifeline.lineX }
@@ -389,7 +399,7 @@ private struct PersonTimelineLine: View {
                         if let id = lifeline.foldedMark(nearest: hit.lowerBound + location.y) { select(id) }
                     }
                     .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: hit.lowerBound)
-                    .accessibilityIdentifier("persons.detail.timeline.folded")
+                    .accessibilityIdentifier("\(accessibilityIdentifierRoot).folded")
             }
             ForEach(lifeline.targets, id: \.mark.id) { target in
                 let hit = target.mark.hit
@@ -400,12 +410,12 @@ private struct PersonTimelineLine: View {
                     .contentShape(Rectangle())
                     .offset(x: lineX - PersonTimelineDrawing.hit / 2, y: hit.lowerBound)
                     .help(target.label)
-                    .accessibilityIdentifier("persons.detail.timeline.point.\(target.mark.id)")
+                    .accessibilityIdentifier("\(accessibilityIdentifierRoot).point.\(target.mark.id)")
             }
         }
         .frame(width: PersonTimelineLifeline.columnWidth, alignment: .topLeading)
         .accessibilityHidden(true)
-        .accessibilityIdentifier("persons.detail.timeline.line")
+        .accessibilityIdentifier("\(accessibilityIdentifierRoot).line")
     }
 
     private func draw(into context: inout GraphicsContext) {
@@ -568,6 +578,7 @@ private struct PersonTimelinePreview: View {
             PersonTimelineList(
                 content: PersonTimelineContent(timeline: timeline, folds: folds, widthClass: width >= PVSpacing.widthWideBreakpoint ? .wide : .regular),
                 projectDir: "/tmp/none",
+                accessibilityIdentifierRoot: "preview",
                 open: { _ in },
                 expand: { folds.revealPage($0) },
                 expandThrough: { folds.reveal($0, pages: $1) }
