@@ -155,7 +155,7 @@ Draw the dialog over the Source page frames of this board (the page dimmed behin
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
 | Copy Source dialog | Component | Ship | `macos/App/DesignSystem/Components/FormDialog/` `pvFormDialog`, used by `macos/App/Features/Sources/SourceCopyDialog.swift` `SourceCopyDialogModifier` | Unchanged: 520pt, title, subtitle, Cancel and Copy, dirty-close confirm |
-| Copy form body | Snowflake | Extend | `macos/App/Features/Sources/SourceCopyDialog.swift` `SourceCopyForm` `partCheckboxes` | Gains the Published date tick beside the other three |
+| Copy form body | Snowflake | Extend | `macos/App/Features/Sources/SourceCopyDialog.swift` `SourceCopyForm` `partCheckboxes` | Gains the Published date tick; the four ticks share one private form helper, so an unavailable part's look is decided once |
 | Part tick | Component | Ship | `macos/App/DesignSystem/Components/Checkbox/PVCheckbox.swift` `PVCheckbox` | The Published date tick is a PVCheckbox with a label and a description, like the other three. The date hint is a value, not fixed copy: the `verbatim:` initializer, as `PVChecklistRows` does. Not a new "date tick" control |
 | Published date text | Snowflake helper | Ship | `macos/App/Features/Sources/SourcesRowDate.swift` `SourcesRowDate.line` | The one place a Source's date becomes its row text; the hint reads it |
 | Parts load area | Snowflake | Ship | `macos/App/Features/Sources/SourceFormLoadArea.swift` `SourceFormLoadArea` | Unchanged: loading line, read-failed Callout with Read again |

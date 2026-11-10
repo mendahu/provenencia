@@ -8,12 +8,13 @@
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-D13
 **Blocks:** —
 **Branch:** `s15-32-copy-source-date`
-**Version bump:** minor, the next minor at merge (0.7.0 → 0.8.0 at the planning base) — a new choice on the Copy form and a new field on `CopySourceRequest` that old clients ignore ([`docs/versioning.md`](../../../versioning.md))
+**Version bump:** minor, 0.7.0 → **0.8.0** (if `main`'s `VERSION` is no longer 0.7.0 when you rebase, the next minor after it): `VERSION`, `core/version.go`, and all four `MARKETING_VERSION` lines in `macos/Provenencia.xcodeproj/project.pbxproj` — a new choice on the Copy form and a new field on `CopySourceRequest` that old clients ignore ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-date-value`](../../../../.agents/skills/add-date-value/SKILL.md), [`add-ffi-handler`](../../../../.agents/skills/add-ffi-handler/SKILL.md), [`add-audit-scope`](../../../../.agents/skills/add-audit-scope/SKILL.md), [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md), [`add-localized-string`](../../../../.agents/skills/add-localized-string/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/date-values.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "The Source date is one optional DateValue on `sources`" and "Not public is a stored switch and nothing else" ([`../deployment-plan.md`](../deployment-plan.md#working-rules)); [`../source-provenance-date.md`](../source-provenance-date.md); [`../../../source-layer-data-model.md` § 4.2](../../../source-layer-data-model.md#42-copy-source); S15-02's [plan](S15-02-source-date-and-public-flag.md) D-7, D-14 and **Next adds**; S15-04's [plan](S15-04-sources-list-date.md) D-14 (the date's one name is "Published")
 **Planned:** 2026-11-10 against `main` @ `5a10ccb`
-**Review:** [`S15-32-copy-source-date.review.md`](S15-32-copy-source-date.review.md)
+**Review:** [`S15-32-copy-source-date.review.md`](S15-32-copy-source-date.review.md) — Fits with changes / Not ready (on the board only), 1 round; every finding Fixed or answered; nothing open but the board
+**Runs on:** macOS. STEP-2's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go` and `protoc-gen-swift`; STEP-3 – STEP-5 and `scripts/check-pr.sh` need Xcode ([`README.md`](../../../../README.md)). Without them, stop: never hand-edit the generated `engine.pb.go` or `engine.pb.swift`
 
 ### Implementer — read this first
 
@@ -77,6 +78,9 @@ A researcher copying a Source chooses whether the copy keeps the original's publ
 | A date on the Add Source dialog | Not planned |
 | The value-row owner check in `datevalues.PutTx` | [`docs/ideas/value-row-owner-check.md`](../../../ideas/value-row-owner-check.md) (D-6) |
 | A date on `sources.CreateInput` | Not planned (D-2) |
+| `SourceCopyModel` routing `sources.not_found` through `SourcePageContext.fail` | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md) row "S15-03 plan": the model is also hosted from the Sources list, which has no `SourcePageContext`, so the route needs its own design; that row gains "S15-32 left it: two hosts" (STEP-6) |
+| Renaming `SourcesRowDate` (its callers are now a row, the page header and the Copy form) | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md), a new row (STEP-6) |
+| A `SourceCopyParts` value in place of the Bool parameters of `copySource` | Not planned (no further Copy part is named in the map) |
 
 ## 4. Current state
 
@@ -104,11 +108,11 @@ A researcher copying a Source chooses whether the copy keeps the original's publ
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | `sourcecopy.Draft` gains `Date *datevalue.Value` (nil when undated). `ReadDraft` sets it from `src.Date` with its `ID` cleared. `CopyInput` gains `Date bool`; `apply` sets `d.Date = nil` when `!in.Date` | The credibility shape (precedent); a draft holds facts, not the original's row id | Reading the date inside `CreateFromDraft` — `ReadDraft` is the one read of the original |
+| D-1 | `sourcecopy.Draft` gains `Date *datevalue.Value` (nil when undated). `ReadDraft` copies the struct (`d := *src.Date; d.ID = nil; draft.Date = &d`), never clearing `ID` through `src.Date`. `CopyInput` gains `Date bool`; `apply` sets `d.Date = nil` when `!in.Date` | The credibility shape (precedent); a draft holds facts, not the original's row id | Reading the date inside `CreateFromDraft` — `ReadDraft` is the one read of the original |
 | D-2 | `CreateFromDraft` calls `sources.SetDate(tx, userID, src.ID, d.Date)` right after `sources.Create` when `d.Date != nil`, appends its changes after the Create changes (so the order is Source, its Default graph, the date row and the Source's `date_value_id` update, then metadata, layout, credibility, Artifacts), and returns the Source `SetDate` returned. The package doc and the `CreateFromDraft` doc list the date | `SetDate` is the one owner write of a Source date (S15-02 D-7), mints the copy's own row through `PutTx`, and audits it; returning its Source puts `Date` and `date_sort_key` on the response so the list row shows the date without a reread | Adding `Date` to `sources.CreateInput` — a second path that writes a Source date beside `SetDate`, for one caller |
 | D-3 | `CopySourceRequest` gains `bool copy_date = 10;` with the comment `// the original's date, as the copy's own`. The handler passes `req.GetCopyDate()` to `CopyInput.Date`. `copy_date: true` on an undated original is not an error | The same contract as `copy_description` on an original with no description | A separate RPC to date the copy after copying — two writes, two revisions |
 | D-4 | Swift: `SourceCopyChoices.includeDate = true`; `SourceCopyModel.dateLine: String?` *(new)* = `SourcesRowDate.line(workspace?.source.date)`; `dateAvailable: Bool` *(new)* = `dateLine != nil`; `copy()` sends `copyDate: choices.includeDate && dateAvailable` | Availability reads the freshly loaded workspace, as the other three parts do; one helper decides "dated" for the list, the page and this form, so a date the researcher cannot see is not carried silently | Reading `original.date` — the snapshot the dialog opened with, stale after an edit elsewhere |
-| D-5 | The tick is `PVCheckbox(verbatim: L10n.string(L10n.Sources.copySourceDate), description: model.dateLine ?? L10n.string(L10n.Sources.copySourcePartAbsent), isChecked: partBinding(\.includeDate, available: model.dateAvailable), isDisabled: !model.dateAvailable || model.isSaving)` with identifier `sources.copy.date`, placed first in `partCheckboxes`, above Description, unless the agreed board places it elsewhere (CS-1) | The hint is a value, so the `verbatim:` initializer, as `PVChecklistRows` does; no new kit initializer for one call site (S15-D13 inventory) | A `PVCheckbox` initializer mixing a resource label and a String description — a kit change for one caller |
+| D-5 | `SourceCopyForm` gains one private `partTick(_ label: LocalizedStringResource, hint: String, keyPath: WritableKeyPath<SourceCopyChoices, Bool>, available: Bool, id: String) -> some View` *(new)* that builds `PVCheckbox(verbatim: L10n.string(label), description: available ? hint : L10n.string(L10n.Sources.copySourcePartAbsent), isChecked: partBinding(keyPath, available: available), isDisabled: !available \|\| model.isSaving).accessibilityIdentifier(id)`. All four parts go through it: Published date (`L10n.Sources.copySourceDate`, hint `model.dateLine ?? ""`, `\.includeDate`, `model.dateAvailable`, `sources.copy.date`) first, then Description, Metadata, Credibility with their existing hints (`L10n.string(…Hint)`) and identifiers, unless the agreed board places the date elsewhere (CS-1). The identifier and the L10n key both read `sources.copy.date`; they are separate namespaces | The rule "an unavailable part reads unticked, disabled, with None on this Source" lives once instead of four times (review M-1); the date hint is a value, so every part takes the `verbatim:` initializer, as `PVChecklistRows` does | A fourth hand-copied block; a `PVCheckbox` initializer mixing a resource label and a String description — a kit change for one caller |
 | D-6 | The value-row owner check stays in its idea file. Its trigger line is reworded so it no longer names S15-32 | The copy mints its own row (`PutTx` with no `prevID`) and never edits a row in place, so the crafted shared-row case the idea guards is not reached by this PR; a Source is not a new kind of date owner | Adding the check here — a change to `datevalues.PutTx` and `namevalues.PutTx` that this PR does not exercise |
 | D-7 | The Swift `FakeStore.copySource` copies `original.date` and `original.dateSortKey` onto the copy when `copyDate` is true | The fake mirrors what the wire returns, as it does for description and credibility; it does not compute a sort key | Leaving the fake undated — the model tests could not see the carried date |
 
@@ -124,13 +128,14 @@ A researcher copying a Source chooses whether the copy keeps the original's publ
 | `CopySourceRequest.copy_date` *(new)* | proto field | `copy_credibility` | Same message, next field |
 | `copySource(…, copyDate:)` *(new parameter)* | Swift store parameter | `copyCredibility:` | Same method |
 | `SourceCopyChoices.includeDate`, `SourceCopyModel.dateLine`, `dateAvailable` *(new)* | property | `includeCredibility`, `credibilityAvailable`; `SourcesRowDate.line` | Reuses `SourcesRowDate.line`; no second date-to-text rule |
+| `SourceCopyForm.partTick` *(new)* | private func | the three hand-copied blocks in `partCheckboxes` | Replaces them (D-5) |
 | `L10n.Sources.copySourceDate` *(new)* | L10n key | `copySourceCredibility`; `L10n.Sources.publishedLabel` ("Published") | The tick names a part ("Published date"), not a row label; one key in the copy namespace beside its siblings |
 
 Searched: `SetDate` callers (`api/ffi/handlers/sources.go` `SetSourceDate` only), every `PVCheckbox(verbatim:` caller, `SourcesRowDate` callers, `copy_` fields in `engine.proto`.
 
 **Builds on.** `sources.SetDate` and `datevalues.PutTx` (S15-02 D-7) for the owned row and its audit; the `date_values` effect's inbound `sources.date_value_id` for the scope; the Copy form's part-tick pattern; `SourcesRowDate` (S15-04).
-**Deletes.** The handler test case "copy is undated and public" becomes "copy carries the date when chosen and stays public" (T-4). The sentence in `docs/source-layer-data-model.md` § 4.2 that names the date as never copied. Nothing else becomes dead.
-**Next adds.** None named. A later carried part (Artifact metadata, S15-08) adds a draft field, an `apply` line and a tick the same way.
+**Deletes.** The three hand-copied `PVCheckbox` blocks in `SourceCopyForm.partCheckboxes` (D-5). The handler test case "copy is undated and public" becomes "copy carries the date when chosen and stays public" (T-4). The sentence in `docs/source-layer-data-model.md` § 4.2 that names the date as never copied. Nothing else becomes dead.
+**Next adds.** S15-08 adds Artifact metadata to `sourcecopy.DraftArtifact`, not a new part or tick. S15-07 re-keys the `sourcemetadata` calls in `ReadDraft` and `CreateFromDraft`, beside the date lines this PR adds; whichever lands second rebases over the other.
 
 ### Reach
 
@@ -180,7 +185,7 @@ From the S15-D13 inventory. The board is not agreed yet; the frames, in words fr
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
 | Copy Source dialog | `pvFormDialog` | `macos/App/Features/Sources/SourceCopyDialog.swift` `SourceCopyDialogModifier` | Unchanged; width 520 at both widths (CS-W1) |
-| Copy form body | Snowflake | `SourceCopyForm` `partCheckboxes` | Gains the Published date tick (D-5) |
+| Copy form body | Snowflake | `SourceCopyForm` `partCheckboxes`, `partTick` *(new)* | Four one-line `partTick` calls (D-5) |
 | Published date tick | `PVCheckbox` `init(verbatim:…)` | `macos/App/DesignSystem/Components/Checkbox/PVCheckbox.swift` | Label "Published date", hint the date line or "None on this Source" |
 | Date text | `SourcesRowDate.line` | `macos/App/Features/Sources/SourcesRowDate.swift` | Through `SourceCopyModel.dateLine` (D-4) |
 | Parts load area, Artifact checklist, save Callout | `SourceFormLoadArea`, `PVArtifactChecklist`, `PVCallout` | as today | Unchanged |
@@ -195,7 +200,7 @@ L10n keys *(new)*: `L10n.Sources.copySourceDate` = "Published date", key `source
 
 **STEP-1 — The copy engine carries the date when chosen**
 Files: `core/database/sourcecopy/sourcecopy.go`, `core/database/sourcecopy/sourcecopy_test.go`. Skill: `add-date-value`, `add-audit-scope`.
-Do: D-1 and D-2. Add T-1 – T-3 as cases of `TestCopy`.
+Do: D-1 and D-2. Add T-1 – T-3 as cases of `TestCopy`. Read a revision's changes with a test helper `revisionChanges(t *testing.T, c *database.Catalog) []rowchange.Change` *(new)* in `sourcecopy_test.go` that selects `entity_type, entity_id, action, changes_json` from `audit_changes` for the latest `audit_transactions` row, as `core/database/audit/scopes_effects_test.go` `loadRevisionChanges` does; `runCopy` keeps its signature. For T-2's missing row, turn foreign keys off on one connection and delete the `date_values` row, as `core/database/sources/sources_test.go` does near `PRAGMA foreign_keys=OFF`. No existing `TestCopy` case asserts the full change list.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/sourcecopy/ ./core/database/sources/` passes.
 
 **STEP-2 — `CopySourceRequest` takes `copy_date`**
@@ -210,16 +215,16 @@ Check: the app and test targets build (`xcodebuild build-for-testing` as `script
 
 **STEP-4 — The Copy model knows the date part**
 Files: `macos/App/Features/Sources/SourceCopyModel.swift`, `macos/ProvenenciaTests/SourceCopyModelTests.swift`. Skill: `add-swift-test`.
-Do: D-4. Add T-6 – T-9; give the test fixture `original()` an optional date parameter.
+Do: D-4. Add T-6 – T-9; give the test fixture `original()` a `date: CatalogDateValueInput? = nil` parameter. The dated fixture is `CatalogDateValueInput(kind: "point", startYear: 1881, startMonth: 7, startDay: 4)`, as `SourcesModelTests` builds dates. `FakeStore.getSourceWorkspace` returns the stored `CatalogSource` (through `enrichCoverFields`, which keeps `date`).
 Check: `xcodebuild test -only-testing:ProvenenciaTests/SourceCopyModelTests` passes (scheme and destination as `scripts/check-pr.sh` uses).
 
 **STEP-5 — The Published date tick on the form**
 Files: `macos/App/Features/Sources/SourceCopyDialog.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-ui-component`, `add-localized-string`.
-Do: D-5 and the key under **Strings**. Match the agreed board's frames 1a – 4.
+Do: D-5 (the `partTick` helper and all four parts on it) and the key under **Strings**. Match the agreed board's frames 1a – 4.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; the manual check (§ 10) steps 1–3.
 
 **STEP-6 — Docs**
-Files: `docs/source-layer-data-model.md` § 4.2 (the date moves from "Never copied" to "Copied, each only when chosen": "the date, as a `date_values` row of the copy's own"; "Never copied" keeps "the not-public flag (the copy always starts public)"), `docs/ideas/value-row-owner-check.md` (D-6: the trigger line reads "Touch it when `PutTx` next changes, or with the next new kind of owner of a date row."), `docs/deployment-plan/spike-15/completed.md`, `docs/deployment-plan/spike-15/deployment-plan.md` (map row), this plan (status, Landed note), `docs/deployment-plan/spike-15/design/` (S15-D13 → `design/archive/`, `design/README.md`). Version files per `.cursor/rules/versioning.mdc`.
+Files: `docs/source-layer-data-model.md` § 4.2 (the date moves from "Never copied" to "Copied, each only when chosen": "the date, as a `date_values` row of the copy's own"; "Never copied" keeps "the not-public flag (the copy always starts public)"), `docs/ideas/value-row-owner-check.md` (D-6: the trigger line reads "Touch it when `PutTx` next changes, or with the next new kind of owner of a date row."), `docs/ideas/structural-debt.md` (the "S15-03 plan" row gains "S15-32 left `SourceCopyModel` as it was: it has two hosts and the Sources list has no `SourcePageContext`"; a new row `| — | S15-32 plan | SourcesRowDate now serves a row, the Source page header and the Copy form; rename it for what it does (a Source's date as text). |`), `docs/deployment-plan/spike-15/completed.md` (a paragraph at the top in the shape of S15-04's: what the researcher sees, the engine change, "Product 0.8.0."), `docs/deployment-plan/spike-15/deployment-plan.md` (map row Status `Landed #N`), this plan (Status, a Landed note), and the brief archived as S15-D2 was: `git mv` it to `design/archive/`, add one `../` to each of its relative links, move its row from **Scheduled** to **Archived** in `design/README.md` (the S15-D2 row is the model: brief link into `archive/`, view "Copy Source dialog: a Published date tick", the agreed board link and date, built by "S15-32 (#N)"), and repoint its links in `deployment-plan.md` and this plan to `design/archive/`. Version files per the header.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-15/prs/S15-32-copy-source-date.md` reports no errors; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
@@ -234,12 +239,12 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-3 | Go | `TestCopy` case "date not chosen" *(new)* | Dated original, `Date: false` → copy undated; `date_values` row count unchanged | AC-1.3, AC-2.3 |
 | T-4 | Go | `api/ffi/handlers/sources_test.go` `TestCopySource` case "copy carries the date when chosen and stays public" (replaces "copy is undated and public") | Original dated `12 Mar 1880` and not public, `CopyDate: true` → response `Source.Date` equals the date, `DateSortKey` set, `IsPublic` true; audit action `copy_source` | AC-1.8, AC-2.1, D-3 |
 | T-5 | Go | `TestCopySource` case "copy without the date is undated" *(new)* | Same original, `CopyDate: false` → `Date` nil, `DateSortKey` nil, `IsPublic` true | AC-2.3 |
-| T-6 | Swift | `macos/ProvenenciaTests/SourceCopyModelTests.swift` `dateTickIsOnWhenDatedAndCarried` *(new)* | Original dated 4 Jul 1881 → `dateAvailable`, `dateLine == "4 Jul 1881"`, `choices.includeDate`; `copy()` → the copy's `date` equals the original's | AC-1.1, AC-1.2, D-4, D-7 |
+| T-6 | Swift | `macos/ProvenenciaTests/SourceCopyModelTests.swift` `dateTickIsOnWhenDatedAndCarried` *(new)* | Original dated 4 Jul 1881 → `dateAvailable`, `dateLine == SourcesRowDate.line(date)` (not a literal: the line follows the test machine's locale), `choices.includeDate`; `copy()` → the copy's `date` equals the original's | AC-1.1, AC-1.2, D-4, D-7 |
 | T-7 | Swift | `SourceCopyModelTests` `untickedDateIsNotCarried` *(new)* | Dated original, `includeDate = false` → the copy's `date` is nil | AC-1.3 |
 | T-8 | Swift | `SourceCopyModelTests` `absentPartsAreUnavailableAndNotSent` (extended) | Undated original → `!dateAvailable`, `dateLine == nil`; the copy's `date` is nil | AC-1.6 |
 | T-9 | Swift | `SourceCopyModelTests` `isDirtyTracksChanges` (extended) | `includeDate = false` → dirty; back to true → clean | AC-1.7 |
 
-Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestCopy`'s change-order assertions, if any case counts changes; `TestCopySource`; `EvidenceGraphStoreTests`.
+Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestCopySource`; `EvidenceGraphStoreTests`; `SourceCopyModelTests` (the `partTick` move).
 
 ## 9. Definition of done
 
@@ -271,7 +276,6 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 | Risk | Mitigation |
 | --- | --- |
-| A case in `TestCopy` asserts the exact change list and breaks on the two new changes | Update that assertion to the order D-2 states; do not reorder the writes |
 | The board moves the tick or changes its copy | D-5 follows the board's place; copy changes go through **Strings** after the board is agreed |
 
 **Stop and report if:**
