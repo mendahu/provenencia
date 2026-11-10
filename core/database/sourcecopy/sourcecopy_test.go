@@ -3,7 +3,6 @@ package sourcecopy
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"image"
 	"image/png"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -212,52 +212,6 @@ func setDate(t *testing.T, c *database.Catalog, userID, sourceID []byte, d *date
 		t.Fatal(err)
 	}
 	return src
-}
-
-// dateRows counts the date_values rows.
-func dateRows(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM date_values`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
-// revisionChanges reads every change of the latest revision, in write order.
-func revisionChanges(t *testing.T, c *database.Catalog) []rowchange.Change {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows, err := db.Query(`SELECT entity_type, entity_id, action, changes_json FROM audit_changes
-		WHERE audit_transaction_id = (SELECT id FROM audit_transactions ORDER BY revision DESC LIMIT 1)
-		ORDER BY rowid`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []rowchange.Change
-	for rows.Next() {
-		var ch rowchange.Change
-		var raw string
-		if err := rows.Scan(&ch.EntityType, &ch.EntityID, &ch.Action, &raw); err != nil {
-			t.Fatal(err)
-		}
-		if err := json.Unmarshal([]byte(raw), &ch.Fields); err != nil {
-			t.Fatal(err)
-		}
-		out = append(out, ch)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return out
 }
 
 func writeOne[T any](c *database.Catalog, userID []byte, action string, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, error) {
@@ -648,7 +602,12 @@ func TestCopy(t *testing.T) {
 						}
 						var creates, updates int
 						var seen []string
-						for _, ch := range revisionChanges(t, c) {
+						db, err := c.DB()
+						if err != nil {
+							t.Fatal(err)
+						}
+						_, revision := dbtest.LatestRevision(t, db)
+						for _, ch := range revision {
 							seen = append(seen, ch.EntityType+" "+string(ch.Action))
 							switch {
 							case ch.EntityType == "date_value" && ch.Action == rowchange.ActionCreate:
@@ -687,10 +646,15 @@ func TestCopy(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if cp.Date != nil || cp.DateValueID != nil || dateRows(t, c) != 0 {
-						t.Fatalf("copy %+v, date rows %d", cp.Date, dateRows(t, c))
+					db, err := c.DB()
+					if err != nil {
+						t.Fatal(err)
 					}
-					for _, ch := range revisionChanges(t, c) {
+					if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != 0 {
+						t.Fatalf("copy %+v, date rows %d", cp.Date, rows)
+					}
+					_, revision := dbtest.LatestRevision(t, db)
+					for _, ch := range revision {
 						if ch.EntityType == "date_value" {
 							t.Fatalf("date_value change %+v", ch)
 						}
@@ -727,10 +691,11 @@ func TestCopy(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if cp.Date != nil || cp.DateValueID != nil || dateRows(t, c) != 0 {
-						t.Fatalf("copy %+v, date rows %d", cp.Date, dateRows(t, c))
+					if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != 0 {
+						t.Fatalf("copy %+v, date rows %d", cp.Date, rows)
 					}
-					for _, ch := range revisionChanges(t, c) {
+					_, revision := dbtest.LatestRevision(t, db)
+					for _, ch := range revision {
 						if ch.EntityType == "date_value" {
 							t.Fatalf("date_value change %+v", ch)
 						}
@@ -743,13 +708,17 @@ func TestCopy(t *testing.T) {
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
 				orig = setDate(t, c, userID, orig.ID, datevaluetest.YMD(1880, 7, 4))
-				before := dateRows(t, c)
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				before := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`)
 				cp, err := runCopy(c, userID, allParts(orig, arts))
 				if err != nil {
 					t.Fatal(err)
 				}
-				if cp.Date != nil || cp.DateValueID != nil || dateRows(t, c) != before {
-					t.Fatalf("copy %+v, date rows %d -> %d", cp.Date, before, dateRows(t, c))
+				if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != before {
+					t.Fatalf("copy %+v, date rows %d -> %d", cp.Date, before, rows)
 				}
 			},
 		},

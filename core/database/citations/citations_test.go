@@ -2,7 +2,6 @@ package citations
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -240,62 +240,33 @@ func TestCitations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				rows, err := db.Query(`
-					SELECT entity_type, action, changes_json FROM audit_changes
-					WHERE audit_transaction_id = (
-						SELECT id FROM audit_transactions ORDER BY revision DESC LIMIT 1
-					)
-					ORDER BY rowid`)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer rows.Close()
-				type row struct {
-					entity, action string
-					fields         map[string]any
-				}
-				var got []row
-				for rows.Next() {
-					var entity, action, raw string
-					if err := rows.Scan(&entity, &action, &raw); err != nil {
-						t.Fatal(err)
-					}
-					var fields map[string]any
-					if err := json.Unmarshal([]byte(raw), &fields); err != nil {
-						t.Fatal(err)
-					}
-					got = append(got, row{entity, action, fields})
-				}
-				if err := rows.Err(); err != nil {
-					t.Fatal(err)
-				}
+				_, got := dbtest.LatestRevision(t, db)
 				if len(got) < 3 {
 					t.Fatalf("changes %d want >= 3", len(got))
 				}
-				if got[0].entity != "citation" || got[0].action != "create" {
+				if got[0].EntityType != "citation" || got[0].Action != "create" {
 					t.Fatalf("first %+v", got[0])
 				}
 				for _, key := range []string{
 					"id", "ref", "artifact_id", "locator_json",
 					"transcription", "label", "transcription_uncertain", "transcription_note",
 				} {
-					if _, ok := got[0].fields[key]; !ok {
-						t.Fatalf("citation missing %q in %+v", key, got[0].fields)
+					if _, ok := got[0].Fields[key]; !ok {
+						t.Fatalf("citation missing %q in %+v", key, got[0].Fields)
 					}
 				}
 				for _, key := range []string{"transcription", "label", "transcription_note"} {
-					diff, _ := got[0].fields[key].(map[string]any)
-					if diff["new"] != nil {
-						t.Fatalf("empty citation %s should be null: %+v", key, got[0].fields)
+					if got[0].Fields[key].New != nil {
+						t.Fatalf("empty citation %s should be null: %+v", key, got[0].Fields)
 					}
 				}
-				if got[1].entity != "citation_note" {
+				if got[1].EntityType != "citation_note" {
 					t.Fatalf("note %+v", got[1])
 				}
-				if body, _ := got[1].fields["body"].(map[string]any); body["new"] != "see folio 12" {
-					t.Fatalf("note body %+v", got[1].fields)
+				if got[1].Fields["body"].New != "see folio 12" {
+					t.Fatalf("note body %+v", got[1].Fields)
 				}
-				if got[2].entity != "observation" {
+				if got[2].EntityType != "observation" {
 					t.Fatalf("obs %+v", got[2])
 				}
 				for _, key := range []string{
@@ -303,14 +274,13 @@ func TestCitations(t *testing.T) {
 					"value_text", "value_integer", "value_date_id", "value_name_id",
 					"value_subject_id", "value_term_id",
 				} {
-					if _, ok := got[2].fields[key]; !ok {
-						t.Fatalf("observation missing %q in %+v", key, got[2].fields)
+					if _, ok := got[2].Fields[key]; !ok {
+						t.Fatalf("observation missing %q in %+v", key, got[2].Fields)
 					}
 				}
 				for _, key := range []string{"value_text", "value_date_id"} {
-					diff, _ := got[2].fields[key].(map[string]any)
-					if diff["new"] != nil {
-						t.Fatalf("unused observation %s should be null: %+v", key, got[2].fields)
+					if got[2].Fields[key].New != nil {
+						t.Fatalf("unused observation %s should be null: %+v", key, got[2].Fields)
 					}
 				}
 				if string(res.Citation.ID) == "" {

@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/datevalue"
@@ -1188,11 +1189,8 @@ func countCatalogRows(t *testing.T, dir, table string) int {
 	t.Helper()
 	var n int
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		return db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n)
+		n = dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM `+table)
+		return nil
 	})
 	if err != nil {
 		t.Fatal(err)

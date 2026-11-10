@@ -182,15 +182,10 @@ func TestIdentityClaims(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				var action, entityType string
-				var entityID []byte
-				if err := db.QueryRow(`SELECT t.action_type, ch.entity_type, ch.entity_id
-					FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-					ORDER BY t.revision DESC LIMIT 1`).Scan(&action, &entityType, &entityID); err != nil {
-					t.Fatal(err)
-				}
-				if action != "create_identity_claim" || entityType != "identity_claim" || string(entityID) != string(cl.ID) {
-					t.Fatalf("%s %s", action, entityType)
+				action, revision := dbtest.LatestRevision(t, db)
+				last := revision[len(revision)-1]
+				if action != "create_identity_claim" || last.EntityType != "identity_claim" || string(last.EntityID) != string(cl.ID) {
+					t.Fatalf("%s %s", action, last.EntityType)
 				}
 			},
 		},

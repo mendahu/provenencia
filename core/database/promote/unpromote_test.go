@@ -8,6 +8,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/autoreconciler/autoreconcilertest"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -90,8 +91,12 @@ func TestUnpromote(t *testing.T) {
 		if w.revisions() != before+1 {
 			t.Fatalf("revisions %d, want %d", w.revisions(), before+1)
 		}
-		if got := lastRevisionChanges(t, w.C); got[:len("unpromote_subject:")] != "unpromote_subject:" {
-			t.Fatalf("revision %s", got)
+		db, err := w.C.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if action, _ := dbtest.LatestRevision(t, db); action != "unpromote_subject" {
+			t.Fatalf("revision %s", action)
 		}
 		for name, s := range map[string]subjects.Subject{"james": h.james, "son-of": h.sonOf, "participation": h.part} {
 			if w.filed(s) {

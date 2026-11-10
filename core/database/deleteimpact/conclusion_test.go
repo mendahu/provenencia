@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
@@ -135,7 +136,12 @@ func TestImpactConclusion(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		action, types := lastRevision(t, c)
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		action, revision := dbtest.LatestRevision(t, db)
+		types := dbtest.EntityTypes(revision)
 		if action != "delete_observation" || strings.Join(types, ",") != "observation" {
 			t.Fatalf("%s %v", action, types)
 		}
@@ -151,7 +157,12 @@ func TestImpactConclusion(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		action, types := lastRevision(t, c)
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		action, revision := dbtest.LatestRevision(t, db)
+		types := dbtest.EntityTypes(revision)
 		if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,canonical_entity,subject" {
 			t.Fatalf("%s %v", action, types)
 		}
@@ -159,33 +170,6 @@ func TestImpactConclusion(t *testing.T) {
 			t.Fatal("handle should be gone")
 		}
 	})
-}
-
-// lastRevision returns the newest revision's action and its change entity types in insert order.
-func lastRevision(t *testing.T, c *database.Catalog) (string, []string) {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows, err := db.Query(`SELECT t.action_type, ch.entity_type
-		FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-		WHERE t.revision = (SELECT MAX(revision) FROM audit_transactions)
-		ORDER BY ch.rowid`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var action string
-	var types []string
-	for rows.Next() {
-		var entityType string
-		if err := rows.Scan(&action, &entityType); err != nil {
-			t.Fatal(err)
-		}
-		types = append(types, entityType)
-	}
-	return action, types
 }
 
 func assertLeaves(t *testing.T, r deleteimpact.Report, handleRef string) {

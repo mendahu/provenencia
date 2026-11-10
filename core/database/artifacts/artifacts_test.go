@@ -3,7 +3,6 @@ package artifacts_test
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"image"
 	"image/png"
@@ -108,20 +107,14 @@ func TestArtifacts(t *testing.T) {
 		}
 		return actionType
 	}
-	latestChangesJSON := func(t *testing.T, c *database.Catalog) string {
+	latestDiffs := func(t *testing.T, c *database.Catalog) map[string]rowchange.FieldDiff {
 		t.Helper()
 		db, err := c.DB()
 		if err != nil {
 			t.Fatal(err)
 		}
-		var raw string
-		if err := db.QueryRow(`
-			SELECT c.changes_json FROM audit_changes c
-			JOIN audit_transactions t ON t.id = c.audit_transaction_id
-			ORDER BY t.revision DESC LIMIT 1`).Scan(&raw); err != nil {
-			t.Fatal(err)
-		}
-		return raw
+		_, revision := dbtest.LatestRevision(t, db)
+		return revision[len(revision)-1].Fields
 	}
 	artifactCount := func(t *testing.T, c *database.Catalog) int {
 		t.Helper()
@@ -291,13 +284,7 @@ func TestArtifacts(t *testing.T) {
 				if latestAction(t, c) != "update_artifact" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				var diffs map[string]struct {
-					Old any `json:"old"`
-					New any `json:"new"`
-				}
-				if err := json.Unmarshal([]byte(latestChangesJSON(t, c)), &diffs); err != nil {
-					t.Fatal(err)
-				}
+				diffs := latestDiffs(t, c)
 				if diffs["file_id"].Old != nil || diffs["file_id"].New == nil {
 					t.Fatalf("attach diff %+v", diffs["file_id"])
 				}

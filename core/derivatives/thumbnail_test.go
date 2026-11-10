@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/searchindex"
@@ -63,19 +64,6 @@ func installSourceFile(t *testing.T, c *database.Catalog, data []byte, mediaType
 	return id
 }
 
-func auditTotal(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 func TestEnsureThumbnailIdempotent(t *testing.T) {
 	c, err := database.Create(t.TempDir(), "t.provenencia")
 	if err != nil {
@@ -88,7 +76,7 @@ func TestEnsureThumbnailIdempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	srcID := installSourceFile(t, c, pngBytes, "image/png", "tiny.png")
-	before := auditTotal(t, c)
+	before := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`)
 
 	first, err := EnsureThumbnail(c, srcID)
 	if err != nil || first.Skipped {
@@ -131,8 +119,8 @@ func TestEnsureThumbnailIdempotent(t *testing.T) {
 	if err != nil || len(list) != 1 {
 		t.Fatalf("%v %+v", err, list)
 	}
-	if auditTotal(t, c) != before {
-		t.Fatalf("EnsureThumbnail wrote audit: before=%d after=%d", before, auditTotal(t, c))
+	if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`) != before {
+		t.Fatalf("EnsureThumbnail wrote audit: before=%d after=%d", before, dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`))
 	}
 }
 
@@ -520,7 +508,7 @@ func TestEnsureThumbnailCommitsWithoutRevisionAndRefreshesSearch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	before := auditTotal(t, c)
+	before := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`)
 	got, err := EnsureThumbnail(c, fileID)
 	if err != nil || got.Skipped {
 		t.Fatalf("%+v %v", got, err)
@@ -528,8 +516,8 @@ func TestEnsureThumbnailCommitsWithoutRevisionAndRefreshesSearch(t *testing.T) {
 	if _, err := files.Lookup(c, got.Link.DerivedFileID); err != nil {
 		t.Fatal(err)
 	}
-	if auditTotal(t, c) != before {
-		t.Fatalf("unaudited thumbnail wrote audit: before=%d after=%d", before, auditTotal(t, c))
+	if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`) != before {
+		t.Fatalf("unaudited thumbnail wrote audit: before=%d after=%d", before, dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`))
 	}
 
 	id, err := uuid.FromBytes(sourceID)
@@ -672,11 +660,11 @@ func TestCommitAfterChange(t *testing.T) {
 		dir, _, job, staged := plan(t)
 		err := catalogsession.Do(dir, func(c *database.Catalog) error {
 			defer ingest.Stages{staged}.Settle(c)
-			before := auditTotal(t, c)
+			before := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`)
 			if _, err := Commit(c, job); err != nil {
 				return err
 			}
-			if after := auditTotal(t, c); after != before {
+			if after := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`); after != before {
 				t.Fatalf("audit revisions %d, was %d", after, before)
 			}
 			return nil
