@@ -1,7 +1,7 @@
 # Review — S16-09 Conclusion pages refresh from the Sources they cite and show their last value while they refresh
 
-**Verdict:** (round 2 pending)
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - The Batch 1 rule "A cached detail follows the Sources its records cite" says a hidden detail "is evicted, as today"; the Batch 2 rule sets `.markStale` for the same key. The plan treats your merge of S16-23 into S16-09 (2026-11-08) as the answer and rewrites the Batch 1 clause (D-12, **Rules this plan bends**). Confirm.
@@ -64,3 +64,23 @@ Maintainability: every round-1 answer checked against the code; no new blocker. 
 
 ### M-8 · nit · `maxArcs` does not exist
 **Answer:** Fixed. Codebase fit cites `PersonRecordLinksContent.maxNodes`.
+
+Executability: every round-1 answer and every Current state row checked; no blocker. Verdict: Ready with changes.
+
+### N-1 · major · The map's Check says "deleted in another window", which the plan puts Out
+**Answer:** Fixed. The map's S16-09 Check now reads "a person deleted from another place in the app (the Evidence graph's Unpromote) leaves on Back", which manual check 4 runs; a second window's session is Out.
+
+### N-2 · minor · STEP-3's check cannot tell the step is right
+**Answer:** Fixed. T-7's first half reports `deleted` with no `handles`, so only D-4 evicts.
+
+### N-3 · minor · The map row does not link the plan
+**Answer:** Fixed at wiring: the map row links the plan and says Planned; STEP-7 sets its landed status.
+
+### N-4 · minor · T-7 and T-9 fixtures leave choices
+**Answer:** Fixed. T-7 and T-9 name their location builder, seeds and value builders.
+
+### N-5 · minor · `ownId` has unread branches
+**Answer:** Fixed. D-6: `ownId` covers only the kinds that read it; `.sourceWorkspace` joins with the deleted-Sources entry (Next adds); T-14 expects nil for it.
+
+### N-6 · nit
+**Answer:** Fixed. STEP-4's parenthesis names T-12's asserts; D-5 says the cap runs after a place resolves.
