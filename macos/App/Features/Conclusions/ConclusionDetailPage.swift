@@ -296,7 +296,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             lead: lead,
                             pageIdentifier: pageIdentifier,
                             offeredPageSections: offeredPageSections,
-                            pageSection: openPageSection,
+                            openPageSection: openPageSection,
                             refreshing: refreshing || sectionRefreshing,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
@@ -334,12 +334,12 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let lead: ConclusionLeadModel
     let pageIdentifier: String
     let offeredPageSections: [ConclusionPageSection]
-    let pageSection: ConclusionPageSection?
+    let openPageSection: ConclusionPageSection?
     let refreshing: Bool
     let select: (ConclusionPageSection) -> Void
 
     /// A page with page sections pins its header; one without scrolls it away.
-    private var pinned: Bool { pageSection != nil }
+    private var pinned: Bool { openPageSection != nil }
 
     private var bar: CGFloat { PVSpacing.space7 }
 
@@ -352,8 +352,8 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
                 lead: lead,
                 pageIdentifier: pageIdentifier
             )
-            if let pageSection {
-                switcher(selection: pageSection)
+            if let openPageSection {
+                switcher(selection: openPageSection)
             }
         }
         .padding(.top, pinned ? PVSpacing.space9 : 0)
