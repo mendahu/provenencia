@@ -2659,6 +2659,12 @@ enum L10n {
             return L10n.format(resource, locale: locale, start, end)
         }
 
+        static let rowUndated = LocalizedStringResource(
+            "dates.row.undated",
+            defaultValue: "Undated",
+            comment: "A list cell's date when there is none"
+        )
+
         static func rowAbout(_ date: String, locale: Locale = .autoupdatingCurrent) -> String {
             let resource = LocalizedStringResource(
                 "dates.row.about",
@@ -5208,6 +5214,18 @@ enum L10n {
             comment: "Sources sort option: title Z to A"
         )
 
+        static let sortDateOldest = LocalizedStringResource(
+            "sources.list.sort.dateOldest",
+            defaultValue: "Published date, oldest first",
+            comment: "Sources sort option: published date, oldest first, undated last"
+        )
+
+        static let sortDateNewest = LocalizedStringResource(
+            "sources.list.sort.dateNewest",
+            defaultValue: "Published date, newest first",
+            comment: "Sources sort option: published date, newest first, undated last"
+        )
+
         static func sortedBy(_ label: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.list.sortedBy",
@@ -5250,6 +5268,46 @@ enum L10n {
             "sources.list.columnEvidenceGraph",
             defaultValue: "Evidence graph",
             comment: "Sources list column caption"
+        )
+
+        static let publishedLabel = LocalizedStringResource(
+            "sources.list.publishedLabel",
+            defaultValue: "Published",
+            comment: "Label before a Source's date on a Sources list row"
+        )
+
+        static let columnPublished = LocalizedStringResource(
+            "sources.list.columnPublished",
+            defaultValue: "Published",
+            comment: "Sources list column caption: the Source's published date (Wide)"
+        )
+
+        static let noPublishedDate = LocalizedStringResource(
+            "sources.list.noPublishedDate",
+            defaultValue: "No published date",
+            comment: "Sources list row: the Source has no date"
+        )
+
+        static func publishedHelp(date: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.list.publishedHelp",
+                defaultValue: "Published %@",
+                comment: "Hover text on a Sources list row's date; argument is the date"
+            ), date)
+        }
+
+        static func publishedSpoken(date: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.list.publishedSpoken",
+                defaultValue: "published %@",
+                comment: "VoiceOver part of a Sources list row; argument is the date"
+            ), date)
+        }
+
+        static let noPublishedDateSpoken = LocalizedStringResource(
+            "sources.list.noPublishedDateSpoken",
+            defaultValue: "no published date",
+            comment: "VoiceOver part of a Sources list row with no date"
         )
 
         static let graphNotStarted = LocalizedStringResource(
@@ -5868,27 +5926,27 @@ enum L10n {
 
         static let sourceDateAdd = LocalizedStringResource(
             "sources.page.sourceDate.add",
-            defaultValue: "Add publication date",
+            defaultValue: "Add published date",
             comment: "Button in the Source page header: open the Source date dialog for an undated Source"
         )
 
         static let sourceDateEdit = LocalizedStringResource(
             "sources.page.sourceDate.edit",
-            defaultValue: "Edit date",
+            defaultValue: "Edit published date",
             comment: "Accessibility label and help of the pencil beside the Source's date"
         )
 
         static func sourceDateAccessibility(date: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.sourceDate.accessibility",
-                defaultValue: "Date, %@",
+                defaultValue: "Published, %@",
                 comment: "Accessibility label of the Source's date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880"
             ), date)
         }
 
         static let sourceDateDialogTitle = LocalizedStringResource(
             "sources.page.sourceDate.dialogTitle",
-            defaultValue: "Source date",
+            defaultValue: "Published date",
             comment: "Title of the Source date dialog"
         )
 
@@ -5912,7 +5970,7 @@ enum L10n {
 
         static let sourceDateClearsCaption = LocalizedStringResource(
             "sources.page.sourceDate.clearsCaption",
-            defaultValue: "Saving removes this Source's date.",
+            defaultValue: "Saving removes this Source's published date.",
             comment: "Caption under Clear date in the Source date dialog once the form is emptied"
         )
 

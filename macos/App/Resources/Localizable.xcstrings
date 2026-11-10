@@ -7920,6 +7920,114 @@
         }
       }
     },
+    "sources.list.sort.dateOldest": {
+      "comment": "Sources sort option: published date, oldest first, undated last",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published date, oldest first"
+          }
+        }
+      }
+    },
+    "sources.list.sort.dateNewest": {
+      "comment": "Sources sort option: published date, newest first, undated last",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published date, newest first"
+          }
+        }
+      }
+    },
+    "sources.list.publishedLabel": {
+      "comment": "Label before a Source's date on a Sources list row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published"
+          }
+        }
+      }
+    },
+    "sources.list.columnPublished": {
+      "comment": "Sources list column caption: the Source's published date (Wide)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published"
+          }
+        }
+      }
+    },
+    "sources.list.noPublishedDate": {
+      "comment": "Sources list row: the Source has no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No published date"
+          }
+        }
+      }
+    },
+    "sources.list.publishedHelp": {
+      "comment": "Hover text on a Sources list row's date; argument is the date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published %@"
+          }
+        }
+      }
+    },
+    "sources.list.publishedSpoken": {
+      "comment": "VoiceOver part of a Sources list row; argument is the date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "published %@"
+          }
+        }
+      }
+    },
+    "sources.list.noPublishedDateSpoken": {
+      "comment": "VoiceOver part of a Sources list row with no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no published date"
+          }
+        }
+      }
+    },
+    "dates.row.undated": {
+      "comment": "A list cell's date when there is none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undated"
+          }
+        }
+      }
+    },
     "sources.list.sortMenu": {
       "comment": "Accessibility label for the Sources sort control",
       "extractionState": "manual",
@@ -8587,7 +8695,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add publication date"
+            "value": "Add published date"
           }
         }
       }
@@ -8599,7 +8707,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Edit date"
+            "value": "Edit published date"
           }
         }
       }
@@ -8611,7 +8719,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Date, %@"
+            "value": "Published, %@"
           }
         }
       }
@@ -8623,7 +8731,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Source date"
+            "value": "Published date"
           }
         }
       }
@@ -8671,7 +8779,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saving removes this Source's date."
+            "value": "Saving removes this Source's published date."
           }
         }
       }
