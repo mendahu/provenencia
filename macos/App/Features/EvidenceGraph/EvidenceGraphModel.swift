@@ -141,32 +141,30 @@ final class EvidenceGraphModel {
         errorMessage(session.queryHandle(connectRulesKey) as QueryHandle<[CatalogConnectRule]>?)
     }
 
-    /// The graph rows' load error, shown whether or not a stale value is kept.
+    /// The graph rows' load error, shown whether or not a stale value is kept, and held through
+    /// a retry after a first-load failure so the callout stays mounted.
     var graphReadError: String? {
-        errorMessage(session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)
+        guard let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey) else { return nil }
+        switch handle.reading {
+        case .failed(let error): return L10n.Errors.message(for: error)
+        case .loaded(_, let refreshFailure): return refreshFailure.map(L10n.Errors.message(for:))
+        case .loading: return nil
+        }
     }
 
-    /// True while a read of the graph rows is running beside their stale value.
+    /// True while a read of the graph rows is running: a first load or a refetch beside a stale value.
     var isRereadingGraph: Bool {
-        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.isFetching ?? false
+        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.isReading ?? false
     }
 
-    /// Bumps when a graph read fails so the read-error callout remounts and announces again.
-    private(set) var graphReadAttempt = 0
+    /// Bumps for each failed graph read, so the read-error callout speaks again.
+    var graphReadFailureRevision: Int {
+        (session.queryHandle(graphKey) as QueryHandle<EvidenceGraphRows>?)?.failureRevision ?? 0
+    }
 
     /// Reads the graph rows again after a failed read.
     func readGraphAgain() {
         let _: QueryHandle<EvidenceGraphRows> = session.reread(graphKey)
-        Task {
-            _ = await session.readyValue(graphKey) as EvidenceGraphRows?
-            graphReadFailedSettled()
-        }
-    }
-
-    /// Called when a graph read settles still failed (initial load or a reread).
-    private func graphReadFailedSettled() {
-        guard graphReadError != nil else { return }
-        graphReadAttempt += 1
     }
 
     private func errorMessage<Value>(_ handle: QueryHandle<Value>?) -> String? {

@@ -987,7 +987,26 @@ struct EvidenceGraphModelTests {
         #expect(failedAgain)
         #expect(!model.isRereadingGraph)
         #expect(model.graphReadError != nil)
-        #expect(await waitUntil { model.graphReadAttempt >= 2 })
+        #expect(await waitUntil { model.graphReadFailureRevision >= 2 })
+    }
+
+    @Test func aFirstLoadRetryKeepsTheReadError() async {
+        let store = makeStore()
+        store.listSubjectsError = TestFailure()
+        let model = makeModel(store: store)
+        await model.prepare()
+        let key = CatalogQueryKey.evidenceGraph(project: model.session.projectKey, graphId: graphID)
+        let handle: QueryHandle<EvidenceGraphRows>? = model.session.queryHandle(key)
+        #expect(model.graphReadError != nil)
+        #expect(model.graphReadFailureRevision == 1)
+
+        model.readGraphAgain()
+        #expect(model.isRereadingGraph)
+        #expect(model.graphReadError != nil)
+        let failedAgain = await waitUntil { handle?.isReading == false }
+        #expect(failedAgain)
+        #expect(model.graphReadError != nil)
+        #expect(model.graphReadFailureRevision == 2)
     }
 
     @Test func graphPresenceFollowsTheList() async {
