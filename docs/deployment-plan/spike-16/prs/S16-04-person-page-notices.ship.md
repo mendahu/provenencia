@@ -26,8 +26,8 @@ Reviewers: CON, MNT, UX, SEC+PRF. Skipped: none (UX: `macos/App/**`, `Localizabl
 | MNT-7 | MNT | minor | New tests copy `graph(_:)` and a 12-line setup | Fix now → F-8 | Same-pass cleanup in test files this PR changes |
 | CON-2 | CON | minor | `failure` doc "Nil while a retry runs" wrong behind a value | Fix now → F-9 | Verified `beginLoading(keepingValue: true)` leaves `.error` |
 | CON-3 | CON | minor | T-1 asserts `read` at one step, plan says every step | Fix now → F-8 | Plan T-1 wording |
-| UX-3 | UX | minor | Notices failing together interrupt each other (high priority) | Follow-up | Kit-wide announcement policy; not this PR's alone |
-| UX-4 | UX | minor | Focus goes nowhere after a successful Try again | Follow-up | Kit-wide; Promote and Evidence graph already behave so |
+| UX-3 | UX | minor | Notices failing together interrupt each other (high priority) | Follow-up → dropped (user) | Kit-wide announcement policy; not this PR's alone |
+| UX-4 | UX | minor | Focus goes nowhere after a successful Try again | Follow-up → dropped (user) | Kit-wide; Promote and Evidence graph already behave so |
 | CON-7 (CON outside-lens) | UX | minor | A mouse click that fails again also moves focus to Try again | Rejected | D-4: "the Button's action sets `retryPressed`", no input distinction; the focus lands on the button just clicked |
 | CON-8 (CON outside-lens) | UX | minor | Event/Place: header-band notice gap is the columns' gap, not 20 pt | To user (manual check) | Needs the board and eyes; added to the PR's manual check list, does not block the fix round |
 
@@ -102,4 +102,4 @@ No new findings. Logged (CON outside-lens): `PVRetryCallout.swift:61` sets an em
 Merged `origin/main` @ `cbe6b57d` (docs-only: S15-32 plan). Gate PASS after merge.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-3, UX-4 (home: user to choose) · to user: CON-8 (Event/Place notice gap, in the manual check)
+Gate PASS · CI green · open: none · follow-ups: UX-3, UX-4 dropped (user, 2026-11-10) · to user: CON-8 (Event/Place notice gap, in the manual check)
