@@ -59,3 +59,13 @@ Waiting on the network for finish steps 0–3: fetch and merge `origin/main`, ga
 
 ## Finish
 github.com reachable again; `origin/main` had not moved since `918c8ad3`, so no merge. Pushed and opened #774 ready for review (the user chose Create PR). "#N" placeholders filled with #774.
+
+## To user — MNT-2 answered
+User, 2026-11-10: "Yes, unify them." `.az` and `.za` move onto the one title comparison; this supersedes D-3's last sentence and its Out line ("`.az` and `.za` reading `titleOrder`": not planned). Equal titles, whose order `sorted` left unspecified until now, sort by id descending (newest added first) in both directions, the tie rule of `.added`, `.updated` and the date sorts.
+
+### Fix plan 2
+**F-4 — A–Z and Z–A share the date sorts' title comparison** (from MNT-2, user decision)
+Files: `macos/App/Features/Sources/SourcesModel.swift`, `macos/ProvenenciaTests/SourcesModelTests.swift`, the plan (Landed note, D-3's Out line row), `../completed.md` only if its S15-04 paragraph describes the A–Z sorts. Skill: `add-swift-test`.
+Failing test first: `SourcesModelTests/titleSortsBreakTiesByNewestAdded` *(new)* — sources "b" (id 1), "a" (id 2), "A" (id 3), "a" (id 4) where ids are added order. `.az` → ids [4, 3, 2, 1] ("a"/"A"/"a" compare same case-insensitively, so newest first, then "b"); `.za` → [1, 4, 3, 2]. Feed the rows so that the current unstable `sorted` would not happen to give this (e.g. insert ascending id); if it passes before the fix, report it as Not reproduced and stop.
+Do: `titleOrder` takes `descending: Bool = false` — the title comparison flips when descending, the `orderedSame` id-descending tie does not. `.az` sorts by `titleOrder($0, $1)`, `.za` by `titleOrder($0, $1, descending: true)`; the date sorts call it unchanged. Update `titleOrder`'s doc comment to say all four title-ordered sorts use it. In the plan's Out table, mark the "`.az` and `.za` reading `titleOrder`" row as reversed by the user (2026-11-10, F-4), and add one Landed line.
+Check: the new test passes; `scripts/check-pr.sh` PASS.
