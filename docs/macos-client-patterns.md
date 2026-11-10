@@ -277,7 +277,7 @@ The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-
 5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
 6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
-Rule 3's list maximum is a token, `PVSpacing.widthListWideMax` (1600; S15-04 adds it, and Promote's list reads it): a list whose Wide arrangement adds no column, or only a narrow one, centers at that width with hairlines at its sides, as the Sources list does (S15-04, user 2026-11-10: a list stretched across a 2296pt pane left a wide empty band between its title and its graphs).
+Rule 3's list maximum is a token, `PVSpacing.widthListWideMax` (1600pt of content, gutters outside; S15-04 adds it, and Promote's list reads it): a list whose Wide arrangement adds no column, or only a narrow one, centers at that width with hairlines at its sides through `pvListBand(_:)` (`Components/PageColumns/PVPageColumns.swift`), as the Sources list does (S15-04, user 2026-11-10: a list stretched across a 2296pt pane left a wide empty band between its title and its graphs).
 
 A full-width section's empty, loading and error states keep the page band: apply `pvKeepsPageBand()` (`Components/PageColumns/PVPageColumns.swift`) to them, so they stay centered at `widthContentMax` instead of stretching across a Wide pane. A page that passes `fillSplitSideMax` has a wider band (the main-and-side group); its states sit in the primary, which is that band.
 
