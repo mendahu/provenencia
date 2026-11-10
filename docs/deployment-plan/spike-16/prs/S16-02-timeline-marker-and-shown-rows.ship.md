@@ -1,7 +1,7 @@
 # Ship log — S16-02 The Timeline places a missing death and builds what it shows
 
 **Plan:** [`S16-02-timeline-marker-and-shown-rows.md`](S16-02-timeline-marker-and-shown-rows.md) · **Branch:** `s16-02-timeline-marker-and-shown-rows` · **PR:** [#764](https://github.com/mendahu/provenencia/pull/764)
-**State:** review 1
+**State:** ready
 
 ## Round 0 — implement
 Head `59e4a6a1`. Gate: implementer PASS; orchestrator re-run on `59e4a6a1` PASS (9/9; xcode-test 130s).
@@ -46,3 +46,14 @@ Check: `rg -n 'func timeline\(_ events' macos/ProvenenciaTests macos/App` prints
 Files: `docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` (Landed note only; do not edit Decisions, Scope or ACs).
 Do: add one sentence to the Landed note: adding a before-birth type (one `EventRole` in `lifelineTypes.beforeBirth`) can place a birth after the `.more(.dated)` item, and then D-9 draws the folded points dated after it inside the birth stub; that add must also shift those folded points (CON-1, S16-02 ship log).
 Check: scripts/check-pr.sh PASS (plan-docs).
+
+## Round 1 — fix
+Head `e1a8b2ec`. Gate PASS (orchestrator re-run; xcode-test 112s). F-1 done (`7a3fa2a5`); F-2 done (`1f9445e5` + call-site fix `e1a8b2ec`: `1f9445e5` alone does not build the tests); F-3 done (`d11e4fa0`).
+Deviations: F-2 Go helpers were closures inside `TestLifeMarkers`, so they became package-level `markerBefore`/`markerAfter`/`sameMarkerPlace` in `lifeline_test.go`, exported through `export_test.go`; Swift helper is `PersonTimelinePreviewData.timeline` in `macos/ProvenenciaTests/PersonTimelinePreviewData+Tests.swift`.
+Read by the orchestrator (minors only, no round 2): MNT-1 **Resolved** (the Check `rg` prints only the two `…HasSpan` lines); MNT-2 **Resolved** (one Swift `timeline(_:birth:death:)`; Go comparator and builders only in `lifeline_test.go`); CON-1 edge recorded in the plan's Landed note.
+
+## Round 2 — review
+Not run: no round-1 blocker or major.
+
+## Result
+Gate PASS · CI see PR · open: none · follow-ups: none · to user: —
