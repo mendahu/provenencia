@@ -7,7 +7,7 @@
 **Board:** —
 **Depends on:** S16-34 (landed [#772](https://github.com/mendahu/provenencia/pull/772))
 **Blocks:** —
-**Branch:** `s16-35-layout-tests-without-waits`
+**Branch:** `plan/s16-35-layout-tests-without-waits` (the planning PR [#775](https://github.com/mendahu/provenencia/pull/775) carries the code too: user, 2026-11-10)
 **Version bump:** none — no change a researcher can see in the shipped app ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
