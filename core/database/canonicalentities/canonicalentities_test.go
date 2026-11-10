@@ -67,10 +67,7 @@ func TestCanonicalEntities(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, persons[0].ID, persons[2].ID); err != nil {
 					t.Fatal(err)
 				}
@@ -95,10 +92,7 @@ func TestCanonicalEntities(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				action, revision := dbtest.LatestRevision(t, db)
 				last := revision[len(revision)-1]
 				if action != "create_canonical_entity" || last.EntityType != "canonical_entity" || string(last.EntityID) != string(e.ID) {

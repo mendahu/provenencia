@@ -263,10 +263,7 @@ func artifactKeys(t *testing.T, c *database.Catalog, sourceID []byte) []artKey {
 
 func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) int {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var n int
 	if err := db.QueryRow(query, sourceID).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -276,10 +273,7 @@ func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) 
 
 func layoutOf(t *testing.T, c *database.Catalog, sourceID []byte) []sourcemetadata.LayoutRow {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -332,10 +326,7 @@ func snap(t *testing.T, c *database.Catalog, id []byte) snapshot {
 // graphLinks returns the one graph of a Source and the Artifact ids linked to it.
 func graphLinks(t *testing.T, c *database.Catalog, sourceID []byte) ([]byte, []string) {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var graph []byte
 	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&graph); err != nil {
 		t.Fatal(err)
@@ -602,10 +593,7 @@ func TestCopy(t *testing.T) {
 						}
 						var creates, updates int
 						var seen []string
-						db, err := c.DB()
-						if err != nil {
-							t.Fatal(err)
-						}
+						db := dbtest.MustDB(t, c)
 						_, revision := dbtest.LatestRevision(t, db)
 						for _, ch := range revision {
 							seen = append(seen, ch.EntityType+" "+string(ch.Action))
@@ -646,10 +634,7 @@ func TestCopy(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					db, err := c.DB()
-					if err != nil {
-						t.Fatal(err)
-					}
+					db := dbtest.MustDB(t, c)
 					if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != 0 {
 						t.Fatalf("copy %+v, date rows %d", cp.Date, rows)
 					}
@@ -663,10 +648,7 @@ func TestCopy(t *testing.T) {
 				t.Run("date row missing", func(t *testing.T) {
 					c, userID, orig, arts := seedObituary(t)
 					orig = setDate(t, c, userID, orig.ID, datevaluetest.YMD(1880, 0, 0))
-					db, err := c.DB()
-					if err != nil {
-						t.Fatal(err)
-					}
+					db := dbtest.MustDB(t, c)
 					ctx := context.Background()
 					conn, err := db.Conn(ctx)
 					if err != nil {
@@ -708,10 +690,7 @@ func TestCopy(t *testing.T) {
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
 				orig = setDate(t, c, userID, orig.ID, datevaluetest.YMD(1880, 7, 4))
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				before := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`)
 				cp, err := runCopy(c, userID, allParts(orig, arts))
 				if err != nil {
@@ -782,10 +761,7 @@ func TestCopy(t *testing.T) {
 
 func TestReadDraftMissingSourceIsNotFound(t *testing.T) {
 	c, _, _, _ := seedObituary(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)

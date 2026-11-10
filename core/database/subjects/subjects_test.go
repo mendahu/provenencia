@@ -74,10 +74,7 @@ func TestSubjects(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&actionType); err != nil {
 			t.Fatal(err)
@@ -86,10 +83,7 @@ func TestSubjects(t *testing.T) {
 	}
 	latestEntityType := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		_, revision := dbtest.LatestRevision(t, db)
 		return revision[len(revision)-1].EntityType
 	}
@@ -217,10 +211,7 @@ func TestSubjects(t *testing.T) {
 				if latestEntityType(t, c) != "subject" {
 					t.Fatalf("entity %s", latestEntityType(t, c))
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				_, revision := dbtest.LatestRevision(t, db)
 				fields := revision[len(revision)-1].Fields
 				for _, key := range []string{"id", "ref", "source_id", "subject_type_id", "label", "description"} {
@@ -361,10 +352,7 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(
 					`INSERT INTO subject_positions (subject_id, grid_x, grid_y) VALUES (?, 1, 2)`,
 					s.ID,

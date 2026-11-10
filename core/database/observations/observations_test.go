@@ -159,10 +159,7 @@ func TestObservations(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(
 			`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`,
@@ -443,10 +440,7 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var before int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&before); err != nil {
 					t.Fatal(err)
@@ -539,10 +533,7 @@ func TestObservations(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var dates, names int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM date_values WHERE id = ?`, dateID).Scan(&dates); err != nil {
 					t.Fatal(err)
@@ -738,10 +729,7 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var transcription sql.NullString
 				if err := db.QueryRow(`SELECT transcription FROM citations WHERE id = ?`, res.Citation.ID).Scan(&transcription); err != nil || transcription.Valid {
 					t.Fatalf("transcription %+v %v", transcription, err)
@@ -829,10 +817,7 @@ func TestObservations(t *testing.T) {
 							t.Fatal(err)
 						}
 						obs := res.Observations[0]
-						db, err := c.DB()
-						if err != nil {
-							t.Fatal(err)
-						}
+						db := dbtest.MustDB(t, c)
 						var imageID []byte
 						if err := db.QueryRow(`SELECT image_file_id FROM depiction_values WHERE id = ?`, obs.ValueDepictionID).Scan(&imageID); err != nil {
 							t.Fatal(err)
@@ -957,10 +942,7 @@ func TestObservations(t *testing.T) {
 					t.Fatal(err)
 				}
 				obs := res.Observations[0]
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				lookup := func() (valueID []byte, region string, file files.File) {
 					var imageID []byte
 					if err := db.QueryRow(`SELECT o.value_depiction_id, d.region_json, d.image_file_id
@@ -1493,10 +1475,7 @@ func newBooleanFixture(t *testing.T) booleanFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	if _, err := db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, personType.ID, id); err != nil {
 		t.Fatal(err)
 	}

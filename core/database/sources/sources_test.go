@@ -145,10 +145,7 @@ func TestSources(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&actionType); err != nil {
 			t.Fatal(err)
@@ -163,10 +160,7 @@ func TestSources(t *testing.T) {
 		{
 			name: "title column is not null at current format",
 			run: func(t *testing.T, c *database.Catalog) {
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var ver int
 				if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
 					t.Fatal(err)
@@ -453,10 +447,7 @@ func TestSources(t *testing.T) {
 				if _, err := runAddNote(c, userID, s.ID, "Keep"); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, s.ID); err != nil {
 					t.Fatal(err)
 				}
@@ -714,10 +705,7 @@ func TestSourceDelete(t *testing.T) {
 	if _, err := GetNote(c, note.ID); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("note left %v", err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var action string
 	if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&action); err != nil {
 		t.Fatal(err)
@@ -1101,10 +1089,7 @@ func TestSourceDate(t *testing.T) {
 	t.Run("dangling date row reads undated", func(t *testing.T) {
 		dangle := func() []byte {
 			ctx := context.Background()
-			db, err := c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
+			db := dbtest.MustDB(t, c)
 			conn, err := db.Conn(ctx)
 			if err != nil {
 				t.Fatal(err)
@@ -1139,10 +1124,7 @@ func TestSourceDate(t *testing.T) {
 		}
 	})
 	t.Run("one date row per source", func(t *testing.T) {
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		cur, err := Get(c, src.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -1235,10 +1217,7 @@ func TestMissingSourceIsNotFound(t *testing.T) {
 	unused := make([]byte, 16)
 	unused[15] = 9
 	short := []byte{1, 2, 3}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 
 	cases := []struct {
 		name string

@@ -136,10 +136,7 @@ func TestImpactConclusion(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		action, revision := dbtest.LatestRevision(t, db)
 		types := dbtest.EntityTypes(revision)
 		if action != "delete_observation" || strings.Join(types, ",") != "observation" {
@@ -157,10 +154,7 @@ func TestImpactConclusion(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		action, revision := dbtest.LatestRevision(t, db)
 		types := dbtest.EntityTypes(revision)
 		if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,canonical_entity,subject" {

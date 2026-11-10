@@ -19,10 +19,7 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	c := testCatalogInternal(t)
 	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-AAAAA", "Deed")
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 
 	fileA := newFileID(t)
 	const sum = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -211,10 +208,7 @@ func TestReleaseKeepsSharedDerived(t *testing.T) {
 	c := testCatalogInternal(t)
 	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-CCCCC", "Deed")
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -274,10 +268,7 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 			c := testCatalogInternal(t)
 			typeID := insertSourceType(t, c, "book", "Book")
 			srcID := insertSource(t, c, typeID, "SRC-DDDDD", "Deed")
-			db, err := c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
+			db := dbtest.MustDB(t, c)
 			tx, err := db.Begin()
 			if err != nil {
 				t.Fatal(err)
@@ -323,10 +314,7 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 
 func TestSnapshotOwnedRequiresParent(t *testing.T) {
 	c := testCatalogInternal(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -345,10 +333,7 @@ func TestSnapshotOwnedRequiresParent(t *testing.T) {
 
 func insertSourceType(t *testing.T, c *database.Catalog, key, label string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -364,10 +349,7 @@ func insertSourceType(t *testing.T, c *database.Catalog, key, label string) []by
 
 func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, title string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -383,10 +365,7 @@ func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, t
 
 func insertArtifact(t *testing.T, c *database.Catalog, sourceID, fileID []byte, artRef, label string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -441,10 +420,7 @@ type ownedPlanFixture struct {
 func newOwnedPlanFixture(t *testing.T) *ownedPlanFixture {
 	t.Helper()
 	c := testCatalogInternal(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)

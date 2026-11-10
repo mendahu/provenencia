@@ -115,10 +115,7 @@ func TestCitations(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(
 			`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`,
@@ -139,10 +136,7 @@ func TestCitations(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer c.Close()
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				for _, table := range []string{"citations", "citation_notes", "observations", "observation_notes"} {
 					var name string
 					if err := db.QueryRow(
@@ -236,10 +230,7 @@ func TestCitations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				_, got := dbtest.LatestRevision(t, db)
 				if len(got) < 3 {
 					t.Fatalf("changes %d want >= 3", len(got))
@@ -328,10 +319,7 @@ func TestCitations(t *testing.T) {
 				if err != nil || len(obs) != 1 {
 					t.Fatalf("obs %v len=%d", err, len(obs))
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var n int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
 					t.Fatal(err)
@@ -585,10 +573,7 @@ func TestCitations(t *testing.T) {
 						t.Fatalf("%s: err %v, want citations.invalid", name, err)
 					}
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var n int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM citations`).Scan(&n); err != nil || n != 0 {
 					t.Fatalf("%d Citations written, err %v", n, err)
@@ -682,10 +667,7 @@ func TestCitations(t *testing.T) {
 				}, nil); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`DELETE FROM artifacts WHERE id = ?`, s.artifact.ID); err == nil {
 					t.Fatal("expected artifact delete to fail while a citation remains")
 				}
@@ -728,10 +710,7 @@ func TestCitations(t *testing.T) {
 				if _, err := Get(c, cit.Citation.ID); err == nil {
 					t.Fatal("citation still present")
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var n int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM citation_notes WHERE citation_id = ?`, cit.Citation.ID).Scan(&n); err != nil || n != 0 {
 					t.Fatalf("notes leftover %d %v", n, err)

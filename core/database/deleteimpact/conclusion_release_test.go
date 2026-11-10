@@ -134,10 +134,7 @@ func TestMemberDeleteEndToEnd(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	action, revision := dbtest.LatestRevision(t, db)
 	types := dbtest.EntityTypes(revision)
 	if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,subject" {
@@ -192,10 +189,7 @@ func TestLastMemberDeleteEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var searchDocs int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE entity_id = ?`, entityUUID).Scan(&searchDocs); err != nil {
 		t.Fatal(err)

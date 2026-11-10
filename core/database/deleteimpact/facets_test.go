@@ -93,10 +93,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		action, revision := dbtest.LatestRevision(t, db)
 		types := dbtest.EntityTypes(revision)
 		if action != "delete_source" || types[len(types)-1] != "source" {
@@ -126,10 +123,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err := runFieldDelete(c, userID, other); err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		action, revision := dbtest.LatestRevision(t, db)
 		types := dbtest.EntityTypes(revision)
 		if action != "delete_metadata_field" || strings.Join(types, ",") != "source_metadata_layout,metadata_field" {
@@ -164,10 +158,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		action, revision := dbtest.LatestRevision(t, db)
 		types := dbtest.EntityTypes(revision)
 		if action != "delete_citation" || strings.Join(types, ",") != "citation_note,citation_note,citation" {

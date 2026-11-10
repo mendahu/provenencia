@@ -52,10 +52,7 @@ func TestSave(t *testing.T) {
 			name: "one promote_subject revision with two changes",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				action, revision := dbtest.LatestRevision(t, db)
 				if action != "promote_subject" {
 					t.Fatalf("action %s", action)
@@ -125,10 +122,7 @@ func TestSave(t *testing.T) {
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v handles=%d", err, len(list))
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				action, revision := dbtest.LatestRevision(t, db)
 				if action != "promote_subject" || len(revision) != 1 || revision[0].EntityType != "identity_claim" {
 					t.Fatalf("revision %s %+v", action, revision)
@@ -168,10 +162,7 @@ func TestSave(t *testing.T) {
 				}
 				a := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
 				b := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, b.Entity.ID, a.Entity.ID); err != nil {
 					t.Fatal(err)
 				}

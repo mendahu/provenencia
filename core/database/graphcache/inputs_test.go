@@ -2,10 +2,10 @@ package graphcache_test
 
 import (
 	"bytes"
-	"database/sql"
 	"slices"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/hops"
@@ -108,7 +108,7 @@ func TestInputScope(t *testing.T) {
 		sameKeys(t, "nil dependent", in.Keys(), []graphcache.InputKey{keyOf(person, "", "")})
 	})
 	t.Run("the recorder hears Node and Follow and no node values from Follow", func(t *testing.T) {
-		rg := graphcache.Over(mustDB(t, c))
+		rg := graphcache.Over(dbtest.MustDB(t, c))
 		var heard []graphcache.InputKey
 		rg.SetInputRecorderForTest(func(k graphcache.InputKey) { heard = append(heard, k) })
 		if _, err := rg.Follow(person, hops.EventsOfSubject); err != nil {
@@ -146,7 +146,7 @@ func TestAssociationInputs(t *testing.T) {
 	})
 
 	// An end that is not rank 1 gives no key.
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	if _, err := db.Exec(`UPDATE auto_reconciler_values SET rank = 2
 		WHERE entity_id = ? AND value_entity_id = ?`, moved, other); err != nil {
 		t.Fatal(err)
@@ -157,13 +157,4 @@ func TestAssociationInputs(t *testing.T) {
 		t.Fatal(err)
 	}
 	sameKeys(t, "rank 2 end", got[string(moved)], []graphcache.InputKey{keyOf(birth, "participation", "event")})
-}
-
-func mustDB(t *testing.T, c interface{ DB() (*sql.DB, error) }) *sql.DB {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return db
 }
