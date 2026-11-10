@@ -325,7 +325,7 @@ struct ListScrollAnchorModifier: ViewModifier {
 /// Leaves the page for its section's list once its entity is gone: it replaces the current
 /// entry (`fallbackToSectionRoot`). Also fires on mount, so a page opened on a gone entity leaves.
 /// A non-nil `notice` is shown as the session's notice toast first, so the list says why.
-private struct LeavesForSectionRoot: ViewModifier {
+struct LeavesForSectionRoot: ViewModifier {
     let gone: Bool
     let notice: String?
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -334,11 +334,17 @@ private struct LeavesForSectionRoot: ViewModifier {
     func body(content: Content) -> some View {
         content.onChange(of: gone, initial: true) { _, gone in
             guard gone else { return }
-            if let notice {
-                session.noticeToast = VocabularyToast(title: notice, body: "", tone: .info)
-            }
-            navigation.fallbackToSectionRoot()
+            Self.leave(notice: notice, navigation: navigation, session: session)
         }
+    }
+
+    /// Shows `notice` as the session's notice toast when it is non-nil, then replaces the
+    /// current entry with its section's list.
+    static func leave(notice: String?, navigation: WorkspaceNavigation, session: WorkspaceSession) {
+        if let notice {
+            session.noticeToast = VocabularyToast(title: notice, body: "", tone: .info)
+        }
+        navigation.fallbackToSectionRoot()
     }
 }
 
