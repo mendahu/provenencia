@@ -201,6 +201,128 @@ struct WorkspaceSessionTests {
         #expect(session.evidenceGraphProgress(graphID: "g-1")?.subjectCount == 3)
     }
 
+    @Test func queryReadingCarriesARefreshFailure() {
+        struct TestFailure: Error {}
+        let handle = QueryHandle<Int>()
+        func expectLoading() {
+            guard case .loading = handle.reading else {
+                Issue.record("expected .loading")
+                return
+            }
+        }
+        func expectLoaded(_ expected: Int, failed: Bool) {
+            guard case .loaded(let value, let refreshFailure) = handle.reading else {
+                Issue.record("expected .loaded")
+                return
+            }
+            #expect(value == expected)
+            #expect((refreshFailure != nil) == failed)
+        }
+        expectLoading()
+        #expect(handle.failureRevision == 0)
+        #expect(handle.isReading == false)
+
+        handle.applyFailure(TestFailure(), clearValue: true)
+        guard case .failed(let error) = handle.reading else {
+            Issue.record("expected .failed")
+            return
+        }
+        #expect(error is TestFailure)
+        #expect(handle.failureRevision == 1)
+
+        handle.beginLoading(keepingValue: false)
+        guard case .failed = handle.reading else {
+            Issue.record("expected .failed to hold during the retry")
+            return
+        }
+        #expect(handle.isReading)
+        #expect(handle.read.isLoading)
+
+        handle.applySuccess(3)
+        expectLoaded(3, failed: false)
+        #expect(handle.isReading == false)
+
+        handle.applyFailure(TestFailure(), clearValue: false)
+        handle.applyFailure(TestFailure(), clearValue: false)
+        expectLoaded(3, failed: true)
+        #expect(handle.failureRevision == 3)
+
+        handle.applySuccess(4)
+        expectLoaded(4, failed: false)
+
+        handle.resetForInvalidation()
+        expectLoading()
+    }
+
+    /// P-5 (AC-1.1, AC-1.2): a section's reload that fails after a write keeps its rows and is
+    /// read beside them; Try again reads it back to a clean value.
+    @Test func aFailedSectionReloadIsReadBesideItsRows() async throws {
+        struct ReloadFailure: Error {}
+        let store = FakeStore()
+        let seeded = claims(onGraph: "g1")
+        store.seededPersonClaims["per-1"] = seeded
+        store.seededConclusionDetails["per-1"] = detail("per-1")
+        let session = makeSession(store: store)
+        session.apply(location: .personDetail(entityId: "per-1", ref: "PER-1", title: nil).withPageSection(.sources))
+        let key = CatalogQueryKey.personClaims(project: session.projectKey, entityId: "per-1")
+        let handle: QueryHandle<[CatalogPersonClaimGroup]> = session.query(key)
+        await waitForQuery(handle)
+        guard case .loaded(_, let clean) = handle.reading else {
+            Issue.record("expected .loaded")
+            return
+        }
+        #expect(clean == nil)
+
+        store.listPersonClaimsError = ReloadFailure()
+        session.apply(CatalogWriteEffects(handles: ["per-1"]))
+        await session.settleWrites()
+        guard case .loaded(let rows, let refreshFailure) = handle.reading else {
+            Issue.record("expected the rows to stay")
+            return
+        }
+        #expect(rows == seeded)
+        #expect(refreshFailure is ReloadFailure)
+        #expect(handle.failureRevision == 1)
+
+        store.listPersonClaimsError = nil
+        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.reread(key)
+        await session.settleWrites()
+        guard case .loaded(_, let after) = handle.reading else {
+            Issue.record("expected .loaded after Try again")
+            return
+        }
+        #expect(after == nil)
+    }
+
+    /// AC-1.3, D-2: a second failure of the same read is a new failure, so the notice speaks again.
+    @Test func aSecondFailureBumpsTheFailureRevision() async throws {
+        struct ReloadFailure: Error {}
+        let store = FakeStore()
+        let seeded = claims(onGraph: "g1")
+        store.seededPersonClaims["per-1"] = seeded
+        store.seededConclusionDetails["per-1"] = detail("per-1")
+        let session = makeSession(store: store)
+        session.apply(location: .personDetail(entityId: "per-1", ref: "PER-1", title: nil).withPageSection(.sources))
+        let key = CatalogQueryKey.personClaims(project: session.projectKey, entityId: "per-1")
+        let handle: QueryHandle<[CatalogPersonClaimGroup]> = session.query(key)
+        await waitForQuery(handle)
+
+        store.listPersonClaimsError = ReloadFailure()
+        session.apply(CatalogWriteEffects(handles: ["per-1"]))
+        await session.settleWrites()
+        #expect(handle.failureRevision == 1)
+
+        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.reread(key)
+        await session.settleWrites()
+        #expect(handle.failureRevision == 2)
+        guard case .loaded(let rows, let refreshFailure) = handle.reading else {
+            Issue.record("expected the rows to stay")
+            return
+        }
+        #expect(rows == seeded)
+        #expect(refreshFailure != nil)
+    }
+
     @Test func progressFailureReadsUnavailable() {
         struct TestFailure: Error {}
         let session = makeSession()
