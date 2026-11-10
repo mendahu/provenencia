@@ -189,13 +189,13 @@ struct PVPageColumnsTests {
         #expect(PVSpacing.widthContentMax == 1180)
     }
 
-    @Test func wideHostPlacesTheSecondaryBeside() async {
+    @Test func wideHostPlacesTheSecondaryBeside() async throws {
         let wide = FrameBox()
-        _ = hostInBorderlessWindow(
+        hostInBorderlessWindow(
             ColumnsProbe(box: wide, widthClass: .wide), windowSize: CGSize(width: 2296, height: 600)
         )
         #expect(await waitUntil { wide.primary != nil && wide.secondary != nil && wide.header != nil })
-        let p = wide.primary!, s = wide.secondary!
+        let p = try #require(wide.primary), s = try #require(wide.secondary)
         #expect(s.minX >= p.maxX)
         #expect(abs(s.minY - p.minY) < 0.5)
         #expect(p.width == 1180 && s.width == 480)
@@ -203,11 +203,11 @@ struct PVPageColumnsTests {
         #expect(abs(wide.header!.width - 1692) < 0.5)
 
         let regular = FrameBox()
-        _ = hostInBorderlessWindow(
+        hostInBorderlessWindow(
             ColumnsProbe(box: regular, widthClass: .regular), windowSize: CGSize(width: 1102, height: 600)
         )
         #expect(await waitUntil { regular.primary != nil && regular.secondary != nil })
-        let rp = regular.primary!, rs = regular.secondary!
+        let rp = try #require(regular.primary), rs = try #require(regular.secondary)
         #expect(rs.minY >= rp.maxY)
         #expect(abs(rs.minX - rp.minX) < 0.5)
         #expect(rp.width == 1038 && rs.width == 1038)
