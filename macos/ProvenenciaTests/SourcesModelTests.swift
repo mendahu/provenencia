@@ -683,6 +683,23 @@ struct SourcesModelTests {
         #expect(PVSpacing.widthListWideMax == 1600)
     }
 
+    @Test func publishedDateTextAndSpokenBase() {
+        let en = Locale(identifier: "en_US")
+        let point = CatalogDateValueInput(kind: "point", startYear: 1880, startMonth: 6, startDay: 1)
+        #expect(SourcesRowDate.line(point, locale: en) == "1 Jun 1880")
+        #expect(SourcesRowDate.line(
+            CatalogDateValueInput(kind: "point", phrase: "in the reign of Victoria"), locale: en
+        ) == "in the reign of Victoria")
+        #expect(SourcesRowDate.line(nil, locale: en) == nil)
+        #expect(SourcesRowDate.line(CatalogDateValueInput(kind: "range", startYear: 1834), locale: en) == nil)
+        #expect(SourcesRowDate.help(point, locale: en) == "Published 1 Jun 1880")
+        #expect(SourcesRowDate.help(nil, locale: en) == nil)
+        #expect(
+            SourcesListRow.spokenBase(title: "T", type: "Census", ref: "SRC-1", date: nil, locale: en)
+                == "T, Census, no published date, SRC-1"
+        )
+    }
+
     @Test func listReadsEachGraphsProgress() async {
         let store = FakeStore()
         let sources = [source(id: "s1", title: "Census", typeID: "t1")]
