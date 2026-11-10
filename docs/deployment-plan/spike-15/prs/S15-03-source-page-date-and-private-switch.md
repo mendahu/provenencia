@@ -1,10 +1,10 @@
 # S15-03 — The Source page shows the date and the Private switch
 
-**Status:** Blocked — on board S15-D1
+**Status:** Draft
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S15-D1](../design/S15-D1-source-page.md), board not drawn yet
-**Board:** — (ask the user how the agreed board reaches the implementer when it is agreed; until then **Design → macOS** describes each frame in words from the brief)
+**Brief:** [S15-D1](../design/S15-D1-source-page.md), board drawn and validated 2026-11-10
+**Board:** [Claude Design — Source Detail](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK), page *Source page*: rows "The page" (page, page-wide, page-new, header-wrap), "Date and Private" (date-add, date-edit, date-cleared, date-refused, private-failed, deleted), "Metadata and citation", "Artifact cards", "Evidence graphs"; each frame toggles Regular 1102 / Wide 2296. Decisions panel entries "S15-D1 · SD-1 / SD-2" through "S15-D1 · kit". The implementer reads it with the Artifact tool's `read` on that link, path "project/Source.dc.html" (frames and decisions) and "project/Source page.dc.html" (frame list)
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-D1
 **Blocks:** S15-09, S15-23, S15-25 (they build on the page layout this PR adds)
 **Branch:** `s15-03-source-page-date-and-private-switch`
@@ -140,13 +140,13 @@ On the Source page, a researcher sets, changes and clears the Source's own date 
 | D-8 | `SourceDateFormModel` *(new)* in `macos/App/Features/Sources/SourceDateFormModel.swift`, shaped as `SourceGraphFormModel`: `draft: DateValueDraft`, `initial: CatalogDateValueInput?`, `clears: Bool`, `isSaving`, `saveError: String?`, `isDirty`, `canSave` (`clears || (!draft.isBlank && draft.isValid)`), `clear()` (empties the draft, `clears = true`), `save() async -> Bool`. A one-line modifier `.sourceDateDialog($model.identity.dateForm)` *(new)* in `SourceDateDialog.swift` *(new)* over `pvFormDialog(item:)`. `SourceIdentitySection` gains `dateForm: SourceDateFormModel?`, `openDate()` | Third dialog in the page's pattern | State spread across `SourceIdentitySection` |
 | D-9 | Clear date empties the form inside the dialog; Save then writes no date. No separate Confirm: the dialog's Save is the confirmation, Cancel keeps the date, and the caption says what Save will do | No Confirm sheet over the FormDialog sheet (one sheet per host) | A Confirm over the dialog |
 | D-10 | Each write calls the store, then `context.applySource(updated, effects:)`; the header reads `context.source?.date` and `.isPublic` | The RPCs return the Source and effects, as `setSourceCover` | A workspace re-read |
-| D-11 | The switch binds to `Binding(get: { identity.pendingPrivate ?? !(source.isPublic) }, set: { v in Task { await identity.setPrivate(v) } })`; `pendingPrivate: Bool?` *(new)* is set while the write runs and cleared after; disabled while non-nil. On failure the binding reads the saved value again and `pageError = context.fail(error)` | No local copy to drift | Optimistic `@State` |
+| D-11 | The switch binds to `Binding(get: { identity.pendingPrivate ?? !(source.isPublic) }, set: { v in Task { await identity.setPrivate(v) } })`; `pendingPrivate: Bool?` *(new)* is set while the write runs and cleared after; disabled while non-nil. On failure the binding reads the saved value again and the page's error Callout shows the board's titled form: `SourcePageContext.pageErrorTitle: String?` *(new, cleared with `pageError`)* = `L10n.Sources.privateFailedTitle`, `pageError = L10n.Sources.privateFailedMessage(detail:)` with `context.fail(error)` as the detail (a nil from `fail` sets neither: the page is leaving). The page's Callout passes `title:` when set (`PVCallout(tone:title:message:)`) | No local copy to drift; the board's private-failed frame | Optimistic `@State`; an untitled message (the board titles it) |
 | D-12 | `SourcePageModel.apply` resets `identity` only when `id`, `title`, `sourceTypeID` or `description` differ, through `SourceIdentitySection.resetIfChanged(from: CatalogSource?, to: CatalogSource)` *(new)* | Flipping Private keeps a description edit (AC-2.4) | Exempting the date dialog alone |
 | D-13 | `CatalogSource` gains `date: CatalogDateValueInput?` and `isPublic: Bool = true`; `GoStore.mapSource` sets `date` only when `s.hasDate` | Smallest model the page needs | Adding `dateSortKey` now — S15-04's |
 | D-14 | Store methods *(new)*: `setSourceDate(projectDir:userID:sourceID:date: CatalogDateValueInput?) async throws -> (CatalogSource, CatalogWriteEffects)`, `setSourcePublic(projectDir:userID:sourceID:isPublic: Bool) async throws -> (CatalogSource, CatalogWriteEffects)`; `CoreMethod.setSourceDate`, `.setSourcePublic`. `FakeStore` stores them, bumps the revision, and has `setSourceDateError`, `setSourcePublicError`, `setSourceCoverError`, `getSourceWorkspaceError` *(new)* hooks. `FakeStore.sourceNotFound` *(new)* = `CoreInvokeError.coded(status: 1, code: "sources.not_found", kind: .notFound, params: [])`, thrown by its Source writes for an unknown id in place of `StoreBoom.boom` | Mirrors `setSourceCover`; the gone path is testable | — |
 | D-15 | The refused date shows the shared `L10n.Errors.dateValuesInvalid`, whose copy changes to "This date isn't valid. Check the year, month and day." (UX-2); the composer shows the same | Fix the shared message, not one page | A page-only key |
-| D-16 | Page shell: `PVPageColumns(headerPinned: true, scrollResetKey: sourceID, primaryFill: true, header: { SourcePageIdentityHeader(model:) }, primary: { … })`, no secondary. The header always passes its view (it renders nothing while there is no workspace), drops its frame, gutter, `surfaceCard` background and `PVDivider`: the kit draws the band's rule. Loading, the load-error Callout and `pageError` go at the top of `primary`. `SourcePageLoadingShell` becomes `PVPageColumns(headerPinned: true, header:, primary: { ProgressView })` | The kit owns page chrome | Keeping the header's own card and rule — a double rule |
-| D-17 | `SourcePageOverviewLayout` *(new)*, a feature-local `Layout` in `SourcePageView.swift` over three fixed subviews: A (Description, then Credibility), M (Metadata), R (graphs, Artifacts, Notes). It reads `pvWidthClass` and the proposed width (the primary's, full pane less gutters at Wide through `primaryFill`). Regular: a group of `min(widthContentMax, width)`, left-aligned as today; A and M side by side with `PVSpacing.space11` between, each half the group; both proposed the taller one's height so Credibility sits at the bottom of A (A keeps its `Spacer`); R below at the group width after `space9`. Wide: `PVPageColumnsMetrics.split(available: width, sideMax: PVSpacing.widthSecondaryMax)`; A then R stacked in the main column, M in the side column, top-aligned; the group centered. `SourcePageOverviewHeightKey` and `metadataColumnHeight` go | No section changes parent, so drafts survive 1600 by construction; S15-23 adds the preview as a fourth subview in M's column | Moving sections between primary and secondary by `if` — loses `@State`; an always-present empty secondary — stacks a gap |
+| D-16 | Page shell: `PVPageColumns(headerPinned: true, scrollResetKey: sourceID, primaryFill: true, fillMax: PVSpacing.widthContentMax + PVSpacing.space9 + PVSpacing.widthSecondaryMax, header: { SourcePageIdentityHeader(model:) }, primary: { … })`, no secondary. The header always passes its view (it renders nothing while there is no workspace), drops its frame, gutter, `surfaceCard` background and `PVDivider`: the kit draws the band's rule. Loading, the load-error Callout and `pageError` go at the top of `primary`. `SourcePageLoadingShell` becomes `PVPageColumns(headerPinned: true, header:, primary: { ProgressView })`. **Kit extension (board SD-W1: the header band keeps the group width at Wide):** `PVPageColumns` and `PVPageColumnsMetrics.columnWidths` gain `fillMax: CGFloat? = nil` *(new)*; in full-width mode at Wide with no secondary, a non-nil `fillMax` caps the primary at `min(pane − 2·gutterPage, fillMax)`, centered, and the band is that primary width (not `widthContentMax`). Every existing caller passes nil and is unchanged | The kit owns page chrome; one kit option gives the board's band | Keeping the header's own card and rule — a double rule; the header measuring the group itself — a second band |
+| D-17 | `SourcePageOverviewLayout` *(new)*, a feature-local `Layout` in `SourcePageView.swift` over three fixed subviews: A (Description, then Credibility), M (Metadata), R (graphs, Artifacts, Notes). It reads `pvWidthClass` and the proposed width (the primary's: at Wide the group width D-16's `fillMax` gives, 1180 + `space9` + 480 at a 2296 pane). Regular: a group of `min(widthContentMax, width)`, left-aligned as today; A and M side by side with `PVSpacing.space11` between, each half the group; both proposed the taller one's height so Credibility sits at the bottom of A (A keeps its `Spacer`); R below at the group width after `space9`. Wide: `PVPageColumnsMetrics.split(available: width, sideMax: PVSpacing.widthSecondaryMax)`; A then R stacked in the main column, M in the side column, top-aligned (the board: main 1180, side 480 at a 2296 pane). `SourcePageOverviewHeightKey` and `metadataColumnHeight` go | No section changes parent, so drafts survive 1600 by construction; S15-23 adds the preview as a fourth subview in M's column | Moving sections between primary and secondary by `if` — loses `@State`; an always-present empty secondary — stacks a gap |
 | D-18 | Copy keys use `L10n.Sources.sourceDate*` (keys `sources.page.sourceDate.*`) and identifiers `sources.page.sourceDate.*`; the shared form keeps its `sources.page.date*` keys | One prefix, one meaning | Sharing the form's prefix |
 
 **Rules this plan bends.** None.
@@ -162,6 +162,9 @@ On the Source page, a researcher sets, changes and clears the Source's own date 
 | `CatalogSource.date`, `.isPublic` | fields | `coverMode` | Extends the struct |
 | `setSourceDate`, `setSourcePublic`, `CoreMethod` cases, FakeStore hooks, `FakeStore.sourceNotFound` | func | `setSourceCover`, `updateSourceError` | Mirrors them |
 | `SourceDateFormModel`, `sourceDateDialog(_:)` | model, modifier | `SourceGraphFormModel`, `sourceGraphFormDialog(_:)` | Same pattern, new form |
+| `PVPageColumns(fillMax:)`, `PVPageColumnsMetrics.columnWidths(…fillMax:)` | kit param | `primaryFill` | Extends full-width mode with a cap; the band follows the primary |
+| "Reads as" strip in the date dialog | snowflake in `SourceDateDialog.swift` | the board's date dialog | Dialog-level, outside `DateValueEditorForm` (the shared form is unchanged) |
+| `SourcePageContext.pageErrorTitle` | state | `pageError` | Lets the page Callout carry the board's title |
 | `SourcePageContext.fail`, `.gone` | func, state | the 16 `L10n.Errors.message(for:)` sites | Replaces them |
 | `leavesForSectionRoot(when:notice:)` | modifier param | `leavesForSectionRoot(when:)`, `ConclusionDetailPage`'s `.onChange` | Extends the shared leave; absorbs the Person page's copy |
 | `SourceIdentitySection.resetIfChanged`, `pendingPrivate`, `setPrivate`, `openDate`, `dateForm` | members | `reset()`, the title/type flows | Extends the header's model |
@@ -219,7 +222,7 @@ The board is not agreed. Until it is, the arrangement is the brief's recommendat
 | Meta row: ref · type · date · Private | header snowflake | `SourcePageIdentityHeader.swift` `metaRow` | SD-1; Private at the row's end, not with Copy and Delete; the row wraps under its ref when it does not fit (`PVFlowLayout`) |
 | Date text | `Text` + `PVIcon(.calendar)` through `DateRowDisplay.line(date:)` | header | accessibility label `L10n.Sources.sourceDateAccessibility(date:)` |
 | Edit date / Add date | `PVIconButton(.penLine, size: .sm)` / `PVButton(variant: .ghost, size: .sm, icon: .calendar)` | header | identifiers `sources.page.sourceDate.edit`, `.add`; focus returns through `FocusClaim.claim` after the dialog closes, as the type pencil |
-| Date dialog | `.sourceDateDialog` over `pvFormDialog(item:)` with `DateValueEditorForm(draft:, accessibilityIdentifierPrefix: "sources.page.sourceDate")` | `SourceDateDialog.swift` | `PVCallout(tone: .danger)` above the form for `saveError` |
+| Date dialog | `.sourceDateDialog` over `pvFormDialog(item:)` with `DateValueEditorForm(draft:, accessibilityIdentifierPrefix: "sources.page.sourceDate")` | `SourceDateDialog.swift` | `PVCallout(tone: .danger)` above the form for `saveError`; under the form a "Reads as" strip (sunken fill, subtle border, small radius; micro caps label, then `DateRowDisplay.line(date: draft.toInput())` in mono caption), as the board's date-add and date-edit frames; dialog width 560 |
 | Clear date | `PVButton(variant: .ghost, tone: .danger, size: .sm)` under the form, only when `initial != nil`; caption under it when `clears` | dialog | D-9 |
 | Private switch | `PVSwitch(L10n.Sources.privateSwitch, isOn:, isDisabled:)` + `.help(L10n.Sources.privateSwitchHelp)` | header | identifier `sources.page.private` |
 | Deleted notice | `leavesForSectionRoot(when:notice:)` | `WorkspaceNavigation.swift` | D-7 |
@@ -230,15 +233,17 @@ States: undated, dated, dialog saving, dialog clearing, refused date, switch sav
 
 New, `L10n.Sources`:
 
-- `sourceDateAdd` = "Add date"; `sourceDateEdit` = "Edit date"; `sourceDateAccessibility(date:)` = "Date, %@"
+- `sourceDateAdd` = "Add publication date" (board); `sourceDateEdit` = "Edit date"; `sourceDateAccessibility(date:)` = "Date, %@"
 - `sourceDateDialogTitle` = "Source date"; `sourceDateDialogSubtitle` = "When the record was made or first published."; `sourceDateSave` = "Save"
 - `sourceDateClear` = "Clear date"; `sourceDateClearsCaption` = "Saving removes this Source's date."
+- `sourceDateReadsAs` = "Reads as" (board)
 - `privateSwitch` = "Private"; `privateSwitchHelp` = "Private Sources will be kept out of sharing. Nothing else changes yet."
+- `privateFailedTitle` = "Couldn’t change Private"; `privateFailedMessage(detail:)` = "The Source was not changed. Try again. %@" (board)
 - `sourceDeletedNotice(title:)` = "“%@” was deleted."
 
 New, `L10n.Errors.sourcesNotFound` = "This Source no longer exists.", with `case "sources.not_found":` in `message(for:)`.
 Changed: `error.datevalues.invalid` "Invalid date value." → "This date isn't valid. Check the year, month and day." (the composer shows it too).
-The board's wording replaces any of these.
+These are the board's strings. The dialog's discard check keeps the kit's standard copy ("Discard changes?" / "Your changes will be lost."); the board's per-dialog body ("The date you changed is not kept. Nothing has been saved.") is not adopted.
 
 ## 7. Steps
 
@@ -273,9 +278,9 @@ Do: SD-1 – SD-6, SD-8 per **macOS** and the board.
 Check: `xcodebuild test` passes; manual checks 1–3, 5.
 
 **STEP-7 — Page columns and the overview layout**
-Files: `SourcePageView.swift`, `SourcePageIdentityHeader.swift`, `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift` *(new)*.
-Do: D-16, D-17.
-Check: T-9 passes; manual check 6.
+Files: `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift`, `macos/ProvenenciaTests/PVPageColumnsTests.swift`, `SourcePageView.swift`, `SourcePageIdentityHeader.swift`, `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift` *(new)*. Skill: `add-ui-component`.
+Do: D-16 (the `fillMax` kit option first), D-17.
+Check: T-9, T-10 and the existing `PVPageColumnsTests` pass; manual check 6.
 
 **STEP-8 — Version and docs**
 Files: `VERSION`, `core/version.go`, `MARKETING_VERSION` in the Xcode project (0.6.0); `../completed.md`; `../deployment-plan.md` (map row); this plan (status, Landed note); `../design/README.md` (S15-D1 board line); `docs/source-layer-data-model.md` § 4 (the switch reads "Private"); `docs/macos-client-patterns.md` § 9 (the Source page is on Page columns, not left-aligned); `docs/ideas/wide-layout.md` "Source page" row; `docs/ideas/structural-debt.md` (the two Out lines).
@@ -296,7 +301,8 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-6 | Swift | same file, `privateSwitchSavesRevertsAndKeepsEdits` *(new)* | `setPrivate(true)` → `isPublic == false`; with an internal error → `isPublic == true`, `pageError` set; with `identity.editingDescription` and a draft, `setPrivate(true)` → still editing, draft kept | AC-2.2, AC-2.3, AC-2.4, D-11, D-12 |
 | T-7 | Swift | same file, `writeToADeletedSourceLeaves` *(new)* | `setSourcePublicError`, `updateSourceError`, `setSourceCoverError` each `FakeStore.sourceNotFound` → `model.gone == "“…” was deleted."`, no field error | AC-3.4, D-5 |
 | T-8 | Swift | same file, `readOfADeletedSourceIsGone` *(new)* | `getSourceWorkspaceError = FakeStore.sourceNotFound` → `warmFromSession` → `model.gone == L10n.string(L10n.Errors.sourcesNotFound)`; an internal error → `gone == nil` | AC-3.5, D-6 |
-| T-9 | Swift | `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift` *(new)* | the layout's frames for three fixed-size subviews: Regular 1102 → A and M side by side, equal heights, R below; Wide 2296 → A over R in a `widthContentMax` main column, M beside at `split`'s side width, group centered | AC-4.1, AC-4.2, D-17 |
+| T-9 | Swift | `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift` *(new)* | the layout's frames for three fixed-size subviews: Regular 1102 → A and M side by side, equal heights, R below; Wide at the `fillMax` group → A over R in a 1180 main column, M beside at 480 | AC-4.1, AC-4.2, D-17 |
+| T-10 | Swift | `macos/ProvenenciaTests/PVPageColumnsTests.swift` `fillMaxCapsTheBandAndPrimary` *(new)* | `columnWidths(pane: 2296, widthClass: .wide, hasSecondary: false, primaryFill: true, fillMax: 1180 + space9 + 480)` → primary and band equal `fillMax`; with `fillMax: nil` → today's numbers; at Regular → unchanged | AC-4.1, D-16 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `SourcePageModelTests`, `PersonDetailTests`, handler tests expecting `sources.ErrInvalid` for a missing Source, the Swift vocabulary test.
 
@@ -335,20 +341,19 @@ On a project with a census Source with metadata, three graphs and four Artifacts
 | Risk | Mitigation |
 | --- | --- |
 | Metadata rows are cramped in the 340–480pt side column | Manual check 6; the board draws it |
-| `primaryFill`'s header band keeps `widthContentMax` while the overview group at Wide is wider | The board decides; Stop condition if it asks for a band the kit cannot give |
+| `fillMax` changes an existing Page columns caller | Default nil; T-10 pins the existing full-width numbers |
 | The layout's Regular branch differs from today's two-column look | T-9 and manual check 6 against a screenshot of `main` |
 
 **Stop and report if:**
 
 - The agreed board differs from SD-1 – SD-8, SD-W1 or SD-W2 as written here (update the plan first).
-- The board asks for the header band to span the overview group at Wide (`PVPageColumns` would need a new option).
 - A Go caller outside §4 branches on `sql.ErrNoRows` from `sources` (`rg "sources\.(Get|GetTx)\(" --type go`).
 - `DateValueEditorForm` needs a change to work in a dialog.
 - `CoreErrorKind` has no `.notFound` for `FakeStore.sourceNotFound`.
 
 ## 12. Open questions
 
-1. **The board.** S15-D1 is not drawn. When it is agreed: how does it reach the implementer (a link the implementer opens with the Artifact tool's `read`, or exported frames)? The plan's macOS section and Strings are then updated to the board, round 2 of the review runs, and this question closes.
+None. (The board is linked on the **Board** line and read with the Artifact tool. Round 2 of the review runs before the status moves to Planned.)
 
 ## 13. PR
 

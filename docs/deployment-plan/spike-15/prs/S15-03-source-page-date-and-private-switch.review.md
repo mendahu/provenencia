@@ -48,3 +48,15 @@
 - **X-B3 · minor · Reach-for table lacks Switch, Disclosure, ClipboardButton.** Fixed — named in the enhancement note (the Paste block stays verbatim).
 - **X-B4 · minor · New row with no second call site.** Fixed — the preview row is Extend.
 - **X-B5 · nit.** Logged.
+
+## Board validation (2026-11-10)
+
+The S15-D1 board ([Claude Design — Source Detail](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK)) was read against SD-1 – SD-14, SD-W1 and SD-W2. It draws every frame the brief asks for (Regular and Wide by a pane toggle on each frame) and records a decision per requirement. Where it differs from the plan:
+
+- **Header band at Wide spans the group** (SD-W1), which the plan's Stop condition named. Fixed — D-16 adds a `fillMax` option to `PVPageColumns` full-width mode; T-10.
+- **"Add publication date"** in place of "Add date". Adopted — Strings.
+- **A "Reads as" strip** under the date form in the dialog. Adopted as a dialog-level snowflake; `DateValueEditorForm` is unchanged — macOS row, Codebase fit.
+- **A titled Callout for a failed Private flip** ("Couldn’t change Private"). Adopted — D-11, `pageErrorTitle`.
+- **A per-dialog discard body.** Not adopted: the kit's standard FormDialog discard copy stays — Strings.
+
+Round 2 of the review is next; the plan stays Draft until it passes.
