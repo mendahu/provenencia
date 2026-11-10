@@ -1,6 +1,6 @@
 # Review — S15-32 Copy Source can carry the date
 
-Plan: [`S15-32-copy-source-date.md`](S15-32-copy-source-date.md). Brief: [S15-D13](../design/S15-D13-copy-source-dialog.md), reviewed with it.
+Plan: [`S15-32-copy-source-date.md`](S15-32-copy-source-date.md). Brief: [S15-D13](../design/archive/S15-D13-copy-source-dialog.md), reviewed with it.
 
 **Verdict:** Fits with changes — Ready with changes (round 1's only open blocker, X-1, closed when the S15-D13 board was agreed on 2026-11-10)
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). No round 2: round 1 raised no maintainability blocker, and the executability blockers were the board (expected) and the build host.
