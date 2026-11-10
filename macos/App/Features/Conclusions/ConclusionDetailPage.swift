@@ -99,7 +99,7 @@ struct ConclusionDetailPageSectionsContext {
     var pageIdentifier: String
     var lead: ConclusionLeadModel
     /// The section of the page that is open; nil for a kind that offers none.
-    var pageSection: ConclusionPageSection? = nil
+    var openPageSection: ConclusionPageSection? = nil
 }
 
 /// Shared Conclusion detail chrome (S9-24). A view, not a place: the caller
@@ -258,18 +258,17 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     }
 
     /// The open page section: the location's, else the kind's first.
-    private var pageSection: ConclusionPageSection? {
-        offeredPageSections.isEmpty ? nil : (navigation.currentLocation.pageSection ?? offeredPageSections[0])
+    private var openPageSection: ConclusionPageSection? {
+        navigation.currentLocation.openPageSection
     }
 
     /// The open section is reloading behind a value it already shows. Its first load
     /// is the section's own spinner and does not count.
     private var sectionRefreshing: Bool {
-        guard let pageSection else { return false }
-        return [
-            pageSection.queryKey(project: session.projectKey, entityId: entityId),
-            pageSection.companionQueryKey(project: session.projectKey, entityId: entityId),
-        ].contains { $0.map(session.isRefreshing) ?? false }
+        guard let openPageSection else { return false }
+        return openPageSection.reads(project: session.projectKey, entityId: entityId)
+            .filter(\.role.showsRefreshing)
+            .contains { session.isRefreshing($0.key) }
     }
 
     var body: some View {
@@ -287,8 +286,8 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
             case .content(let content, let refreshing):
                 PVPageColumns(
                     headerPinned: !offeredPageSections.isEmpty,
-                    scrollResetKey: pageSection,
-                    primaryFill: pageSection?.fillsWidth ?? false,
+                    scrollResetKey: openPageSection,
+                    primaryFill: openPageSection?.fillsWidth ?? false,
                     header: {
                         ConclusionDetailHeaderBand(
                             content: content,
@@ -297,7 +296,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             lead: lead,
                             pageIdentifier: pageIdentifier,
                             offeredPageSections: offeredPageSections,
-                            pageSection: pageSection,
+                            pageSection: openPageSection,
                             refreshing: refreshing || sectionRefreshing,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
@@ -311,7 +310,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                                     refreshing: refreshing,
                                     pageIdentifier: pageIdentifier,
                                     lead: lead,
-                                    pageSection: pageSection
+                                    openPageSection: openPageSection
                                 )
                             )
                         }

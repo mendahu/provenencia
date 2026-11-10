@@ -85,18 +85,6 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         reads(project: project, entityId: entityId).first { $0.role == role }?.key
     }
 
-    func queryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
-        read(.own, project: project, entityId: entityId)
-    }
-
-    func supportingQueryKeys(project: ProjectKey, entityId: String) -> [CatalogQueryKey] {
-        reads(project: project, entityId: entityId).filter { $0.role == .supporting }.map(\.key)
-    }
-
-    func companionQueryKey(project: ProjectKey, entityId: String) -> CatalogQueryKey? {
-        read(.companion, project: project, entityId: entityId)
-    }
-
     /// The section opts into Page columns' full-width mode: at Wide it fills the pane
     /// between the gutters while the header keeps its measure.
     var fillsWidth: Bool {

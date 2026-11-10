@@ -114,6 +114,7 @@ enum PersonFamilyPreviewData {
                 content: PersonFamilyContent(family: family),
                 projectDir: "/tmp/preview.provenencia",
                 widthClass: .regular,
+                accessibilityIdentifierRoot: "preview",
                 open: { _ in }
             )
         }

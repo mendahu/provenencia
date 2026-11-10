@@ -2,12 +2,13 @@ import SwiftUI
 
 /// The Person page's Sources section (S13-16, board S13-D6): the Sources the person's
 /// records come from, one row each, with a line for every record on that Source's Evidence
-/// graphs. It reads its own query (`ConclusionPageSection.queryKey`) and the Source types
-/// list the place warms beside it, keeps the rows drawn while it reloads, opens a Source on
-/// its page and a record on its graph, with that Subject selected.
+/// graphs. It declares its reads in `ConclusionPageSection.reads` (its own claims, the record
+/// links as companion, the Source types as supporting), keeps the rows drawn while it reloads,
+/// opens a Source on its page and a record on its graph, with that Subject selected.
 struct PersonSourcesSection: View {
     let entityId: String
     let userID: String
+    let pageIdentifier: String
 
     @Environment(WorkspaceSession.self) private var session
     @Environment(WorkspaceNavigation.self) private var navigation
@@ -18,15 +19,18 @@ struct PersonSourcesSection: View {
     /// The Unpromote confirm; another person's page is another view, so it starts fresh.
     @State private var unpromote = UnpromoteFlow()
 
+    private var root: String { ConclusionPageSection.sources.accessibilityIdentifierRoot(pageIdentifier: pageIdentifier) }
+
     var body: some View {
         let orders = session.nameFormat
         let folds = folds
-        let typesHandle: QueryHandle<[CatalogSourceType]>? = session.queryHandle(
-            CatalogQueryKey.sourceTypesList(project: session.projectKey)
-        )
+        let typesHandle: QueryHandle<[CatalogSourceType]>? = ConclusionPageSection.sources
+            .read(.supporting, project: session.projectKey, entityId: entityId)
+            .flatMap { session.queryHandle($0) }
         ConclusionPageSectionHost<[CatalogPersonClaimGroup], PersonSourcesContent, PersonSourcesList>(
             section: .sources,
             entityId: entityId,
+            accessibilityIdentifierRoot: root,
             errorTitle: L10n.Conclusions.sourcesErrorTitle,
             emptyTitle: L10n.Conclusions.sourcesEmptyTitle,
             emptyMessage: L10n.string(L10n.Conclusions.sourcesEmptyMessage),
@@ -43,6 +47,7 @@ struct PersonSourcesSection: View {
             PersonSourcesList(
                 content: content,
                 entityId: entityId,
+                accessibilityIdentifierRoot: root,
                 open: { navigation.go(to: $0) },
                 expand: { self.folds.revealPage($0) },
                 unpromote: unpromote,
@@ -143,6 +148,7 @@ private extension View {
 struct PersonSourcesList: View {
     let content: PersonSourcesContent
     let entityId: String
+    let accessibilityIdentifierRoot: String
     let open: (WorkspaceLocation) -> Void
     let expand: (PersonSourcesContent.Fold) -> Void
     let unpromote: UnpromoteFlow
@@ -184,7 +190,7 @@ struct PersonSourcesList: View {
         }
         .unpromoteConfirm(
             flow: unpromote,
-            accessibilityIdentifierPrefix: "persons.detail.sources.unpromote",
+            accessibilityIdentifierPrefix: "\(accessibilityIdentifierRoot).unpromote",
             onConfirm: confirmAndTrackFocus
         )
         .onChange(of: content) { _, new in
@@ -200,13 +206,13 @@ struct PersonSourcesList: View {
     /// The diagram column: a second host over the section's companion read, so the rows stay
     /// drawn while it loads, fails or reloads.
     private var diagram: some View {
-        let project = session.projectKey
         let focused = focusedGraphID
         let hover = hover
         return ConclusionPageSectionHost<CatalogPersonRecordLinks, PersonRecordLinksContent, PersonRecordLinksColumn>(
             section: .sources,
             entityId: entityId,
-            queryKey: ConclusionPageSection.sources.companionQueryKey(project: project, entityId: entityId),
+            accessibilityIdentifierRoot: accessibilityIdentifierRoot,
+            read: .companion,
             placement: .column(
                 loadingHeight: CircularLinkDiagramStyle.standard.minimumHeight
             ),
@@ -221,6 +227,7 @@ struct PersonSourcesList: View {
         ) { links in
             PersonRecordLinksColumn(
                 content: links,
+                accessibilityIdentifierRoot: accessibilityIdentifierRoot,
                 hover: hover,
                 focusedGraphID: focused,
                 open: { id in
@@ -239,7 +246,7 @@ struct PersonSourcesList: View {
                 if index > 0 { PVDivider() }
                 let fold = PersonSourcesContent.Fold.lines(sourceID: row.id)
                 PersonSourcesRowView(
-                    row: row, open: open, expand: { unfold(fold) }, focused: $focus,
+                    row: row, accessibilityIdentifierRoot: accessibilityIdentifierRoot, open: open, expand: { unfold(fold) }, focused: $focus,
                     revealed: content.firstRevealed(by: fold).map { .graph(claimID: $0) },
                     foldedGraphIDs: content.foldedGraphIDs(by: fold),
                     hover: hover,
@@ -261,7 +268,7 @@ struct PersonSourcesList: View {
                     focusedGraphID: focusedGraphID
                 ) { unfold(.rows) }
                 .padding(.vertical, PVSpacing.space3)
-                .accessibilityIdentifier("persons.detail.sources.more")
+                .accessibilityIdentifier("\(accessibilityIdentifierRoot).more")
             }
         }
         .pvScrollsRowIntoView(scrollTarget, whenRequested: scrollRequest)
@@ -349,6 +356,7 @@ private struct PersonSourcesRowsShowMore: View {
 /// One Source: its title as a link, its type, date and ref, and under the title a line per record.
 private struct PersonSourcesRowView: View {
     let row: PersonSourcesContent.Row
+    let accessibilityIdentifierRoot: String
     let open: (WorkspaceLocation) -> Void
     let expand: () -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
@@ -374,7 +382,7 @@ private struct PersonSourcesRowView: View {
         }
         .padding(.vertical, PVSpacing.space3)
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("persons.detail.sources.row.\(row.id)")
+        .accessibilityIdentifier("\(accessibilityIdentifierRoot).row.\(row.id)")
     }
 
     private var columns: some View {
@@ -400,7 +408,7 @@ private struct PersonSourcesRowView: View {
             PVTitleText(row.title, style: .rowLink, lineLimit: 2)
         }
         .accessibilityLabel(Text(verbatim: L10n.Conclusions.sourcesOpenSource(row.helpTitle)))
-        .accessibilityIdentifier("persons.detail.sources.title.\(row.id)")
+        .accessibilityIdentifier("\(accessibilityIdentifierRoot).title.\(row.id)")
         .help(row.helpTitle)
     }
 
@@ -410,7 +418,7 @@ private struct PersonSourcesRowView: View {
         return VStack(alignment: .leading, spacing: PVSpacing.space2) {
             ForEach(row.lines) { line in
                 PersonSourcesLineView(
-                    line: line, open: open, focused: focused,
+                    line: line, accessibilityIdentifierRoot: accessibilityIdentifierRoot, open: open, focused: focused,
                     highlighted: line.graphID == highlightedGraphID, hover: { hover.id = $0 },
                     unpromoteDisabled: unpromoteDisabled, beginUnpromote: beginUnpromote
                 )
@@ -426,7 +434,7 @@ private struct PersonSourcesRowView: View {
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .personSourcesHighlight(highlightedGraphID.map(foldedGraphIDs.contains) ?? false)
-                .accessibilityIdentifier("persons.detail.sources.more.\(row.id)")
+                .accessibilityIdentifier("\(accessibilityIdentifierRoot).more.\(row.id)")
             }
         }
         .padding(.leading, PersonSourcesColumns.lineIndent)
@@ -446,6 +454,7 @@ private struct PersonSourcesRowView: View {
 /// Every part stays on one line; a line too narrow cuts the Subject's name first.
 private struct PersonSourcesLineView: View {
     let line: PersonSourcesContent.Line
+    let accessibilityIdentifierRoot: String
     let open: (WorkspaceLocation) -> Void
     var focused: FocusState<PersonSourcesFocus?>.Binding
     /// The line's graph is the one highlighted, from a node or from the line itself.
@@ -463,7 +472,7 @@ private struct PersonSourcesLineView: View {
                 .focused(focused, equals: .graph(claimID: line.id))
                 .pvActivatesOnReturn(when: focused.wrappedValue == .graph(claimID: line.id)) { open(line.location) }
                 .accessibilityLabel(line.accessibilityLabel)
-                .accessibilityIdentifier("persons.detail.sources.graph.\(line.id)")
+                .accessibilityIdentifier("\(accessibilityIdentifierRoot).graph.\(line.id)")
             Group {
                 if let graphRef = line.graphRef {
                     Text(verbatim: " · ")
@@ -494,7 +503,7 @@ private struct PersonSourcesLineView: View {
                 when: focused.wrappedValue == .unpromote(claimID: line.id) && !unpromoteDisabled
             ) { beginUnpromote(line) }
             .accessibilityLabel(line.unpromoteAccessibilityLabel)
-            .accessibilityIdentifier("persons.detail.sources.unpromote.\(line.id)")
+            .accessibilityIdentifier("\(accessibilityIdentifierRoot).unpromote.\(line.id)")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 2)
@@ -503,7 +512,7 @@ private struct PersonSourcesLineView: View {
         .contentShape(Rectangle())
         .onHover { hover($0 ? line.graphID : nil) }
         .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("persons.detail.sources.line.\(line.id)")
+        .accessibilityIdentifier("\(accessibilityIdentifierRoot).line.\(line.id)")
     }
 }
 
@@ -532,6 +541,7 @@ private struct PersonSourcesPreview: View {
                     folds: folds
                 ),
                 entityId: Self.entityId,
+                accessibilityIdentifierRoot: "preview",
                 open: { _ in },
                 expand: { folds.revealPage($0) },
                 unpromote: unpromote,

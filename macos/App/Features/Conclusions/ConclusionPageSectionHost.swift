@@ -1,14 +1,14 @@
 import SwiftUI
 
-/// The host of a Person page section that reads its own query
-/// (`ConclusionPageSection.queryKey`): it gets the section's handle, starts
-/// the read, and draws the spinner, the error Callout and the empty state
-/// around the section's `content`. Only the content differs between sections.
+/// The host of a Person page section that reads from its list
+/// (`ConclusionPageSection.reads`): it gets the handle of the section's `read` role
+/// (its own read by default), starts the read, and draws the spinner, the error Callout
+/// and the empty state around the section's `content`. Only the content differs between sections.
 ///
-/// The id root is `persons.detail.<section>`: `.error`, `.empty`, and the root
-/// itself on the content. A second host over a section's companion read
-/// (`ConclusionPageSection.companionQueryKey`) draws in its own region: it passes
-/// `queryKey` and `placement: .column(loadingHeight:)`, and its id root gains `.column`.
+/// The id root is the section's `accessibilityIdentifierRoot(pageIdentifier:)`: `.error`,
+/// `.empty`, and the root itself on the content. A second host over a section's companion
+/// read draws in its own region: it passes `read: .companion` and
+/// `placement: .column(loadingHeight:)`, and its id root gains `.column`.
 struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     /// Where the host draws its states.
     enum Placement {
@@ -22,7 +22,8 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
 
     let section: ConclusionPageSection
     let entityId: String
-    let queryKey: CatalogQueryKey?
+    let accessibilityIdentifierRoot: String
+    let read: ConclusionSectionRead.Role
     let placement: Placement
     let errorTitle: LocalizedStringResource
     let emptyTitle: LocalizedStringResource?
@@ -36,7 +37,8 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     init(
         section: ConclusionPageSection,
         entityId: String,
-        queryKey: CatalogQueryKey? = nil,
+        accessibilityIdentifierRoot: String,
+        read: ConclusionSectionRead.Role = .own,
         placement: Placement = .band,
         errorTitle: LocalizedStringResource,
         emptyTitle: LocalizedStringResource? = nil,
@@ -47,7 +49,8 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     ) {
         self.section = section
         self.entityId = entityId
-        self.queryKey = queryKey
+        self.accessibilityIdentifierRoot = accessibilityIdentifierRoot
+        self.read = read
         self.placement = placement
         self.errorTitle = errorTitle
         self.emptyTitle = emptyTitle
@@ -58,8 +61,8 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     }
 
     private var key: CatalogQueryKey {
-        guard let key = queryKey ?? section.queryKey(project: session.projectKey, entityId: entityId) else {
-            preconditionFailure("\(section.rawValue) reads no query of its own")
+        guard let key = section.read(read, project: session.projectKey, entityId: entityId) else {
+            preconditionFailure("\(section.rawValue) has no \(read) read")
         }
         return key
     }
@@ -70,7 +73,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     }
 
     private var idRoot: String {
-        "persons.detail.\(section.rawValue)" + (columnLoadingHeight == nil ? "" : ".column")
+        accessibilityIdentifierRoot + (columnLoadingHeight == nil ? "" : ".column")
     }
 
     var body: some View {
@@ -140,5 +143,13 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
                     .accessibilityIdentifier(idRoot)
             }
         }
+    }
+}
+
+extension ConclusionPageSection {
+    /// The root of the identifiers inside this section's view: the page's identifier, then the
+    /// section. The section computes it once and passes it to every view that builds an identifier.
+    func accessibilityIdentifierRoot(pageIdentifier: String) -> String {
+        "\(pageIdentifier).\(rawValue)"
     }
 }

@@ -6,6 +6,7 @@ import SwiftUI
 /// scroll with the page. Draws nothing for a person with no records on the read.
 struct PersonRecordLinksColumn: View {
     let content: PersonRecordLinksContent
+    let accessibilityIdentifierRoot: String
     let hover: CircularLinkHover<String>
     let focusedGraphID: String?
     let open: (String) -> Void
@@ -47,7 +48,7 @@ struct PersonRecordLinksColumn: View {
                         hover: hover,
                         focusedID: focusedGraphID,
                         accessibilityLabel: L10n.Conclusions.recordLinksGroupAccessibility(count: content.dataset.nodes.count),
-                        accessibilityIdentifierRoot: "persons.detail.sources",
+                        accessibilityIdentifierRoot: accessibilityIdentifierRoot,
                         onOpen: open,
                         focus: focus
                     )

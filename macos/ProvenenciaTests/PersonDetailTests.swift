@@ -459,6 +459,13 @@ struct PersonDetailTests {
         #expect(competing.rows[3].shown.badge == nil && competing.rows[4].shown.badge == nil)
     }
 
+    @Test func sectionIdentifierRoots() {
+        for section in [ConclusionPageSection.family, .timeline, .sources] {
+            #expect(section.accessibilityIdentifierRoot(pageIdentifier: "persons.detail")
+                == "persons.detail.\(section.rawValue)")
+        }
+    }
+
     @Test func sectionReads() {
         let project = ProjectKey(projectDir: "/tmp/section-keys.provenencia")
         let own = { (key: CatalogQueryKey) in ConclusionSectionRead(key: key, role: .own) }
