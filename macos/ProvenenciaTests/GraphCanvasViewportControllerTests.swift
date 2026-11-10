@@ -6,7 +6,6 @@ import Testing
 @MainActor
 struct GraphCanvasViewportControllerTests {
     private struct Rig {
-        let window: NSWindow
         let scrollView: NSScrollView
         let document: GraphCanvasDocumentView
         let controller: GraphCanvasViewportController
@@ -25,11 +24,11 @@ struct GraphCanvasViewportControllerTests {
             frame: NSRect(x: 0, y: 0, width: 4_000, height: 4_000)
         )
         scrollView.documentView = document
-        let window = hostInBorderlessWindow(nsView: scrollView, size: CGSize(width: 1_000, height: 800))
+        hostInBorderlessWindow(nsView: scrollView, size: CGSize(width: 1_000, height: 800))
         scrollView.layoutSubtreeIfNeeded()
         let controller = GraphCanvasViewportController()
         controller.scrollView = scrollView
-        return Rig(window: window, scrollView: scrollView, document: document, controller: controller)
+        return Rig(scrollView: scrollView, document: document, controller: controller)
     }
 
     private func nextTurn() async {

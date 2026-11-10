@@ -7,6 +7,7 @@ import Testing
 /// The window is never shown. Mark the suite `.hostedWindows`: the trait keeps
 /// the window alive for the test and closes it when the test ends.
 @MainActor
+@discardableResult
 func hostInBorderlessWindow<V: View>(
     _ view: V,
     windowSize: CGSize,
@@ -22,6 +23,7 @@ func hostInBorderlessWindow<V: View>(
 /// Hosts an AppKit `view` as the content view of a borderless window of `size`.
 /// Never shown; the `.hostedWindows` trait closes it.
 @MainActor
+@discardableResult
 func hostInBorderlessWindow(nsView view: NSView, size: CGSize) -> NSWindow {
     let window = testWindow(size: size)
     window.contentView = view
@@ -31,6 +33,7 @@ func hostInBorderlessWindow(nsView view: NSView, size: CGSize) -> NSWindow {
 /// The one builder for test windows: never ordered in, tracked by the
 /// `.hostedWindows` trait.
 @MainActor
+@discardableResult
 func testWindow(size: CGSize, styleMask: NSWindow.StyleMask = .borderless) -> NSWindow {
     trackTestWindow(
         NSWindow(

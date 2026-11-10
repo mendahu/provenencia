@@ -51,11 +51,11 @@ struct PVWidthClassTests {
         let view = WidthClassProbe(box: box)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvMeasuresWidthClass()
-        _ = hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
+        hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
         #expect(await waitUntil { box.seen == .wide })
 
         let bare = WidthClassBox()
-        _ = hostInBorderlessWindow(
+        hostInBorderlessWindow(
             WidthClassProbe(box: bare), windowSize: CGSize(width: 2000, height: 400)
         )
         #expect(await waitUntil { bare.seen == .regular })

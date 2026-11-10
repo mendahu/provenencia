@@ -13,7 +13,7 @@ struct ArtifactPDFViewportPageTests {
             reportedPages.append(page)
         }
 
-        _ = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")
@@ -34,7 +34,7 @@ struct ArtifactPDFViewportPageTests {
         let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
         let host = ArtifactFileFixtures.pdfHost(document: document) { _ in }
 
-        _ = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")
@@ -70,7 +70,7 @@ struct ArtifactPDFViewportPageTests {
             page = reported
         }
 
-        _ = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")

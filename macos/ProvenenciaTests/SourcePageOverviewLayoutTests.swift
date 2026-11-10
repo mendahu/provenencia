@@ -36,18 +36,18 @@ private struct OverviewProbe: View {
 struct SourcePageOverviewLayoutTests {
     private func host(
         width: CGFloat, widthClass: PVWidthClass, errorHeight: CGFloat
-    ) async -> (OverviewFrames, NSWindow) {
+    ) async -> OverviewFrames {
         let frames = OverviewFrames()
-        let (window, _) = hostInBorderlessWindow(
+        hostInBorderlessWindow(
             OverviewProbe(frames: frames, widthClass: widthClass, errorHeight: errorHeight),
             windowSize: CGSize(width: width, height: 800)
         )
         _ = await waitUntil { frames.error != nil && frames.body != nil && frames.side != nil && frames.rest != nil }
-        return (frames, window)
+        return frames
     }
 
     @Test func regularPlacesDescriptionBesideMetadataThenTheRest() async throws {
-        let (frames, _) = await host(width: 1038, widthClass: .regular, errorHeight: 30)
+        let frames = await host(width: 1038, widthClass: .regular, errorHeight: 30)
         let error = try #require(frames.error), body = try #require(frames.body)
         let side = try #require(frames.side), rest = try #require(frames.rest)
         let half: CGFloat = (1038 - PVSpacing.space11) / 2
@@ -61,7 +61,7 @@ struct SourcePageOverviewLayoutTests {
     }
 
     @Test func anEmptyErrorAddsNoGap() async throws {
-        let (frames, _) = await host(width: 1038, widthClass: .regular, errorHeight: 0)
+        let frames = await host(width: 1038, widthClass: .regular, errorHeight: 0)
         let body = try #require(frames.body)
         #expect(body.minY == 0)
     }
@@ -70,7 +70,7 @@ struct SourcePageOverviewLayoutTests {
         let group = PVPageColumnsMetrics.split(
             available: 2296 - 2 * PVSpacing.gutterPage, sideMax: PVSpacing.widthSecondaryMax
         )
-        let (frames, _) = await host(width: group.group, widthClass: .wide, errorHeight: 30)
+        let frames = await host(width: group.group, widthClass: .wide, errorHeight: 30)
         let error = try #require(frames.error), body = try #require(frames.body)
         let side = try #require(frames.side), rest = try #require(frames.rest)
         #expect(group.main == 1180 && group.side == 480)

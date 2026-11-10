@@ -43,7 +43,7 @@ struct WorkspaceDestinationHostTests {
         navigation: WorkspaceNavigation,
         session: WorkspaceSession,
         store: FakeStore
-    ) -> (NSWindow, NSHostingView<some View>) {
+    ) {
         hostInBorderlessWindow(
             WorkspaceDestinationHost(
                 userID: "user-1",
@@ -61,7 +61,7 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let navigation = WorkspaceNavigation()
         navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-a", title: "Jones"))
-        let _ = mountHost(navigation: navigation, session: session, store: store)
+        mountHost(navigation: navigation, session: session, store: store)
 
         let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
         let loadedA = await waitUntil(timeout: .seconds(15)) {
@@ -97,7 +97,7 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let (navigation, directory) = try navigationOnCanvas(graphId: "g-x")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let _ = mountHost(navigation: navigation, session: session, store: store)
+        mountHost(navigation: navigation, session: session, store: store)
 
         let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
         #expect(fellBack)
@@ -110,7 +110,7 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let (navigation, directory) = try navigationOnCanvas(graphId: "g-a")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let _ = mountHost(navigation: navigation, session: session, store: store)
+        mountHost(navigation: navigation, session: session, store: store)
 
         let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
         let loaded = await waitUntil(timeout: .seconds(15)) {
