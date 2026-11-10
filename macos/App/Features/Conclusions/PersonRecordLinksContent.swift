@@ -44,14 +44,9 @@ struct PersonRecordLinksContent: Equatable {
             ids.insert(graph.graphID)
             graphs.append(graph)
         }
-        if links.notCounted {
-            partial = .notCounted
-        } else if links.linesDropped || graphsCut {
-            partial = .leftOut
-        } else {
-            partial = nil
-        }
-        let notCounted = links.notCounted
+        let reading: Partial? =
+            if links.notCounted { .notCounted } else if links.linesDropped || graphsCut { .leftOut } else { nil }
+        partial = reading
         // Go sends at most `persondetail.maxRecordLinkLines` lines, strong first; every line it sends is an arc, in the read's order.
         var arcs: [CircularLinkArc<String>] = []
         for pair in links.pairs where Self.isKept(pair, in: ids) {
@@ -78,7 +73,8 @@ struct PersonRecordLinksContent: Equatable {
                 id: graph.graphID,
                 label: label,
                 help: L10n.Conclusions.recordLinksNodeHelp(graph: graphTitle, source: sourceTitle),
-                accessibilityLabel: notCounted
+                // A node with no line in a drawing that left some out may have lost its lines.
+                accessibilityLabel: reading == .notCounted || (reading == .leftOut && connected == 0)
                     ? L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: label, graph: graphTitle, source: sourceTitle)
                     : connected == 0
                     ? L10n.Conclusions.recordLinksNodeApartAccessibility(ref: label, graph: graphTitle, source: sourceTitle)
