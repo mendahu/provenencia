@@ -6,7 +6,7 @@ import Testing
 @Suite @MainActor
 struct AppLaunchTests {
     @Test func hostRunsTheTestApp() {
-        #expect(ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil)
+        #expect(ProvenenciaMain.isTestHost)
         #expect(NSApplication.shared.activationPolicy() == .accessory)
     }
 

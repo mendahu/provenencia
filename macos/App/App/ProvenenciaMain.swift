@@ -5,8 +5,12 @@ import SwiftUI
 /// the researcher's scene.
 @main
 enum ProvenenciaMain {
+    static var isTestHost: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+
     static func main() {
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+        if isTestHost {
             TestHostApp.main()
         } else {
             ProvenenciaApp.main()
