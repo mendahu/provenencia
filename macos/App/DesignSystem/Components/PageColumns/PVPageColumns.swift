@@ -4,6 +4,29 @@ import SwiftUI
 /// without a window. Not generic, so a caller can reach them without naming
 /// the page's three view types.
 enum PVPageColumnsMetrics {
+    /// Where a group of `group` starts inside `width`: centered.
+    static func groupX(in width: CGFloat, group: CGFloat) -> CGFloat {
+        (width - group) / 2
+    }
+
+    /// The page's column widths for a proposal as the layout reads them: `columnWidths`, with
+    /// the side stacked under the main whenever there is a side column and the class is not Wide.
+    static func layoutWidths(
+        proposal: ProposedViewSize, widthClass: PVWidthClass, hasSecondary: Bool,
+        primaryFill: Bool, fillSplitSideMax: CGFloat?
+    ) -> PVPageSideColumnWidths {
+        let w = columnWidths(
+            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary,
+            primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
+        )
+        return PVPageSideColumnWidths(
+            main: w.primary,
+            side: w.secondary,
+            group: w.group,
+            stacked: hasSecondary && widthClass != .wide
+        )
+    }
+
     /// The id of the zero-height view at the very top of the scroll content.
     static let topAnchor = "pv.pageColumns.top"
     /// The scroll view's coordinate space, for a section that measures its rows in it.
@@ -252,15 +275,9 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         let (widthClass, hasSecondary, primaryFill) = (widthClass, hasSecondary, primaryFill)
         let fillSplitSideMax = fillSplitSideMax
         return PVPageColumnsLayout(widths: { proposal in
-            let w = PVPageColumnsMetrics.columnWidths(
+            PVPageColumnsMetrics.layoutWidths(
                 proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary,
                 primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
-            )
-            return PVPageSideColumnWidths(
-                main: w.primary,
-                side: w.secondary,
-                group: w.group,
-                stacked: hasSecondary && widthClass != .wide
             )
         }) {
             VStack(alignment: .leading, spacing: 0) { primary }
@@ -361,6 +378,13 @@ struct PVPageVisibleRect<Content: View>: View {
     }
 }
 
+extension LayoutSubviews {
+    /// A page `Layout`'s `fit` for its static `arrange`.
+    func fit(_ index: Int, _ width: CGFloat) -> CGSize {
+        self[index].sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+}
+
 /// Places a main column and, when there is one, a side column: side by side, the
 /// group centered, or stacked, the side under the main. Sizes itself from the
 /// proposed width alone, so it holds no state and crossing a breakpoint keeps the
@@ -374,40 +398,49 @@ struct PVPageColumnsLayout: Layout {
         proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? w.group
     }
 
+    /// The frames of the main and side columns, relative to the layout's origin, and the
+    /// overall height, for a layout `width` wide. `fit` is a subview's size at a proposed
+    /// width; the side's is asked for only when there is a side column.
+    static func arrange(
+        width: CGFloat, widths: PVPageSideColumnWidths, fit: (Int, CGFloat) -> CGSize
+    ) -> (main: CGRect, side: CGRect?, height: CGFloat) {
+        let x = PVPageColumnsMetrics.groupX(in: width, group: widths.group)
+        let main = fit(0, widths.main)
+        let mainFrame = CGRect(x: x, y: 0, width: widths.main, height: main.height)
+        guard let sideWidth = widths.side else { return (mainFrame, nil, main.height) }
+        let side = fit(1, sideWidth)
+        if widths.stacked {
+            let sideFrame = CGRect(
+                x: x, y: main.height + PVSpacing.space9, width: sideWidth, height: side.height
+            )
+            return (mainFrame, sideFrame, main.height + PVSpacing.space9 + side.height)
+        }
+        let sideFrame = CGRect(
+            x: x + widths.main + PVSpacing.space9, y: 0, width: sideWidth, height: side.height
+        )
+        return (mainFrame, sideFrame, max(main.height, side.height))
+    }
+
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
         let w = widths(proposal)
-        let main = subviews[0].sizeThatFits(ProposedViewSize(width: w.main, height: nil))
-        var height = main.height
-        if let sideWidth = w.side {
-            let side = subviews[1].sizeThatFits(ProposedViewSize(width: sideWidth, height: nil))
-            height = w.stacked
-                ? main.height + PVSpacing.space9 + side.height
-                : max(main.height, side.height)
-        }
-        return CGSize(width: pane(proposal, w), height: height)
+        let width = pane(proposal, w)
+        let placed = Self.arrange(width: width, widths: w, fit: subviews.fit)
+        return CGSize(width: width, height: placed.height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
         let w = widths(ProposedViewSize(width: bounds.width, height: nil))
-        let x = bounds.minX + (bounds.width - w.group) / 2
-        let main = subviews[0].sizeThatFits(ProposedViewSize(width: w.main, height: nil))
-        subviews[0].place(
-            at: CGPoint(x: x, y: bounds.minY),
-            anchor: .topLeading,
-            proposal: ProposedViewSize(width: w.main, height: main.height)
-        )
-        guard let sideWidth = w.side else { return }
-        let side = subviews[1].sizeThatFits(ProposedViewSize(width: sideWidth, height: nil))
-        let origin = w.stacked
-            ? CGPoint(x: x, y: bounds.minY + main.height + PVSpacing.space9)
-            : CGPoint(x: x + w.main + PVSpacing.space9, y: bounds.minY)
-        subviews[1].place(
-            at: origin,
-            anchor: .topLeading,
-            proposal: ProposedViewSize(width: sideWidth, height: side.height)
-        )
+        let placed = Self.arrange(width: bounds.width, widths: w, fit: subviews.fit)
+        for (index, frame) in [placed.main, placed.side].enumerated() {
+            guard let frame else { continue }
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: frame.width, height: frame.height)
+            )
+        }
     }
 }
 
@@ -440,7 +473,10 @@ private struct PVPageColumnsBandLayout: Layout {
         let w = group(ProposedViewSize(width: bounds.width, height: nil))
         let size = child.sizeThatFits(ProposedViewSize(width: w.group, height: nil))
         child.place(
-            at: CGPoint(x: bounds.minX + (bounds.width - w.group) / 2, y: bounds.minY),
+            at: CGPoint(
+                x: bounds.minX + PVPageColumnsMetrics.groupX(in: bounds.width, group: w.group),
+                y: bounds.minY
+            ),
             anchor: .topLeading,
             proposal: ProposedViewSize(width: w.group, height: size.height)
         )

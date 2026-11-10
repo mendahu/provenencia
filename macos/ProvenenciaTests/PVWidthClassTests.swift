@@ -34,30 +34,34 @@ struct PVWidthClassTests {
         #expect(PVSpacing.widthWideBreakpoint == 1600)
     }
 
-    @Test func modifierFollowsTheWindow() async {
+    @Test func modifierFollowsTheWindow() {
         let box = WidthClassBox()
         let view = WidthClassProbe(box: box)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvMeasuresWidthClass()
-        let (window, _) = hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
-        #expect(await waitUntil { box.seen == .wide })
+        let (window, host) = hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
+        host.layoutSubtreeIfNeeded()
+        #expect(box.seen == .wide)
 
         window.setContentSize(NSSize(width: 1200, height: 400))
-        #expect(await waitUntil { box.seen == .regular })
+        host.layoutSubtreeIfNeeded()
+        #expect(box.seen == .regular)
     }
 
-    @Test func aFilledHostMeasuresTheSpaceNotTheChild() async {
+    @Test func aFilledHostMeasuresTheSpaceNotTheChild() {
         let box = WidthClassBox()
         let view = WidthClassProbe(box: box)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvMeasuresWidthClass()
-        hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
-        #expect(await waitUntil { box.seen == .wide })
+        let (_, filled) = hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
+        filled.layoutSubtreeIfNeeded()
+        #expect(box.seen == .wide)
 
         let bare = WidthClassBox()
-        hostInBorderlessWindow(
+        let (_, probe) = hostInBorderlessWindow(
             WidthClassProbe(box: bare), windowSize: CGSize(width: 2000, height: 400)
         )
-        #expect(await waitUntil { bare.seen == .regular })
+        probe.layoutSubtreeIfNeeded()
+        #expect(bare.seen == .regular)
     }
 }

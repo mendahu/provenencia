@@ -25,6 +25,24 @@ struct WorkspaceNavigationTests {
         return (navigation, url)
     }
 
+    @Test func leavingAGonePageShowsTheNoticeAndRewritesTheEntry() throws {
+        for notice in ["Gone", nil] as [String?] {
+            let (navigation, _) = try attachedNavigation()
+            navigation.go(to: .sectionRoot(.sources))
+            navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-x", title: "Graph"))
+            let session = WorkspaceSession(
+                projectKey: ProjectKey(projectDir: "/tmp/leave-gone-page.provenencia"), store: FakeStore()
+            )
+
+            LeavesForSectionRoot.leave(notice: notice, navigation: navigation, session: session)
+
+            #expect(navigation.currentLocation == .sectionRoot(.sources))
+            let remembered = navigation.backJumpItems(limit: 100) + navigation.forwardJumpItems(limit: 100)
+            #expect(!remembered.contains { $0.location.graphId == "g-x" })
+            #expect(session.noticeToast?.title == notice)
+        }
+    }
+
     @Test func eventsListAndDetailStayOffThePersonsPlace() throws {
         let (navigation, _) = try attachedNavigation()
         navigation.go(to: .sectionRoot(.events))

@@ -5,7 +5,8 @@ import Testing
 /// Hosts `view` in a borderless window so layout, `.task` and geometry
 /// callbacks run. The hosting view is sized after it becomes the content view.
 /// The window is never shown. Mark the suite `.hostedWindows`: the trait keeps
-/// the window alive for the test and closes it when the test ends.
+/// the window alive for the test and closes it when the test ends. The helper does not
+/// force layout: call `layoutSubtreeIfNeeded()` on the returned host, then assert.
 @MainActor
 @discardableResult
 func hostInBorderlessWindow<V: View>(

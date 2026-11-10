@@ -1,40 +1,8 @@
-import AppKit
 import SwiftUI
 import Testing
 @testable import Provenencia
 
 @MainActor
-private final class FrameBox {
-    var primary: CGRect?
-    var secondary: CGRect?
-    var header: CGRect?
-}
-
-private struct ColumnsProbe: View {
-    let box: FrameBox
-    let widthClass: PVWidthClass
-
-    var body: some View {
-        PVPageColumns(
-            header: {
-                Color.clear.frame(height: 40)
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("probe")) } action: { box.header = $0 }
-            },
-            primary: {
-                Color.clear.frame(height: 100)
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("probe")) } action: { box.primary = $0 }
-            },
-            secondary: {
-                Color.clear.frame(height: 100)
-                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("probe")) } action: { box.secondary = $0 }
-            }
-        )
-        .environment(\.pvWidthClass, widthClass)
-        .coordinateSpace(name: "probe")
-    }
-}
-
-@MainActor @Suite(.hostedWindows)
 struct PVPageColumnsTests {
     @Test(arguments: [
         (1102, PVWidthClass.regular, true, 1038, 1038, 1038),
@@ -189,27 +157,45 @@ struct PVPageColumnsTests {
         #expect(PVSpacing.widthContentMax == 1180)
     }
 
-    @Test func wideHostPlacesTheSecondaryBeside() async throws {
-        let wide = FrameBox()
-        hostInBorderlessWindow(
-            ColumnsProbe(box: wide, widthClass: .wide), windowSize: CGSize(width: 2296, height: 600)
-        )
-        #expect(await waitUntil { wide.primary != nil && wide.secondary != nil && wide.header != nil })
-        let p = try #require(wide.primary), s = try #require(wide.secondary)
-        #expect(s.minX >= p.maxX)
-        #expect(abs(s.minY - p.minY) < 0.5)
-        #expect(p.width == 1180 && s.width == 480)
-        #expect(abs(p.minX - (2296 - 1692) / 2) < 0.5)
-        #expect(abs(wide.header!.width - 1692) < 0.5)
+    @Test func groupXCentersTheGroup() {
+        #expect(PVPageColumnsMetrics.groupX(in: 2296, group: 1692) == 302)
+        #expect(PVPageColumnsMetrics.groupX(in: 1102, group: 1038) == 32)
+        #expect(PVPageColumnsMetrics.groupX(in: 1038, group: 1038) == 0)
+    }
 
-        let regular = FrameBox()
-        hostInBorderlessWindow(
-            ColumnsProbe(box: regular, widthClass: .regular), windowSize: CGSize(width: 1102, height: 600)
-        )
-        #expect(await waitUntil { regular.primary != nil && regular.secondary != nil })
-        let rp = try #require(regular.primary), rs = try #require(regular.secondary)
-        #expect(rs.minY >= rp.maxY)
-        #expect(abs(rs.minX - rp.minX) < 0.5)
-        #expect(rp.width == 1038 && rs.width == 1038)
+    @Test func columnsLayoutPlacesTheSecondaryBesideAtWideAndBelowAtRegular() throws {
+        func arrange(width: CGFloat, widthClass: PVWidthClass, hasSecondary: Bool = true)
+            -> (widths: PVPageSideColumnWidths, placed: (main: CGRect, side: CGRect?, height: CGFloat), asked: [Int])
+        {
+            let widths = PVPageColumnsMetrics.layoutWidths(
+                proposal: ProposedViewSize(width: width, height: nil), widthClass: widthClass,
+                hasSecondary: hasSecondary, primaryFill: false, fillSplitSideMax: nil
+            )
+            var asked: [Int] = []
+            let placed = PVPageColumnsLayout.arrange(width: width, widths: widths) { index, width in
+                asked.append(index)
+                return CGSize(width: width, height: 100)
+            }
+            return (widths, placed, asked)
+        }
+
+        let wide = arrange(width: 2296, widthClass: .wide)
+        let main = wide.placed.main, side = try #require(wide.placed.side)
+        #expect(!wide.widths.stacked)
+        #expect(main.width == 1180 && main.minX == (2296 - 1692) / 2 && main.minY == 0)
+        #expect(side.width == 480 && side.minX == main.maxX + PVSpacing.space9 && side.minY == 0)
+        #expect(wide.placed.height == 100)
+
+        let regular = arrange(width: 1102, widthClass: .regular)
+        let rMain = regular.placed.main, rSide = try #require(regular.placed.side)
+        #expect(regular.widths.stacked)
+        #expect(rMain.width == 1038 && rSide.width == 1038 && rMain.minX == 32 && rSide.minX == 32)
+        #expect(rSide.minY == rMain.maxY + PVSpacing.space9)
+        #expect(regular.placed.height == 100 + PVSpacing.space9 + 100)
+
+        let alone = arrange(width: 2296, widthClass: .wide, hasSecondary: false)
+        #expect(alone.widths.side == nil && alone.placed.side == nil)
+        #expect(alone.asked == [0])
+        #expect(alone.placed.height == 100)
     }
 }

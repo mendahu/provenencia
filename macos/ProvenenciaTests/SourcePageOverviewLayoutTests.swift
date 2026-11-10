@@ -1,55 +1,22 @@
-import AppKit
 import SwiftUI
 import Testing
 @testable import Provenencia
 
 @MainActor
-private final class OverviewFrames {
-    var error: CGRect?
-    var body: CGRect?
-    var side: CGRect?
-    var rest: CGRect?
-}
-
-private struct OverviewProbe: View {
-    let frames: OverviewFrames
-    let widthClass: PVWidthClass
-    let errorHeight: CGFloat
-
-    var body: some View {
-        SourcePageOverviewLayout(widthClass: widthClass) {
-            Color.clear.frame(height: errorHeight)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("overview")) } action: { frames.error = $0 }
-            Color.clear.frame(minHeight: 100)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("overview")) } action: { frames.body = $0 }
-            Color.clear.frame(height: 140)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("overview")) } action: { frames.side = $0 }
-            Color.clear.frame(height: 80)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("overview")) } action: { frames.rest = $0 }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .coordinateSpace(name: "overview")
-    }
-}
-
-@MainActor @Suite(.hostedWindows)
 struct SourcePageOverviewLayoutTests {
-    private func host(
+    /// Arranges four subviews of these heights at `width`.
+    private func arrange(
         width: CGFloat, widthClass: PVWidthClass, errorHeight: CGFloat
-    ) async -> OverviewFrames {
-        let frames = OverviewFrames()
-        hostInBorderlessWindow(
-            OverviewProbe(frames: frames, widthClass: widthClass, errorHeight: errorHeight),
-            windowSize: CGSize(width: width, height: 800)
-        )
-        _ = await waitUntil { frames.error != nil && frames.body != nil && frames.side != nil && frames.rest != nil }
-        return frames
+    ) -> (frames: [CGRect], height: CGFloat) {
+        let heights: [CGFloat] = [errorHeight, 100, 140, 80]
+        return SourcePageOverviewLayout.arrange(width: width, widthClass: widthClass) { index, width in
+            CGSize(width: width, height: heights[index])
+        }
     }
 
-    @Test func regularPlacesDescriptionBesideMetadataThenTheRest() async throws {
-        let frames = await host(width: 1038, widthClass: .regular, errorHeight: 30)
-        let error = try #require(frames.error), body = try #require(frames.body)
-        let side = try #require(frames.side), rest = try #require(frames.rest)
+    @Test func regularPlacesDescriptionBesideMetadataThenTheRest() {
+        let frames = arrange(width: 1038, widthClass: .regular, errorHeight: 30).frames
+        let (error, body, side, rest) = (frames[0], frames[1], frames[2], frames[3])
         let half: CGFloat = (1038 - PVSpacing.space11) / 2
         #expect(error.minX == 0 && error.minY == 0 && error.width == 1038)
         #expect(body.width == half && side.width == half)
@@ -60,19 +27,17 @@ struct SourcePageOverviewLayoutTests {
         #expect(rest.minX == 0 && rest.width == 1038 && rest.minY == body.maxY + PVSpacing.space9)
     }
 
-    @Test func anEmptyErrorAddsNoGap() async throws {
-        let frames = await host(width: 1038, widthClass: .regular, errorHeight: 0)
-        let body = try #require(frames.body)
-        #expect(body.minY == 0)
+    @Test func anEmptyErrorAddsNoGap() {
+        let frames = arrange(width: 1038, widthClass: .regular, errorHeight: 0).frames
+        #expect(frames[1].minY == 0)
     }
 
-    @Test func widePlacesMetadataInASideColumn() async throws {
+    @Test func widePlacesMetadataInASideColumn() {
         let group = PVPageColumnsMetrics.split(
             available: 2296 - 2 * PVSpacing.gutterPage, sideMax: PVSpacing.widthSecondaryMax
         )
-        let frames = await host(width: group.group, widthClass: .wide, errorHeight: 30)
-        let error = try #require(frames.error), body = try #require(frames.body)
-        let side = try #require(frames.side), rest = try #require(frames.rest)
+        let frames = arrange(width: group.group, widthClass: .wide, errorHeight: 30).frames
+        let (error, body, side, rest) = (frames[0], frames[1], frames[2], frames[3])
         #expect(group.main == 1180 && group.side == 480)
         #expect(error.width == 1180 && body.width == 1180 && rest.width == 1180)
         #expect(error.minX == 0 && body.minX == 0 && rest.minX == 0)

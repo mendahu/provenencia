@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-35 — Layout tests compute their frames instead of waiting on a window
+
+**Landed 2026-11-10** in [#775](https://github.com/mendahu/provenencia/pull/775). Nothing a researcher sees changes. The Swift tests no longer poll a hosted window for layout, which failed at random when the Mac was busy: `SourcePageOverviewLayout.arrange` and `PVPageColumnsLayout.arrange` are static functions tested with made-up sizes, `PVPageColumnsMetrics.layoutWidths` holds the stacked rule and `groupX` the one centering rule, `PVWidthClassTests` force layout and assert at once, `LeavesForSectionRoot.leave` has a plain test, and `WorkspaceDestinationHostTests`' three whole-workspace tests are deleted. `add-swift-test` teaches the rule. The full suite failed once in five runs before (four tests) and in none of five after.
+
 ## S16-34 — Tests run without showing a window or opening the researcher's project
 
 **Landed 2026-11-10** in [#772](https://github.com/mendahu/provenencia/pull/772). Running the Swift tests no longer shows a window or opens the researcher's project: under tests `ProvenenciaMain` runs `TestHostApp` (a `Settings`-only accessory app), test windows are never ordered in, and one `.hostedWindows` trait closes each when its test ends. `PVSegmentedControlTests` (clicks through a window) is deleted, and `PVOutsideClick.isInsideSheet` takes a `parent:` closure so its tests open no real sheets. Five full runs in a row passed, one at a time.
