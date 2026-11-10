@@ -6,6 +6,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"golang.org/x/text/collate"
 	"golang.org/x/text/language"
 )
@@ -64,19 +65,24 @@ func PlaceBirth(birth *datevalue.Value) (PlacedBirth, bool) {
 // on birth had at it, from one placing of the event's date. The span is that of
 // the date the event order places it by (a date, else a start date, whichever
 // has a place); dated is false when h is undated, so "dated" and "has a span"
-// are one fact. The age is in whole years, as a range: Hi counts from the
+// are one fact. days is the days of the same date as written (an ABT date is
+// not widened; a BEF or AFT end is open on its side), the zero Window when h is
+// not dated. The age is in whole years, as a range: Hi counts from the
 // earliest birth day to the latest day of the event, Lo from the latest birth
 // day to the earliest day of the event. aged is false when hasBirth is false,
 // when the event or the birth has no place, when any of the four ends is open
 // (BEF, AFT, a one-sided range), or when the event is before the birth.
-func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span TimelineSpan, dated bool, age AgeRange, aged bool) {
+func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span TimelineSpan, days valuecompare.Window, dated bool, age AgeRange, aged bool) {
 	ev := eventDating(h.Date, h.StartDate)
 	span, dated = ev.span, ev.key.ok
+	if dated {
+		days = valuecompare.EndsWindow(ev.first, ev.last)
+	}
 	if !hasBirth {
-		return span, dated, AgeRange{}, false
+		return span, days, dated, AgeRange{}, false
 	}
 	if !dated {
-		return span, dated, AgeRange{}, false
+		return span, days, dated, AgeRange{}, false
 	}
 	b := birth.placed
 	// The youngest is from the latest birth to the earliest event day; the
@@ -84,17 +90,17 @@ func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span Tim
 	// when either date leaves its end open.
 	age = AgeRange{OpenLo: b.last.Open || ev.first.Open, OpenHi: b.first.Open || ev.last.Open}
 	if age.OpenLo && age.OpenHi {
-		return span, dated, AgeRange{}, false
+		return span, days, dated, AgeRange{}, false
 	}
 	if !age.OpenHi {
 		if age.Hi = datevalue.CompletedYears(b.first.Lo, ev.last.Hi); age.Hi < 0 {
-			return span, dated, AgeRange{}, false
+			return span, days, dated, AgeRange{}, false
 		}
 	}
 	if !age.OpenLo {
 		age.Lo = max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo))
 	}
-	return span, dated, age, true
+	return span, days, dated, age, true
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,

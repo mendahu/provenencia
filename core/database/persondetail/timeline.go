@@ -189,7 +189,7 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	placedBirth, hasBirth := conclusionsummaries.PlaceBirth(birthDate)
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
-		span, dated, age, aged := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
+		span, _, dated, age, aged := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
 		if dated {
 			rows[i].Span = &span
 		}

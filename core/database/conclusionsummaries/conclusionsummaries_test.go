@@ -40,6 +40,7 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/ref"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -1337,9 +1338,42 @@ func TestEventSpan(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			got, _, ok, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
 			if ok != tc.wantOK || got != tc.want {
 				t.Fatalf("EventSpan = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
+			}
+		})
+	}
+}
+
+func TestEventSpanDays(t *testing.T) {
+	noYear := &datevalue.Value{Kind: datevalue.KindPoint, Calendar: "gregorian"}
+	days := func(d *datevalue.Value) valuecompare.Window {
+		w, ok := valuecompare.DateWindow(*d)
+		if !ok {
+			t.Fatalf("DateWindow(%+v) has no days", d)
+		}
+		return w
+	}
+	cases := []struct {
+		name      string
+		in        conclusionsummaries.EventSummary
+		want      valuecompare.Window
+		wantDated bool
+	}{
+		{"about is not widened", conclusionsummaries.EventSummary{Date: datevaluetest.About(2011, 0, 0)}, days(datevaluetest.YMD(2011, 0, 0)), true},
+		{"after is open at its end", conclusionsummaries.EventSummary{Date: datevaluetest.After(2011, 3, 29)}, days(datevaluetest.After(2011, 3, 29)), true},
+		{"before is open at its start", conclusionsummaries.EventSummary{Date: datevaluetest.Before(1880, 0, 0)}, days(datevaluetest.Before(1880, 0, 0)), true},
+		{"start date only", conclusionsummaries.EventSummary{StartDate: datevaluetest.YMD(1860, 0, 0)}, days(datevaluetest.YMD(1860, 0, 0)), true},
+		{"date with no year, dated start", conclusionsummaries.EventSummary{Date: noYear, StartDate: datevaluetest.YMD(1860, 3, 4)}, days(datevaluetest.YMD(1860, 3, 4)), true},
+		{"no date", conclusionsummaries.EventSummary{}, valuecompare.Window{}, false},
+	}
+	same := func(a, b *int) bool { return (a == nil) == (b == nil) && (a == nil || *a == *b) }
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, got, dated, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			if dated != tc.wantDated || !same(got.Lo, tc.want.Lo) || !same(got.Hi, tc.want.Hi) {
+				t.Fatalf("days = %+v, %v; want %+v, %v", got, dated, tc.want, tc.wantDated)
 			}
 		})
 	}
@@ -1450,7 +1484,7 @@ func TestEventAge(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			placed, hasBirth := conclusionsummaries.PlaceBirth(tc.birth)
-			_, _, got, ok := conclusionsummaries.EventSpanAndAge(tc.in, placed, hasBirth)
+			_, _, _, got, ok := conclusionsummaries.EventSpanAndAge(tc.in, placed, hasBirth)
 			if ok != tc.wantOK || got != tc.want {
 				t.Errorf("EventAge = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
 			}
