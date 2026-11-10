@@ -153,3 +153,29 @@ The user scoped a fix into S16-02 after rounds 0 and 1 of #764 (dogfood: burial 
 
 #### X-9 · nit · T-13's day span inexact
 **Answer:** Fixed — `from: 2011.9534, to: 2011.9562`.
+
+### Round 2
+
+Maintainability: every round-1 answer holds; one new blocker. Executability: every round-1 answer holds; no new blocker.
+
+#### M-7 · blocker · A death stub before a funeral draws the overlapping burial 40pt off its own year
+With no recorded death, pass (3) gives "Death unknown" `.before(funeral "aft 29 Mar 2011")`, then the burial "abt 2011"; the stub at the funeral's start put the burial's bar 40pt below its 2011 tick and across the stub (D-9 assumed no dated item after a `.before` stub starts earlier).
+**Answer:** Fixed — D-20: a `.before(row)` stub sits at the least `from` of that row and the shown dated items after the marker (a min over spans Go sent; unchanged for every order before the amendment). STEP-11 changes the `Insertion` in `PersonTimelineLifeline.swift`; T-14 tests AC-4.4 on the line; Reach and Edges updated. It changes the working rule's "at that row's start"; the user asked the amendment to settle what the line shows, so the writer settled it and updated the rule (Rules this plan bends) — flagged to the user to veto.
+
+#### X-1 · major · T-10's `days` map has no per-case home
+**Answer:** Fixed — T-10's cases list `{n, d, roles}` specs; the loop builds the rows and the `days` map per case.
+
+#### X-2 · minor · "zero when not dated" needs a guard
+**Answer:** Fixed — D-17: set only when dated; every return carries it.
+
+#### X-3 · minor · Anchor lookup and pass (3) iteration
+**Answer:** Fixed — D-16: anchors by `Event` id after each pass; pass (3) iterates a snapshot of ids.
+
+#### X-4 · minor · Docs-step choices
+**Answer:** Fixed — D-22 places the `date-values.mdc` sentence as a new bullet; STEP-12 gives the Status and paragraph date (`date +%F`); STEP-8 checks `git status` is clean.
+
+#### X-5 · nit · T-13 cannot fail first
+**Answer:** Fixed — T-13 says it pins D-20 and passes on today's code.
+
+### Verdict (amendment)
+Fits with changes — Ready with changes; 2 rounds; no open blocker. To user: M-7's stub rule (settled by the writer under the user's "settle what the line shows"; veto welcome) and M-1 (answered by the user's decision 1).
