@@ -156,4 +156,4 @@ New findings: none. Nits (logged): `CON-4 · lifeline.go:101, reorderAfterDeath 
 
 ## Amendment result
 Merged `origin/main` (`eff0b23d`) as `5971639a`. Gate: first run FAIL on `WorkspaceDestinationHostTests` (`canvasToCanvasBuildsTheSecondGraphsModel`, `openGraphThatGoesFallsBackToTheSourcesList`), the load flake seen twice in this log, untouched code; re-run on the same head PASS 9/9 (xcode-test 122s).
-Gate PASS · CI see PR · open: none · follow-ups: none · to user: CON-1 and MNT-3 answered (2026-11-09)
+Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · follow-ups: none · to user: CON-1 and MNT-3 answered (2026-11-09)
