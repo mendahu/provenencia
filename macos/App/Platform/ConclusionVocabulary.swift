@@ -311,17 +311,19 @@ enum DeleteImpactCascadeVia: Sendable, Equatable {
 /// The engine error codes the client branches on (the code of a `CoreInvokeError`); every other
 /// code only has its message. `conclusiondetails.not_found` is an unknown, deleted or merged
 /// handle; `promote.stale` a Done that lost the revision race; `sourcemetadata.invalid` a value
-/// the field refuses.
+/// the field refuses; `sources.not_found` a Source another window deleted.
 enum EngineErrorCode: Sendable, Equatable {
     case conclusionNotFound
     case promoteStale
     case sourceMetadataInvalid
+    case sourceNotFound
 
     init?(wire: String) {
         switch wire {
         case "conclusiondetails.not_found": self = .conclusionNotFound
         case "promote.stale": self = .promoteStale
         case "sourcemetadata.invalid": self = .sourceMetadataInvalid
+        case "sources.not_found": self = .sourceNotFound
         default: return nil
         }
     }

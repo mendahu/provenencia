@@ -514,7 +514,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "engine error codes", path: swiftVocabulary, enum: "EngineErrorCode", re: wireCase,
-			want: sorted(apperr.CodeConclusionDetailsNotFound, apperr.CodePromoteStale, apperr.CodeSourceMetadataInvalid),
+			want: sorted(apperr.CodeConclusionDetailsNotFound, apperr.CodePromoteStale, apperr.CodeSourceMetadataInvalid, apperr.CodeSourcesNotFound),
 		},
 		{
 			name: "cascade vias", path: swiftVocabulary, enum: "DeleteImpactCascadeVia", re: wireCase,
