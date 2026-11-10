@@ -301,6 +301,18 @@ struct PlaceRegistryTests {
         ])
     }
 
+    @Test func personDetailWarmsEveryReadOfTheOpenSection() throws {
+        let sections: [ConclusionPageSection?] = [nil] + ConclusionPageSection.allCases
+        for section in sections {
+            let location = WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: "Weber, Anna")
+                .withPageSection(section)
+            let open = try #require(location.openPageSection)
+            #expect(resolve(location)?.queryKeys
+                == [.conclusionDetail(project: project, entityId: "per-1")]
+                + open.reads(project: project, entityId: "per-1").filter(\.role.warmsWithPlace).map(\.key))
+        }
+    }
+
     @Test func placesListWarmsTheSummaryRead() {
         let place = resolve(.sectionRoot(.places))
         #expect(place?.placeID == .placesList)

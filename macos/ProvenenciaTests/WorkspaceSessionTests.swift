@@ -630,6 +630,18 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
 
+    /// The open section's reads stay visible, so a write revalidates them instead of evicting
+    /// them while they are on screen; the first section, stored as nil, reads nothing yet.
+    @Test func applyPersonPageKeepsTheOpenSectionsReadsVisible() {
+        let session = makeSession(store: FakeStore())
+        let detail = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "per-1")
+        let person = WorkspaceLocation.personDetail(entityId: "per-1", ref: "PER-1", title: nil)
+        session.apply(location: person.withPageSection(.family))
+        #expect(session.visibleKeys.contains(.personFamily(project: session.projectKey, entityId: "per-1")))
+        session.apply(location: person)
+        #expect(session.visibleKeys == [detail])
+    }
+
     /// The rule-2 exception (S9-15): a trigger evicts Conclusion detail
     /// pages that aren't on screen, revalidates the one that is, and marks the
     /// Persons list (also off screen) stale until its next query.
