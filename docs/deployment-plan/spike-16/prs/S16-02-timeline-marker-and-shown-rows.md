@@ -1,6 +1,6 @@
 # S16-02 — The Timeline places a missing death and builds what it shows
 
-**Status:** Planned
+**Status:** Landed in [#764](https://github.com/mendahu/provenencia/pull/764) (2026-11-09)
 **Spike / slice:** Spike 16 · Slice 1a — Bounded reads, folds and the Timeline
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the placeholder marker, its dashed stub and the points are drawn as board S13-D4 draws them; only the row a placeholder sits beside changes, a bugfix back to R-24a; user, 2026-11-09. The amendment's order fix moves a burial or funeral row below the death row and draws nothing new, the same kind of fix)
@@ -28,17 +28,16 @@
 
 ---
 
-## Amendment (2026-11-09)
-
-STEP-1 – STEP-7 are done on this branch ([#764](https://github.com/mendahu/provenencia/pull/764), rounds 0 and 1); the §4 rows above "Amendment" describe `main` @ `462699f` before them and are history. The amendment is US-4, D-16 – D-22, STEP-8 – STEP-12 and T-10 – T-14; its §4 rows describe this branch @ `4588b62e`. Work STEP-8 onward only.
-
-## Deviations in rounds 0 and 1
+## Landed
 
 - The version bump is 0.5.0 → 0.5.1 (main was at 0.5.0, not 0.4.4).
 - T-6's same-year case uses day dates (a baptism in March, a burial in September 1850): two year-wide spans start at the same y, so the baptism cannot sit above the death stub.
 - T-7's nearest-point check compares the found mark's `pointY` with the clicked one: points of one year share a y, and the earlier in item order wins the tie.
 - `PersonTimelinePlacement.KeptScale` keeps its four fields private; its init and `pointsPerYear(for:viewportHeight:)` are the interface the plan names.
 - STEP-1's and STEP-3's failing-first tests were written after the code, in the same commit.
+- Amended 2026-11-09 after rounds 0 and 1: US-4, D-16 – D-22 (the Timeline order).
+- `lifelineRow` carries one more private field, `after` (the row's `afterDeath` rank, read once), so pass (3) does not look up a row's type for every pair.
+- T-12's subtests passed when written: `order` was already in place from STEP-9, so they pin the read end to end and did not fail first.
 - Adding a before-birth type (one `EventRole` in `lifelineTypes.beforeBirth`) can place a birth after the `.more(.dated)` item, and then D-9 draws the folded points dated after it inside the birth stub; that add must also shift those folded points (CON-1, S16-02 ship log).
 
 ## 1. Objective
