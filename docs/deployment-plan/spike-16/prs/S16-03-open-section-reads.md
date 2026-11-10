@@ -1,6 +1,6 @@
 # S16-03 — One open section and one list of section reads
 
-**Status:** Planned
+**Status:** Landed in [#769](https://github.com/mendahu/provenencia/pull/769) (2026-11-09)
 **Spike / slice:** Spike 16 · Slice 1b — Current data and honest notices
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Person page draws the same header, switcher, sections and states before and after)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-workspace-location`](../../../../.agents/skills/add-workspace-location/SKILL.md), [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-13, P-26 (part); working rule "(Batch 1) One open section, one list of reads"; [`macos-client-patterns.md`](../../../macos-client-patterns.md) "Conclusion keys" (the "One detail key for every kind" and "One sectioned detail page" lines)
+**Landed:** No version bump, as planned. One difference from the plan: the §6 sketch lists `pageIdentifier:` in the host's init, but D-7 and D-8 say the host takes `accessibilityIdentifierRoot:`; the decisions shipped.
 **Planned:** 2026-11-10 against `main` @ `9897bf19`
 **Review:** [`S16-03-open-section-reads.review.md`](S16-03-open-section-reads.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: none
 
