@@ -36,6 +36,7 @@
 - The S15-D1 Paste block was brought up to date with the current `add-design-brief` text (rules 2 and 3), because Step 8 edits that brief and `check-plan-docs.py` rejected the stale block.
 - `SourcesRowDate` lives in its own file, `SourcesRowDate.swift`, and the Source page header reads it to decide dated versus undated (F-1).
 - The Sort menu is 240 wide, not 220, so the longest sort label fits (F-2).
+- `.az` and `.za` read `titleOrder` too, with `descending: true` for Z–A; equal titles sort newest added first in both (F-4, user decision 2026-11-10, reversing D-3's last sentence).
 - Not run: the manual check (§ 10) and the board comparison of frames 1a, 1b, 2b and 5 (this build was verified by the Xcode tests only).
 
 ## 1. Objective
@@ -93,7 +94,7 @@ A researcher sees each Source's own date on its Sources list row, named as its p
 | Centering the other lists (Persons, Events, Places) at `widthListWideMax` | their redesigns ([`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md)) |
 | The Person page's Sources section date | S15-05 |
 | Any Go change: the key is already on the wire | not needed (S15-02 D-5) |
-| `.az` and `.za` reading `titleOrder` | not planned (D-3) |
+| `.az` and `.za` reading `titleOrder` | not planned (D-3); reversed by the user (2026-11-10, F-4) |
 | The date in the list's search keys (`SourcesModel.searchKeys`) | not planned |
 | Truncating titles to one line at Wide | not planned: the board's "titles stay on one line" is the effect of the width, not a line limit |
 | Rewriting Wide rule 3 in `docs/macos-client-patterns.md` § 9 and the `add-design-brief` Paste block | done in the planning PR [#770](https://github.com/mendahu/provenencia/pull/770) |

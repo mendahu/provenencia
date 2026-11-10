@@ -326,13 +326,9 @@ final class SourcesModel {
                 return $0.id > $1.id
             }
         case .az:
-            rows = rows.sorted {
-                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
-            }
+            rows = rows.sorted { Self.titleOrder($0, $1) }
         case .za:
-            rows = rows.sorted {
-                $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedDescending
-            }
+            rows = rows.sorted { Self.titleOrder($0, $1, descending: true) }
         case .dateOldest:
             rows = rows.sorted { Self.dateOrder($0, $1, newestFirst: false) }
         case .dateNewest:
@@ -352,11 +348,13 @@ final class SourcesModel {
         }
     }
 
-    /// Title ascending, then id descending: the same in both date directions.
-    private static func titleOrder(_ a: CatalogSource, _ b: CatalogSource) -> Bool {
+    /// The one title comparison of all four title-ordered sorts (A–Z, Z–A and the
+    /// date sorts' ties and undated tail): title, flipped when `descending`, then
+    /// id descending (newest added first) in both directions.
+    private static func titleOrder(_ a: CatalogSource, _ b: CatalogSource, descending: Bool = false) -> Bool {
         switch a.title.localizedCaseInsensitiveCompare(b.title) {
-        case .orderedAscending: true
-        case .orderedDescending: false
+        case .orderedAscending: !descending
+        case .orderedDescending: descending
         case .orderedSame: a.id > b.id
         }
     }

@@ -208,6 +208,23 @@ struct SourcesModelTests {
         #expect(model.visibleSources.map(\.title) == ["Charlie", "Bravo", "Alpha"])
     }
 
+    @Test func titleSortsBreakTiesByNewestAdded() async {
+        let (model, session) = makeModel(
+            sources: [
+                source(id: "s1", title: "b", typeID: "t1"),
+                source(id: "s2", title: "a", typeID: "t1"),
+                source(id: "s3", title: "A", typeID: "t1"),
+                source(id: "s4", title: "a", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.sort = .az
+        #expect(model.visibleSources.map(\.id) == ["s4", "s3", "s2", "s1"])
+        model.settings.sort = .za
+        #expect(model.visibleSources.map(\.id) == ["s1", "s4", "s3", "s2"])
+    }
+
     // MARK: Date sorts (S15-04)
 
     private func datedSources() -> [CatalogSource] {
