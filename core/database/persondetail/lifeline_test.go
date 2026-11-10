@@ -2,10 +2,15 @@ package persondetail
 
 import (
 	"bytes"
+	"fmt"
+	"math/rand"
 	"reflect"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/subjectcompare"
@@ -22,24 +27,38 @@ func sameMarkerPlace(a, b *MarkerPlace) bool {
 	return a.Side == b.Side && bytes.Equal(a.Row, b.Row)
 }
 
+// id is the event id of lifelineTestRow(n).
+func id(n byte) []byte { return []byte{n} }
+
+// lifelineTestTypes gives the type of the event id(n) that lifelineTestRow(n)
+// makes: 1 birth, 2 census, 3 funeral, 4 and 7 burial, 5 marriage, 6 baptism,
+// 8 death.
+var lifelineTestTypes = map[byte]vocabkey.EventType{
+	1: vocabkey.EventBirth, 2: "census", 3: vocabkey.EventFuneral, 4: vocabkey.EventBurial, 5: vocabkey.EventMarriage,
+	6: "baptism", 7: vocabkey.EventBurial, 8: vocabkey.EventDeath,
+}
+
+func types(e []byte) vocabkey.EventType { return lifelineTestTypes[e[0]] }
+
+// lifelineTestRow is the person's row for event id(n): the person's roles on
+// it, the subject when none are given.
+func lifelineTestRow(n byte, roles ...vocabkey.Role) PersonEvent {
+	r := PersonEvent{Event: id(n)}
+	if len(roles) == 0 {
+		roles = []vocabkey.Role{vocabkey.RoleSubject}
+	}
+	for _, role := range roles {
+		r.Roles = append(r.Roles, conclusionsummaries.Term{Key: string(role), Origin: vocabkey.OriginProvenencia})
+	}
+	return r
+}
+
 func TestLifeMarkers(t *testing.T) {
 	span := &conclusionsummaries.TimelineSpan{From: 1800, To: 1801}
-	id := func(n byte) []byte { return []byte{n} }
-	typeOf := map[byte]vocabkey.EventType{
-		1: vocabkey.EventBirth, 2: "census", 3: vocabkey.EventFuneral, 4: vocabkey.EventBurial, 5: vocabkey.EventMarriage,
-		6: "baptism", 7: vocabkey.EventBurial,
-	}
-	types := func(e []byte) vocabkey.EventType { return typeOf[e[0]] }
 	row := func(n byte, dated bool, roles ...vocabkey.Role) PersonEvent {
-		r := PersonEvent{Event: id(n)}
+		r := lifelineTestRow(n, roles...)
 		if dated {
 			r.Span = span
-		}
-		if len(roles) == 0 {
-			roles = []vocabkey.Role{vocabkey.RoleSubject}
-		}
-		for _, role := range roles {
-			r.Roles = append(r.Roles, conclusionsummaries.Term{Key: string(role), Origin: vocabkey.OriginProvenencia})
 		}
 		return r
 	}
@@ -85,12 +104,6 @@ func TestLifeMarkers(t *testing.T) {
 }
 
 func TestLifelineOrder(t *testing.T) {
-	id := func(n byte) []byte { return []byte{n} }
-	typeOf := map[byte]vocabkey.EventType{
-		1: vocabkey.EventBirth, 2: "census", 3: vocabkey.EventFuneral, 4: vocabkey.EventBurial, 5: vocabkey.EventMarriage,
-		6: "baptism", 7: vocabkey.EventBurial, 8: vocabkey.EventDeath,
-	}
-	types := func(e []byte) vocabkey.EventType { return typeOf[e[0]] }
 	type in struct {
 		n     byte
 		d     *datevalue.Value
@@ -113,6 +126,7 @@ func TestLifelineOrder(t *testing.T) {
 		{"a witness's burial", lifeline, []in{{4, datevaluetest.About(2011, 0, 0), witness}, {8, death, nil}}, nil, id(8), []byte{4, 8}},
 		{"funeral and burial overlap after the death", lifeline, []in{{8, death, nil}, {4, datevaluetest.YMD(2011, 4, 0), nil}, {3, datevaluetest.YMD(2011, 4, 5), nil}}, nil, id(8), []byte{8, 3, 4}},
 		{"funeral and burial that do not overlap", lifeline, []in{{8, death, nil}, {4, datevaluetest.YMD(2011, 4, 2), nil}, {3, datevaluetest.YMD(2011, 4, 10), nil}}, nil, id(8), []byte{8, 4, 3}},
+		{"a funeral does not pass a row the dates put before it", lifeline, []in{{4, datevaluetest.YMD(2011, 0, 0), nil}, {2, datevaluetest.YMD(2011, 2, 0), nil}, {3, datevaluetest.After(2011, 3, 1), nil}}, nil, nil, []byte{2, 3, 4}},
 		{"no death", lifeline, []in{{4, datevaluetest.About(2011, 0, 0), nil}, {3, datevaluetest.After(2011, 3, 29), nil}}, nil, nil, []byte{3, 4}},
 		{"a burial and a funeral both before the death", lifeline, []in{{4, datevaluetest.YMD(1990, 0, 0), nil}, {3, datevaluetest.YMD(1990, 5, 0), nil}, {8, death, nil}}, nil, id(8), []byte{4, 3, 8}},
 		{"a recorded death with no days", lifeline, []in{{4, datevaluetest.About(2011, 0, 0), nil}, {3, datevaluetest.After(2011, 3, 29), nil}, {8, nil, nil}}, nil, id(8), []byte{3, 4, 8}},
@@ -127,14 +141,7 @@ func TestLifelineOrder(t *testing.T) {
 			var rows []PersonEvent
 			days := map[byte]valuecompare.Window{}
 			for _, r := range tc.rows {
-				roles := r.roles
-				if len(roles) == 0 {
-					roles = []vocabkey.Role{vocabkey.RoleSubject}
-				}
-				pe := PersonEvent{Event: id(r.n)}
-				for _, role := range roles {
-					pe.Roles = append(pe.Roles, conclusionsummaries.Term{Key: string(role), Origin: vocabkey.OriginProvenencia})
-				}
+				pe := lifelineTestRow(r.n, r.roles...)
 				if r.d != nil {
 					pe.Span = &conclusionsummaries.TimelineSpan{From: 1800, To: 1801}
 					pe.Age = &conclusionsummaries.AgeRange{Lo: int(r.n)}
@@ -168,4 +175,136 @@ func TestLifelineOrder(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestLifelineOrderMovesOnlyOverlappingRows runs order over random years 2010
+// and 2011, with and without a dated death and no recorded birth, and holds it
+// to what it promises: the output is the input rows, and a pair of rows whose
+// order changed has overlapping days. A recorded birth is left out: a row that
+// overlaps the birth moves after it, and a row that overlaps that one then
+// moves after it too, passing a birth it does not overlap.
+func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
+	rng := rand.New(rand.NewSource(16))
+	kinds := []byte{2, 3, 4, 5, 6, 7}
+	date := func() *datevalue.Value {
+		y, m, d := 2010+rng.Intn(2), rng.Intn(13), 0
+		if m > 0 {
+			d = rng.Intn(29)
+		}
+		switch rng.Intn(5) {
+		case 0:
+			return datevaluetest.After(y, m, d)
+		case 1:
+			return datevaluetest.Before(y, m, d)
+		default:
+			return datevaluetest.YMD(y, m, d)
+		}
+	}
+	for c := 0; c < 5000; c++ {
+		var ns []byte
+		days := map[byte]valuecompare.Window{}
+		add := func(n byte) {
+			w, ok := valuecompare.DateWindow(*date())
+			if !ok {
+				t.Fatalf("case %d: row %d has no days", c, n)
+			}
+			days[n] = w
+			ns = append(ns, n)
+		}
+		var death []byte
+		for i, n := 0, 2+rng.Intn(7); i < n; i++ {
+			add(kinds[rng.Intn(len(kinds))] + byte(i)*10)
+		}
+		// types reads a row's type from its id: the kind, whatever the tens.
+		typeOf := func(e []byte) vocabkey.EventType { return lifelineTestTypes[e[0]%10] }
+		if rng.Intn(2) == 0 {
+			add(8)
+			death = id(8)
+		}
+		// Date order: earliest start first, an open start first.
+		sort.SliceStable(ns, func(i, j int) bool {
+			a, b := days[ns[i]].Lo, days[ns[j]].Lo
+			return a == nil && b != nil || a != nil && b != nil && *a < *b
+		})
+		var rows []PersonEvent
+		for _, n := range ns {
+			rows = append(rows, lifelineTestRow(n))
+		}
+		daysOf := func(e []byte) (valuecompare.Window, bool) { w, ok := days[e[0]]; return w, ok }
+		got := lifeline.order(rows, typeOf, daysOf, nil, death)
+		if len(got) != len(rows) {
+			t.Fatalf("case %d: %d rows, want %d", c, len(got), len(rows))
+		}
+		at := map[byte]int{}
+		for i, r := range got {
+			at[r.Event[0]] = i
+		}
+		if len(at) != len(rows) {
+			t.Fatalf("case %d: output %v is not a permutation of %v", c, got, ns)
+		}
+		for i := range rows {
+			for j := i + 1; j < len(rows); j++ {
+				a, b := rows[i].Event[0], rows[j].Event[0]
+				if at[a] > at[b] && !days[a].Overlaps(days[b]) {
+					var ws []string
+					for _, n := range ns {
+						w := days[n]
+						lo, hi := "-", "-"
+						if w.Lo != nil {
+							lo = fmt.Sprint(*w.Lo)
+						}
+						if w.Hi != nil {
+							hi = fmt.Sprint(*w.Hi)
+						}
+						ws = append(ws, fmt.Sprintf("%d:[%s,%s]", n, lo, hi))
+					}
+					var o []byte
+					for _, r := range got {
+						o = append(o, r.Event[0])
+					}
+					t.Fatalf("case %d: rows %d and %d changed order and do not overlap; input %v got %v", c, a, b, ws, o)
+				}
+			}
+		}
+	}
+}
+
+// TestLifelineOrderLargeBudget holds order to a time on a crafted catalog: far
+// more burials and funerals than a person has, all in one window with a dated
+// death. Pass (3) leaves them in date order above maxReorderedAfterDeath, so
+// the cost is that of passes (1) and (2).
+func TestLifelineOrderLargeBudget(t *testing.T) {
+	n := 20 * 64
+	days := map[byte]valuecompare.Window{}
+	w, _ := valuecompare.DateWindow(*datevaluetest.YMD(2011, 0, 0))
+	rows := []PersonEvent{lifelineTestRow(8)}
+	days[8] = w
+	for i := 0; i < n; i++ {
+		kind := byte(4)
+		if i%2 == 1 {
+			kind = 3
+		}
+		// Ids are two bytes so that no row repeats; the type is the first.
+		r := lifelineTestRow(kind)
+		r.Event = []byte{kind, byte(i / 256), byte(i)}
+		days[kind] = w
+		rows = append(rows, r)
+	}
+	typeOf := func(e []byte) vocabkey.EventType {
+		if len(e) == 1 {
+			return vocabkey.EventDeath
+		}
+		return lifelineTestTypes[e[0]]
+	}
+	daysOf := func(e []byte) (valuecompare.Window, bool) {
+		if len(e) == 1 {
+			return days[8], true
+		}
+		return days[e[0]], true
+	}
+	d := databasetest.Fastest(3, func() time.Duration {
+		return databasetest.Since(func() { lifeline.timeline(rows, typeOf, daysOf, id(8), id(8)) })
+	})
+	t.Logf("%d rows: %v", len(rows), d)
+	databasetest.WithinBudget(t, "order on a crafted catalog", d, 2*time.Millisecond)
 }

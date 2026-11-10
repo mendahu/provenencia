@@ -95,11 +95,12 @@ func (l lifelineTypes) timeline(events []PersonEvent, types func(event []byte) v
 //     birth's, and that may not come before birth, goes just after the birth.
 //  2. When the recorded death has days, a burial or funeral of the person's own
 //     (afterDeath) before it whose days overlap the death's goes just after it.
-//  3. The afterDeath rows with days placed after the death (all of them when
-//     the death is nil or has no days), taken in list order, each goes just
-//     before the first of them placed earlier whose rank is greater and whose
-//     days overlap its own: a funeral before a burial. Rows still before the
-//     death (a clear conflict) keep date order.
+//  3. Of the afterDeath rows with days placed after the death (all of them when
+//     the death is nil or has no days), a row that has a later one of a lesser
+//     rank whose days overlap its own goes just after the last such one: a
+//     burial after a funeral. Rows still before the death (a clear conflict)
+//     keep date order, and so do all of them when there are more than
+//     maxReorderedAfterDeath.
 //
 // A row placed before a date whose days do not overlap it ends before that date
 // begins, so "overlap" is exactly "the dates cannot say which came first".
@@ -132,32 +133,59 @@ func (l lifelineTypes) order(events []PersonEvent, types func(event []byte) voca
 	} else {
 		deathAt = -1
 	}
-	// Pass 3: the dated afterDeath rows after the death, in list order.
-	var ids [][]byte
-	inSet := map[string]bool{}
-	for i := deathAt + 1; i < len(rows); i++ {
-		if rows[i].dated && rows[i].after >= 0 {
-			ids = append(ids, rows[i].row.Event)
-			inSet[string(rows[i].row.Event)] = true
-		}
-	}
-	for _, id := range ids {
-		at := find(id)
-		for j := 0; j < at; j++ {
-			if !inSet[string(rows[j].row.Event)] || rows[j].after <= rows[at].after || !rows[j].window.Overlaps(rows[at].window) {
-				continue
-			}
-			moved := rows[at]
-			copy(rows[j+1:at+1], rows[j:at])
-			rows[j] = moved
-			break
-		}
-	}
+	rows = reorderAfterDeath(rows, deathAt+1)
 	out := make([]PersonEvent, len(rows))
 	for i := range rows {
 		out[i] = rows[i].row
 	}
 	return out
+}
+
+// maxReorderedAfterDeath is the most afterDeath rows pass (3) of order reorders.
+//
+// decided: a real person has one to three burials and funerals; only a crafted
+// catalog passes 64. Above it pass (3) leaves those rows in date order, so a
+// crafted person costs the two linear passes and a count.
+const maxReorderedAfterDeath = 64
+
+// reorderAfterDeath is pass (3) of order on rows[from:]: each dated afterDeath
+// row with a later one of a lesser rank whose days overlap its own goes just
+// after the last such one. It walks back from the end, so rows that move to one
+// place keep their order. It does nothing when it would consider more than
+// maxReorderedAfterDeath rows.
+func reorderAfterDeath(rows []lifelineRow, from int) []lifelineRow {
+	n := 0
+	for i := from; i < len(rows); i++ {
+		if rows[i].dated && rows[i].after >= 0 {
+			n++
+		}
+	}
+	if n < 2 || n > maxReorderedAfterDeath {
+		return rows
+	}
+	for i := len(rows) - 1; i >= from; i-- {
+		r := rows[i]
+		if !r.dated || r.after < 0 {
+			continue
+		}
+		last := -1
+		for j := i + 1; j < len(rows); j++ {
+			if rows[j].dated && rows[j].after >= 0 && rows[j].after < r.after && rows[j].window.Overlaps(r.window) {
+				last = j
+			}
+		}
+		if last >= 0 {
+			moveRowAfter(rows, i, last)
+		}
+	}
+	return rows
+}
+
+// moveRowAfter moves rows[from] to just after rows[to], to > from, in place.
+func moveRowAfter(rows []lifelineRow, from, to int) {
+	moved := rows[from]
+	copy(rows[from:to], rows[from+1:to+1])
+	rows[to] = moved
 }
 
 // moveAfterOverlapping moves each dated row before rows[anchor] whose days
