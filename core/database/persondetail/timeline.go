@@ -193,13 +193,13 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	days := map[string]valuecompare.Window{}
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
-		span, window, dated, age, aged := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
-		if dated {
-			rows[i].Span = &span
-			days[string(rows[i].Event)] = window
+		placing := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
+		if placing.Dated {
+			rows[i].Span = &placing.Span
+			days[string(rows[i].Event)] = placing.Days
 		}
-		if aged {
-			rows[i].Age = &age
+		if placing.Aged {
+			rows[i].Age = &placing.Age
 		}
 	}
 	for i := range rows {

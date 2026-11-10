@@ -1338,7 +1338,8 @@ func TestEventSpan(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _, ok, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			p := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			got, ok := p.Span, p.Dated
 			if ok != tc.wantOK || got != tc.want {
 				t.Fatalf("EventSpan = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
 			}
@@ -1371,7 +1372,8 @@ func TestEventSpanDays(t *testing.T) {
 	same := func(a, b *int) bool { return (a == nil) == (b == nil) && (a == nil || *a == *b) }
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, got, dated, _, _ := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			p := conclusionsummaries.EventSpanAndAge(tc.in, conclusionsummaries.PlacedBirth{}, false)
+			got, dated := p.Days, p.Dated
 			if dated != tc.wantDated || !same(got.Lo, tc.want.Lo) || !same(got.Hi, tc.want.Hi) {
 				t.Fatalf("days = %+v, %v; want %+v, %v", got, dated, tc.want, tc.wantDated)
 			}
@@ -1484,7 +1486,8 @@ func TestEventAge(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			placed, hasBirth := conclusionsummaries.PlaceBirth(tc.birth)
-			_, _, _, got, ok := conclusionsummaries.EventSpanAndAge(tc.in, placed, hasBirth)
+			p := conclusionsummaries.EventSpanAndAge(tc.in, placed, hasBirth)
+			got, ok := p.Age, p.Aged
 			if ok != tc.wantOK || got != tc.want {
 				t.Errorf("EventAge = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
 			}

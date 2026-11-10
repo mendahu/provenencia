@@ -61,46 +61,55 @@ func PlaceBirth(birth *datevalue.Value) (PlacedBirth, bool) {
 	return PlacedBirth{placed: p}, ok
 }
 
+// EventPlacing is where an event sits on a line of years and the age a person
+// had at it: EventSpanAndAge's result. Span and Days are set when Dated; Age is
+// set when Aged.
+type EventPlacing struct {
+	Span  TimelineSpan
+	Days  valuecompare.Window
+	Dated bool
+	Age   AgeRange
+	Aged  bool
+}
+
 // EventSpanAndAge is where h sits on a line of years and the age a person born
 // on birth had at it, from one placing of the event's date. The span is that of
 // the date the event order places it by (a date, else a start date, whichever
-// has a place); dated is false when h is undated, so "dated" and "has a span"
-// are one fact. days is the days of the same date as written (an ABT date is
+// has a place); Dated is false when h is undated, so "dated" and "has a span"
+// are one fact. Days is the days of the same date as written (an ABT date is
 // not widened; a BEF or AFT end is open on its side), the zero Window when h is
-// not dated. The age is in whole years, as a range: Hi counts from the
+// not dated. Age is in whole years, as a range: Hi counts from the
 // earliest birth day to the latest day of the event, Lo from the latest birth
-// day to the earliest day of the event. aged is false when hasBirth is false,
+// day to the earliest day of the event. Aged is false when hasBirth is false,
 // when the event or the birth has no place, when any of the four ends is open
 // (BEF, AFT, a one-sided range), or when the event is before the birth.
-func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) (span TimelineSpan, days valuecompare.Window, dated bool, age AgeRange, aged bool) {
+func EventSpanAndAge(h EventSummary, birth PlacedBirth, hasBirth bool) EventPlacing {
 	ev := eventDating(h.Date, h.StartDate)
-	span, dated = ev.span, ev.key.ok
-	if dated {
-		days = valuecompare.EndsWindow(ev.first, ev.last)
+	placing := EventPlacing{Span: ev.span, Dated: ev.key.ok}
+	if placing.Dated {
+		placing.Days = valuecompare.EndsWindow(ev.first, ev.last)
 	}
-	if !hasBirth {
-		return span, days, dated, AgeRange{}, false
-	}
-	if !dated {
-		return span, days, dated, AgeRange{}, false
+	if !hasBirth || !placing.Dated {
+		return placing
 	}
 	b := birth.placed
 	// The youngest is from the latest birth to the earliest event day; the
 	// oldest from the earliest birth to the latest event day. A side is open
 	// when either date leaves its end open.
-	age = AgeRange{OpenLo: b.last.Open || ev.first.Open, OpenHi: b.first.Open || ev.last.Open}
+	age := AgeRange{OpenLo: b.last.Open || ev.first.Open, OpenHi: b.first.Open || ev.last.Open}
 	if age.OpenLo && age.OpenHi {
-		return span, days, dated, AgeRange{}, false
+		return placing
 	}
 	if !age.OpenHi {
 		if age.Hi = datevalue.CompletedYears(b.first.Lo, ev.last.Hi); age.Hi < 0 {
-			return span, days, dated, AgeRange{}, false
+			return placing
 		}
 	}
 	if !age.OpenLo {
 		age.Lo = max(0, datevalue.CompletedYears(b.last.Hi, ev.first.Lo))
 	}
-	return span, days, dated, age, true
+	placing.Age, placing.Aged = age, true
+	return placing
 }
 
 // sortByDateKey orders rows by their date key: dated first, earliest first,
