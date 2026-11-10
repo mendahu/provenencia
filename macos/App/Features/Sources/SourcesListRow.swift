@@ -41,6 +41,7 @@ struct SourcesListRow: View {
             }
         }
         .padding(.vertical, SourcesListColumns.stackVertical)
+        .frame(maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .leading) {
             PVDivider(axis: .vertical)
         }
