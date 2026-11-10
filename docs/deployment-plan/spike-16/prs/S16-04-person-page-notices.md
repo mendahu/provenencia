@@ -1,6 +1,6 @@
 # S16-04 — The Person page says when a reload failed or the diagram is partial
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 16 · Slice 1b — Current data and honest notices
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S16-D1](../design/S16-D1-person-page-notices.md), board agreed 2026-11-10 (one brief for the Person page's notices and the record links note: PN-1 – PN-10, PN-W1, PN-W2)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/match-rules.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-5, P-10, P-17; working rules "(Batch 1) A refresh failure is read beside its value", "(Batch 1) One open section, one list of reads", "(Batch 1) A person's records are records", "(Batch 1) The record links read is bounded and says so"; [`macos-client-patterns.md`](../../../macos-client-patterns.md) (the `QueryHandle` row, "One sectioned detail page", § 9); the Evidence graph's retry notice (`EvidenceGraphView.readErrorCallout`, S14-20), which this PR moves onto the new reading
 **Planned:** 2026-11-10 against `main` @ `e70bba8`. The Swift steps need a Mac with Xcode (`xcodebuild`); the Go step and the doc checks run anywhere
-**Review:** [`S16-04-person-page-notices.review.md`](S16-04-person-page-notices.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: the board, Remove on a stale line, the Go reach
+**Review:** [`S16-04-person-page-notices.review.md`](S16-04-person-page-notices.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: the board, Remove on a stale line and the Go reach, all answered 2026-11-10
 
 ### Implementer — read this first
 
@@ -95,7 +95,7 @@ When a Person page's reload fails, the page keeps what it showed and says so, wi
 | --- | --- |
 | The Conclusion lists' silent refresh failure | [idea](../../../ideas/person-page-followups.md) (its own brief) |
 | Moving `SourcesModel` and `SourceTypesModel` off `QueryHandle.failure` | not planned (`failure` stays the primitive `reading` is built from; those lists show a failure in place of their state, not beside a value) |
-| What Remove does on a record line under a stale notice (a second Remove is a silent no-op) | To user (review log B-2); recommended home [idea](../../../ideas/person-page-followups.md) |
+| What Remove does on a record line under a stale notice (a second Remove is a silent no-op) | not planned (user, 2026-11-10: an edge case, dropped) |
 | A notice for a failed Source types (supporting) read | not planned (the labels drop out, as today; brief §2.1) |
 | Stale-while-refreshing of hidden keys, the 50-entity cap | S16-09 |
 | Section-switch and Remove announcements; "records" in the header count and confirm | S16-06 |
@@ -372,7 +372,7 @@ Each line says where it runs: **Preview** (D-14's previews in `PersonDetailNotic
 
 ## 12. Open questions
 
-- **Remove on a stale line** (review B-2): leave it as today, with a line in the follow-ups idea, or decide it here. Recommended: leave it; the stale notice already says the rows are old, and Try again is one press away.
+None.
 
 ## 13. PR
 

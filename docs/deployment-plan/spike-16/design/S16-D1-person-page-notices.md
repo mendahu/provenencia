@@ -116,7 +116,7 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 - A dismiss button: a notice goes when its read succeeds.
 - Moving the keyboard to a notice that appears on its own (a background reload). Only a Try again the researcher pressed keeps the keyboard on the notice.
 - Back restoring a section's place (P-19).
-- What Remove does on a record line under a stale notice: it stays as today (open question for the user, recorded in the plan's review log).
+- What Remove does on a record line under a stale notice: it stays as today (user, 2026-11-10: an edge case, not handled).
 
 ---
 
