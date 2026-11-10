@@ -111,6 +111,16 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static let switchOn = LocalizedStringResource(
+            "designSystem.switch.on",
+            defaultValue: "On",
+            comment: "Spoken value of a PVSwitch that is on"
+        )
+        static let switchOff = LocalizedStringResource(
+            "designSystem.switch.off",
+            defaultValue: "Off",
+            comment: "Spoken value of a PVSwitch that is off"
+        )
         static func badgeMoreCount(_ count: Int) -> String {
             let resource = LocalizedStringResource(
                 "designSystem.badge.moreCount",

@@ -381,6 +381,30 @@
         }
       }
     },
+    "designSystem.switch.on": {
+      "comment": "Spoken value of a PVSwitch that is on",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
+    "designSystem.switch.off": {
+      "comment": "Spoken value of a PVSwitch that is off",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
     "designSystem.segmentedControl.shortcutHelp": {
       "comment": "Tooltip of a PVSegmentedControl segment that has a keyboard shortcut; arguments are the segment's label and the key pressed with Command",
       "extractionState": "manual",

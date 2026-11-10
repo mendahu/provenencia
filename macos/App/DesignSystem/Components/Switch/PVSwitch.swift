@@ -84,18 +84,26 @@ struct PVSwitch: View {
 }
 
 /// A labeled switch keeps its visible text. A track-only switch speaks `spoken`.
+/// VoiceOver says "switch" (the toggle trait) and the value "On" or "Off".
 private struct SwitchAccessibility: ViewModifier {
     var spoken: Text?
     var isOn: Bool
 
+    private var value: Text {
+        Text(isOn ? L10n.DesignSystem.switchOn : L10n.DesignSystem.switchOff)
+    }
+
     func body(content: Content) -> some View {
-        let marked = content.accessibilityAddTraits(isOn ? [.isButton, .isSelected] : .isButton)
+        let marked = content.accessibilityAddTraits(.isToggle)
         if let spoken {
             marked
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel(spoken)
+                .accessibilityValue(value)
         } else {
-            marked.accessibilityElement(children: .combine)
+            marked
+                .accessibilityElement(children: .combine)
+                .accessibilityValue(value)
         }
     }
 }
