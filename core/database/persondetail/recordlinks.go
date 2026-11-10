@@ -14,9 +14,8 @@ import (
 type PersonRecordLinks struct {
 	Graphs []graphcache.EvidenceGraph
 	Pairs  []recordlinks.Pair
-	// NotCounted is true when the read passed its work bound and compared
-	// nothing: every line is weak, or no pair is listed when the lines alone
-	// passed it.
+	// NotCounted is true when the read passed its work bound: it compared
+	// nothing and lists no pair.
 	NotCounted bool
 	// LinesDropped is true when the read found more than maxRecordLinkLines
 	// lines and sent that many, strong lines first.

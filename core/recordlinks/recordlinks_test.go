@@ -1022,9 +1022,9 @@ func TestPairsReadCap(t *testing.T) {
 					t.Fatalf("got %+v", got)
 				}
 			}},
-		{"AC-2.3 cap one short: every pair listed at 0 facts", two, func(w int) int { return w - 1 },
+		{"AC-2.3 cap one short: no pair", two, func(w int) int { return w - 1 },
 			func(t *testing.T, got []recordlinks.Pair) {
-				if want := lines(want{entF, 0, weak}); len(got) != 1 || !equalLines(got[0].Lines, want) {
+				if got != nil {
 					t.Fatalf("got %+v", got)
 				}
 			}},
@@ -1044,13 +1044,8 @@ func TestPairsReadCap(t *testing.T) {
 			}},
 		{"unshared links: the links each compare walks are work", crafted, func(int) int { return cfg.RecordLinks.MaxReadWork },
 			func(t *testing.T, got []recordlinks.Pair) {
-				if len(got) != 2016 {
-					t.Fatalf("pairs = %d, want 2016", len(got))
-				}
-				for _, p := range got {
-					if len(p.Lines) != 1 || p.Lines[0].Facts != 0 || p.Lines[0].Strength != weak {
-						t.Fatalf("pair %d-%d lines = %s; want one line at 0 facts", p.A, p.B, show(p.Lines))
-					}
+				if got != nil {
+					t.Fatalf("pairs = %d, want none: the links pass the read's cap", len(got))
 				}
 			}},
 	}
@@ -1150,16 +1145,8 @@ func TestPairsCounted(t *testing.T) {
 		}
 	})
 	t.Run("AC-2.2 past it by pair work", func(t *testing.T) {
-		pairs, counted := read(graphs, work-1)
-		if counted || len(pairs) != 3 {
-			t.Fatalf("counted %v, %d pairs, want not counted and every pair", counted, len(pairs))
-		}
-		for _, p := range pairs {
-			for _, l := range p.Lines {
-				if l.Facts != 0 {
-					t.Fatalf("a line has %d facts, want 0", l.Facts)
-				}
-			}
+		if pairs, counted := read(graphs, work-1); counted || pairs != nil {
+			t.Fatalf("counted %v, pairs %v, want not counted and no pair", counted, pairs)
 		}
 	})
 	t.Run("AC-2.3 past it by the lines alone", func(t *testing.T) {

@@ -1,7 +1,6 @@
 package recordlinks_test
 
 import (
-	"bytes"
 	"math/rand"
 	"reflect"
 	"slices"
@@ -213,7 +212,7 @@ func TestLinesInvariants(t *testing.T) {
 
 // TestPairsInvariants holds Pairs to the one-pair count: each pair of a read
 // equals the lines over the same two graphs, and a pair is present exactly when
-// those lines are not empty.
+// those lines are not empty. A read whose work passes its cap lists no pair.
 func TestPairsInvariants(t *testing.T) {
 	r := rand.New(rand.NewSource(2))
 	base := matchregistry.Default().RecordLinksConfig()
@@ -251,15 +250,9 @@ func TestPairsInvariants(t *testing.T) {
 			}
 			byPair[[2]int{pair.A, pair.B}] = pair.Lines
 		}
-		var lines int
-		for a := range graphs {
-			for b := a + 1; b < len(graphs); b++ {
-				lines += len(recordlinks.Lines(p, graphs[a], graphs[b], metas, cfg))
-			}
-		}
-		if lines > cfg.RecordLinks.MaxReadWork {
+		if work > cfg.RecordLinks.MaxReadWork {
 			if got != nil {
-				t.Fatalf("round %d: %d lines pass the cap %d but Pairs = %+v", round, lines, cfg.RecordLinks.MaxReadWork, got)
+				t.Fatalf("round %d: the work %d passes the cap %d but Pairs = %+v", round, work, cfg.RecordLinks.MaxReadWork, got)
 			}
 			continue
 		}
@@ -270,16 +263,8 @@ func TestPairsInvariants(t *testing.T) {
 				if present != (len(want) != 0) {
 					t.Fatalf("round %d pair %d-%d: Pairs = %s (present %v), Lines = %s", round, a, b, show(have), present, show(want))
 				}
-				if work <= cfg.RecordLinks.MaxReadWork {
-					if present && !reflect.DeepEqual(have, want) {
-						t.Fatalf("round %d pair %d-%d: Pairs = %s, Lines = %s", round, a, b, show(have), show(want))
-					}
-					continue
-				}
-				for i, l := range have {
-					if !bytes.Equal(l.Entity, want[i].Entity) || l.Facts != 0 || l.Strength != recordlinks.StrengthWeak {
-						t.Fatalf("round %d pair %d-%d: past the read's cap line %d = %+v; want %x at 0 facts, weak", round, a, b, i, l, want[i].Entity)
-					}
+				if present && !reflect.DeepEqual(have, want) {
+					t.Fatalf("round %d pair %d-%d: Pairs = %s, Lines = %s", round, a, b, show(have), show(want))
 				}
 			}
 		}
