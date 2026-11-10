@@ -121,3 +121,13 @@ Check: the test passes; T-6 unchanged; scripts/check-pr.sh PASS.
 Files: the S16-02 plan.
 Do: delete the "**Amendment — this branch @ `4588b62e`.**" table in §4 and the "Amendment —" Edges bullets (fold anything still true into the Landed note).
 Check: `rg -n 'Amendment —' docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` prints nothing; plan-docs PASS.
+
+## Round A1 — fix
+Head `42977e6e`. Gate: implementer PASS (one earlier `promotealign` budget flake under load, untouched package, re-run passed). F-1, F-2, F-5 in `85a2adfe`; F-4 `fed2d7ba`; F-3, F-6 `449ba5d1`; F-7 `42977e6e`. All named tests seen red first. `TestLifelineOrderLargeBudget`: 10.1 ms old → ~0.12 ms new (budget 2 ms).
+Deviations: `PersonTimelineContentTests.swift:256` now finds the birth target by id (F-3 reorders `targets`). F-1's property test leaves out a recorded birth because the property fails with one: after pass (1) moves a funeral after the birth, the new pass (3) can carry a burial dated wholly before the birth past it (counterexample: windows 14 `[-,14635]`, 33 `[-,15111]`, 46 `[-,14807]`, birth `[14660,14660]`).
+
+**F-8 — Pass (3) passes only rows the burial's dates overlap** (from the F-1 deviation; Fix now: a defect in code this PR adds, against US-4 and the user's rule "the dates that are on the events are authoritative")
+Files: `core/database/persondetail/lifeline.go` (`reorderAfterDeath`), `lifeline_test.go`, the plan's Landed note (drop the "no recorded birth" limit).
+Failing test first: `TestLifelineOrderMovesOnlyOverlappingRows` with the generator's optional dated birth restored (and the implementer's counterexample as a named `TestLifelineOrder` case).
+Do: in `reorderAfterDeath`, scan `j` from `i+1` and stop at the first dated row whose window does not overlap `r`'s (undated rows never stop the scan? they sit last in date order; keep them unpassed: stop at them too); `last` is the last lower-rank overlapping after-death row inside that run. The cap and cost stay as they are.
+Check: both tests pass; T-10, T-12 and the budget test unchanged; scripts/check-pr.sh PASS.
