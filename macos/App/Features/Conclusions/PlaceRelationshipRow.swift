@@ -83,3 +83,67 @@ enum PlacePeriodDisplay {
         }
     }
 }
+
+/// One related-place row inside a Place detail section (S9-40).
+struct ConclusionDetailRelationship: Equatable, Identifiable {
+    var relationship: CatalogPlaceRelationship
+    var role: String? = nil
+
+    var id: String {
+        if let role, !role.isEmpty {
+            return "\(relationship.id)-\(role)"
+        }
+        return relationship.id
+    }
+}
+
+/// One Place hierarchy section (Part of / Contains / Succession). Carries relationship
+/// rows when Go filled them; otherwise the empty sentence.
+struct ConclusionDetailSection: Equatable, Identifiable {
+    var id: String
+    var title: LocalizedStringResource
+    var aside: String
+    var emptyText: String
+    var relationships: [ConclusionDetailRelationship] = []
+    /// Contains remainder when the list is truncated (PLD-5).
+    var omittedCount: Int = 0
+}
+
+/// A relationship section: header, rows when present, otherwise the empty sentence.
+struct ConclusionDetailRelationshipSection: View {
+    let section: ConclusionDetailSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            PVSectionHeader(title: section.title, aside: {
+                Text(verbatim: section.aside)
+                    .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .lineLimit(2)
+            })
+            if section.relationships.isEmpty {
+                Text(verbatim: section.emptyText)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall, italic: true))
+                    .foregroundStyle(PVColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, PVSpacing.space5)
+            } else {
+                ForEach(section.relationships) { row in
+                    PlaceRelationshipRow(relationship: row.relationship, role: row.role)
+                }
+                if section.omittedCount > 0 {
+                    Text(verbatim: L10n.Conclusions.placeContainsMore(section.omittedCount))
+                        .font(PVFont.body(size: PVTypeScale.caption, italic: true))
+                        .foregroundStyle(PVColor.textMuted)
+                        .padding(.vertical, PVSpacing.space3)
+                }
+            }
+        }
+        .accessibilityElement(children: section.relationships.isEmpty ? .combine : .contain)
+        .accessibilityLabel(
+            section.relationships.isEmpty
+                ? L10n.DesignSystem.spokenJoin(L10n.string(section.title), section.emptyText)
+                : L10n.string(section.title)
+        )
+    }
+}
