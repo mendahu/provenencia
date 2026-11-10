@@ -183,7 +183,7 @@ func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) 
 	h := holdings{}
 	limit := cfg.RecordLinks.MaxReadWork
 	shared, work := readPlan(string(page), graphs, h, cfg, limit)
-	if shared == nil || work > limit {
+	if work > limit {
 		return nil, false
 	}
 	var out []Pair
@@ -251,7 +251,7 @@ type sharedPair struct {
 // pairs that share one, ordered, with the read's work: the number of lines plus
 // each pair's work capped at MaxPairWork. It counts the lines before it builds
 // any pair and stops counting once past limit; past it, the work is returned
-// as counted so far, and the pairs are nil when the lines alone passed limit.
+// as counted so far and there are no pairs.
 func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([]sharedPair, int) {
 	holders := map[string][]int{}
 	for i, g := range graphs {
@@ -299,7 +299,7 @@ func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([
 		w := pairWork(p.entities, graphs[p.a], graphs[p.b], h, h, cfg, cfg.RecordLinks.MaxPairWork)
 		p.over = w > cfg.RecordLinks.MaxPairWork
 		if n += min(w, cfg.RecordLinks.MaxPairWork); n > limit {
-			return out, n
+			return nil, n
 		}
 	}
 	return out, n
