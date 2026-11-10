@@ -1,6 +1,6 @@
 # Review — S15-04 The Sources list shows and sorts by the date
 
-Plan: [`S15-04-sources-list-date.md`](S15-04-sources-list-date.md). Brief: [`../design/archive/S15-D2-sources-list.md`](../design/S15-D2-sources-list.md).
+Plan: [`S15-04-sources-list-date.md`](S15-04-sources-list-date.md). Brief: [`../design/archive/S15-D2-sources-list.md`](../design/archive/S15-D2-sources-list.md).
 
 ## Round 1 (2026-11-10)
 

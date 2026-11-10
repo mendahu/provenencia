@@ -33,6 +33,9 @@
 - `SourcesListContent` keeps `listWidth` in `@State` and reads `columns` through a computed property built from it and `\.pvWidthClass`, instead of a `let columns` in `body`; every reader still gets the one value.
 - `pvListBand` is documented in the design system README's Page columns row (the kit's inventory of its modifiers).
 - The comments on the D-14 strings in `L10n.swift` and `Localizable.xcstrings` now say "published date dialog" along with the values.
+- The S15-D1 Paste block was brought up to date with the current `add-design-brief` text (rules 2 and 3), because Step 8 edits that brief and `check-plan-docs.py` rejected the stale block.
+- `SourcesRowDate` lives in its own file, `SourcesRowDate.swift`, and the Source page header reads it to decide dated versus undated (F-1).
+- The Sort menu is 240 wide, not 220, so the longest sort label fits (F-2).
 - Not run: the manual check (§ 10) and the board comparison of frames 1a, 1b, 2b and 5 (this build was verified by the Xcode tests only).
 
 ## 1. Objective

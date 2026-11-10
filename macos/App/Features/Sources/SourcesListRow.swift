@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// One Source in the Sources list: three columns (S12-D5). The Source link (cover,
-/// title, and a second line of ref and last update), its type, and a stack of
-/// Evidence graph buttons, each carrying its own status badge. A Source with no
-/// Artifact shows one blocked block instead.
+/// One Source in the Sources list (S12-D5, S15-D2). The Source link (cover, title,
+/// the record line when narrow, and the activity line of ref and last update), the
+/// Type with the published date under it at Regular, a Published column at Wide, and
+/// the Evidence graph stack of buttons, each carrying its own status badge. A Source
+/// with no Artifact shows one blocked block instead.
 struct SourcesListRow: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
