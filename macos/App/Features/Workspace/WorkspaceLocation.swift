@@ -76,6 +76,14 @@ struct WorkspaceLocation: Codable, Equatable, Sendable {
     /// link without a section and one to the first section are equal.
     private(set) var pageSection: ConclusionPageSection?
 
+    /// The section the page shows: the stored one, else the first the kind offers. Nil for a
+    /// location with no entity or a kind without sections. The place, the page and the fill
+    /// all read this.
+    var openPageSection: ConclusionPageSection? {
+        guard entityId != nil else { return nil }
+        return pageSection ?? ConclusionPageSection.offered(by: section).first
+    }
+
     enum CodingKeys: String, CodingKey {
         case section, sourceId, graphId, fieldId, typeId, subjectId, citationId, artifactId, observationId
         case connectFromSubjectId, connectToSubjectId, connectBridgeTypeKey
