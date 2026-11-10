@@ -6,12 +6,11 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 ## Scheduled
 
-| Brief | View | Board | Gates |
-| --- | --- | --- | --- |
-| [S16-D1](S16-D1-person-page-notices.md) | Person page: notices for a failed reload (header band, a full-width section, the Sources diagram column) and for a record links diagram that is partial | [agreed 2026-11-10](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ) | S16-04 |
+None.
 
 ## Archived
 
 | Brief | View | Board | Built by |
 | --- | --- | --- | --- |
 | [S16-D2](archive/S16-D2-person-page-folds.md) | Person page folds (Family, Timeline, Sources): a page per Show more, focus on what it reveals, a folded record's highlight | [agreed 2026-11-09](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ) | S16-07 |
+| [S16-D1](archive/S16-D1-person-page-notices.md) | Person page: notices for a failed reload (header band, a full-width section, the Sources diagram column) and for a record links diagram that is partial | [agreed 2026-11-10](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ) | S16-04 |

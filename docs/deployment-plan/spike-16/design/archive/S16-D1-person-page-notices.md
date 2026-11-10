@@ -6,9 +6,9 @@
 **Implements later as:** PR **S16-04** (The Person page says when a reload failed or the diagram is partial)
 **Board:** agreed 2026-11-10 — [Claude Design — Person Detail](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ), turn 17 "S16-D1 · Notices" on three pages: *Person Detail - Family* (F1a, F1b, F5), *Person Detail - Sources* (F2a, F2b, F2c, a reference frame for a record links reload over a drawn diagram, F6a, F6b, F7, F8) and *Person Detail - Timeline* (F3a, F3b, F4, F9). Each turn's decisions panel restates its PN rows. Two details: a section's notice sits 24 pt above the content, and the header band's notice 20 pt below the switcher, both at most 1180 pt (`PVSpacing.widthContentMax`). The board draws the leave Toast as a title and a body; it is built as one line, as Event and Place do (user, 2026-11-10)
 **Depends on:** the agreed S13-D1, S13-D10 and S16-D2 boards (the page frame shipped in S9-24 and S13-08; Sources and the record links in S13-16, [#722](https://github.com/mendahu/provenencia/pull/722), and S13-28, [#744](https://github.com/mendahu/provenencia/pull/744); the folds in S16-07, [#761](https://github.com/mendahu/provenencia/pull/761))
-**Related:** audit P-5, P-10, P-17 ([`../person-page-audit.md`](../person-page-audit.md)); working rules "A refresh failure is read beside its value", "The record links read is bounded and says so", "A person's records are records" in [`../deployment-plan.md`](../deployment-plan.md#working-rules); the Promote page's and the Evidence graph's retry notices (S14-D7, S14-20) for the kit piece; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** audit P-5, P-10, P-17 ([`../person-page-audit.md`](../../person-page-audit.md)); working rules "A refresh failure is read beside its value", "The record links read is bounded and says so", "A person's records are records" in [`../deployment-plan.md`](../../deployment-plan.md#working-rules); the Promote page's and the Evidence graph's retry notices (S14-D7, S14-20) for the kit piece; [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -124,7 +124,7 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 
 | S16-04 ships | Not S16-04 |
 | --- | --- |
-| PN-1 – PN-10, PN-W1, PN-W2 | The lists' notices ([idea](../../../ideas/person-page-followups.md)); stale-while-refreshing of hidden pages (S16-09); the section-switch and Remove announcements (S16-06) |
+| PN-1 – PN-10, PN-W1, PN-W2 | The lists' notices ([idea](../../../../ideas/person-page-followups.md)); stale-while-refreshing of hidden pages (S16-09); the section-switch and Remove announcements (S16-06) |
 
 ---
 
@@ -195,4 +195,4 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 ## 7. Handoff
 
-When the board is agreed: record the frames on the **Board** line here, in [`README.md`](README.md) and on the plan's **Board** line; the plan ([`../prs/S16-04-person-page-notices.md`](../prs/S16-04-person-page-notices.md)) copies PN-1 – PN-10, PN-W1 and PN-W2 into its Scope and moves from `Blocked — on board S16-D1` to `Planned`. When S16-04 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the frames on the **Board** line here, in [`README.md`](README.md) and on the plan's **Board** line; the plan ([`../prs/S16-04-person-page-notices.md`](../../prs/S16-04-person-page-notices.md)) copies PN-1 – PN-10, PN-W1 and PN-W2 into its Scope and moves from `Blocked — on board S16-D1` to `Planned`. When S16-04 lands, the brief moves to the spike's design archive.

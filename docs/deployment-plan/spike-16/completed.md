@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-04 — The Person page says when a reload failed or the diagram is partial
+
+**Landed 2026-11-10** in [#776](https://github.com/mendahu/provenencia/pull/776). When a Person page's reload fails, the page keeps what it showed and says so with an announced Try again notice where that read failed: under the section switcher for the page's own read, above the rows for a section's read, at the top of the diagram column for the record links read; a first load that fails offers Try again too. A person deleted or merged in another window leaves with "This person no longer exists", also when the page was already shown. `QueryHandle` gains `reading`, `failureRevision` and `isReading`, and `PVRetryCallout(failureRevision:)` speaks again for each new failure and keeps the keyboard on Try again after a press; the Evidence graph and Promote use it. A read past `MaxReadWork` sends no record link, and the diagram says when it is partial (not compared, lines dropped, or more than 1,000 records). Version 0.7.1.
+
 ## S16-35 — Layout tests compute their frames instead of waiting on a window
 
 **Landed 2026-11-10** in [#775](https://github.com/mendahu/provenencia/pull/775). Nothing a researcher sees changes. The Swift tests no longer poll a hosted window for layout, which failed at random when the Mac was busy: `SourcePageOverviewLayout.arrange` and `PVPageColumnsLayout.arrange` are static functions tested with made-up sizes, `PVPageColumnsMetrics.layoutWidths` holds the stacked rule and `groupX` the one centering rule, `PVWidthClassTests` force layout and assert at once, `LeavesForSectionRoot.leave` has a plain test, and `WorkspaceDestinationHostTests`' three whole-workspace tests are deleted. `add-swift-test` teaches the rule. The full suite failed once in five runs before (four tests) and in none of five after.
