@@ -94,4 +94,4 @@ No Fix plan 2.
 `origin/main` still `9897bf19`; no merge needed. Gate PASS on `85bfe707`.
 
 ## Result
-Gate PASS · CI green (localizable, test ×2) · open: none · follow-ups: MNT-6 (FakeStore `getSourceWorkspace` blank read; `structural-debt.md` line pending the user's choice) · to user: —
+Gate PASS · CI green (localizable, test ×2) · open: none · follow-ups: MNT-6 (FakeStore `getSourceWorkspace` blank read; kept in `docs/ideas/structural-debt.md`, user's choice 2026-11-09) · to user: —
