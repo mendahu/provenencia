@@ -75,3 +75,14 @@ F-4 **Not reproduced**: `titleSortsBreakTiesByNewestAdded` passed before any cha
 
 **F-4 (revised) — A–Z and Z–A share the date sorts' title comparison** (from MNT-2, user decision)
 No failing test first: the behavior already holds by accident. Add `SourcesModelTests/titleSortsBreakTiesByNewestAdded` as written in the first attempt (it pins the tie order so it no longer rests on the input order), then do F-4's **Do** as written above. Check: the test passes before and after; `scripts/check-pr.sh` PASS.
+
+## Round 2 — fix
+Head `712a3c8f` (pushed). F-4 (revised) read by the orchestrator: `.az`/`.za` call `titleOrder`, `descending` flips only the title comparison, the id-descending tie stays; `titleSortsBreakTiesByNewestAdded` added. MNT-2: **Resolved**.
+
+### Gate failure — window-hosted layout tests (reclassified: not a pre-existing flake)
+Orchestrator gate FAIL twice at `712a3c8f`, `xcode-test`: `PVPageColumnsTests.wideHostPlacesTheSecondaryBeside`, `SourcePageOverviewLayoutTests` ×3, `PVWidthClassTests` ×2 time out (~13 s) waiting on hosted-window frames / width class. Measured the full `ProvenenciaTests` run with the gate's xcodebuild command: `main` (`918c8ad3`, 1878 tests) 2 of 2 pass; this branch (1889 tests, 169 suites) 1 of 2 pass here, and across the implementer's and orchestrator's runs this PR has failed ~5 of 8. Round 0 and round 1 logged it as a flake in untouched files; that was wrong. It goes back as a gate fix item, not a follow-up.
+
+**F-5 — Find and fix what makes the window-hosted layout tests time out on this branch**
+Failing test first: the full `ProvenenciaTests` run (gate command) fails on most runs at `712a3c8f`; the target is several consecutive passing runs.
+Do: bisect before changing anything. Candidates are what this branch adds to the test process: the new tests (`SourcesModelTests` T-1 – T-8 incl. the 3,000-row `dateSortAtScaleWithFilter`, `SourceMappingTests`, `SourcesListSettingsTests` additions, `titleSortsBreakTiesByNewestAdded`, `sourceDateCopySaysPublished`) and the product changes the hosted tests render (`pvListBand` in `PVPageColumns.swift`, the Source page header). Disable or revert one candidate group at a time locally (do not commit the disabling) and run the full suite enough times to tell. Fix the cause in the code or test this PR added — do not weaken, skip, lengthen the timeout of, or serialize the failing layout tests. If the cause turns out to be in code this PR did not touch, stop and report with the evidence.
+Check: the gate's xcode-test passes on at least 4 consecutive full runs; `scripts/check-pr.sh` PASS.
