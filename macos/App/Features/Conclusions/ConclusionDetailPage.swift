@@ -160,6 +160,7 @@ struct ConclusionDetailPage<Content: ConclusionDetailBody, Secondary: View, Page
             if let handle: QueryHandle<CatalogConclusionDetail> = session.queryHandle(key) {
                 ConclusionDetailLoaded(
                     handle: handle,
+                    key: key,
                     session: session,
                     entityId: entityId,
                     projectDir: session.projectKey.projectDir,
@@ -249,6 +250,7 @@ struct ConclusionDetailDefaultPageSections<Content: ConclusionDetailBody>: View 
 
 private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: View, PageSections: View>: View {
     @Bindable var handle: QueryHandle<CatalogConclusionDetail>
+    let key: CatalogQueryKey
     let session: WorkspaceSession
     let entityId: String
     let projectDir: String
@@ -286,9 +288,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
 
     /// Reads the page's detail again; the notice's Try again.
     private func readAgain() {
-        let _: QueryHandle<CatalogConclusionDetail> = session.reread(
-            .conclusionDetail(project: session.projectKey, entityId: entityId)
-        )
+        let _: QueryHandle<CatalogConclusionDetail> = session.reread(key)
     }
 
     var body: some View {
@@ -303,10 +303,8 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                     PVRetryCallout(
                         title: L10n.Conclusions.pageReadErrorTitle,
                         message: message,
-                        retry: L10n.Conclusions.readNoticeTryAgain,
-                        isRetrying: handle.isReading,
-                        retryIdentifier: "\(errorIdentifier).tryAgain",
-                        failureRevision: handle.failureRevision,
+                        handle: handle,
+                        id: errorIdentifier,
                         onRetry: readAgain
                     )
                     .accessibilityIdentifier(errorIdentifier)
@@ -327,8 +325,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             openPageSection: openPageSection,
                             refreshing: refreshing || sectionRefreshing,
                             refreshFailure: refreshFailure,
-                            isRetrying: handle.isReading,
-                            failureRevision: handle.failureRevision,
+                            handle: handle,
                             retry: readAgain,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
@@ -372,8 +369,7 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let refreshing: Bool
     /// The message of a page re-read that failed behind the shown page, nil when none did.
     let refreshFailure: String?
-    let isRetrying: Bool
-    let failureRevision: Int
+    let handle: QueryHandle<CatalogConclusionDetail>
     let retry: () -> Void
     let select: (ConclusionPageSection) -> Void
 
@@ -398,10 +394,8 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
                 PVRetryCallout(
                     title: L10n.Conclusions.pageReadErrorTitle,
                     message: L10n.Conclusions.readNoticeStaleMessage(refreshFailure),
-                    retry: L10n.Conclusions.readNoticeTryAgain,
-                    isRetrying: isRetrying,
-                    retryIdentifier: "\(pageIdentifier).refreshError.tryAgain",
-                    failureRevision: failureRevision,
+                    handle: handle,
+                    id: "\(pageIdentifier).refreshError",
                     onRetry: retry
                 )
                 .accessibilityIdentifier("\(pageIdentifier).refreshError")

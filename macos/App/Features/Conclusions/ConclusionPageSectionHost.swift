@@ -68,13 +68,13 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         return key
     }
 
-    private var columnLoadingHeight: CGFloat? {
-        if case .column(let height) = placement { return height }
-        return nil
+    private var isColumn: Bool {
+        if case .column = placement { return true }
+        return false
     }
 
     private var idRoot: String {
-        accessibilityIdentifierRoot + (columnLoadingHeight == nil ? "" : ".column")
+        accessibilityIdentifierRoot + (isColumn ? ".column" : "")
     }
 
     var body: some View {
@@ -105,41 +105,41 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         }
     }
 
-    private var isColumn: Bool { columnLoadingHeight != nil }
+    /// A notice keeps the page band's width in the band, and fills the column in a column.
+    @ViewBuilder
+    private func placed(_ notice: some View) -> some View {
+        if isColumn { notice } else { notice.pvKeepsPageBand() }
+    }
 
-    /// A failed read's notice with Try again, which reads this host's own key again. `bandGap`
-    /// keeps the band's notices at the page band's width.
+    /// A failed read's notice with Try again, which reads this host's own key again.
     private func retryNotice(
         _ message: String, id: String, handle: QueryHandle<Value>
     ) -> some View {
-        let notice = PVRetryCallout(
-            title: errorTitle,
-            message: message,
-            retry: L10n.Conclusions.readNoticeTryAgain,
-            isRetrying: handle.isReading,
-            compact: isColumn,
-            retryIdentifier: "\(id).tryAgain",
-            failureRevision: handle.failureRevision,
-            onRetry: { let _: QueryHandle<Value> = session.reread(key) }
+        placed(
+            PVRetryCallout(
+                title: errorTitle,
+                message: message,
+                handle: handle,
+                compact: isColumn,
+                id: id,
+                onRetry: { let _: QueryHandle<Value> = session.reread(key) }
+            )
+            .accessibilityIdentifier(id)
         )
-        .accessibilityIdentifier(id)
-        return Group {
-            if isColumn { notice } else { notice.pvKeepsPageBand() }
-        }
     }
 
     /// The read is gone (deleted or merged): the page's kind says so, with nothing to try again.
-    @ViewBuilder
     private var goneNotice: some View {
-        let notice = PVCallout(
-            tone: .danger,
-            title: errorTitle,
-            message: L10n.string(L10n.Conclusions.goneNotice(section: navigation.currentLocation.section)),
-            compact: isColumn,
-            announces: true
+        placed(
+            PVCallout(
+                tone: .danger,
+                title: errorTitle,
+                message: L10n.string(L10n.Conclusions.goneNotice(section: navigation.currentLocation.section)),
+                compact: isColumn,
+                announces: true
+            )
+            .accessibilityIdentifier("\(idRoot).error")
         )
-        .accessibilityIdentifier("\(idRoot).error")
-        if isColumn { notice } else { notice.pvKeepsPageBand() }
     }
 
     @ViewBuilder
@@ -168,7 +168,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
                         handle: handle
                     )
                 }
-                if case .band = placement, let emptyTitle, isEmpty(value) {
+                if !isColumn, let emptyTitle, isEmpty(value) {
                     PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
                         .pvKeepsPageBand()
                         .accessibilityIdentifier("\(idRoot).empty")
