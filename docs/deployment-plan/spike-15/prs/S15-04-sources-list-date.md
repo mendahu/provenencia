@@ -1,9 +1,9 @@
 # S15-04 — The Sources list shows and sorts by the date
 
-**Status:** Planned
+**Status:** Landed in #N (2026-11-10)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S15-D2](../design/S15-D2-sources-list.md), board agreed 2026-11-10
+**Brief:** [S15-D2](../design/archive/S15-D2-sources-list.md), board agreed 2026-11-10
 **Board:** [Claude Design — Sources List](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm), page *S2-04 Sources list*, turn "S15-D2 · Sources list": frames 1a/1b, 2a/2b, 3, 4, 5, 6 and the panel "S15-D2 · Requirements as drawn"; the row and list code is the component *Sources List Frame* (presets `s15added`, `s15asc`, `s15sortmenu`, `s15desc`, `s15narrow`, `s15census`). Read it with the Artifact tool's `read` on that link, `path` "project/S2-04 Sources list.dc.html" (frames and requirements) and "project/Sources List Frame.dc.html" (the row). §6 macOS describes each frame in words
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)), S15-D2
 **Blocks:** —
@@ -27,6 +27,13 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- `SourcesListContent` keeps `listWidth` in `@State` and reads `columns` through a computed property built from it and `\.pvWidthClass`, instead of a `let columns` in `body`; every reader still gets the one value.
+- `pvListBand` is documented in the design system README's Page columns row (the kit's inventory of its modifiers).
+- The comments on the D-14 strings in `L10n.swift` and `Localizable.xcstrings` now say "published date dialog" along with the values.
+- Not run: the manual check (§ 10) and the board comparison of frames 1a, 1b, 2b and 5 (this build was verified by the Xcode tests only).
 
 ## 1. Objective
 

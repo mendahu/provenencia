@@ -6,9 +6,9 @@
 **Implements later as:** PR **S15-04** (SL-1 – SL-7, SL-W1, SL-W2)
 **Board:** agreed 2026-11-10 — [Claude Design — Sources List](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm), page *S2-04 Sources list*, turn "S15-D2 · Sources list": frames 1a/1b (date added), 2a/2b (Source date, oldest first), 3 (Sort menu), 4 (newest first), 5 (narrow, 860), 6 (type filter Census), and the panel "S15-D2 · Requirements as drawn"; the frame component is *Sources List Frame* (presets `s15added`, `s15asc`, `s15sortmenu`, `s15desc`, `s15narrow`, `s15census`). Board decisions (user, 2026-11-10), which replace the brief's recommendations where they differ: the date is named as the **published** date, never shown with an icon, and kept apart from the last update (option C): "Published 1 Jun 1880" under the type at Regular, its own **Published** column at Wide, a record line (type · Published date) above the activity line when narrow; undated reads "No published date" (or "Undated" in the column), faint; at Wide the whole list centers at 1600pt of content (Wide rule 3 rewritten to match). After the board (user, 2026-11-10): "Published" is the date's one name, so the sorts read "Published date, …" and the Source page's date copy follows (S15-04 D-14); Promote adopts the 1600 list width. § 4 below is the requirements as drawn
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)): every Source carries an optional date and its place in date order; S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)): the Source page shows that date with a calendar icon
-**Related:** [`../source-provenance-date.md`](../source-provenance-date.md); board [S15-D1](S15-D1-source-page.md) SD-1 (how the date reads on the Source page); [`../../../ideas/wide-layout.md`](../../../ideas/wide-layout.md) "Sources, Persons, Events and Places lists"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); working rules in [`../deployment-plan.md`](../deployment-plan.md#working-rules); plan [`../prs/S15-04-sources-list-date.md`](../prs/S15-04-sources-list-date.md)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-provenance-date.md`](../../source-provenance-date.md); board [S15-D1](../S15-D1-source-page.md) SD-1 (how the date reads on the Source page); [`../../../ideas/wide-layout.md`](../../../../ideas/wide-layout.md) "Sources, Persons, Events and Places lists"; [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); working rules in [`../deployment-plan.md`](../../deployment-plan.md#working-rules); plan [`../prs/S15-04-sources-list-date.md`](../../prs/S15-04-sources-list-date.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -111,7 +111,7 @@ The Sort menu holds four options today: Date added (newest first, the default), 
 - Editing the date from the list: the date is set on the Source page.
 - Group headings by decade or century, or an "Undated" section heading: the undated rows simply come last.
 - The Source page (S15-D1), the Person page's Sources section (S15-D3), the Copy Source form (S15-D13).
-- List beside the selected detail at Wide (the lists' later redesign, [`wide-layout.md`](../../../ideas/wide-layout.md)).
+- List beside the selected detail at Wide (the lists' later redesign, [`wide-layout.md`](../../../../ideas/wide-layout.md)).
 
 ---
 
@@ -183,4 +183,4 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 ## 7. Handoff
 
-When the board is agreed: record the link, the frames and the board's decisions on the **Board** line here, in [`README.md`](README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the link, the frames and the board's decisions on the **Board** line here, in [`README.md`](../README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.
