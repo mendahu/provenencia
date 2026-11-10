@@ -46,9 +46,10 @@ struct PVRetryCallout: View {
         PVCallout(tone: .danger, title: title, message: message, compact: compact, announces: true) {
             retryButton
         }
-        // A new failure remounts the callout so it is announced again.
-        .id(failureRevision)
+        // The appear is the inner callout's, so a new failure (which remounts it through the
+        // id below) fires it again and announces again.
         .onAppear(perform: claimFocusAfterPressedRetry)
+        .id(failureRevision)
     }
 
     private var focusBinding: FocusState<Bool>.Binding { retryFocused ?? $ownRetryFocus }
@@ -56,6 +57,8 @@ struct PVRetryCallout: View {
     private var retryButton: some View {
         PVButton(retry, variant: .secondary, size: .sm, loading: isRetrying, action: pressRetry)
             .accessibilityIdentifier(retryIdentifier)
+            // Several notices can each offer "Try again"; the title says which read it retries.
+            .accessibilityHint(title?.pvString ?? "")
             .focused(focusBinding)
     }
 
