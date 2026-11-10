@@ -1,10 +1,10 @@
 # S15-32 — Copy Source can carry the date
 
-**Status:** Blocked — on board S15-D13
+**Status:** Planned
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S15-D13](../design/S15-D13-copy-source-dialog.md), board not agreed yet
-**Board:** — (not drawn yet). When agreed: the S15-D1 Source page board, turn "S15-D13 · Copy Source", read with the Artifact tool's `read` on its link. §6 macOS describes each frame in words from the brief; the board's decisions, where they differ, are copied here when it is agreed
+**Brief:** [S15-D13](../design/S15-D13-copy-source-dialog.md), board agreed 2026-11-10
+**Board:** [Claude Design — Source page](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK#artboard-32c863db011e), page *Source page*, row "Copy Source": frames `copy-dated` (1a), `copy-dated-wide` (1b), `copy-undated` (2), `copy-phrase` (3), `copy-date-off` (4), beside the dialog's earlier frames (`copy-page`, `copy-loading`, `copy-absent`, `copy-forty`, `copy-error`, `copy-failed`, `copy-discard`), which are unchanged. Read it with the Artifact tool's `read` on that link, `path` "project/Source page.dc.html" (the frame list) and "project/Source.dc.html" (the dialog markup near `copyParts`, the parts builder `part(…)`, and `openCopy`). As drawn: Published date is the first of four `PVCheckbox` part ticks, all built by one `part` helper; its hint is the date as the row display writes it ("4 Jul 1881", or the phrase); an undated original reads "None on this Source", unticked and disabled; the dialog is 520pt and centered at Wide. No board decision differs from the brief. §6 macOS describes each frame in words
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-D13
 **Blocks:** —
 **Branch:** `s15-32-copy-source-date`
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/go-tests.mdc`, `.cursor/rules/date-values.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "The Source date is one optional DateValue on `sources`" and "Not public is a stored switch and nothing else" ([`../deployment-plan.md`](../deployment-plan.md#working-rules)); [`../source-provenance-date.md`](../source-provenance-date.md); [`../../../source-layer-data-model.md` § 4.2](../../../source-layer-data-model.md#42-copy-source); S15-02's [plan](S15-02-source-date-and-public-flag.md) D-7, D-14 and **Next adds**; S15-04's [plan](S15-04-sources-list-date.md) D-14 (the date's one name is "Published")
 **Planned:** 2026-11-10 against `main` @ `5a10ccb`
-**Review:** [`S15-32-copy-source-date.review.md`](S15-32-copy-source-date.review.md) — Fits with changes / Not ready (on the board only), 1 round; every finding Fixed or answered; nothing open but the board
+**Review:** [`S15-32-copy-source-date.review.md`](S15-32-copy-source-date.review.md) — Fits with changes / Not ready (on the board only), 1 round; every finding Fixed or answered; the board (agreed 2026-11-10) matches the brief; nothing open
 **Runs on:** macOS. STEP-2's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go` and `protoc-gen-swift`; STEP-3 – STEP-5 and `scripts/check-pr.sh` need Xcode ([`README.md`](../../../../README.md)). Without them, stop: never hand-edit the generated `engine.pb.go` or `engine.pb.swift`
 
 ### Implementer — read this first
@@ -112,7 +112,7 @@ A researcher copying a Source chooses whether the copy keeps the original's publ
 | D-2 | `CreateFromDraft` calls `sources.SetDate(tx, userID, src.ID, d.Date)` right after `sources.Create` when `d.Date != nil`, appends its changes after the Create changes (so the order is Source, its Default graph, the date row and the Source's `date_value_id` update, then metadata, layout, credibility, Artifacts), and returns the Source `SetDate` returned. The package doc and the `CreateFromDraft` doc list the date | `SetDate` is the one owner write of a Source date (S15-02 D-7), mints the copy's own row through `PutTx`, and audits it; returning its Source puts `Date` and `date_sort_key` on the response so the list row shows the date without a reread | Adding `Date` to `sources.CreateInput` — a second path that writes a Source date beside `SetDate`, for one caller |
 | D-3 | `CopySourceRequest` gains `bool copy_date = 10;` with the comment `// the original's date, as the copy's own`. The handler passes `req.GetCopyDate()` to `CopyInput.Date`. `copy_date: true` on an undated original is not an error | The same contract as `copy_description` on an original with no description | A separate RPC to date the copy after copying — two writes, two revisions |
 | D-4 | Swift: `SourceCopyChoices.includeDate = true`; `SourceCopyModel.dateLine: String?` *(new)* = `SourcesRowDate.line(workspace?.source.date)`; `dateAvailable: Bool` *(new)* = `dateLine != nil`; `copy()` sends `copyDate: choices.includeDate && dateAvailable` | Availability reads the freshly loaded workspace, as the other three parts do; one helper decides "dated" for the list, the page and this form, so a date the researcher cannot see is not carried silently | Reading `original.date` — the snapshot the dialog opened with, stale after an edit elsewhere |
-| D-5 | `SourceCopyForm` gains one private `partTick(_ label: LocalizedStringResource, hint: String, keyPath: WritableKeyPath<SourceCopyChoices, Bool>, available: Bool, id: String) -> some View` *(new)* that builds `PVCheckbox(verbatim: L10n.string(label), description: available ? hint : L10n.string(L10n.Sources.copySourcePartAbsent), isChecked: partBinding(keyPath, available: available), isDisabled: !available \|\| model.isSaving).accessibilityIdentifier(id)`. All four parts go through it: Published date (`L10n.Sources.copySourceDate`, hint `model.dateLine ?? ""`, `\.includeDate`, `model.dateAvailable`, `sources.copy.date`) first, then Description, Metadata, Credibility with their existing hints (`L10n.string(…Hint)`) and identifiers, unless the agreed board places the date elsewhere (CS-1). The identifier and the L10n key both read `sources.copy.date`; they are separate namespaces | The rule "an unavailable part reads unticked, disabled, with None on this Source" lives once instead of four times (review M-1); the date hint is a value, so every part takes the `verbatim:` initializer, as `PVChecklistRows` does | A fourth hand-copied block; a `PVCheckbox` initializer mixing a resource label and a String description — a kit change for one caller |
+| D-5 | `SourceCopyForm` gains one private `partTick(_ label: LocalizedStringResource, hint: String, keyPath: WritableKeyPath<SourceCopyChoices, Bool>, available: Bool, id: String) -> some View` *(new)* that builds `PVCheckbox(verbatim: L10n.string(label), description: available ? hint : L10n.string(L10n.Sources.copySourcePartAbsent), isChecked: partBinding(keyPath, available: available), isDisabled: !available \|\| model.isSaving).accessibilityIdentifier(id)`. All four parts go through it: Published date (`L10n.Sources.copySourceDate`, hint `model.dateLine ?? ""`, `\.includeDate`, `model.dateAvailable`, `sources.copy.date`) first, then Description, Metadata, Credibility with their existing hints (`L10n.string(…Hint)`) and identifiers, where the agreed board places it (CS-1). The identifier and the L10n key both read `sources.copy.date`; they are separate namespaces | The rule "an unavailable part reads unticked, disabled, with None on this Source" lives once instead of four times (review M-1); the date hint is a value, so every part takes the `verbatim:` initializer, as `PVChecklistRows` does | A fourth hand-copied block; a `PVCheckbox` initializer mixing a resource label and a String description — a kit change for one caller |
 | D-6 | The value-row owner check stays in its idea file. Its trigger line is reworded so it no longer names S15-32 | The copy mints its own row (`PutTx` with no `prevID`) and never edits a row in place, so the crafted shared-row case the idea guards is not reached by this PR; a Source is not a new kind of date owner | Adding the check here — a change to `datevalues.PutTx` and `namevalues.PutTx` that this PR does not exercise |
 | D-7 | The Swift `FakeStore.copySource` copies `original.date` and `original.dateSortKey` onto the copy when `copyDate` is true | The fake mirrors what the wire returns, as it does for description and credibility; it does not compute a sort key | Leaving the fake undated — the model tests could not see the carried date |
 
@@ -175,12 +175,12 @@ Errors: none new. A stored date that fails `datevalue.Validate` (a crafted catal
 
 ### macOS
 
-From the S15-D13 inventory. The board is not agreed yet; the frames, in words from the brief:
+From the S15-D13 inventory and the agreed board; each frame in words:
 
-- **Frame 1a / 1b** (Regular, Wide): the dialog over the Source page, 520pt, centered at both widths. Under the title and type fields and the divider, the "COPY FROM THE ORIGINAL" heading, then four ticks: Published date (hint "4 Jul 1881"), Description, Metadata, Credibility, all ticked; then the Artifact checklist.
-- **Frame 2:** an undated original: Published date unticked, disabled, hint "None on this Source".
-- **Frame 3:** a long phrase date: the hint wraps; the dialog keeps its width.
-- **Frame 4:** frame 1a with Published date unticked; Copy enabled.
+- **`copy-dated` / `copy-dated-wide`** (1a / 1b, Regular, Wide): the dialog over the Source page, 520pt, centered at both widths. Under the title and type fields and the divider, the "COPY FROM THE ORIGINAL" heading, then four ticks: Published date (hint "4 Jul 1881"), Description, Metadata, Credibility, all ticked; then the Artifact checklist.
+- **`copy-undated`** (2): an undated original: Published date unticked, disabled, hint "None on this Source".
+- **`copy-phrase`** (3): the phrase "in the reign of Victoria, before the mill fire of that year" is the hint and wraps; the dialog keeps its width.
+- **`copy-date-off`** (4): frame 1a with Published date unticked (next week's issue); the form is changed, so Cancel asks first; Copy enabled.
 
 | Building block | Component | Home | Notes |
 | --- | --- | --- | --- |
@@ -220,7 +220,7 @@ Check: `xcodebuild test -only-testing:ProvenenciaTests/SourceCopyModelTests` pas
 
 **STEP-5 — The Published date tick on the form**
 Files: `macos/App/Features/Sources/SourceCopyDialog.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`. Skill: `add-ui-component`, `add-localized-string`.
-Do: D-5 (the `partTick` helper and all four parts on it) and the key under **Strings**. Match the agreed board's frames 1a – 4.
+Do: D-5 (the `partTick` helper and all four parts on it) and the key under **Strings**. Match the board's frames `copy-dated`, `copy-dated-wide`, `copy-undated`, `copy-phrase` and `copy-date-off`.
 Check: `python3 scripts/check-localizable-xcstrings.py` passes; the manual check (§ 10) steps 1–3.
 
 **STEP-6 — Docs**
@@ -287,7 +287,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 
 ## 12. Open questions
 
-None. The plan is blocked only on the S15-D13 board.
+None.
 
 ## 13. PR
 

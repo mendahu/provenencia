@@ -2,11 +2,11 @@
 
 Plan: [`S15-32-copy-source-date.md`](S15-32-copy-source-date.md). Brief: [S15-D13](../design/S15-D13-copy-source-dialog.md), reviewed with it.
 
-**Verdict:** Fits with changes — Not ready (only on the S15-D13 board; Ready with changes for the rest)
+**Verdict:** Fits with changes — Ready with changes (round 1's only open blocker, X-1, closed when the S15-D13 board was agreed on 2026-11-10)
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet). No round 2: round 1 raised no maintainability blocker, and the executability blockers were the board (expected) and the build host.
 
 ## To user
-- None. The plan stays `Blocked — on board S15-D13` until the board is agreed.
+- None. The S15-D13 board (2026-11-10) was read against the brief: CS-1 – CS-6 and CS-W1 are drawn as written, the date tick first, so the plan moved to Planned.
 
 ## Writer's own calls
 - The tick is named "Published date" (S15-04 D-14: the date's one name), with the date itself as its hint; the brief recommends it first among the parts.

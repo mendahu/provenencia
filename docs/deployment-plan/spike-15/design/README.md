@@ -19,7 +19,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 | S15-D10 | Move confirm: the bundle, the target, the credibility note | — | S15-25 |
 | S15-D11 | Event page: value rows open the provenance sheet; the Why accordion removed | — | S15-31 |
 | S15-D12 | Place page: value rows open the provenance sheet; the Why accordion removed | — | S15-31 |
-| [S15-D13](S15-D13-copy-source-dialog.md) | Copy Source dialog: a Published date tick | — | S15-32 |
+| [S15-D13](S15-D13-copy-source-dialog.md) | Copy Source dialog: a Published date tick | [agreed 2026-11-10](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK#artboard-32c863db011e) | S15-32 |
 
 ## Archived
 
