@@ -195,6 +195,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     let workspaceNavCountsHold = FakeHold()
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
+    /// The date sort key `setSourceDate` gives the row (the fake does not derive one); nil leaves it unplaced.
+    var nextSourceDateSortKey: Int64?
     /// When set, `setSourceDate` throws.
     var setSourceDateError: Error?
     /// When set, `setSourcePublic` throws.
@@ -579,7 +581,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
             if let setSourceDateError { throw setSourceDateError }
-            return try mutateSource(projectDir: projectDir, sourceID: sourceID) { $0.date = date }
+            return try mutateSource(projectDir: projectDir, sourceID: sourceID) {
+                $0.date = date
+                $0.dateSortKey = nextSourceDateSortKey
+            }
         }
     }
 

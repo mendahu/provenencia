@@ -7920,6 +7920,114 @@
         }
       }
     },
+    "sources.list.sort.dateOldest": {
+      "comment": "Sources sort option: published date, oldest first, undated last",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published date, oldest first"
+          }
+        }
+      }
+    },
+    "sources.list.sort.dateNewest": {
+      "comment": "Sources sort option: published date, newest first, undated last",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published date, newest first"
+          }
+        }
+      }
+    },
+    "sources.list.publishedLabel": {
+      "comment": "Label before a Source's date on a Sources list row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published"
+          }
+        }
+      }
+    },
+    "sources.list.columnPublished": {
+      "comment": "Sources list column caption: the Source's published date (Wide)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published"
+          }
+        }
+      }
+    },
+    "sources.list.noPublishedDate": {
+      "comment": "Sources list row: the Source has no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No published date"
+          }
+        }
+      }
+    },
+    "sources.list.publishedHelp": {
+      "comment": "Hover text on a Sources list row's date; argument is the date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published %@"
+          }
+        }
+      }
+    },
+    "sources.list.publishedSpoken": {
+      "comment": "VoiceOver part of a Sources list row; argument is the date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "published %@"
+          }
+        }
+      }
+    },
+    "sources.list.noPublishedDateSpoken": {
+      "comment": "VoiceOver part of a Sources list row with no date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no published date"
+          }
+        }
+      }
+    },
+    "dates.row.undated": {
+      "comment": "A list cell's date when there is none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undated"
+          }
+        }
+      }
+    },
     "sources.list.sortMenu": {
       "comment": "Accessibility label for the Sources sort control",
       "extractionState": "manual",
@@ -8581,55 +8689,55 @@
       }
     },
     "sources.page.sourceDate.add": {
-      "comment": "Button in the Source page header: open the Source date dialog for an undated Source",
+      "comment": "Button in the Source page header: open the published date dialog for an undated Source",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add publication date"
+            "value": "Add published date"
           }
         }
       }
     },
     "sources.page.sourceDate.edit": {
-      "comment": "Accessibility label and help of the pencil beside the Source's date",
+      "comment": "Accessibility label and help of the pencil beside the Source's published date",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Edit date"
+            "value": "Edit published date"
           }
         }
       }
     },
     "sources.page.sourceDate.accessibility": {
-      "comment": "Accessibility label of the Source's date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880",
+      "comment": "Accessibility label of the Source's published date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Date, %@"
+            "value": "Published, %@"
           }
         }
       }
     },
     "sources.page.sourceDate.dialogTitle": {
-      "comment": "Title of the Source date dialog",
+      "comment": "Title of the published date dialog",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Source date"
+            "value": "Published date"
           }
         }
       }
     },
     "sources.page.sourceDate.dialogSubtitle": {
-      "comment": "Subtitle of the Source date dialog",
+      "comment": "Subtitle of the published date dialog",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8641,7 +8749,7 @@
       }
     },
     "sources.page.sourceDate.save": {
-      "comment": "Confirm button of the Source date dialog",
+      "comment": "Confirm button of the published date dialog",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8653,7 +8761,7 @@
       }
     },
     "sources.page.sourceDate.clear": {
-      "comment": "Button in the Source date dialog: empty the form so that saving removes the date",
+      "comment": "Button in the published date dialog: empty the form so that saving removes the date",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8665,19 +8773,19 @@
       }
     },
     "sources.page.sourceDate.clearsCaption": {
-      "comment": "Caption under Clear date in the Source date dialog once the form is emptied",
+      "comment": "Caption under Clear date in the published date dialog once the form is emptied",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Saving removes this Source's date."
+            "value": "Saving removes this Source's published date."
           }
         }
       }
     },
     "sources.page.sourceDate.readsAs": {
-      "comment": "Micro-caps label above the date as the page will show it, in the Source date dialog",
+      "comment": "Micro-caps label above the date as the page will show it, in the published date dialog",
       "extractionState": "manual",
       "localizations": {
         "en": {

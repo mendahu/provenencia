@@ -2146,7 +2146,7 @@ struct GoStore: GenealogyStore {
         )
     }
 
-    private static func mapSource(_ s: Provenencia_Engine_V1_Source) -> CatalogSource {
+    static func mapSource(_ s: Provenencia_Engine_V1_Source) -> CatalogSource {
         CatalogSource(
             id: s.id,
             ref: s.ref,
@@ -2160,6 +2160,7 @@ struct GoStore: GenealogyStore {
             primaryArtifactID: s.primaryArtifactID,
             hasArtifact: s.hasArtifact_p,
             date: s.hasDate ? mapDateValue(s.date) : nil,
+            dateSortKey: s.hasDateSortKey ? s.dateSortKey : nil,
             isPublic: s.isPublic,
             updated: CatalogActivity(revision: s.updatedRevision, at: s.updatedAt)
         )

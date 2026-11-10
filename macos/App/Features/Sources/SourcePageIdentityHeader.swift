@@ -204,8 +204,7 @@ struct SourcePageIdentityHeader: View {
 
     @ViewBuilder
     private var sourceDate: some View {
-        if let date = model.source?.date {
-            let line = DateRowDisplay.line(date: date)
+        if let line = SourcesRowDate.line(model.source?.date) {
             HStack(spacing: PVSpacing.space3) {
                 PVIcon(.calendar, size: 14)
                     .foregroundStyle(PVColor.textMuted)

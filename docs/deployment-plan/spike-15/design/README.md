@@ -9,7 +9,6 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
 | [S15-D1](S15-D1-source-page.md) | Source page: the date, the Private switch, Page columns, an Artifact's metadata board, the citation preview, Move on Artifacts and graphs | [validated 2026-11-10](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK) | S15-03, S15-09, S15-23, S15-25 |
-| [S15-D2](S15-D2-sources-list.md) | Sources list: the date on rows and as a sort | [agreed 2026-11-10](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm) | S15-04 |
 | S15-D3 | Person page Sources section: each Source's date; Citations grouped under one citation | — | S15-05, S15-22 |
 | S15-D4 | Adding an Artifact: the copy fields | — | S15-10 |
 | S15-D5 | Evidence graph form: the item's metadata board | — | S15-11 |
@@ -25,3 +24,4 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Board | Built by |
 | --- | --- | --- | --- |
+| [S15-D2](archive/S15-D2-sources-list.md) | Sources list: the date on rows and as a sort | [agreed 2026-11-10](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm) | S15-04 (#774) |

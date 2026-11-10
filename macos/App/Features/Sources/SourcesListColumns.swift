@@ -1,10 +1,17 @@
 import SwiftUI
 
 /// The widths and insets the Sources list's caption band and its rows share:
-/// Source (fills) · Type · Evidence graph. Below `compactBelow` the Type column
-/// goes (the type joins the Source's second line) and the graph column narrows.
+/// Source (fills) · Type · (Published, at Wide) · Evidence graph. Below `compactBelow`
+/// the Type column goes (the type and the date join a record line under the title)
+/// and the graph column narrows.
 struct SourcesListColumns: Equatable {
     let isCompact: Bool
+    let widthClass: PVWidthClass
+
+    /// Where a row draws its published date.
+    enum DatePlacement: Equatable {
+        case underType, column, recordLine
+    }
 
     static let compactBelow: CGFloat = 880
     static let sourceTrailing = PVSpacing.space6
@@ -17,12 +24,27 @@ struct SourcesListColumns: Equatable {
     static let slotSpacing = PVSpacing.space3
     static let stackVertical = PVSpacing.space4
 
-    init(listWidth: CGFloat) {
+    init(listWidth: CGFloat, widthClass: PVWidthClass) {
         isCompact = listWidth < Self.compactBelow
+        self.widthClass = widthClass
+    }
+
+    var datePlacement: DatePlacement {
+        if isCompact { return .recordLine }
+        return widthClass == .wide ? .column : .underType
     }
 
     /// Nil when compact: there is no Type column.
-    var type: CGFloat? { isCompact ? nil : 170 }
+    var type: CGFloat? {
+        switch datePlacement {
+        case .recordLine: nil
+        case .column: 150
+        case .underType: 170
+        }
+    }
+
+    /// Nil unless the date has its own column (Wide).
+    var published: CGFloat? { datePlacement == .column ? 150 : nil }
     var graphs: CGFloat { isCompact ? 380 : 420 }
 }
 
@@ -36,6 +58,11 @@ extension View {
     func sourcesTypeCell(_ columns: SourcesListColumns) -> some View {
         padding(.trailing, SourcesListColumns.cellTrailing)
             .frame(width: columns.type, alignment: .leading)
+    }
+
+    func sourcesPublishedCell(_ columns: SourcesListColumns) -> some View {
+        padding(.trailing, SourcesListColumns.cellTrailing)
+            .frame(width: columns.published, alignment: .leading)
     }
 
     func sourcesGraphCell(_ columns: SourcesListColumns) -> some View {

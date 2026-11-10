@@ -53,9 +53,14 @@ private struct SourcesListContent: View {
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
     @Bindable var model: SourcesModel
-    /// The caption and every row lay out on these; the first frame is wide and
-    /// the first geometry report corrects it.
-    @State private var columns = SourcesListColumns(listWidth: .infinity)
+    @Environment(\.pvWidthClass) private var widthClass
+    /// The list's width; the caption and every row lay out on the columns built
+    /// from it. The first frame is wide and the first geometry report corrects it.
+    @State private var listWidth: CGFloat = .infinity
+
+    private var columns: SourcesListColumns {
+        SourcesListColumns(listWidth: listWidth, widthClass: widthClass)
+    }
 
     var body: some View {
         let rows = model.visibleSources
@@ -80,6 +85,7 @@ private struct SourcesListContent: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .pvListBand(widthClass)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sources.toast")
         .pvFormDialog(
@@ -257,7 +263,7 @@ private struct SourcesListContent: View {
             options: options,
             icon: .sort,
             displayLabel: model.sortControlLabel,
-            menuWidth: 220,
+            menuWidth: 240,
             fillsWidth: false,
             accessibilityLabel: L10n.Sources.sortMenu,
             accessibilityIdentifier: "sources.sort"
@@ -306,10 +312,8 @@ private struct SourcesListContent: View {
                 }
                 .scrollTargetLayout()
             }
-            .onGeometryChange(for: SourcesListColumns.self) {
-                SourcesListColumns(listWidth: $0.size.width)
-            } action: {
-                columns = $0
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                listWidth = $0
             }
             .modifier(ListScrollAnchorModifier(
                 anchor: navigation.currentLocation.listScrollAnchor,
@@ -329,6 +333,10 @@ private struct SourcesListContent: View {
             if columns.type != nil {
                 caption(L10n.Sources.columnType)
                     .sourcesTypeCell(columns)
+            }
+            if columns.published != nil {
+                caption(L10n.Sources.columnPublished)
+                    .sourcesPublishedCell(columns)
             }
             caption(L10n.Sources.columnEvidenceGraph)
                 .frame(maxWidth: .infinity, alignment: .leading)

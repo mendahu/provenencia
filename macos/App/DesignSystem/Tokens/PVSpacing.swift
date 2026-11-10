@@ -44,6 +44,9 @@ enum PVSpacing {
     /// The widest a side column grows inside a full-width section, beside its rows
     /// (`ConclusionPinnedSideColumn`); not the page's secondary column.
     static let widthSideColumnMax: CGFloat = 720
+    /// A list's content width at Wide, with the page gutters outside it (`pvListBand`;
+    /// Promote's list frames its content at it too).
+    static let widthListWideMax: CGFloat = 1600
     /// Pane width at and above which a page is Wide. Compared with the width of
     /// the workspace pane (`PVWidthClass`), not the window or the screen: a
     /// collapsed sidebar changes the space a page has.

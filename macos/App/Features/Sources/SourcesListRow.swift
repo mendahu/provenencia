@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// One Source in the Sources list: three columns (S12-D5). The Source link (cover,
-/// title, and a second line of ref and last update), its type, and a stack of
-/// Evidence graph buttons, each carrying its own status badge. A Source with no
-/// Artifact shows one blocked block instead.
+/// One Source in the Sources list (S12-D5, S15-D2). The Source link (cover, title,
+/// the record line when narrow, and the activity line of ref and last update), the
+/// Type with the published date under it at Regular, a Published column at Wide, and
+/// the Evidence graph stack of buttons, each carrying its own status badge. A Source
+/// with no Artifact shows one blocked block instead.
 struct SourcesListRow: View {
     @Environment(WorkspaceNavigation.self) private var navigation
     @Environment(WorkspaceSession.self) private var session
@@ -41,6 +42,7 @@ struct SourcesListRow: View {
             }
         }
         .padding(.vertical, SourcesListColumns.stackVertical)
+        .frame(maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .leading) {
             PVDivider(axis: .vertical)
         }
@@ -56,30 +58,25 @@ struct SourcesListRow: View {
                     thumbnailRelPath: source.thumbnailRelPath,
                     typeIconKey: model.typeIconKey(for: source),
                     title: source.title,
-                    typeLabel: columns.isCompact ? model.typeLabel(for: source) : "",
+                    typeLabel: showsRecordLine ? model.typeLabel(for: source) : "",
+                    date: source.date,
+                    showsRecordLine: showsRecordLine,
                     ref: source.ref,
                     updatedAt: source.updated.at
                 )
                 .padding(.vertical, SourcesListColumns.sourceVertical)
                 .padding(.leading, PVSpacing.gutterPage)
                 .sourcesSourceCell()
-                if columns.type != nil {
-                    Text(verbatim: model.typeLabel(for: source))
-                        .font(PVFont.body(size: PVTypeScale.caption))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .help(model.typeLabel(for: source))
-                        .sourcesTypeCell(columns)
-                        .frame(minHeight: Self.firstSlot)
-                }
+                typeAndDateCells
             }
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .buttonStyle(PVListRowStyle(focused: nil))
         .accessibilityLabel(Text(L10n.Sources.openSourcePage))
         .accessibilityValue(Text(verbatim: PVLastUpdated.label(
-            "\(source.title), \(model.typeLabel(for: source)), \(source.ref)",
+            Self.spokenBase(
+                title: source.title, type: model.typeLabel(for: source), ref: source.ref, date: source.date
+            ),
             updatedAt: source.updated.at,
             in: .current
         )))
@@ -94,6 +91,48 @@ struct SourcesListRow: View {
                 ),
             ]
         )
+    }
+
+    private var showsRecordLine: Bool { columns.datePlacement == .recordLine }
+
+    /// What VoiceOver reads before the last update: the record's facts, then its ref.
+    static func spokenBase(
+        title: String, type: String, ref: String, date: CatalogDateValueInput?,
+        locale: Locale = .autoupdatingCurrent
+    ) -> String {
+        L10n.DesignSystem.spokenJoin([title, type, SourcesRowDate.spoken(date, locale: locale), ref]) ?? title
+    }
+
+    private var typeText: some View {
+        Text(verbatim: model.typeLabel(for: source))
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .foregroundStyle(PVColor.textSecondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .help(model.typeLabel(for: source))
+    }
+
+    /// The Type cell, and at Wide the Published cell after it; none when compact.
+    @ViewBuilder
+    private var typeAndDateCells: some View {
+        switch columns.datePlacement {
+        case .underType:
+            VStack(alignment: .leading, spacing: PVSpacing.space1) {
+                typeText
+                SourcesPublishedDate(date: source.date, style: .labeled)
+            }
+            .sourcesTypeCell(columns)
+            .frame(minHeight: Self.firstSlot)
+        case .column:
+            typeText
+                .sourcesTypeCell(columns)
+                .frame(minHeight: Self.firstSlot)
+            SourcesPublishedDate(date: source.date, style: .bare)
+                .sourcesPublishedCell(columns)
+                .frame(minHeight: Self.firstSlot)
+        case .recordLine:
+            EmptyView()
+        }
     }
 
     private struct GraphEntry {
@@ -146,16 +185,18 @@ struct SourcesListRow: View {
 
 // MARK: Source link
 
-/// The Source link's content: cover, title, and a second line of the type (only
-/// when the Type column is gone), ref and last update. The button's row style
-/// draws the hover, press and focus.
+/// The Source link's content: cover, title, a record line of the type and the
+/// published date (only when the Type column is gone), and a line of ref and last
+/// update. The button's row style draws the hover, press and focus.
 private struct SourcesLinkLabel: View {
     let projectDir: String
     let thumbnailRelPath: String
     let typeIconKey: String?
     let title: String
-    /// Empty when the list has a Type column.
+    /// Empty unless the record line shows (the list has no Type column).
     let typeLabel: String
+    let date: CatalogDateValueInput?
+    let showsRecordLine: Bool
     let ref: String
     let updatedAt: String
 
@@ -172,14 +213,17 @@ private struct SourcesLinkLabel: View {
                     .font(PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.medium))
                     .foregroundStyle(PVColor.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
-                secondLine
+                if showsRecordLine {
+                    recordLine
+                }
+                activityLine
             }
             .frame(minHeight: SourcesListRow.coverSize)
         }
     }
 
-    /// Type (compact lists only, truncates first), ref, then the last update.
-    private var secondLine: some View {
+    /// Type, then the published date; the type truncates first.
+    private var recordLine: some View {
         HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
             if !typeLabel.isEmpty {
                 Text(verbatim: typeLabel)
@@ -188,8 +232,18 @@ private struct SourcesLinkLabel: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(typeLabel)
+                    .layoutPriority(0)
                 separator
             }
+            SourcesPublishedDate(date: date, style: .labeled)
+                .layoutPriority(1)
+        }
+        .lineLimit(1)
+    }
+
+    /// Ref, then the last update.
+    private var activityLine: some View {
+        HStack(alignment: .firstTextBaseline, spacing: PVSpacing.space3) {
             Text(verbatim: ref)
                 .font(PVFont.mono(size: PVTypeScale.micro))
                 .foregroundStyle(PVColor.textMuted)
@@ -210,6 +264,64 @@ private struct SourcesLinkLabel: View {
             .font(PVFont.body(size: PVTypeScale.caption))
             .foregroundStyle(PVColor.textFaint)
             .accessibilityHidden(true)
+    }
+}
+
+// MARK: Published date
+
+/// A Source's published date on a list row: `.labeled` ("Published" then the date,
+/// or "No published date") under the type or on the record line; `.bare` (the date
+/// alone, or "Undated") in the Published column.
+private struct SourcesPublishedDate: View {
+    enum Style { case labeled, bare }
+
+    let date: CatalogDateValueInput?
+    let style: Style
+
+    var body: some View {
+        if let line = SourcesRowDate.line(date) {
+            dated(line)
+        } else {
+            undated
+        }
+    }
+
+    @ViewBuilder
+    private func dated(_ line: String) -> some View {
+        switch style {
+        case .labeled:
+            HStack(spacing: PVSpacing.space2) {
+                Text(L10n.Sources.publishedLabel)
+                    .foregroundStyle(PVColor.textMuted)
+                    .fixedSize()
+                value(line)
+            }
+            .font(PVFont.body(size: PVTypeScale.caption))
+            .help(SourcesRowDate.help(date) ?? "")
+        case .bare:
+            value(line)
+                .font(PVFont.body(size: PVTypeScale.caption))
+                .help(SourcesRowDate.help(date) ?? "")
+        }
+    }
+
+    private func value(_ line: String) -> some View {
+        Text(verbatim: line)
+            .foregroundStyle(PVColor.textSecondary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+    }
+
+    private var undated: some View {
+        Group {
+            switch style {
+            case .labeled: Text(L10n.Sources.noPublishedDate)
+            case .bare: Text(L10n.Dates.rowUndated)
+            }
+        }
+        .font(PVFont.body(size: PVTypeScale.caption))
+        .foregroundStyle(PVColor.textFaint)
+        .lineLimit(1)
     }
 }
 

@@ -2119,6 +2119,12 @@ struct SourcePageModelTests {
         model.draft = draft
     }
 
+    @Test func sourceDateCopySaysPublished() {
+        #expect(L10n.Sources.sourceDateAccessibility(date: "1 Jun 1880") == "Published, 1 Jun 1880")
+        #expect(L10n.string(L10n.Sources.sourceDateAdd) == "Add published date")
+        #expect(L10n.string(L10n.Sources.sourceDateDialogTitle) == "Published date")
+    }
+
     @Test func fakeStoreSetsDateAndPublic() async throws {
         let store = makeStore()
         let date = CatalogDateValueInput(kind: "point", startYear: 1880)

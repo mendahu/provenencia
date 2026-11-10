@@ -46,6 +46,8 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     var hasArtifact: Bool = false
     /// The Source's own date (when the record was made or first published); nil when undated.
     var date: CatalogDateValueInput?
+    /// Where `date` falls in date order, from the engine; nil when undated or when the date is a phrase only.
+    var dateSortKey: Int64? = nil
     /// False when the researcher marked the Source Private. Stored and read back; nothing else acts on it.
     var isPublic: Bool = true
     /// Latest audit revision of any work scoped to this Source (its row, notes,

@@ -1,9 +1,9 @@
 # S15-04 — The Sources list shows and sorts by the date
 
-**Status:** Planned
+**Status:** Landed in [#774](https://github.com/mendahu/provenencia/pull/774) (2026-11-10)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S15-D2](../design/S15-D2-sources-list.md), board agreed 2026-11-10
+**Brief:** [S15-D2](../design/archive/S15-D2-sources-list.md), board agreed 2026-11-10
 **Board:** [Claude Design — Sources List](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm), page *S2-04 Sources list*, turn "S15-D2 · Sources list": frames 1a/1b, 2a/2b, 3, 4, 5, 6 and the panel "S15-D2 · Requirements as drawn"; the row and list code is the component *Sources List Frame* (presets `s15added`, `s15asc`, `s15sortmenu`, `s15desc`, `s15narrow`, `s15census`). Read it with the Artifact tool's `read` on that link, `path` "project/S2-04 Sources list.dc.html" (frames and requirements) and "project/Sources List Frame.dc.html" (the row). §6 macOS describes each frame in words
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)), S15-D2
 **Blocks:** —
@@ -27,6 +27,17 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- `SourcesListContent` keeps `listWidth` in `@State` and reads `columns` through a computed property built from it and `\.pvWidthClass`, instead of a `let columns` in `body`; every reader still gets the one value.
+- `pvListBand` is documented in the design system README's Page columns row (the kit's inventory of its modifiers).
+- The comments on the D-14 strings in `L10n.swift` and `Localizable.xcstrings` now say "published date dialog" along with the values.
+- The S15-D1 Paste block was brought up to date with the current `add-design-brief` text (rules 2 and 3), because Step 8 edits that brief and `check-plan-docs.py` rejected the stale block.
+- `SourcesRowDate` lives in its own file, `SourcesRowDate.swift`, and the Source page header reads it to decide dated versus undated (F-1).
+- The Sort menu is 240 wide, not 220, so the longest sort label fits (F-2).
+- `.az` and `.za` read `titleOrder` too, with `descending: true` for Z–A; equal titles sort newest added first in both (F-4, user decision 2026-11-10, reversing D-3's last sentence).
+- Not run: the manual check (§ 10) and the board comparison of frames 1a, 1b, 2b and 5 (this build was verified by the Xcode tests only).
 
 ## 1. Objective
 
@@ -74,6 +85,7 @@ A researcher sees each Source's own date on its Sources list row, named as its p
 | Wide: centered at `widthListWideMax`, side hairlines, Published caption (SL-W1); Regular and narrow (SL-W2) | STEP-4, STEP-6, AC-1.4, AC-1.5 |
 | `PVSpacing.widthListWideMax` and the kit modifier `pvListBand`; Promote's list adopts the token (1600 of content at Wide) | STEP-4, STEP-6 |
 | "Published" as the date's one name: the sorts, the Source page's date copy (D-14) | STEP-2, AC-1.8 |
+| Bug (user, 2026-11-10): the vertical hairline between the Source/Type cells and the Evidence graph column stops at the bottom of the graph stack when a wrapped title makes the row taller; it spans the full row | STEP-5a |
 
 | Out | Home |
 | --- | --- |
@@ -82,7 +94,7 @@ A researcher sees each Source's own date on its Sources list row, named as its p
 | Centering the other lists (Persons, Events, Places) at `widthListWideMax` | their redesigns ([`docs/ideas/wide-layout.md`](../../../ideas/wide-layout.md)) |
 | The Person page's Sources section date | S15-05 |
 | Any Go change: the key is already on the wire | not needed (S15-02 D-5) |
-| `.az` and `.za` reading `titleOrder` | not planned (D-3) |
+| `.az` and `.za` reading `titleOrder` | not planned (D-3); reversed by the user (2026-11-10, F-4) |
 | The date in the list's search keys (`SourcesModel.searchKeys`) | not planned |
 | Truncating titles to one line at Wide | not planned: the board's "titles stay on one line" is the effect of the width, not a line limit |
 | Rewriting Wide rule 3 in `docs/macos-client-patterns.md` § 9 and the `add-design-brief` Paste block | done in the planning PR [#770](https://github.com/mendahu/provenencia/pull/770) |
@@ -253,6 +265,11 @@ Files: `macos/App/Features/Sources/SourcesListRow.swift`, `macos/ProvenenciaTest
 Do: D-5, D-6, D-8, D-11. Add T-6.
 Check: T-6 passes; frames 1a and 5 match in the app.
 
+**STEP-5a — The graph column's hairline spans the row.** Skill: `add-ui-component`. Added at the user's request, 2026-11-10.
+Files: `macos/App/Features/Sources/SourcesListRow.swift`.
+Do: today `graphStack` draws `PVDivider(axis: .vertical)` as an `.overlay(alignment: .leading)` on the stack itself, so the line is only as tall as the graph buttons; a title that wraps makes the Source cell, and so the row, taller, and the line stops short. Tie the line to the row's height, not the stack's: give `graphStack` `.frame(maxHeight: .infinity, alignment: .top)` after its `.padding(.vertical, …)` and before the `.overlay` (the row already has `.fixedSize(horizontal: false, vertical: true)`, and `sourceLink` uses the same `maxHeight: .infinity` idiom), so the stack fills the row and the hairline runs top to bottom. The buttons stay top-aligned where they are. One commit: "Run the Sources list's graph column hairline down the whole row."
+Check: the app builds; with a title long enough to wrap to three lines at Regular, the hairline meets the row's bottom divider; a row with two graphs (taller stack than the Source cell) looks as before.
+
 **STEP-6 — The list at Wide.** Skill: `add-ui-component`.
 Files: `macos/App/Features/Sources/SourcesListView.swift`.
 Do: `pvListBand` and its use (D-9), D-10.
@@ -314,6 +331,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `l
 5. Widen past 1600pt of pane: the list centers with side hairlines and a Published column; scroll and sort are kept (AC-1.4). Frame 1b.
 6. VoiceOver on a dated and an undated row reads AC-1.7. On a Source page, the header and dialog read AC-1.8.
 7. Open Promote at Wide: its list is 1600 of content, centered; at Regular it looks as before.
+8. Give a Source a title long enough to wrap to two or three lines: the hairline left of its Evidence graph column runs down to the row's bottom divider (STEP-5a).
 
 ## 11. Risks and stop conditions
 

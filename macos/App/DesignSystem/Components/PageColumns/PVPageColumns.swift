@@ -485,4 +485,26 @@ extension View {
         frame(maxWidth: PVSpacing.widthContentMax)
             .frame(maxWidth: .infinity)
     }
+
+    /// Centers a list at `widthListWideMax` of content plus the page gutters when the pane is
+    /// Wide, with a hairline down each side; at Regular it fills the pane and draws nothing. One
+    /// structure at both widths, so the list keeps its identity and scroll across the crossing.
+    /// Apply it to the list's content, inside the page background and the dialogs.
+    func pvListBand(_ widthClass: PVWidthClass) -> some View {
+        let isWide = widthClass == .wide
+        return frame(
+            maxWidth: isWide ? PVSpacing.widthListWideMax + 2 * PVSpacing.gutterPage : .infinity,
+            maxHeight: .infinity
+        )
+        .overlay {
+            HStack(spacing: 0) {
+                if isWide {
+                    PVDivider(axis: .vertical)
+                    Spacer()
+                    PVDivider(axis: .vertical)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
