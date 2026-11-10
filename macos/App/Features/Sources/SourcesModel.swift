@@ -12,6 +12,8 @@ final class SourcesModel {
         case updated
         case az
         case za
+        case dateOldest
+        case dateNewest
 
         var id: String { rawValue }
 
@@ -21,6 +23,8 @@ final class SourcesModel {
             case .updated: L10n.Sources.sortUpdated
             case .az: L10n.Sources.sortAZ
             case .za: L10n.Sources.sortZA
+            case .dateOldest: L10n.Sources.sortDateOldest
+            case .dateNewest: L10n.Sources.sortDateNewest
             }
         }
     }
@@ -329,8 +333,32 @@ final class SourcesModel {
             rows = rows.sorted {
                 $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedDescending
             }
+        case .dateOldest:
+            rows = rows.sorted { Self.dateOrder($0, $1, newestFirst: false) }
+        case .dateNewest:
+            rows = rows.sorted { Self.dateOrder($0, $1, newestFirst: true) }
         }
         return rows
+    }
+
+    /// The date sorts: rows with a place in date order first, by that key; equal
+    /// keys, and the rows without a key (undated, or a phrase only), by title.
+    private static func dateOrder(_ a: CatalogSource, _ b: CatalogSource, newestFirst: Bool) -> Bool {
+        switch (a.dateSortKey, b.dateSortKey) {
+        case let (x?, y?) where x != y: return newestFirst ? x > y : x < y
+        case (_?, nil): return true
+        case (nil, _?): return false
+        default: return titleOrder(a, b)
+        }
+    }
+
+    /// Title ascending, then id descending: the same in both date directions.
+    private static func titleOrder(_ a: CatalogSource, _ b: CatalogSource) -> Bool {
+        switch a.title.localizedCaseInsensitiveCompare(b.title) {
+        case .orderedAscending: true
+        case .orderedDescending: false
+        case .orderedSame: a.id > b.id
+        }
     }
 
     var isCatalogEmpty: Bool { sources.isEmpty }

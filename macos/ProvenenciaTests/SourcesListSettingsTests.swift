@@ -37,6 +37,13 @@ struct SourcesListSettingsTests {
         #expect(try #require(store(uuid, "u1", url)).load() == saved)
     }
 
+    @Test func dateSortRoundTrips() throws {
+        let url = try tempFile()
+        let saved = settings(sort: .dateNewest, query: "")
+        try #require(store(uuid, "u1", url)).save(saved)
+        #expect(try #require(store(uuid, "u1", url)).load().sort == .dateNewest)
+    }
+
     @Test func perProjectAndUser() throws {
         let url = try tempFile()
         let other = try tempFile()

@@ -27,7 +27,9 @@ struct SourcesModelTests {
         title: String,
         typeID: String,
         ref: String = "SRC-AAAAA",
-        updatedRevision: Int64 = 0
+        updatedRevision: Int64 = 0,
+        date: CatalogDateValueInput? = nil,
+        dateSortKey: Int64? = nil
     ) -> CatalogSource {
         CatalogSource(
             id: id,
@@ -35,6 +37,8 @@ struct SourcesModelTests {
             sourceTypeID: typeID,
             title: title,
             description: "",
+            date: date,
+            dateSortKey: dateSortKey,
             updated: CatalogActivity(revision: updatedRevision)
         )
     }
@@ -202,6 +206,97 @@ struct SourcesModelTests {
 
         model.settings.sort = .za
         #expect(model.visibleSources.map(\.title) == ["Charlie", "Bravo", "Alpha"])
+    }
+
+    // MARK: Date sorts (S15-04)
+
+    private func datedSources() -> [CatalogSource] {
+        [
+            source(id: "s1", title: "Delta", typeID: "t1", dateSortKey: 100),
+            source(id: "s2", title: "Echo", typeID: "t1", dateSortKey: 200),
+            source(id: "s3", title: "Foxtrot", typeID: "t1", dateSortKey: 300),
+            source(id: "s4", title: "Golf", typeID: "t1", dateSortKey: 400),
+            source(id: "s5", title: "Bravo", typeID: "t1"),
+            source(id: "s6", title: "Alpha", typeID: "t1"),
+        ]
+    }
+
+    @Test func sortByDateOldestPutsUndatedLast() async {
+        let (model, session) = makeModel(sources: datedSources(), types: [photoType()])
+        await warmLists(model, session: session)
+        model.settings.sort = .dateOldest
+        #expect(model.visibleSources.map(\.id) == ["s1", "s2", "s3", "s4", "s6", "s5"])
+    }
+
+    @Test func sortByDateNewestKeepsUndatedTailAndTies() async {
+        let phrase = CatalogDateValueInput(kind: "point", phrase: "in the reign of Victoria")
+        let (model, session) = makeModel(
+            sources: datedSources() + [
+                source(id: "s7", title: "Zeta", typeID: "t1", dateSortKey: 500),
+                source(id: "s8", title: "Eta", typeID: "t1", dateSortKey: 500),
+                source(id: "s9", title: "Mill notes", typeID: "t1", date: phrase),
+                source(id: "s10", title: "Abbey roll", typeID: "t1"),
+            ],
+            types: [photoType()]
+        )
+        await warmLists(model, session: session)
+        model.settings.sort = .dateNewest
+        #expect(model.visibleSources.map(\.id) == ["s8", "s7", "s4", "s3", "s2", "s1", "s10", "s6", "s5", "s9"])
+        model.settings.sort = .dateOldest
+        #expect(model.visibleSources.map(\.id) == ["s1", "s2", "s3", "s4", "s8", "s7", "s10", "s6", "s5", "s9"])
+    }
+
+    @Test func clearedDateMovesRowToUndatedTail() async throws {
+        let store = FakeStore()
+        let (model, session) = makeModel(store: store, sources: datedSources(), types: [photoType()])
+        await warmLists(model, session: session)
+        model.settings.sort = .dateOldest
+
+        store.nextSourceDateSortKey = nil
+        let (cleared, _) = try await store.setSourceDate(
+            projectDir: projectDir, userID: userID, sourceID: "s1", date: nil
+        )
+        session.apply(.updatedSource(cleared))
+        #expect(model.visibleSources.map(\.id) == ["s2", "s3", "s4", "s6", "s5", "s1"])
+
+        store.nextSourceDateSortKey = 450
+        let (dated, _) = try await store.setSourceDate(
+            projectDir: projectDir, userID: userID, sourceID: "s5",
+            date: CatalogDateValueInput(kind: "point", startYear: 1880, startMonth: 6, startDay: 1)
+        )
+        session.apply(.updatedSource(dated))
+        #expect(model.visibleSources.map(\.id) == ["s2", "s3", "s4", "s5", "s6", "s1"])
+    }
+
+    @Test func sortControlLabelForDateSort() {
+        let (model, _) = makeModel()
+        model.settings.sort = .dateNewest
+        #expect(model.sortControlLabel == "Sorted by published date, newest first")
+    }
+
+    @Test func dateSortAtScaleWithFilter() async {
+        var all: [CatalogSource] = []
+        for n in 0..<3000 {
+            let id = String(format: "s%04d", n)
+            all.append(source(
+                id: id, title: "Source " + String(format: "%04d", n),
+                typeID: n % 2 == 0 ? "t1" : "t2",
+                dateSortKey: n % 30 == 0 ? Int64(n) : nil
+            ))
+        }
+        let (model, session) = makeModel(sources: all, types: [photoType(), bookType()])
+        await warmLists(model, session: session)
+        model.settings.typeFilterID = "t1"
+        _ = model.visibleSources
+        let before = model.visibleSourcesBuildCount
+        model.settings.sort = .dateOldest
+        let rows = model.visibleSources
+        #expect(model.visibleSourcesBuildCount == before + 1)
+        #expect(rows.count == 1500)
+        let dated = (0..<100).map { String(format: "s%04d", $0 * 30) }
+        #expect(rows.prefix(100).map(\.id) == dated)
+        let undated = (0..<3000).filter { $0 % 2 == 0 && $0 % 30 != 0 }.map { String(format: "s%04d", $0) }
+        #expect(rows.dropFirst(100).map(\.id) == undated)
     }
 
     @Test func createRequiresTypeAndTitle() async {
