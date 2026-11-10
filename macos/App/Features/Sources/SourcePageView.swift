@@ -378,15 +378,22 @@ struct SourcePageOverviewLayout: Layout {
     }
 
     /// The frame of each subview (in order), and the overall height, for `width`.
-    private func arrange(width: CGFloat, subviews: Subviews) -> (frames: [CGRect], height: CGFloat) {
+    private func placed(width: CGFloat, subviews: Subviews) -> (frames: [CGRect], height: CGFloat) {
         guard subviews.count == 4 else { return ([], 0) }
-        func fit(_ index: Int, _ w: CGFloat) -> CGSize {
-            subviews[index].sizeThatFits(ProposedViewSize(width: w, height: nil))
+        return Self.arrange(width: width, widthClass: widthClass) {
+            subviews[$0].sizeThatFits(ProposedViewSize(width: $1, height: nil))
         }
+    }
+
+    /// The frame of each of the four subviews (error, body, side, rest) and the overall height,
+    /// for `width`. `fit` is a subview's size at a proposed width.
+    static func arrange(
+        width: CGFloat, widthClass: PVWidthClass, fit: (Int, CGFloat) -> CGSize
+    ) -> (frames: [CGRect], height: CGFloat) {
         var frames = [CGRect](repeating: .zero, count: 4)
         if widthClass == .wide {
             let split = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax)
-            let x = (width - split.group) / 2
+            let x = PVPageColumnsMetrics.groupX(in: width, group: split.group)
             let error = fit(0, split.main), body = fit(1, split.main), rest = fit(3, split.main)
             var y: CGFloat = 0
             frames[0] = CGRect(x: x, y: y, width: split.main, height: error.height)
@@ -419,12 +426,12 @@ struct SourcePageOverviewLayout: Layout {
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let w = width(proposal)
-        return CGSize(width: w, height: arrange(width: w, subviews: subviews).height)
+        return CGSize(width: w, height: placed(width: w, subviews: subviews).height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let placed = arrange(width: bounds.width, subviews: subviews)
-        for (index, frame) in placed.frames.enumerated() {
+        let laidOut = placed(width: bounds.width, subviews: subviews)
+        for (index, frame) in laidOut.frames.enumerated() {
             subviews[index].place(
                 at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
                 anchor: .topLeading,
