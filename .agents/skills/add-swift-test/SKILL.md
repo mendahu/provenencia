@@ -13,7 +13,7 @@ Product logic under test lives in `macos/App/`. Tests live in **`macos/Provenenc
 ## What to test
 
 - Models (`OnboardingModel`), path helpers (`InstallPaths`), store fakes.
-- Artifact files on disk (an image via `writeImage(fileType:)` in PNG, JPEG or TIFF, with `dpi:`, `orientation:` or `grayscale:` when the test needs them, a PNG header that only declares a size via `writeDeclaredPNGHeader`, raw bytes via `write(_:)`, a PDF (`sizedPDFDocument(size:)` for one page of a known size, `pdfHost(document:)` for the PDF host view on it), the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy. To lay an AppKit view out in a window for hit-testing or events, use `hostInBorderlessWindow(nsView:size:)` from `macos/ProvenenciaTests/HostedWindow.swift`.
+- Artifact files on disk (an image via `writeImage(fileType:)` in PNG, JPEG or TIFF, with `dpi:`, `orientation:` or `grayscale:` when the test needs them, a PNG header that only declares a size via `writeDeclaredPNGHeader`, raw bytes via `write(_:)`, a PDF (`sizedPDFDocument(size:)` for one page of a known size, `pdfHost(document:)` for the PDF host view on it), the catalog row that points at them): use `ArtifactFileFixtures` in `macos/ProvenenciaTests/ArtifactFileFixtures.swift`; do not write another copy. To lay a SwiftUI or AppKit view out in a window, use `hostInBorderlessWindow` or `hostInBorderlessWindow(nsView:size:)` from `macos/ProvenenciaTests/HostedWindow.swift` (or `testWindow(size:styleMask:)` for a bare window, and `trackTestWindow(_:)` around a panel the builder cannot make) on a suite marked `.hostedWindows`: the window is never shown and the trait closes it when the test ends. Do not hold the window yourself or build an untracked window. Do not synthesize mouse or key events through a window: test the model, the action closure, or the view's own handler instead.
 - Inject `FakeStore` and `OnboardingFolders` with dirs under `FileManager.default.temporaryDirectory`.
 - **FakeStore:** new methods seed rows and script return values (`nextWriteEffects`, `…Error` hooks, impact maps); do not add graph-list order, Citation membership, effects-resolution, or graph / Copy Source refusal logic.
 - When adding a catalog `GenealogyStore` API on `FakeStore`, call `markCatalogSessionHeld` (same as real traffic) so `CatalogSessionStoreTests` / overlap coverage stay honest.
@@ -50,7 +50,7 @@ struct FooTests {
 
 `macos/ProvenenciaTests` is a synchronized folder: a `.swift` file saved there is in the **ProvenenciaTests** target. Do not edit `project.pbxproj`, and never add a test file under `macos/App`.
 
-Bundle id stays `app.provenencia.tests`. Host: Provenencia.app.
+Bundle id stays `app.provenencia.tests`. Host: Provenencia.app, which runs `TestHostApp` under tests: no window, no install identity, no project.
 
 ## Run
 

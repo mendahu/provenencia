@@ -19,7 +19,7 @@ private struct WidthClassProbe: View {
     }
 }
 
-@MainActor @Suite
+@MainActor @Suite(.hostedWindows)
 struct PVWidthClassTests {
     @Test(arguments: [
         (-1, PVWidthClass.regular), (0, .regular), (1102, .regular), (1464, .regular),
@@ -51,14 +51,13 @@ struct PVWidthClassTests {
         let view = WidthClassProbe(box: box)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .pvMeasuresWidthClass()
-        let (window, _) = hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
+        hostInBorderlessWindow(view, windowSize: CGSize(width: 2000, height: 400))
         #expect(await waitUntil { box.seen == .wide })
 
         let bare = WidthClassBox()
-        let (bareWindow, _) = hostInBorderlessWindow(
+        hostInBorderlessWindow(
             WidthClassProbe(box: bare), windowSize: CGSize(width: 2000, height: 400)
         )
         #expect(await waitUntil { bare.seen == .regular })
-        withExtendedLifetime((window, bareWindow)) {}
     }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 import Testing
 @testable import Provenencia
 
-@Suite
+@Suite(.hostedWindows)
 struct PVSelectPlacementTests {
     private let screen = CGRect(x: 0, y: 0, width: 1440, height: 875)
 
@@ -122,7 +122,7 @@ struct PVSelectPlacementTests {
     @Test @MainActor func aLongClosedLabelStaysInsideTheCallerWidth() {
         let column: CGFloat = 330
         let label = "EVT-RSKRW Residence of James Kenneth Jim Robins"
-        let (window, host) = hostInBorderlessWindow(
+        let (_, host) = hostInBorderlessWindow(
             HStack(spacing: 8) {
                 PVSelect(
                     selection: .constant("short"),
@@ -140,31 +140,27 @@ struct PVSelectPlacementTests {
             }
             .frame(width: 780, alignment: .leading),
             windowSize: CGSize(width: 900, height: 200),
-            hostSize: CGSize(width: 900, height: 80),
-            orderFront: false
+            hostSize: CGSize(width: 900, height: 80)
         )
         host.layoutSubtreeIfNeeded()
         let frames = PVSelectLayoutProbe.collect(in: host)
         let selects = frames.filter { $0.width > 200 && $0.width <= column + 1 && $0.height >= 20 }
         #expect(selects.count >= 2, "frames \(frames)")
-        withExtendedLifetime(window) {}
     }
 
     @Test @MainActor func aShortClosedLabelHugsItsText() {
-        let (window, host) = hostInBorderlessWindow(
+        let (_, host) = hostInBorderlessWindow(
             PVSelect(
                 selection: .constant("a"),
                 options: [PVSelectOption(value: "a", label: "May")],
                 fillsWidth: false
             ),
             windowSize: CGSize(width: 900, height: 200),
-            hostSize: CGSize(width: 900, height: 80),
-            orderFront: false
+            hostSize: CGSize(width: 900, height: 80)
         )
         host.layoutSubtreeIfNeeded()
         let frames = PVSelectLayoutProbe.collect(in: host)
         #expect(frames.contains { $0.width > 36 && $0.width < 160 && $0.height >= 20 }, "frames \(frames)")
-        withExtendedLifetime(window) {}
     }
 }
 

@@ -3,7 +3,7 @@ import PDFKit
 import Testing
 @testable import Provenencia
 
-@Suite
+@Suite(.hostedWindows)
 @MainActor
 struct ArtifactPDFViewportPageTests {
     @Test func pageChangedNotificationUpdatesCallback() async throws {
@@ -13,8 +13,7 @@ struct ArtifactPDFViewportPageTests {
             reportedPages.append(page)
         }
 
-        let window = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
-        defer { withExtendedLifetime(window) {} }
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")
@@ -35,8 +34,7 @@ struct ArtifactPDFViewportPageTests {
         let document = ArtifactFileFixtures.blankPDFDocument(pageCount: 3)
         let host = ArtifactFileFixtures.pdfHost(document: document) { _ in }
 
-        let window = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
-        defer { withExtendedLifetime(window) {} }
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")
@@ -72,8 +70,7 @@ struct ArtifactPDFViewportPageTests {
             page = reported
         }
 
-        let window = hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
-        defer { withExtendedLifetime(window) {} }
+        hostInBorderlessWindow(nsView: host, size: CGSize(width: 400, height: 500))
 
         guard let pageThree = document.page(at: 2) else {
             Issue.record("Expected page at index 2")

@@ -86,16 +86,11 @@ struct PVFormDialogControlsTests {
     }
 }
 
-@Suite
+@Suite(.hostedWindows)
 @MainActor
 struct PVFormDialogClickTests {
     private func window() -> NSWindow {
-        NSWindow(
-            contentRect: CGRect(x: 0, y: 0, width: 200, height: 120),
-            styleMask: [.titled],
-            backing: .buffered,
-            defer: true
-        )
+        testWindow(size: CGSize(width: 200, height: 120), styleMask: [.titled])
     }
 
     @Test func aClickOnTheSheetIsInside() {
@@ -106,37 +101,37 @@ struct PVFormDialogClickTests {
     @Test func aParentWindowClickIsOutside() {
         let workspace = window()
         let sheet = window()
-        workspace.addChildWindow(sheet, ordered: .above)
-        defer { workspace.removeChildWindow(sheet) }
-        #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: nil))
+        let parents = [ObjectIdentifier(sheet): workspace]
+        #expect(!PVOutsideClick.isInsideSheet(
+            eventWindow: workspace, sheet: sheet, modalWindow: nil, parent: { parents[ObjectIdentifier($0)] }
+        ))
     }
 
     @Test func aSheetOnASheetIsInside() {
         let workspace = window()
         let parentSheet = window()
         let childSheet = window()
-        workspace.makeKeyAndOrderFront(nil)
-        workspace.beginSheet(parentSheet) { _ in }
-        parentSheet.beginSheet(childSheet) { _ in }
-        defer {
-            parentSheet.endSheet(childSheet)
-            workspace.endSheet(parentSheet)
-        }
-        #expect(PVOutsideClick.isInsideSheet(eventWindow: childSheet, sheet: parentSheet, modalWindow: nil))
-        #expect(!PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: parentSheet, modalWindow: nil))
+        let parents = [ObjectIdentifier(parentSheet): workspace, ObjectIdentifier(childSheet): parentSheet]
+        let parent: (NSWindow) -> NSWindow? = { parents[ObjectIdentifier($0)] }
+        #expect(PVOutsideClick.isInsideSheet(
+            eventWindow: childSheet, sheet: parentSheet, modalWindow: nil, parent: parent
+        ))
+        #expect(!PVOutsideClick.isInsideSheet(
+            eventWindow: workspace, sheet: parentSheet, modalWindow: nil, parent: parent
+        ))
     }
 
     @Test func anOpenPanelModalCountsAsInside() {
         let sheet = window()
         let workspace = window()
-        let panel = NSOpenPanel()
+        let panel = trackTestWindow(NSOpenPanel())
         #expect(PVOutsideClick.isInsideSheet(eventWindow: nil, sheet: sheet, modalWindow: panel))
         #expect(PVOutsideClick.isInsideSheet(eventWindow: workspace, sheet: sheet, modalWindow: panel))
     }
 
     @Test func aSavePanelEventWindowIsInside() {
         let sheet = window()
-        let panel = NSSavePanel()
+        let panel = trackTestWindow(NSSavePanel())
         #expect(PVOutsideClick.isInsideSheet(eventWindow: panel, sheet: sheet, modalWindow: nil))
     }
 

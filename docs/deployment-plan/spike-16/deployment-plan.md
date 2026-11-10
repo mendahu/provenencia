@@ -154,7 +154,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 ### Batch 3 — Test infrastructure
 
-- **(Batch 3) A test run shows no window and touches no install** (user, 2026-11-10). The test host opens no app window and reads no install identity or project; a test window is never ordered in and is closed when its test ends; test runs are measured one `xcodebuild` at a time, never several at once (three at once took the researcher's Mac down on 2026-11-10). Binds S16-34.
+- **(Batch 3) A test run shows no window and touches no install** (user, 2026-11-10). The test host opens no app window and reads no install identity or project; a test window is never ordered in and is closed when its test ends; test runs are measured one `xcodebuild` at a time, never several at once (three at once took the researcher's Mac down on 2026-11-10). Unit and integration tests stay low-cost: no mouse or key events synthesized through a window (user, 2026-11-10). Binds S16-34.
 
 ## PR map
 
@@ -193,7 +193,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S16-26 | Conclusion lists merge the rows a write touched | 2e | Go and Swift: the Persons, Events and Places lists re-read only the touched rows by id with Go's sort key, through the existing merged read | — | S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-27 | One primitive for values derived from cached data | 2e | Swift: `session.derived` builds a value once per change of its inputs; the four hand memos and the section host's per-pass build move onto it | — | S16-03, S16-07 | — | Scoped |
 | S16-29 | Prefetch a person's other sections and a hovered person | 2e | Swift: a `prefetch` tag in the section read list warms Family and Timeline after the open section settles; a 250 ms hover on a person warms their page | — | S16-09, S16-25, S16-03 | — | Scoped |
-| S16-34 | Tests run without showing a window or opening the researcher's project | 3a | Swift, tests only: the test host launches a `Settings`-only app (no window, no identity or project read, no Dock icon); test windows are never shown and one `.hostedWindows` trait closes them when each test ends, replacing every `withExtendedLifetime` hold; `add-swift-test` teaches it | — | — | [plan](prs/S16-34-hidden-test-windows.md) | Planned |
+| S16-34 | Tests run without showing a window or opening the researcher's project | 3a | Swift, tests only: the test host launches a `Settings`-only app (no window, no identity or project read, no Dock icon); test windows are never shown and one `.hostedWindows` trait closes them when each test ends, replacing every `withExtendedLifetime` hold; `add-swift-test` teaches it | — | — | [plan](prs/S16-34-hidden-test-windows.md) | Landed #772 |
 | S16-99 | Dogfood close / docs | — | Bar pass; the ship logs' follow-ups triaged; the audit's [Close the loop](person-page-audit.md#close-the-loop) classes added to the lenses' Known traps; [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track

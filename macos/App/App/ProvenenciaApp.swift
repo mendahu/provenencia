@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct ProvenenciaApp: App {
     // Owned here (not inside the view hierarchy) because `.commands` builds
     // the app menu at the Scene level, outside the views that hold
