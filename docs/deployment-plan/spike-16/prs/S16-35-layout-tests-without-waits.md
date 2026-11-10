@@ -1,6 +1,6 @@
 # S16-35 — Layout tests compute their frames instead of waiting on a window
 
-**Status:** Planned
+**Status:** Landed in [#775](https://github.com/mendahu/provenencia/pull/775) (2026-11-10)
 **Spike / slice:** Spike 16 · Slice 3a — Quiet test runs
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: two layouts move their placement arithmetic into static functions with the same results; every view draws as it does today)
@@ -14,6 +14,7 @@
 **Context:** working rule "(Batch 3) A test run shows no window and touches no install"; the S15-04 ship log on [#774](https://github.com/mendahu/provenencia/pull/774), section "F-5 — Not reproduced on this branch alone" (`main` passes 3 of 5 full runs at load average 15–53); S16-34's ship log (STEP-1 and STEP-5 run tables)
 **Planned:** 2026-11-10 against `main` @ `db5885df`
 **Review:** [`S16-35-layout-tests-without-waits.review.md`](S16-35-layout-tests-without-waits.review.md) — Fits with changes / Ready with changes, 1 round; no blocker
+**Landed:** No version bump, as planned. Differences from the plan: T-5 is one test that loops over the two notices (`"Gone"` and `nil`) instead of two; the work was committed in four commits, not one per step. The before and after tables: one of five runs failed before (`SourcePageOverviewLayoutTests` x3 and `wideHostPlacesTheSecondaryBeside`, load average 20.92 on entry), none of five after.
 
 ### Implementer — read this first
 
