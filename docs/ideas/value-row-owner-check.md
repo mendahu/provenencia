@@ -15,7 +15,7 @@ The app never creates the shared row: every owner write mints its row through `P
 
 One owner check in `datevalues.PutTx` (and `namevalues.PutTx`, which has the same shape) before an in-place update: count references to `prevID` across every owned outbound FK into the value table, as `catalogmodel` registers them (the same list `deleteimpact.ReleaseReplaced` checks). More than one → insert a fresh row for this owner instead of editing in place, and leave the old row to its other owner. Not a Sources-only guard.
 
-Touch it when `PutTx` next changes, or with the next owner of a date row (S15-32's Copy Source date is one).
+Touch it when `PutTx` next changes, or with the next new kind of owner of a date row.
 
 ## Check
 

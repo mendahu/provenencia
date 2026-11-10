@@ -166,11 +166,12 @@ Copy Source makes a new Source from an existing one so a researcher starts from 
 **Copied, each only when chosen:**
 
 - the description;
+- the date, as a `date_values` row of the copy's own;
 - the metadata values and their layout rows, verbatim (order and dismissed suggestions included), whatever type the copy has;
 - the credibility assessment (grade and argument);
 - each chosen Artifact, as a new row with its own `ART-` ref and the same label, description and File.
 
-**Never copied:** the date and the not-public flag (the copy is undated and public until Copy Source carries the date, S15-32), notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
+**Never copied:** the not-public flag (the copy always starts public), notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
 
 **Cover.** The copy's cover is reset to the Source type icon (`primary_artifact_id` is empty), even when the original's cover was one of the Artifacts the copy carries.
 
