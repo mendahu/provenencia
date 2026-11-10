@@ -107,9 +107,6 @@ struct PersonRecordLinksContentTests {
     }
 
     @Test func allLinesDrawAndNodesStopAtTheCap() {
-        func graph(_ id: String) -> CatalogRecordLinksGraph {
-            CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
-        }
         // Go owns the line bound: every line it sends is an arc, however many.
         let lines = (0..<80_000).map { CatalogRecordLink(entityID: "e\($0)", strength: .weak) }
         let many = PersonRecordLinksContent(
@@ -166,8 +163,10 @@ struct PersonRecordLinksContentTests {
         #expect(content.partial == .notCounted)
         #expect(content.dataset.nodes.count == 40)
         #expect(content.dataset.resolvedArcs.isEmpty)
-        #expect(content.dataset.nodes[0].accessibilityLabel == "g0, g0, ")
-        #expect(content.dataset.nodes.allSatisfy { $0.accessibilityLabel?.contains("shares no one") == false })
+        let apart = L10n.Conclusions.recordLinksNodeApartAccessibility(ref: "g0", graph: "g0", source: "")
+        #expect(content.dataset.nodes[0].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "g0", graph: "g0", source: ""))
+        #expect(content.dataset.nodes.allSatisfy { $0.accessibilityLabel != apart })
     }
 
     @Test func droppedLinesAreLeftOut() {
@@ -181,6 +180,23 @@ struct PersonRecordLinksContentTests {
         )
         #expect(content.partial == .leftOut)
         #expect(content.dataset.resolvedArcs.count == 1)
+    }
+
+    @Test func aNodeWhoseLinesWereAllDroppedIsNotSpokenAsSharingNoOne() {
+        // "a" and "b" link, "c" has no line in what Go sent, and Go dropped lines.
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: [graph("a"), graph("b"), graph("c")],
+                pairs: [CatalogRecordLinksPair(graphAID: "a", graphBID: "b", lines: [line()])],
+                notCounted: false, linesDropped: true
+            ),
+            graphLocations: [:]
+        )
+        #expect(content.partial == .leftOut)
+        #expect(content.dataset.nodes[2].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "c", graph: "c", source: ""))
+        #expect(content.dataset.nodes[0].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeAccessibility(ref: "a", graph: "a", source: "", connected: 1))
     }
 
     @Test func droppedGraphsAreLeftOut() {
