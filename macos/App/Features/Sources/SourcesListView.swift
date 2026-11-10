@@ -53,9 +53,14 @@ private struct SourcesListContent: View {
     @Bindable var sourcesHandle: QueryHandle<[CatalogSource]>
     @Bindable var typesHandle: QueryHandle<[CatalogSourceType]>
     @Bindable var model: SourcesModel
-    /// The caption and every row lay out on these; the first frame is wide and
-    /// the first geometry report corrects it.
-    @State private var columns = SourcesListColumns(listWidth: .infinity)
+    @Environment(\.pvWidthClass) private var widthClass
+    /// The list's width; the caption and every row lay out on the columns built
+    /// from it. The first frame is wide and the first geometry report corrects it.
+    @State private var listWidth: CGFloat = .infinity
+
+    private var columns: SourcesListColumns {
+        SourcesListColumns(listWidth: listWidth, widthClass: widthClass)
+    }
 
     var body: some View {
         let rows = model.visibleSources
@@ -306,10 +311,8 @@ private struct SourcesListContent: View {
                 }
                 .scrollTargetLayout()
             }
-            .onGeometryChange(for: SourcesListColumns.self) {
-                SourcesListColumns(listWidth: $0.size.width)
-            } action: {
-                columns = $0
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                listWidth = $0
             }
             .modifier(ListScrollAnchorModifier(
                 anchor: navigation.currentLocation.listScrollAnchor,

@@ -40,9 +40,9 @@ struct PromoteView: View {
                         mapRest
                     }
                 }
+                .frame(maxWidth: PromoteLayout.listMax(widthClass), alignment: .leading)
                 .padding(.horizontal, PVSpacing.space10)
                 .padding(.vertical, PVSpacing.space6)
-                .frame(maxWidth: PromoteLayout.listMax(widthClass), alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
             .pvScrollsRowIntoView(PromoteView.noticesAnchor, anchor: .top, whenRequested: model.noticeToken)
@@ -597,13 +597,13 @@ private enum PromoteLayout {
     static let badgeColumn: CGFloat = 112
     /// Notes under a row start where its name does.
     static let noteIndent = kindTile + columnGap
-    static let listMaxRegular: CGFloat = 1200
-    static let listMaxWide: CGFloat = 1600
+    /// The list's content width, inside its `space10` side padding.
+    static let listMaxRegular: CGFloat = 1120
     static let targetColumnRegular: CGFloat = 330
     static let targetColumnWide: CGFloat = 460
 
     static func listMax(_ widthClass: PVWidthClass) -> CGFloat {
-        widthClass == .wide ? listMaxWide : listMaxRegular
+        widthClass == .wide ? PVSpacing.widthListWideMax : listMaxRegular
     }
 
     static func targetColumn(_ widthClass: PVWidthClass) -> CGFloat {

@@ -649,18 +649,38 @@ struct SourcesModelTests {
     }
 
     @Test func listColumnsMatchBoard() {
-        let wide = SourcesListColumns(listWidth: 1136)
+        let wide = SourcesListColumns(listWidth: 1136, widthClass: .regular)
         #expect(!wide.isCompact)
         #expect(wide.type == 170)
         #expect(wide.graphs == 420)
-        #expect(!SourcesListColumns(listWidth: 880).isCompact)
-        let narrow = SourcesListColumns(listWidth: 879.5)
+        #expect(!SourcesListColumns(listWidth: 880, widthClass: .regular).isCompact)
+        let narrow = SourcesListColumns(listWidth: 879.5, widthClass: .regular)
         #expect(narrow.isCompact)
         #expect(narrow.type == nil)
         #expect(narrow.graphs == 380)
         #expect(L10n.string(L10n.Sources.columnSource) == "Source")
         #expect(L10n.string(L10n.Sources.columnType) == "Type")
         #expect(L10n.string(L10n.Sources.columnEvidenceGraph) == "Evidence graph")
+    }
+
+    @Test func columnsPlaceTheDateByWidth() {
+        let regular = SourcesListColumns(listWidth: 1000, widthClass: .regular)
+        #expect(regular.datePlacement == .underType)
+        #expect(regular.type == 170)
+        #expect(regular.published == nil)
+        #expect(regular.graphs == 420)
+        #expect(SourcesListColumns(listWidth: 880, widthClass: .regular).datePlacement == .underType)
+        let narrow = SourcesListColumns(listWidth: 860, widthClass: .regular)
+        #expect(narrow.datePlacement == .recordLine)
+        #expect(narrow.type == nil)
+        #expect(narrow.graphs == 380)
+        let wide = SourcesListColumns(listWidth: 1664, widthClass: .wide)
+        #expect(wide.datePlacement == .column)
+        #expect(wide.type == 150)
+        #expect(wide.published == 150)
+        #expect(wide.graphs == 420)
+        #expect(SourcesListColumns(listWidth: 860, widthClass: .wide).datePlacement == .recordLine)
+        #expect(PVSpacing.widthListWideMax == 1600)
     }
 
     @Test func listReadsEachGraphsProgress() async {
