@@ -1,6 +1,6 @@
 # Deployment plan — Spike 16
 
-Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-even-spikes)): small fixes, UX refinements and follow-ups, in batches, each a slice with its own Check. Batch 1 takes the high and medium findings of the [Person page audit](person-page-audit.md) (2026-11-08), an area audit of Spike 13's Person page with all five [`review-pr`](../../../.agents/skills/review-pr/SKILL.md) lenses. Findings that edit the same code or the same concern share a PR (user, 2026-11-08), unless the map review found a reason to keep them apart ([review](deployment-plan.review.md)); the rest are parked in idea files ([Where the notes went](#where-the-notes-went)). Batch 2 (2026-11-08) reworks the catalog's caches so the conclusion layer's code gets simpler: entities and indexes held in Go memory and updated exactly on commit, answers composed from them, and Swift following what each value was built from ([design](cache-architecture.md)). A last pass the same day combined PRs with heavy domain or file overlap to cut review cycles, from 33 to 25 ([review](deployment-plan.review.md#consolidation-2026-11-08)).
+Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-even-spikes)): small fixes, UX refinements and follow-ups, in batches, each a slice with its own Check. Batch 1 takes the high and medium findings of the [Person page audit](person-page-audit.md) (2026-11-08), an area audit of Spike 13's Person page with all five [`review-pr`](../../../.agents/skills/review-pr/SKILL.md) lenses. Findings that edit the same code or the same concern share a PR (user, 2026-11-08), unless the map review found a reason to keep them apart ([review](deployment-plan.review.md)); the rest are parked in idea files ([Where the notes went](#where-the-notes-went)). Batch 2 (2026-11-08) reworks the catalog's caches so the conclusion layer's code gets simpler: entities and indexes held in Go memory and updated exactly on commit, answers composed from them, and Swift following what each value was built from ([design](cache-architecture.md)). A last pass the same day combined PRs with heavy domain or file overlap to cut review cycles, from 33 to 25 ([review](deployment-plan.review.md#consolidation-2026-11-08)). Batch 3 (2026-11-10) quiets the Swift test runs: no window on screen and no project opened by the test host.
 
 **A brief covers one view.** A PR that adds, changes or removes chrome waits on a brief for each view it touches. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). A bugfix or a behavior change with no new chrome is not gated.
 
@@ -152,6 +152,10 @@ These are the calls for this spike. PR plans treat them as binding.
 - **(Batch 2) No new persisted projections, and no stored answer without a measurement.** Stored summary rows, a canonical links table and stored shortlist keys are refused for now ([design](cache-architecture.md#not-this-batch)). A composed answer is memoised only after it measures slow at the batch's Scale. Binds S16-10 – S16-32.
 - **(Batch 2) Measure growth.** A PR that claims speed adds a budget at 4,000 and 16,000 persons on the large fixture (or at the input it grows with), and records today's figure on the same machine in its ship log. Binds S16-11 – S16-32.
 
+### Batch 3 — Test infrastructure
+
+- **(Batch 3) A test run shows no window and touches no install** (user, 2026-11-10). The test host opens no app window and reads no install identity or project; a test window is never ordered in and is closed when its test ends; test runs are measured one `xcodebuild` at a time, never several at once (three at once took the researcher's Mac down on 2026-11-10). Binds S16-34.
+
 ## PR map
 
 | PR | Title | Slice | Scope | Brief | Depends on | Plan | Status |
@@ -189,6 +193,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S16-26 | Conclusion lists merge the rows a write touched | 2e | Go and Swift: the Persons, Events and Places lists re-read only the touched rows by id with Go's sort key, through the existing merged read | — | S14-42 (Spike 14, landed #748) | — | Scoped |
 | S16-27 | One primitive for values derived from cached data | 2e | Swift: `session.derived` builds a value once per change of its inputs; the four hand memos and the section host's per-pass build move onto it | — | S16-03, S16-07 | — | Scoped |
 | S16-29 | Prefetch a person's other sections and a hovered person | 2e | Swift: a `prefetch` tag in the section read list warms Family and Timeline after the open section settles; a 250 ms hover on a person warms their page | — | S16-09, S16-25, S16-03 | — | Scoped |
+| S16-34 | Tests run without showing a window or opening the researcher's project | 3a | Swift, tests only: the test host launches a `Settings`-only app (no window, no identity or project read, no Dock icon); test windows are never shown and one `.hostedWindows` trait closes them when each test ends, replacing every `withExtendedLifetime` hold; `add-swift-test` teaches it | — | — | [plan](prs/S16-34-hidden-test-windows.md) | Planned |
 | S16-99 | Dogfood close / docs | — | Bar pass; the ship logs' follow-ups triaged; the audit's [Close the loop](person-page-audit.md#close-the-loop) classes added to the lenses' Known traps; [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -255,6 +260,12 @@ SLICE 2e — The app's cache
   S16-27  One primitive for values derived from cached data
   S16-29  Prefetch a person's other sections and a hovered person
   Check: bar 12 (lists), the rest of 14, and 15.
+
+BATCH 3 — Test infrastructure
+
+SLICE 3a — Quiet test runs
+  S16-34  Tests run without showing a window or opening the researcher's project
+  Check: ⌘U shows no window or Dock icon and opens no project file; the full suite passes five runs in a row.
 
 S16-99 — Dogfood close / docs
 ```
@@ -511,3 +522,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). The design, the 
 **Not this PR.** Engine-side warming (rule "Warm only what every proposal needs").
 **Check.** Bar 14's last clause: switching to Family or Timeline after the page settles shows no spinner; the prefetch's cost on the next click measured.
 **Context.** Rule "One open section, one list of reads" (S16-03); `macos/App/Features/Workspace/WorkspaceLocation.swift`, `Session/PlaceRegistry.swift`, `macos/App/Features/Conclusions/PersonCardLink.swift`; updates [`add-workspace-place`](../../../.agents/skills/add-workspace-place/SKILL.md).
+
+### Batch 3 — Test infrastructure
+
+### Slice 3a — Quiet test runs
+
+#### S16-34 — Tests run without showing a window or opening the researcher's project
+
+**Ships.** `ProvenenciaMain` chooses the app at launch: when Xcode hosts the tests it runs `TestHostApp` (a `Settings` scene only, accessory policy), so the host never builds `OnboardingView` and never reopens the researcher's project. `HostedWindow.swift` gains a `HostedWindows` tracker and a `.hostedWindows` Swift Testing trait; test windows are never ordered in and are closed when each test ends. Every window-hosting suite moves onto it and its `withExtendedLifetime` holds go; `PVFormDialogClickTests` builds its titled windows through the same helper and tracks its panels. `add-swift-test` teaches it.
+**Not this PR.** Changing any timeout or assertion; the root cause of `WorkspaceDestinationHostTests`' timeouts under load if it survives (S16-99 triages it from the ship log); test plans, parallelism settings or CI.
+**Check.** ⌘U with another app in front shows no Provenencia window or Dock icon and opens no file in the project folder; the full suite passes five runs in a row, one at a time, with before-and-after durations in the PR body.
+**Context.** Rule "(Batch 3) A test run shows no window and touches no install"; S16-03's ship log on [#769](https://github.com/mendahu/provenencia/pull/769); `macos/App/App/ProvenenciaApp.swift`, `macos/App/Features/Onboarding/OnboardingModel.swift`, `macos/ProvenenciaTests/HostedWindow.swift`; [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
