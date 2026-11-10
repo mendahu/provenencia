@@ -84,14 +84,14 @@ struct EvidenceGraphStoreTests {
             _ = try await store.copySource(
                 projectDir: projectDir, userID: userID, sourceID: sourceID, title: "Copy",
                 sourceTypeID: "t", copyDescription: false, copyMetadata: false,
-                copyCredibility: false, artifactIDs: []
+                copyCredibility: false, copyDate: false, artifactIDs: []
             )
         }
         store.copySourceError = nil
         let (copy, _) = try await store.copySource(
             projectDir: projectDir, userID: userID, sourceID: sourceID, title: "",
             sourceTypeID: "t", copyDescription: false, copyMetadata: false,
-            copyCredibility: false, artifactIDs: []
+            copyCredibility: false, copyDate: false, artifactIDs: []
         )
         #expect(copy.title == "")
         #expect(copy.id != sourceID)
@@ -171,7 +171,7 @@ struct EvidenceGraphStoreTests {
 
         let (copy, _) = try await store.copySource(
             projectDir: projectDir, userID: userID, sourceID: created.id, title: "Deed copy", sourceTypeID: "t",
-            copyDescription: false, copyMetadata: false, copyCredibility: false, artifactIDs: [artifact.id]
+            copyDescription: false, copyMetadata: false, copyCredibility: false, copyDate: false, artifactIDs: [artifact.id]
         )
         let all = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         let copied = try #require(all.first { $0.sourceID == copy.id })

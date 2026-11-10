@@ -5612,6 +5612,12 @@ enum L10n {
             comment: "Heading above the Copy Source part checkboxes"
         )
 
+        static let copySourceDate = LocalizedStringResource(
+            "sources.copy.date",
+            defaultValue: "Published date",
+            comment: "Copy Source checkbox: give the copy the original's published date"
+        )
+
         static let copySourceDescription = LocalizedStringResource(
             "sources.copy.description",
             defaultValue: "Description",

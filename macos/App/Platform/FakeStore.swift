@@ -497,6 +497,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         copyDescription: Bool,
         copyMetadata: Bool,
         copyCredibility: Bool,
+        copyDate: Bool,
         artifactIDs: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
@@ -512,6 +513,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 title: title,
                 description: copyDescription ? original.description : ""
             )
+            if copyDate {
+                copy.date = original.date
+                copy.dateSortKey = original.dateSortKey
+            }
             if copyMetadata {
                 // Entries copy as they are; a `suggested` flag can be stale under
                 // another type in the fake.

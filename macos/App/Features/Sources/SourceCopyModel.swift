@@ -5,6 +5,7 @@ import Observation
 /// anything change" is one comparison against the prefill.
 struct SourceCopyChoices: Equatable {
     var draft: SourcesModel.Draft
+    var includeDate = true
     var includeDescription = true
     var includeMetadata = true
     var includeCredibility = true
@@ -81,6 +82,11 @@ final class SourceCopyModel {
         }
     }
 
+    /// The original's date as a row says it; nil when undated.
+    var dateLine: String? { SourcesRowDate.line(workspace?.source.date) }
+
+    var dateAvailable: Bool { dateLine != nil }
+
     var descriptionAvailable: Bool {
         guard let workspace else { return false }
         return !workspace.source.description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -138,6 +144,7 @@ final class SourceCopyModel {
                 copyDescription: choices.includeDescription && descriptionAvailable,
                 copyMetadata: choices.includeMetadata && metadataAvailable,
                 copyCredibility: choices.includeCredibility && credibilityAvailable,
+                copyDate: choices.includeDate && dateAvailable,
                 artifactIDs: artifactIDsToCopy
             )
             session.apply(effects, .createdSource(copy))

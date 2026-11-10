@@ -381,6 +381,7 @@ private struct ThrowingStore: GenealogyStore {
         copyDescription _: Bool,
         copyMetadata _: Bool,
         copyCredibility _: Bool,
+        copyDate _: Bool,
         artifactIDs _: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSource(
