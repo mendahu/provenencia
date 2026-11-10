@@ -2,14 +2,14 @@
 
 Covers the plan [`S16-04-person-page-notices.md`](S16-04-person-page-notices.md) and its brief [S16-D1](../design/S16-D1-person-page-notices.md).
 
-**Verdict:** round 1: Fits with changes — Not ready (plan); Fits with changes — Ready with changes (brief). Round 2 pending.
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet), brief (Opus, maintainability UI rows and executability for briefs)
+**Verdict:** Fits with changes — Ready with changes (round 2 findings all Fixed; no open blocker). Round 1 was Fits with changes — Not ready (plan) and Fits with changes — Ready with changes (brief).
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet), brief (Opus, maintainability UI rows and executability for briefs)
 
 ## To user
 
 - **Board S16-D1.** Paste the brief into Claude Design ("Person Detail" board, new turn "S16-D1 · Notices") and agree the board. Until then the plan stays `Blocked — on board S16-D1`.
 - **B-2: Remove on a stale line.** After a failed reload, a record line already removed stays under the notice, and a second Remove on it is a silent no-op (`core/database/promote/unpromote.go`). Recommendation: leave it as it is in this PR. The notice says the rows are old and Try again is one press away. Add a line to [`ideas/person-page-followups.md`](../../../ideas/person-page-followups.md). The other choices are to disable Remove under a stale notice, or to have a no-op Remove say so; either one adds a frame and a Decision.
-- **M-3 widens the PR to Go.** A not-counted record links read now sends no pairs (D-9). That is a small `persondetail` change plus a test, accepted here because the reviewer's reason holds: the engine should own what "not compared" means. Say so if you want S16-04 to stay Swift-only; then the Swift drop comes back and is logged as debt.
+- **M-3 / M2-4 widen the PR to Go, in a matching-layer package.** A not-counted read now lists no pair. The change sits in `recordlinks.Pairs` (D-9), with two rewritten subtests and two lines in `docs/matching-model.md`. The writer accepted it because the reviewers' reason holds: `Pairs` owns `MaxReadWork`, and it stops building up to about 1.1M lines only to have them dropped. If you want S16-04 to stay Swift-only, say so; the drop would then move back to Swift and be logged as debt.
 
 ## Writer's own calls
 
@@ -143,3 +143,37 @@ Logged.
 ### B-10 · nit · Sample error text is not a real engine message
 
 **Answer:** Fixed. The frames use the generic error "Something went wrong. Please try again.", marked as sample text.
+
+## Round 2
+
+Fresh reviewers had the plan, the brief and this log. They accepted the round-1 answers M-4, M-5, X-1 – X-14 and B-1 – B-10, and M-1's decline to delete `failure`. Every new finding is Fixed.
+
+### M2-1 / X2-1 · blocker · The Evidence graph's notice reads `failure`, which is nil during a first-load retry, so the notice unmounts
+**Answer:** Fixed. In D-5, `graphReadError` reads `handle.reading`. D-1 now says `.failed` comes from the stored `error`, and that it holds through a retry. `failure`'s doc comment says it is nil while a retry runs. A new test, T-10 `aFirstLoadRetryKeepsTheReadError`, checks that the error stays during the retry.
+
+### M2-2 · blocker · Promote still remounts on its own counter
+**Answer:** Fixed. In D-4, `PromoteView` passes `failureRevision: model.loadAttempt` and drops `.id`. It keeps its binding and its focus on appear, and the claim goes through the caller's binding when one is passed. The Out row is deleted. Manual check 9 covers Promote.
+
+### M2-3 · blocker · `CitationComposerModel.isGraphReloading` is `isReading` already
+**Answer:** Fixed. In D-2, `isGraphReloading` returns `isReading`. Codebase fit and Deletes now list it.
+
+### M2-4 / X2-3 · blocker · The "not compared → no pair" rule belongs in `recordlinks.Pairs`; existing tests and docs assert the old shape
+**Answer:** Fixed. In D-9, `Pairs` returns `nil, false` past `MaxReadWork`, and the `skip` path goes; `persondetail` changes only a comment. T-9 rewrites `TestPairsCounted` "AC-2.2" and `TestRecordLinksSaysWhenPartial` "past the work bound by pair work". STEP-8 updates `docs/matching-model.md` (line 33 and the knob row) and loads `add-match-rule` and `match-rules.mdc`. A Stop condition covers any other caller of `Pairs`.
+
+### M2-5 / X2-5 · blocker · The host's new `WorkspaceNavigation` breaks the Sources previews; the page previews had no fixture and the wrong section
+**Answer:** Fixed. In D-14, `PersonSourcesPreview` gains a `WorkspaceNavigation` sent to a Person location, in STEP-6, the same commit as the host change. The record links previews reuse that harness: its existing "Diagram error", plus the four partial states. The page harness names its seeded detail, ids, `userID`, navigation and frames.
+
+### X2-2 · major · `generate-proto.sh` cannot run on Linux
+**Answer:** Fixed. The FFI section and STEP-8 run it on the Mac, name the tools it needs and the two generated files, and check that the diff is comment-only.
+
+### X2-4 · major · `manyRecordLinks(graphs: 1_001)` yields 50 graphs
+**Answer:** Fixed. STEP-9 adds `crowdClaims(graphs:)` and `crowdRecordLinks(graphs:)` (in Codebase fit) and spells out "pairs emptied" as a copy changed through its `var`s.
+
+### X2-6 · minor · `readAgainShowsItIsReading` reads `graphReadAttempt`
+**Answer:** Fixed. STEP-4 names the line's replacement. T-10 is a new test.
+
+### X2-7 · minor · `goneNotice(section:)` return type
+**Answer:** Fixed. D-7 now declares the return type: `-> LocalizedStringResource`.
+
+### X2-8 · minor · Small gaps
+**Answer:** Fixed. All four `MARKETING_VERSION` lines are now covered. D-6 builds the `.conclusionDetail` key inline. D-4 says what happens when a caller passes both parameters. STEP-2 names the `.content` patterns. STEP-1 says how T-1 matches a non-`Equatable` value.
