@@ -1,36 +1,29 @@
 import SwiftUI
 
-/// Sticky identity header: thumbnail, title edit, type chip.
+/// The Source page's pinned header: thumbnail, title edit, and the meta row (ref, type, date,
+/// Private). The page's `PVPageColumns` draws the band's width and the rule under it; this
+/// view renders nothing until the workspace is there.
 struct SourcePageIdentityHeader: View {
     @Bindable var model: SourcePageModel
     /// Local draft so title keystrokes don't invalidate the whole Source page
     /// observation graph on every character.
     @State private var titleDraft = ""
-    private enum TypeField: Hashable { case combo, edit }
-    @FocusState private var typeFieldFocused: TypeField?
+    private enum MetaField: Hashable { case combo, edit, dateEdit, dateAdd }
+    @FocusState private var metaFocused: MetaField?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            if model.workspace != nil {
-                HStack(alignment: .top, spacing: PVSpacing.space7) {
-                    coverThumbnail
-                    titleCluster
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    HStack(alignment: .top, spacing: PVSpacing.space4) {
-                        copySourceButton
-                        deleteSourceButton
-                    }
+        if model.workspace != nil {
+            HStack(alignment: .top, spacing: PVSpacing.space7) {
+                coverThumbnail
+                titleCluster
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: PVSpacing.space4) {
+                    copySourceButton
+                    deleteSourceButton
                 }
-                .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
             }
-        }
-        .padding(.top, PVSpacing.space5)
-        .padding(.horizontal, PVSpacing.gutterPage)
-        .padding(.bottom, PVSpacing.space6)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PVColor.surfaceCard)
-        .overlay(alignment: .bottom) {
-            PVDivider()
+            .padding(.top, PVSpacing.space5)
+            .padding(.bottom, PVSpacing.space6)
         }
     }
 
@@ -179,7 +172,77 @@ struct SourcePageIdentityHeader: View {
         .accessibilityIdentifier("sources.page.deleteSource")
     }
 
+    /// Two groups in a wrapping row, so a narrow header breaks after the type and the ref stays
+    /// first: ref · type, then · date · Private.
     private var metaRow: some View {
+        PVFlowLayout(spacing: PVSpacing.space5, lineSpacing: PVSpacing.space3) {
+            refAndType
+            dateAndPrivate
+        }
+        // The pencils are inserted by the commit that closes an editor or dialog, so the
+        // hand-back goes through the app's focus claim.
+        .onChange(of: model.identity.editingType) { was, now in
+            if was, !now { FocusClaim.claim($metaFocused, .edit) }
+        }
+        .onChange(of: model.identity.dateForm != nil) { was, now in
+            if was, !now {
+                FocusClaim.claim($metaFocused, model.source?.date == nil ? .dateAdd : .dateEdit)
+            }
+        }
+    }
+
+    private var dateAndPrivate: some View {
+        HStack(alignment: .center, spacing: PVSpacing.space5) {
+            Text(verbatim: "·")
+                .foregroundStyle(PVColor.borderDefault)
+            sourceDate
+            Text(verbatim: "·")
+                .foregroundStyle(PVColor.borderDefault)
+            privateSwitch
+        }
+    }
+
+    @ViewBuilder
+    private var sourceDate: some View {
+        if let date = model.source?.date {
+            let line = DateRowDisplay.line(date: date)
+            HStack(spacing: PVSpacing.space3) {
+                PVIcon(.calendar, size: 14)
+                    .foregroundStyle(PVColor.textMuted)
+                Text(verbatim: line)
+                    .font(PVFont.body(size: PVTypeScale.bodySmall))
+                    .foregroundStyle(PVColor.textSecondary)
+                    .accessibilityLabel(L10n.Sources.sourceDateAccessibility(date: line))
+                    .accessibilityIdentifier("sources.page.sourceDate")
+                PVIconButton(.penLine, label: L10n.Sources.sourceDateEdit, size: .sm) {
+                    model.identity.openDate()
+                }
+                .focused($metaFocused, equals: .dateEdit)
+                .accessibilityIdentifier("sources.page.sourceDate.edit")
+            }
+        } else {
+            PVButton(L10n.Sources.sourceDateAdd, variant: .ghost, size: .sm, icon: .calendar) {
+                model.identity.openDate()
+            }
+            .focused($metaFocused, equals: .dateAdd)
+            .accessibilityIdentifier("sources.page.sourceDate.add")
+        }
+    }
+
+    private var privateSwitch: some View {
+        PVSwitch(
+            L10n.Sources.privateSwitch,
+            isOn: Binding(
+                get: { model.identity.pendingPrivate ?? !(model.source?.isPublic ?? true) },
+                set: { isPrivate in Task { await model.identity.setPrivate(isPrivate) } }
+            ),
+            isDisabled: model.identity.pendingPrivate != nil
+        )
+        .help(L10n.string(L10n.Sources.privateSwitchHelp))
+        .accessibilityIdentifier("sources.page.private")
+    }
+
+    private var refAndType: some View {
         HStack(alignment: .center, spacing: PVSpacing.space5) {
             if let ref = model.source?.ref {
                 Text(ref)
@@ -201,7 +264,7 @@ struct SourcePageIdentityHeader: View {
                             emptyLabel: L10n.Sources.typeNoMatch,
                             label: L10n.Sources.pageFormType,
                             accessibilityIdentifierPrefix: "sources.page.type",
-                            focus: PVFieldFocus($typeFieldFocused, equals: .combo)
+                            focus: PVFieldFocus($metaFocused, equals: .combo)
                         ) { option, query in
                             SourceTypeComboRow(
                                 type: model.identity.types.first { $0.id == option.value },
@@ -211,7 +274,7 @@ struct SourcePageIdentityHeader: View {
                         }
                         .frame(width: 210)
                         .disabled(model.identity.isSaving)
-                        .onAppear { FocusClaim.claim($typeFieldFocused, .combo) }
+                        .onAppear { FocusClaim.claim($metaFocused, .combo) }
                         .onChange(of: model.identity.typeDraftID) { _, newValue in
                             guard !newValue.isEmpty, newValue != model.identity.sourceTypeID else { return }
                             Task { await model.identity.saveType() }
@@ -239,15 +302,10 @@ struct SourcePageIdentityHeader: View {
                     PVIconButton(.penLine, label: L10n.Sources.editType, size: .sm) {
                         model.identity.beginEditType()
                     }
-                    .focused($typeFieldFocused, equals: .edit)
+                    .focused($metaFocused, equals: .edit)
                     .accessibilityIdentifier("sources.page.type.edit")
                 }
             }
-        }
-        // The pencil is inserted by the commit that closes the editor, so the
-        // hand-back goes through the app's focus claim.
-        .onChange(of: model.identity.editingType) { was, now in
-            if was, !now { FocusClaim.claim($typeFieldFocused, .edit) }
         }
     }
 }

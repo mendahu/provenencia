@@ -18,13 +18,38 @@ final class SourcePageContext {
     let session: WorkspaceSession
 
     var workspace: CatalogSourceWorkspace?
-    /// Non-field failure banner shared by the page sections.
-    var pageError: String?
+    /// Non-field failure banner shared by the page sections: one value, so a title can never
+    /// pair with another write's message. Written only through `showPageError`.
+    struct PageError: Equatable {
+        var title: String?
+        var message: String
+    }
+
+    private(set) var pageError: PageError?
     var toast: VocabularyToast?
+    /// The notice to show when a write found this Source deleted elsewhere; the page leaves
+    /// for the Sources list while it is set.
+    var gone: String?
 
     /// Clears the shared banner before a new section mutation.
     func clearPageError() {
         pageError = nil
+    }
+
+    /// Shows `message` (with an optional bold `title`) in the shared banner; nil clears it.
+    func showPageError(_ message: String?, title: String? = nil) {
+        pageError = message.map { PageError(title: title, message: $0) }
+    }
+
+    /// The one door for a failed Source page write. A Source another window deleted sets `gone`
+    /// and returns nil: the caller returns without writing any state, the page is leaving.
+    /// Any other failure returns its message for the caller to show.
+    func fail(_ error: Error) -> String? {
+        if (error as? CoreInvokeError)?.engineCode == .sourceNotFound {
+            gone = L10n.Sources.sourceDeletedNotice(title: source?.title ?? "")
+            return nil
+        }
+        return L10n.Errors.message(for: error)
     }
 
     init(
@@ -111,7 +136,8 @@ final class SourcePageContext {
             )
             session.apply(.updatedSource(ws.source))
         } catch {
-            pageError = L10n.Errors.message(for: error)
+            guard let message = fail(error) else { return }
+            showPageError(message)
         }
     }
 
@@ -129,7 +155,9 @@ final class SourcePageContext {
             applySource(updated, effects: effects)
             return true
         } catch {
-            pageError = L10n.Errors.message(for: error)
+            // A gone Source: the page is leaving, nothing is shown.
+            guard let message = fail(error) else { return false }
+            showPageError(message)
             return false
         }
     }

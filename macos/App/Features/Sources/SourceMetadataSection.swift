@@ -168,7 +168,8 @@ final class SourceMetadataSection {
             applyCleared(fieldID: item.fieldID, effects: effects)
             pendingDelete = nil
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
         }
     }
 
@@ -185,7 +186,8 @@ final class SourceMetadataSection {
             context.applyWrite(effects)
             syncDrafts()
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
         }
     }
 
@@ -209,7 +211,8 @@ final class SourceMetadataSection {
             context.applyWrite(effects)
             syncDrafts()
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
             context.workspace?.metadata = previous
         }
     }
@@ -261,8 +264,8 @@ final class SourceMetadataSection {
 
     /// `sourcemetadata.invalid` stays on the value field; I/O goes to `pageError`.
     func applySetError(_ error: Error, fieldID: String?) {
+        guard let message = context.fail(error) else { return }
         if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid {
-            let message = L10n.Errors.message(for: error)
             if isAdding {
                 addValueError = message
             } else if let fieldID {
@@ -271,7 +274,7 @@ final class SourceMetadataSection {
             }
             return
         }
-        context.pageError = L10n.Errors.message(for: error)
+        context.showPageError(message)
     }
 
     /// Patches one workspace row from a `setSourceMetadata` response.

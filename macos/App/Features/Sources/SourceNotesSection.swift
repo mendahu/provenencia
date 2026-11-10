@@ -53,7 +53,8 @@ final class SourceNotesSection {
             context.workspace?.notes.append(note)
             context.applyWrite(effects)
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
         }
     }
 
@@ -108,7 +109,8 @@ final class SourceNotesSection {
             bodyDraft = ""
             context.applyWrite(effects)
         } catch {
-            bodyError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            bodyError = message
         }
     }
 
@@ -139,7 +141,8 @@ final class SourceNotesSection {
             context.workspace?.notes.removeAll { $0.id == id }
             context.applyWrite(effects)
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
         }
     }
 }

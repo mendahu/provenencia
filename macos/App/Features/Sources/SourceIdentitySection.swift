@@ -3,7 +3,7 @@ import Observation
 
 /// Title, type, and description edit flows for the Source page. Each field
 /// carries its own draft, edit flag, and error channel; all three share one
-/// `updateSource` write.
+/// `updateSource` write. The header's date dialog and Private switch live here too.
 @MainActor
 @Observable
 final class SourceIdentitySection {
@@ -20,6 +20,12 @@ final class SourceIdentitySection {
     var descriptionError: String?
 
     private(set) var isSaving = false
+
+    /// The Source date dialog while it is open.
+    var dateForm: SourceDateFormModel?
+
+    /// The value the Private switch shows while its write runs; nil at rest.
+    private(set) var pendingPrivate: Bool?
 
     private let context: SourcePageContext
 
@@ -46,6 +52,21 @@ final class SourceIdentitySection {
         SourceTypeComboRow.options(for: types)
     }
 
+    /// Discards the edit sessions when a workspace (re)load changed what they edit: the Source's
+    /// id, title, type or description. A new date, flag or cover leaves them (and the date dialog
+    /// and the switch) as they are. No previous Source always resets.
+    func resetIfChanged(from old: CatalogSource?, to new: CatalogSource) {
+        guard let old else {
+            reset()
+            return
+        }
+        if old.id != new.id || old.title != new.title
+            || old.sourceTypeID != new.sourceTypeID || old.description != new.description
+        {
+            reset()
+        }
+    }
+
     /// Discards all edit sessions after a workspace (re)load.
     func reset() {
         editingTitle = false
@@ -57,6 +78,38 @@ final class SourceIdentitySection {
         editingDescription = false
         descriptionDraft = ""
         descriptionError = nil
+    }
+
+    // MARK: Date and Private
+
+    /// Opens the Source date dialog on the Source's saved date.
+    func openDate() {
+        guard let source = context.source else { return }
+        dateForm = SourceDateFormModel(context: context, initial: source.date)
+    }
+
+    /// Flips Private. The switch shows `isPrivate` and is disabled while the write runs; a
+    /// failure puts the saved value back and shows the page's titled error.
+    func setPrivate(_ isPrivate: Bool) async {
+        guard pendingPrivate == nil, let current = context.source, current.isPublic == isPrivate else { return }
+        pendingPrivate = isPrivate
+        defer { pendingPrivate = nil }
+        context.clearPageError()
+        do {
+            let (updated, effects) = try await context.store.setSourcePublic(
+                projectDir: context.projectDir,
+                userID: context.userID,
+                sourceID: context.sourceID,
+                isPublic: !isPrivate
+            )
+            context.applySource(updated, effects: effects)
+        } catch {
+            guard let detail = context.fail(error) else { return }
+            context.showPageError(
+                L10n.Sources.privateFailedMessage(detail: detail),
+                title: L10n.string(L10n.Sources.privateFailedTitle)
+            )
+        }
     }
 
     // MARK: Title
@@ -179,7 +232,7 @@ final class SourceIdentitySection {
             context.applySource(updated, effects: effects, typeChanged: sourceTypeID != current.sourceTypeID)
             return nil
         } catch {
-            return L10n.Errors.message(for: error)
+            return context.fail(error)
         }
     }
 }

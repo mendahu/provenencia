@@ -87,7 +87,8 @@ final class SourceCredibilitySection {
             context.applyWrite(effects)
             resetDrafts()
         } catch {
-            context.pageError = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
+            context.showPageError(message)
         }
     }
 }
