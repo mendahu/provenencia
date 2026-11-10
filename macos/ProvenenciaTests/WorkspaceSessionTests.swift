@@ -632,6 +632,10 @@ struct WorkspaceSessionTests {
 
     /// The open section's reads stay visible, so a write revalidates them instead of evicting
     /// them while they are on screen; the first section, stored as nil, reads nothing yet.
+    /// While the first section (Vitals) reads nothing, the stored-nil case passes whether the
+    /// place resolves `openPageSection` or the raw `pageSection`; the first PR that gives the
+    /// first section a read must add that case's own key to this test's expectation, which then
+    /// fails against the raw `pageSection`.
     @Test func applyPersonPageKeepsTheOpenSectionsReadsVisible() {
         let session = makeSession(store: FakeStore())
         let detail = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "per-1")

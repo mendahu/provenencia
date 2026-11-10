@@ -301,6 +301,10 @@ struct PlaceRegistryTests {
         ])
     }
 
+    /// While the first section (Vitals) reads nothing, the stored-nil case passes whether the
+    /// place resolves `openPageSection` or the raw `pageSection`; the first PR that gives the
+    /// first section a read must add that case's own key to this test's expectation, which then
+    /// fails against the raw `pageSection`.
     @Test func personDetailWarmsEveryReadOfTheOpenSection() throws {
         let sections: [ConclusionPageSection?] = [nil] + ConclusionPageSection.allCases
         for section in sections {
