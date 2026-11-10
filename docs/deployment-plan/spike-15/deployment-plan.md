@@ -81,7 +81,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-01 | The credibility argument is a text area | 1 | Swift: `PVTextArea` with the description's behavior; Save as today | — | — | [plan](prs/S15-01-credibility-argument-text-area.md) | Landed #758 |
 | S15-02 | Sources carry a date and a not-public flag | 1 | Go: one migration (`date_value_id`, `is_public`), Source read and write, a date sort key from the shared date order | — | — | [plan](prs/S15-02-source-date-and-public-flag.md) | Landed #762 |
 | S15-03 | The Source page shows the date and the Private switch | 1 | Swift: set, change, clear the date in a dialog; the Private switch; the page on Page columns. Go: `sources.not_found` for a missing Source | S15-D1 | S15-02, S15-D1 | [plan](prs/S15-03-source-page-date-and-private-switch.md) | Landed #766 |
-| S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | — | Scoped |
+| S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | [plan](prs/S15-04-sources-list-date.md) | Blocked — on board S15-D2 |
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | — | Scoped |
 | S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | — | Scoped |
@@ -264,7 +264,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-04 — The Sources list shows and sorts by the date
 
-**Ships.** Each Sources list row shows the date as S15-D2 draws it, and `SourcesModel`'s `Sort` gains the date, ordered by Go's sort key, undated last.
+**Ships.** Each Sources list row shows the date on its second line as S15-D2 draws it ("Undated" when it has none), and `SourcesModel`'s `Sort` gains "Source date, oldest first" and "newest first", ordered by Go's sort key, undated last in both (user, 2026-11-10).
 **Not this PR.** Filtering by date or by not public.
 **Check.** Bar 1's list half, on a project with dated and undated Sources.
 **Context.** S15-D2; `SourcesListRow.swift`, `SourcesListSettings.swift`, `SourcesModel.swift`.
