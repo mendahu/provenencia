@@ -1,7 +1,7 @@
 # Ship log — S16-35 Layout tests compute their frames instead of waiting on a window
 
 **Plan:** [`S16-35-layout-tests-without-waits.md`](S16-35-layout-tests-without-waits.md) · **Branch:** `plan/s16-35-layout-tests-without-waits` · **PR:** [#775](https://github.com/mendahu/provenencia/pull/775)
-**State:** fixing 1
+**State:** ready
 
 ## Before round 0
 
@@ -55,3 +55,9 @@ Check: `check-guidance-names.py` passes.
 Files: `macos/ProvenenciaTests/WorkspaceDestinationHostTests.swift`, `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift`, `macos/App/Features/Sources/SourcePageView.swift`, `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift`.
 Do: drop `import SwiftUI` from `WorkspaceDestinationHostTests.swift` if the file builds without it; bind `pane(proposal, w)` once in `PVPageColumnsLayout.sizeThatFits`; `placed(width:subviews:)`'s doc: "The `Subviews` adapter for `arrange`: no frames unless there are four subviews."; the test helper's doc: "Arranges four subviews of these heights at `width`."
 Check: `scripts/check-pr.sh` PASS. Then one line in the plan's Landed note for F-1 (the shared adapter) and F-2.
+
+## Round 1 — fix
+Head `54374d15`. Gate PASS (orchestrator run, load 17.3 / 14.4 / 11.9). F-1, F-2 `5b561ed8`; F-3 `5b561ed8` + `54374d15`. Read by the orchestrator: one `LayoutSubviews.fit(_:_:)` beside `PVPageColumnsLayout`, both layouts pass `subviews.fit`, the old closure copies gone; the skill's example list labels `PersonTimelinePlacement` as a placement value. MNT-1, MNT-2: **Resolved**. Nits MNT-3, MNT-4, MNT-5, CON-1 done. No round 2 (no blocker or major in round 1).
+
+## Result
+Gate PASS at `54374d15` · `origin/main` unchanged (`db5885df`) · CI: see #775 · open: none · follow-ups: none · to user: —
