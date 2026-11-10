@@ -46,7 +46,7 @@ Spike 15 makes Sources carry what a standard genealogical citation needs and tur
 These are the calls for this spike. PR plans treat them as binding.
 
 - **Follow the *Evidence Explained* style; never copy the book.** Seeded formats, examples, tests, fixtures and UI copy are written for Provenencia; every example uses invented people, places and records; no product or feature name uses the book's name; nothing is called official. The full rule: [`README.md`](README.md#working-rules). Binds S15-14, S15-19, S15-20 and every PR with copy.
-- **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. Copy Source carries it only when the Copy form's Date tick is on (S15-32; user, 2026-11-09). The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
+- **The Source date is one optional DateValue on `sources`.** `sources.date_value_id` into `date_values` ([`add-date-value`](../../../.agents/skills/add-date-value/SKILL.md)); its meaning is the original publication, or when the record was made; no backfill. Copy Source carries it only when the Copy form's Published date tick is on (S15-32; user, 2026-11-09). The Sources list sorts by it, undated last. Metadata dates stay text. Binds S15-02 – S15-05. Design: [`source-provenance-date.md`](source-provenance-date.md).
 - **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page by a switch labeled "Private", off by default (user, 2026-11-09). No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
 - **Metadata lives at three levels with one vocabulary.** The Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) each hold values and layout, with the same fields from `source_metadata_fields`, which keeps its name. Tables: `artifact_metadata`, `artifact_metadata_layout`, `evidence_graph_metadata`, `evidence_graph_metadata_layout`. Layout rules (order, dismiss) are the Source's at every level. Binds S15-07 – S15-12. Design: map § 6.6.
 - **One level type.** Source, Artifact and graph are one Go `Level` type in the pure package `core/vocabkey`, used by suggestion rows, metadata owners, the format prefixes and the built-ins table, and the RPCs, with one Swift enum and a row in `api/ffi/swift_vocabulary_test.go`. S15-06 adds it; S15-14 uses it. (K-6, K-20.)
@@ -109,7 +109,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D9 | S15-28, S15-21, S15-31, S16-09, S15-D9 | — | Scoped |
 | S15-30 | The paged fold moves to the kit | 8 | Preparatory, Swift: S16-07's fold rule and state to `Platform/`, `PVShowMoreRow` in the kit; the Conclusion sections unchanged | — | S16-07 | — | Scoped |
 | S15-31 | Event and Place rows open the provenance sheet | 8 | Swift: `.sheet` provenance on Event and Place pages; the Why accordion and its code go | S15-D11, S15-D12 | S15-D11, S15-D12 | — | Scoped |
-| S15-32 | Copy Source can carry the date | 1 | Go and Swift: a `copy_date` choice on `CopySourceRequest` and `sourcecopy`; a Date tick on the Copy form | S15-D13 | S15-02, S15-D13 | — | Scoped |
+| S15-32 | Copy Source can carry the date | 1 | Go and Swift: a `copy_date` choice on `CopySourceRequest` and `sourcecopy`; a Published date tick on the Copy form | [S15-D13](design/S15-D13-copy-source-dialog.md) | S15-02, S15-D13 | [plan](prs/S15-32-copy-source-date.md) | Planned |
 | S15-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, the dogfood Install run, the spike's `citation-formats.md` retired in favour of the domain doc, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
 ## Design track
@@ -128,7 +128,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-D10 | Move confirm | **S15-25** | The bundle, the target picker, the credibility note |
 | S15-D11 | Event page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D12 | Place page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
-| S15-D13 | Copy Source dialog | **S15-32** | A Date tick beside Description, Metadata and Credibility |
+| S15-D13 | Copy Source dialog | **S15-32** | A Published date tick beside Description, Metadata and Credibility ([brief](design/S15-D13-copy-source-dialog.md)) |
 
 ## Slices
 
@@ -271,7 +271,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-32 — Copy Source can carry the date
 
-**Ships.** `CopySourceRequest` gains `copy_date`; `sourcecopy` reads the original's date into the draft and, when chosen, gives the copy its own `date_values` row through `sources.SetDate`. The Copy form shows a Date tick as S15-D13 draws it, off when the original is undated.
+**Ships.** `CopySourceRequest` gains `copy_date`; `sourcecopy` reads the original's date into the draft and, when chosen, gives the copy its own `date_values` row through `sources.SetDate`. The Copy form shows a Published date tick as S15-D13 draws it, ticked when the original is dated, disabled with "None on this Source" when it is not.
 **Not this PR.** Carrying the not-public flag (refused: the copy starts public).
 **Check.** Copy a dated Source with the tick on: the copy has the same date and its own row; with it off: undated.
 **Context.** S15-D13; rule "The Source date is one optional DateValue"; `core/database/sourcecopy/sourcecopy.go`, `SourceCopyDialog.swift`, `SourceCopyModel.swift`; [`source-layer-data-model.md`](../../source-layer-data-model.md) § 4.2.
