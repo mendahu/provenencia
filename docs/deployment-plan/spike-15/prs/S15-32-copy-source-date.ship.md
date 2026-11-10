@@ -80,4 +80,4 @@ Check: scripts/check-pr.sh PASS.
 Head `7cb08479` (commits `aa9de12e`, `7cb08479`). Gate PASS (orchestrator run). F-4: `rg -n "^func mustDB" --type go` prints nothing; the private copies in graphcache and namealiases, the MNT-6 sites, and the same pattern in the other test files this branch touches use `dbtest.MustDB`. F-5: `dbtest.Revisions`; `rg -n 'dbtest.Count\(.*FROM audit_transactions'` prints nothing. F-6: `Count` and `MustDB` in `dbtest.go`. MNT-5 to MNT-8 **Resolved** (orchestrator read the commits).
 
 ## Result
-Gate PASS on `7cb08479` · `origin/main` still `cd035824`, no merge needed · CI: pending · open: none · follow-ups: SEC-1 (home to be chosen by the user) · to user: CON-1 manual check and board comparison
+Gate PASS on `7cb08479` · `origin/main` still `cd035824`, no merge needed · CI green (localizable, test ×2) · open: none · follow-ups: SEC-1 (home to be chosen by the user) · to user: CON-1 manual check and board comparison
