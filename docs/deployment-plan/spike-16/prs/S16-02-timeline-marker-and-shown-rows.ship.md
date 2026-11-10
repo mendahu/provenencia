@@ -62,3 +62,7 @@ Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · foll
 Dogfood: burial "abt 2011", death "29 Mar 2011", funeral "aft 29 Mar 2011" listed Burial, Death, Funeral. User chose to add the fix to S16-02 (Timeline only; funeral before burial when dates overlap). PR returned to draft. Plan amended through plan-pr and review-plan (`bbdf916b`, `b81958e8`): D-16 – D-22, STEP-8 – STEP-12, T-10 – T-14; Status Planned. User's rule on the planner's five calls: "the dates that are on the events are authoritative, but if they don't conflict, then we follow the rule of death, funeral, burial … order them by the dates, and then, if we need a tiebreaker, we use the types." That matches D-16 – D-20, so no call changed.
 
 ## Round A0 — implement amendment
+Head `b3b49581`. Gate: implementer PASS; orchestrator re-run on `b3b49581` PASS (9/9; xcode-test 120s). Failing first seen for T-11, T-10 (7 cases), T-14; T-12 passed when written (STEP-9 already in). Deviations: `lifelineRow` gains a private `after` rank field (read once); PR body not edited (orchestrator's). Implementer saw one load flake (`promotealign` budget, four `WorkspaceDestinationHostTests`); passed on rerun, unchanged code.
+
+## Round A1 — review (scope `f9ce9203...b3b49581`)
+Reviewers: CON, MNT, UX (`macos/App/Features/Conclusions/**`), SEC+PRF (`core/database/**`; `order` loops over a person's rows, up to 2,000). Skipped: none.
