@@ -708,12 +708,17 @@ func TestCopy(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					defer conn.Close()
 					if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
 						t.Fatal(err)
 					}
-					defer conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`)
 					if _, err := conn.ExecContext(ctx, `DELETE FROM date_values WHERE id = ?`, orig.DateValueID); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`); err != nil {
+						t.Fatal(err)
+					}
+					// Release the connection: the catalog holds one, and the copy needs it.
+					if err := conn.Close(); err != nil {
 						t.Fatal(err)
 					}
 					in := allParts(orig, arts)
