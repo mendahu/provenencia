@@ -4,7 +4,7 @@ import SwiftUI
 import Testing
 @testable import Provenencia
 
-@MainActor @Suite
+@MainActor @Suite(.hostedWindows)
 struct WorkspaceDestinationHostTests {
     private let projectDir = "/tmp/workspace-destination-host.provenencia"
 
@@ -61,7 +61,7 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let navigation = WorkspaceNavigation()
         navigation.go(to: .evidenceGraph(sourceId: "src-1", graphId: "g-a", title: "Jones"))
-        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+        let _ = mountHost(navigation: navigation, session: session, store: store)
 
         let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
         let loadedA = await waitUntil(timeout: .seconds(15)) {
@@ -77,7 +77,6 @@ struct WorkspaceDestinationHostTests {
                 && (session.queryHandle(workspaceB) as QueryHandle<CatalogSourceWorkspace>?)?.isSettled == true
         }
         #expect(loadedB)
-        withExtendedLifetime((window, host)) {}
     }
 
     /// A Sources-list root under a canvas on `graphId`, with history written to a
@@ -98,13 +97,12 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let (navigation, directory) = try navigationOnCanvas(graphId: "g-x")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+        let _ = mountHost(navigation: navigation, session: session, store: store)
 
         let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
         #expect(fellBack)
         let remembered = navigation.backJumpItems(limit: 100) + navigation.forwardJumpItems(limit: 100)
         #expect(!remembered.contains { $0.location.graphId == "g-x" })
-        withExtendedLifetime((window, host)) {}
     }
 
     @Test func openGraphThatGoesFallsBackToTheSourcesList() async throws {
@@ -112,7 +110,7 @@ struct WorkspaceDestinationHostTests {
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let (navigation, directory) = try navigationOnCanvas(graphId: "g-a")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let (window, host) = mountHost(navigation: navigation, session: session, store: store)
+        let _ = mountHost(navigation: navigation, session: session, store: store)
 
         let graphA = CatalogQueryKey.evidenceGraph(project: session.projectKey, graphId: "g-a")
         let loaded = await waitUntil(timeout: .seconds(15)) {
@@ -125,7 +123,6 @@ struct WorkspaceDestinationHostTests {
         session.setQueryValue(session.evidenceGraphsKey, value: [CatalogEvidenceGraph]())
         let fellBack = await waitUntil(timeout: .seconds(15)) { navigation.currentLocation == .sectionRoot(.sources) }
         #expect(fellBack)
-        withExtendedLifetime((window, host)) {}
     }
 
     @Test func presentationSourcesRoot() {

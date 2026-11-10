@@ -3,7 +3,7 @@ import PDFKit
 import Testing
 @testable import Provenencia
 
-@Suite
+@Suite(.hostedWindows)
 @MainActor
 struct ArtifactRegionOverlayTests {
     private static let triangle = [
@@ -47,8 +47,7 @@ struct ArtifactRegionOverlayTests {
     }
 
     @Test func pdfHostHitTestFindsVertex() {
-        let (host, window, media) = makeHost(committed: Self.triangle)
-        defer { withExtendedLifetime(window) {} }
+        let (host, _, media) = makeHost(committed: Self.triangle)
         #expect(abs(media.width - 300) <= 1 && abs(media.height - 400) <= 1)
 
         for vertex in [Self.triangle[0], Self.triangle[2]] {
@@ -110,7 +109,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func freeformFourthClickNearFirstAddsVertex() {
         let (overlay, window, media) = makeArmedFreeform()
-        defer { withExtendedLifetime(window) {} }
         var commits: [ArtifactRegionDraft] = []
         overlay.onCommit = { commits.append($0); return true }
 
@@ -128,7 +126,6 @@ struct ArtifactRegionOverlayTests {
     @Test func freeformCloseZoneIsHandleRadiusAtAnyZoom() {
         for (offset, closes) in [(CGFloat(1.5), true), (CGFloat(2), false)] {
             let (overlay, window, _) = makeArmedFreeform(magnification: 4)
-            defer { withExtendedLifetime(window) {} }
             var commits: [ArtifactRegionDraft] = []
             overlay.onCommit = { commits.append($0); return true }
 
@@ -159,7 +156,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func vertexDragCommitsOnce() {
         let (host, window, _) = makeHost(committed: Self.triangle)
-        defer { withExtendedLifetime(window) {} }
         var commits: [ArtifactRegionDraft] = []
         host.overlayView.onCommit = { commits.append($0); return true }
 
@@ -187,7 +183,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func invalidEditRevertsAndDoesNotCommit() {
         let (host, window, _) = makeHost(committed: Self.square)
-        defer { withExtendedLifetime(window) {} }
         let overlay = host.overlayView
         var commits: [ArtifactRegionDraft] = []
         overlay.onCommit = { commits.append($0); return true }
@@ -214,7 +209,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func refusedCommitRevertsEdit() {
         let (host, window, _) = makeHost(committed: Self.triangle)
-        defer { withExtendedLifetime(window) {} }
         let overlay = host.overlayView
         var commits: [ArtifactRegionDraft] = []
         overlay.onCommit = { commits.append($0); return false }
@@ -236,7 +230,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func subThresholdDragDoesNotEdit() {
         let (host, window, media) = makeHost(committed: Self.triangle)
-        defer { withExtendedLifetime(window) {} }
         let overlay = host.overlayView
         var commits: [ArtifactRegionDraft] = []
         overlay.onCommit = { commits.append($0); return true }
@@ -254,7 +247,6 @@ struct ArtifactRegionOverlayTests {
 
     @Test func vertexKeepsGrabOffset() {
         let (host, window, media) = makeHost(committed: Self.triangle)
-        defer { withExtendedLifetime(window) {} }
         let overlay = host.overlayView
         overlay.onCommit = { _ in true }
         let vertex = Self.triangle[2]

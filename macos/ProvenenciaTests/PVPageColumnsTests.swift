@@ -34,7 +34,7 @@ private struct ColumnsProbe: View {
     }
 }
 
-@MainActor @Suite
+@MainActor @Suite(.hostedWindows)
 struct PVPageColumnsTests {
     @Test(arguments: [
         (1102, PVWidthClass.regular, true, 1038, 1038, 1038),
@@ -191,7 +191,7 @@ struct PVPageColumnsTests {
 
     @Test func wideHostPlacesTheSecondaryBeside() async {
         let wide = FrameBox()
-        let (wideWindow, _) = hostInBorderlessWindow(
+        _ = hostInBorderlessWindow(
             ColumnsProbe(box: wide, widthClass: .wide), windowSize: CGSize(width: 2296, height: 600)
         )
         #expect(await waitUntil { wide.primary != nil && wide.secondary != nil && wide.header != nil })
@@ -203,7 +203,7 @@ struct PVPageColumnsTests {
         #expect(abs(wide.header!.width - 1692) < 0.5)
 
         let regular = FrameBox()
-        let (regularWindow, _) = hostInBorderlessWindow(
+        _ = hostInBorderlessWindow(
             ColumnsProbe(box: regular, widthClass: .regular), windowSize: CGSize(width: 1102, height: 600)
         )
         #expect(await waitUntil { regular.primary != nil && regular.secondary != nil })
@@ -211,6 +211,5 @@ struct PVPageColumnsTests {
         #expect(rs.minY >= rp.maxY)
         #expect(abs(rs.minX - rp.minX) < 0.5)
         #expect(rp.width == 1038 && rs.width == 1038)
-        withExtendedLifetime((wideWindow, regularWindow)) {}
     }
 }

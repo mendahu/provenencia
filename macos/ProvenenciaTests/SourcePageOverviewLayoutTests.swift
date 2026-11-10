@@ -32,7 +32,7 @@ private struct OverviewProbe: View {
     }
 }
 
-@MainActor @Suite
+@MainActor @Suite(.hostedWindows)
 struct SourcePageOverviewLayoutTests {
     private func host(
         width: CGFloat, widthClass: PVWidthClass, errorHeight: CGFloat
@@ -47,7 +47,7 @@ struct SourcePageOverviewLayoutTests {
     }
 
     @Test func regularPlacesDescriptionBesideMetadataThenTheRest() async throws {
-        let (frames, window) = await host(width: 1038, widthClass: .regular, errorHeight: 30)
+        let (frames, _) = await host(width: 1038, widthClass: .regular, errorHeight: 30)
         let error = try #require(frames.error), body = try #require(frames.body)
         let side = try #require(frames.side), rest = try #require(frames.rest)
         let half: CGFloat = (1038 - PVSpacing.space11) / 2
@@ -58,21 +58,19 @@ struct SourcePageOverviewLayoutTests {
         // Both are as tall as the taller, so Credibility sits at the bottom of its column.
         #expect(body.height == 140 && side.height == 140)
         #expect(rest.minX == 0 && rest.width == 1038 && rest.minY == body.maxY + PVSpacing.space9)
-        withExtendedLifetime(window) {}
     }
 
     @Test func anEmptyErrorAddsNoGap() async throws {
-        let (frames, window) = await host(width: 1038, widthClass: .regular, errorHeight: 0)
+        let (frames, _) = await host(width: 1038, widthClass: .regular, errorHeight: 0)
         let body = try #require(frames.body)
         #expect(body.minY == 0)
-        withExtendedLifetime(window) {}
     }
 
     @Test func widePlacesMetadataInASideColumn() async throws {
         let group = PVPageColumnsMetrics.split(
             available: 2296 - 2 * PVSpacing.gutterPage, sideMax: PVSpacing.widthSecondaryMax
         )
-        let (frames, window) = await host(width: group.group, widthClass: .wide, errorHeight: 30)
+        let (frames, _) = await host(width: group.group, widthClass: .wide, errorHeight: 30)
         let error = try #require(frames.error), body = try #require(frames.body)
         let side = try #require(frames.side), rest = try #require(frames.rest)
         #expect(group.main == 1180 && group.side == 480)
@@ -82,6 +80,5 @@ struct SourcePageOverviewLayoutTests {
         #expect(body.minY == 30 + PVSpacing.space9)
         #expect(rest.minY == body.maxY + PVSpacing.space9)
         #expect(side.minX == 1180 + PVSpacing.space9 && side.minY == 0 && side.width == 480)
-        withExtendedLifetime(window) {}
     }
 }

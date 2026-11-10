@@ -2,7 +2,7 @@ import AppKit
 import Testing
 @testable import Provenencia
 
-@Suite(.serialized)
+@Suite(.serialized, .hostedWindows)
 @MainActor
 struct GraphCanvasViewportControllerTests {
     private struct Rig {
@@ -65,6 +65,5 @@ struct GraphCanvasViewportControllerTests {
         await nextTurn()
         await nextTurn()
         #expect(clip.bounds.origin == CGPoint(x: 2_750, y: 1_000))
-        withExtendedLifetime(rig.window) {}
     }
 }
