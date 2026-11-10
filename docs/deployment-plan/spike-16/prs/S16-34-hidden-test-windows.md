@@ -1,6 +1,6 @@
 # S16-34 — Tests run without showing a window or opening the researcher's project
 
-**Status:** Planned
+**Status:** Landed in [#772](https://github.com/mendahu/provenencia/pull/772) (2026-11-10)
 **Spike / slice:** Spike 16 · Slice 3a — Quiet test runs
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the app looks the same; only the test host and the test helpers change)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rule "(Batch 3) A test run shows no window and touches no install"; S16-03's ship log on [#769](https://github.com/mendahu/provenencia/pull/769) (the `WorkspaceDestinationHostTests` timeouts under load)
+**Landed:** No version bump, as planned. Differences from the plan: `HostedWindows()` is built without `await` in `provideScope` (the sketched `await` warns); T-4 counts `willClose` with one observer per window and a small counter (the shared observer warned); the `add-swift-test` sentence leaves out the literal `window.sendEvent` because `check-guidance-names` rejects an undefined name. D-12 and D-13 were added while implementing.
 **Planned:** 2026-11-10 against `main` @ `16efd08f`
 **Review:** [`S16-34-hidden-test-windows.review.md`](S16-34-hidden-test-windows.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: none
 

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-34 — Tests run without showing a window or opening the researcher's project
+
+**Landed 2026-11-10** in [#772](https://github.com/mendahu/provenencia/pull/772). Running the Swift tests no longer shows a window or opens the researcher's project: under tests `ProvenenciaMain` runs `TestHostApp` (a `Settings`-only accessory app), test windows are never ordered in, and one `.hostedWindows` trait closes each when its test ends. `PVSegmentedControlTests` (clicks through a window) is deleted, and `PVOutsideClick.isInsideSheet` takes a `parent:` closure so its tests open no real sheets. Five full runs in a row passed, one at a time.
+
 ## S16-03 — One open section and one list of section reads
 
 **Landed 2026-11-09** in [#769](https://github.com/mendahu/provenencia/pull/769). Nothing a researcher sees changes. A Person page section declares what it reads once, in `ConclusionPageSection.reads`, each read tagged own, companion or supporting, and `WorkspaceLocation.openPageSection` names the section the page shows, the first one included, so the place registry, the page's "Refreshing" line, the fill and the section hosts cannot disagree. Each section computes its accessibility identifier root once and its views build from it. `ConclusionDetailPage.swift` is split: the gallery model, the rows section and the Place relationship types sit beside their kin. No version bump.
