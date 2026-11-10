@@ -4,7 +4,8 @@ import Foundation
 /// the one display order the list and the lifeline both read, with the birth and
 /// death markers placed and the long lists folded. Pure; the section draws it.
 ///
-/// Go gives the rows in date order, undated last, with each row's span and the
+/// Go gives the rows in the Timeline's order (date order, with S16-02's moves),
+/// undated last, with each row's span and the
 /// markers (S13-33); this places the markers and the undated group and folds,
 /// and never sorts or dates anything itself.
 struct PersonTimelineContent: Equatable {

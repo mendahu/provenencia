@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 /// Timelines for the Timeline section's `#Preview`s and tests (board S13-D4,
-/// brief § 5): the sample life of Johann Weber as Go returns it, in date order
+/// brief § 5): the sample life of Johann Weber as Go returns it, in the Timeline's order (date order, with S16-02's moves)
 /// with each row's span, undated last, and the birth and death markers.
 enum PersonTimelinePreviewData {
     // MARK: - When

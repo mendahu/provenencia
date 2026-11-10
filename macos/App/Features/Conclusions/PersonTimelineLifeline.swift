@@ -136,15 +136,23 @@ struct PersonTimelineLifeline: Equatable {
         }
 
         // Where each stub is inserted on the line of years, from the place the content
-        // resolved: before a row, at its `from`; after a row, at its `to`; with none, a
-        // birth at the range's start and a death at its end.
+        // resolved: before a row, at the least `from` of that row and the shown dated
+        // rows after the marker (a row the Timeline's order put after the stub can start
+        // earlier than the row it names); after a row, at its `to`; with none, a birth at
+        // the range's start and a death at its end.
         struct Insertion { var at: Double; var isBefore: Bool }
         let insertions: [String: Insertion] = Dictionary(stubbed.map { marker in
             let id = PersonTimelineContent.Item.marker(marker).id
             let insertion: Insertion
             switch marker.place {
             case .before(let row)? where spansByID[row] != nil:
-                insertion = Insertion(at: spansByID[row]!.from, isBefore: true)
+                let later = (items.firstIndex { $0.id == id }.map { items[($0 + 1)...] } ?? []).compactMap { item -> Double? in
+                    switch item {
+                    case .row, .marker: spansByID[item.id]?.from
+                    case .undatedHeader, .more: nil
+                    }
+                }
+                insertion = Insertion(at: ([spansByID[row]!.from] + later).min()!, isBefore: true)
             case .after(let row)? where spansByID[row] != nil:
                 insertion = Insertion(at: spansByID[row]!.to, isBefore: false)
             default:

@@ -242,6 +242,26 @@ struct PersonTimelineLifelineTests {
         #expect(abs(end.stubs[1].lowerBound - (18 + CGFloat(unknownRange.to - unknownRange.from) * ppy + 40)) < 0.001)
     }
 
+    @Test func aStubAboveAnEarlierRowAfterIt() throws {
+        // No death recorded; a funeral "aft 29 Mar 2011" lists before a burial "abt 2011".
+        let life = Data.timeline(
+            [
+                Data.event("f", type: "funeral", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411)),
+                Data.event("bur", type: "burial", when: .year(2011)),
+            ],
+            birth: CatalogLifeMarker(place: .before(eventId: "f")), death: CatalogLifeMarker(place: .before(eventId: "f"))
+        )
+        let (line, content) = lifeline(life, ppy: 40)
+        #expect(content.items.map(\.id) == ["birth", "death", "f", "bur"])
+        let tick = try #require(line.ticks.first { $0.year == 2011 }).y
+        #expect(line.stubs.count == 2)
+        #expect(abs(line.stubs[1].lowerBound - (tick - 40)) < 0.001 && abs(line.stubs[1].upperBound - tick) < 0.001)
+        #expect(abs(y(line.mark("bur")) - tick) < 0.001)
+        if case .cap(let deathY, true) = line.mark("death")?.shape {
+            #expect(deathY < y(line.mark("bur")) && deathY < y(line.mark("f")))
+        } else { Issue.record("death placeholder") }
+    }
+
     @Test func tickCountIsCapped() {
         var timeline = Data.ida
         timeline.events = [

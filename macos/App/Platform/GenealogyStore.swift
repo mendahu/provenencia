@@ -772,7 +772,7 @@ struct CatalogLifeMarker: Sendable, Equatable {
     var place: Place? = nil
 }
 
-/// A Person's timeline: the events in date order and the birth and death markers.
+/// A Person's timeline: the events in the Timeline's order (date order, with S16-02's moves) and the birth and death markers.
 struct CatalogPersonTimeline: Sendable, Equatable {
     var events: [CatalogPersonEvent] = []
     var birth = CatalogLifeMarker()
