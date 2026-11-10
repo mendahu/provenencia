@@ -40,14 +40,25 @@ enum PVPageColumnsMetrics {
     /// `primaryFill` (full-width mode) lets the primary fill the pane between
     /// the gutters at Wide when there is no secondary; the header band keeps
     /// `widthContentMax`. Ignored at Regular and with a secondary.
+    ///
+    /// `fillSplitSideMax` (full-width mode, with `primaryFill`) is for a page that lays out a
+    /// main and a side column of its own inside the primary: the primary and the band are then
+    /// the group `split(available:sideMax:)` computes for the pane between the gutters, so the
+    /// header lines up with the two columns. Ignored at Regular, without `primaryFill` and with
+    /// a secondary.
     static func columnWidths(
         pane: CGFloat,
         widthClass: PVWidthClass,
         hasSecondary: Bool,
-        primaryFill: Bool = false
+        primaryFill: Bool = false,
+        fillSplitSideMax: CGFloat? = nil
     ) -> (primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
         if primaryFill && widthClass == .wide && !hasSecondary {
             let primary = max(0, pane - 2 * PVSpacing.gutterPage)
+            if let sideMax = fillSplitSideMax {
+                let group = split(available: primary, sideMax: sideMax).group
+                return (group, nil, group, group)
+            }
             return (primary, nil, primary, min(PVSpacing.widthContentMax, primary))
         }
         if widthClass == .regular || !hasSecondary {
@@ -105,14 +116,16 @@ enum PVPageColumnsMetrics {
         proposal: ProposedViewSize,
         widthClass: PVWidthClass,
         hasSecondary: Bool,
-        primaryFill: Bool = false
+        primaryFill: Bool = false,
+        fillSplitSideMax: CGFloat? = nil
     ) -> (pane: CGFloat, primary: CGFloat, secondary: CGFloat?, group: CGFloat, band: CGFloat) {
         let proposed = proposal.width.flatMap { $0.isFinite ? $0 : nil }
         let widths = columnWidths(
             pane: proposed ?? fallbackPane,
             widthClass: widthClass,
             hasSecondary: hasSecondary,
-            primaryFill: primaryFill && proposed != nil
+            primaryFill: primaryFill && proposed != nil,
+            fillSplitSideMax: fillSplitSideMax
         )
         return (proposed ?? widths.group, widths.primary, widths.secondary, widths.group, widths.band)
     }
@@ -166,10 +179,14 @@ extension EnvironmentValues {
 /// `primaryFill` is an opt-in full-width mode: at Wide, with no secondary, the
 /// primary fills the pane between the gutters while the header keeps its
 /// `widthContentMax` band. The section inside keeps its own text measure.
+/// `fillSplitSideMax` narrows that mode for a page that lays out its own main and side
+/// column inside the primary (the Source page): the primary and the header band are the
+/// group `PVPageColumnsMetrics.split` computes for that side column's maximum width.
 struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     private let headerPinned: Bool
     private let scrollResetKey: AnyHashable?
     private let primaryFill: Bool
+    private let fillSplitSideMax: CGFloat?
     private let header: () -> Header
     private let primary: Primary
     private let secondary: Secondary
@@ -181,6 +198,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
         primaryFill: Bool = false,
+        fillSplitSideMax: CGFloat? = nil,
         @ViewBuilder header: @escaping () -> Header,
         @ViewBuilder primary: () -> Primary,
         @ViewBuilder secondary: () -> Secondary
@@ -188,6 +206,7 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
         self.headerPinned = headerPinned
         self.scrollResetKey = scrollResetKey
         self.primaryFill = primaryFill
+        self.fillSplitSideMax = fillSplitSideMax
         self.header = header
         self.primary = primary()
         self.secondary = secondary()
@@ -199,7 +218,10 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
     var body: some View {
         if headerPinned && hasHeader {
             VStack(spacing: 0) {
-                PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
+                PVPageColumnsBandLayout(
+                    widthClass: widthClass, hasSecondary: hasSecondary,
+                    primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
+                ) {
                     header()
                 }
                 PVColor.borderDefault.frame(height: 1)
@@ -211,7 +233,10 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
             scroll {
                 VStack(spacing: 0) {
                     if hasHeader {
-                        PVPageColumnsBandLayout(widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill) {
+                        PVPageColumnsBandLayout(
+                    widthClass: widthClass, hasSecondary: hasSecondary,
+                    primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
+                ) {
                             header()
                         }
                         Color.clear.frame(height: PVSpacing.space9)
@@ -225,9 +250,11 @@ struct PVPageColumns<Header: View, Primary: View, Secondary: View>: View {
 
     private var columns: some View {
         let (widthClass, hasSecondary, primaryFill) = (widthClass, hasSecondary, primaryFill)
+        let fillSplitSideMax = fillSplitSideMax
         return PVPageColumnsLayout(widths: { proposal in
             let w = PVPageColumnsMetrics.columnWidths(
-                proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
+                proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary,
+                primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
             )
             return PVPageSideColumnWidths(
                 main: w.primary,
@@ -273,6 +300,7 @@ extension PVPageColumns where Secondary == EmptyView {
         headerPinned: Bool = false,
         scrollResetKey: AnyHashable? = nil,
         primaryFill: Bool = false,
+        fillSplitSideMax: CGFloat? = nil,
         @ViewBuilder header: @escaping () -> Header,
         @ViewBuilder primary: () -> Primary
     ) {
@@ -280,6 +308,7 @@ extension PVPageColumns where Secondary == EmptyView {
             headerPinned: headerPinned,
             scrollResetKey: scrollResetKey,
             primaryFill: primaryFill,
+            fillSplitSideMax: fillSplitSideMax,
             header: header,
             primary: primary,
             secondary: { EmptyView() }
@@ -291,12 +320,14 @@ extension PVPageColumns where Header == EmptyView, Secondary == EmptyView {
     init(
         scrollResetKey: AnyHashable? = nil,
         primaryFill: Bool = false,
+        fillSplitSideMax: CGFloat? = nil,
         @ViewBuilder primary: () -> Primary
     ) {
         self.init(
             headerPinned: false,
             scrollResetKey: scrollResetKey,
             primaryFill: primaryFill,
+            fillSplitSideMax: fillSplitSideMax,
             header: { EmptyView() },
             primary: primary,
             secondary: { EmptyView() }
@@ -387,10 +418,12 @@ private struct PVPageColumnsBandLayout: Layout {
     let widthClass: PVWidthClass
     let hasSecondary: Bool
     let primaryFill: Bool
+    let fillSplitSideMax: CGFloat?
 
     private func group(_ proposal: ProposedViewSize) -> (pane: CGFloat, group: CGFloat) {
         let widths = PVPageColumnsMetrics.columnWidths(
-            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary, primaryFill: primaryFill
+            proposal: proposal, widthClass: widthClass, hasSecondary: hasSecondary,
+            primaryFill: primaryFill, fillSplitSideMax: fillSplitSideMax
         )
         return (widths.pane, widths.band)
     }
@@ -446,7 +479,8 @@ private struct PVPageColumnsBandLayout: Layout {
 extension View {
     /// Keeps a full-width section's empty, loading or error state in the page band: centered at
     /// `widthContentMax`, as the Regular primary column is, instead of stretching across a Wide
-    /// pane. A no-op at Regular.
+    /// pane. A no-op at Regular. (A page that passes `fillSplitSideMax` has a wider band; its
+    /// states sit in the primary, which is that band.)
     func pvKeepsPageBand() -> some View {
         frame(maxWidth: PVSpacing.widthContentMax)
             .frame(maxWidth: .infinity)
