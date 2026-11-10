@@ -5459,14 +5459,22 @@ public nonisolated struct Provenencia_Engine_V1_ListPersonEventsRequest: Sendabl
 }
 
 /// ListPersonEventsResponse is a person's timeline: every canonical event the
-/// person took part in directly, in any role, in date order (dated first,
-/// earliest first, then by ref, the order of ListEventSummaries), and where the
-/// lifeline's birth and death markers go. Canonical events and participants
-/// only. Each marker is always sent. An event_id names the recorded event (the
-/// header's birth or death) when it is one of the rows; empty is a placeholder.
-/// beside_event_id is set whenever the marker has no span of its own: the dated
-/// event it sits beside (a birth beside the first dated event that may follow
-/// birth, a death beside the last that may precede death); no date is invented.
+/// person took part in directly, in any role, in the Timeline's order, and where
+/// the lifeline's birth and death markers go. The order is date order (dated
+/// first, earliest first, then by ref, the order of ListEventSummaries), then: a
+/// row the recorded birth's dates cannot order follows the birth; a burial or
+/// funeral of the person's own (role subject) the recorded death's dates cannot
+/// order follows the death; and among those after the death a funeral comes
+/// before a burial whose dates overlap. Dates that clearly conflict keep date
+/// order. Canonical events and participants only. Each marker is always sent. An
+/// event_id names the recorded event (the header's birth or death) when it is one
+/// of the rows; empty is a placeholder. place is set whenever the marker has no
+/// span of its own and an event is dated: the dated event it sits after or
+/// before. A placeholder death sits before the first dated burial or funeral of
+/// the person's own (role subject) in the Timeline's order, else after the last
+/// dated event; a placeholder birth sits after the last dated event that may
+/// precede birth, else before the first dated event. No date is invented. place
+/// is unset when the marker has its own span or nothing is dated.
 public nonisolated struct Provenencia_Engine_V1_ListPersonEventsResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -5509,9 +5517,31 @@ public nonisolated struct Provenencia_Engine_V1_LifeMarker: Sendable {
 
   public var eventID: String = String()
 
-  public var besideEventID: String = String()
+  public var place: Provenencia_Engine_V1_LifeMarker.OneOf_Place? = nil
+
+  public var afterEventID: String {
+    get {
+      if case .afterEventID(let v)? = place {return v}
+      return String()
+    }
+    set {place = .afterEventID(newValue)}
+  }
+
+  public var beforeEventID: String {
+    get {
+      if case .beforeEventID(let v)? = place {return v}
+      return String()
+    }
+    set {place = .beforeEventID(newValue)}
+  }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Place: Equatable, Sendable {
+    case afterEventID(String)
+    case beforeEventID(String)
+
+  }
 
   public init() {}
 }
@@ -17282,7 +17312,7 @@ nonisolated extension Provenencia_Engine_V1_ListPersonEventsResponse: SwiftProto
 
 nonisolated extension Provenencia_Engine_V1_LifeMarker: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LifeMarker"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}event_id\0\u{3}beside_event_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}event_id\0\u{4}\u{2}after_event_id\0\u{3}before_event_id\0\u{b}beside_event_id\0\u{c}\u{2}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -17291,25 +17321,52 @@ nonisolated extension Provenencia_Engine_V1_LifeMarker: SwiftProtobuf.Message, S
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.eventID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.besideEventID) }()
+      case 3: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.place != nil {try decoder.handleConflictingOneOf()}
+          self.place = .afterEventID(v)
+        }
+      }()
+      case 4: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.place != nil {try decoder.handleConflictingOneOf()}
+          self.place = .beforeEventID(v)
+        }
+      }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.eventID.isEmpty {
       try visitor.visitSingularStringField(value: self.eventID, fieldNumber: 1)
     }
-    if !self.besideEventID.isEmpty {
-      try visitor.visitSingularStringField(value: self.besideEventID, fieldNumber: 2)
+    switch self.place {
+    case .afterEventID?: try {
+      guard case .afterEventID(let v)? = self.place else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    }()
+    case .beforeEventID?: try {
+      guard case .beforeEventID(let v)? = self.place else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    }()
+    case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_LifeMarker, rhs: Provenencia_Engine_V1_LifeMarker) -> Bool {
     if lhs.eventID != rhs.eventID {return false}
-    if lhs.besideEventID != rhs.besideEventID {return false}
+    if lhs.place != rhs.place {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

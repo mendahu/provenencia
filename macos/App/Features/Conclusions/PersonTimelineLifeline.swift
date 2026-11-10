@@ -43,6 +43,15 @@ struct PersonTimelineLifeline: Equatable {
         var id: String
         var shape: Shape
 
+        /// The y range of the mark's click target: 6pt around a dot or cap, and a bar's extent
+        /// with 6pt more at each end.
+        var hit: ClosedRange<CGFloat> {
+            switch shape {
+            case .dot(let y), .cap(let y, _): (y - 6)...(y + 6)
+            case .bar(let from, let to, _, _): (from - 6)...max(to + 6, from + 6)
+            }
+        }
+
         /// Where a tether leaves it: a dot or cap at its y, a closed bar at its
         /// middle, an open bar 8pt in from its known end.
         var pointY: CGFloat {
@@ -67,8 +76,23 @@ struct PersonTimelineLifeline: Equatable {
         var to: CGPoint
     }
 
+    /// One click target of the line: a shown item's mark and its name, shown on hover.
+    struct Target: Equatable {
+        var mark: Mark
+        var label: String
+    }
+
     private(set) var length: CGFloat = 0
     private(set) var marks: [Mark] = []
+    /// A click target for each item with a mark, in drawing order: the widest `hit` first, item
+    /// order for ties, so a narrower one is drawn on top. The folded rows' points have none of
+    /// their own: they share `foldedHit`.
+    private(set) var targets: [Target] = []
+    /// The y range that covers the folded rows' points, one shared click target; nil when
+    /// nothing is folded.
+    private(set) var foldedHit: ClosedRange<CGFloat>?
+    /// The folded rows' marks, in item order.
+    private var foldedMarks: [Mark] = []
     private(set) var stubs: [ClosedRange<CGFloat>] = []
     private(set) var ticks: [Tick] = []
     /// Each mark by its item id.
@@ -88,22 +112,23 @@ struct PersonTimelineLifeline: Equatable {
         let spans = content.allSpans
         let spansByID = Dictionary(spans.map { ($0.id, $0.span) }, uniquingKeysWith: { first, _ in first })
         let shown = Set(items.map(\.id))
-        let folded = spans.map(\.id).filter { !shown.contains($0) }
 
         // The markers that take a stub of their own: a placeholder, or a
         // recorded one with no span.
-        struct Stubbed { var item: String; var kind: PersonTimelineContent.Marker.Kind; var recorded: Bool }
-        let stubbed: [Stubbed] = items.compactMap { item in
+        let stubbed: [PersonTimelineContent.Marker] = items.compactMap { item in
             guard case .marker(let marker) = item, marker.row?.span == nil else { return nil }
-            return Stubbed(item: item.id, kind: marker.kind, recorded: marker.row != nil)
+            return marker
         }
 
         guard let range = Self.range(content) else {
             // Nothing to scale (only undated events): the two caps and one
             // dashed stretch between them.
             let top = Self.pad, bottom = Self.pad + Self.stubLength
-            for item in stubbed {
-                marks.append(Mark(id: item.item, shape: .cap(y: item.kind == .birth ? top : bottom, isPlaceholder: !item.recorded)))
+            for marker in stubbed {
+                let item = PersonTimelineContent.Item.marker(marker)
+                let mark = Mark(id: item.id, shape: .cap(y: marker.kind == .birth ? top : bottom, isPlaceholder: marker.row == nil))
+                marks.append(mark)
+                targets.append(Target(mark: mark, label: marker.spokenLabel))
             }
             stubs = [top...bottom]
             length = bottom + Self.pad
@@ -111,68 +136,105 @@ struct PersonTimelineLifeline: Equatable {
             return
         }
 
-        // Where each stub is inserted on the line of years: a birth's at the
-        // `from` of the row it precedes, a death's at the `to` of the row it
-        // follows; the range's start and end when there is none.
-        struct Insertion { var item: String; var at: Double; var kind: PersonTimelineContent.Marker.Kind }
-        let insertions: [Insertion] = stubbed.map { item in
-            switch item.kind {
-            case .birth:
-                let next = Self.nextRowID(after: item.item, in: items, folded: folded)
-                return Insertion(item: item.item, at: next.flatMap { spansByID[$0]?.from } ?? range.from, kind: .birth)
-            case .death:
-                let previous = Self.previousRowID(before: item.item, in: items, folded: folded)
-                return Insertion(item: item.item, at: previous.flatMap { spansByID[$0]?.to } ?? range.to, kind: .death)
-            }
-        }
-        length = Self.pad + CGFloat(range.to - range.from) * pointsPerYear + Self.stubLength * CGFloat(insertions.count) + Self.pad
-
-        func map(_ year: Double) -> CGFloat {
-            var y = Self.pad + CGFloat(year - range.from) * pointsPerYear
-            for insertion in insertions {
-                switch insertion.kind {
-                case .birth where year >= insertion.at: y += Self.stubLength
-                case .death where year > insertion.at: y += Self.stubLength
-                default: break
+        // Where each stub is inserted on the line of years, from the place the content
+        // resolved: before a row, at the least `from` of that row and the shown dated
+        // rows after the marker (a row the Timeline's order put after the stub can start
+        // earlier than the row it names); after a row, at the greatest `to` of that row and
+        // the shown dated rows before the marker (a row the order put before it can end
+        // later); with none, a birth at the range's start and a death at its end.
+        struct Insertion { var at: Double; var isBefore: Bool }
+        let insertions: [String: Insertion] = Dictionary(stubbed.map { marker in
+            let id = PersonTimelineContent.Item.marker(marker).id
+            let insertion: Insertion
+            // The spans of the shown dated items on one side of this marker, in item order.
+            let position = items.firstIndex { $0.id == id } ?? items.endIndex
+            func shownSpans(_ side: ArraySlice<PersonTimelineContent.Item>) -> [CatalogTimelineSpan] {
+                side.compactMap { item in
+                    switch item {
+                    case .row, .marker: spansByID[item.id]
+                    case .undatedHeader, .more: nil
+                    }
                 }
             }
-            return y
-        }
+            switch marker.place {
+            case .before(let row)? where spansByID[row] != nil:
+                let later = shownSpans(items[min(position + 1, items.endIndex)...])
+                insertion = Insertion(at: ([spansByID[row]!.from] + later.map(\.from)).min()!, isBefore: true)
+            case .after(let row)? where spansByID[row] != nil:
+                let earlier = shownSpans(items[..<position])
+                insertion = Insertion(at: ([spansByID[row]!.to] + earlier.map(\.to)).max()!, isBefore: false)
+            default:
+                insertion = marker.kind == .birth
+                    ? Insertion(at: range.from, isBefore: true) : Insertion(at: range.to, isBefore: false)
+            }
+            return (id, insertion)
+        }, uniquingKeysWith: { first, _ in first })
+        length = Self.pad + CGFloat(range.to - range.from) * pointsPerYear + Self.stubLength * CGFloat(stubbed.count) + Self.pad
 
-        // Marks, in item order; the folded rows' points where their fold is.
+        func base(_ year: Double) -> CGFloat { Self.pad + CGFloat(year - range.from) * pointsPerYear }
+
+        // Marks, in item order. A point is drawn below the stubs before its item; the folded
+        // rows' points are where their fold is.
         let recordedSpanMarkers = Set(items.compactMap { item -> String? in
             guard case .marker(let marker) = item, let row = marker.row, row.span != nil else { return nil }
             return row.id
         })
-        func point(_ id: String, _ span: CatalogTimelineSpan) -> Mark {
+        func point(_ id: String, _ span: CatalogTimelineSpan, stubsBefore: Int) -> Mark {
+            let shift = Self.stubLength * CGFloat(stubsBefore)
             if recordedSpanMarkers.contains(id) {
-                return Mark(id: id, shape: .cap(y: map(span.from), isPlaceholder: false))
+                return Mark(id: id, shape: .cap(y: base(span.from) + shift, isPlaceholder: false))
             }
             if span.to - span.from <= Self.dayInYears {
-                return Mark(id: id, shape: .dot(y: map(span.from)))
+                return Mark(id: id, shape: .dot(y: base(span.from) + shift))
             }
             return Mark(id: id, shape: .bar(
-                from: map(span.from), to: map(span.to), openStart: span.openStart, openEnd: span.openEnd
+                from: base(span.from) + shift, to: base(span.to) + shift, openStart: span.openStart, openEnd: span.openEnd
             ))
         }
+        var stubsBefore = 0
         for item in items {
             switch item {
             case .row, .marker:
-                if let stub = insertions.first(where: { $0.item == item.id }) {
-                    let recorded = item.eventRow != nil
-                    let start = stub.kind == .birth ? map(stub.at) - Self.stubLength : map(stub.at)
+                let mark: Mark
+                if let stub = insertions[item.id] {
+                    let start = base(stub.at) + Self.stubLength * CGFloat(stubsBefore)
                     stubs.append(start...(start + Self.stubLength))
-                    marks.append(Mark(
+                    mark = Mark(
                         id: item.id,
-                        shape: .cap(y: stub.kind == .birth ? start : start + Self.stubLength, isPlaceholder: !recorded)
-                    ))
+                        shape: .cap(y: stub.isBefore ? start : start + Self.stubLength, isPlaceholder: item.eventRow == nil)
+                    )
+                    stubsBefore += 1
                 } else if let span = spansByID[item.id] {
-                    marks.append(point(item.id, span))
+                    mark = point(item.id, span, stubsBefore: stubsBefore)
+                } else {
+                    continue
                 }
+                marks.append(mark)
+                targets.append(Target(mark: mark, label: item.spokenLabel ?? ""))
             case .more(.dated, _):
-                for span in spans where !shown.contains(span.id) { marks.append(point(span.id, span.span)) }
+                for span in spans where !shown.contains(span.id) {
+                    let mark = point(span.id, span.span, stubsBefore: stubsBefore)
+                    marks.append(mark)
+                    foldedMarks.append(mark)
+                }
             case .undatedHeader, .more: break
             }
+        }
+        // Drawn widest first, so a later, narrower button is on top of a wider bar it lies on.
+        // Item order breaks a tie.
+        targets = targets.enumerated().sorted { a, b in
+            let (wa, wb) = (a.element.mark.hit.upperBound - a.element.mark.hit.lowerBound, b.element.mark.hit.upperBound - b.element.mark.hit.lowerBound)
+            return wa != wb ? wa > wb : a.offset < b.offset
+        }.map(\.element)
+        if let low = foldedMarks.map(\.hit.lowerBound).min(), let high = foldedMarks.map(\.hit.upperBound).max() {
+            foldedHit = low...high
+        }
+
+        // A year on the line, moved down by the stubs inserted before it.
+        func map(_ year: Double) -> CGFloat {
+            var y = base(year)
+            for stub in insertions.values where stub.isBefore ? year >= stub.at : year > stub.at { y += Self.stubLength }
+            return y
         }
 
         // Ticks.
@@ -220,27 +282,18 @@ struct PersonTimelineLifeline: Equatable {
     /// The marks of the rows with a point, and which of them is where.
     func mark(_ id: String) -> Mark? { marksByID[id] }
 
+    /// The folded mark whose point is nearest `y`, in the line's space (the earlier in item order on
+    /// a tie); nil when nothing is folded.
+    func foldedMark(nearest y: CGFloat) -> String? {
+        var best: (id: String, distance: CGFloat)?
+        for mark in foldedMarks {
+            let distance = abs(mark.pointY - y)
+            if best == nil || distance < best!.distance { best = (mark.id, distance) }
+        }
+        return best?.id
+    }
+
     // MARK: - Pieces
-
-    /// The dated row after the item `id`, a fold standing for its first hidden row.
-    private static func nextRowID(after id: String, in items: [PersonTimelineContent.Item], folded: [String]) -> String? {
-        guard let at = items.firstIndex(where: { $0.id == id }) else { return nil }
-        for item in items[(at + 1)...] {
-            if case .more(.dated, _) = item { return folded.first }
-            if let row = item.eventRow, row.span != nil { return row.id }
-        }
-        return nil
-    }
-
-    /// The dated row before the item `id`, a fold standing for its last hidden row.
-    private static func previousRowID(before id: String, in items: [PersonTimelineContent.Item], folded: [String]) -> String? {
-        guard let at = items.firstIndex(where: { $0.id == id }) else { return nil }
-        for item in items[..<at].reversed() {
-            if case .more(.dated, _) = item { return folded.last }
-            if let row = item.eventRow, row.span != nil { return row.id }
-        }
-        return nil
-    }
 
     /// The step between year ticks: the smallest of 1, 2, 5, 10, 20, 50 that
     /// leaves them `minimumTickSpacing` apart; if even 50 draws more than

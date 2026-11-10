@@ -68,7 +68,7 @@ struct PersonTimelineContentTests {
             if event.id == "1" { event.span = nil }
             return event
         }
-        timeline.birth = CatalogLifeMarker(eventId: "1", besideEventId: "2")
+        timeline.birth = CatalogLifeMarker(eventId: "1", place: .before(eventId: "2"))
         let recorded = content(timeline)
         #expect(ids(recorded) == ["1", "2", "3", "4", "5", "6", "7", "8", "9", "undated", "12", "13", "10", "11"])
         guard case .marker = recorded.items[0] else {
@@ -134,7 +134,7 @@ struct PersonTimelineContentTests {
         var timeline = Data.ida
         timeline.events = (1...60).map { Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0))) }
         // A birth with no recorded event, placed beside the 55th row: past the 50th.
-        timeline.birth = CatalogLifeMarker(besideEventId: "d55")
+        timeline.birth = CatalogLifeMarker(place: .before(eventId: "d55"))
         timeline.death = CatalogLifeMarker()
 
         let folded = content(timeline)
@@ -179,7 +179,7 @@ struct PersonTimelineContentTests {
     @Test func foldedMarkersStayAfterPagedRun() {
         var timeline = Data.ida
         timeline.events = datedEvents(120)
-        timeline.birth = CatalogLifeMarker(besideEventId: "d110")
+        timeline.birth = CatalogLifeMarker(place: .before(eventId: "d110"))
         timeline.death = CatalogLifeMarker()
         let order = paged(timeline, [.dated: 1]).items.map(\.id)
         #expect(order.firstIndex(of: "d100").map { $0 + 1 } == order.firstIndex(of: "more.dated"))
@@ -232,15 +232,90 @@ struct PersonTimelineContentTests {
         for timeline in [Data.johann, Data.lise, Data.unknownEnds] {
             let all = content(timeline, of: [.dated, .undated])
             #expect(!all.allSpans.isEmpty)
-            for span in all.allSpans {
-                #expect(span.spokenLabel == row(all, span.id)?.spokenLabel)
-                #expect(all.pointLabels[span.id] == span.spokenLabel)
+            let line = PersonTimelineLifeline(content: all, pointsPerYear: 40)
+            for item in all.items {
+                if let row = item.eventRow { #expect(item.spokenLabel == row.spokenLabel) }
+                // A lifeline's target is named by its item.
+                if let mark = line.mark(item.id) {
+                    #expect(line.targets.first { $0.mark.id == mark.id }?.label == item.spokenLabel)
+                }
             }
+            #expect(all.items.allSatisfy { item in
+                switch item {
+                case .undatedHeader, .more: item.spokenLabel == nil
+                case .row, .marker: item.spokenLabel != nil
+                }
+            })
         }
-        // A fold hides a row but its point keeps its name; a placeholder cap is named by its text.
+        // A fold hides a row and its point has no name or target of its own; a placeholder cap is named by its text.
         let lise = content(Data.lise)
-        #expect(lise.pointLabels["l60"] == lise.allSpans.first { $0.id == "l60" }?.spokenLabel)
-        #expect(content(Data.unknownEnds).pointLabels["birth"] == "Birth unknown")
+        let line = PersonTimelineLifeline(content: lise, pointsPerYear: 41)
+        #expect(line.mark("l60") != nil && !line.targets.contains { $0.mark.id == "l60" })
+        let unknown = content(Data.unknownEnds)
+        #expect(unknown.items.first?.spokenLabel == "Birth unknown")
+        #expect(PersonTimelineLifeline(content: unknown, pointsPerYear: 43).targets.first { $0.mark.id == "birth" }?.label == "Birth unknown")
+    }
+
+    @Test func buildsOnlyShownRowsAndCards() {
+        let crowd = (1...500).map {
+            CatalogEventParticipant(person: Data.person("p\($0)", "P \($0) Weber"), roles: [Data.role("mourner")])
+        }
+        var timeline = Data.ida
+        timeline.events = (1...2000).map {
+            Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0 / 20)), participants: crowd)
+        }
+        timeline.birth = CatalogLifeMarker()
+        timeline.death = CatalogLifeMarker()
+        let folded = paged(timeline, [:], widthClass: .wide)
+        let rows = folded.items.compactMap(\.eventRow)
+        #expect(rows.count == 50 && rows.allSatisfy { $0.participants.count == 12 })
+        #expect(folded.allSpans.count == 2000)
+        #expect(folded.items.compactMap(\.spokenLabel).count == 52)
+        #expect(!folded.isShown("d51") && !folded.isShown("d2000"))
+        #expect(paged(timeline, [.dated: 1], widthClass: .wide).items.compactMap(\.eventRow).count == 100)
+    }
+
+    @Test func deathNeverFollowsAnAfterDeathEvent() {
+        // Only a burial dated, two undated events: the audit's case.
+        let burial = Data.timeline(
+            [Data.event("b1", type: "burial", when: .year(1850)), Data.event("i1", type: "residence"), Data.event("i2", type: "migration")],
+            birth: CatalogLifeMarker(place: .before(eventId: "b1")), death: CatalogLifeMarker(place: .before(eventId: "b1"))
+        )
+        #expect(ids(content(burial)) == ["birth", "undated", "i1", "i2", "death", "b1"])
+
+        // A baptism and a burial: the death sits between them.
+        let baptism = Data.timeline(
+            [Data.event("bap", type: "baptism", when: .year(1820)), Data.event("bur", type: "burial", when: .year(1850))],
+            birth: CatalogLifeMarker(place: .before(eventId: "bap")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
+        )
+        #expect(ids(content(baptism)) == ["birth", "bap", "death", "bur"])
+
+        // A recorded death with no date, before a dated funeral: its row is the marker.
+        let recorded = Data.timeline(
+            [Data.event("c", type: "census", when: .year(1851)), Data.event("f", type: "funeral", when: .year(1880)), Data.event("d", type: "death")],
+            birth: CatalogLifeMarker(place: .before(eventId: "c")), death: CatalogLifeMarker(eventId: "d", place: .before(eventId: "f"))
+        )
+        let recordedContent = content(recorded)
+        #expect(ids(recordedContent) == ["birth", "c", "d", "f"])
+        if case .marker(let marker) = recordedContent.items[2] {
+            #expect(marker.kind == .death && marker.row?.id == "d" && marker.place == .before(eventId: "f"))
+        } else { Issue.record("a recorded death with no date is a marker") }
+
+        // Both after the same row: the birth, then the death.
+        let both = Data.timeline(
+            [Data.event("x", type: "census", when: .year(1850))],
+            birth: CatalogLifeMarker(place: .after(eventId: "x")), death: CatalogLifeMarker(place: .after(eventId: "x"))
+        )
+        #expect(ids(content(both)) == ["x", "birth", "death"])
+
+        // A place that is not a dated row counts as none.
+        let unknown = Data.timeline(
+            [Data.event("x", type: "census", when: .year(1850))],
+            birth: CatalogLifeMarker(place: .before(eventId: "nope")), death: CatalogLifeMarker(place: .before(eventId: "nope"))
+        )
+        let unknownContent = content(unknown)
+        #expect(ids(unknownContent) == ["birth", "x", "death"])
+        if case .marker(let death) = unknownContent.items[2] { #expect(death.place == nil) } else { Issue.record("death marker") }
     }
 
     @Test func rolesLocationsAndSpoken() {

@@ -1301,12 +1301,14 @@ struct GoStore: GenealogyStore {
         }
     }
 
-    /// An empty id is nil: a placeholder, or a marker with no span to sit beside.
+    /// An empty id is nil: a placeholder, or a marker with no span to sit next to.
     private static func mapLifeMarker(_ m: Provenencia_Engine_V1_LifeMarker) -> CatalogLifeMarker {
-        CatalogLifeMarker(
-            eventId: m.eventID.isEmpty ? nil : m.eventID,
-            besideEventId: m.besideEventID.isEmpty ? nil : m.besideEventID
-        )
+        let place: CatalogLifeMarker.Place? = switch m.place {
+        case .afterEventID(let id): id.isEmpty ? nil : .after(eventId: id)
+        case .beforeEventID(let id): id.isEmpty ? nil : .before(eventId: id)
+        case nil: nil
+        }
+        return CatalogLifeMarker(eventId: m.eventID.isEmpty ? nil : m.eventID, place: place)
     }
 
     /// A unit of a kind this build doesn't know is dropped, as is a shape of a

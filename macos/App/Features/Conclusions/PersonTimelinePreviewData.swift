@@ -3,7 +3,7 @@ import Foundation
 import SwiftUI
 
 /// Timelines for the Timeline section's `#Preview`s and tests (board S13-D4,
-/// brief § 5): the sample life of Johann Weber as Go returns it, in date order
+/// brief § 5): the sample life of Johann Weber as Go returns it, in the Timeline's order (date order, with S16-02's moves)
 /// with each row's span, undated last, and the birth and death markers.
 enum PersonTimelinePreviewData {
     // MARK: - When
@@ -200,8 +200,8 @@ enum PersonTimelinePreviewData {
         )
     }
 
-    /// Johann without events 1 and 10: a birth placeholder beside the baptism, a
-    /// death placeholder beside the 1861 marriage.
+    /// Johann without events 1 and 10: a birth placeholder before the baptism, a
+    /// death placeholder before the burial (11).
     static var unknownEnds: CatalogPersonTimeline {
         CatalogPersonTimeline(
             events: johannEvents.filter { $0.id != "1" && $0.id != "10" }.map { row in
@@ -209,8 +209,8 @@ enum PersonTimelinePreviewData {
                 row.age = nil
                 return row
             },
-            birth: CatalogLifeMarker(besideEventId: "2"),
-            death: CatalogLifeMarker(besideEventId: "9")
+            birth: CatalogLifeMarker(place: .before(eventId: "2")),
+            death: CatalogLifeMarker(place: .before(eventId: "11"))
         )
     }
 

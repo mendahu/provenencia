@@ -9,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -24,8 +25,9 @@ type PersonEvent struct {
 	Age          *conclusionsummaries.AgeRange
 }
 
-// Timeline is the Timeline section's read: the person's events in date order
-// and where the birth and death markers go.
+// Timeline is the Timeline section's read: the person's events in the
+// Timeline's order (date order, then lifelineTypes.order's moves) and where the
+// birth and death markers go.
 type Timeline struct {
 	Events       []PersonEvent
 	Birth, Death LifeMarker
@@ -81,9 +83,10 @@ func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) 
 }
 
 // PersonEvents is the Timeline section's read: every canonical event the
-// person took part in, in any role, in event date order, each with its span on
+// person took part in, in any role, in the Timeline's order (event date order,
+// then lifelineTypes.order's moves), each with its span on
 // the line of years, the birth and death markers (the header's birth and death
-// when they are among the events, else placed beside a dated event), and the
+// when they are among the events, else placed after or before a dated event), and the
 // summary of every event and participant it names. An unknown or merged handle, or one
 // that is no Person, is conclusiondetails.ErrNotFound.
 func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsummaries.Summaries, error) {
@@ -187,14 +190,16 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		birthDate = me.Birth.Date
 	}
 	placedBirth, hasBirth := conclusionsummaries.PlaceBirth(birthDate)
+	days := map[string]valuecompare.Window{}
 	for i := range rows {
 		h, _ := summaries.Event(rows[i].Event)
-		span, dated, age, aged := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
-		if dated {
-			rows[i].Span = &span
+		placing := conclusionsummaries.EventSpanAndAge(h, placedBirth, hasBirth)
+		if placing.Dated {
+			rows[i].Span = &placing.Span
+			days[string(rows[i].Event)] = placing.Days
 		}
-		if aged {
-			rows[i].Age = &age
+		if placing.Aged {
+			rows[i].Age = &placing.Age
 		}
 	}
 	for i := range rows {
@@ -211,9 +216,8 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		}
 		return ""
 	}
-	t := Timeline{Events: rows}
-	t.Birth, t.Death = lifeMarkers(rows, typeOf, birth, death)
-	return t, summaries, nil
+	daysOf := func(id []byte) (valuecompare.Window, bool) { w, ok := days[string(id)]; return w, ok }
+	return lifeline.timeline(rows, typeOf, daysOf, birth, death), summaries, nil
 }
 
 // recorded is the id of pick when it is one of the timeline's rows, else nil:

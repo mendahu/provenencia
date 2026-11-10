@@ -16,6 +16,27 @@ struct PersonTimelinePlacementTests {
         Dictionary(uniqueKeysWithValues: content.items.map { ($0.id, height) })
     }
 
+    @Test func aRowAfterTheDeathKeepsItsDate() throws {
+        // A burial "2011" listed after a death on 15 Dec 2011: its bar spans 2011 and its point is above the death's.
+        let life = Data.timeline(
+            [
+                Data.event("d", type: "death", when: .day(2011, 12, 15, from: 2011.9534, to: 2011.9562)),
+                Data.event("bur", type: "burial", when: .year(2011)),
+            ],
+            birth: CatalogLifeMarker(place: .before(eventId: "d")), death: CatalogLifeMarker(eventId: "d")
+        )
+        let c = content(life)
+        let placement = PersonTimelinePlacement(content: c, heights: heights(c, 120), viewportHeight: 900)
+        let line = try #require(placement.lifeline)
+        #expect(c.items.map(\.id) == ["birth", "d", "bur"])
+        guard case .bar? = line.mark("bur")?.shape else {
+            Issue.record("the burial is a bar")
+            return
+        }
+        #expect(line.mark("bur")!.pointY < line.mark("d")!.pointY)
+        #expect(placement.tops["bur"]! >= placement.tops["d"]! + 120 - 0.001)
+    }
+
     @Test func rowsSitByTheirPoints() throws {
         let johann = content(Data.johann)
         let placement = PersonTimelinePlacement(content: johann, heights: heights(johann, 120), viewportHeight: 900)
@@ -132,5 +153,29 @@ struct PersonTimelinePlacementTests {
         #expect(PersonTimelinePlacement.topPadding(header, after: before) == 22 && !PersonTimelinePlacement.hasDivider(header, after: before))
         #expect(PersonTimelinePlacement.topPadding(after, after: header) == 14 && !PersonTimelinePlacement.hasDivider(after, after: header))
         #expect(PersonTimelinePlacement.gutterWidth == 56)
+    }
+
+    @Test func aDateEditRescales() {
+        let johann = content(Data.johann)
+        let kept = PersonTimelinePlacement.KeptScale(content: johann, viewportHeight: 900, pointsPerYear: 37)
+        #expect(kept.pointsPerYear(for: johann, viewportHeight: 900) == 37)
+        #expect(kept.pointsPerYear(for: johann, viewportHeight: 800) == nil)
+
+        // The last dated event, the burial, moved 50 years later under the same ids: the line's range changes.
+        var moved = Data.johann
+        moved.events = moved.events.map { event in
+            var event = event
+            if event.id == "11", var span = event.span {
+                span.from += 50
+                span.to += 50
+                event.span = span
+            }
+            return event
+        }
+        let later = content(moved)
+        #expect(later.items.map(\.id) == johann.items.map(\.id))
+        #expect(kept.pointsPerYear(for: later, viewportHeight: 900) == nil)
+
+        #expect(kept.pointsPerYear(for: content(Data.unknownEnds), viewportHeight: 900) == nil)
     }
 }

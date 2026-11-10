@@ -75,9 +75,10 @@ struct PersonTimelineLifelineTests {
         let spans = Dictionary(uniqueKeysWithValues: content.allSpans.map { ($0.id, $0.span) })
         let perYear: CGFloat = 43
         #expect(abs(y(unknown.mark("11")) - (18 + CGFloat(spans["11"]!.from - spans["2"]!.from) * perYear + 80)) < 0.5)
-        // The death stub follows event 9's end.
-        let nineEnd = 18 + CGFloat(spans["9"]!.to - spans["2"]!.from) * perYear + 40
-        if case .cap(let deathY, true) = unknown.mark("death")?.shape { #expect(abs(deathY - (nineEnd + 40)) < 0.5) } else { Issue.record("death placeholder") }
+        // The death stub sits just before the burial, below the birth stub's shift, with its cap at the stub's top.
+        let deathStart = 18 + CGFloat(spans["11"]!.from - spans["2"]!.from) * perYear + 40
+        if case .cap(let deathY, true) = unknown.mark("death")?.shape { #expect(abs(deathY - deathStart) < 0.5) } else { Issue.record("death placeholder") }
+        #expect(unknown.stubs.contains { abs($0.lowerBound - deathStart) < 0.5 && abs($0.upperBound - (deathStart + 40)) < 0.5 })
 
         // A funeral and no death: the death stub goes before the funeral.
         var timeline = Data.johann
@@ -85,8 +86,8 @@ struct PersonTimelineLifelineTests {
             Data.event("c", type: "census", when: .year(1875)),
             Data.event("f", type: "funeral", when: .year(1880)),
         ]
-        timeline.birth = CatalogLifeMarker(besideEventId: "c")
-        timeline.death = CatalogLifeMarker(besideEventId: "c")
+        timeline.birth = CatalogLifeMarker(place: .before(eventId: "c"))
+        timeline.death = CatalogLifeMarker(place: .before(eventId: "f"))
         let (funeral, funeralContent) = lifeline(timeline, ppy: 43)
         #expect(funeralContent.items.map(\.id) == ["birth", "c", "death", "f"])
         #expect(funeral.mark("death").map { y($0) }! < y(funeral.mark("f")))
@@ -119,7 +120,7 @@ struct PersonTimelineLifelineTests {
             if event.id == "1" { event.span = nil }
             return event
         }
-        recorded.birth = CatalogLifeMarker(eventId: "1", besideEventId: "2")
+        recorded.birth = CatalogLifeMarker(eventId: "1", place: .before(eventId: "2"))
         let (cap, _) = lifeline(recorded, ppy: 43)
         if case .cap(_, let placeholder) = cap.mark("1")?.shape { #expect(!placeholder) } else { Issue.record("filled cap") }
         let capTether = cap.tethers(anchors: ["1": 100], spans: ["1": 80...180], visible: CGRect(x: 0, y: 0, width: 800, height: 200)).first
@@ -160,6 +161,145 @@ struct PersonTimelineLifelineTests {
         let (folded, foldedContent) = lifeline(Data.lise, ppy: 41)
         #expect(foldedContent.items.contains(.more(.dated, count: 67)))
         #expect(folded.marks.count == 120)
+
+        // A click target for each shown item with a point; the folded points share one region.
+        #expect(folded.targets.count == foldedContent.items.filter { folded.mark($0.id) != nil }.count)
+        #expect(folded.targets.count < 120)
+        let foldedIDs = content.allSpans.map(\.id).filter { id in !foldedContent.items.contains { $0.id == id } }
+        #expect(foldedIDs.count == 67)
+        let foldedMarks = foldedIDs.compactMap { folded.mark($0) }
+        let hit = folded.foldedHit
+        #expect(hit?.lowerBound == foldedMarks.map(\.hit.lowerBound).min() && hit?.upperBound == foldedMarks.map(\.hit.upperBound).max())
+        let middle = foldedMarks[30]
+        // Points of one year share a y: the nearest is one of them, the earlier in item order.
+        #expect(folded.foldedMark(nearest: middle.pointY).flatMap { folded.mark($0)?.pointY } == middle.pointY)
+        #expect(folded.foldedMark(nearest: (hit?.lowerBound ?? 0) - 500) == foldedMarks.first?.id)
+        #expect(line.foldedHit == nil && line.foldedMark(nearest: 100) == nil)
+        // A target's extent: 6pt around a dot, a bar's extent with 6pt more at each end.
+        #expect(PersonTimelineLifeline.Mark(id: "d", shape: .dot(y: 100)).hit == 94...106)
+        #expect(PersonTimelineLifeline.Mark(id: "b", shape: .bar(from: 100, to: 200, openStart: false, openEnd: false)).hit == 94...206)
+        #expect(PersonTimelineLifeline.Mark(id: "s", shape: .bar(from: 100, to: 100, openStart: false, openEnd: false)).hit == 94...106)
+    }
+
+    @Test func aDeathBeforeABurial() throws {
+        let ppy: CGFloat = 10
+        // A baptism and a burial: the death cap is 40pt above the burial and below the baptism.
+        let life = Data.timeline(
+            [Data.event("bap", type: "baptism", when: .year(1820)), Data.event("bur", type: "burial", when: .year(1850))],
+            birth: CatalogLifeMarker(place: .before(eventId: "bap")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
+        )
+        let (line, _) = lifeline(life, ppy: ppy)
+        if case .cap(let deathY, true) = line.mark("death")?.shape {
+            #expect(abs(deathY - (y(line.mark("bur")) - 40)) < 0.001)
+            #expect(deathY > y(line.mark("bap")))
+        } else { Issue.record("death placeholder") }
+
+        // A baptism and a burial in the same year: the baptism is above the death stub, the burial below it.
+        let infant = Data.timeline(
+            [
+                Data.event("bap", type: "baptism", when: .day(1850, 3, 1, from: 1850.17, to: 1850.1728)),
+                Data.event("bur", type: "burial", when: .day(1850, 9, 1, from: 1850.67, to: 1850.6728)),
+            ],
+            birth: CatalogLifeMarker(place: .before(eventId: "bap")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
+        )
+        let (short, _) = lifeline(infant, ppy: 100)
+        if case .cap(let deathY, true) = short.mark("death")?.shape {
+            #expect(y(short.mark("bap")) < deathY && y(short.mark("bur")) >= deathY + 40 - 0.001)
+        } else { Issue.record("death placeholder") }
+
+        // Both before the one burial: the birth stub is the 0th, the death stub the 1st, the burial after both.
+        let burial = Data.timeline(
+            [Data.event("bur", type: "burial", when: .day(1850, 9, 1, from: 1850.67, to: 1850.6728))],
+            birth: CatalogLifeMarker(place: .before(eventId: "bur")), death: CatalogLifeMarker(place: .before(eventId: "bur"))
+        )
+        let (both, _) = lifeline(burial, ppy: ppy)
+        #expect(both.stubs == [18...58, 58...98])
+        #expect(abs(y(both.mark("bur")) - 98) < 0.001)
+
+        // After the 60th of 60 rows, which a fold hides: the stub is at that row's end.
+        var rows = (1...60).map { Data.event("d\($0)", type: "census", when: .year(Int32(1800 + $0))) }
+        rows[59] = Data.event("d60", type: "census", when: .year(1860))
+        let folded = Data.timeline(rows, birth: CatalogLifeMarker(), death: CatalogLifeMarker(place: .after(eventId: "d60")))
+        let (afterFold, foldedContent) = lifeline(folded, ppy: ppy)
+        #expect(foldedContent.items.contains(.more(.dated, count: 10)))
+        let range = try #require(PersonTimelineLifeline.range(foldedContent))
+        let d60 = try #require(foldedContent.allSpans.first { $0.id == "d60" })
+        #expect(afterFold.stubs.count == 2)
+        #expect(abs(afterFold.stubs[1].lowerBound - (18 + CGFloat(d60.span.to - range.from) * ppy + 40)) < 0.001)
+
+        // A place that is not a dated row: the content drops it and the stub sits at the range's end.
+        let unknown = Data.timeline(
+            [Data.event("x", type: "census", when: .year(1850))],
+            birth: CatalogLifeMarker(), death: CatalogLifeMarker(place: .before(eventId: "nope"))
+        )
+        let (end, unknownContent) = lifeline(unknown, ppy: ppy)
+        guard case .marker(let death) = unknownContent.items.last else {
+            Issue.record("death is last")
+            return
+        }
+        #expect(death.place == nil)
+        let unknownRange = try #require(PersonTimelineLifeline.range(unknownContent))
+        #expect(abs(end.stubs[1].lowerBound - (18 + CGFloat(unknownRange.to - unknownRange.from) * ppy + 40)) < 0.001)
+    }
+
+    @Test func aStubAboveAnEarlierRowAfterIt() throws {
+        // No death recorded; a funeral "aft 29 Mar 2011" lists before a burial "abt 2011".
+        let life = Data.timeline(
+            [
+                Data.event("f", type: "funeral", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411)),
+                Data.event("bur", type: "burial", when: .year(2011)),
+            ],
+            birth: CatalogLifeMarker(place: .before(eventId: "f")), death: CatalogLifeMarker(place: .before(eventId: "f"))
+        )
+        let (line, content) = lifeline(life, ppy: 40)
+        #expect(content.items.map(\.id) == ["birth", "death", "f", "bur"])
+        let tick = try #require(line.ticks.first { $0.year == 2011 }).y
+        #expect(line.stubs.count == 2)
+        #expect(abs(line.stubs[1].lowerBound - (tick - 40)) < 0.001 && abs(line.stubs[1].upperBound - tick) < 0.001)
+        #expect(abs(y(line.mark("bur")) - tick) < 0.001)
+        if case .cap(let deathY, true) = line.mark("death")?.shape {
+            #expect(deathY < y(line.mark("bur")) && deathY < y(line.mark("f")))
+        } else { Issue.record("death placeholder") }
+    }
+
+    @Test func anAfterStubBelowALaterEndingRowBeforeIt() throws {
+        // The death sits after "x", which the Timeline's order put after the birth; the stub is below the birth's point.
+        let life = Data.timeline(
+            [
+                Data.event("b", type: "birth", when: .day(1850, 3, 12, from: 1850.1948, to: 1850.1975)),
+                Data.event("x", type: "census", when: .day(1850, 1, 1, from: 1850.0, to: 1850.0027)),
+            ],
+            birth: CatalogLifeMarker(eventId: "b"), death: CatalogLifeMarker(place: .after(eventId: "x"))
+        )
+        let (line, _) = lifeline(life, ppy: 40)
+        #expect(line.stubs.count == 1)
+        #expect((line.stubs.first?.lowerBound ?? 0) >= (line.mark("b")?.pointY ?? .infinity))
+    }
+
+    @Test func aPointUnderAWiderBarIsClickable() throws {
+        // The dogfood case: a death on 29 Mar 2011, a funeral "aft 29 Mar 2011" and a burial "abt 2011", in that item order.
+        let death = Data.event("d", type: "death", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411))
+        var funeral = Data.event("f", type: "funeral", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411))
+        funeral.span = CatalogTimelineSpan(from: 2011.2384, to: 2011.6, openStart: false, openEnd: true)
+        let burial = Data.event("bur", type: "burial", when: .year(2011))
+        let (late, _) = lifeline(
+            Data.timeline([death, funeral, burial], birth: CatalogLifeMarker(), death: CatalogLifeMarker(eventId: "d")), ppy: 43
+        )
+        // A birth on 12 Mar 1850 and a baptism "1850".
+        let (early, _) = lifeline(
+            Data.timeline(
+                [Data.event("b", type: "birth", when: .day(1850, 3, 12, from: 1850.1948, to: 1850.1975)), Data.event("bap", type: "baptism", when: .year(1850))],
+                birth: CatalogLifeMarker(eventId: "b"), death: CatalogLifeMarker()
+            ), ppy: 43
+        )
+        for (line, ids) in [(late, ["d", "f"]), (early, ["b"])] {
+            for id in ids {
+                let mark = try #require(line.mark(id))
+                // The last button in drawing order whose area holds the point is on top.
+                let top = line.targets.last { $0.mark.hit.contains(mark.pointY) }
+                #expect(top?.mark.id == id, "the point of \(id)")
+            }
+        }
     }
 
     @Test func tickCountIsCapped() {

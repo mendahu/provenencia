@@ -365,11 +365,11 @@ func TestListPersonEvents(t *testing.T) {
 		}
 	}
 
-	if got.GetBirth().GetEventId() != database.UUIDString(b1) || got.GetBirth().GetBesideEventId() != "" {
+	if got.GetBirth().GetEventId() != database.UUIDString(b1) || got.GetBirth().GetPlace() != nil {
 		t.Errorf("birth marker %+v", got.GetBirth())
 	}
-	if got.GetDeath() == nil || got.GetDeath().GetEventId() != "" || got.GetDeath().GetBesideEventId() != database.UUIDString(cs) {
-		t.Errorf("death marker %+v, want a placeholder beside the census (the burial may follow death)", got.GetDeath())
+	if got.GetDeath() == nil || got.GetDeath().GetEventId() != "" || got.GetDeath().GetAfterEventId() != database.UUIDString(u) {
+		t.Errorf("death marker %+v, want a placeholder after the burial the person only witnessed", got.GetDeath())
 	}
 	if sp := got.Events[0].GetSpan(); sp.GetFrom() != 1820 || sp.GetTo() != 1821 || sp.GetOpenStart() || sp.GetOpenEnd() {
 		t.Errorf("birth span %+v", sp)
@@ -407,10 +407,10 @@ func TestListPersonEvents(t *testing.T) {
 		if a := res.Events[0].GetAge(); a == nil || a.GetLo() != 0 || a.GetHi() != 0 || res.Events[1].GetAge() != nil {
 			t.Errorf("ages %+v, %+v", res.Events[0].GetAge(), res.Events[1].GetAge())
 		}
-		if res.GetBirth().GetEventId() != database.UUIDString(born) || res.GetBirth().GetBesideEventId() != "" {
+		if res.GetBirth().GetEventId() != database.UUIDString(born) || res.GetBirth().GetPlace() != nil {
 			t.Errorf("birth %+v", res.GetBirth())
 		}
-		if res.GetDeath() == nil || res.GetDeath().GetEventId() != "" || res.GetDeath().GetBesideEventId() != database.UUIDString(born) {
+		if res.GetDeath() == nil || res.GetDeath().GetEventId() != "" || res.GetDeath().GetAfterEventId() != database.UUIDString(born) {
 			t.Errorf("death %+v", res.GetDeath())
 		}
 	})
