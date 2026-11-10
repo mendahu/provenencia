@@ -1,7 +1,7 @@
 # Ship log — S15-03 The Source page shows the date and the Private switch
 
 **Plan:** [`S15-03-source-page-date-and-private-switch.md`](S15-03-source-page-date-and-private-switch.md) · **Branch:** `s15-03-source-page-date-and-private-switch` · **PR:** #766
-**State:** fixing 1
+**State:** ready
 
 Base: `main` @ `9897bf19`.
 
@@ -73,3 +73,25 @@ Check: `rg "leavesForSectionRoot" .agents .cursor docs` shows the `notice:` form
 Files: `macos/App/Features/Sources/SourcePageContext.swift`, the Sources sections listed in MNT-5.
 Do: make `showPageError`'s message `String`. Add `@discardableResult func showFailure(_ error: Error, title: …) -> Bool` on `SourcePageContext` that calls `fail`, shows the banner, and returns false when the page is leaving. Move the ten banner sites onto it; keep `fail` for field-error sites and the date dialog.
 Check: `rg -n "context.fail\(" macos/App/Features/Sources` prints only field-error sites, `SourceDateFormModel` and `showFailure` itself (list them); check-pr PASS.
+
+## Round 1 — fix
+Head `85bfe707`. Gate PASS (orchestrator re-run). F-1–F-8 done. F-3: the `getSourceWorkspace` not-found change broke `CatalogSessionStoreTests.getSourceWorkspaceMarksSessionHeld` (it reads id `"missing"`), so it was reverted and a `docs/ideas/structural-debt.md` line added (MNT-6); that line's home goes to the user at finish. F-2 tests passed before any code change (the code was right); red proven by disabling `fail`'s `sourceNotFound` branch. F-5 key is `"\(sourceID)/\(count)"`. F-6 caption is an announced compact info `PVCallout`. Landed note and `completed.md` updated for the fixes.
+
+## Round 2 — review
+Reviewers: CON (CON-1), MNT (MNT-1), UX (UX-1). Scope `5cf61c1b...85bfe707`. SEC+PRF not sent (no findings).
+
+| ID | Lens | Round-1 finding | Round 2 |
+| --- | --- | --- | --- |
+| CON-1 | CON | major | Resolved: `deletedSourceClosesTheDateDialog`, `deletedSourceDuringACoverRefreshLeaves` |
+| MNT-1 | MNT | major | Resolved: one `mutateSource`; remaining revision bumps are a batch write and `bumpActivity` |
+| UX-1 | UX | major | Resolved in code: `.isToggle` and an On/Off value; spoken wording left to manual check 5 |
+
+No new blockers from any reviewer. Minors, read by the orchestrator and confirmed by the round-2 reviewers: CON-2 Resolved; MNT-2 Resolved; MNT-3 Resolved; MNT-4 Resolved; MNT-5 Resolved (direct `fail` sites left are field errors, the date form, the identity description save and `applySetError`); MNT-6 Not resolved: the fake's blank read stays because `CatalogSessionStoreTests.getSourceWorkspaceMarksSessionHeld` depends on it, and a `structural-debt.md` line records that (its home goes to the user); UX-2 Resolved (date truncates inside `widthInspector`, `.help` and VoiceOver keep the full line); UX-3 Resolved (scroll key `"\(sourceID)/\(count)"`, a scroll restart, not an `.id`); UX-4 Resolved (announced compact `PVCallout`).
+
+No Fix plan 2.
+
+## Finish
+`origin/main` still `9897bf19`; no merge needed. Gate PASS on `85bfe707`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: MNT-6 (FakeStore `getSourceWorkspace` blank read; `structural-debt.md` line pending the user's choice) · to user: —
