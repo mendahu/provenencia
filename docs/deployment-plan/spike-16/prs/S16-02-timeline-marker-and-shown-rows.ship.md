@@ -1,7 +1,7 @@
 # Ship log — S16-02 The Timeline places a missing death and builds what it shows
 
 **Plan:** [`S16-02-timeline-marker-and-shown-rows.md`](S16-02-timeline-marker-and-shown-rows.md) · **Branch:** `s16-02-timeline-marker-and-shown-rows` · **PR:** [#764](https://github.com/mendahu/provenencia/pull/764)
-**State:** implementing (amendment)
+**State:** ready
 
 ## Round 0 — implement
 Head `59e4a6a1`. Gate: implementer PASS; orchestrator re-run on `59e4a6a1` PASS (9/9; xcode-test 130s).
@@ -143,3 +143,17 @@ Read by the orchestrator (minors): MNT-1 **Resolved** (`inSet` and `find` gone; 
 
 ## Round A2 — review (scope `b3b49581...91ba88e0`)
 Reviewers: CON (CON-1 major), UX (UX-1 major), SEC+PRF (PRF-1 major). Not sent: MNT (minors only, read above).
+
+| ID | Lens | Round-A1 finding | Result |
+| --- | --- | --- | --- |
+| CON-1 | CON | Pass (3) moved a funeral past rows the dates put before it | Resolved (F-1, F-8, F-9; reviewer probe 200,000 cases, 0 violations) |
+| CON-2 | CON | `.after` stub above a recorded birth | Resolved (F-6) |
+| F-7 | CON | Plan's leftover amendment notes | Resolved |
+| UX-1 | UX | Bar button covered the death or birth point | Resolved (F-3) |
+| PRF-1 | PRF/SEC | Pass (3) quadratic, uncapped | Resolved (F-2, F-9): cap 64 checked before pair work; 385 µs at 2,000 rows, 2.58 ms at 8,000 under the cap |
+
+New findings: none. Nits (logged): `CON-4 · lifeline.go:101, reorderAfterDeath · rewrap long doc lines` · `CON-5 · S16-02 plan · F-7 dropped the "neighbors" cases (e.g. burial "abt 2010" vs death 29 Mar 2011 keeps date order) without moving them to the Landed note`
+
+## Amendment result
+Merged `origin/main` (`eff0b23d`) as `5971639a`. Gate: first run FAIL on `WorkspaceDestinationHostTests` (`canvasToCanvasBuildsTheSecondGraphsModel`, `openGraphThatGoesFallsBackToTheSourcesList`), the load flake seen twice in this log, untouched code; re-run on the same head PASS 9/9 (xcode-test 122s).
+Gate PASS · CI see PR · open: none · follow-ups: none · to user: CON-1 and MNT-3 answered (2026-11-09)
