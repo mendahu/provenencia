@@ -1,6 +1,6 @@
 # S15-04 — The Sources list shows and sorts by the date
 
-**Status:** Landed in #N (2026-11-10)
+**Status:** Landed in [#774](https://github.com/mendahu/provenencia/pull/774) (2026-11-10)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D2](../design/archive/S15-D2-sources-list.md), board agreed 2026-11-10

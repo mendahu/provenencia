@@ -1,7 +1,7 @@
 # Ship log — S15-04 The Sources list shows and sorts by the date
 
-**Plan:** [`S15-04-sources-list-date.md`](S15-04-sources-list-date.md) · **Branch:** `s15-04-sources-list-date` · **PR:** — (not opened yet: github.com unreachable from the Mac at start, 2026-11-10)
-**State:** stopped — review done; waiting on github.com to push and open the PR
+**Plan:** [`S15-04-sources-list-date.md`](S15-04-sources-list-date.md) · **Branch:** `s15-04-sources-list-date` · **PR:** [#774](https://github.com/mendahu/provenencia/pull/774)
+**State:** ready
 
 ## Before round 0
 
@@ -56,3 +56,6 @@ MNT-1: **Resolved** (`SourcePageIdentityHeader.swift:207` reads `SourcesRowDate.
 ## Result
 Gate PASS at `66b69414` · CI not run (github.com unreachable: no push, no PR yet) · open: none · to user: MNT-2 · follow-ups: the nil-frame layout-test flake (`SourcePageOverviewLayoutTests`, `PVPageColumnsTests`, `PVWidthClassTests`)
 Waiting on the network for finish steps 0–3: fetch and merge `origin/main`, gate, push, open the PR, fill every "#N", PR body, `gh pr ready`, CI.
+
+## Finish
+github.com reachable again; `origin/main` had not moved since `918c8ad3`, so no merge. Pushed and opened #774 ready for review (the user chose Create PR). "#N" placeholders filled with #774.
