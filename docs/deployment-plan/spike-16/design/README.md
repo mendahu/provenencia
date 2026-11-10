@@ -8,7 +8,7 @@ Briefs are written one at a time, just before the PR they gate. Design track and
 
 | Brief | View | Board | Gates |
 | --- | --- | --- | --- |
-| [S16-D1](S16-D1-person-page-notices.md) | Person page: notices for a failed reload (header band, a full-width section, the Sources diagram column) and for a record links diagram that is partial | — (not drawn yet) | S16-04 |
+| [S16-D1](S16-D1-person-page-notices.md) | Person page: notices for a failed reload (header band, a full-width section, the Sources diagram column) and for a record links diagram that is partial | [agreed 2026-11-10](https://claude.ai/artifact/N9V52ewQjxeNvh3Az3YkXQ) | S16-04 |
 
 ## Archived
 

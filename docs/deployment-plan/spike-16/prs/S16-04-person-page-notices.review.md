@@ -7,9 +7,9 @@ Covers the plan [`S16-04-person-page-notices.md`](S16-04-person-page-notices.md)
 
 ## To user
 
-- **Board S16-D1.** Paste the brief into Claude Design ("Person Detail" board, new turn "S16-D1 · Notices") and agree the board. Until then the plan stays `Blocked — on board S16-D1`.
+- **Board S16-D1.** Answered (user, 2026-11-10): agreed, turn 17 on the Family, Sources and Timeline pages. The writer checked it against the brief: every frame and every string matches. Two differences were found. The 24 pt section gap is copied into D-8. The Toast is drawn as a title and a body, and the user chose to build it as one line (D-7).
 - **B-2: Remove on a stale line.** After a failed reload, a record line already removed stays under the notice, and a second Remove on it is a silent no-op (`core/database/promote/unpromote.go`). Recommendation: leave it as it is in this PR. The notice says the rows are old and Try again is one press away. Add a line to [`ideas/person-page-followups.md`](../../../ideas/person-page-followups.md). The other choices are to disable Remove under a stale notice, or to have a no-op Remove say so; either one adds a frame and a Decision.
-- **M-3 / M2-4 widen the PR to Go, in a matching-layer package.** A not-counted read now lists no pair. The change sits in `recordlinks.Pairs` (D-9), with two rewritten subtests and two lines in `docs/matching-model.md`. The writer accepted it because the reviewers' reason holds: `Pairs` owns `MaxReadWork`, and it stops building up to about 1.1M lines only to have them dropped. If you want S16-04 to stay Swift-only, say so; the drop would then move back to Swift and be logged as debt.
+- **M-3 / M2-4 widen the PR to Go, in a matching-layer package.** Answered (user, 2026-11-10): keep the Go change. A not-counted read now lists no pair. The change sits in `recordlinks.Pairs` (D-9), with two rewritten subtests and two lines in `docs/matching-model.md`. The writer accepted it because the reviewers' reason holds: `Pairs` owns `MaxReadWork`, and it stops building up to about 1.1M lines only to have them dropped. If you want S16-04 to stay Swift-only, say so; the drop would then move back to Swift and be logged as debt.
 
 ## Writer's own calls
 
