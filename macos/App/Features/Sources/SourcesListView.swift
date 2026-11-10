@@ -263,7 +263,7 @@ private struct SourcesListContent: View {
             options: options,
             icon: .sort,
             displayLabel: model.sortControlLabel,
-            menuWidth: 220,
+            menuWidth: 240,
             fillsWidth: false,
             accessibilityLabel: L10n.Sources.sortMenu,
             accessibilityIdentifier: "sources.sort"
