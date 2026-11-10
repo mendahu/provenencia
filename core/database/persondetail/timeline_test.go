@@ -582,4 +582,62 @@ func TestPersonEventsLifeline(t *testing.T) {
 			t.Fatal("the header names the non-canonical birth")
 		}
 	})
+	order := func(t *testing.T, w *kinWorld, tl persondetail.Timeline, want ...string) {
+		t.Helper()
+		if got := eventOrder(w, tl.Events); !reflect.DeepEqual(got, want) {
+			t.Errorf("order %v, want %v", got, want)
+		}
+	}
+	t.Run("AC-4.1 the dogfood case", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		d := w.eventOn("D", vocabkey.EventDeath, datevaluetest.YMD(2011, 3, 29))
+		u := w.eventOn("U", vocabkey.EventBurial, datevaluetest.About(2011, 0, 0))
+		f := w.eventOn("F", vocabkey.EventFuneral, datevaluetest.After(2011, 3, 29))
+		for _, e := range [][]byte{d, u, f} {
+			w.k.Join(pat, e, "subject")
+		}
+		tl := check(t, w, pat, markers{birth: before(d), deathEvent: d})
+		order(t, w, tl, "D", "F", "U")
+	})
+	t.Run("AC-4.2 a burial before the death", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		d := w.eventOn("D", vocabkey.EventDeath, datevaluetest.YMD(2011, 3, 29))
+		u := w.eventOn("U", vocabkey.EventBurial, datevaluetest.YMD(1990, 0, 0))
+		w.k.Join(pat, d, "subject")
+		w.k.Join(pat, u, "subject")
+		tl := check(t, w, pat, markers{birth: before(u), deathEvent: d})
+		order(t, w, tl, "U", "D")
+	})
+	t.Run("AC-4.4 no death", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		u := w.eventOn("U", vocabkey.EventBurial, datevaluetest.About(2011, 0, 0))
+		f := w.eventOn("F", vocabkey.EventFuneral, datevaluetest.After(2011, 3, 29))
+		w.k.Join(pat, u, "subject")
+		w.k.Join(pat, f, "subject")
+		tl := check(t, w, pat, markers{birth: before(f), death: before(f)})
+		order(t, w, tl, "F", "U")
+	})
+	t.Run("AC-4.5 a baptism in the birth's year", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		b := w.eventOn("B", vocabkey.EventBirth, datevaluetest.YMD(1850, 3, 12))
+		p := w.eventOn("P", vocabkey.EventType("baptism"), datevaluetest.YMD(1850, 0, 0))
+		w.k.Join(pat, b, "subject")
+		w.k.Join(pat, p, "subject")
+		tl := check(t, w, pat, markers{birthEvent: b, death: after(p)})
+		order(t, w, tl, "B", "P")
+	})
+	t.Run("AC-4.6 a witness's burial", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.person("Pat")
+		d := w.eventOn("D", vocabkey.EventDeath, datevaluetest.YMD(2011, 3, 29))
+		u := w.eventOn("U", vocabkey.EventBurial, datevaluetest.About(2011, 0, 0))
+		w.k.Join(pat, d, "subject")
+		w.k.Join(pat, u, "witness")
+		tl := check(t, w, pat, markers{birth: before(u), deathEvent: d})
+		order(t, w, tl, "U", "D")
+	})
 }

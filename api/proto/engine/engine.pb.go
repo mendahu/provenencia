@@ -12654,18 +12654,22 @@ func (x *ListPersonEventsRequest) GetEntityId() string {
 }
 
 // ListPersonEventsResponse is a person's timeline: every canonical event the
-// person took part in directly, in any role, in date order (dated first,
-// earliest first, then by ref, the order of ListEventSummaries), and where the
-// lifeline's birth and death markers go. Canonical events and participants
-// only. Each marker is always sent. An event_id names the recorded event (the
-// header's birth or death) when it is one of the rows; empty is a placeholder.
-// place is set whenever the marker has no span of its own and an event is
-// dated: the dated event it sits after or before. A placeholder death sits
-// before the earliest dated burial or funeral of the person's own (role
-// subject), else after the last dated event; a placeholder birth sits after the
-// last dated event that may precede birth, else before the first dated event.
-// No date is invented. place is unset when the marker has its own span or
-// nothing is dated.
+// person took part in directly, in any role, in the Timeline's order, and where
+// the lifeline's birth and death markers go. The order is date order (dated
+// first, earliest first, then by ref, the order of ListEventSummaries), then: a
+// row the recorded birth's dates cannot order follows the birth; a burial or
+// funeral of the person's own (role subject) the recorded death's dates cannot
+// order follows the death; and among those after the death a funeral comes
+// before a burial whose dates overlap. Dates that clearly conflict keep date
+// order. Canonical events and participants only. Each marker is always sent. An
+// event_id names the recorded event (the header's birth or death) when it is one
+// of the rows; empty is a placeholder. place is set whenever the marker has no
+// span of its own and an event is dated: the dated event it sits after or
+// before. A placeholder death sits before the first dated burial or funeral of
+// the person's own (role subject) in the Timeline's order, else after the last
+// dated event; a placeholder birth sits after the last dated event that may
+// precede birth, else before the first dated event. No date is invented. place
+// is unset when the marker has its own span or nothing is dated.
 type ListPersonEventsResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Events        []*PersonEvent         `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
