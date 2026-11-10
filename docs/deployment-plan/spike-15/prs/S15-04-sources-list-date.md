@@ -74,6 +74,7 @@ A researcher sees each Source's own date on its Sources list row, named as its p
 | Wide: centered at `widthListWideMax`, side hairlines, Published caption (SL-W1); Regular and narrow (SL-W2) | STEP-4, STEP-6, AC-1.4, AC-1.5 |
 | `PVSpacing.widthListWideMax` and the kit modifier `pvListBand`; Promote's list adopts the token (1600 of content at Wide) | STEP-4, STEP-6 |
 | "Published" as the date's one name: the sorts, the Source page's date copy (D-14) | STEP-2, AC-1.8 |
+| Bug (user, 2026-11-10): the vertical hairline between the Source/Type cells and the Evidence graph column stops at the bottom of the graph stack when a wrapped title makes the row taller; it spans the full row | STEP-5a |
 
 | Out | Home |
 | --- | --- |
@@ -253,6 +254,11 @@ Files: `macos/App/Features/Sources/SourcesListRow.swift`, `macos/ProvenenciaTest
 Do: D-5, D-6, D-8, D-11. Add T-6.
 Check: T-6 passes; frames 1a and 5 match in the app.
 
+**STEP-5a — The graph column's hairline spans the row.** Skill: `add-ui-component`. Added at the user's request, 2026-11-10.
+Files: `macos/App/Features/Sources/SourcesListRow.swift`.
+Do: today `graphStack` draws `PVDivider(axis: .vertical)` as an `.overlay(alignment: .leading)` on the stack itself, so the line is only as tall as the graph buttons; a title that wraps makes the Source cell, and so the row, taller, and the line stops short. Tie the line to the row's height, not the stack's: give `graphStack` `.frame(maxHeight: .infinity, alignment: .top)` after its `.padding(.vertical, …)` and before the `.overlay` (the row already has `.fixedSize(horizontal: false, vertical: true)`, and `sourceLink` uses the same `maxHeight: .infinity` idiom), so the stack fills the row and the hairline runs top to bottom. The buttons stay top-aligned where they are. One commit: "Run the Sources list's graph column hairline down the whole row."
+Check: the app builds; with a title long enough to wrap to three lines at Regular, the hairline meets the row's bottom divider; a row with two graphs (taller stack than the Source cell) looks as before.
+
 **STEP-6 — The list at Wide.** Skill: `add-ui-component`.
 Files: `macos/App/Features/Sources/SourcesListView.swift`.
 Do: `pvListBand` and its use (D-9), D-10.
@@ -314,6 +320,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `l
 5. Widen past 1600pt of pane: the list centers with side hairlines and a Published column; scroll and sort are kept (AC-1.4). Frame 1b.
 6. VoiceOver on a dated and an undated row reads AC-1.7. On a Source page, the header and dialog read AC-1.8.
 7. Open Promote at Wide: its list is 1600 of content, centered; at Regular it looks as before.
+8. Give a Source a title long enough to wrap to two or three lines: the hairline left of its Evidence graph column runs down to the row's bottom divider (STEP-5a).
 
 ## 11. Risks and stop conditions
 
