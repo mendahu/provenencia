@@ -51,3 +51,16 @@
 
 ### X-8 · nit · Stale "evicted" prose in test comments
 **Answer:** Fixed. STEP-4 names each comment.
+
+## Round 2
+
+Maintainability: every round-1 answer checked against the code; no new blocker. Verdict: Fits with changes.
+
+### M-6 · minor · `deletedWith` also marks the cap's per-entity keys
+**Answer:** Fixed. D-4: `deletedWith`'s doc comment names both readers (the deleted eviction and the hidden-entity cap).
+
+### M-7 · minor · The sketch's `ownId` doc comment contradicts D-6
+**Answer:** Fixed. The sketch comment is D-6's wording.
+
+### M-8 · nit · `maxArcs` does not exist
+**Answer:** Fixed. Codebase fit cites `PersonRecordLinksContent.maxNodes`.
