@@ -5927,57 +5927,57 @@ enum L10n {
         static let sourceDateAdd = LocalizedStringResource(
             "sources.page.sourceDate.add",
             defaultValue: "Add published date",
-            comment: "Button in the Source page header: open the Source date dialog for an undated Source"
+            comment: "Button in the Source page header: open the published date dialog for an undated Source"
         )
 
         static let sourceDateEdit = LocalizedStringResource(
             "sources.page.sourceDate.edit",
             defaultValue: "Edit published date",
-            comment: "Accessibility label and help of the pencil beside the Source's date"
+            comment: "Accessibility label and help of the pencil beside the Source's published date"
         )
 
         static func sourceDateAccessibility(date: String) -> String {
             return L10n.format(LocalizedStringResource(
                 "sources.page.sourceDate.accessibility",
                 defaultValue: "Published, %@",
-                comment: "Accessibility label of the Source's date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880"
+                comment: "Accessibility label of the Source's published date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880"
             ), date)
         }
 
         static let sourceDateDialogTitle = LocalizedStringResource(
             "sources.page.sourceDate.dialogTitle",
             defaultValue: "Published date",
-            comment: "Title of the Source date dialog"
+            comment: "Title of the published date dialog"
         )
 
         static let sourceDateDialogSubtitle = LocalizedStringResource(
             "sources.page.sourceDate.dialogSubtitle",
             defaultValue: "When the record was made or first published.",
-            comment: "Subtitle of the Source date dialog"
+            comment: "Subtitle of the published date dialog"
         )
 
         static let sourceDateSave = LocalizedStringResource(
             "sources.page.sourceDate.save",
             defaultValue: "Save",
-            comment: "Confirm button of the Source date dialog"
+            comment: "Confirm button of the published date dialog"
         )
 
         static let sourceDateClear = LocalizedStringResource(
             "sources.page.sourceDate.clear",
             defaultValue: "Clear date",
-            comment: "Button in the Source date dialog: empty the form so that saving removes the date"
+            comment: "Button in the published date dialog: empty the form so that saving removes the date"
         )
 
         static let sourceDateClearsCaption = LocalizedStringResource(
             "sources.page.sourceDate.clearsCaption",
             defaultValue: "Saving removes this Source's published date.",
-            comment: "Caption under Clear date in the Source date dialog once the form is emptied"
+            comment: "Caption under Clear date in the published date dialog once the form is emptied"
         )
 
         static let sourceDateReadsAs = LocalizedStringResource(
             "sources.page.sourceDate.readsAs",
             defaultValue: "Reads as",
-            comment: "Micro-caps label above the date as the page will show it, in the Source date dialog"
+            comment: "Micro-caps label above the date as the page will show it, in the published date dialog"
         )
 
         static let privateSwitch = LocalizedStringResource(
