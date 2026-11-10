@@ -26,6 +26,16 @@ enum QueryReading<Value> {
     case loading
     case failed(Error)
     case loaded(Value, refreshFailure: Error?)
+
+    /// The error a notice with Try again shows: the failure with no value, or the failure of the
+    /// latest reload behind a value; nil while loading or when the reload succeeded.
+    var noticeError: Error? {
+        switch self {
+        case .failed(let error): error
+        case .loaded(_, let refreshFailure): refreshFailure
+        case .loading: nil
+        }
+    }
 }
 
 /// Typed view of one cached catalog query. Owned by `WorkspaceSession` per key.
@@ -55,7 +65,8 @@ final class QueryHandle<Value> {
     var hasValue: Bool { value != nil }
 
     /// The last load's error while the handle is in the error state, even beside a stale value.
-    /// Nil while a retry runs; a notice with Try again reads `reading`.
+    /// Nil while a retry after a first-load failure runs (a retry behind a value keeps it); a
+    /// notice with Try again reads `reading`.
     var failure: Error? { status == .error ? error : nil }
 
     /// Bumps in every `applyFailure`, so a notice can speak again for each new failure.

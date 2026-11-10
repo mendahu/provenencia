@@ -145,11 +145,7 @@ final class EvidenceGraphModel {
     /// a retry after a first-load failure so the callout stays mounted.
     var graphReadError: String? {
         guard let handle: QueryHandle<EvidenceGraphRows> = session.queryHandle(graphKey) else { return nil }
-        switch handle.reading {
-        case .failed(let error): return L10n.Errors.message(for: error)
-        case .loaded(_, let refreshFailure): return refreshFailure.map(L10n.Errors.message(for:))
-        case .loading: return nil
-        }
+        return handle.reading.noticeError.map(L10n.Errors.message(for:))
     }
 
     /// True while a read of the graph rows is running: a first load or a refetch beside a stale value.
