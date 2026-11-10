@@ -4,8 +4,7 @@ import Testing
 
 @MainActor
 struct SourcePageOverviewLayoutTests {
-    /// The sizes the four subviews report at any width: the error, Description and Credibility,
-    /// Metadata, and the rest.
+    /// Arranges four subviews of these heights at `width`.
     private func arrange(
         width: CGFloat, widthClass: PVWidthClass, errorHeight: CGFloat
     ) -> (frames: [CGRect], height: CGFloat) {
