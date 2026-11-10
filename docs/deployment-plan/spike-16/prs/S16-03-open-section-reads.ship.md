@@ -45,4 +45,4 @@ Find which of this PR's tests or changes interferes (likely shared state, a leak
 G-1 **Not reproduced** by the implementer: full suite 5 of 5 PASS at `88744c49` (17–29s, one run with the CPU oversubscribed); no commit. Orchestrator reran `scripts/check-pr.sh` with no other xcodebuild running: PASS (xcode-test 72s). The new tests are synchronous and touch no shared state; the diff does not touch the graph canvas or the Sources-list fallback. Read as a load-sensitive flake in `WorkspaceDestinationHostTests`' 15s `waitUntil` window tests, not a regression from this PR. Logged as follow-up FU-1.
 
 ## Result
-Gate PASS (`88744c49`) · CI <pending> · open: none · follow-ups: FU-1 (`WorkspaceDestinationHostTests` graph-canvas waits time out under load in the full suite; failed 4 of 6 orchestrator full-suite runs at `88744c49`, 0 of 5 implementer runs and 0 of 3 alone) · to user: —
+Gate PASS (`88744c49`) · CI green (run 42762770432) · open: none · follow-ups: FU-1 (`WorkspaceDestinationHostTests` graph-canvas waits time out under load in the full suite; failed 4 of 6 orchestrator full-suite runs at `88744c49`, 0 of 5 implementer runs and 0 of 3 alone) · to user: —
