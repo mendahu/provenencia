@@ -1,6 +1,6 @@
 # S16-03 — One open section and one list of section reads
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 16 · Slice 1b — Current data and honest notices
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Person page draws the same header, switcher, sections and states before and after)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-13, P-26 (part); working rule "(Batch 1) One open section, one list of reads"; [`macos-client-patterns.md`](../../../macos-client-patterns.md) "Conclusion keys" (the "One detail key for every kind" and "One sectioned detail page" lines)
 **Planned:** 2026-11-10 against `main` @ `9897bf19`
-**Review:** [`S16-03-open-section-reads.review.md`](S16-03-open-section-reads.review.md) — round 1 answered; round 2 pending
+**Review:** [`S16-03-open-section-reads.review.md`](S16-03-open-section-reads.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: none
 
 ### Implementer — read this first
 
@@ -59,9 +59,9 @@ A Person page section declares what it reads once, and every part of the app tha
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `ConclusionPageSection.family.identifierRoot(pageIdentifier: "persons.detail", inColumn: false)` | `persons.detail.family` |
-| AC-3.2 | `.sources.identifierRoot(pageIdentifier: "persons.detail", inColumn: true)` | `persons.detail.sources.column` |
-| AC-3.4 | `rg -n '"persons\.detail\.' macos/App/Features/Conclusions` | Hits only `PersonDetailView.swift`'s `pageIdentifier` and `errorIdentifier` arguments: every section identifier is built from its root |
+| AC-3.1 | `ConclusionPageSection.family.accessibilityIdentifierRoot(pageIdentifier: "persons.detail")`, and `.timeline`, `.sources` | `persons.detail.family`, `persons.detail.timeline`, `persons.detail.sources` |
+| AC-3.2 | The Sources diagram column's host, in the app | `persons.detail.sources.column` (manual check 3) |
+| AC-3.4 | `rg -n '"persons\.detail\.' macos/App/Features/Conclusions` | One hit: `PersonDetailView.swift`'s `errorIdentifier: "persons.detail.error"` (the `pageIdentifier: "persons.detail"` line has no trailing dot). Every section identifier is built from its root |
 | AC-3.3 | The app, a Person page on each section | Same screen and identifiers as before (manual check 1–3) |
 
 ## 3. Scope
@@ -74,8 +74,8 @@ A Person page section declares what it reads once, and every part of the app tha
 | `WorkspaceLocation.openPageSection` | STEP-3, AC-2.1, AC-2.2 |
 | `PlaceRegistry`'s `.personDetail` spec reads `openPageSection` and the read list | STEP-4, AC-1.2, AC-1.3 |
 | The page's open section and refreshing state read `openPageSection` and the read list; the fill switches on the context's section with no default | STEP-5, AC-2.3 |
-| `ConclusionPageSectionHost` takes a read role and the page identifier; its id root, and every identifier inside the Family, Timeline and Sources sections and the record links column, come from the section's root | STEP-6, AC-3.1, AC-3.2, AC-3.4 |
-| `add-workspace-location` teaches page sections; `add-workspace-place` and `macos-client-patterns.md` name the read list | STEP-7 |
+| `ConclusionPageSectionHost` takes a read role and the page identifier; its id root, and every identifier inside the Family, Timeline and Sources sections and the record links column, come from the section's root | STEP-6, STEP-7, STEP-8, AC-3.1, AC-3.2, AC-3.4 |
+| `add-workspace-location` teaches page sections; `add-workspace-place` and `macos-client-patterns.md` name the read list | STEP-9 |
 
 | Out | Home |
 | --- | --- |
@@ -86,7 +86,6 @@ A Person page section declares what it reads once, and every part of the app tha
 | A `prefetch` read role | S16-29 |
 | Keys as plain values, `.followsInputs` | S16-25 |
 | The other `Features/Conclusions` tidy-ups of P-26 | [`docs/ideas/structural-debt.md`](../../../ideas/structural-debt.md) (P-26 row) |
-| Lifting `ConclusionPageSectionHost.Placement` out of the generic host to replace `inColumn: Bool` | not planned (review M-10, logged) |
 
 ## 4. Current state
 
@@ -125,9 +124,9 @@ A Person page section declares what it reads once, and every part of the app tha
 | D-4 | Each consumer's policy is an exhaustive `switch` property on `Role` *(new)*: `showsRefreshing` (own, companion true; supporting false) and `warmsWithPlace` (all three true). The page's refreshing state is `reads(…).filter(\.role.showsRefreshing).contains { session.isRefreshing($0.key) }`; the place keeps `reads(…).filter(\.role.warmsWithPlace)` | Keeps today's behavior (a catalog-wide vocabulary's reload shows no "Refreshing"), and a new role such as S16-29's `prefetch` does not compile until each policy is decided for it (review M-2) | `role != .supporting` — a new role silently shows Refreshing and warms at apply time |
 | D-5 | `WorkspaceLocation.openPageSection: ConclusionPageSection?` *(new)* is `pageSection ?? ConclusionPageSection.offered(by: section).first` when `entityId != nil`, else nil | Same guard as `normalizedPageSection`; a list root has no page | Storing the first section explicitly — changes history files |
 | D-6 | `ConclusionDetailPageSectionsContext.pageSection` and `ConclusionDetailLoaded`'s private `pageSection` are renamed `openPageSection`. The fill switches on `context.openPageSection` with a `case nil` that draws nothing; there is no `?? .vitals` | One word per concept: `pageSection` is the stored value (nil is the first), `openPageSection` the one shown. The page passes `openPageSection`, never nil for a Person | Keeping a default — a third resolution; keeping the name — the ambiguity that invited `?? .vitals` |
-| D-7 | `ConclusionPageSectionHost` drops `queryKey:` and gains `pageIdentifier: String` and `read: ConclusionSectionRead.Role = .own`. Placement stays a separate parameter | The host resolves its key from the list; placement holds the loading height, which is view data | Deriving placement from the role — the column's height is not a read property |
-| D-8 | `extension ConclusionPageSection { func identifierRoot(pageIdentifier: String, inColumn: Bool) -> String }` *(new)* in `ConclusionPageSectionHost.swift` gives `"\(pageIdentifier).\(rawValue)"` plus `.column`; the host's `idRoot` calls it, and each section computes `let root = ConclusionPageSection.<case>.identifierRoot(pageIdentifier: pageIdentifier, inColumn: false)` once and builds every child identifier as `"\(root).…"` | A unit test can pin the identifiers without a view; one source for a section's prefix, so the host and its children cannot disagree (review M-1) | An environment value for the page identifier — `ConclusionGallerySection` already takes `pageIdentifier` as a parameter, which is the precedent |
-| D-9 | `PersonFamilySection`, `PersonTimelineSection` and `PersonSourcesSection` gain `let pageIdentifier: String`, passed from `context.pageIdentifier` in `PersonDetailSections`. `PersonRecordLinksColumn` gains `let identifierRoot: String`, passed the Sources root, in place of its literal `"persons.detail.sources"`; its preview passes `"preview"` | The sections hand it to their hosts and children; the gallery is passed it the same way | — |
+| D-7 | `ConclusionPageSectionHost` drops `queryKey:` and gains `accessibilityIdentifierRoot: String` (the section's root, D-8) and `read: ConclusionSectionRead.Role = .own`. Its `idRoot` is that root plus `.column` for the column placement, as today. Placement stays a separate parameter | The host resolves its key from the list; it takes the root its section already computed from the page identifier (the working rule), so the Sources diagram's host inside `PersonSourcesList` needs no page identifier; placement holds the loading height, which is view data | Deriving placement from the role — the column's height is not a read property |
+| D-8 | `extension ConclusionPageSection { func accessibilityIdentifierRoot(pageIdentifier: String) -> String }` *(new)* in `ConclusionPageSectionHost.swift` gives `"\(pageIdentifier).\(rawValue)"`. Each section view computes it once from its `pageIdentifier` and passes it down one route: an init parameter `let accessibilityIdentifierRoot: String` *(new)* on every view that builds an identifier, which builds each as `"\(accessibilityIdentifierRoot).…"` with today's suffix. The views: the host; Family → `PersonFamilyDiagram`; Timeline → `PersonTimelineList` → `PersonTimelineItemView` → `PersonTimelineEventRow`, and `PersonTimelineList` → `PersonTimelineLine`; Sources → `PersonSourcesList` → `PersonSourcesRowView` → `PersonSourcesLineView`, and `PersonSourcesList` → the diagram's host and `PersonRecordLinksColumn`. Previews pass `"preview"` (`PersonRecordLinksColumn`'s preview already does). The name is `CircularLinkDiagram`'s parameter (`CircularLinkDiagram.swift` line 22) | A unit test can pin the root without a view; one source and one route for a section's prefix, so the host and its children cannot disagree (review M-1, M-11) | An environment value set by the host — it covers only the host's content, not the Sources diagram's second host, and the gallery's precedent is a parameter |
+| D-9 | `PersonFamilySection`, `PersonTimelineSection` and `PersonSourcesSection` gain `let pageIdentifier: String`, passed from `context.pageIdentifier` in `PersonDetailSections`; they are the only views that take the page identifier. `PersonRecordLinksColumn` takes `accessibilityIdentifierRoot` (D-8) in place of its literal `"persons.detail.sources"` | The gallery is passed `pageIdentifier` the same way | — |
 | D-10 | The split moves types only: no renames, no access changes except dropping `private` from `ConclusionDetailRelationshipSection` (it moves to another file and `ConclusionDetailDefaultPageSections` still calls it). The gallery models go to `macos/App/Features/Conclusions/ConclusionDetailGallery.swift` *(new)*, a model file beside its view as `ReconciledValueRowModel.swift` is; the rows section and the Place relationship model and section join their row files, as the audit says | Seven files read the gallery model; it is a model, not part of the gallery view. `App` is a synchronized group, so a new file needs no project edit | The gallery model in `ConclusionGallerySection.swift` (the audit's text) — a model inside a view file (review M-3) |
 | D-11 | The Sources section reads its Source types through the list: `ConclusionPageSection.sources.read(.supporting, project: session.projectKey, entityId: entityId).flatMap { session.queryHandle($0) }` in place of the literal `CatalogQueryKey.sourceTypesList(…)` | The key is written once, in `reads`, so the place cannot warm one key while the section reads another (review M-8) | The literal key — a second place to write it |
 | D-12 | Version: none | No visible behavior changes; the eviction P-13 describes cannot happen while Vitals, which reads nothing, is first | Patch — there is no release-worthy change |
@@ -147,9 +146,9 @@ A Person page section declares what it reads once, and every part of the app tha
 | `macos/App/Features/Workspace/ConclusionPageSection.swift` *(new)* | file | `WorkspaceLocation.swift` | `ConclusionPageSection` moves out verbatim; the location file keeps history and identity |
 | `macos/App/Features/Conclusions/ConclusionDetailGallery.swift` *(new)* | file | `ConclusionGallerySection.swift`; `ReconciledValueRowModel.swift` beside `ReconciledValueRow.swift` | A model file beside its view, as the row's |
 | `WorkspaceLocation.openPageSection` *(new)* | property | `ConclusionDetailLoaded.pageSection`, `PersonDetailSections`' `?? .vitals` | Replaces both and the place's raw read |
-| `ConclusionPageSection.identifierRoot(pageIdentifier:inColumn:)` *(new)* | func | `ConclusionPageSectionHost.idRoot`, `ConclusionGallerySection`'s `"\(pageIdentifier).picture…"` | Testable form of `idRoot`, shared by the host and the section bodies |
-| `PersonRecordLinksColumn.identifierRoot` *(new)* | property | its literal `accessibilityIdentifierRoot: "persons.detail.sources"` | Same value, from the section's root |
-| `pageIdentifier` on three section views *(new)* | property | `ConclusionGallerySection.pageIdentifier` | Same parameter, same source |
+| `ConclusionPageSection.accessibilityIdentifierRoot(pageIdentifier:)` *(new)* | func | `ConclusionPageSectionHost.idRoot`, `ConclusionGallerySection`'s `"\(pageIdentifier).picture…"` | Testable root, computed once per section |
+| `accessibilityIdentifierRoot` *(new)* on `ConclusionPageSectionHost`, `PersonFamilyDiagram`, `PersonTimelineList`, `PersonTimelineItemView`, `PersonTimelineEventRow`, `PersonTimelineLine`, `PersonSourcesList`, `PersonSourcesRowView`, `PersonSourcesLineView`, `PersonRecordLinksColumn` | property | `CircularLinkDiagram.accessibilityIdentifierRoot` | Same name and job, passed one level further up |
+| `pageIdentifier` on three section views *(new)* | property | `ConclusionGallerySection.pageIdentifier` | Same parameter, same source; only the section views take it |
 
 **Builds on.** `PlaceRegistry` specs, `WorkspaceLocation` normalization, `ConclusionPageSectionHost` (from `f4688953`), `ConclusionDetailPageSectionsContext.pageIdentifier`.
 **Deletes.** `ConclusionPageSection.queryKey(project:entityId:)`, `supportingQueryKeys(project:entityId:)`, `companionQueryKey(project:entityId:)`; `ConclusionPageSectionHost`'s `queryKey` parameter and its `preconditionFailure` message wording; `ConclusionDetailLoaded.pageSection`'s `offeredPageSections[0]` and the fill's `?? .vitals`; the hard-coded `persons.detail.` in the host, the three sections and the record links column; the literal `sourceTypesList` key in `PersonSourcesSection`; `PersonDetailTests.sectionQueryKeys` (replaced by T-1).
@@ -271,14 +270,24 @@ Files: `ConclusionDetailPage.swift`, `PersonDetailView.swift`.
 Do: in `ConclusionDetailLoaded`, rename the private `pageSection` to `openPageSection` and return `navigation.currentLocation.openPageSection`; `offeredPageSections` stays for the switcher; `sectionRefreshing` per D-4. Rename `ConclusionDetailPageSectionsContext.pageSection` to `openPageSection` (its callers: `ConclusionDetailLoaded`, `PersonDetailSections`). In `PersonDetailSections`, `switch context.openPageSection` with `case nil: EmptyView()` and no `?? .vitals` (D-6). `ConclusionDetailHeaderBand`'s `pageSection` parameter keeps its name (Out: no rename the plan does not name).
 Check: the Xcode tests pass; AC-2.3's `rg` finds nothing.
 
-**STEP-6 — The host takes a role and the page identifier**
-Files: `ConclusionPageSectionHost.swift`, `PersonDetailView.swift`, `PersonFamilySection.swift`, `PersonTimelineSection.swift`, `PersonSourcesSection.swift`, `PersonRecordLinksColumn.swift`. Then `ConclusionPageSection.swift`, `PersonDetailTests.swift`.
-Do: D-7, D-8, D-9. The Sources column host passes `read: .companion` and no key; delete the `let project = session.projectKey` local in `PersonSourcesSection.diagram` (line 203), whose only use was that key. Each section computes its `root` once (D-8) and every `persons.detail.<section>…` literal in it becomes `"\(root)…"` with the same suffix; the Sources section passes `root` to `PersonRecordLinksColumn` (D-9) and reads its Source types through `read(.supporting, …)` (D-11). Rewrite the doc comment at line 5 of each of the three section files to say the section declares its reads in `ConclusionPageSection.reads` (Sources: its own claims, the record links as companion, the Source types as supporting) and update the host's doc comment to name `reads` and the roles. Add T-5. Then delete `queryKey`, `companionQueryKey` and `supportingQueryKeys` from `ConclusionPageSection`.
-Check: `rg -n "queryKey\(project|companionQueryKey|supportingQueryKeys|ConclusionPageSection\.queryKey" macos` finds no hit; AC-3.4's `rg` hits only `PersonDetailView.swift`; T-5 passes; the Xcode tests pass with no warning.
+**STEP-6 — The host takes a role and a root; Family builds from its root**
+Files: `ConclusionPageSectionHost.swift`, `PersonDetailView.swift`, `PersonFamilySection.swift`, `PersonFamilyPreviewData.swift`, `PersonTimelineSection.swift`, `PersonSourcesSection.swift`, `macos/ProvenenciaTests/PersonDetailTests.swift`.
+Do: D-7 and D-8's helper in the host file; update the host's doc comment to name `reads`, the roles and the root. D-9: the three sections take `pageIdentifier` from `PersonDetailSections`, compute their root, and pass it to their own host. Family: `PersonFamilyDiagram` takes `accessibilityIdentifierRoot` and lines 97 and 114 build from it; the preview at `PersonFamilyPreviewData.swift:113` passes `"preview"`. Timeline and Sources pass their root to their own host only here; their inner literals are STEP-7 and STEP-8. Rewrite the doc comment at line 5 of each section file to say the section declares its reads in `ConclusionPageSection.reads` (Sources: its own claims, the record links as companion, the Source types as supporting). Add T-5.
+Check: T-5 passes; `rg -n '"persons\.detail\.family' macos/App` finds no hit; the Xcode tests pass with no warning.
 
-**STEP-7 — Docs**
+**STEP-7 — The Timeline builds from its root**
+Files: `PersonTimelineSection.swift`.
+Do: `PersonTimelineList`, `PersonTimelineItemView`, `PersonTimelineEventRow` and `PersonTimelineLine` take `accessibilityIdentifierRoot` (D-8), passed down from `PersonTimelineSection`; the literals at lines 93, 284, 324, 336, 392, 403 and 408 build from it with the same suffixes; `PersonTimelinePreview` (568) passes `"preview"`.
+Check: `rg -n '"persons\.detail\.timeline' macos/App` finds no hit; the Xcode tests pass with no warning.
+
+**STEP-8 — Sources builds from its root; the old slots go**
+Files: `PersonSourcesSection.swift`, `PersonRecordLinksColumn.swift`, `ConclusionPageSection.swift`.
+Do: `PersonSourcesList`, `PersonSourcesRowView`, `PersonSourcesLineView` and `PersonRecordLinksColumn` take `accessibilityIdentifierRoot` (D-8); the literals at lines 187, 264, 377, 403, 429, 466, 497, 506 and `PersonRecordLinksColumn.swift:50` build from it; `PersonSourcesPreview` (527) passes `"preview"`. In `PersonSourcesList.diagram`, the diagram's host passes `read: .companion` and the root, and the `let project = session.projectKey` local (line 203), whose only use was the old key, is deleted. D-11 for the Source types, keeping the `QueryHandle<[CatalogSourceType]>?` annotation so `queryHandle` infers its type; a missing read still yields `[]` through `typesHandle?.value ?? []`. Then delete `queryKey`, `companionQueryKey` and `supportingQueryKeys` from `ConclusionPageSection`.
+Check: `rg -n "queryKey\(project|companionQueryKey|supportingQueryKeys|ConclusionPageSection\.queryKey" macos` finds no hit; AC-3.4's `rg` has its one hit; the Xcode tests pass with no warning.
+
+**STEP-9 — Docs**
 Files: `.agents/skills/add-workspace-location/SKILL.md`, `.agents/skills/add-workspace-place/SKILL.md` (line 90), `docs/macos-client-patterns.md` (lines 103–104), `docs/deployment-plan/spike-16/completed.md`, `docs/deployment-plan/spike-16/deployment-plan.md` (map row), this plan (status).
-Do: `add-workspace-location` gains a short "Page sections" section: a page section is a sub-place stored on `WorkspaceLocation.pageSection` (first stored as nil, frozen raw values), changed with `withPageSection(_:)` through `navigation.go(to:)`, and two properties with two jobs: `openPageSection` is the section the page shows (the place, the page and the fill read it), and the stored `pageSection` is history identity and the crumb, where the first section adds none (`WorkspaceLocationLabels`). A kind that adopts sections adds its cases to `offered(by:)` and `reads`, gives its place spec the open-section line, and supplies its own fill. `add-workspace-place` line 90 and `macos-client-patterns.md` 103–104 describe `reads(project:entityId:)`, its three roles and their two policies in place of the three slots, the host's `read:` and `pageIdentifier:` in place of `queryKey:`, and `ConclusionDetailPageSectionsContext.openPageSection`. Then the DoD lines.
+Do: `add-workspace-location` gains a short "Page sections" section: a page section is a sub-place stored on `WorkspaceLocation.pageSection` (first stored as nil, frozen raw values), changed with `withPageSection(_:)` through `navigation.go(to:)`, and two properties with two jobs: `openPageSection` is the section the page shows (the place, the page and the fill read it), and the stored `pageSection` is history identity and the crumb, where the first section adds none (`WorkspaceLocationLabels`). A kind that adopts sections adds its cases to `offered(by:)` and `reads`, gives its place spec the open-section line, and supplies its own fill. `add-workspace-place` line 90 and `macos-client-patterns.md` 103–104 describe `reads(project:entityId:)`, its three roles and their two policies in place of the three slots, the host's `read:` and `accessibilityIdentifierRoot:` in place of `queryKey:`, the one route a section's identifier root takes, and `ConclusionDetailPageSectionsContext.openPageSection`. Then the DoD lines.
 Check: `python3 scripts/check-guidance-names.py` passes; links resolve.
 
 Commits: one per behavior. The subject is one full imperative sentence that says what changed for the researcher, ending in a period, like the rest of `git log` ("Restore list scroll after the sort is applied."). No WIP commits.
@@ -291,7 +300,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-2 | Swift | `macos/ProvenenciaTests/PlaceRegistryTests.swift` `personDetailWarmsEveryReadOfTheOpenSection` *(new)* | For `pageSection` in `[nil] + allCases`: `resolve(.personDetail(…).withPageSection(it))?.queryKeys` → `[conclusionDetail] + openPageSection!.reads(…).filter(\.role.warmsWithPlace).map(\.key)` | AC-1.2 |
 | T-3 | Swift | `macos/ProvenenciaTests/WorkspaceNavigationTests.swift` `openPageSectionIsTheStoredOrFirst` *(new)* | Person on nil / each case → `.vitals` / that case; decoded `"pageSection":"lineage"` → `.vitals`; event, place, persons root → nil | AC-2.1, AC-2.2, D-5 |
 | T-4 | Swift | `macos/ProvenenciaTests/WorkspaceSessionTests.swift` `applyPersonPageKeepsTheOpenSectionsReadsVisible` *(new)* | Setup as `applyTriggerEvictsHiddenDetailPagesAndRevalidatesTheVisibleOne`: `makeSession(store: FakeStore())`, no seeding (the test reads `visibleKeys` only and awaits no load). `session.apply(location: .personDetail(…, pageSection: .family))` → `visibleKeys` contains `.personFamily(project:entityId:)`; with `pageSection` nil → `visibleKeys == [conclusionDetail]` | AC-1.3 |
-| T-5 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `sectionIdentifierRoots` *(new)* | `.family`/`.timeline`/`.sources` with `"persons.detail"`, `inColumn` false → `persons.detail.<raw>`; `.sources`, true → `persons.detail.sources.column` | AC-3.1, AC-3.2, D-8 |
+| T-5 | Swift | `macos/ProvenenciaTests/PersonDetailTests.swift` `sectionIdentifierRoots` *(new)* | `.family`/`.timeline`/`.sources` `accessibilityIdentifierRoot(pageIdentifier: "persons.detail")` → `persons.detail.<raw>` | AC-3.1, D-8 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `PlaceRegistryTests` (key order), `WorkspaceNavigationTests` "Page sections", `PersonDetailTests`.
 
@@ -310,7 +319,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `P
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
-- [ ] Domain doc updated if a rule in docs/*.md changed: macos-client-patterns.md "Conclusion keys" (STEP-7)
+- [ ] Domain doc updated if a rule in docs/*.md changed: macos-client-patterns.md "Conclusion keys" (STEP-9)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
 
@@ -322,8 +331,8 @@ On macOS with Xcode: the Xcode tests and these checks need the app.
 
 1. (AC-3.3) Open a project with a person who has relatives, events and records in at least two Evidence graphs. Open the person: Vitals shows with no spinner in the switcher once loaded. Press ⌘2, ⌘3, ⌘4, ⌘5: each section draws as before, Sources with its diagram column at Wide.
 2. On Sources, rename one of the person's Sources in another window: "Refreshing" shows beside the switcher while the claims and record links reload, as before.
-3. (AC-3.3) With Accessibility Inspector, check the Family section's root is `persons.detail.family`, a family tile's is `persons.detail.family.tile.<id>`, and the Sources diagram column's is `persons.detail.sources.column`.
-6. (AC-3.4) Run AC-3.4's `rg`: only `PersonDetailView.swift` hits.
+3. (AC-3.2, AC-3.3) With Accessibility Inspector, check the Family section's root is `persons.detail.family`, a family tile's is `persons.detail.family.tile.<id>`, a Timeline row's title is `persons.detail.timeline.title.<id>`, a Sources line is `persons.detail.sources.line.<id>`, and the Sources diagram column's is `persons.detail.sources.column`.
+6. (AC-3.4) Run AC-3.4's `rg`: its one hit is `PersonDetailView.swift`'s `errorIdentifier`.
 4. Quit and reopen the project on Timeline: the page reopens on Timeline.
 5. (AC-2.3) Run `rg -n -F -e 'offeredPageSections[0]' -e 'pageSection ?? .vitals' macos/App`: no hit.
 
@@ -341,7 +350,8 @@ On macOS with Xcode: the Xcode tests and these checks need the app.
 - A type in STEP-1 cannot move without changing its access level beyond D-10, or without a new file.
 - `ConclusionPageSectionHost` has a caller outside `PersonFamilySection.swift`, `PersonTimelineSection.swift` and `PersonSourcesSection.swift`.
 - Any existing `PlaceRegistryTests` or `WorkspaceNavigationTests` case fails after STEP-4 without a test edit this plan names.
-- A section identifier cannot be rebuilt from its root with the same value (AC-3.3).
+- A section identifier cannot be rebuilt from its root with the same value (AC-3.3), or a view named in D-8 cannot take the parameter without a change the plan does not name.
+- T-4's unseeded `FakeStore` loads throw or crash the test instead of failing quietly; report it rather than seeding a store.
 - A UI test or script in the repo reads an identifier this PR touches and expects a value other than AC-3.1 / AC-3.2.
 
 ## 12. Open questions
