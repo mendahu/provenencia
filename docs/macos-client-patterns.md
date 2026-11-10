@@ -236,7 +236,7 @@ Product version remains [`versioning.md`](versioning.md) (`VERSION` / About box)
 
 ## 9. Window widths: Regular and Wide
 
-The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, with a wall of empty space beside it (left-aligned on the Source page, centered on the Person, Event and Place pages and lists). Every view is designed for both widths.
+The window opens at `PVSpacing.widthWorkspaceDefault` × `heightWorkspaceDefault` (1366 × 900pt, clamped to the screen), which is laptop-shaped. People also stretch it across a large external monitor. A view designed only for the default size then sits in its 1180pt `widthContentMax` column, with a wall of empty space beside it (centered on the Source, Person, Event and Place pages and lists). Every view is designed for both widths.
 
 ### The breakpoint
 
@@ -264,20 +264,20 @@ Where the numbers come from (points, sidebar open):
 
 The breakpoint is a token (`PVSpacing.widthWideBreakpoint = 1600`) and the class is `PVWidthClass` (`Components/WidthClass/PVWidthClass.swift`): `WorkspaceDestinationHost` measures the pane once with `pvMeasuresWidthClass()`, and a page reads `@Environment(\.pvWidthClass)` instead of measuring itself.
 
-`PVPageColumns` (`Components/PageColumns/PVPageColumns.swift`) is the record-page scaffold: a header slot (scrolling, or pinned), a primary column and an optional secondary column, sized by `PVPageColumnsMetrics.columnWidths`, stacked at Regular, side by side at Wide, and centered. `ConclusionDetailPage` is built on it.
+`PVPageColumns` (`Components/PageColumns/PVPageColumns.swift`) is the record-page scaffold: a header slot (scrolling, or pinned), a primary column and an optional secondary column, sized by `PVPageColumnsMetrics.columnWidths`, stacked at Regular, side by side at Wide, and centered. `ConclusionDetailPage` is built on it, and the Source page (`SourcePageView`: the pinned header over `primaryFill` with `fillSplitSideMax`, and `SourcePageOverviewLayout` placing Metadata in a side column at Wide).
 
 ### Rules for Wide
 
 The same six rules are in the [`add-design-brief`](../.agents/skills/add-design-brief/SKILL.md) Paste block, word for word, because Claude Design does not follow links. Change both together.
 
 1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
-2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths, unless the section opts into Page columns' full-width mode (`primaryFill`: at Wide, with no secondary, the primary fills the pane between the gutters and the header keeps its band); its text still keeps its measure. Wide adds columns; it does not stretch text or fields.
+2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths, unless the section opts into Page columns' full-width mode (`primaryFill`: at Wide, with no secondary, the primary fills the pane between the gutters and the header keeps its band; with `fillSplitSideMax` the primary and the band are the main-and-side group the page lays out inside it, as the Source page does); its text still keeps its measure. Wide adds columns; it does not stretch text or fields.
 3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
 4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
 5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
 6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
 
-A full-width section's empty, loading and error states keep the page band: apply `pvKeepsPageBand()` (`Components/PageColumns/PVPageColumns.swift`) to them, so they stay centered at `widthContentMax` instead of stretching across a Wide pane.
+A full-width section's empty, loading and error states keep the page band: apply `pvKeepsPageBand()` (`Components/PageColumns/PVPageColumns.swift`) to them, so they stay centered at `widthContentMax` instead of stretching across a Wide pane. A page that passes `fillSplitSideMax` has a wider band (the main-and-side group); its states sit in the primary, which is that band.
 
 `FocusKeeper` (`Platform/FocusKeeper.swift`, applied with `focusKeeper(...)`, which takes a pure `map` from a stop to the stop that can take the keyboard and a `scroll` that only a claim calls) is how a view keeps rule 5's focus: it hands the keyboard back to the stop that survived a width change, to a fallback when a card was folded away, and to a tile a lazy grid dropped.
 

@@ -202,7 +202,7 @@ struct SourcePageModelTests {
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
         await model.artifacts.open(art)
-        #expect(model.pageError == L10n.ObjectOpen.refused(filename: "run.sh"))
+        #expect(model.pageError?.message == L10n.ObjectOpen.refused(filename: "run.sh"))
     }
 
     @Test func openRefusalNamesAFileWithNoNameByItsRef() async {
@@ -216,7 +216,7 @@ struct SourcePageModelTests {
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
         await model.artifacts.open(art)
-        #expect(model.pageError == L10n.ObjectOpen.refused(filename: "ART-X"))
+        #expect(model.pageError?.message == L10n.ObjectOpen.refused(filename: "ART-X"))
     }
 
     @Test func openRefusesAStoredScriptByItsTypeAndNamesTheFile() async throws {
@@ -233,7 +233,7 @@ struct SourcePageModelTests {
         let model = makeModel(store: makeStore(artifacts: [art]))
         await model.warmFromSession()
         await model.artifacts.open(art)
-        #expect(model.pageError == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
+        #expect(model.pageError?.message == L10n.ObjectOpen.refused(filename: art.fileDisplayName))
     }
 
     @Test func addNoteFailureSurfacesPageError() async {
@@ -1100,7 +1100,7 @@ struct SourcePageModelTests {
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "https://example.org"
         await model.metadata.save(fieldID: field.id)
-        #expect(model.pageError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.pageError?.message == L10n.Errors.message(for: store.setSourceMetadataError!))
         #expect(model.metadata.fieldError == nil)
         #expect(model.metadata.editingFieldID == field.id)
     }
@@ -2109,5 +2109,237 @@ struct SourcePageModelTests {
             return
         }
         #expect(model.artifacts.cardSaveError == L10n.Sources.artifactCardSaveErrorKept(L10n.Errors.message(for: refusal)))
+    }
+
+    // MARK: Source date, Private and a Source deleted elsewhere (S15-03)
+
+    private func pointDraft(year: Int32, in model: SourceDateFormModel) {
+        var draft = model.draft
+        draft.startYear = year
+        model.draft = draft
+    }
+
+    @Test func fakeStoreSetsDateAndPublic() async throws {
+        let store = makeStore()
+        let date = CatalogDateValueInput(kind: "point", startYear: 1880)
+        let (dated, _) = try await store.setSourceDate(
+            projectDir: projectDir, userID: userID, sourceID: sourceID, date: date
+        )
+        #expect(dated.date == date)
+        let (flipped, _) = try await store.setSourcePublic(
+            projectDir: projectDir, userID: userID, sourceID: sourceID, isPublic: false
+        )
+        #expect(flipped.isPublic == false && flipped.date == date)
+        let ws = try await store.getSourceWorkspace(projectDir: projectDir, sourceID: sourceID)
+        #expect(ws.source.date == date && ws.source.isPublic == false)
+        let (cleared, _) = try await store.setSourceDate(
+            projectDir: projectDir, userID: userID, sourceID: sourceID, date: nil
+        )
+        #expect(cleared.date == nil)
+        await #expect(throws: CoreInvokeError.self) {
+            _ = try await store.setSourceDate(
+                projectDir: projectDir, userID: userID, sourceID: "nope", date: nil
+            )
+        }
+    }
+
+    @Test func dateFormSetsChangesAndClears() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+
+        model.identity.openDate()
+        let blank = try #require(model.identity.dateForm)
+        #expect(blank.draft.isBlank && !blank.canSave && !blank.isDirty)
+        pointDraft(year: 1880, in: blank)
+        #expect(blank.canSave && blank.isDirty)
+        #expect(await blank.save())
+        #expect(model.source?.date?.startYear == 1880)
+        #expect(store.sourcesByProject[projectDir]?.first?.date?.startYear == 1880)
+
+        model.identity.openDate()
+        let edit = try #require(model.identity.dateForm)
+        #expect(edit.draft.startYear == 1880 && !edit.isDirty)
+        edit.clear()
+        #expect(edit.clears && edit.canSave && edit.isDirty && edit.draft.isBlank)
+        pointDraft(year: 1881, in: edit)
+        #expect(!edit.clears)
+        edit.clear()
+        #expect(await edit.save())
+        #expect(model.source?.date == nil)
+    }
+
+    @Test func refusedDateKeepsTheDialog() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.setSourceDateError = CoreInvokeError.coded(
+            status: 1, code: "datevalues.invalid", kind: .user, params: []
+        )
+        model.identity.openDate()
+        let form = try #require(model.identity.dateForm)
+        pointDraft(year: 1880, in: form)
+        #expect(await form.save() == false)
+        #expect(model.identity.dateForm != nil)
+        #expect(form.draft.startYear == 1880)
+        #expect(form.saveError == L10n.string(L10n.Errors.dateValuesInvalid))
+        #expect(model.gone == nil)
+    }
+
+    @Test func privateSwitchSavesRevertsAndKeepsEdits() async throws {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "https://example.com",
+                    hasValue: true, suggested: false, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        #expect(model.source?.isPublic == true)
+
+        await model.identity.setPrivate(true)
+        #expect(model.source?.isPublic == false)
+        #expect(store.sourcesByProject[projectDir]?.first?.isPublic == false)
+        #expect(model.identity.pendingPrivate == nil)
+
+        await model.identity.setPrivate(false)
+        let privateError = CoreInvokeError.coded(
+            status: 1, code: "internal.unknown", kind: .internal, params: []
+        )
+        store.setSourcePublicError = privateError
+        await model.identity.setPrivate(true)
+        #expect(model.source?.isPublic == true)
+        #expect(model.pageError?.title == L10n.string(L10n.Sources.privateFailedTitle))
+        #expect(
+            model.pageError?.message
+                == L10n.Sources.privateFailedMessage(detail: L10n.Errors.message(for: privateError))
+        )
+
+        // The next failed write replaces the whole banner: no stale title.
+        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        model.metadata.beginEdit(fieldID: field.id)
+        model.metadata.drafts[field.id] = "https://example.org"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.pageError != nil && model.pageError?.title == nil)
+
+        // A flip leaves a description edit alone, through the session's patched handle.
+        store.setSourcePublicError = nil
+        model.identity.beginEditDescription()
+        model.identity.descriptionDraft = "Unsaved words"
+        await model.identity.setPrivate(true)
+        let handle: QueryHandle<CatalogSourceWorkspace> = try #require(
+            session.queryHandle(.sourceWorkspace(project: session.projectKey, sourceId: sourceID))
+        )
+        model.sync(from: handle)
+        #expect(model.identity.editingDescription)
+        #expect(model.identity.descriptionDraft == "Unsaved words")
+        #expect(model.source?.isPublic == false)
+    }
+
+    @Test func writeToADeletedSourceLeaves() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let notice = L10n.Sources.sourceDeletedNotice(title: "Family album")
+
+        store.setSourcePublicError = FakeStore.sourceNotFound
+        await model.identity.setPrivate(true)
+        #expect(model.gone == notice)
+        #expect(model.pageError == nil)
+
+        let other = makeModel(store: store)
+        await other.warmFromSession()
+        store.updateSourceError = FakeStore.sourceNotFound
+        other.identity.beginEditDescription()
+        other.identity.descriptionDraft = "New"
+        await other.identity.saveDescription()
+        #expect(other.gone == notice)
+        #expect(other.identity.descriptionError == nil)
+
+        let covered = makeStore(source: CatalogSource(
+            id: sourceID, ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Family album",
+            description: "", coverMode: "artifact", primaryArtifactID: "a1"
+        ))
+        covered.setSourceCoverError = FakeStore.sourceNotFound
+        let third = makeModel(store: covered)
+        await third.warmFromSession()
+        await third.artifacts.revertCoverToTypeIcon()
+        #expect(third.gone == notice)
+        #expect(third.pageError == nil)
+    }
+
+    @Test func deletedSourceClosesTheDateDialog() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.setSourceDateError = FakeStore.sourceNotFound
+        model.identity.openDate()
+        let form = try #require(model.identity.dateForm)
+        pointDraft(year: 1880, in: form)
+        #expect(await form.save())
+        #expect(form.saveError == nil)
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+    }
+
+    @Test func deletedSourceDuringACoverRefreshLeaves() async {
+        let store = makeStore(artifacts: [
+            CatalogArtifact(
+                id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "f1",
+                label: "Scan", description: "", file: nil
+            ),
+        ])
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteArtifact(id: "a1")
+        store.getSourceWorkspaceError = FakeStore.sourceNotFound
+        await model.confirmResourceDelete(leaving: {})
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+        #expect(model.pageError == nil)
+    }
+
+    @Test func pageErrorCountMovesOnShowNotOnClear() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        #expect(model.pageErrorShownCount == 0)
+        store.setSourcePublicError = CoreInvokeError.coded(
+            status: 1, code: "internal.unknown", kind: .internal, params: []
+        )
+        await model.identity.setPrivate(true)
+        #expect(model.pageErrorShownCount == 1)
+        await model.identity.setPrivate(true)
+        #expect(model.pageErrorShownCount == 2)
+        store.setSourcePublicError = nil
+        await model.identity.setPrivate(true)
+        #expect(model.pageError == nil)
+        #expect(model.pageErrorShownCount == 2)
+    }
+
+    @Test func goneNoticeReadsTheFailedRead() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let internalError = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        #expect(
+            model.goneNotice(read: .failed(FakeStore.sourceNotFound))
+                == L10n.string(L10n.Errors.sourcesNotFound)
+        )
+        #expect(model.goneNotice(read: .failed(internalError)) == nil)
+        if let workspace = model.workspace {
+            #expect(model.goneNotice(read: .loaded(workspace)) == nil)
+        }
+        #expect(model.goneNotice(read: .loading) == nil)
+
+        store.setSourcePublicError = FakeStore.sourceNotFound
+        await model.identity.setPrivate(true)
+        #expect(
+            model.goneNotice(read: .failed(FakeStore.sourceNotFound))
+                == L10n.Sources.sourceDeletedNotice(title: "Family album")
+        )
     }
 }

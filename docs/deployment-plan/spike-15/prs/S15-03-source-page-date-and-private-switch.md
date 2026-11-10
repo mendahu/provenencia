@@ -1,6 +1,6 @@
 # S15-03 — The Source page shows the date and the Private switch
 
-**Status:** Planned
+**Status:** Landed in [#766](https://github.com/mendahu/provenencia/pull/766) (2026-11-09)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D1](../design/S15-D1-source-page.md), board drawn and validated 2026-11-10
@@ -27,6 +27,18 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The version bump is 0.5.1 → 0.6.0 (main was at 0.5.1 after the planning base), still minor.
+- `PVButton` has no `tone:` parameter, so Clear date is `PVButton(variant: .ghost, size: .sm, icon: .trash)`; no new kit primitive.
+- `SourcePageContext.setSourceCover` returns false (not true) when the Source turned out to be deleted, so the callers show no "thumbnail updated" toast on a page that is leaving.
+- The date dialog's form takes the keyboard in the year field on open (`yearFocus` through a `FocusState`), a detail the plan left open.
+- `SourcePageModel.pageError` is now `SourcePageContext.PageError?` (D-19), so the existing `SourcePageModelTests` compare `pageError?.message`.
+- `OnboardingModelTests.ThrowingStore` gained the two new `GenealogyStore` methods.
+- The PR gave `design/README.md` no change: its S15-D1 line already links the validated board.
+- Review round 1 changed three things the plan left open: `PVSwitch` speaks the toggle trait and an "On"/"Off" value (`L10n.DesignSystem.switchOn`/`switchOff`); the header's date truncates at `PVSpacing.widthInspector` with the full line as its tooltip; and the date dialog's Clear caption is an announced compact info `PVCallout`. A new page error scrolls the Source page to the top (`SourcePageContext.pageErrorShownCount` in the `scrollResetKey`), and `SourcePageContext.showFailure` is the one writer of a failure banner.
+- AC-4.3 (state kept across 1600pt) has no automated test beyond `SourcePageOverviewLayoutTests`: the page keeps one layout over four fixed subviews, and manual check 6 covers the rest.
 
 ## 1. Objective
 

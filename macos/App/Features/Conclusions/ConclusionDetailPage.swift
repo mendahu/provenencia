@@ -546,14 +546,10 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                 )
             }
         }
-        .onChange(of: presentation == .gone, initial: true) { _, gone in
-            if gone {
-                session.noticeToast = VocabularyToast(
-                    title: L10n.string(L10n.Errors.conclusionDetailsNotFound), body: "", tone: .info
-                )
-            }
-        }
-        .leavesForSectionRoot(when: presentation == .gone)
+        .leavesForSectionRoot(
+            when: presentation == .gone,
+            notice: presentation == .gone ? L10n.string(L10n.Errors.conclusionDetailsNotFound) : nil
+        )
     }
 }
 

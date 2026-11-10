@@ -323,8 +323,9 @@ final class SourceArtifactsSection {
             linkEdit?.blocks = blocks.filter { $0.artifactID == artifactID }
             linkEdit?.loadState = .ready
         } catch {
+            guard let message = context.fail(error) else { return }
             guard linkEdit?.artifactID == artifactID else { return }
-            linkEdit?.loadState = .failed(L10n.Errors.message(for: error))
+            linkEdit?.loadState = .failed(message)
         }
     }
 
@@ -423,7 +424,7 @@ final class SourceArtifactsSection {
                 dropLinkEdit()
             }
         } catch {
-            let message = L10n.Errors.message(for: error)
+            guard let message = context.fail(error) else { return }
             // Read the locks again: a Citation may have taken the Artifact
             // since edit opened, and the engine's preflight says which graph keeps it.
             if graphIDs != nil, linkEdit?.artifactID == id {
@@ -602,8 +603,8 @@ final class SourceArtifactsSection {
                 draft.reject = callout
                 draft.filePath = nil
                 draftLabelError = nil
-            } else {
-                draftLabelError = L10n.Errors.message(for: error)
+            } else if let message = context.fail(error) {
+                draftLabelError = message
             }
         }
     }
@@ -704,8 +705,7 @@ final class SourceArtifactsSection {
             {
                 attachDraft.reject = callout
                 attachDraft.filePath = nil
-            } else {
-                context.pageError = L10n.Errors.message(for: error)
+            } else if context.showFailure(error) {
                 isAttaching = false
             }
         }
@@ -719,15 +719,15 @@ final class SourceArtifactsSection {
         context.clearPageError()
         let name = art.fileDisplayName
         guard let rel = art.openableRelPath else {
-            context.pageError = L10n.ObjectOpen.refused(filename: name)
+            context.showPageError(L10n.ObjectOpen.refused(filename: name))
             return
         }
         guard let refusal = await ProjectFiles.openObject(projectDir: context.projectDir, relPath: rel) else { return }
-        context.pageError = L10n.ObjectOpen.message(
+        context.showPageError(L10n.ObjectOpen.message(
             for: refusal,
             filename: name,
             missing: L10n.string(L10n.Sources.fileOpenMissing)
-        )
+        ))
     }
 
     private func setReject(

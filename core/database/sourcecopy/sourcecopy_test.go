@@ -579,12 +579,13 @@ func TestCopy(t *testing.T) {
 				cases := []struct {
 					name   string
 					mutate func(in *CopyInput)
+					want   error
 				}{
-					{"blank title", func(in *CopyInput) { in.Title = "   " }},
-					{"unknown source", func(in *CopyInput) { in.SourceID = missing }},
-					{"foreign Artifact", func(in *CopyInput) { in.ArtifactIDs = [][]byte{arts[0].ID, foreign.ID} }},
-					{"repeated Artifact", func(in *CopyInput) { in.ArtifactIDs = [][]byte{arts[0].ID, arts[0].ID} }},
-					{"unknown type", func(in *CopyInput) { in.SourceTypeID = missing }},
+					{"blank title", func(in *CopyInput) { in.Title = "   " }, sources.ErrInvalid},
+					{"unknown source", func(in *CopyInput) { in.SourceID = missing }, sources.ErrNotFound},
+					{"foreign Artifact", func(in *CopyInput) { in.ArtifactIDs = [][]byte{arts[0].ID, foreign.ID} }, sources.ErrInvalid},
+					{"repeated Artifact", func(in *CopyInput) { in.ArtifactIDs = [][]byte{arts[0].ID, arts[0].ID} }, sources.ErrInvalid},
+					{"unknown type", func(in *CopyInput) { in.SourceTypeID = missing }, sources.ErrInvalid},
 				}
 				for _, tc := range cases {
 					t.Run(tc.name, func(t *testing.T) {
@@ -594,8 +595,8 @@ func TestCopy(t *testing.T) {
 						}
 						in := allParts(orig, arts)
 						tc.mutate(&in)
-						if _, err := runCopy(c, userID, in); !errors.Is(err, sources.ErrInvalid) {
-							t.Fatalf("got %v", err)
+						if _, err := runCopy(c, userID, in); !errors.Is(err, tc.want) {
+							t.Fatalf("got %v, want %v", err, tc.want)
 						}
 						after, err := sources.Count(c)
 						if err != nil {
@@ -611,5 +612,23 @@ func TestCopy(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, tt.run)
+	}
+}
+
+func TestReadDraftMissingSourceIsNotFound(t *testing.T) {
+	c, _, _, _ := seedObituary(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	missing := make([]byte, 16)
+	missing[15] = 9
+	if _, err := ReadDraft(tx, missing); !errors.Is(err, sources.ErrNotFound) {
+		t.Fatalf("got %v, want sources.ErrNotFound", err)
 	}
 }

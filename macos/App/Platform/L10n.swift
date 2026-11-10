@@ -111,6 +111,16 @@ enum L10n {
             defaultValue: "Locked",
             comment: "Spoken value of a PVCheckbox for a link or binding the researcher cannot clear"
         )
+        static let switchOn = LocalizedStringResource(
+            "designSystem.switch.on",
+            defaultValue: "On",
+            comment: "Spoken value of a PVSwitch that is on"
+        )
+        static let switchOff = LocalizedStringResource(
+            "designSystem.switch.off",
+            defaultValue: "Off",
+            comment: "Spoken value of a PVSwitch that is off"
+        )
         static func badgeMoreCount(_ count: Int) -> String {
             let resource = LocalizedStringResource(
                 "designSystem.badge.moreCount",
@@ -5856,6 +5866,96 @@ enum L10n {
             comment: "Status under artifact fields when drafts match saved values"
         )
 
+        static let sourceDateAdd = LocalizedStringResource(
+            "sources.page.sourceDate.add",
+            defaultValue: "Add publication date",
+            comment: "Button in the Source page header: open the Source date dialog for an undated Source"
+        )
+
+        static let sourceDateEdit = LocalizedStringResource(
+            "sources.page.sourceDate.edit",
+            defaultValue: "Edit date",
+            comment: "Accessibility label and help of the pencil beside the Source's date"
+        )
+
+        static func sourceDateAccessibility(date: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.sourceDate.accessibility",
+                defaultValue: "Date, %@",
+                comment: "Accessibility label of the Source's date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880"
+            ), date)
+        }
+
+        static let sourceDateDialogTitle = LocalizedStringResource(
+            "sources.page.sourceDate.dialogTitle",
+            defaultValue: "Source date",
+            comment: "Title of the Source date dialog"
+        )
+
+        static let sourceDateDialogSubtitle = LocalizedStringResource(
+            "sources.page.sourceDate.dialogSubtitle",
+            defaultValue: "When the record was made or first published.",
+            comment: "Subtitle of the Source date dialog"
+        )
+
+        static let sourceDateSave = LocalizedStringResource(
+            "sources.page.sourceDate.save",
+            defaultValue: "Save",
+            comment: "Confirm button of the Source date dialog"
+        )
+
+        static let sourceDateClear = LocalizedStringResource(
+            "sources.page.sourceDate.clear",
+            defaultValue: "Clear date",
+            comment: "Button in the Source date dialog: empty the form so that saving removes the date"
+        )
+
+        static let sourceDateClearsCaption = LocalizedStringResource(
+            "sources.page.sourceDate.clearsCaption",
+            defaultValue: "Saving removes this Source's date.",
+            comment: "Caption under Clear date in the Source date dialog once the form is emptied"
+        )
+
+        static let sourceDateReadsAs = LocalizedStringResource(
+            "sources.page.sourceDate.readsAs",
+            defaultValue: "Reads as",
+            comment: "Micro-caps label above the date as the page will show it, in the Source date dialog"
+        )
+
+        static let privateSwitch = LocalizedStringResource(
+            "sources.page.private.switch",
+            defaultValue: "Private",
+            comment: "Label of the switch that marks a Source private"
+        )
+
+        static let privateSwitchHelp = LocalizedStringResource(
+            "sources.page.private.help",
+            defaultValue: "Private Sources will be kept out of sharing. Nothing else changes yet.",
+            comment: "Help text of the Private switch on the Source page"
+        )
+
+        static let privateFailedTitle = LocalizedStringResource(
+            "sources.page.private.failedTitle",
+            defaultValue: "Couldn’t change Private",
+            comment: "Title of the error banner when the Private switch could not be saved"
+        )
+
+        static func privateFailedMessage(detail: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.private.failedMessage",
+                defaultValue: "The Source was not changed. Try again. %@",
+                comment: "Body of the error banner when the Private switch could not be saved; argument is the error's own message"
+            ), detail)
+        }
+
+        static func sourceDeletedNotice(title: String) -> String {
+            return L10n.format(LocalizedStringResource(
+                "sources.page.deletedNotice",
+                defaultValue: "“%@” was deleted.",
+                comment: "Notice after leaving a Source page whose Source another window deleted; argument is the Source title"
+            ), title)
+        }
+
         static let dateKindLabel = LocalizedStringResource(
             "sources.page.dateKindLabel",
             defaultValue: "Kind",
@@ -10640,6 +10740,11 @@ enum L10n {
             defaultValue: "This record no longer exists. It may have been merged into another.",
             comment: "FFI error conclusiondetails.not_found: the handle was merged or deleted"
         )
+        static let sourcesNotFound = LocalizedStringResource(
+            "error.sources.not_found",
+            defaultValue: "This Source no longer exists.",
+            comment: "FFI error sources.not_found: the Source was deleted in another window"
+        )
         static let subjectPositionsInvalid = LocalizedStringResource(
             "error.subjectpositions.invalid",
             defaultValue: "Invalid subject position.",
@@ -11144,7 +11249,7 @@ enum L10n {
         )
         static let dateValuesInvalid = LocalizedStringResource(
             "error.datevalues.invalid",
-            defaultValue: "Invalid date value.",
+            defaultValue: "This date isn't valid. Check the year, month and day.",
             comment: "FFI error datevalues.invalid"
         )
         static let depictionValuesInvalid = LocalizedStringResource(
@@ -11266,6 +11371,8 @@ enum L10n {
                 return L10n.string(promoteStale)
             case "conclusiondetails.not_found":
                 return L10n.string(conclusionDetailsNotFound)
+            case "sources.not_found":
+                return L10n.string(sourcesNotFound)
             case "subjectpositions.invalid":
                 return L10n.string(subjectPositionsInvalid)
             case "subjecttypes.invalid":

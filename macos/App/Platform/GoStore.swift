@@ -241,6 +241,42 @@ struct GoStore: GenealogyStore {
         return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
     }
 
+    func setSourceDate(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        date: CatalogDateValueInput?
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        var req = Provenencia_Engine_V1_SetSourceDateRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        if let date { req.date = Self.mapDateValueToProto(date) }
+        let resp: Provenencia_Engine_V1_SetSourceDateResponse = try await provenenciaCall(
+            method: CoreMethod.setSourceDate,
+            request: req
+        )
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
+    }
+
+    func setSourcePublic(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        isPublic: Bool
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        var req = Provenencia_Engine_V1_SetSourcePublicRequest()
+        req.projectDir = projectDir
+        req.userID = userID
+        req.sourceID = sourceID
+        req.isPublic = isPublic
+        let resp: Provenencia_Engine_V1_SetSourcePublicResponse = try await provenenciaCall(
+            method: CoreMethod.setSourcePublic,
+            request: req
+        )
+        return (Self.mapSource(resp.source), Self.mapWriteEffects(resp.effects))
+    }
+
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects)
     {
@@ -2123,6 +2159,8 @@ struct GoStore: GenealogyStore {
             coverMode: s.coverMode.isEmpty ? "type_icon" : s.coverMode,
             primaryArtifactID: s.primaryArtifactID,
             hasArtifact: s.hasArtifact_p,
+            date: s.hasDate ? mapDateValue(s.date) : nil,
+            isPublic: s.isPublic,
             updated: CatalogActivity(revision: s.updatedRevision, at: s.updatedAt)
         )
     }

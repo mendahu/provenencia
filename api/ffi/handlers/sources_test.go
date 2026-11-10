@@ -358,6 +358,15 @@ func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspa
 func TestGetSourceWorkspace(t *testing.T) {
 	runRPC(t, GetSourceWorkspace, []rpcTest{
 		{
+			name: "unknown source is not found",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, _, _ := sourceFixture(t)
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: "01890000-0000-7000-8000-000000000001"}
+			},
+			wantErr:   true,
+			wantErrIs: sources.ErrNotFound,
+		},
+		{
 			name: "workspace reads source-specific data only",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, typeID := sourceFixture(t)
@@ -789,7 +798,7 @@ func TestDeleteSource(t *testing.T) {
 				}
 			},
 			wantErr:   true,
-			wantErrIs: sources.ErrInvalid,
+			wantErrIs: sources.ErrNotFound,
 		},
 		{
 			name: "malformed id refuses as an id, not a source",
@@ -1090,7 +1099,7 @@ func TestSetSourceDate(t *testing.T) {
 		t.Cleanup(func() { _ = catalogsession.CloseAll() })
 		dir, userID, _ := newSource(t)
 		_, err := set(t, dir, userID, "00000000-0000-7000-8000-000000000000", pointDate(1880, 0, 0))
-		if !errors.Is(err, sources.ErrInvalid) {
+		if !errors.Is(err, sources.ErrNotFound) {
 			t.Fatalf("err %v", err)
 		}
 	})
@@ -1136,6 +1145,14 @@ func TestSetSourcePublic(t *testing.T) {
 	if !resp.Source.GetIsPublic() {
 		t.Fatalf("set true %+v", resp.Source)
 	}
+	t.Run("unknown source", func(t *testing.T) {
+		_, err := SetSourcePublic(marshalProto(t, &engine.SetSourcePublicRequest{
+			ProjectDir: dir, UserId: userID, SourceId: "00000000-0000-7000-8000-000000000000", IsPublic: false,
+		}))
+		if !errors.Is(err, sources.ErrNotFound) {
+			t.Fatalf("err %v", err)
+		}
+	})
 	runRPC(t, SetSourcePublic, []rpcTest{
 		{name: "bad proto", raw: []byte{0xff}, wantErr: true},
 	})

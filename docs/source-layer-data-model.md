@@ -139,7 +139,7 @@ CREATE TABLE sources (
 
 `date_value_id` is the Source's own date: the original publication, or when the record was made. It is one optional shared DateValue ([`structured-date-model.md`](structured-date-model.md)), unique to its Source, owned as an Observation owns its value: set and edited in place by `sources.SetDate`, cleared by releasing the row, and released when the Source is deleted. It is not a `source_metadata` value, which stays text. Sources are ordered by it with `date_sort_key`, the integer `valuecompare.DateKeyOf` gives (absent when undated or when the date has no year).
 
-`is_public` is the researcher's not-public switch (`0` = not public); it defaults to public, so every Source that existed before it is public. It is stored and read back and nothing else in the engine acts on it: no filter, hide or cascade.
+`is_public` is the researcher's not-public switch (`0` = not public), shown on the Source page as a switch labeled "Private" that is off by default; it defaults to public, so every Source that existed before it is public. It is stored and read back and nothing else in the engine acts on it: no filter, hide or cascade.
 
 `description` is catalog text about the Source itself. Researcher commentary that may accumulate over time belongs in `source_notes` rather than a single inline notes field.
 

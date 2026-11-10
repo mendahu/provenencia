@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// Individual Source page (S2-18 / S2-25): sticky identity header, Description +
-/// Credibility beside Metadata, artifact cards, Notes. Section bodies live
-/// in sibling `SourcePage*View` files; this shell owns cache sync, dialogs, and layout.
+/// Individual Source page (S2-18 / S2-25): pinned identity header, Description +
+/// Credibility beside Metadata (Metadata in a side column at Wide), graphs, artifact cards, Notes,
+/// on Page columns. Section bodies live in sibling `SourcePage*View` files; this shell owns cache
+/// sync, dialogs, and layout.
 struct SourcePageView: View {
     @Environment(WorkspaceSession.self) private var session
     let sourceID: String
@@ -35,11 +36,12 @@ struct SourcePageView: View {
         Group {
             if let workspaceHandle: QueryHandle<CatalogSourceWorkspace> = session.queryHandle(workspaceKey) {
                 SourcePageContent(
+                    sourceID: sourceID,
                     workspaceHandle: workspaceHandle,
                     model: model
                 )
             } else {
-                SourcePageLoadingShell(model: model)
+                SourcePageLoadingShell(sourceID: sourceID, model: model)
             }
         }
         .task {
@@ -51,19 +53,20 @@ struct SourcePageView: View {
 
 /// Spinner-only shell before the workspace handle exists.
 private struct SourcePageLoadingShell: View {
+    let sourceID: String
     let model: SourcePageModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            if model.isLoading || model.loadError != nil {
-                SourcePageIdentityHeader(model: model)
-            }
-            ScrollView {
+        PVPageColumns(
+            headerPinned: true,
+            scrollResetKey: sourceID,
+            header: { SourcePageIdentityHeader(model: model) },
+            primary: {
                 ProgressView()
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, PVSpacing.space9)
             }
-        }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PVColor.surfacePage)
         .accessibilityIdentifier("sources.page")
@@ -73,45 +76,33 @@ private struct SourcePageLoadingShell: View {
 /// Observes the workspace handle so cache loads repaint the page.
 private struct SourcePageContent: View {
     @Environment(WorkspaceNavigation.self) private var navigation
+    let sourceID: String
     @Bindable var workspaceHandle: QueryHandle<CatalogSourceWorkspace>
     @Bindable var model: SourcePageModel
-    /// Metadata column height so the left column can stretch and pin Credibility.
-    @State private var metadataColumnHeight: CGFloat = 0
     /// True while a file drag is over the content pane.
     @State private var pageFileDrag = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            if model.workspace != nil || model.isLoading || model.loadError != nil {
-                SourcePageIdentityHeader(model: model)
-            }
-            ScrollView {
-                VStack(alignment: .leading, spacing: PVSpacing.space9) {
-                    if model.isLoading && model.workspace == nil {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, alignment: .center)
-                            .padding(.top, PVSpacing.space9)
-                    } else if let loadError = model.loadError, model.workspace == nil {
-                        PVCallout(tone: .danger, message: L10n.Errors.message(for: loadError))
-                            .accessibilityIdentifier("sources.page.loadError")
-                    } else {
-                        if let pageError = model.pageError {
-                            PVCallout(tone: .danger, message: pageError, announces: true)
-                                .accessibilityIdentifier("sources.page.error")
-                        }
-                        overviewColumns
-                        SourcePageGraphsView(model: model)
-                        SourcePageArtifactsView(model: model)
-                        SourcePageNotesView(model: model)
-                    }
+        PVPageColumns(
+            headerPinned: true,
+            // A new page error scrolls up to the banner it shows in.
+            scrollResetKey: "\(sourceID)/\(model.pageErrorShownCount)",
+            primaryFill: true,
+            fillSplitSideMax: SourcePageOverviewLayout.sideMax,
+            header: { SourcePageIdentityHeader(model: model) },
+            primary: {
+                if model.isLoading && model.workspace == nil {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, PVSpacing.space9)
+                } else if let loadError = model.loadError, model.workspace == nil {
+                    PVCallout(tone: .danger, message: L10n.Errors.message(for: loadError))
+                        .accessibilityIdentifier("sources.page.loadError")
+                } else {
+                    SourcePageOverview(model: model)
                 }
-                .frame(maxWidth: PVSpacing.widthContentMax, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, PVSpacing.gutterPage)
-                .padding(.top, PVSpacing.space8)
-                .padding(.bottom, PVSpacing.space10)
             }
-        }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PVColor.surfacePage)
         .overlay {
@@ -188,6 +179,7 @@ private struct SourcePageContent: View {
         }
         .sourceCopyDialog($model.copying)
         .sourceGraphFormDialog($model.graphs.form)
+        .sourceDateDialog($model.identity.dateForm)
         .pvConfirm(
             item: Binding(
                 get: { model.metadata.pendingDelete },
@@ -251,7 +243,10 @@ private struct SourcePageContent: View {
         .onChange(of: workspaceHandle.status) {
             model.sync(from: workspaceHandle)
         }
-        .leavesForSectionRoot(when: workspaceHandle.read.isFailed)
+        .leavesForSectionRoot(
+            when: workspaceHandle.read.isFailed || model.gone != nil,
+            notice: model.goneNotice(read: workspaceHandle.read)
+        )
         .onChange(of: workspaceHandle.value) { _, newValue in
             guard newValue != nil else { return }
             model.sync(from: workspaceHandle)
@@ -260,31 +255,6 @@ private struct SourcePageContent: View {
             model.sync(from: workspaceHandle)
         }
         .accessibilityIdentifier("sources.page")
-    }
-
-    /// Board: Description grows; Credibility pins to the bottom of the left
-    /// column so it tracks the metadata column's height.
-    private var overviewColumns: some View {
-        HStack(alignment: .top, spacing: PVSpacing.space11) {
-            VStack(alignment: .leading, spacing: PVSpacing.space10) {
-                SourcePageDescriptionView(model: model)
-                Spacer(minLength: 0)
-                SourcePageCredibilityView(model: model)
-            }
-            .frame(minHeight: metadataColumnHeight, alignment: .top)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            SourcePageMetadataView(model: model)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: SourcePageOverviewHeightKey.self,
-                            value: proxy.size.height
-                        )
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .onPreferenceChange(SourcePageOverviewHeightKey.self) { metadataColumnHeight = $0 }
     }
 
     private var showPageDropHighlight: Bool {
@@ -352,9 +322,114 @@ private struct SourcePageContent: View {
 
 }
 
-private struct SourcePageOverviewHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
+/// The page's sections as four fixed subviews for `SourcePageOverviewLayout`: the page error,
+/// Description above Credibility, Metadata, then graphs, Artifacts and Notes. No section
+/// changes parent between widths, so its drafts survive crossing the Wide breakpoint.
+private struct SourcePageOverview: View {
+    @Environment(\.pvWidthClass) private var widthClass
+    @Bindable var model: SourcePageModel
+
+    var body: some View {
+        SourcePageOverviewLayout(widthClass: widthClass) {
+            VStack(spacing: 0) {
+                if let pageError = model.pageError {
+                    PVCallout(
+                        tone: .danger,
+                        title: pageError.title,
+                        message: pageError.message,
+                        announces: true
+                    )
+                    .accessibilityIdentifier("sources.page.error")
+                }
+            }
+            VStack(alignment: .leading, spacing: PVSpacing.space10) {
+                SourcePageDescriptionView(model: model)
+                Spacer(minLength: 0)
+                SourcePageCredibilityView(model: model)
+            }
+            SourcePageMetadataView(model: model)
+            VStack(alignment: .leading, spacing: PVSpacing.space9) {
+                SourcePageGraphsView(model: model)
+                SourcePageArtifactsView(model: model)
+                SourcePageNotesView(model: model)
+            }
+        }
+    }
+}
+
+/// Places the page's four subviews (error, Description and Credibility, Metadata, rest).
+///
+/// Regular: a group of up to `widthContentMax`, left-aligned; the error across it, then
+/// Description and Credibility beside Metadata, each half the group, both as tall as the
+/// taller (Credibility sits at the bottom of its column), then the rest below.
+/// Wide: the group `PVPageColumnsMetrics.split` computes: the error, Description and
+/// Credibility, and the rest stacked in a main column, Metadata in a side column beside it.
+/// An empty error adds no gap. It sizes itself from the proposed width alone, so it holds no
+/// state and crossing the breakpoint keeps the page's scroll and focus.
+struct SourcePageOverviewLayout: Layout {
+    let widthClass: PVWidthClass
+
+    private static let rowGap = PVSpacing.space9
+    /// The side column's cap; `PVPageColumns` is handed the same value to size its band.
+    static let sideMax = PVSpacing.widthSecondaryMax
+
+    private func width(_ proposal: ProposedViewSize) -> CGFloat {
+        proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? PVSpacing.widthContentMax
+    }
+
+    /// The frame of each subview (in order), and the overall height, for `width`.
+    private func arrange(width: CGFloat, subviews: Subviews) -> (frames: [CGRect], height: CGFloat) {
+        guard subviews.count == 4 else { return ([], 0) }
+        func fit(_ index: Int, _ w: CGFloat) -> CGSize {
+            subviews[index].sizeThatFits(ProposedViewSize(width: w, height: nil))
+        }
+        var frames = [CGRect](repeating: .zero, count: 4)
+        if widthClass == .wide {
+            let split = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax)
+            let x = (width - split.group) / 2
+            let error = fit(0, split.main), body = fit(1, split.main), rest = fit(3, split.main)
+            var y: CGFloat = 0
+            frames[0] = CGRect(x: x, y: y, width: split.main, height: error.height)
+            if error.height > 0 { y += error.height + Self.rowGap }
+            frames[1] = CGRect(x: x, y: y, width: split.main, height: body.height)
+            y += body.height + Self.rowGap
+            frames[3] = CGRect(x: x, y: y, width: split.main, height: rest.height)
+            y += rest.height
+            let side = fit(2, split.side)
+            frames[2] = CGRect(
+                x: x + split.group - split.side, y: 0, width: split.side, height: side.height
+            )
+            return (frames, max(y, side.height))
+        }
+        let group = min(PVSpacing.widthContentMax, width)
+        let half = max(0, (group - PVSpacing.space11) / 2)
+        let error = fit(0, group)
+        var y: CGFloat = 0
+        frames[0] = CGRect(x: 0, y: y, width: group, height: error.height)
+        if error.height > 0 { y += error.height + Self.rowGap }
+        let left = fit(1, half), right = fit(2, half)
+        let row = max(left.height, right.height)
+        frames[1] = CGRect(x: 0, y: y, width: half, height: row)
+        frames[2] = CGRect(x: half + PVSpacing.space11, y: y, width: half, height: row)
+        y += row + Self.rowGap
+        let rest = fit(3, group)
+        frames[3] = CGRect(x: 0, y: y, width: group, height: rest.height)
+        return (frames, y + rest.height)
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let w = width(proposal)
+        return CGSize(width: w, height: arrange(width: w, subviews: subviews).height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let placed = arrange(width: bounds.width, subviews: subviews)
+        for (index, frame) in placed.frames.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(width: frame.width, height: frame.height)
+            )
+        }
     }
 }

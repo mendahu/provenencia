@@ -401,6 +401,18 @@ private struct ThrowingStore: GenealogyStore {
         coverMode _: String,
         primaryArtifactID _: String
     ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
+    func setSourceDate(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        date _: CatalogDateValueInput?
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
+    func setSourcePublic(
+        projectDir _: String,
+        userID _: String,
+        sourceID _: String,
+        isPublic _: Bool
+    ) async throws -> (CatalogSource, CatalogWriteEffects) { throw StoreBoom.boom }
     func addSourceNote(projectDir _: String, userID _: String, sourceID _: String, body _: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateSourceNote(projectDir _: String, userID _: String, noteID _: String, body _: String) async throws

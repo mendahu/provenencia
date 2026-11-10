@@ -26,6 +26,10 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodeSourcesInvalid, apperr.KindUser)
 
+// ErrNotFound is returned when no Source has the id: a read or write of a Source
+// another window deleted. A malformed id or user stays ErrInvalid.
+var ErrNotFound = apperr.New(apperr.CodeSourcesNotFound, apperr.KindNotFound)
+
 // ErrInUse is returned by Delete when Artifacts or Subjects still belong to the Source.
 var ErrInUse = apperr.New(apperr.CodeSourcesInUse, apperr.KindConflict)
 
@@ -196,7 +200,8 @@ func NormalizeCover(c *database.Catalog, sourceID []byte, mode string, primaryAr
 }
 
 // loadForWrite reads the Source a write targets: ErrInvalid for a missing
-// transaction, a malformed id, a bad user or a Source that does not exist.
+// transaction, a malformed id or a bad user, ErrNotFound for a Source that does
+// not exist.
 func loadForWrite(tx *database.Tx, userID, id []byte) (Source, error) {
 	if tx == nil || len(id) != 16 {
 		return Source{}, ErrInvalid
@@ -204,11 +209,7 @@ func loadForWrite(tx *database.Tx, userID, id []byte) (Source, error) {
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Source{}, err
 	}
-	s, err := getTx(tx.Tx, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return Source{}, ErrInvalid
-	}
-	return s, err
+	return getTx(tx.Tx, id)
 }
 
 // SetCover pins an Artifact as cover or reverts to the Source type icon.
@@ -432,7 +433,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 		return nil, err
 	}
 	if err := deleteimpact.Refuse(report, deleteimpact.Codes{
-		InUse: ErrInUse, NotFound: ErrInvalid,
+		InUse: ErrInUse, NotFound: ErrNotFound,
 	}); err != nil {
 		return nil, err
 	}
@@ -472,7 +473,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	}), nil
 }
 
-// Get returns a Source by id, or sql.ErrNoRows.
+// Get returns a Source by id, or ErrNotFound.
 func Get(c *database.Catalog, id []byte) (Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -484,7 +485,7 @@ func Get(c *database.Catalog, id []byte) (Source, error) {
 	return getOne(db, sqlGet, id)
 }
 
-// getByRef returns a Source by SRC-… ref, or sql.ErrNoRows.
+// getByRef returns a Source by SRC-… ref, or ErrNotFound.
 func getByRef(c *database.Catalog, sourceRef string) (Source, error) {
 	db, err := c.DB()
 	if err != nil {
@@ -611,7 +612,7 @@ func scanSourceList(row rowScanner) (Source, error) {
 	return s, nil
 }
 
-// GetTx returns a Source by id on an open transaction, or sql.ErrNoRows.
+// GetTx returns a Source by id on an open transaction, or ErrNotFound.
 func GetTx(tx *sql.Tx, id []byte) (Source, error) {
 	if len(id) != 16 {
 		return Source{}, ErrInvalid
@@ -623,11 +624,15 @@ func getTx(tx *sql.Tx, id []byte) (Source, error) {
 	return getOne(tx, sqlGet, id)
 }
 
-// getOne reads one Source by the query's key and fills its date.
+// getOne reads one Source by the query's key and fills its date. A missing
+// Source is ErrNotFound, mapped here once for every reader.
 func getOne(q interface {
 	QueryRow(query string, args ...any) *sql.Row
 }, query string, key any) (Source, error) {
 	s, err := scanSource(q.QueryRow(query, key))
+	if errors.Is(err, sql.ErrNoRows) {
+		return Source{}, ErrNotFound
+	}
 	if err != nil {
 		return Source{}, err
 	}

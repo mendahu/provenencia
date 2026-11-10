@@ -381,6 +381,30 @@
         }
       }
     },
+    "designSystem.switch.on": {
+      "comment": "Spoken value of a PVSwitch that is on",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        }
+      }
+    },
+    "designSystem.switch.off": {
+      "comment": "Spoken value of a PVSwitch that is off",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off"
+          }
+        }
+      }
+    },
     "designSystem.segmentedControl.shortcutHelp": {
       "comment": "Tooltip of a PVSegmentedControl segment that has a keyboard shortcut; arguments are the segment's label and the key pressed with Command",
       "extractionState": "manual",
@@ -3247,7 +3271,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Invalid date value."
+            "value": "This date isn't valid. Check the year, month and day."
           }
         }
       }
@@ -8552,6 +8576,186 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hour must be between 0 and 23."
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.add": {
+      "comment": "Button in the Source page header: open the Source date dialog for an undated Source",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add publication date"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.edit": {
+      "comment": "Accessibility label and help of the pencil beside the Source's date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit date"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.accessibility": {
+      "comment": "Accessibility label of the Source's date in the page header; argument is the date as shown, e.g. abt 12 Mar 1880",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Date, %@"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.dialogTitle": {
+      "comment": "Title of the Source date dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source date"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.dialogSubtitle": {
+      "comment": "Subtitle of the Source date dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When the record was made or first published."
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.save": {
+      "comment": "Confirm button of the Source date dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.clear": {
+      "comment": "Button in the Source date dialog: empty the form so that saving removes the date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear date"
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.clearsCaption": {
+      "comment": "Caption under Clear date in the Source date dialog once the form is emptied",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving removes this Source's date."
+          }
+        }
+      }
+    },
+    "sources.page.sourceDate.readsAs": {
+      "comment": "Micro-caps label above the date as the page will show it, in the Source date dialog",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads as"
+          }
+        }
+      }
+    },
+    "sources.page.private.switch": {
+      "comment": "Label of the switch that marks a Source private",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private"
+          }
+        }
+      }
+    },
+    "sources.page.private.help": {
+      "comment": "Help text of the Private switch on the Source page",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Private Sources will be kept out of sharing. Nothing else changes yet."
+          }
+        }
+      }
+    },
+    "sources.page.private.failedTitle": {
+      "comment": "Title of the error banner when the Private switch could not be saved",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn’t change Private"
+          }
+        }
+      }
+    },
+    "sources.page.private.failedMessage": {
+      "comment": "Body of the error banner when the Private switch could not be saved; argument is the error's own message",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Source was not changed. Try again. %@"
+          }
+        }
+      }
+    },
+    "sources.page.deletedNotice": {
+      "comment": "Notice after leaving a Source page whose Source another window deleted; argument is the Source title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” was deleted."
+          }
+        }
+      }
+    },
+    "error.sources.not_found": {
+      "comment": "FFI error sources.not_found: the Source was deleted in another window",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Source no longer exists."
           }
         }
       }

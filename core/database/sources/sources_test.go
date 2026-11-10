@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
-	"database/sql"
 	"errors"
 	"image"
 	"image/png"
@@ -533,12 +532,12 @@ func TestSources(t *testing.T) {
 			},
 		},
 		{
-			name: "missing get is no rows",
+			name: "missing get is not found",
 			run: func(t *testing.T, c *database.Catalog) {
 				id := make([]byte, 16)
 				id[0] = 9
 				_, err := Get(c, id)
-				if !errors.Is(err, sql.ErrNoRows) {
+				if !errors.Is(err, ErrNotFound) {
 					t.Fatalf("got %v", err)
 				}
 			},
@@ -708,7 +707,7 @@ func TestSourceDelete(t *testing.T) {
 	if err := runDelete(c, userID, empty.ID); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Get(c, empty.ID); !errors.Is(err, sql.ErrNoRows) {
+	if _, err := Get(c, empty.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("source left %v", err)
 	}
 	if _, err := GetNote(c, note.ID); !errors.Is(err, ErrInvalid) {
@@ -833,7 +832,7 @@ func TestSourceDelete(t *testing.T) {
 	})
 
 	missing := make([]byte, 16)
-	if err := runDelete(c, userID, missing); !errors.Is(err, ErrInvalid) {
+	if err := runDelete(c, userID, missing); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("missing %v", err)
 	}
 }
@@ -1083,7 +1082,7 @@ func TestSourceDate(t *testing.T) {
 	})
 	t.Run("unknown source", func(t *testing.T) {
 		_, err := runSetDate(c, userID, make([]byte, 16), datevaluetest.YMD(1880, 0, 0))
-		if !errors.Is(err, ErrInvalid) {
+		if !errors.Is(err, ErrNotFound) {
 			t.Fatalf("err %v", err)
 		}
 		if _, err := runSetDate(c, userID, []byte{1}, nil); !errors.Is(err, ErrInvalid) {
@@ -1195,7 +1194,7 @@ func TestSourcePublic(t *testing.T) {
 	if err != nil || !got.IsPublic {
 		t.Fatalf("set true: %+v err=%v", got, err)
 	}
-	if _, _, err := runSetPublic(c, userID, make([]byte, 16), false); !errors.Is(err, ErrInvalid) {
+	if _, _, err := runSetPublic(c, userID, make([]byte, 16), false); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown source err=%v", err)
 	}
 }
@@ -1228,5 +1227,62 @@ func TestDateSortKey(t *testing.T) {
 	}
 	if _, ok := DateSortKey(Source{Date: datevaluetest.Phrase("in the reign of Victoria")}); ok {
 		t.Fatal("phrase-only date has a key")
+	}
+}
+
+func TestMissingSourceIsNotFound(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	unused := make([]byte, 16)
+	unused[15] = 9
+	short := []byte{1, 2, 3}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := []struct {
+		name string
+		run  func(id []byte) error
+	}{
+		{"SetCover", func(id []byte) error {
+			_, err := runSetCover(c, userID, id, CoverModeTypeIcon, nil)
+			return err
+		}},
+		{"SetDate", func(id []byte) error { _, err := runSetDate(c, userID, id, nil); return err }},
+		{"SetPublic", func(id []byte) error { _, _, err := runSetPublic(c, userID, id, false); return err }},
+		{"Update", func(id []byte) error { return runUpdate(c, userID, Source{ID: id, SourceTypeID: unused, Title: "x"}) }},
+		{"Delete", func(id []byte) error { return runDelete(c, userID, id) }},
+		{"Get", func(id []byte) error { _, err := Get(c, id); return err }},
+		{"GetTx", func(id []byte) error {
+			tx, err := db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Rollback()
+			_, err = GetTx(tx, id)
+			return err
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := tc.run(unused); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("unused id: %v, want ErrNotFound", err)
+			}
+			if err := tc.run(short); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("3-byte id: %v, want ErrInvalid", err)
+			}
+		})
 	}
 }

@@ -44,6 +44,10 @@ struct CatalogSource: Sendable, Equatable, Identifiable {
     /// True when this Source has at least one Artifact (fileless counts).
     /// Used by the Sources list Evidence graph gate — not cover presence.
     var hasArtifact: Bool = false
+    /// The Source's own date (when the record was made or first published); nil when undated.
+    var date: CatalogDateValueInput?
+    /// False when the researcher marked the Source Private. Stored and read back; nothing else acts on it.
+    var isPublic: Bool = true
     /// Latest audit revision of any work scoped to this Source (its row, notes,
     /// metadata, artifacts, Evidence graph) and when it was recorded. Sources
     /// list "Updated" sort reads the revision; zero means unset / unknown.
@@ -1339,6 +1343,20 @@ protocol GenealogyStore: Sendable {
         sourceID: String,
         coverMode: String,
         primaryArtifactID: String
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
+    /// Set the Source's own date, or clear it with nil.
+    func setSourceDate(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        date: CatalogDateValueInput?
+    ) async throws -> (CatalogSource, CatalogWriteEffects)
+    /// Mark the Source public (`true`) or Private (`false`).
+    func setSourcePublic(
+        projectDir: String,
+        userID: String,
+        sourceID: String,
+        isPublic: Bool
     ) async throws -> (CatalogSource, CatalogWriteEffects)
     func addSourceNote(projectDir: String, userID: String, sourceID: String, body: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects)

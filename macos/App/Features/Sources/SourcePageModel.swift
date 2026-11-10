@@ -67,9 +67,23 @@ final class SourcePageModel {
     var pageProjectDir: String { context.projectDir }
 
     /// Non-field failure banner shared by the page sections.
-    var pageError: String? {
-        get { context.pageError }
-        set { context.pageError = newValue }
+    var pageError: SourcePageContext.PageError? { context.pageError }
+    var pageErrorShownCount: Int { context.pageErrorShownCount }
+
+    /// The notice a write set when it found this Source deleted elsewhere; the page leaves while it is set.
+    var gone: String? { context.gone }
+
+    /// The notice to show as the page leaves: the write path's (`context.gone`), else the
+    /// "no longer exists" copy when the workspace read failed with `sources.not_found`. Pure and
+    /// read at body time, so a Back visit to a deleted Source already has it on the first pass.
+    func goneNotice(read: QueryRead<CatalogSourceWorkspace>) -> String? {
+        if let gone = context.gone { return gone }
+        if case .failed(let error) = read,
+           (error as? CoreInvokeError)?.engineCode == .sourceNotFound
+        {
+            return L10n.string(L10n.Errors.sourcesNotFound)
+        }
+        return nil
     }
 
     var toast: VocabularyToast? {
@@ -135,10 +149,8 @@ final class SourcePageModel {
     private func apply(_ workspace: CatalogSourceWorkspace) {
         let previous = appliedWorkspace
         context.workspace = workspace
-        context.pageError = nil
-        if previous?.source != workspace.source {
-            identity.reset()
-        }
+        context.clearPageError()
+        identity.resetIfChanged(from: previous?.source, to: workspace.source)
         if previous?.credibility != workspace.credibility {
             credibility.resetDrafts()
         }
@@ -252,7 +264,7 @@ final class SourcePageModel {
             )
         }
         if deleteImpact.request == nil, let message = deleteImpact.error {
-            context.pageError = message
+            context.showPageError(message)
         }
     }
 }

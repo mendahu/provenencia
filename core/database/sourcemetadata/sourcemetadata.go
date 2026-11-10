@@ -503,9 +503,6 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 	}
 	src, err := sources.Get(c, sourceID)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrInvalid
-		}
 		return nil, err
 	}
 	db, err := c.DB()

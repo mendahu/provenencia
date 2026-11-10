@@ -146,6 +146,38 @@ struct PVPageColumnsTests {
         #expect(unbounded.primary == PVSpacing.widthContentMax && unbounded.band == unbounded.group)
     }
 
+    @Test func fillSplitSideMaxTakesTheSplitGroup() {
+        let gutter = PVSpacing.gutterPage
+        let sideMax = PVSpacing.widthSecondaryMax
+        let group = PVPageColumnsMetrics.split(available: 2296 - 2 * gutter, sideMax: sideMax).group
+        let split = PVPageColumnsMetrics.columnWidths(
+            pane: 2296, widthClass: .wide, hasSecondary: false, primaryFill: true, fillSplitSideMax: sideMax
+        )
+        #expect(split.primary == group && split.group == group && split.band == group && split.secondary == nil)
+
+        let proposed = PVPageColumnsMetrics.columnWidths(
+            proposal: ProposedViewSize(width: 2296, height: nil),
+            widthClass: .wide, hasSecondary: false, primaryFill: true, fillSplitSideMax: sideMax
+        )
+        #expect(proposed.pane == 2296 && proposed.primary == group && proposed.band == group)
+
+        // nil keeps today's numbers.
+        let nilMax = PVPageColumnsMetrics.columnWidths(
+            pane: 2296, widthClass: .wide, hasSecondary: false, primaryFill: true, fillSplitSideMax: nil
+        )
+        #expect(nilMax.primary == 2296 - 2 * gutter && nilMax.band == PVSpacing.widthContentMax)
+
+        // Regular, or primaryFill off: unchanged.
+        let regular = PVPageColumnsMetrics.columnWidths(
+            pane: 1102, widthClass: .regular, hasSecondary: false, primaryFill: true, fillSplitSideMax: sideMax
+        )
+        #expect(regular.primary == 1038 && regular.band == regular.group)
+        let unfilled = PVPageColumnsMetrics.columnWidths(
+            pane: 2296, widthClass: .wide, hasSecondary: false, primaryFill: false, fillSplitSideMax: sideMax
+        )
+        #expect(unfilled.primary == 1180 && unfilled.band == unfilled.group)
+    }
+
     @Test func viewportSizeIsZeroOutsideAPage() {
         #expect(EnvironmentValues().pvPageViewportSize == .zero)
     }
