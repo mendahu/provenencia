@@ -26,6 +26,9 @@ final class SourcePageContext {
     }
 
     private(set) var pageError: PageError?
+    /// How many times a page error has been shown; clearing does not change it. The page folds
+    /// it into its scroll-reset key so a new error scrolls up to the banner.
+    private(set) var pageErrorShownCount = 0
     var toast: VocabularyToast?
     /// The notice to show when a write found this Source deleted elsewhere; the page leaves
     /// for the Sources list while it is set.
@@ -36,9 +39,10 @@ final class SourcePageContext {
         pageError = nil
     }
 
-    /// Shows `message` (with an optional bold `title`) in the shared banner; nil clears it.
-    func showPageError(_ message: String?, title: String? = nil) {
-        pageError = message.map { PageError(title: title, message: $0) }
+    /// Shows `message` (with an optional bold `title`) in the shared banner.
+    func showPageError(_ message: String, title: String? = nil) {
+        pageError = PageError(title: title, message: message)
+        pageErrorShownCount += 1
     }
 
     /// The one door for a failed Source page write. A Source another window deleted sets `gone`
@@ -50,6 +54,20 @@ final class SourcePageContext {
             return nil
         }
         return L10n.Errors.message(for: error)
+    }
+
+    /// A failed write whose answer is the page banner: `fail`, then the banner, with `wrap`
+    /// shaping the message (and `title` heading it). False when the Source was deleted
+    /// elsewhere and the page is leaving, so the caller returns without writing state.
+    @discardableResult
+    func showFailure(
+        _ error: Error,
+        title: String? = nil,
+        wrap: (String) -> String = { $0 }
+    ) -> Bool {
+        guard let message = fail(error) else { return false }
+        showPageError(wrap(message), title: title)
+        return true
     }
 
     init(
@@ -136,8 +154,7 @@ final class SourcePageContext {
             )
             session.apply(.updatedSource(ws.source))
         } catch {
-            guard let message = fail(error) else { return }
-            showPageError(message)
+            showFailure(error)
         }
     }
 
@@ -156,8 +173,7 @@ final class SourcePageContext {
             return true
         } catch {
             // A gone Source: the page is leaving, nothing is shown.
-            guard let message = fail(error) else { return false }
-            showPageError(message)
+            showFailure(error)
             return false
         }
     }

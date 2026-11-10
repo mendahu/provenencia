@@ -37,6 +37,7 @@
 - `SourcePageModel.pageError` is now `SourcePageContext.PageError?` (D-19), so the existing `SourcePageModelTests` compare `pageError?.message`.
 - `OnboardingModelTests.ThrowingStore` gained the two new `GenealogyStore` methods.
 - The PR gave `design/README.md` no change: its S15-D1 line already links the validated board.
+- Review round 1 changed three things the plan left open: `PVSwitch` speaks the toggle trait and an "On"/"Off" value (`L10n.DesignSystem.switchOn`/`switchOff`); the header's date truncates at `PVSpacing.widthInspector` with the full line as its tooltip; and the date dialog's Clear caption is an announced compact info `PVCallout`. A new page error scrolls the Source page to the top (`SourcePageContext.pageErrorShownCount` in the `scrollResetKey`), and `SourcePageContext.showFailure` is the one writer of a failure banner.
 - AC-4.3 (state kept across 1600pt) has no automated test beyond `SourcePageOverviewLayoutTests`: the page keeps one layout over four fixed subviews, and manual check 6 covers the rest.
 
 ## 1. Objective

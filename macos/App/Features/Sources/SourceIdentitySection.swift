@@ -104,10 +104,10 @@ final class SourceIdentitySection {
             )
             context.applySource(updated, effects: effects)
         } catch {
-            guard let detail = context.fail(error) else { return }
-            context.showPageError(
-                L10n.Sources.privateFailedMessage(detail: detail),
-                title: L10n.string(L10n.Sources.privateFailedTitle)
+            context.showFailure(
+                error,
+                title: L10n.string(L10n.Sources.privateFailedTitle),
+                wrap: { L10n.Sources.privateFailedMessage(detail: $0) }
             )
         }
     }

@@ -68,6 +68,7 @@ final class SourcePageModel {
 
     /// Non-field failure banner shared by the page sections.
     var pageError: SourcePageContext.PageError? { context.pageError }
+    var pageErrorShownCount: Int { context.pageErrorShownCount }
 
     /// The notice a write set when it found this Source deleted elsewhere; the page leaves while it is set.
     var gone: String? { context.gone }

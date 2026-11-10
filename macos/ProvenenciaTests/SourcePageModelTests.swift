@@ -2208,13 +2208,17 @@ struct SourcePageModelTests {
         #expect(model.identity.pendingPrivate == nil)
 
         await model.identity.setPrivate(false)
-        store.setSourcePublicError = CoreInvokeError.coded(
+        let privateError = CoreInvokeError.coded(
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
+        store.setSourcePublicError = privateError
         await model.identity.setPrivate(true)
         #expect(model.source?.isPublic == true)
         #expect(model.pageError?.title == L10n.string(L10n.Sources.privateFailedTitle))
-        #expect(model.pageError?.message.hasPrefix("The Source was not changed. Try again.") == true)
+        #expect(
+            model.pageError?.message
+                == L10n.Sources.privateFailedMessage(detail: L10n.Errors.message(for: privateError))
+        )
 
         // The next failed write replaces the whole banner: no stale title.
         store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
@@ -2267,6 +2271,53 @@ struct SourcePageModelTests {
         await third.artifacts.revertCoverToTypeIcon()
         #expect(third.gone == notice)
         #expect(third.pageError == nil)
+    }
+
+    @Test func deletedSourceClosesTheDateDialog() async throws {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.setSourceDateError = FakeStore.sourceNotFound
+        model.identity.openDate()
+        let form = try #require(model.identity.dateForm)
+        pointDraft(year: 1880, in: form)
+        #expect(await form.save())
+        #expect(form.saveError == nil)
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+    }
+
+    @Test func deletedSourceDuringACoverRefreshLeaves() async {
+        let store = makeStore(artifacts: [
+            CatalogArtifact(
+                id: "a1", ref: "ART-AAAAA", sourceID: sourceID, fileID: "f1",
+                label: "Scan", description: "", file: nil
+            ),
+        ])
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        await model.askDeleteArtifact(id: "a1")
+        store.getSourceWorkspaceError = FakeStore.sourceNotFound
+        await model.confirmResourceDelete(leaving: {})
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+        #expect(model.pageError == nil)
+    }
+
+    @Test func pageErrorCountMovesOnShowNotOnClear() async {
+        let store = makeStore()
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        #expect(model.pageErrorShownCount == 0)
+        store.setSourcePublicError = CoreInvokeError.coded(
+            status: 1, code: "internal.unknown", kind: .internal, params: []
+        )
+        await model.identity.setPrivate(true)
+        #expect(model.pageErrorShownCount == 1)
+        await model.identity.setPrivate(true)
+        #expect(model.pageErrorShownCount == 2)
+        store.setSourcePublicError = nil
+        await model.identity.setPrivate(true)
+        #expect(model.pageError == nil)
+        #expect(model.pageErrorShownCount == 2)
     }
 
     @Test func goneNoticeReadsTheFailedRead() async {

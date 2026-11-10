@@ -212,6 +212,12 @@ struct SourcePageIdentityHeader: View {
                 Text(verbatim: line)
                     .font(PVFont.body(size: PVTypeScale.bodySmall))
                     .foregroundStyle(PVColor.textSecondary)
+                    // A long phrase date ("between ... and ...") truncates instead of pushing
+                    // the Private switch past the header; the full text is the tooltip.
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: PVSpacing.widthInspector, alignment: .leading)
+                    .help(line)
                     .accessibilityLabel(L10n.Sources.sourceDateAccessibility(date: line))
                     .accessibilityIdentifier("sources.page.sourceDate")
                 PVIconButton(.penLine, label: L10n.Sources.sourceDateEdit, size: .sm) {

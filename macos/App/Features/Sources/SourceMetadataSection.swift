@@ -168,8 +168,7 @@ final class SourceMetadataSection {
             applyCleared(fieldID: item.fieldID, effects: effects)
             pendingDelete = nil
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
         }
     }
 
@@ -186,8 +185,7 @@ final class SourceMetadataSection {
             context.applyWrite(effects)
             syncDrafts()
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
         }
     }
 
@@ -211,8 +209,7 @@ final class SourceMetadataSection {
             context.applyWrite(effects)
             syncDrafts()
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
             context.workspace?.metadata = previous
         }
     }

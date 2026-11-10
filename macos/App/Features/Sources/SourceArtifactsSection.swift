@@ -705,8 +705,7 @@ final class SourceArtifactsSection {
             {
                 attachDraft.reject = callout
                 attachDraft.filePath = nil
-            } else if let message = context.fail(error) {
-                context.showPageError(message)
+            } else if context.showFailure(error) {
                 isAttaching = false
             }
         }

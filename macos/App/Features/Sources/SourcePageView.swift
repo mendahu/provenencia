@@ -85,9 +85,10 @@ private struct SourcePageContent: View {
     var body: some View {
         PVPageColumns(
             headerPinned: true,
-            scrollResetKey: sourceID,
+            // A new page error scrolls up to the banner it shows in.
+            scrollResetKey: "\(sourceID)/\(model.pageErrorShownCount)",
             primaryFill: true,
-            fillSplitSideMax: PVSpacing.widthSecondaryMax,
+            fillSplitSideMax: SourcePageOverviewLayout.sideMax,
             header: { SourcePageIdentityHeader(model: model) },
             primary: {
                 if model.isLoading && model.workspace == nil {
@@ -369,6 +370,8 @@ struct SourcePageOverviewLayout: Layout {
     let widthClass: PVWidthClass
 
     private static let rowGap = PVSpacing.space9
+    /// The side column's cap; `PVPageColumns` is handed the same value to size its band.
+    static let sideMax = PVSpacing.widthSecondaryMax
 
     private func width(_ proposal: ProposedViewSize) -> CGFloat {
         proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? PVSpacing.widthContentMax
@@ -382,7 +385,7 @@ struct SourcePageOverviewLayout: Layout {
         }
         var frames = [CGRect](repeating: .zero, count: 4)
         if widthClass == .wide {
-            let split = PVPageColumnsMetrics.split(available: width, sideMax: PVSpacing.widthSecondaryMax)
+            let split = PVPageColumnsMetrics.split(available: width, sideMax: Self.sideMax)
             let x = (width - split.group) / 2
             let error = fit(0, split.main), body = fit(1, split.main), rest = fit(3, split.main)
             var y: CGFloat = 0
@@ -394,7 +397,7 @@ struct SourcePageOverviewLayout: Layout {
             y += rest.height
             let side = fit(2, split.side)
             frames[2] = CGRect(
-                x: x + split.main + PVSpacing.space9, y: 0, width: split.side, height: side.height
+                x: x + split.group - split.side, y: 0, width: split.side, height: side.height
             )
             return (frames, max(y, side.height))
         }

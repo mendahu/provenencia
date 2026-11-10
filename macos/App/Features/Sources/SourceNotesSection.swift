@@ -53,8 +53,7 @@ final class SourceNotesSection {
             context.workspace?.notes.append(note)
             context.applyWrite(effects)
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
         }
     }
 
@@ -141,8 +140,7 @@ final class SourceNotesSection {
             context.workspace?.notes.removeAll { $0.id == id }
             context.applyWrite(effects)
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
         }
     }
 }

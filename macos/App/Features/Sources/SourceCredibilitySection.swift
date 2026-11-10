@@ -87,8 +87,7 @@ final class SourceCredibilitySection {
             context.applyWrite(effects)
             resetDrafts()
         } catch {
-            guard let message = context.fail(error) else { return }
-            context.showPageError(message)
+            context.showFailure(error)
         }
     }
 }
