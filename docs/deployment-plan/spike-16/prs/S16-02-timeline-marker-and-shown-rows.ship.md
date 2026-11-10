@@ -138,3 +138,8 @@ Files: `core/database/persondetail/lifeline.go` (`moveAfterOverlapping`), `lifel
 Failing test first: `TestLifelineOrderMovesOnlyOverlappingRows` generating a birth and a death together again (plus the implementer's case as a named `TestLifelineOrder` case).
 Do: keep it linear. In `moveAfterOverlapping`, walk the rows before the anchor from the anchor backwards, keeping the running greatest `Lo` and least `Hi` over the rows passed so far (the anchor included, open ends as `Window.Overlaps` treats them; reuse `valuecompare.Window` helpers if one exists). A candidate moves only when its window overlaps that running range as well as the anchor's (every row between overlaps it). Rows that move keep their order. Undated rows never move and are never passed. T-10, T-12, F-8's case and the budget test unchanged.
 Check: property test (birth and death together) passes; scripts/check-pr.sh PASS.
+F-9 done: head `91ba88e0`, gate PASS (orchestrator re-run 9/9; xcode-test 103s). Red first: named case `[1 8 4]` → want `[4 1 8]`; property test with birth and death together failed at case 2. `moveAfterOverlapping` keeps a running window of the anchor and the rows that stay; linear.
+Read by the orchestrator (minors): MNT-1 **Resolved** (`inSet` and `find` gone; pass (3) is `reorderAfterDeath` + `moveRowAfter`); MNT-2 **Resolved** (`rg 'typeOf := map\[byte\]'` prints nothing); MNT-3 **Resolved** (`EventPlacing`; no positional destructuring); CON-2, F-7 go to round 2 with CON.
+
+## Round A2 — review (scope `b3b49581...91ba88e0`)
+Reviewers: CON (CON-1 major), UX (UX-1 major), SEC+PRF (PRF-1 major). Not sent: MNT (minors only, read above).
