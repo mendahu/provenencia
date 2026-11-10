@@ -218,6 +218,24 @@ enum PersonSourcesPreviewData {
         return copy
     }
 
+    /// The error a preview makes a read answer with.
+    static let previewFailure: Error = CoreInvokeError.coded(
+        status: 1, code: "catalog.already_open", kind: .user, params: []
+    )
+
+    /// Reads `key` once and waits for its answer, then lets `fail` break the store and reads it
+    /// again, so a notice shows beside the value the first answer gave.
+    @MainActor
+    static func failAfterFirstAnswer<Value>(
+        _ key: CatalogQueryKey, as _: Value.Type = Value.self, session: WorkspaceSession,
+        fail: (FakeStore) -> Void
+    ) async {
+        let _: QueryHandle<Value> = session.query(key)
+        _ = await session.readyValue(key) as Value?
+        if let store = session.store as? FakeStore { fail(store) }
+        let _: QueryHandle<Value> = session.reread(key)
+    }
+
     /// A session over a `FakeStore` that serves the record links of `entityId`: the given
     /// links, a failure, or (with neither) an answer an hour late, so the column shows its
     /// spinner. `claims` are the Sources the Sources section reads; nil leaves the person
@@ -230,9 +248,7 @@ enum PersonSourcesPreviewData {
         let store = FakeStore()
         if let claims { store.seededPersonClaims[entityId] = claims }
         if failure {
-            store.getPersonRecordLinksError = CoreInvokeError.coded(
-                status: 1, code: "catalog.already_open", kind: .user, params: []
-            )
+            store.getPersonRecordLinksError = previewFailure
         } else if let recordLinks {
             store.seededPersonRecordLinks[entityId] = recordLinks
         } else {

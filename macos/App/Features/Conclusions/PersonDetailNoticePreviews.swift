@@ -34,10 +34,9 @@ private struct PersonDetailNoticePreview: View {
         )
         store.seededPersonEvents[Self.entityId] = CatalogPersonTimeline()
         store.seededPersonClaims[Self.entityId] = []
-        let error = CoreInvokeError.coded(status: 1, code: "catalog.already_open", kind: .user, params: [])
         switch failure {
-        case .page: store.getConclusionDetailError = error
-        case .family: store.getPersonFamilyError = error
+        case .page: store.getConclusionDetailError = PersonSourcesPreviewData.previewFailure
+        case .family: store.getPersonFamilyError = PersonSourcesPreviewData.previewFailure
         case .pageStale: break
         }
         // A page that shows sections is on a Person location; the default location offers none.
@@ -65,12 +64,9 @@ private struct PersonDetailNoticePreview: View {
     private func failTheDetailAfterTheFirstAnswer() async {
         guard failure == .pageStale else { return }
         let key = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: Self.entityId)
-        let _: QueryHandle<CatalogConclusionDetail> = session.query(key)
-        _ = await session.readyValue(key) as CatalogConclusionDetail?
-        (session.store as? FakeStore)?.getConclusionDetailError = CoreInvokeError.coded(
-            status: 1, code: "catalog.already_open", kind: .user, params: []
-        )
-        let _: QueryHandle<CatalogConclusionDetail> = session.reread(key)
+        await PersonSourcesPreviewData.failAfterFirstAnswer(
+            key, as: CatalogConclusionDetail.self, session: session
+        ) { $0.getConclusionDetailError = PersonSourcesPreviewData.previewFailure }
     }
 }
 

@@ -600,12 +600,9 @@ private struct PersonSourcesPreview: View {
     private func failClaimsAfterTheFirstAnswer() async {
         guard claimsFailure else { return }
         let key = CatalogQueryKey.personClaims(project: session.projectKey, entityId: Self.entityId)
-        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.query(key)
-        _ = await session.readyValue(key) as [CatalogPersonClaimGroup]?
-        (session.store as? FakeStore)?.listPersonClaimsError = CoreInvokeError.coded(
-            status: 1, code: "catalog.already_open", kind: .user, params: []
-        )
-        let _: QueryHandle<[CatalogPersonClaimGroup]> = session.reread(key)
+        await PersonSourcesPreviewData.failAfterFirstAnswer(
+            key, as: [CatalogPersonClaimGroup].self, session: session
+        ) { $0.listPersonClaimsError = PersonSourcesPreviewData.previewFailure }
     }
 }
 
