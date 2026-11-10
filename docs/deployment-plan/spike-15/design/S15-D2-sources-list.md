@@ -1,10 +1,10 @@
 # S15-D2 — Sources list: the Source's date on each row and as a sort
 
-**Kind:** Claude Design board (**enhancement** of the Sources list as shipped: S2-04 / S12-D5 list, three columns Source · Type · Evidence graph, the S12-14 toolbar. Draw on the existing Sources list frames; add the date to the row's second line and two options to the Sort menu, and give the list its first Wide frame)
+**Kind:** Claude Design board (**enhancement** of the Sources list as shipped: S2-04 / S12-D5 list, three columns Source · Type · Evidence graph, the S12-14 toolbar. Draw on the existing Sources list frames; add the date to each row and two options to the Sort menu, and give the list its first Wide frame. Drawn as option C: see **Board**)
 **Spike:** Provenencia Spike 15, slice 1
 **View:** the Sources list (the workspace's Sources destination: header, toolbar, caption band, rows)
 **Implements later as:** PR **S15-04** (SL-1 – SL-7, SL-W1, SL-W2)
-**Board:** — (not drawn yet). When agreed, a Claude Design artifact link, recorded here, in [`README.md`](README.md) and on S15-04's plan **Board** line (user, 2026-11-10)
+**Board:** agreed 2026-11-10 — [Claude Design — Sources List](https://claude.ai/artifact/JDm51QdorUvY79EFoci4cm), page *S2-04 Sources list*, turn "S15-D2 · Sources list": frames 1a/1b (date added), 2a/2b (Source date, oldest first), 3 (Sort menu), 4 (newest first), 5 (narrow, 860), 6 (type filter Census), and the panel "S15-D2 · Requirements as drawn"; the frame component is *Sources List Frame* (presets `s15added`, `s15asc`, `s15sortmenu`, `s15desc`, `s15narrow`, `s15census`). Board decisions (user, 2026-11-10), which replace the brief's recommendations where they differ: the date is named as the **published** date, never shown with an icon, and kept apart from the last update (option C): "Published 1 Jun 1880" under the type at Regular, its own **Published** column at Wide, a record line (type · Published date) above the activity line when narrow; undated reads "No published date" (or "Undated" in the column), faint; at Wide the whole list centers at 1600pt of content (Wide rule 3 rewritten to match). § 4 below is the requirements as drawn
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)): every Source carries an optional date and its place in date order; S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)): the Source page shows that date with a calendar icon
 **Related:** [`../source-provenance-date.md`](../source-provenance-date.md); board [S15-D1](S15-D1-source-page.md) SD-1 (how the date reads on the Source page); [`../../../ideas/wide-layout.md`](../../../ideas/wide-layout.md) "Sources, Persons, Events and Places lists"; [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); working rules in [`../deployment-plan.md`](../deployment-plan.md#working-rules); plan [`../prs/S15-04-sources-list-date.md`](../prs/S15-04-sources-list-date.md)
 **Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
@@ -63,7 +63,7 @@ Rules for Wide:
 
 1. **The extra space does a job.** Show more at once: a second column of supporting content, the detail beside its list, more grid or table columns, an inspector docked open. If the view truly has nothing to add, center its content. Content jammed to one side with empty space beside it is never the Wide design.
 2. **Readable things keep their measure.** Prose, forms and the primary column keep their Regular maximum widths, unless the section opts into Page columns' full-width mode (`primaryFill`: at Wide, with no secondary, the primary fills the pane between the gutters and the header keeps its band; with `fillSplitSideMax` the primary and the band are the main-and-side group the page lays out inside it, as the Source page does); its text still keeps its measure. Wide adds columns; it does not stretch text or fields.
-3. **Lists, tables, grids and canvases fill the width.** Cards keep their size and add columns.
+3. **Fill the width only with something useful.** A list, table, grid or canvas takes the extra width when Wide has more to show in it: more columns, more cards, the detail beside the list. When it has nothing more to show, it keeps a maximum width (1600pt of content for a list) and is centered, with the page gutters outside it. Empty space stretched between a row's columns is never the Wide design. Cards keep their size and add columns.
 4. **Same content, same actions.** Width changes arrangement only. Anything in the Wide second column is stacked below, in an inspector, or behind a disclosure at Regular.
 5. **Crossing the line keeps state.** Selection, scroll position, focus and unsaved edits survive a resize across 1600.
 6. **Past every column's maximum, center the group.** Page gutters are never narrower than at Regular; they take what is left.
@@ -82,10 +82,10 @@ The Sources list is every Source in the project, one row each. Today, from the t
 
 The Sort menu holds four options today: Date added (newest first, the default), Date updated, Alphabetical, Reverse alphabetical. The sort, the filters and the search are remembered per project.
 
-**What changes.**
-- **The Source's own date on each row.** A Source has one optional date: when the record was made or first published ("1880", "abt 12 Mar 1880", "bet 1834 and 1840", or a phrase "in the reign of Victoria"). The Source page shows it in its header with a 14pt calendar icon (board S15-D1, SD-1). The list row shows the same date, written the same way, on the Source cell's second line (user, 2026-11-10). An undated Source's row reads a muted "Undated" in that place (user, 2026-11-10).
-- **Two date sorts.** The Sort menu gains "Source date, oldest first" and "Source date, newest first" (user, 2026-11-10). Undated Sources come last in both.
-- **Wide.** The list gets its Wide frame (SL-W1).
+**What changes** (as drawn, user 2026-11-10).
+- **The Source's own date, named as published.** A Source has one optional date: when the record was made or first published. The list names it as the published date, apart from the last update: the Source date is a fact about the record, the last update is app activity, so they never share a line. "Published 1 Jun 1880" sits under the type at Regular; at Wide it is its own Published column; below 880pt a record line (type · Published date) sits above the activity line (ref · last update). An undated Source reads "No published date" (or "Undated" in the column), faint.
+- **Two date sorts.** The Sort menu gains "Source date, oldest first" and "Source date, newest first". Undated Sources come last in both.
+- **Wide.** The list gets its Wide frame: centered at 1600pt of content with a Published column (SL-W1).
 
 **What stays.** The header, the toolbar's controls and order, the caption band and its columns, the Type and Evidence graph cells, the narrow arrangement, the filter-empty and catalog-empty states, Copy Source on right-click, and the four existing sorts with their labels.
 
@@ -125,23 +125,25 @@ The Sort menu holds four options today: Date added (newest first, the default), 
 
 ## 4. Requirements
 
+As drawn on the board (user, 2026-11-10). The board's panel "S15-D2 · Requirements as drawn" is the long form.
+
 | ID | Requirement |
 | --- | --- |
-| SL-1 | **The date on the second line.** A dated Source's second line reads: (type, narrow lists only) · ref · date · last update. The date is caption-size muted text after a 12pt calendar icon, matching the last update's icon size, so the line reads as one row of facts. It is the same kit cell as the last update (List detail cell): its icon size, spacing and muted tone. Not a Chip or Badge. |
-| SL-2 | **Undated.** An undated Source shows the same calendar icon and the word "Undated" in the date's place, in the faintest text tone, so a dated row stands out from an undated one at a glance. |
-| SL-3 | **A long date.** A long range or phrase ("bet 12 Mar 1834 and 3 Sep 1840", "in the reign of Victoria, before the fire") truncates with an ellipsis and shows the full date as a tooltip; the ref never truncates; the last update keeps its place. **The board decides** which item gives way first when the line is too narrow (recommended: the type (narrow lists), then the date, then the last update). The row never wraps its second line. |
-| SL-4 | **The Sort menu.** Two options after "Reverse alphabetical": "Source date, oldest first" and "Source date, newest first". The control reads "Sorted by source date, oldest first" when chosen. No icon change. |
-| SL-5 | **The order.** Under "oldest first": `bef. 1830`, `1830`, then `abt 1834` and `bet 1834 and 1840` (they share a place, 1834, and go by title), `1880`, `aft. 1880`, then the undated rows by title. Under "newest first": the dated rows in reverse, then the same undated rows by title. A phrase-only date sits among the undated rows. |
-| SL-6 | **Empty and filtered.** A filter or search that leaves rows keeps the chosen date sort. The filter-empty state and the catalog-empty state are unchanged. |
-| SL-7 | **Keyboard and VoiceOver.** The row's link reads "1880 U.S. census, Ottawa County, Census, SRC-4KD2P, 1 Jun 1880, updated 2 days ago" (and "Undated" in the date's place for an undated Source). The Sort options are reachable by keyboard as today. |
-| SL-W1 | **Wide: the list fills the width.** At Wide the toolbar, the caption band and the rows run the pane's full width between the page gutters, as lists do. The Source cell takes the extra width; the Type (170pt) and Evidence graph (420pt) cells keep their size; the second line, date included, never stretches its items apart. No second column: the list beside a selected Source is a later redesign. |
-| SL-W2 | **Regular: as today plus the date.** At Regular the three columns as today with the date on the second line. Below 880pt the narrow arrangement, with the type first on the second line. Crossing 1600pt or 880pt keeps the scroll position and the chosen sort. |
+| SL-1 | **The published date.** At Regular the Type cell reads the type, then under it "Published 1 Jun 1880": a muted "Published" label and the date (through the app's row date display, as the Source page header writes it) in secondary ink like the type, caption size, no icon. The last update stays on the Source cell's second line after the ref, behind its history icon, as shipped. The two dates differ in place, label and tone. Not a Chip or Badge. |
+| SL-2 | **Undated.** "No published date" where the label and date stand (Regular, narrow), or "Undated" under the Published caption (Wide), in faint ink. A phrase-only date shows its phrase. |
+| SL-3 | **A long date.** The date truncates with an ellipsis inside its column (Type 170 at Regular, Published 150 at Wide), with "Published {full date}" as help; the "Published" label never truncates. Narrow (below 880pt of list): the record line is type · Published date; the type gives way first, then the date; the activity line (ref · last update) stays below it and the ref never truncates. Neither line wraps; a narrow row gains one line. |
+| SL-4 | **The Sort menu.** Two options after "Reverse alphabetical": "Source date, oldest first" and "Source date, newest first". The control reads "Sorted by source date, oldest first" when chosen. Same Select, same icon. |
+| SL-5 | **The order.** The engine's place in date order, never parsed by the list: `bef. 1830` < `1830` < `abt 1834` = `bet 1834 and 1840` < `1880` < `aft. 1880`. Ties by title A to Z. Undated and phrase-only Sources last in both directions, by title A to Z. |
+| SL-6 | **Empty and filtered.** A filter or search keeps the chosen date sort. The filter-empty and catalog-empty states are unchanged. |
+| SL-7 | **VoiceOver.** Record facts, then app data: "1880 U.S. census, Ottawa County, Kansas, Census, published 1 Jun 1880, SRC-4KD2P, updated 2 days ago"; an undated Source reads "no published date" in the date's place. Sort options reachable by keyboard as today. |
+| SL-W1 | **Wide: center, don't stretch.** From 1600pt of pane the whole list (header, toolbar, caption band, rows) sits in one centered column, at most 1600pt of content plus the page gutters, with hairlines on its sides; the pane takes what is left. The date moves out from under the type into its own Published column: Source fills (about 880pt), Type 150, Published 150, Evidence graph 420. Titles stay on one line. |
+| SL-W2 | **Regular.** The three columns as today (Source fills, Type 170, Evidence graph 420) with the date under the type. Below 880pt of list width: record line, then activity line. Crossing 880pt or 1600pt keeps the scroll position and the chosen sort. |
 
 ### 4.1 Wide layout
 
 | View | Regular (pane below 1600 pt) | Wide (pane 1600 pt and up) | What moves where |
 | --- | --- | --- | --- |
-| Sources list | Header, toolbar, caption band, rows; three columns (Source fills, Type 170, Evidence graph 420); below 880 the Type column joins the second line | The same, filling the pane between the gutters; the Source cell takes the extra width; Type and Evidence graph keep their widths | Nothing moves: a list fills the width (rule 3). The extra width lets long titles and long dates show in full |
+| Sources list | Header, toolbar, caption band, rows across the pane; Source fills, Type 170 (type, then Published date under it), Evidence graph 420; below 880 the record and activity lines | One centered column of at most 1600pt of content plus gutters, hairlines at its sides; Source fills, Type 150, Published 150, Evidence graph 420 | The date leaves the Type cell for its own Published column; the list stops growing at 1600 and centers (rule 3) |
 
 ---
 
@@ -155,7 +157,7 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 | 2a / 2b | SL-4, SL-5 | The list sorted "Source date, oldest first": the dated rows in order, the phrase-only and undated rows last; the Sort control reading "Sorted by source date, oldest first" |
 | 3 | SL-4 | The Sort menu open, six options, "Source date, oldest first" checked |
 | 4 | SL-5 | "Source date, newest first" |
-| 5 | SL-3, SL-W2 | The list at 860pt (narrow): type first on the second line; one long range date truncated with its tooltip shown |
+| 5 | SL-3, SL-W2 | The list at 860pt (narrow): the record line (type · Published date) above the activity line (ref · last update); one long range date truncated with its tooltip shown (as drawn) |
 | 6 | SL-6 | A type filter "Census" with the date sort kept |
 
 ---
@@ -164,18 +166,20 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Sources list row | Snowflake | Extend | `macos/App/Features/Sources/SourcesListRow.swift` `SourcesListRow`, `SourcesLinkLabel` | The date joins `SourcesLinkLabel`'s second line between the ref and the last update. No new cell, no new column |
-| Row date | Component | Extend (truncation) | `macos/App/DesignSystem/Components/List/PVList.swift` `PVListDetailCell` | The same cell as the last update, with a calendar icon, the date through the app's row date display (`DateRowDisplay`), faint for Undated, the full date as help. It gains truncation for a long date. Not a Chip, not a Badge, not a hand-drawn icon + text |
-| Separator dot | Snowflake | Ship | `SourcesLinkLabel.separator` | Between each item, as today |
-| Sort control | Component | Ship | `macos/App/DesignSystem/Components/Select/` `PVSelect` | Two more options; no new control |
-| Caption band | Snowflake | Ship | `SourcesListView` `captionBand` | Unchanged: no Date caption |
-| Columns | Snowflake | Ship | `macos/App/Features/Sources/SourcesListColumns.swift` `SourcesListColumns` | Unchanged widths; Wide changes nothing in them |
-| Tooltip | Platform | Ship | `.help` | The full date on a truncated date |
+| Sources list row | Snowflake | Extend | `macos/App/Features/Sources/SourcesListRow.swift` `SourcesListRow`, `SourcesLinkLabel` | The Type cell gains the published line (Regular); a Published cell (Wide); the narrow record line |
+| Published date | Snowflake (inside the row) | Extend (the row) | `macos/App/Features/Sources/SourcesListRow.swift` | Muted "Published" label + the date in secondary ink through the row date display (`DateRowDisplay`); faint "No published date" / "Undated". No icon. Not a Chip, Badge or List detail cell (that cell is icon + muted text: the last update's look, which the board keeps apart) |
+| Last update | Component | Ship | `macos/App/DesignSystem/Components/List/PVList.swift` `PVListDetailCell` via `PVLastUpdated.detail` | Unchanged, on the activity line |
+| Sort control | Component | Ship | `macos/App/DesignSystem/Components/Select/` `PVSelect` | Two more options |
+| Caption band | Snowflake | Extend | `SourcesListView` `captionBand` | Gains a "Published" caption at Wide |
+| Columns | Snowflake | Extend | `macos/App/Features/Sources/SourcesListColumns.swift` `SourcesListColumns` | Learns the width class: Type 150 and Published 150 at Wide |
+| Wide list column | Token | New | `macos/App/DesignSystem/Tokens/PVSpacing.swift` `widthListWideMax` | 1600; second call site: Promote's list (`PromoteLayout.listMaxWide`) |
+| Side hairlines | Component | Ship | `macos/App/DesignSystem/Components/Divider/` `PVDivider` | Vertical, at the centered column's sides at Wide |
+| Tooltip | Platform | Ship | `.help` | "Published {full date}" |
 
-**Non-goals.** No new kit primitive: the date is one more List detail cell. No Date column, no Private glyph, no filter control, no group headings.
+**Non-goals.** No new kit component: the published date is part of the row's snowflake; the only kit addition is the width token, which Promote already needs. No icon on the date, no Private glyph, no filter control, no group headings.
 
 ---
 
 ## 7. Handoff
 
-When the board is agreed: record the link, the frames and the board's decisions (SL-3's give-way order, and any frame that differs from the brief) on the **Board** line here, in [`README.md`](README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the link, the frames and the board's decisions on the **Board** line here, in [`README.md`](README.md) and on S15-04's plan **Board** line; the plan copies SL-1 – SL-7, SL-W1 and SL-W2 and moves from `Blocked — on board S15-D2` to `Planned`. When S15-04 lands, the brief moves to the spike's design archive.
