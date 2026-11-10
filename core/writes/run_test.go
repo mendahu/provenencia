@@ -47,7 +47,7 @@ func TestRunRollsBack(t *testing.T) {
 	if _, err := users.Lookup(c, id); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("user %v", err)
 	}
-	if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -65,7 +65,7 @@ func TestRunSkipsEmptyChanges(t *testing.T) {
 	if got != "kept" || res.Revision != 0 || ran {
 		t.Fatalf("got %q rev %d after %v", got, res.Revision, ran)
 	}
-	if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -110,10 +110,7 @@ func TestRunNoneOnlyCommits(t *testing.T) {
 	if res.Revision != 0 || !ran {
 		t.Fatalf("rev %d after %v", res.Revision, ran)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var n int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives WHERE id = ?`, linkID).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -121,7 +118,7 @@ func TestRunNoneOnlyCommits(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("links %d", n)
 	}
-	if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -165,10 +162,7 @@ func TestRunMixedOmitsNone(t *testing.T) {
 	if res.Revision == 0 {
 		t.Fatal("expected a revision")
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var entity string
 	if err := db.QueryRow(`SELECT entity_type FROM audit_changes WHERE audit_transaction_id = (
 		SELECT id FROM audit_transactions WHERE revision = ?)`, res.Revision).Scan(&entity); err != nil {
@@ -251,7 +245,7 @@ func TestRunDropsListeners(t *testing.T) {
 	if ok.notices != 1 || bad.notices != 1 || ok.dropped != 1 || bad.dropped != 1 {
 		t.Fatalf("ok %+v bad %+v", ok, bad)
 	}
-	if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM audit_transactions`); n != 1 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 1 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -268,10 +262,7 @@ func TestRunReportsCommitTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var stored string
 	if err := db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, res.Revision).Scan(&stored); err != nil {
 		t.Fatal(err)
@@ -408,10 +399,7 @@ func mustRef(t *testing.T) string {
 
 func auditAction(t *testing.T, c *database.Catalog, revision int64) (string, int) {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var action string
 	var id []byte
 	if err := db.QueryRow(`SELECT id, action_type FROM audit_transactions WHERE revision = ?`, revision).Scan(&id, &action); err != nil {

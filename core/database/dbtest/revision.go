@@ -41,18 +41,6 @@ func LatestRevision(t testing.TB, db *sql.DB) (string, []rowchange.Change) {
 	return action, out
 }
 
-// Count runs a single-integer query (SELECT COUNT(*) …) on a *sql.DB or *sql.Tx.
-func Count(t testing.TB, q interface {
-	QueryRow(string, ...any) *sql.Row
-}, query string, args ...any) int {
-	t.Helper()
-	var n int
-	if err := q.QueryRow(query, args...).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 // EntityTypes lists the entity_type of each change, in order.
 func EntityTypes(changes []rowchange.Change) []string {
 	types := make([]string, len(changes))
@@ -62,12 +50,8 @@ func EntityTypes(changes []rowchange.Change) []string {
 	return types
 }
 
-// MustDB opens c's *sql.DB, failing the test on error.
-func MustDB(t testing.TB, c interface{ DB() (*sql.DB, error) }) *sql.DB {
+// Revisions counts the audit revisions written so far.
+func Revisions(t testing.TB, db *sql.DB) int {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return db
+	return Count(t, db, `SELECT COUNT(*) FROM audit_transactions`)
 }
