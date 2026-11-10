@@ -253,7 +253,7 @@ struct PersonTimelineContentTests {
         #expect(line.mark("l60") != nil && !line.targets.contains { $0.mark.id == "l60" })
         let unknown = content(Data.unknownEnds)
         #expect(unknown.items.first?.spokenLabel == "Birth unknown")
-        #expect(PersonTimelineLifeline(content: unknown, pointsPerYear: 43).targets.first?.label == "Birth unknown")
+        #expect(PersonTimelineLifeline(content: unknown, pointsPerYear: 43).targets.first { $0.mark.id == "birth" }?.label == "Birth unknown")
     }
 
     @Test func buildsOnlyShownRowsAndCards() {

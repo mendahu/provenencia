@@ -84,8 +84,9 @@ struct PersonTimelineLifeline: Equatable {
 
     private(set) var length: CGFloat = 0
     private(set) var marks: [Mark] = []
-    /// A click target for each item with a mark, in item order. The folded rows' points have
-    /// none of their own: they share `foldedHit`.
+    /// A click target for each item with a mark, in drawing order: the widest `hit` first, item
+    /// order for ties, so a narrower one is drawn on top. The folded rows' points have none of
+    /// their own: they share `foldedHit`.
     private(set) var targets: [Target] = []
     /// The y range that covers the folded rows' points, one shared click target; nil when
     /// nothing is folded.
@@ -138,23 +139,30 @@ struct PersonTimelineLifeline: Equatable {
         // Where each stub is inserted on the line of years, from the place the content
         // resolved: before a row, at the least `from` of that row and the shown dated
         // rows after the marker (a row the Timeline's order put after the stub can start
-        // earlier than the row it names); after a row, at its `to`; with none, a birth at
-        // the range's start and a death at its end.
+        // earlier than the row it names); after a row, at the greatest `to` of that row and
+        // the shown dated rows before the marker (a row the order put before it can end
+        // later); with none, a birth at the range's start and a death at its end.
         struct Insertion { var at: Double; var isBefore: Bool }
         let insertions: [String: Insertion] = Dictionary(stubbed.map { marker in
             let id = PersonTimelineContent.Item.marker(marker).id
             let insertion: Insertion
-            switch marker.place {
-            case .before(let row)? where spansByID[row] != nil:
-                let later = (items.firstIndex { $0.id == id }.map { items[($0 + 1)...] } ?? []).compactMap { item -> Double? in
+            // The spans of the shown dated items on one side of this marker, in item order.
+            let position = items.firstIndex { $0.id == id } ?? items.endIndex
+            func shownSpans(_ side: ArraySlice<PersonTimelineContent.Item>) -> [CatalogTimelineSpan] {
+                side.compactMap { item in
                     switch item {
-                    case .row, .marker: spansByID[item.id]?.from
+                    case .row, .marker: spansByID[item.id]
                     case .undatedHeader, .more: nil
                     }
                 }
-                insertion = Insertion(at: ([spansByID[row]!.from] + later).min()!, isBefore: true)
+            }
+            switch marker.place {
+            case .before(let row)? where spansByID[row] != nil:
+                let later = shownSpans(items[min(position + 1, items.endIndex)...])
+                insertion = Insertion(at: ([spansByID[row]!.from] + later.map(\.from)).min()!, isBefore: true)
             case .after(let row)? where spansByID[row] != nil:
-                insertion = Insertion(at: spansByID[row]!.to, isBefore: false)
+                let earlier = shownSpans(items[..<position])
+                insertion = Insertion(at: ([spansByID[row]!.to] + earlier.map(\.to)).max()!, isBefore: false)
             default:
                 insertion = marker.kind == .birth
                     ? Insertion(at: range.from, isBefore: true) : Insertion(at: range.to, isBefore: false)
@@ -212,6 +220,12 @@ struct PersonTimelineLifeline: Equatable {
             case .undatedHeader, .more: break
             }
         }
+        // Drawn widest first, so a later, narrower button is on top of a wider bar it lies on.
+        // Item order breaks a tie.
+        targets = targets.enumerated().sorted { a, b in
+            let (wa, wb) = (a.element.mark.hit.upperBound - a.element.mark.hit.lowerBound, b.element.mark.hit.upperBound - b.element.mark.hit.lowerBound)
+            return wa != wb ? wa > wb : a.offset < b.offset
+        }.map(\.element)
         if let low = foldedMarks.map(\.hit.lowerBound).min(), let high = foldedMarks.map(\.hit.upperBound).max() {
             foldedHit = low...high
         }

@@ -262,6 +262,46 @@ struct PersonTimelineLifelineTests {
         } else { Issue.record("death placeholder") }
     }
 
+    @Test func anAfterStubBelowALaterEndingRowBeforeIt() throws {
+        // The death sits after "x", which the Timeline's order put after the birth; the stub is below the birth's point.
+        let life = Data.timeline(
+            [
+                Data.event("b", type: "birth", when: .day(1850, 3, 12, from: 1850.1948, to: 1850.1975)),
+                Data.event("x", type: "census", when: .day(1850, 1, 1, from: 1850.0, to: 1850.0027)),
+            ],
+            birth: CatalogLifeMarker(eventId: "b"), death: CatalogLifeMarker(place: .after(eventId: "x"))
+        )
+        let (line, _) = lifeline(life, ppy: 40)
+        #expect(line.stubs.count == 1)
+        #expect((line.stubs.first?.lowerBound ?? 0) >= (line.mark("b")?.pointY ?? .infinity))
+    }
+
+    @Test func aPointUnderAWiderBarIsClickable() throws {
+        // The dogfood case: a death on 29 Mar 2011, a funeral "aft 29 Mar 2011" and a burial "abt 2011", in that item order.
+        let death = Data.event("d", type: "death", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411))
+        var funeral = Data.event("f", type: "funeral", when: .day(2011, 3, 29, from: 2011.2384, to: 2011.2411))
+        funeral.span = CatalogTimelineSpan(from: 2011.2384, to: 2011.6, openStart: false, openEnd: true)
+        let burial = Data.event("bur", type: "burial", when: .year(2011))
+        let (late, _) = lifeline(
+            Data.timeline([death, funeral, burial], birth: CatalogLifeMarker(), death: CatalogLifeMarker(eventId: "d")), ppy: 43
+        )
+        // A birth on 12 Mar 1850 and a baptism "1850".
+        let (early, _) = lifeline(
+            Data.timeline(
+                [Data.event("b", type: "birth", when: .day(1850, 3, 12, from: 1850.1948, to: 1850.1975)), Data.event("bap", type: "baptism", when: .year(1850))],
+                birth: CatalogLifeMarker(eventId: "b"), death: CatalogLifeMarker()
+            ), ppy: 43
+        )
+        for (line, ids) in [(late, ["d", "f"]), (early, ["b"])] {
+            for id in ids {
+                let mark = try #require(line.mark(id))
+                // The last button in drawing order whose area holds the point is on top.
+                let top = line.targets.last { $0.mark.hit.contains(mark.pointY) }
+                #expect(top?.mark.id == id, "the point of \(id)")
+            }
+        }
+    }
+
     @Test func tickCountIsCapped() {
         var timeline = Data.ida
         timeline.events = [
