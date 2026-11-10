@@ -1,7 +1,7 @@
 # Review — S15-03 The Source page shows the date and the Private switch (and brief S15-D1)
 
-**Verdict:** round 1 — plan Fits with changes / Not ready; brief Fits with changes / Ready with changes. Every finding Fixed. Round 2 runs once the S15-D1 board is agreed and the plan's macOS section follows it.
-**Rounds:** 1. **Reviewers:** maintainability (fresh context, session model), executability (fresh context, Sonnet)
+**Verdict:** Fits with changes — Ready with changes. Round 2 found 3 blockers and 10 majors in round-1 and board-validation text; all Fixed. Plan Planned 2026-11-10.
+**Rounds:** 2, plus a board validation between them. **Reviewers:** maintainability (fresh context, session model), executability (fresh context, Sonnet)
 
 ## To user
 - None beyond the plan's open question (how the agreed board reaches the implementer).
@@ -59,4 +59,29 @@ The S15-D1 board ([Claude Design — Source Detail](https://claude.ai/artifact/4
 - **A titled Callout for a failed Private flip** ("Couldn’t change Private"). Adopted — D-11, `pageErrorTitle`.
 - **A per-dialog discard body.** Not adopted: the kit's standard FormDialog discard copy stays — Strings.
 
-Round 2 of the review is next; the plan stays Draft until it passes.
+
+
+## Round 2 — maintainability
+
+- **M2-1 · blocker · `pageErrorTitle` beside `pageError` races.** Fixed — D-19: one `PageError` value, written only through `showPageError` / `clearPageError`; `apply` calls `clearPageError()`; T-6 asserts the title is cleared by the next error.
+- **M2-2 · major · `fillMax` hand-sums `split`.** Fixed — D-16 renames it `fillSplitSideMax` and takes primary and band from `PVPageColumnsMetrics.split(…).group`; T-10.
+- **M2-3 · major · guidance made false by the kit option.** Fixed — STEP-8 and the DoD: `macos-client-patterns.md` § 9 rule 2 with `add-design-brief`'s Paste block, `pvKeepsPageBand()`, `DesignSystem/README.md`, the doc comments.
+- **M2-4 · major · the page error spans the group at Wide.** Fixed — D-17 subview E in the main column at both widths; D-16 keeps only loading and load error in `primary`; T-9.
+- **M2-5 · major · "Reads as" as raw styling.** Fixed — `PVCard(tone: .sunken, cornerRadius: PVRadius.sm)` + `pvMicroCaps()`; hidden while the draft is blank, invalid or clearing.
+- **M2-6 · major · brief rows and ACs state pre-board copy.** Fixed — brief SD-2, SD-3, SD-6, SD-8, SD-W1, § 4.1, frames 2–3, inventory (Page columns Extend); plan ACs and manual checks say "Add publication date" and the titled Callout.
+
+## Round 2 — executability
+
+- **X2-1 · blocker · the read-path notice is lost on mount.** Fixed — D-6 `goneNotice(read:)` is pure and read in the same body pass as `isFailed` (D-7); T-8.
+- **X2-2 · blocker · STEP-4 needs STEP-5's `fail`.** Fixed — the gone door and `PageError` are STEP-4; the header and date form models are STEP-5.
+- **X2-3 · major · Callouts at Wide.** Fixed — as M2-4.
+- **X2-4 · major · date form edges.** Fixed — D-8 defines `clears` reset on typing, `isDirty`, `canSave`, and that `pvFormDialog(item:)` clears the binding; T-4 asserts on the store, not on `dateForm`.
+- **X2-5 · major · "Add date" vs "Add publication date".** Fixed — as M2-6.
+- **X2-6 · major · layout interface.** Fixed — D-17: `init(widthClass:)`, internal, wrapper reads the environment, subviews and gaps named; T-9 hosting pattern named.
+- **X2-7 · major · `fail` returns optional.** Fixed — D-5's rule: on nil, return without writing state.
+- **X2-8 · minor · stale "board is not agreed".** Fixed — removed.
+- **X2-9 · minor · `fillMax` sites.** Fixed — D-16 lists the overload, the band layout, the three inits, the doc comments, the existing test.
+- **X2-10 · minor · title clearing, AC-2.3, T-6, `resetIfChanged`.** Fixed — D-19, AC-2.3, T-6 calls `sync`, D-12 states `from == nil` and what `reset()` leaves.
+- **X2-11 · minor · `sourcecopy_test.go` "unknown source".** Fixed — named in §8's likely-to-break line.
+- **X2-12 · minor · meta row wording, date text style, delete after deletion.** Fixed — macOS rows follow the board; delete-impact on a deleted Source is an Out line to `ideas/structural-debt.md`.
+- **Brief (executability).** Fixed — as M2-6.
