@@ -56,4 +56,4 @@ Read by the orchestrator (minors only, no round 2): MNT-1 **Resolved** (the Chec
 Not run: no round-1 blocker or major.
 
 ## Result
-Gate PASS · CI see PR · open: none · follow-ups: none · to user: —
+Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · follow-ups: none · to user: —
