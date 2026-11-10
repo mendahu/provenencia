@@ -185,14 +185,50 @@ enum PersonSourcesPreviewData {
         return links(graphs: manyClaims(graphs: graphs), pairs: pairs)
     }
 
+    /// One Source, "Crowd register", with a record on each of `graphs` graphs; graph `g-c<i>`.
+    /// Past the 1,000 nodes the diagram draws, which the 50-graph fixtures never reach.
+    static func crowdClaims(graphs: Int) -> [CatalogPersonClaimGroup] {
+        [CatalogPersonClaimGroup(
+            sourceID: "src-crowd", sourceRef: "SRC-CROWD", title: "Crowd register", sourceTypeID: "type-census",
+            claims: (1...max(1, graphs)).map {
+                record("cc\($0)", "g-c\($0)", "EVG-C\($0)", "Entry \($0)", "Johann Weber", "CPR-C\($0)")
+            }
+        )]
+    }
+
+    /// The crowd's graphs, graph i linked to i + 1 by one weak line.
+    static func crowdRecordLinks(graphs: Int) -> CatalogPersonRecordLinks {
+        links(graphs: crowdClaims(graphs: graphs), pairs: (1..<max(2, graphs)).map {
+            pair("g-c\($0)", "g-c\($0 + 1)", [("ent-c\($0)", .weak)])
+        })
+    }
+
+    /// `links` as the engine sends a read it did not compare: the graphs, no pair, `notCounted`.
+    static func notCounted(_ links: CatalogPersonRecordLinks) -> CatalogPersonRecordLinks {
+        var copy = links
+        copy.pairs = []
+        copy.notCounted = true
+        return copy
+    }
+
+    /// `links` as the engine sends a read that found more lines than it sends.
+    static func linesDropped(_ links: CatalogPersonRecordLinks) -> CatalogPersonRecordLinks {
+        var copy = links
+        copy.linesDropped = true
+        return copy
+    }
+
     /// A session over a `FakeStore` that serves the record links of `entityId`: the given
     /// links, a failure, or (with neither) an answer an hour late, so the column shows its
-    /// spinner.
+    /// spinner. `claims` are the Sources the Sources section reads; nil leaves the person
+    /// unknown to that read (gone).
     @MainActor
     static func previewSession(
-        entityId: String, recordLinks: CatalogPersonRecordLinks?, failure: Bool
+        entityId: String, recordLinks: CatalogPersonRecordLinks?, failure: Bool,
+        claims: [CatalogPersonClaimGroup]? = nil
     ) -> WorkspaceSession {
         let store = FakeStore()
+        if let claims { store.seededPersonClaims[entityId] = claims }
         if failure {
             store.getPersonRecordLinksError = CoreInvokeError.coded(
                 status: 1, code: "catalog.already_open", kind: .user, params: []

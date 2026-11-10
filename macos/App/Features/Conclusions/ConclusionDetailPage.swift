@@ -8,18 +8,27 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
     /// The handle no longer exists (deleted or merged), not a failure that may pass; the page leaves.
     case gone
     case failed(String)
-    case content(Content, refreshing: Bool)
+    /// `refreshFailure` is the message of a reload that failed behind the content, nil otherwise.
+    case content(Content, refreshing: Bool, refreshFailure: String?)
 
     init<Value>(
-        _ read: QueryRead<Value>,
+        _ reading: QueryReading<Value>,
         isFetching: Bool,
         content: (Value) -> Content
     ) {
-        switch read {
-        case .loaded(let value):
-            self = .content(content(value), refreshing: isFetching)
+        switch reading {
+        case .loaded(let value, let refreshFailure):
+            if let refreshFailure, Self.isGone(refreshFailure) {
+                self = .gone
+            } else {
+                self = .content(
+                    content(value),
+                    refreshing: isFetching,
+                    refreshFailure: refreshFailure.map { L10n.Errors.message(for: $0) }
+                )
+            }
         case .failed(let error):
-            if (error as? CoreInvokeError)?.engineCode == .conclusionNotFound {
+            if Self.isGone(error) {
                 self = .gone
             } else {
                 self = .failed(L10n.Errors.message(for: error))
@@ -27,6 +36,10 @@ enum ConclusionDetailPresentation<Content: Equatable>: Equatable {
         case .loading:
             self = .loading
         }
+    }
+
+    private static func isGone(_ error: Error) -> Bool {
+        (error as? CoreInvokeError)?.engineCode == .conclusionNotFound
     }
 }
 
@@ -249,7 +262,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
     @Environment(WorkspaceNavigation.self) private var navigation
 
     private var presentation: ConclusionDetailPresentation<Content> {
-        ConclusionDetailPresentation(handle.read, isFetching: handle.isFetching, content: make)
+        ConclusionDetailPresentation(handle.reading, isFetching: handle.isFetching, content: make)
     }
 
     /// The page sections this kind of page offers; none for Event and Place.
@@ -271,6 +284,13 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
             .contains { session.isRefreshing($0.key) }
     }
 
+    /// Reads the page's detail again; the notice's Try again.
+    private func readAgain() {
+        let _: QueryHandle<CatalogConclusionDetail> = session.reread(
+            .conclusionDetail(project: session.projectKey, entityId: entityId)
+        )
+    }
+
     var body: some View {
         let presentation = presentation
         Group {
@@ -280,10 +300,18 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                 ConclusionDetailPage<Content, Secondary, PageSections>.loadingPage
             case .failed(let message):
                 PVPageColumns(primary: {
-                    PVCallout(tone: .danger, message: message)
-                        .accessibilityIdentifier(errorIdentifier)
+                    PVRetryCallout(
+                        title: L10n.Conclusions.pageReadErrorTitle,
+                        message: message,
+                        retry: L10n.Conclusions.readNoticeTryAgain,
+                        isRetrying: handle.isReading,
+                        retryIdentifier: "\(errorIdentifier).tryAgain",
+                        failureRevision: handle.failureRevision,
+                        onRetry: readAgain
+                    )
+                    .accessibilityIdentifier(errorIdentifier)
                 })
-            case .content(let content, let refreshing):
+            case .content(let content, let refreshing, let refreshFailure):
                 PVPageColumns(
                     headerPinned: !offeredPageSections.isEmpty,
                     scrollResetKey: openPageSection,
@@ -298,6 +326,10 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             offeredPageSections: offeredPageSections,
                             openPageSection: openPageSection,
                             refreshing: refreshing || sectionRefreshing,
+                            refreshFailure: refreshFailure,
+                            isRetrying: handle.isReading,
+                            failureRevision: handle.failureRevision,
+                            retry: readAgain,
                             select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
                         )
                     },
@@ -320,7 +352,9 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
         }
         .leavesForSectionRoot(
             when: presentation == .gone,
-            notice: presentation == .gone ? L10n.string(L10n.Errors.conclusionDetailsNotFound) : nil
+            notice: presentation == .gone
+                ? L10n.string(L10n.Conclusions.goneNotice(section: navigation.currentLocation.section))
+                : nil
         )
     }
 }
@@ -336,6 +370,11 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let offeredPageSections: [ConclusionPageSection]
     let openPageSection: ConclusionPageSection?
     let refreshing: Bool
+    /// The message of a page re-read that failed behind the shown page, nil when none did.
+    let refreshFailure: String?
+    let isRetrying: Bool
+    let failureRevision: Int
+    let retry: () -> Void
     let select: (ConclusionPageSection) -> Void
 
     /// A page with page sections pins its header; one without scrolls it away.
@@ -354,6 +393,18 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
             )
             if let openPageSection {
                 switcher(selection: openPageSection)
+            }
+            if let refreshFailure {
+                PVRetryCallout(
+                    title: L10n.Conclusions.pageReadErrorTitle,
+                    message: L10n.Conclusions.readNoticeStaleMessage(refreshFailure),
+                    retry: L10n.Conclusions.readNoticeTryAgain,
+                    isRetrying: isRetrying,
+                    retryIdentifier: "\(pageIdentifier).refreshError.tryAgain",
+                    failureRevision: failureRevision,
+                    onRetry: retry
+                )
+                .accessibilityIdentifier("\(pageIdentifier).refreshError")
             }
         }
         .padding(.top, pinned ? PVSpacing.space9 : 0)
