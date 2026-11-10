@@ -97,8 +97,8 @@ func (l lifelineTypes) timeline(events []PersonEvent, types func(event []byte) v
 //     (afterDeath) before it whose days overlap the death's goes just after it.
 //  3. Of the afterDeath rows with days placed after the death (all of them when
 //     the death is nil or has no days), a row that has a later one of a lesser
-//     rank whose days overlap its own goes just after the last such one: a
-//     burial after a funeral. Rows still before the death (a clear conflict)
+//     rank whose days overlap its own goes just after the last such one, passing
+//     only rows whose days overlap its own: a burial after a funeral. Rows still before the death (a clear conflict)
 //     keep date order, and so do all of them when there are more than
 //     maxReorderedAfterDeath.
 //
@@ -150,7 +150,8 @@ const maxReorderedAfterDeath = 64
 
 // reorderAfterDeath is pass (3) of order on rows[from:]: each dated afterDeath
 // row with a later one of a lesser rank whose days overlap its own goes just
-// after the last such one. It walks back from the end, so rows that move to one
+// after the last such one, within the run of rows after it whose days all
+// overlap its own: it never passes a row its dates do not overlap. It walks back from the end, so rows that move to one
 // place keep their order. It does nothing when it would consider more than
 // maxReorderedAfterDeath rows.
 func reorderAfterDeath(rows []lifelineRow, from int) []lifelineRow {
@@ -169,8 +170,8 @@ func reorderAfterDeath(rows []lifelineRow, from int) []lifelineRow {
 			continue
 		}
 		last := -1
-		for j := i + 1; j < len(rows); j++ {
-			if rows[j].dated && rows[j].after >= 0 && rows[j].after < r.after && rows[j].window.Overlaps(r.window) {
+		for j := i + 1; j < len(rows) && rows[j].dated && rows[j].window.Overlaps(r.window); j++ {
+			if rows[j].after >= 0 && rows[j].after < r.after {
 				last = j
 			}
 		}

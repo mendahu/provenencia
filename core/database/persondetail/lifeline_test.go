@@ -127,6 +127,7 @@ func TestLifelineOrder(t *testing.T) {
 		{"funeral and burial overlap after the death", lifeline, []in{{8, death, nil}, {4, datevaluetest.YMD(2011, 4, 0), nil}, {3, datevaluetest.YMD(2011, 4, 5), nil}}, nil, id(8), []byte{8, 3, 4}},
 		{"funeral and burial that do not overlap", lifeline, []in{{8, death, nil}, {4, datevaluetest.YMD(2011, 4, 2), nil}, {3, datevaluetest.YMD(2011, 4, 10), nil}}, nil, id(8), []byte{8, 4, 3}},
 		{"a funeral does not pass a row the dates put before it", lifeline, []in{{4, datevaluetest.YMD(2011, 0, 0), nil}, {2, datevaluetest.YMD(2011, 2, 0), nil}, {3, datevaluetest.After(2011, 3, 1), nil}}, nil, nil, []byte{2, 3, 4}},
+		{"a burial the dates put before the birth does not pass it", lifeline, []in{{4, datevaluetest.Before(2010, 6, 1), nil}, {3, datevaluetest.Before(2010, 12, 1), nil}, {1, datevaluetest.YMD(2010, 6, 15), nil}}, id(1), nil, []byte{4, 1, 3}},
 		{"no death", lifeline, []in{{4, datevaluetest.About(2011, 0, 0), nil}, {3, datevaluetest.After(2011, 3, 29), nil}}, nil, nil, []byte{3, 4}},
 		{"a burial and a funeral both before the death", lifeline, []in{{4, datevaluetest.YMD(1990, 0, 0), nil}, {3, datevaluetest.YMD(1990, 5, 0), nil}, {8, death, nil}}, nil, id(8), []byte{4, 3, 8}},
 		{"a recorded death with no days", lifeline, []in{{4, datevaluetest.About(2011, 0, 0), nil}, {3, datevaluetest.After(2011, 3, 29), nil}, {8, nil, nil}}, nil, id(8), []byte{3, 4, 8}},
@@ -178,11 +179,9 @@ func TestLifelineOrder(t *testing.T) {
 }
 
 // TestLifelineOrderMovesOnlyOverlappingRows runs order over random years 2010
-// and 2011, with and without a dated death and no recorded birth, and holds it
-// to what it promises: the output is the input rows, and a pair of rows whose
-// order changed has overlapping days. A recorded birth is left out: a row that
-// overlaps the birth moves after it, and a row that overlaps that one then
-// moves after it too, passing a birth it does not overlap.
+// and 2011, with a dated birth, a dated death or neither, and holds it to what
+// it promises: the output is the input rows, and a pair of rows whose
+// order changed has overlapping days.
 func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
 	rng := rand.New(rand.NewSource(16))
 	kinds := []byte{2, 3, 4, 5, 6, 7}
@@ -211,13 +210,21 @@ func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
 			days[n] = w
 			ns = append(ns, n)
 		}
-		var death []byte
+		var birth, death []byte
 		for i, n := 0, 2+rng.Intn(7); i < n; i++ {
 			add(kinds[rng.Intn(len(kinds))] + byte(i)*10)
 		}
 		// types reads a row's type from its id: the kind, whatever the tens.
 		typeOf := func(e []byte) vocabkey.EventType { return lifelineTestTypes[e[0]%10] }
-		if rng.Intn(2) == 0 {
+		// A recorded birth and death together are left out: a burial that
+		// overlaps the death moves after it (pass 2), and with the death
+		// moved after the birth that carries the burial past a birth it
+		// does not overlap.
+		switch rng.Intn(3) {
+		case 0:
+			add(1)
+			birth = id(1)
+		case 1:
 			add(8)
 			death = id(8)
 		}
@@ -231,7 +238,7 @@ func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
 			rows = append(rows, lifelineTestRow(n))
 		}
 		daysOf := func(e []byte) (valuecompare.Window, bool) { w, ok := days[e[0]]; return w, ok }
-		got := lifeline.order(rows, typeOf, daysOf, nil, death)
+		got := lifeline.order(rows, typeOf, daysOf, birth, death)
 		if len(got) != len(rows) {
 			t.Fatalf("case %d: %d rows, want %d", c, len(got), len(rows))
 		}
