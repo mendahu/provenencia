@@ -69,3 +69,9 @@ Files: `macos/App/Features/Sources/SourcesModel.swift`, `macos/ProvenenciaTests/
 Failing test first: `SourcesModelTests/titleSortsBreakTiesByNewestAdded` *(new)* — sources "b" (id 1), "a" (id 2), "A" (id 3), "a" (id 4) where ids are added order. `.az` → ids [4, 3, 2, 1] ("a"/"A"/"a" compare same case-insensitively, so newest first, then "b"); `.za` → [1, 4, 3, 2]. Feed the rows so that the current unstable `sorted` would not happen to give this (e.g. insert ascending id); if it passes before the fix, report it as Not reproduced and stop.
 Do: `titleOrder` takes `descending: Bool = false` — the title comparison flips when descending, the `orderedSame` id-descending tie does not. `.az` sorts by `titleOrder($0, $1)`, `.za` by `titleOrder($0, $1, descending: true)`; the date sorts call it unchanged. Update `titleOrder`'s doc comment to say all four title-ordered sorts use it. In the plan's Out table, mark the "`.az` and `.za` reading `titleOrder`" row as reversed by the user (2026-11-10, F-4), and add one Landed line.
 Check: the new test passes; `scripts/check-pr.sh` PASS.
+
+## Round 2 — fix (first attempt)
+F-4 **Not reproduced**: `titleSortsBreakTiesByNewestAdded` passed before any change (rows reach `sorted` id-descending and Swift's sort keeps tie order in practice, though `sorted` does not document stability). Nothing committed. This does not drop MNT-2: the user's decision was the unification itself, a maintainability change, not a bug fix, and the failing-test-first line in F-4 was the orchestrator's error.
+
+**F-4 (revised) — A–Z and Z–A share the date sorts' title comparison** (from MNT-2, user decision)
+No failing test first: the behavior already holds by accident. Add `SourcesModelTests/titleSortsBreakTiesByNewestAdded` as written in the first attempt (it pins the tie order so it no longer rests on the input order), then do F-4's **Do** as written above. Check: the test passes before and after; `scripts/check-pr.sh` PASS.
