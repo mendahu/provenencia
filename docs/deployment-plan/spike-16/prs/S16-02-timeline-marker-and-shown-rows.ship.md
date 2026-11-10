@@ -66,3 +66,58 @@ Head `b3b49581`. Gate: implementer PASS; orchestrator re-run on `b3b49581` PASS 
 
 ## Round A1 — review (scope `f9ce9203...b3b49581`)
 Reviewers: CON, MNT, UX (`macos/App/Features/Conclusions/**`), SEC+PRF (`core/database/**`; `order` loops over a person's rows, up to 2,000). Skipped: none.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| CON-1 | CON | major | Pass (3) moves a funeral above rows the dates clearly put before it | To user → user chose "move the burial down" (2026-11-09) → Fix now → F-1 | Reviewer's seeded probe: 830 non-overlapping pairs flipped, 0 with funerals removed; failing case `[4 2 3]` → `[3 4 2]`. Contradicts US-4 and D-21/D-22 wording; fix changes D-16's mechanism, so asked |
+| PRF-1 (SEC) | PRF/SEC | major | Pass (3) quadratic in a person's own burials/funerals, uncapped, inside the held session | Fix now → F-2 | Reviewer's overlay probe: 147 ms at 2,000 rows with nothing moving, ~2 s at 16,000; profile 97% in `order` (`inSet` map lookups, `find` scans, shifts). Map rule "Crafted fan-out is capped, not engineered"; the plan's Scale paragraph counted `Overlaps` calls only |
+| UX-1 | UX | major | A moved row's bar button covers the death or birth point; clicking it opens the moved row | Fix now → F-3 | verified: `PersonTimelineLifeline.swift` appends `targets` in item order; `PersonTimelineSection.swift` draws them in a `ZStack` `ForEach` (later on top); `Mark.hit` of a bar spans its extent ±6. Dogfood order D, F, U puts the burial's year bar over both points |
+| MNT-3 | MNT | minor | `EventSpanAndAge` returns five positional results | To user → user chose a named struct (2026-11-09) → Fix now → F-4 | D-17 named the signature |
+| MNT-1 | MNT | minor | `order` moves rows two ways (pass 3's inline shift and `inSet`) | Fix now → folded into F-1/F-2 | pass 3 is rewritten there |
+| MNT-2 | MNT | minor | `TestLifelineOrder` copies `TestLifeMarkers`' fixture | Fix now → F-5 | same-pass cleanup; this PR adds both |
+| CON-2 | CON | minor | An `.after` death stub can sit above a recorded birth pass (1) put before its row | Fix now → F-6 | code this PR changes; mirror of D-20; F-3 touches the file |
+| UX note → CON | CON | minor | Plan still has the "Amendment —" §4 table row and Edges bullets STEP-12 said to delete | Fix now → F-7 | `rg -n 'Amendment —' S16-02…md` |
+
+Nits (logged): `MNT-4 · lifeline.go · lifelineRow.after stores one rank, pass 1 recomputes the other` · `MNT-5 · PersonTimelineLifeline.swift:654 · nested firstIndex.map…compactMap; name a local` · `MNT-6 · GenealogyStore.swift:775, PersonTimelinePreviewData.swift:6, PersonTimelineContent.swift:7 · comments name "S16-02's moves"; name lifelineTypes.order` · `UX-2 · PersonTimelineContent.swift:7-8 · rejoin wrapped comment` · `CON-3 · PersonTimelinePreviewData.swift:6 · long doc line`
+
+### Fix plan A1
+
+**F-1 — Pass (3) moves the burial down, not the funeral up** (from CON-1, MNT-1; user, 2026-11-09)
+Files: `core/database/persondetail/lifeline.go`, `lifeline_test.go`, the plan (Landed note: D-16 pass (3) superseded, with the user's answer).
+Failing test first: `TestLifelineOrder` "a funeral does not pass a row the dates put before it": rows burial 4 `YMD(2011,0,0)`, census 2 `YMD(2011,2,0)`, funeral 3 `After(2011,3,1)`, no birth/death → want `[2, 3, 4]` (today `[3 4 2]`). Also a seeded property test over `order` with the shipped `lifeline` (fixed seed, ≥ 5,000 cases of 2–8 rows in 2010–2011 with year/month/day/AFT/BEF dates, optional dated birth and death, funerals and burials): every pair whose relative order changed has overlapping windows, and the output is a permutation of the input.
+Do: among the after-death rows after the death (or all of them when there is no recorded dated death), a burial (higher `afterDeath` rank) that has a later overlapping funeral (lower rank) moves to just after that funeral, by the same move shape as `moveAfterOverlapping` (reuse it or a shared single-row helper beside it, so `order` moves rows one way). Drop `inSet` and the per-id `find`: track positions, test the int rank before anything else. Every T-10 and T-12 expectation holds unchanged.
+Check: both tests pass; T-10, T-12 unchanged; scripts/check-pr.sh PASS.
+
+**F-2 — Cap pass (3) and keep the no-move path linear** (from PRF-1)
+Files: `core/database/persondetail/lifeline.go`, `lifeline_test.go`, the plan (Landed note: correct the Scale paragraph's count).
+Failing test first: a timing test (pattern of the repo's existing budget tests, e.g. `core/database/promotealign` `TestLargeSourceBudgets`) that runs `lifeline.timeline` on 20 × the cap own burials and funerals with one window and a dated death, interleaved, and asserts it finishes within a budget well under today's (today ~0.15 s at 2,000; pick the budget so the current code fails at 20 × cap).
+Do: a package constant `maxReorderedAfterDeath` (64) with a `// decided:` comment (a real person has one to three; only a crafted catalog passes it; above it pass (3) leaves those rows in date order). Count the after-death rows pass (3) would consider before doing pair work. Passes (1) and (2) stay one `moveAfterOverlapping` call each. No cap on the person's events (Out line stands).
+Check: the timing test passes; scripts/check-pr.sh PASS.
+
+**F-3 — The narrowest click target sits on top** (from UX-1)
+Files: `macos/App/Features/Conclusions/PersonTimelineLifeline.swift`, `macos/ProvenenciaTests/PersonTimelineLifelineTests.swift`.
+Failing test first: `PersonTimelineLifelineTests.aPointUnderAWiderBarIsClickable`: the dogfood fixture (death `.day(2011,3,29)` recorded, funeral AFT 29 Mar 2011, burial year 2011, in that item order) and a recorded birth `.day(1850,3,12)` followed by baptism year 1850: the last target in `targets` whose `hit` contains `mark("d")!.pointY` (and `mark("b")!.pointY`, and the funeral's `pointY`) is that mark's own target.
+Do: build `targets` in drawing order: longer `hit` first, item order for ties (stable), so a later, narrower button is on top in `PersonTimelineLine`'s `ZStack`. Keep the click handler and labels unchanged.
+Check: the test passes; existing lifeline tests unchanged; scripts/check-pr.sh PASS.
+
+**F-4 — `EventSpanAndAge` returns a named struct** (from MNT-3; user, 2026-11-09)
+Files: `core/database/conclusionsummaries/order.go`, `conclusionsummaries_test.go`, `core/database/persondetail/timeline.go`, the plan (Landed note: D-17 signature superseded).
+Failing test first: none (refactor; `TestEventSpanDays` and the span/age tests pin behavior).
+Do: `type EventPlacing struct { Span TimelineSpan; Days valuecompare.Window; Dated bool; Age AgeRange; Aged bool }` (name per the package's conventions); `EventSpanAndAge` returns it; update the one production caller and the test calls.
+Check: `rg -n 'EventSpanAndAge\(' core api` shows no positional `_, _` destructuring; scripts/check-pr.sh PASS.
+
+**F-5 — One `lifeline_test.go` fixture** (from MNT-2)
+Files: `core/database/persondetail/lifeline_test.go`.
+Do: move `id`, the type map with `types`, and a row builder (`lifelineTestRow(n byte, roles ...vocabkey.Role) PersonEvent`) to package-level test helpers beside `markerBefore`; use them in `TestLifeMarkers`, `TestLifelineOrder` and F-1/F-2's new tests.
+Check: `rg -n 'typeOf := map\[byte\]' core/database/persondetail` prints at most one line; scripts/check-pr.sh PASS.
+
+**F-6 — An `.after` stub sits below every shown dated item before it** (from CON-2)
+Files: `macos/App/Features/Conclusions/PersonTimelineLifeline.swift`, `PersonTimelineLifelineTests.swift`, the plan (Landed note: D-20 mirrored).
+Failing test first: `PersonTimelineLifelineTests.anAfterStubBelowALaterEndingRowBeforeIt`: `Data.timeline([birth "b" .day(1850,3,12), "x" .day(1850,1,1)], birth: CatalogLifeMarker(eventId: "b"), death: CatalogLifeMarker(place: .after(eventId: "x")))` → the death stub's lowerBound ≥ `mark("b")!.pointY`.
+Do: mirror D-20: an `.after(row)` stub's `at` is the greatest `to` among that row's span and the spans of the shown dated items before the marker in `content.items`. Name the scan as a local (covers MNT-5).
+Check: the test passes; T-6 unchanged; scripts/check-pr.sh PASS.
+
+**F-7 — Remove the plan's leftover amendment notes** (from the UX note)
+Files: the S16-02 plan.
+Do: delete the "**Amendment — this branch @ `4588b62e`.**" table in §4 and the "Amendment —" Edges bullets (fold anything still true into the Landed note).
+Check: `rg -n 'Amendment —' docs/deployment-plan/spike-16/prs/S16-02-timeline-marker-and-shown-rows.md` prints nothing; plan-docs PASS.
