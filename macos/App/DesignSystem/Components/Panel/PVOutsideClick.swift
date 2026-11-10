@@ -9,7 +9,8 @@ enum PVOutsideClick {
     static func isInsideSheet(
         eventWindow: NSWindow?,
         sheet: NSWindow,
-        modalWindow: NSWindow?
+        modalWindow: NSWindow?,
+        parent: (NSWindow) -> NSWindow? = { $0.sheetParent ?? $0.parent }
     ) -> Bool {
         if modalWindow is NSSavePanel { return true }
         guard let eventWindow else { return false }
@@ -17,7 +18,7 @@ enum PVOutsideClick {
         var current: NSWindow? = eventWindow
         while let window = current {
             if window === sheet || window is NSSavePanel { return true }
-            current = window.sheetParent ?? window.parent
+            current = parent(window)
         }
         return false
     }
