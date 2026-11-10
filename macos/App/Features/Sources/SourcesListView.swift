@@ -85,6 +85,7 @@ private struct SourcesListContent: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .pvListBand(widthClass)
         .background(PVColor.surfacePage)
         .vocabularyToastOverlay($model.toast, identifier: "sources.toast")
         .pvFormDialog(
@@ -332,6 +333,10 @@ private struct SourcesListContent: View {
             if columns.type != nil {
                 caption(L10n.Sources.columnType)
                     .sourcesTypeCell(columns)
+            }
+            if columns.published != nil {
+                caption(L10n.Sources.columnPublished)
+                    .sourcesPublishedCell(columns)
             }
             caption(L10n.Sources.columnEvidenceGraph)
                 .frame(maxWidth: .infinity, alignment: .leading)
