@@ -3430,6 +3430,7 @@ type CopySourceRequest struct {
 	CopyMetadata    bool                   `protobuf:"varint,7,opt,name=copy_metadata,json=copyMetadata,proto3" json:"copy_metadata,omitempty"` // values and their layout
 	CopyCredibility bool                   `protobuf:"varint,8,opt,name=copy_credibility,json=copyCredibility,proto3" json:"copy_credibility,omitempty"`
 	ArtifactIds     []string               `protobuf:"bytes,9,rep,name=artifact_ids,json=artifactIds,proto3" json:"artifact_ids,omitempty"` // the original's Artifacts to copy
+	CopyDate        bool                   `protobuf:"varint,10,opt,name=copy_date,json=copyDate,proto3" json:"copy_date,omitempty"`        // the original's date, as the copy's own
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -3525,6 +3526,13 @@ func (x *CopySourceRequest) GetArtifactIds() []string {
 		return x.ArtifactIds
 	}
 	return nil
+}
+
+func (x *CopySourceRequest) GetCopyDate() bool {
+	if x != nil {
+		return x.CopyDate
+	}
+	return false
 }
 
 type CopySourceResponse struct {
@@ -20109,7 +20117,7 @@ const file_engine_proto_rawDesc = "" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\"\x8c\x01\n" +
 	"\x14CreateSourceResponse\x125\n" +
 	"\x06source\x18\x01 \x01(\v2\x1d.provenencia.engine.v1.SourceR\x06source\x12=\n" +
-	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xc4\x02\n" +
+	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xe1\x02\n" +
 	"\x11CopySourceRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
@@ -20120,7 +20128,9 @@ const file_engine_proto_rawDesc = "" +
 	"\x10copy_description\x18\x06 \x01(\bR\x0fcopyDescription\x12#\n" +
 	"\rcopy_metadata\x18\a \x01(\bR\fcopyMetadata\x12)\n" +
 	"\x10copy_credibility\x18\b \x01(\bR\x0fcopyCredibility\x12!\n" +
-	"\fartifact_ids\x18\t \x03(\tR\vartifactIds\"\x8a\x01\n" +
+	"\fartifact_ids\x18\t \x03(\tR\vartifactIds\x12\x1b\n" +
+	"\tcopy_date\x18\n" +
+	" \x01(\bR\bcopyDate\"\x8a\x01\n" +
 	"\x12CopySourceResponse\x125\n" +
 	"\x06source\x18\x01 \x01(\v2\x1d.provenencia.engine.v1.SourceR\x06source\x12=\n" +
 	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"\xa7\x01\n" +

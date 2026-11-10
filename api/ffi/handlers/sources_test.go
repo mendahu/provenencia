@@ -931,19 +931,27 @@ func TestCopySource(t *testing.T) {
 			},
 		},
 		{
-			name: "copy is undated and public",
+			name: "copy carries the date when chosen and stays public",
 			reqFn: func(t *testing.T) proto.Message {
-				dir, userID, typeID, sourceA, _, _ := copySourceFixture(t)
-				mustRPC(t, SetSourceDate, &engine.SetSourceDateRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceA, Date: pointDate(1880, 3, 12),
-				}, &engine.SetSourceDateResponse{})
-				mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceA, IsPublic: false,
-				}, &engine.SetSourcePublicResponse{})
-				return &engine.CopySourceRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy", SourceTypeId: typeID,
-					CopyDescription: true, CopyMetadata: true, CopyCredibility: true,
+				return notPublicDatedCopyRequest(t, true)
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.CopySourceResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
 				}
+				d := resp.Source.GetDate()
+				if d == nil || d.GetStartYear() != 1880 || d.GetStartMonth() != 3 || d.GetStartDay() != 12 ||
+					resp.Source.DateSortKey == nil || !resp.Source.GetIsPublic() {
+					t.Fatalf("copy %+v", resp.Source)
+				}
+				assertLatestAuditAction(t, req.(*engine.CopySourceRequest).ProjectDir, "copy_source")
+			},
+		},
+		{
+			name: "copy without the date is undated",
+			reqFn: func(t *testing.T) proto.Message {
+				return notPublicDatedCopyRequest(t, false)
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var resp engine.CopySourceResponse
@@ -980,6 +988,23 @@ func TestCopySource(t *testing.T) {
 			wantErrIs: sources.ErrInvalid,
 		},
 	})
+}
+
+// notPublicDatedCopyRequest dates `12 Mar 1880` and hides the original, then
+// asks to copy it with every part ticked and the date as given.
+func notPublicDatedCopyRequest(t *testing.T, copyDate bool) *engine.CopySourceRequest {
+	t.Helper()
+	dir, userID, typeID, sourceA, _, _ := copySourceFixture(t)
+	mustRPC(t, SetSourceDate, &engine.SetSourceDateRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceA, Date: pointDate(1880, 3, 12),
+	}, &engine.SetSourceDateResponse{})
+	mustRPC(t, SetSourcePublic, &engine.SetSourcePublicRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceA, IsPublic: false,
+	}, &engine.SetSourcePublicResponse{})
+	return &engine.CopySourceRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceA, Title: "Copy", SourceTypeId: typeID,
+		CopyDescription: true, CopyMetadata: true, CopyCredibility: true, CopyDate: copyDate,
+	}
 }
 
 func pointDate(y, m, d int32) *engine.DateValueInput {
