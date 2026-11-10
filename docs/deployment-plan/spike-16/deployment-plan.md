@@ -154,7 +154,7 @@ These are the calls for this spike. PR plans treat them as binding.
 
 ### Batch 3 — Test infrastructure
 
-- **(Batch 3) A test run shows no window and touches no install** (user, 2026-11-10). The test host opens no app window and reads no install identity or project; a test window is never ordered in and is closed when its test ends; test runs are measured one `xcodebuild` at a time, never several at once (three at once took the researcher's Mac down on 2026-11-10). Binds S16-34.
+- **(Batch 3) A test run shows no window and touches no install** (user, 2026-11-10). The test host opens no app window and reads no install identity or project; a test window is never ordered in and is closed when its test ends; test runs are measured one `xcodebuild` at a time, never several at once (three at once took the researcher's Mac down on 2026-11-10). Unit and integration tests stay low-cost: no mouse or key events synthesized through a window (user, 2026-11-10). Binds S16-34.
 
 ## PR map
 
