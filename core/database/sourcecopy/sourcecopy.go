@@ -1,9 +1,9 @@
 // Package sourcecopy copies a Source in one write: a new Source with a chosen
 // title and type, and, each only when chosen, the original's description,
 // published date (as a date row of the copy's own), metadata with its layout,
-// credibility and any subset of its Artifacts. It
-// composes the owner packages inside the caller's writes.Run transaction and
-// never calls writes.Run itself.
+// credibility and any subset of its Artifacts. It composes the owner packages
+// inside the caller's writes.Run transaction and never calls writes.Run
+// itself.
 //
 // Notes, Subjects, Citations, Observations, graphs and the cover are never
 // copied.
