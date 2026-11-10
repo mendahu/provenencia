@@ -1,7 +1,7 @@
 # Ship log — S16-35 Layout tests compute their frames instead of waiting on a window
 
 **Plan:** [`S16-35-layout-tests-without-waits.md`](S16-35-layout-tests-without-waits.md) · **Branch:** `plan/s16-35-layout-tests-without-waits` · **PR:** [#775](https://github.com/mendahu/provenencia/pull/775)
-**State:** review 1
+**State:** fixing 1
 
 ## Before round 0
 
@@ -28,3 +28,30 @@ D-8 run tables (implementer, one `xcodebuild` at a time; load = 1/5/15-min befor
 
 ## Round 1 — review
 Reviewers: CON, MNT, UX (`macos/App/**`). Skipped: SEC+PRF — no catalog data, store, list, cache or model code; the diff moves layout arithmetic into static functions that do the same work per layout pass, and deletes tests.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | minor | Two copies of the `Subviews` → `fit` closure; D-7 tells every new layout to write a third | Fix now → F-1 | verified: `SourcePageView.swift:384` (inside `placed`) and `PVPageColumns.swift:418` (`fit(_:)`) hold the same closure; same-pass cleanup — this PR adds both copies |
+| MNT-2 | MNT | minor | `add-swift-test` lists `PersonTimelinePlacement` as a `static func arrange(width:…fit:)`; it has none | Fix now → F-2 | verified: `PersonTimelinePlacement.swift` has `init(content:heights:viewportHeight:pointsPerYear:)` and helpers, no `arrange`; the example came from the plan's D-7 (the orchestrator's error, from plan review M-3). The fix keeps D-7's example and labels it as the other pure-placement shape, so no Decision changes |
+
+Nits (logged): `MNT-3 · WorkspaceDestinationHostTests.swift:2 · unused import SwiftUI` (rides F-3) · `MNT-4 · PVPageColumns.swift:424-425 · pane(proposal, w) computed twice` (rides F-3) · `MNT-5 · SourcePageView.swift:380 · placed's doc repeats arrange's` (rides F-3) · `CON-1 · SourcePageOverviewLayoutTests.swift:7 · test helper doc says "sizes" but returns frames` (rides F-3) · `CON-2 · macos/App/DesignSystem/README.md:192 · could name arrange, layoutWidths, groupX` · Outside lens (MNT→CON): `WorkspaceNavigationTests.swift:656 · T-5's attachedNavigation() temp dirs are not removed; the file's other tests do the same` — logged, the pattern predates this PR.
+
+UX: no findings (clean). CON: no findings above nit (clean). No blocker or major in any lens, so no round 2.
+
+### Fix plan 1
+
+**F-1 — One `Subviews` → `fit` adapter** (from MNT-1)
+Files: `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift`, `macos/App/Features/Sources/SourcePageView.swift`, `.agents/skills/add-swift-test/SKILL.md`.
+Failing test first: none (refactor; T-2 and T-3 pin the results).
+Do: add `extension LayoutSubviews { func fit(_ index: Int, _ width: CGFloat) -> CGSize }` returning `self[index].sizeThatFits(ProposedViewSize(width: width, height: nil))`, in `PVPageColumns.swift` beside `PVPageColumnsLayout` with a one-line doc ("a page `Layout`'s `fit` for its static `arrange`"). `PVPageColumnsLayout` drops its private `fit(_:)` and passes `subviews.fit`; `SourcePageOverviewLayout.placed` passes `subviews.fit`. In the D-7 bullet of `add-swift-test`, say the `Layout` passes `subviews.fit` to its `arrange`.
+Check: `rg -n 'sizeThatFits\(ProposedViewSize\(width: \$1' macos/App` prints nothing; `rg -n 'func fit\(' macos/App` prints only the extension; T-2, T-3 pass; `check-guidance-names.py` passes.
+
+**F-2 — The skill's example list says what each example is** (from MNT-2)
+Files: `.agents/skills/add-swift-test/SKILL.md`.
+Do: the examples of `static func arrange(width:…fit:)` are `SourcePageOverviewLayout.arrange` and `PVPageColumnsLayout.arrange`; `PersonTimelinePlacement` follows as "or a pure placement value built from measured sizes (`PersonTimelinePlacement`)".
+Check: `check-guidance-names.py` passes.
+
+**F-3 — Nits in files this PR changes** (MNT-3, MNT-4, MNT-5, CON-1)
+Files: `macos/ProvenenciaTests/WorkspaceDestinationHostTests.swift`, `macos/App/DesignSystem/Components/PageColumns/PVPageColumns.swift`, `macos/App/Features/Sources/SourcePageView.swift`, `macos/ProvenenciaTests/SourcePageOverviewLayoutTests.swift`.
+Do: drop `import SwiftUI` from `WorkspaceDestinationHostTests.swift` if the file builds without it; bind `pane(proposal, w)` once in `PVPageColumnsLayout.sizeThatFits`; `placed(width:subviews:)`'s doc: "The `Subviews` adapter for `arrange`: no frames unless there are four subviews."; the test helper's doc: "Arranges four subviews of these heights at `width`."
+Check: `scripts/check-pr.sh` PASS. Then one line in the plan's Landed note for F-1 (the shared adapter) and F-2.
