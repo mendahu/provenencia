@@ -116,6 +116,7 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 - A dismiss button: a notice goes when its read succeeds.
 - Moving the keyboard to a notice that appears on its own (a background reload). Only a Try again the researcher pressed keeps the keyboard on the notice.
 - Back restoring a section's place (P-19).
+- What Remove does on a record line under a stale notice: it stays as today (open question for the user, recorded in the plan's review log).
 
 ---
 
@@ -123,7 +124,7 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 
 | S16-04 ships | Not S16-04 |
 | --- | --- |
-| PN-1 – PN-9, PN-W1, PN-W2 | The lists' notices ([idea](../../../ideas/person-page-followups.md)); stale-while-refreshing of hidden pages (S16-09); the section-switch and Remove announcements (S16-06) |
+| PN-1 – PN-10, PN-W1, PN-W2 | The lists' notices ([idea](../../../ideas/person-page-followups.md)); stale-while-refreshing of hidden pages (S16-09); the section-switch and Remove announcements (S16-06) |
 
 ---
 
@@ -139,9 +140,10 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 | PN-6 | **Try again** reads again only what its notice reports. While it runs, the Button shows its loading state; over shown content the header's "Refreshing" spinner runs too, as for any reload. On success the notice goes. On a new failure the notice stays, the keyboard stays on Try again, and VoiceOver hears the notice again. |
 | PN-7 | **VoiceOver hears each notice** when it appears and when its read fails again (danger priority). A notice that appears on its own does not take the keyboard. |
 | PN-8 | **Gone.** When the person is gone, the page leaves for the Persons list with a Toast: "This person no longer exists. They may have been merged into another person." When a section's read learns it first, that section's notice says the same line under its title, with no Try again (it would fail the same way). An Event or Place page keeps "This record no longer exists. It may have been merged into another." |
-| PN-9 | **A partial diagram says so, once.** One note in the record links column, under the title, in place of the caption ("An arc per shared person · thick when 2+ facts agree"). Kit: Callout, warning tone, compact, no title, no button; not announced (it is a state of the drawing, read in order before the diagram). Two messages: **did not compare** — "Too many records to compare. The links between them are not drawn." The diagram draws every record and no arc, and no record is described as standing apart. **Left some out** (more links than are sent, or more than 1,000 records) — "Too many records to draw them all. The strongest links are drawn." Did not compare wins when both are true. A full read shows no note. |
+| PN-9 | **A partial diagram says so, once.** One note in the record links column, under the title, in place of the caption ("An arc per shared person · thick when 2+ facts agree"). Kit: Callout, warning tone, compact, no title, no button; not announced (it is a state of the drawing, read in order before the diagram). Two messages: **did not compare** — "Too many records to compare. The links between them are not drawn." The diagram draws every record and no arc (the app is sent none), and each record is spoken as its ref, graph and Source only ("PER-7KD45, Entry 1834/112, Hamburg parish register"), never as sharing no one. **Left some out** (more links than are sent, or more than 1,000 records) — "Too many records to draw them all. Some records and links are left out." Did not compare wins when both are true. A full read shows no note. |
 | PN-W1 | Wide changes no notice's place. The page's notice keeps the header band's width; a section's notice keeps the page band's width when the section fills the pane (Timeline, Sources); the diagram's notice and note keep the pinned column's width beside the rows. |
-| PN-W2 | Crossing 1600 keeps every notice and the keyboard on its Try again. At Regular, when the diagram sits under the rows, its notice and note move with it. |
+| PN-W2 | Crossing 1600 keeps every notice and the keyboard on its Try again. At Regular, when the pane is too narrow for the rows and the column side by side, the column (its notice and note with it) sits under the rows, as today. |
+| PN-10 | **Combined states.** When the Sources rows' first load fails or the person is gone, the record links column is not drawn (the column belongs to the rows). A gone section shows only its notice, no rows. A reload that fails over an empty section puts the notice above the EmptyState. At Wide the top of the pinned column aligns with the top of the rows, not with the rows' notice. |
 
 ### 4.1 Wide layout
 
@@ -151,24 +153,25 @@ A Person page reads its data in parts: the page's own read (the header, Vitals a
 | Person page, Family section | The section's notice, then the tree, as S13-D3 agreed | As S13-D3 agreed, with the notice at the band's width | Nothing |
 | Person page, Timeline section | The section's notice, then the lifeline and the rows | Full width (Page columns' `primaryFill`): the notice keeps the band's width, the lifeline and rows fill the pane | Nothing |
 | Person page, Sources section | The rows' notice above the rows; the record links column (notice, title, note, diagram) beside them, or under them when the rows would be narrower than their minimum | Full width (`primaryFill`): the rows' notice keeps the band's width; the column pinned beside the rows | The column only, as today |
-| Event and Place pages | Header, then the page's notice, then Details | Centred at the Regular measure, as today | Nothing |
+| Event and Place pages | Header, then the page's notice, then Details | Centred at the Regular measure, as today (not drawn: nothing moves) | Nothing |
 
 ---
 
 ## 5. Suggested frames
 
-Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide** (pane 2296 × 1440); the others as they say. Error text for the frames: "The project could not be read. The disk may be full or the file locked."
+Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide** (pane 2296 × 1440); the others as they say. Sample error text for the frames (the engine's own message is shown; this is not new copy): "Something went wrong. Please try again."
 
 | Frame | Requirement | Draw |
 | --- | --- | --- |
 | 1a / 1b | PN-1, PN-4, PN-W1 | Family open on a person with two parents, four siblings, a spouse and three children. The section's reload failed: the notice "Family could not be read" with Try again above the tree, which is unchanged |
-| 2a / 2b | PN-1, PN-5, PN-W1 | Sources open on a person with records on four Sources. The rows' reload failed and the record links' first load failed: the rows' notice above the rows, the compact notice alone in the column |
+| 2a / 2b | PN-1, PN-5, PN-10, PN-W1 | Sources open on a person with records on four Sources, the column beside the rows. The rows' reload failed and the record links' first load failed: the rows' notice above the rows, the compact notice alone in the column, its top aligned with the rows' top |
+| 2c | PN-W2 | Regular, pane 900 pt wide: frame 2 with the column under the rows (notice first) |
 | 3a / 3b | PN-3, PN-W1 | Timeline open. The page's reload failed: the notice under the switcher in the pinned band, the Timeline under it unchanged |
 | 4 | PN-2, PN-3 | Regular only, two states side by side: the page's first load failed (the notice alone at the top of the page); Timeline's first load failed under a loaded header (the notice in place of the lifeline) |
 | 5 | PN-6 | Regular only: frame 1 while Try again runs (the Button's loading state, "Refreshing" beside the switcher), then after a second failure (the notice again, Try again with its focus ring) |
-| 6a / 6b | PN-9, PN-W1 | Sources with the record links read that did not compare: 40 records on the circle, no arcs, the warning note under the title in place of the caption |
+| 6a / 6b | PN-9, PN-W1 | Sources with the record links read that did not compare, the column beside the rows: 40 records on the circle, no arcs, the warning note under the title in place of the caption |
 | 7 | PN-9 | Regular only: the column with the "left some out" note: 1,000 records drawn with their arcs, the note under the title |
-| 8 | PN-8 | Regular only, two states: the Persons list with the Toast "This person no longer exists. They may have been merged into another person."; and the Sources section's notice for a gone person (title "Sources could not be read", that line, no Try again) |
+| 8 | PN-8, PN-10 | Regular only, two states: the Toast "This person no longer exists. They may have been merged into another person." alone at the pane's toast position over a blank pane (the Persons list is not on this board); and the Sources section's notice for a gone person (title "Sources could not be read", that line, no Try again, no rows, no column) |
 | 9 | PN-3 | Regular only: an Event page whose reload failed: the notice under the header, above Details |
 
 ---
@@ -177,19 +180,19 @@ Frames with an a / b pair are drawn at **Regular** (pane 1102 × 900) and **Wide
 
 | Building block | Layer | Status | Home | Notes |
 | --- | --- | --- | --- | --- |
-| Retry notice | Component | Ship | `macos/App/DesignSystem/Components/Callout/PVRetryCallout.swift` `PVRetryCallout` | Every failed-read notice on this board (PN-1 – PN-6), full or compact. It is the Callout with one small secondary Button and announces. Not a second retry control, not a Toast |
+| Retry notice | Component | Extend | `macos/App/DesignSystem/Components/Callout/PVRetryCallout.swift` `PVRetryCallout` | Every failed-read notice on this board (PN-1 – PN-6), full or compact, at its call site: no wrapper. It is the Callout with one small secondary Button and announces. It gains what PN-6 and PN-7 need for every caller: speak again on each new failure, and keep the keyboard on Try again after a pressed retry fails. The Button reads "Try again", as on Promote. Not a second retry control, not a Toast |
 | Callout | Component | Ship | `macos/App/DesignSystem/Components/Callout/PVCallout.swift` `PVCallout` | The gone notice in a section (danger, no button, PN-8) and the diagram's partial note (warning, compact, no title, not announced, PN-9) |
 | Button | Component | Ship | `macos/App/DesignSystem/Components/Button/` | Inside the retry notice only: secondary, small, its loading state while Try again runs |
-| Toast | Component | Ship | the page's leave Toast (`leavesForSectionRoot`) | The gone line as the page leaves (PN-8); only its words change |
+| Toast | Component | Ship | `macos/App/DesignSystem/Components/Toast/`, shown by `macos/App/Features/Workspace/WorkspaceNavigation.swift` `leavesForSectionRoot` | The gone line as the page leaves (PN-8); only its words change |
 | Page frame | Snowflake | Extend | `macos/App/Features/Conclusions/ConclusionDetailPage.swift` | Gains the page's notice under the switcher (PN-3), shared by Person, Event and Place |
 | Section host | Snowflake | Extend | `macos/App/Features/Conclusions/ConclusionPageSectionHost.swift` `ConclusionPageSectionHost` | Draws each section's notice (band) and the diagram's (column); today's plain Callout becomes the retry notice |
 | Record links column | Snowflake | Extend | `macos/App/Features/Conclusions/PersonRecordLinksColumn.swift` | Gains the note in place of the caption (PN-9); the circle, nodes and title are unchanged |
 | Refreshing spinner | Snowflake | Ship | `ConclusionDetailPage.swift` `ConclusionDetailHeaderBand` | Runs while Try again reads, as for any reload |
 
-**Non-goals.** No new kit primitive, no new tone, no new color token, no dismiss control, no new stroke style on the diagram (a link that was not compared is not drawn at all), no per-section copy of the stale line.
+**Non-goals.** No new kit primitive (the retry notice is extended, not forked), no feature wrapper around it, no new tone, no new color token, no dismiss control, no new stroke style on the diagram (a link that was not compared is not drawn at all), no per-section copy of the stale line.
 
 ---
 
 ## 7. Handoff
 
-When the board is agreed: record the frames on the **Board** line here, in [`README.md`](README.md) and on the plan's **Board** line; the plan ([`../prs/S16-04-person-page-notices.md`](../prs/S16-04-person-page-notices.md)) copies PN-1 – PN-9, PN-W1 and PN-W2 into its Scope and moves from `Blocked — on board S16-D1` to `Planned`. When S16-04 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the frames on the **Board** line here, in [`README.md`](README.md) and on the plan's **Board** line; the plan ([`../prs/S16-04-person-page-notices.md`](../prs/S16-04-person-page-notices.md)) copies PN-1 – PN-10, PN-W1 and PN-W2 into its Scope and moves from `Blocked — on board S16-D1` to `Planned`. When S16-04 lands, the brief moves to the spike's design archive.
