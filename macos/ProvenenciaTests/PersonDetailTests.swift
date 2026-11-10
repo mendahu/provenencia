@@ -44,11 +44,41 @@ struct PersonDetailTests {
         ) == .failed(L10n.Errors.message(for: uncoded)))
         let content = PersonDetailContent(detail: detail())
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
-            .loaded(detail()), isFetching: false, content: { PersonDetailContent(detail: $0) }
-        ) == .content(content, refreshing: false))
+            .loaded(detail(), refreshFailure: nil), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .content(content, refreshing: false, refreshFailure: nil))
         #expect(ConclusionDetailPresentation<PersonDetailContent>(
-            .loaded(detail()), isFetching: true, content: { PersonDetailContent(detail: $0) }
-        ) == .content(content, refreshing: true))
+            .loaded(detail(), refreshFailure: nil), isFetching: true, content: { PersonDetailContent(detail: $0) }
+        ) == .content(content, refreshing: true, refreshFailure: nil))
+    }
+
+    @Test func presentationShowsARefreshFailureBesideTheContent() {
+        let content = PersonDetailContent(detail: detail())
+        let generic = CoreInvokeError.coded(status: 1, code: "internal.unknown", kind: .internal, params: [])
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
+            .loaded(detail(), refreshFailure: generic), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .content(content, refreshing: false, refreshFailure: L10n.Errors.message(for: generic)))
+        // A person gone behind a shown page reads as gone, like a first load.
+        let gone = CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
+            .loaded(detail(), refreshFailure: gone), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .gone)
+        #expect(ConclusionDetailPresentation<PersonDetailContent>(
+            .failed(gone), isFetching: false, content: { PersonDetailContent(detail: $0) }
+        ) == .gone)
+    }
+
+    @Test func eachKindSuppliesItsGoneLine() {
+        #expect(L10n.string(L10n.Conclusions.goneNotice(section: .persons))
+            == "This person no longer exists. They may have been merged into another person.")
+        #expect(L10n.string(L10n.Conclusions.goneNotice(section: .events))
+            == L10n.string(L10n.Errors.conclusionDetailsNotFound))
+        #expect(L10n.string(L10n.Conclusions.goneNotice(section: .places))
+            == L10n.string(L10n.Errors.conclusionDetailsNotFound))
+    }
+
+    @Test func readNoticeStaleMessageWrapsTheError() {
+        #expect(L10n.Conclusions.readNoticeStaleMessage("Disk full.")
+            == "Disk full. What is shown is from the last time it was read.")
     }
 
     /// Name and the life rows always show; any other field only once a

@@ -5663,9 +5663,9 @@ public nonisolated struct Provenencia_Engine_V1_GetPersonRecordLinksRequest: Sen
 /// each such person. Pairs are ordered by graph order, graph_a_id first, and
 /// hold only pairs with a line. The facts a line counted are not sent. Computed
 /// on each read, never stored. not_counted is true when the read passed its work
-/// bound and compared nothing (every line weak, or no pair when the lines alone
-/// passed it); lines_dropped is true when more lines were found than
-/// `persondetail.maxRecordLinkLines` sent, strong lines sent first.
+/// bound, so it compared nothing and sends no pair; lines_dropped is true when
+/// more lines were found than `persondetail.maxRecordLinkLines` sent, strong
+/// lines sent first.
 public nonisolated struct Provenencia_Engine_V1_GetPersonRecordLinksResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

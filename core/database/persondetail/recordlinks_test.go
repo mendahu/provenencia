@@ -274,8 +274,8 @@ func TestRecordLinksSaysWhenPartial(t *testing.T) {
 	})
 	t.Run("past the work bound by pair work", func(t *testing.T) {
 		rl := read(18, 75_000)
-		if n, strong := lines(rl); !rl.NotCounted || rl.LinesDropped || len(rl.Pairs) != 6 || n != 18 || strong != 0 {
-			t.Fatalf("not counted %v, dropped %v, %d pairs, %d lines, %d strong", rl.NotCounted, rl.LinesDropped, len(rl.Pairs), n, strong)
+		if !rl.NotCounted || rl.LinesDropped || len(rl.Pairs) != 0 || len(rl.Graphs) != 4 {
+			t.Fatalf("not counted %v, dropped %v, %d pairs, %d graphs", rl.NotCounted, rl.LinesDropped, len(rl.Pairs), len(rl.Graphs))
 		}
 	})
 	t.Run("past the work bound by the lines alone", func(t *testing.T) {

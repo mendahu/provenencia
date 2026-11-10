@@ -299,9 +299,9 @@ private struct EvidenceGraphContent: View {
             retry: L10n.EvidenceGraph.readAgain,
             isRetrying: model.isRereadingGraph,
             retryIdentifier: "evidenceGraph.readError.readAgain",
+            failureRevision: model.graphReadFailureRevision,
             onRetry: { model.readGraphAgain() }
         )
-        .id(model.graphReadAttempt)
         .accessibilityIdentifier("evidenceGraph.readError.callout")
     }
 

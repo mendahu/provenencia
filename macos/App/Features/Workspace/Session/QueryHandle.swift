@@ -19,6 +19,25 @@ enum QueryRead<Value> {
     }
 }
 
+/// What a reader that shows a refresh failure beside its value sees: nothing
+/// yet, a failure with no value, or a value with the failure of its latest
+/// reload (nil when that reload succeeded).
+enum QueryReading<Value> {
+    case loading
+    case failed(Error)
+    case loaded(Value, refreshFailure: Error?)
+
+    /// The error a notice with Try again shows: the failure with no value, or the failure of the
+    /// latest reload behind a value; nil while loading or when the reload succeeded.
+    var noticeError: Error? {
+        switch self {
+        case .failed(let error): error
+        case .loaded(_, let refreshFailure): refreshFailure
+        case .loading: nil
+        }
+    }
+}
+
 /// Typed view of one cached catalog query. Owned by `WorkspaceSession` per key.
 @MainActor
 @Observable
@@ -46,7 +65,25 @@ final class QueryHandle<Value> {
     var hasValue: Bool { value != nil }
 
     /// The last load's error while the handle is in the error state, even beside a stale value.
+    /// Nil while a retry after a first-load failure runs (a retry behind a value keeps it); a
+    /// notice with Try again reads `reading`.
     var failure: Error? { status == .error ? error : nil }
+
+    /// Bumps in every `applyFailure`, so a notice can speak again for each new failure.
+    private(set) var failureRevision = 0
+
+    /// True while a first load or a refetch is running.
+    var isReading: Bool { status == .loading || isFetching }
+
+    /// A value with the failure of its latest reload beside it (nil when it
+    /// succeeded), else the stored error, else still loading. The error
+    /// holds while a retry after a first-load failure runs, so a notice with
+    /// Try again stays on screen. `read` and `failure` are unchanged.
+    var reading: QueryReading<Value> {
+        if let value { return .loaded(value, refreshFailure: failure) }
+        if let error { return .failed(error) }
+        return .loading
+    }
 
     /// Folds value / error / loading: a value wins (even a stale one), else a
     /// failure, else still loading.
@@ -102,6 +139,7 @@ final class QueryHandle<Value> {
         self.error = error
         status = .error
         refetching = false
+        failureRevision += 1
         if clearValue {
             value = nil
             revision += 1

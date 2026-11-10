@@ -2,8 +2,8 @@ import SwiftUI
 
 /// The host of a Person page section that reads from its list
 /// (`ConclusionPageSection.reads`): it gets the handle of the section's `read` role
-/// (its own read by default), starts the read, and draws the spinner, the error Callout
-/// and the empty state around the section's `content`. Only the content differs between sections.
+/// (its own read by default), starts the read, and draws the spinner, the read-failure
+/// notice and the empty state around the section's `content`. Only the content differs between sections.
 ///
 /// The id root is the section's `accessibilityIdentifierRoot(pageIdentifier:)`: `.error`,
 /// `.empty`, and the root itself on the content. A second host over a section's companion
@@ -15,7 +15,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         /// The section's own region: states keep the page band, an empty read has an EmptyState.
         case band
         /// A column beside the section's rows: the spinner centred in `loadingHeight` (the
-        /// height the column draws at, so it does not jump), a compact danger Callout, and no
+        /// height the column draws at, so it does not jump), a compact retry callout, and no
         /// empty state.
         case column(loadingHeight: CGFloat)
     }
@@ -33,6 +33,7 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
     let content: (Content) -> Body
 
     @Environment(WorkspaceSession.self) private var session
+    @Environment(WorkspaceNavigation.self) private var navigation
 
     init(
         section: ConclusionPageSection,
@@ -67,13 +68,13 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         return key
     }
 
-    private var columnLoadingHeight: CGFloat? {
-        if case .column(let height) = placement { return height }
-        return nil
+    private var isColumn: Bool {
+        if case .column = placement { return true }
+        return false
     }
 
     private var idRoot: String {
-        accessibilityIdentifierRoot + (columnLoadingHeight == nil ? "" : ".column")
+        accessibilityIdentifierRoot + (isColumn ? ".column" : "")
     }
 
     var body: some View {
@@ -104,23 +105,47 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         }
     }
 
+    /// A notice keeps the page band's width in the band, and fills the column in a column.
     @ViewBuilder
-    private func error(_ message: String) -> some View {
-        switch placement {
-        case .band:
-            PVCallout(tone: .danger, title: errorTitle, message: message)
-                .pvKeepsPageBand()
-                .accessibilityIdentifier("\(idRoot).error")
-        case .column:
-            PVCallout(tone: .danger, title: errorTitle, message: message, compact: true)
-                .accessibilityIdentifier("\(idRoot).error")
-        }
+    private func placed(_ notice: some View) -> some View {
+        if isColumn { notice } else { notice.pvKeepsPageBand() }
+    }
+
+    /// A failed read's notice with Try again, which reads this host's own key again.
+    private func retryNotice(
+        _ message: String, id: String, handle: QueryHandle<Value>
+    ) -> some View {
+        placed(
+            PVRetryCallout(
+                title: errorTitle,
+                message: message,
+                handle: handle,
+                compact: isColumn,
+                id: id,
+                onRetry: { let _: QueryHandle<Value> = session.reread(key) }
+            )
+            .accessibilityIdentifier(id)
+        )
+    }
+
+    /// The read is gone (deleted or merged): the page's kind says so, with nothing to try again.
+    private var goneNotice: some View {
+        placed(
+            PVCallout(
+                tone: .danger,
+                title: errorTitle,
+                message: L10n.string(L10n.Conclusions.goneNotice(section: navigation.currentLocation.section)),
+                compact: isColumn,
+                announces: true
+            )
+            .accessibilityIdentifier("\(idRoot).error")
+        )
     }
 
     @ViewBuilder
     private func loaded(_ handle: QueryHandle<Value>) -> some View {
         let presentation = ConclusionDetailPresentation<Content>(
-            handle.read,
+            handle.reading,
             isFetching: handle.isFetching,
             content: make
         )
@@ -130,17 +155,27 @@ struct ConclusionPageSectionHost<Value, Content: Equatable, Body: View>: View {
         case .gone:
             // The page above leaves when its own read reports the handle gone; a section whose
             // read fails first, under a page that still holds its value, shows why.
-            error(L10n.string(L10n.Errors.conclusionDetailsNotFound))
+            goneNotice
         case .failed(let message):
-            error(message)
-        case .content(let value, _):
-            if case .band = placement, let emptyTitle, isEmpty(value) {
-                PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
-                    .pvKeepsPageBand()
-                    .accessibilityIdentifier("\(idRoot).empty")
-            } else {
-                content(value)
-                    .accessibilityIdentifier(idRoot)
+            retryNotice(message, id: "\(idRoot).error", handle: handle)
+        case .content(let value, _, let refreshFailure):
+            // One stack either way, so the section stays mounted when a notice comes and goes.
+            VStack(alignment: .leading, spacing: isColumn ? PVSpacing.space4 : PVSpacing.space8) {
+                if let refreshFailure {
+                    retryNotice(
+                        L10n.Conclusions.readNoticeStaleMessage(refreshFailure),
+                        id: "\(idRoot).refreshError",
+                        handle: handle
+                    )
+                }
+                if !isColumn, let emptyTitle, isEmpty(value) {
+                    PVEmptyState(glyph: section.glyph, title: emptyTitle, message: emptyMessage)
+                        .pvKeepsPageBand()
+                        .accessibilityIdentifier("\(idRoot).empty")
+                } else {
+                    content(value)
+                        .accessibilityIdentifier(idRoot)
+                }
             }
         }
     }

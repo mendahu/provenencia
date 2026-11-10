@@ -107,9 +107,6 @@ struct PersonRecordLinksContentTests {
     }
 
     @Test func allLinesDrawAndNodesStopAtTheCap() {
-        func graph(_ id: String) -> CatalogRecordLinksGraph {
-            CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
-        }
         // Go owns the line bound: every line it sends is an arc, however many.
         let lines = (0..<80_000).map { CatalogRecordLink(entityID: "e\($0)", strength: .weak) }
         let many = PersonRecordLinksContent(
@@ -136,6 +133,7 @@ struct PersonRecordLinksContentTests {
             graphLocations: [:]
         )
         #expect(wide.dataset.nodes.count == PersonRecordLinksContent.maxNodes)
+        #expect(wide.partial == .leftOut)
         #expect(wide.dataset.resolvedArcs.count == 1)
         #expect(wide.dataset.resolvedArcs.map { [wide.dataset.nodes[$0.from].id, wide.dataset.nodes[$0.to].id] } == [["g0", "g1"]])
     }
@@ -144,6 +142,98 @@ struct PersonRecordLinksContentTests {
         let links = CatalogPersonRecordLinks()
         #expect(!links.notCounted)
         #expect(!links.linesDropped)
+    }
+
+    private func graph(_ id: String) -> CatalogRecordLinksGraph {
+        CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
+    }
+
+    private func line(_ strength: CatalogRecordLinkStrength = .weak) -> CatalogRecordLink {
+        CatalogRecordLink(entityID: "e", strength: strength)
+    }
+
+    @Test func aReadThatDidNotCountIsPartialAndSpokenWithoutLinks() {
+        // Go sends the graphs and no pair when it did not count.
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: (0..<40).map { graph("g\($0)") }, pairs: [], notCounted: true
+            ),
+            graphLocations: [:]
+        )
+        #expect(content.partial == .notCounted)
+        #expect(content.dataset.nodes.count == 40)
+        #expect(content.dataset.resolvedArcs.isEmpty)
+        let apart = L10n.Conclusions.recordLinksNodeApartAccessibility(ref: "g0", graph: "g0", source: "")
+        #expect(content.dataset.nodes[0].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "g0", graph: "g0", source: ""))
+        #expect(content.dataset.nodes.allSatisfy { $0.accessibilityLabel != apart })
+    }
+
+    @Test func droppedLinesAreLeftOut() {
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: [graph("a"), graph("b")],
+                pairs: [CatalogRecordLinksPair(graphAID: "a", graphBID: "b", lines: [line()])],
+                notCounted: false, linesDropped: true
+            ),
+            graphLocations: [:]
+        )
+        #expect(content.partial == .leftOut)
+        #expect(content.dataset.resolvedArcs.count == 1)
+    }
+
+    @Test func aNodeWhoseLinesWereAllDroppedIsNotSpokenAsSharingNoOne() {
+        // "a" and "b" link, "c" has no line in what Go sent, and Go dropped lines.
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(
+                graphs: [graph("a"), graph("b"), graph("c")],
+                pairs: [CatalogRecordLinksPair(graphAID: "a", graphBID: "b", lines: [line()])],
+                notCounted: false, linesDropped: true
+            ),
+            graphLocations: [:]
+        )
+        #expect(content.partial == .leftOut)
+        #expect(content.dataset.nodes[2].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "c", graph: "c", source: ""))
+        #expect(content.dataset.nodes[0].accessibilityLabel
+            == L10n.Conclusions.recordLinksNodeAccessibility(ref: "a", graph: "a", source: "", connected: 1))
+    }
+
+    @Test func droppedGraphsAreLeftOut() {
+        let ids = (0...PersonRecordLinksContent.maxNodes).map { "g\($0)" }
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(graphs: ids.map(graph), pairs: []),
+            graphLocations: [:]
+        )
+        #expect(content.dataset.nodes.count == PersonRecordLinksContent.maxNodes)
+        #expect(content.partial == .leftOut)
+        // A duplicate of a kept graph past the cap is not a graph left out.
+        let exactly = Array(ids.dropLast())
+        let duplicated = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(graphs: (exactly + [exactly[0]]).map(graph), pairs: []),
+            graphLocations: [:]
+        )
+        #expect(duplicated.partial == nil)
+    }
+
+    @Test func notCountedWinsOverLeftOut() {
+        let ids = (0...PersonRecordLinksContent.maxNodes).map { "g\($0)" }
+        let content = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(graphs: ids.map(graph), pairs: [], notCounted: true),
+            graphLocations: [:]
+        )
+        #expect(content.partial == .notCounted)
+    }
+
+    @Test func aFullReadIsNotPartial() {
+        #expect(johann().partial == nil)
+        // A counted read with no pair still speaks "shares no one" (the apart label).
+        let lone = PersonRecordLinksContent(
+            links: CatalogPersonRecordLinks(graphs: [graph("a"), graph("b")], pairs: []),
+            graphLocations: [:]
+        )
+        #expect(lone.partial == nil)
+        #expect(lone.dataset.nodes[0].accessibilityLabel?.hasSuffix("shares no one") == true)
     }
 
     @Test func goStoreCarriesThePartialFlags() {

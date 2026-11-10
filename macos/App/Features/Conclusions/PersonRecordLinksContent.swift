@@ -7,6 +7,16 @@ struct PersonRecordLinksContent: Equatable {
     let dataset: CircularLinkDataset<String>
     /// Where a click on a graph's node opens its record; a graph the claims read has not named is absent.
     let locations: [String: WorkspaceLocation]
+    /// Why the drawing is not the whole read, nil when it is.
+    let partial: Partial?
+
+    /// The one note for a drawing that leaves something out, whichever side cut it.
+    enum Partial: Equatable {
+        /// The engine did not compare the records, so it sent no link.
+        case notCounted
+        /// Records or links are left out: the engine dropped lines, or there are more records than nodes drawn.
+        case leftOut
+    }
 
     /// The board's line widths (S13-D10): a strong line and a weak one.
     static let strongLineWidth: CGFloat = 3
@@ -25,10 +35,18 @@ struct PersonRecordLinksContent: Equatable {
     ) {
         var ids = Set<String>()
         var graphs: [CatalogRecordLinksGraph] = []
-        for graph in links.graphs where !ids.contains(graph.graphID) && graphs.count < Self.maxNodes {
+        var graphsCut = false
+        for graph in links.graphs where !ids.contains(graph.graphID) {
+            if graphs.count == Self.maxNodes {
+                graphsCut = true
+                break
+            }
             ids.insert(graph.graphID)
             graphs.append(graph)
         }
+        let reading: Partial? =
+            if links.notCounted { .notCounted } else if links.linesDropped || graphsCut { .leftOut } else { nil }
+        partial = reading
         // Go sends at most `persondetail.maxRecordLinkLines` lines, strong first; every line it sends is an arc, in the read's order.
         var arcs: [CircularLinkArc<String>] = []
         for pair in links.pairs where Self.isKept(pair, in: ids) {
@@ -55,7 +73,10 @@ struct PersonRecordLinksContent: Equatable {
                 id: graph.graphID,
                 label: label,
                 help: L10n.Conclusions.recordLinksNodeHelp(graph: graphTitle, source: sourceTitle),
-                accessibilityLabel: connected == 0
+                // A node with no line in a drawing that left some out may have lost its lines.
+                accessibilityLabel: reading == .notCounted || (reading == .leftOut && connected == 0)
+                    ? L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: label, graph: graphTitle, source: sourceTitle)
+                    : connected == 0
                     ? L10n.Conclusions.recordLinksNodeApartAccessibility(ref: label, graph: graphTitle, source: sourceTitle)
                     : L10n.Conclusions.recordLinksNodeAccessibility(
                         ref: label, graph: graphTitle, source: sourceTitle, connected: connected

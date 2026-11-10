@@ -517,45 +517,92 @@ private struct PersonSourcesLineView: View {
 }
 
 #if DEBUG
-/// The Sources section over a fixture, with its folds working and its two reads served by a
-/// preview session.
+/// The Sources section over a fixture, with its folds working and its reads served by a
+/// preview session. With `claimsFailure` or `claimsGone` it draws the whole section, so the
+/// rows' own read shows its notice.
 private struct PersonSourcesPreview: View {
     static let entityId = "preview-person"
 
     let groups: [CatalogPersonClaimGroup]
-    var recordLinks: CatalogPersonRecordLinks?
-    var failure = false
-    var width: CGFloat = 1102
-    var foldsAtStart = ConclusionFoldState<PersonSourcesContent.Fold>()
+    var claimsFailure: Bool
+    var claimsGone: Bool
+    var width: CGFloat
+    var foldsAtStart: ConclusionFoldState<PersonSourcesContent.Fold>
 
     @State private var unpromote = UnpromoteFlow()
     @State private var folds = ConclusionFoldState<PersonSourcesContent.Fold>()
+    @State private var session: WorkspaceSession
+    @State private var navigation = PersonSourcesPreview.makeNavigation()
+
+    init(
+        groups: [CatalogPersonClaimGroup],
+        recordLinks: CatalogPersonRecordLinks? = nil,
+        failure: Bool = false,
+        claimsFailure: Bool = false,
+        claimsGone: Bool = false,
+        width: CGFloat = 1102,
+        foldsAtStart: ConclusionFoldState<PersonSourcesContent.Fold> = ConclusionFoldState<PersonSourcesContent.Fold>()
+    ) {
+        self.groups = groups
+        self.claimsFailure = claimsFailure
+        self.claimsGone = claimsGone
+        self.width = width
+        self.foldsAtStart = foldsAtStart
+        _session = State(initialValue: PersonSourcesPreviewData.previewSession(
+            entityId: Self.entityId,
+            recordLinks: recordLinks,
+            failure: failure,
+            claims: claimsFailure ? groups : nil
+        ))
+    }
+
+    /// The Person location the section's host reads for its kind's words.
+    private static func makeNavigation() -> WorkspaceNavigation {
+        let navigation = WorkspaceNavigation()
+        navigation.go(to: WorkspaceLocation.personDetail(
+            entityId: entityId, ref: "PER-7KD45", title: nil
+        ).withPageSection(.sources))
+        return navigation
+    }
 
     var body: some View {
         PVPageColumns(primaryFill: true) {
-            PersonSourcesList(
-                content: PersonSourcesContent(
-                    groups: groups,
-                    sourceTypes: PersonSourcesPreviewData.types,
-                    orders: NameFormatOrders(),
-                    folds: folds
-                ),
-                entityId: Self.entityId,
-                accessibilityIdentifierRoot: "preview",
-                open: { _ in },
-                expand: { folds.revealPage($0) },
-                unpromote: unpromote,
-                beginUnpromote: { _ in },
-                confirmUnpromote: { false }
-            )
+            if claimsFailure || claimsGone {
+                PersonSourcesSection(entityId: Self.entityId, userID: "preview-user", pageIdentifier: "preview")
+            } else {
+                PersonSourcesList(
+                    content: PersonSourcesContent(
+                        groups: groups,
+                        sourceTypes: PersonSourcesPreviewData.types,
+                        orders: NameFormatOrders(),
+                        folds: folds
+                    ),
+                    entityId: Self.entityId,
+                    accessibilityIdentifierRoot: "preview",
+                    open: { _ in },
+                    expand: { folds.revealPage($0) },
+                    unpromote: unpromote,
+                    beginUnpromote: { _ in },
+                    confirmUnpromote: { false }
+                )
+            }
         }
-        .environment(PersonSourcesPreviewData.previewSession(
-            entityId: Self.entityId, recordLinks: recordLinks, failure: failure
-        ))
+        .environment(session)
+        .environment(navigation)
         .environment(\.pvWidthClass, width >= PVSpacing.widthWideBreakpoint ? .wide : .regular)
         .frame(width: width, height: 700)
         .background(PVColor.surfacePage)
         .onAppear { folds = foldsAtStart }
+        .task { await failClaimsAfterTheFirstAnswer() }
+    }
+
+    /// "Sources stale": the rows are read once, then the next read fails and is asked for.
+    private func failClaimsAfterTheFirstAnswer() async {
+        guard claimsFailure else { return }
+        let key = CatalogQueryKey.personClaims(project: session.projectKey, entityId: Self.entityId)
+        await PersonSourcesPreviewData.failAfterFirstAnswer(
+            key, as: [CatalogPersonClaimGroup].self, session: session
+        ) { $0.listPersonClaimsError = PersonSourcesPreviewData.previewFailure }
     }
 }
 
@@ -579,6 +626,39 @@ private struct PersonSourcesPreview: View {
 }
 #Preview("Diagram loading") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular) }
 #Preview("Diagram error") { PersonSourcesPreview(groups: PersonSourcesPreviewData.regular, failure: true) }
+#Preview("Not counted") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.manyClaims(graphs: 40),
+        recordLinks: PersonSourcesPreviewData.notCounted(PersonSourcesPreviewData.manyRecordLinks(graphs: 40))
+    )
+}
+#Preview("Lines dropped") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.manyClaims(graphs: 50),
+        recordLinks: PersonSourcesPreviewData.linesDropped(PersonSourcesPreviewData.manyRecordLinks(graphs: 50))
+    )
+}
+#Preview("1,001 graphs") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.crowdClaims(graphs: 1_001),
+        recordLinks: PersonSourcesPreviewData.crowdRecordLinks(graphs: 1_001)
+    )
+}
+#Preview("Both") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.crowdClaims(graphs: 1_001),
+        recordLinks: PersonSourcesPreviewData.notCounted(PersonSourcesPreviewData.crowdRecordLinks(graphs: 1_001))
+    )
+}
+#Preview("Sources stale") {
+    PersonSourcesPreview(
+        groups: PersonSourcesPreviewData.regular, recordLinks: PersonSourcesPreviewData.johannRecordLinks,
+        claimsFailure: true
+    )
+}
+#Preview("Sources gone") {
+    PersonSourcesPreview(groups: PersonSourcesPreviewData.regular, claimsGone: true)
+}
 #Preview("Untitled Source") { PersonSourcesPreview(groups: PersonSourcesPreviewData.untitled) }
 #Preview("Folded") { PersonSourcesPreview(groups: PersonSourcesPreviewData.folded) }
 #Preview("Many Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.manySources) }

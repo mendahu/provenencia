@@ -52,8 +52,7 @@ type Rules struct {
 	// read, so a crafted value cannot hang a pair's count.
 	MaxValueBytes int
 	// MaxReadWork is the most work one Pairs call may do before it compares
-	// nothing: every line keeps 0 facts, and when the number of lines alone
-	// passes it, no line is listed. Work is the number of lines plus each
+	// nothing and lists no pair. Work is the number of lines plus each
 	// pair's work as MaxPairWork counts it, capped at MaxPairWork.
 	MaxReadWork int
 }
@@ -176,24 +175,22 @@ type Pair struct {
 // than the page's own, ordered by A and then B; a pair with no line is absent.
 // Each pair's lines are what the one-pair count gives over the two graphs. The
 // whole read is bounded by MaxReadWork, counted before any compare: past it
-// every pair is listed and every line has 0 facts, and when the number of lines
-// alone passes it, no pair is returned. counted is false exactly then, when the
-// read's work passes MaxReadWork, and true otherwise, a read of no graph
-// included. A pair over MaxPairWork or an entity over MaxEntityMembers keeps
-// its lines at 0 facts and does not change counted.
+// nothing is compared and no pair is listed. counted is false exactly then,
+// when the read's work passes MaxReadWork, and true otherwise, a read of no
+// graph included. A pair over MaxPairWork or an entity over MaxEntityMembers
+// keeps its lines at 0 facts and does not change counted.
 func Pairs(page []byte, graphs []Graph, metas subjectcompare.Metas, cfg Config) (pairs []Pair, counted bool) {
 	h := holdings{}
 	limit := cfg.RecordLinks.MaxReadWork
 	shared, work := readPlan(string(page), graphs, h, cfg, limit)
-	if shared == nil {
+	if work > limit {
 		return nil, false
 	}
-	skip := work > limit
 	var out []Pair
 	for _, p := range shared {
-		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, skip || p.over)})
+		out = append(out, Pair{A: p.a, B: p.b, Lines: linesOf(p.entities, graphs[p.a], graphs[p.b], metas, cfg, h, h, p.over)})
 	}
-	return out, !skip
+	return out, true
 }
 
 // CapLines keeps at most most lines (most is at least 1) of pairs. With at
@@ -254,7 +251,7 @@ type sharedPair struct {
 // pairs that share one, ordered, with the read's work: the number of lines plus
 // each pair's work capped at MaxPairWork. It counts the lines before it builds
 // any pair and stops counting once past limit; past it, the work is returned
-// as counted so far, and the pairs are nil when the lines alone passed limit.
+// as counted so far and there are no pairs.
 func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([]sharedPair, int) {
 	holders := map[string][]int{}
 	for i, g := range graphs {
@@ -302,7 +299,7 @@ func readPlan(page string, graphs []Graph, h holdings, cfg Config, limit int) ([
 		w := pairWork(p.entities, graphs[p.a], graphs[p.b], h, h, cfg, cfg.RecordLinks.MaxPairWork)
 		p.over = w > cfg.RecordLinks.MaxPairWork
 		if n += min(w, cfg.RecordLinks.MaxPairWork); n > limit {
-			return out, n
+			return nil, n
 		}
 	}
 	return out, n

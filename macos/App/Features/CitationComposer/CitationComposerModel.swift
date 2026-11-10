@@ -416,7 +416,7 @@ final class CitationComposerModel {
     }
 
     var isGraphReloading: Bool {
-        graphHandle?.status == .loading || (graphHandle?.isFetching ?? false)
+        graphHandle?.isReading ?? false
     }
 
     var subjectOptions: [PVComboBoxOption] { vocabulary.subjectComboOptions }

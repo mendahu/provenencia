@@ -103,6 +103,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var seededPersonRecordLinks: [String: CatalogPersonRecordLinks] = [:]
     /// When set, `getPersonRecordLinks` throws it instead of answering.
     var getPersonRecordLinksError: Error?
+    /// When set, `getConclusionDetail` throws it instead of answering (a seed still answers once it is nil).
+    var getConclusionDetailError: Error?
+    /// When set, `getPersonFamily` throws it instead of answering.
+    var getPersonFamilyError: Error?
+    /// When set, `listPersonClaims` throws it instead of answering.
+    var listPersonClaimsError: Error?
     /// Optional delay before each `getPersonRecordLinks` answers (previews of the loading state).
     var personRecordLinksDelayNanoseconds: UInt64 = 0
     /// The Identity Claim Promote wrote per Subject id.
@@ -1748,6 +1754,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // A read: no `recordedCalls`.
         try withState {
             markCatalogSessionHeld(projectDir)
+            if let listPersonClaimsError { throw listPersonClaimsError }
             guard let seeded = seededPersonClaims[entityID] else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
@@ -1759,6 +1766,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // A read: no `recordedCalls`.
         try withState {
             markCatalogSessionHeld(projectDir)
+            if let getPersonFamilyError { throw getPersonFamilyError }
             guard let seeded = seededPersonFamilies[entityID] else {
                 throw CoreInvokeError.coded(status: 1, code: "conclusiondetails.not_found", kind: .user, params: [])
             }
@@ -1797,6 +1805,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         // A read: no `recordedCalls`.
         try withState {
             markCatalogSessionHeld(projectDir)
+            if let getConclusionDetailError { throw getConclusionDetailError }
             if let seeded = seededConclusionDetails[entityID] {
                 return seeded
             }

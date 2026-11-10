@@ -17424,6 +17424,90 @@
         }
       }
     },
+    "conclusions.detail.errorTitle": {
+      "comment": "Title of the Callout shown when a record page could not be read or re-read",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This page could not be read"
+          }
+        }
+      }
+    },
+    "conclusions.readNotice.tryAgain": {
+      "comment": "Button on a record page's read-failure notice that reads again",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        }
+      }
+    },
+    "conclusions.readNotice.staleMessage": {
+      "comment": "Message of a record page's read-failure notice over data that stays on screen; the argument is the error's text, a full sentence",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ What is shown is from the last time it was read."
+          }
+        }
+      }
+    },
+    "conclusions.person.gone": {
+      "comment": "Toast and notice when a Person page's person was deleted or merged in another window",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This person no longer exists. They may have been merged into another person."
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.notCounted": {
+      "comment": "Note in place of the record links caption when the engine did not compare the records",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many records to compare. The links between them are not drawn."
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.partial": {
+      "comment": "Note in place of the record links caption when the diagram leaves records or links out",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many records to draw them all. Some records and links are left out."
+          }
+        }
+      }
+    },
+    "conclusions.recordLinks.nodeUncountedAccessibility": {
+      "comment": "Spoken label of a record in the record links diagram when the records were not compared; arguments are the node's label, the graph's name and the Source's title",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
     "conclusions.section.leaf": {
       "comment": "Back menu entry for a section of a record page; arguments are the record's title and the section name",
       "extractionState": "manual",

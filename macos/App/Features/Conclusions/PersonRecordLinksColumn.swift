@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The side column of the Person page's Sources section (S13-28): the title and caption,
-/// then the record links diagram at the column's width. The circle shrinks to fit the part of
+/// The side column of the Person page's Sources section (S13-28): the title and caption (or,
+/// when the drawing is partial, the note that says so in its place), then the record links diagram at the column's width. The circle shrinks to fit the part of
 /// the page in view, to its smallest, below which `ConclusionPinnedSideColumn` lets the column
 /// scroll with the page. Draws nothing for a person with no records on the read.
 struct PersonRecordLinksColumn: View {
@@ -32,7 +32,16 @@ struct PersonRecordLinksColumn: View {
                     Text(L10n.Conclusions.recordLinksTitle)
                         .pvMicroCaps()
                         .foregroundStyle(PVColor.textMuted)
-                    if !single {
+                    if let partial = content.partial {
+                        PVCallout(
+                            tone: .warning,
+                            message: L10n.string(partial == .notCounted
+                                ? L10n.Conclusions.recordLinksNotCounted
+                                : L10n.Conclusions.recordLinksPartial),
+                            compact: true
+                        )
+                        .accessibilityIdentifier("\(accessibilityIdentifierRoot).recordLinks.partial")
+                    } else if !single {
                         Text(L10n.Conclusions.recordLinksCaption)
                             .font(PVFont.body(size: PVTypeScale.caption))
                             .foregroundStyle(PVColor.textMuted)

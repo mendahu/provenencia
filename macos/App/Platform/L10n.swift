@@ -9414,6 +9414,42 @@ enum L10n {
             comment: "Shown beside a small spinner while a record page re-reads its data"
         )
 
+        static let pageReadErrorTitle = LocalizedStringResource(
+            "conclusions.detail.errorTitle",
+            defaultValue: "This page could not be read",
+            comment: "Title of the Callout shown when a record page could not be read or re-read"
+        )
+
+        static let readNoticeTryAgain = LocalizedStringResource(
+            "conclusions.readNotice.tryAgain",
+            defaultValue: "Try again",
+            comment: "Button on a record page's read-failure notice that reads again"
+        )
+
+        /// The notice's message when a re-read failed and the old data stays on screen.
+        static func readNoticeStaleMessage(_ error: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.readNotice.staleMessage",
+                defaultValue: "%@ What is shown is from the last time it was read.",
+                comment: "Message of a record page's read-failure notice over data that stays on screen; the argument is the error's text, a full sentence"
+            ), error)
+        }
+
+        /// The line a record page leaves with when its record was deleted or merged elsewhere.
+        /// The kind of the page supplies it; a kind without its own line says the generic one.
+        static func goneNotice(section: WorkspaceSection) -> LocalizedStringResource {
+            switch section {
+            case .persons:
+                return LocalizedStringResource(
+                    "conclusions.person.gone",
+                    defaultValue: "This person no longer exists. They may have been merged into another person.",
+                    comment: "Toast and notice when a Person page's person was deleted or merged in another window"
+                )
+            default:
+                return L10n.Errors.conclusionDetailsNotFound
+            }
+        }
+
         static func pageSectionLeaf(_ title: String, _ section: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.section.leaf",
@@ -9663,6 +9699,18 @@ enum L10n {
             comment: "Caption under the record links diagram's title"
         )
 
+        static let recordLinksNotCounted = LocalizedStringResource(
+            "conclusions.recordLinks.notCounted",
+            defaultValue: "Too many records to compare. The links between them are not drawn.",
+            comment: "Note in place of the record links caption when the engine did not compare the records"
+        )
+
+        static let recordLinksPartial = LocalizedStringResource(
+            "conclusions.recordLinks.partial",
+            defaultValue: "Too many records to draw them all. Some records and links are left out.",
+            comment: "Note in place of the record links caption when the diagram leaves records or links out"
+        )
+
         static let recordLinksErrorTitle = LocalizedStringResource(
             "conclusions.recordLinks.errorTitle",
             defaultValue: "The connections could not be read",
@@ -9704,6 +9752,14 @@ enum L10n {
                 "conclusions.recordLinks.nodeApartAccessibility",
                 defaultValue: "%1$@, %2$@, %3$@, shares no one",
                 comment: "Spoken label of a record in the record links diagram that shares no person with another; arguments are the node's label, the graph's name and the Source's title"
+            ), ref, graph, source)
+        }
+
+        static func recordLinksNodeUncountedAccessibility(ref: String, graph: String, source: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.recordLinks.nodeUncountedAccessibility",
+                defaultValue: "%1$@, %2$@, %3$@",
+                comment: "Spoken label of a record in the record links diagram when the records were not compared; arguments are the node's label, the graph's name and the Source's title"
             ), ref, graph, source)
         }
 

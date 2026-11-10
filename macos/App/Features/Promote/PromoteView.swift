@@ -92,9 +92,9 @@ struct PromoteView: View {
                     isRetrying: model.isLoading,
                     retryIdentifier: "promote.tryAgain",
                     retryFocused: $loadRetryFocused,
+                    failureRevision: model.loadAttempt,
                     onRetry: { model.retryLoad() }
                 )
-                .id(model.loadAttempt)
                 .onAppear { loadRetryFocused = true }
             }
             if model.flow.staleNote != nil {
