@@ -191,13 +191,38 @@ func moveRowAfter(rows []lifelineRow, from, to int) {
 
 // moveAfterOverlapping moves each dated row before rows[anchor] whose days
 // overlap the anchor's and for which moves is true to just after the anchor,
-// the moved rows in their order and ahead of the rows already after it. The
-// other rows keep their order. It rebuilds the slice once.
+// the moved rows in their order and ahead of the rows already after it. A row
+// moves only past the rows that stay between it and the anchor, so it must
+// overlap every one of them as well as the anchor; an undated row that stays
+// stops the walk, since nothing passes it. The other rows keep their order.
+// It walks back from the anchor keeping the greatest start and the least end
+// of the anchor and the rows that stayed, so it is linear: a window overlaps
+// each of them exactly when it overlaps that range's start and end.
 func moveAfterOverlapping(rows []lifelineRow, anchor int, moves func(lifelineRow) bool) []lifelineRow {
+	passed := rows[anchor].window
+	blocked := false
+	movedAt := make([]bool, anchor)
+	for i := anchor - 1; i >= 0 && !blocked; i-- {
+		r := rows[i]
+		if !r.dated {
+			blocked = true
+			continue
+		}
+		if r.window.Overlaps(passed) && moves(r) {
+			movedAt[i] = true
+			continue
+		}
+		if r.window.Lo != nil && (passed.Lo == nil || *r.window.Lo > *passed.Lo) {
+			passed.Lo = r.window.Lo
+		}
+		if r.window.Hi != nil && (passed.Hi == nil || *r.window.Hi < *passed.Hi) {
+			passed.Hi = r.window.Hi
+		}
+	}
 	out := make([]lifelineRow, 0, len(rows))
 	var moved []lifelineRow
-	for _, r := range rows[:anchor] {
-		if r.dated && r.window.Overlaps(rows[anchor].window) && moves(r) {
+	for i, r := range rows[:anchor] {
+		if movedAt[i] {
 			moved = append(moved, r)
 			continue
 		}

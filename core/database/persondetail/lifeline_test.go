@@ -135,6 +135,7 @@ func TestLifelineOrder(t *testing.T) {
 		{"a baptism in the birth's year", lifeline, []in{{6, datevaluetest.YMD(1850, 0, 0), nil}, {1, birthDay, nil}}, id(1), nil, []byte{1, 6}},
 		{"a baptism the year before", lifeline, []in{{6, datevaluetest.YMD(1849, 0, 0), nil}, {1, birthDay, nil}}, id(1), nil, []byte{6, 1}},
 		{"an infant", lifeline, []in{{6, datevaluetest.YMD(1850, 0, 0), nil}, {4, datevaluetest.YMD(1850, 0, 0), nil}, {1, birthDay, nil}, {8, datevaluetest.YMD(1850, 9, 1), nil}}, id(1), id(8), []byte{1, 6, 8, 4}},
+		{"a burial the death would carry past a birth it does not overlap", lifeline, []in{{4, datevaluetest.Before(2011, 1, 1), nil}, {1, datevaluetest.YMD(2011, 6, 15), nil}, {8, datevaluetest.Before(2011, 12, 31), nil}}, id(1), id(8), []byte{4, 1, 8}},
 		{"a type that may come before birth", beforeBirth, []in{{2, datevaluetest.YMD(1850, 0, 0), nil}, {6, datevaluetest.YMD(1850, 0, 0), nil}, {1, birthDay, nil}}, id(1), nil, []byte{2, 1, 6}},
 	}
 	for _, tc := range cases {
@@ -179,7 +180,7 @@ func TestLifelineOrder(t *testing.T) {
 }
 
 // TestLifelineOrderMovesOnlyOverlappingRows runs order over random years 2010
-// and 2011, with a dated birth, a dated death or neither, and holds it to what
+// and 2011, with a dated birth, a dated death, both or neither, and holds it to what
 // it promises: the output is the input rows, and a pair of rows whose
 // order changed has overlapping days.
 func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
@@ -216,15 +217,16 @@ func TestLifelineOrderMovesOnlyOverlappingRows(t *testing.T) {
 		}
 		// types reads a row's type from its id: the kind, whatever the tens.
 		typeOf := func(e []byte) vocabkey.EventType { return lifelineTestTypes[e[0]%10] }
-		// A recorded birth and death together are left out: a burial that
-		// overlaps the death moves after it (pass 2), and with the death
-		// moved after the birth that carries the burial past a birth it
-		// does not overlap.
-		switch rng.Intn(3) {
+		switch rng.Intn(4) {
 		case 0:
 			add(1)
 			birth = id(1)
 		case 1:
+			add(8)
+			death = id(8)
+		case 2:
+			add(1)
+			birth = id(1)
 			add(8)
 			death = id(8)
 		}
