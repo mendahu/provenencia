@@ -377,12 +377,10 @@ struct SourcePageOverviewLayout: Layout {
         proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? PVSpacing.widthContentMax
     }
 
-    /// The frame of each subview (in order), and the overall height, for `width`.
+    /// The `Subviews` adapter for `arrange`: no frames unless there are four subviews.
     private func placed(width: CGFloat, subviews: Subviews) -> (frames: [CGRect], height: CGFloat) {
         guard subviews.count == 4 else { return ([], 0) }
-        return Self.arrange(width: width, widthClass: widthClass) {
-            subviews[$0].sizeThatFits(ProposedViewSize(width: $1, height: nil))
-        }
+        return Self.arrange(width: width, widthClass: widthClass, fit: subviews.fit)
     }
 
     /// The frame of each of the four subviews (error, body, side, rest) and the overall height,

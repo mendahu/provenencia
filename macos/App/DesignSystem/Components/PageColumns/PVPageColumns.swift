@@ -378,6 +378,13 @@ struct PVPageVisibleRect<Content: View>: View {
     }
 }
 
+extension LayoutSubviews {
+    /// A page `Layout`'s `fit` for its static `arrange`.
+    func fit(_ index: Int, _ width: CGFloat) -> CGSize {
+        self[index].sizeThatFits(ProposedViewSize(width: width, height: nil))
+    }
+}
+
 /// Places a main column and, when there is one, a side column: side by side, the
 /// group centered, or stacked, the side under the main. Sizes itself from the
 /// proposed width alone, so it holds no state and crossing a breakpoint keeps the
@@ -414,21 +421,18 @@ struct PVPageColumnsLayout: Layout {
         return (mainFrame, sideFrame, max(main.height, side.height))
     }
 
-    private func fit(_ subviews: Subviews) -> (Int, CGFloat) -> CGSize {
-        { subviews[$0].sizeThatFits(ProposedViewSize(width: $1, height: nil)) }
-    }
-
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         guard !subviews.isEmpty else { return .zero }
         let w = widths(proposal)
-        let placed = Self.arrange(width: pane(proposal, w), widths: w, fit: fit(subviews))
-        return CGSize(width: pane(proposal, w), height: placed.height)
+        let width = pane(proposal, w)
+        let placed = Self.arrange(width: width, widths: w, fit: subviews.fit)
+        return CGSize(width: width, height: placed.height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         guard !subviews.isEmpty else { return }
         let w = widths(ProposedViewSize(width: bounds.width, height: nil))
-        let placed = Self.arrange(width: bounds.width, widths: w, fit: fit(subviews))
+        let placed = Self.arrange(width: bounds.width, widths: w, fit: subviews.fit)
         for (index, frame) in [placed.main, placed.side].enumerated() {
             guard let frame else { continue }
             subviews[index].place(
