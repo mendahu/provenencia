@@ -1,7 +1,7 @@
 # Ship log — S16-02 The Timeline places a missing death and builds what it shows
 
 **Plan:** [`S16-02-timeline-marker-and-shown-rows.md`](S16-02-timeline-marker-and-shown-rows.md) · **Branch:** `s16-02-timeline-marker-and-shown-rows` · **PR:** [#764](https://github.com/mendahu/provenencia/pull/764)
-**State:** ready
+**State:** implementing (amendment)
 
 ## Round 0 — implement
 Head `59e4a6a1`. Gate: implementer PASS; orchestrator re-run on `59e4a6a1` PASS (9/9; xcode-test 130s).
@@ -57,3 +57,8 @@ Not run: no round-1 blocker or major.
 
 ## Result
 Gate PASS · CI green (Go tests, macOS tests, localizable) · open: none · follow-ups: none · to user: —
+
+## Amendment — scope added after ready (user, 2026-11-09)
+Dogfood: burial "abt 2011", death "29 Mar 2011", funeral "aft 29 Mar 2011" listed Burial, Death, Funeral. User chose to add the fix to S16-02 (Timeline only; funeral before burial when dates overlap). PR returned to draft. Plan amended through plan-pr and review-plan (`bbdf916b`, `b81958e8`): D-16 – D-22, STEP-8 – STEP-12, T-10 – T-14; Status Planned. User's rule on the planner's five calls: "the dates that are on the events are authoritative, but if they don't conflict, then we follow the rule of death, funeral, burial … order them by the dates, and then, if we need a tiebreaker, we use the types." That matches D-16 – D-20, so no call changed.
+
+## Round A0 — implement amendment
