@@ -99,6 +99,8 @@ enum CoreMethod {
     static let getWorkspaceNavCounts = Int32(Provenencia_Engine_V1_Method.getWorkspaceNavCounts.rawValue)
     static let closeCatalogSession = Int32(Provenencia_Engine_V1_Method.closeCatalogSession.rawValue)
     static let setSourceCover = Int32(Provenencia_Engine_V1_Method.setSourceCover.rawValue)
+    static let setSourceDate = Int32(Provenencia_Engine_V1_Method.setSourceDate.rawValue)
+    static let setSourcePublic = Int32(Provenencia_Engine_V1_Method.setSourcePublic.rawValue)
     static let searchCatalog = Int32(Provenencia_Engine_V1_Method.searchCatalog.rawValue)
     static let createSubject = Int32(Provenencia_Engine_V1_Method.createSubject.rawValue)
     static let updateSubject = Int32(Provenencia_Engine_V1_Method.updateSubject.rawValue)

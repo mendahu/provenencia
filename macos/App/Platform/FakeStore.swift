@@ -195,6 +195,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     let workspaceNavCountsHold = FakeHold()
     /// When set, `updateSource` throws (identity title/type/description saves).
     var updateSourceError: Error?
+    /// When set, `setSourceDate` throws.
+    var setSourceDateError: Error?
+    /// When set, `setSourcePublic` throws.
+    var setSourcePublicError: Error?
+    /// When set, `setSourceCover` throws.
+    var setSourceCoverError: Error?
+    /// When set, `getSourceWorkspace` throws.
+    var getSourceWorkspaceError: Error?
     /// When set, `addObservationsToCitation` throws after recording the call.
     var addObservationsToCitationError: Error?
     /// When set, `updateObservation` throws after recording the call.
@@ -437,9 +445,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     func getSourceWorkspace(projectDir: String, sourceID: String) async throws -> CatalogSourceWorkspace {
-        return withState {
+        return try withState {
             getSourceWorkspaceCalls += 1
             markCatalogSessionHeld(projectDir)
+            if let getSourceWorkspaceError { throw getSourceWorkspaceError }
             let raw = (sourcesByProject[projectDir] ?? []).first { $0.id == sourceID }
                 ?? CatalogSource(id: sourceID, ref: "SRC-XXXXX", sourceTypeID: "", title: "", description: "")
             return CatalogSourceWorkspace(
@@ -532,11 +541,56 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if let updateSourceError { throw updateSourceError }
             var list = sourcesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
-                throw StoreBoom.boom
+                throw Self.sourceNotFound
             }
             list[idx].sourceTypeID = sourceTypeID
             list[idx].title = title
             list[idx].description = description
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
+            nextAuditRevision += 1
+            sourcesByProject[projectDir] = list
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
+        }
+    }
+
+    /// The engine's answer for a Source another window deleted.
+    static let sourceNotFound: Error = CoreInvokeError.coded(
+        status: 1, code: "sources.not_found", kind: .notFound, params: []
+    )
+
+    func setSourceDate(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        date: CatalogDateValueInput?
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        return try withState {
+            if let setSourceDateError { throw setSourceDateError }
+            var list = sourcesByProject[projectDir] ?? []
+            guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
+                throw Self.sourceNotFound
+            }
+            list[idx].date = date
+            list[idx].updated = CatalogActivity(revision: nextAuditRevision)
+            nextAuditRevision += 1
+            sourcesByProject[projectDir] = list
+            return (enrichCoverFields(list[idx]), nextWriteEffects)
+        }
+    }
+
+    func setSourcePublic(
+        projectDir: String,
+        userID _: String,
+        sourceID: String,
+        isPublic: Bool
+    ) async throws -> (CatalogSource, CatalogWriteEffects) {
+        return try withState {
+            if let setSourcePublicError { throw setSourcePublicError }
+            var list = sourcesByProject[projectDir] ?? []
+            guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
+                throw Self.sourceNotFound
+            }
+            list[idx].isPublic = isPublic
             list[idx].updated = CatalogActivity(revision: nextAuditRevision)
             nextAuditRevision += 1
             sourcesByProject[projectDir] = list
@@ -552,9 +606,10 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         primaryArtifactID: String
     ) async throws -> (CatalogSource, CatalogWriteEffects) {
         return try withState {
+            if let setSourceCoverError { throw setSourceCoverError }
             var list = sourcesByProject[projectDir] ?? []
             guard let idx = list.firstIndex(where: { $0.id == sourceID }) else {
-                throw StoreBoom.boom
+                throw Self.sourceNotFound
             }
             switch coverMode {
             case "type_icon":
