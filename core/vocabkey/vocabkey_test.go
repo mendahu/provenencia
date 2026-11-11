@@ -115,3 +115,41 @@ func TestCompareByOrder(t *testing.T) {
 		t.Error("with no order, keys rank by key")
 	}
 }
+
+func TestLevels(t *testing.T) {
+	all := []Level{"source", "artifact", "graph", "citation"}
+	meta := []Level{"source", "artifact", "graph"}
+	if got := Levels(); !slices.Equal(got, all) {
+		t.Fatalf("Levels() = %v, want %v", got, all)
+	}
+	if got := MetadataLevels(); !slices.Equal(got, meta) {
+		t.Fatalf("MetadataLevels() = %v, want %v", got, meta)
+	}
+	Levels()[0] = "x"
+	MetadataLevels()[0] = "x"
+	if Levels()[0] != LevelSource || MetadataLevels()[0] != LevelSource {
+		t.Fatal("Levels and MetadataLevels must return a fresh slice per call")
+	}
+	tests := []struct {
+		l        Level
+		valid    bool
+		metadata bool
+	}{
+		{"source", true, true},
+		{"artifact", true, true},
+		{"graph", true, true},
+		{"citation", true, false},
+		{"", false, false},
+		{"Source", false, false},
+		{" source", false, false},
+		{"page", false, false},
+	}
+	for _, tc := range tests {
+		if got := tc.l.Valid(); got != tc.valid {
+			t.Errorf("Level(%q).Valid() = %v, want %v", tc.l, got, tc.valid)
+		}
+		if got := tc.l.HoldsMetadata(); got != tc.metadata {
+			t.Errorf("Level(%q).HoldsMetadata() = %v, want %v", tc.l, got, tc.metadata)
+		}
+	}
+}
