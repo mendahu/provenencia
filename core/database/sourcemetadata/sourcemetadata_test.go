@@ -3,9 +3,12 @@ package sourcemetadata
 import (
 	"bytes"
 	"errors"
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -84,7 +87,7 @@ func TestSourceMetadata(t *testing.T) {
 	}
 	workspaceKeys := func(t *testing.T, c *database.Catalog, sourceID []byte) []string {
 		t.Helper()
-		ws, err := ListWorkspace(c, sourceID)
+		ws, err := ListWorkspace(c, sourceOwner(sourceID))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -154,8 +157,8 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				row, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: doc.ID, ValueText: "12345",
+				row, err := runSet(c, userID, src.ID, Input{
+					FieldID: doc.ID, ValueText: "12345",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -177,8 +180,8 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				row, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "https://example.com/record",
+				row, err := runSet(c, userID, src.ID, Input{
+					FieldID: field.ID, ValueText: "https://example.com/record",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -186,13 +189,13 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "https://example.com/record" {
 					t.Fatalf("%+v", row)
 				}
-				if _, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "www.url.com",
+				if _, err := runSet(c, userID, src.ID, Input{
+					FieldID: field.ID, ValueText: "www.url.com",
 				}); err != nil {
 					t.Fatal(err)
 				}
-				lowered, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "HTTPS://Example.COM/Record",
+				lowered, err := runSet(c, userID, src.ID, Input{
+					FieldID: field.ID, ValueText: "HTTPS://Example.COM/Record",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -200,13 +203,13 @@ func TestSourceMetadata(t *testing.T) {
 				if lowered.ValueText != "https://example.com/record" {
 					t.Fatalf("canonical %q", lowered.ValueText)
 				}
-				if _, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "file:/tmp",
+				if _, err := runSet(c, userID, src.ID, Input{
+					FieldID: field.ID, ValueText: "file:/tmp",
 				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("file url %v", err)
 				}
-				if _, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: field.ID, ValueText: "not a url",
+				if _, err := runSet(c, userID, src.ID, Input{
+					FieldID: field.ID, ValueText: "not a url",
 				}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("junk url %v", err)
 				}
@@ -221,8 +224,8 @@ func TestSourceMetadata(t *testing.T) {
 				if rec.DataType != metadatafields.DataTypeText {
 					t.Fatalf("record_date type %q", rec.DataType)
 				}
-				row, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: rec.ID, ValueText: "about the year 1890",
+				row, err := runSet(c, userID, src.ID, Input{
+					FieldID: rec.ID, ValueText: "about the year 1890",
 				})
 				if err != nil {
 					t.Fatal(err)
@@ -230,8 +233,8 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "about the year 1890" {
 					t.Fatalf("%+v", row)
 				}
-				kept, err := runSet(c, userID, Input{
-					SourceID: src.ID, FieldID: rec.ID,
+				kept, err := runSet(c, userID, src.ID, Input{
+					FieldID:   rec.ID,
 					ValueText: "circa 1890",
 				})
 				if err != nil {
@@ -248,20 +251,20 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				first, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "111"})
+				first, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "111"})
 				if err != nil {
 					t.Fatal(err)
 				}
-				second, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "222"})
+				second, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "222"})
 				if err != nil {
 					t.Fatal(err)
 				}
 				if string(first.ID) != string(second.ID) || second.ValueText != "222" {
 					t.Fatalf("first=%+v second=%+v", first, second)
 				}
-				list, err := ListBySource(c, src.ID)
-				if err != nil || len(list) != 1 {
-					t.Fatalf("%v len=%d", err, len(list))
+				list := values(t, c, src.ID)
+				if len(list) != 1 {
+					t.Fatalf("len=%d", len(list))
 				}
 				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
@@ -269,9 +272,9 @@ func TestSourceMetadata(t *testing.T) {
 				if latestAction(t, c) != "update_source_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				list, err = ListBySource(c, src.ID)
-				if err != nil || len(list) != 0 {
-					t.Fatalf("after clear %v len=%d", err, len(list))
+				list = values(t, c, src.ID)
+				if len(list) != 0 {
+					t.Fatalf("after clear len=%d", len(list))
 				}
 				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
@@ -284,7 +287,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
 				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
@@ -293,10 +296,10 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: extraID, ValueText: "A-12"}); err != nil {
 					t.Fatal(err)
 				}
-				ws, err := ListWorkspace(c, src.ID)
+				ws, err := ListWorkspace(c, sourceOwner(src.ID))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -338,7 +341,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := sourcevocab.AppendSuggestion(c, src.SourceTypeID, fieldID, vocabkey.LevelGraph); err != nil {
 					t.Fatal(err)
 				}
-				ws, err := ListWorkspace(c, src.ID)
+				ws, err := ListWorkspace(c, sourceOwner(src.ID))
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -362,7 +365,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -452,7 +455,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
 				if err := runDismissSuggestion(c, userID, src.ID, doc.ID); err != nil {
@@ -507,21 +510,21 @@ func TestSourceMetadata(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: extraID, ValueText: "A-12"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: extraID, ValueText: "A-12"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, dismissed := layoutOf(t, c, src.ID, extraID); order != 0 || dismissed != 0 {
 					t.Fatalf("extra layout order=%d dismissed=%d", order, dismissed)
 				}
 				doc := mustField(t, c, "document_number")
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "12345"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, _ := layoutOf(t, c, src.ID, doc.ID); order != 1 {
 					t.Fatalf("document_number order %d", order)
 				}
 				// Updating an existing value must not append a second slot.
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "999"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "999"}); err != nil {
 					t.Fatal(err)
 				}
 				if order, _ := layoutOf(t, c, src.ID, doc.ID); order != 1 {
@@ -579,7 +582,7 @@ func TestSourceMetadata(t *testing.T) {
 				mustUser(t, c)
 				src := mustSeededSource(t, c)
 				doc := mustField(t, c, "document_number")
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -606,17 +609,82 @@ func TestSourceMetadata(t *testing.T) {
 				doc := mustField(t, c, "document_number")
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := runSet(c, userID, Input{SourceID: missing, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, missing, Input{FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad source %v", err)
 				}
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: missing, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: missing, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("bad field %v", err)
 				}
-				if _, err := runSet(c, nil, Input{SourceID: src.ID, FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, nil, src.ID, Input{FieldID: doc.ID, ValueText: "x"}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("nil user %v", err)
 				}
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text %v", err)
+				}
+			},
+		},
+		{
+			name: "list workspace reads several extras",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSeededSource(t, c)
+				doc := mustField(t, c, "document_number")
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
+					t.Fatal(err)
+				}
+				for _, label := range []string{"a", "b", "c"} {
+					f, err := runFieldCreate(c, label, metadatafields.DataTypeText, "")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := runSet(c, userID, src.ID, Input{FieldID: f.ID, ValueText: "v-" + label}); err != nil {
+						t.Fatal(err)
+					}
+				}
+				// Layout holds every filled field in the order it was filled; drop it
+				// so the list shows suggestions in type order, then extras by field id.
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`DELETE FROM source_metadata_layout`); err != nil {
+					t.Fatal(err)
+				}
+				ws, err := ListWorkspace(c, sourceOwner(src.ID))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var suggested, extras []string
+				for _, e := range ws {
+					if e.Suggested {
+						suggested = append(suggested, e.Field.Key)
+						continue
+					}
+					if e.Value == nil || e.Value.ValueText != "v-"+e.Field.Key || e.Field.Label != e.Field.Key {
+						t.Fatalf("extra %+v", e)
+					}
+					extras = append(extras, e.Field.Key)
+				}
+				if len(suggested) == 0 || !slices.Contains(suggested, "document_number") {
+					t.Fatalf("suggested %v", suggested)
+				}
+				if !slices.Equal(extras, []string{"a", "b", "c"}) {
+					t.Fatalf("extras %v", extras)
+				}
+				if got := workspaceKeys(t, c, src.ID); !slices.Equal(got[len(got)-3:], []string{"a", "b", "c"}) {
+					t.Fatalf("keys %v", got)
+				}
+			},
+		},
+		{
+			name: "list workspace on a missing source is invalid",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				mustSeededSource(t, c)
+				missing := make([]byte, 16)
+				missing[15] = 9
+				if _, err := ListWorkspace(c, sourceOwner(missing)); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
 				}
 			},
 		},
@@ -634,10 +702,31 @@ func TestSourceMetadata(t *testing.T) {
 	}
 }
 
-func runSet(c *database.Catalog, userID []byte, in Input) (Row, error) {
+func sourceOwner(id []byte) Owner { return Owner{Level: vocabkey.LevelSource, ID: id} }
+
+// values reads the owner's stored value rows in a read transaction.
+func values(t *testing.T, c *database.Catalog, sourceID []byte) []Row {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	rows, err := listByOwners(tx, []Owner{sourceOwner(sourceID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rows
+}
+
+func runSet(c *database.Catalog, userID, sourceID []byte, in Input) (Row, error) {
 	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
 		func(tx *database.Tx) (Row, []rowchange.Change, error) {
-			return Set(tx, userID, in)
+			return Set(tx, userID, sourceOwner(sourceID), in)
 		})
 	return row, err
 }
@@ -645,7 +734,7 @@ func runSet(c *database.Catalog, userID []byte, in Input) (Row, error) {
 func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Clear(tx, userID, sourceID, fieldID)
+			changes, err := Clear(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
 		})
 	return err
@@ -654,7 +743,7 @@ func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := DismissSuggestion(tx, userID, sourceID, fieldID)
+			changes, err := DismissSuggestion(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
 		})
 	return err
@@ -663,7 +752,7 @@ func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte)
 func runReorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := Reorder(tx, userID, sourceID, fieldIDs)
+			changes, err := Reorder(tx, userID, sourceOwner(sourceID), fieldIDs)
 			return struct{}{}, changes, err
 		})
 	return err
@@ -677,12 +766,12 @@ func runFieldCreate(c *database.Catalog, label, dataType, description string) (m
 	return got, err
 }
 
-func runCreateAll(c *database.Catalog, userID, sourceID []byte, values []Input, layout []LayoutRow) ([]rowchange.Change, error) {
+func runCreateAll(c *database.Catalog, userID, sourceID []byte, d Draft) ([]rowchange.Change, error) {
 	var changes []rowchange.Change
 	_, _, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			var err error
-			changes, err = CreateAll(tx, userID, sourceID, values, layout)
+			changes, err = CreateAll(tx, userID, sourceOwner(sourceID), d)
 			return struct{}{}, changes, err
 		})
 	return changes, err
@@ -778,16 +867,16 @@ func TestCreateAll(t *testing.T) {
 			name: "values with no layout rows write no layout",
 			run: func(t *testing.T) {
 				c, src, text, _ := seed(t)
-				changes, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: text.ID, ValueText: "No. 7"}}, nil)
+				changes, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: text.ID, ValueText: "No. 7"}}})
 				if err != nil {
 					t.Fatal(err)
 				}
 				if len(changes) != 1 || changes[0].EntityType != "source_metadata" {
 					t.Fatalf("changes %+v", changes)
 				}
-				rows, err := ListBySource(c, src.ID)
-				if err != nil || len(rows) != 1 || rows[0].ValueText != "No. 7" {
-					t.Fatalf("rows %+v err %v", rows, err)
+				rows := values(t, c, src.ID)
+				if len(rows) != 1 || rows[0].ValueText != "No. 7" {
+					t.Fatalf("rows %+v", rows)
 				}
 				if n := count(t, c, "source_metadata_layout"); n != 0 {
 					t.Fatalf("layout rows %d", n)
@@ -798,9 +887,10 @@ func TestCreateAll(t *testing.T) {
 			name: "dismissed layout row on a valued field stays dismissed",
 			run: func(t *testing.T) {
 				c, src, text, link := seed(t)
-				changes, err := runCreateAll(c, userID, src.ID,
-					[]Input{{SourceID: src.ID, FieldID: text.ID, ValueText: "No. 7"}},
-					[]LayoutRow{{FieldID: link.ID, SortOrder: 0}, {FieldID: text.ID, SortOrder: 1, Dismissed: true}})
+				changes, err := runCreateAll(c, userID, src.ID, Draft{
+					Values: []Input{{FieldID: text.ID, ValueText: "No. 7"}},
+					Layout: []LayoutRow{{FieldID: link.ID, SortOrder: 0}, {FieldID: text.ID, SortOrder: 1, Dismissed: true}},
+				})
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -826,12 +916,12 @@ func TestCreateAll(t *testing.T) {
 			name: "URL value takes the form Set stores",
 			run: func(t *testing.T) {
 				c, src, _, link := seed(t)
-				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "HTTPS://Example.org/a"}}, nil); err != nil {
+				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "HTTPS://Example.org/a"}}}); err != nil {
 					t.Fatal(err)
 				}
-				rows, err := ListBySource(c, src.ID)
-				if err != nil || len(rows) != 1 {
-					t.Fatalf("rows %+v err %v", rows, err)
+				rows := values(t, c, src.ID)
+				if len(rows) != 1 {
+					t.Fatalf("rows %+v", rows)
 				}
 				if rows[0].ValueText != "https://example.org/a" {
 					t.Fatalf("stored %q", rows[0].ValueText)
@@ -842,10 +932,10 @@ func TestCreateAll(t *testing.T) {
 			name: "source that already has a value is refused",
 			run: func(t *testing.T) {
 				c, src, text, link := seed(t)
-				if _, err := runSet(c, userID, Input{SourceID: src.ID, FieldID: text.ID, ValueText: "x"}); err != nil {
+				if _, err := runSet(c, userID, src.ID, Input{FieldID: text.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
-				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "https://example.org"}}, nil)
+				_, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "https://example.org"}}})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
 				}
@@ -858,24 +948,9 @@ func TestCreateAll(t *testing.T) {
 				if err := runDismissSuggestion(c, userID, src.ID, text.ID); err != nil {
 					t.Fatal(err)
 				}
-				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: link.ID, ValueText: "https://example.org"}}, nil)
+				_, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "https://example.org"}}})
 				if !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
-				}
-			},
-		},
-		{
-			name: "input for another source is refused",
-			run: func(t *testing.T) {
-				c, src, text, _ := seed(t)
-				other := make([]byte, 16)
-				other[15] = 9
-				_, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: other, FieldID: text.ID, ValueText: "x"}}, nil)
-				if !errors.Is(err, ErrInvalid) {
-					t.Fatalf("got %v", err)
-				}
-				if n := count(t, c, "source_metadata"); n != 0 {
-					t.Fatalf("rows %d", n)
 				}
 			},
 		},
@@ -885,13 +960,13 @@ func TestCreateAll(t *testing.T) {
 				c, src, text, _ := seed(t)
 				missing := make([]byte, 16)
 				missing[15] = 9
-				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: missing, ValueText: "x"}}, nil); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: missing, ValueText: "x"}}}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("value field: %v", err)
 				}
-				if _, err := runCreateAll(c, userID, src.ID, nil, []LayoutRow{{FieldID: missing}}); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreateAll(c, userID, src.ID, Draft{Layout: []LayoutRow{{FieldID: missing}}}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("layout field: %v", err)
 				}
-				if _, err := runCreateAll(c, userID, src.ID, []Input{{SourceID: src.ID, FieldID: text.ID}}, nil); !errors.Is(err, ErrInvalid) {
+				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: text.ID}}}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text: %v", err)
 				}
 				if n := count(t, c, "source_metadata") + count(t, c, "source_metadata_layout"); n != 0 {
@@ -903,18 +978,19 @@ func TestCreateAll(t *testing.T) {
 			name: "empty inputs write nothing",
 			run: func(t *testing.T) {
 				c, src, _, _ := seed(t)
-				changes, err := runCreateAll(c, userID, src.ID, nil, nil)
+				changes, err := runCreateAll(c, userID, src.ID, Draft{})
 				if err != nil || len(changes) != 0 {
 					t.Fatalf("changes %+v err %v", changes, err)
 				}
 			},
 		},
 		{
-			name: "ListLayoutTx returns rows by sort order",
+			name: "ReadDraftTx returns layout rows by sort order",
 			run: func(t *testing.T) {
 				c, src, text, link := seed(t)
-				if _, err := runCreateAll(c, userID, src.ID, nil,
-					[]LayoutRow{{FieldID: text.ID, SortOrder: 1}, {FieldID: link.ID, SortOrder: 0, Dismissed: true}}); err != nil {
+				if _, err := runCreateAll(c, userID, src.ID, Draft{
+					Layout: []LayoutRow{{FieldID: text.ID, SortOrder: 1}, {FieldID: link.ID, SortOrder: 0, Dismissed: true}},
+				}); err != nil {
 					t.Fatal(err)
 				}
 				db, err := c.DB()
@@ -926,10 +1002,11 @@ func TestCreateAll(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer tx.Rollback()
-				got, err := ListLayoutTx(tx, src.ID)
+				d, err := ReadDraftTx(tx, sourceOwner(src.ID))
 				if err != nil {
 					t.Fatal(err)
 				}
+				got := d.Layout
 				if len(got) != 2 || !bytes.Equal(got[0].FieldID, link.ID) || !got[0].Dismissed ||
 					!bytes.Equal(got[1].FieldID, text.ID) || got[1].Dismissed {
 					t.Fatalf("layout %+v", got)
@@ -939,5 +1016,225 @@ func TestCreateAll(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, tt.run)
+	}
+}
+
+// testWorld is a catalog with a user and a Source of a seeded type.
+func testWorld(t *testing.T) (c *database.Catalog, userID []byte) {
+	t.Helper()
+	userID = []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { c.Close() })
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Jake", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := sourcevocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	return c, userID
+}
+
+func newSource(t *testing.T, c *database.Catalog, userID, typeID []byte, title string) sources.Source {
+	t.Helper()
+	s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return s
+}
+
+func TestStoresAreRegistered(t *testing.T) {
+	tables := map[string]bool{}
+	for _, tb := range catalogmodel.Tables {
+		tables[tb.Name] = true
+	}
+	for level, st := range stores {
+		if st.level != level {
+			t.Fatalf("store at %q carries level %q", level, st.level)
+		}
+		for _, name := range []string{st.values, st.layout} {
+			if !tables[name] {
+				t.Fatalf("%s: %q is not in catalogmodel.Tables", level, name)
+			}
+			found := false
+			for _, fk := range catalogmodel.FKs {
+				if fk.From == name && fk.Column == st.ownerColumn {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("%s: catalogmodel.FKs has no FK from %s.%s", level, name, st.ownerColumn)
+			}
+		}
+	}
+}
+
+func TestOwnerLevels(t *testing.T) {
+	c, userID := testWorld(t)
+	st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	src := newSource(t, c, userID, st.ID, "Birth of Alice")
+	doc, err := metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owners := map[string]Owner{"short id": {Level: vocabkey.LevelSource, ID: src.ID[:15]}}
+	for _, l := range vocabkey.Levels() {
+		if l != vocabkey.LevelSource {
+			owners[string(l)] = Owner{Level: l, ID: src.ID}
+		}
+	}
+	owners["empty level"] = Owner{Level: "", ID: src.ID}
+	owners["page"] = Owner{Level: "page", ID: src.ID}
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	counts := func() int {
+		var n int
+		if err := db.QueryRow(`SELECT (SELECT COUNT(*) FROM source_metadata) + (SELECT COUNT(*) FROM source_metadata_layout)`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	write := func(f func(tx *database.Tx, o Owner) ([]rowchange.Change, error)) func(Owner) error {
+		return func(o Owner) error {
+			_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+				func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := f(tx, o)
+					return struct{}{}, ch, err
+				})
+			return err
+		}
+	}
+	ops := map[string]func(Owner) error{
+		"Set": write(func(tx *database.Tx, o Owner) ([]rowchange.Change, error) {
+			_, ch, err := Set(tx, userID, o, Input{FieldID: doc.ID, ValueText: "x"})
+			return ch, err
+		}),
+		"Clear": write(func(tx *database.Tx, o Owner) ([]rowchange.Change, error) {
+			return Clear(tx, userID, o, doc.ID)
+		}),
+		"DismissSuggestion": write(func(tx *database.Tx, o Owner) ([]rowchange.Change, error) {
+			return DismissSuggestion(tx, userID, o, doc.ID)
+		}),
+		"Reorder": write(func(tx *database.Tx, o Owner) ([]rowchange.Change, error) {
+			return Reorder(tx, userID, o, [][]byte{doc.ID})
+		}),
+		"CreateAll": write(func(tx *database.Tx, o Owner) ([]rowchange.Change, error) {
+			return CreateAll(tx, userID, o, Draft{Values: []Input{{FieldID: doc.ID, ValueText: "x"}}})
+		}),
+		"ListWorkspace": func(o Owner) error { _, err := ListWorkspace(c, o); return err },
+		"ReadDraftTx": func(o Owner) error {
+			tx, err := db.Begin()
+			if err != nil {
+				return err
+			}
+			defer tx.Rollback()
+			_, err = ReadDraftTx(tx, o)
+			return err
+		},
+	}
+	for opName, op := range ops {
+		for ownerName, o := range owners {
+			if err := op(o); !errors.Is(err, ErrInvalid) {
+				t.Fatalf("%s on %s owner = %v, want ErrInvalid", opName, ownerName, err)
+			}
+			if n := counts(); n != 0 {
+				t.Fatalf("%s on %s owner wrote %d rows", opName, ownerName, n)
+			}
+		}
+	}
+	good := sourceOwner(src.ID)
+	if _, err := ReadDraftTx(nil, good); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("ReadDraftTx(nil tx) = %v", err)
+	}
+}
+
+func TestListWorkspaces(t *testing.T) {
+	c, userID := testWorld(t)
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, _, err := writes.Run(c, writes.Op{Action: "create_source_type", UserID: userID},
+		func(tx *database.Tx) (sourcetypes.Type, []rowchange.Change, error) {
+			return sourcetypes.Create(tx, "Ledger", "", "")
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f1, err := runFieldCreate(c, "Shelf mark", metadatafields.DataTypeText, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f2, err := runFieldCreate(c, "Volume", metadatafields.DataTypeText, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []metadatafields.Field{f2, f1} {
+		if err := sourcevocab.AppendSuggestion(c, other.ID, f.ID, vocabkey.LevelSource); err != nil {
+			t.Fatal(err)
+		}
+	}
+	a := newSource(t, c, userID, cert.ID, "Birth of Alice")
+	b := newSource(t, c, userID, other.ID, "Ledger 1")
+	doc, err := metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runSet(c, userID, a.ID, Input{FieldID: doc.ID, ValueText: "No. 7"}); err != nil {
+		t.Fatal(err)
+	}
+
+	// The catalog has one connection: read each Source alone before the batch
+	// read transaction opens.
+	alone := map[string][]WorkspaceEntry{}
+	for _, src := range []sources.Source{a, b} {
+		ws, err := ListWorkspace(c, sourceOwner(src.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		alone[src.Title] = ws
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	got, err := listWorkspaces(tx, []Owner{sourceOwner(a.ID), sourceOwner(b.ID)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, src := range []sources.Source{a, b} {
+		if !reflect.DeepEqual(got[sourceOwner(src.ID).key()], alone[src.Title]) {
+			t.Fatalf("%s: batch\n%+v\nalone\n%+v", src.Title, got[sourceOwner(src.ID).key()], alone[src.Title])
+		}
+	}
+	// B has no layout: its entries follow the type's suggestion order.
+	gotB := got[sourceOwner(b.ID).key()]
+	if len(gotB) != 2 || !bytes.Equal(gotB[0].Field.ID, f2.ID) || !bytes.Equal(gotB[1].Field.ID, f1.ID) {
+		t.Fatalf("B entries %+v", gotB)
+	}
+	// A has a layout row for document_number: it leads.
+	gotA := got[sourceOwner(a.ID).key()]
+	if len(gotA) == 0 || !bytes.Equal(gotA[0].Field.ID, doc.ID) || gotA[0].Value == nil {
+		t.Fatalf("A entries %+v", gotA)
 	}
 }

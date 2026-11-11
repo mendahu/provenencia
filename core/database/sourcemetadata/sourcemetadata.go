@@ -1,12 +1,13 @@
-// Package sourcemetadata stores descriptive Source metadata values, plus the
-// per-Source layout (dismissed suggestions and field order) that the Source
-// page metadata editor reads back through ListWorkspace. Set, Clear,
-// DismissSuggestion, and Reorder run inside writes.Run and return the row
-// changes that Run records.
+// Package sourcemetadata stores descriptive metadata values for an owner (a
+// Source today; an Artifact and an Evidence graph (S15-08) share the same
+// functions), plus the per-owner layout (dismissed suggestions and field order)
+// that the metadata editor reads back through ListWorkspace. Every function
+// takes an Owner, a vocabkey.Level and an id; a level with no store entry is
+// ErrInvalid. Set, Clear, DismissSuggestion, Reorder, CreateAll, and Apply run
+// inside writes.Run and return the row changes that Run records.
 package sourcemetadata
 
 import (
-	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -17,7 +18,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/urlshape"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -25,69 +25,35 @@ import (
 
 var ErrInvalid = apperr.New(apperr.CodeSourceMetadataInvalid, apperr.KindUser)
 
-const (
-	sqlInsert = `INSERT INTO source_metadata (id, source_id, field_id, value_text)
-		VALUES (?, ?, ?, ?)`
-	sqlUpdate = `UPDATE source_metadata SET value_text = ?
-		WHERE id = ?`
-	sqlDelete  = `DELETE FROM source_metadata WHERE source_id = ? AND field_id = ?`
-	sqlGetPair = `SELECT id, source_id, field_id, COALESCE(value_text, '')
-		FROM source_metadata WHERE source_id = ? AND field_id = ?`
-	sqlListBySource = `SELECT id, source_id, field_id, COALESCE(value_text, '')
-		FROM source_metadata WHERE source_id = ?
-		ORDER BY field_id`
-	sqlSourceExists = `SELECT 1 FROM sources WHERE id = ?`
-	sqlFieldGet     = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
-		FROM source_metadata_fields WHERE id = ?`
-
-	// Layout rows append at the end of the Source's existing order. The next
-	// sort_order is computed inside the INSERT so two appends cannot read the
-	// same MAX and share a slot; the WHERE clause is also what lets SQLite
-	// parse INSERT…SELECT with an upsert clause.
-	sqlLayoutAppend = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order, dismissed)
-		SELECT ?, ?, COALESCE(MAX(sort_order), -1) + 1, 0
-		FROM source_metadata_layout WHERE source_id = ?
-		ON CONFLICT(source_id, field_id) DO NOTHING`
-	sqlLayoutDismiss = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order, dismissed)
-		SELECT ?, ?, COALESCE(MAX(sort_order), -1) + 1, 1
-		FROM source_metadata_layout WHERE source_id = ?
-		ON CONFLICT(source_id, field_id) DO UPDATE SET dismissed = 1`
-	// Reorder must not disturb dismissed, so the upsert touches sort_order only.
-	sqlLayoutOrder = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order)
-		VALUES (?, ?, ?)
-		ON CONFLICT(source_id, field_id) DO UPDATE SET sort_order = excluded.sort_order`
-	sqlHasAny = `SELECT EXISTS (SELECT 1 FROM source_metadata WHERE source_id = ?)
-		OR EXISTS (SELECT 1 FROM source_metadata_layout WHERE source_id = ?)`
-	sqlLayoutInsert = `INSERT INTO source_metadata_layout (source_id, field_id, sort_order, dismissed)
-		VALUES (?, ?, ?, ?)`
-	sqlLayoutGet  = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ? AND field_id = ?`
-	sqlLayoutList = `SELECT field_id, sort_order, dismissed FROM source_metadata_layout WHERE source_id = ?
-		ORDER BY sort_order, field_id`
-)
-
-// Row is one source_metadata value.
+// Row is one stored metadata value.
 type Row struct {
 	ID        []byte
-	SourceID  []byte
+	Owner     Owner
 	FieldID   []byte
 	ValueText string
 }
 
-// Input is the payload for Set.
+// Input is one value of a Set or a Draft.
 type Input struct {
-	SourceID  []byte
 	FieldID   []byte
 	ValueText string
 }
 
-// WorkspaceEntry is a suggested or extra field for Source edit UI.
+// Draft is what an owner's metadata form or copy holds: one value per field,
+// and layout rows written as given.
+type Draft struct {
+	Values []Input     // one per field
+	Layout []LayoutRow // written verbatim
+}
+
+// WorkspaceEntry is a suggested or extra field for the owner's edit UI.
 type WorkspaceEntry struct {
 	Field     metadatafields.Field
 	Value     *Row // nil when suggested but unset
 	Suggested bool
 	// SortOrder is the position ListWorkspace returned the entry in: the
-	// source_metadata_layout order once the Source has any layout row,
-	// otherwise the type's suggestion order (0 for extras).
+	// layout order once the owner has any layout row, otherwise the type's
+	// suggestion order (0 for extras).
 	SortOrder int
 }
 
@@ -106,46 +72,51 @@ func (e WorkspaceEntry) OpenHref() string {
 	return href
 }
 
-// LayoutRow is one source_metadata_layout row for a field.
+// LayoutRow is one layout row for a field.
 type LayoutRow struct {
 	FieldID   []byte
 	SortOrder int
 	Dismissed bool
 }
 
-// Set upserts a metadata value for (source_id, field_id). The caller records
-// the returned changes. An unchanged value returns the existing row and no changes.
-func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, error) {
+// Set upserts a metadata value for (owner, field). The caller records the
+// returned changes. An unchanged value returns the existing row and no changes.
+func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return Row{}, nil, err
+	}
 	in.ValueText = strings.TrimSpace(in.ValueText)
-	if tx == nil || len(in.SourceID) != 16 || len(in.FieldID) != 16 {
+	if tx == nil || len(in.FieldID) != 16 {
 		return Row{}, nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return Row{}, nil, err
 	}
 
-	if err := requireSource(tx.Tx, in.SourceID); err != nil {
+	if err := requireOwner(tx.Tx, st, owner); err != nil {
 		return Row{}, nil, err
 	}
-	field, err := getField(tx.Tx, in.FieldID)
+	fields, err := loadFields(tx.Tx, [][]byte{in.FieldID})
 	if err != nil {
 		return Row{}, nil, err
 	}
+	field := fields[string(in.FieldID)]
 
-	prev, err := getPairTx(tx.Tx, in.SourceID, in.FieldID)
+	prev, err := getPairTx(tx.Tx, st, owner, in.FieldID)
 	creating := errors.Is(err, sql.ErrNoRows)
 	if err != nil && !creating {
 		return Row{}, nil, err
 	}
 
 	if creating {
-		row, change, err := insertValueTx(tx.Tx, in.SourceID, field, in.ValueText)
+		row, change, err := insertValueTx(tx.Tx, st, owner, field, in.ValueText)
 		if err != nil {
 			return Row{}, nil, err
 		}
-		// A field the researcher just filled needs a place in the Source's
+		// A field the researcher just filled needs a place in the owner's
 		// order; appending keeps an existing hand-sorted layout intact.
-		if _, err := tx.Exec(sqlLayoutAppend, in.SourceID, in.FieldID, in.SourceID); err != nil {
+		if _, err := tx.Exec(st.layoutAppend, owner.ID, in.FieldID, owner.ID); err != nil {
 			return Row{}, nil, mapConstraint(err)
 		}
 		return row, []rowchange.Change{change}, nil
@@ -155,33 +126,20 @@ func Set(tx *database.Tx, userID []byte, in Input) (Row, []rowchange.Change, err
 	if err != nil {
 		return Row{}, nil, err
 	}
-	in.ValueText = normalized
-	if prev.ValueText == in.ValueText {
+	if prev.ValueText == normalized {
 		return prev, nil, nil
 	}
-	if _, err := tx.Exec(sqlUpdate, database.NullString(in.ValueText), prev.ID); err != nil {
-		return Row{}, nil, mapConstraint(err)
+	row, change, err := updateValueTx(tx.Tx, st, prev, normalized)
+	if err != nil {
+		return Row{}, nil, err
 	}
-	row := Row{
-		ID:        append([]byte(nil), prev.ID...),
-		SourceID:  append([]byte(nil), in.SourceID...),
-		FieldID:   append([]byte(nil), in.FieldID...),
-		ValueText: in.ValueText,
-	}
-	return row, []rowchange.Change{{
-		EntityType: "source_metadata",
-		EntityID:   row.ID,
-		Action:     rowchange.ActionUpdate,
-		Fields: map[string]rowchange.FieldDiff{
-			"value_text": {Old: database.NullString(prev.ValueText), New: database.NullString(in.ValueText)},
-		},
-	}}, nil
+	return row, []rowchange.Change{change}, nil
 }
 
 // insertValueTx trims and normalizes valueText for the field's data type, inserts
-// the source_metadata row, and returns it with its create change. It writes no
-// layout row; Set appends one and CreateAll writes the caller's.
-func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valueText string) (Row, rowchange.Change, error) {
+// the value row, and returns it with its create change. It writes no layout
+// row; Set appends one and CreateAll writes the caller's.
+func insertValueTx(tx *sql.Tx, st *store, owner Owner, field metadatafields.Field, valueText string) (Row, rowchange.Change, error) {
 	normalized, err := normalizeValue(field.DataType, strings.TrimSpace(valueText))
 	if err != nil {
 		return Row{}, rowchange.Change{}, err
@@ -191,166 +149,225 @@ func insertValueTx(tx *sql.Tx, sourceID []byte, field metadatafields.Field, valu
 		return Row{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
-	if _, err := tx.Exec(sqlInsert, idBytes, sourceID, field.ID, database.NullString(normalized)); err != nil {
+	if _, err := tx.Exec(st.insert, idBytes, owner.ID, field.ID, database.NullString(normalized)); err != nil {
 		return Row{}, rowchange.Change{}, mapConstraint(err)
 	}
 	row := Row{
 		ID:        append([]byte(nil), idBytes...),
-		SourceID:  append([]byte(nil), sourceID...),
+		Owner:     Owner{Level: owner.Level, ID: append([]byte(nil), owner.ID...)},
 		FieldID:   append([]byte(nil), field.ID...),
 		ValueText: normalized,
 	}
 	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: nil, New: id.String()},
-		"source_id": {Old: nil, New: database.UUIDString(sourceID)},
-		"field_id":  {Old: nil, New: database.UUIDString(field.ID)},
+		"id":           {Old: nil, New: id.String()},
+		st.ownerColumn: {Old: nil, New: database.UUIDString(owner.ID)},
+		"field_id":     {Old: nil, New: database.UUIDString(field.ID)},
 	}
 	if normalized != "" {
 		fields["value_text"] = rowchange.FieldDiff{Old: nil, New: normalized}
 	}
 	return row, rowchange.Change{
-		EntityType: "source_metadata",
+		EntityType: st.values,
 		EntityID:   row.ID,
 		Action:     rowchange.ActionCreate,
 		Fields:     fields,
 	}, nil
 }
 
-// CreateAll writes values and layout rows verbatim onto a Source that has
+// updateValueTx writes the new, already normalized text over prev's row.
+func updateValueTx(tx *sql.Tx, st *store, prev Row, normalized string) (Row, rowchange.Change, error) {
+	if _, err := tx.Exec(st.update, database.NullString(normalized), prev.ID); err != nil {
+		return Row{}, rowchange.Change{}, mapConstraint(err)
+	}
+	row := Row{
+		ID:        append([]byte(nil), prev.ID...),
+		Owner:     Owner{Level: prev.Owner.Level, ID: append([]byte(nil), prev.Owner.ID...)},
+		FieldID:   append([]byte(nil), prev.FieldID...),
+		ValueText: normalized,
+	}
+	return row, rowchange.Change{
+		EntityType: st.values,
+		EntityID:   row.ID,
+		Action:     rowchange.ActionUpdate,
+		Fields: map[string]rowchange.FieldDiff{
+			"value_text": {Old: database.NullString(prev.ValueText), New: database.NullString(normalized)},
+		},
+	}, nil
+}
+
+// deleteValueTx deletes prev's row and returns its delete change.
+func deleteValueTx(tx *sql.Tx, st *store, prev Row) (rowchange.Change, error) {
+	if _, err := tx.Exec(st.delete, prev.Owner.ID, prev.FieldID); err != nil {
+		return rowchange.Change{}, err
+	}
+	fields := map[string]rowchange.FieldDiff{
+		"id":           {Old: database.UUIDString(prev.ID), New: nil},
+		st.ownerColumn: {Old: database.UUIDString(prev.Owner.ID), New: nil},
+		"field_id":     {Old: database.UUIDString(prev.FieldID), New: nil},
+	}
+	if prev.ValueText != "" {
+		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
+	}
+	return rowchange.Change{
+		EntityType: st.values,
+		EntityID:   prev.ID,
+		Action:     rowchange.ActionDelete,
+		Fields:     fields,
+	}, nil
+}
+
+// layoutChange builds every layout row change: the owner column and field_id
+// are always written ({nil, id} on a create, {id, id} on an update, the shape
+// effects scopes by), with diffs beside them. EntityID is the field id.
+func layoutChange(st *store, owner Owner, fieldID []byte, action string, diffs map[string]rowchange.FieldDiff) rowchange.Change {
+	ownerID, field := database.UUIDString(owner.ID), database.UUIDString(fieldID)
+	fields := make(map[string]rowchange.FieldDiff, len(diffs)+2)
+	if action == rowchange.ActionCreate {
+		fields[st.ownerColumn] = rowchange.FieldDiff{Old: nil, New: ownerID}
+		fields["field_id"] = rowchange.FieldDiff{Old: nil, New: field}
+	} else {
+		fields[st.ownerColumn] = rowchange.FieldDiff{Old: ownerID, New: ownerID}
+		fields["field_id"] = rowchange.FieldDiff{Old: field, New: field}
+	}
+	for k, v := range diffs {
+		fields[k] = v
+	}
+	return rowchange.Change{
+		EntityType: st.layout,
+		EntityID:   append([]byte(nil), fieldID...),
+		Action:     action,
+		Fields:     fields,
+	}
+}
+
+// insertLayoutTx writes a layout row as given and returns its create change.
+func insertLayoutTx(tx *sql.Tx, st *store, owner Owner, l LayoutRow) (rowchange.Change, error) {
+	if _, err := tx.Exec(st.layoutInsert, owner.ID, l.FieldID, l.SortOrder, boolInt(l.Dismissed)); err != nil {
+		return rowchange.Change{}, mapConstraint(err)
+	}
+	return layoutChange(st, owner, l.FieldID, rowchange.ActionCreate, map[string]rowchange.FieldDiff{
+		"sort_order": {Old: nil, New: l.SortOrder},
+		"dismissed":  {Old: nil, New: l.Dismissed},
+	}), nil
+}
+
+// CreateAll writes values and layout rows verbatim onto an owner that has
 // neither, so a copy reads back in the original's order with the original's
 // dismissed flags. Unlike Set it appends no layout row of its own. Changes are
 // the value changes in input order, then the layout changes in input order.
 // The caller records them.
-func CreateAll(tx *database.Tx, userID, sourceID []byte, values []Input, layout []LayoutRow) ([]rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 {
+func CreateAll(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	if len(values) == 0 && len(layout) == 0 {
+	if len(d.Values) == 0 && len(d.Layout) == 0 {
 		return nil, nil
 	}
-	if err := requireSource(tx.Tx, sourceID); err != nil {
+	if err := requireOwner(tx.Tx, st, owner); err != nil {
 		return nil, err
 	}
-	var has bool
-	if err := tx.QueryRow(sqlHasAny, sourceID, sourceID).Scan(&has); err != nil {
+	have, err := readOwnerTx(tx.Tx, st, owner)
+	if err != nil {
 		return nil, err
 	}
-	if has {
+	if len(have.values) > 0 || len(have.layout) > 0 {
 		return nil, ErrInvalid
 	}
-	for _, in := range values {
-		if !bytes.Equal(in.SourceID, sourceID) {
-			return nil, ErrInvalid
-		}
-	}
 
-	changes := make([]rowchange.Change, 0, len(values)+len(layout))
-	for _, in := range values {
+	changes := make([]rowchange.Change, 0, len(d.Values)+len(d.Layout))
+	for _, in := range d.Values {
 		if len(in.FieldID) != 16 {
 			return nil, ErrInvalid
 		}
-		field, err := getField(tx.Tx, in.FieldID)
+		fields, err := loadFields(tx.Tx, [][]byte{in.FieldID})
 		if err != nil {
 			return nil, err
 		}
-		_, change, err := insertValueTx(tx.Tx, sourceID, field, in.ValueText)
+		_, change, err := insertValueTx(tx.Tx, st, owner, fields[string(in.FieldID)], in.ValueText)
 		if err != nil {
 			return nil, err
 		}
 		changes = append(changes, change)
 	}
-	for _, l := range layout {
+	for _, l := range d.Layout {
 		if len(l.FieldID) != 16 {
 			return nil, ErrInvalid
 		}
-		if _, err := getField(tx.Tx, l.FieldID); err != nil {
+		if _, err := loadFields(tx.Tx, [][]byte{l.FieldID}); err != nil {
 			return nil, err
 		}
-		dismissed := 0
-		if l.Dismissed {
-			dismissed = 1
+		change, err := insertLayoutTx(tx.Tx, st, owner, l)
+		if err != nil {
+			return nil, err
 		}
-		if _, err := tx.Exec(sqlLayoutInsert, sourceID, l.FieldID, l.SortOrder, dismissed); err != nil {
-			return nil, mapConstraint(err)
-		}
-		changes = append(changes, rowchange.Change{
-			EntityType: "source_metadata_layout",
-			EntityID:   append([]byte(nil), l.FieldID...),
-			Action:     rowchange.ActionCreate,
-			Fields: map[string]rowchange.FieldDiff{
-				"source_id":  {Old: nil, New: database.UUIDString(sourceID)},
-				"field_id":   {Old: nil, New: database.UUIDString(l.FieldID)},
-				"sort_order": {Old: nil, New: l.SortOrder},
-				"dismissed":  {Old: nil, New: l.Dismissed},
-			},
-		})
+		changes = append(changes, change)
 	}
 	return changes, nil
 }
 
-// Clear deletes the metadata row for (source_id, field_id) when one exists.
-// A missing row returns no changes. The caller records the returned changes.
-func Clear(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 || len(fieldID) != 16 {
+// Clear deletes the metadata row for (owner, field) when one exists. A missing
+// row, or a missing owner, returns no changes. The caller records the returned
+// changes.
+func Clear(tx *database.Tx, userID []byte, owner Owner, fieldID []byte) ([]rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil || len(fieldID) != 16 {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
 
-	prev, err := getPairTx(tx.Tx, sourceID, fieldID)
+	prev, err := getPairTx(tx.Tx, st, owner, fieldID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := tx.Exec(sqlDelete, sourceID, fieldID); err != nil {
+	change, err := deleteValueTx(tx.Tx, st, prev)
+	if err != nil {
 		return nil, err
 	}
-	fields := map[string]rowchange.FieldDiff{
-		"id":        {Old: database.UUIDString(prev.ID), New: nil},
-		"source_id": {Old: database.UUIDString(prev.SourceID), New: nil},
-		"field_id":  {Old: database.UUIDString(prev.FieldID), New: nil},
-	}
-	if prev.ValueText != "" {
-		fields["value_text"] = rowchange.FieldDiff{Old: prev.ValueText, New: nil}
-	}
-	return []rowchange.Change{{
-		EntityType: "source_metadata",
-		EntityID:   prev.ID,
-		Action:     rowchange.ActionDelete,
-		Fields:     fields,
-	}}, nil
+	return []rowchange.Change{change}, nil
 }
 
 // DismissSuggestion hides one of the type's metadata suggestions for a single
-// Source. The caller records the returned changes.
+// owner. The caller records the returned changes.
 //
 // Dismissing is only meaningful while the field is an empty suggestion. A field
 // that already holds a value stays visible, so the call is a no-op rather than
 // an error — the editor's X is offered on empty suggestion rows only. An
 // already-dismissed suggestion is also a no-op. Both return no changes.
-func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 || len(fieldID) != 16 {
+func DismissSuggestion(tx *database.Tx, userID []byte, owner Owner, fieldID []byte) ([]rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil || len(fieldID) != 16 {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
 
-	if err := requireSource(tx.Tx, sourceID); err != nil {
+	if err := requireOwner(tx.Tx, st, owner); err != nil {
 		return nil, err
 	}
-	if _, err := getField(tx.Tx, fieldID); err != nil {
+	if _, err := loadFields(tx.Tx, [][]byte{fieldID}); err != nil {
 		return nil, err
 	}
 
-	_, err := getPairTx(tx.Tx, sourceID, fieldID)
+	_, err = getPairTx(tx.Tx, st, owner, fieldID)
 	switch {
 	case err == nil:
 		return nil, nil
@@ -358,7 +375,7 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 		return nil, err
 	}
 
-	prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
+	prev, err := getLayoutTx(tx.Tx, st, owner, fieldID)
 	had := true
 	if errors.Is(err, sql.ErrNoRows) {
 		had = false
@@ -369,7 +386,7 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 		return nil, nil
 	}
 
-	if _, err := tx.Exec(sqlLayoutDismiss, sourceID, fieldID, sourceID); err != nil {
+	if _, err := tx.Exec(st.layoutDismiss, owner.ID, fieldID, owner.ID); err != nil {
 		return nil, mapConstraint(err)
 	}
 	action := rowchange.ActionCreate
@@ -378,24 +395,21 @@ func DismissSuggestion(tx *database.Tx, userID, sourceID, fieldID []byte) ([]row
 		action = rowchange.ActionUpdate
 		oldDismissed = false
 	}
-	return []rowchange.Change{{
-		EntityType: "source_metadata_layout",
-		EntityID:   fieldID,
-		Action:     action,
-		Fields: map[string]rowchange.FieldDiff{
-			"source_id": {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
-			"field_id":  {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
-			"dismissed": {Old: oldDismissed, New: true},
-		},
-	}}, nil
+	return []rowchange.Change{layoutChange(st, owner, fieldID, action, map[string]rowchange.FieldDiff{
+		"dismissed": {Old: oldDismissed, New: true},
+	})}, nil
 }
 
-// Reorder rewrites the Source's field order as 0..n-1 over fieldIDs. The caller
+// Reorder rewrites the owner's field order as 0..n-1 over fieldIDs. The caller
 // records the returned changes. Fields left out of the list keep their rows and
 // sort after the listed ones in ListWorkspace. Dismissed flags are preserved.
 // An order that already matches returns no changes.
-func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]rowchange.Change, error) {
-	if tx == nil || len(sourceID) != 16 || len(fieldIDs) == 0 {
+func Reorder(tx *database.Tx, userID []byte, owner Owner, fieldIDs [][]byte) ([]rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil || len(fieldIDs) == 0 {
 		return nil, ErrInvalid
 	}
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
@@ -412,16 +426,16 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 		seen[string(fieldID)] = struct{}{}
 	}
 
-	if err := requireSource(tx.Tx, sourceID); err != nil {
+	if err := requireOwner(tx.Tx, st, owner); err != nil {
+		return nil, err
+	}
+	if _, err := loadFields(tx.Tx, fieldIDs); err != nil {
 		return nil, err
 	}
 
 	var changes []rowchange.Change
 	for i, fieldID := range fieldIDs {
-		if _, err := getField(tx.Tx, fieldID); err != nil {
-			return nil, err
-		}
-		prev, err := getLayoutTx(tx.Tx, sourceID, fieldID)
+		prev, err := getLayoutTx(tx.Tx, st, owner, fieldID)
 		had := true
 		if errors.Is(err, sql.ErrNoRows) {
 			had = false
@@ -431,7 +445,7 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 		if had && prev.SortOrder == i {
 			continue
 		}
-		if _, err := tx.Exec(sqlLayoutOrder, sourceID, fieldID, i); err != nil {
+		if _, err := tx.Exec(st.layoutOrder, owner.ID, fieldID, i); err != nil {
 			return nil, mapConstraint(err)
 		}
 		action := rowchange.ActionCreate
@@ -440,187 +454,316 @@ func Reorder(tx *database.Tx, userID, sourceID []byte, fieldIDs [][]byte) ([]row
 			action = rowchange.ActionUpdate
 			oldOrder = prev.SortOrder
 		}
-		changes = append(changes, rowchange.Change{
-			EntityType: "source_metadata_layout",
-			EntityID:   fieldID,
-			Action:     action,
-			Fields: map[string]rowchange.FieldDiff{
-				"source_id":  {Old: database.UUIDString(sourceID), New: database.UUIDString(sourceID)},
-				"field_id":   {Old: database.UUIDString(fieldID), New: database.UUIDString(fieldID)},
-				"sort_order": {Old: oldOrder, New: i},
-			},
-		})
+		changes = append(changes, layoutChange(st, owner, fieldID, action, map[string]rowchange.FieldDiff{
+			"sort_order": {Old: oldOrder, New: i},
+		}))
 	}
 	return changes, nil
 }
 
-// ListBySource returns all metadata rows for a Source.
-func ListBySource(c *database.Catalog, sourceID []byte) ([]Row, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	return listBySource(db, sourceID)
+// stored is what an owner holds, with the row ids and old text the change rows
+// need: values by field id, layout by sort_order then field id.
+type stored struct {
+	values []Row
+	layout []LayoutRow
 }
 
-// ListBySourceTx is ListBySource on an open transaction.
-func ListBySourceTx(tx *sql.Tx, sourceID []byte) ([]Row, error) {
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
+// readOwnerTx reads what the owner holds. It reads rows, not the owner, so a
+// missing owner holds nothing.
+func readOwnerTx(tx *sql.Tx, st *store, owner Owner) (stored, error) {
+	owners := []Owner{owner}
+	values, err := listByOwners(tx, owners)
+	if err != nil {
+		return stored{}, err
 	}
-	return listBySource(tx, sourceID)
+	layout, err := listLayoutByOwners(tx, owners)
+	if err != nil {
+		return stored{}, err
+	}
+	return stored{values: values, layout: layout[owner.key()]}, nil
 }
 
-func listBySource(q database.Querier, sourceID []byte) ([]Row, error) {
-	rows, err := q.Query(sqlListBySource, sourceID)
+// ReadDraftTx returns what the owner holds as a Draft: its values in field-id
+// order and its layout rows by sort_order then field id. An owner with no row
+// holds nothing, so the Draft is empty and there is no error.
+func ReadDraftTx(tx *sql.Tx, owner Owner) (Draft, error) {
+	st, err := storeFor(owner)
 	if err != nil {
-		return nil, err
+		return Draft{}, err
 	}
-	defer rows.Close()
+	if tx == nil {
+		return Draft{}, ErrInvalid
+	}
+	have, err := readOwnerTx(tx, st, owner)
+	if err != nil {
+		return Draft{}, err
+	}
+	var d Draft
+	for _, v := range have.values {
+		d.Values = append(d.Values, Input{FieldID: v.FieldID, ValueText: v.ValueText})
+	}
+	d.Layout = have.layout
+	return d, nil
+}
+
+// listByOwners reads the values of the owners, one query per level, each
+// owner's rows by field id. The owners must already have passed storeFor.
+func listByOwners(q database.Querier, owners []Owner) ([]Row, error) {
 	var out []Row
-	for rows.Next() {
-		r, err := scanRow(rows)
+	for _, level := range vocabkey.MetadataLevels() {
+		st, ids := stores[level], idsAt(owners, level)
+		if st == nil || len(ids) == 0 {
+			continue
+		}
+		rows, err := q.Query(st.listIn+database.SQLInPlaceholders(len(ids))+st.listSuffix, database.BlobArgs(ids)...)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
-}
-
-// ListWorkspace returns suggested fields for the Source’s type plus any extra
-// stored values, filtered and ordered by the Source's layout.
-//
-// Dismissed suggestions are omitted while they hold no value. Once the Source
-// has any layout row the entries come back in layout order, with fields that
-// have no row yet sorting after them in suggestion-then-extra order; a Source
-// with no layout at all keeps the original suggestion-then-extra order.
-func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, error) {
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	src, err := sources.Get(c, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
-	suggestions, err := sourcevocab.ListSuggestions(c, src.SourceTypeID, vocabkey.LevelSource)
-	if err != nil {
-		return nil, err
-	}
-	values, err := ListBySource(c, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	layoutRows, maxOrder, err := listLayout(c, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	byField := make(map[string]Row, len(values))
-	for _, v := range values {
-		byField[string(v.FieldID)] = v
-	}
-
-	out := make([]WorkspaceEntry, 0, len(suggestions)+len(values))
-	seen := make(map[string]struct{}, len(suggestions))
-	for _, s := range suggestions {
-		key := string(s.Field.ID)
-		seen[key] = struct{}{}
-		entry := WorkspaceEntry{Field: s.Field, Suggested: true, SortOrder: s.SortOrder}
-		if v, ok := byField[key]; ok {
-			vv := v
-			entry.Value = &vv
+		for rows.Next() {
+			r, err := scanRow(rows, st)
+			if err != nil {
+				rows.Close()
+				return nil, err
+			}
+			out = append(out, r)
 		}
-		if entry.Value == nil && layoutRows[key].Dismissed {
-			continue
-		}
-		out = append(out, entry)
-	}
-	for _, v := range values {
-		key := string(v.FieldID)
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		field, err := getField(db, v.FieldID)
+		err = rows.Err()
+		rows.Close()
 		if err != nil {
 			return nil, err
 		}
-		vv := v
-		out = append(out, WorkspaceEntry{
-			Field:     field,
-			Value:     &vv,
-			Suggested: false,
-			SortOrder: 0,
-		})
 	}
-
-	if len(layoutRows) == 0 {
-		return out, nil
-	}
-	fallback := maxOrder + 1
-	for i := range out {
-		if l, ok := layoutRows[string(out[i].Field.ID)]; ok {
-			out[i].SortOrder = l.SortOrder
-			continue
-		}
-		out[i].SortOrder = fallback + i
-	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].SortOrder < out[j].SortOrder })
 	return out, nil
 }
 
-// ListLayoutTx returns the Source's layout rows on an open transaction, ordered
-// by sort_order then field id.
-func ListLayoutTx(tx *sql.Tx, sourceID []byte) ([]LayoutRow, error) {
-	if len(sourceID) != 16 {
-		return nil, ErrInvalid
-	}
-	return listLayoutRows(tx, sourceID)
-}
-
-// listLayout reads the Source's layout rows keyed by field id, with the highest
-// sort_order in use (-1 when the Source has no layout).
-func listLayout(c *database.Catalog, sourceID []byte) (map[string]LayoutRow, int, error) {
-	db, err := c.DB()
-	if err != nil {
-		return nil, 0, err
-	}
-	rows, err := listLayoutRows(db, sourceID)
-	if err != nil {
-		return nil, 0, err
-	}
-	out := make(map[string]LayoutRow, len(rows))
-	maxOrder := -1
-	for _, l := range rows {
-		out[string(l.FieldID)] = l
-		if l.SortOrder > maxOrder {
-			maxOrder = l.SortOrder
+// listLayoutByOwners reads the layout rows of the owners, one query per level,
+// keyed by Owner.key and ordered by sort_order then field id. The owners must
+// already have passed storeFor.
+func listLayoutByOwners(q database.Querier, owners []Owner) (map[string][]LayoutRow, error) {
+	out := make(map[string][]LayoutRow)
+	for _, level := range vocabkey.MetadataLevels() {
+		st, ids := stores[level], idsAt(owners, level)
+		if st == nil || len(ids) == 0 {
+			continue
 		}
-	}
-	return out, maxOrder, nil
-}
-
-func listLayoutRows(q database.Querier, sourceID []byte) ([]LayoutRow, error) {
-	rows, err := q.Query(sqlLayoutList, sourceID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var out []LayoutRow
-	for rows.Next() {
-		l, err := scanLayoutRow(rows)
+		rows, err := q.Query(st.layoutListIn+database.SQLInPlaceholders(len(ids))+st.layoutListSuffix, database.BlobArgs(ids)...)
 		if err != nil {
 			return nil, err
 		}
-		out = append(out, l)
+		for rows.Next() {
+			var ownerID []byte
+			var l LayoutRow
+			var dismissed int
+			if err := rows.Scan(&ownerID, &l.FieldID, &l.SortOrder, &dismissed); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			l.Dismissed = dismissed == 1
+			k := Owner{Level: level, ID: ownerID}.key()
+			out[k] = append(out[k], l)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
 	}
-	return out, rows.Err()
+	return out, nil
+}
+
+// idsAt is the distinct ids of the owners at one level.
+func idsAt(owners []Owner, level vocabkey.Level) [][]byte {
+	var ids [][]byte
+	for _, o := range owners {
+		if o.Level == level {
+			ids = append(ids, o.ID)
+		}
+	}
+	return database.UniqueBlobIDs(ids)
+}
+
+// ListWorkspace returns suggested fields for the owner's type plus any extra
+// stored values, filtered and ordered by the owner's layout. A missing owner is
+// ErrInvalid.
+//
+// Dismissed suggestions are omitted while they hold no value. Once the owner
+// has any layout row the entries come back in layout order, with fields that
+// have no row yet sorting after them in suggestion-then-extra order; an owner
+// with no layout at all keeps the original suggestion-then-extra order.
+func ListWorkspace(c *database.Catalog, owner Owner) ([]WorkspaceEntry, error) {
+	if _, err := storeFor(owner); err != nil {
+		return nil, err
+	}
+	db, err := c.DB()
+	if err != nil {
+		return nil, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	byOwner, err := listWorkspaces(tx, []Owner{owner})
+	if err != nil {
+		return nil, err
+	}
+	return byOwner[owner.key()], nil
+}
+
+// listWorkspaces is ListWorkspace over many owners, keyed by Owner.key: each
+// level's types in one query, the suggestions once per distinct (type, level),
+// then the values, the layout and every extra value's field in one read each.
+func listWorkspaces(tx *sql.Tx, owners []Owner) (map[string][]WorkspaceEntry, error) {
+	var uniq []Owner
+	seenOwner := make(map[string]struct{}, len(owners))
+	for _, o := range owners {
+		if _, err := storeFor(o); err != nil {
+			return nil, err
+		}
+		if _, dup := seenOwner[o.key()]; dup {
+			continue
+		}
+		seenOwner[o.key()] = struct{}{}
+		uniq = append(uniq, o)
+	}
+
+	typeOf := make(map[string][]byte, len(uniq))
+	for _, level := range vocabkey.MetadataLevels() {
+		st, ids := stores[level], idsAt(uniq, level)
+		if st == nil || len(ids) == 0 {
+			continue
+		}
+		rows, err := tx.Query(st.typeIn+database.SQLInPlaceholders(len(ids))+")", database.BlobArgs(ids)...)
+		if err != nil {
+			return nil, err
+		}
+		for rows.Next() {
+			var id, typeID []byte
+			if err := rows.Scan(&id, &typeID); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			typeOf[Owner{Level: level, ID: id}.key()] = typeID
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	type typeLevel struct {
+		typeID string
+		level  vocabkey.Level
+	}
+	suggested := make(map[typeLevel][]sourcevocab.Suggestion)
+	for _, o := range uniq {
+		typeID, ok := typeOf[o.key()]
+		if !ok {
+			return nil, ErrInvalid
+		}
+		k := typeLevel{string(typeID), o.Level}
+		if _, ok := suggested[k]; ok {
+			continue
+		}
+		list, err := sourcevocab.ListSuggestionsTx(tx, typeID, o.Level)
+		if err != nil {
+			return nil, err
+		}
+		suggested[k] = list
+	}
+
+	valueRows, err := listByOwners(tx, uniq)
+	if err != nil {
+		return nil, err
+	}
+	valuesOf := make(map[string][]Row, len(uniq))
+	for _, v := range valueRows {
+		valuesOf[v.Owner.key()] = append(valuesOf[v.Owner.key()], v)
+	}
+	layoutOf, err := listLayoutByOwners(tx, uniq)
+	if err != nil {
+		return nil, err
+	}
+
+	var extraIDs [][]byte
+	for _, o := range uniq {
+		inSuggestions := make(map[string]struct{})
+		for _, s := range suggested[typeLevel{string(typeOf[o.key()]), o.Level}] {
+			inSuggestions[string(s.Field.ID)] = struct{}{}
+		}
+		for _, v := range valuesOf[o.key()] {
+			if _, ok := inSuggestions[string(v.FieldID)]; !ok {
+				extraIDs = append(extraIDs, v.FieldID)
+			}
+		}
+	}
+	var extras map[string]metadatafields.Field
+	if len(extraIDs) > 0 {
+		if extras, err = loadFields(tx, extraIDs); err != nil {
+			return nil, err
+		}
+	}
+
+	out := make(map[string][]WorkspaceEntry, len(uniq))
+	for _, o := range uniq {
+		suggestions := suggested[typeLevel{string(typeOf[o.key()]), o.Level}]
+		values := valuesOf[o.key()]
+		layoutRows := make(map[string]LayoutRow, len(layoutOf[o.key()]))
+		maxOrder := -1
+		for _, l := range layoutOf[o.key()] {
+			layoutRows[string(l.FieldID)] = l
+			if l.SortOrder > maxOrder {
+				maxOrder = l.SortOrder
+			}
+		}
+		byField := make(map[string]Row, len(values))
+		for _, v := range values {
+			byField[string(v.FieldID)] = v
+		}
+
+		entries := make([]WorkspaceEntry, 0, len(suggestions)+len(values))
+		seen := make(map[string]struct{}, len(suggestions))
+		for _, s := range suggestions {
+			key := string(s.Field.ID)
+			seen[key] = struct{}{}
+			entry := WorkspaceEntry{Field: s.Field, Suggested: true, SortOrder: s.SortOrder}
+			if v, ok := byField[key]; ok {
+				vv := v
+				entry.Value = &vv
+			}
+			if entry.Value == nil && layoutRows[key].Dismissed {
+				continue
+			}
+			entries = append(entries, entry)
+		}
+		for _, v := range values {
+			if _, ok := seen[string(v.FieldID)]; ok {
+				continue
+			}
+			vv := v
+			entries = append(entries, WorkspaceEntry{
+				Field:     extras[string(v.FieldID)],
+				Value:     &vv,
+				Suggested: false,
+				SortOrder: 0,
+			})
+		}
+
+		if len(layoutRows) > 0 {
+			fallback := maxOrder + 1
+			for i := range entries {
+				if l, ok := layoutRows[string(entries[i].Field.ID)]; ok {
+					entries[i].SortOrder = l.SortOrder
+					continue
+				}
+				entries[i].SortOrder = fallback + i
+			}
+			sort.SliceStable(entries, func(i, j int) bool { return entries[i].SortOrder < entries[j].SortOrder })
+		}
+		out[o.key()] = entries
+	}
+	return out, nil
 }
 
 func normalizeValue(dataType, valueText string) (string, error) {
@@ -645,16 +788,18 @@ type rowScanner interface {
 	Scan(dest ...any) error
 }
 
-func scanRow(row rowScanner) (Row, error) {
+func scanRow(row rowScanner, st *store) (Row, error) {
 	var r Row
-	if err := row.Scan(&r.ID, &r.SourceID, &r.FieldID, &r.ValueText); err != nil {
+	var ownerID []byte
+	if err := row.Scan(&r.ID, &ownerID, &r.FieldID, &r.ValueText); err != nil {
 		return Row{}, err
 	}
+	r.Owner = Owner{Level: st.level, ID: ownerID}
 	return r, nil
 }
 
-func getPairTx(tx *sql.Tx, sourceID, fieldID []byte) (Row, error) {
-	return scanRow(tx.QueryRow(sqlGetPair, sourceID, fieldID))
+func getPairTx(tx *sql.Tx, st *store, owner Owner, fieldID []byte) (Row, error) {
+	return scanRow(tx.QueryRow(st.getPair, owner.ID, fieldID), st)
 }
 
 func scanLayoutRow(row rowScanner) (LayoutRow, error) {
@@ -667,29 +812,34 @@ func scanLayoutRow(row rowScanner) (LayoutRow, error) {
 	return l, nil
 }
 
-func getLayoutTx(tx *sql.Tx, sourceID, fieldID []byte) (LayoutRow, error) {
-	return scanLayoutRow(tx.QueryRow(sqlLayoutGet, sourceID, fieldID))
+func getLayoutTx(tx *sql.Tx, st *store, owner Owner, fieldID []byte) (LayoutRow, error) {
+	return scanLayoutRow(tx.QueryRow(st.layoutGet, owner.ID, fieldID))
 }
 
-// getField reads one metadata field; an unknown id is ErrInvalid.
-func getField(q database.Querier, fieldID []byte) (metadatafields.Field, error) {
-	var f metadatafields.Field
-	err := q.QueryRow(sqlFieldGet, fieldID).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	if errors.Is(err, sql.ErrNoRows) {
-		return metadatafields.Field{}, ErrInvalid
+// loadFields reads the fields with the given ids in one query, keyed by id; an
+// id with no field is ErrInvalid.
+func loadFields(tx *sql.Tx, ids [][]byte) (map[string]metadatafields.Field, error) {
+	found, err := metadatafields.ListByIDsTx(tx, ids)
+	if err != nil {
+		return nil, err
 	}
-	return f, err
+	out := make(map[string]metadatafields.Field, len(found))
+	for _, f := range found {
+		out[string(f.ID)] = f
+	}
+	for _, id := range ids {
+		if _, ok := out[string(id)]; !ok {
+			return nil, ErrInvalid
+		}
+	}
+	return out, nil
 }
 
-func requireSource(tx *sql.Tx, sourceID []byte) error {
-	var one int
-	err := tx.QueryRow(sqlSourceExists, sourceID).Scan(&one)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrInvalid
+func boolInt(b bool) int {
+	if b {
+		return 1
 	}
-	return err
+	return 0
 }
 
 func mapConstraint(err error) error {

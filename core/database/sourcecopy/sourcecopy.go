@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Draft is everything a copy can carry from a Source. Every SourceID is nil
@@ -27,8 +28,7 @@ import (
 type Draft struct {
 	Source      sources.CreateInput
 	Date        *datevalue.Value // nil when the Source is undated; its ID is always nil
-	Metadata    []sourcemetadata.Input
-	Layout      []sourcemetadata.LayoutRow
+	Metadata    sourcemetadata.Draft
 	Credibility *sourcecredibility.UpsertInput // nil when the Source has none
 	Artifacts   []DraftArtifact                // the original's ref order
 }
@@ -70,14 +70,7 @@ func ReadDraft(tx *sql.Tx, sourceID []byte) (Draft, error) {
 		d.Date = &date
 	}
 
-	values, err := sourcemetadata.ListBySourceTx(tx, sourceID)
-	if err != nil {
-		return Draft{}, err
-	}
-	for _, v := range values {
-		d.Metadata = append(d.Metadata, sourcemetadata.Input{FieldID: v.FieldID, ValueText: v.ValueText})
-	}
-	if d.Layout, err = sourcemetadata.ListLayoutTx(tx, sourceID); err != nil {
+	if d.Metadata, err = sourcemetadata.ReadDraftTx(tx, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}); err != nil {
 		return Draft{}, err
 	}
 
@@ -124,12 +117,7 @@ func CreateFromDraft(tx *database.Tx, userID []byte, d Draft) (sources.Source, [
 		changes = append(changes, more...)
 	}
 
-	values := make([]sourcemetadata.Input, len(d.Metadata))
-	for i, v := range d.Metadata {
-		v.SourceID = src.ID
-		values[i] = v
-	}
-	more, err := sourcemetadata.CreateAll(tx, userID, src.ID, values, d.Layout)
+	more, err := sourcemetadata.CreateAll(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: src.ID}, d.Metadata)
 	if err != nil {
 		return sources.Source{}, nil, err
 	}
@@ -190,7 +178,7 @@ func apply(d Draft, in CopyInput) (Draft, error) {
 		d.Date = nil
 	}
 	if !in.Metadata {
-		d.Metadata, d.Layout = nil, nil
+		d.Metadata = sourcemetadata.Draft{}
 	}
 	if !in.Credibility {
 		d.Credibility = nil

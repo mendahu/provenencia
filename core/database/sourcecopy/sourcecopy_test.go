@@ -119,18 +119,18 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	}
 	steps := []func(tx *database.Tx) ([]rowchange.Change, error){
 		func(tx *database.Tx) ([]rowchange.Change, error) {
-			_, ch, err := sourcemetadata.Set(tx, userID, sourcemetadata.Input{SourceID: orig.ID, FieldID: publication, ValueText: "Medicine Hat News"})
+			_, ch, err := sourcemetadata.Set(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: orig.ID}, sourcemetadata.Input{FieldID: publication, ValueText: "Medicine Hat News"})
 			return ch, err
 		},
 		func(tx *database.Tx) ([]rowchange.Change, error) {
-			_, ch, err := sourcemetadata.Set(tx, userID, sourcemetadata.Input{SourceID: orig.ID, FieldID: link, ValueText: "https://example.org/a"})
+			_, ch, err := sourcemetadata.Set(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: orig.ID}, sourcemetadata.Input{FieldID: link, ValueText: "https://example.org/a"})
 			return ch, err
 		},
 		func(tx *database.Tx) ([]rowchange.Change, error) {
-			return sourcemetadata.DismissSuggestion(tx, userID, orig.ID, page)
+			return sourcemetadata.DismissSuggestion(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: orig.ID}, page)
 		},
 		func(tx *database.Tx) ([]rowchange.Change, error) {
-			return sourcemetadata.Reorder(tx, userID, orig.ID, [][]byte{link, publication, page})
+			return sourcemetadata.Reorder(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: orig.ID}, [][]byte{link, publication, page})
 		},
 		func(tx *database.Tx) ([]rowchange.Change, error) {
 			_, ch, err := sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{
@@ -229,7 +229,7 @@ type wsKey struct {
 
 func workspaceKeys(t *testing.T, c *database.Catalog, sourceID []byte) []wsKey {
 	t.Helper()
-	ws, err := sourcemetadata.ListWorkspace(c, sourceID)
+	ws, err := sourcemetadata.ListWorkspace(c, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -279,11 +279,11 @@ func layoutOf(t *testing.T, c *database.Catalog, sourceID []byte) []sourcemetada
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	rows, err := sourcemetadata.ListLayoutTx(tx, sourceID)
+	d, err := sourcemetadata.ReadDraftTx(tx, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return rows
+	return d.Layout
 }
 
 type snapshot struct {
@@ -548,12 +548,18 @@ func TestCopy(t *testing.T) {
 				}
 				type valueKey struct{ FieldID, ValueText string }
 				valueKeys := func(id []byte) []valueKey {
-					rows, err := sourcemetadata.ListBySource(c, id)
+					db := dbtest.MustDB(t, c)
+					tx, err := db.Begin()
 					if err != nil {
 						t.Fatal(err)
 					}
-					out := make([]valueKey, 0, len(rows))
-					for _, r := range rows {
+					defer tx.Rollback()
+					d, err := sourcemetadata.ReadDraftTx(tx, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: id})
+					if err != nil {
+						t.Fatal(err)
+					}
+					out := make([]valueKey, 0, len(d.Values))
+					for _, r := range d.Values {
 						out = append(out, valueKey{string(r.FieldID), r.ValueText})
 					}
 					sort.Slice(out, func(i, j int) bool { return out[i].FieldID < out[j].FieldID })

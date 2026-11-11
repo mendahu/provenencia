@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ingest/mediatypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -57,6 +58,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner := sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}
 	var out *engine.GetSourceWorkspaceResponse
 	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
@@ -68,7 +70,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		meta, err := sourcemetadata.ListWorkspace(c, sourceID)
+		meta, err := sourcemetadata.ListWorkspace(c, owner)
 		if err != nil {
 			return err
 		}
@@ -540,6 +542,7 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner := sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}
 	fieldID, err := parseID(req.GetFieldId())
 	if err != nil {
 		return nil, err
@@ -548,8 +551,7 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
 			func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
-				return sourcemetadata.Set(tx, userID, sourcemetadata.Input{
-					SourceID:  sourceID,
+				return sourcemetadata.Set(tx, userID, owner, sourcemetadata.Input{
 					FieldID:   fieldID,
 					ValueText: req.GetValueText(),
 				})
@@ -557,7 +559,7 @@ func SetSourceMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, sourceID)
+		entries, err := sourcemetadata.ListWorkspace(c, owner)
 		if err != nil {
 			return err
 		}
@@ -592,6 +594,7 @@ func ClearSourceMetadata(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner := sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}
 	fieldID, err := parseID(req.GetFieldId())
 	if err != nil {
 		return nil, err
@@ -600,7 +603,7 @@ func ClearSourceMetadata(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := sourcemetadata.Clear(tx, userID, sourceID, fieldID)
+				changes, err := sourcemetadata.Clear(tx, userID, owner, fieldID)
 				return struct{}{}, changes, err
 			})
 		if err != nil {
@@ -628,6 +631,7 @@ func DismissSourceMetadataSuggestion(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner := sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}
 	fieldID, err := parseID(req.GetFieldId())
 	if err != nil {
 		return nil, err
@@ -636,13 +640,13 @@ func DismissSourceMetadataSuggestion(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourceID, fieldID)
+				changes, err := sourcemetadata.DismissSuggestion(tx, userID, owner, fieldID)
 				return struct{}{}, changes, err
 			})
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, sourceID)
+		entries, err := sourcemetadata.ListWorkspace(c, owner)
 		if err != nil {
 			return err
 		}
@@ -671,6 +675,7 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	owner := sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}
 	fieldIDs, err := parseIDs(req.GetFieldIds())
 	if err != nil {
 		return nil, err
@@ -679,13 +684,13 @@ func ReorderSourceMetadata(in []byte) ([]byte, error) {
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
 			func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-				changes, err := sourcemetadata.Reorder(tx, userID, sourceID, fieldIDs)
+				changes, err := sourcemetadata.Reorder(tx, userID, owner, fieldIDs)
 				return struct{}{}, changes, err
 			})
 		if err != nil {
 			return err
 		}
-		entries, err := sourcemetadata.ListWorkspace(c, sourceID)
+		entries, err := sourcemetadata.ListWorkspace(c, owner)
 		if err != nil {
 			return err
 		}
