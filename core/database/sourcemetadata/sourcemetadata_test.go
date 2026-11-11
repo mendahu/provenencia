@@ -25,36 +25,6 @@ import (
 func TestSourceMetadata(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
-	mustUser := func(t *testing.T, c *database.Catalog) {
-		t.Helper()
-		r, err := ref.Mint(ref.PrefixUser)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := users.Upsert(c, userID, "Jake", r); err != nil {
-			t.Fatal(err)
-		}
-	}
-	mustSeededSource := func(t *testing.T, c *database.Catalog) sources.Source {
-		t.Helper()
-		if err := sourcevocab.Install(c); err != nil {
-			t.Fatal(err)
-		}
-		st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		s, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-			return sources.Create(tx, userID, sources.CreateInput{
-				SourceTypeID: st.ID,
-				Title:        "Birth of Alice",
-			})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		return s
-	}
 	mustField := func(t *testing.T, c *database.Catalog, key string) metadatafields.Field {
 		t.Helper()
 		f, err := metadatafields.Lookup(c, key, vocabkey.OriginProvenencia)
@@ -74,18 +44,6 @@ func TestSourceMetadata(t *testing.T) {
 			t.Fatal(err)
 		}
 		return actionType
-	}
-	metaCount := func(t *testing.T, c *database.Catalog) int {
-		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var n int
-		if err := db.QueryRow(`SELECT COUNT(*) FROM source_metadata`).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
 	}
 	workspaceKeys := func(t *testing.T, c *database.Catalog, sourceID []byte) []string {
 		t.Helper()
@@ -156,8 +114,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "set text metadata",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				row, err := runSet(c, userID, src.ID, Input{
 					FieldID: doc.ID, ValueText: "12345",
@@ -176,8 +133,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "set url and reject date on url field",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				field, err := runFieldCreate(c, "Landing page", metadatafields.DataTypeURL, "")
 				if err != nil {
 					t.Fatal(err)
@@ -220,8 +176,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "date-named fields are text",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				rec := mustField(t, c, "record_date")
 				if rec.DataType != metadatafields.DataTypeText {
 					t.Fatalf("record_date type %q", rec.DataType)
@@ -250,8 +205,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "clear and upsert same pair",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				first, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "111"})
 				if err != nil {
@@ -286,8 +240,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "list workspace suggested and extras",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
@@ -332,8 +285,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "list workspace suggests the source level only",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
 					Key: "shelf_mark", Origin: vocabkey.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
@@ -364,8 +316,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "source delete cascades metadata",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
@@ -377,8 +328,8 @@ func TestSourceMetadata(t *testing.T) {
 				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, src.ID); err != nil {
 					t.Fatal(err)
 				}
-				if metaCount(t, c) != 0 {
-					t.Fatalf("count %d", metaCount(t, c))
+				if countRows(t, c, "source_metadata") != 0 {
+					t.Fatalf("count %d", countRows(t, c, "source_metadata"))
 				}
 			},
 		},
@@ -426,8 +377,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "dismiss hides empty suggestion and persists",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				issue := mustField(t, c, "issue_date")
 				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
@@ -454,8 +404,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "dismiss with existing value keeps the value visible",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
@@ -478,8 +427,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "reorder rewrites workspace order and keeps dismissals",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				rec := mustField(t, c, "record_date")
 				issue := mustField(t, c, "issue_date")
@@ -504,8 +452,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "set gives a new field a layout slot at the end",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				extraID, err := metadatafields.Upsert(c, metadatafields.Field{
 					Key: "shelf_mark", Origin: vocabkey.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
 				})
@@ -547,8 +494,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "reject bad layout arguments",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				missing := make([]byte, 16)
 				missing[15] = 9
@@ -581,8 +527,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "source delete cascades layout",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
@@ -606,8 +551,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "reject bad ids and empty text set",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				missing := make([]byte, 16)
 				missing[15] = 9
@@ -628,8 +572,7 @@ func TestSourceMetadata(t *testing.T) {
 		{
 			name: "list workspace reads several extras",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				src := mustSeededSource(t, c)
+				src := birthOfAlice(t, c, userID)
 				doc := mustField(t, c, "document_number")
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: doc.ID, ValueText: "12345"}); err != nil {
 					t.Fatal(err)
@@ -673,16 +616,24 @@ func TestSourceMetadata(t *testing.T) {
 				if !slices.Equal(extras, []string{"a", "b", "c"}) {
 					t.Fatalf("extras %v", extras)
 				}
-				if got := workspaceKeys(t, c, src.ID); !slices.Equal(got[len(got)-3:], []string{"a", "b", "c"}) {
-					t.Fatalf("keys %v", got)
+				list, err := sourcevocab.ListSuggestions(c, src.SourceTypeID, vocabkey.LevelSource)
+				if err != nil {
+					t.Fatal(err)
+				}
+				want := make([]string, 0, len(list)+3)
+				for _, s := range list {
+					want = append(want, s.Field.Key)
+				}
+				want = append(want, "a", "b", "c")
+				if got := workspaceKeys(t, c, src.ID); !slices.Equal(got, want) {
+					t.Fatalf("keys %v, want the type's suggestions then extras %v", got, want)
 				}
 			},
 		},
 		{
 			name: "list workspace on a missing source is invalid",
 			run: func(t *testing.T, c *database.Catalog) {
-				mustUser(t, c)
-				mustSeededSource(t, c)
+				birthOfAlice(t, c, userID)
 				missing := make([]byte, 16)
 				missing[15] = 9
 				if _, err := ListWorkspace(c, sourceOwner(missing)); !errors.Is(err, ErrInvalid) {
@@ -694,11 +645,7 @@ func TestSourceMetadata(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := database.Create(t.TempDir(), "t.provenencia")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer c.Close()
+			c, _ := testWorld(t)
 			tt.run(t, c)
 		})
 	}
@@ -810,57 +757,6 @@ func TestWorkspaceEntryOpenHref(t *testing.T) {
 func TestCreateAll(t *testing.T) {
 	userID := []byte{16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1}
 
-	// seed returns a catalog with a Source, a text field and a URL field.
-	seed := func(t *testing.T) (c *database.Catalog, src sources.Source, text, link metadatafields.Field) {
-		t.Helper()
-		c, err := database.Create(t.TempDir(), "t.provenencia")
-		if err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { c.Close() })
-		r, err := ref.Mint(ref.PrefixUser)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := users.Upsert(c, userID, "Jake", r); err != nil {
-			t.Fatal(err)
-		}
-		if err := sourcevocab.Install(c); err != nil {
-			t.Fatal(err)
-		}
-		st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		src, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
-			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: st.ID, Title: "Birth of Alice"})
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-		text, err = metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia)
-		if err != nil {
-			t.Fatal(err)
-		}
-		link, err = runFieldCreate(c, "Web page", metadatafields.DataTypeURL, "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		return c, src, text, link
-	}
-	count := func(t *testing.T, c *database.Catalog, table string) int {
-		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var n int
-		if err := db.QueryRow(`SELECT COUNT(*) FROM ` + table).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
-	}
-
 	tests := []struct {
 		name string
 		run  func(t *testing.T)
@@ -868,7 +764,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "values with no layout rows write no layout",
 			run: func(t *testing.T) {
-				c, src, text, _ := seed(t)
+				c, _, src, text, _, _, _ := applyWorld(t)
 				changes, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: text.ID, ValueText: "No. 7"}}})
 				if err != nil {
 					t.Fatal(err)
@@ -880,7 +776,7 @@ func TestCreateAll(t *testing.T) {
 				if len(rows) != 1 || rows[0].ValueText != "No. 7" {
 					t.Fatalf("rows %+v", rows)
 				}
-				if n := count(t, c, "source_metadata_layout"); n != 0 {
+				if n := countRows(t, c, "source_metadata_layout"); n != 0 {
 					t.Fatalf("layout rows %d", n)
 				}
 			},
@@ -888,7 +784,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "dismissed layout row on a valued field stays dismissed",
 			run: func(t *testing.T) {
-				c, src, text, link := seed(t)
+				c, _, src, text, link, _, _ := applyWorld(t)
 				changes, err := runCreateAll(c, userID, src.ID, Draft{
 					Values: []Input{{FieldID: text.ID, ValueText: "No. 7"}},
 					Layout: []LayoutRow{{FieldID: link.ID, SortOrder: 0}, {FieldID: text.ID, SortOrder: 1, Dismissed: true}},
@@ -909,7 +805,7 @@ func TestCreateAll(t *testing.T) {
 					t.Fatalf("dismissed %d err %v", dismissed, err)
 				}
 				// A layout row for a field with no value is allowed.
-				if n := count(t, c, "source_metadata_layout"); n != 2 {
+				if n := countRows(t, c, "source_metadata_layout"); n != 2 {
 					t.Fatalf("layout rows %d", n)
 				}
 			},
@@ -917,7 +813,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "URL value takes the form Set stores",
 			run: func(t *testing.T) {
-				c, src, _, link := seed(t)
+				c, _, src, _, link, _, _ := applyWorld(t)
 				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: link.ID, ValueText: "HTTPS://Example.org/a"}}}); err != nil {
 					t.Fatal(err)
 				}
@@ -933,7 +829,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "source that already has a value is refused",
 			run: func(t *testing.T) {
-				c, src, text, link := seed(t)
+				c, _, src, text, link, _, _ := applyWorld(t)
 				if _, err := runSet(c, userID, src.ID, Input{FieldID: text.ID, ValueText: "x"}); err != nil {
 					t.Fatal(err)
 				}
@@ -946,7 +842,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "source that already has a layout row is refused",
 			run: func(t *testing.T) {
-				c, src, text, link := seed(t)
+				c, _, src, text, link, _, _ := applyWorld(t)
 				if err := runDismissSuggestion(c, userID, src.ID, text.ID); err != nil {
 					t.Fatal(err)
 				}
@@ -959,7 +855,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "unknown field and empty text are refused",
 			run: func(t *testing.T) {
-				c, src, text, _ := seed(t)
+				c, _, src, text, _, _, _ := applyWorld(t)
 				missing := make([]byte, 16)
 				missing[15] = 9
 				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: missing, ValueText: "x"}}}); !errors.Is(err, ErrInvalid) {
@@ -971,7 +867,7 @@ func TestCreateAll(t *testing.T) {
 				if _, err := runCreateAll(c, userID, src.ID, Draft{Values: []Input{{FieldID: text.ID}}}); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("empty text: %v", err)
 				}
-				if n := count(t, c, "source_metadata") + count(t, c, "source_metadata_layout"); n != 0 {
+				if n := countRows(t, c, "source_metadata") + countRows(t, c, "source_metadata_layout"); n != 0 {
 					t.Fatalf("rows %d", n)
 				}
 			},
@@ -979,7 +875,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "empty inputs write nothing",
 			run: func(t *testing.T) {
-				c, src, _, _ := seed(t)
+				c, _, src, _, _, _, _ := applyWorld(t)
 				changes, err := runCreateAll(c, userID, src.ID, Draft{})
 				if err != nil || len(changes) != 0 {
 					t.Fatalf("changes %+v err %v", changes, err)
@@ -989,7 +885,7 @@ func TestCreateAll(t *testing.T) {
 		{
 			name: "ReadDraftTx returns layout rows by sort order",
 			run: func(t *testing.T) {
-				c, src, text, link := seed(t)
+				c, _, src, text, link, _, _ := applyWorld(t)
 				if _, err := runCreateAll(c, userID, src.ID, Draft{
 					Layout: []LayoutRow{{FieldID: text.ID, SortOrder: 1}, {FieldID: link.ID, SortOrder: 0, Dismissed: true}},
 				}); err != nil {
@@ -1054,6 +950,16 @@ func newSource(t *testing.T, c *database.Catalog, userID, typeID []byte, title s
 	return s
 }
 
+// birthOfAlice is a Source of the seeded birth certificate type.
+func birthOfAlice(t *testing.T, c *database.Catalog, userID []byte) sources.Source {
+	t.Helper()
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return newSource(t, c, userID, cert.ID, "Birth of Alice")
+}
+
 func TestStoresAreRegistered(t *testing.T) {
 	tables := map[string]bool{}
 	for _, tb := range catalogmodel.Tables {
@@ -1082,11 +988,7 @@ func TestStoresAreRegistered(t *testing.T) {
 
 func TestOwnerLevels(t *testing.T) {
 	c, userID := testWorld(t)
-	st, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	src := newSource(t, c, userID, st.ID, "Birth of Alice")
+	src := birthOfAlice(t, c, userID)
 	doc, err := metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia)
 	if err != nil {
 		t.Fatal(err)
@@ -1103,13 +1005,6 @@ func TestOwnerLevels(t *testing.T) {
 	db, err := c.DB()
 	if err != nil {
 		t.Fatal(err)
-	}
-	counts := func() int {
-		var n int
-		if err := db.QueryRow(`SELECT (SELECT COUNT(*) FROM source_metadata) + (SELECT COUNT(*) FROM source_metadata_layout)`).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
 	}
 	write := func(f func(tx *database.Tx, o Owner) ([]rowchange.Change, error)) func(Owner) error {
 		return func(o Owner) error {
@@ -1166,7 +1061,7 @@ func TestOwnerLevels(t *testing.T) {
 			if err := op(o); !errors.Is(err, ErrInvalid) {
 				t.Fatalf("%s on %s owner = %v, want ErrInvalid", opName, ownerName, err)
 			}
-			if n := counts(); n != 0 {
+			if n := countRows(t, c, "source_metadata") + countRows(t, c, "source_metadata_layout"); n != 0 {
 				t.Fatalf("%s on %s owner wrote %d rows", opName, ownerName, n)
 			}
 		}
@@ -1261,11 +1156,8 @@ func TestListWorkspaces(t *testing.T) {
 func applyWorld(t *testing.T) (c *database.Catalog, userID []byte, src sources.Source, doc, link, f1, f2 metadatafields.Field) {
 	t.Helper()
 	c, userID = testWorld(t)
-	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
-	if err != nil {
-		t.Fatal(err)
-	}
-	src = newSource(t, c, userID, cert.ID, "Birth of Alice")
+	src = birthOfAlice(t, c, userID)
+	var err error
 	if doc, err = metadatafields.Lookup(c, "document_number", vocabkey.OriginProvenencia); err != nil {
 		t.Fatal(err)
 	}
