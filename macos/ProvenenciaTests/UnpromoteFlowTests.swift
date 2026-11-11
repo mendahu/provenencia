@@ -272,8 +272,22 @@ struct UnpromoteFlowTests {
     }
 
     @Test func confirmStaysAndSaysSo() async {
-        let (store, session, navigation, _) = personPage()
+        let (store, session, navigation, detailKey) = personPage()
         let location = navigation.currentLocation
+        // Warm the page's detail with a value, then seed a newer one for the confirm to find.
+        var shown = CatalogConclusionDetail(
+            entity: CatalogCanonicalEntity(id: "h-maria", ref: "PER-8JD2L", subjectTypeID: "t-person", label: "Maria"),
+            fields: []
+        )
+        shown.memberCount = 2
+        store.seededConclusionDetails["h-maria"] = shown
+        session.apply(CatalogWriteEffects(handles: ["h-maria"]))
+        await session.settleWrites()
+        let warmed: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
+        #expect(warmed?.value == shown)
+        var moved = shown
+        moved.memberCount = 1
+        store.seededConclusionDetails["h-maria"] = moved
         let flow = UnpromoteFlow()
         await flow.open(
             subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: "h-maria",
@@ -289,6 +303,9 @@ struct UnpromoteFlowTests {
         #expect(navigation.currentLocation == location)
         #expect(said == ["J. Weber unpromoted."])
         #expect(flow.pending == nil)
+        // The stay branch applied the effects: the warmed page re-reads.
+        await session.settleWrites()
+        #expect(warmed?.value == moved)
     }
 
     @Test func confirmFailureNeitherLeavesNorSpeaks() async {
