@@ -85,7 +85,7 @@ type largeFixture struct {
 	citySubject subjects.Subject
 }
 
-func newLargeFixture(t *testing.T) *largeFixture {
+func newLargeFixture(t testing.TB, persons int) *largeFixture {
 	t.Helper()
 	f := newFixture(t)
 	must(t, nameformats.Install(f.c))
@@ -108,7 +108,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 
 	db, err := f.c.DB()
 	must(t, err)
-	must(t, bulkCanon(db, cityID, largeShape(r, names, filed[0])))
+	must(t, bulkCanon(db, cityID, largeShape(r, names, filed[0], persons)))
 	f.c.Graph().Drop()
 
 	// Source A: 40 persons, 40 births and 20 deaths, none located.
@@ -147,7 +147,7 @@ func newLargeFixture(t *testing.T) *largeFixture {
 // makes it slow fails here instead of in a dogfood session. Subtests share one
 // fixture and run in order.
 func TestLargeSourceBudgets(t *testing.T) {
-	lf := newLargeFixture(t)
+	lf := newLargeFixture(t, 4000)
 	f := lf.fixture
 	aGraph := f.Graph(lf.a)
 	propose := func() graphalign.Proposal { return f.propose(aGraph, nil) }
