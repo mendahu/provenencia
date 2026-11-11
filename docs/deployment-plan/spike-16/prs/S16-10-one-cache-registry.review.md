@@ -5,7 +5,7 @@
 
 ## To user
 
-- **M-1 · rule K-21 and a write's graph.** Plan § 12 Open question 1. Recommendation (a): `Value` refuses a graph-lifetime Build on a write's `Over` graph and allows a catalog-lifetime one (two small config reads, as today's cold path does per call); reword the rule to say so; the mechanism enforces it for S16-12 and S16-15.
+- **M-1 · rule K-21 and a write's graph.** Answered 2026-11-11: allow catalog configuration only (option a) → D-21, Rules this plan bends, STEP-8.
 
 ## Writer's own calls
 
@@ -19,7 +19,7 @@
 ## Round 1
 
 ### M-1 · blocker · A whole Build runs on the write path (`Over`), against working rule K-21
-**Answer:** To user — plan § 12 Open question 1, three options with a recommendation; STEP-3 is blocked on it; status Draft.
+**Answer:** To user — answered 2026-11-11, option (a): D-21; the rule is reworded in STEP-8 and listed under Rules this plan bends.
 
 ### M-2 · major · A keyed entry with nil Apply keeps everything on a commit
 **Answer:** Fixed — D-3: `RegisterKeyed` panics without an Apply; AC-1.8, T-6.
