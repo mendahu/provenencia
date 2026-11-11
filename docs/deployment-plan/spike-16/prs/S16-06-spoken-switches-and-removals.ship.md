@@ -61,3 +61,21 @@ Orchestrator check of the minors: CON-1 **Resolved** (red/green above). MNT-1 **
 
 ## Round 2 — review
 Reviewers: UX (had UX-1, UX-2 majors). Not re-sent: CON, MNT (minors only, checked above), SEC+PRF (clean).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| UX-2 (r2) | UX | blocker (re-rated from major) | With Full Keyboard Access on, the unselected segments are still Tab stops, so AC-1.1's "next Tab goes into the section" fails | Fix now → F-4 | verified by reading: the `else` branch of `segment(_:)` (`PVSegmentedControl.swift:155-157`) is a plain `chip(item)`, a SwiftUI `Button` (`PVChip.swift:96-112`) with no `.focusable(false)`; under Keyboard navigation every button is a key-loop stop. Re-rated to blocker: an AC fails in the setup the plan's own manual check uses (§10 turns Full Keyboard Access on) |
+| UX-1 (r2) | UX | blocker (re-rated from major) | Under Full Keyboard Access, Space on an unselected segment's button drops focus | Fix now → F-4 | same branch: the button is not the bound view, so `switcherFocus` is nil and nothing claims; the segment then changes `if` branch and is rebuilt. Taking the non-target chips out of the key loop removes the path |
+| UX-r2 note | UX | minor | Manual check step 2 says "press → to move to Vitals" from Gallery; order is vitals, family, timeline, gallery, sources and arrows do not wrap | Fix now → F-4 | `ConclusionPageSection.swift:38-43` |
+| UX-r2 note | UX | minor | Plan Codebase fit "Neighbors" still says Space on an unselected segment keeps focus through `.focusable()` | Fix now → F-4 | plan line 182 no longer describes the code after F-1 |
+
+### Fix plan 2
+
+**F-4 — With a handle, the segments that do not carry it leave the key loop** (from UX-2 r2, UX-1 r2, the two round-2 notes)
+Files: `macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift`, `macos/App/DesignSystem/README.md` (row "SegmentedControl"), the plan. Skill: `add-ui-component`.
+Failing test first: none possible (key-loop membership under Full Keyboard Access is not reachable from a unit test); manual check §10 step 1 with Full Keyboard Access on holds it.
+Do:
+- In `segment(_:)`, when `focus != nil`, the `else` branch is `chip(item).focusable(false)`; with no handle it stays `chip(item)` (no change for the other three callers). Mouse clicks still choose.
+- Doc comment and README row: "one Tab stop, with or without Full Keyboard Access: the segments without the handle leave the key loop".
+- Plan §10 step 2: replace "press → to move to Vitals: hear "Vitals shown."; focus stays on Vitals. Tab into the Vitals rows" with "press → to move to Sources: hear "Sources shown."; focus stays on Sources. Press ← three times to reach Family, hearing each section; Tab into the Family tiles", and adjust the following "click the Family segment" to "click the Vitals segment … hear "Vitals shown."". Plan Codebase fit "Neighbors": replace the "Space on a segment other than the selected one…" sentence with "Only the selected segment is in the key loop (with or without Full Keyboard Access), so Space, ←/→ or ⌘1–⌘5 on the switcher always start from the bound segment and `switcherFocus != nil` claims the new one (ship log round 1, UX-2 decision; round 2, F-4)."
+Check: `rg -n "focusable\(false\)" macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift` prints the one line; scripts/check-pr.sh PASS.
