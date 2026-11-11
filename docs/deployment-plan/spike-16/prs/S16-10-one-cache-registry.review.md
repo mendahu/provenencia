@@ -71,3 +71,11 @@
 
 ### X-7 · minor · Small choices
 **Answer:** Fixed — drops return no error (D-8); `Warm`/`Invalidate` signatures and nil-graph behavior (D-10); `SetMemo` nil and short-id rule (D-8); held-key replace under Cap (D-6); the extra call sites are in § 4; `TestDropLeaves*` cases go to T-1/T-9; `assocBetween` call sites (D-16); the Known trap is a new line (STEP-8, § 4 Guides row); the pointless line-241 note removed. The Swift enumeration is now one descriptor row plus the named outside caches (D-18).
+
+## Round 2
+
+### X-8 · blocker · STEP-3 deletes `warmNeeded` while `dropDerived` still sets it
+**Answer:** Fixed — STEP-3 deletes the `g.warmNeeded = true` line from `dropDerived`; the function goes in STEP-4.
+
+### X-9 · major · Match-index drop on a vocabulary commit between steps; D-13 errors
+**Answer:** Fixed — STEP-1 keeps the `dropDerived()` call in the vocabulary branch until STEP-4; STEP-3 removes `TestMatchIndexDrops`' alias and name format cases and states the intended gap until STEP-4's DerivedFrom; D-13 returns `loadConfig`'s and `Metas`' errors.
