@@ -1,6 +1,7 @@
 package sourcevocab
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"testing"
@@ -298,6 +299,54 @@ func TestAppendSuggestion(t *testing.T) {
 			run: func(t *testing.T, c *database.Catalog) {
 				if err := AppendSuggestion(c, []byte{1}, []byte{2}, vocabkey.LevelSource); !errors.Is(err, ErrInvalid) {
 					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
+			name: "ListSuggestionsTx reads what ListSuggestions reads",
+			run: func(t *testing.T, c *database.Catalog) {
+				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{
+					Key: "book", Origin: vocabkey.OriginUser, Label: "Book",
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, label := range []string{"Author", "Publisher"} {
+					f, err := runFieldCreate(c, label, metadatafields.DataTypeText, "")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := AppendSuggestion(c, typeID, f.ID, vocabkey.LevelSource); err != nil {
+						t.Fatal(err)
+					}
+				}
+				want, err := ListSuggestions(c, typeID, vocabkey.LevelSource)
+				if err != nil || len(want) != 2 {
+					t.Fatalf("ListSuggestions = %+v, %v", want, err)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tx, err := db.Begin()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer func() { _ = tx.Rollback() }()
+				got, err := ListSuggestionsTx(tx, typeID, vocabkey.LevelSource)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if len(got) != len(want) {
+					t.Fatalf("got %d suggestions, want %d", len(got), len(want))
+				}
+				for i := range got {
+					if !bytes.Equal(got[i].Field.ID, want[i].Field.ID) || got[i].SortOrder != want[i].SortOrder {
+						t.Fatalf("suggestion %d = %+v, want %+v", i, got[i], want[i])
+					}
+				}
+				if _, err := ListSuggestionsTx(tx, typeID, vocabkey.LevelCitation); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("citation level = %v", err)
 				}
 			},
 		},

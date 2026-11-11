@@ -106,10 +106,22 @@ func ListSuggestions(c *database.Catalog, typeID []byte, level vocabkey.Level) (
 	if err != nil {
 		return nil, err
 	}
+	return listSuggestions(db, typeID, level)
+}
+
+// ListSuggestionsTx is ListSuggestions on an open transaction.
+func ListSuggestionsTx(tx *sql.Tx, typeID []byte, level vocabkey.Level) ([]Suggestion, error) {
+	return listSuggestions(tx, typeID, level)
+}
+
+func listSuggestions(q database.Querier, typeID []byte, level vocabkey.Level) ([]Suggestion, error) {
+	if !level.HoldsMetadata() {
+		return nil, ErrInvalid
+	}
 	if len(typeID) != 16 {
 		return nil, ErrInvalid
 	}
-	rows, err := db.Query(sqlListSuggestions, typeID, string(level))
+	rows, err := q.Query(sqlListSuggestions, typeID, string(level))
 	if err != nil {
 		return nil, err
 	}

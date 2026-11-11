@@ -49,6 +49,8 @@ const (
 		FROM source_metadata_fields WHERE key = ? AND origin = ?`
 	sqlGetByID = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
 		FROM source_metadata_fields WHERE id = ?`
+	sqlGetByIDsIn = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
+		FROM source_metadata_fields WHERE id IN (`
 	sqlList = `SELECT f.id, f.key, f.origin, f.label, f.data_type, COALESCE(f.description, ''),
 			(SELECT COUNT(*) FROM source_metadata m WHERE m.field_id = f.id)
 		FROM source_metadata_fields f ORDER BY f.label COLLATE NOCASE, f.origin, f.key`
@@ -152,7 +154,7 @@ func Create(tx *database.Tx, label, dataType, description string) (Field, []rowc
 	if description != "" {
 		fields["description"] = rowchange.FieldDiff{Old: nil, New: description}
 	}
-	got, err := getByIDTx(tx.Tx, id)
+	got, err := getByID(tx.Tx, id)
 	if err != nil {
 		return Field{}, nil, err
 	}
@@ -180,7 +182,7 @@ func Update(tx *database.Tx, id []byte, label, dataType, description string) (Fi
 	if len(id) != 16 || label == "" || !dataTypeOK(dataType) {
 		return Field{}, nil, ErrInvalid
 	}
-	existing, err := getByIDTx(tx.Tx, id)
+	existing, err := getByID(tx.Tx, id)
 	if err != nil {
 		return Field{}, nil, err
 	}
@@ -203,7 +205,7 @@ func Update(tx *database.Tx, id []byte, label, dataType, description string) (Fi
 	if _, err := tx.Exec(sqlUpdate, label, database.NullString(description), id); err != nil {
 		return Field{}, nil, err
 	}
-	got, err := getByIDTx(tx.Tx, id)
+	got, err := getByID(tx.Tx, id)
 	if err != nil {
 		return Field{}, nil, err
 	}
@@ -224,14 +226,31 @@ func GetByID(c *database.Catalog, id []byte) (Field, error) {
 	if len(id) != 16 {
 		return Field{}, ErrInvalid
 	}
-	var f Field
-	err = db.QueryRow(sqlGetByID, id).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	if err != nil {
-		return Field{}, err
+	return getByID(db, id)
+}
+
+// ListByIDsTx returns the fields with the given ids on an open transaction, in
+// no set order. A repeated id counts once and an id with no field is left out;
+// no ids returns nil.
+func ListByIDsTx(tx *sql.Tx, ids [][]byte) ([]Field, error) {
+	ids = database.UniqueBlobIDs(ids)
+	if len(ids) == 0 {
+		return nil, nil
 	}
-	return f, nil
+	rows, err := tx.Query(sqlGetByIDsIn+database.SQLInPlaceholders(len(ids))+")", database.BlobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Field
+	for rows.Next() {
+		f, err := scanField(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
 }
 
 // Lookup returns the field for (key, origin), or sql.ErrNoRows.
@@ -245,14 +264,7 @@ func Lookup(c *database.Catalog, key, origin string) (Field, error) {
 	if key == "" || origin == "" {
 		return Field{}, ErrInvalid
 	}
-	var f Field
-	err = db.QueryRow(sqlLookup, key, origin).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	if err != nil {
-		return Field{}, err
-	}
-	return f, nil
+	return scanField(db.QueryRow(sqlLookup, key, origin))
 }
 
 // List returns all source_metadata_fields rows.
@@ -301,7 +313,7 @@ func Delete(tx *database.Tx, userID, id []byte) ([]rowchange.Change, error) {
 	if tx == nil || len(id) != 16 {
 		return nil, ErrInvalid
 	}
-	prev, err := getByIDTx(tx.Tx, id)
+	prev, err := getByID(tx.Tx, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
 	}
@@ -348,18 +360,17 @@ func dataTypeOK(dt string) bool {
 	return dt == DataTypeText || dt == DataTypeURL
 }
 
-func getByIDTx(tx *sql.Tx, id []byte) (Field, error) {
-	var f Field
-	err := tx.QueryRow(sqlGetByID, id).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
-	return f, err
+func getByID(q database.Querier, id []byte) (Field, error) {
+	return scanField(q.QueryRow(sqlGetByID, id))
 }
 
 func lookupTx(tx *sql.Tx, key, origin string) (Field, error) {
+	return scanField(tx.QueryRow(sqlLookup, key, origin))
+}
+
+// scanField scans the six field columns every single-field read selects.
+func scanField(row interface{ Scan(dest ...any) error }) (Field, error) {
 	var f Field
-	err := tx.QueryRow(sqlLookup, key, origin).Scan(
-		&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description,
-	)
+	err := row.Scan(&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description)
 	return f, err
 }
