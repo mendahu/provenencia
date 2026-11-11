@@ -53,3 +53,11 @@ Do: remove `ConclusionDetailHeaderBand.select` and its argument in `ConclusionDe
 Check: `rg -n "select:" macos/App/Features/Conclusions/ConclusionDetailPage.swift` shows only the `PVSegmentedControl` argument; scripts/check-pr.sh PASS.
 
 Also: the plan's Landed note gains one line naming the UX-2 decision and F-1.
+
+## Round 1 — fix
+Head `d100bfc7` (pushed; carries the earlier unpushed commit). Gate PASS (orchestrator run against `9a514612`). F-1 done (`arrowsMoveToTheNextEnabledSegment` red by compile failure, then green; `arrowOnTheSwitcherSpeaksAndClaims` added). F-2 done (red with `session.apply(effects)` removed: `memberCount` stayed 2; deviation: the test seeds a first detail for `h-maria` because the fixture had none). F-3 done (`CatalogMutation.swift:119` already had the full spelling; only `macos-client-patterns.md:89` changed). The F-1 commit also carries the `ConclusionDetailPage.swift` part of F-3.
+
+Orchestrator check of the minors: CON-1 **Resolved** (red/green above). MNT-1 **Resolved** (`select` property and argument removed; `choose` calls `navigation.go`). MNT-3 **Resolved** (patterns doc now says `confirm(session:userID:leavingPage:announce:)`).
+
+## Round 2 — review
+Reviewers: UX (had UX-1, UX-2 majors). Not re-sent: CON, MNT (minors only, checked above), SEC+PRF (clean).
