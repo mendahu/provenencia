@@ -78,4 +78,4 @@ No new findings. Both verdicts Clean. No Fix plan 2.
 Nits (logged): `MNT-7 · macos/App/Platform/GenealogyStore.swift:1184-1187 · rewrapped doc comment leaves "rows. Only" on a short line` · `MNT-8 · deployment-plan.md:283, evidence-explained-citation-map.md:830 · cite "S15-06 D-7" rather than bare "D-7" in spike-wide docs`
 
 ## Result
-Gate PASS at `5945913e` · `main` unchanged since the branch was cut (`0cd37005`), no merge needed · CI pending · open: none · follow-ups: none · to user: — · manual check §10 not run (user)
+Gate PASS at `5945913e` · `main` unchanged since the branch was cut (`0cd37005`), no merge needed · CI green (localizable, test ×2) · open: none · follow-ups: none · to user: — · manual check §10 not run (user)
