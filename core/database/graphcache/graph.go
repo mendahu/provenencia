@@ -31,8 +31,8 @@ type Graph struct {
 	vocab   Vocabulary
 	vocabOK bool
 
-	// displays are composed (not finished) summary rows keyed by handle id. memos are the
-	// the typed fields below are not registry entries (docs/catalog-caches.md).
+	// displays are composed (not finished) summary rows keyed by handle id.
+	// The typed fields below are not registry entries (docs/catalog-caches.md).
 	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
 	// the memos features derive from it, so a memo cannot outlive its graph.
 	// At most evidenceCap stay loaded; evidenceTick stamps their use order.
