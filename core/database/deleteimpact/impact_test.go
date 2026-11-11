@@ -27,6 +27,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -1201,5 +1202,64 @@ func TestSubjectCascadesSplitHandles(t *testing.T) {
 	leaves := findCascade(t, report, deleteimpact.ViaLeavesHandle)
 	if leaves.Total != 1 || leaves.Listed[0].Ref != perB.Ref {
 		t.Fatalf("leaves %+v", leaves)
+	}
+}
+
+// TestInboundTotal checks the Used by total against the groups Impact lists.
+func TestInboundTotal(t *testing.T) {
+	c, userID := testCatalog(t)
+	fieldID, err := metadatafields.Upsert(c, metadatafields.Field{Key: "shelfmark", Origin: vocabkey.OriginUser, Label: "Shelfmark", DataType: "text"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1, a1, g1 := ownerFixture(t, c, userID, "S1")
+	s2, _, _ := ownerFixture(t, c, userID, "S2")
+	for _, o := range []sourcemetadata.Owner{
+		{Level: vocabkey.LevelSource, ID: s1.ID}, {Level: vocabkey.LevelSource, ID: s2.ID}, a1, g1,
+	} {
+		runOwnerSet(t, c, userID, o, fieldID, "v")
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	total, err := deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, fieldID)
+	if err != nil || total != 4 {
+		t.Fatalf("InboundTotal = %d, %v; want 4", total, err)
+	}
+	report, err := deleteimpact.Impact(tx, catalogmodel.KindMetadataField, fieldID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := 0
+	for _, g := range report.Groups {
+		sum += g.Total
+	}
+	if sum != total {
+		t.Fatalf("groups sum to %d, InboundTotal %d", sum, total)
+	}
+	if got, err := deleteimpact.InboundTotal(tx, catalogmodel.KindSourceType, s1.SourceTypeID); err != nil || got != 2 {
+		t.Fatalf("InboundTotal(source type) = %d, %v; want 2", got, err)
+	}
+
+	for name, call := range map[string]func() error{
+		"nil tx": func() error {
+			_, err := deleteimpact.InboundTotal(nil, catalogmodel.KindMetadataField, fieldID)
+			return err
+		},
+		"unknown kind": func() error { _, err := deleteimpact.InboundTotal(tx, catalogmodel.Kind("nope"), fieldID); return err },
+		"short id": func() error {
+			_, err := deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, fieldID[:15])
+			return err
+		},
+	} {
+		if err := call(); !errors.Is(err, deleteimpact.ErrInvalid) {
+			t.Errorf("%s: %v, want ErrInvalid", name, err)
+		}
 	}
 }

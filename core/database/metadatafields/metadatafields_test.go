@@ -1,6 +1,7 @@
 package metadatafields
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/binary"
 	"errors"
@@ -268,6 +269,49 @@ func TestDelete(t *testing.T) {
 					layout[0].Fields["artifact_id"].Old != database.UUIDString(art) ||
 					layout[0].Fields["field_id"].Old != database.UUIDString(field.ID) {
 					t.Fatalf("layout changes = %+v", layout)
+				}
+			},
+		},
+		{
+			name: "UsedBy and List count Sources, Artifacts and graphs alike",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				s1, art, _ := fieldHolders(t, c, userID)
+				s2, _, _ := fieldHolders(t, c, userID)
+				graphID := insertGraph(t, c, s1.ID, "Household")
+				field, err := runCreate(c, "Shelf mark", DataTypeText, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				db := dbtest.MustDB(t, c)
+				for _, ins := range []struct {
+					query string
+					owner []byte
+				}{
+					{`INSERT INTO source_metadata (id, source_id, field_id, value_text) VALUES (?, ?, ?, 'a')`, s1.ID},
+					{`INSERT INTO source_metadata (id, source_id, field_id, value_text) VALUES (?, ?, ?, 'b')`, s2.ID},
+					{`INSERT INTO artifact_metadata (id, artifact_id, field_id, value_text) VALUES (?, ?, ?, 'c')`, art},
+					{`INSERT INTO evidence_graph_metadata (id, graph_id, field_id, value_text) VALUES (?, ?, ?, 'd')`, graphID},
+				} {
+					id, err := uuid.NewV7()
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := db.Exec(ins.query, id[:], ins.owner, field.ID); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if n, err := UsedBy(c, field.ID); err != nil || n != 4 {
+					t.Fatalf("UsedBy = %d, %v; want 4", n, err)
+				}
+				all, err := List(c)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, f := range all {
+					if bytes.Equal(f.ID, field.ID) && f.UsedBy != 4 {
+						t.Fatalf("List UsedBy = %d, want 4", f.UsedBy)
+					}
 				}
 			},
 		},

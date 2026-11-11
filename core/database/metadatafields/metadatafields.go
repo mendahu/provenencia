@@ -30,7 +30,8 @@ var ErrDuplicateKey = apperr.New(apperr.CodeMetadataFieldsDuplicateKey, apperr.K
 // (project fields — user and provenencia starters — are editable).
 var ErrLocked = apperr.New(apperr.CodeMetadataFieldsInvalid, apperr.KindUser)
 
-// ErrInUse is returned by Delete when source_metadata still references the field.
+// ErrInUse is returned by Delete when a value in source_metadata,
+// artifact_metadata or evidence_graph_metadata still references the field.
 var ErrInUse = apperr.New(apperr.CodeMetadataFieldsInUse, apperr.KindConflict)
 
 // ErrOriginLocked is returned by Delete when the field is plugin-origin.
@@ -52,12 +53,10 @@ const (
 		FROM source_metadata_fields WHERE id = ?`
 	sqlGetByIDsIn = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
 		FROM source_metadata_fields WHERE id IN (`
-	sqlList = `SELECT f.id, f.key, f.origin, f.label, f.data_type, COALESCE(f.description, ''),
-			(SELECT COUNT(*) FROM source_metadata m WHERE m.field_id = f.id)
-		FROM source_metadata_fields f ORDER BY f.label COLLATE NOCASE, f.origin, f.key`
+	sqlList = `SELECT id, key, origin, label, data_type, COALESCE(description, '')
+		FROM source_metadata_fields ORDER BY label COLLATE NOCASE, origin, key`
 	sqlUpdate = `UPDATE source_metadata_fields SET label = ?, description = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM source_metadata_fields WHERE id = ?`
-	sqlUsedBy = `SELECT COUNT(*) FROM source_metadata WHERE field_id = ?`
 )
 
 // Field is one source_metadata_fields row.
@@ -68,8 +67,9 @@ type Field struct {
 	Label       string
 	DataType    string
 	Description string
-	// UsedBy is how many source_metadata rows reference this field. Only
-	// List and Update populate it; the other readers leave it 0.
+	// UsedBy is how many Sources, Artifacts and Evidence graphs hold a value
+	// for this field: the total that blocks its delete. Only List populates
+	// it; the other readers leave it 0.
 	UsedBy int
 }
 
@@ -267,44 +267,61 @@ func Lookup(c *database.Catalog, key, origin string) (Field, error) {
 	return ScanField(db.QueryRow(sqlLookup, key, origin))
 }
 
-// List returns all source_metadata_fields rows.
+// List returns all source_metadata_fields rows, each with its UsedBy total,
+// read in one transaction.
 func List(c *database.Catalog) ([]Field, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(sqlList)
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.Query(sqlList)
+	if err != nil {
+		return nil, err
+	}
 	var out []Field
 	for rows.Next() {
-		var usedBy int
-		f, err := ScanField(rows, &usedBy)
+		f, err := ScanField(rows)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
-		f.UsedBy = usedBy
 		out = append(out, f)
 	}
-	return out, rows.Err()
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if out[i].UsedBy, err = deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, out[i].ID); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
-// UsedBy reports how many source_metadata rows reference the field.
+// UsedBy reports how many Sources, Artifacts and Evidence graphs hold a value
+// for the field: the delete-impact total.
 func UsedBy(c *database.Catalog, id []byte) (int, error) {
 	db, err := c.DB()
 	if err != nil {
 		return 0, err
 	}
-	var n int
-	if err := db.QueryRow(sqlUsedBy, id).Scan(&n); err != nil {
+	tx, err := db.Begin()
+	if err != nil {
 		return 0, err
 	}
-	return n, nil
+	defer func() { _ = tx.Rollback() }()
+	return deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, id)
 }
 
-// Delete erases a field when no sources store a value for it. Suggestion
+// Delete erases a field when no Source, Artifact or Evidence graph stores a value for it. Suggestion
 // and layout joins CASCADE. Plugin-origin fields are origin_locked even
 // when unused. The caller records the returned changes, including layout
 // rows released before the field itself.

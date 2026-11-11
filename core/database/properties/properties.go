@@ -47,12 +47,10 @@ const (
 		FROM properties WHERE key = ? AND origin = ?`
 	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), value_type, cardinality
 		FROM properties WHERE id = ?`
-	sqlList = `SELECT p.id, p.key, p.origin, p.label, COALESCE(p.description, ''), p.value_type, p.cardinality,
-			(SELECT COUNT(*) FROM observations o WHERE o.property_id = p.id)
-		FROM properties p ORDER BY p.label COLLATE NOCASE, p.origin, p.key`
+	sqlList = `SELECT id, key, origin, label, COALESCE(description, ''), value_type, cardinality
+		FROM properties ORDER BY label COLLATE NOCASE, origin, key`
 	sqlUpdate = `UPDATE properties SET label = ?, description = ?, cardinality = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM properties WHERE id = ?`
-	sqlUsedBy = `SELECT COUNT(*) FROM observations WHERE property_id = ?`
 )
 
 // Property is one properties row.
@@ -65,7 +63,8 @@ type Property struct {
 	ValueType   string
 	// Cardinality is single or multiple. Empty on input means single.
 	Cardinality string
-	// UsedBy is how many observations reference this Property. Type bindings
+	// UsedBy is how many Observations and terms hold this Property: the
+	// delete-impact total, so a Property is deletable only at 0. Type bindings
 	// do not count. Only List and Update populate it; other readers leave it 0.
 	UsedBy int
 }
@@ -235,9 +234,11 @@ func Update(tx *database.Tx, userID, id []byte, label, valueType, description, c
 	existing.Label = label
 	existing.Description = description
 	existing.Cardinality = cardinality
-	if err := tx.QueryRow(sqlUsedBy, id).Scan(&existing.UsedBy); err != nil {
+	used, err := deleteimpact.InboundTotal(tx.Tx, catalogmodel.KindProperty, id)
+	if err != nil {
 		return Property{}, nil, err
 	}
+	existing.UsedBy = used
 	if len(fields) == 0 {
 		return existing, nil, nil
 	}
@@ -296,39 +297,58 @@ func LookupTx(tx *sql.Tx, key, origin string) (Property, error) {
 	return scanProperty(tx.QueryRow(sqlLookup, key, origin))
 }
 
-// List returns all properties rows.
+// List returns all properties rows, each with its UsedBy total, read in one
+// transaction.
 func List(c *database.Catalog) ([]Property, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(sqlList)
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.Query(sqlList)
+	if err != nil {
+		return nil, err
+	}
 	var out []Property
 	for rows.Next() {
 		var p Property
-		if err := rows.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType, &p.Cardinality, &p.UsedBy); err != nil {
+		if err := rows.Scan(&p.ID, &p.Key, &p.Origin, &p.Label, &p.Description, &p.ValueType, &p.Cardinality); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		out = append(out, p)
 	}
-	return out, rows.Err()
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		if out[i].UsedBy, err = deleteimpact.InboundTotal(tx, catalogmodel.KindProperty, out[i].ID); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
-// UsedBy reports how many observations reference the Property.
+// UsedBy reports how many Observations and terms hold the Property: the
+// delete-impact total.
 func UsedBy(c *database.Catalog, id []byte) (int, error) {
 	db, err := c.DB()
 	if err != nil {
 		return 0, err
 	}
-	var n int
-	if err := db.QueryRow(sqlUsedBy, id).Scan(&n); err != nil {
+	tx, err := db.Begin()
+	if err != nil {
 		return 0, err
 	}
-	return n, nil
+	defer func() { _ = tx.Rollback() }()
+	return deleteimpact.InboundTotal(tx, catalogmodel.KindProperty, id)
 }
 
 // Delete erases a user-origin Property when no observations or terms

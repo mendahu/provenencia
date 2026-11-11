@@ -132,3 +132,28 @@ func ListedGroup(tx *sql.Tx, via string, kind catalogmodel.Kind, rows []Listed) 
 	}
 	return g, nil
 }
+
+// InboundTotal is the number of rows that hold id of kind: the sum of Count
+// over the edges Impact groups, without listing them. A kind with no inbound
+// edge is 0. It is the "used by" count of a vocabulary row, so the number a
+// list shows is the number that blocks its delete.
+func InboundTotal(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (int, error) {
+	if tx == nil || len(id) != 16 {
+		return 0, ErrInvalid
+	}
+	if _, ok := tableByKind(kind); !ok {
+		return 0, ErrInvalid
+	}
+	total := 0
+	for _, edge := range inboundFor(kind) {
+		if edge.Count == nil {
+			continue
+		}
+		n, err := edge.Count(tx, id)
+		if err != nil {
+			return 0, err
+		}
+		total += n
+	}
+	return total, nil
+}

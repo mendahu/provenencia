@@ -1,6 +1,7 @@
 package properties_test
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"testing"
@@ -8,7 +9,10 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -431,6 +435,123 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 	}
 	if listed != 1 {
 		t.Fatalf("list usedBy %d", listed)
+	}
+}
+
+// TestUsedByCountsObservationsAndTerms pins the Used by count to the delete
+// gate: Observations and terms both hold a Property, so both count, and the
+// List row, UsedBy and Update's reply agree with the delete-impact total.
+func TestUsedByCountsObservationsAndTerms(t *testing.T) {
+	c, err := database.Create(t.TempDir(), "t.provenencia")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer c.Close()
+	userID := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	r, err := ref.Mint(ref.PrefixUser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := users.Upsert(c, userID, "Tester", r); err != nil {
+		t.Fatal(err)
+	}
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	propID, err := properties.Upsert(c, properties.Property{
+		Key: "residence_status", Origin: vocabkey.OriginUser, Label: "Residence status", ValueType: propertymeta.ValueTypeTerm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	usedBy := func() (int, int, int) {
+		t.Helper()
+		n, err := properties.UsedBy(c, propID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		list, err := properties.List(c)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var listed int
+		for _, row := range list {
+			if bytes.Equal(row.ID, propID) {
+				listed = row.UsedBy
+			}
+		}
+		updated, _, err := writes.Run(c, writes.Op{Action: "update_property", UserID: userID},
+			func(tx *database.Tx) (properties.Property, []rowchange.Change, error) {
+				return properties.Update(tx, userID, propID, "Residence status", propertymeta.ValueTypeTerm, "", "")
+			})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return n, listed, updated.UsedBy
+	}
+	var terms [][]byte
+	for _, label := range []string{"Lodger", "Head"} {
+		term, _, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
+			func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
+				return propertyterms.Create(tx, userID, propID, label, "")
+			})
+		if err != nil {
+			t.Fatal(err)
+		}
+		terms = append(terms, term.ID)
+	}
+	if n, listed, updated := usedBy(); n != 2 || listed != 2 || updated != 2 {
+		t.Fatalf("two terms, no Observation: UsedBy %d, List %d, Update %d; want 2", n, listed, updated)
+	}
+
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "Register"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	personType, err := subjecttypes.Lookup(c, "person", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dbtest.MustDB(t, c).Exec(
+		`INSERT OR IGNORE INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 0)`,
+		personType.ID, propID); err != nil {
+		t.Fatal(err)
+	}
+	graph := evidencegraphstest.SoleGraph(t, c, src.ID).ID
+	person := subjectstest.OfType(t, c, userID, graph, personType.ID, "Alice")
+	var inputs []observations.Input
+	for _, term := range [][]byte{terms[0], terms[1], terms[0]} {
+		inputs = append(inputs, observations.Input{SubjectID: person.ID, PropertyID: propID, ValueTermID: term})
+	}
+	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: graph, ArtifactID: art.ID, LocatorJSON: testLocator, Transcription: "Alice",
+		}, inputs)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	n, listed, updated := usedBy()
+	if n != 5 || listed != 5 || updated != 5 {
+		t.Fatalf("two terms and three Observations: UsedBy %d, List %d, Update %d; want 5", n, listed, updated)
+	}
+	tx, err := dbtest.MustDB(t, c).Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	total, err := deleteimpact.InboundTotal(tx, catalogmodel.KindProperty, propID)
+	if err != nil || total != n {
+		t.Fatalf("InboundTotal = %d, %v; want %d", total, err, n)
 	}
 }
 
