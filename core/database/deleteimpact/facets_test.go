@@ -2,10 +2,13 @@ package deleteimpact_test
 
 import (
 	"bytes"
+	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
@@ -107,6 +110,88 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 			if !got[want] {
 				t.Errorf("missing %s in %v", want, types)
 			}
+		}
+	})
+
+	// A Source with no Artifacts keeps its default graph; the graph's metadata
+	// is deleted audited, ahead of the graph's own delete (AC-3.3).
+	graphSource := func(t *testing.T, title string) (sources.Source, sourcemetadata.Owner) {
+		t.Helper()
+		src, _, err := writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return src, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
+	}
+	deleteSource := func(t *testing.T, id []byte) []string {
+		t.Helper()
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sources.Delete(tx, userID, id)
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		_, revision := dbtest.LatestRevision(t, dbtest.MustDB(t, c))
+		return dbtest.EntityTypes(revision)
+	}
+
+	t.Run("source delete audits its graph's metadata", func(t *testing.T) {
+		src, graph := graphSource(t, "Census")
+		runOwnerSet(t, c, userID, graph, fieldID, "14")
+		got := deleteSource(t, src.ID)
+		// The Source's own default-graph row and the value, layout and graph
+		// deletes, in that order, then the Source.
+		want := []string{"evidence_graph_metadata", "evidence_graph_metadata_layout", "evidence_graph", "source"}
+		if !strings.HasSuffix(strings.Join(got, ","), strings.Join(want, ",")) {
+			t.Fatalf("types %v, want a tail of %v", got, want)
+		}
+		for _, table := range []string{"evidence_graph_metadata", "evidence_graph_metadata_layout"} {
+			if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM `+table); n != 0 {
+				t.Fatalf("%s left %d rows", table, n)
+			}
+		}
+	})
+
+	t.Run("source delete releases two graphs in id order", func(t *testing.T) {
+		src, g1 := graphSource(t, "Census")
+		g2ID, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := dbtest.MustDB(t, c).Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, 'Second')`, g2ID[:], src.ID); err != nil {
+			t.Fatal(err)
+		}
+		g2 := sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: g2ID[:]}
+		runOwnerSet(t, c, userID, g1, fieldID, "1")
+		runOwnerSet(t, c, userID, g2, fieldID, "2")
+		first, second := g1, g2
+		if bytes.Compare(g1.ID, g2.ID) > 0 {
+			first, second = g2, g1
+		}
+		if _, _, err := writes.Run(c, writes.Op{Action: "delete_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sources.Delete(tx, userID, src.ID)
+			return struct{}{}, changes, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		_, revision := dbtest.LatestRevision(t, dbtest.MustDB(t, c))
+		var owners []string
+		for _, ch := range revision {
+			switch ch.EntityType {
+			case "evidence_graph_metadata":
+				owners = append(owners, "value:"+fmt.Sprint(ch.Fields["graph_id"].Old))
+			case "evidence_graph":
+				owners = append(owners, "graph:"+database.UUIDString(ch.EntityID))
+			}
+		}
+		want := []string{
+			"value:" + database.UUIDString(first.ID), "graph:" + database.UUIDString(first.ID),
+			"value:" + database.UUIDString(second.ID), "graph:" + database.UUIDString(second.ID),
+		}
+		if !slices.Equal(owners, want) {
+			t.Fatalf("order %v, want %v", owners, want)
 		}
 	})
 

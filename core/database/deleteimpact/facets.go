@@ -207,8 +207,13 @@ func buildFacetReleases() []facetRelease {
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"body", colText}),
-		rowFacet(catalogmodel.KindSource, "evidence_graphs", "source_id", "evidence_graph", "id",
-			col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText}, col{"description", colText}),
+		// Each graph goes through releaseGraph, in id order: its own facets
+		// (a deletable Source's graphs hold only metadata), then its row and change.
+		{
+			Parent: catalogmodel.KindSource, Via: "evidence_graphs.source_id",
+			Remaining: `SELECT COUNT(*) FROM evidence_graphs WHERE source_id = ?`,
+			Release:   releaseEach(`SELECT id FROM evidence_graphs WHERE source_id = ? ORDER BY id`, releaseGraph),
+		},
 		rowFacet(catalogmodel.KindSource, "source_metadata", "source_id", "source_metadata", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
 		rowFacet(catalogmodel.KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",
@@ -394,6 +399,60 @@ func releaseCitation(tx *sql.Tx, citationID []byte) (released, error) {
 			"label":                   nullStringJSON(label),
 			"transcription_uncertain": uncertain != 0,
 			"transcription_note":      nullStringJSON(transcriptionNote),
+		}),
+	})
+	return out, nil
+}
+
+// ReleaseGraph is releaseGraph on the write's Tx: it schedules the purge of any
+// File released and returns the audit changes.
+func ReleaseGraph(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	r, err := releaseGraph(tx.Tx, graphID)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseGraph removes one Evidence graph, audited: its facets (through
+// releaseFacets), then the row, then the graph's own delete change over every
+// column. It is the one graph removal; evidencegraphs.Delete and a Source
+// delete both call it. The caller has already refused a graph that still has
+// Subjects. Does not commit.
+func releaseGraph(tx *sql.Tx, graphID []byte) (released, error) {
+	if tx == nil || len(graphID) != 16 {
+		return released{}, ErrInvalid
+	}
+	var (
+		id, sourceID     []byte
+		name             string
+		ref, description sql.NullString
+	)
+	if err := tx.QueryRow(`SELECT id, ref, source_id, name, description FROM evidence_graphs WHERE id = ?`, graphID).
+		Scan(&id, &ref, &sourceID, &name, &description); err != nil {
+		return released{}, err
+	}
+	out, err := releaseFacets(tx, catalogmodel.KindEvidenceGraph, id)
+	if err != nil {
+		return released{}, err
+	}
+	if _, err := tx.Exec(`DELETE FROM evidence_graphs WHERE id = ?`, id); err != nil {
+		return released{}, err
+	}
+	out.Changes = append(out.Changes, rowchange.Change{
+		EntityType: "evidence_graph",
+		EntityID:   id,
+		Action:     rowchange.ActionDelete,
+		Fields: rowchange.DeletedRow(map[string]any{
+			"id":          database.UUIDJSON(id),
+			"ref":         nullStringJSON(ref),
+			"source_id":   database.UUIDJSON(sourceID),
+			"name":        name,
+			"description": nullStringJSON(description),
 		}),
 	})
 	return out, nil
