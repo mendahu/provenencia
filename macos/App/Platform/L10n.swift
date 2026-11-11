@@ -9863,14 +9863,6 @@ enum L10n {
             ), graph, subject, ref)
         }
 
-        static func sourcesPersonDeletedAnnouncement(ref: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.sources.personDeletedAnnouncement",
-                defaultValue: "%@ deleted.",
-                comment: "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref"
-            ), ref)
-        }
-
         static func sourcesOpenGraph(graph: String, subject: String, ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.sources.openGraph",
