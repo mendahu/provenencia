@@ -1381,8 +1381,9 @@ public nonisolated struct Provenencia_Engine_V1_SourceType: Sendable {
   /// delete affordance and say what is holding the type.
   public var usedBy: Int32 = 0
 
-  /// How many metadata fields this type suggests — the list's third column,
-  /// so browsing does not have to fetch every type's join rows.
+  /// How many metadata fields this type suggests at the Source level — the
+  /// list's third column, so browsing does not have to fetch every type's
+  /// join rows.
   public var suggestedFieldCount: Int32 = 0
 
   /// Closed design-system type_* key for evidence representation.
@@ -1394,8 +1395,8 @@ public nonisolated struct Provenencia_Engine_V1_SourceType: Sendable {
 }
 
 /// TypeSuggestion is one source_type_metadata_fields join row: a field this
-/// type suggests, in its stored order. Suggestions are not a schema — a
-/// source of the type may leave any of them blank.
+/// type suggests at one level, in its stored order. Suggestions are not a
+/// schema — a source of the type may leave any of them blank.
 public nonisolated struct Provenencia_Engine_V1_TypeSuggestion: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

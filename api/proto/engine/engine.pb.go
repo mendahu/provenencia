@@ -2545,8 +2545,9 @@ type SourceType struct {
 	// (see sourcetypes.ErrInUse); the client uses the count to disable its
 	// delete affordance and say what is holding the type.
 	UsedBy int32 `protobuf:"varint,6,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`
-	// How many metadata fields this type suggests — the list's third column,
-	// so browsing does not have to fetch every type's join rows.
+	// How many metadata fields this type suggests at the Source level — the
+	// list's third column, so browsing does not have to fetch every type's
+	// join rows.
 	SuggestedFieldCount int32 `protobuf:"varint,7,opt,name=suggested_field_count,json=suggestedFieldCount,proto3" json:"suggested_field_count,omitempty"`
 	// Closed design-system type_* key for evidence representation.
 	IconKey       string `protobuf:"bytes,8,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`
@@ -2641,8 +2642,8 @@ func (x *SourceType) GetIconKey() string {
 }
 
 // TypeSuggestion is one source_type_metadata_fields join row: a field this
-// type suggests, in its stored order. Suggestions are not a schema — a
-// source of the type may leave any of them blank.
+// type suggests at one level, in its stored order. Suggestions are not a
+// schema — a source of the type may leave any of them blank.
 type TypeSuggestion struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Field         *MetadataField         `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`

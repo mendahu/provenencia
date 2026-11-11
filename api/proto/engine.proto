@@ -337,16 +337,17 @@ message SourceType {
   // (see sourcetypes.ErrInUse); the client uses the count to disable its
   // delete affordance and say what is holding the type.
   int32 used_by = 6;
-  // How many metadata fields this type suggests — the list's third column,
-  // so browsing does not have to fetch every type's join rows.
+  // How many metadata fields this type suggests at the Source level — the
+  // list's third column, so browsing does not have to fetch every type's
+  // join rows.
   int32 suggested_field_count = 7;
   // Closed design-system type_* key for evidence representation.
   string icon_key = 8;
 }
 
 // TypeSuggestion is one source_type_metadata_fields join row: a field this
-// type suggests, in its stored order. Suggestions are not a schema — a
-// source of the type may leave any of them blank.
+// type suggests at one level, in its stored order. Suggestions are not a
+// schema — a source of the type may leave any of them blank.
 message TypeSuggestion {
   MetadataField field = 1;
   int32 sort_order = 2;

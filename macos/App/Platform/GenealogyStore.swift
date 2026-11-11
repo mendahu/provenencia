@@ -1181,8 +1181,9 @@ struct CatalogSourceType: Sendable, Equatable, Identifiable {
     /// 0 — the engine refuses otherwise (`sourcetypes.in_use`). Only
     /// `listSourceTypes` and `updateSourceType` populate it.
     var usedBy: Int = 0
-    /// How many metadata fields this type suggests — the list's third
-    /// column, so browsing never fetches every type's join rows. Only
+    /// How many metadata fields this type suggests at the Source level —
+    /// the list's third column, so browsing never fetches every type's join
+    /// rows. Only
     /// `listSourceTypes` and `updateSourceType` populate it.
     var suggestedFieldCount: Int = 0
 }
