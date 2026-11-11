@@ -736,6 +736,11 @@ func TestRemoveTypeFieldDetachesOneLevel(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
+				for _, level := range []string{"graph", "source"} {
+					if got := listSuggestionLabels(t, dir, typeID, level); len(got) != 1 || got[0] != "Folio" {
+						t.Fatalf("%s list %v before the remove, want [Folio]", level, got)
+					}
+				}
 				return &engine.RemoveTypeFieldRequest{ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: "graph"}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -762,6 +767,11 @@ func TestTypeSuggestionRefusesAnyOtherLevel(t *testing.T) {
 			dir, userID, _ := sourceFixture(t)
 			typeID := newUserType(t, dir, userID, "Parish register")
 			fieldID := newUserField(t, dir, userID, "Folio")
+			if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+				ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: "source",
+			})); err != nil {
+				t.Fatal(err)
+			}
 			if _, err := ListTypeSuggestions(marshalProto(t, &engine.ListTypeSuggestionsRequest{
 				ProjectDir: dir, TypeId: typeID, Level: level,
 			})); !errors.Is(err, sourcevocab.ErrInvalid) {
@@ -777,7 +787,10 @@ func TestTypeSuggestionRefusesAnyOtherLevel(t *testing.T) {
 			})); !errors.Is(err, sourcevocab.ErrInvalid) {
 				t.Fatalf("RemoveTypeField: %v", err)
 			}
-			for _, l := range []string{"source", "artifact", "graph"} {
+			if got := listSuggestionLabels(t, dir, typeID, "source"); len(got) != 1 || got[0] != "Folio" {
+				t.Fatalf("source list %v after refused calls, want [Folio]", got)
+			}
+			for _, l := range []string{"artifact", "graph"} {
 				if got := listSuggestionLabels(t, dir, typeID, l); len(got) != 0 {
 					t.Fatalf("a refused write left %s rows: %v", l, got)
 				}
