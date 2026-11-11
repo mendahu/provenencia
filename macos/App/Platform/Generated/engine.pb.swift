@@ -1731,6 +1731,13 @@ public nonisolated struct Provenencia_Engine_V1_GetSourceWorkspaceResponse: @unc
   /// Clears the value of `credibility`. Subsequent reads from it will return its default value.
   public mutating func clearCredibility() {_uniqueStorage()._credibility = nil}
 
+  /// One board per Artifact, in the order of artifacts: its type's artifact-level
+  /// suggestions plus extras, by its layout.
+  public var artifactMetadata: [Provenencia_Engine_V1_MetadataBoard] {
+    get {_storage._artifactMetadata}
+    set {_uniqueStorage()._artifactMetadata = newValue}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1925,9 +1932,21 @@ public nonisolated struct Provenencia_Engine_V1_CreateEvidenceGraphRequest: Send
   /// at least one
   public var artifactIds: [String] = []
 
+  /// absent = no metadata
+  public var metadata: Provenencia_Engine_V1_MetadataDraft {
+    get {_metadata ?? Provenencia_Engine_V1_MetadataDraft()}
+    set {_metadata = newValue}
+  }
+  /// Returns true if `metadata` has been explicitly set.
+  public var hasMetadata: Bool {self._metadata != nil}
+  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
+  public mutating func clearMetadata() {self._metadata = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _metadata: Provenencia_Engine_V1_MetadataDraft? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_CreateEvidenceGraphResponse: @unchecked Sendable {
@@ -1978,9 +1997,21 @@ public nonisolated struct Provenencia_Engine_V1_UpdateEvidenceGraphRequest: Send
   /// empty = links unchanged; otherwise the full set
   public var artifactIds: [String] = []
 
+  /// absent = metadata unchanged; present = the stored values become these
+  public var metadata: Provenencia_Engine_V1_MetadataDraft {
+    get {_metadata ?? Provenencia_Engine_V1_MetadataDraft()}
+    set {_metadata = newValue}
+  }
+  /// Returns true if `metadata` has been explicitly set.
+  public var hasMetadata: Bool {self._metadata != nil}
+  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
+  public mutating func clearMetadata() {self._metadata = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+
+  fileprivate var _metadata: Provenencia_Engine_V1_MetadataDraft? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_UpdateEvidenceGraphResponse: Sendable {
@@ -2722,6 +2753,54 @@ public nonisolated struct Provenencia_Engine_V1_ReorderMetadataResponse: Sendabl
   fileprivate var _effects: Provenencia_Engine_V1_WriteEffects? = nil
 }
 
+/// MetadataDraft is what an owner's form holds, saved with the owner's own write.
+/// An absent draft changes nothing; a present, empty one clears every value.
+public nonisolated struct Provenencia_Engine_V1_MetadataDraft: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// one per field; the stored values become these
+  public var values: [Provenencia_Engine_V1_MetadataValue] = []
+
+  /// written as given; rows not listed stay
+  public var layout: [Provenencia_Engine_V1_MetadataLayoutRow] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_MetadataValue: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fieldID: String = String()
+
+  public var valueText: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Provenencia_Engine_V1_MetadataLayoutRow: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var fieldID: String = String()
+
+  public var sortOrder: Int32 = 0
+
+  public var dismissed: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// MetadataBoard is one owner's entries: its type's suggestions at its level
 /// plus extras, by its layout.
 public nonisolated struct Provenencia_Engine_V1_MetadataBoard: Sendable {
@@ -2811,11 +2890,22 @@ public nonisolated struct Provenencia_Engine_V1_CreateArtifactRequest: Sendable 
   /// Clears the value of `graphLinks`. Subsequent reads from it will return its default value.
   public mutating func clearGraphLinks() {self._graphLinks = nil}
 
+  /// absent = no metadata
+  public var metadata: Provenencia_Engine_V1_MetadataDraft {
+    get {_metadata ?? Provenencia_Engine_V1_MetadataDraft()}
+    set {_metadata = newValue}
+  }
+  /// Returns true if `metadata` has been explicitly set.
+  public var hasMetadata: Bool {self._metadata != nil}
+  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
+  public mutating func clearMetadata() {self._metadata = nil}
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _graphLinks: Provenencia_Engine_V1_GraphLinks? = nil
+  fileprivate var _metadata: Provenencia_Engine_V1_MetadataDraft? = nil
 }
 
 /// Which graphs of its Source an Artifact is in. A message field has presence,
@@ -9934,7 +10024,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceRequest: SwiftProt
 
 nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".GetSourceWorkspaceResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{1}notes\0\u{1}metadata\0\u{1}artifacts\0\u{1}credibility\0\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{8}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}source\0\u{1}notes\0\u{1}metadata\0\u{1}artifacts\0\u{1}credibility\0\u{4}\u{4}artifact_metadata\0\u{c}\u{6}\u{1}\u{c}\u{7}\u{1}\u{c}\u{8}\u{1}")
 
   fileprivate class _StorageClass {
     var _source: Provenencia_Engine_V1_Source? = nil
@@ -9942,6 +10032,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
     var _metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
     var _artifacts: [Provenencia_Engine_V1_Artifact] = []
     var _credibility: Provenencia_Engine_V1_SourceCredibilityAssessment? = nil
+    var _artifactMetadata: [Provenencia_Engine_V1_MetadataBoard] = []
 
       // This property is used as the initial default value for new instances of the type.
       // The type itself is protecting the reference to its storage via CoW semantics.
@@ -9957,6 +10048,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
       _metadata = source._metadata
       _artifacts = source._artifacts
       _credibility = source._credibility
+      _artifactMetadata = source._artifactMetadata
     }
   }
 
@@ -9980,6 +10072,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
         case 3: try { try decoder.decodeRepeatedMessageField(value: &_storage._metadata) }()
         case 4: try { try decoder.decodeRepeatedMessageField(value: &_storage._artifacts) }()
         case 5: try { try decoder.decodeSingularMessageField(value: &_storage._credibility) }()
+        case 9: try { try decoder.decodeRepeatedMessageField(value: &_storage._artifactMetadata) }()
         default: break
         }
       }
@@ -10007,6 +10100,9 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
       try { if let v = _storage._credibility {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
       } }()
+      if !_storage._artifactMetadata.isEmpty {
+        try visitor.visitRepeatedMessageField(value: _storage._artifactMetadata, fieldNumber: 9)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -10021,6 +10117,7 @@ nonisolated extension Provenencia_Engine_V1_GetSourceWorkspaceResponse: SwiftPro
         if _storage._metadata != rhs_storage._metadata {return false}
         if _storage._artifacts != rhs_storage._artifacts {return false}
         if _storage._credibility != rhs_storage._credibility {return false}
+        if _storage._artifactMetadata != rhs_storage._artifactMetadata {return false}
         return true
       }
       if !storagesAreEqual {return false}
@@ -10431,7 +10528,7 @@ nonisolated extension Provenencia_Engine_V1_ListEvidenceGraphsResponse: SwiftPro
 
 nonisolated extension Provenencia_Engine_V1_CreateEvidenceGraphRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateEvidenceGraphRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{1}name\0\u{1}description\0\u{3}artifact_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{1}name\0\u{1}description\0\u{3}artifact_ids\0\u{1}metadata\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10445,12 +10542,17 @@ nonisolated extension Provenencia_Engine_V1_CreateEvidenceGraphRequest: SwiftPro
       case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.artifactIds) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._metadata) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -10469,6 +10571,9 @@ nonisolated extension Provenencia_Engine_V1_CreateEvidenceGraphRequest: SwiftPro
     if !self.artifactIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.artifactIds, fieldNumber: 6)
     }
+    try { if let v = self._metadata {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10479,6 +10584,7 @@ nonisolated extension Provenencia_Engine_V1_CreateEvidenceGraphRequest: SwiftPro
     if lhs.name != rhs.name {return false}
     if lhs.description_p != rhs.description_p {return false}
     if lhs.artifactIds != rhs.artifactIds {return false}
+    if lhs._metadata != rhs._metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -10563,7 +10669,7 @@ nonisolated extension Provenencia_Engine_V1_CreateEvidenceGraphResponse: SwiftPr
 
 nonisolated extension Provenencia_Engine_V1_UpdateEvidenceGraphRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateEvidenceGraphRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}graph_id\0\u{1}name\0\u{1}description\0\u{3}artifact_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}graph_id\0\u{1}name\0\u{1}description\0\u{3}artifact_ids\0\u{1}metadata\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10577,12 +10683,17 @@ nonisolated extension Provenencia_Engine_V1_UpdateEvidenceGraphRequest: SwiftPro
       case 4: try { try decoder.decodeSingularStringField(value: &self.name) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeRepeatedStringField(value: &self.artifactIds) }()
+      case 7: try { try decoder.decodeSingularMessageField(value: &self._metadata) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.projectDir.isEmpty {
       try visitor.visitSingularStringField(value: self.projectDir, fieldNumber: 1)
     }
@@ -10601,6 +10712,9 @@ nonisolated extension Provenencia_Engine_V1_UpdateEvidenceGraphRequest: SwiftPro
     if !self.artifactIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.artifactIds, fieldNumber: 6)
     }
+    try { if let v = self._metadata {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10611,6 +10725,7 @@ nonisolated extension Provenencia_Engine_V1_UpdateEvidenceGraphRequest: SwiftPro
     if lhs.name != rhs.name {return false}
     if lhs.description_p != rhs.description_p {return false}
     if lhs.artifactIds != rhs.artifactIds {return false}
+    if lhs._metadata != rhs._metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12121,6 +12236,116 @@ nonisolated extension Provenencia_Engine_V1_ReorderMetadataResponse: SwiftProtob
   }
 }
 
+nonisolated extension Provenencia_Engine_V1_MetadataDraft: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MetadataDraft"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}values\0\u{1}layout\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.values) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.layout) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.values.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.values, fieldNumber: 1)
+    }
+    if !self.layout.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.layout, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_MetadataDraft, rhs: Provenencia_Engine_V1_MetadataDraft) -> Bool {
+    if lhs.values != rhs.values {return false}
+    if lhs.layout != rhs.layout {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_MetadataValue: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MetadataValue"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}field_id\0\u{3}value_text\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.fieldID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.valueText) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.fieldID.isEmpty {
+      try visitor.visitSingularStringField(value: self.fieldID, fieldNumber: 1)
+    }
+    if !self.valueText.isEmpty {
+      try visitor.visitSingularStringField(value: self.valueText, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_MetadataValue, rhs: Provenencia_Engine_V1_MetadataValue) -> Bool {
+    if lhs.fieldID != rhs.fieldID {return false}
+    if lhs.valueText != rhs.valueText {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Provenencia_Engine_V1_MetadataLayoutRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".MetadataLayoutRow"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}field_id\0\u{3}sort_order\0\u{1}dismissed\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.fieldID) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.sortOrder) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.dismissed) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.fieldID.isEmpty {
+      try visitor.visitSingularStringField(value: self.fieldID, fieldNumber: 1)
+    }
+    if self.sortOrder != 0 {
+      try visitor.visitSingularInt32Field(value: self.sortOrder, fieldNumber: 2)
+    }
+    if self.dismissed != false {
+      try visitor.visitSingularBoolField(value: self.dismissed, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Provenencia_Engine_V1_MetadataLayoutRow, rhs: Provenencia_Engine_V1_MetadataLayoutRow) -> Bool {
+    if lhs.fieldID != rhs.fieldID {return false}
+    if lhs.sortOrder != rhs.sortOrder {return false}
+    if lhs.dismissed != rhs.dismissed {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 nonisolated extension Provenencia_Engine_V1_MetadataBoard: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".MetadataBoard"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}owner_id\0\u{1}entries\0")
@@ -12231,7 +12456,7 @@ nonisolated extension Provenencia_Engine_V1_GetMetadataBoardResponse: SwiftProto
 
 nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CreateArtifactRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}file_id\0\u{1}description\0\u{1}label\0\u{4}\u{2}graph_links\0\u{b}graph_ids\0\u{c}\u{7}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{3}file_id\0\u{1}description\0\u{1}label\0\u{4}\u{2}graph_links\0\u{1}metadata\0\u{b}graph_ids\0\u{c}\u{7}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12246,6 +12471,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
       case 5: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.label) }()
       case 8: try { try decoder.decodeSingularMessageField(value: &self._graphLinks) }()
+      case 9: try { try decoder.decodeSingularMessageField(value: &self._metadata) }()
       default: break
       }
     }
@@ -12277,6 +12503,9 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
     try { if let v = self._graphLinks {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
     } }()
+    try { if let v = self._metadata {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -12288,6 +12517,7 @@ nonisolated extension Provenencia_Engine_V1_CreateArtifactRequest: SwiftProtobuf
     if lhs.description_p != rhs.description_p {return false}
     if lhs.label != rhs.label {return false}
     if lhs._graphLinks != rhs._graphLinks {return false}
+    if lhs._metadata != rhs._metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
