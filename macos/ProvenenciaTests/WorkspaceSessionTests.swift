@@ -762,8 +762,8 @@ struct WorkspaceSessionTests {
         #expect(handle.value?.map(\.entity.ref) == [promoted.entity.ref])
     }
 
-    /// The open section's reads stay visible, so a write revalidates them instead of evicting
-    /// them while they are on screen; the first section, stored as nil, reads nothing yet.
+    /// The open section's reads stay visible, so a write revalidates them instead of marking
+    /// them stale while they are on screen; the first section, stored as nil, reads nothing yet.
     /// While the first section (Vitals) reads nothing, the stored-nil case passes whether the
     /// place resolves `openPageSection` or the raw `pageSection`; the first PR that gives the
     /// first section a read must add that case's own key to this test's expectation, which then
@@ -778,10 +778,10 @@ struct WorkspaceSessionTests {
         #expect(session.visibleKeys == [detail])
     }
 
-    /// The rule-2 exception (S9-15): a trigger evicts Conclusion detail
-    /// pages that aren't on screen, revalidates the one that is, and marks the
-    /// Persons list (also off screen) stale until its next query.
-    @Test func applyTriggerEvictsHiddenDetailPagesAndRevalidatesTheVisibleOne() async throws {
+    /// A trigger marks Conclusion detail pages that aren't on screen stale,
+    /// revalidates the one that is, and marks the Persons list (also off
+    /// screen) stale until its next query.
+    @Test func applyTriggerStalesHiddenDetailPagesAndRevalidatesTheVisibleOne() async throws {
         let store = FakeStore()
         seedStore(store)
         store.subjectTypesByProject[projectDir] = [
@@ -826,9 +826,9 @@ struct WorkspaceSessionTests {
         ]
         session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], evidenceGraphs: ["g-1"]))
 
-        // Off screen: dropped, so it reloads only when next visited.
-        let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
-        #expect(evicted == nil)
+        // Off screen: stale with its value kept, so it reloads only when next visited.
+        let stale: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(firstKey)
+        #expect(stale?.value != nil && stale?.isStale == true && stale?.isFetching == false)
         // On screen: revalidated in place.
         await waitForQuery(secondHandle)
         #expect(secondHandle.value?.fields.first?.state == .single)
@@ -843,11 +843,11 @@ struct WorkspaceSessionTests {
         session.apply(location: .sectionRoot(.persons))
         session.apply(CatalogWriteEffects(handles: [first.entity.id, second.entity.id], evidenceGraphs: ["g-1"]))
         let hidden: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(secondKey)
-        #expect(hidden == nil)
+        #expect(hidden?.isStale == true && hidden?.isFetching == false)
         await waitForQuery(list)
         #expect(list.status == .ready)
 
-        // Revisiting loads afresh.
+        // Revisiting reloads behind the old value.
         session.apply(location: .personDetail(entityId: first.entity.id, ref: first.entity.ref, title: nil))
         let reloaded: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(firstKey))
         await waitForQuery(reloaded)
@@ -1137,7 +1137,7 @@ struct WorkspaceSessionTests {
     }
 
     /// T-7 (AC-2.1): a write's touched handles revalidate only their own detail
-    /// pages. A visible page reloads; a hidden one is evicted.
+    /// pages. A visible page reloads; a hidden one goes stale.
     @Test func touchedHandlesRevalidateOnlyTheirDetailPages() async {
         let store = FakeStore()
         seedStore(store)
@@ -1160,11 +1160,12 @@ struct WorkspaceSessionTests {
         #expect(session.queryHandle(third) as QueryHandle<CatalogConclusionDetail>? != nil)
 
         session.apply(CatalogWriteEffects(handles: ["e3"]))
-        #expect(session.queryHandle(third) as QueryHandle<CatalogConclusionDetail>? == nil)
+        let stale: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(third)
+        #expect(stale?.isStale == true && stale?.isFetching == false)
     }
 
     /// A Promote's effects name the handles it filed: those handles' keys reload and the
-    /// other people's cached pages are neither reloaded nor evicted.
+    /// other people's cached pages are neither reloaded nor marked stale.
     @Test func promoteRevalidatesOnlyItsPeople() async throws {
         let store = FakeStore()
         seedStore(store)
@@ -1211,8 +1212,8 @@ struct WorkspaceSessionTests {
     }
 
     /// T-8 (AC-2.6): a key that two refreshes and a mutation all name is
-    /// revalidated once. A hidden `.personClaims` key is evicted by the pass
-    /// that names it, and nothing loads it again.
+    /// revalidated once. A hidden `.personClaims` key is marked stale by the pass
+    /// that names it, and nothing loads it.
     @Test func aKeyInvalidatedAndRefreshedRevalidatesOnce() async {
         let store = FakeStore()
         seedStore(store)
@@ -1225,11 +1226,13 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: effects) == [key])
         session.apply(effects)
         await session.settleWrites()
-        #expect(session.queryHandle(key) as QueryHandle<[CatalogPersonClaimGroup]>? == nil)
+        let hidden: QueryHandle<[CatalogPersonClaimGroup]>? = session.queryHandle(key)
+        #expect(hidden?.value != nil && hidden?.isStale == true && hidden?.isFetching == false)
     }
 
     /// T-9 (AC-2.1, AC-2.3): person claims follow their handle and the graphs
-    /// they hold a claim on; the detail page follows only the handle.
+    /// they hold a claim on; the detail page follows the handle and the Sources
+    /// its records cite.
     @Test func personClaimsFollowHandlesAndGraphs() {
         let session = makeSession()
         let project = session.projectKey
@@ -1241,6 +1244,216 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [claimsKey])
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
         #expect(Set(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"]))) == [claimsKey, detailKey])
+
+        var cited = detail("e1")
+        cited.fields = [ReconciledValueDisplayTests.field(
+            "kept", outcomes: [ReconciledValueDisplayTests.outcome("o1", "kept", source: "s1")]
+        )]
+        session.setQueryValue(detailKey, value: cited)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s1"])) == [detailKey])
+    }
+
+    /// T-7 (AC-3.1, AC-3.2): a write that deleted a handle drops that handle's
+    /// hidden keys of the kinds that declare it, and leaves a visible key to
+    /// reload.
+    @Test func deletedEntitiesLoseTheirHiddenKeys() async {
+        let store = FakeStore()
+        store.seededConclusionDetails = ["e1": detail("e1"), "e3": detail("e3")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let detail1 = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        let family1 = CatalogQueryKey.personFamily(project: project, entityId: "e1")
+        let claims1 = CatalogQueryKey.personClaims(project: project, entityId: "e1")
+        let detail3 = CatalogQueryKey.conclusionDetail(project: project, entityId: "e3")
+        let sourceKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "e1")
+        session.setQueryValue(detail1, value: detail("e1"))
+        session.setQueryValue(family1, value: CatalogPersonFamily(units: []))
+        session.setQueryValue(claims1, value: claims(onGraph: "g1"))
+        session.setQueryValue(detail3, value: detail("e3"))
+        session.setQueryValue(sourceKey, value: CatalogSourceWorkspace(
+            source: CatalogSource(id: "e1", ref: "SRC-1", sourceTypeID: "t1", title: "Alpha", description: ""),
+            notes: [], metadata: [], artifacts: [], credibility: nil
+        ))
+        session.apply(location: .sectionRoot(.persons))
+
+        session.apply(CatalogWriteEffects(deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["e1"])]))
+        #expect(session.queryHandle(detail1) as QueryHandle<CatalogConclusionDetail>? == nil)
+        #expect(session.queryHandle(family1) as QueryHandle<CatalogPersonFamily>? == nil)
+        #expect(session.queryHandle(claims1) as QueryHandle<[CatalogPersonClaimGroup]>? == nil)
+        let untouched: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detail3)
+        #expect(untouched != nil && untouched?.isStale == false)
+        #expect(session.queryHandle(sourceKey) as QueryHandle<CatalogSourceWorkspace>? != nil)
+
+        session.apply(location: .personDetail(entityId: "e3", ref: "PER-e3", title: nil))
+        await session.settleWrites()
+        store.seededConclusionDetails["e3"] = nil
+        session.apply(CatalogWriteEffects(
+            handles: ["e3"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["e3"])]
+        ))
+        let visible: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detail3)
+        #expect(visible != nil && visible?.isFetching == true)
+        await session.settleWrites()
+        #expect(ConclusionDetailPresentation(visible!.reading, isFetching: false) { $0.entity.id } == .gone)
+    }
+
+    /// T-3 (AC-2.1, AC-2.2): a page visited and then hidden goes stale on a write
+    /// naming it; going Back shows its old value while it reloads.
+    @Test func backToAStalePageShowsItsValueWhileItRefreshes() async throws {
+        let store = FakeStore()
+        store.seededConclusionDetails = ["e1": detail("e1"), "e3": detail("e3")]
+        store.seededPersonFamilies = ["e1": CatalogPersonFamily(units: [])]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let detailKey = CatalogQueryKey.conclusionDetail(project: project, entityId: "e1")
+        let familyKey = CatalogQueryKey.personFamily(project: project, entityId: "e1")
+        let e1 = WorkspaceLocation.personDetail(entityId: "e1", ref: "PER-e1", title: nil)
+
+        session.apply(location: e1.withPageSection(.family))
+        await session.settleWrites()
+        session.apply(location: e1)
+        await session.settleWrites()
+        session.apply(location: .personDetail(entityId: "e3", ref: "PER-e3", title: nil))
+        await session.settleWrites()
+        session.apply(CatalogWriteEffects(handles: ["e1"]))
+
+        let detailHandle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(detailKey))
+        let familyHandle: QueryHandle<CatalogPersonFamily> = try #require(session.queryHandle(familyKey))
+        #expect(detailHandle.isStale && !detailHandle.isFetching)
+        #expect(familyHandle.isStale && !familyHandle.isFetching)
+
+        var updated = detail("e1")
+        updated.memberCount = 2
+        store.seededConclusionDetails["e1"] = updated
+        session.apply(location: e1)
+        #expect(detailHandle.value == detail("e1"))
+        #expect(detailHandle.isFetching)
+        await session.settleWrites()
+        #expect(detailHandle.value == updated)
+        #expect(!detailHandle.isStale)
+    }
+
+    /// T-8 (AC-3.3): a stale page of an entity that is gone reloads into S16-04's
+    /// reading, which the page presents as gone.
+    @Test func aStaleReloadOfAGoneEntityReadsAsGone() async throws {
+        let store = FakeStore()
+        store.seededConclusionDetails = ["e1": detail("e1")]
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "e1")
+        session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: nil))
+        await session.settleWrites()
+        session.apply(location: .sectionRoot(.persons))
+        session.apply(CatalogWriteEffects(handles: ["e1"]))
+
+        store.seededConclusionDetails = [:]
+        session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: nil))
+        await session.settleWrites()
+
+        let handle: QueryHandle<CatalogConclusionDetail> = try #require(session.queryHandle(key))
+        guard case .loaded(_, let refreshFailure) = handle.reading else {
+            Issue.record("expected a loaded reading, got \(handle.reading)")
+            return
+        }
+        #expect(refreshFailure != nil)
+        #expect(ConclusionDetailPresentation(handle.reading, isFetching: false) { $0.entity.id } == .gone)
+    }
+
+    /// T-9 (AC-4.1 - AC-4.4): at most 50 hidden entities keep their keys, the
+    /// least recently shown go first, and the entity on screen keeps all of its
+    /// keys, a section key its place does not warm included.
+    @Test func hiddenConclusionPagesAreCappedAtFifty() async throws {
+        let store = FakeStore()
+        for index in 0...52 {
+            store.seededConclusionDetails["e\(index)"] = detail("e\(index)")
+        }
+        store.seededPersonFamilies = ["e0": CatalogPersonFamily(units: []), "e1": CatalogPersonFamily(units: [])]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        func detailKey(_ id: String) -> CatalogQueryKey { .conclusionDetail(project: project, entityId: id) }
+        func familyKey(_ id: String) -> CatalogQueryKey { .personFamily(project: project, entityId: id) }
+        func holds(_ key: CatalogQueryKey) -> Bool {
+            (session.queryHandle(key) as QueryHandle<CatalogConclusionDetail>?) != nil
+                || (session.queryHandle(key) as QueryHandle<CatalogPersonFamily>?) != nil
+        }
+        func show(_ id: String, _ section: ConclusionPageSection? = nil) async {
+            session.apply(location: .personDetail(entityId: id, ref: "PER-\(id)", title: nil).withPageSection(section))
+            await session.settleWrites()
+            #expect(holds(detailKey(id)))
+        }
+
+        session.setQueryValue(detailKey("never"), value: detail("never"))
+        await show("e0", .family)
+        for index in 1...50 {
+            await show("e\(index)")
+        }
+        #expect(!holds(detailKey("never")))
+        #expect(holds(detailKey("e0")) && holds(familyKey("e0")))
+
+        await show("e51")
+        #expect(!holds(detailKey("e0")) && !holds(familyKey("e0")))
+        for index in 1...50 {
+            #expect(holds(detailKey("e\(index)")), "e\(index)")
+        }
+
+        session.setQueryValue(familyKey("e1"), value: CatalogPersonFamily(units: []))
+        session.setQueryValue(detailKey("extra"), value: detail("extra"))
+        await show("e1")
+        #expect(!holds(detailKey("extra")))
+        #expect(holds(familyKey("e1")))
+        #expect(holds(detailKey("e2")))
+
+        await show("e52")
+        #expect(!holds(detailKey("e2")))
+        #expect(holds(detailKey("e1")) && holds(familyKey("e1")))
+        #expect(holds(detailKey("e3")))
+    }
+
+    /// The detail with a name field citing "s-field", a birth row whose owner's
+    /// field cites "s-owner", and a picture whose record cites "s-pic".
+    private func citedDetail(_ id: String) -> CatalogConclusionDetail {
+        typealias Display = ReconciledValueDisplayTests
+        var cited = detail(id)
+        cited.fields = [Display.field("kept", outcomes: [Display.outcome("o1", "kept", source: "s-field")])]
+        cited.derivedRows = [CatalogDerivedRow(kind: .birthDate, owners: [CatalogOwnerField(
+            entity: CatalogCanonicalEntity(id: "ev1", ref: "EVT-1", subjectTypeID: "t", label: ""),
+            field: Display.field("kept", key: "date", outcomes: [Display.outcome("o2", "kept", source: "s-owner")])
+        )])]
+        cited.pictures = [CatalogPicture(imageRelPath: "objects/p", record: Display.outcome("o3", "kept", source: "s-pic"))]
+        return cited
+    }
+
+    /// T-1 (AC-1.1 - AC-1.4): the detail follows the Sources its field outcomes,
+    /// derived-row owners and pictures cite; a visible page reloads, a hidden one
+    /// goes stale.
+    @Test func detailFollowsTheSourcesItsRecordsCite() async {
+        let store = FakeStore()
+        store.seededConclusionDetails = ["e1": citedDetail("e1")]
+        let session = makeSession(store: store)
+        let key = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "e1")
+        session.setQueryValue(key, value: citedDetail("e1"))
+
+        for id in ["s-field", "s-owner", "s-pic"] {
+            #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: [id])) == [key])
+        }
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s-other"])).isEmpty)
+
+        session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: nil))
+        await session.settleWrites()
+        let handle: QueryHandle<CatalogConclusionDetail> = session.query(key)
+        var renamed = citedDetail("e1")
+        renamed.memberCount = 2
+        store.seededConclusionDetails = ["e1": renamed]
+        session.apply(CatalogWriteEffects(sourceScopes: ["s-pic"]))
+        #expect(handle.isFetching)
+        await session.settleWrites()
+        #expect(handle.value == renamed)
+        #expect(handle.value != citedDetail("e1"))
+        #expect(!handle.isStale)
+
+        session.apply(location: .sectionRoot(.persons))
+        session.apply(CatalogWriteEffects(sourceScopes: ["s-pic"]))
+        #expect(handle.value == renamed)
+        #expect(handle.isStale)
+        #expect(!handle.isFetching)
     }
 
     /// T-8 (AC-4.3): a warmed family key follows every touched handle, a

@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-09 — Conclusion pages refresh from the Sources they cite and show their last value while they refresh
+
+**Landed 2026-11-10** in [#780](https://github.com/mendahu/provenencia/pull/780). Renaming a Source, or fixing a Citation's label or page or an Artifact's label, now reaches the Vitals provenance sheet, the Gallery captions and the viewer's record row on every Person, Event and Place page that cites it. Going Back to a page shows its last value at once with "Refreshing" instead of a spinner: a write marks hidden pages stale rather than dropping them, only an entity a write deleted is dropped, and at most 50 hidden entities keep their pages. The unused `CatalogQueryStalePolicy` is gone. Version 0.8.1.
+
 ## S16-04 — The Person page says when a reload failed or the diagram is partial
 
 **Landed 2026-11-10** in [#776](https://github.com/mendahu/provenencia/pull/776). When a Person page's reload fails, the page keeps what it showed and says so with an announced Try again notice where that read failed: under the section switcher for the page's own read, above the rows for a section's read, at the top of the diagram column for the record links read; a first load that fails offers Try again too. A person deleted or merged in another window leaves with "This person no longer exists", also when the page was already shown. `QueryHandle` gains `reading`, `failureRevision` and `isReading`, and `PVRetryCallout(failureRevision:)` speaks again for each new failure and keeps the keyboard on Try again after a press; the Evidence graph and Promote use it. A read past `MaxReadWork` sends no record link, and the diagram says when it is partial (not compared, lines dropped, or more than 1,000 records); in a diagram with lines left out, a record with no line is not spoken as sharing no one. Version 0.7.1.

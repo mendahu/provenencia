@@ -19,6 +19,10 @@ final class WorkspaceSession {
     private var inFlight: [CatalogQueryKey: (generation: Int, task: Task<Void, Never>)] = [:]
     /// Keys of the place on screen, from the last `apply(location:)`.
     private(set) var visibleKeys: Set<CatalogQueryKey> = []
+    /// The entities whose pages were shown, least recently shown first (D-5).
+    private var shownOrder: [String] = []
+    /// Hidden entities whose per-entity keys stay cached.
+    static let maxHiddenEntities = 50 // decided: user, 2026-11-08
     /// Transient notice after leaving a place (composer save, etc.).
     var noticeToast: VocabularyToast?
     /// Recounts the sidebar after a write whose effects report the `counts` list (`WriteEffects.lists`). Set by `WorkspaceView`.
@@ -228,9 +232,30 @@ final class WorkspaceSession {
         for key in place.queryKeys {
             key.kind.descriptor.warm(self, key)
         }
+        var onScreen = Set<String>()
+        for key in place.queryKeys where key.kind.descriptor.isEntityPage {
+            guard let id = key.ownId else { continue }
+            onScreen.insert(id)
+            shownOrder.removeAll { $0 == id }
+            shownOrder.append(id)
+        }
+        trimHiddenEntities(keeping: onScreen)
     }
 
-    /// The one application of a write. Patches in place first, with no load:
+    /// Keeps at most `maxHiddenEntities` hidden entities' per-entity keys: past
+    /// that, the least recently shown go, every key of an entity at once. An
+    /// entity no place showed counts as least recently shown. The entities on
+    /// screen are never hidden, whichever of their keys the place warms.
+    private func trimHiddenEntities(keeping onScreen: Set<String>) {
+        let hidden = Set(warmedKeys(deletedWith: .handle).map(\.id).filter { !onScreen.contains($0) })
+        guard hidden.count > Self.maxHiddenEntities else { return }
+        let ordered = hidden.subtracting(shownOrder).sorted() + shownOrder.filter(hidden.contains)
+        evict(.handle, ids: Set(ordered.prefix(hidden.count - Self.maxHiddenEntities)))
+    }
+
+    /// The one application of a write. First it evicts the hidden keys of the
+    /// entities the effects deleted (`evict(_:ids:)`; a visible key is left to
+    /// the pass below, which reloads it and reads gone). Then it patches in place, with no load:
     /// each warmed key runs its descriptor `patches` in order (last-updated
     /// cells from the effects, then an enriched Source row and page shell).
     /// Then it revalidates, once per key through one dedupe set, the union of
@@ -239,7 +264,7 @@ final class WorkspaceSession {
     /// `refreshes` follow what the effects reported (`revalidatedKeys`: ids, the
     /// catalog-wide lists, structure), the keys a patch
     /// found with their first load still in flight, and the keys a `.run`
-    /// refresh cannot run for. Keys the registry evicts or marks stale when
+    /// refresh cannot run for. Keys the registry marks stale when
     /// hidden are not loaded unless on screen. Last, it starts each warmed
     /// key's `.run` refreshes for the ids the effects reported (graph
     /// progress per graph, the graph list per Source, only the ids named),
@@ -253,6 +278,9 @@ final class WorkspaceSession {
     /// call `apply`; they do not query afterward or tell sibling views to
     /// refresh.
     func apply(_ effects: CatalogWriteEffects = .empty, _ mutation: CatalogMutation? = nil) {
+        for deleted in effects.deleted {
+            evict(deleted.entity, ids: Set(deleted.ids))
+        }
         let awaiting = applyPatches(effects, mutation)
         let invalidated = mutation.map { cachedKeys(for: registry.invalidations(by: $0, project: projectKey)) } ?? []
         let refreshed = revalidatedKeys(for: effects)
@@ -288,10 +316,10 @@ final class WorkspaceSession {
         }
     }
 
-    /// A write that deleted the entity the page shows. Applies the effects (and the mutation, when
-    /// one names a key the effects cannot) with every key hidden, so the page's own keys are evicted
-    /// and no list loads, then runs `leave`, which moves to the next place and loads its keys once.
-    /// Nothing reads the deleted id in between.
+    /// A write that deleted the entity the page shows. Every key is hidden first so no list loads;
+    /// each leaving key then follows `apply` (evicted when `effects.deleted` names its entity for
+    /// its kind, else its hidden policy), then `leave` runs, which moves to the next place and
+    /// loads its keys once. Nothing reads the deleted id in between.
     func apply(
         _ effects: CatalogWriteEffects,
         _ mutation: CatalogMutation? = nil,
@@ -386,13 +414,11 @@ final class WorkspaceSession {
     }
 
     /// What an invalidated key does: a visible one reloads, a hidden one
-    /// follows its descriptor's `whenHidden` (evict, mark stale, or reload).
+    /// follows its descriptor's `whenHidden` (mark stale, or reload).
     /// The one path for a registry invalidation and for a descriptor
     /// `refreshes` entry that revalidates a key rather than patching it.
     func applyHiddenPolicy(to key: CatalogQueryKey) {
         switch effectivePolicy(for: key) {
-        case .evict:
-            evict(key)
         case .markStale:
             // The old value stays; the next `query` reloads it.
             handles[key]?.markStale()
@@ -470,6 +496,25 @@ final class WorkspaceSession {
         inFlight[key]?.task.cancel()
         inFlight[key] = nil
         handles[key]?.markStale()
+    }
+
+    /// This project's warmed keys whose descriptor's `deletedWith` is `entity`,
+    /// each with its `ownId`.
+    private func warmedKeys(deletedWith entity: CatalogDeletedEntity) -> [(key: CatalogQueryKey, id: String)] {
+        handles.keys.compactMap { key in
+            guard key.project == projectKey, key.kind.descriptor.deletedWith == entity, let id = key.ownId else { return nil }
+            return (key, id)
+        }
+    }
+
+    /// Drops the hidden keys of `entity` whose `ownId` is in `ids`. It works key
+    /// by key (a visible key stays: its page holds no handle across an
+    /// eviction), where the cap works entity by entity.
+    private func evict(_ entity: CatalogDeletedEntity, ids: Set<String>) {
+        for (key, id) in warmedKeys(deletedWith: entity) where ids.contains(id) && !visibleKeys.contains(key) {
+            evict(key)
+        }
+        if entity == .handle { shownOrder.removeAll { ids.contains($0) } }
     }
 
     /// Drops a key: its in-flight load is cancelled and its handle forgotten,

@@ -214,6 +214,12 @@ struct CatalogQueryRefresh: Sendable {
         return CatalogQueryRefresh(follows: follows, action: .revalidate { session, key in ids(session, key) })
     }
 
+    /// `applyHiddenPolicy(follows:ids:)` for a key whose id is the one row it
+    /// names (`CatalogQueryKey.ownId`).
+    static func applyHiddenPolicy(followsOwnId follows: CatalogQueryFollows) -> CatalogQueryRefresh {
+        .applyHiddenPolicy(follows: follows) { _, key in key.ownId.map { [$0] } ?? [] }
+    }
+
     /// A refresh whose ids come from the key's cached `Value`. Until the key
     /// holds a value its first load is in flight and its ids are unknown, so
     /// the refresh matches any id the slot names.

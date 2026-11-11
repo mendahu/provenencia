@@ -333,7 +333,7 @@ struct PropertiesModelTests {
     }
 
     /// T-9 (AC-1.1): a Property relabel reports `property_vocabulary`; a hidden
-    /// Person page is evicted, the hidden Persons list is marked stale, and the
+    /// Person page and the hidden Persons list are marked stale, and the
     /// Properties page reloads.
     @Test func renamingAPropertyStalesConclusionPages() async throws {
         let store = FakeStore()
@@ -355,7 +355,7 @@ struct PropertiesModelTests {
         await session.settleWrites()
 
         let detail: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
-        #expect(detail == nil)
+        #expect(detail?.isStale == true)
         let list: QueryHandle<[CatalogPersonSummary]>? = session.queryHandle(listKey)
         #expect(list?.isStale == true)
         #expect(store.getPropertiesWorkspaceCalls == baseline + 1)

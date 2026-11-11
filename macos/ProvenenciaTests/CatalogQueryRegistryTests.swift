@@ -438,12 +438,38 @@ struct CatalogQueryRegistryTests {
     @Test func hiddenPolicies() {
         let registry = CatalogQueryRegistry.standard
         let project = ProjectKey(projectDir: projectDir)
-        #expect(registry.hiddenPolicy(.conclusionDetail(project: project, entityId: "e1")) == .evict)
+        #expect(registry.hiddenPolicy(.conclusionDetail(project: project, entityId: "e1")) == .markStale)
         #expect(registry.hiddenPolicy(.personsList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.eventsList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.placesList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.sourcesList(project: project)) == .markStale)
         #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
+    }
+
+    @Test func ownIdNamesTheKeysOneRow() {
+        let project = ProjectKey(projectDir: projectDir)
+        #expect(CatalogQueryKey.conclusionDetail(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personClaims(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personFamily(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personEvents(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personRecordLinks(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.evidenceGraph(project: project, graphId: "g1").ownId == "g1")
+        #expect(CatalogQueryKey.citationCounts(project: project, graphId: "g1").ownId == "g1")
+        #expect(CatalogQueryKey.propertyTerms(project: project, propertyId: "p1").ownId == "p1")
+        #expect(CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1").ownId == nil)
+        #expect(CatalogQueryKey.personsList(project: project).ownId == nil)
+        #expect(CatalogQueryKey.citationsByArtifact(project: project, graphId: "g1", artifactId: "a1").ownId == nil)
+
+        for key in [
+            CatalogQueryKey.conclusionDetail(project: project, entityId: "e1"),
+            .personClaims(project: project, entityId: "e1"),
+            .personFamily(project: project, entityId: "e1"),
+            .personEvents(project: project, entityId: "e1"),
+            .personRecordLinks(project: project, entityId: "e1"),
+        ] {
+            #expect(key.kind.descriptor.deletedWith == .handle)
+        }
+        #expect(CatalogQueryKey.Kind.sourceWorkspace.descriptor.deletedWith == nil)
     }
 
     @Test func everyKindHasOneDescriptor() {
@@ -837,7 +863,7 @@ struct CatalogQueryRegistryTests {
     @Test func sessionUsesStandardRegistryByDefault() {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
-        #expect(session.registry.stalePolicy(for: key) == .sessionFresh)
+        #expect(session.registry.hiddenPolicy(key) == .markStale)
     }
 
     @Test func invalidationsComeFromRegistrySpecs() {
@@ -892,7 +918,7 @@ struct CatalogQueryRegistryTests {
         }
         #expect(
             CatalogQueryKey.Kind.conclusionDetail.descriptor.refreshes.map(\.follows)
-                == [.touchedHandles, .list(.propertyVocabulary)]
+                == [.touchedHandles, .source, .list(.propertyVocabulary)]
         )
         #expect(
             CatalogQueryKey.Kind.personClaims.descriptor.refreshes.map(\.follows)
@@ -1411,7 +1437,7 @@ struct CatalogQueryRegistryTests {
     }
 
     /// A write that touches a handle revalidates the cached `personClaims` key through `touchedHandles`;
-    /// the key is evicted while hidden.
+    /// the key is marked stale while hidden.
     @Test func personClaimsRevalidateOnTouchedHandle() {
         let session = makeSession()
         let project = session.projectKey
@@ -1420,8 +1446,7 @@ struct CatalogQueryRegistryTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
         #expect(key.kind == .personClaims)
         #expect(key.project == project)
-        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
     }
 
     /// T-11 (AC-2.4): the key loads through the store; an unseeded handle is
@@ -1446,7 +1471,7 @@ struct CatalogQueryRegistryTests {
     }
 
     /// A write that touches a handle revalidates the cached `personFamily` key through `touchedHandles`;
-    /// the key is evicted while hidden.
+    /// the key is marked stale while hidden.
     @Test func personFamilyRevalidateOnTouchedHandle() {
         let session = makeSession()
         let project = session.projectKey
@@ -1455,8 +1480,7 @@ struct CatalogQueryRegistryTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
         #expect(key.kind == .personFamily)
         #expect(key.project == project)
-        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
         #expect(CatalogQueryKey.Kind.personFamily.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
@@ -1492,7 +1516,7 @@ struct CatalogQueryRegistryTests {
     }
 
     /// A write that touches a handle revalidates the cached `personEvents` key through `touchedHandles`;
-    /// the key is evicted while hidden.
+    /// the key is marked stale while hidden.
     @Test func personEventsRevalidateOnTouchedHandle() {
         let session = makeSession()
         let project = session.projectKey
@@ -1501,15 +1525,14 @@ struct CatalogQueryRegistryTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
         #expect(key.kind == .personEvents)
         #expect(key.project == project)
-        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
         #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
     /// A write that names a graph the value holds, or the Person's own handle,
     /// revalidates the cached `personRecordLinks` key; a write that names only a
-    /// handle and a graph it does not hold does not. The key is evicted while
-    /// hidden.
+    /// handle and a graph it does not hold does not. The key is marked stale
+    /// while hidden.
     @Test func personRecordLinksRevalidate() {
         let session = makeSession()
         let project = session.projectKey
@@ -1524,8 +1547,7 @@ struct CatalogQueryRegistryTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(lists: [.propertyVocabulary])).contains(key))
         #expect(key.kind == .personRecordLinks)
         #expect(key.project == project)
-        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .evict)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
+        #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
         #expect(
             CatalogQueryKey.Kind.personRecordLinks.descriptor.refreshes.map(\.follows)
                 == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]

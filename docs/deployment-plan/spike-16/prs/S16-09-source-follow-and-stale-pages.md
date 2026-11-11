@@ -1,6 +1,6 @@
 # S16-09 — Conclusion pages refresh from the Sources they cite and show their last value while they refresh
 
-**Status:** Planned
+**Status:** Landed in [#780](https://github.com/mendahu/provenencia/pull/780) (2026-11-10)
 **Spike / slice:** Spike 16 · Slice 1b — Current data and honest notices
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a page shown stale draws the header's existing "Refreshing" line and its existing content; no view gains or loses a part)
@@ -12,6 +12,7 @@
 **Skills to load:** [`add-workspace-place`](../../../../.agents/skills/add-workspace-place/SKILL.md), [`add-swift-test`](../../../../.agents/skills/add-swift-test/SKILL.md)
 **Rules that bind:** `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** [audit](../person-page-audit.md) P-6; [cache design](../cache-architecture.md) "Stale while refreshing"; working rules: "(Batch 1) A cached detail follows the Sources its records cite", "(Batch 2) Swift caches one value per view, follows its inputs and shows it stale while refreshing", "(Batch 2) The point of this batch is simpler code" (binds the stale half), "(Batch 1) A refresh failure is read beside its value" (S16-04's reading); [`macos-client-patterns.md`](../../../macos-client-patterns.md) rule 2 and "Conclusion keys"
+**Landed:** Version 0.8.0 → 0.8.1 (`main` had moved past the 0.7.1 the header named). Differences from the plan: the Source follow, the stale policy and the deleted eviction (STEP-2 to STEP-4) are one commit, since they edit the same descriptors and tests; `CatalogQueryRegistryTests.invalidationsComeFromRegistrySpecs`'s detail follows list gained `.source`; `applyTriggerStalesHiddenDetailPagesAndRevalidatesTheVisibleOne` also expects the hidden second page stale where it expected nil. The manual check (section 10) was not run.
 **Planned:** 2026-11-10 against `main` @ `cd03582`. The Swift steps need a Mac with Xcode (`xcodebuild`); the `rg` sweeps and `scripts/check-plan-docs.py` run anywhere
 **Review:** [`S16-09-source-follow-and-stale-pages.review.md`](S16-09-source-follow-and-stale-pages.review.md) — Fits with changes — Ready with changes, 2 rounds; no open blocker; To user: the Batch 1 rule clause (D-12)
 
