@@ -32,6 +32,7 @@
 
 - The version bump is 0.9.0 → 0.9.1 (main was at 0.9.0).
 - Round 1 (UX-2, user decision 2026-11-11): a `PVSegmentedControl` with a `focus:` handle is one Tab stop and ←/→ move the selection, not one Tab stop per segment; the Out line, §6 States and manual check step 2 changed to match (F-1).
+- Round 3 (user request 2026-11-11, F-5): the auto-reconciler's provisional outcome reads "provisional record" (was "provisional member"), so the page keeps one word for a person's records.
 
 ## 1. Objective
 

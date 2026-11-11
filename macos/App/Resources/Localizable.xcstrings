@@ -17101,13 +17101,13 @@
       }
     },
     "conclusions.outcome.provisional": {
-      "comment": "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only",
+      "comment": "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "provisional member"
+            "value": "provisional record"
           }
         }
       }

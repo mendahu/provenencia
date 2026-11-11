@@ -9189,8 +9189,8 @@ enum L10n {
 
         static let outcomeProvisional = LocalizedStringResource(
             "conclusions.outcome.provisional",
-            defaultValue: "provisional member",
-            comment: "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only"
+            defaultValue: "provisional record",
+            comment: "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only"
         )
 
         static let outcomeNoEvidence = LocalizedStringResource(
