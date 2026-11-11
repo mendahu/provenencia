@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/valuerules"
@@ -41,7 +42,7 @@ func TestLoad(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		rules, key, err := valuerules.Load(nil, db)
+		rules, key, err := valuerules.Load(graphcache.Over(db))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +67,7 @@ func TestLoad(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		rules, key, err := valuerules.Load(nil, db)
+		rules, key, err := valuerules.Load(graphcache.Over(db))
 		if err != nil {
 			t.Fatal(err)
 		}

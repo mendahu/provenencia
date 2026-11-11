@@ -6,8 +6,10 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/kinship"
+	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -32,22 +34,6 @@ type pivotResult struct {
 	links []kinship.Implied
 }
 
-// kinshipSlot is where results are stored on the graph. A commit drops a
-// result for each handle it touches and for each neighbor of those: an event
-// result reads the event's links, a chain result reads the person's links and
-// the results of their events, and both are one hop from what they read.
-var kinshipSlot graphcache.MemoSlot
-
-// siblingSlot is where each person's implied siblings are stored, for the page.
-// A sibling is two to four hops away, past what Deps can name, so any commit that
-// names a handle drops the whole slot.
-var siblingSlot graphcache.MemoSlot
-
-// forSlot is where each person's full For answer is stored. It reads nodes up
-// to three hops from the person (a birth, the parent, the parent's events), so
-// any commit that names a handle drops the whole slot.
-var forSlot graphcache.MemoSlot
-
 // personAnswer is one person's stored answer, For's or the siblings'. It is
 // shared and read-only.
 type personAnswer struct {
@@ -55,36 +41,69 @@ type personAnswer struct {
 	links []kinship.Implied
 }
 
+// maxKeys caps each kinship entry: a crafted catalog cannot grow one past it,
+// and a key not stored is derived again on read.
+const maxKeys = 65_536
+
+// pivots holds what each event, or each person as the parent between, implies.
+// A commit drops a result for each handle it touches and for each neighbor of
+// those: an event result reads the event's links, a chain result reads the
+// person's links and the results of their events, and both are one hop from
+// what they read.
+var pivots graphcache.Keyed[pivotResult]
+
+// forAnswers holds each person's full For answer. It reads nodes up to three
+// hops from the person (a birth, the parent, the parent's events), past what
+// the pivots' Apply can name, so any commit that names a handle drops all of
+// it. S16-16 deletes this entry.
+var forAnswers graphcache.Keyed[personAnswer]
+
+// siblingAnswers holds each person's implied siblings, for the page. A sibling
+// is two to four hops away, so any commit that names a handle drops all of it.
+// S16-16 deletes this entry.
+var siblingAnswers graphcache.Keyed[personAnswer]
+
 func init() {
-	kinshipSlot = graphcache.RegisterNodeMemo(graphcache.NodeMemo{
-		Name:             "canonlinks.kinship",
-		Check:            check,
-		Deps:             deps,
-		DropOnVocabulary: true,
+	pivots = graphcache.RegisterKeyed(graphcache.KeyedEntry[pivotResult]{
+		Name:        "canonlinks.kinship",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
+		Apply: func(g *graphcache.Graph, k graphcache.Keyed[pivotResult], roots [][]byte, _ effects.Set) error {
+			k.Drop(g, roots)
+			k.Drop(g, deps(g, roots))
+			return nil
+		},
+		Check: check,
+		Cap:   maxKeys,
 	})
-	forSlot = graphcache.RegisterNodeMemo(graphcache.NodeMemo{
-		Name:               "canonlinks.for",
-		Check:              checkFor,
-		DropOnVocabulary:   true,
-		DropOnHandleCommit: true,
+	forAnswers = graphcache.RegisterKeyed(graphcache.KeyedEntry[personAnswer]{
+		Name:        "canonlinks.for",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
+		Apply:       clearOnHandles[personAnswer],
+		Check:       checkFor,
+		Cap:         maxKeys,
 	})
-	siblingSlot = graphcache.RegisterNodeMemo(graphcache.NodeMemo{
-		Name:               "canonlinks.siblings",
-		Check:              checkSiblings,
-		DropOnVocabulary:   true,
-		DropOnHandleCommit: true,
+	siblingAnswers = graphcache.RegisterKeyed(graphcache.KeyedEntry[personAnswer]{
+		Name:        "canonlinks.siblings",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}},
+		Apply:       clearOnHandles[personAnswer],
+		Check:       checkSiblings,
+		Cap:         maxKeys,
 	})
+}
+
+// clearOnHandles empties the entry when a commit names any handle.
+func clearOnHandles[T any](g *graphcache.Graph, k graphcache.Keyed[T], roots [][]byte, _ effects.Set) error {
+	if len(roots) > 0 {
+		k.Clear(g)
+	}
+	return nil
 }
 
 // checkPersonAnswer rebuilds a stored per-person answer from the cached nodes
 // and compares. derive makes the answer for one id with a deriver that loads
 // nothing; found is false when the id has no answer to make.
-func checkPersonAnswer(derive func(d *deriver, id []byte) (links []kinship.Implied, found bool, err error)) graphcache.MemoCheck {
-	return func(g *graphcache.Graph, id []byte, stored any) error {
-		res, ok := stored.(personAnswer)
-		if !ok {
-			return fmt.Errorf("canonlinks: stored answer %x has type %T", id, stored)
-		}
+func checkPersonAnswer(derive func(d *deriver, id []byte) (links []kinship.Implied, found bool, err error)) func(g *graphcache.Graph, id []byte, res personAnswer) error {
+	return func(g *graphcache.Graph, id []byte, res personAnswer) error {
 		d, err := newDeriver(g, res.rules, cachedNodes(g))
 		if err != nil {
 			return err
@@ -122,7 +141,7 @@ var checkSiblings = checkPersonAnswer(func(d *deriver, id []byte) ([]kinship.Imp
 })
 
 // deps names every neighbor of each root, and the root.
-func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
+func deps(g *graphcache.Graph, roots [][]byte) [][]byte {
 	var out [][]byte
 	for _, id := range roots {
 		out = append(out, id)
@@ -130,15 +149,11 @@ func deps(g *graphcache.Graph, roots [][]byte) ([][]byte, error) {
 			out = append(out, neighborsOf([]*graphcache.Node{n})...)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // check rebuilds a stored result from the cached nodes and compares.
-func check(g *graphcache.Graph, id []byte, stored any) error {
-	res, ok := stored.(pivotResult)
-	if !ok {
-		return fmt.Errorf("canonlinks: stored result %x has type %T", id, stored)
-	}
+func check(g *graphcache.Graph, id []byte, res pivotResult) error {
 	// The check must not load: it reads only nodes already cached.
 	d, err := newDeriver(g, res.rules, cachedNodes(g))
 	if err != nil {
@@ -333,9 +348,10 @@ type Reader struct {
 	d *deriver
 }
 
-// NewReader loads the catalog's bridge terms and event type property once.
-func NewReader(g *graphcache.Graph, rules kinship.Rules) (*Reader, error) {
-	d, err := newDeriver(g, rules, loadingNodes(g))
+// NewReader loads the catalog's bridge terms and event type property once. It
+// reads with the registry's kinship rules.
+func NewReader(g *graphcache.Graph) (*Reader, error) {
+	d, err := newDeriver(g, matchregistry.Default().Kinship, loadingNodes(g))
 	if err != nil {
 		return nil, err
 	}
@@ -343,19 +359,13 @@ func NewReader(g *graphcache.Graph, rules kinship.Rules) (*Reader, error) {
 }
 
 // pivot returns the stored result of kind for id, deriving and storing it when
-// there is none or it was made under other rules.
+// there is none.
 func (r *Reader) pivot(kind pivotKind, id []byte, derive func() ([]kinship.Implied, error)) ([]kinship.Implied, error) {
-	if v, ok := r.g.Memo(kinshipSlot, id); ok {
-		if res, ok := v.(pivotResult); ok && res.kind == kind && res.rules == r.d.rules {
-			return res.links, nil
-		}
-	}
-	links, err := derive()
-	if err != nil {
-		return nil, err
-	}
-	r.g.SetMemo(kinshipSlot, id, pivotResult{kind: kind, rules: r.d.rules, links: links})
-	return links, nil
+	res, err := pivots.Get(r.g, id, func() (pivotResult, error) {
+		links, err := derive()
+		return pivotResult{kind: kind, rules: r.d.rules, links: links}, err
+	})
+	return res.links, err
 }
 
 func (r *Reader) event(id []byte) ([]kinship.Implied, error) {
@@ -366,17 +376,6 @@ func (r *Reader) chain(id []byte) ([]kinship.Implied, error) {
 	return r.pivot(pivotChain, id, func() ([]kinship.Implied, error) { return r.d.chainLinks(id, r.event) })
 }
 
-// answer returns the stored answer of slot for id, when there is one made under
-// the reader's rules.
-func (r *Reader) answer(slot graphcache.MemoSlot, id []byte) ([]kinship.Implied, bool) {
-	if v, ok := r.g.Memo(slot, id); ok {
-		if res, ok := v.(personAnswer); ok && res.rules == r.d.rules {
-			return res.links, true
-		}
-	}
-	return nil, false
-}
-
 // For returns every spouse, parent and grandparent link the patterns imply
 // with id as an end: the links of each event id stands in, then the chain links
 // through each parent and child of id. The answer is stored until the next
@@ -384,19 +383,25 @@ func (r *Reader) answer(slot graphcache.MemoSlot, id []byte) ([]kinship.Implied,
 // and read-only. Links from different pivots differ in Event or Through, so
 // none is repeated.
 func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
-	if links, ok := r.answer(forSlot, id); ok {
-		return links, nil
-	}
-	n, err := r.d.around(id)
-	if err != nil || n == nil {
-		return nil, err
-	}
-	out, err := r.d.forLinks(id, r.event, r.chain)
+	absent := false
+	ans, err := forAnswers.Get(r.g, id, func() (personAnswer, error) {
+		n, err := r.d.around(id)
+		if err != nil || n == nil {
+			absent = n == nil
+			return personAnswer{}, err
+		}
+		out, err := r.d.forLinks(id, r.event, r.chain)
+		return personAnswer{rules: r.d.rules, links: out}, err
+	})
 	if err != nil {
 		return nil, err
 	}
-	r.g.SetMemo(forSlot, id, personAnswer{rules: r.d.rules, links: out})
-	return out, nil
+	if absent {
+		// An id that is no node has no answer to keep.
+		forAnswers.Drop(r.g, [][]byte{id})
+		return nil, nil
+	}
+	return ans.links, nil
 }
 
 // Options are what Relationships returns beyond the person's recorded and
@@ -426,11 +431,11 @@ func (r *Reader) Relationships(id []byte, opts Options) ([]kinship.Link, error) 
 		set.AddImplied(imp)
 	}
 	if opts.Siblings {
-		if err := r.LoadSiblings([][]byte{id}); err != nil {
+		answers, err := r.siblings([][]byte{id})
+		if err != nil {
 			return nil, err
 		}
-		siblings, _ := r.answer(siblingSlot, id)
-		for _, imp := range siblings {
+		for _, imp := range answers[string(id)].links {
 			set.AddImplied(imp)
 		}
 	}
@@ -462,25 +467,24 @@ func (r *Reader) LoadRelationships(ids [][]byte, opts Options) error {
 // stored, loading every id's nodes in a fixed number of batches. An id that is
 // no node stores nothing.
 func (r *Reader) LoadSiblings(ids [][]byte) error {
-	var need [][]byte
-	for _, id := range ids {
-		if _, ok := r.answer(siblingSlot, id); !ok {
-			need = append(need, id)
+	_, err := r.siblings(ids)
+	return err
+}
+
+// siblings is each id's stored sibling answer, derived for those without one.
+// An id that is no node has no entry.
+func (r *Reader) siblings(ids [][]byte) (map[string]personAnswer, error) {
+	return siblingAnswers.GetMany(r.g, ids, func(missing [][]byte) (map[string]personAnswer, error) {
+		answers, err := r.d.siblingsOf(missing, r.event)
+		if err != nil {
+			return nil, err
 		}
-	}
-	if len(need) == 0 {
-		return nil
-	}
-	answers, err := r.d.siblingsOf(need, r.event)
-	if err != nil {
-		return err
-	}
-	for _, id := range need {
-		if links, ok := answers[string(id)]; ok {
-			r.g.SetMemo(siblingSlot, id, personAnswer{rules: r.d.rules, links: links})
+		out := make(map[string]personAnswer, len(answers))
+		for key, links := range answers {
+			out[key] = personAnswer{rules: r.d.rules, links: links}
 		}
-	}
-	return nil
+		return out, nil
+	})
 }
 
 // stepped is one id's node, its parent links for a canon read, and the people

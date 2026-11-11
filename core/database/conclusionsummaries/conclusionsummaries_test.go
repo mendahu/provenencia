@@ -280,6 +280,8 @@ func TestSummariesShowKeptValuesOnly(t *testing.T) {
 
 func TestListPersonsQueryCountIsConstant(t *testing.T) {
 	f := newFixture(t)
+	// An open project holds its name format from open; a Drop leaves it.
+	must(t, nameformats.Warm(f.C))
 	gender := func(s subjects.Subject) {
 		f.Cite(f.Artifact, s, observations.Input{PropertyID: f.Prop("gender").ID, ValueTermID: f.Term("gender", "woman").ID})
 	}
@@ -860,9 +862,7 @@ func TestListOrderIsByShownTitle(t *testing.T) {
 func TestPersonListOrder(t *testing.T) {
 	f := newFixture(t)
 	must(t, nameformats.Install(f.C))
-	db, err := f.C.DB()
-	must(t, err)
-	loaded, err := nameformats.LoadFor(f.C.Graph(), db)
+	loaded, err := nameformats.LoadFor(f.C.Graph())
 	must(t, err)
 	western := loaded.Profile
 	part := func(typ, v string) namevalue.Part { return namevalue.Part{Type: typ, Value: v} }

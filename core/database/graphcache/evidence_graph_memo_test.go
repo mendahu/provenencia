@@ -5,10 +5,11 @@ import (
 
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
 // T-20: an Evidence graph's memo lives as long as the graph is loaded, and a
-// drop of the graph, Drop, a vocabulary change and SetAliasIndex each clear it.
+// drop of the graph, Drop, and a vocabulary change each clear it.
 func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 	f := newWalkFixture(t)
 	g := f.C.Graph()
@@ -81,11 +82,13 @@ func TestEvidenceGraphMemoDroppedWithSource(t *testing.T) {
 			t.Error("a vocabulary commit left the memo")
 		}
 	})
-	t.Run("SetAliasIndex", func(t *testing.T) {
+	t.Run("a catalog entry set", func(t *testing.T) {
+		defer graphcache.SnapshotRegistryForTest()()
+		w := graphcache.RegisterWhole(graphcache.WholeEntry[string]{Name: "t.memo", Lifetime: graphcache.LifeCatalog})
 		load(t)
-		g.SetAliasIndex(nil)
-		if held() {
-			t.Error("SetAliasIndex left the memo")
+		w.Set(g, "v")
+		if !held() {
+			t.Error("a change to a catalog entry dropped the memo")
 		}
 	})
 }

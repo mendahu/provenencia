@@ -54,11 +54,6 @@ type profiler struct {
 }
 
 func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string) (*profiler, error) {
-	vocab, err := g.Vocabulary()
-	if err != nil {
-		return nil, err
-	}
-	props := vocab.PropertiesByID()
 	// Profiles are kept with the match index, for one name pattern at a time:
 	// this profiler shares the index's map when it has one for this pattern,
 	// and starts its own otherwise. keep stores a map into the index.
@@ -67,6 +62,17 @@ func newProfiler(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectc
 	if done == nil || m.profilesPattern != namePattern {
 		done = map[string]profile{}
 	}
+	return newProfilerWith(g, metas, rules, namePattern, done)
+}
+
+// newProfilerWith is newProfiler over a given profile map: a check passes an
+// empty one so it shares nothing with the stored index.
+func newProfilerWith(g *graphcache.Graph, metas subjectcompare.Metas, rules subjectcompare.Rules, namePattern string, done map[string]profile) (*profiler, error) {
+	vocab, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	props := vocab.PropertiesByID()
 	return &profiler{
 		g: g, props: props, eventTypeProp: vocab.PropertyID(vocabkey.PropertyEventType, vocabkey.OriginProvenencia), terms: vocab.TermsByID(), metas: metas, types: vocab.TypeIDsByKey(), typeKeys: vocab.TypeKeysByID(), rules: rules,
 		reconcile: autoreconciler.ValueRules, namePattern: namePattern,
@@ -84,7 +90,7 @@ func (p *profiler) keep() {
 		return
 	}
 	m.profiles, m.profilesPattern = p.done, p.namePattern
-	p.g.SetMatchIndex(m)
+	MatchIndex.Set(p.g, m)
 }
 
 func (p *profiler) kind(n *graphcache.Node) vocabkey.SubjectType {

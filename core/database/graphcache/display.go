@@ -1,9 +1,9 @@
 package graphcache
 
-var displayFn MemoCheck
+var displayFn func(g *Graph, id []byte, stored any) error
 
 // SetDisplayCheck registers the stored-row comparison Verify runs.
-func SetDisplayCheck(fn MemoCheck) { displayFn = fn }
+func SetDisplayCheck(fn func(g *Graph, id []byte, stored any) error) { displayFn = fn }
 
 // Display returns the stored row for id.
 func (g *Graph) Display(id []byte) (any, bool) {

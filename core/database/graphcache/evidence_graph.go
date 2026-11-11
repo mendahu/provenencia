@@ -179,8 +179,9 @@ func (g *Graph) dropEvidenceGraphs(ids [][]byte) {
 
 // EvidenceGraphMemo returns what a feature stored for a loaded Evidence graph
 // under key. It is held only while the graph is loaded: a commit that names
-// the graph, Drop, a vocabulary commit and SetAliasIndex clear it. A hit
-// counts as a use of the graph. The graph and its memos are also dropped when
+// the graph, Drop and a vocabulary commit clear it; the vocabulary loop in
+// OnCommit is the store's one hand-written drop, until S16-13 moves it onto the
+// registry. A hit counts as a use of the graph. The graph and its memos are also dropped when
 // it is the least recently used of more than maxEvidenceGraphs loaded graphs.
 // A memoized value is shared, so every reader treats it as read-only.
 func (g *Graph) EvidenceGraphMemo(graphID []byte, key string) (any, bool) {

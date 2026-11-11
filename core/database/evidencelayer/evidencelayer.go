@@ -50,8 +50,8 @@ func (l Layer) Subject(id []byte) (subjectcompare.Subject, bool) {
 // Load is the Evidence graph's layer: the one memoized on its graph, or the
 // one built, memoized. The layer reads the Evidence graph, the vocabulary, the
 // terms, the name pattern and the static registry, and the memo is dropped
-// with the graph (a commit that names its Source), a vocabulary change and new
-// alias tables. A reader never changes a layer, so every caller shares it. A
+// with the graph (a commit that names its Source) and by a vocabulary change.
+// A reader never changes a layer, so every caller shares it. A
 // graph id the cache does not find is ErrNoGraph, and nothing is stored.
 func Load(g *graphcache.Graph, graphID []byte, namePattern string) (Layer, error) {
 	if g == nil {

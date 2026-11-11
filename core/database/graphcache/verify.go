@@ -69,7 +69,7 @@ func (g *Graph) Verify() error {
 			}
 		}
 	}
-	if err := g.verifyMemos(); err != nil {
+	if err := g.verifyEntries(); err != nil {
 		return err
 	}
 	if evidenceGraphFn != nil {

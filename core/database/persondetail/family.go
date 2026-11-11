@@ -27,7 +27,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 	}
 	g := c.Graph()
 	rules := matchregistry.Default().Kinship
-	r, err := canonlinks.NewReader(g, rules)
+	r, err := canonlinks.NewReader(g)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package nameformats
 
 import (
 	"database/sql"
+	"errors"
 	"math"
 	"reflect"
 	"testing"
@@ -239,8 +240,8 @@ func TestSeedMatchesRegistryWestern(t *testing.T) {
 	}
 }
 
-// LoadFor reads the graph's warm copy without a query, and the catalog when the
-// graph is nil or cold; both give Load's answer.
+// LoadFor reads the graph's warm copy without a query, builds it once when the
+// graph holds none, and refuses a nil graph; each gives Load's answer.
 func TestLoadFor(t *testing.T) {
 	c, db := installedCatalog(t)
 	want, err := Load(db)
@@ -252,36 +253,39 @@ func TestLoadFor(t *testing.T) {
 	}
 	selects := databasetest.CountSelects(t, c)
 
-	tests := []struct {
-		name    string
-		warm    bool
-		graph   func() *graphcache.Graph
-		selects bool
-	}{
-		{"a warm graph reads no SELECT", true, c.Graph, false},
-		{"a nil graph reads the catalog", false, func() *graphcache.Graph { return nil }, true},
-		{"a cold graph reads the catalog", false, func() *graphcache.Graph { return graphcache.New(nil) }, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.warm {
-				if err := Warm(c); err != nil {
-					t.Fatal(err)
-				}
-			}
-			selects.Reset()
-			got, err := LoadFor(tt.graph(), db)
+	t.Run("a warm graph reads no SELECT", func(t *testing.T) {
+		if err := Warm(c); err != nil {
+			t.Fatal(err)
+		}
+		selects.Reset()
+		got, err := LoadFor(c.Graph())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got, want) {
+			t.Fatalf("LoadFor = %+v, Load = %+v", got, want)
+		}
+		if n := selects.N(); n != 0 {
+			t.Fatalf("LoadFor issued %d SELECTs", n)
+		}
+	})
+	t.Run("a nil graph is closed", func(t *testing.T) {
+		if _, err := LoadFor(nil); !errors.Is(err, database.ErrClosed) {
+			t.Fatalf("LoadFor(nil) error = %v, want database.ErrClosed", err)
+		}
+	})
+	t.Run("a write's graph builds once through its connection", func(t *testing.T) {
+		g := graphcache.Over(db)
+		for i := 0; i < 2; i++ {
+			got, err := LoadFor(g)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(got, want) {
 				t.Fatalf("LoadFor = %+v, Load = %+v", got, want)
 			}
-			if n := selects.N(); (n > 0) != tt.selects {
-				t.Fatalf("LoadFor issued %d SELECTs", n)
-			}
-		})
-	}
+		}
+	})
 }
 
 func TestSortKey(t *testing.T) {

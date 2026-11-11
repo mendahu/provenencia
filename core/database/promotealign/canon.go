@@ -9,7 +9,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
-	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -108,7 +107,7 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 		return handles[string(seeds[i])].Ref < handles[string(seeds[j])].Ref
 	})
 
-	reader, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	reader, err := canonlinks.NewReader(g)
 	if err != nil {
 		return graphalign.Canon{}, err
 	}

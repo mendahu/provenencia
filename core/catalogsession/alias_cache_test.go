@@ -31,7 +31,7 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 			return err
 		}
-		rules, err := namealiases.Rules(c.Graph(), db, matchregistry.Default().Value)
+		rules, err := namealiases.Rules(c.Graph(), matchregistry.Default().Value)
 		if err != nil {
 			return err
 		}
@@ -50,11 +50,7 @@ func TestDoKeepsAliasTablesForTheOpenProject(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = catalogsession.Do(created.ProjectDir, func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		rules, err := namealiases.Rules(c.Graph(), db, matchregistry.Default().Value)
+		rules, err := namealiases.Rules(c.Graph(), matchregistry.Default().Value)
 		if err != nil {
 			return err
 		}

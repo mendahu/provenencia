@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -21,6 +24,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -168,11 +172,7 @@ func TestLoadSharesPromotesMemo(t *testing.T) {
 	w := newWarmFixture(t)
 	graph := w.f.Graph(w.srcB)
 	w.f.propose(graph, nil)
-	db, err := w.f.c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, namePattern, err := valuerules.Load(w.f.c.Graph(), db)
+	_, namePattern, err := valuerules.Load(w.f.c.Graph())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,5 +311,87 @@ func TestWarmBuildsTheIndex(t *testing.T) {
 	w.f.propose(w.f.Graph(w.srcB), nil)
 	if got := promotealign.MatchIndexGenForTest(g); got != gen {
 		t.Errorf("a proposal rebuilt the index: generation %d, want %d", got, gen)
+	}
+}
+
+// The match index drops as it is declared: a Source-only commit keeps it; a
+// handle commit, a vocabulary commit, a new alias index and Drop empty it.
+func TestMatchIndexDrops(t *testing.T) {
+	w := newWarmFixture(t)
+	c := w.f.c
+	g := c.Graph()
+	warm := func() {
+		t.Helper()
+		g.Drop()
+		if err := promotealign.Warm(c); err != nil {
+			t.Fatal(err)
+		}
+		if !stored(g) {
+			t.Fatal("Warm stored no match index")
+		}
+	}
+	rev := int64(1000)
+	commit := func(set effects.Set) {
+		t.Helper()
+		rev++
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: rev}, Effects: set}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	warm()
+	commit(effects.Set{SourceScopes: [][]byte{w.f.source.ID}})
+	if !stored(g) {
+		t.Error("a Source-only commit dropped the match index")
+	}
+	commit(effects.Set{Handles: [][]byte{w.personHandle}})
+	if stored(g) {
+		t.Error("a handle commit left the match index")
+	}
+	warm()
+	commit(effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}})
+	if stored(g) {
+		t.Error("a vocabulary commit left the match index")
+	}
+	warm()
+	commit(effects.Set{Lists: []effects.List{effects.ListSourceVocabulary}})
+	if !stored(g) {
+		t.Error("a Source vocabulary commit dropped the match index")
+	}
+	namealiases.Index.Set(g, valuecompare.AliasIndex{})
+	if stored(g) {
+		t.Error("a new alias index left the match index")
+	}
+	warm()
+	g.Drop()
+	if stored(g) {
+		t.Error("Drop left the match index")
+	}
+}
+
+func stored(g *graphcache.Graph) bool {
+	_, ok, _ := promotealign.MatchIndex.Get(g)
+	return ok
+}
+
+// With PROVENENCIA_GRAPH_VERIFY=1 a commit rebuilds the stored shortlist index
+// and profiles and compares them.
+func TestVerifyChecksMatchIndex(t *testing.T) {
+	t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+	w := newWarmFixture(t)
+	c := w.f.c
+	g := c.Graph()
+	w.f.propose(w.f.Graph(w.srcB), nil)
+	if !stored(g) {
+		t.Fatal("setup: no match index")
+	}
+	if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2000}, Effects: effects.Set{SourceScopes: [][]byte{w.f.source.ID}}}); err != nil {
+		t.Fatalf("a fresh match index failed Verify: %v", err)
+	}
+	if err := promotealign.EmptyShortlistForTest(c); err != nil {
+		t.Fatal(err)
+	}
+	err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 2001}, Effects: effects.Set{SourceScopes: [][]byte{w.f.source.ID}}})
+	if err == nil || !strings.Contains(err.Error(), "promotealign.matchindex") {
+		t.Fatalf("a shortlist lacking a handle: error = %v, want one naming promotealign.matchindex", err)
 	}
 }

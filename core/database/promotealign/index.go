@@ -3,13 +3,19 @@ package promotealign
 import (
 	"bytes"
 	"cmp"
+	"errors"
+	"fmt"
+	"reflect"
 	"slices"
 	"sort"
 	"strings"
 	"sync/atomic"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/shortlist"
@@ -17,7 +23,7 @@ import (
 )
 
 // matchIndex is what Promote derives from the whole catalog and keeps in the
-// graph's match index slot. A nil field is not built yet. profiles are the
+// MatchIndex entry. A nil field is not built yet. profiles are the
 // handle profiles built so far, by handle id, under namePattern: a profile
 // reads the handle's values and the events it takes part in, so it lives as
 // long as the index does, and every handle commit drops both.
@@ -32,14 +38,30 @@ type matchIndex struct {
 // so a memo ranked against one index can tell it is not the one now stored.
 var indexGen atomic.Uint64
 
+// MatchIndex is the registry entry holding the match index. It is derived
+// from the vocabulary, the alias index and the name format, and a handle commit
+// drops it (S16-20 patches it instead). It has no Build: the profiler's shared
+// profile map is stored with it by loadShortlist and keep.
+var MatchIndex graphcache.Whole[matchIndex]
+
+func init() {
+	MatchIndex = graphcache.RegisterWhole(graphcache.WholeEntry[matchIndex]{
+		Name:        "promotealign.matchindex",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}, namealiases.Index, nameformats.Default},
+		Apply: func(g *graphcache.Graph, w graphcache.Whole[matchIndex], roots [][]byte, _ effects.Set) error {
+			if len(roots) > 0 {
+				w.Drop(g)
+			}
+			return nil
+		},
+		Check: checkMatchIndex,
+	})
+}
+
 // matchIndexOf is the stored match index, or the zero value when none is.
 func matchIndexOf(g *graphcache.Graph) matchIndex {
-	if v, ok := g.MatchIndex(); ok {
-		if m, ok := v.(matchIndex); ok {
-			return m
-		}
-	}
-	return matchIndex{}
+	m, _, _ := MatchIndex.Get(g)
+	return m
 }
 
 // loadShortlist is the catalog's shortlist index: the stored one, or one built
@@ -52,6 +74,20 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 	if m.shortlist != nil {
 		return m.shortlist, m.gen, nil
 	}
+	ix, err := buildShortlist(g, p, cfg)
+	if err != nil {
+		return nil, 0, err
+	}
+	m.shortlist = ix
+	m.gen = indexGen.Add(1)
+	MatchIndex.Set(g, m)
+	p.keep()
+	return ix, m.gen, nil
+}
+
+// buildShortlist makes a shortlist index from every unmerged handle of the
+// kinds the rules key.
+func buildShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*shortlist.Index, error) {
 	ix := shortlist.NewIndex(cfg.Alignment.Shortlist, cfg.Subject, cfg.Value, p.metas)
 	kinds := map[vocabkey.SubjectType]bool{}
 	for kind := range cfg.Alignment.Shortlist.Words {
@@ -72,7 +108,7 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 		}
 		nodes, err := g.Kind(typeID)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 		for _, n := range nodes {
 			if n.Merged {
@@ -80,28 +116,68 @@ func loadShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*sh
 			}
 			v, err := p.keyValues(n)
 			if err != nil {
-				return nil, 0, err
+				return nil, err
 			}
 			ix.Add(vocabkey.SubjectType(kind), n.ID, v)
 		}
 	}
-	m.shortlist = ix
-	m.gen = indexGen.Add(1)
-	g.SetMatchIndex(m)
-	p.keep()
-	return ix, m.gen, nil
+	return ix, nil
+}
+
+// checkMatchIndex rebuilds the stored shortlist index and each stored profile
+// with a profiler that shares nothing with the stored value, and compares.
+func checkMatchIndex(g *graphcache.Graph, stored matchIndex) error {
+	cfg, namePattern, err := loadConfig(g)
+	if err != nil {
+		return err
+	}
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return err
+	}
+	p, err := newProfilerWith(g, metas, cfg.Subject, namePattern, map[string]profile{})
+	if err != nil {
+		return err
+	}
+	if stored.shortlist != nil {
+		fresh, err := buildShortlist(g, p, cfg)
+		if err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(stored.shortlist, fresh) {
+			return errors.New("promotealign: the stored shortlist index does not match a fresh build")
+		}
+	}
+	if stored.profilesPattern != namePattern {
+		return nil
+	}
+	for id, want := range stored.profiles {
+		n, err := g.Node([]byte(id))
+		if err != nil {
+			return err
+		}
+		if n == nil || n.Merged {
+			return fmt.Errorf("promotealign: a stored profile is for %x, which is no unmerged handle", id)
+		}
+		if err := p.profile([]*graphcache.Node{n}); err != nil {
+			return err
+		}
+		if !reflect.DeepEqual(p.done[id], want) {
+			return fmt.Errorf("promotealign: the stored profile of %x does not match a fresh build", id)
+		}
+	}
+	return nil
 }
 
 // Warm loads the shortlist kinds onto the catalog graph and builds the
 // shortlist index, so the first proposal after a project opens ranks without
 // either. A handle commit drops the index again; the next proposal rebuilds it.
 func Warm(c *database.Catalog) error {
-	db, err := c.DB()
-	if err != nil {
+	if _, err := c.DB(); err != nil {
 		return err
 	}
 	g := c.Graph()
-	cfg, namePattern, err := loadConfig(g, db)
+	cfg, namePattern, err := loadConfig(g)
 	if err != nil {
 		return err
 	}

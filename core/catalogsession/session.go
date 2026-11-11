@@ -69,29 +69,24 @@ func ReconcileOnOpen(c *database.Catalog) error {
 }
 
 // warmGraph loads what Promote and the lists read on every call onto the
-// catalog graph: the built alias index, then the default name format, then it
-// marks the graph warm. Its error is the only one WarmOnOpen returns.
+// catalog graph: the built alias index, then the default name format. Its
+// error is the only one WarmOnOpen returns.
 func warmGraph(c *database.Catalog) error {
 	if err := namealiases.Warm(c); err != nil {
 		return err
 	}
-	if err := nameformats.Warm(c); err != nil {
-		return err
-	}
-	c.Graph().MarkWarm()
-	return nil
+	return nameformats.Warm(c)
 }
 
 // WarmOnOpen loads what Promote and the lists read on every call onto the
 // catalog graph when a project opens: the built alias index and the default
-// name format (warmGraph), then matching's shortlist kinds and index. Matching
-// goes last because setting the first two drops the match index. Matching's
-// error is ignored: a value that does not decode leaves the shortlist index
-// unbuilt, and the next proposal builds it and reports the error. WarmOnOpen
-// returns warmGraph's error only. Do runs warmGraph again after a call that
-// dropped the graph or its vocabulary, not matching's warm, so the shortlist
-// index waits for the next proposal. One list, so a catalog opened for a test
-// warms what the app does.
+// name format (warmGraph), then matching's shortlist kinds and index. Both
+// registry entries live with the catalog connection, so a Drop or a
+// vocabulary commit leaves them and nothing warms them again. Matching's error
+// is ignored: a value that does not decode leaves the shortlist index unbuilt,
+// and the next proposal builds it and reports the error. WarmOnOpen returns
+// warmGraph's error only. One list, so a catalog opened for a test warms what
+// the app does.
 func WarmOnOpen(c *database.Catalog) error {
 	if err := warmGraph(c); err != nil {
 		return err
@@ -184,11 +179,7 @@ func getOrOpen(projectDir string) (*session, error) {
 
 // Do runs fn on the held catalog for projectDir, opening once if needed.
 // Operations on the same project serialize; overlapping callers wait.
-// Opening a different project closes any other held session first. When fn
-// returns nil and left the graph needing a warm, Do runs warmGraph (the alias
-// index and name format, not the shortlist index) before it returns; when fn
-// fails it does not. A warm error never replaces fn's result, and leaves the
-// flag set so the next call tries again.
+// Opening a different project closes any other held session first.
 func Do(projectDir string, fn func(*database.Catalog) error) error {
 	dir, err := Key(projectDir)
 	if err != nil {
@@ -211,8 +202,8 @@ func Do(projectDir string, fn func(*database.Catalog) error) error {
 	}
 }
 
-// runLocked runs fn on s, which Do has locked, and unlocks it. A panic in fn or
-// in the warm closes the session (its caches may disagree with the catalog) and
+// runLocked runs fn on s, which Do has locked, and unlocks it. A panic in fn
+// closes the session (its caches may disagree with the catalog) and
 // drops it from the registry, so the next Do reopens; the panic goes on to the
 // caller.
 func runLocked(dir string, s *session, fn func(*database.Catalog) error) error {
@@ -227,9 +218,6 @@ func runLocked(dir string, s *session, fn func(*database.Catalog) error) error {
 		}
 	}()
 	err := fn(s.cat)
-	if err == nil && s.cat.Graph().WarmNeeded() {
-		_ = warmGraph(s.cat)
-	}
 	done = true
 	return err
 }

@@ -95,8 +95,8 @@ type inputs struct {
 // loadConfig is the alignment config a proposal ranks with and the shortlist
 // index is built with: the registry's, with the catalog's value rules. The
 // string is the name pattern those rules came from.
-func loadConfig(g *graphcache.Graph, q database.Querier) (graphalign.Config, string, error) {
-	rules, namePattern, err := valuerules.Load(g, q)
+func loadConfig(g *graphcache.Graph) (graphalign.Config, string, error) {
+	rules, namePattern, err := valuerules.Load(g)
 	if err != nil {
 		return graphalign.Config{}, "", err
 	}
@@ -112,11 +112,9 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if c == nil || len(graphID) != 16 {
 		return inputs{}, promote.ErrInvalid
 	}
-	db, err := c.DB()
-	if err != nil {
+	if _, err := c.DB(); err != nil {
 		return inputs{}, err
 	}
-	var q database.Querier = db
 	eg, err := c.Graph().EvidenceGraph(graphID)
 	if err != nil {
 		return inputs{}, err
@@ -125,7 +123,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 		return inputs{}, promote.ErrInvalid
 	}
 
-	cfg, namePattern, err := loadConfig(c.Graph(), q)
+	cfg, namePattern, err := loadConfig(c.Graph())
 	if err != nil {
 		return inputs{}, err
 	}

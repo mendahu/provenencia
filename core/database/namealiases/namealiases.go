@@ -4,12 +4,13 @@
 // a catalog that already exists. Matching reads these rows and no other list;
 // the reconciler cache reads the product seed through valuerules.Product.
 // An open project keeps the alias index built from those rows on the catalog
-// graph until the project closes; Invalidate rebuilds it.
+// graph until the project closes; Invalidate drops it and the next read rebuilds it.
 package namealiases
 
 import (
 	"database/sql"
-	"fmt"
+	"errors"
+	"reflect"
 	"sort"
 
 	"github.com/google/uuid"
@@ -172,50 +173,71 @@ func Load(q Querier) ([]valuecompare.AliasTable, error) {
 	return tables, nil
 }
 
-// Warm loads every alias table and stores the alias index built from them on
-// the catalog graph. catalogsession calls this when a project opens. A later
-// Warm replaces the index. Closing the catalog drops it with the graph.
+// Index is the alias index built from every alias table, one per catalog
+// connection. An open project builds it once and keeps it until the project
+// closes; a write's graph builds it once from its transaction. A stored index
+// is shared, so readers treat it as read-only.
+var Index graphcache.Whole[valuecompare.AliasIndex]
+
+func init() {
+	Index = graphcache.RegisterWhole(graphcache.WholeEntry[valuecompare.AliasIndex]{
+		Name:     "namealiases.index",
+		Lifetime: graphcache.LifeCatalog,
+		Build: func(g *graphcache.Graph) (valuecompare.AliasIndex, error) {
+			tables, err := Load(g)
+			if err != nil {
+				return valuecompare.AliasIndex{}, err
+			}
+			return buildIndex(tables), nil
+		},
+		Check: func(g *graphcache.Graph, stored valuecompare.AliasIndex) error {
+			tables, err := Load(g)
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(stored, buildIndex(tables)) {
+				return errors.New("namealiases: the stored alias index does not match the alias tables")
+			}
+			return nil
+		},
+	})
+}
+
+// Warm builds the alias index onto the catalog graph. catalogsession calls
+// this when a project opens. Closing the catalog drops it with the graph.
 func Warm(c *database.Catalog) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	tables, err := Load(db)
-	if err != nil {
-		return err
-	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed
 	}
-	g.SetAliasIndex(buildIndex(tables))
+	_, _, err := Index.Get(g)
+	return err
+}
+
+// Invalidate drops the alias index; the next read rebuilds it. A future editor
+// calls this after inserting, changing, or deleting a table.
+func Invalidate(c *database.Catalog) error {
+	g := c.Graph()
+	if g == nil {
+		return database.ErrClosed
+	}
+	Index.Drop(g)
 	return nil
 }
 
-// Invalidate reloads the catalog's alias tables and rebuilds the index. A
-// future editor calls this after inserting, changing, or deleting a table.
-func Invalidate(c *database.Catalog) error {
-	return Warm(c)
-}
-
-// Rules is base with the catalog's alias index in Names.Aliases. A warmed
-// graph supplies its built index, which is shared and read-only, including an
-// index of no tables. A nil or cold graph reads q and builds one. The index
-// replaces whatever base had.
-func Rules(g *graphcache.Graph, q Querier, base valuecompare.Rules) (valuecompare.Rules, error) {
-	if raw, ok := g.AliasIndex(); ok {
-		index, ok := raw.(valuecompare.AliasIndex)
-		if !ok {
-			return valuecompare.Rules{}, fmt.Errorf("namealiases: alias cache has %T", raw)
-		}
-		base.Names.Aliases = index
-		return base, nil
+// Rules is base with the catalog's alias index in Names.Aliases. The graph
+// supplies its built index, which is shared and read-only, including an index
+// of no tables. A nil graph is database.ErrClosed. The index replaces whatever
+// base had.
+func Rules(g *graphcache.Graph, base valuecompare.Rules) (valuecompare.Rules, error) {
+	if g == nil {
+		return valuecompare.Rules{}, database.ErrClosed
 	}
-	tables, err := Load(q)
+	index, _, err := Index.Get(g)
 	if err != nil {
 		return valuecompare.Rules{}, err
 	}
-	base.Names.Aliases = buildIndex(tables)
+	base.Names.Aliases = index
 	return base, nil
 }
 

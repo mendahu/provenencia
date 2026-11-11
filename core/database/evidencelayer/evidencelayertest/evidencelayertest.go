@@ -305,9 +305,7 @@ func (r *Records) Graph(src sources.Source) []byte {
 // pattern: the memoized one, or one built.
 func (r *Records) Layer(graph []byte) evidencelayer.Layer {
 	r.T.Helper()
-	db, err := r.C.DB()
-	Must(r.T, err)
-	_, namePattern, err := valuerules.Load(r.C.Graph(), db)
+	_, namePattern, err := valuerules.Load(r.C.Graph())
 	Must(r.T, err)
 	layer, err := evidencelayer.Load(r.C.Graph(), graph, namePattern)
 	Must(r.T, err)

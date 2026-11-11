@@ -16,11 +16,7 @@ func GetNameFormat(in []byte) ([]byte, error) {
 	}
 	var resp engine.GetNameFormatResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
-		loaded, err := nameformats.LoadFor(c.Graph(), db)
+		loaded, err := nameformats.LoadFor(c.Graph())
 		if err != nil {
 			return err
 		}
