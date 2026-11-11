@@ -96,3 +96,17 @@ Do: the default value and the catalog `en` value become "provisional record"; th
 Check: `rg -n '"provisional member"' macos` prints nothing; scripts/check-pr.sh PASS.
 
 F-5 done: head `bb5758e7`. Red first (`otherReasonsHaveAPhraseAndAMark` failed on "provisional member" vs "provisional record"), then green. Gate PASS (orchestrator run). UX-3 **Resolved**; follow-ups: none.
+
+The user asked (2026-11-11) on this PR: "have Vitals be a subpage as well" — the Vitals section's crumbs read like the page root (`Persons › Jane Doe`) while Family, Timeline, Gallery and Sources add a section crumb.
+
+**F-6 — Vitals gets a section crumb like the other sections**
+Cause: `WorkspaceLocationLabels.labels(for:names:)` (`macos/App/Features/Workspace/WorkspaceLocationLabels.swift:46`) reads the stored `location.pageSection`, which `normalizedPageSection` stores as nil for a kind's first section (Vitals on a Person), so the crumbs and the Back / Forward menu name no section there.
+Files: `macos/App/Features/Workspace/WorkspaceLocationLabels.swift`, `macos/App/Features/Workspace/WorkspaceToolbar.swift` (`breadcrumbItems`, around line 266), `macos/ProvenenciaTests/WorkspaceToolbarBreadcrumbTests.swift` (`pageSectionAddsACrumb`, `locationLabelsNameTheSection`). Skill: `add-workspace-location` (read only; no location shape changes).
+Failing test first: in `locationLabelsNameTheSection`, the Vitals case expects `vitals.section == L10n.string(L10n.Conclusions.pageSectionVitals)` (use the existing Vitals label key); in `pageSectionAddsACrumb`, the Vitals case expects labels `[Persons, "Jane Doe", Vitals]` with `vitals[2].action == nil` and `vitals[1].action == nil`. Both fail today.
+Do:
+- `labels(for:names:)` reads `location.openPageSection` instead of `location.pageSection`. Stored identity does not change (`pageSection` stays nil for the first section; `==`, persistence and history are untouched). Event and Place offer no sections, so their `openPageSection` is nil and their crumbs do not change; keep or add a test line proving an Event detail still has no section crumb.
+- In `breadcrumbItems`, the record's crumb keeps `action: { goTo(location.withPageSection(nil)) }` on every section except the first; on the first (`location.pageSection == nil`) its action is nil, because it would go to the page already shown.
+- Update the doc comment on `labels(for:names:)` ("on a section of its page" → "the open section of its page, the first one included").
+- The Back / Forward menu (`WorkspaceToolbar.swift` around line 352) follows from the same labels: a Vitals row reads `pageSectionLeaf("Jane Doe", "Vitals")`. If a test pins the old Vitals menu row, update it.
+- Add one line to the plan's Landed note naming the user's request and F-6.
+Check: the two tests pass; `rg -n "\.pageSection\b" macos/App/Features/Workspace/WorkspaceLocationLabels.swift` prints nothing; scripts/check-pr.sh PASS.
