@@ -8,7 +8,7 @@ Closed spikes under [`archive/`](archive/) keep **themes and decisions**. PR ord
 
 ## Odd and even spikes
 
-From Spike 13, **odd-numbered spikes are large new features** and **even-numbered spikes are odds and ends**: small features, UX refinements and fixes. An odds-and-ends spike adds work in batches. Each batch is a slice in the spike's map with its own Check, bar outcomes and working rules (a rule names its batch), cut with [`plan-spike`](../../.agents/skills/plan-spike/SKILL.md) when it is pulled in. A one-off PR goes to the open even spike, as a new batch or into an open one. Work that needs its own dogfood bar or several briefs waits for the next odd spike.
+From Spike 13, **odd-numbered spikes are large new features** and **even-numbered spikes are odds and ends**: small features, UX refinements and fixes. An odds-and-ends spike adds work in batches. Each batch is a slice in the spike's map with its own Check, bar outcomes and working rules (a rule names its batch), cut with [`plan-spike`](../../.agents/skills/plan-spike/SKILL.md) when it is pulled in. A one-off PR goes to the open even spike, as a new batch or into an open one. A small fix that passes the [`quick-pr`](../../.agents/skills/quick-pr/SKILL.md#fits-a-quick-pr) fit list needs no map row at all. Work that needs its own dogfood bar or several briefs waits for the next odd spike.
 
 ## How a spike is planned
 
@@ -20,6 +20,7 @@ Two levels of plan, plus briefs and a review for each. The map is cut once and k
 | One PR | [`plan-pr`](../../.agents/skills/plan-pr/SKILL.md) | `prs/S#-NN-<slug>.md`: the whole task for the implementing agent |
 | One view's chrome | [`add-design-brief`](../../.agents/skills/add-design-brief/SKILL.md) | `design/S#-D#-<slug>.md`, pasted into Claude Design. Gates the PR plan |
 | Build one PR | [`ship-pr`](../../.agents/skills/ship-pr/SKILL.md) | The orchestrator runs [`implement-pr`](../../.agents/skills/implement-pr/SKILL.md), `scripts/check-pr.sh`, and five [`review-pr`](../../.agents/skills/review-pr/SKILL.md) lenses for at most two rounds; `prs/S#-NN-<slug>.ship.md` on the PR branch. Needs a `Planned` plan |
+| Ship one small fix | [`quick-pr`](../../.agents/skills/quick-pr/SKILL.md) | No plan: a failing test, the fix, `scripts/check-pr.sh`, and one fresh reviewer through the quick lens, one round. The PR body is the record. For a change that passes its [fit list](../../.agents/skills/quick-pr/SKILL.md#fits-a-quick-pr); `plan-pr` and `plan-spike` recommend it when one does |
 | Any plan above | [`review-plan`](../../.agents/skills/review-plan/SKILL.md) | `<doc>.review.md` beside it: a maintainability review and a dry run by fresh agents, at most two rounds. `python3 scripts/check-plan-docs.py` first |
 
 ```text
@@ -38,7 +39,7 @@ docs/deployment-plan/spike-N/
 
 | Status | Means |
 | --- | --- |
-| `Scoped` | In the map with a scope entry. No plan yet |
+| `Scoped` | In the map with a scope entry. No plan yet. A row whose **Plan** column says `quick-pr` needs none: it goes straight to [`quick-pr`](../../.agents/skills/quick-pr/SKILL.md) |
 | `Blocked — on …` | A dependency, a board, or a re-plan is outstanding |
 | `Planned` | The plan passed the `plan-pr` gate and `review-plan`. An agent can implement it |
 | `In progress` | `ship-pr` is running: a branch or draft PR is open |

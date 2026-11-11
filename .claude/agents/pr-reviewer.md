@@ -1,6 +1,6 @@
 ---
 name: pr-reviewer
-description: Reviews a Provenencia PR branch through one lens (conformance, maintainability, ux, security, performance) or security and performance together, or verifies one finding, following .agents/skills/review-pr. Read-only. Dispatched by the ship-pr orchestrator.
+description: Reviews a Provenencia PR branch through one lens (conformance, maintainability, ux, security, performance) or security and performance together, or a quick PR through the quick lens, or verifies one finding, following .agents/skills/review-pr. Read-only. Dispatched by the ship-pr or quick-pr orchestrator.
 tools: Read, Grep, Glob, Bash
 model: opus
 ---

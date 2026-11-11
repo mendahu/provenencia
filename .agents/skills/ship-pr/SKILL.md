@@ -44,6 +44,9 @@ reviewer into round 2; a reviewer that saw round 1 defends it.
 
 ## Before you start
 
+- The change is not a quick fix. A map row whose **Plan** column says
+  `quick-pr`, or a request for a small fix with no plan, goes to
+  [`quick-pr`](../quick-pr/SKILL.md) instead: one reviewer, no plan, no ship log.
 - The plan's **Status** is `Planned`, its **Review:** log exists, and its
   **Open questions** is `None.` Otherwise stop and tell the user; the plan goes
   back to [`plan-pr`](../plan-pr/SKILL.md).

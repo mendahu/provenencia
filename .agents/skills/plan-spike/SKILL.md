@@ -155,6 +155,14 @@ Split rules:
   engine rule.
 - **Another open spike.** A PR that changes code a PR in another open spike's
   map also changes names it in **Depends on**, in both maps.
+- **Mark the quick ones.** A PR that passes the fit list in [`quick-pr`](../quick-pr/SKILL.md#fits-a-quick-pr)
+  (one behavior, about 40 lines of non-test code, no schema, FFI, new package
+  or chrome) gets `quick-pr` in its **Plan** column. It skips `plan-pr` and
+  `ship-pr`; its scope entry is still written, and states the wrong result and
+  where it comes from. Do not merge a quick fix into a planned PR to save a
+  row: it then pays for a plan it did not need. A PR you are unsure about is
+  not quick; `quick-pr` escalates when a fix outgrows it, but a plan cannot
+  shrink into one.
 - **Descoping is a decision.** Keep the ID, mark it `Descoped (date)`, and say
   where the idea went.
 
@@ -204,6 +212,7 @@ spike.
 - [ ] The map has a **Scale** line, and each scope entry that adds a write or a list says its fan-out at that scale
 - [ ] Each PR that renames, re-keys or retires a pattern names the docs and skills it updates
 - [ ] No PR scoped to one layer carries a multi-write action or a rule the other layer owns
+- [ ] Every PR that passes the quick-pr fit list says `quick-pr` in its Plan column, and no `quick-pr` row fails it
 ```
 
 Then run the **map review** in [`review-plan`](../review-plan/SKILL.md): a
@@ -222,7 +231,8 @@ pattern change with no skill update. Answer each finding in
 ## 9. Report
 
 Tell the user: the map path; the PRs by slice; the working rules you wrote that
-they did not state themselves; open product questions; and which PR is ready
+they did not state themselves; open product questions; which PRs are marked
+`quick-pr` (they can ship at once, with no plan); and which PR is ready
 to plan first with `plan-pr` (its dependencies are met and its brief, if any, is
 the next one to draw).
 
