@@ -89,8 +89,10 @@ struct CatalogWriteEffectsDeleted: Sendable, Equatable {
     var ids: [String]
 }
 
-/// Handles and Sources a write reported. The session drops those cached
-/// reads and patches the rows whose last activity it moved.
+/// Handles and Sources a write reported. The session applies each cached
+/// key's hidden policy to the reads the write moved (a visible key reloads, a
+/// hidden one is marked stale), evicts the hidden keys of what `deleted`
+/// names, and patches the rows whose last activity moved.
 struct CatalogWriteEffects: Sendable, Equatable {
     var handles: [String] = []
     /// Evidence graphs whose loaded rows changed (graphcache drops each). A
@@ -109,7 +111,8 @@ struct CatalogWriteEffects: Sendable, Equatable {
     /// pages) does not include them.
     var handleScopes: [String] = []
     /// Sources whose last-updated time this write moved. The session patches
-    /// those rows in the cached Sources list with `activity`; it reloads nothing.
+    /// those rows in the cached Sources list with `activity`, and the detail
+    /// keys whose records cite one of those Sources follow it through `.source`.
     var sourceScopes: [String] = []
     /// Ids this write deleted, by entity. `apply` evicts the hidden keys whose
     /// descriptor's `deletedWith` names the entity; a page that shows a deleted id applies the
