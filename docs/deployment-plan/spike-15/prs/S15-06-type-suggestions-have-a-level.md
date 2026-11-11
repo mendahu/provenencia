@@ -32,7 +32,6 @@
 
 - Version: `main`'s `VERSION` was 0.8.1, not 0.8.0, so the bump is 0.8.1 to 0.9.0 as the header's rule says.
 - T-7 is split: the two-level assign and the per-level remove are `TestAssignAndRemoveTypeField` "assigning at graph lists at graph and leaves the source list alone" and the new `TestRemoveTypeFieldDetachesOneLevel`, because `runRPC` drives one handler per table. T-8's four levels are one `TestTypeSuggestionRefusesAnyOtherLevel` over all three RPCs (it also checks no row is written), with the `sourcevocab` side in `TestAppendSuggestion` "levels that hold no metadata are rejected".
-- The map's S15-06 "Ships" line still says the effects registry and catalog model "read" the level; D-7 left both unchanged.
 - Not run: the manual check (section 10); this build was verified by the Go and Xcode tests only.
 
 ## 1. Objective

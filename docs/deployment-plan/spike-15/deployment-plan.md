@@ -280,7 +280,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-06 — Type suggestions have a level
 
-**Ships.** One `Level` type in `core/vocabkey` (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab`, `sourcetypes`, the effects registry and the catalog model read it; the suggestion RPCs take a level, and the Source page's board reads `source` only.
+**Ships.** One `Level` type in `core/vocabkey` (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab` and `sourcetypes` read it (the effects registry and catalog model are unchanged, D-7); the suggestion RPCs take a level and return the type's Source-level field count, and the Source page's board reads `source` only.
 **Not this PR.** Artifact and graph values (S15-08); the type page's three lists (S15-12).
 **Check.** The Source page's suggestions are unchanged; handler tests add and list suggestions per level; a field suggested at two levels keeps both rows.
 **Context.** Rule "Suggestions have a level"; map § 6.6; skills `add-catalog-migration`, `add-catalog-model`, `add-seeded-vocabulary` (update its suggestion shape).
