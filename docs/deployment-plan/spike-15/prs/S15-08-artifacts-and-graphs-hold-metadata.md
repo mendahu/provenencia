@@ -1,6 +1,6 @@
 # S15-08 — Artifacts and graphs hold metadata
 
-**Status:** Planned
+**Status:** Landed in [#791](https://github.com/mendahu/provenencia/pull/791) (2026-11-11)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the engine, the wire and three strings in existing copy; the delete notice draws its groups as today, and S15-09 – S15-11 add every board; user, 2026-11-11)
@@ -28,6 +28,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- D-18 reads the entity type through `entityOf(table)`, a loop over `entityTable`, not `registry[table].Entity`: the registry's initializer reaches the path functions, so naming it there is an initialization cycle. No new map.
+- `TestListByOwnersTx`' refused owner changed from `graph` to `citation`, since `graph` is now wired (`TestOwnerLevels` changed the same way, as planned).
+- `TestImpactMetadataFieldHolders` (AC-2.1, AC-2.2 groups) lives in `deleteimpact/facets_test.go` beside the shared owner helpers; the `metadatafields` cases that need raw SQL inserts (the package cannot import `sourcemetadata`) sit in its `TestDelete` table, and the `UsedBy`/`List` case beside them.
+- The Artifact and graph delete cases (T-9) are subtests (`TestArtifactDelete/releases_its_metadata`, `TestDelete/a_graph_releases_its_metadata`) and the Artifact's change list includes its graph link delete ahead of the metadata deletes.
+- T-3 (`TestSourceScopes`) creates its field inline with `metadatafields.Create`, since the scope seed installs no vocabulary.
+- Not run: the manual check (section 10); no view changed, and the Go and Xcode tests cover the renamed RPCs.
 
 ## 1. Objective
 
