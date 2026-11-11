@@ -169,7 +169,7 @@ Copy Source makes a new Source from an existing one so a researcher starts from 
 - the date, as a `date_values` row of the copy's own;
 - the metadata values and their layout rows, verbatim (order and dismissed suggestions included), whatever type the copy has;
 - the credibility assessment (grade and argument);
-- each chosen Artifact, as a new row with its own `ART-` ref and the same label, description and File.
+- each chosen Artifact, as a new row with its own `ART-` ref and the same label, description and File, and with its own metadata (values and layout, verbatim) whatever the metadata choice says: an Artifact's metadata is part of the Artifact, and the metadata choice covers the Source's own fields.
 
 **Never copied:** the not-public flag (the copy always starts public), notes, Subjects, Citations, Observations and graphs. Those are the researcher's work on the original, not facts about the document.
 
@@ -290,7 +290,36 @@ Reorder rewrites `sort_order` as `0..n-1` over the fields it is given and leaves
 
 Dismiss and reorder are researcher decisions about their own catalog, so both are audited (`dismiss_metadata_suggestion`, `reorder_metadata`).
 
-`sourcemetadata` takes an owner (a level and an id) on every function; only the Source level is wired today. `Apply` saves a draft of values and layout by comparing it with what is stored, writing layout rows verbatim and keeping the rows the draft leaves out; `CreateAll` is `Apply` on an owner that holds nothing.
+`sourcemetadata` takes an owner (a level and an id) on every function, at the three levels that hold metadata: a Source, an Artifact and an Evidence graph (`vocabkey.MetadataLevels`). Its one store table names the level's tables and owner column, so a level adds an entry and no code. `Apply` saves a draft of values and layout by comparing it with what is stored, writing layout rows verbatim and keeping the rows the draft leaves out; `CreateAll` is `Apply` on an owner that holds nothing.
+
+## 5.5 Metadata at three levels
+
+An Artifact (the copy used) and an Evidence graph (the item cited) hold metadata values and a layout with the same fields, rules and audit as a Source: one vocabulary (`source_metadata_fields`), one set of functions, one table pair per level.
+
+```sql
+CREATE TABLE artifact_metadata (
+    id          BLOB PRIMARY KEY,
+    artifact_id BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+    field_id    BLOB NOT NULL REFERENCES source_metadata_fields(id),
+    value_text  TEXT,
+    UNIQUE (artifact_id, field_id)
+) STRICT;
+
+CREATE TABLE artifact_metadata_layout (
+    artifact_id BLOB NOT NULL REFERENCES artifacts(id) ON DELETE CASCADE,
+    field_id    BLOB NOT NULL REFERENCES source_metadata_fields(id) ON DELETE CASCADE,
+    sort_order  INTEGER NOT NULL,
+    dismissed   INTEGER NOT NULL DEFAULT 0 CHECK (dismissed IN (0, 1)),
+    PRIMARY KEY (artifact_id, field_id)
+) STRICT;
+```
+
+`evidence_graph_metadata` and `evidence_graph_metadata_layout` are the same with `graph_id REFERENCES evidence_graphs(id)`. Each table has an index on `field_id` for the field delete's probe and release.
+
+- **Suggestions have a level.** A Source type suggests fields per level (`source_type_metadata_fields.level`); an Artifact's or a graph's board lists its own Source's type's suggestions at its level, plus extras.
+- **Audit.** Every change carries the owner column (`artifact_id`, `graph_id`) and scopes the owner's Source (`effects` registry, `up(owner, "source_id")`), so a write refreshes the Source's page and moves its last activity.
+- **Delete.** A field is in use while any of the three value tables holds it, and `metadatafields.UsedBy` counts all three; a layout row alone never blocks. A field's layout rows at every level are released, audited, with it.
+- **Search and citations.** No search document is built from Artifact or graph metadata. A citation reads the graph's value, else the Artifact's, else the Source's (spike 15).
 
 ---
 
@@ -379,6 +408,8 @@ CREATE TABLE artifacts (
 
 An Artifact has zero or one primary File.
 
+An Artifact holds metadata of its own (provider, URL, accessed date, film number): `artifact_metadata` and `artifact_metadata_layout` ([§5.5](#55-metadata-at-three-levels)). Deleting an Artifact releases them, audited, before the Artifact's own delete change; a File's own data stays on the File.
+
 Fileless Artifacts are valid and can represent physical-only evidence:
 
 ```text
@@ -435,7 +466,7 @@ Rules the schema and `core/database/evidencegraphs` hold today:
 - `Link` refuses an Artifact of another Source. `Unlink` is refused while a Citation of that graph is on the Artifact, with or without Observations (`evidencegraphs.artifact_in_use`), and when it is the graph's only link (`evidencegraphs.last_artifact`). One check, `checkUnlink`, decides, so `Unlink` and the preflight `UnlinkImpact` (over (graph, Artifact) pairs, one block per refused pair with its graph and reason) cannot disagree. Linking a linked pair and unlinking an unlinked pair change nothing.
 - A Citation belongs to the one graph it was made in (`citations.graph_id`, required, linked to its Artifact, never changed). A graph's Citations on an Artifact are those rows; `citations.ListByArtifact` and `CountByEvidenceGraph` read them, and the Citation composer lists only the graph's linked Artifacts. Copy Source copies no Citations.
 - `List` is the one read of graphs: full rows with their linked Artifact ids, by name (case-insensitive), for one Source or the whole project. `Create` needs a name and at least one Artifact of the Source, linked through `Link`. Name and description are editable and names need not be unique. `Update` saves the name, description and the full set of linked Artifacts in one write: Artifacts are linked before others are unlinked, and any refusal rolls back the whole edit.
-- `Delete` refuses a Source's last graph (`deleteimpact` gate `last_graph`, code `evidencegraphs.last_graph`) and a graph with Subjects (`evidencegraphs.in_use`), and releases the graph's links and its Citations, audited.
+- `Delete` refuses a Source's last graph (`deleteimpact` gate `last_graph`, code `evidencegraphs.last_graph`) and a graph with Subjects (`evidencegraphs.in_use`), and releases the graph's links, its Citations and its metadata (`evidence_graph_metadata` and its layout), audited. One removal, `deleteimpact.ReleaseGraph`, runs the graph's facets, deletes the row and returns the graph's own delete change; a graph delete and a Source delete both call it, graph by graph in id order, so a Source delete audits each graph's metadata instead of dropping it by cascade.
 - A graph is part of its Source's record and a link row is part of both ends: their deletes are audited and released with the Source or Artifact ([`catalog-deletes.md`](catalog-deletes.md)). Both audit under the Source's scope and report the `evidence_graphs` read for their Source (`effects.ReadEvidenceGraphs` in `effects.Set.Reads`).
 
 ---
@@ -516,9 +547,13 @@ source_metadata_fields
 source_type_metadata_fields
 source_metadata
 source_metadata_layout
+artifact_metadata
+artifact_metadata_layout
 artifacts
 evidence_graphs
 evidence_graph_artifacts
+evidence_graph_metadata
+evidence_graph_metadata_layout
 ```
 
 with these directly supporting storage tables:

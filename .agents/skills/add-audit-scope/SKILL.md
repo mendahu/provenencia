@@ -60,7 +60,10 @@ Source scopes come from the effect's `SourceScope` path, not a hand resolver. Se
 - **Delete** changes must carry the parent FK (`source_id`, `artifact_id`, `citation_id`,
   `observation_id`, …) in `rowchange.DeletedRow(...)`. The row is gone by `Record` time, so the
   fields are the only link. Children released in the same revision (notes before their
-  citation) reach a deleted parent through that parent's delete change (the ghost map).
+  citation; an Artifact's or graph's metadata before the Artifact or graph) reach a deleted
+  parent through that parent's delete change (the ghost map). Every hop of a path reads it: the
+  second hop of `up("artifact_id", "source_id")` takes `source_id` from the deleted Artifact's
+  delete change, so the parent's delete change must carry it.
 - A `rowFacet(...)` must list its FK column in `cols` for the same reason.
 - A row that moves between parents (update with `old` ≠ `new` parent id) scopes to both.
 
