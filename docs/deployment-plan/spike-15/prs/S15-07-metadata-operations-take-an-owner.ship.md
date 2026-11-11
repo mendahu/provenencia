@@ -80,4 +80,4 @@ Remaining `SQLInPlaceholders` sites (traced by SEC+PRF and MNT round 2): `autore
 Nits (logged): `MNT-10 · sourcemetadata_test.go:542-548 · "source delete cascades layout" still counts with its own SELECT COUNT(*)` · `MNT-11 · sourcemetadata_test.go:920 · testWorld doc says it makes a Source; it makes none` · `MNT-12 · sourcemetadata_test.go:24,753 · tests set their own userID and drop testWorld's`
 
 ## Result
-Gate PASS (`34cc1505`; `origin/main` unmoved since `6c8736d5`) · CI pending · open: none · follow-ups: none · to user: SEC-1/MNT-1 (answered 2026-11-11: use `sqlbatch`, D-10 "No chunking" superseded)
+Gate PASS (`34cc1505`; `origin/main` unmoved since `6c8736d5`) · CI green · open: none · follow-ups: none · to user: SEC-1/MNT-1 (answered 2026-11-11: use `sqlbatch`, D-10 "No chunking" superseded)
