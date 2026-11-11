@@ -247,20 +247,23 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func listArtifactsProto(c *database.Catalog, sourceID []byte, pass *thumbnailPass) ([]*engine.Artifact, error) {
+// listArtifactsProto reads a Source's Artifacts with their raw ids, in order.
+func listArtifactsProto(c *database.Catalog, sourceID []byte, pass *thumbnailPass) ([]*engine.Artifact, [][]byte, error) {
 	rows, err := artifacts.ListBySource(c, sourceID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	out := make([]*engine.Artifact, 0, len(rows))
+	ids := make([][]byte, 0, len(rows))
 	for _, a := range rows {
 		ap, err := artifactProto(c, a, pass)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, ap)
+		ids = append(ids, a.ID)
 	}
-	return out, nil
+	return out, ids, nil
 }
 
 // artifactProto builds the Artifact's proto. Its thumbnail path is filled by

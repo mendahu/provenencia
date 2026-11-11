@@ -63,26 +63,19 @@ func applyDraft(tx *database.Tx, userID []byte, owner sourcemetadata.Owner, d *s
 }
 
 // artifactBoardsProto reads every Artifact's board in one batch, in the order
-// of arts.
-func artifactBoardsProto(c *database.Catalog, arts []*engine.Artifact) ([]*engine.MetadataBoard, error) {
-	owners := make([]sourcemetadata.Owner, len(arts))
-	for i, a := range arts {
-		id, err := parseID(a.GetId())
-		if err != nil {
-			return nil, err
-		}
+// of ids (the raw Artifact ids, as stored).
+func artifactBoardsProto(c *database.Catalog, ids [][]byte) ([]*engine.MetadataBoard, error) {
+	owners := make([]sourcemetadata.Owner, len(ids))
+	for i, id := range ids {
 		owners[i] = sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: id}
 	}
 	lists, err := sourcemetadata.ListWorkspaces(c, owners)
 	if err != nil {
 		return nil, err
 	}
-	boards := make([]*engine.MetadataBoard, len(arts))
-	for i, a := range arts {
-		boards[i] = &engine.MetadataBoard{OwnerId: a.GetId()}
-		for _, e := range lists[i] {
-			boards[i].Entries = append(boards[i].Entries, metadataEntryProto(c, e))
-		}
+	boards := make([]*engine.MetadataBoard, len(ids))
+	for i, id := range ids {
+		boards[i] = &engine.MetadataBoard{OwnerId: database.UUIDString(id), Entries: metadataEntriesProto(lists[i])}
 	}
 	return boards, nil
 }
@@ -123,7 +116,7 @@ func SetMetadata(in []byte) ([]byte, error) {
 		for _, e := range entries {
 			if bytes.Equal(e.Field.ID, fieldID) {
 				out = &engine.SetMetadataResponse{
-					Entry:   metadataEntryProto(c, e),
+					Entry:   metadataEntryProto(e),
 					Effects: writeEffectsProto(wrote),
 				}
 				return nil
@@ -205,10 +198,7 @@ func DismissMetadataSuggestion(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.DismissMetadataSuggestionResponse{Effects: writeEffectsProto(wrote)}
-		for _, e := range entries {
-			out.Metadata = append(out.Metadata, metadataEntryProto(c, e))
-		}
+		out = &engine.DismissMetadataSuggestionResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
 		return nil
 	})
 	if err != nil {
@@ -248,10 +238,7 @@ func ReorderMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.ReorderMetadataResponse{Effects: writeEffectsProto(wrote)}
-		for _, e := range entries {
-			out.Metadata = append(out.Metadata, metadataEntryProto(c, e))
-		}
+		out = &engine.ReorderMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
 		return nil
 	})
 	if err != nil {
@@ -277,11 +264,10 @@ func GetMetadataBoard(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		board := &engine.MetadataBoard{OwnerId: database.UUIDString(owner.ID)}
-		for _, e := range entries {
-			board.Entries = append(board.Entries, metadataEntryProto(c, e))
-		}
-		out = &engine.GetMetadataBoardResponse{Board: board}
+		out = &engine.GetMetadataBoardResponse{Board: &engine.MetadataBoard{
+			OwnerId: database.UUIDString(owner.ID),
+			Entries: metadataEntriesProto(entries),
+		}}
 		return nil
 	})
 	if err != nil {
@@ -290,7 +276,16 @@ func GetMetadataBoard(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func metadataEntryProto(_ *database.Catalog, e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
+// metadataEntriesProto is metadataEntryProto for a whole board, nil when empty.
+func metadataEntriesProto(entries []sourcemetadata.WorkspaceEntry) []*engine.MetadataWorkspaceEntry {
+	var out []*engine.MetadataWorkspaceEntry
+	for _, e := range entries {
+		out = append(out, metadataEntryProto(e))
+	}
+	return out
+}
+
+func metadataEntryProto(e sourcemetadata.WorkspaceEntry) *engine.MetadataWorkspaceEntry {
 	out := &engine.MetadataWorkspaceEntry{
 		Field: &engine.MetadataField{
 			Id:          database.UUIDString(e.Field.ID),

@@ -71,7 +71,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		arts, err := listArtifactsProto(c, sourceID, pass)
+		arts, artIDs, err := listArtifactsProto(c, sourceID, pass)
 		if err != nil {
 			return err
 		}
@@ -88,10 +88,8 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		for _, n := range notes {
 			out.Notes = append(out.Notes, noteProto(n))
 		}
-		for _, e := range meta {
-			out.Metadata = append(out.Metadata, metadataEntryProto(c, e))
-		}
-		boards, err := artifactBoardsProto(c, arts)
+		out.Metadata = metadataEntriesProto(meta)
+		boards, err := artifactBoardsProto(c, artIDs)
 		if err != nil {
 			return err
 		}

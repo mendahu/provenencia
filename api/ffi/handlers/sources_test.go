@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
@@ -435,6 +436,38 @@ func TestGetSourceWorkspace(t *testing.T) {
 					if holds := board.GetOwnerId() == artifactBoardOwner; entry.GetHasValue() != holds || (holds && entry.GetValueText() != "FamilySearch") {
 						t.Fatalf("board %d entry %+v, holds value = %v", i, entry, holds)
 					}
+				}
+			},
+		},
+		{
+			name: "artifact with non v7 id",
+			reqFn: func(t *testing.T) proto.Message {
+				m := newMetadataOwners(t)
+				sid := uuid.MustParse(m.sourceID)
+				damageCatalog(t, m.dir, `INSERT INTO artifacts (id, ref, source_id, label)
+					VALUES (x'aaaaaaaaaaaa4aaa8aaaaaaaaaaaaaaa', 'ART-NONV7', ?, 'Legacy')`, sid[:])
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				const legacy = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+				if len(resp.ArtifactMetadata) != len(resp.Artifacts) || len(resp.Artifacts) != 3 {
+					t.Fatalf("%d boards for %d Artifacts", len(resp.ArtifactMetadata), len(resp.Artifacts))
+				}
+				for i, a := range resp.Artifacts {
+					if resp.ArtifactMetadata[i].GetOwnerId() != a.GetId() {
+						t.Fatalf("board %d is for %s, want %s", i, resp.ArtifactMetadata[i].GetOwnerId(), a.GetId())
+					}
+				}
+				found := false
+				for _, a := range resp.Artifacts {
+					found = found || a.GetId() == legacy
+				}
+				if !found {
+					t.Fatalf("Artifacts %v lack %s", resp.Artifacts, legacy)
 				}
 			},
 		},
