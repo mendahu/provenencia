@@ -4135,7 +4135,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "That metadata field is still used on one or more sources."
+            "value": "That metadata field still holds a value on a Source, Artifact or Evidence graph."
           }
         }
       }
@@ -6447,7 +6447,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Values and field layout"
+            "value": "This Source's values and field layout. Artifacts keep their own."
           }
         }
       }
@@ -16335,13 +16335,13 @@
       }
     },
     "properties.inspector.usedOn": {
-      "comment": "Inspector meta label: observation count for the selected property",
+      "comment": "Inspector label beside the count of Observations and terms using the Property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Used on"
+            "value": "In use by"
           }
         }
       }

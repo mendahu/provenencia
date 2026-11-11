@@ -5632,7 +5632,7 @@ enum L10n {
 
         static let copySourceMetadataHint = LocalizedStringResource(
             "sources.copy.metadataHint",
-            defaultValue: "Values and field layout",
+            defaultValue: "This Source's values and field layout. Artifacts keep their own.",
             comment: "Hint under the Copy Source Metadata checkbox"
         )
 
@@ -7662,8 +7662,8 @@ enum L10n {
         )
         static let inspectorUsedOn = LocalizedStringResource(
             "properties.inspector.usedOn",
-            defaultValue: "Used on",
-            comment: "Inspector meta label: observation count for the selected property"
+            defaultValue: "In use by",
+            comment: "Inspector label beside the count of Observations and terms using the Property"
         )
         static func usedOnCount(count: Int) -> String {
             return L10n.format(LocalizedStringResource(
@@ -11269,7 +11269,7 @@ enum L10n {
         }
         static let metadataInUse = LocalizedStringResource(
             "error.metadatafields.in_use",
-            defaultValue: "That metadata field is still used on one or more sources.",
+            defaultValue: "That metadata field still holds a value on a Source, Artifact or Evidence graph.",
             comment: "FFI error metadatafields.in_use"
         )
         static let metadataOriginLocked = LocalizedStringResource(
