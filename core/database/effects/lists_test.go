@@ -68,6 +68,12 @@ func TestResolveLists(t *testing.T) {
 	text := map[string]rowchange.FieldDiff{"value_text": {Old: "a", New: "b"}}
 	prop := map[string]rowchange.FieldDiff{"property_id": {Old: id(5), New: id(6)}}
 
+	value := map[string]rowchange.FieldDiff{"value": {Old: "a", New: "b"}}
+	held := func(entityType string, b byte, action string, fields map[string]rowchange.FieldDiff) rowchange.Change {
+		return rowchange.Change{EntityType: entityType, EntityID: id(b), Action: action, Fields: fields}
+	}
+	full := rowchange.FullRow(map[string]any{"value": "a"})
+
 	tests := []struct {
 		name    string
 		changes []rowchange.Change
@@ -92,6 +98,15 @@ func TestResolveLists(t *testing.T) {
 			[]effects.List{effects.ListPropertyUsage}},
 		{"observation delete", []rowchange.Change{obs(rowchange.ActionDelete, text)},
 			[]effects.List{effects.ListPropertyUsage}},
+		{"artifact metadata create", []rowchange.Change{held("artifact_metadata", 20, rowchange.ActionCreate, full)},
+			[]effects.List{effects.ListMetadataFieldUsage}},
+		{"graph metadata delete", []rowchange.Change{held("evidence_graph_metadata", 21, rowchange.ActionDelete, full)},
+			[]effects.List{effects.ListMetadataFieldUsage}},
+		{"source metadata create", []rowchange.Change{held("source_metadata", 22, rowchange.ActionCreate, full)},
+			[]effects.List{effects.ListMetadataFieldUsage}},
+		{"artifact metadata value edit", []rowchange.Change{held("artifact_metadata", 20, rowchange.ActionUpdate, value)}, nil},
+		{"graph metadata value edit", []rowchange.Change{held("evidence_graph_metadata", 21, rowchange.ActionUpdate, value)}, nil},
+		{"source metadata value edit", []rowchange.Change{held("source_metadata", 22, rowchange.ActionUpdate, value)}, nil},
 		{"source create", []rowchange.Change{source(rowchange.ActionCreate, rowchange.FullRow(map[string]any{"title": "a"}))},
 			[]effects.List{effects.ListCounts}},
 		{"source title edit", []rowchange.Change{source(rowchange.ActionUpdate, title)}, nil},

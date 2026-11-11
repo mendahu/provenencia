@@ -1450,6 +1450,23 @@ func TestDelete(t *testing.T) {
 				t.Fatalf("%s left %d rows", table, n)
 			}
 		}
+		// The released values resolve to the Source's scope and report the
+		// field list's usage, though the graph row is gone.
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		set, err := effects.Resolve(tx, ch)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(set.SourceScopes) != 1 || !bytes.Equal(set.SourceScopes[0], s.ID) {
+			t.Fatalf("SourceScopes = %x, want the Source %x", set.SourceScopes, s.ID)
+		}
+		if !set.Has(effects.ListMetadataFieldUsage) {
+			t.Fatalf("Lists = %v, want metadata_field_usage", set.Lists)
+		}
 	})
 
 	t.Run("a Source's last graph", func(t *testing.T) {

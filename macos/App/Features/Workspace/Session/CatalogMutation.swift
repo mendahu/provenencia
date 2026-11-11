@@ -46,6 +46,9 @@ enum CatalogList: String, Sendable, CaseIterable {
     /// An Observation was created, deleted, or moved to another Property, so
     /// the Properties workspace's `usedBy` counts changed.
     case propertyUsage = "property_usage"
+    /// A metadata value was created or deleted on a Source, Artifact or
+    /// Evidence graph, so the field list's `usedBy` counts changed.
+    case metadataFieldUsage = "metadata_field_usage"
     /// A Source or a handle (of any type) was created, deleted or merged, so a
     /// sidebar count may have changed. It names no cache key: the session
     /// recounts (`WorkspaceSession.onNavCountsMoved`).

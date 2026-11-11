@@ -112,13 +112,17 @@ const (
 	// ListPropertyUsage: an Observation was created, deleted, or moved to
 	// another Property, so the Properties workspace's usedBy counts changed.
 	ListPropertyUsage List = "property_usage"
+	// ListMetadataFieldUsage: a metadata value was created or deleted on a
+	// Source, Artifact or Evidence graph, so the field list's usedBy counts
+	// changed. An edit of a held value moves no count.
+	ListMetadataFieldUsage List = "metadata_field_usage"
 	// ListCounts: a Source or a handle (of any type) was created, deleted or
 	// merged, so a sidebar count may have changed.
 	ListCounts List = "counts"
 )
 
 // Lists is every catalog-wide list, in the order Set.Lists reports them.
-var Lists = []List{ListSourceVocabulary, ListPropertyVocabulary, ListPropertyUsage, ListCounts}
+var Lists = []List{ListSourceVocabulary, ListPropertyVocabulary, ListPropertyUsage, ListMetadataFieldUsage, ListCounts}
 
 // Set is what a batch of changes touches. Empty Handles or Search means that
 // job has nothing to do. Lists and Structure are the catalog-wide fields.
@@ -330,7 +334,10 @@ var registry = map[string]Effect{
 	"source_metadata": {
 		Entity:      "source_metadata",
 		SourceScope: field("source_id"),
-		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
+		// A value held or released moves the field list's usedBy; an edit does not.
+		Lists:               []List{ListMetadataFieldUsage},
+		ListsOnCreateDelete: true,
+		Search:              []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
 	"source_credibility_assessments": {
 		Entity:      "source_credibility_assessment",
@@ -346,6 +353,9 @@ var registry = map[string]Effect{
 	"artifact_metadata": {
 		Entity:      "artifact_metadata",
 		SourceScope: up("artifact_id", "source_id"),
+		// A value held or released moves the field list's usedBy; an edit does not.
+		Lists:               []List{ListMetadataFieldUsage},
+		ListsOnCreateDelete: true,
 	},
 	"artifact_metadata_layout": {
 		Entity:      "artifact_metadata_layout",
@@ -354,6 +364,9 @@ var registry = map[string]Effect{
 	"evidence_graph_metadata": {
 		Entity:      "evidence_graph_metadata",
 		SourceScope: up("graph_id", "source_id"),
+		// A value held or released moves the field list's usedBy; an edit does not.
+		Lists:               []List{ListMetadataFieldUsage},
+		ListsOnCreateDelete: true,
 	},
 	"evidence_graph_metadata_layout": {
 		Entity:      "evidence_graph_metadata_layout",

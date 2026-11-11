@@ -200,13 +200,15 @@ extension CatalogQueryKey.Kind {
             )
         case .metadataFieldsList:
             // A field write reports `source_vocabulary`, which this key follows.
-            // `usedBy` counts sources holding a value for the field, and it
-            // gates Delete.
+            // `usedBy` counts Sources, Artifacts and Evidence graphs holding a
+            // value for the field, and it gates Delete: a value created or
+            // released on any of them reports `metadata_field_usage`.
             return .make(
                 kind: self,
-                invalidateOn: [.mutatedSourceMetadata],
-                invalidation: { project, _ in .key(.metadataFieldsList(project: project)) },
-                refreshes: [.applyHiddenPolicyOnAny(follows: .list(.sourceVocabulary))],
+                refreshes: [
+                    .applyHiddenPolicyOnAny(follows: .list(.sourceVocabulary)),
+                    .applyHiddenPolicyOnAny(follows: .list(.metadataFieldUsage)),
+                ],
                 load: { key, store in
                     guard case .metadataFieldsList(let project) = key else {
                         mismatchedCatalogKey(key, .metadataFieldsList)
@@ -346,7 +348,7 @@ extension CatalogQueryKey.Kind {
                 }
             )
         case .propertiesWorkspace:
-            // `usedBy` counts Observations per Property: a write that creates,
+            // `usedBy` counts Observations and terms per Property: a write that creates,
             // deletes or re-points an Observation reports `property_usage`, which
             // this key follows, as it follows a vocabulary label change and graph
             // structure.

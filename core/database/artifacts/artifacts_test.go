@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/dbtest"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
@@ -620,6 +621,23 @@ func TestArtifactDelete(t *testing.T) {
 			if n := dbtest.Count(t, db, `SELECT COUNT(*) FROM `+table); n != 0 {
 				t.Fatalf("%s left %d rows", table, n)
 			}
+		}
+		// The released values resolve to the Source's scope and report the
+		// field list's usage, though the Artifact row is gone.
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() { _ = tx.Rollback() }()
+		set, err := effects.Resolve(tx, revision)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(set.SourceScopes) != 1 || !bytes.Equal(set.SourceScopes[0], src.ID) {
+			t.Fatalf("SourceScopes = %x, want the Source %x", set.SourceScopes, src.ID)
+		}
+		if !set.Has(effects.ListMetadataFieldUsage) {
+			t.Fatalf("Lists = %v, want metadata_field_usage", set.Lists)
 		}
 	})
 

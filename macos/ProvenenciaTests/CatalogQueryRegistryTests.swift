@@ -947,7 +947,6 @@ struct CatalogQueryRegistryTests {
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
         ])
         #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
-            .key(.metadataFieldsList(project: project)),
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
         ])
         #expect(registry.invalidations(by: .changedSourceType(source), project: project) == [
@@ -1092,8 +1091,9 @@ struct CatalogQueryRegistryTests {
     }
 
     /// `usedBy` gates Delete on the Metadata page, and it moves whenever a
-    /// source gains or loses a value.
-    @Test func sourceMetadataWriteInvalidatesFieldsList() async {
+    /// Source, Artifact or Evidence graph gains or loses a value: the write
+    /// reports `metadata_field_usage`.
+    @Test func metadataFieldUsageRevalidatesFieldsList() async {
         let store = FakeStore()
         seedStore(store)
         let session = makeSession(store: store)
@@ -1104,7 +1104,7 @@ struct CatalogQueryRegistryTests {
         #expect(handle.value?.first?.usedBy == 0)
 
         store.fieldsByProject[projectDir]?[0].usedBy = 1
-        session.apply(.mutatedSourceMetadata(sourceId: "s1"))
+        session.apply(CatalogWriteEffects(lists: [.metadataFieldUsage]))
 
         let _: QueryHandle<[CatalogMetadataField]> = session.query(key)
         await waitForQuery(handle)
