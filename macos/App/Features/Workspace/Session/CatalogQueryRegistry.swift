@@ -340,7 +340,9 @@ extension CatalogQueryKey.Kind {
                     guard case .typeSuggestions(let project, let typeId) = key else {
                         mismatchedCatalogKey(key, .typeSuggestions)
                     }
-                    return try await store.listTypeSuggestions(projectDir: project.projectDir, typeID: typeId)
+                    return try await store.listTypeSuggestions(
+                        projectDir: project.projectDir, typeID: typeId, level: .source
+                    )
                 }
             )
         case .propertiesWorkspace:

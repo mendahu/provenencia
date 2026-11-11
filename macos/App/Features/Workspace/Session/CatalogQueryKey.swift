@@ -11,6 +11,8 @@ enum CatalogQueryKey: Hashable, Sendable {
     /// One Evidence graph's rows: the canvas, the composer and Promote read it.
     case evidenceGraph(project: ProjectKey, graphId: String)
     case citationCounts(project: ProjectKey, graphId: String)
+    /// A type's suggested fields at the `source` level; the type page draws one
+    /// list until it edits all three levels.
     case typeSuggestions(project: ProjectKey, typeId: String)
     case propertiesWorkspace(project: ProjectKey)
     case connectRules(project: ProjectKey)

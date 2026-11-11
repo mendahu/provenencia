@@ -678,10 +678,13 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func listTypeSuggestions(projectDir: String, typeID: String) async throws -> [CatalogTypeSuggestion] {
+    func listTypeSuggestions(projectDir: String, typeID: String, level: Level) async throws
+        -> [CatalogTypeSuggestion]
+    {
         var req = Provenencia_Engine_V1_ListTypeSuggestionsRequest()
         req.projectDir = projectDir
         req.typeID = typeID
+        req.level = level.rawValue
         let resp: Provenencia_Engine_V1_ListTypeSuggestionsResponse = try await provenenciaCall(
             method: CoreMethod.listTypeSuggestions,
             request: req
@@ -692,33 +695,43 @@ struct GoStore: GenealogyStore {
     func assignTypeField(
         projectDir: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion] {
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit {
         var req = Provenencia_Engine_V1_AssignTypeFieldRequest()
         req.projectDir = projectDir
         req.typeID = typeID
         req.fieldID = fieldID
+        req.level = level.rawValue
         let resp: Provenencia_Engine_V1_AssignTypeFieldResponse = try await provenenciaCall(
             method: CoreMethod.assignTypeField,
             request: req
         )
-        return resp.suggestions.map(Self.mapTypeSuggestion)
+        return CatalogTypeSuggestionEdit(
+            suggestions: resp.suggestions.map(Self.mapTypeSuggestion),
+            suggestedFieldCount: Int(resp.suggestedFieldCount)
+        )
     }
 
     func removeTypeField(
         projectDir: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion] {
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit {
         var req = Provenencia_Engine_V1_RemoveTypeFieldRequest()
         req.projectDir = projectDir
         req.typeID = typeID
         req.fieldID = fieldID
+        req.level = level.rawValue
         let resp: Provenencia_Engine_V1_RemoveTypeFieldResponse = try await provenenciaCall(
             method: CoreMethod.removeTypeField,
             request: req
         )
-        return resp.suggestions.map(Self.mapTypeSuggestion)
+        return CatalogTypeSuggestionEdit(
+            suggestions: resp.suggestions.map(Self.mapTypeSuggestion),
+            suggestedFieldCount: Int(resp.suggestedFieldCount)
+        )
     }
 
     func listMetadataFields(projectDir: String) async throws -> [CatalogMetadataField] {

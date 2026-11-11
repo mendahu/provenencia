@@ -1199,14 +1199,23 @@ extension [CatalogSourceType] {
     }
 }
 
-/// One `source_type_metadata_fields` join row: a field a type suggests, in
-/// its stored order. Suggestions are not a schema — a source of the type may
-/// leave any of them blank.
+/// One `source_type_metadata_fields` join row: a field a type suggests at a
+/// level, in its stored order. Suggestions are not a schema — a source of the
+/// type may leave any of them blank.
 struct CatalogTypeSuggestion: Sendable, Equatable, Identifiable {
     var field: CatalogMetadataField
     var sortOrder: Int
 
     var id: String { field.id }
+}
+
+/// What an assign or remove of a type's suggested field answers: the list at
+/// that level after the write, and the engine's suggested-field count for the
+/// type (`CatalogSourceType.suggestedFieldCount`), so no caller derives the
+/// count from the list.
+struct CatalogTypeSuggestionEdit: Sendable, Equatable {
+    var suggestions: [CatalogTypeSuggestion]
+    var suggestedFieldCount: Int
 }
 
 struct CatalogMetadataField: Sendable, Equatable, Identifiable {
@@ -1480,22 +1489,29 @@ protocol GenealogyStore: Sendable {
         userID: String,
         typeID: String
     ) async throws -> CatalogWriteEffects
-    func listTypeSuggestions(projectDir: String, typeID: String) async throws -> [CatalogTypeSuggestion]
-    /// Attaches an existing field to a type at the end of its order.
-    /// Assigning a field the type already suggests is a no-op. Returns the
-    /// type's whole suggestion list so the caller never re-derives order.
+    /// A type's suggested fields at one level, in order. The engine refuses a
+    /// level that holds no metadata (`.citation`) with `sourcevocab.invalid`.
+    func listTypeSuggestions(projectDir: String, typeID: String, level: Level) async throws
+        -> [CatalogTypeSuggestion]
+    /// Attaches an existing field to a type at the end of its order at one
+    /// level. Assigning a field the type already suggests there is a no-op.
+    /// Returns that level's whole suggestion list so the caller never
+    /// re-derives order, and the type's suggested-field count.
     func assignTypeField(
         projectDir: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion]
-    /// Detaches a field from a type — the join only. The field stays in the
-    /// vocabulary and sources already carrying a value for it keep it.
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit
+    /// Detaches a field from a type at one level — the join row only. The field
+    /// stays in the vocabulary, its rows at other levels stay, and sources
+    /// already carrying a value for it keep it.
     func removeTypeField(
         projectDir: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion]
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit
     func listMetadataFields(projectDir: String) async throws -> [CatalogMetadataField]
     /// `key` is never accepted from the caller — the engine mints it as a
     /// kebab-case slug of `label` (see `FieldSlug.kebab` for the client-side

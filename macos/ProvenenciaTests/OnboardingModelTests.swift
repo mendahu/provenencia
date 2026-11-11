@@ -524,18 +524,20 @@ private struct ThrowingStore: GenealogyStore {
         userID _: String,
         typeID _: String
     ) async throws -> CatalogWriteEffects { .empty }
-    func listTypeSuggestions(projectDir _: String, typeID _: String) async throws
+    func listTypeSuggestions(projectDir _: String, typeID _: String, level _: Level) async throws
         -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
     func assignTypeField(
         projectDir _: String,
         typeID _: String,
-        fieldID _: String
-    ) async throws -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
+        fieldID _: String,
+        level _: Level
+    ) async throws -> CatalogTypeSuggestionEdit { throw StoreBoom.boom }
     func removeTypeField(
         projectDir _: String,
         typeID _: String,
-        fieldID _: String
-    ) async throws -> [CatalogTypeSuggestion] { throw StoreBoom.boom }
+        fieldID _: String,
+        level _: Level
+    ) async throws -> CatalogTypeSuggestionEdit { throw StoreBoom.boom }
     func listMetadataFields(projectDir _: String) async throws -> [CatalogMetadataField] { throw StoreBoom.boom }
     func createMetadataField(
         projectDir _: String,
