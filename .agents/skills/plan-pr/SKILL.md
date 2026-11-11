@@ -36,6 +36,7 @@ Template: [`template.md`](template.md). Copy it; keep every heading.
 | --- | --- |
 | Write the plan for a PR already in the map | **Yes** |
 | Refresh a plan whose dependencies landed differently, or whose `main` moved | **Yes** |
+| A small fix that passes the fit list in [`quick-pr`](../quick-pr/SKILL.md#fits-a-quick-pr) (one behavior, about 40 lines, no schema, FFI or chrome) | **No.** Recommend [`quick-pr`](../quick-pr/SKILL.md) to the user and stop. Plan it only if they ask for the full loop |
 | Plan a one-off PR outside a spike (bugfix, chore) | **Yes**. Put it under the open even-numbered (odds-and-ends) spike's `prs/` with the next free ID, and add a map row in a batch ([odd and even spikes](../../../docs/deployment-plan/README.md#odd-and-even-spikes)) |
 | Split a spike or slice into PRs, or change the PR list | No — [`plan-spike`](../plan-spike/SKILL.md) |
 | Write the Claude Design brief the PR waits on | [`add-design-brief`](../add-design-brief/SKILL.md), called from step 3 below |
@@ -74,6 +75,11 @@ Read, in this order:
 
 Stop and tell the user instead of planning when:
 
+- The PR passes the fit list in [`quick-pr`](../quick-pr/SKILL.md#fits-a-quick-pr). A plan, its review and
+  the full ship loop cost more than the fix. Recommend `quick-pr`, and when the
+  PR has a map row, set its **Plan** column to `quick-pr` once the user agrees.
+  Check this before step 4, not after: the research that would show it is
+  quick is the start of the fix itself.
 - A **Depends on** PR has not landed. Planning against code that does not exist
   yet produces a Current state that is fiction. Exception: the user asks for a
   draft. Then status is `Blocked — on S#-NN` and step 4 is redone on landing.

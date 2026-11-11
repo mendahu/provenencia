@@ -31,6 +31,7 @@ the gate already ran it and parallel builds collide.
 | User experience | `UX` | [`lenses/ux.md`](lenses/ux.md) | Copy, accessibility, workflow, and error handling |
 | Security | `SEC` | [`lenses/security.md`](lenses/security.md) | Can a file, project, or value the app did not create make it misbehave? |
 | Performance | `PRF` | [`lenses/performance.md`](lenses/performance.md) | Does it stay fast on a real project and off the main thread? |
+| Quick | `QCK` | [`lenses/quick.md`](lenses/quick.md) | For a [`quick-pr`](../quick-pr/SKILL.md) only, in place of the five: is the small fix right for every input, proven by its test, and no bigger than it says? |
 
 ## Inputs (from the orchestrator)
 
@@ -39,7 +40,8 @@ the gate already ran it and parallel builds collide.
   and numbers findings `SEC-` or `PRF-` by the rubric they come from. A finding
   that is both (an unbounded decode, an unbounded list loaded from the catalog)
   is written once, under the lens with the higher severity, and names the other.
-- **Plan**: `docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md`.
+- **Plan**: `docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md`. A quick PR has
+  none: its PR body stands in for the plan.
 - **Base** and **head**: commits. The change is `git diff <base>...<head>`.
 - **Round**: 1, or 2 with the **ship log** (`S#-NN-<slug>.ship.md`) holding the
   round-1 findings and how each was answered.
@@ -72,7 +74,7 @@ at the end under **Outside my lens**, one line each. The orchestrator routes it.
 **Problem:** what goes wrong, for whom, when.
 **Evidence:** the code, the trace from input to failure, the command and its output, or the failing test.
 **Fix:** what to change. Name the existing code to reuse when there is one.
-**Fit:** this PR | later PR (S#-NN) | follow-up (idea file)
+**Fit:** this PR | later PR (S#-NN) | follow-up (idea file) | escalate (quick lens only)
 **Confidence:** high | medium | low
 ```
 

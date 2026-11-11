@@ -93,8 +93,10 @@ These are the calls for this spike. PR plans treat them as binding.
 | S#-02 | … | 1 | … | S#-D1 | S#-01, S#-D1 | [plan](prs/S#-02-slug.md) | Planned |
 | S#-03 | … | 2 | … | — | — | [plan](prs/S#-03-slug.md) | Landed [#N](https://github.com/mendahu/provenencia/pull/N) |
 | S#-04 | … | 2 | … | — | — | — | Descoped (date) → [idea](../../ideas/….md) |
+| S#-05 | … | 2 | One line: the wrong result and the fix | — | — | `quick-pr` | Scoped |
 | S#-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
 
+<!-- Plan column: — until plan-pr writes the plan; `quick-pr` for a PR that passes the quick-pr fit list and needs no plan. -->
 <!-- Status words: Scoped, Blocked — on …, Planned, In progress, Landed #N, Descoped (date). See docs/deployment-plan/README.md. -->
 
 ## Design track
