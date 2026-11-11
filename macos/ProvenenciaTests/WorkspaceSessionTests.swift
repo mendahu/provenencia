@@ -1286,11 +1286,14 @@ struct WorkspaceSessionTests {
 
         session.apply(location: .personDetail(entityId: "e3", ref: "PER-e3", title: nil))
         await session.settleWrites()
+        store.seededConclusionDetails["e3"] = nil
         session.apply(CatalogWriteEffects(
             handles: ["e3"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["e3"])]
         ))
         let visible: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detail3)
         #expect(visible != nil && visible?.isFetching == true)
+        await session.settleWrites()
+        #expect(ConclusionDetailPresentation(visible!.reading, isFetching: false) { $0.entity.id } == .gone)
     }
 
     /// T-3 (AC-2.1, AC-2.2): a page visited and then hidden goes stale on a write
@@ -1436,15 +1439,19 @@ struct WorkspaceSessionTests {
         session.apply(location: .personDetail(entityId: "e1", ref: "PER-e1", title: nil))
         await session.settleWrites()
         let handle: QueryHandle<CatalogConclusionDetail> = session.query(key)
+        var renamed = citedDetail("e1")
+        renamed.memberCount = 2
+        store.seededConclusionDetails = ["e1": renamed]
         session.apply(CatalogWriteEffects(sourceScopes: ["s-pic"]))
         #expect(handle.isFetching)
         await session.settleWrites()
-        #expect(handle.value == citedDetail("e1"))
+        #expect(handle.value == renamed)
+        #expect(handle.value != citedDetail("e1"))
         #expect(!handle.isStale)
 
         session.apply(location: .sectionRoot(.persons))
         session.apply(CatalogWriteEffects(sourceScopes: ["s-pic"]))
-        #expect(handle.value == citedDetail("e1"))
+        #expect(handle.value == renamed)
         #expect(handle.isStale)
         #expect(!handle.isFetching)
     }
