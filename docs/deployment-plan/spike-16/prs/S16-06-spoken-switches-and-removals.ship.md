@@ -110,3 +110,5 @@ Do:
 - The Back / Forward menu (`WorkspaceToolbar.swift` around line 352) follows from the same labels: a Vitals row reads `pageSectionLeaf("Jane Doe", "Vitals")`. If a test pins the old Vitals menu row, update it.
 - Add one line to the plan's Landed note naming the user's request and F-6.
 Check: the two tests pass; `rg -n "\.pageSection\b" macos/App/Features/Workspace/WorkspaceLocationLabels.swift` prints nothing; scripts/check-pr.sh PASS.
+
+F-6 done: red first (`pageSectionAddsACrumb` crashed on the missing third crumb; `locationLabelsNameTheSection` expected the Vitals label). Labels read `openPageSection`; the record's crumb has no action on the first section; an Event detail keeps two crumbs. Plan Landed note updated. Gate PASS.

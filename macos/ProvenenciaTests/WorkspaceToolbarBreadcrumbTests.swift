@@ -229,8 +229,17 @@ struct WorkspaceToolbarBreadcrumbTests {
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"),
             goTo: { _ in }
         )
-        #expect(vitals.map(\.label) == [L10n.string(L10n.Workspace.personsTitle), "Jane Doe"])
+        #expect(vitals.map(\.label) == [
+            L10n.string(L10n.Workspace.personsTitle), "Jane Doe", L10n.string(L10n.Conclusions.pageSectionVitals),
+        ])
         #expect(vitals[1].action == nil)
+        #expect(vitals[2].action == nil)
+
+        let event = WorkspaceToolbar.breadcrumbItems(
+            for: .eventDetail(entityId: "evt-1", ref: "EVT-1", title: "Birth"),
+            goTo: { _ in }
+        )
+        #expect(event.count == 2)
     }
 
     @Test func locationLabelsNameTheSection() {
@@ -244,7 +253,7 @@ struct WorkspaceToolbarBreadcrumbTests {
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe")
         )
         #expect(vitals.leaf == "Jane Doe")
-        #expect(vitals.section == nil)
+        #expect(vitals.section == L10n.string(L10n.Conclusions.pageSectionVitals))
 
         let bare = WorkspaceLocationLabels.labels(
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: nil)
