@@ -1,6 +1,6 @@
 # S15-06 — Type suggestions have a level
 
-**Status:** Planned
+**Status:** Landed in [#782](https://github.com/mendahu/provenencia/pull/782) (2026-11-10)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: Go, the wire and a store parameter; the Source page and the Source types page draw the same rows as today)
@@ -27,6 +27,13 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- Version: `main`'s `VERSION` was 0.8.1, not 0.8.0, so the bump is 0.8.1 to 0.9.0 as the header's rule says.
+- T-7 is split: the two-level assign and the per-level remove are `TestAssignAndRemoveTypeField` "assigning at graph lists at graph and leaves the source list alone" and the new `TestRemoveTypeFieldDetachesOneLevel`, because `runRPC` drives one handler per table. T-8's four levels are one `TestTypeSuggestionRefusesAnyOtherLevel` over all three RPCs (it also checks no row is written), with the `sourcevocab` side in `TestAppendSuggestion` "levels that hold no metadata are rejected".
+- The map's S15-06 "Ships" line still says the effects registry and catalog model "read" the level; D-7 left both unchanged.
+- Not run: the manual check (section 10); this build was verified by the Go and Xcode tests only.
 
 ## 1. Objective
 
