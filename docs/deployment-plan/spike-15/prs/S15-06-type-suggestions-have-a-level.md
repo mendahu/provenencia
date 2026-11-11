@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/catalog-migrations.mdc`, `.cursor/rules/catalog-model.mdc`, `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/seeded-vocabulary.mdc`, `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/macos-client.mdc`, `.cursor/rules/swift-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "One level type", "Suggestions have a level", "Metadata lives at three levels with one vocabulary" ([`../deployment-plan.md`](../deployment-plan.md#working-rules)); [`evidence-explained-citation-map.md`](../evidence-explained-citation-map.md) § 6.6; [`source-layer-data-model.md`](../../../source-layer-data-model.md) § 5.2; [`seeded-vocabulary.md`](../../../seeded-vocabulary.md) § 2.3
 **Planned:** 2026-11-11 against `main` @ `43b7247`
-**Review:** — (not reviewed yet)
+**Review:** [`S15-06-type-suggestions-have-a-level.review.md`](S15-06-type-suggestions-have-a-level.review.md) — round 1: Fits with changes / Ready with changes; round 2 running
 
 ### Implementer — read this first
 
@@ -30,7 +30,7 @@
 
 ## 1. Objective
 
-A Source type's suggested fields gain a level: `source` (the record), `artifact` (the copy used) or `graph` (the item cited). This PR adds the one `Level` type the spike shares, rebuilds `source_type_metadata_fields` with `level` in its key, and makes every reader and writer of the join name a level. It is the foundation of slice 2: S15-08 suggests fields on Artifacts and graphs, S15-12 edits the three lists, S15-19 seeds them, and S15-14 reuses the type for its format prefixes.
+A Source type's suggested fields gain a level: `source` (the record), `artifact` (the copy used) or `graph` (the item cited). This PR adds the one `Level` type the spike shares (those three, which hold metadata, plus `citation`, which only S15-14's built-ins use), rebuilds `source_type_metadata_fields` with `level` in its key, and makes every reader and writer of the join name a level. It is the foundation of slice 2: S15-08 suggests fields on Artifacts and graphs, S15-12 edits the three lists, S15-19 seeds them, and S15-14 reuses the type for its format prefixes.
 
 **Why now.** Working rules "One level type" and "Suggestions have a level"; S15-07, S15-08, S15-12, S15-14, S15-18 and S15-19 all depend on it.
 
@@ -55,18 +55,18 @@ A Source type's suggested fields gain a level: `source` (the record), `artifact`
 | AC-2.2 | F is assigned to T at `source` and at `graph` | Both rows exist; `ListTypeSuggestions` returns F at each level |
 | AC-2.3 | T has `source` rows at sort 0 and 1; F is appended at `artifact` | F's sort order is 0 (order is per level) |
 | AC-2.4 | `RemoveTypeField` with `level: "graph"` on F assigned at both levels | The `graph` row goes; the `source` row stays |
-| AC-2.5 | Any of the three RPCs with `level` `""`, `"Source"` or `"page"` | Refused with `sourcevocab.invalid`; nothing is written |
-| AC-2.6 | `vocabkey.Levels()` and Swift `MetadataLevel.allCases` | The same three strings; `api/ffi/swift_vocabulary_test.go` fails if they drift |
+| AC-2.5 | Any of the three RPCs with `level` `""`, `"Source"`, `"page"` or `"citation"` | Refused with `sourcevocab.invalid`; nothing is written |
+| AC-2.6 | `vocabkey.MetadataLevels()` and Swift `MetadataLevel.allCases` | The same three strings; `api/ffi/swift_vocabulary_test.go` fails if they drift |
 | AC-2.7 | `sourcevocab.Install` on a new catalog | Every seeded suggestion is a `source` row, as today |
 
 ## 3. Scope
 
 | In | Covered by |
 | --- | --- |
-| `vocabkey.Level` with `LevelSource`, `LevelArtifact`, `LevelGraph`, `Levels()`, `Valid()` | STEP-1, AC-2.6 |
+| `vocabkey.Level` with `LevelSource`, `LevelArtifact`, `LevelGraph`, `LevelCitation`, `Levels()`, `MetadataLevels()`, `Valid()`, `HoldsMetadata()` | STEP-1, AC-2.6 |
 | Migration `000064.sql`: rebuild `source_type_metadata_fields` with `level` in the primary key; existing rows become `source` | STEP-2, AC-1.1 |
 | `sourcevocab` suggestion functions and `seedSuggestion` take a level | STEP-3, AC-2.3, AC-2.7 |
-| `sourcetypes` `List` counts `source` rows only | STEP-3, AC-1.3 |
+| One suggested-field count in `sourcetypes` (`List` and the new `SuggestedFields`), counting `source` rows only; `sourcevocab.CountSuggestions` deleted | STEP-3, AC-1.3 |
 | `sourcemetadata.ListWorkspace` reads `source` suggestions only | STEP-3, AC-1.2 |
 | `effects` registry and `catalogmodel`: verified unchanged (D-7) | STEP-3 |
 | `level` on `ListTypeSuggestionsRequest`, `AssignTypeFieldRequest`, `RemoveTypeFieldRequest`; handlers pass it through | STEP-4, AC-2.1 – AC-2.5 |
@@ -78,7 +78,8 @@ A Source type's suggested fields gain a level: `source` (the record), `artifact`
 | --- | --- |
 | Artifact and graph metadata values, layout tables and their board | S15-08 |
 | `sourcemetadata` functions on an owner | S15-07 |
-| The Source types page editing three lists; a level in `CatalogQueryKey.typeSuggestions` and in `CatalogTypeSuggestion`; what the Fields column counts once three lists exist | S15-12 |
+| The Source types page editing three lists; a level in `CatalogQueryKey.typeSuggestions` and in `CatalogTypeSuggestion`; what the Fields column counts once three lists exist; renaming `FakeStore.suggestionsByType` call sites to `suggestionsByLevel` and dropping the alias | S15-12 |
+| Using `LevelCitation` (prefixes, built-ins table, Insert field groups) | S15-14, S15-17 |
 | Seeding `artifact` and `graph` suggestions | S15-19 |
 | Copying a type's suggestions at every level | S15-18 |
 | Format prefixes and the built-ins table using `Level` | S15-14 |
@@ -88,23 +89,23 @@ A Source type's suggested fields gain a level: `source` (the record), `artifact`
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Level type | `core/vocabkey/vocabkey.go` | No level type. Precedent for a small closed key set: `PrimaryKinds()` returns a new slice each call; `ValidOrigin` reports membership |
+| Level type | `core/vocabkey/vocabkey.go` | No level type. Precedent for a small closed key set: `PrimaryKinds()` returns a new slice each call; `ValidOrigin` and `IsPrimaryKind` report membership as free functions on strings |
 | Table | `core/database/migrations/000005.sql` | `source_type_metadata_fields (source_type_id, field_id, sort_order, PRIMARY KEY (source_type_id, field_id))`; both FKs `ON DELETE CASCADE` |
 | Indexes | `core/database/migrations/000031.sql` | `source_type_metadata_fields_type_id_idx` (redundant with the PK's leftmost column) and `source_type_metadata_fields_field_id_idx`. A rebuild drops both |
 | Latest migration | `core/database/migrations/000063.sql` | Last step; the next is `000064.sql` |
 | Rebuild precedent | `core/database/migrations/000061.sql` | `-- migrate: foreign_keys off`, `CREATE TABLE …__new`, `INSERT … SELECT`, `DROP`, `ALTER TABLE … RENAME` |
 | Suggestion ops | `core/database/sourcevocab/sourcevocab.go` `EnsureSuggestion`, `AppendSuggestion`, `CountSuggestions`, `ListSuggestions`, `DeleteSuggestion` and the `sql*Suggestion*` constants | Keyed by `(type, field)`; `sqlEnsureSuggestion` and `sqlAppendSuggestion` conflict on `(source_type_id, field_id)`; `sqlAppendSuggestion` takes `MAX(sort_order)` over the whole type |
-| Seed registry | `core/database/sourcevocab/registry.go` `seedSuggestion`, `seedSuggestions` | `{TypeKey, FieldKey, SortOrder}`; three `birth_certificate` rows; `Install` calls `EnsureSuggestion` for each |
-| Type list count | `core/database/sourcetypes/sourcetypes.go` `sqlList`, `List`, `Type.SuggestedFields` | Subquery counts every join row of the type |
+| Seed registry | `core/database/sourcevocab/registry.go` `seedSuggestion`, `seedSuggestions` | `{TypeKey, FieldKey, SortOrder}` with hand-numbered orders; three `birth_certificate` rows (0, 1, 2); `Install` calls `EnsureSuggestion` for each |
+| Type list count | `core/database/sourcetypes/sourcetypes.go` `sqlList`, `List`, `Type.SuggestedFields`, `UsedBy`; `core/database/sourcevocab/sourcevocab.go` `CountSuggestions`; `macos/App/Platform/FakeStore.swift` `withSuggestedFieldCount` | The same count lives twice in Go: `sqlList`'s subquery and `sourcevocab.CountSuggestions` (only caller: `UpdateSourceType`). Both count every join row of the type. The fake derives it from `suggestionsByType` |
 | Source board | `core/database/sourcemetadata/sourcemetadata.go` `ListWorkspace` | Calls `sourcevocab.ListSuggestions(c, src.SourceTypeID)` |
 | Effects | `core/database/effects/registry.go` | `"source_type_metadata_fields": {None: true}`: the join is never audited and no write through `writes.Run` touches it |
 | Catalog model | `core/database/catalogmodel/model.go` | Table `{Name: "source_type_metadata_fields", Bucket: BucketFacet}` and two FKs to `source_types` and `source_metadata_fields`; no columns or key declared |
-| Proto | `api/proto/engine.proto` `ListTypeSuggestionsRequest` (fields 1, 2), `AssignTypeFieldRequest` and `RemoveTypeFieldRequest` (1, reserved 2, 3, 4), `TypeSuggestion` | No level |
-| Handlers | `api/ffi/handlers/source_defs.go` `ListTypeSuggestions`, `AssignTypeField`, `RemoveTypeField`, `parseSuggestionJoin`, `suggestionsProto`, `UpdateSourceType` | `suggestionsProto(c, typeID)` lists every row; `UpdateSourceType` fills `SuggestedFields` from `CountSuggestions(c, typeID)` |
+| Proto | `api/proto/engine.proto` `ListTypeSuggestionsRequest` (fields 1, 2), `AssignTypeFieldRequest` and `RemoveTypeFieldRequest` (fields 1, 3, 4; 2 reserved), `TypeSuggestion` | No level |
+| Handlers | `api/ffi/handlers/source_defs.go` `ListTypeSuggestions`, `AssignTypeField`, `RemoveTypeField`, `parseSuggestionJoin`, `suggestionsProto`, `UpdateSourceType` | `suggestionsProto(c, typeID)` lists every row; `UpdateSourceType` fills `UsedBy` from `sourcetypes.UsedBy` and `SuggestedFields` from `sourcevocab.CountSuggestions(c, typeID)` |
 | Swift store | `macos/App/Platform/GenealogyStore.swift` `listTypeSuggestions`, `assignTypeField`, `removeTypeField`, `CatalogTypeSuggestion`; `macos/App/Platform/GoStore.swift` same three; `macos/App/Platform/FakeStore.swift` `suggestionsByType` and the same three; `macos/ProvenenciaTests/OnboardingModelTests.swift` `ThrowingStore` | No level |
 | Swift callers | `macos/App/Features/SourceTypes/SourceTypesModel.swift` `assignPickedField`, `removeSuggestion` (patch `suggestedFieldCount = updated.count`); `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` `.typeSuggestions` loader | Call the store without a level |
 | Parity test | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` | Row `"primary kinds"` pairs `vocabkey.PrimaryKinds()` with `EvidencePrimaryKind` through `rawCase` |
-| Tests | `core/database/sourcevocab/sourcevocab_test.go` `TestInstall`, `TestAppendSuggestion`; `core/database/sourcetypes/sourcetypes_test.go` `TestDelete` (counts `SuggestedFields`); `core/database/metadatafields/metadatafields_test.go` `TestDelete` (raw `INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order)`); `core/database/sourcecopy/sourcecopy_test.go` (`EnsureSuggestion`); `api/ffi/handlers/source_defs_test.go` `TestAssignAndRemoveTypeField`, `TestListTypeSuggestions`; `macos/ProvenenciaTests/SourceTypesModelTests.swift` | Cover today's single-level behavior |
+| Tests | `core/database/sourcevocab/sourcevocab_test.go` `TestInstall`, `TestAppendSuggestion`; `core/database/sourcetypes/sourcetypes_test.go` `TestDelete` (two raw `INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order)`, one raw `SELECT COUNT(*)` on the join, and the `SuggestedFields` case; raw because `sourcevocab` imports `sourcetypes`); `core/database/metadatafields/metadatafields_test.go` `TestDelete` (one raw insert, one raw count); `core/database/sourcecopy/sourcecopy_test.go` (`EnsureSuggestion`); `api/ffi/handlers/source_defs_test.go` `TestAssignAndRemoveTypeField`, `TestListTypeSuggestions`, the `UpdateSourceType` case; `api/ffi/handlers/sources_test.go` (the metadata fixture calls `ListTypeSuggestions` without a level); `macos/ProvenenciaTests/SourceTypesModelTests.swift` | Cover today's single-level behavior. No request in `api/ffi` sets a level |
 
 **Precedent.** `000061.sql` (S14-36) for the table rebuild: copy its shape and the `-- migrate: foreign_keys off` line. `vocabkey.PrimaryKinds()` and the `"primary kinds"` parity row for a closed Go key set mirrored by a Swift `rawCase` enum: copy both.
 
@@ -112,21 +113,21 @@ A Source type's suggested fields gain a level: `source` (the record), `artifact`
 
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
-| D-1 | `type Level string` in `core/vocabkey` with `LevelSource = "source"`, `LevelArtifact = "artifact"`, `LevelGraph = "graph"`; `func Levels() []Level` returns a new slice in that order; `func (l Level) Valid() bool` is exact membership (no trimming, no case folding) | Working rule "One level type"; `vocabkey` is pure and already holds the shared vocabulary keys | A `Level` in `sourcevocab` — S15-14's pure `core/citationformat` cannot import a database package |
-| D-2 | The migration's primary key is `(source_type_id, field_id, level)`; `level TEXT NOT NULL CHECK (level IN ('source', 'artifact', 'graph'))` with **no** `DEFAULT` | Map § 6.6 key. No default: every writer names its level, and a writer that forgets fails `NOT NULL` instead of silently writing `source` | `DEFAULT 'source'` from the map sketch — hides a missed level; the backfill names `'source'` explicitly instead |
+| D-1 | `type Level string` in `core/vocabkey` with `LevelSource = "source"`, `LevelArtifact = "artifact"`, `LevelGraph = "graph"`, `LevelCitation = "citation"`. `func Levels() []Level` returns all four, a new slice in that order; `func MetadataLevels() []Level` returns the first three, the levels that hold metadata. `func (l Level) Valid() bool` is membership in `Levels()`; `func (l Level) HoldsMetadata() bool` is membership in `MetadataLevels()`. Both are exact (no trimming, no case folding). Methods on the typed key, not free functions on strings: this is the form for new typed keys in `vocabkey` (`ValidOrigin` and `IsPrimaryKind` predate typed keys) | Working rule "One level type", amended by the user's answer (2026-11-11): one type serves suggestions, owners, format prefixes and the built-ins table, and the Citation level (built-ins only, map § 6.3) is in it; `vocabkey` is pure | Three values with `citation` added by S15-14 — S15-14 would rework validation, the `CHECK` and the Swift enum; a second type for prefixes — breaks the rule (user, 2026-11-11). A `Level` in `sourcevocab` — `core/citationformat` cannot import a database package |
+| D-2 | The migration's primary key is `(source_type_id, field_id, level)`; `level TEXT NOT NULL CHECK (level IN ('source', 'artifact', 'graph'))` (the `MetadataLevels()`; a type never suggests at `citation`) with **no** `DEFAULT` | Map § 6.6 key. No default: every writer names its level, and a writer that forgets fails `NOT NULL` instead of silently writing `source` | `DEFAULT 'source'` from the map sketch — hides a missed level; the backfill names `'source'` explicitly instead |
 | D-3 | The rebuild recreates `source_type_metadata_fields_field_id_idx` only. `source_type_id` is covered by the primary key's leftmost column | `000031`'s `type_id_idx` duplicated the PK; `TestPragmaHonesty` accepts a PK-leftmost covering index | Recreating both — keeps a redundant index |
 | D-4 | `sort_order` is per (type, level): `sqlAppendSuggestion` takes `MAX(sort_order)` over `source_type_id = ? AND level = ?` | Each level is its own ordered list (S15-12 edits three) | One order across levels — the type page would show gaps |
-| D-5 | Every `sourcevocab` suggestion function takes `level vocabkey.Level` after the ids: `EnsureSuggestion(c, typeID, fieldID, level, sortOrder)`, `AppendSuggestion(c, typeID, fieldID, level)`, `CountSuggestions(c, typeID, level)`, `ListSuggestions(c, typeID, level)`, `DeleteSuggestion(c, typeID, fieldID, level)`. Each returns `ErrInvalid` when `!level.Valid()`, before any query | One validation, at the owner of the join; the handlers pass the wire string through as `vocabkey.Level(req.GetLevel())` | Validating in the handler — a second check S15-08's Go callers would skip |
-| D-6 | `seedSuggestion` gains `Level vocabkey.Level`; the three existing rows say `LevelSource`. `Install` passes it to `EnsureSuggestion` | S15-19 fills `artifact` and `graph` rows in the same list | A separate list per level — three near-copies |
+| D-5 | Every `sourcevocab` suggestion function takes `level vocabkey.Level` after the ids: `EnsureSuggestion(c, typeID, fieldID, level, sortOrder)`, `AppendSuggestion(c, typeID, fieldID, level)`, `ListSuggestions(c, typeID, level)`, `DeleteSuggestion(c, typeID, fieldID, level)`. Each returns `ErrInvalid` when `!level.HoldsMetadata()` (so `citation` is refused like an unknown string, matching the `CHECK`), before any query | One validation, at the owner of the join; the handlers pass the wire string through as `vocabkey.Level(req.GetLevel())` | Validating in the handler — a second check S15-08's Go callers would skip |
+| D-6 | `seedSuggestion` becomes `{TypeKey string; Level vocabkey.Level; FieldKeys []string}`: one entry per (type, level), its fields in order. The three existing rows become one entry `{TypeKey: "birth_certificate", Level: vocabkey.LevelSource, FieldKeys: []string{"document_number", "record_date", "issue_date"}}`. `Install` passes each field's index in `FieldKeys` as its sort order | S15-19 writes 26 types' suggestions per level in format order (map § 6.8); order by position cannot repeat or skip a number | Hand-numbered `SortOrder` per row — S15-19 would number hundreds of rows, restarting at 0 per level (D-4), untested; a separate list per level — three near-copies |
 | D-7 | `effects` registry and `catalogmodel` do not change | The join is `None` in effects (never audited, per `docs/catalog-deletes.md`); `catalogmodel` registers tables and FKs, which the rebuild keeps. `catalogmodel` `TestPragmaHonesty` and `effects` `TestEveryNonSkipTableHasAnEntry` prove it | Adding a level to either — they hold no columns |
 | D-8 | Each of the three RPCs takes `string level`: `ListTypeSuggestionsRequest.level = 3`, `AssignTypeFieldRequest.level = 5`, `RemoveTypeFieldRequest.level = 5`. Each reply lists that level's suggestions only. `TypeSuggestion` does not change | Map row "the suggestion RPCs take a level"; Swift's `suggestedFieldCount = updated.count` patch stays right because the reply is the `source` list | One reply with every level tagged — changes the count patch and the cached list shape, which is S15-12's call |
-| D-9 | `sourcetypes` `List`'s count and the handler's `CountSuggestions` count `source` rows only. `sqlList` binds `vocabkey.LevelSource` as a parameter | The Fields column keeps today's meaning; S15-12 decides what it counts once three lists show | Counting every level — changes a visible number in a PR that changes nothing visible |
-| D-10 | Swift `enum MetadataLevel: String, CaseIterable, Sendable { case source, artifact, graph }` in `macos/App/Platform/MetadataLevel.swift` *(new)*, one `case` per line without raw values so `rawCase` reads it; parity row `"metadata levels"` against `vocabkey.Levels()` | Working rule "One level type" (one Swift enum, one parity row); precedent `EvidencePrimaryKind` | Raw strings at call sites — no parity check |
+| D-9 | The suggested-field count lives once, in `sourcetypes`: one SQL fragment `sqlSuggestedFields` *(new)* counts the type's `source` rows (`level` bound to `vocabkey.LevelSource`); `sqlList` uses it as its subquery and `func SuggestedFields(c *database.Catalog, typeID []byte) (int, error)` *(new)*, beside `UsedBy`, runs it alone. `UpdateSourceType` fills `SuggestedFields` from `sourcetypes.SuggestedFields`. `sourcevocab.CountSuggestions` and `sqlCountSuggestions` are deleted | One place for the rule "which rows count", which S15-12 changes; `sourcetypes` already reads the join in `sqlList`, and `sourcevocab` imports `sourcetypes`, so the count cannot live in `sourcevocab`. Source level only: the Fields column keeps today's meaning | Leaving the count in two packages — the level rule can be changed in one and missed in the other; counting every level — changes a visible number in a PR that changes nothing visible |
+| D-10 | Swift `enum MetadataLevel: String, CaseIterable, Sendable { case source, artifact, graph }` in `macos/App/Platform/MetadataLevel.swift` *(new)*, one `case` per line without raw values so `rawCase` reads it; its doc comment says it mirrors `vocabkey.MetadataLevels()`, the levels that hold metadata. Parity row `"metadata levels"` against `vocabkey.MetadataLevels()`. No Swift case for `citation` until a Swift caller needs one (S15-17) | Working rule "One level type" (one Swift enum, one parity row); precedent `EvidencePrimaryKind` | Raw strings at call sites — no parity check |
 | D-11 | `GenealogyStore` `listTypeSuggestions`, `assignTypeField`, `removeTypeField` gain `level: MetadataLevel` as the last parameter. `CatalogQueryKey.typeSuggestions` and the `.assignedTypeSuggestion` / `.removedTypeSuggestion` mutations stay as they are and mean the `source` list: the loader in `CatalogQueryRegistry` and `SourceTypesModel` pass `.source`. The key's doc comment says so | The type page shows one list until S15-12; S15-12 adds the level to the key with the three lists it draws | Adding the level to the key now — eight test sites and the mutation invalidations change for a list nobody shows yet |
-| D-12 | `FakeStore` stores `suggestionsByLevel: [MetadataLevel: [String: [CatalogTypeSuggestion]]]`; `suggestionsByType` becomes a computed get/set over `suggestionsByLevel[.source]`, so existing tests stay unchanged. `deleteSourceType` clears the type at every level | One store per level, faithful to Go; no test churn | A second dictionary for other levels — two sources of truth |
+| D-12 | `FakeStore` stores `suggestionsByLevel: [MetadataLevel: [String: [CatalogTypeSuggestion]]]`; `suggestionsByType` becomes a computed get/set over `suggestionsByLevel[.source, default: [:]]`, so existing tests stay unchanged. The computed property takes no lock: like every stored property it is read and written inside `withState` (`stateLock` is not reentrant). `deleteSourceType` clears the type at every level; `withSuggestedFieldCount` keeps reading the `.source` list (D-9) | One store per level, faithful to Go; no test churn | A second dictionary for other levels — two sources of truth |
 | D-13 | No backfill test for the migration; behavior is tested in `sourcevocab`, `sourcetypes`, `sourcemetadata` and the handlers | `add-catalog-migration` step 4 | A per-migration test — the skill forbids it |
 
-**Rules this plan bends.** None. D-2 drops the map sketch's `DEFAULT 'source'`; the map's working rule does not name a default, and STEP-7 updates § 6.6's sketch to match.
+**Rules this plan bends.** The working rule "One level type" named three levels → `citation` joins the type so S15-14's prefixes and built-ins table use it (review M-1) → user, 2026-11-11: four values, with a metadata subset → the map's rule is amended in the commit that wires this plan, and STEP-7 has nothing left to do for it. D-2 drops the map sketch's `DEFAULT 'source'`; no working rule names a default, and STEP-7 updates § 6.6's sketch to match.
 
 ## 6. Design
 
@@ -134,17 +135,18 @@ A Source type's suggested fields gain a level: `source` (the record), `artifact`
 
 | New *(this PR adds)* | Kind | Closest existing | Why not reuse or extend it |
 | --- | --- | --- | --- |
-| `vocabkey.Level`, `LevelSource`, `LevelArtifact`, `LevelGraph`, `Levels`, `Level.Valid` *(new)* | type / const / func | `vocabkey.PrimaryKinds`, `vocabkey.ValidOrigin` | Extends the same package with the same shape; no level type exists (searched `rg -n "Level\b" core/`: only unrelated log and fold levels) |
+| `vocabkey.Level`, `LevelSource`, `LevelArtifact`, `LevelGraph`, `LevelCitation`, `Levels`, `MetadataLevels`, `Level.Valid`, `Level.HoldsMetadata` *(new)* | type / const / func | `vocabkey.PrimaryKinds`, `vocabkey.ValidOrigin` | Extends the same package with the same shape; no level type exists (searched `rg -n "Level\b" core/`: only unrelated log and fold levels) |
 | `core/database/migrations/000064.sql` *(new)* | migration | `000061.sql` | A new step; shipped steps are never edited |
-| `seedSuggestion.Level` *(new)* | field | `seedSuggestion` | Extends the existing row |
+| `seedSuggestion.Level`, `seedSuggestion.FieldKeys` *(new)* | field | `seedSuggestion` | Reshapes the existing row (D-6) |
+| `sourcetypes.SuggestedFields`, `sqlSuggestedFields` *(new)* | func / SQL | `sqlList`'s subquery, `sourcevocab.CountSuggestions`, `sourcetypes.UsedBy` | Replaces the two copies with one, beside `UsedBy` (D-9) |
 | `level` on three requests *(new)* | proto field | `ListTypeSuggestionsRequest`, `AssignTypeFieldRequest`, `RemoveTypeFieldRequest` | Extends; no new method |
 | `macos/App/Platform/MetadataLevel.swift` `MetadataLevel` *(new)* | Swift enum | `EvidencePrimaryKind`, `CatalogSearchKind` | No Swift level type exists (`rg -n "enum .*Level" macos/App`) |
 | `FakeStore.suggestionsByLevel` *(new)* | test store | `FakeStore.suggestionsByType` | Becomes the storage under the existing name |
 | Parity row `"metadata levels"` *(new)* | test row | `"primary kinds"` | A row in the existing table |
 
 **Builds on.** `vocabkey` as the shared key package; the `000061` rebuild pattern; `TestSwiftVocabularyMatchesGo`; the `sourcevocab` registry and `Install` (`add-seeded-vocabulary`).
-**Deletes.** The index `source_type_metadata_fields_type_id_idx` (D-3). No Go or Swift symbol loses its last caller.
-**Next adds.** S15-07 and S15-08 key owners by `vocabkey.Level` and call `ListSuggestions(c, typeID, LevelArtifact | LevelGraph)`; S15-12 adds `level` to `CatalogQueryKey.typeSuggestions` and passes `.artifact` / `.graph` through the store parameter added here; S15-19 adds registry rows with `Level`; S15-14 maps `{source.…}`, `{artifact.…}`, `{graph.…}` prefixes to `vocabkey.Level`.
+**Deletes.** The index `source_type_metadata_fields_type_id_idx` (D-3). `sourcevocab.CountSuggestions` and `sqlCountSuggestions` (D-9); `seedSuggestion.SortOrder` (D-6).
+**Next adds.** S15-07 and S15-08 key owners by `vocabkey.Level` and call `ListSuggestions(c, typeID, LevelArtifact | LevelGraph)`; S15-12 adds `level` to `CatalogQueryKey.typeSuggestions` and passes `.artifact` / `.graph` through the store parameter added here; S15-19 adds registry rows with `Level`; S15-14 maps `{source.…}`, `{artifact.…}`, `{graph.…}`, `{citation.…}` prefixes to `vocabkey.Level` and gives each built-in a level; the list form's rule is "Source only" over the same type.
 
 ### Reach
 
@@ -196,18 +198,18 @@ Registered in `catalogmodel` as today (no change, D-7). Delete class: facet join
 
 | Package | Change |
 | --- | --- |
-| `core/vocabkey` | `type Level string` *(new)*; `LevelSource`, `LevelArtifact`, `LevelGraph` *(new)*; `func Levels() []Level` *(new)*; `func (l Level) Valid() bool` *(new)*. Doc comment: where a metadata value or a type's suggestion sits: the Source, one of its Artifacts, or one of its Evidence graphs |
-| `core/database/sourcevocab` | The five functions of D-5. SQL: `sqlEnsureSuggestion` inserts `level` and conflicts on `(source_type_id, field_id, level)`; `sqlAppendSuggestion` inserts `level`, takes `MAX(sort_order)` `WHERE source_type_id = ? AND level = ?`, conflicts on the three columns; `sqlListSuggestions`, `sqlCountSuggestions`, `sqlDeleteSuggestion` add `AND j.level = ?` / `AND level = ?`. `seedSuggestion.Level` (D-6). Package doc: "type↔field suggestions per level" |
-| `core/database/sourcetypes` | `sqlList` subquery adds `AND j.level = ?`; `List` binds `string(vocabkey.LevelSource)`. `Type.SuggestedFields` comment: "how many fields this type suggests at the Source level" |
+| `core/vocabkey` | D-1. Doc comment: the layers a citation reads: the Source, one of its Artifacts, one of its Evidence graphs, the Citation; the first three hold metadata values and type suggestions, the Citation only built-ins |
+| `core/database/sourcevocab` | The five functions of D-5. SQL: `sqlEnsureSuggestion` inserts `level` and conflicts on `(source_type_id, field_id, level)`; `sqlAppendSuggestion` inserts `level`, takes `MAX(sort_order)` `WHERE source_type_id = ? AND level = ?`, conflicts on the three columns; `sqlListSuggestions` and `sqlDeleteSuggestion` add `AND j.level = ?` / `AND level = ?`. `CountSuggestions` and `sqlCountSuggestions` are deleted (D-9). `seedSuggestion` and `Install` per D-6. Package doc: "type↔field suggestions per level" |
+| `core/database/sourcetypes` | `sqlSuggestedFields` and `SuggestedFields` (D-9); `sqlList` embeds the fragment and `List` binds `string(vocabkey.LevelSource)`. `Type.SuggestedFields` comment: "how many fields this type suggests at the Source level" |
 | `core/database/sourcemetadata` | `ListWorkspace` calls `sourcevocab.ListSuggestions(c, src.SourceTypeID, vocabkey.LevelSource)` |
 
-Errors: `sourcevocab.invalid` → a level outside `Levels()`, as for a bad id today.
+Errors: `sourcevocab.invalid` → a level outside `MetadataLevels()`, `citation` included, as for a bad id today.
 
 ### FFI
 
 `api/proto/engine.proto`: `string level = 3;` on `ListTypeSuggestionsRequest`; `string level = 5;` on `AssignTypeFieldRequest` and `RemoveTypeFieldRequest`, each commented "`source`, `artifact` or `graph` (`vocabkey.Levels`); any other value is `sourcevocab.invalid`". The three message comments say the reply lists that level's suggestions. Regenerate with `./scripts/generate-proto.sh`.
 
-Handlers in `api/ffi/handlers/source_defs.go`: `suggestionsProto(c, typeID, level vocabkey.Level)`; `ListTypeSuggestions`, `AssignTypeField`, `RemoveTypeField` pass `vocabkey.Level(req.GetLevel())` to `sourcevocab` and to `suggestionsProto`; `UpdateSourceType` calls `CountSuggestions(c, typeID, vocabkey.LevelSource)`. `parseSuggestionJoin` does not change.
+Handlers in `api/ffi/handlers/source_defs.go`: `suggestionsProto(c, typeID, level vocabkey.Level)`; `ListTypeSuggestions`, `AssignTypeField`, `RemoveTypeField` pass `vocabkey.Level(req.GetLevel())` to `sourcevocab` and to `suggestionsProto`; `UpdateSourceType` calls `sourcetypes.SuggestedFields(c, typeID)` (D-9). `parseSuggestionJoin` does not change.
 
 ### macOS
 
@@ -240,17 +242,17 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/catalogmodel/...` passe
 
 **STEP-3 — Readers and writers take a level**
 Files: `core/database/sourcevocab/sourcevocab.go`, `core/database/sourcevocab/registry.go`, `core/database/sourcevocab/sourcevocab_test.go`, `core/database/sourcetypes/sourcetypes.go`, `core/database/sourcetypes/sourcetypes_test.go`, `core/database/sourcemetadata/sourcemetadata.go`, `core/database/sourcemetadata/sourcemetadata_test.go`, `core/database/metadatafields/metadatafields_test.go`, `core/database/sourcecopy/sourcecopy_test.go`. Skill: `add-catalog-query`, `add-seeded-vocabulary`.
-Do: D-4, D-5, D-6, D-9 and the `ListWorkspace` change. Raw `INSERT INTO source_type_metadata_fields` in tests name `level` = `'source'`. `sourcecopy_test.go` passes `vocabkey.LevelSource`. Confirm `core/database/effects/registry.go` and `core/database/catalogmodel/model.go` need no edit (D-7).
+Do: D-4, D-5, D-6, D-9 and the `ListWorkspace` change. The raw inserts in `sourcetypes_test.go` (two) and `metadatafields_test.go` (one) add the `level` column with `'source'`; the raw counts there need no change. `sourcecopy_test.go` passes `vocabkey.LevelSource`. Confirm `core/database/effects/registry.go` and `core/database/catalogmodel/model.go` need no edit (D-7).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/...` passes with T-2 – T-6.
 
 **STEP-4 — The RPCs take a level**
-Files: `api/proto/engine.proto`, generated `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`, `api/ffi/handlers/source_defs.go`, `api/ffi/handlers/source_defs_test.go`. Skill: `add-ffi-handler`.
-Do: the FFI section. Existing handler test requests set `Level: "source"`.
+Files: `api/proto/engine.proto`, generated `api/proto/engine/engine.pb.go` and `macos/App/Platform/Generated/engine.pb.swift`, `api/ffi/handlers/source_defs.go`, `api/ffi/handlers/source_defs_test.go`, `api/ffi/handlers/sources_test.go`. Skill: `add-ffi-handler`.
+Do: the FFI section. Every `ListTypeSuggestionsRequest`, `AssignTypeFieldRequest` and `RemoveTypeFieldRequest` literal under `api/ffi` (`rg -n "TypeSuggestionsRequest\{|TypeFieldRequest\{" api/ffi`) sets `Level: "source"`, except the new invalid-level cases.
 Check: `./scripts/generate-proto.sh` then `CGO_ENABLED=1 go test -tags fts5 ./api/...` passes with T-7, T-8.
 
 **STEP-5 — The Swift enum and its parity row**
 Files: `macos/App/Platform/MetadataLevel.swift` *(new)*, `api/ffi/swift_vocabulary_test.go`.
-Do: D-10. Add the path constant `swiftMetadataLevel` and the row `{name: "metadata levels", path: swiftMetadataLevel, enum: "MetadataLevel", re: rawCase, want: sorted(levelStrings()...)}`, with a helper that maps `vocabkey.Levels()` to strings. The Xcode project uses synchronized folders, so the new file needs no project edit.
+Do: D-10. Add the path constant `swiftMetadataLevel` and the row `{name: "metadata levels", path: swiftMetadataLevel, enum: "MetadataLevel", re: rawCase, want: sorted(levelStrings()...)}`, with a helper that maps `vocabkey.MetadataLevels()` to strings. The Xcode project uses synchronized folders, so the new file needs no project edit.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/ -run TestSwiftVocabularyMatchesGo` passes (T-9).
 
 **STEP-6 — Swift store calls name the level**
@@ -259,7 +261,7 @@ Do: D-11, D-12; the protocol doc comments say the level.
 Check: `xcodebuild test` (as `scripts/check-pr.sh` runs it) passes with T-10, T-11 and no Swift warning.
 
 **STEP-7 — Docs and version**
-Files: `docs/source-layer-data-model.md` § 5.2 (DDL with `level`, one sentence on levels), `docs/seeded-vocabulary.md` § 2.3 (one sentence: rows carry a level; the seed's rows are `source`), `.agents/skills/add-seeded-vocabulary/SKILL.md` (`seedSuggestions` — `(type_key, field_key, level, sort_order)`), `docs/deployment-plan/spike-15/evidence-explained-citation-map.md` § 6.6 sketch (drop `DEFAULT 'source'`, D-2), `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj`, `completed.md`, `deployment-plan.md` (map row), this plan.
+Files: `docs/source-layer-data-model.md` § 5.2 (DDL with `level`, one sentence on levels), `docs/seeded-vocabulary.md` § 2.3 (one sentence: rows carry a level; the seed's rows are `source`), `.agents/skills/add-seeded-vocabulary/SKILL.md` (`seedSuggestions` — one entry per (type, level) with its field keys in order; the order is the position), `docs/deployment-plan/spike-15/evidence-explained-citation-map.md` § 6.6 sketch (drop `DEFAULT 'source'`, D-2), `VERSION`, `core/version.go`, `macos/Provenencia.xcodeproj/project.pbxproj`, `docs/deployment-plan/spike-15/completed.md`, `docs/deployment-plan/spike-15/deployment-plan.md` (map row), this plan.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-15/prs/S15-06-type-suggestions-have-a-level.md` and `scripts/check-pr.sh` print no error.
 
@@ -269,15 +271,15 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/vocabkey/vocabkey_test.go` `TestLevels` *(new)* | `Levels()` → `[source artifact graph]`, a fresh slice each call; `Valid` table: `source`, `artifact`, `graph` → true; `""`, `Source`, ` source`, `page` → false | AC-2.5, AC-2.6, D-1 |
-| T-2 | Go | `core/database/sourcevocab/sourcevocab_test.go` `TestAppendSuggestion` (new cases) | Type with Publisher, Author at `source`; append Author at `artifact` → `artifact` list `[Author]` sort 0, `source` list unchanged; `AppendSuggestion` with level `page` → `ErrInvalid` | AC-2.3, AC-2.5, D-4 |
+| T-1 | Go | `core/vocabkey/vocabkey_test.go` `TestLevels` *(new)* | `Levels()` → `[source artifact graph citation]` and `MetadataLevels()` → `[source artifact graph]`, each a fresh slice per call; table over `source`, `artifact`, `graph`, `citation`, `""`, `Source`, ` source`, `page` → `Valid` true for the first four only, `HoldsMetadata` true for the first three only | AC-2.5, AC-2.6, D-1 |
+| T-2 | Go | `core/database/sourcevocab/sourcevocab_test.go` `TestAppendSuggestion` (new cases) | Type with Publisher, Author at `source`; append Author at `artifact` → `artifact` list `[Author]` sort 0, `source` list unchanged; `AppendSuggestion` with level `page` or `citation` → `ErrInvalid` | AC-2.3, AC-2.5, D-4 |
 | T-3 | Go | `core/database/sourcevocab/sourcevocab_test.go` `TestAppendSuggestion` (new case) | Author at `source` and `graph`; `DeleteSuggestion` at `graph` → `graph` empty, `source` `[Author]` | AC-2.2, AC-2.4 |
-| T-4 | Go | `core/database/sourcevocab/sourcevocab_test.go` `TestInstall` | After Install, `ListSuggestions(cert, LevelSource)` returns the three seeded fields in order; `LevelArtifact` and `LevelGraph` return none | AC-1.1, AC-2.7 |
+| T-4 | Go | `core/database/sourcevocab/sourcevocab_test.go` `TestInstall` | After Install, `ListSuggestions(cert, LevelSource)` returns `document_number`, `record_date`, `issue_date` with sort orders 0, 1, 2; `LevelArtifact` and `LevelGraph` return none | AC-1.1, AC-2.7, D-6 |
 | T-5 | Go | `core/database/sourcemetadata/sourcemetadata_test.go` `TestSourceMetadata` (new case) | Source of a type with A at `source`, B at `graph` → `ListWorkspace` has A suggested, no B | AC-1.2 |
-| T-6 | Go | `core/database/sourcetypes/sourcetypes_test.go` `TestDelete` (the `SuggestedFields` case) | `book` with 1 `source` row and 1 `graph` row → `SuggestedFields` 1 | AC-1.3, D-9 |
+| T-6 | Go | `core/database/sourcetypes/sourcetypes_test.go` `TestDelete` (the `SuggestedFields` case) | `book`'s field inserted by raw SQL at `source` and the same field again at `graph` (raw: `sourcevocab` imports `sourcetypes`) → `List` gives `SuggestedFields` 1 and `SuggestedFields(c, book)` returns 1 | AC-1.3, D-9 |
 | T-7 | Go | `api/ffi/handlers/source_defs_test.go` `TestAssignAndRemoveTypeField` (new case) | Assign F at `graph`, then at `source`; list `graph` → `[F]`; list `source` → `[F]`; remove at `graph` → reply `[]`, list `source` → `[F]` | AC-2.1, AC-2.2, AC-2.4 |
-| T-8 | Go | `api/ffi/handlers/source_defs_test.go` `TestListTypeSuggestions`, `TestAssignAndRemoveTypeField` (new cases) | `level` `""`, `"Source"`, `"page"` on each RPC → error `sourcevocab.invalid`; no row written | AC-2.5 |
-| T-9 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` row `"metadata levels"` *(new)* | `MetadataLevel` cases = `vocabkey.Levels()` | AC-2.6, D-10 |
+| T-8 | Go | `api/ffi/handlers/source_defs_test.go` `TestListTypeSuggestions`, `TestAssignAndRemoveTypeField` (new cases) | `level` `""`, `"Source"`, `"page"`, `"citation"` on each RPC → error `sourcevocab.invalid`; no row written | AC-2.5 |
+| T-9 | Go | `api/ffi/swift_vocabulary_test.go` `TestSwiftVocabularyMatchesGo` row `"metadata levels"` *(new)* | `MetadataLevel` cases = `vocabkey.MetadataLevels()` | AC-2.6, D-10 |
 | T-10 | Swift | `macos/ProvenenciaTests/SourceTypesModelTests.swift` `selectingShowsOnlySourceLevelSuggestions` *(new)* | Fake holds A at `.source`, B at `.graph` for `t1`; select `t1` → suggestions `[A]` | AC-1.4, D-11 |
 | T-11 | Swift | `macos/ProvenenciaTests/SourceTypesModelTests.swift` `assigningWritesAtSourceLevelOnly` *(new)* | Fake holds B at `.graph`; assign A → `suggestionsByLevel[.source]["t1"]` `[A]`, `[.graph]` still `[B]`, `suggestedFieldCount` 1 | AC-1.4, D-12 |
 
@@ -296,7 +298,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
+- [ ] docs/deployment-plan/spike-15/deployment-plan.md: map row status; docs/deployment-plan/spike-15/completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
 - [ ] Domain doc updated if a rule in docs/*.md changed: source-layer-data-model.md § 5.2, seeded-vocabulary.md § 2.3; add-seeded-vocabulary suggestion shape; map § 6.6 sketch (D-2)
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
@@ -318,7 +320,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 
 **Stop and report if:**
 
-- `rg -n "source_type_metadata_fields" --glob '*.go' --glob '*.swift' --glob '*.sql'` finds a reader or writer not listed in § 4.
+- `rg -n "source_type_metadata_fields" --glob '*.go' --glob '*.swift' --glob '*.sql'` finds a reader or writer not listed in § 4 (shipped migrations and the generated `engine.pb.*` comments excepted).
+- A Go caller of `sourcevocab.CountSuggestions` other than `UpdateSourceType` exists.
 - `TestPragmaHonesty` asks for a `catalogmodel` change (D-7 is wrong).
 - `ON CONFLICT(source_type_id, field_id, level)` is refused by SQLite as matching no unique index.
 - A Swift test other than those in § 8 needs an assertion changed (not a signature) to pass.
