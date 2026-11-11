@@ -428,16 +428,9 @@ func readChangeColumn(w *walk, col string) ([][]byte, string, error) {
 }
 
 // entityOf is the entity type a catalog table's changes carry, or "". It reads
-// entityTable rather than registry: registry's initializer reaches this file's
+// tableEntity rather than registry: registry's initializer reaches this file's
 // path functions, so naming it here would be an initialization cycle.
-func entityOf(table string) string {
-	for entity, t := range entityTable {
-		if t == table {
-			return entity
-		}
-	}
-	return ""
-}
+func entityOf(table string) string { return tableEntity[table] }
 
 func readRowsColumn(w *walk, table string, ids [][]byte, col string) ([][]byte, error) {
 	pk := pkOf(table)

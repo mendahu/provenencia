@@ -499,8 +499,9 @@ var registry = map[string]Effect{
 	"file_derivatives":            {Entity: "file_derivative", None: true},
 }
 
-// entityTable maps an entity type to its catalog table.
-var entityTable map[string]string
+// entityTable maps an entity type to its catalog table, and tableEntity is the
+// reverse. Both are filled in init.
+var entityTable, tableEntity map[string]string
 
 func init() {
 	seen := map[string]struct{}{}
@@ -533,6 +534,10 @@ func init() {
 		}
 	}
 	entityTable = byEntity
+	tableEntity = make(map[string]string, len(byEntity))
+	for entity, table := range byEntity {
+		tableEntity[table] = entity
+	}
 }
 
 // paths lists every path field of the effect.
