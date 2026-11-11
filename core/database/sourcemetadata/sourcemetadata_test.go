@@ -1697,6 +1697,15 @@ func TestOwnerTables(t *testing.T) {
 			if err := sourcevocab.AppendSuggestion(c, cert.ID, doc.ID, level); err != nil {
 				t.Fatal(err)
 			}
+			// A field suggested at each other level must not reach this owner.
+			for _, other := range []vocabkey.Level{vocabkey.LevelSource, vocabkey.LevelArtifact, vocabkey.LevelGraph} {
+				if other == level {
+					continue
+				}
+				if err := sourcevocab.AppendSuggestion(c, cert.ID, f2.ID, other); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Anchor"}); err != nil {
 				t.Fatal(err)
 			}

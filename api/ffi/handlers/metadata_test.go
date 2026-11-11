@@ -172,3 +172,51 @@ func draftOf(fieldID, text string) *engine.MetadataDraft {
 		Layout: []*engine.MetadataLayoutRow{{FieldId: fieldID, SortOrder: 0}},
 	}
 }
+
+// TestMetadataBoardsKeepTheirLevel suggests one field at the artifact level
+// only and one at the graph level only: each board lists its own level's
+// suggestions and not the other's, on the board read and on the Source page.
+func TestMetadataBoardsKeepTheirLevel(t *testing.T) {
+	m := newMetadataOwners(t)
+	artifactOnly := newUserField(t, m.dir, m.userID, "Provider URL")
+	graphOnly := newUserField(t, m.dir, m.userID, "Tree")
+	var ws engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &ws)
+	for field, level := range map[string]string{artifactOnly: "artifact", graphOnly: "graph"} {
+		mustRPC(t, AssignTypeField, &engine.AssignTypeFieldRequest{
+			ProjectDir: m.dir, TypeId: ws.GetSource().GetSourceTypeId(), FieldId: field, Level: level,
+		}, &engine.AssignTypeFieldResponse{})
+	}
+	ids := func(entries []*engine.MetadataWorkspaceEntry) []string {
+		var out []string
+		for _, e := range entries {
+			out = append(out, e.GetField().GetId())
+		}
+		slices.Sort(out)
+		return out
+	}
+	sorted := func(ids ...string) []string { slices.Sort(ids); return ids }
+	for name, tt := range map[string]struct {
+		owner *engine.MetadataOwner
+		want  []string
+	}{
+		"artifact": {m.artifact, sorted(m.suggested, artifactOnly)},
+		"graph":    {m.graph, sorted(m.suggested, graphOnly)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var board engine.GetMetadataBoardResponse
+			mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: m.dir, Owner: tt.owner}, &board)
+			if got := ids(board.GetBoard().GetEntries()); !slices.Equal(got, tt.want) {
+				t.Fatalf("board fields %v, want %v", got, tt.want)
+			}
+		})
+	}
+	// The Source page's Artifact boards carry the artifact-level fields only.
+	var after engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &after)
+	for _, board := range after.GetArtifactMetadata() {
+		if got, want := ids(board.GetEntries()), sorted(m.suggested, artifactOnly); !slices.Equal(got, want) {
+			t.Fatalf("Artifact board fields %v, want %v", got, want)
+		}
+	}
+}
