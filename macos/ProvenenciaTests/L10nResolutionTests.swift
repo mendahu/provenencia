@@ -50,9 +50,19 @@ struct L10nResolutionTests {
         #expect(L10n.string(L10n.Unpromote.keep) == "Keep promotion")
         #expect(L10n.Unpromote.confirmTitle(name: "James Robins") == "Unpromote James Robins?")
         #expect(
-            L10n.string(L10n.Unpromote.confirmMessage)
-                == "This promotion is removed. The cards stay on the graph, and the handle stays."
+            L10n.Unpromote.confirmMessage(kind: .person)
+                == "This promotion is removed. The cards stay on the graph, and the person stays."
         )
+        #expect(
+            L10n.Unpromote.confirmMessage(kind: .event)
+                == "This promotion is removed. The cards stay on the graph, and the event stays."
+        )
+        #expect(
+            L10n.Unpromote.confirmMessage(kind: .place)
+                == "This promotion is removed. The cards stay on the graph, and the place stays."
+        )
+        #expect(L10n.Unpromote.unpromotedAnnouncement(name: "J. Weber") == "J. Weber unpromoted.")
+        #expect(L10n.Unpromote.deletedAnnouncement(ref: "PER-8JD2L") == "PER-8JD2L deleted.")
         #expect(L10n.string(L10n.Unpromote.confirmBridgesHeader) == "Also unpromoted")
         #expect(L10n.string(L10n.Unpromote.confirmBridgesNote) == "The other end of each stays promoted.")
         #expect(

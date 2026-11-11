@@ -112,7 +112,7 @@ struct UnpromoteFlowTests {
         #expect(failed.confirmTone == .danger)
 
         let none = item()
-        #expect(none.message == L10n.string(L10n.Unpromote.confirmMessage))
+        #expect(none.message == "This promotion is removed. The cards stay on the graph, and the person stays.")
         #expect(none.confirmTone == .irreversible)
     }
 

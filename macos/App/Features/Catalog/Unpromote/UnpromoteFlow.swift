@@ -52,7 +52,7 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
         if impactCheckFailed {
             return L10n.Unpromote.confirmPreflightFailed(kind: kind)
         }
-        return L10n.string(L10n.Unpromote.confirmMessage)
+        return L10n.Unpromote.confirmMessage(kind: kind)
     }
 
     var content: PVUnpromoteConfirmContent {

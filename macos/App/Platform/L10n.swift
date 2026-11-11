@@ -8564,11 +8564,30 @@ enum L10n {
             ), ref)
         }
 
-        static let confirmMessage = LocalizedStringResource(
-            "unpromote.confirmMessage",
-            defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",
-            comment: "Message of the Unpromote confirm when the handle keeps another record"
-        )
+        static func confirmMessage(kind: EvidencePrimaryKind) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.person",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the person stays.",
+                    comment: "Message of the Unpromote confirm when the person keeps another record"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.event",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the event stays.",
+                    comment: "Message of the Unpromote confirm when the event keeps another record"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.place",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the place stays.",
+                    comment: "Message of the Unpromote confirm when the place keeps another record"
+                )
+            }
+            return L10n.string(key)
+        }
 
         static func confirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
             let key: LocalizedStringResource
@@ -10417,8 +10436,8 @@ enum L10n {
         static func memberCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.memberCount",
-                defaultValue: "%lld members",
-                comment: "Page header: how many Subjects are members of this handle; argument is the count"
+                defaultValue: "%lld records",
+                comment: "Page header: how many records (Identity Claims) this person, event or place has; argument is the count"
             ), count)
         }
 

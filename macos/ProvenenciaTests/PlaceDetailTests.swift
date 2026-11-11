@@ -128,7 +128,7 @@ struct PlaceDetailTests {
         let page = content(detail())
         #expect(page.title == .ref("PLC-2MT40"))
         #expect(!page.showsRef)
-        #expect(page.members == "1 member")
+        #expect(page.members == "1 record")
     }
 
     @Test func aPictureFillsTheGalleryAndLeadsTheHeader() {

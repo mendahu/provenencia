@@ -16488,6 +16488,42 @@
         }
       }
     },
+    "unpromote.confirmMessage.person": {
+      "comment": "Message of the Unpromote confirm when the person keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the person stays."
+          }
+        }
+      }
+    },
+    "unpromote.confirmMessage.event": {
+      "comment": "Message of the Unpromote confirm when the event keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the event stays."
+          }
+        }
+      }
+    },
+    "unpromote.confirmMessage.place": {
+      "comment": "Message of the Unpromote confirm when the place keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the place stays."
+          }
+        }
+      }
+    },
     "unpromote.confirmMessageDeletes.person": {
       "comment": "Unpromote confirm when the Person handle is deleted; argument is its ref",
       "extractionState": "manual",
@@ -16640,18 +16676,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph."
-          }
-        }
-      }
-    },
-    "unpromote.confirmMessage": {
-      "comment": "Message of the Unpromote confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This promotion is removed. The cards stay on the graph, and the handle stays."
           }
         }
       }
@@ -18517,7 +18541,7 @@
       }
     },
     "conclusions.memberCount": {
-      "comment": "Page header: how many Subjects are members of this handle; argument is the count",
+      "comment": "Page header: how many records (Identity Claims) this person, event or place has; argument is the count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18526,13 +18550,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld member"
+                  "value": "%lld record"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld members"
+                  "value": "%lld records"
                 }
               }
             }
