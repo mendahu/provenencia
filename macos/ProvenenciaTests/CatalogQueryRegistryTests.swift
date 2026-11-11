@@ -863,7 +863,7 @@ struct CatalogQueryRegistryTests {
     @Test func sessionUsesStandardRegistryByDefault() {
         let session = makeSession()
         let key = CatalogQueryKey.sourcesList(project: session.projectKey)
-        #expect(session.registry.stalePolicy(for: key) == .sessionFresh)
+        #expect(session.registry.hiddenPolicy(key) == .markStale)
     }
 
     @Test func invalidationsComeFromRegistrySpecs() {
@@ -1447,7 +1447,6 @@ struct CatalogQueryRegistryTests {
         #expect(key.kind == .personClaims)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
     }
 
     /// T-11 (AC-2.4): the key loads through the store; an unseeded handle is
@@ -1482,7 +1481,6 @@ struct CatalogQueryRegistryTests {
         #expect(key.kind == .personFamily)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
         #expect(CatalogQueryKey.Kind.personFamily.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
@@ -1528,7 +1526,6 @@ struct CatalogQueryRegistryTests {
         #expect(key.kind == .personEvents)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
         #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
@@ -1551,7 +1548,6 @@ struct CatalogQueryRegistryTests {
         #expect(key.kind == .personRecordLinks)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
-        #expect(CatalogQueryRegistry.standard.stalePolicy(for: key) == .sessionFresh)
         #expect(
             CatalogQueryKey.Kind.personRecordLinks.descriptor.refreshes.map(\.follows)
                 == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]

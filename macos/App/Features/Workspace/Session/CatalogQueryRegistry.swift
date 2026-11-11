@@ -24,7 +24,6 @@ enum CatalogHiddenPolicy: Sendable, Equatable {
 /// the in-place patches for lists and the Source page.
 struct CatalogQueryDescriptor: Sendable {
     let kind: CatalogQueryKey.Kind
-    let stalePolicy: CatalogQueryStalePolicy
     let invalidateOn: Set<CatalogMutationKind>
     /// What an invalidated key that isn't on screen does. The exception
     /// to cache rule 2 for lists and per-handle pages, so one trigger
@@ -53,7 +52,6 @@ extension CatalogQueryDescriptor {
     /// from `key.kind.descriptor`.
     static func make<Value>(
         kind: CatalogQueryKey.Kind,
-        stalePolicy: CatalogQueryStalePolicy,
         invalidateOn: Set<CatalogMutationKind> = [],
         whenHidden: CatalogHiddenPolicy = .revalidate,
         deletedWith: CatalogDeletedEntity? = nil,
@@ -68,7 +66,6 @@ extension CatalogQueryDescriptor {
         )
         return CatalogQueryDescriptor(
             kind: kind,
-            stalePolicy: stalePolicy,
             invalidateOn: invalidateOn,
             whenHidden: whenHidden,
             deletedWith: deletedWith,
@@ -95,7 +92,6 @@ extension CatalogQueryDescriptor {
     ) -> CatalogQueryDescriptor {
         .make(
             kind: kind,
-            stalePolicy: .sessionFresh,
             whenHidden: .markStale,
             deletedWith: .handle,
             refreshes: [
@@ -116,7 +112,6 @@ extension CatalogQueryDescriptor {
     ) -> CatalogQueryDescriptor {
         .make(
             kind: kind,
-            stalePolicy: .sessionFresh,
             whenHidden: .markStale,
             deletedWith: .handle,
             refreshes: [
@@ -132,10 +127,6 @@ extension CatalogQueryDescriptor {
 /// Declarative catalog read loaders and mutation invalidation map.
 struct CatalogQueryRegistry: Sendable {
     static let standard = CatalogQueryRegistry()
-
-    func stalePolicy(for key: CatalogQueryKey) -> CatalogQueryStalePolicy {
-        descriptor(for: key).stalePolicy
-    }
 
     /// Resolves cache effects from each kind's `invalidateOn` tags + mutation payload.
     func invalidations(by mutation: CatalogMutation, project: ProjectKey) -> [CatalogQueryInvalidation] {
@@ -174,7 +165,6 @@ extension CatalogQueryKey.Kind {
             // patches the row through `lastUpdated`.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 invalidateOn: [.deletedSource],
                 whenHidden: .markStale,
                 invalidation: { project, _ in .key(.sourcesList(project: project)) },
@@ -195,7 +185,6 @@ extension CatalogQueryKey.Kind {
             // restates rows no type edit touched.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 invalidateOn: [.createdSource, .deletedSource, .changedSourceType],
                 invalidation: { project, _ in .key(.sourceTypesList(project: project)) },
                 refreshes: [.applyHiddenPolicyOnAny(follows: .list(.sourceVocabulary))],
@@ -212,7 +201,6 @@ extension CatalogQueryKey.Kind {
             // gates Delete.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 invalidateOn: [.mutatedSourceMetadata],
                 invalidation: { project, _ in .key(.metadataFieldsList(project: project)) },
                 refreshes: [.applyHiddenPolicyOnAny(follows: .list(.sourceVocabulary))],
@@ -227,7 +215,6 @@ extension CatalogQueryKey.Kind {
             // Seeded vocabulary with no CRUD surface, so nothing stales it.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 load: { key, store in
                     guard case .credibilityGradesList(let project) = key else {
                         mismatchedCatalogKey(key, .credibilityGradesList)
@@ -244,7 +231,6 @@ extension CatalogQueryKey.Kind {
             // through `.updatedMetadataField` / `.deletedMetadataField`.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 invalidateOn: [
                     .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
                     .updatedMetadataField, .deletedMetadataField,
@@ -278,7 +264,6 @@ extension CatalogQueryKey.Kind {
             // reloads when its canvas, composer or Promote is shown again.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 refreshes: [.applyHiddenPolicy(followsOwnId: .evidenceGraphs)],
                 load: { key, store in
@@ -319,7 +304,6 @@ extension CatalogQueryKey.Kind {
             // Reloads follow the write's `citations` read for this key's graph.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 refreshes: [.applyHiddenPolicy(followsOwnId: .reads(.citations))],
                 load: { key, store in
@@ -339,7 +323,6 @@ extension CatalogQueryKey.Kind {
             // no effects, so the type–field mutations name the key.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 invalidateOn: [.assignedTypeSuggestion, .removedTypeSuggestion],
                 invalidation: { project, mutation in
                     switch mutation {
@@ -364,7 +347,6 @@ extension CatalogQueryKey.Kind {
             // structure.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 refreshes: [
                     .followsPropertyLabels,
@@ -382,7 +364,6 @@ extension CatalogQueryKey.Kind {
             // Seeded product matrix with no CRUD surface.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 load: { key, store in
                     guard case .connectRules = key else {
                         mismatchedCatalogKey(key, .connectRules)
@@ -393,7 +374,6 @@ extension CatalogQueryKey.Kind {
         case .propertyTerms:
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 // A term write reports the `property_terms` read for its Property.
                 // The rows hold no Property label, binding or type, so the key
                 // follows no vocabulary list.
@@ -412,7 +392,6 @@ extension CatalogQueryKey.Kind {
             // Reloads follow the write's `citations` read for this key's graph.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
                     guard case .citationsByArtifact(_, let graphId, _) = key else { return [] }
@@ -435,7 +414,6 @@ extension CatalogQueryKey.Kind {
             // project-wide map (or sourcesList). It keeps merging while hidden.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 refreshes: [.merged(
                     follows: .reads(.evidenceGraphProgress),
                     as: [String: EvidenceGraphProgress].self,
@@ -472,7 +450,6 @@ extension CatalogQueryKey.Kind {
             // it for the deleted Source too. A hidden list goes stale until it is shown again.
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 refreshes: [.merged(
                     follows: .reads(.evidenceGraphs),
@@ -501,7 +478,6 @@ extension CatalogQueryKey.Kind {
         case .personsList:
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 patches: [.lastUpdated(CatalogPersonSummary.self, follows: .handle)],
                 refreshes: [
@@ -518,7 +494,6 @@ extension CatalogQueryKey.Kind {
         case .eventsList:
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 patches: [.lastUpdated(CatalogEventSummary.self, follows: .handle)],
                 refreshes: [
@@ -535,7 +510,6 @@ extension CatalogQueryKey.Kind {
         case .placesList:
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 patches: [.lastUpdated(CatalogPlaceSummary.self, follows: .handle)],
                 refreshes: [
@@ -552,7 +526,6 @@ extension CatalogQueryKey.Kind {
         case .conclusionDetail:
             return .make(
                 kind: self,
-                stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
                 deletedWith: .handle,
                 refreshes: [
