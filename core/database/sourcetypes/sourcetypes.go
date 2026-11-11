@@ -173,10 +173,10 @@ func List(c *database.Catalog) ([]Type, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for i := range out {
-		if out[i].UsedBy, err = deleteimpact.InboundTotal(tx, catalogmodel.KindSourceType, out[i].ID); err != nil {
-			return nil, err
-		}
+	err = deleteimpact.FillUsedBy(tx, catalogmodel.KindSourceType, out,
+		func(t Type) []byte { return t.ID }, func(t *Type, n int) { t.UsedBy = n })
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -314,20 +314,6 @@ func GetByID(c *database.Catalog, id []byte) (Type, error) {
 		return Type{}, err
 	}
 	return t, nil
-}
-
-// UsedBy reports how many sources reference the type: the delete-impact total.
-func UsedBy(c *database.Catalog, id []byte) (int, error) {
-	db, err := c.DB()
-	if err != nil {
-		return 0, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	return deleteimpact.InboundTotal(tx, catalogmodel.KindSourceType, id)
 }
 
 // SuggestedFields reports how many fields the type suggests at the Source

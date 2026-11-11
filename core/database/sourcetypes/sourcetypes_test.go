@@ -448,7 +448,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				n, err := UsedBy(c, used)
+				n, err := deleteimpact.UsedBy(c, catalogmodel.KindSourceType, used)
 				if err != nil || n != 2 {
 					t.Fatalf("UsedBy %d %v", n, err)
 				}

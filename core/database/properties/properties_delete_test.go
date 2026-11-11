@@ -91,7 +91,7 @@ func TestDelete(t *testing.T) {
 				); err != nil {
 					t.Fatal(err)
 				}
-				n, err := properties.UsedBy(c, got.ID)
+				n, err := deleteimpact.UsedBy(c, catalogmodel.KindProperty, got.ID)
 				if err != nil || n != 0 {
 					t.Fatalf("usedBy want 0 got %d %v", n, err)
 				}
@@ -160,7 +160,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				obsID := insertObservationOn(t, c, userID, prop.ID)
-				n, err := properties.UsedBy(c, prop.ID)
+				n, err := deleteimpact.UsedBy(c, catalogmodel.KindProperty, prop.ID)
 				if err != nil || n != 1 {
 					t.Fatalf("usedBy want 1 got %d %v", n, err)
 				}
@@ -411,7 +411,7 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
-	n, err := properties.UsedBy(c, prop.ID)
+	n, err := deleteimpact.UsedBy(c, catalogmodel.KindProperty, prop.ID)
 	if err != nil || n != 0 {
 		t.Fatalf("binding must not count: %d %v", n, err)
 	}
@@ -419,7 +419,7 @@ func TestUsedByCountsObservationsNotBindings(t *testing.T) {
 		t.Fatal(err)
 	}
 	insertObservationOn(t, c, userID, prop.ID)
-	n, err = properties.UsedBy(c, prop.ID)
+	n, err = deleteimpact.UsedBy(c, catalogmodel.KindProperty, prop.ID)
 	if err != nil || n != 1 {
 		t.Fatalf("want 1 observation got %d %v", n, err)
 	}
@@ -466,7 +466,7 @@ func TestUsedByCountsObservationsAndTerms(t *testing.T) {
 	}
 	usedBy := func() (int, int, int) {
 		t.Helper()
-		n, err := properties.UsedBy(c, propID)
+		n, err := deleteimpact.UsedBy(c, catalogmodel.KindProperty, propID)
 		if err != nil {
 			t.Fatal(err)
 		}

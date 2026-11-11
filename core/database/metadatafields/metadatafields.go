@@ -68,7 +68,7 @@ type Field struct {
 	DataType    string
 	Description string
 	// UsedBy is how many Sources, Artifacts and Evidence graphs hold a value
-	// for this field: the total that blocks its delete. Only List populates
+	// for this field: the total that blocks its delete. List and Update populate
 	// it; the other readers leave it 0.
 	UsedBy int
 }
@@ -298,27 +298,12 @@ func List(c *database.Catalog) ([]Field, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for i := range out {
-		if out[i].UsedBy, err = deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, out[i].ID); err != nil {
-			return nil, err
-		}
+	err = deleteimpact.FillUsedBy(tx, catalogmodel.KindMetadataField, out,
+		func(f Field) []byte { return f.ID }, func(f *Field, n int) { f.UsedBy = n })
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
-}
-
-// UsedBy reports how many Sources, Artifacts and Evidence graphs hold a value
-// for the field: the delete-impact total.
-func UsedBy(c *database.Catalog, id []byte) (int, error) {
-	db, err := c.DB()
-	if err != nil {
-		return 0, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	return deleteimpact.InboundTotal(tx, catalogmodel.KindMetadataField, id)
 }
 
 // Delete erases a field when no Source, Artifact or Evidence graph stores a value for it. Suggestion

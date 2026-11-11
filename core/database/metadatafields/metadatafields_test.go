@@ -10,7 +10,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/dbtest"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -247,7 +249,7 @@ func TestDelete(t *testing.T) {
 					art, field.ID); err != nil {
 					t.Fatal(err)
 				}
-				if n, err := UsedBy(c, field.ID); err != nil || n != 0 {
+				if n, err := deleteimpact.UsedBy(c, catalogmodel.KindMetadataField, field.ID); err != nil || n != 0 {
 					t.Fatalf("UsedBy = %d, %v; want 0", n, err)
 				}
 				var changes []rowchange.Change
@@ -301,7 +303,7 @@ func TestDelete(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				if n, err := UsedBy(c, field.ID); err != nil || n != 4 {
+				if n, err := deleteimpact.UsedBy(c, catalogmodel.KindMetadataField, field.ID); err != nil || n != 4 {
 					t.Fatalf("UsedBy = %d, %v; want 4", n, err)
 				}
 				all, err := List(c)

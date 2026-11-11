@@ -3,6 +3,8 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -82,7 +84,7 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		if got.UsedBy, err = sourcetypes.UsedBy(c, typeID); err != nil {
+		if got.UsedBy, err = deleteimpact.UsedBy(c, catalogmodel.KindSourceType, typeID); err != nil {
 			return err
 		}
 		if got.SuggestedFields, err = sourcetypes.SuggestedFields(c, typeID); err != nil {
@@ -284,7 +286,7 @@ func UpdateMetadataField(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		if got.UsedBy, err = metadatafields.UsedBy(c, fieldID); err != nil {
+		if got.UsedBy, err = deleteimpact.UsedBy(c, catalogmodel.KindMetadataField, fieldID); err != nil {
 			return err
 		}
 		out = &engine.UpdateMetadataFieldResponse{Field: metadataFieldProto(got), Effects: writeEffectsProto(wrote)}

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 )
 
@@ -156,4 +157,77 @@ func InboundTotal(tx *sql.Tx, kind catalogmodel.Kind, id []byte) (int, error) {
 		total += n
 	}
 	return total, nil
+}
+
+// InboundTotals is InboundTotal for many ids of one kind: the map holds every
+// id (string(id)) with its total, 0 when nothing holds it. Each edge with a
+// grouped form reads all ids in one statement per batch, so a list shows its
+// "used by" column in a handful of statements however many rows it has.
+func InboundTotals(tx *sql.Tx, kind catalogmodel.Kind, ids [][]byte) (map[string]int, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	if _, ok := tableByKind(kind); !ok {
+		return nil, ErrInvalid
+	}
+	out := make(map[string]int, len(ids))
+	for _, id := range ids {
+		if len(id) != 16 {
+			return nil, ErrInvalid
+		}
+		out[string(id)] = 0
+	}
+	for _, edge := range inboundFor(kind) {
+		switch {
+		case edge.Totals != nil:
+			got, err := edge.Totals(tx, ids)
+			if err != nil {
+				return nil, err
+			}
+			for id, n := range got {
+				out[id] += n
+			}
+		case edge.Count != nil:
+			for _, id := range ids {
+				n, err := edge.Count(tx, id)
+				if err != nil {
+					return nil, err
+				}
+				out[string(id)] += n
+			}
+		}
+	}
+	return out, nil
+}
+
+// UsedBy is InboundTotal read in its own transaction: the "used by" count of
+// one vocabulary row, the number that blocks its delete.
+func UsedBy(c *database.Catalog, kind catalogmodel.Kind, id []byte) (int, error) {
+	db, err := c.DB()
+	if err != nil {
+		return 0, err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	return InboundTotal(tx, kind, id)
+}
+
+// FillUsedBy sets each row's "used by" from one InboundTotals read: key gives a
+// row's id and set stores its total. It is the tail of a vocabulary List.
+func FillUsedBy[T any](tx *sql.Tx, kind catalogmodel.Kind, rows []T, key func(T) []byte, set func(*T, int)) error {
+	ids := make([][]byte, len(rows))
+	for i, r := range rows {
+		ids[i] = key(r)
+	}
+	totals, err := InboundTotals(tx, kind, ids)
+	if err != nil {
+		return err
+	}
+	for i := range rows {
+		set(&rows[i], totals[string(ids[i])])
+	}
+	return nil
 }

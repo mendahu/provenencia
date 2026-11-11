@@ -328,27 +328,12 @@ func List(c *database.Catalog) ([]Property, error) {
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for i := range out {
-		if out[i].UsedBy, err = deleteimpact.InboundTotal(tx, catalogmodel.KindProperty, out[i].ID); err != nil {
-			return nil, err
-		}
+	err = deleteimpact.FillUsedBy(tx, catalogmodel.KindProperty, out,
+		func(p Property) []byte { return p.ID }, func(p *Property, n int) { p.UsedBy = n })
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
-}
-
-// UsedBy reports how many Observations and terms hold the Property: the
-// delete-impact total.
-func UsedBy(c *database.Catalog, id []byte) (int, error) {
-	db, err := c.DB()
-	if err != nil {
-		return 0, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return 0, err
-	}
-	defer func() { _ = tx.Rollback() }()
-	return deleteimpact.InboundTotal(tx, catalogmodel.KindProperty, id)
 }
 
 // Delete erases a user-origin Property when no observations or terms

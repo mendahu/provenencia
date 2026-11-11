@@ -30,6 +30,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -1262,4 +1263,115 @@ func TestInboundTotal(t *testing.T) {
 			t.Errorf("%s: %v, want ErrInvalid", name, err)
 		}
 	}
+}
+
+// TestInboundTotals checks the batched Used by totals against InboundTotal per
+// id: metadata fields held on a Source, an Artifact and a graph, Properties
+// held by Observations and terms, an unheld id, and more ids than one batch.
+func TestInboundTotals(t *testing.T) {
+	c, userID := testCatalog(t)
+	if err := subjectvocab.Install(c); err != nil {
+		t.Fatal(err)
+	}
+	field := func(key string) []byte {
+		id, err := metadatafields.Upsert(c, metadatafields.Field{Key: key, Origin: vocabkey.OriginUser, Label: key, DataType: "text"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return id
+	}
+	onSource, onOthers, unheld := field("on-source"), field("on-others"), field("unheld")
+	s1, a1, g1 := ownerFixture(t, c, userID, "S1")
+	runOwnerSet(t, c, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: s1.ID}, onSource, "v")
+	runOwnerSet(t, c, userID, a1, onOthers, "v")
+	runOwnerSet(t, c, userID, g1, onOthers, "v")
+
+	toponym, err := properties.Lookup(c, "toponym", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	placeType, err := subjecttypes.Lookup(c, "place", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	place := subjectstest.OfType(t, c, userID, g1.ID, placeType.ID, "Leeds")
+	if _, err := writes.Call(c, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: g1.ID, ArtifactID: a1.ID, LocatorJSON: testLocator, Transcription: "Leeds",
+		}, []observations.Input{{SubjectID: place.ID, PropertyID: toponym.ID, Scalar: propertymeta.TextScalar("Leeds")}})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	termed, err := properties.Upsert(c, properties.Property{
+		Key: "termed", Origin: vocabkey.OriginUser, Label: "Termed", ValueType: propertymeta.ValueTypeTerm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	createTerm(t, c, userID, termed, "One")
+	createTerm(t, c, userID, termed, "Two")
+	untouched, err := properties.Upsert(c, properties.Property{
+		Key: "untouched", Origin: vocabkey.OriginUser, Label: "Untouched", ValueType: propertymeta.ValueTypeTerm,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	for _, tt := range []struct {
+		name string
+		kind catalogmodel.Kind
+		ids  [][]byte
+		want []int
+	}{
+		{"metadata fields", catalogmodel.KindMetadataField, [][]byte{onSource, onOthers, unheld}, []int{1, 2, 0}},
+		{"properties", catalogmodel.KindProperty, [][]byte{toponym.ID, termed, untouched}, []int{1, 2, 0}},
+		{"source types", catalogmodel.KindSourceType, [][]byte{s1.SourceTypeID}, []int{1}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := deleteimpact.InboundTotals(tx, tt.kind, tt.ids)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i, id := range tt.ids {
+				single, err := deleteimpact.InboundTotal(tx, tt.kind, id)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if got[string(id)] != single || single != tt.want[i] {
+					t.Errorf("id %d: InboundTotals %d, InboundTotal %d, want %d", i, got[string(id)], single, tt.want[i])
+				}
+			}
+		})
+	}
+	t.Run("more ids than one batch", func(t *testing.T) {
+		ids := [][]byte{onOthers}
+		for i := 0; i < sqlbatch.Size*2+7; i++ {
+			ids = append(ids, fakeID(t))
+		}
+		ids = append(ids, onSource)
+		got, err := deleteimpact.InboundTotals(tx, catalogmodel.KindMetadataField, ids)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != len(ids) || got[string(onOthers)] != 2 || got[string(onSource)] != 1 {
+			t.Fatalf("totals %d entries, others %d, source %d", len(got), got[string(onOthers)], got[string(onSource)])
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if _, err := deleteimpact.InboundTotals(tx, catalogmodel.KindMetadataField, [][]byte{unheld[:15]}); !errors.Is(err, deleteimpact.ErrInvalid) {
+			t.Errorf("short id: %v", err)
+		}
+		if _, err := deleteimpact.InboundTotals(nil, catalogmodel.KindMetadataField, nil); !errors.Is(err, deleteimpact.ErrInvalid) {
+			t.Errorf("nil tx: %v", err)
+		}
+	})
 }
