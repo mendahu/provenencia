@@ -1,11 +1,12 @@
 # Review — S15-06 Type suggestions have a level
 
-**Verdict:** Fits with changes — Ready with changes (round 1)
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
-- **M-1: does `Level` include `citation`?** Recommended: four values with a metadata subset. **Answered (user, 2026-11-11): four values, subset.** D-1, D-2, D-5, D-10 and the map's rule "One level type" follow.
+- **M-1: does `Level` include `citation`?** Recommended: four values with a metadata subset. **Answered (user, 2026-11-11): four values, subset.** D-1, D-2, D-5 and the map's rule "One level type" follow.
+- **M-8: how does Swift mirror the level?** Recommended: one four-case `Level` enum with `metadataLevels`. **Answered (user, 2026-11-11): one `Level` enum, four cases.** D-10, D-11, D-12 and the map's rule follow.
 
 ## Writer's own calls
 
@@ -15,7 +16,7 @@
 - D-9: the Fields column counts `source` rows only until S15-12.
 - D-11: `CatalogQueryKey.typeSuggestions` and the type-suggestion mutations keep no level until S15-12.
 - D-12: `FakeStore.suggestionsByType` stays as an alias over the `source` level until S15-12.
-- Swift `MetadataLevel` has no `citation` case until a Swift caller needs it (S15-17).
+- Swift's enum is named `Level` (top level; `TextMatch.Level` is nested and unrelated).
 
 ## Round 1
 
@@ -69,3 +70,40 @@
 **Answer:** No change — the reviewer confirmed AC-2.5 holds.
 
 Also fixed from X-5's notes: §4's proto row now says fields 1, 3, 4 with 2 reserved.
+
+## Round 2
+
+Both reviewers confirmed the round-1 answers, with the notes below.
+
+### X-1 (r2) · major · `stateLock` is an `NSRecursiveLock`, not non-reentrant
+**Answer:** Fixed — D-12 now says only that callers already hold `stateLock` through `withState`.
+
+### X-2 (r2) · major · The `SuggestedFields` case is in `TestCreateUpdateGetByID`
+**Answer:** Fixed — §4 Tests row and T-6 name `TestCreateUpdateGetByID` case "list counts the fields a type suggests".
+
+### X-3 (r2) · major · T-5 left the fixture and field B open
+**Answer:** Fixed — T-5: `mustSeededSource`, a new user field `shelf_mark` appended at `LevelGraph` with `sourcevocab.AppendSuggestion`.
+
+### X-4 (r2) · minor · `sqlAppendSuggestion` argument order
+**Answer:** Fixed — Go core row gives the SQL and the bind order.
+
+### X-5 (r2) · minor · Where D-5's check goes
+**Answer:** Fixed — D-5: first statement, before `c.DB()`.
+
+### X-6 (r2) · minor · STEP-2 check text
+**Answer:** Fixed — packages compile and fail at run time on `level NOT NULL`.
+
+### X-7 (r2) · minor · T-10, T-11 fixture
+**Answer:** Fixed — tests set `store.suggestionsByLevel[.graph]` directly after `makeModel`.
+
+### M-7 · blocker · The count rule still lives in Swift (`updated.count`)
+**Codebase:** `SourceTypesModel.assignPickedField`, `removeSuggestion`; `AssignTypeFieldResponse`, `RemoveTypeFieldResponse` carry no count.
+**Answer:** Fixed — D-8: `suggested_field_count = 2` on both replies from `sourcetypes.SuggestedFields`; D-11 `CatalogTypeSuggestionEdit`; AC-2.8, T-12; Deletes lists the `updated.count` patches.
+
+### M-8 · blocker · `MetadataLevel` cannot take S15-17's `citation`
+**Answer:** To user → answered (2026-11-11): one four-case Swift `Level`. Fixed — D-10 (`Level.swift`, `metadataLevels`, `holdsMetadata`, two parity rows), D-11, D-12, AC-2.6, T-9; the map's rule names `Level`.
+
+### Notes below the bar
+- Proto comment named `vocabkey.Levels`: Fixed — names `MetadataLevels`, `citation` refused.
+- A fourth string-mapping helper in `swift_vocabulary_test.go`: Fixed — one generic `strs` replaces `listStrings`, `readStrings`, `connectionOutcomes` (STEP-5, Deletes).
+- M-6's "form for new typed keys" sets a pattern rather than following one: kept; D-1 states it so the next typed key follows it.
