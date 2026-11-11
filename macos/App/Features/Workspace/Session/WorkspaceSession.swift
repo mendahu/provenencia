@@ -232,6 +232,28 @@ final class WorkspaceSession {
         for key in place.queryKeys {
             key.kind.descriptor.warm(self, key)
         }
+        var onScreen = Set<String>()
+        for key in place.queryKeys where key.kind.descriptor.deletedWith == .handle {
+            guard let id = key.ownId else { continue }
+            onScreen.insert(id)
+            shownOrder.removeAll { $0 == id }
+            shownOrder.append(id)
+        }
+        trimHiddenEntities(keeping: onScreen)
+    }
+
+    /// Keeps at most `maxHiddenEntities` hidden entities' per-entity keys: past
+    /// that, the least recently shown go, every key of an entity at once. An
+    /// entity no place showed counts as least recently shown. The entities on
+    /// screen are never hidden, whichever of their keys the place warms.
+    private func trimHiddenEntities(keeping onScreen: Set<String>) {
+        var hidden = Set<String>()
+        for key in handles.keys where key.project == projectKey && key.kind.descriptor.deletedWith == .handle {
+            if let id = key.ownId, !onScreen.contains(id) { hidden.insert(id) }
+        }
+        guard hidden.count > Self.maxHiddenEntities else { return }
+        let ordered = hidden.subtracting(shownOrder).sorted() + shownOrder.filter(hidden.contains)
+        evict(.handle, ids: Set(ordered.prefix(hidden.count - Self.maxHiddenEntities)))
     }
 
     /// The one application of a write. First it evicts the hidden keys of the

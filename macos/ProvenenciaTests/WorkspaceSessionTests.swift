@@ -1354,6 +1354,56 @@ struct WorkspaceSessionTests {
         #expect(ConclusionDetailPresentation(handle.reading, isFetching: false) { $0.entity.id } == .gone)
     }
 
+    /// T-9 (AC-4.1 - AC-4.4): at most 50 hidden entities keep their keys, the
+    /// least recently shown go first, and the entity on screen keeps all of its
+    /// keys, a section key its place does not warm included.
+    @Test func hiddenConclusionPagesAreCappedAtFifty() async throws {
+        let store = FakeStore()
+        for index in 0...52 {
+            store.seededConclusionDetails["e\(index)"] = detail("e\(index)")
+        }
+        store.seededPersonFamilies = ["e0": CatalogPersonFamily(units: []), "e1": CatalogPersonFamily(units: [])]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        func detailKey(_ id: String) -> CatalogQueryKey { .conclusionDetail(project: project, entityId: id) }
+        func familyKey(_ id: String) -> CatalogQueryKey { .personFamily(project: project, entityId: id) }
+        func holds(_ key: CatalogQueryKey) -> Bool {
+            (session.queryHandle(key) as QueryHandle<CatalogConclusionDetail>?) != nil
+                || (session.queryHandle(key) as QueryHandle<CatalogPersonFamily>?) != nil
+        }
+        func show(_ id: String, _ section: ConclusionPageSection? = nil) async {
+            session.apply(location: .personDetail(entityId: id, ref: "PER-\(id)", title: nil).withPageSection(section))
+            await session.settleWrites()
+            #expect(holds(detailKey(id)))
+        }
+
+        session.setQueryValue(detailKey("never"), value: detail("never"))
+        await show("e0", .family)
+        for index in 1...50 {
+            await show("e\(index)")
+        }
+        #expect(!holds(detailKey("never")))
+        #expect(holds(detailKey("e0")) && holds(familyKey("e0")))
+
+        await show("e51")
+        #expect(!holds(detailKey("e0")) && !holds(familyKey("e0")))
+        for index in 1...50 {
+            #expect(holds(detailKey("e\(index)")), "e\(index)")
+        }
+
+        session.setQueryValue(familyKey("e1"), value: CatalogPersonFamily(units: []))
+        session.setQueryValue(detailKey("extra"), value: detail("extra"))
+        await show("e1")
+        #expect(!holds(detailKey("extra")))
+        #expect(holds(familyKey("e1")))
+        #expect(holds(detailKey("e2")))
+
+        await show("e52")
+        #expect(!holds(detailKey("e2")))
+        #expect(holds(detailKey("e1")) && holds(familyKey("e1")))
+        #expect(holds(detailKey("e3")))
+    }
+
     /// The detail with a name field citing "s-field", a birth row whose owner's
     /// field cites "s-owner", and a picture whose record cites "s-pic".
     private func citedDetail(_ id: String) -> CatalogConclusionDetail {
