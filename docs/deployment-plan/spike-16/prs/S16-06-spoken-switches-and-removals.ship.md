@@ -112,3 +112,11 @@ Do:
 Check: the two tests pass; `rg -n "\.pageSection\b" macos/App/Features/Workspace/WorkspaceLocationLabels.swift` prints nothing; scripts/check-pr.sh PASS.
 
 F-6 done: red first (`pageSectionAddsACrumb` crashed on the missing third crumb; `locationLabelsNameTheSection` expected the Vitals label). Labels read `openPageSection`; the record's crumb has no action on the first section; an Event detail keeps two crumbs. Plan Landed note updated. Gate PASS.
+
+The user reported (2026-11-11) that the person's name in the crumbs has a different typeface on Vitals than on the other sections, and asked that it come from one code path. Finding: there is one path — `WorkspaceToolbar.breadcrumbItems` builds every crumb and `PVBreadcrumbs` draws them — but `PVBreadcrumbs` picks the style from `action`: a link is body medium, a crumb without an action is mono (the current-page ref style). F-6 gave the record's crumb no action on the first section, so on Vitals the name drew as mono.
+
+**F-7 — The record's crumb is a link on every section**
+Files: `macos/App/Features/Workspace/WorkspaceToolbar.swift` (`breadcrumbItems`), `macos/ProvenenciaTests/WorkspaceToolbarBreadcrumbTests.swift` (`pageSectionAddsACrumb`).
+Failing test first: in `pageSectionAddsACrumb`, the Vitals case expects `vitals[1].action != nil`, and calling it goes to `.personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe")` with `pageSection == nil`; `vitals[2].action == nil` stays. Fails today.
+Do: the record's crumb always has `action: { goTo(location.withPageSection(nil)) }` (revert F-6's `location.pageSection == nil ? nil : …`). On Vitals it goes to the page shown, which `WorkspaceNavigation.go(to:)` coalesces into the current history entry (no new entry). Restore the comment to "the record's crumb goes back to its first section". Add one line to the plan's Landed note: F-7 supersedes F-6's no-action crumb so the name keeps one style.
+Check: the test passes; scripts/check-pr.sh PASS.
