@@ -117,6 +117,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// Type↔field suggestion joins per level, then by source type id, held in
     /// the order they were assigned — the engine's `sort_order`.
     var suggestionsByLevel: [Level: [String: [CatalogTypeSuggestion]]] = [:]
+    /// A count the engine would report that differs from the `.source` list's
+    /// length, so a test can tell the engine's count from the reply's rows.
+    var suggestedFieldCountOverride: [String: Int] = [:]
     /// The `.source` level of `suggestionsByLevel`, for tests that need one
     /// list. Like every stored property it is read and written inside
     /// `withState`, which already holds `stateLock`.
@@ -1112,7 +1115,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     private func suggestedFieldCount(typeID: String) -> Int {
-        (suggestionsByLevel[.source]?[typeID] ?? []).count
+        suggestedFieldCountOverride[typeID] ?? (suggestionsByLevel[.source]?[typeID] ?? []).count
     }
 
     func createSourceType(
