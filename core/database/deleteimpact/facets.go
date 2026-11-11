@@ -3,6 +3,7 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -367,41 +368,10 @@ func releaseCitation(tx *sql.Tx, citationID []byte) (released, error) {
 	if tx == nil || len(citationID) != 16 {
 		return released{}, ErrInvalid
 	}
-	var (
-		id, artifactID, graphID                 []byte
-		ref, locator                            string
-		transcription, label, transcriptionNote sql.NullString
-		uncertain                               int
-	)
-	if err := tx.QueryRow(`SELECT id, ref, artifact_id, graph_id, locator_json, transcription, label,
-		transcription_uncertain, transcription_note FROM citations WHERE id = ?`, citationID).
-		Scan(&id, &ref, &artifactID, &graphID, &locator, &transcription, &label, &uncertain, &transcriptionNote); err != nil {
-		return released{}, err
-	}
-	out, err := releaseFacets(tx, catalogmodel.KindCitation, id)
-	if err != nil {
-		return released{}, err
-	}
-	if _, err := tx.Exec(`DELETE FROM citations WHERE id = ?`, id); err != nil {
-		return released{}, err
-	}
-	out.Changes = append(out.Changes, rowchange.Change{
-		EntityType: "citation",
-		EntityID:   id,
-		Action:     rowchange.ActionDelete,
-		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                      database.UUIDJSON(id),
-			"ref":                     ref,
-			"artifact_id":             database.UUIDJSON(artifactID),
-			"graph_id":                database.UUIDJSON(graphID),
-			"locator_json":            locator,
-			"transcription":           nullStringJSON(transcription),
-			"label":                   nullStringJSON(label),
-			"transcription_uncertain": uncertain != 0,
-			"transcription_note":      nullStringJSON(transcriptionNote),
-		}),
-	})
-	return out, nil
+	return releaseRow(tx, catalogmodel.KindCitation, "citations", "citation", citationID,
+		col{"id", colUUID}, col{"ref", colText}, col{"artifact_id", colUUID}, col{"graph_id", colUUID},
+		col{"locator_json", colText}, col{"transcription", colText}, col{"label", colText},
+		col{"transcription_uncertain", colBool}, col{"transcription_note", colText})
 }
 
 // ReleaseGraph is releaseGraph on the write's Tx: it schedules the purge of any
@@ -427,33 +397,40 @@ func releaseGraph(tx *sql.Tx, graphID []byte) (released, error) {
 	if tx == nil || len(graphID) != 16 {
 		return released{}, ErrInvalid
 	}
-	var (
-		id, sourceID     []byte
-		name             string
-		ref, description sql.NullString
-	)
-	if err := tx.QueryRow(`SELECT id, ref, source_id, name, description FROM evidence_graphs WHERE id = ?`, graphID).
-		Scan(&id, &ref, &sourceID, &name, &description); err != nil {
+	return releaseRow(tx, catalogmodel.KindEvidenceGraph, "evidence_graphs", "evidence_graph", graphID,
+		col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText},
+		col{"description", colText})
+}
+
+// releaseRow removes one row by id, audited whole: its facets (through
+// releaseFacets), then the row, then a delete change of entityType over cols.
+// Citation and graph removal share it. Does not commit.
+func releaseRow(tx *sql.Tx, kind catalogmodel.Kind, table, entityType string, id []byte, cols ...col) (released, error) {
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = c.name
+	}
+	dest, vals := colScanDest(cols)
+	if err := tx.QueryRow(fmt.Sprintf(`SELECT %s FROM %s WHERE id = ?`, strings.Join(names, ", "), table), id).
+		Scan(dest...); err != nil {
 		return released{}, err
 	}
-	out, err := releaseFacets(tx, catalogmodel.KindEvidenceGraph, id)
+	out, err := releaseFacets(tx, kind, id)
 	if err != nil {
 		return released{}, err
 	}
-	if _, err := tx.Exec(`DELETE FROM evidence_graphs WHERE id = ?`, id); err != nil {
+	if _, err := tx.Exec(fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, table), id); err != nil {
 		return released{}, err
 	}
+	fields := make(map[string]any, len(cols))
+	for i, c := range cols {
+		fields[c.name] = colJSON(c.kind, vals[i])
+	}
 	out.Changes = append(out.Changes, rowchange.Change{
-		EntityType: "evidence_graph",
+		EntityType: entityType,
 		EntityID:   id,
 		Action:     rowchange.ActionDelete,
-		Fields: rowchange.DeletedRow(map[string]any{
-			"id":          database.UUIDJSON(id),
-			"ref":         nullStringJSON(ref),
-			"source_id":   database.UUIDJSON(sourceID),
-			"name":        name,
-			"description": nullStringJSON(description),
-		}),
+		Fields:     rowchange.DeletedRow(fields),
 	})
 	return out, nil
 }

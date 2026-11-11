@@ -421,7 +421,8 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 	return g, change, nil
 }
 
-// graphFields is the audit field map of a graph row, for its create and delete.
+// graphFields is the audit field map of a graph row, for its create. A delete
+// is audited by deleteimpact.releaseGraph.
 func graphFields(g Graph) map[string]any {
 	return map[string]any{
 		"id":          database.UUIDJSON(g.ID),
