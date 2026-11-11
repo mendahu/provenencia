@@ -91,7 +91,12 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		for _, e := range meta {
 			out.Metadata = append(out.Metadata, metadataEntryProto(c, e))
 		}
+		boards, err := artifactBoardsProto(c, arts)
+		if err != nil {
+			return err
+		}
 		out.Artifacts = arts
+		out.ArtifactMetadata = boards
 		out.Credibility = cred
 		return nil
 	})

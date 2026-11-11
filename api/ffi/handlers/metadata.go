@@ -27,6 +27,66 @@ func parseOwner(o *engine.MetadataOwner) (sourcemetadata.Owner, error) {
 	return sourcemetadata.Owner{Level: vocabkey.Level(o.GetLevel()), ID: id}, nil
 }
 
+// parseDraft reads a metadata draft off the wire. An absent message is nil
+// (no metadata change); a present one, empty included, is the draft the owner's
+// stored values become. A malformed field id is request.invalid_id before any
+// write.
+func parseDraft(d *engine.MetadataDraft) (*sourcemetadata.Draft, error) {
+	if d == nil {
+		return nil, nil
+	}
+	out := &sourcemetadata.Draft{}
+	for _, v := range d.GetValues() {
+		id, err := parseID(v.GetFieldId())
+		if err != nil {
+			return nil, err
+		}
+		out.Values = append(out.Values, sourcemetadata.Input{FieldID: id, ValueText: v.GetValueText()})
+	}
+	for _, l := range d.GetLayout() {
+		id, err := parseID(l.GetFieldId())
+		if err != nil {
+			return nil, err
+		}
+		out.Layout = append(out.Layout, sourcemetadata.LayoutRow{FieldID: id, SortOrder: int(l.GetSortOrder()), Dismissed: l.GetDismissed()})
+	}
+	return out, nil
+}
+
+// applyDraft saves a draft on the owner inside the caller's write: no changes
+// for an absent draft, else sourcemetadata.Apply.
+func applyDraft(tx *database.Tx, userID []byte, owner sourcemetadata.Owner, d *sourcemetadata.Draft) ([]rowchange.Change, error) {
+	if d == nil {
+		return nil, nil
+	}
+	return sourcemetadata.Apply(tx, userID, owner, *d)
+}
+
+// artifactBoardsProto reads every Artifact's board in one batch, in the order
+// of arts.
+func artifactBoardsProto(c *database.Catalog, arts []*engine.Artifact) ([]*engine.MetadataBoard, error) {
+	owners := make([]sourcemetadata.Owner, len(arts))
+	for i, a := range arts {
+		id, err := parseID(a.GetId())
+		if err != nil {
+			return nil, err
+		}
+		owners[i] = sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: id}
+	}
+	lists, err := sourcemetadata.ListWorkspaces(c, owners)
+	if err != nil {
+		return nil, err
+	}
+	boards := make([]*engine.MetadataBoard, len(arts))
+	for i, a := range arts {
+		boards[i] = &engine.MetadataBoard{OwnerId: a.GetId()}
+		for _, e := range lists[i] {
+			boards[i].Entries = append(boards[i].Entries, metadataEntryProto(c, e))
+		}
+	}
+	return boards, nil
+}
+
 func SetMetadata(in []byte) ([]byte, error) {
 	var req engine.SetMetadataRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

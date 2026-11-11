@@ -6,6 +6,8 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -70,16 +72,25 @@ func CreateEvidenceGraph(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	draft, err := parseDraft(req.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.CreateEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		g, wrote, err := writes.Run(c, writes.Op{Action: "create_evidence_graph", UserID: userID},
 			func(tx *database.Tx) (evidencegraphs.Graph, []rowchange.Change, error) {
-				return evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
+				g, changes, err := evidencegraphs.Create(tx, userID, evidencegraphs.CreateInput{
 					SourceID:    sourceID,
 					Name:        req.GetName(),
 					Description: req.GetDescription(),
 					ArtifactIDs: artifactIDs,
 				})
+				if err != nil {
+					return evidencegraphs.Graph{}, nil, err
+				}
+				more, err := applyDraft(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: g.ID}, draft)
+				return g, append(changes, more...), err
 			})
 		if err != nil {
 			return err
@@ -110,6 +121,10 @@ func UpdateEvidenceGraph(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	draft, err := parseDraft(req.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.UpdateEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		_, wrote, err := writes.Run(c, writes.Op{Action: "update_evidence_graph", UserID: userID},
@@ -119,7 +134,11 @@ func UpdateEvidenceGraph(in []byte) ([]byte, error) {
 					Description: req.GetDescription(),
 					ArtifactIDs: artifactIDs,
 				})
-				return struct{}{}, changes, err
+				if err != nil {
+					return struct{}{}, nil, err
+				}
+				more, err := applyDraft(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: graphID}, draft)
+				return struct{}{}, append(changes, more...), err
 			})
 		if err != nil {
 			return err

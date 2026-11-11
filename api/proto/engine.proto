@@ -430,6 +430,9 @@ message GetSourceWorkspaceResponse {
   // owns each list; duplicating them here staled every open page on a
   // vocabulary edit made elsewhere.
   reserved 6, 7, 8;
+  // One board per Artifact, in the order of artifacts: its type's artifact-level
+  // suggestions plus extras, by its layout.
+  repeated MetadataBoard artifact_metadata = 9;
 }
 
 message CreateSourceRequest {
@@ -491,6 +494,7 @@ message CreateEvidenceGraphRequest {
   string name = 4;
   string description = 5;
   repeated string artifact_ids = 6; // at least one
+  MetadataDraft metadata = 7; // absent = no metadata
 }
 
 message CreateEvidenceGraphResponse {
@@ -505,6 +509,7 @@ message UpdateEvidenceGraphRequest {
   string name = 4;
   string description = 5;
   repeated string artifact_ids = 6; // empty = links unchanged; otherwise the full set
+  MetadataDraft metadata = 7; // absent = metadata unchanged; present = the stored values become these
 }
 
 message UpdateEvidenceGraphResponse {
@@ -712,6 +717,24 @@ message ReorderMetadataResponse {
   WriteEffects effects = 2;
 }
 
+// MetadataDraft is what an owner's form holds, saved with the owner's own write.
+// An absent draft changes nothing; a present, empty one clears every value.
+message MetadataDraft {
+  repeated MetadataValue values = 1;     // one per field; the stored values become these
+  repeated MetadataLayoutRow layout = 2; // written as given; rows not listed stay
+}
+
+message MetadataValue {
+  string field_id = 1;
+  string value_text = 2;
+}
+
+message MetadataLayoutRow {
+  string field_id = 1;
+  int32 sort_order = 2;
+  bool dismissed = 3;
+}
+
 // MetadataBoard is one owner's entries: its type's suggestions at its level
 // plus extras, by its layout.
 message MetadataBoard {
@@ -738,6 +761,7 @@ message CreateArtifactRequest {
   reserved 7;
   reserved "graph_ids";
   GraphLinks graph_links = 8; // absent = every graph of the Source
+  MetadataDraft metadata = 9; // absent = no metadata
 }
 
 // Which graphs of its Source an Artifact is in. A message field has presence,

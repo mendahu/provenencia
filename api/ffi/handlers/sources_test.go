@@ -363,6 +363,7 @@ func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspa
 }
 
 func TestGetSourceWorkspace(t *testing.T) {
+	var artifactBoardOwner string // the Artifact the "artifact boards" case valued
 	runRPC(t, GetSourceWorkspace, []rpcTest{
 		{
 			name: "unknown source is not found",
@@ -402,6 +403,38 @@ func TestGetSourceWorkspace(t *testing.T) {
 				// vocabulary lists, which each have their own RPC.
 				if len(resp.Metadata) == 0 {
 					t.Fatal("expected suggested metadata rows for the seeded type")
+				}
+			},
+		},
+		{
+			name: "artifact boards",
+			reqFn: func(t *testing.T) proto.Message {
+				m := newMetadataOwners(t)
+				mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
+					ProjectDir: m.dir, UserId: m.userID, Owner: m.artifact, FieldId: m.suggested, ValueText: "FamilySearch",
+				}, &engine.SetMetadataResponse{})
+				artifactBoardOwner = m.page1
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}
+			},
+			after: func(t *testing.T, raw []byte, _ proto.Message) {
+				var resp engine.GetSourceWorkspaceResponse
+				if err := proto.Unmarshal(raw, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.ArtifactMetadata) != len(resp.Artifacts) || len(resp.Artifacts) != 2 {
+					t.Fatalf("%d boards for %d Artifacts", len(resp.ArtifactMetadata), len(resp.Artifacts))
+				}
+				for i, board := range resp.ArtifactMetadata {
+					if board.GetOwnerId() != resp.Artifacts[i].GetId() {
+						t.Fatalf("board %d is for %s, want the Artifact at that index, %s", i, board.GetOwnerId(), resp.Artifacts[i].GetId())
+					}
+					if len(board.GetEntries()) != 1 || !board.GetEntries()[0].GetSuggested() {
+						t.Fatalf("board %d = %+v, want the artifact-level suggestion only", i, board)
+					}
+					entry := board.GetEntries()[0]
+					if holds := board.GetOwnerId() == artifactBoardOwner; entry.GetHasValue() != holds || (holds && entry.GetValueText() != "FamilySearch") {
+						t.Fatalf("board %d entry %+v, holds value = %v", i, entry, holds)
+					}
 				}
 			},
 		},

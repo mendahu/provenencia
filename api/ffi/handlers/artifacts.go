@@ -7,7 +7,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/ingest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,18 +38,27 @@ func CreateArtifact(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	draft, err := parseDraft(req.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.CreateArtifactResponse
 	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 			func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-				return artifacts.Create(tx, userID, artifacts.CreateInput{
+				a, changes, err := artifacts.Create(tx, userID, artifacts.CreateInput{
 					SourceID:    sourceID,
 					FileID:      fileID,
 					Label:       req.GetLabel(),
 					Description: req.GetDescription(),
 					Graphs:      graphs,
 				})
+				if err != nil {
+					return artifacts.Artifact{}, nil, err
+				}
+				more, err := applyDraft(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: a.ID}, draft)
+				return a, append(changes, more...), err
 			})
 		if err != nil {
 			return err

@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/ingest"
 	"google.golang.org/protobuf/proto"
 )
@@ -416,4 +417,72 @@ func TestIngestStagesBeforeSession(t *testing.T) {
 			t.Fatalf("temps left: %v", temps)
 		}
 	})
+}
+
+// TestCreateArtifactMetadata saves a metadata draft with the Artifact's create
+// in one revision, and refuses a bad draft with nothing written.
+func TestCreateArtifactMetadata(t *testing.T) {
+	dir, userID, typeID := sourceFixture(t)
+	var src engine.CreateSourceResponse
+	mustRPC(t, CreateSource, &engine.CreateSourceRequest{ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Census"}, &src)
+	sourceID := src.GetSource().GetId()
+	provider := newUserField(t, dir, userID, "Provider")
+	artifactCount := func() int {
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &ws)
+		return len(ws.GetArtifacts())
+	}
+
+	var plain engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Plain"}, &plain)
+	plainTypes := latestRevisionTypes(t, dir)
+	if slices.ContainsFunc(plainTypes, func(s string) bool { return s == "artifact_metadata create" }) {
+		t.Fatalf("a create without metadata wrote metadata: %v", plainTypes)
+	}
+
+	var resp engine.CreateArtifactResponse
+	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Page",
+		Metadata: draftOf(provider, "FamilySearch"),
+	}, &resp)
+	got := latestRevisionTypes(t, dir)
+	want := append(slices.Clone(plainTypes), "artifact_metadata create", "artifact_metadata_layout create")
+	if !slices.Equal(got, want) {
+		t.Fatalf("changes %v, want the plain create's %v then the value and layout creates", got, plainTypes)
+	}
+	var ws engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &ws)
+	var found bool
+	for _, board := range ws.GetArtifactMetadata() {
+		if board.GetOwnerId() != resp.GetArtifact().GetId() {
+			continue
+		}
+		found = len(board.GetEntries()) == 1 && board.GetEntries()[0].GetField().GetId() == provider &&
+			board.GetEntries()[0].GetValueText() == "FamilySearch"
+	}
+	if !found {
+		t.Fatalf("board missing the saved value: %+v", ws.GetArtifactMetadata())
+	}
+
+	before := artifactCount()
+	err := rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Bad",
+		Metadata: draftOf("01890000-0000-7000-8000-000000000009", "x"),
+	}, &engine.CreateArtifactResponse{})
+	if !errors.Is(err, sourcemetadata.ErrInvalid) {
+		t.Fatalf("unknown field: %v", err)
+	}
+	if artifactCount() != before {
+		t.Fatal("an Artifact was created beside the refused draft")
+	}
+	err = rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Bad",
+		Metadata: draftOf("nope", "x"),
+	}, &engine.CreateArtifactResponse{})
+	if !errors.Is(err, errInvalidID) {
+		t.Fatalf("malformed field id: %v", err)
+	}
+	if artifactCount() != before {
+		t.Fatal("an Artifact was created beside the malformed draft")
+	}
 }

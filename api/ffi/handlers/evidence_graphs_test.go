@@ -186,6 +186,25 @@ func TestCreateEvidenceGraph(t *testing.T) {
 			t.Fatalf("listed %+v", listed)
 		}
 	})
+	t.Run("saves a metadata draft with the graph", func(t *testing.T) {
+		line := newUserField(t, f.dir, f.userID, "Line")
+		var resp engine.CreateEvidenceGraphResponse
+		mustRPC(t, CreateEvidenceGraph, &engine.CreateEvidenceGraphRequest{
+			ProjectDir: f.dir, UserId: f.userID, SourceId: f.sourceID, Name: "Smith", ArtifactIds: []string{f.page1},
+			Metadata: draftOf(line, "14"),
+		}, &resp)
+		types := latestRevisionTypes(t, f.dir)
+		if n := len(types); n < 3 || types[n-2] != "evidence_graph_metadata create" || types[n-1] != "evidence_graph_metadata_layout create" {
+			t.Fatalf("changes %v, want the graph's, then its value and layout creates", types)
+		}
+		var board engine.GetMetadataBoardResponse
+		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{
+			ProjectDir: f.dir, Owner: &engine.MetadataOwner{Level: "graph", Id: resp.GetGraph().GetId()},
+		}, &board)
+		if len(board.GetBoard().GetEntries()) != 1 || board.GetBoard().GetEntries()[0].GetValueText() != "14" {
+			t.Fatalf("board %+v", board.GetBoard())
+		}
+	})
 	_, foreign := f.otherSource(t)
 	before := len(f.list(t))
 	for name, ids := range map[string][]string{"no artifacts": nil, "another source's artifact": {foreign}} {
@@ -228,6 +247,37 @@ func TestUpdateEvidenceGraph(t *testing.T) {
 		g := f.graph(t, id)
 		if g.GetName() != "Jones family" || !slices.Equal(g.GetArtifactIds(), []string{f.page2}) {
 			t.Fatalf("graph %+v", g)
+		}
+	})
+	t.Run("metadata: absent changes nothing, present replaces", func(t *testing.T) {
+		line := newUserField(t, f.dir, f.userID, "Line")
+		owner := &engine.MetadataOwner{Level: "graph", Id: id}
+		mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
+			ProjectDir: f.dir, UserId: f.userID, Owner: owner, FieldId: line, ValueText: "14",
+		}, &engine.SetMetadataResponse{})
+		held := func() int {
+			var board engine.GetMetadataBoardResponse
+			mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: f.dir, Owner: owner}, &board)
+			n := 0
+			for _, e := range board.GetBoard().GetEntries() {
+				if e.GetHasValue() {
+					n++
+				}
+			}
+			return n
+		}
+		mustRPC(t, UpdateEvidenceGraph, &engine.UpdateEvidenceGraphRequest{
+			ProjectDir: f.dir, UserId: f.userID, GraphId: id, Name: "Jones family",
+		}, &engine.UpdateEvidenceGraphResponse{})
+		if held() != 1 {
+			t.Fatalf("an update without metadata changed the values: %d held", held())
+		}
+		mustRPC(t, UpdateEvidenceGraph, &engine.UpdateEvidenceGraphRequest{
+			ProjectDir: f.dir, UserId: f.userID, GraphId: id, Name: "Jones family",
+			Metadata: &engine.MetadataDraft{},
+		}, &engine.UpdateEvidenceGraphResponse{})
+		if held() != 0 {
+			t.Fatalf("an empty draft left %d values", held())
 		}
 	})
 	t.Run("a graph's Citations keep their Artifact linked", func(t *testing.T) {

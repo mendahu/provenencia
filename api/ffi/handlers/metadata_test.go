@@ -6,6 +6,9 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/catalogsession"
+	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 )
 
@@ -141,5 +144,31 @@ func TestGetMetadataBoard(t *testing.T) {
 
 	if err := rpc(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: m.dir}, &got); !errors.Is(err, sourcemetadata.ErrInvalid) {
 		t.Errorf("no owner: %v", err)
+	}
+}
+
+// latestRevisionTypes lists the entity type and action of every change in the
+// project's latest revision, in write order.
+func latestRevisionTypes(t *testing.T, dir string) []string {
+	t.Helper()
+	var out []string
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		_, changes := dbtest.LatestRevision(t, dbtest.MustDB(t, c))
+		for _, ch := range changes {
+			out = append(out, ch.EntityType+" "+ch.Action)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// draftOf is a draft with one value and its layout row at the top.
+func draftOf(fieldID, text string) *engine.MetadataDraft {
+	return &engine.MetadataDraft{
+		Values: []*engine.MetadataValue{{FieldId: fieldID, ValueText: text}},
+		Layout: []*engine.MetadataLayoutRow{{FieldId: fieldID, SortOrder: 0}},
 	}
 }
