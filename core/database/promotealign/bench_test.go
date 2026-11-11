@@ -10,11 +10,18 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/valuecodec"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // catalogShape is the catalog bulkCanon writes. City event i is the birth of
@@ -46,13 +53,14 @@ func benchShape() catalogShape {
 	}
 }
 
-// largeShape is the catalog TestLargeSourceBudgets runs on: 4,000 persons, one
+// largeShape is the catalog TestLargeSourceBudgets runs on (4,000 persons) and
+// BenchmarkCacheSizes grows to 16,000: persons persons, one
 // city of 6,000 events, 50 towns of 2,000 events, Zipf names, dated, and a
 // parent tree of 12 generations whose root is named treeRoot, so a proposal
 // that reaches it runs the kinship patterns over about 8,000 parent links.
-func largeShape(r *rand.Rand, names *zipfNames, treeRoot string) catalogShape {
+func largeShape(r *rand.Rand, names *zipfNames, treeRoot string, persons int) catalogShape {
 	return catalogShape{
-		Persons: 4000, Cities: 1, CityEvents: 6000, Towns: 50, TownEvents: 2000,
+		Persons: persons, Cities: 1, CityEvents: 6000, Towns: 50, TownEvents: 2000,
 		Name: func(int) string { return names.next() }, Rand: r, Dates: true,
 		TreeGenerations: 12, TreeRoot: treeRoot,
 	}
@@ -561,4 +569,71 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 		}
 	}
 	return nil
+}
+
+// BenchmarkCacheSizes reports what each Go cache holds on the heap at 4,000 and
+// 16,000 persons, and how many keys each keyed entry holds. Reported, not
+// gated: docs/catalog-caches.md records the figures. Each fill below measures
+// HeapAlloc after a GC before and after, so a number is that cache's own cost
+// when it is the next to fill; the order is the order of the metrics.
+func BenchmarkCacheSizes(b *testing.B) {
+	for _, persons := range []int{4000, 16000} {
+		b.Run(fmt.Sprintf("persons=%d", persons), func(b *testing.B) {
+			lf := newLargeFixture(b, persons)
+			f := lf.fixture
+			c := f.c
+			g := c.Graph()
+			db, err := c.DB()
+			must(b, err)
+			g.Drop()
+			// The alias index and name format live with the connection: Drop
+			// leaves them, so drop them too to measure their fill.
+			must(b, namealiases.Invalidate(c))
+			must(b, nameformats.Invalidate(c))
+
+			heap := func() float64 {
+				runtime.GC()
+				var ms runtime.MemStats
+				runtime.ReadMemStats(&ms)
+				return float64(ms.HeapAlloc)
+			}
+			measure := func(metric string, fill func()) {
+				before := heap()
+				fill()
+				b.ReportMetric(heap()-before, metric+"-B")
+			}
+			measure("nodes", func() {
+				for _, kind := range []string{"person", "event", "place"} {
+					_, err := g.Kind(graphcachetest.SubjectTypeID(b, c, kind))
+					must(b, err)
+				}
+			})
+			measure("aliasIndex", func() { must(b, namealiases.Warm(c)) })
+			measure("nameFormat", func() { must(b, nameformats.Warm(c)) })
+			measure("matchIndex", func() { must(b, promotealign.Warm(c)) })
+			measure("evidence", func() { f.propose(f.Graph(f.source), nil) })
+			measure("kinship", func() {
+				r, err := canonlinks.NewReader(g)
+				must(b, err)
+				for _, id := range conclusionsummariestest.HandleIDs(b, db, vocabkey.Person) {
+					_, err := r.Relationships(id, canonlinks.Options{Siblings: true})
+					must(b, err)
+				}
+			})
+			measure("displays", func() {
+				w := conclusionsummaries.Want{
+					Persons: conclusionsummariestest.HandleIDs(b, db, vocabkey.Person),
+					Events:  conclusionsummariestest.HandleIDs(b, db, vocabkey.Event),
+				}
+				_, err := conclusionsummaries.RowsForSearch(g, w)
+				must(b, err)
+			})
+			var handles float64
+			must(b, db.QueryRow(`SELECT COUNT(*) FROM canonical_entities`).Scan(&handles))
+			b.ReportMetric(handles, "handles")
+			for name, n := range g.KeyCounts() {
+				b.ReportMetric(float64(n), name+"-keys")
+			}
+		})
+	}
 }

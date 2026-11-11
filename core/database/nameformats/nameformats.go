@@ -3,8 +3,9 @@
 // create-time rows live in registry.go. Install writes that list once when
 // a catalog is created. Load reads the project default, or the built-in
 // Western pattern when that row is missing. A future writer of the catalog's
-// default name format calls Invalidate, which reloads the open project's warm
-// copy and drops the graph's match index: shortlist keys read its part roles.
+// default name format calls Invalidate, which drops the open project's warm
+// copy and, through the registry, the match index: shortlist keys read its
+// part roles.
 package nameformats
 
 import (
@@ -13,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -161,43 +163,66 @@ func (l Loaded) Rules(base valuecompare.Rules) valuecompare.Rules {
 	return base
 }
 
+// Default is the catalog's default name format, one per catalog connection.
+// An open project builds it once and keeps it until the project closes; a
+// write's graph builds it once from its transaction.
+var Default graphcache.Whole[Loaded]
+
+func init() {
+	Default = graphcache.RegisterWhole(graphcache.WholeEntry[Loaded]{
+		Name:     "nameformats.default",
+		Lifetime: graphcache.LifeCatalog,
+		Build:    func(g *graphcache.Graph) (Loaded, error) { return Load(g) },
+		Check: func(g *graphcache.Graph, stored Loaded) error {
+			fresh, err := Load(g)
+			if err != nil {
+				return err
+			}
+			if !reflect.DeepEqual(stored, fresh) {
+				return errors.New("nameformats: the stored default name format does not match the catalog")
+			}
+			return nil
+		},
+	})
+}
+
 // Warm loads the catalog's default name format onto the catalog graph.
-// catalogsession calls this when a project opens. A later Warm replaces it.
-// Closing the catalog drops it with the graph.
+// catalogsession calls this when a project opens. Closing the catalog drops it
+// with the graph.
 func Warm(c *database.Catalog) error {
-	db, err := c.DB()
-	if err != nil {
-		return err
-	}
-	loaded, err := Load(db)
-	if err != nil {
+	if _, err := c.DB(); err != nil {
 		return err
 	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed
 	}
-	g.SetNameFormat(loaded)
+	_, _, err := Default.Get(g)
+	return err
+}
+
+// Invalidate drops the catalog's default name format; the next read reloads
+// it. A future writer calls this after changing it.
+func Invalidate(c *database.Catalog) error {
+	if _, err := c.DB(); err != nil {
+		return err
+	}
+	g := c.Graph()
+	if g == nil {
+		return database.ErrClosed
+	}
+	Default.Drop(g)
 	return nil
 }
 
-// Invalidate reloads the catalog's default name format. A future writer calls
-// this after changing it.
-func Invalidate(c *database.Catalog) error {
-	return Warm(c)
-}
-
-// LoadFor is Load through the graph's warm copy: no query when g holds one.
-// g may be nil, and a cold graph is read from q.
-func LoadFor(g *graphcache.Graph, q Querier) (Loaded, error) {
-	if raw, ok := g.NameFormat(); ok {
-		loaded, ok := raw.(Loaded)
-		if !ok {
-			return Loaded{}, fmt.Errorf("nameformats: name format cache has %T", raw)
-		}
-		return loaded, nil
+// LoadFor is the catalog's default name format from the graph: no query when
+// it holds one. A nil graph is database.ErrClosed.
+func LoadFor(g *graphcache.Graph) (Loaded, error) {
+	if g == nil {
+		return Loaded{}, database.ErrClosed
 	}
-	return Load(q)
+	loaded, _, err := Default.Get(g)
+	return loaded, err
 }
 
 // Load reads the project default. A missing or empty setting returns the

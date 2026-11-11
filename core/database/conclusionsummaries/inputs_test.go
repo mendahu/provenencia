@@ -2,12 +2,12 @@ package conclusionsummaries_test
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"reflect"
 	"slices"
 	"testing"
 
-	"github.com/mendahu/provenencia/core/database/canonicalgraph"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -16,7 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
-	"github.com/mendahu/provenencia/core/hops"
+
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -160,21 +160,10 @@ func TestInputsMatchIsolatedComposition(t *testing.T) {
 	if holds(got, w.james, "", "") {
 		t.Error("James holds his own values")
 	}
-	assoc := func(h hops.Hop, from, to []byte) []byte {
-		edges, err := canonicalgraph.Walk(db, h, [][]byte{from})
-		must(t, err)
-		for _, e := range edges {
-			if bytes.Equal(e.To, to) {
-				return e.Association
-			}
-		}
-		t.Fatalf("no %s association from %x to %x", h.Bridge(), from, to)
-		return nil
-	}
-	birthLocation := assoc(hops.PlacesOfEvent, w.birth, w.town)
-	townCity := assoc(hops.ParentsOfPlace, w.town, w.city)
-	cityRegion := assoc(hops.ParentsOfPlace, w.city, w.region)
-	regionCountry := assoc(hops.ParentsOfPlace, w.region, w.country)
+	birthLocation := assocBetween(t, db, w.birth, w.town)
+	townCity := assocBetween(t, db, w.town, w.city)
+	cityRegion := assocBetween(t, db, w.city, w.region)
+	regionCountry := assocBetween(t, db, w.region, w.country)
 	for _, c := range []struct {
 		name         string
 		id           []byte
@@ -357,4 +346,28 @@ func TestListsRecordNoInputs(t *testing.T) {
 	if scopes == 0 {
 		t.Error("RowsForSearch created no recording scope")
 	}
+}
+
+// assocBetween is the one association whose kept rows name both a and b: the
+// test's oracle for a cache key, read with SQL so it does not lean on the
+// cache it checks.
+func assocBetween(t *testing.T, db *sql.DB, a, b []byte) []byte {
+	t.Helper()
+	rows, err := db.Query(`SELECT x.entity_id FROM auto_reconciler_values x
+		JOIN auto_reconciler_values y ON y.entity_id = x.entity_id
+		WHERE x.value_entity_id = ? AND y.value_entity_id = ?
+		AND x.rank = 1 AND y.rank = 1 AND x.reason = 'kept' AND y.reason = 'kept'`, a, b)
+	must(t, err)
+	defer rows.Close()
+	var out [][]byte
+	for rows.Next() {
+		var id []byte
+		must(t, rows.Scan(&id))
+		out = append(out, id)
+	}
+	must(t, rows.Err())
+	if len(out) != 1 {
+		t.Fatalf("%d associations between %x and %x, want 1", len(out), a, b)
+	}
+	return out[0]
 }

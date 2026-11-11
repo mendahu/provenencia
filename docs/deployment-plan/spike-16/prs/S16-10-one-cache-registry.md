@@ -1,6 +1,6 @@
 # S16-10 — One cache registry
 
-**Status:** Planned
+**Status:** Landed in [#789](https://github.com/mendahu/provenencia/pull/789) (2026-11-11)
 **Spike / slice:** Spike 16 · Slice 2a — One home for caches
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine refactor; no view, wire or catalog changes)
@@ -27,6 +27,14 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- `graphcache.Vocabulary` was already a struct, so it implements `Source` and owners write `graphcache.Vocabulary{}` in `DerivedFrom` (D-1).
+- Whole Checks take `(g, stored)`, so `checkMatchIndex` has two parameters (D-8, D-13).
+- `Reader.For` drops the key it filled for an id that is no node, so Verify's cached-only check holds; `Reader.Relationships` reads siblings from `GetMany`'s result.
+- `TestListPersonsQueryCountIsConstant` warms the name format first, since the name format is now stored on first read; `TestLoadFor` (nameformats) asserts `ErrClosed` for a nil graph and a build-once write graph (D-10).
+- The registry, its owners and their call sites landed as one commit, since they compile only together.
 
 ## 1. Objective
 

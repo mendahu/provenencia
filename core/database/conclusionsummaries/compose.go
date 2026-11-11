@@ -385,7 +385,7 @@ func persons(g *graphcache.Graph, ids [][]byte, all, store bool, rec *inputBudge
 	if err != nil {
 		return nil, nil, err
 	}
-	loaded, err := nameformats.LoadFor(g, g)
+	loaded, err := nameformats.LoadFor(g)
 	if err != nil {
 		return nil, nil, err
 	}

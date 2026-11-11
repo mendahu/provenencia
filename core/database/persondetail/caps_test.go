@@ -44,7 +44,7 @@ func TestCraftedFamily(t *testing.T) {
 
 	// The first MaxKinPerRole children in link order, as the reader returns them.
 	g := w.c.Graph()
-	r, err := canonlinks.NewReader(g, matchregistry.Default().Kinship)
+	r, err := canonlinks.NewReader(g)
 	if err != nil {
 		t.Fatal(err)
 	}

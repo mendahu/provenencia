@@ -5,7 +5,6 @@
 package valuerules
 
 import (
-	"database/sql"
 	"sync"
 
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -18,21 +17,15 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Querier is *sql.DB or *sql.Tx.
-type Querier interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-}
-
 // Load returns the catalog's rules and the name pattern key its name values
 // carry. With no stored default name format, Names.Patterns stays empty and the
-// key is western. g may be nil: the alias tables are then read from q.
-func Load(g *graphcache.Graph, q Querier) (rules valuecompare.Rules, namePattern string, err error) {
-	loaded, err := nameformats.LoadFor(g, q)
+// key is western. A nil graph is database.ErrClosed.
+func Load(g *graphcache.Graph) (rules valuecompare.Rules, namePattern string, err error) {
+	loaded, err := nameformats.LoadFor(g)
 	if err != nil {
 		return valuecompare.Rules{}, "", err
 	}
-	rules, err = namealiases.Rules(g, q, loaded.Rules(matchregistry.Default().Value))
+	rules, err = namealiases.Rules(g, loaded.Rules(matchregistry.Default().Value))
 	if err != nil {
 		return valuecompare.Rules{}, "", err
 	}

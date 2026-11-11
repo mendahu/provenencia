@@ -13,9 +13,12 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/valuecompare"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -36,7 +39,7 @@ type world struct {
 func newWorld(t *testing.T) *world {
 	t.Helper()
 	c := graphcachetest.OpenCatalog(t)
-	r, err := NewReader(c.Graph(), shipped)
+	r, err := NewReader(c.Graph())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,10 +435,33 @@ func TestRelationships(t *testing.T) {
 	})
 }
 
-// hasMemo reports whether a result is stored for an id.
-func (w *world) hasMemo(slot graphcache.MemoSlot, id []byte) bool {
-	_, ok := w.g.Memo(slot, id)
+// hasPivot reports whether a kinship result is stored for an id.
+func (w *world) hasPivot(id []byte) bool {
+	_, ok := pivots.Peek(w.g, id)
 	return ok
+}
+
+// hasSiblings reports whether a sibling answer is stored for an id.
+func (w *world) hasSiblings(id []byte) bool {
+	_, ok := siblingAnswers.Peek(w.g, id)
+	return ok
+}
+
+// A new name format or alias index empties what read it, and no kinship
+// result: a result reads nodes and the vocabulary only.
+func TestPivotsSurviveNameFormatAndAliasChanges(t *testing.T) {
+	w := newWorld(t)
+	ann, bob := w.person("Ann"), w.person("Bob")
+	m1 := w.marriage("M1", ann, bob)
+	w.for_(ann)
+	if !w.hasPivot(m1) {
+		t.Fatal("setup: no stored result")
+	}
+	nameformats.Default.Set(w.g, nameformats.Loaded{})
+	namealiases.Index.Set(w.g, valuecompare.AliasIndex{})
+	if !w.hasPivot(m1) {
+		t.Fatal("a name format or alias index change dropped a kinship result")
+	}
 }
 
 func TestForFollowsCommits(t *testing.T) {
@@ -514,14 +540,14 @@ func TestForFollowsCommits(t *testing.T) {
 		ann, bob := w.person("Ann"), w.person("Bob")
 		m1 := w.marriage("M1", ann, bob)
 		w.for_(ann)
-		if !w.hasMemo(kinshipSlot, m1) {
+		if !w.hasPivot(m1) {
 			t.Fatal("setup: the event result was not stored")
 		}
 		w.k.CommitVocabulary()
-		if w.hasMemo(kinshipSlot, m1) {
+		if w.hasPivot(m1) {
 			t.Fatal("a vocabulary commit kept a result")
 		}
-		if len(w.for_(ann)) != 1 || !w.hasMemo(kinshipSlot, m1) {
+		if len(w.for_(ann)) != 1 || !w.hasPivot(m1) {
 			t.Fatal("the next read did not derive again")
 		}
 	})
@@ -536,7 +562,7 @@ func TestForFollowsCommits(t *testing.T) {
 		if _, err := w.g.Node(bob); err != nil {
 			t.Fatal(err)
 		}
-		if !w.hasMemo(kinshipSlot, m1) {
+		if !w.hasPivot(m1) {
 			t.Fatal("a first load dropped the result")
 		}
 	})
@@ -640,7 +666,7 @@ func TestVerifyCatchesAStaleResult(t *testing.T) {
 	if err := w.g.Verify(); err != nil {
 		t.Fatalf("a fresh result failed Verify: %v", err)
 	}
-	w.g.SetMemo(kinshipSlot, m1, pivotResult{kind: pivotEvent, rules: shipped, links: []kinship.Implied{{
+	pivots.Set(w.g, m1, pivotResult{kind: pivotEvent, rules: shipped, links: []kinship.Implied{{
 		Edge: kinship.Edge{A: bob, B: ann}, Pattern: kinship.PatternMarriageSpouses, Event: m1,
 	}}})
 	if err := w.g.Verify(); err == nil {
@@ -804,10 +830,10 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		check(t, read(w, w.person("Ann")))
 		check(t, read(w, make([]byte, 16)))
 		check(t, read(w, []byte{1, 2, 3}))
-		if _, ok := w.g.Memo(siblingSlot, []byte{1, 2, 3}); ok {
+		if _, ok := siblingAnswers.Peek(w.g, []byte{1, 2, 3}); ok {
 			t.Fatal("a wrong-length id stored an answer")
 		}
-		if _, ok := w.g.Memo(siblingSlot, make([]byte, 16)); ok {
+		if _, ok := siblingAnswers.Peek(w.g, make([]byte, 16)); ok {
 			t.Fatal("an unknown id stored an answer")
 		}
 		bea := w.person("Bea")
@@ -826,12 +852,12 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		// fromNames reads the names of the associations of Bea's stored
 		// sibling link's From edges.
 		fromNames := func(w *world, id []byte) []string {
-			v, ok := w.g.Memo(siblingSlot, id)
+			v, ok := siblingAnswers.Peek(w.g, id)
 			if !ok {
 				t.Fatal("no stored sibling answer")
 			}
 			var out []string
-			for _, imp := range v.(personAnswer).links {
+			for _, imp := range v.links {
 				for _, f := range imp.From {
 					for _, a := range f.Associations {
 						out = append(out, w.name(a))
@@ -907,7 +933,7 @@ func TestSiblingsFollowCommits(t *testing.T) {
 		if len(w.siblings(bea)) != 1 {
 			t.Fatal("setup: want one sibling")
 		}
-		if !w.hasMemo(siblingSlot, bea) {
+		if !w.hasSiblings(bea) {
 			t.Fatal("setup: the answer was not stored")
 		}
 		return
@@ -915,20 +941,20 @@ func TestSiblingsFollowCommits(t *testing.T) {
 	t.Run("AC-2.4", func(t *testing.T) {
 		w, ann, bea := filed(t)
 		w.k.Commit(ann)
-		if w.hasMemo(siblingSlot, bea) {
+		if w.hasSiblings(bea) {
 			t.Fatal("a commit naming Ann kept the answer")
 		}
-		if len(w.siblings(bea)) != 1 || !w.hasMemo(siblingSlot, bea) {
+		if len(w.siblings(bea)) != 1 || !w.hasSiblings(bea) {
 			t.Fatal("the next read did not derive again")
 		}
 	})
 	t.Run("AC-2.5", func(t *testing.T) {
 		w, _, bea := filed(t)
 		w.k.CommitVocabulary()
-		if w.hasMemo(siblingSlot, bea) {
+		if w.hasSiblings(bea) {
 			t.Fatal("a vocabulary commit kept the answer")
 		}
-		if len(w.siblings(bea)) != 1 || !w.hasMemo(siblingSlot, bea) {
+		if len(w.siblings(bea)) != 1 || !w.hasSiblings(bea) {
 			t.Fatal("the next read did not derive again")
 		}
 	})
@@ -1001,7 +1027,7 @@ func TestLoadSiblingsQueryCount(t *testing.T) {
 				t.Fatal(err)
 			}
 			for _, id := range ids {
-				if !w.hasMemo(siblingSlot, id) {
+				if !w.hasSiblings(id) {
 					t.Fatalf("no answer stored for %s", w.name(id))
 				}
 			}
@@ -1121,8 +1147,32 @@ func TestVerifyCatchesAStaleSiblingAnswer(t *testing.T) {
 	if err := w.g.Verify(); err != nil {
 		t.Fatalf("a fresh answer failed Verify: %v", err)
 	}
-	w.g.SetMemo(siblingSlot, bea, personAnswer{rules: shipped})
+	siblingAnswers.Set(w.g, bea, personAnswer{rules: shipped})
 	if err := w.g.Verify(); err == nil {
 		t.Fatal("Verify accepted a stale answer")
+	}
+}
+
+func TestPivotKindMismatch(t *testing.T) {
+	// Ann stands in Bea's birth and is also filed as the parent of the birth's
+	// handle, so her chain reads the birth as a person. The handle's event
+	// result is stored first; the chain must not be served it.
+	w := newWorld(t)
+	ann, bea := w.person("Ann"), w.person("Bea")
+	b1 := w.event("B1", vocabkey.EventBirth)
+	w.join("B1/Ann", ann, b1, "mother")
+	w.join("B1/Bea", bea, b1, "subject")
+	w.parent("AB1", ann, b1)
+	got := w.for_(ann)
+	seen := map[string]bool{}
+	for _, l := range got {
+		key := fmt.Sprintf("%x|%x|%s|%x|%x", l.A, l.B, l.Pattern, l.Event, l.Through)
+		if seen[key] {
+			t.Fatalf("For(Ann) repeats %+v in %+v", l, got)
+		}
+		seen[key] = true
+	}
+	if len(got) == 0 {
+		t.Fatal("the fixture implies nothing for Ann")
 	}
 }

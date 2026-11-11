@@ -76,12 +76,11 @@ func recordLinks(c *database.Catalog, entityID []byte, cfg recordlinks.Config, m
 // Subject with none draws no line. cfg is the caller's; its Value is set from
 // the catalog's rules on a copy. counted is Pairs' report.
 func linksBetween(c *database.Catalog, page []byte, graphs []graphcache.EvidenceGraph, cfg recordlinks.Config) ([]recordlinks.Pair, bool, error) {
-	db, err := c.DB()
-	if err != nil {
+	if _, err := c.DB(); err != nil {
 		return nil, false, err
 	}
 	g := c.Graph()
-	rules, namePattern, err := valuerules.Load(g, db)
+	rules, namePattern, err := valuerules.Load(g)
 	if err != nil {
 		return nil, false, err
 	}

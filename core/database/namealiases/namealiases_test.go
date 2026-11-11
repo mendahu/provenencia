@@ -2,6 +2,7 @@ package namealiases
 
 import (
 	"database/sql"
+	"errors"
 	"math"
 	"reflect"
 	"slices"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/dbtest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -69,7 +71,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 		t.Fatal(err)
 	}
-	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +80,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err := Invalidate(c); err != nil {
 		t.Fatal(err)
 	}
-	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err = Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +90,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	}
 
 	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
-	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err = Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +102,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err := Invalidate(c); err != nil {
 		t.Fatal(err)
 	}
-	rules, err = Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err = Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +119,7 @@ func TestEmptyCatalogScoresNoAliases(t *testing.T) {
 	if len(tables) != 0 {
 		t.Fatalf("empty catalog loaded %d tables", len(tables))
 	}
-	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +137,7 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 	db := dbtest.MustDB(t, c)
 	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 	insertTable(t, db, "pepe", "plugin:example", "nickname", [][]string{{"josé", "pepe"}})
-	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +170,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	if !reflect.DeepEqual(got.Sets, want) {
 		t.Fatalf("stored sets %v, want %v", got.Sets, want)
 	}
-	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -185,7 +187,7 @@ func TestDesIsANicknameOfDesireeAndDesirae(t *testing.T) {
 	if err := Warm(c); err != nil {
 		t.Fatal(err)
 	}
-	rules, err := Rules(c.Graph(), dbtest.MustDB(t, c), matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -417,7 +419,7 @@ func TestWarmRulesReusesIndex(t *testing.T) {
 		g := c.Graph()
 		var failed error
 		got := testing.AllocsPerRun(10, func() {
-			if _, err := Rules(g, db, base); err != nil {
+			if _, err := Rules(g, base); err != nil {
 				failed = err
 			}
 		})
@@ -433,24 +435,27 @@ func TestWarmRulesReusesIndex(t *testing.T) {
 		if build <= 1000 {
 			t.Errorf("NewAliasIndex allocates %v times; the test cannot see a rebuild", build)
 		}
-		rules, err := Rules(g, db, base)
+		rules, err := Rules(g, base)
 		if err != nil {
 			t.Fatal(err)
 		}
 		assertScore(t, rules, "Jas.", "James", base.Words.AliasCredit)
 	})
 
-	t.Run("nil graph", func(t *testing.T) {
-		warm, err := Rules(c.Graph(), db, base)
+	t.Run("a write's graph and a nil graph", func(t *testing.T) {
+		warm, err := Rules(c.Graph(), base)
 		if err != nil {
 			t.Fatal(err)
 		}
-		cold, err := Rules(nil, db, base)
+		cold, err := Rules(graphcache.Over(db), base)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(cold.Names.Aliases, warm.Names.Aliases) {
-			t.Error("a nil graph builds a different index from the warm one")
+			t.Error("a write's graph builds a different index from the warm one")
+		}
+		if _, err := Rules(nil, base); !errors.Is(err, database.ErrClosed) {
+			t.Errorf("Rules(nil) error = %v, want database.ErrClosed", err)
 		}
 	})
 }
@@ -494,5 +499,18 @@ func TestProductFoldsInto(t *testing.T) {
 	}
 	if slices.Contains(idx.FoldsInto("william", valuecompare.RoleGiven), "robert") {
 		t.Error("william holds robert")
+	}
+}
+
+func TestWarmClosedCatalog(t *testing.T) {
+	c := newCatalog(t)
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := Warm(c); !errors.Is(err, database.ErrClosed) {
+		t.Fatalf("Warm on a closed catalog = %v, want ErrClosed", err)
+	}
+	if err := Invalidate(c); !errors.Is(err, database.ErrClosed) {
+		t.Fatalf("Invalidate on a closed catalog = %v, want ErrClosed", err)
 	}
 }

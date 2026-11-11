@@ -10,8 +10,8 @@ import (
 // already loaded is replaced. A handle whose kind index is loaded is inserted
 // when it is new. Associations in the set drop their holders, then every
 // endpoint that was loaded or that the committed rows name is reloaded once.
-// Finished rows for those handles, and for whatever reads them, are dropped
-// after the reload. Loaded last-activity maps move forward to the commit.
+// Finished rows for those handles are dropped after the reload, and each
+// registered cache entry that holds data then applies the commit (cache.go). Loaded last-activity maps move forward to the commit.
 // A read does not consult the audit log beyond the first Activity load.
 // A deleted handle's neighbors become roots; its writer commits the
 // associations it removed. A merged handle's loaded neighbors are reloaded by
@@ -26,8 +26,12 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
-		g.dropDerived()
-		g.dropVocabularyMemos()
+		// Evidence-graph memos follow the vocabulary here until the records
+		// tier moves them onto the registry (S16-13).
+		for _, e := range g.evidenceGraphs {
+			e.memos = nil
+		}
+		g.dropReaders(vocabularySource)
 	}
 	if set.Structure {
 		g.Drop()
@@ -36,10 +40,11 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	g.dropEvidenceGraphs(set.EvidenceGraphs)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
+		if err := g.applyEntries(nil, set); err != nil {
+			return err
+		}
 		return g.verifyIfSet()
 	}
-	g.dropMatchIndex()
-	g.dropHandleMemos()
 	rows, err := g.entityRows(ids)
 	if err != nil {
 		return err
@@ -102,7 +107,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	}
 	roots = uniqueIDs(roots)
 	g.dropCommittedDisplays(roots, set)
-	if err := g.dropMemos(roots); err != nil {
+	if err := g.applyEntries(roots, set); err != nil {
 		return err
 	}
 	return g.verifyIfSet()

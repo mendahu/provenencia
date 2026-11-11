@@ -87,11 +87,11 @@ func TestProposeWithOnlyFixedSubjectsBuildsNoIndex(t *testing.T) {
 	bPerson := f.Person(srcB, artB, "Gracie")
 
 	f.propose(f.Graph(srcB), []graphalign.Fixed{{SubjectID: bPerson.ID, HandleID: per.Entity.ID}})
-	if _, ok := f.c.Graph().MatchIndex(); ok {
+	if _, ok, _ := promotealign.MatchIndex.Get(f.c.Graph()); ok {
 		t.Error("Propose built the match index with no Subject to seed")
 	}
 	f.propose(f.Graph(srcB), nil)
-	if _, ok := f.c.Graph().MatchIndex(); !ok {
+	if _, ok, _ := promotealign.MatchIndex.Get(f.c.Graph()); !ok {
 		t.Error("Propose with an unfixed Subject did not build the match index")
 	}
 }
@@ -1319,7 +1319,7 @@ func TestProposeIgnoresStoredSiblings(t *testing.T) {
 	f.Relationship(src, art, sbea, scal, "sibling")
 	before := f.propose(f.Graph(src), nil)
 
-	reader, err := canonlinks.NewReader(f.c.Graph(), matchregistry.Default().Kinship)
+	reader, err := canonlinks.NewReader(f.c.Graph())
 	must(t, err)
 	must(t, reader.LoadSiblings([][]byte{beaID, calID}))
 	links, err := reader.Relationships(beaID, canonlinks.Options{Siblings: true})

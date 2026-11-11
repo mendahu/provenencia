@@ -21,22 +21,14 @@ import (
 func TestDoWarmsNameFormat(t *testing.T) {
 	dir := newProject(t)
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
-		raw, ok := c.Graph().NameFormat()
-		if !ok {
+		if _, ok, _ := nameformats.Default.Get(c.Graph()); !ok {
 			t.Fatal("the open project has no warm name format")
 		}
-		if _, ok := raw.(nameformats.Loaded); !ok {
-			t.Fatalf("the warm name format is a %T", raw)
-		}
-		db, err := c.DB()
-		if err != nil {
-			return err
-		}
 		selects := databasetest.CountSelects(t, c)
-		if _, _, err := valuerules.Load(c.Graph(), db); err != nil {
+		if _, _, err := valuerules.Load(c.Graph()); err != nil {
 			return err
 		}
-		if _, err := nameformats.LoadFor(c.Graph(), db); err != nil {
+		if _, err := nameformats.LoadFor(c.Graph()); err != nil {
 			return err
 		}
 		if n := selects.N(); n != 0 {
@@ -65,11 +57,8 @@ func TestDoWarmsMatching(t *testing.T) {
 	dir := newProject(t)
 	err := catalogsession.Do(dir, func(c *database.Catalog) error {
 		g := c.Graph()
-		if _, ok := g.MatchIndex(); !ok {
+		if _, ok, _ := promotealign.MatchIndex.Get(g); !ok {
 			t.Error("the open project has no match index")
-		}
-		if g.WarmNeeded() {
-			t.Error("the open project still needs a warm")
 		}
 		graphcachetest.AssertKindsLoaded(t, c, "person", "event", "place")
 		return nil
@@ -79,29 +68,31 @@ func TestDoWarmsMatching(t *testing.T) {
 	}
 }
 
-// A call that throws the warm state away warms the alias index and name format
-// again before it returns and leaves the shortlist index to the next proposal;
-// a handle commit warms nothing, and a failed call does not.
-func TestDoRewarms(t *testing.T) {
+// The alias index and name format live with the catalog connection: a vocabulary
+// commit, a Drop, a handle commit and a failed call leave them, and no call
+// warms them again. The match index follows its declarations: a vocabulary
+// commit, a Drop and a handle commit empty it, and a Source vocabulary commit
+// does not.
+func TestDoKeepsWarmEntries(t *testing.T) {
 	handle := []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
 	cases := []struct {
 		name      string
 		fn        func(*database.Catalog) error
 		wantErr   bool
-		wantIndex bool
-		wantWarm  bool // WarmNeeded afterwards
-		aliases   bool // the alias index and name format are present afterwards
+		wantIndex bool // the match index is present afterwards
 		kinds     bool // the shortlist kinds are not loaded afterwards
 	}{
-		{"AC-2.1 vocabulary commit", func(c *database.Catalog) error {
+		{"vocabulary commit", func(c *database.Catalog) error {
 			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}}})
-		}, false, false, false, true, false},
-		{"AC-2.2 drop", func(c *database.Catalog) error { c.Graph().Drop(); return nil }, false, false, false, true, true},
-		{"AC-2.3 alias warm", func(c *database.Catalog) error { return namealiases.Warm(c) }, false, false, false, true, false},
-		{"AC-2.4 handle commit", func(c *database.Catalog) error {
+		}, false, false, false},
+		{"drop", func(c *database.Catalog) error { c.Graph().Drop(); return nil }, false, false, true},
+		{"handle commit", func(c *database.Catalog) error {
 			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Handles: [][]byte{handle}}})
-		}, false, false, false, true, false},
-		{"AC-2.5 failed call", func(c *database.Catalog) error { c.Graph().Drop(); return errors.New("boom") }, true, false, true, true, false},
+		}, false, false, false},
+		{"source vocabulary commit", func(c *database.Catalog) error {
+			return c.Graph().OnCommit(effects.Commit{Effects: effects.Set{Lists: []effects.List{effects.ListSourceVocabulary}}})
+		}, false, true, false},
+		{"failed call", func(c *database.Catalog) error { c.Graph().Drop(); return errors.New("boom") }, true, false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -113,20 +104,17 @@ func TestDoRewarms(t *testing.T) {
 			if (err != nil) != tc.wantErr {
 				t.Fatalf("Do returned %v, want error %v", err, tc.wantErr)
 			}
-			// fn of a second Do runs before that Do's own warm, so it sees what the
-			// first left.
 			err = catalogsession.Do(dir, func(c *database.Catalog) error {
 				g := c.Graph()
-				if _, ok := g.MatchIndex(); ok != tc.wantIndex {
+				if _, ok, _ := promotealign.MatchIndex.Get(g); ok != tc.wantIndex {
 					t.Errorf("match index present = %v, want %v", ok, tc.wantIndex)
 				}
-				if g.WarmNeeded() != tc.wantWarm {
-					t.Errorf("WarmNeeded = %v, want %v", g.WarmNeeded(), tc.wantWarm)
+				selects := databasetest.CountSelects(t, c)
+				if _, _, err := valuerules.Load(g); err != nil {
+					return err
 				}
-				_, aliases := g.AliasIndex()
-				_, format := g.NameFormat()
-				if aliases != tc.aliases || format != tc.aliases {
-					t.Errorf("alias index present = %v, name format present = %v, want %v", aliases, format, tc.aliases)
+				if n := selects.N(); n != 0 {
+					t.Errorf("valuerules.Load issued %d SELECTs, want 0 (the alias index and name format survive)", n)
 				}
 				if tc.kinds {
 					// A drop empties the kinds; the next proposal loads them.
@@ -145,6 +133,40 @@ func TestDoRewarms(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+// Setting the name format empties exactly what read it: the match index goes;
+// the alias index stays.
+func TestNameFormatDropsItsReaders(t *testing.T) {
+	dir := newProject(t)
+	err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		g := c.Graph()
+		if _, ok, _ := promotealign.MatchIndex.Get(g); !ok {
+			t.Fatal("the open project has no match index")
+		}
+		loaded, ok, err := nameformats.Default.Get(g)
+		if err != nil || !ok {
+			t.Fatalf("name format = %v, %v", ok, err)
+		}
+		nameformats.Default.Set(g, loaded)
+		if _, ok, _ := promotealign.MatchIndex.Get(g); ok {
+			t.Error("the match index survived a new name format")
+		}
+		selects := databasetest.CountSelects(t, c)
+		if _, _, err := valuerules.Load(g); err != nil {
+			return err
+		}
+		if n := selects.N(); n != 0 {
+			t.Errorf("valuerules.Load issued %d SELECTs, want 0", n)
+		}
+		if _, ok, _ := namealiases.Index.Get(g); !ok {
+			t.Error("a new name format dropped the alias index")
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -177,7 +199,7 @@ func TestOpenSurvivesABadValue(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = catalogsession.Do(dir, func(c *database.Catalog) error {
-		if _, ok := c.Graph().MatchIndex(); ok {
+		if _, ok, _ := promotealign.MatchIndex.Get(c.Graph()); ok {
 			t.Error("the shortlist index was built over a value that does not decode")
 		}
 		if err := promotealign.Warm(c); err == nil {

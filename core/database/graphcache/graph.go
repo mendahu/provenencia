@@ -25,25 +25,20 @@ type Graph struct {
 	kindOn  map[string]bool
 	kindSet map[string]map[string]bool
 
-	// matchIndex is what Promote derives from the whole catalog.
-	matchIndex   any
-	matchIndexOK bool
-	// warmNeeded is set by every drop that loses what the open-time warm
-	// built, and cleared by MarkWarm.
-	warmNeeded bool
+	// entries holds each registered cache's data by entry id (cache.go).
+	entries map[int]any
 
 	vocab   Vocabulary
 	vocabOK bool
 
-	// displays are composed (not finished) summary rows keyed by handle id. memos are the
-	// results owners store per node through registered slots (memo.go).
+	// displays are composed (not finished) summary rows keyed by handle id.
+	// The typed fields below are not registry entries (docs/catalog-caches.md).
 	// evidenceGraphs are loaded Evidence graphs keyed by graph id, each with
 	// the memos features derive from it, so a memo cannot outlive its graph.
 	// At most evidenceCap stay loaded; evidenceTick stamps their use order.
 	// labels is the vocabulary map the rows resolve at read time. alt, when
 	// set, is the querier a one-shot graph reads instead of db (a write transaction).
 	displays       map[string]any
-	memos          map[MemoSlot]map[string]any
 	evidenceGraphs map[string]*loadedEvidenceGraph
 	evidenceTick   uint64
 	evidenceCap    int
@@ -54,17 +49,6 @@ type Graph struct {
 	// activity is last activity per scope type, then per scope id, loaded by
 	// the first Activity read of that type and patched by OnCommit.
 	activity map[string]map[string]effects.Activity
-
-	// aliasIndex is the built abbreviation and nickname index for this open
-	// catalog. It is not a graph node: Drop leaves it. Closing the catalog
-	// drops it with this graph. namealiases owns the concrete value.
-	aliasIndex   any
-	aliasIndexOK bool
-
-	// nameFormat is the catalog's default name format, warmed the same way.
-	// nameformats owns the concrete value.
-	nameFormat   any
-	nameFormatOK bool
 
 	entityTable string
 	claimTable  string
@@ -225,59 +209,25 @@ func mustTableName(name string) string {
 	panic("graphcache: catalog model missing " + name)
 }
 
-// dropDerived empties what features derive from the graph and its vocabulary
-// and alias index: the Evidence graph memos and the match index. It also marks
-// the open-time warm as needed again.
-func (g *Graph) dropDerived() {
-	for _, e := range g.evidenceGraphs {
-		e.memos = nil
-	}
-	g.dropMatchIndex()
-	g.warmNeeded = true
-}
-
-// dropMatchIndex empties the match index and nothing else.
-func (g *Graph) dropMatchIndex() {
-	g.matchIndexOK = false
-	g.matchIndex = nil
-}
-
-// WarmNeeded reports whether a drop has lost what the open-time warm built
-// since the last MarkWarm. A new graph needs it. A handle commit drops the
-// match index without setting it.
-func (g *Graph) WarmNeeded() bool {
-	return g != nil && g.warmNeeded
-}
-
-// MarkWarm records that the open-time warm has run.
-func (g *Graph) MarkWarm() {
-	if g == nil {
-		return
-	}
-	g.warmNeeded = false
-}
-
 func (g *Graph) clear() {
 	g.nodes = map[string]*Node{}
 	g.holders = map[string][][]byte{}
 	g.kinds = map[string][][]byte{}
 	g.kindOn = map[string]bool{}
 	g.kindSet = map[string]map[string]bool{}
-	g.dropDerived()
 	g.vocabOK = false
 	g.vocab = Vocabulary{}
 	g.displays = map[string]any{}
-	g.memos = nil
+	g.dropGraphEntries()
 	g.evidenceGraphs = map[string]*loadedEvidenceGraph{}
 	g.labelsOK = false
 	g.labels = nil
 	g.activity = map[string]map[string]effects.Activity{}
-	// The alias index and the name format stay. They follow the catalog connection,
-	// not a rebuild.
+	// Catalog-lifetime entries stay. They follow the catalog connection.
 }
 
-// Drop empties nodes, holders, kind indexes, and the match index. The next read fills
-// them. EnsureCatalog calls this after a rebuild, which does not go through Run.
+// Drop empties nodes, holders, kind indexes and the graph-lifetime cache
+// entries. The next read fills them. EnsureCatalog calls this after a rebuild, which does not go through Run.
 func (g *Graph) Drop() {
 	if g == nil {
 		return
@@ -317,6 +267,15 @@ func (g *Graph) node(id []byte) (*Node, error) {
 	return g.nodes[string(id)], nil
 }
 
+// Cached returns the node when it is loaded. It never loads.
+func (g *Graph) Cached(id []byte) (*Node, bool) {
+	if g == nil {
+		return nil, false
+	}
+	n, ok := g.nodes[string(id)]
+	return n, ok
+}
+
 // Kind returns every unmerged node of a subject type. The first read loads
 // them and stores the id list. Later commits insert and remove on that list.
 func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
@@ -346,80 +305,6 @@ func (g *Graph) Kind(typeID []byte) ([]*Node, error) {
 		}
 	}
 	return out, nil
-}
-
-// MatchIndex returns the match index: what Promote derives from the whole
-// catalog, stored in this slot by a feature. A commit that names handles, a
-// vocabulary commit, a structure drop and SetAliasIndex clear it: its keys
-// read term keys and metas as well as handles.
-func (g *Graph) MatchIndex() (any, bool) {
-	if g == nil || !g.matchIndexOK {
-		return nil, false
-	}
-	return g.matchIndex, true
-}
-
-// AliasIndex returns the abbreviation and nickname index namealiases.Warm
-// built for this open catalog. The bool is false until Warm stores it,
-// including when the catalog has no alias rows.
-func (g *Graph) AliasIndex() (any, bool) {
-	if g == nil || !g.aliasIndexOK {
-		return nil, false
-	}
-	return g.aliasIndex, true
-}
-
-// SetAliasIndex stores the built alias index until the catalog closes. An
-// index built from no tables is a warm catalog with no rows. Drop does not
-// clear this. The match index and Evidence graph memos read the alias sets,
-// so a new index drops them. A stored index is shared, so readers treat it as
-// read-only.
-func (g *Graph) SetAliasIndex(index any) {
-	if g == nil {
-		return
-	}
-	g.dropDerived()
-	g.aliasIndex = index
-	g.aliasIndexOK = true
-}
-
-// NameFormat returns the catalog's default name format warmed for this open
-// catalog. The bool is false until nameformats.Warm stores it.
-func (g *Graph) NameFormat() (any, bool) {
-	if g == nil || !g.nameFormatOK {
-		return nil, false
-	}
-	return g.nameFormat, true
-}
-
-// SetNameFormat stores the catalog's default name format until the catalog
-// closes. Drop does not clear it. The match index and Evidence graph memos read
-// the name format's part roles, so a new one drops them.
-func (g *Graph) SetNameFormat(v any) {
-	if g == nil {
-		return
-	}
-	g.dropDerived()
-	g.nameFormat = v
-	g.nameFormatOK = true
-}
-
-// SetMatchIndex stores the match index until the next handle commit,
-// vocabulary commit, alias index load or drop.
-func (g *Graph) SetMatchIndex(index any) {
-	if g == nil {
-		return
-	}
-	g.matchIndex = index
-	g.matchIndexOK = true
-}
-
-// ResetMatchIndexForTest drops the match index.
-func (g *Graph) ResetMatchIndexForTest() {
-	if g == nil {
-		return
-	}
-	g.dropMatchIndex()
 }
 
 // SetQueryCounterForTest counts queries this graph issues. Tests only.

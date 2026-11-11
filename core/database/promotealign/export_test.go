@@ -5,6 +5,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/shortlist"
 )
 
 // ProfiledRefsForTest proposes for the graph with no fixed rows and returns,
@@ -31,7 +32,7 @@ func ProfiledRefsForTest(c *database.Catalog, graphID []byte) ([]string, error) 
 // ProfilesKeptForTest is how many handle profiles the graph's match index
 // holds, and false when the graph has no match index.
 func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
-	if _, ok := c.Graph().MatchIndex(); !ok {
+	if _, ok, _ := MatchIndex.Get(c.Graph()); !ok {
 		return 0, false
 	}
 	return len(matchIndexOf(c.Graph()).profiles), true
@@ -41,4 +42,18 @@ func ProfilesKeptForTest(c *database.Catalog) (int, bool) {
 // the graph has none.
 func MatchIndexGenForTest(g *graphcache.Graph) uint64 {
 	return matchIndexOf(g).gen
+}
+
+// EmptyShortlistForTest replaces the stored shortlist index with one that
+// holds no handle, so Verify can fail a test.
+func EmptyShortlistForTest(c *database.Catalog) error {
+	g := c.Graph()
+	cfg, _, p, err := shortlistInputs(g, false)
+	if err != nil {
+		return err
+	}
+	m := matchIndexOf(g)
+	m.shortlist = shortlist.NewIndex(cfg.Alignment.Shortlist, cfg.Subject, cfg.Value, p.metas)
+	MatchIndex.Set(g, m)
+	return nil
 }
