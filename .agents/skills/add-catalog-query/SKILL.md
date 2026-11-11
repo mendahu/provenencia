@@ -44,7 +44,7 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 
 ## Reads inside a write
 
-The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ListLayoutTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
+The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ReadDraftTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
 
 A read made of more than one query opens one read transaction (`db.Begin`, deferred `Rollback`), as `deleteimpact.Snapshot` and `evidencegraphs.List` do, so its queries see one state. Its unexported body takes `*sql.Tx` and the package's writes call it with theirs; add an exported `…Tx` twin only with its first caller outside the package.
 
