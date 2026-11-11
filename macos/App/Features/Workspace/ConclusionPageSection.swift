@@ -114,3 +114,29 @@ enum ConclusionPageSection: String, Codable, CaseIterable, Sendable {
         }
     }
 }
+
+/// What choosing a section on a record page's switcher does beyond opening it:
+/// say which section opened, and say whether the keyboard goes to the switcher.
+/// A decision in plain data, so a test reaches it; the page's header band
+/// performs it.
+struct ConclusionPageSectionSwitch: Equatable {
+    let to: ConclusionPageSection
+    /// The VoiceOver text: "{Section} shown."
+    let announcement: String
+    /// The keyboard was in the sections column (about to be replaced) or on the
+    /// switcher, so it goes to the selected segment.
+    let claimsSwitcher: Bool
+
+    /// Nil when `to` is the section already open.
+    init?(
+        from: ConclusionPageSection,
+        to: ConclusionPageSection,
+        sectionsFocused: Bool,
+        switcherFocused: Bool
+    ) {
+        guard from != to else { return nil }
+        self.to = to
+        self.announcement = L10n.Conclusions.sectionShownAnnouncement(L10n.string(to.label))
+        self.claimsSwitcher = sectionsFocused || switcherFocused
+    }
+}

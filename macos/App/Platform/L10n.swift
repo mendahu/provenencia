@@ -9464,6 +9464,14 @@ enum L10n {
             ), title, section)
         }
 
+        static func sectionShownAnnouncement(_ section: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sectionShownAnnouncement",
+                defaultValue: "%@ shown.",
+                comment: "VoiceOver announcement after a record page's section switcher opens a section; the argument is the section's name"
+            ), section)
+        }
+
         static let detailsSection = LocalizedStringResource(
             "conclusions.detail.details",
             defaultValue: "Details",

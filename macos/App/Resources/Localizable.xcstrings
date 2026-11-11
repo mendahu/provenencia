@@ -17520,6 +17520,18 @@
         }
       }
     },
+    "conclusions.sectionShownAnnouncement": {
+      "comment": "VoiceOver announcement after a record page's section switcher opens a section; the argument is the section's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ shown."
+          }
+        }
+      }
+    },
     "conclusions.section.leaf": {
       "comment": "Back menu entry for a section of a record page; arguments are the record's title and the section name",
       "extractionState": "manual",
