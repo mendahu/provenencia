@@ -145,4 +145,25 @@ enum CatalogQueryKey: Hashable, Sendable {
             project
         }
     }
+
+    /// The one row id a key names, for the kinds whose descriptor reads it; nil
+    /// otherwise.
+    var ownId: String? {
+        switch self {
+        case .conclusionDetail(_, let id),
+             .personClaims(_, let id),
+             .personFamily(_, let id),
+             .personEvents(_, let id),
+             .personRecordLinks(_, let id),
+             .evidenceGraph(_, let id),
+             .citationCounts(_, let id),
+             .propertyTerms(_, let id):
+            id
+        case .sourcesList, .sourceTypesList, .metadataFieldsList, .credibilityGradesList,
+             .sourceWorkspace, .typeSuggestions, .propertiesWorkspace, .connectRules,
+             .citationsByArtifact, .evidenceGraphProgress, .evidenceGraphsList,
+             .personsList, .eventsList, .placesList:
+            nil
+        }
+    }
 }

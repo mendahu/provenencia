@@ -446,6 +446,21 @@ struct CatalogQueryRegistryTests {
         #expect(registry.hiddenPolicy(.sourceWorkspace(project: project, sourceId: "s1")) == .markStale)
     }
 
+    @Test func ownIdNamesTheKeysOneRow() {
+        let project = ProjectKey(projectDir: projectDir)
+        #expect(CatalogQueryKey.conclusionDetail(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personClaims(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personFamily(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personEvents(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.personRecordLinks(project: project, entityId: "e1").ownId == "e1")
+        #expect(CatalogQueryKey.evidenceGraph(project: project, graphId: "g1").ownId == "g1")
+        #expect(CatalogQueryKey.citationCounts(project: project, graphId: "g1").ownId == "g1")
+        #expect(CatalogQueryKey.propertyTerms(project: project, propertyId: "p1").ownId == "p1")
+        #expect(CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1").ownId == nil)
+        #expect(CatalogQueryKey.personsList(project: project).ownId == nil)
+        #expect(CatalogQueryKey.citationsByArtifact(project: project, graphId: "g1", artifactId: "a1").ownId == nil)
+    }
+
     @Test func everyKindHasOneDescriptor() {
         let kinds = CatalogQueryKey.Kind.allCases
         let described = kinds.map { kind -> CatalogQueryKey.Kind in

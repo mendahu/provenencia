@@ -106,7 +106,6 @@ extension CatalogQueryDescriptor {
     /// written.
     static func personGraphsSection<Value>(
         kind: CatalogQueryKey.Kind,
-        entityId: @escaping @Sendable (CatalogQueryKey) -> String?,
         graphIDs: @escaping @Sendable (Value) -> Set<String>,
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
@@ -115,7 +114,7 @@ extension CatalogQueryDescriptor {
             stalePolicy: .sessionFresh,
             whenHidden: .evict,
             refreshes: [
-                .applyHiddenPolicy(follows: .touchedHandles) { _, key in entityId(key).map { [$0] } ?? [] },
+                .applyHiddenPolicy(followsOwnId: .touchedHandles),
                 .applyHiddenPolicy(followsValue: .evidenceGraphs, ids: graphIDs),
                 .followsPropertyLabels,
             ],
@@ -275,10 +274,7 @@ extension CatalogQueryKey.Kind {
                 kind: self,
                 stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
-                refreshes: [.applyHiddenPolicy(follows: .evidenceGraphs) { _, key in
-                    guard case .evidenceGraph(_, let graphId) = key else { return [] }
-                    return [graphId]
-                }],
+                refreshes: [.applyHiddenPolicy(followsOwnId: .evidenceGraphs)],
                 load: { key, store in
                     guard case .evidenceGraph(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .evidenceGraph)
@@ -319,10 +315,7 @@ extension CatalogQueryKey.Kind {
                 kind: self,
                 stalePolicy: .sessionFresh,
                 whenHidden: .markStale,
-                refreshes: [.applyHiddenPolicy(follows: .reads(.citations)) { _, key in
-                    guard case .citationCounts(_, let graphId) = key else { return [] }
-                    return [graphId]
-                }],
+                refreshes: [.applyHiddenPolicy(followsOwnId: .reads(.citations))],
                 load: { key, store in
                     guard case .citationCounts(let project, let graphId) = key else {
                         mismatchedCatalogKey(key, .citationCounts)
@@ -398,10 +391,7 @@ extension CatalogQueryKey.Kind {
                 // A term write reports the `property_terms` read for its Property.
                 // The rows hold no Property label, binding or type, so the key
                 // follows no vocabulary list.
-                refreshes: [.applyHiddenPolicy(follows: .reads(.propertyTerms)) { _, key in
-                    guard case .propertyTerms(_, let propertyId) = key else { return [] }
-                    return [propertyId]
-                }],
+                refreshes: [.applyHiddenPolicy(followsOwnId: .reads(.propertyTerms))],
                 load: { key, store in
                     guard case .propertyTerms(let project, let propertyId) = key else {
                         mismatchedCatalogKey(key, .propertyTerms)
@@ -559,10 +549,7 @@ extension CatalogQueryKey.Kind {
                 stalePolicy: .sessionFresh,
                 whenHidden: .evict,
                 refreshes: [
-                    .applyHiddenPolicy(follows: .touchedHandles) { _, key in
-                        guard case .conclusionDetail(_, let entityId) = key else { return [] }
-                        return [entityId]
-                    },
+                    .applyHiddenPolicy(followsOwnId: .touchedHandles),
                     .followsPropertyLabels,
                 ],
                 load: { key, store in
@@ -579,10 +566,6 @@ extension CatalogQueryKey.Kind {
             // the Evidence graphs it holds a claim on.
             return .personGraphsSection(
                 kind: self,
-                entityId: { key in
-                    guard case .personClaims(_, let entityId) = key else { return nil }
-                    return entityId
-                },
                 graphIDs: { (groups: [CatalogPersonClaimGroup]) in
                     Set(groups.flatMap(\.claims).map(\.graphID))
                 },
@@ -625,10 +608,6 @@ extension CatalogQueryKey.Kind {
             // gained or lost), so a write elsewhere does not reload the pairs.
             return .personGraphsSection(
                 kind: self,
-                entityId: { key in
-                    guard case .personRecordLinks(_, let entityId) = key else { return nil }
-                    return entityId
-                },
                 graphIDs: { (links: CatalogPersonRecordLinks) in Set(links.graphs.map(\.graphID)) },
                 load: { key, store in
                     guard case .personRecordLinks(let project, let entityId) = key else {
