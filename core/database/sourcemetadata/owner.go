@@ -30,9 +30,10 @@ type store struct {
 	values      string
 	layout      string
 
-	// typeIn is a prefix: complete it with placeholders and ")". It reads the
-	// owners' ids and their Source type ids.
-	typeIn string
+	// typeIn and typeSuffix bracket the IN list of sqlbatch.Query. They read
+	// the owners' ids and their Source type ids.
+	typeIn     string
+	typeSuffix string
 
 	ownerExists string
 	insert      string
@@ -40,8 +41,8 @@ type store struct {
 	delete      string
 	getPair     string
 
-	// listIn and layoutListIn are prefixes: complete them with placeholders and
-	// the suffix their order needs (see listSuffix and layoutListSuffix).
+	// listIn and layoutListIn are heads for sqlbatch.Query, closed by the
+	// suffix their order needs (listSuffix and layoutListSuffix).
 	listIn       string
 	listSuffix   string
 	layoutListIn string
@@ -57,7 +58,7 @@ type store struct {
 }
 
 // newStore builds a level's SQL from its constant names, as deleteimpact's
-// rowFacet does. No argument comes from a caller; typeIn is passed whole.
+// rowFacet does. No argument comes from a caller; typeIn is passed whole, up to its IN list.
 func newStore(level vocabkey.Level, ownerTable, ownerColumn, values, layout, typeIn string) *store {
 	f := func(format string, a ...any) string { return fmt.Sprintf(format, a...) }
 	return &store{
@@ -66,6 +67,7 @@ func newStore(level vocabkey.Level, ownerTable, ownerColumn, values, layout, typ
 		values:      values,
 		layout:      layout,
 		typeIn:      typeIn,
+		typeSuffix:  `)`,
 		ownerExists: f(`SELECT 1 FROM %s WHERE id = ?`, ownerTable),
 		insert: f(`INSERT INTO %s (id, %s, field_id, value_text)
 			VALUES (?, ?, ?, ?)`, values, ownerColumn),

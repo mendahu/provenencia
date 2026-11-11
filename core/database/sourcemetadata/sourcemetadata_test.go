@@ -3,6 +3,7 @@ package sourcemetadata
 import (
 	"bytes"
 	"errors"
+	"math/rand"
 	"reflect"
 	"slices"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -1653,4 +1655,84 @@ func TestListByOwnersTx(t *testing.T) {
 	if _, err := ListByOwnersTx(tx, []Owner{sourceOwner(a.ID), {Level: vocabkey.LevelGraph, ID: a.ID}}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("graph owner = %v", err)
 	}
+
+	listByOwnersBatches(t)
+}
+
+// listByOwnersBatches is TestListByOwnersTx's cases over more owners than one
+// sqlbatch IN list holds: the rows still come back by owner id then field id,
+// and the workspace read finds every owner's type, values and layout.
+func listByOwnersBatches(t *testing.T) {
+	t.Helper()
+	c, userID, _, _, _, f1, f2 := applyWorld(t)
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := sqlbatch.Size*2 + 201
+	owners := make([]Owner, 0, n)
+	_, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		var changes []rowchange.Change
+		for i := 0; i < n; i++ {
+			src, ch, err := sources.Create(tx, userID, sources.CreateInput{SourceTypeID: cert.ID, Title: "S"})
+			if err != nil {
+				return struct{}{}, nil, err
+			}
+			changes = append(changes, ch...)
+			o := sourceOwner(src.ID)
+			for _, f := range []metadatafields.Field{f2, f1} {
+				_, ch, err := Set(tx, userID, o, Input{FieldID: f.ID, ValueText: "v"})
+				if err != nil {
+					return struct{}{}, nil, err
+				}
+				changes = append(changes, ch...)
+			}
+			owners = append(owners, o)
+		}
+		return struct{}{}, changes, nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rand.New(rand.NewSource(1)).Shuffle(len(owners), func(i, j int) { owners[i], owners[j] = owners[j], owners[i] })
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	t.Run("order holds across batches", func(t *testing.T) {
+		rows, err := ListByOwnersTx(tx, owners)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rows) != 2*n {
+			t.Fatalf("got %d rows, want %d", len(rows), 2*n)
+		}
+		for i := 1; i < len(rows); i++ {
+			prev, cur := rows[i-1], rows[i]
+			byOwner := bytes.Compare(prev.Owner.ID, cur.Owner.ID)
+			if byOwner > 0 || (byOwner == 0 && bytes.Compare(prev.FieldID, cur.FieldID) >= 0) {
+				t.Fatalf("row %d out of order: %x/%x then %x/%x", i, prev.Owner.ID, prev.FieldID, cur.Owner.ID, cur.FieldID)
+			}
+		}
+	})
+	t.Run("workspaces read every owner", func(t *testing.T) {
+		got, err := listWorkspaces(tx, owners)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != n {
+			t.Fatalf("got %d owners, want %d", len(got), n)
+		}
+		for _, o := range owners {
+			if len(got[o.key()]) == 0 {
+				t.Fatalf("owner %x has no entries", o.ID)
+			}
+		}
+	})
 }

@@ -2,6 +2,7 @@ package metadatafields
 
 import (
 	"database/sql"
+	"encoding/binary"
 	"errors"
 	"testing"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/users"
 	"github.com/mendahu/provenencia/core/ref"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -494,6 +496,23 @@ func TestListByIDsTx(t *testing.T) {
 	if err != nil || none != nil {
 		t.Fatalf("nil ids = %+v, %v", none, err)
 	}
+
+	t.Run("reads past one batch", func(t *testing.T) {
+		ids := [][]byte{a.ID}
+		for i := 0; i < sqlbatch.Size*2+1; i++ {
+			unknown := make([]byte, 16)
+			binary.BigEndian.PutUint64(unknown[8:], uint64(i+1))
+			ids = append(ids, unknown)
+		}
+		ids = append(ids, b.ID)
+		got, err := ListByIDsTx(tx, ids)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 2 {
+			t.Fatalf("got %d fields, want the 2 known: %+v", len(got), got)
+		}
+	})
 }
 
 func runCreate(c *database.Catalog, label, dataType, description string) (Field, error) {

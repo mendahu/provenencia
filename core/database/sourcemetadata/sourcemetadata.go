@@ -8,6 +8,7 @@
 package sourcemetadata
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"sort"
@@ -19,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/urlshape"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -646,65 +648,67 @@ func ListByOwnersTx(tx *sql.Tx, owners []Owner) ([]Row, error) {
 // owner's rows by field id. The owners must already have passed storeFor.
 func listByOwners(q database.Querier, owners []Owner) ([]Row, error) {
 	var out []Row
-	for _, level := range vocabkey.MetadataLevels() {
-		st, ids := stores[level], idsAt(owners, level)
-		if st == nil || len(ids) == 0 {
-			continue
-		}
-		rows, err := q.Query(st.listIn+database.SQLInPlaceholders(len(ids))+st.listSuffix, database.BlobArgs(ids)...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+	err := eachLevel(owners, func(st *store, ids [][]byte) error {
+		return sqlbatch.Query(q, st.listIn, st.listSuffix, nil, ids, func(rows *sql.Rows) error {
 			r, err := scanRow(rows, st)
 			if err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			out = append(out, r)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
 }
 
-// listLayoutByOwners reads the layout rows of the owners, one query per level,
-// keyed by Owner.key and ordered by sort_order then field id. The owners must
-// already have passed storeFor.
+// listLayoutByOwners reads the layout rows of the owners, one query per level
+// and batch, keyed by Owner.key and ordered by sort_order then field id. The
+// owners must already have passed storeFor.
 func listLayoutByOwners(q database.Querier, owners []Owner) (map[string][]LayoutRow, error) {
 	out := make(map[string][]LayoutRow)
-	for _, level := range vocabkey.MetadataLevels() {
-		st, ids := stores[level], idsAt(owners, level)
-		if st == nil || len(ids) == 0 {
-			continue
-		}
-		rows, err := q.Query(st.layoutListIn+database.SQLInPlaceholders(len(ids))+st.layoutListSuffix, database.BlobArgs(ids)...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+	err := eachLevel(owners, func(st *store, ids [][]byte) error {
+		return sqlbatch.Query(q, st.layoutListIn, st.layoutListSuffix, nil, ids, func(rows *sql.Rows) error {
 			var ownerID []byte
 			var l LayoutRow
 			var dismissed int
 			if err := rows.Scan(&ownerID, &l.FieldID, &l.SortOrder, &dismissed); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
 			l.Dismissed = dismissed == 1
-			k := Owner{Level: level, ID: ownerID}.key()
+			k := Owner{Level: st.level, ID: ownerID}.key()
 			out[k] = append(out[k], l)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
 	}
 	return out, nil
+}
+
+// eachLevel calls fn for each level that keeps metadata and has owners, with
+// the level's store and its distinct owner ids in byte order. SQLite orders
+// BLOBs by memcmp, so a query that orders by owner id, run batch by batch over
+// these ids, returns rows in one order across the batches.
+func eachLevel(owners []Owner, fn func(st *store, ids [][]byte) error) error {
+	for _, level := range vocabkey.MetadataLevels() {
+		st := stores[level]
+		if st == nil {
+			continue
+		}
+		ids := idsAt(owners, level)
+		if len(ids) == 0 {
+			continue
+		}
+		sort.Slice(ids, func(i, j int) bool { return bytes.Compare(ids[i], ids[j]) < 0 })
+		if err := fn(st, ids); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // idsAt is the distinct ids of the owners at one level.
@@ -764,28 +768,18 @@ func listWorkspaces(tx *sql.Tx, owners []Owner) (map[string][]WorkspaceEntry, er
 	}
 
 	typeOf := make(map[string][]byte, len(uniq))
-	for _, level := range vocabkey.MetadataLevels() {
-		st, ids := stores[level], idsAt(uniq, level)
-		if st == nil || len(ids) == 0 {
-			continue
-		}
-		rows, err := tx.Query(st.typeIn+database.SQLInPlaceholders(len(ids))+")", database.BlobArgs(ids)...)
-		if err != nil {
-			return nil, err
-		}
-		for rows.Next() {
+	err := eachLevel(uniq, func(st *store, ids [][]byte) error {
+		return sqlbatch.Query(tx, st.typeIn, st.typeSuffix, nil, ids, func(rows *sql.Rows) error {
 			var id, typeID []byte
 			if err := rows.Scan(&id, &typeID); err != nil {
-				rows.Close()
-				return nil, err
+				return err
 			}
-			typeOf[Owner{Level: level, ID: id}.key()] = typeID
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
+			typeOf[Owner{Level: st.level, ID: id}.key()] = typeID
+			return nil
+		})
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	type typeLevel struct {

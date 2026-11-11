@@ -386,10 +386,7 @@ type group struct {
 // candidates, then their date values, name values, and name parts. Groups
 // come back ordered by (entity id, property id).
 func load(q Querier, ids [][]byte) ([]*group, error) {
-	rows, err := q.Query(sqlLoadCandidates+database.SQLInPlaceholders(len(ids))+`)`, database.BlobArgs(ids)...)
-	if err != nil {
-		return nil, err
-	}
+	ids = database.UniqueBlobIDs(ids)
 	type pending struct {
 		g      *group
 		c      autoreconcile.Candidate
@@ -400,7 +397,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 	var groups []*group
 	var all []pending
 	var dateIDs, nameIDs [][]byte
-	for rows.Next() {
+	err := sqlbatch.Query(q, sqlLoadCandidates, `)`, nil, ids, func(rows *sql.Rows) error {
 		var (
 			entityID, obsID, propertyID       []byte
 			valueType, cardinality            string
@@ -418,8 +415,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
 			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
 		if err := rows.Scan(dest...); err != nil {
-			_ = rows.Close()
-			return nil, err
+			return err
 		}
 		k := string(entityID) + "\x00" + string(propertyID)
 		g, ok := byKey[k]
@@ -441,9 +437,8 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		if len(nameID) > 0 {
 			nameIDs = append(nameIDs, nameID)
 		}
-	}
-	err = rows.Err()
-	_ = rows.Close()
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}

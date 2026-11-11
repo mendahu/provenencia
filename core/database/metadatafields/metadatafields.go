@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/slug"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
@@ -237,20 +238,19 @@ func ListByIDsTx(tx *sql.Tx, ids [][]byte) ([]Field, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	rows, err := tx.Query(sqlGetByIDsIn+database.SQLInPlaceholders(len(ids))+")", database.BlobArgs(ids)...)
+	var out []Field
+	err := sqlbatch.Query(tx, sqlGetByIDsIn, ")", nil, ids, func(rows *sql.Rows) error {
+		f, err := ScanField(rows)
+		if err != nil {
+			return err
+		}
+		out = append(out, f)
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []Field
-	for rows.Next() {
-		f, err := scanField(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, f)
-	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // Lookup returns the field for (key, origin), or sql.ErrNoRows.
@@ -264,7 +264,7 @@ func Lookup(c *database.Catalog, key, origin string) (Field, error) {
 	if key == "" || origin == "" {
 		return Field{}, ErrInvalid
 	}
-	return scanField(db.QueryRow(sqlLookup, key, origin))
+	return ScanField(db.QueryRow(sqlLookup, key, origin))
 }
 
 // List returns all source_metadata_fields rows.
@@ -280,10 +280,12 @@ func List(c *database.Catalog) ([]Field, error) {
 	defer rows.Close()
 	var out []Field
 	for rows.Next() {
-		var f Field
-		if err := rows.Scan(&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description, &f.UsedBy); err != nil {
+		var usedBy int
+		f, err := ScanField(rows, &usedBy)
+		if err != nil {
 			return nil, err
 		}
+		f.UsedBy = usedBy
 		out = append(out, f)
 	}
 	return out, rows.Err()
@@ -361,16 +363,17 @@ func dataTypeOK(dt string) bool {
 }
 
 func getByID(q database.Querier, id []byte) (Field, error) {
-	return scanField(q.QueryRow(sqlGetByID, id))
+	return ScanField(q.QueryRow(sqlGetByID, id))
 }
 
 func lookupTx(tx *sql.Tx, key, origin string) (Field, error) {
-	return scanField(tx.QueryRow(sqlLookup, key, origin))
+	return ScanField(tx.QueryRow(sqlLookup, key, origin))
 }
 
-// scanField scans the six field columns every single-field read selects.
-func scanField(row interface{ Scan(dest ...any) error }) (Field, error) {
+// ScanField scans a row of id, key, origin, label, data_type, description, in
+// that order, then any trailing columns into extra.
+func ScanField(row interface{ Scan(dest ...any) error }, extra ...any) (Field, error) {
 	var f Field
-	err := row.Scan(&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description)
+	err := row.Scan(append([]any{&f.ID, &f.Key, &f.Origin, &f.Label, &f.DataType, &f.Description}, extra...)...)
 	return f, err
 }
