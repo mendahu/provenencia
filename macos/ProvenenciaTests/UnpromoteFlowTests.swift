@@ -215,7 +215,7 @@ struct UnpromoteFlowTests {
         await opening.value
         #expect(!flow.isBusy)
 
-        // The person is deleted: `apply` receives the effects, and leaving there evicts her page.
+        // The person is deleted: `apply` receives the effects and evicts her page, since she is deleted and, leaving, hidden.
         store.nextWriteEffects = CatalogWriteEffects(
             handles: ["h-maria"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-maria"])]
         )

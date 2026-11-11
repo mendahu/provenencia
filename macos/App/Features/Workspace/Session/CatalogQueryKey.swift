@@ -27,19 +27,19 @@ enum CatalogQueryKey: Hashable, Sendable {
     case placesList(project: ProjectKey)
     /// One handle's detail, any kind (S9-15), with its kind's summary (birth
     /// and death, an Event's subjects and title, a Place's names) read in the
-    /// same call. Evicted, not revalidated, while off screen.
+    /// same call. Marked stale, not revalidated, while off screen.
     case conclusionDetail(project: ProjectKey, entityId: String)
     /// One Person's accepted claims grouped by Source (S13-01), read for the
-    /// Sources section. Evicted, not revalidated, while off screen.
+    /// Sources section. Marked stale, not revalidated, while off screen.
     case personClaims(project: ProjectKey, entityId: String)
     /// One Person's family units (S13-04), read for the Family section.
-    /// Evicted, not revalidated, while off screen.
+    /// Marked stale, not revalidated, while off screen.
     case personFamily(project: ProjectKey, entityId: String)
     /// One Person's timeline events (S13-05), read for the Timeline section.
-    /// Evicted, not revalidated, while off screen.
+    /// Marked stale, not revalidated, while off screen.
     case personEvents(project: ProjectKey, entityId: String)
     /// One Person's Evidence graphs and the lines between them (S13-27), read
-    /// for the record links view. Evicted, not revalidated, while off screen.
+    /// for the record links view. Marked stale, not revalidated, while off screen.
     case personRecordLinks(project: ProjectKey, entityId: String)
 
     /// Case identity without associated payload. Each kind has one

@@ -18,8 +18,6 @@ enum CatalogHiddenPolicy: Sendable, Equatable {
     case revalidate
     /// Keep the old value and reload on the next `query`; nothing fetches now.
     case markStale
-    /// Drop the key; it loads fresh when next visited.
-    case evict
 }
 
 /// One catalog cache kind: its policies, how a mutation invalidates it, and
@@ -32,6 +30,10 @@ struct CatalogQueryDescriptor: Sendable {
     /// to cache rule 2 for lists and per-handle pages, so one trigger
     /// doesn't reload every list or page the researcher has opened.
     var whenHidden: CatalogHiddenPolicy = .revalidate
+    /// The entity whose id `ownId` is. Its deletion evicts the hidden key
+    /// (`apply`), and `.handle` keys are the pages the hidden-entity cap counts
+    /// (`apply(location:)`).
+    var deletedWith: CatalogDeletedEntity? = nil
     /// Nil when the kind names no mutation in `invalidateOn`.
     let invalidation: (@Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation)?
     /// In-place updates run, in order, before invalidation. Empty for kinds
@@ -54,6 +56,7 @@ extension CatalogQueryDescriptor {
         stalePolicy: CatalogQueryStalePolicy,
         invalidateOn: Set<CatalogMutationKind> = [],
         whenHidden: CatalogHiddenPolicy = .revalidate,
+        deletedWith: CatalogDeletedEntity? = nil,
         invalidation: (@Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation)? = nil,
         patches: [CatalogQueryPatch] = [],
         refreshes: [CatalogQueryRefresh] = [],
@@ -68,6 +71,7 @@ extension CatalogQueryDescriptor {
             stalePolicy: stalePolicy,
             invalidateOn: invalidateOn,
             whenHidden: whenHidden,
+            deletedWith: deletedWith,
             invalidation: invalidation,
             patches: patches,
             refreshes: refreshes,
@@ -92,7 +96,8 @@ extension CatalogQueryDescriptor {
         .make(
             kind: kind,
             stalePolicy: .sessionFresh,
-            whenHidden: .evict,
+            whenHidden: .markStale,
+            deletedWith: .handle,
             refreshes: [
                 .applyHiddenPolicyOnAny(follows: .touchedHandles),
                 .followsPropertyLabels,
@@ -112,7 +117,8 @@ extension CatalogQueryDescriptor {
         .make(
             kind: kind,
             stalePolicy: .sessionFresh,
-            whenHidden: .evict,
+            whenHidden: .markStale,
+            deletedWith: .handle,
             refreshes: [
                 .applyHiddenPolicy(followsOwnId: .touchedHandles),
                 .applyHiddenPolicy(followsValue: .evidenceGraphs, ids: graphIDs),
@@ -547,9 +553,26 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 stalePolicy: .sessionFresh,
-                whenHidden: .evict,
+                whenHidden: .markStale,
+                deletedWith: .handle,
                 refreshes: [
                     .applyHiddenPolicy(followsOwnId: .touchedHandles),
+                    // The Sources its records cite: a rename or a Citation or
+                    // Artifact label fix reaches the provenance sheet, the
+                    // Gallery captions and the viewer's record row.
+                    .applyHiddenPolicy(followsValue: .source) { (detail: CatalogConclusionDetail) in
+                        var ids = Set<String>()
+                        for field in detail.fields {
+                            ids.formUnion(field.outcomes.map(\.sourceID))
+                        }
+                        for row in detail.derivedRows {
+                            for owner in row.owners {
+                                ids.formUnion(owner.field.outcomes.map(\.sourceID))
+                            }
+                        }
+                        ids.formUnion(detail.pictures.map(\.record.sourceID))
+                        return ids
+                    },
                     .followsPropertyLabels,
                 ],
                 load: { key, store in
