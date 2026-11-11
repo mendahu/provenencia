@@ -318,7 +318,7 @@ CREATE TABLE artifact_metadata_layout (
 
 - **Suggestions have a level.** A Source type suggests fields per level (`source_type_metadata_fields.level`); an Artifact's or a graph's board lists its own Source's type's suggestions at its level, plus extras.
 - **Audit.** Every change carries the owner column (`artifact_id`, `graph_id`) and scopes the owner's Source (`effects` registry, `up(owner, "source_id")`), so a write refreshes the Source's page and moves its last activity.
-- **Delete.** A field is in use while any of the three value tables holds it, and `metadatafields.UsedBy` counts all three; a layout row alone never blocks. A field's layout rows at every level are released, audited, with it.
+- **Delete.** A field is in use while any of the three value tables holds it, and `deleteimpact.UsedBy` counts all three; a layout row alone never blocks. A field's layout rows at every level are released, audited, with it.
 - **Search and citations.** No search document is built from Artifact or graph metadata. A citation reads the graph's value, else the Artifact's, else the Source's (spike 15).
 
 ---
