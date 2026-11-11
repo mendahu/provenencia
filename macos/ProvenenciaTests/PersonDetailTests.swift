@@ -404,9 +404,9 @@ struct PersonDetailTests {
 
     @Test func headerFallsBackNameLabelRef() {
         let named = PersonDetailContent(detail: detail())
-        #expect(named.title == .name("James Robins") && named.showsRef && named.members == "4 members")
+        #expect(named.title == .name("James Robins") && named.showsRef && named.members == "4 records")
         let labelled = PersonDetailContent(detail: detail(name: D.field("", [], outcomes: []), label: "Grandpa", members: 1))
-        #expect(labelled.title == .label("Grandpa") && labelled.showsRef && labelled.members == "1 member")
+        #expect(labelled.title == .label("Grandpa") && labelled.showsRef && labelled.members == "1 record")
         let bare = PersonDetailContent(detail: detail(name: nil, members: 1))
         #expect(bare.title == .ref("PER-7KD45") && !bare.showsRef)
         // No name field at all: the Name row still shows, empty.

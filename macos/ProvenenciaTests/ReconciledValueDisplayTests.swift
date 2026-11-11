@@ -240,7 +240,7 @@ struct ReconciledValueDisplayTests {
         func both(_ o: CatalogReconcilerOutcome) -> (String, PVSymbol) {
             (ReconciledValueDisplay.outcomePhrase(o, in: f), ReconciledValueDisplay.outcomeMark(o, in: f))
         }
-        #expect(both(Self.outcome("p", "provisional", rank: 2)) == ("provisional member", .circleDashed))
+        #expect(both(Self.outcome("p", "provisional", rank: 2)) == ("provisional record", .circleDashed))
         let none = Self.outcome("n", "no_evidence", rank: nil, recorded: .none)
         #expect(both(none) == ("no usable value", .minus))
         #expect(ReconciledValueDisplay.readAs(none, propertyKey: "name") == "—")

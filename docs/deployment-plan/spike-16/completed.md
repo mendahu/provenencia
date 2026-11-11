@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-06 — Section switches and removals are spoken
+
+**Landed 2026-11-11** in [#785](https://github.com/mendahu/provenencia/pull/785). Choosing a Person page section with ⌘1–⌘5, a click or Space now says "Timeline shown." (and so on), and the keyboard stays on the selected segment of the switcher when it was in the sections or on the switcher; the segmented control's focus handle lands on the selected segment. Unpromoting one of a person's records that keeps the person says "J. Weber unpromoted."; the leave-or-stay choice after a Remove moved out of the Sources section into the shared Unpromote flow (`UnpromotePageOutcome`), where tests reach it. The header counts "7 records" on every Conclusion page, and the Unpromote confirm ends ", and the person stays" (event, place per kind). Version 0.9.1.
+
 ## S16-09 — Conclusion pages refresh from the Sources they cite and show their last value while they refresh
 
 **Landed 2026-11-10** in [#780](https://github.com/mendahu/provenencia/pull/780). Renaming a Source, or fixing a Citation's label or page or an Artifact's label, now reaches the Vitals provenance sheet, the Gallery captions and the viewer's record row on every Person, Event and Place page that cites it. Going Back to a page shows its last value at once with "Refreshing" instead of a spinner: a write marks hidden pages stale rather than dropping them, only an entity a write deleted is dropped, and at most 50 hidden entities keep their pages. The unused `CatalogQueryStalePolicy` is gone. Version 0.8.1.

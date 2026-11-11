@@ -273,18 +273,6 @@
         }
       }
     },
-    "conclusions.sources.personDeletedAnnouncement": {
-      "comment": "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ deleted."
-          }
-        }
-      }
-    },
     "conclusions.sources.unpromoteAccessibility": {
       "comment": "Spoken label of the Unpromote button on a record's line on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref",
       "extractionState": "manual",
@@ -16476,6 +16464,66 @@
         }
       }
     },
+    "unpromote.unpromotedAnnouncement": {
+      "comment": "VoiceOver announcement after a record is unpromoted and its person, event or place stays; the argument is the record's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unpromoted."
+          }
+        }
+      }
+    },
+    "unpromote.deletedAnnouncement": {
+      "comment": "VoiceOver announcement after a record's Unpromote deleted the person, event or place the page showed; the argument is its ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ deleted."
+          }
+        }
+      }
+    },
+    "unpromote.confirmMessage.person": {
+      "comment": "Message of the Unpromote confirm when the person keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the person stays."
+          }
+        }
+      }
+    },
+    "unpromote.confirmMessage.event": {
+      "comment": "Message of the Unpromote confirm when the event keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the event stays."
+          }
+        }
+      }
+    },
+    "unpromote.confirmMessage.place": {
+      "comment": "Message of the Unpromote confirm when the place keeps another record",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This promotion is removed. The cards stay on the graph, and the place stays."
+          }
+        }
+      }
+    },
     "unpromote.confirmMessageDeletes.person": {
       "comment": "Unpromote confirm when the Person handle is deleted; argument is its ref",
       "extractionState": "manual",
@@ -16628,18 +16676,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The check for whether this place is deleted could not run. Confirming may still delete this place. The cards stay on the graph."
-          }
-        }
-      }
-    },
-    "unpromote.confirmMessage": {
-      "comment": "Message of the Unpromote confirm",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This promotion is removed. The cards stay on the graph, and the handle stays."
           }
         }
       }
@@ -17065,13 +17101,13 @@
       }
     },
     "conclusions.outcome.provisional": {
-      "comment": "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only",
+      "comment": "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "provisional member"
+            "value": "provisional record"
           }
         }
       }
@@ -17516,6 +17552,18 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@, %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "conclusions.sectionShownAnnouncement": {
+      "comment": "VoiceOver announcement after a record page's section switcher opens a section; the argument is the section's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ shown."
           }
         }
       }
@@ -18493,7 +18541,7 @@
       }
     },
     "conclusions.memberCount": {
-      "comment": "Page header: how many Subjects are members of this handle; argument is the count",
+      "comment": "Page header: how many records (Identity Claims) this person, event or place has; argument is the count",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -18502,13 +18550,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld member"
+                  "value": "%lld record"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld members"
+                  "value": "%lld records"
                 }
               }
             }

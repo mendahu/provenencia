@@ -266,7 +266,8 @@ struct WorkspaceToolbar: View {
             let labels = WorkspaceLocationLabels.labels(for: location)
             leaf = labels.leaf ?? "…"
             if let section = labels.section {
-                // A section of the page: the record's crumb goes back to its first section.
+                // A section of the page: the record's crumb goes back to its first
+                // section.
                 items.append(
                     PVBreadcrumbItem(
                         id: "entity-\(location.section.rawValue)",

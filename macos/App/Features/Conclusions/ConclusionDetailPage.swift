@@ -105,6 +105,19 @@ extension ConclusionDetailBody {
     var badge: ConclusionDetailBadge? { nil }
 }
 
+private struct ConclusionSectionsFocusedKey: FocusedValueKey {
+    typealias Value = Bool
+}
+
+extension FocusedValues {
+    /// True while the keyboard is inside the page's sections column, the part a
+    /// section switch replaces.
+    var conclusionSectionsFocused: Bool? {
+        get { self[ConclusionSectionsFocusedKey.self] }
+        set { self[ConclusionSectionsFocusedKey.self] = newValue }
+    }
+}
+
 /// What the `pageSections` slot receives beside the content.
 struct ConclusionDetailPageSectionsContext {
     var projectDir: String
@@ -326,8 +339,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             refreshing: refreshing || sectionRefreshing,
                             refreshFailure: refreshFailure,
                             handle: handle,
-                            retry: readAgain,
-                            select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
+                            retry: readAgain
                         )
                     },
                     primary: {
@@ -343,6 +355,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                                 )
                             )
                         }
+                        .focusedValue(\.conclusionSectionsFocused, true)
                     }
                 )
             }
@@ -371,7 +384,33 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let refreshFailure: String?
     let handle: QueryHandle<CatalogConclusionDetail>
     let retry: () -> Void
-    let select: (ConclusionPageSection) -> Void
+
+    @Environment(WorkspaceNavigation.self) private var navigation
+    @FocusState private var switcherFocus: ConclusionPageSection?
+    @FocusedValue(\.conclusionSectionsFocused) private var sectionsFocused
+
+    /// Chooses a section, then speaks it and, when the keyboard was in the
+    /// column about to be replaced or on the switcher, keeps it on the switcher.
+    /// Focus is read before the move, while the old column still holds it.
+    /// The segmented control does not claim focus after a choice: with one Tab
+    /// stop, `switcherFocus != nil` means the keyboard is on the switcher, so
+    /// Space, an arrow or ⌘1–⌘5 re-claim it for the newly selected segment.
+    private func choose(_ section: ConclusionPageSection) {
+        let sectionSwitch = openPageSection.flatMap {
+            ConclusionPageSectionSwitch(
+                from: $0,
+                to: section,
+                sectionsFocused: sectionsFocused == true,
+                switcherFocused: switcherFocus != nil
+            )
+        }
+        navigation.go(to: navigation.currentLocation.withPageSection(section))
+        guard let sectionSwitch, navigation.currentLocation.openPageSection == sectionSwitch.to else { return }
+        AccessibilityAnnouncement.post(sectionSwitch.announcement)
+        if sectionSwitch.claimsSwitcher {
+            FocusClaim.claim($switcherFocus, sectionSwitch.to)
+        }
+    }
 
     /// A page with page sections pins its header; one without scrolls it away.
     private var pinned: Bool { openPageSection != nil }
@@ -420,7 +459,8 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
                 },
                 selection: selection,
                 size: .lg,
-                select: select
+                focus: PVFieldFocus($switcherFocus, equals: selection),
+                select: choose
             )
             if refreshing {
                 HStack(spacing: PVSpacing.space3) {

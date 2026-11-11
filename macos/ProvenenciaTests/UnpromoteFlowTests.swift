@@ -112,7 +112,7 @@ struct UnpromoteFlowTests {
         #expect(failed.confirmTone == .danger)
 
         let none = item()
-        #expect(none.message == L10n.string(L10n.Unpromote.confirmMessage))
+        #expect(none.message == "This promotion is removed. The cards stay on the graph, and the person stays.")
         #expect(none.confirmTone == .irreversible)
     }
 
@@ -196,18 +196,50 @@ struct UnpromoteFlowTests {
         #expect(!flow.isBusy)
     }
 
-    @Test func confirmReportsTheEffects() async throws {
+    @Test func pageOutcomeLeavesOnlyWhenTheOwnHandleIsDeleted() {
+        let deleted = CatalogWriteEffects(
+            handles: ["h-maria"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-maria"])]
+        )
+        let own = item(deletes: group(total: 1, listed: [("h-maria", "PER-8JD2L")]))
+        #expect(UnpromotePageOutcome.after(deleted, item: own) == .leave("PER-8JD2L deleted."))
+        // The preflight failed: the write still deleted her, with nothing to name.
+        #expect(UnpromotePageOutcome.after(deleted, item: item()) == .leave(nil))
+
+        let other = CatalogWriteEffects(
+            handles: ["h-otto"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-otto"])]
+        )
+        #expect(UnpromotePageOutcome.after(other, item: item()) == .stay("Maria unpromoted."))
+        #expect(UnpromotePageOutcome.after(CatalogWriteEffects(handles: ["h-maria"]), item: item()) == .stay("Maria unpromoted."))
+        #expect(UnpromotePageOutcome.after(deleted, item: item(handleID: nil)) == .stay("Maria unpromoted."))
+    }
+
+    /// A session and a navigation on h-maria's person page, with her detail key warmed.
+    private func personPage() -> (FakeStore, WorkspaceSession, WorkspaceNavigation, CatalogQueryKey) {
         let (store, session) = makeFixture()
+        let navigation = WorkspaceNavigation()
+        let location = WorkspaceLocation.personDetail(entityId: "h-maria", ref: "PER-8JD2L", title: "Maria")
+        navigation.go(to: location)
+        session.apply(location: location)
+        let detailKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "h-maria")
+        let warmed: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
+        #expect(warmed != nil)
+        return (store, session, navigation, detailKey)
+    }
+
+    @Test func confirmLeavesWhenThePersonIsDeleted() async {
+        let (store, session, navigation, detailKey) = personPage()
         let flow = UnpromoteFlow()
-        func open() async {
+        store.unpromoteImpactBySubject["s-weber"] = CatalogUnpromoteImpact(
+            deletes: group(total: 1, listed: [("h-maria", "PER-8JD2L")]), unpromotedBridgeSubjectIDs: []
+        )
+        // Busy while the open reads.
+        store.getUnpromoteImpactHold.isOn = true
+        let opening = Task {
             await flow.open(
                 subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: "h-maria",
                 graphID: graphID, session: session
             )
         }
-        // Busy while the open reads.
-        store.getUnpromoteImpactHold.isOn = true
-        let opening = Task { await open() }
         #expect(await waitUntil { store.getUnpromoteImpactHold.count == 1 })
         #expect(flow.isBusy)
         store.getUnpromoteImpactHold.isOn = false
@@ -215,39 +247,92 @@ struct UnpromoteFlowTests {
         await opening.value
         #expect(!flow.isBusy)
 
-        // The person is deleted: `apply` receives the effects and evicts her page, since she is deleted and, leaving, hidden.
         store.nextWriteEffects = CatalogWriteEffects(
             handles: ["h-maria"], deleted: [CatalogWriteEffectsDeleted(entity: .handle, ids: ["h-maria"])]
         )
-        let detailKey = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "h-maria")
-        session.apply(location: .personDetail(entityId: "h-maria", ref: "PER-8JD2L", title: "Maria"))
-        let warmed: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
-        #expect(warmed != nil)
-        var seen: [String] = []
+        var said: [String] = []
         store.unpromoteSubjectHold.isOn = true
         let writing = Task {
-            await flow.confirm(session: session, userID: "user-1", apply: { effects in
-                seen = effects.deletedHandles
-                session.apply(effects, leavingPage: { session.apply(location: .sectionRoot(.persons)) })
-            })
+            await flow.confirm(
+                session: session, userID: "user-1", leavingPage: navigation.fallbackToSectionRoot,
+                announce: { said.append($0) }
+            )
         }
         #expect(await waitUntil { store.unpromoteSubjectHold.count == 1 })
         #expect(flow.isBusy)
         store.unpromoteSubjectHold.isOn = false
         store.unpromoteSubjectHold.release()
         #expect(await writing.value)
-        #expect(seen == ["h-maria"])
-        #expect(flow.pending == nil)
-        #expect(!flow.isBusy)
+        #expect(navigation.currentLocation == .sectionRoot(.persons))
         let evicted: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
         #expect(evicted == nil)
+        #expect(said == ["PER-8JD2L deleted."])
+        #expect(flow.pending == nil)
+        #expect(!flow.isBusy)
+    }
 
-        // The person stayed.
+    @Test func confirmStaysAndSaysSo() async {
+        let (store, session, navigation, detailKey) = personPage()
+        let location = navigation.currentLocation
+        // Warm the page's detail with a value, then seed a newer one for the confirm to find.
+        var shown = CatalogConclusionDetail(
+            entity: CatalogCanonicalEntity(id: "h-maria", ref: "PER-8JD2L", subjectTypeID: "t-person", label: "Maria"),
+            fields: []
+        )
+        shown.memberCount = 2
+        store.seededConclusionDetails["h-maria"] = shown
+        session.apply(CatalogWriteEffects(handles: ["h-maria"]))
+        await session.settleWrites()
+        let warmed: QueryHandle<CatalogConclusionDetail>? = session.queryHandle(detailKey)
+        #expect(warmed?.value == shown)
+        var moved = shown
+        moved.memberCount = 1
+        store.seededConclusionDetails["h-maria"] = moved
+        let flow = UnpromoteFlow()
+        await flow.open(
+            subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: "h-maria",
+            graphID: graphID, session: session
+        )
         store.nextWriteEffects = CatalogWriteEffects(handles: ["h-maria"])
-        await open()
-        var stayedSeen: CatalogWriteEffects?
-        #expect(await flow.confirm(session: session, userID: "user-1", apply: { stayedSeen = $0 }))
-        #expect(stayedSeen?.deletedHandles.isEmpty == true)
+        var said: [String] = []
+        let result = await flow.confirm(
+            session: session, userID: "user-1", leavingPage: navigation.fallbackToSectionRoot,
+            announce: { said.append($0) }
+        )
+        #expect(result)
+        #expect(navigation.currentLocation == location)
+        #expect(said == ["J. Weber unpromoted."])
+        #expect(flow.pending == nil)
+        // The stay branch applied the effects: the warmed page re-reads.
+        await session.settleWrites()
+        #expect(warmed?.value == moved)
+    }
+
+    @Test func confirmFailureNeitherLeavesNorSpeaks() async {
+        let (store, session, navigation, _) = personPage()
+        let location = navigation.currentLocation
+        let flow = UnpromoteFlow()
+        var said: [String] = []
+        // Nothing opened: nothing to write.
+        #expect(!(await flow.confirm(
+            session: session, userID: "user-1", leavingPage: navigation.fallbackToSectionRoot,
+            announce: { said.append($0) }
+        )))
+        #expect(navigation.currentLocation == location)
+        #expect(said.isEmpty)
+
+        await flow.open(
+            subjectID: "s-weber", name: "J. Weber", kind: .person, handleID: "h-maria",
+            graphID: graphID, session: session
+        )
+        store.unpromoteSubjectError = CoreInvokeError.coded(status: 1, code: "promote.stale", kind: .user, params: [])
+        #expect(!(await flow.confirm(
+            session: session, userID: "user-1", leavingPage: navigation.fallbackToSectionRoot,
+            announce: { said.append($0) }
+        )))
+        #expect(navigation.currentLocation == location)
+        #expect(said.isEmpty)
+        #expect(flow.pending?.error != nil)
     }
 
     @Test func confirmFailureStaysOpen() async {

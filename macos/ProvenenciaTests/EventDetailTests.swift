@@ -59,6 +59,11 @@ struct EventDetailTests {
         )
     }
 
+    @Test func headerCountsRecords() {
+        #expect(content(detail(members: 4)).members == "4 records")
+        #expect(content(detail(members: 1)).members == "1 record")
+    }
+
     @Test func titleIsTheSummaryChosenTitle() {
         let page = EventDetailContent(
             detail: detail(summary: summary(CatalogEventTitle(rule: .recordedName, recordedName: "Fire at York", ref: "EVT-8PL22"))),

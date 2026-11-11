@@ -104,7 +104,7 @@ private struct PVUnpromoteConfirmDetail: View {
         .pvUnpromoteConfirm(
             item: .constant(PVUnpromoteConfirmContent(
                 id: "s1", name: "J. Weber",
-                message: "This promotion is removed. The cards stay on the graph, and the handle stays.",
+                message: "This promotion is removed. The cards stay on the graph, and the person stays.",
                 tone: .irreversible,
                 connections: .listed(["J. Weber is the father of M. Weber."]),
                 error: nil
@@ -121,7 +121,7 @@ private struct PVUnpromoteConfirmDetail: View {
         .pvUnpromoteConfirm(
             item: .constant(PVUnpromoteConfirmContent(
                 id: "s1", name: "J. Weber",
-                message: "This promotion is removed. The cards stay on the graph, and the handle stays.",
+                message: "This promotion is removed. The cards stay on the graph, and the person stays.",
                 tone: .irreversible,
                 connections: .listed((1...200).map { "J. Weber is the father of M. Weber \($0)." }),
                 error: nil

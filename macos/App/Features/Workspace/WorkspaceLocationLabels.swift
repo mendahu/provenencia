@@ -31,8 +31,8 @@ struct LocationNames {
 /// canvas's VoiceOver label: one home for all three.
 @MainActor
 enum WorkspaceLocationLabels {
-    /// The record (`title ?? ref`) and, on a section of its page, the section's
-    /// name. On an Evidence graph, its composer or its Promote page the leaf is
+    /// The record (`title ?? ref`) and the open section of its page, the first one
+    /// included, by name. On an Evidence graph, its composer or its Promote page the leaf is
     /// the graph's name and the section is the surface.
     static func labels(
         for location: WorkspaceLocation,
@@ -43,7 +43,7 @@ enum WorkspaceLocationLabels {
         }
         return (
             location.title?.trimmedNonEmpty ?? location.ref?.trimmedNonEmpty,
-            location.pageSection.map { L10n.string($0.label) }
+            location.openPageSection.map { L10n.string($0.label) }
         )
     }
 

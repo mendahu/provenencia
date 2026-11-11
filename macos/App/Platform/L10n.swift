@@ -8548,11 +8548,46 @@ enum L10n {
             ), name)
         }
 
-        static let confirmMessage = LocalizedStringResource(
-            "unpromote.confirmMessage",
-            defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",
-            comment: "Message of the Unpromote confirm when the handle keeps another record"
-        )
+        static func unpromotedAnnouncement(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "unpromote.unpromotedAnnouncement",
+                defaultValue: "%@ unpromoted.",
+                comment: "VoiceOver announcement after a record is unpromoted and its person, event or place stays; the argument is the record's name"
+            ), name)
+        }
+
+        static func deletedAnnouncement(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "unpromote.deletedAnnouncement",
+                defaultValue: "%@ deleted.",
+                comment: "VoiceOver announcement after a record's Unpromote deleted the person, event or place the page showed; the argument is its ref"
+            ), ref)
+        }
+
+        static func confirmMessage(kind: EvidencePrimaryKind) -> String {
+            let key: LocalizedStringResource
+            switch kind {
+            case .person:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.person",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the person stays.",
+                    comment: "Message of the Unpromote confirm when the person keeps another record"
+                )
+            case .event:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.event",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the event stays.",
+                    comment: "Message of the Unpromote confirm when the event keeps another record"
+                )
+            case .place:
+                key = LocalizedStringResource(
+                    "unpromote.confirmMessage.place",
+                    defaultValue: "This promotion is removed. The cards stay on the graph, and the place stays.",
+                    comment: "Message of the Unpromote confirm when the place keeps another record"
+                )
+            }
+            return L10n.string(key)
+        }
 
         static func confirmPreflightFailed(kind: EvidencePrimaryKind) -> String {
             let key: LocalizedStringResource
@@ -9154,8 +9189,8 @@ enum L10n {
 
         static let outcomeProvisional = LocalizedStringResource(
             "conclusions.outcome.provisional",
-            defaultValue: "provisional member",
-            comment: "Auto-reconciler outcome: the record's Subject is only a provisional member, so it is reasoning only"
+            defaultValue: "provisional record",
+            comment: "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only"
         )
 
         static let outcomeNoEvidence = LocalizedStringResource(
@@ -9462,6 +9497,14 @@ enum L10n {
                 defaultValue: "%1$@ · %2$@",
                 comment: "Back menu entry for a section of a record page; arguments are the record's title and the section name"
             ), title, section)
+        }
+
+        static func sectionShownAnnouncement(_ section: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "conclusions.sectionShownAnnouncement",
+                defaultValue: "%@ shown.",
+                comment: "VoiceOver announcement after a record page's section switcher opens a section; the argument is the section's name"
+            ), section)
         }
 
         static let detailsSection = LocalizedStringResource(
@@ -9837,14 +9880,6 @@ enum L10n {
                 defaultValue: "Unpromote %1$@, record %2$@, %3$@",
                 comment: "Spoken label of the Unpromote button on a record's line on a Person's Sources section; arguments are the graph's name, the record's name and the record's ref"
             ), graph, subject, ref)
-        }
-
-        static func sourcesPersonDeletedAnnouncement(ref: String) -> String {
-            L10n.format(LocalizedStringResource(
-                "conclusions.sources.personDeletedAnnouncement",
-                defaultValue: "%@ deleted.",
-                comment: "VoiceOver announcement after a person's last record is unpromoted; the argument is the person's ref"
-            ), ref)
         }
 
         static func sourcesOpenGraph(graph: String, subject: String, ref: String) -> String {
@@ -10401,8 +10436,8 @@ enum L10n {
         static func memberCount(_ count: Int) -> String {
             L10n.format(LocalizedStringResource(
                 "conclusions.memberCount",
-                defaultValue: "%lld members",
-                comment: "Page header: how many Subjects are members of this handle; argument is the count"
+                defaultValue: "%lld records",
+                comment: "Page header: how many records (Identity Claims) this person, event or place has; argument is the count"
             ), count)
         }
 
