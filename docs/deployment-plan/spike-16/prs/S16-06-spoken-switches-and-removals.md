@@ -1,6 +1,6 @@
 # S16-06 — Section switches and removals are spoken
 
-**Status:** Planned
+**Status:** Landed in [#785](https://github.com/mendahu/provenencia/pull/785) (2026-11-11)
 **Spike / slice:** Spike 16 · Slice 1c — Keyboard and VoiceOver
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the copy changes sit in slots that exist today, and the focus ring on the selected segment is `PVChip`'s existing ring; user, 2026-11-11)
@@ -27,6 +27,10 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The version bump is 0.9.0 → 0.9.1 (main was at 0.9.0).
 
 ## 1. Objective
 
