@@ -1,7 +1,7 @@
 # Review — S15-07 Metadata operations take an owner
 
-**Verdict:** (pending round 2) — round 1: Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -13,6 +13,9 @@ None.
 - D-7: `Apply` writes layout rows verbatim, never deletes a layout row the draft leaves out, and never appends one for a new value; a board on a draft sends its whole order (M-8, declined below).
 - D-11: `ListWorkspace` returns `ErrInvalid` for a missing owner; the wire keeps `sources.not_found` through `GetSourceWorkspace`'s `sources.Get`.
 - D-10: no chunking of `IN (…)` lists; S15-16's largest call binds 300 ids.
+- D-8: a dismiss or reorder that creates a layout row now records `Old: nil` for `source_id` and `field_id`, as Copy Source's creates do (M-11); the one audit detail that moves.
+- D-14: `Clear` keeps no owner check; a missing owner returns `nil, nil` as today (X-4 round 2).
+- Map: S15-08's scope entry now carries the layout (`sourcemetadata.Draft`) on the Artifact and graph requests, not only values (M-8 round 2).
 - D-5: `ListBySource`, `ListBySourceTx` and `ListLayoutTx` go; `ReadDraftTx` replaces them.
 
 ## Round 1
@@ -79,3 +82,37 @@ None.
 
 ### X-8 · minor · Smaller choices
 **Answer:** Fixed — T-6 field types; T-5 counts. The rest is covered by "Do only In".
+
+## Round 2
+
+### M-11 · blocker · D-8 promises "exactly today's" change fields while one builder writes one create shape
+**Codebase:** `DismissSuggestion` and `Reorder` write `{id, id}` on create; `CreateAll` writes `{nil, id}`; `effects/path.go` `uuidPair` reads either; no test pins `Old` on a layout create.
+**Answer:** Fixed — D-8: one create shape `{nil, id}` for every layout writer; §1 **What stays** names the detail; T-2 asserts `Old == nil` on a dismiss create.
+
+### M-12 · blocker · `ListByIDsTx` adds a fifth copy of the field scan inside `metadatafields`
+**Codebase:** `metadatafields.go` scans the six columns in `GetByID`, `Lookup`, `getByIDTx`, `lookupTx`.
+**Answer:** Fixed — D-13 `scanField` for all five reads and `getByID` on a `Querier`; Codebase fit, Deletes, T-10. `sourcevocab`'s joined suggestion scan stays (logged; it reads a join with `sort_order`).
+
+### M-8 note (round 2) · Out row home
+**Answer:** Fixed — Out row home is S15-08 (the requests carry `Draft.Layout`) and S15-26 (the board sends it); the map's S15-08 scope entry says so.
+
+### X-1 · blocker · layoutChange create shape
+**Answer:** Fixed — with M-11 (the reviewer read the text before that fix).
+
+### X-2 · blocker · `apply` receives a `Draft` with no row ids
+**Answer:** Fixed — D-7 `readOwnerTx` returns `stored{values []Row; layout []LayoutRow}`; `ReadDraftTx` converts it; D-9 uses it.
+
+### X-3 · major · Helper signatures unspecified; where `Row.Owner.Level` comes from
+**Answer:** Fixed — D-8 gives each helper's signature; D-2 adds `store.level`.
+
+### X-4 · major · `Clear` on a missing owner
+**Answer:** Fixed — D-14: `Clear` keeps `nil, nil` (no owner check), as today.
+
+### X-5 · minor · `CreateAll` check order wording
+**Answer:** Fixed — §4 Writes row.
+
+### X-6 · minor · T-9 fixtures; `sourcecopy_test.go` direct calls and `valueKeys`
+**Answer:** Fixed — T-9 names the types and fields; D-16 covers `sourcecopy_test.go`.
+
+### X-7 · nit · STEP-2 `rg` misses in-package uses
+Logged — `go vet` and the compiler catch them.
