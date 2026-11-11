@@ -383,25 +383,22 @@ func (r *Reader) chain(id []byte) ([]kinship.Implied, error) {
 // and read-only. Links from different pivots differ in Event or Through, so
 // none is repeated.
 func (r *Reader) For(id []byte) ([]kinship.Implied, error) {
-	absent := false
-	ans, err := forAnswers.Get(r.g, id, func() (personAnswer, error) {
+	got, err := forAnswers.GetMany(r.g, [][]byte{id}, func(missing [][]byte) (map[string]personAnswer, error) {
 		n, err := r.d.around(id)
 		if err != nil || n == nil {
-			absent = n == nil
-			return personAnswer{}, err
+			// An id that is no node has no answer to keep.
+			return map[string]personAnswer{}, err
 		}
 		out, err := r.d.forLinks(id, r.event, r.chain)
-		return personAnswer{rules: r.d.rules, links: out}, err
+		if err != nil {
+			return nil, err
+		}
+		return map[string]personAnswer{string(id): {rules: r.d.rules, links: out}}, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if absent {
-		// An id that is no node has no answer to keep.
-		forAnswers.Drop(r.g, [][]byte{id})
-		return nil, nil
-	}
-	return ans.links, nil
+	return got[string(id)].links, nil
 }
 
 // Options are what Relationships returns beyond the person's recorded and
