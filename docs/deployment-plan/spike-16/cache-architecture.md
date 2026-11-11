@@ -29,17 +29,17 @@ The catalog keeps derived data in three layers: SQLite (the auto-reconciler's va
 
 `graphcache` registers every cache that is not a typed field of `Graph`. An entry declares:
 
-- **Fill:** per key (today's `NodeMemo`, a Fill plus `Deps`, which folds into the registry) or whole (a lazy Build).
+- **Fill:** keyed (`Keyed[T].Get` / `GetMany` with the caller's fill closure, and an Apply in place of `Deps`) or whole (`Whole[T]` with a lazy Build).
 - **Apply(g, roots, set):** run by `OnCommit` after its reload, with the same roots `dropMemos` gets today — association ids become their ends (`detachAssociation`), merges add their neighbours (`mergedNeighbors`), removed nodes add their links' neighbours — and the commit's `effects.Set`, so no entry works out what a commit touched again.
-- **Reads:** what else the entry is derived from (the vocabulary, the alias index, the name format, another entry). This replaces `DropOnVocabulary` and `dropDerived`: a name-format change drops exactly what was keyed on it, such as profiles.
+- **DerivedFrom:** what else the entry is derived from (the vocabulary, the alias index, the name format, another entry). This replaces `DropOnVocabulary` and `dropDerived`: a name-format change drops exactly what was keyed on it, such as profiles.
 - **Lifetime:** the graph, or the catalog connection for an entry that survives `Drop` (the alias index and the name format do today).
 - **Check,** which Verify (`PROVENENCIA_GRAPH_VERIFY`) runs, and a memory **Cap**.
 
-The match index, alias index, name format and the `canonlinks` slots move onto it. `Activity`, the summary displays and the labels stay typed fields of `Graph` (each is one map patched by `OnCommit` with its own rule); the cache table says why. The registry comes with **one table of every cache** — Go and Swift, its key, its fill, the signal that updates it, its cap and its size at Scale — in a new domain doc, `docs/catalog-caches.md` (S16-10), which each later PR updates.
+The match index, alias index, name format and the `canonlinks` slots move onto it. `Activity`, the summary displays and the labels stay typed fields of `Graph` (each is one map patched by `OnCommit` with its own rule); the cache table says why. The registry comes with **one table of every cache** — Go and Swift, its key, its fill, the signal that updates it, its cap and its size at Scale — in a new domain doc, [`docs/catalog-caches.md`](../../catalog-caches.md) (S16-10), which each later PR updates and `TestCacheDocListsEveryEntry` holds to the registry.
 
 ### The write path fills only what it reads
 
-A write composes summary rows on a throwaway graph over its own transaction (`searchindex` `newGraph = graphcache.Over`), because the session graph is still on the previous commit and the catalog has one connection. A per-key entry there fills only the keys the write's composers read and is discarded with the graph; no whole Build runs on a write path, so a write's cost follows the write, not the catalog. The session graph keeps entries and drops or updates them per key.
+A write composes summary rows on a throwaway graph over its own transaction (`searchindex` `newGraph = graphcache.Over`), because the session graph is still on the previous commit and the catalog has one connection. A per-key entry there fills only the keys the write's composers read and is discarded with the graph; no whole Build of graph data runs on a write path (the registry neither builds nor stores a graph-lifetime entry on a write's graph; catalog configuration builds once there), so a write's cost follows the write, not the catalog. The session graph keeps entries and drops or updates them per key.
 
 ### A cache a composer reads hands its inputs to the row
 
@@ -62,7 +62,7 @@ S14-40 records each summary row's inputs through `graphcache.InputScope` (`Node`
 
 ### Promote
 
-- **One match index entry (S16-20).** Profiles by handle, lookup keys by handle and the shortlist postings, as one whole entry filled by `promotealign.Warm` at open and declaring Reads on the alias index and the name format. Apply re-profiles the commit's roots and the people at the events they touched, once, diffs each changed handle's old and new keys, patches the postings, and hands the changed keys to the candidates. `indexGen`, the generation checks and the profiler's shared map go; Verify compares the patched entry with a fresh build. This is [`promote-ranking.md`](../../ideas/promote-ranking.md)'s "Name index on commit".
+- **One match index entry (S16-20).** Profiles by handle, lookup keys by handle and the shortlist postings, as one whole entry filled by `promotealign.Warm` at open and declaring DerivedFrom on the alias index and the name format. Apply re-profiles the commit's roots and the people at the events they touched, once, diffs each changed handle's old and new keys, patches the postings, and hands the changed keys to the candidates. `indexGen`, the generation checks and the profiler's shared map go; Verify compares the patched entry with a fresh build. This is [`promote-ranking.md`](../../ideas/promote-ranking.md)'s "Name index on commit".
 - **Candidates re-rank only what moved (S16-32).** Each Subject's ranked candidates live in the records tier and are re-ranked only when a changed key meets the Subject's lookup keys or a changed handle is in its list; they survive the loaded graph's eviction.
 - **Neighbourhoods instead of the whole canon (S16-21, S16-22).** First `Align` reads a `CanonView` interface served by today's `Canon`, with goldens unchanged, and `Connections`' loop check takes the filed `part_of` and `succeeded_by` links from the place entries instead of every canon edge (S16-21). Then the session-graph view serves one handle's profile and links at a time from the match index and the kinship pivots, and `loadCanon`'s walk of the whole component goes (S16-22). Cost then grows with the Source, not the catalog (est. warm proposal 661–779 ms → about 150 ms at 16,000 persons); an equivalence test on the large fixture holds the result. This is "Narrower canon walk".
 
@@ -82,7 +82,7 @@ S14-40 records each summary row's inputs through `graphcache.InputScope` (`Node`
 
 ## What goes
 
-`canonicalgraph` (its last production caller, `Dependents`, leaves with S14-42); `RegisterNodeMemo` as a separate mechanism, `DropOnHandleCommit`, `dropHandleMemos` and `dropDerived`; the `for` and `siblings` slots; dropping the match index on every handle commit; the three warm fields on `Graph`; `sqlOutcomes`, `sqlPropertyIDs`, `gallery.ForEntities`; the Source fields on `EvidenceGraph`; `graphprogress`'s scans; most of `canonlinks`' loading; the place-chain builders; `PersonLifeOwners`; `loadCanon`'s walk; `personSection` and `personGraphsSection` in Swift. Rough total from the review: about 1,500 lines out and a few hundred in (est.).
+`canonicalgraph` (its last production caller, `Dependents`, leaves with S14-42); `RegisterNodeMemo` as a separate mechanism, `DropOnHandleCommit`, `dropHandleMemos` and `dropDerived`; the `for` and `siblings` slots; the match index's drop-on-any-handle Apply; the three warm fields on `Graph`; `sqlOutcomes`, `sqlPropertyIDs`, `gallery.ForEntities`; the Source fields on `EvidenceGraph`; `graphprogress`'s scans; most of `canonlinks`' loading; the place-chain builders; `PersonLifeOwners`; `loadCanon`'s walk; `personSection` and `personGraphsSection` in Swift. Rough total from the review: about 1,500 lines out and a few hundred in (est.).
 
 ## Not this batch
 
