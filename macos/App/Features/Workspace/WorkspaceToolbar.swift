@@ -267,12 +267,12 @@ struct WorkspaceToolbar: View {
             leaf = labels.leaf ?? "…"
             if let section = labels.section {
                 // A section of the page: the record's crumb goes back to its first
-                // section, and does nothing while that one is open.
+                // section.
                 items.append(
                     PVBreadcrumbItem(
                         id: "entity-\(location.section.rawValue)",
                         label: leaf,
-                        action: location.pageSection == nil ? nil : { goTo(location.withPageSection(nil)) }
+                        action: { goTo(location.withPageSection(nil)) }
                     )
                 )
                 items.append(

@@ -225,14 +225,18 @@ struct WorkspaceToolbarBreadcrumbTests {
         #expect(wentTo == .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"))
         #expect(wentTo?.pageSection == nil)
 
+        var vitalsWentTo: WorkspaceLocation?
         let vitals = WorkspaceToolbar.breadcrumbItems(
             for: .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"),
-            goTo: { _ in }
+            goTo: { vitalsWentTo = $0 }
         )
         #expect(vitals.map(\.label) == [
             L10n.string(L10n.Workspace.personsTitle), "Jane Doe", L10n.string(L10n.Conclusions.pageSectionVitals),
         ])
-        #expect(vitals[1].action == nil)
+        #expect(vitals[1].action != nil)
+        vitals[1].action?()
+        #expect(vitalsWentTo == .personDetail(entityId: "per-1", ref: "PER-1", title: "Jane Doe"))
+        #expect(vitalsWentTo?.pageSection == nil)
         #expect(vitals[2].action == nil)
 
         let event = WorkspaceToolbar.breadcrumbItems(

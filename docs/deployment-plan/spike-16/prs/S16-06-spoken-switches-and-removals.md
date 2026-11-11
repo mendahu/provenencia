@@ -34,6 +34,7 @@
 - Round 1 (UX-2, user decision 2026-11-11): a `PVSegmentedControl` with a `focus:` handle is one Tab stop and ←/→ move the selection, not one Tab stop per segment; the Out line, §6 States and manual check step 2 changed to match (F-1).
 - Round 3 (user request 2026-11-11, F-5): the auto-reconciler's provisional outcome reads "provisional record" (was "provisional member"), so the page keeps one word for a person's records.
 - Round 4 (user request 2026-11-11, F-6): Vitals gets a section crumb like the other sections. `WorkspaceLocationLabels.labels(for:names:)` reads `openPageSection`, so the crumbs and the Back / Forward menu name the first section too; the record's crumb is inert on it.
+- Round 5 (user request 2026-11-11, F-7): the record's crumb is a link on every section, Vitals included, so the name keeps one style; F-7 supersedes F-6's no-action crumb. On Vitals it goes to the page shown, which `go(to:)` coalesces into the current history entry.
 
 ## 1. Objective
 
