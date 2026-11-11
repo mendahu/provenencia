@@ -1,7 +1,7 @@
 # Ship log — S16-06 Section switches and removals are spoken
 
 **Plan:** [`S16-06-spoken-switches-and-removals.md`](S16-06-spoken-switches-and-removals.md) · **Branch:** `s16-06-spoken-switches-and-removals` · **PR:** [#785](https://github.com/mendahu/provenencia/pull/785)
-**State:** fixing 1
+**State:** ready
 
 ## Before round 0
 
@@ -79,3 +79,9 @@ Do:
 - Doc comment and README row: "one Tab stop, with or without Full Keyboard Access: the segments without the handle leave the key loop".
 - Plan §10 step 2: replace "press → to move to Vitals: hear "Vitals shown."; focus stays on Vitals. Tab into the Vitals rows" with "press → to move to Sources: hear "Sources shown."; focus stays on Sources. Press ← three times to reach Family, hearing each section; Tab into the Family tiles", and adjust the following "click the Family segment" to "click the Vitals segment … hear "Vitals shown."". Plan Codebase fit "Neighbors": replace the "Space on a segment other than the selected one…" sentence with "Only the selected segment is in the key loop (with or without Full Keyboard Access), so Space, ←/→ or ⌘1–⌘5 on the switcher always start from the bound segment and `switcherFocus != nil` claims the new one (ship log round 1, UX-2 decision; round 2, F-4)."
 Check: `rg -n "focusable\(false\)" macos/App/DesignSystem/Components/Chip/PVSegmentedControl.swift` prints the one line; scripts/check-pr.sh PASS.
+
+## Round 2 — fix
+Head `39a023ca`. Gate PASS (orchestrator run against `9a514612`). F-4 done: `else if focus != nil { chip(item).focusable(false) }` (`PVSegmentedControl.swift:158`); doc comment, README row, plan §10 step 2 and Codebase fit "Neighbors" rewritten. No failing test possible (key-loop membership under Full Keyboard Access); manual check §10 step 1 with Full Keyboard Access on holds it. Orchestrator read the commit: UX-1 (r2) and UX-2 (r2) **Resolved in code, pending manual check**; both round-2 notes **Resolved**.
+
+## Result
+Gate PASS · CI pending · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: UX-3 ("provisional member" outcome copy) · to user: UX-2 answered (one Tab stop, arrows)
