@@ -1,10 +1,10 @@
 # Review — S16-11 Outcome records live on the canonical node
 
-**Verdict:** Fits with changes — Ready with changes (round 1; no round 2 yet: every blocker was Fixed without a reshape, and the open item is the user's)
+**Verdict:** Fits with changes — Ready with changes (round 1; no round 2: every blocker was Fixed without a reshape)
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
-- **The memory line (plan §12).** The map's "under 6 MB more" assumed far fewer rows than the large fixture holds (102,458 values at 16,000 persons, counted at the base), so outcomes on the node are est. 15–18 MB there, on top of caches already at ~118 MB against the rule's 40 MB. Recommendation: record before and after, stop at 20 MB of growth, and restate "Memory is budgeted" in the map as a ceiling that follows the catalog's size.
+- **The memory line (plan §12).** The map's "under 6 MB more" assumed far fewer rows than the large fixture holds (102,458 values at 16,000 persons, counted at the base), so outcomes on the node are est. 15–18 MB there, on top of caches already at ~118 MB against the rule's 40 MB. Recommendation: record before and after, stop at 20 MB of growth, and restate "Memory is budgeted" in the map as a ceiling that follows the catalog's size. **Answered (user, 2026-11-11):** agreed; the map's rule now reads 250 MB at 16,000 persons, and a PR may warm a cache at open when it measures the open cost and the task-to-task gain.
 
 ## Writer's own calls
 - No registry entry: outcomes and the pointer are node fields reloaded by `Set.Handles` (D-13).
@@ -44,7 +44,7 @@
 **Answer:** Fixed — D-6: a lead's row is found by scanning that node's gallery-Property rows; a lead with no row or no record is skipped; fields copy across with no conversion (D-1).
 
 ### X-3 · major · The 6 MB bound disagrees with the fixture
-**Answer:** To user — counted: 90,445 values at 4,000 and 102,458 at 16,000. Plan §12 carries the question; AC-3.1, STEP-8 and the Stop condition point at it.
+**Answer:** To user, answered 2026-11-11 (20 MB stop; map rule 250 MB) — counted: 90,445 values at 4,000 and 102,458 at 16,000. Plan §12 carries the question; AC-3.1, STEP-8 and the Stop condition point at it.
 
 ### X-4 · minor · T-9 and `catalogsession.Do`
 **Answer:** Fixed — counters installed in one `Do`, the second open made outside it, copying `person_detail_test.go` ~133.

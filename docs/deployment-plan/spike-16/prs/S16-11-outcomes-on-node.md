@@ -1,6 +1,6 @@
 # S16-11 — Outcome records live on the canonical node
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine refactor; every page draws the same values, records and pictures)
@@ -11,9 +11,9 @@
 **Version bump:** none — no change a researcher can see, no wire and no catalog change ([`docs/versioning.md`](../../../versioning.md))
 **Skills to load:** [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md), [`add-depiction-value`](../../../../.agents/skills/add-depiction-value/SKILL.md), [`use-catalog-session`](../../../../.agents/skills/use-catalog-session/SKILL.md) (for the handler test's `catalogsession.Do`)
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/go-tests.mdc`
-**Context:** [design § Entity records](../cache-architecture.md#entity-records); [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §2.7 and §6 (the gallery); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §7 (depictions) and §10; [`docs/catalog-caches.md`](../../../catalog-caches.md); working rules: "(Batch 2) The point of this batch is simpler code", "(Batch 2) Cache entities and results per key; compose answers", "(Batch 2) Every cache names the signal that updates it, and updates exactly", "(Batch 2) Apply states its fan-out", "(Batch 2) A write's one-shot graph fills only what it reads", "(Batch 2) Orders are defined and results do not move", "(Batch 2) Memory is budgeted", "(Batch 2) Measure growth"; goal bars 11 and 15
+**Context:** [design § Entity records](../cache-architecture.md#entity-records); [`conclusion-layer-data-model.md`](../../../conclusion-layer-data-model.md) §2.7 and §6 (the gallery); [`conclusion-reconciliation.md`](../../../conclusion-reconciliation.md) §7 (depictions) and §10; [`docs/catalog-caches.md`](../../../catalog-caches.md); working rules: "(Batch 2) The point of this batch is simpler code", "(Batch 2) Cache entities and results per key; compose answers", "(Batch 2) Every cache names the signal that updates it, and updates exactly", "(Batch 2) Apply states its fan-out", "(Batch 2) A write's one-shot graph fills only what it reads", "(Batch 2) Orders are defined and results do not move", "(Batch 2) Memory is budgeted" (250 MB at 16,000 persons, user 2026-11-11), "(Batch 2) Measure growth"; goal bars 11 and 15
 **Planned:** 2026-11-11 against `main` @ `cba6e26`
-**Review:** [`S16-11-outcomes-on-node.review.md`](S16-11-outcomes-on-node.review.md) — Fits with changes — Ready with changes, round 1; To user: the memory line (§12)
+**Review:** [`S16-11-outcomes-on-node.review.md`](S16-11-outcomes-on-node.review.md) — Fits with changes — Ready with changes, round 1; To user: answered (memory line, 2026-11-11)
 
 ### Implementer — read this first
 
@@ -61,7 +61,7 @@ A Conclusion page's "why" (each record's outcome), its gallery, the lists' lead 
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-3.1 | `BenchmarkCacheSizes` at 4,000 and 16,000 persons, before and after this PR, on the same machine | The ship log records `nodes-B` and `nodes-ms` both times; `nodes-B` at 16,000 persons grows by less than the line §12 settles (the map's 6 MB estimate assumed far fewer rows than the fixture's 102,458 values) |
+| AC-3.1 | `BenchmarkCacheSizes` at 4,000 and 16,000 persons, before and after this PR, on the same machine | The ship log records `nodes-B` and `nodes-ms` both times; `nodes-B` at 16,000 persons grows by less than 20 MB (user, 2026-11-11; the fixture holds 102,458 values, est. 15–18 MB) |
 | AC-3.2 | `TestLargeSourceBudgets` before and after | Every budget passes; the ship log records "warm at open", the five city writes ("join a place onto the city", "file one location at the city", "unpromote one event at the city", "delete one location at the city", "file a second part_of from the city") and "clear the portrait at the city" *(new)* both times |
 
 ## 3. Scope
@@ -85,7 +85,7 @@ A Conclusion page's "why" (each record's outcome), its gallery, the lists' lead 
 | `PersonLifeOwners` and `PersonDerivedRows`' second pass | S16-19, S16-30 |
 | `FieldRecordCounts` and the records read by (owner, Property) | S15-28 |
 | Any wire or Swift change | not planned |
-| A memory budget gate on nodes, or shrinking today's 58 MB of nodes toward the 40 MB budget | not planned in this PR: reported to the user (S16-10 ship log "Go caches ≈118 MB"); the map's rule "Memory is budgeted" decides where it goes |
+| A memory budget gate on nodes, or shrinking today's 58 MB of nodes toward the 40 MB budget | not planned in this PR: the map's rule "Memory is budgeted" sets 250 MB at 16,000 persons (user, 2026-11-11); today's caches are about 118 MB |
 
 ## 4. Current state
 
@@ -268,10 +268,10 @@ Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/databasetest/ ./api/ffi
 **STEP-8 — Measure after**
 Files: the ship log.
 Do: rerun STEP-1's two commands; record `nodes-B`, `nodes-ms` and AC-3.2's seven figures after, beside STEP-1's.
-Check: `TestLargeSourceBudgets` passes; `nodes-B` at 16,000 persons grows by less than §12's line (else Stop condition).
+Check: `TestLargeSourceBudgets` passes; `nodes-B` at 16,000 persons grows by less than 20 MB (else Stop condition).
 
 **STEP-9 — Docs**
-Files: `docs/conclusion-layer-data-model.md` (§2.7: a canonical node in the graph cache carries the handle's outcome rows and chosen likeness, reloaded with it; §6: the tile image line → "Each tile's image is the value's image File (`value_image_file_id`), which every record counted into that value shows"), `docs/conclusion-reconciliation.md` (§7 depiction paragraph: same change; §10: the graph cache's node holds the outcomes and reloads with the handle), `.agents/skills/add-depiction-value/SKILL.md` ("The gallery is `gallery.Of` over the node"; the image line as §6), `docs/catalog-caches.md` (the `nodes` row: holds outcome rows and the chosen likeness; STEP-8's sizes); `add-depiction-value` "Read path" gains one line: the cached `value_image_file_id` was read through `Readable` when the reconciler wrote it, so `gallery.Of` returns it as stored (review M-3); `docs/deployment-plan/spike-16/cache-architecture.md` "Entity records" and the S16-11 scope entry: the Check's memory line as §12 settles it; `completed.md`; the map row (status; its Plan column already links this plan); this plan.
+Files: `docs/conclusion-layer-data-model.md` (§2.7: a canonical node in the graph cache carries the handle's outcome rows and chosen likeness, reloaded with it; §6: the tile image line → "Each tile's image is the value's image File (`value_image_file_id`), which every record counted into that value shows"), `docs/conclusion-reconciliation.md` (§7 depiction paragraph: same change; §10: the graph cache's node holds the outcomes and reloads with the handle), `.agents/skills/add-depiction-value/SKILL.md` ("The gallery is `gallery.Of` over the node"; the image line as §6), `docs/catalog-caches.md` (the `nodes` row: holds outcome rows and the chosen likeness; STEP-8's sizes); `add-depiction-value` "Read path" gains one line: the cached `value_image_file_id` was read through `Readable` when the reconciler wrote it, so `gallery.Of` returns it as stored (review M-3); `docs/deployment-plan/spike-16/cache-architecture.md` "Entity records" and the S16-11 scope entry: already carry the 20 MB line (planning commit); `completed.md`; the map row (status; its Plan column already links this plan); this plan.
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py docs/deployment-plan/spike-16/prs/S16-11-outcomes-on-node.md` and `scripts/check-guidance-names.py` pass; links resolve.
 
@@ -303,7 +303,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/... passes
 - [ ] No Out line was implemented; no code outside §4 / §6 was refactored
 - [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left (none expected)
-- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left (`gallery.ForEntities`, `sqlPropertyIDs`, `sqlOutcomes`, `sqlPreferred`, "not the reconciler cache", "under 6 MB"); `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left (`gallery.ForEntities`, `sqlPropertyIDs`, `sqlOutcomes`, `sqlPreferred`, "not the reconciler cache"); `scripts/check-guidance-names.py` passes (check-pr runs it)
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated (STEP-9)
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New (no UI)
 - [ ] Version bump: none
@@ -328,11 +328,11 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 | A reader relied on the gallery SQL's own image read | §4 "Value image" and D-5; T-4 and T-5 hold every gallery case |
 | Field order moves where two Properties tie | D-6's id pre-sort; `TestFieldsOf` |
 | Open or a city write slows as every node load carries outcomes | STEP-1 / STEP-8 figures; the existing budgets gate |
-| Memory over the estimate | AC-3.1's line (§12); Stop condition |
+| Memory over the estimate | AC-3.1's 20 MB line; Stop condition |
 
 **Stop and report if:**
 
-- `nodes-B` at 16,000 persons grows by §12's line or more between STEP-1 and STEP-8: report both figures and the outcome row count (`SELECT COUNT(*) FROM auto_reconciler_outcomes` on the fixture).
+- `nodes-B` at 16,000 persons grows by 20 MB or more between STEP-1 and STEP-8: report both figures and the outcome row count (`SELECT COUNT(*) FROM auto_reconciler_outcomes` on the fixture).
 - A `TestLargeSourceBudgets` budget that passes at STEP-1 fails at STEP-8.
 - An existing gallery, detail, summary or likeness assertion fails and only a change to the assertion (not D-12's setup edits) would make it pass.
 - T-9 finds `auto_reconciler_outcomes` or `depiction_values` read on the warm open by code this plan does not name.
@@ -341,7 +341,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 
 ## 12. Open questions
 
-- **The memory line for nodes with outcomes (To user).** The map's Check says nodes grow by under 6 MB at 16,000 persons. At the base the large fixture holds 102,458 reconciled values at 16,000 persons (90,445 at 4,000), so one record per value is about 100,000 outcome rows: est. 15–18 MB at 150–170 B a row. The rule "(Batch 2) Memory is budgeted" caps the Go caches at 40 MB together, and today's caches already measure about 118 MB (S16-10 ship log; nodes 58 MB). Recommended: record before and after, stop at 20 MB of growth, and settle the 40 MB rule in the map (a ceiling that follows the catalog's size) as a spike-wide working rule.
+None. The memory line was answered by the user on 2026-11-11: record before and after, stop at 20 MB of node growth at 16,000 persons; the map's rule "(Batch 2) Memory is budgeted" now sets a 250 MB ceiling for the Go caches' live data at 16,000 persons.
 
 ## 13. PR
 
