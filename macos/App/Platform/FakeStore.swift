@@ -114,9 +114,19 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// The Identity Claim Promote wrote per Subject id.
     var claimBySubject: [String: CatalogIdentityClaim] = [:]
     var subjectPositionsBySubject: [String: CatalogSubjectPosition] = [:]
-    /// Type↔field suggestion joins, keyed by source type id and held in the
-    /// order they were assigned — the engine's `sort_order`.
-    var suggestionsByType: [String: [CatalogTypeSuggestion]] = [:]
+    /// Type↔field suggestion joins per level, then by source type id, held in
+    /// the order they were assigned — the engine's `sort_order`.
+    var suggestionsByLevel: [Level: [String: [CatalogTypeSuggestion]]] = [:]
+    /// A count the engine would report that differs from the `.source` list's
+    /// length, so a test can tell the engine's count from the reply's rows.
+    var suggestedFieldCountOverride: [String: Int] = [:]
+    /// The `.source` level of `suggestionsByLevel`, for tests that need one
+    /// list. Like every stored property it is read and written inside
+    /// `withState`, which already holds `stateLock`.
+    var suggestionsByType: [String: [CatalogTypeSuggestion]] {
+        get { suggestionsByLevel[.source, default: [:]] }
+        set { suggestionsByLevel[.source] = newValue }
+    }
     var fieldsByProject: [String: [CatalogMetadataField]] = [:]
     var propertiesByProject: [String: [CatalogProperty]] = [:]
     /// Value-type rules `getPropertiesWorkspace` returns; empty unless a test seeds them.
@@ -1097,11 +1107,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     }
 
     /// The engine derives this column in its list query, so the fake keeps it
-    /// in step with `suggestionsByType` rather than making tests set it.
+    /// in step with the `.source` suggestions rather than making tests set it.
     private func withSuggestedFieldCount(_ type: CatalogSourceType) -> CatalogSourceType {
         var copy = type
-        copy.suggestedFieldCount = (suggestionsByType[type.id] ?? []).count
+        copy.suggestedFieldCount = suggestedFieldCount(typeID: type.id)
         return copy
+    }
+
+    private func suggestedFieldCount(typeID: String) -> Int {
+        suggestedFieldCountOverride[typeID] ?? (suggestionsByLevel[.source]?[typeID] ?? []).count
     }
 
     func createSourceType(
@@ -1197,45 +1211,59 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             list.remove(at: idx)
             sourceTypesByProject[projectDir] = list
             // Suggestion joins cascade; the fields they named do not.
-            suggestionsByType[typeID] = nil
+            for level in suggestionsByLevel.keys {
+                suggestionsByLevel[level]?[typeID] = nil
+            }
             return nextWriteEffects
         }
     }
 
-    func listTypeSuggestions(projectDir _: String, typeID: String) async throws -> [CatalogTypeSuggestion] {
-        return withState {
-            suggestionsByType[typeID] ?? []
+    func listTypeSuggestions(projectDir _: String, typeID: String, level: Level) async throws
+        -> [CatalogTypeSuggestion]
+    {
+        return try withState {
+            // The engine refuses a level that holds no metadata.
+            guard level.holdsMetadata else { throw StoreBoom.boom }
+            return suggestionsByLevel[level]?[typeID] ?? []
         }
     }
 
     func assignTypeField(
         projectDir: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion] {
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit {
         return try withState {
+            guard level.holdsMetadata else { throw StoreBoom.boom }
             guard let field = (fieldsByProject[projectDir] ?? []).first(where: { $0.id == fieldID }) else {
                 throw StoreBoom.boom
             }
-            var list = suggestionsByType[typeID] ?? []
+            var list = suggestionsByLevel[level]?[typeID] ?? []
             // Assigning a field the type already suggests leaves its place alone.
             if !list.contains(where: { $0.field.id == fieldID }) {
                 list.append(CatalogTypeSuggestion(field: field, sortOrder: (list.last?.sortOrder ?? -1) + 1))
-                suggestionsByType[typeID] = list
+                suggestionsByLevel[level, default: [:]][typeID] = list
             }
-            return list
+            return CatalogTypeSuggestionEdit(
+                suggestions: list, suggestedFieldCount: suggestedFieldCount(typeID: typeID)
+            )
         }
     }
 
     func removeTypeField(
         projectDir _: String,
         typeID: String,
-        fieldID: String
-    ) async throws -> [CatalogTypeSuggestion] {
-        return withState {
-            let list = (suggestionsByType[typeID] ?? []).filter { $0.field.id != fieldID }
-            suggestionsByType[typeID] = list
-            return list
+        fieldID: String,
+        level: Level
+    ) async throws -> CatalogTypeSuggestionEdit {
+        return try withState {
+            guard level.holdsMetadata else { throw StoreBoom.boom }
+            let list = (suggestionsByLevel[level]?[typeID] ?? []).filter { $0.field.id != fieldID }
+            suggestionsByLevel[level, default: [:]][typeID] = list
+            return CatalogTypeSuggestionEdit(
+                suggestions: list, suggestedFieldCount: suggestedFieldCount(typeID: typeID)
+            )
         }
     }
 

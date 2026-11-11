@@ -392,13 +392,13 @@ final class SourceTypesModel {
         defer { isAssigning = false }
         do {
             let updated = try await store.assignTypeField(
-                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID
+                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID, level: .source
             )
             session.apply(.assignedTypeSuggestion(typeId: type.id))
-            patchSuggestions(updated, typeID: type.id)
+            patchSuggestions(updated.suggestions, typeID: type.id)
             patchTypesList { rows in
                 if let idx = rows.firstIndex(where: { $0.id == type.id }) {
-                    rows[idx].suggestedFieldCount = updated.count
+                    rows[idx].suggestedFieldCount = updated.suggestedFieldCount
                 }
             }
             assignPick = ""
@@ -420,13 +420,13 @@ final class SourceTypesModel {
         defer { removingFieldID = nil }
         do {
             let updated = try await store.removeTypeField(
-                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID
+                projectDir: session.projectKey.projectDir, typeID: type.id, fieldID: fieldID, level: .source
             )
             session.apply(.removedTypeSuggestion(typeId: type.id))
-            patchSuggestions(updated, typeID: type.id)
+            patchSuggestions(updated.suggestions, typeID: type.id)
             patchTypesList { rows in
                 if let idx = rows.firstIndex(where: { $0.id == type.id }) {
-                    rows[idx].suggestedFieldCount = updated.count
+                    rows[idx].suggestedFieldCount = updated.suggestedFieldCount
                 }
             }
             toast = VocabularyToast(

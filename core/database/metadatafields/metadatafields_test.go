@@ -253,7 +253,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := db.Exec(
-					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order) VALUES (?, ?, 0)`,
+					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, level, sort_order) VALUES (?, ?, 'source', 0)`,
 					typeID, id,
 				); err != nil {
 					t.Fatal(err)

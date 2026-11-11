@@ -54,6 +54,7 @@ const (
 	swiftSearchKind                 = "../../macos/App/Platform/CatalogSearchKind.swift"
 	swiftNamePartType               = "../../macos/App/Platform/NamePartType.swift"
 	swiftWorkspaceLocation          = "../../macos/App/Features/Workspace/WorkspaceLocation.swift"
+	swiftLevel                      = "../../macos/App/Platform/Level.swift"
 
 	swiftRegionGeometry     = "../../macos/App/Features/ArtifactViewer/ArtifactRegionGeometry.swift"
 	swiftProjectFiles       = "../../macos/App/Platform/ProjectFiles.swift"
@@ -415,9 +416,11 @@ var (
 	wordingCase = regexp.MustCompile(`case \(SeededPropertyKey\.\w+, (Seeded\w+Term)\.(\w+)\): return \.?(\w+)`)
 	sentenceRow = regexp.MustCompile(`namedTermSentence\(\s*\.\w+,\s*(Seeded\w+Term)\.(\w+),`)
 	rawCase     = regexp.MustCompile(`(?m)^\s+case (\w+)\s*$`)
-	unrecogniz  = regexp.MustCompile(`case unrecognized\(String\)`)
-	listCase    = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
-	subjectMark = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
+	// levelListEntry reads one `.source,` entry per line of Level.metadataLevels.
+	levelListEntry = regexp.MustCompile(`(?m)^\s+\.(\w+),\s*$`)
+	unrecogniz     = regexp.MustCompile(`case unrecognized\(String\)`)
+	listCase       = regexp.MustCompile(`case \w+ = "([a-z_]+)"`)
+	subjectMark    = regexp.MustCompile(`case \w+ = "(subject_[a-z_]+)"`)
 )
 
 // subjectMarkSymbols is the sorted IconSymbol of every registry subject type;
@@ -432,16 +435,6 @@ func subjectMarkSymbols() []string {
 	return out
 }
 
-// listStrings is every effects.List wire key; Swift's CatalogList decodes
-// WriteEffects.lists with them.
-func listStrings() []string {
-	var out []string
-	for _, l := range effects.Lists {
-		out = append(out, string(l))
-	}
-	return out
-}
-
 // partTypeKeys is every product name part type key; Swift's NamePartType
 // decodes name parts with them.
 func partTypeKeys() []string {
@@ -452,21 +445,11 @@ func partTypeKeys() []string {
 	return out
 }
 
-// connectionOutcomes is every Promote connection outcome code; Swift's
-// PromoteConnectionOutcome decodes the proposal's connections with them.
-func connectionOutcomes() []string {
-	var out []string
-	for _, o := range graphalign.ConnectionOutcomes() {
-		out = append(out, string(o))
-	}
-	return out
-}
-
-// readStrings is every keyed read's wire key.
-func readStrings() []string {
-	var out []string
-	for _, r := range effects.Reads {
-		out = append(out, string(r))
+// strs converts a typed key slice to its wire strings.
+func strs[T ~string](xs []T) []string {
+	out := make([]string, len(xs))
+	for i, x := range xs {
+		out[i] = string(x)
 	}
 	return out
 }
@@ -506,7 +489,7 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 		},
 		{
 			name: "promote connection outcomes", path: swiftVocabulary, enum: "PromoteConnectionOutcome", re: wireCase,
-			want: sorted(connectionOutcomes()...),
+			want: sorted(strs(graphalign.ConnectionOutcomes())...),
 		},
 		{
 			name: "evidence graph unlink reasons", path: swiftVocabulary, enum: "EvidenceGraphUnlinkReason", re: wireCase,
@@ -549,12 +532,20 @@ func TestSwiftVocabularyMatchesGo(t *testing.T) {
 			want: sorted(vocabkey.PrimaryKinds()...),
 		},
 		{
+			name: "levels", path: swiftLevel, enum: "Level", re: rawCase,
+			want: sorted(strs(vocabkey.Levels())...),
+		},
+		{
+			name: "metadata levels", path: swiftLevel, enum: "Level", re: levelListEntry,
+			want: sorted(strs(vocabkey.MetadataLevels())...),
+		},
+		{
 			name: "catalog-wide lists", path: swiftCatalogMut, enum: "CatalogList", re: listCase,
-			want: sorted(listStrings()...),
+			want: sorted(strs(effects.Lists)...),
 		},
 		{
 			name: "catalog reads", path: swiftCatalogMut, enum: "CatalogRead", re: listCase,
-			want: sorted(readStrings()...),
+			want: sorted(strs(effects.Reads)...),
 		},
 		{
 			name: "deleted entities", path: swiftCatalogMut, enum: "CatalogDeletedEntity", re: listCase,

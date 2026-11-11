@@ -2545,8 +2545,9 @@ type SourceType struct {
 	// (see sourcetypes.ErrInUse); the client uses the count to disable its
 	// delete affordance and say what is holding the type.
 	UsedBy int32 `protobuf:"varint,6,opt,name=used_by,json=usedBy,proto3" json:"used_by,omitempty"`
-	// How many metadata fields this type suggests — the list's third column,
-	// so browsing does not have to fetch every type's join rows.
+	// How many metadata fields this type suggests at the Source level — the
+	// list's third column, so browsing does not have to fetch every type's
+	// join rows.
 	SuggestedFieldCount int32 `protobuf:"varint,7,opt,name=suggested_field_count,json=suggestedFieldCount,proto3" json:"suggested_field_count,omitempty"`
 	// Closed design-system type_* key for evidence representation.
 	IconKey       string `protobuf:"bytes,8,opt,name=icon_key,json=iconKey,proto3" json:"icon_key,omitempty"`
@@ -2641,8 +2642,8 @@ func (x *SourceType) GetIconKey() string {
 }
 
 // TypeSuggestion is one source_type_metadata_fields join row: a field this
-// type suggests, in its stored order. Suggestions are not a schema — a
-// source of the type may leave any of them blank.
+// type suggests at one level, in its stored order. Suggestions are not a
+// schema — a source of the type may leave any of them blank.
 type TypeSuggestion struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Field         *MetadataField         `protobuf:"bytes,1,opt,name=field,proto3" json:"field,omitempty"`
@@ -7647,10 +7648,14 @@ func (x *UpdateSourceTypeResponse) GetEffects() *WriteEffects {
 	return nil
 }
 
+// ListTypeSuggestions lists a type's suggested fields at one level, in order.
 type ListTypeSuggestionsRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	TypeId        string                 `protobuf:"bytes,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	TypeId     string                 `protobuf:"bytes,2,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	// "source", "artifact" or "graph" (vocabkey.MetadataLevels); any other
+	// value, "citation" included, is sourcevocab.invalid.
+	Level         string `protobuf:"bytes,3,opt,name=level,proto3" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7695,6 +7700,13 @@ func (x *ListTypeSuggestionsRequest) GetProjectDir() string {
 func (x *ListTypeSuggestionsRequest) GetTypeId() string {
 	if x != nil {
 		return x.TypeId
+	}
+	return ""
+}
+
+func (x *ListTypeSuggestionsRequest) GetLevel() string {
+	if x != nil {
+		return x.Level
 	}
 	return ""
 }
@@ -7745,13 +7757,16 @@ func (x *ListTypeSuggestionsResponse) GetSuggestions() []*TypeSuggestion {
 
 // AssignTypeField attaches an existing metadata field to a type at the end
 // of its order. Assigning a field the type already suggests is a no-op, not
-// an error. Both replies carry the type's whole suggestion list back so the
-// client never has to re-derive sort_order.
+// an error. Both replies carry the type's whole suggestion list at that level
+// back so the client never has to re-derive sort_order.
 type AssignTypeFieldRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	TypeId        string                 `protobuf:"bytes,3,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	FieldId       string                 `protobuf:"bytes,4,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	TypeId     string                 `protobuf:"bytes,3,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	FieldId    string                 `protobuf:"bytes,4,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
+	// "source", "artifact" or "graph" (vocabkey.MetadataLevels); any other
+	// value, "citation" included, is sourcevocab.invalid.
+	Level         string `protobuf:"bytes,5,opt,name=level,proto3" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7807,11 +7822,21 @@ func (x *AssignTypeFieldRequest) GetFieldId() string {
 	return ""
 }
 
+func (x *AssignTypeFieldRequest) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
 type AssignTypeFieldResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Suggestions   []*TypeSuggestion      `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Suggestions []*TypeSuggestion      `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
+	// The type's suggested-field count after the write, as
+	// SourceType.suggested_field_count.
+	SuggestedFieldCount int32 `protobuf:"varint,2,opt,name=suggested_field_count,json=suggestedFieldCount,proto3" json:"suggested_field_count,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *AssignTypeFieldResponse) Reset() {
@@ -7851,14 +7876,24 @@ func (x *AssignTypeFieldResponse) GetSuggestions() []*TypeSuggestion {
 	return nil
 }
 
+func (x *AssignTypeFieldResponse) GetSuggestedFieldCount() int32 {
+	if x != nil {
+		return x.SuggestedFieldCount
+	}
+	return 0
+}
+
 // RemoveTypeField detaches a field from a type. It deletes only the join —
 // the field stays in the vocabulary and sources already carrying a value
 // for it keep that value.
 type RemoveTypeFieldRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ProjectDir    string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
-	TypeId        string                 `protobuf:"bytes,3,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
-	FieldId       string                 `protobuf:"bytes,4,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	ProjectDir string                 `protobuf:"bytes,1,opt,name=project_dir,json=projectDir,proto3" json:"project_dir,omitempty"`
+	TypeId     string                 `protobuf:"bytes,3,opt,name=type_id,json=typeId,proto3" json:"type_id,omitempty"`
+	FieldId    string                 `protobuf:"bytes,4,opt,name=field_id,json=fieldId,proto3" json:"field_id,omitempty"`
+	// "source", "artifact" or "graph" (vocabkey.MetadataLevels); any other
+	// value, "citation" included, is sourcevocab.invalid.
+	Level         string `protobuf:"bytes,5,opt,name=level,proto3" json:"level,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7914,11 +7949,21 @@ func (x *RemoveTypeFieldRequest) GetFieldId() string {
 	return ""
 }
 
+func (x *RemoveTypeFieldRequest) GetLevel() string {
+	if x != nil {
+		return x.Level
+	}
+	return ""
+}
+
 type RemoveTypeFieldResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Suggestions   []*TypeSuggestion      `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	Suggestions []*TypeSuggestion      `protobuf:"bytes,1,rep,name=suggestions,proto3" json:"suggestions,omitempty"`
+	// The type's suggested-field count after the write, as
+	// SourceType.suggested_field_count.
+	SuggestedFieldCount int32 `protobuf:"varint,2,opt,name=suggested_field_count,json=suggestedFieldCount,proto3" json:"suggested_field_count,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *RemoveTypeFieldResponse) Reset() {
@@ -7956,6 +8001,13 @@ func (x *RemoveTypeFieldResponse) GetSuggestions() []*TypeSuggestion {
 		return x.Suggestions
 	}
 	return nil
+}
+
+func (x *RemoveTypeFieldResponse) GetSuggestedFieldCount() int32 {
+	if x != nil {
+		return x.SuggestedFieldCount
+	}
+	return 0
 }
 
 type DeleteSourceTypeRequest struct {
@@ -20448,27 +20500,32 @@ const file_engine_proto_rawDesc = "" +
 	"\bicon_key\x18\x06 \x01(\tR\aiconKey\"\x90\x01\n" +
 	"\x18UpdateSourceTypeResponse\x125\n" +
 	"\x04type\x18\x01 \x01(\v2!.provenencia.engine.v1.SourceTypeR\x04type\x12=\n" +
-	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"V\n" +
+	"\aeffects\x18\x02 \x01(\v2#.provenencia.engine.v1.WriteEffectsR\aeffects\"l\n" +
 	"\x1aListTypeSuggestionsRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
-	"\atype_id\x18\x02 \x01(\tR\x06typeId\"f\n" +
+	"\atype_id\x18\x02 \x01(\tR\x06typeId\x12\x14\n" +
+	"\x05level\x18\x03 \x01(\tR\x05level\"f\n" +
 	"\x1bListTypeSuggestionsResponse\x12G\n" +
-	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\"|\n" +
+	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\"\x92\x01\n" +
 	"\x16AssignTypeFieldRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\atype_id\x18\x03 \x01(\tR\x06typeId\x12\x19\n" +
-	"\bfield_id\x18\x04 \x01(\tR\afieldIdJ\x04\b\x02\x10\x03R\auser_id\"b\n" +
+	"\bfield_id\x18\x04 \x01(\tR\afieldId\x12\x14\n" +
+	"\x05level\x18\x05 \x01(\tR\x05levelJ\x04\b\x02\x10\x03R\auser_id\"\x96\x01\n" +
 	"\x17AssignTypeFieldResponse\x12G\n" +
-	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\"|\n" +
+	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\x122\n" +
+	"\x15suggested_field_count\x18\x02 \x01(\x05R\x13suggestedFieldCount\"\x92\x01\n" +
 	"\x16RemoveTypeFieldRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +
 	"\atype_id\x18\x03 \x01(\tR\x06typeId\x12\x19\n" +
-	"\bfield_id\x18\x04 \x01(\tR\afieldIdJ\x04\b\x02\x10\x03R\auser_id\"b\n" +
+	"\bfield_id\x18\x04 \x01(\tR\afieldId\x12\x14\n" +
+	"\x05level\x18\x05 \x01(\tR\x05levelJ\x04\b\x02\x10\x03R\auser_id\"\x96\x01\n" +
 	"\x17RemoveTypeFieldResponse\x12G\n" +
-	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\"l\n" +
+	"\vsuggestions\x18\x01 \x03(\v2%.provenencia.engine.v1.TypeSuggestionR\vsuggestions\x122\n" +
+	"\x15suggested_field_count\x18\x02 \x01(\x05R\x13suggestedFieldCount\"l\n" +
 	"\x17DeleteSourceTypeRequest\x12\x1f\n" +
 	"\vproject_dir\x18\x01 \x01(\tR\n" +
 	"projectDir\x12\x17\n" +

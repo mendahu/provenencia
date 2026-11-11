@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
@@ -8,6 +9,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
+	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -505,7 +507,7 @@ func TestUpdateSourceType(t *testing.T) {
 				// agree with what ListTypeSuggestions reads.
 				ur := req.(*engine.UpdateSourceTypeRequest)
 				lout, err := ListTypeSuggestions(marshalProto(t, &engine.ListTypeSuggestionsRequest{
-					ProjectDir: ur.ProjectDir, TypeId: ur.TypeId,
+					ProjectDir: ur.ProjectDir, TypeId: ur.TypeId, Level: "source",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -556,14 +558,14 @@ func TestAssignAndRemoveTypeField(t *testing.T) {
 				// Assign Folio first so stored order and label order disagree.
 				for _, fieldID := range []string{second, first} {
 					if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
-						ProjectDir: dir, TypeId: typeID, FieldId: fieldID,
+						ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: "source",
 					})); err != nil {
 						t.Fatal(err)
 					}
 				}
 				// Re-assigning must not reorder.
 				return &engine.AssignTypeFieldRequest{
-					ProjectDir: dir, TypeId: typeID, FieldId: second,
+					ProjectDir: dir, TypeId: typeID, FieldId: second, Level: "source",
 				}
 			},
 			after: func(t *testing.T, out []byte, req proto.Message) {
@@ -578,7 +580,7 @@ func TestAssignAndRemoveTypeField(t *testing.T) {
 				}
 				ar := req.(*engine.AssignTypeFieldRequest)
 				rout, err := RemoveTypeField(marshalProto(t, &engine.RemoveTypeFieldRequest{
-					ProjectDir: ar.ProjectDir, TypeId: ar.TypeId, FieldId: ar.FieldId,
+					ProjectDir: ar.ProjectDir, TypeId: ar.TypeId, FieldId: ar.FieldId, Level: "source",
 				}))
 				if err != nil {
 					t.Fatal(err)
@@ -608,6 +610,77 @@ func TestAssignAndRemoveTypeField(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "assigning at graph lists at graph and leaves the source list alone",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				typeID := newUserType(t, dir, userID, "Parish register")
+				other := newUserField(t, dir, userID, "Officiant")
+				if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+					ProjectDir: dir, TypeId: typeID, FieldId: other, Level: "source",
+				})); err != nil {
+					t.Fatal(err)
+				}
+				return &engine.AssignTypeFieldRequest{
+					ProjectDir: dir, TypeId: typeID, FieldId: newUserField(t, dir, userID, "Folio"), Level: "graph",
+				}
+			},
+			after: func(t *testing.T, _ []byte, req proto.Message) {
+				ar := req.(*engine.AssignTypeFieldRequest)
+				if got := listSuggestionLabels(t, ar.ProjectDir, ar.TypeId, "graph"); len(got) != 1 || got[0] != "Folio" {
+					t.Fatalf("graph list %v, want [Folio]", got)
+				}
+				if got := listSuggestionLabels(t, ar.ProjectDir, ar.TypeId, "source"); len(got) != 1 || got[0] != "Officiant" {
+					t.Fatalf("source list %v, want [Officiant]", got)
+				}
+			},
+		},
+		{
+			name: "the reply counts the engine's source suggestions after the write",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				typeID := newUserType(t, dir, userID, "Parish register")
+				for _, a := range []struct{ label, level string }{
+					{"Folio", "source"}, {"Officiant", "source"}, {"Witness", "graph"},
+				} {
+					if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+						ProjectDir: dir, TypeId: typeID, FieldId: newUserField(t, dir, userID, a.label), Level: a.level,
+					})); err != nil {
+						t.Fatal(err)
+					}
+				}
+				return &engine.AssignTypeFieldRequest{
+					ProjectDir: dir, TypeId: typeID, FieldId: newUserField(t, dir, userID, "Parish"), Level: "source",
+				}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.AssignTypeFieldResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if resp.GetSuggestedFieldCount() != 3 {
+					t.Fatalf("after assign suggested_field_count = %d, want 3", resp.GetSuggestedFieldCount())
+				}
+				ar := req.(*engine.AssignTypeFieldRequest)
+				ids := suggestionIDs(t, ar.ProjectDir, ar.TypeId, "source")
+				var removed engine.RemoveTypeFieldResponse
+				for _, id := range ids[:2] {
+					rout, err := RemoveTypeField(marshalProto(t, &engine.RemoveTypeFieldRequest{
+						ProjectDir: ar.ProjectDir, TypeId: ar.TypeId, FieldId: id, Level: "source",
+					}))
+					if err != nil {
+						t.Fatal(err)
+					}
+					removed.Reset()
+					if err := proto.Unmarshal(rout, &removed); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if removed.GetSuggestedFieldCount() != 1 {
+					t.Fatalf("after remove suggested_field_count = %d, want 1", removed.GetSuggestedFieldCount())
+				}
+			},
+		},
 	})
 }
 
@@ -618,7 +691,7 @@ func TestListTypeSuggestions(t *testing.T) {
 			name: "reads the seeded starter's suggestions",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, _, typeID := sourceFixture(t)
-				return &engine.ListTypeSuggestionsRequest{ProjectDir: dir, TypeId: typeID}
+				return &engine.ListTypeSuggestionsRequest{ProjectDir: dir, TypeId: typeID, Level: "source"}
 			},
 			after: func(t *testing.T, out []byte, _ proto.Message) {
 				var resp engine.ListTypeSuggestionsResponse
@@ -640,10 +713,122 @@ func TestListTypeSuggestions(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _ := sourceFixture(t)
 				return &engine.ListTypeSuggestionsRequest{
-					ProjectDir: dir, TypeId: newUserType(t, dir, userID, "Letter"),
+					ProjectDir: dir, TypeId: newUserType(t, dir, userID, "Letter"), Level: "source",
 				}
 			},
 			want: &engine.ListTypeSuggestionsResponse{},
 		},
 	})
+}
+
+func TestRemoveTypeFieldDetachesOneLevel(t *testing.T) {
+	runRPC(t, RemoveTypeField, []rpcTest{
+		{
+			name: "a field suggested at two levels is detached one level at a time",
+			reqFn: func(t *testing.T) proto.Message {
+				dir, userID, _ := sourceFixture(t)
+				typeID := newUserType(t, dir, userID, "Parish register")
+				fieldID := newUserField(t, dir, userID, "Folio")
+				for _, level := range []string{"graph", "source"} {
+					if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+						ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: level,
+					})); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, level := range []string{"graph", "source"} {
+					if got := listSuggestionLabels(t, dir, typeID, level); len(got) != 1 || got[0] != "Folio" {
+						t.Fatalf("%s list %v before the remove, want [Folio]", level, got)
+					}
+				}
+				return &engine.RemoveTypeFieldRequest{ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: "graph"}
+			},
+			after: func(t *testing.T, out []byte, req proto.Message) {
+				var resp engine.RemoveTypeFieldResponse
+				if err := proto.Unmarshal(out, &resp); err != nil {
+					t.Fatal(err)
+				}
+				if len(resp.Suggestions) != 0 {
+					t.Fatalf("reply %+v, want the empty graph list", resp.Suggestions)
+				}
+				rr := req.(*engine.RemoveTypeFieldRequest)
+				if got := listSuggestionLabels(t, rr.ProjectDir, rr.TypeId, "source"); len(got) != 1 || got[0] != "Folio" {
+					t.Fatalf("source list %v, want [Folio]", got)
+				}
+			},
+		},
+	})
+}
+
+func TestTypeSuggestionRefusesAnyOtherLevel(t *testing.T) {
+	for _, level := range []string{"", "Source", "page", "citation"} {
+		t.Run("level "+level, func(t *testing.T) {
+			t.Cleanup(func() { _ = catalogsession.CloseAll() })
+			dir, userID, _ := sourceFixture(t)
+			typeID := newUserType(t, dir, userID, "Parish register")
+			fieldID := newUserField(t, dir, userID, "Folio")
+			if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+				ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: "source",
+			})); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ListTypeSuggestions(marshalProto(t, &engine.ListTypeSuggestionsRequest{
+				ProjectDir: dir, TypeId: typeID, Level: level,
+			})); !errors.Is(err, sourcevocab.ErrInvalid) {
+				t.Fatalf("ListTypeSuggestions: %v", err)
+			}
+			if _, err := AssignTypeField(marshalProto(t, &engine.AssignTypeFieldRequest{
+				ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: level,
+			})); !errors.Is(err, sourcevocab.ErrInvalid) {
+				t.Fatalf("AssignTypeField: %v", err)
+			}
+			if _, err := RemoveTypeField(marshalProto(t, &engine.RemoveTypeFieldRequest{
+				ProjectDir: dir, TypeId: typeID, FieldId: fieldID, Level: level,
+			})); !errors.Is(err, sourcevocab.ErrInvalid) {
+				t.Fatalf("RemoveTypeField: %v", err)
+			}
+			if got := listSuggestionLabels(t, dir, typeID, "source"); len(got) != 1 || got[0] != "Folio" {
+				t.Fatalf("source list %v after refused calls, want [Folio]", got)
+			}
+			for _, l := range []string{"artifact", "graph"} {
+				if got := listSuggestionLabels(t, dir, typeID, l); len(got) != 0 {
+					t.Fatalf("a refused write left %s rows: %v", l, got)
+				}
+			}
+		})
+	}
+}
+
+// listSuggestions reads a type's suggestions at one level through the RPC.
+func listSuggestions(t *testing.T, dir, typeID, level string) []*engine.TypeSuggestion {
+	t.Helper()
+	out, err := ListTypeSuggestions(marshalProto(t, &engine.ListTypeSuggestionsRequest{
+		ProjectDir: dir, TypeId: typeID, Level: level,
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var resp engine.ListTypeSuggestionsResponse
+	if err := proto.Unmarshal(out, &resp); err != nil {
+		t.Fatal(err)
+	}
+	return resp.Suggestions
+}
+
+func listSuggestionLabels(t *testing.T, dir, typeID, level string) []string {
+	t.Helper()
+	var out []string
+	for _, s := range listSuggestions(t, dir, typeID, level) {
+		out = append(out, s.Field.GetLabel())
+	}
+	return out
+}
+
+func suggestionIDs(t *testing.T, dir, typeID, level string) []string {
+	t.Helper()
+	var out []string
+	for _, s := range listSuggestions(t, dir, typeID, level) {
+		out = append(out, s.Field.GetId())
+	}
+	return out
 }

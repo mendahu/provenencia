@@ -184,6 +184,66 @@ struct SourceTypesModelTests {
         #expect(model.toast?.title == L10n.string(L10n.SourceTypes.toastAssignedTitle))
     }
 
+    @Test func selectingShowsOnlySourceLevelSuggestions() async {
+        let author = field(id: "f1", label: "Author")
+        let publisher = field(id: "f2", label: "Publisher")
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            types: [seededType()],
+            fields: [author, publisher],
+            suggestions: ["t1": [CatalogTypeSuggestion(field: author, sortOrder: 0)]]
+        )
+        store.suggestionsByLevel[.graph] = ["t1": [CatalogTypeSuggestion(field: publisher, sortOrder: 0)]]
+        await warm(model, session: session)
+        model.select("t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
+        #expect(model.suggestions.map(\.field.id) == ["f1"])
+    }
+
+    @Test func assigningWritesAtSourceLevelOnly() async {
+        let author = field(id: "f1", label: "Author")
+        let publisher = field(id: "f2", label: "Publisher")
+        let store = FakeStore()
+        let (model, session) = makeModel(
+            store: store,
+            types: [seededType()],
+            fields: [author, publisher]
+        )
+        let graphRow = CatalogTypeSuggestion(field: publisher, sortOrder: 0)
+        store.suggestionsByLevel[.graph] = ["t1": [graphRow]]
+        await warm(model, session: session)
+        model.select("t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
+
+        model.assignPick = "f1"
+        await model.assignPickedField()
+
+        #expect(store.suggestionsByLevel[.source]?["t1"]?.map(\.field.id) == ["f1"])
+        #expect(store.suggestionsByLevel[.graph]?["t1"] == [graphRow])
+        #expect(model.types.first { $0.id == "t1" }?.suggestedFieldCount == 1)
+    }
+
+    @Test func fieldsColumnShowsTheEnginesCountNotTheReplyLength() async {
+        let author = field(id: "f1", label: "Author")
+        let store = FakeStore()
+        store.suggestedFieldCountOverride["t1"] = 7
+        let (model, session) = makeModel(
+            store: store,
+            types: [seededType()],
+            fields: [author]
+        )
+        await warm(model, session: session)
+        model.select("t1")
+        await warmSuggestions(model, session: session, typeID: "t1")
+
+        model.assignPick = "f1"
+        await model.assignPickedField()
+
+        #expect(model.suggestions.count == 1)
+        #expect(model.types.first { $0.id == "t1" }?.suggestedFieldCount == 7)
+    }
+
     @Test func removingASuggestionKeepsTheFieldInThePool() async {
         let author = field(id: "f1", label: "Author", usedBy: 3)
         let (model, session) = makeModel(

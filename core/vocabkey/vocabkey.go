@@ -19,6 +19,36 @@ const (
 	originPluginPrefix = "plugin:"
 )
 
+// Level is a layer a citation reads: the Source (the record), one of its
+// Artifacts (the copy used), one of its Evidence graphs (the item cited), or
+// the Citation itself. The first three hold metadata values and type
+// suggestions; the Citation only built-ins.
+type Level string
+
+const (
+	LevelSource   Level = "source"
+	LevelArtifact Level = "artifact"
+	LevelGraph    Level = "graph"
+	LevelCitation Level = "citation"
+)
+
+// Levels returns every level, a new slice in order on each call.
+func Levels() []Level {
+	return []Level{LevelSource, LevelArtifact, LevelGraph, LevelCitation}
+}
+
+// MetadataLevels returns the levels that hold metadata, a new slice in order
+// on each call.
+func MetadataLevels() []Level {
+	return []Level{LevelSource, LevelArtifact, LevelGraph}
+}
+
+// Valid reports whether l is one of Levels. The match is exact.
+func (l Level) Valid() bool { return slices.Contains(Levels(), l) }
+
+// HoldsMetadata reports whether l is one of MetadataLevels. The match is exact.
+func (l Level) HoldsMetadata() bool { return slices.Contains(MetadataLevels(), l) }
+
 // SubjectType is a Subject type key, typed for registry maps.
 type SubjectType string
 

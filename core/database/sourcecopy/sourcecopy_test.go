@@ -96,7 +96,7 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	link := field("url", metadatafields.DataTypeURL)
 	page := field("page", metadatafields.DataTypeText)
 	for i, f := range [][]byte{publication, link, page} {
-		if err := sourcevocab.EnsureSuggestion(c, obit, f, i); err != nil {
+		if err := sourcevocab.EnsureSuggestion(c, obit, f, vocabkey.LevelSource, i); err != nil {
 			t.Fatal(err)
 		}
 	}

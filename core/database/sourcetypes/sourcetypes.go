@@ -46,9 +46,13 @@ const (
 		FROM source_types WHERE key = ? AND origin = ?`
 	sqlGetByID = `SELECT id, key, origin, label, COALESCE(description, ''), icon_key
 		FROM source_types WHERE id = ?`
-	sqlList = `SELECT t.id, t.key, t.origin, t.label, COALESCE(t.description, ''), t.icon_key,
+	// sqlSuggestedFields counts the fields a type suggests at the level bound
+	// to its one placeholder; the type id follows it. It is the one place the
+	// rule for which suggestions count lives.
+	sqlSuggestedFields = `SELECT COUNT(*) FROM source_type_metadata_fields j WHERE j.level = ? AND j.source_type_id = `
+	sqlList            = `SELECT t.id, t.key, t.origin, t.label, COALESCE(t.description, ''), t.icon_key,
 			(SELECT COUNT(*) FROM sources s WHERE s.source_type_id = t.id),
-			(SELECT COUNT(*) FROM source_type_metadata_fields j WHERE j.source_type_id = t.id)
+			(` + sqlSuggestedFields + `t.id)
 		FROM source_types t ORDER BY t.label COLLATE NOCASE, t.origin, t.key`
 	sqlUpdate = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM source_types WHERE id = ?`
@@ -67,8 +71,8 @@ type Type struct {
 	// UsedBy is how many sources reference this type. Only List and
 	// Update populate it; the other readers leave it 0.
 	UsedBy int
-	// SuggestedFields is how many metadata fields this type suggests. Only
-	// List and Update populate it; the other readers leave it 0.
+	// SuggestedFields is how many fields this type suggests at the Source
+	// level. Only List and Update populate it; the other readers leave it 0.
 	SuggestedFields int
 }
 
@@ -143,7 +147,7 @@ func List(c *database.Catalog) ([]Type, error) {
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(sqlList)
+	rows, err := db.Query(sqlList, string(vocabkey.LevelSource))
 	if err != nil {
 		return nil, err
 	}
@@ -305,6 +309,20 @@ func UsedBy(c *database.Catalog, id []byte) (int, error) {
 	}
 	var n int
 	if err := db.QueryRow(sqlUsedBy, id).Scan(&n); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
+// SuggestedFields reports how many fields the type suggests at the Source
+// level, the number List returns in Type.SuggestedFields.
+func SuggestedFields(c *database.Catalog, typeID []byte) (int, error) {
+	db, err := c.DB()
+	if err != nil {
+		return 0, err
+	}
+	var n int
+	if err := db.QueryRow(sqlSuggestedFields+`?`, string(vocabkey.LevelSource), typeID).Scan(&n); err != nil {
 		return 0, err
 	}
 	return n, nil

@@ -7,6 +7,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -84,7 +85,7 @@ func UpdateSourceType(in []byte) ([]byte, error) {
 		if got.UsedBy, err = sourcetypes.UsedBy(c, typeID); err != nil {
 			return err
 		}
-		if got.SuggestedFields, err = sourcevocab.CountSuggestions(c, typeID); err != nil {
+		if got.SuggestedFields, err = sourcetypes.SuggestedFields(c, typeID); err != nil {
 			return err
 		}
 		out = &engine.UpdateSourceTypeResponse{Type: sourceTypeProto(got), Effects: writeEffectsProto(wrote)}
@@ -107,7 +108,7 @@ func ListTypeSuggestions(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListTypeSuggestionsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		suggestions, err := suggestionsProto(c, typeID)
+		suggestions, err := suggestionsProto(c, typeID, vocabkey.Level(req.GetLevel()))
 		if err != nil {
 			return err
 		}
@@ -131,14 +132,19 @@ func AssignTypeField(in []byte) ([]byte, error) {
 	}
 	var out *engine.AssignTypeFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcevocab.AppendSuggestion(c, typeID, fieldID); err != nil {
+		level := vocabkey.Level(req.GetLevel())
+		if err := sourcevocab.AppendSuggestion(c, typeID, fieldID, level); err != nil {
 			return err
 		}
-		suggestions, err := suggestionsProto(c, typeID)
+		suggestions, err := suggestionsProto(c, typeID, level)
 		if err != nil {
 			return err
 		}
-		out = &engine.AssignTypeFieldResponse{Suggestions: suggestions}
+		count, err := sourcetypes.SuggestedFields(c, typeID)
+		if err != nil {
+			return err
+		}
+		out = &engine.AssignTypeFieldResponse{Suggestions: suggestions, SuggestedFieldCount: int32(count)}
 		return nil
 	})
 	if err != nil {
@@ -158,14 +164,19 @@ func RemoveTypeField(in []byte) ([]byte, error) {
 	}
 	var out *engine.RemoveTypeFieldResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		if err := sourcevocab.DeleteSuggestion(c, typeID, fieldID); err != nil {
+		level := vocabkey.Level(req.GetLevel())
+		if err := sourcevocab.DeleteSuggestion(c, typeID, fieldID, level); err != nil {
 			return err
 		}
-		suggestions, err := suggestionsProto(c, typeID)
+		suggestions, err := suggestionsProto(c, typeID, level)
 		if err != nil {
 			return err
 		}
-		out = &engine.RemoveTypeFieldResponse{Suggestions: suggestions}
+		count, err := sourcetypes.SuggestedFields(c, typeID)
+		if err != nil {
+			return err
+		}
+		out = &engine.RemoveTypeFieldResponse{Suggestions: suggestions, SuggestedFieldCount: int32(count)}
 		return nil
 	})
 	if err != nil {
@@ -188,8 +199,8 @@ func parseSuggestionJoin(typeID, fieldID string) ([]byte, []byte, error) {
 	return tid, fid, nil
 }
 
-func suggestionsProto(c *database.Catalog, typeID []byte) ([]*engine.TypeSuggestion, error) {
-	rows, err := sourcevocab.ListSuggestions(c, typeID)
+func suggestionsProto(c *database.Catalog, typeID []byte, level vocabkey.Level) ([]*engine.TypeSuggestion, error) {
+	rows, err := sourcevocab.ListSuggestions(c, typeID, level)
 	if err != nil {
 		return nil, err
 	}

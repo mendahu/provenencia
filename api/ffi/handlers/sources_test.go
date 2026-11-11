@@ -830,7 +830,7 @@ func metadataSuggestionFixture(t *testing.T) (dir, userID, typeID, sourceID, fie
 	}
 	sourceID = created.Source.Id
 	sout, err := ListTypeSuggestions(marshalProto(t, &engine.ListTypeSuggestionsRequest{
-		ProjectDir: dir, TypeId: typeID,
+		ProjectDir: dir, TypeId: typeID, Level: "source",
 	}))
 	if err != nil {
 		t.Fatal(err)

@@ -83,7 +83,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-03 | The Source page shows the date and the Private switch | 1 | Swift: set, change, clear the date in a dialog; the Private switch; the page on Page columns. Go: `sources.not_found` for a missing Source | S15-D1 | S15-02, S15-D1 | [plan](prs/S15-03-source-page-date-and-private-switch.md) | Landed #766 |
 | S15-04 | The Sources list shows and sorts by the date | 1 | Swift: the date on each row; a date sort by Go's key, undated last | S15-D2 | S15-02, S15-D2 | [plan](prs/S15-04-sources-list-date.md) | Landed #774 |
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
-| S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | [plan](prs/S15-06-type-suggestions-have-a-level.md) | Planned |
+| S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | [plan](prs/S15-06-type-suggestions-have-a-level.md) | Landed #782 |
 | S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | — | Scoped |
 | S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | — | Scoped |
 | S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | — | Scoped |
@@ -280,7 +280,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-06 — Type suggestions have a level
 
-**Ships.** One `Level` type in `core/vocabkey` (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab`, `sourcetypes`, the effects registry and the catalog model read it; the suggestion RPCs take a level, and the Source page's board reads `source` only.
+**Ships.** One `Level` type in `core/vocabkey` (Swift enum and vocabulary parity row). A migration rebuilds `source_type_metadata_fields` with `level` in its key (existing rows become `source`); `sourcevocab` and `sourcetypes` read it (the effects registry and catalog model are unchanged, D-7); the suggestion RPCs take a level and return the type's Source-level field count, and the Source page's board reads `source` only.
 **Not this PR.** Artifact and graph values (S15-08); the type page's three lists (S15-12).
 **Check.** The Source page's suggestions are unchanged; handler tests add and list suggestions per level; a field suggested at two levels keeps both rows.
 **Context.** Rule "Suggestions have a level"; map § 6.6; skills `add-catalog-migration`, `add-catalog-model`, `add-seeded-vocabulary` (update its suggestion shape).
