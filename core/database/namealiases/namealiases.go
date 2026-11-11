@@ -206,6 +206,9 @@ func init() {
 // Warm builds the alias index onto the catalog graph. catalogsession calls
 // this when a project opens. Closing the catalog drops it with the graph.
 func Warm(c *database.Catalog) error {
+	if _, err := c.DB(); err != nil {
+		return err
+	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed
@@ -217,6 +220,9 @@ func Warm(c *database.Catalog) error {
 // Invalidate drops the alias index; the next read rebuilds it. A future editor
 // calls this after inserting, changing, or deleting a table.
 func Invalidate(c *database.Catalog) error {
+	if _, err := c.DB(); err != nil {
+		return err
+	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed

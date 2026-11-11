@@ -501,3 +501,16 @@ func TestProductFoldsInto(t *testing.T) {
 		t.Error("william holds robert")
 	}
 }
+
+func TestWarmClosedCatalog(t *testing.T) {
+	c := newCatalog(t)
+	if err := c.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := Warm(c); !errors.Is(err, database.ErrClosed) {
+		t.Fatalf("Warm on a closed catalog = %v, want ErrClosed", err)
+	}
+	if err := Invalidate(c); !errors.Is(err, database.ErrClosed) {
+		t.Fatalf("Invalidate on a closed catalog = %v, want ErrClosed", err)
+	}
+}

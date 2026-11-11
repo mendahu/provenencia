@@ -190,6 +190,9 @@ func init() {
 // catalogsession calls this when a project opens. Closing the catalog drops it
 // with the graph.
 func Warm(c *database.Catalog) error {
+	if _, err := c.DB(); err != nil {
+		return err
+	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed
@@ -201,6 +204,9 @@ func Warm(c *database.Catalog) error {
 // Invalidate drops the catalog's default name format; the next read reloads
 // it. A future writer calls this after changing it.
 func Invalidate(c *database.Catalog) error {
+	if _, err := c.DB(); err != nil {
+		return err
+	}
 	g := c.Graph()
 	if g == nil {
 		return database.ErrClosed
