@@ -818,7 +818,7 @@ CREATE TABLE evidence_graph_metadata_layout (
 -- Templating: a type suggests fields per level.
 -- source_type_metadata_fields gains a level; the table is rebuilt so the
 -- key includes it (a field may be suggested at more than one level).
---   level TEXT NOT NULL DEFAULT 'source' CHECK (level IN ('source', 'artifact', 'graph'))
+--   level TEXT NOT NULL CHECK (level IN ('source', 'artifact', 'graph'))   -- no DEFAULT: every writer names its level
 --   PRIMARY KEY (source_type_id, field_id, level)
 -- Existing rows become level = 'source'.
 ```

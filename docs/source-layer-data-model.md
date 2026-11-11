@@ -218,11 +218,14 @@ A Source type may suggest metadata fields useful for that type. This is a join t
 CREATE TABLE source_type_metadata_fields (
     source_type_id  BLOB NOT NULL REFERENCES source_types(id) ON DELETE CASCADE,
     field_id        BLOB NOT NULL REFERENCES source_metadata_fields(id) ON DELETE CASCADE,
+    level           TEXT NOT NULL CHECK (level IN ('source', 'artifact', 'graph')),
     sort_order      INTEGER,
 
-    PRIMARY KEY (source_type_id, field_id)
+    PRIMARY KEY (source_type_id, field_id, level)
 ) STRICT;
 ```
+
+A type suggests fields per level: `source` (the record), `artifact` (the copy used) or `graph` (the item cited). Each level is its own ordered list, and a field may be suggested at more than one. The Source page reads the `source` rows.
 
 
 For example, `book` might suggest:

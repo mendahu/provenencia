@@ -168,7 +168,7 @@ report_date             text        DNA match report
 
 ## 2.3 `source_type_metadata_fields`
 
-Suggested fields per type for cataloging UI. Not required; a Source may use fields not listed for its type.
+Suggested fields per type for cataloging UI. Not required; a Source may use fields not listed for its type. Each row carries a level (`source`, `artifact` or `graph`); the seed's rows are all `source`.
 
 ```text
 birth_certificate
