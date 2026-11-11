@@ -84,7 +84,7 @@ Check: `rg -n "focusable\(false\)" macos/App/DesignSystem/Components/Chip/PVSegm
 Head `39a023ca`. Gate PASS (orchestrator run against `9a514612`). F-4 done: `else if focus != nil { chip(item).focusable(false) }` (`PVSegmentedControl.swift:158`); doc comment, README row, plan §10 step 2 and Codebase fit "Neighbors" rewritten. No failing test possible (key-loop membership under Full Keyboard Access); manual check §10 step 1 with Full Keyboard Access on holds it. Orchestrator read the commit: UX-1 (r2) and UX-2 (r2) **Resolved in code, pending manual check**; both round-2 notes **Resolved**.
 
 ## Result
-Gate PASS (also after merging `main` @ `d161dc19`) · CI green · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: UX-3 ("provisional member" outcome copy) · to user: UX-2 answered (one Tab stop, arrows)
+Gate PASS (also after merging `main` @ `d161dc19`) · CI green · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: none (UX-3 fixed as F-5 at the user's request) · to user: UX-2 answered (one Tab stop, arrows)
 
 ## After ready — user request
 The user asked (2026-11-11) to fix UX-3 on this PR ("fix the member copy here"): it moves from Follow-up to Fix now.
@@ -94,3 +94,5 @@ Files: `macos/App/Platform/L10n.swift` (`L10n.Conclusions.outcomeProvisional`), 
 Failing test first: change the expectation at `ReconciledValueDisplayTests.swift:243` to `"provisional record"`; it fails.
 Do: the default value and the catalog `en` value become "provisional record"; the comment becomes "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only". Key unchanged. Leave `docs/conclusion-reconciliation.md` (it describes the data model, where "member" is the domain term). Add one line to the plan's Landed note naming the user's request and F-5.
 Check: `rg -n '"provisional member"' macos` prints nothing; scripts/check-pr.sh PASS.
+
+F-5 done: head `bb5758e7`. Red first (`otherReasonsHaveAPhraseAndAMark` failed on "provisional member" vs "provisional record"), then green. Gate PASS (orchestrator run). UX-3 **Resolved**; follow-ups: none.
