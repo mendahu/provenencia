@@ -185,9 +185,12 @@ func Install(c *database.Catalog) error {
 	}
 	for _, s := range seedSuggestions {
 		typeID := typeIDs[s.TypeKey]
+		if len(typeID) == 0 {
+			return ErrInvalid
+		}
 		for order, key := range s.FieldKeys {
 			fieldID := fieldIDs[key]
-			if len(typeID) == 0 || len(fieldID) == 0 {
+			if len(fieldID) == 0 {
 				return ErrInvalid
 			}
 			if err := EnsureSuggestion(c, typeID, fieldID, s.Level, order); err != nil {

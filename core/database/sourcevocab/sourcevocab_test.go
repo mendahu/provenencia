@@ -66,6 +66,17 @@ func TestInstall(t *testing.T) {
 			},
 		},
 		{
+			name: "a seed entry naming an unknown type is rejected even with no fields",
+			run: func(t *testing.T, c *database.Catalog) {
+				saved := seedSuggestions
+				t.Cleanup(func() { seedSuggestions = saved })
+				seedSuggestions = []seedSuggestion{{TypeKey: "no_such_type", Level: vocabkey.LevelSource}}
+				if err := Install(c); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("Install = %v, want ErrInvalid", err)
+				}
+			},
+		},
+		{
 			name: "install twice keeps same ids",
 			run: func(t *testing.T, c *database.Catalog) {
 				if err := Install(c); err != nil {
@@ -255,6 +266,9 @@ func TestAppendSuggestion(t *testing.T) {
 				}
 				if err := AppendSuggestion(c, typeID, f.ID, vocabkey.LevelGraph); err != nil {
 					t.Fatal(err)
+				}
+				if before, err := ListSuggestions(c, typeID, vocabkey.LevelGraph); err != nil || len(before) != 1 {
+					t.Fatalf("graph suggestions before the delete %+v %v", before, err)
 				}
 				if err := DeleteSuggestion(c, typeID, f.ID, vocabkey.LevelGraph); err != nil {
 					t.Fatal(err)
