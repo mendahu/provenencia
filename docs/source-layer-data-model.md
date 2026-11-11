@@ -288,7 +288,7 @@ A row may exist for a field with no value, which is what makes a dismiss durable
 
 Reorder rewrites `sort_order` as `0..n-1` over the fields it is given and leaves `dismissed` alone. Setting a value for a field with no layout row appends one at the end of the existing order, so filling in a field does not disturb a hand-sorted Source.
 
-Dismiss and reorder are researcher decisions about their own catalog, so both are audited (`dismiss_source_metadata_suggestion`, `reorder_source_metadata`).
+Dismiss and reorder are researcher decisions about their own catalog, so both are audited (`dismiss_metadata_suggestion`, `reorder_metadata`).
 
 `sourcemetadata` takes an owner (a level and an id) on every function; only the Source level is wired today. `Apply` saves a draft of values and layout by comparing it with what is stored, writing layout rows verbatim and keeping the rows the draft leaves out; `CreateAll` is `Apply` on an owner that holds nothing.
 

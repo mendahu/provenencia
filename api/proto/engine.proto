@@ -25,8 +25,8 @@ enum Method {
   METHOD_ADD_SOURCE_NOTE = 16;
   METHOD_UPDATE_SOURCE_NOTE = 17;
   METHOD_DELETE_SOURCE_NOTE = 18;
-  METHOD_SET_SOURCE_METADATA = 19;
-  METHOD_CLEAR_SOURCE_METADATA = 20;
+  METHOD_SET_METADATA = 19;
+  METHOD_CLEAR_METADATA = 20;
   METHOD_CREATE_ARTIFACT = 21;
   METHOD_INGEST_ARTIFACT_FILE = 22;
   METHOD_LIST_SOURCE_TYPES = 23;
@@ -67,8 +67,8 @@ enum Method {
   METHOD_UPDATE_ARTIFACT = 36;
   METHOD_LIST_SOURCE_CREDIBILITY_GRADES = 37;
   METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT = 38;
-  METHOD_DISMISS_SOURCE_METADATA_SUGGESTION = 39;
-  METHOD_REORDER_SOURCE_METADATA = 40;
+  METHOD_DISMISS_METADATA_SUGGESTION = 39;
+  METHOD_REORDER_METADATA = 40;
   METHOD_CLOSE_CATALOG_SESSION = 42;
   METHOD_SET_SOURCE_COVER = 43;
   METHOD_SEARCH_CATALOG = 44;
@@ -130,6 +130,7 @@ enum Method {
   METHOD_GET_PERSON_RECORD_LINKS = 116;
   METHOD_SET_SOURCE_DATE = 117;
   METHOD_SET_SOURCE_PUBLIC = 118;
+  METHOD_GET_METADATA_BOARD = 119;
 }
 
 message PingRequest {
@@ -360,9 +361,10 @@ message MetadataField {
   string label = 4;
   string data_type = 5; // text | url
   string description = 6;
-  // How many source_metadata rows reference this field. Deleting is only
-  // allowed at 0 (see metadatafields.ErrInUse); the client uses the count to
-  // disable its delete affordance and say what is holding the field.
+  // How many Sources, Artifacts and Evidence graphs hold a value for this
+  // field (the delete-impact total). Deleting is only allowed at 0 (see
+  // metadatafields.ErrInUse); the client uses the count to disable its delete
+  // affordance and say what is holding the field.
   int32 used_by = 7;
 }
 
@@ -640,60 +642,90 @@ message DeleteSourceNoteResponse {
   WriteEffects effects = 1;
 }
 
-message SetSourceMetadataRequest {
+// MetadataOwner names the record a metadata board hangs off.
+message MetadataOwner {
+  string level = 1; // "source", "artifact" or "graph" (vocabkey.MetadataLevels); any other value is sourcemetadata.invalid
+  string id = 2;
+}
+
+message SetMetadataRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   string field_id = 4;
   string value_text = 5;
   reserved 6;
   reserved "date";
+  MetadataOwner owner = 7;
 }
 
-// SetSourceMetadataResponse returns the refreshed workspace entry so the
+// SetMetadataResponse returns the refreshed workspace entry so the
 // client can patch its list without refetching.
-message SetSourceMetadataResponse {
+message SetMetadataResponse {
   MetadataWorkspaceEntry entry = 1;
   WriteEffects effects = 2;
 }
 
-message ClearSourceMetadataRequest {
+message ClearMetadataRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   string field_id = 4;
+  MetadataOwner owner = 5;
 }
 
-message ClearSourceMetadataResponse {
+message ClearMetadataResponse {
   WriteEffects effects = 1;
 }
 
-// DismissSourceMetadataSuggestionRequest permanently hides an unfilled type
-// suggestion for this Source (source_metadata_layout.dismissed).
-message DismissSourceMetadataSuggestionRequest {
+// DismissMetadataSuggestionRequest permanently hides an unfilled type
+// suggestion for this owner (the owner level's metadata layout, dismissed).
+message DismissMetadataSuggestionRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   string field_id = 4;
+  MetadataOwner owner = 5;
 }
 
-message DismissSourceMetadataSuggestionResponse {
+message DismissMetadataSuggestionResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
   WriteEffects effects = 2;
 }
 
-// ReorderSourceMetadataRequest sets display order for the Source's visible
-// metadata rows (valued + suggestions) via source_metadata_layout.sort_order.
-message ReorderSourceMetadataRequest {
+// ReorderMetadataRequest sets display order for the owner's visible metadata
+// rows (valued + suggestions) via the owner level's layout sort_order.
+message ReorderMetadataRequest {
   string project_dir = 1;
   string user_id = 2;
-  string source_id = 3;
+  reserved 3;
+  reserved "source_id";
   repeated string field_ids = 4;
+  MetadataOwner owner = 5;
 }
 
-message ReorderSourceMetadataResponse {
+message ReorderMetadataResponse {
   repeated MetadataWorkspaceEntry metadata = 1;
   WriteEffects effects = 2;
+}
+
+// MetadataBoard is one owner's entries: its type's suggestions at its level
+// plus extras, by its layout.
+message MetadataBoard {
+  string owner_id = 1;
+  repeated MetadataWorkspaceEntry entries = 2;
+}
+
+message GetMetadataBoardRequest {
+  string project_dir = 1;
+  MetadataOwner owner = 2;
+}
+
+message GetMetadataBoardResponse {
+  MetadataBoard board = 1;
 }
 
 message CreateArtifactRequest {
@@ -2015,7 +2047,7 @@ message Property {
   string label = 4;
   string description = 5;
   string value_type = 6; // a propertymeta value type; GetPropertiesWorkspace lists them
-  int32 used_by = 7; // subject_type_properties references; delete only at 0
+  int32 used_by = 7; // how many Observations and terms hold this Property (the delete-impact total); delete only at 0
   string cardinality = 8; // single | multiple
 }
 

@@ -286,7 +286,7 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 }
 
 func runMetadataSet(c *database.Catalog, userID, sourceID []byte, in sourcemetadata.Input) (sourcemetadata.Row, error) {
-	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	row, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
 			return sourcemetadata.Set(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}, in)
 		})
@@ -294,7 +294,7 @@ func runMetadataSet(c *database.Catalog, userID, sourceID []byte, in sourcemetad
 }
 
 func runDismissMetadata(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}, fieldID)
 			return struct{}{}, changes, err

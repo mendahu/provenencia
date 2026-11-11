@@ -13,6 +13,6 @@ Follow `.agents/skills/add-catalog-delete/SKILL.md` and `docs/catalog-deletes.md
 - Bridge `subjects.Delete` releases connection facets (seeded edges + disambiguation) first. `observations.Delete` of an edge stays `edge_locked`.
 - Do **not** add `sqlInUse` / `SELECT 1 FROM … LIMIT 1` next to a resource `DELETE`. No-UI writers still cut over.
 - New table in the same PR: register the table and FK in `catalogmodel` (`.agents/skills/add-catalog-model/SKILL.md`) **and** register count + list probes + title/location projectors in `deleteimpact`.
-- Facet / field writes (notes, `ClearSourceMetadata`, vocab join remove, `searchindex.Delete`) are not official Deletes.
+- Facet / field writes (notes, `ClearMetadata`, vocab join remove, `searchindex.Delete`) are not official Deletes.
 - FFI: preview is `GetDeleteImpact` (the only rich payload); `Delete*` re-runs Impact as a safety net and returns a generic code. Recipe owns `via` / `kind` L10n. The UI must not call `Delete` when preflight is blocked.
 - UI: DeleteImpact recipe + `DeleteImpactFlow` (confirm if allowed, notice if blocked). Confirm uses `target.id`; `*.in_use` refetches Impact. Do not invent a second inbound query in Swift. `usedBy` must match Impact totals. Subject erase applies its effects, whose `property_usage` reloads Observation `usedBy` (the citation reads reload through the write's effects).

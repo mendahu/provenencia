@@ -129,7 +129,7 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "12345" {
 					t.Fatalf("%+v", row)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 			},
@@ -229,7 +229,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				list = values(t, c, src.ID)
@@ -386,7 +386,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "dismiss_source_metadata_suggestion" {
+				if latestAction(t, c) != "dismiss_metadata_suggestion" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				if _, dismissed := layoutOf(t, c, src.ID, issue.ID); dismissed != 1 {
@@ -416,7 +416,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runDismissSuggestion(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("dismiss audited a value field: %q", latestAction(t, c))
 				}
 				if _, dismissed := layoutOf(t, c, src.ID, doc.ID); dismissed != 0 {
@@ -441,7 +441,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runReorder(c, userID, src.ID, [][]byte{rec.ID, doc.ID, issue.ID}); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "reorder_source_metadata" {
+				if latestAction(t, c) != "reorder_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				keys := workspaceKeys(t, c, src.ID)
@@ -677,7 +677,7 @@ func values(t *testing.T, c *database.Catalog, sourceID []byte) []Row {
 }
 
 func runSet(c *database.Catalog, userID, sourceID []byte, in Input) (Row, error) {
-	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	row, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (Row, []rowchange.Change, error) {
 			return Set(tx, userID, sourceOwner(sourceID), in)
 		})
@@ -685,7 +685,7 @@ func runSet(c *database.Catalog, userID, sourceID []byte, in Input) (Row, error)
 }
 
 func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := Clear(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
@@ -694,7 +694,7 @@ func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 }
 
 func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := DismissSuggestion(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
@@ -703,7 +703,7 @@ func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte)
 }
 
 func runReorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "reorder_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := Reorder(tx, userID, sourceOwner(sourceID), fieldIDs)
 			return struct{}{}, changes, err
@@ -1024,7 +1024,7 @@ func TestOwnerLevels(t *testing.T) {
 	}
 	write := func(f func(tx *database.Tx, o Owner) ([]rowchange.Change, error)) func(Owner) error {
 		return func(o Owner) error {
-			_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+			_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 				func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					ch, err := f(tx, o)
 					return struct{}{}, ch, err
@@ -1195,7 +1195,7 @@ func applyWorld(t *testing.T) (c *database.Catalog, userID []byte, src sources.S
 
 func runApply(c *database.Catalog, userID, sourceID []byte, d Draft) ([]rowchange.Change, error) {
 	var changes []rowchange.Change
-	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			var err error
 			changes, err = Apply(tx, userID, sourceOwner(sourceID), d)
@@ -1427,7 +1427,7 @@ func TestApply(t *testing.T) {
 			run: func(t *testing.T) {
 				c, userID, src, _, _, f1, _ := applyWorld(t)
 				var changes []rowchange.Change
-				_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+				_, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
 					func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 						var err error
 						changes, err = DismissSuggestion(tx, userID, sourceOwner(src.ID), f1.ID)

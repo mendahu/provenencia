@@ -134,7 +134,7 @@ Possible examples:
 ```text
 create_source
 update_source
-update_source_metadata
+update_metadata
 attach_artifact
 create_interpretation
 resolve_record

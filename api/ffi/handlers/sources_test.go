@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -295,7 +296,12 @@ func TestSourceNotes(t *testing.T) {
 
 // metadataSetFixture creates a source and returns a request skeleton targeting
 // the first seeded field of the wanted data type ("text" | "url").
-func metadataSetFixture(t *testing.T, dataType string) *engine.SetSourceMetadataRequest {
+// sourceOwnerProto is the wire owner of a Source's metadata board.
+func sourceOwnerProto(id string) *engine.MetadataOwner {
+	return &engine.MetadataOwner{Level: string(vocabkey.LevelSource), Id: id}
+}
+
+func metadataSetFixture(t *testing.T, dataType string) *engine.SetMetadataRequest {
 	t.Helper()
 	dir, userID, typeID := sourceFixture(t)
 	cout, err := CreateSource(marshalProto(t, &engine.CreateSourceRequest{
@@ -326,14 +332,14 @@ func metadataSetFixture(t *testing.T, dataType string) *engine.SetSourceMetadata
 	if fieldID == "" {
 		t.Fatalf("no seeded %s field", dataType)
 	}
-	return &engine.SetSourceMetadataRequest{
-		ProjectDir: dir, UserId: userID, SourceId: created.Source.Id, FieldId: fieldID,
+	return &engine.SetMetadataRequest{
+		ProjectDir: dir, UserId: userID, Owner: sourceOwnerProto(created.Source.Id), FieldId: fieldID,
 	}
 }
 
 // urlMetadataSetFixture is metadataSetFixture aimed at a new url-typed field
 // (the seeded fields are all text).
-func urlMetadataSetFixture(t *testing.T) *engine.SetSourceMetadataRequest {
+func urlMetadataSetFixture(t *testing.T) *engine.SetMetadataRequest {
 	t.Helper()
 	req := metadataSetFixture(t, "text")
 	var field engine.CreateMetadataFieldResponse
@@ -346,7 +352,7 @@ func urlMetadataSetFixture(t *testing.T) *engine.SetSourceMetadataRequest {
 
 func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry {
 	t.Helper()
-	var resp engine.SetSourceMetadataResponse
+	var resp engine.SetMetadataResponse
 	if err := proto.Unmarshal(raw, &resp); err != nil {
 		t.Fatal(err)
 	}
@@ -485,8 +491,8 @@ func TestGetSourceWorkspace(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				req := urlMetadataSetFixture(t)
 				req.ValueText = "www.example.org"
-				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+				mustRPC(t, SetMetadata, req, &engine.SetMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.Owner.Id}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				entry := onlyValuedMetadata(t, raw)
@@ -500,8 +506,8 @@ func TestGetSourceWorkspace(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				req := metadataSetFixture(t, "text")
 				req.ValueText = "www.example.org"
-				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+				mustRPC(t, SetMetadata, req, &engine.SetMetadataResponse{})
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.Owner.Id}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				entry := onlyValuedMetadata(t, raw)
@@ -515,9 +521,9 @@ func TestGetSourceWorkspace(t *testing.T) {
 			reqFn: func(t *testing.T) proto.Message {
 				req := urlMetadataSetFixture(t)
 				req.ValueText = "www.example.org"
-				mustRPC(t, SetSourceMetadata, req, &engine.SetSourceMetadataResponse{})
+				mustRPC(t, SetMetadata, req, &engine.SetMetadataResponse{})
 				damageCatalog(t, req.ProjectDir, `UPDATE source_metadata SET value_text = 'file:///System/Applications/Calculator.app'`)
-				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.SourceId}
+				return &engine.GetSourceWorkspaceRequest{ProjectDir: req.ProjectDir, SourceId: req.Owner.Id}
 			},
 			after: func(t *testing.T, raw []byte, _ proto.Message) {
 				entry := onlyValuedMetadata(t, raw)
@@ -549,8 +555,8 @@ func onlyValuedMetadata(t *testing.T, raw []byte) *engine.MetadataWorkspaceEntry
 	return valued[0]
 }
 
-func TestSetSourceMetadata(t *testing.T) {
-	runRPC(t, SetSourceMetadata, []rpcTest{
+func TestSetMetadata(t *testing.T) {
+	runRPC(t, SetMetadata, []rpcTest{
 		{
 			name: "set text metadata returns entry",
 			reqFn: func(t *testing.T) proto.Message {
@@ -559,7 +565,7 @@ func TestSetSourceMetadata(t *testing.T) {
 				return req
 			},
 			after: func(t *testing.T, raw []byte, req proto.Message) {
-				sr := req.(*engine.SetSourceMetadataRequest)
+				sr := req.(*engine.SetMetadataRequest)
 				entry := unmarshalSetMetadataEntry(t, raw)
 				if entry.GetValueText() != "Ada" || !entry.GetHasValue() {
 					t.Fatalf("entry %+v", entry)
@@ -653,19 +659,19 @@ func TestSetSourceMetadata(t *testing.T) {
 	})
 }
 
-func TestDismissAndReorderSourceMetadata(t *testing.T) {
-	runRPC(t, DismissSourceMetadataSuggestion, []rpcTest{
+func TestDismissAndReorderMetadata(t *testing.T) {
+	runRPC(t, DismissMetadataSuggestion, []rpcTest{
 		{
 			name: "dismiss suggestion returns metadata without that empty field",
 			reqFn: func(t *testing.T) proto.Message {
 				dir, userID, _, sourceID, fieldID := metadataSuggestionFixture(t)
-				return &engine.DismissSourceMetadataSuggestionRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, FieldId: fieldID,
+				return &engine.DismissMetadataSuggestionRequest{
+					ProjectDir: dir, UserId: userID, Owner: sourceOwnerProto(sourceID), FieldId: fieldID,
 				}
 			},
 			after: func(t *testing.T, raw []byte, req proto.Message) {
-				dismissReq := req.(*engine.DismissSourceMetadataSuggestionRequest)
-				var resp engine.DismissSourceMetadataSuggestionResponse
+				dismissReq := req.(*engine.DismissMetadataSuggestionRequest)
+				var resp engine.DismissMetadataSuggestionResponse
 				if err := proto.Unmarshal(raw, &resp); err != nil {
 					t.Fatal(err)
 				}
@@ -678,7 +684,7 @@ func TestDismissAndReorderSourceMetadata(t *testing.T) {
 		},
 	})
 
-	runRPC(t, ReorderSourceMetadata, []rpcTest{
+	runRPC(t, ReorderMetadata, []rpcTest{
 		{
 			name: "reorder swaps visible metadata order",
 			reqFn: func(t *testing.T) proto.Message {
@@ -704,13 +710,13 @@ func TestDismissAndReorderSourceMetadata(t *testing.T) {
 				for i, j := 0, len(ids)-1; i < j; i, j = i+1, j-1 {
 					ids[i], ids[j] = ids[j], ids[i]
 				}
-				return &engine.ReorderSourceMetadataRequest{
-					ProjectDir: dir, UserId: userID, SourceId: sourceID, FieldIds: ids,
+				return &engine.ReorderMetadataRequest{
+					ProjectDir: dir, UserId: userID, Owner: sourceOwnerProto(sourceID), FieldIds: ids,
 				}
 			},
 			after: func(t *testing.T, raw []byte, req proto.Message) {
-				reorderReq := req.(*engine.ReorderSourceMetadataRequest)
-				var resp engine.ReorderSourceMetadataResponse
+				reorderReq := req.(*engine.ReorderMetadataRequest)
+				var resp engine.ReorderMetadataResponse
 				if err := proto.Unmarshal(raw, &resp); err != nil {
 					t.Fatal(err)
 				}
