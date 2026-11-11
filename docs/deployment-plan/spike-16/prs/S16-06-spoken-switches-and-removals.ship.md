@@ -84,4 +84,4 @@ Check: `rg -n "focusable\(false\)" macos/App/DesignSystem/Components/Chip/PVSegm
 Head `39a023ca`. Gate PASS (orchestrator run against `9a514612`). F-4 done: `else if focus != nil { chip(item).focusable(false) }` (`PVSegmentedControl.swift:158`); doc comment, README row, plan §10 step 2 and Codebase fit "Neighbors" rewritten. No failing test possible (key-loop membership under Full Keyboard Access); manual check §10 step 1 with Full Keyboard Access on holds it. Orchestrator read the commit: UX-1 (r2) and UX-2 (r2) **Resolved in code, pending manual check**; both round-2 notes **Resolved**.
 
 ## Result
-Gate PASS · CI pending · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: UX-3 ("provisional member" outcome copy) · to user: UX-2 answered (one Tab stop, arrows)
+Gate PASS (also after merging `main` @ `d161dc19`) · CI green · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: UX-3 ("provisional member" outcome copy) · to user: UX-2 answered (one Tab stop, arrows)
