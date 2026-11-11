@@ -85,3 +85,12 @@ Head `39a023ca`. Gate PASS (orchestrator run against `9a514612`). F-4 done: `els
 
 ## Result
 Gate PASS (also after merging `main` @ `d161dc19`) · CI green · open: none in code; the §10 manual check (VoiceOver, Full Keyboard Access) is the only evidence for AC-1.1's Tab clause, UX-1 and UX-2 · follow-ups: UX-3 ("provisional member" outcome copy) · to user: UX-2 answered (one Tab stop, arrows)
+
+## After ready — user request
+The user asked (2026-11-11) to fix UX-3 on this PR ("fix the member copy here"): it moves from Follow-up to Fix now.
+
+**F-5 — The provisional outcome says "record"** (from UX-3)
+Files: `macos/App/Platform/L10n.swift` (`L10n.Conclusions.outcomeProvisional`), `macos/App/Resources/Localizable.xcstrings` (`conclusions.outcome.provisional`), `macos/ProvenenciaTests/ReconciledValueDisplayTests.swift:243`. Skill: `add-localized-string`.
+Failing test first: change the expectation at `ReconciledValueDisplayTests.swift:243` to `"provisional record"`; it fails.
+Do: the default value and the catalog `en` value become "provisional record"; the comment becomes "Auto-reconciler outcome: the record's Subject is only provisionally linked to this person, so it is reasoning only". Key unchanged. Leave `docs/conclusion-reconciliation.md` (it describes the data model, where "member" is the domain term). Add one line to the plan's Landed note naming the user's request and F-5.
+Check: `rg -n '"provisional member"' macos` prints nothing; scripts/check-pr.sh PASS.
