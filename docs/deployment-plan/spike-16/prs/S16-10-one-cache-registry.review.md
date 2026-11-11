@@ -1,6 +1,6 @@
 # Review — S16-10 One cache registry
 
-**Verdict:** Fits with changes — Ready with changes, 2 rounds; To user: the keyed Fill wording (M-14)
+**Verdict:** Fits with changes — Ready with changes, 2 rounds; To user: answered (write path, typed get-or-fill)
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -90,3 +90,7 @@
 **Answer:** To user (plan § 12 Open question 1, recommendation: accept) for the Fill wording; Fixed for the rest — STEP-8 rewords the "Every cache names the signal" rule's `DropOnHandleCommit` clause to name the three known exceptions, and D-18 marks them in the table.
 
 Minor, round 2: `SourcesModel.searchKeyCache` and `EvidenceGraphModel.snapshotMemo` are not single-entry `Memo` holders — Fixed in D-18. D-13's `Metas` error — already Fixed under X-9.
+
+## After round 2 — the user's answer on M-14 (2026-11-11)
+
+The user asked for the Fill question to be analyzed against the batch's purpose. Owners, not display code, read the registry; the cost the choice decides is the read–cast–compute–store block every owner writes (six today, one more per Batch 2 cache PR). The user chose typed get-or-fill handles: `Keyed[T]` with `Get(g, id, fill)` and `GetMany(g, ids, fill)` (batch, for S16-18's frontier loads) and `Whole[T]` with a lazy Build. Plan: D-1, D-2, D-8, D-9, D-10, D-12, D-21 rewritten; Rules this plan bends records it; STEP-8 rewords the rule; `NewReader` drops its always-default `rules` parameter (D-9, Stop condition added). Not re-reviewed: the change is the shape the reviewers' M-3 and M-13 pointed toward, and it touches no Current state row.
