@@ -351,6 +351,14 @@ func TestAppendSuggestion(t *testing.T) {
 			},
 		},
 		{
+			name: "ListSuggestionsTx with a nil tx is invalid",
+			run: func(t *testing.T, c *database.Catalog) {
+				if _, err := ListSuggestionsTx(nil, make([]byte, 16), vocabkey.LevelSource); !errors.Is(err, ErrInvalid) {
+					t.Fatalf("got %v", err)
+				}
+			},
+		},
+		{
 			name: "levels that hold no metadata are rejected",
 			run: func(t *testing.T, c *database.Catalog) {
 				typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{

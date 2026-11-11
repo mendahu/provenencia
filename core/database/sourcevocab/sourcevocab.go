@@ -99,9 +99,6 @@ func AppendSuggestion(c *database.Catalog, typeID, fieldID []byte, level vocabke
 // ListSuggestions returns a type's suggested fields at one level, ordered by
 // sort_order. A level outside vocabkey.MetadataLevels is ErrInvalid.
 func ListSuggestions(c *database.Catalog, typeID []byte, level vocabkey.Level) ([]Suggestion, error) {
-	if !level.HoldsMetadata() {
-		return nil, ErrInvalid
-	}
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
@@ -109,8 +106,12 @@ func ListSuggestions(c *database.Catalog, typeID []byte, level vocabkey.Level) (
 	return listSuggestions(db, typeID, level)
 }
 
-// ListSuggestionsTx is ListSuggestions on an open transaction.
+// ListSuggestionsTx is ListSuggestions on an open transaction. A nil tx is
+// ErrInvalid.
 func ListSuggestionsTx(tx *sql.Tx, typeID []byte, level vocabkey.Level) ([]Suggestion, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
 	return listSuggestions(tx, typeID, level)
 }
 
@@ -128,13 +129,12 @@ func listSuggestions(q database.Querier, typeID []byte, level vocabkey.Level) ([
 	defer rows.Close()
 	var out []Suggestion
 	for rows.Next() {
-		var s Suggestion
 		var sort sql.NullInt64
-		if err := rows.Scan(
-			&s.Field.ID, &s.Field.Key, &s.Field.Origin, &s.Field.Label, &s.Field.DataType, &s.Field.Description, &sort,
-		); err != nil {
+		f, err := metadatafields.ScanField(rows, &sort)
+		if err != nil {
 			return nil, err
 		}
+		s := Suggestion{Field: f}
 		if sort.Valid {
 			s.SortOrder = int(sort.Int64)
 		}
