@@ -23,4 +23,11 @@ struct ConclusionPageSectionSwitchTests {
         #expect(ConclusionPageSectionSwitch(
             from: .timeline, to: .timeline, sectionsFocused: true, switcherFocused: true) == nil)
     }
+
+    @Test func arrowOnTheSwitcherSpeaksAndClaims() {
+        let arrow = ConclusionPageSectionSwitch(
+            from: .vitals, to: .family, sectionsFocused: false, switcherFocused: true)
+        #expect(arrow?.announcement == "Family shown.")
+        #expect(arrow?.claimsSwitcher == true)
+    }
 }

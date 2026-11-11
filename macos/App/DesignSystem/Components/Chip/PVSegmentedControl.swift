@@ -8,10 +8,14 @@ import SwiftUI
 /// VoiceOver. A `focus:` handle lands on the selected segment, or on the first
 /// enabled one when the selected one is disabled, so a host can Tab or write
 /// focus into the control like any other kit field. With a
-/// handle every enabled segment is also a Tab stop that Space chooses, so Tab
-/// reaches each option at default macOS settings. The control does not read the
-/// handle's `next` / `previous` neighbours: Tab between segments is left to the
-/// key loop. With no handle it adds no Tab stop (as today).
+/// handle the control is one Tab stop, on the segment that carries it: Space
+/// chooses, and ← / → move the selection to the neighbouring enabled segment
+/// (no wrap), as a native segmented control does. The control does not claim
+/// focus after a choice: a host whose handle follows the selection re-claims
+/// it, so while the keyboard is on the control (the handle is focused) Space,
+/// an arrow or a ⌘ shortcut keep focus on the newly selected segment. The
+/// control does not read the handle's `next` / `previous` neighbours. With no
+/// handle it adds no Tab stop (as today).
 ///
 /// Meaning-free like `PVChip`: the options and what choosing one does belong
 /// to the caller.
@@ -124,25 +128,41 @@ struct PVSegmentedControl<Value: Hashable>: View {
         return items.first(where: { !$0.isDisabled })?.id
     }
 
-    /// The chip. With a host handle each enabled segment is a Tab stop that
-    /// Space chooses, and the focus target carries the handle.
+    /// The value an arrow key moves to from `selection`: the next (or previous)
+    /// enabled item, skipping disabled ones, with no wrap; nil at either end.
+    static func arrowTarget(items: [Item], selection: Value, forward: Bool) -> Value? {
+        guard let index = items.firstIndex(where: { $0.value == selection }) else { return nil }
+        let candidates = forward ? Array(items[(index + 1)...]) : Array(items[..<index].reversed())
+        return candidates.first(where: { !$0.isDisabled })?.value
+    }
+
+    /// The chip. With a host handle only the focus target is a Tab stop: it
+    /// carries the handle, Space chooses it, and ← / → move the selection.
+    /// Every other enabled segment is a plain clickable chip.
     @ViewBuilder
     private func segment(_ item: Item) -> some View {
-        if let focus, !item.isDisabled {
-            let stop = chip(item)
-                .focusable()
-                .onKeyPress(.space) {
-                    select(item.value)
-                    return .handled
-                }
-            if item.id == Self.focusTarget(items: items, selection: selection) {
-                focus.apply(AnyView(stop))
-            } else {
-                stop
-            }
+        if let focus, !item.isDisabled, item.id == Self.focusTarget(items: items, selection: selection) {
+            focus.apply(AnyView(
+                chip(item)
+                    .focusable()
+                    .onKeyPress(.space) {
+                        select(item.value)
+                        return .handled
+                    }
+                    .onKeyPress(.leftArrow) { arrow(forward: false) }
+                    .onKeyPress(.rightArrow) { arrow(forward: true) }
+            ))
         } else {
             chip(item)
         }
+    }
+
+    private func arrow(forward: Bool) -> KeyPress.Result {
+        guard let value = Self.arrowTarget(items: items, selection: selection, forward: forward) else {
+            return .ignored
+        }
+        select(value)
+        return .handled
     }
 
     @ViewBuilder

@@ -339,8 +339,7 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             refreshing: refreshing || sectionRefreshing,
                             refreshFailure: refreshFailure,
                             handle: handle,
-                            retry: readAgain,
-                            select: { navigation.go(to: navigation.currentLocation.withPageSection($0)) }
+                            retry: readAgain
                         )
                     },
                     primary: {
@@ -385,7 +384,6 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
     let refreshFailure: String?
     let handle: QueryHandle<CatalogConclusionDetail>
     let retry: () -> Void
-    let select: (ConclusionPageSection) -> Void
 
     @Environment(WorkspaceNavigation.self) private var navigation
     @FocusState private var switcherFocus: ConclusionPageSection?
@@ -393,7 +391,10 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
 
     /// Chooses a section, then speaks it and, when the keyboard was in the
     /// column about to be replaced or on the switcher, keeps it on the switcher.
-    /// Focus is read before `select`, while the old column still holds it.
+    /// Focus is read before the move, while the old column still holds it.
+    /// The segmented control does not claim focus after a choice: with one Tab
+    /// stop, `switcherFocus != nil` means the keyboard is on the switcher, so
+    /// Space, an arrow or ⌘1–⌘5 re-claim it for the newly selected segment.
     private func choose(_ section: ConclusionPageSection) {
         let sectionSwitch = openPageSection.flatMap {
             ConclusionPageSectionSwitch(
@@ -403,7 +404,7 @@ private struct ConclusionDetailHeaderBand<Content: ConclusionDetailBody, Seconda
                 switcherFocused: switcherFocus != nil
             )
         }
-        select(section)
+        navigation.go(to: navigation.currentLocation.withPageSection(section))
         guard let sectionSwitch, navigation.currentLocation.openPageSection == sectionSwitch.to else { return }
         AccessibilityAnnouncement.post(sectionSwitch.announcement)
         if sectionSwitch.claimsSwitcher {

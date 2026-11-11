@@ -31,6 +31,7 @@
 ## Landed
 
 - The version bump is 0.9.0 → 0.9.1 (main was at 0.9.0).
+- Round 1 (UX-2, user decision 2026-11-11): a `PVSegmentedControl` with a `focus:` handle is one Tab stop and ←/→ move the selection, not one Tab stop per segment; the Out line, §6 States and manual check step 2 changed to match (F-1).
 
 ## 1. Objective
 
@@ -90,7 +91,7 @@ A researcher on VoiceOver or Full Keyboard Access keeps their place on the Perso
 | Back restoring scroll, folds and focus | P-19, [`docs/ideas/person-page-followups.md`](../../../ideas/person-page-followups.md) |
 | Announcing a section reached by Back, Forward or a link (AC-1.6) | not planned: the Back menu names its target (`conclusions.section.leaf`), and a link opens a new page, which VoiceOver reads |
 | An announcement for a Remove on the Evidence graph's own Unpromote | not planned: the graph shows the card leave, and P-12 names the Sources section only |
-| A Tab order between segments (`next` / `previous` neighbours) | not planned: the control leaves Tab between segments to the key loop, as its doc comment says |
+| A Tab order between segments (`next` / `previous` neighbours) | ~~not planned: the control leaves Tab between segments to the key loop, as its doc comment says~~ superseded by the user on 2026-11-11 in round 1 of the ship log (UX-2): one Tab stop, arrows move the selection |
 | Focus handles for the other three `PVSegmentedControl` callers | not planned: no audit finding names them |
 | Rewording "handle" or "members" in docs, the audit, archives and code comments | not planned: P-17 is about copy the researcher sees |
 
@@ -205,7 +206,7 @@ None — no wire change.
 | Sections-focused key | `FocusedValues.conclusionSectionsFocused` *(new)* | `ConclusionDetailPage.swift`, beside `ConclusionDetailPageSectionsContext` | D-3 |
 | Remove outcome | `UnpromotePageOutcome`, `UnpromoteFlow.confirm(session:userID:leavingPage:announce:)` *(new)* | `macos/App/Features/Catalog/Unpromote/UnpromoteFlow.swift` | |
 
-States: nothing new is drawn. Accessibility: the switcher gains Tab stops at default macOS settings (one per enabled segment, as the control documents); ⌘1–⌘5 keep working with focus anywhere.
+States: nothing new is drawn. Accessibility: the switcher gains Tab stops at default macOS settings (~~one per enabled segment, as the control documents~~ superseded by the user on 2026-11-11 in round 1 of the ship log (UX-2): one Tab stop, arrows move the selection); ⌘1–⌘5 keep working with focus anywhere.
 
 ### Strings
 
@@ -301,7 +302,7 @@ Sweep names: `L10n.Unpromote.confirmMessage` (resource form), `unpromote.confirm
 Turn on VoiceOver (⌘F5) and Full Keyboard Access (System Settings → Keyboard → Keyboard navigation). Use a project with a person who has two records on different Evidence graphs, and a second person with one record.
 
 1. Open the first person on Family. Tab to a family tile. Press ⌘3. Hear "Timeline shown."; the Timeline segment shows its focus ring; Tab moves into the Timeline (AC-1.1).
-2. Shift-Tab to the Timeline segment, press ⌘4. Hear "Gallery shown."; focus is on the Gallery segment (AC-1.2). Tab to the Vitals segment and press Space: hear "Vitals shown."; focus stays on Vitals. Tab into the Vitals rows, then click the Family segment with the mouse: hear "Family shown."; the next Tab does not start from the window's first view.
+2. Shift-Tab to the Timeline segment, press ⌘4. Hear "Gallery shown."; focus is on the Gallery segment (AC-1.2). press → to move to Vitals: hear "Vitals shown."; focus stays on Vitals. Tab into the Vitals rows, then click the Family segment with the mouse: hear "Family shown."; the next Tab does not start from the window's first view.
 3. Click in the omnibar field, press ⌘2. Hear "Family shown."; the caret stays in the omnibar (AC-1.4). Press ⌘2 again: nothing is spoken (AC-1.5). Press Back (⌘[): nothing is spoken (AC-1.6).
 4. The header reads "2 records" (AC-3.1); an Event page and a Place page read "N records".
 5. Open Sources. Unpromote one record: the confirm ends ", and the person stays." (AC-3.2). Confirm: hear "{record} unpromoted."; the page stays (AC-2.1).
