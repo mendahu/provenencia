@@ -5,8 +5,9 @@ import SwiftUI
 /// `select` action, so a caller that navigates, sets a model field or refuses
 /// while locked uses it the same way. Each segment is a `PVChip` (so it shows
 /// keyboard focus and reads as selected); the group reads its `label` to
-/// VoiceOver. A `focus:` handle lands on the first enabled segment, so a host
-/// can Tab or write focus into the control like any other kit field. With a
+/// VoiceOver. A `focus:` handle lands on the selected segment, or on the first
+/// enabled one when the selected one is disabled, so a host can Tab or write
+/// focus into the control like any other kit field. With a
 /// handle every enabled segment is also a Tab stop that Space chooses, so Tab
 /// reaches each option at default macOS settings. The control does not read the
 /// handle's `next` / `previous` neighbours: Tab between segments is left to the
@@ -114,8 +115,17 @@ struct PVSegmentedControl<Value: Hashable>: View {
         .accessibilityLabel(Text(label))
     }
 
+    /// The id of the segment that carries the host's focus handle: the selected
+    /// one when it is enabled, else the first enabled one, else none.
+    static func focusTarget(items: [Item], selection: Value) -> String? {
+        if let selected = items.first(where: { $0.value == selection && !$0.isDisabled }) {
+            return selected.id
+        }
+        return items.first(where: { !$0.isDisabled })?.id
+    }
+
     /// The chip. With a host handle each enabled segment is a Tab stop that
-    /// Space chooses, and the first enabled one carries the handle.
+    /// Space chooses, and the focus target carries the handle.
     @ViewBuilder
     private func segment(_ item: Item) -> some View {
         if let focus, !item.isDisabled {
@@ -125,7 +135,7 @@ struct PVSegmentedControl<Value: Hashable>: View {
                     select(item.value)
                     return .handled
                 }
-            if item.id == items.first(where: { !$0.isDisabled })?.id {
+            if item.id == Self.focusTarget(items: items, selection: selection) {
                 focus.apply(AnyView(stop))
             } else {
                 stop
