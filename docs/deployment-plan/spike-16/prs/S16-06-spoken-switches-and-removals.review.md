@@ -1,7 +1,7 @@
 # Review — S16-06 Section switches and removals are spoken
 
-**Verdict:** Fits with changes — Not ready (round 1, before fixes)
-**Rounds:** 1 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 - None.
@@ -76,3 +76,34 @@ Verified: `leaveGuard` is set only by `CitationComposerView.swift` and `PromoteV
 
 ### Outside lens (CON) · Space on a non-selected segment reports `switcherFocused` false
 **Answer:** Fixed — §6 Edges and manual check step 2 cover it; AC-1.2 now uses ⌘4 from the focused selected segment, which is what T-2's case describes.
+
+## Round 2
+
+Maintainability: **Fits**, no new findings; every round-1 answer checked against the code. Executability: **Ready with changes**.
+
+### Q10 · note · `macos-client-patterns.md` Cache contract item 2 still names `UnpromoteFlow.confirm`'s `apply`
+**Answer:** Fixed — STEP-7 rewrites that sentence to name `confirm(session:userID:leavingPage:)`.
+
+### M-3 follow-up · note · The band could build `select` itself now that it reads navigation
+**Answer:** Logged — the band keeps its `select` parameter; Event and Place share the frame, and the change is out of this PR's findings.
+
+### X-1 · blocker · STEP-4 makes `apply:` private while `PersonSourcesSection` still calls it
+**Answer:** Fixed — the `PersonSourcesSection.confirm()` rewrite moves into STEP-4; STEP-5 only removes the old string.
+
+### X-2 · blocker · STEP-5's `rg` would match `UnpromotePageOutcome.after`
+**Answer:** Fixed — `deletedHandles.contains` is searched only in `macos/App/Features/Conclusions`.
+
+### X-3 · major · `@discardableResult` unstated
+**Answer:** Fixed — D-8 and D-9 put it on both public `confirm` methods; D-9 says the no-`apply` overload is new.
+
+### X-4 · major · Enum labels and the `switch` local
+**Answer:** Fixed — D-7's cases are unlabelled; D-5 names the local `sectionSwitch`.
+
+### X-5 · minor · Test fixtures
+**Answer:** Fixed — STEP-4 says to copy the effects shape before deleting the old test; T-6 names the error and drops the unassertable "no write".
+
+### X-6 · minor · Mouse click from the column
+**Answer:** Fixed — manual check step 2 adds the click; a Stop condition covers it failing.
+
+### X-7 · minor · Catalog fields, imports, temptation
+**Answer:** Logged — `add-localized-string` covers the catalog fields; the rest needs no change.
