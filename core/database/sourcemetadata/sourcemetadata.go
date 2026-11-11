@@ -105,6 +105,11 @@ func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchang
 	}
 	field := fields[string(in.FieldID)]
 
+	normalized, err := normalizeValue(field.DataType, in.ValueText)
+	if err != nil {
+		return Row{}, nil, err
+	}
+
 	prev, err := getPairTx(tx.Tx, st, owner, in.FieldID)
 	creating := errors.Is(err, sql.ErrNoRows)
 	if err != nil && !creating {
@@ -112,7 +117,7 @@ func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchang
 	}
 
 	if creating {
-		row, change, err := insertValueTx(tx.Tx, st, owner, field, in.ValueText)
+		row, change, err := insertValueTx(tx.Tx, st, owner, field.ID, normalized)
 		if err != nil {
 			return Row{}, nil, err
 		}
@@ -124,10 +129,6 @@ func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchang
 		return row, []rowchange.Change{change}, nil
 	}
 
-	normalized, err := normalizeValue(field.DataType, in.ValueText)
-	if err != nil {
-		return Row{}, nil, err
-	}
 	if prev.ValueText == normalized {
 		return prev, nil, nil
 	}
@@ -138,32 +139,28 @@ func Set(tx *database.Tx, userID []byte, owner Owner, in Input) (Row, []rowchang
 	return row, []rowchange.Change{change}, nil
 }
 
-// insertValueTx trims and normalizes valueText for the field's data type, inserts
-// the value row, and returns it with its create change. It writes no layout
+// insertValueTx inserts the already normalized text as the owner's value for
+// the field and returns the row with its create change. It writes no layout
 // row; Set appends one and CreateAll writes the caller's.
-func insertValueTx(tx *sql.Tx, st *store, owner Owner, field metadatafields.Field, valueText string) (Row, rowchange.Change, error) {
-	normalized, err := normalizeValue(field.DataType, strings.TrimSpace(valueText))
-	if err != nil {
-		return Row{}, rowchange.Change{}, err
-	}
+func insertValueTx(tx *sql.Tx, st *store, owner Owner, fieldID []byte, normalized string) (Row, rowchange.Change, error) {
 	id, err := uuid.NewV7()
 	if err != nil {
 		return Row{}, rowchange.Change{}, err
 	}
 	idBytes := id[:]
-	if _, err := tx.Exec(st.insert, idBytes, owner.ID, field.ID, database.NullString(normalized)); err != nil {
+	if _, err := tx.Exec(st.insert, idBytes, owner.ID, fieldID, database.NullString(normalized)); err != nil {
 		return Row{}, rowchange.Change{}, mapConstraint(err)
 	}
 	row := Row{
 		ID:        append([]byte(nil), idBytes...),
 		Owner:     Owner{Level: owner.Level, ID: append([]byte(nil), owner.ID...)},
-		FieldID:   append([]byte(nil), field.ID...),
+		FieldID:   append([]byte(nil), fieldID...),
 		ValueText: normalized,
 	}
 	fields := map[string]rowchange.FieldDiff{
 		"id":           {Old: nil, New: id.String()},
 		st.ownerColumn: {Old: nil, New: database.UUIDString(owner.ID)},
-		"field_id":     {Old: nil, New: database.UUIDString(field.ID)},
+		"field_id":     {Old: nil, New: database.UUIDString(fieldID)},
 	}
 	if normalized != "" {
 		fields["value_text"] = rowchange.FieldDiff{Old: nil, New: normalized}
@@ -320,6 +317,22 @@ func Apply(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchange.Ch
 	return apply(tx, userID, st, owner, have, d)
 }
 
+// checkFieldIDs is ErrInvalid unless every id is 16 bytes and listed once. It
+// returns the set of ids.
+func checkFieldIDs(ids [][]byte) (map[string]struct{}, error) {
+	seen := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		if len(id) != 16 {
+			return nil, ErrInvalid
+		}
+		if _, dup := seen[string(id)]; dup {
+			return nil, ErrInvalid
+		}
+		seen[string(id)] = struct{}{}
+	}
+	return seen, nil
+}
+
 // apply checks the whole draft before it writes anything, then writes the
 // value changes (deletes in field-id order, then inserts and updates in draft
 // order) and the layout changes (inserts and updates in draft order).
@@ -334,32 +347,24 @@ func apply(tx *database.Tx, userID []byte, st *store, owner Owner, have stored, 
 		return nil, err
 	}
 
-	ids := make([][]byte, 0, len(d.Values)+len(d.Layout))
-	inValues := make(map[string]struct{}, len(d.Values))
-	for _, in := range d.Values {
-		if len(in.FieldID) != 16 {
-			return nil, ErrInvalid
-		}
-		if _, dup := inValues[string(in.FieldID)]; dup {
-			return nil, ErrInvalid
-		}
-		inValues[string(in.FieldID)] = struct{}{}
-		ids = append(ids, in.FieldID)
+	valueIDs := make([][]byte, len(d.Values))
+	for i, in := range d.Values {
+		valueIDs[i] = in.FieldID
 	}
-	inLayout := make(map[string]struct{}, len(d.Layout))
-	for _, l := range d.Layout {
-		if len(l.FieldID) != 16 {
-			return nil, ErrInvalid
-		}
-		if _, dup := inLayout[string(l.FieldID)]; dup {
-			return nil, ErrInvalid
-		}
-		inLayout[string(l.FieldID)] = struct{}{}
-		ids = append(ids, l.FieldID)
+	inValues, err := checkFieldIDs(valueIDs)
+	if err != nil {
+		return nil, err
 	}
+	layoutIDs := make([][]byte, len(d.Layout))
+	for i, l := range d.Layout {
+		layoutIDs[i] = l.FieldID
+	}
+	if _, err := checkFieldIDs(layoutIDs); err != nil {
+		return nil, err
+	}
+	ids := append(valueIDs, layoutIDs...)
 	var fields map[string]metadatafields.Field
 	if len(ids) > 0 {
-		var err error
 		if fields, err = loadFields(tx.Tx, ids); err != nil {
 			return nil, err
 		}
@@ -397,7 +402,7 @@ func apply(tx *database.Tx, userID []byte, st *store, owner Owner, have stored, 
 		prev, ok := haveValue[string(in.FieldID)]
 		switch {
 		case !ok:
-			_, change, err := insertValueTx(tx.Tx, st, owner, fields[string(in.FieldID)], in.ValueText)
+			_, change, err := insertValueTx(tx.Tx, st, owner, in.FieldID, normalized[i])
 			if err != nil {
 				return nil, err
 			}
@@ -533,15 +538,8 @@ func Reorder(tx *database.Tx, userID []byte, owner Owner, fieldIDs [][]byte) ([]
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	seen := make(map[string]struct{}, len(fieldIDs))
-	for _, fieldID := range fieldIDs {
-		if len(fieldID) != 16 {
-			return nil, ErrInvalid
-		}
-		if _, dup := seen[string(fieldID)]; dup {
-			return nil, ErrInvalid
-		}
-		seen[string(fieldID)] = struct{}{}
+	if _, err := checkFieldIDs(fieldIDs); err != nil {
+		return nil, err
 	}
 
 	if err := requireOwner(tx.Tx, st, owner); err != nil {
