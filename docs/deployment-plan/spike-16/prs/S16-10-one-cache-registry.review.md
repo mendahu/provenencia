@@ -1,0 +1,73 @@
+# Review — S16-10 One cache registry
+
+**Verdict:** Fits with changes — Not ready, fixed in round 1 (round 2 waits on the user's answer to M-1)
+**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+
+## To user
+
+- **M-1 · rule K-21 and a write's graph.** Plan § 12 Open question 1. Recommendation (a): `Value` refuses a graph-lifetime Build on a write's `Over` graph and allows a catalog-lifetime one (two small config reads, as today's cold path does per call); reword the rule to say so; the mechanism enforces it for S16-12 and S16-15.
+
+## Writer's own calls
+
+- D-9 / D-12: the drop-on-any-handle rules of `for`, `siblings` and the match index move into their owners' Apply now, so `DropOnHandleCommit` and `dropHandleMemos` go in this PR, not S16-16; the map's S16-16 and S16-20 wording follows (STEP-8).
+- D-2: no keyed Fill callback; the owner's `SetMemo` plus Apply replace the design's "Fill plus Deps".
+- D-11: `WarmNeeded`, `MarkWarm` and the re-warm after each `Do` go; the alias index and name format survive every in-app change already.
+- D-15: Evidence-graph memos stop dropping on an alias index or name format change.
+- D-6: keyed caps 65,536; past the cap a key is not stored.
+- D-17: only persons grow for the 16,000 fixture.
+
+## Round 1
+
+### M-1 · blocker · A whole Build runs on the write path (`Over`), against working rule K-21
+**Answer:** To user — plan § 12 Open question 1, three options with a recommendation; STEP-3 is blocked on it; status Draft.
+
+### M-2 · major · A keyed entry with nil Apply keeps everything on a commit
+**Answer:** Fixed — D-3: `RegisterKeyed` panics without an Apply; AC-1.8, T-6.
+
+### M-3 · major · `PerKey bool` plus runtime panics where two slot types would do
+**Answer:** Fixed — D-1, D-8: `KeyedEntry`/`KeySlot`/`RegisterKeyed` and `WholeEntry`/`WholeSlot`/`RegisterWhole`; kind-mismatch panics gone from AC-1.8.
+
+### M-4 · major · `Reads` already means something else on the commit path
+**Answer:** Fixed — D-4 `DerivedFrom`; whole accessors `Value`/`SetValue`/`DropValue` (D-8); STEP-8 rewords the rule, the design and the map.
+
+### M-5 · major · The cache doc is held only by a manual `rg`
+**Answer:** Fixed — D-19 `EntryNames` and `TestCacheDocListsEveryEntry` (T-16), after `TestKnobInventoryMatchesRegistry`.
+
+### M-6 · major · Evidence-graph memos keep a hand-written vocabulary drop in `OnCommit`
+**Answer:** Fixed (doc and map) — D-15: the loop is listed in `docs/catalog-caches.md` as the store's one hand-written drop, owned by S16-13; STEP-8 adds it to S16-13's scope (rule K-18 keeps per-graph memos in the store, which S16-13 reshapes). Out row added.
+
+### M-7 · major · The Swift half of the doc hand-copies `descriptor`
+**Answer:** Fixed — D-18 (d): one row pointing to `CatalogQueryKey.Kind.descriptor`, separate rows only for caches outside it.
+
+### M-8 · major · `errNoGraph` beside `database.ErrClosed`
+**Answer:** Fixed — D-10 returns `database.ErrClosed`; `errNoGraph` removed from Codebase fit.
+
+### M-9 · minor · `valuerules.Querier` and `evidencelayer.Load`'s comment
+**Answer:** Fixed — **Deletes**, STEP-4 files.
+
+### M-10 · minor · Benchmark tied to `promotealign`'s private fixture
+**Answer:** Declined — the fixture is built from `promotealign_test`'s `fixture` methods (`newFixture`, `promote`, `Place`, `filedBirth`, `propose` in `promotealign_test.go`), so moving it is a package split, not a file move; no PR planned so far measures outside `promotealign`. Out row: not planned until one does.
+
+### M-11 · nit · `Cached` belongs in `graph.go`
+**Answer:** Fixed — D-8, STEP-1.
+
+### X-1 · blocker · Initialization cycle, and the "fresh profiler" shares the stored map
+**Answer:** Fixed — D-12 registers in `init()`; D-13 adds `newProfilerWith(…, done)` and `buildShortlist(g, p, cfg)`, and the check reads `loadConfig(g)` and `valuerules.Metas(g)`.
+
+### X-2 · major · Fixture at 16,000 persons not derivable
+**Answer:** Fixed — D-17: `largeShape(…, persons int)` changes only `Persons`; `newLargeFixture(tb testing.TB, persons int)` (`newFixture` and `must` already take `testing.TB`); the benchmark reports `handles` and key counts; D-6's "37,000" claim replaced by a measured Stop condition (half the cap).
+
+### X-3 · major · Benchmark fill steps open
+**Answer:** Fixed — D-17 lists each call in order; kinship/for/siblings is one metric with three key counts.
+
+### X-4 · major · T-6 needs a registry snapshot hook
+**Answer:** Fixed — D-20 `SnapshotRegistryForTest` in `graphcache/export_test.go` *(new)*.
+
+### X-5 · major · Does a Build's store drop readers?
+**Answer:** Fixed — D-2: a first fill by Build drops no reader; `SetValue` does; AC-1.5, T-4.
+
+### X-6 · major · Drops move after the reload; error path
+**Answer:** Fixed — D-3: Applies run in registration order; the first error is `OnCommit`'s, and `Catalog.Notify` (`core/database/listen.go`) then calls `Drop()` on the graph, so no stale entry survives a failed commit.
+
+### X-7 · minor · Small choices
+**Answer:** Fixed — drops return no error (D-8); `Warm`/`Invalidate` signatures and nil-graph behavior (D-10); `SetMemo` nil and short-id rule (D-8); held-key replace under Cap (D-6); the extra call sites are in § 4; `TestDropLeaves*` cases go to T-1/T-9; `assocBetween` call sites (D-16); the Known trap is a new line (STEP-8, § 4 Guides row); the pointless line-241 note removed. The Swift enumeration is now one descriptor row plus the named outside caches (D-18).
