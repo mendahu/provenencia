@@ -1,7 +1,7 @@
 # Ship log — S16-09 Conclusion pages refresh from the Sources they cite and show their last value while they refresh
 
 **Plan:** [`S16-09-source-follow-and-stale-pages.md`](S16-09-source-follow-and-stale-pages.md) · **Branch:** `s16-09-source-follow-and-stale-pages` · **PR:** [#780](https://github.com/mendahu/provenencia/pull/780)
-**State:** stopped — main merge and push blocked: git cannot reach github.com from the sandbox
+**State:** ready
 
 ## Before round 0
 
@@ -60,7 +60,8 @@ Nits (logged): `MNT-6 · WorkspaceSession.swift:250 · trimHiddenEntities counts
 Gate PASS on `baa1b9b4` (orchestrator run).
 
 ## Finish
-- `origin/main` moved to `84ed2753` (seen through `gh api`); not yet merged into the branch: `git fetch` cannot resolve github.com from this sandbox (it worked intermittently earlier). Waiting on the user to fetch, merge `origin/main`, and push; then the gate runs again before `gh pr ready`.
+- `origin/main` moved to `84ed2753` (S15-06 plan docs only; no file this PR touches). `git` could not reach github.com from the sandbox for a while; the user pushed the ship log, then fetch worked and `origin/main` was merged (`36c2b0e4`). Gate PASS on the merged head.
+- `gh pr ready 780`; CI green (localizable, test ×2).
 
 ## Result
-Gate PASS (`baa1b9b4`) · CI — (not ready yet) · open: none · follow-ups: none · to user: — · nits logged: MNT-4, MNT-5 (fixed in F-2), MNT-6, MNT-7, CON-4, UX-2
+Gate PASS (`baa1b9b4`) · CI green · open: none · follow-ups: none · to user: — · nits logged: MNT-4, MNT-5 (fixed in F-2), MNT-6, MNT-7, CON-4, UX-2
