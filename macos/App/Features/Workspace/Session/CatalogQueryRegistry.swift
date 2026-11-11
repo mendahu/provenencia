@@ -33,6 +33,9 @@ struct CatalogQueryDescriptor: Sendable {
     /// (`apply`), and `.handle` keys are the pages the hidden-entity cap counts
     /// (`apply(location:)`).
     var deletedWith: CatalogDeletedEntity? = nil
+    /// Whether this is a per-entity page key, one the hidden-entity cap counts
+    /// and `shownOrder` orders: its `ownId` is a handle.
+    var isEntityPage: Bool { deletedWith == .handle }
     /// Nil when the kind names no mutation in `invalidateOn`.
     let invalidation: (@Sendable (ProjectKey, CatalogMutation) -> CatalogQueryInvalidation)?
     /// In-place updates run, in order, before invalidation. Empty for kinds

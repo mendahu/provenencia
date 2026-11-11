@@ -233,7 +233,7 @@ final class WorkspaceSession {
             key.kind.descriptor.warm(self, key)
         }
         var onScreen = Set<String>()
-        for key in place.queryKeys where key.kind.descriptor.deletedWith == .handle {
+        for key in place.queryKeys where key.kind.descriptor.isEntityPage {
             guard let id = key.ownId else { continue }
             onScreen.insert(id)
             shownOrder.removeAll { $0 == id }
@@ -247,10 +247,7 @@ final class WorkspaceSession {
     /// entity no place showed counts as least recently shown. The entities on
     /// screen are never hidden, whichever of their keys the place warms.
     private func trimHiddenEntities(keeping onScreen: Set<String>) {
-        var hidden = Set<String>()
-        for key in handles.keys where key.project == projectKey && key.kind.descriptor.deletedWith == .handle {
-            if let id = key.ownId, !onScreen.contains(id) { hidden.insert(id) }
-        }
+        let hidden = Set(warmedKeys(deletedWith: .handle).map(\.id).filter { !onScreen.contains($0) })
         guard hidden.count > Self.maxHiddenEntities else { return }
         let ordered = hidden.subtracting(shownOrder).sorted() + shownOrder.filter(hidden.contains)
         evict(.handle, ids: Set(ordered.prefix(hidden.count - Self.maxHiddenEntities)))
@@ -501,15 +498,23 @@ final class WorkspaceSession {
         handles[key]?.markStale()
     }
 
-    /// Drops the hidden keys of this project whose descriptor's `deletedWith` is
-    /// `entity` and whose `ownId` is in `ids`. A visible key stays: its page
-    /// holds no handle across an eviction.
+    /// This project's warmed keys whose descriptor's `deletedWith` is `entity`,
+    /// each with its `ownId`.
+    private func warmedKeys(deletedWith entity: CatalogDeletedEntity) -> [(key: CatalogQueryKey, id: String)] {
+        handles.keys.compactMap { key in
+            guard key.project == projectKey, key.kind.descriptor.deletedWith == entity, let id = key.ownId else { return nil }
+            return (key, id)
+        }
+    }
+
+    /// Drops the hidden keys of `entity` whose `ownId` is in `ids`. It works key
+    /// by key (a visible key stays: its page holds no handle across an
+    /// eviction), where the cap works entity by entity.
     private func evict(_ entity: CatalogDeletedEntity, ids: Set<String>) {
-        for key in Array(handles.keys) where key.project == projectKey && !visibleKeys.contains(key) {
-            guard key.kind.descriptor.deletedWith == entity, let id = key.ownId, ids.contains(id) else { continue }
+        for (key, id) in warmedKeys(deletedWith: entity) where ids.contains(id) && !visibleKeys.contains(key) {
             evict(key)
         }
-        shownOrder.removeAll { ids.contains($0) }
+        if entity == .handle { shownOrder.removeAll { ids.contains($0) } }
     }
 
     /// Drops a key: its in-flight load is cancelled and its handle forgotten,
