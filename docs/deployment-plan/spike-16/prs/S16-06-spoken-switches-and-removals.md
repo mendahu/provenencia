@@ -179,7 +179,7 @@ None — no write, list or loop changes. The switcher has at most five items.
 ### Edges
 
 - **Assumptions.** `openPageSection` changes synchronously inside `go(to:)` when no `leaveGuard` is set (§4 Navigation); the band stays mounted across a switch (it sits in `PVPageColumns`' header). T-2 holds the switch rule; the manual check holds the mount and the timing.
-- **Neighbors.** Same section chosen again → nil switch, nothing spoken (AC-1.5, T-2). Focus in the header's Try again or lead menu → neither in the column nor on the switcher → no claim (T-2 "focus elsewhere"). Space on a segment other than the selected one: that segment has focus through `.focusable()` with no binding, so `switcherFocus` is nil and nothing is claimed; the pressed segment becomes the selected one and keeps focus because the band is not replaced (manual check step 2). A disabled selected segment → handle on the first enabled (T-1); the Conclusion switcher has none.
+- **Neighbors.** Same section chosen again → nil switch, nothing spoken (AC-1.5, T-2). Focus in the header's Try again or lead menu → neither in the column nor on the switcher → no claim (T-2 "focus elsewhere"). Only the selected segment is in the key loop (with or without Full Keyboard Access), so Space, ←/→ or ⌘1–⌘5 on the switcher always start from the bound segment and `switcherFocus != nil` claims the new one (ship log round 1, UX-2 decision; round 2, F-4). A disabled selected segment → handle on the first enabled (T-1); the Conclusion switcher has none.
 - **Removed inputs.** A Remove that also deleted another handle but not the page's → stay (AC-2.4, T-3). A Remove whose item has no `handleID` (the Evidence graph opens some with nil) → stay; the graph does not call this method.
 - **Real data.** None — no table- or seed-driven rule.
 - **Untrusted size.** None — no list read from data the app did not write.
@@ -302,7 +302,7 @@ Sweep names: `L10n.Unpromote.confirmMessage` (resource form), `unpromote.confirm
 Turn on VoiceOver (⌘F5) and Full Keyboard Access (System Settings → Keyboard → Keyboard navigation). Use a project with a person who has two records on different Evidence graphs, and a second person with one record.
 
 1. Open the first person on Family. Tab to a family tile. Press ⌘3. Hear "Timeline shown."; the Timeline segment shows its focus ring; Tab moves into the Timeline (AC-1.1).
-2. Shift-Tab to the Timeline segment, press ⌘4. Hear "Gallery shown."; focus is on the Gallery segment (AC-1.2). press → to move to Vitals: hear "Vitals shown."; focus stays on Vitals. Tab into the Vitals rows, then click the Family segment with the mouse: hear "Family shown."; the next Tab does not start from the window's first view.
+2. Shift-Tab to the Timeline segment, press ⌘4. Hear "Gallery shown."; focus is on the Gallery segment (AC-1.2). press → to move to Sources: hear "Sources shown."; focus stays on Sources. Press ← three times to reach Family, hearing each section; Tab into the Family tiles, then click the Vitals segment with the mouse: hear "Vitals shown."; the next Tab does not start from the window's first view.
 3. Click in the omnibar field, press ⌘2. Hear "Family shown."; the caret stays in the omnibar (AC-1.4). Press ⌘2 again: nothing is spoken (AC-1.5). Press Back (⌘[): nothing is spoken (AC-1.6).
 4. The header reads "2 records" (AC-3.1); an Event page and a Place page read "N records".
 5. Open Sources. Unpromote one record: the confirm ends ", and the person stays." (AC-3.2). Confirm: hear "{record} unpromoted."; the page stays (AC-2.1).

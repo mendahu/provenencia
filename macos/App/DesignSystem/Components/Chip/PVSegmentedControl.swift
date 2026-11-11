@@ -8,7 +8,8 @@ import SwiftUI
 /// VoiceOver. A `focus:` handle lands on the selected segment, or on the first
 /// enabled one when the selected one is disabled, so a host can Tab or write
 /// focus into the control like any other kit field. With a
-/// handle the control is one Tab stop, on the segment that carries it: Space
+/// handle the control is one Tab stop, with or without Full Keyboard Access:
+/// the segments without the handle leave the key loop. Space
 /// chooses, and ← / → move the selection to the neighbouring enabled segment
 /// (no wrap), as a native segmented control does. The control does not claim
 /// focus after a choice: a host whose handle follows the selection re-claims
@@ -138,7 +139,8 @@ struct PVSegmentedControl<Value: Hashable>: View {
 
     /// The chip. With a host handle only the focus target is a Tab stop: it
     /// carries the handle, Space chooses it, and ← / → move the selection.
-    /// Every other enabled segment is a plain clickable chip.
+    /// Every other segment is a clickable chip that leaves the key loop
+    /// (not focusable), with or without Full Keyboard Access.
     @ViewBuilder
     private func segment(_ item: Item) -> some View {
         if let focus, !item.isDisabled, item.id == Self.focusTarget(items: items, selection: selection) {
@@ -152,6 +154,8 @@ struct PVSegmentedControl<Value: Hashable>: View {
                     .onKeyPress(.leftArrow) { arrow(forward: false) }
                     .onKeyPress(.rightArrow) { arrow(forward: true) }
             ))
+        } else if focus != nil {
+            chip(item).focusable(false)
         } else {
             chip(item)
         }
