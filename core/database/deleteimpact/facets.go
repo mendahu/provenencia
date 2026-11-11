@@ -180,6 +180,12 @@ func buildFacetReleases() []facetRelease {
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", col{"cover_mode", colText}),
+		// An Artifact's metadata goes with it; layout rows are audited under
+		// field_id, as a Source's are.
+		rowFacet(catalogmodel.KindArtifact, "artifact_metadata", "artifact_id", "artifact_metadata", "id",
+			col{"id", colUUID}, col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
+		rowFacet(catalogmodel.KindArtifact, "artifact_metadata_layout", "artifact_id", "artifact_metadata_layout", "field_id",
+			col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 		// A graph's Citations go with it, each through releaseCitation (a graph
 		// with Subjects is refused first, so none has an Observation).
 		{
@@ -193,6 +199,10 @@ func buildFacetReleases() []facetRelease {
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
+		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_metadata", "graph_id", "evidence_graph_metadata", "id",
+			col{"id", colUUID}, col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
+		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_metadata_layout", "graph_id", "evidence_graph_metadata_layout", "field_id",
+			col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
@@ -208,6 +218,10 @@ func buildFacetReleases() []facetRelease {
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 		rowFacet(catalogmodel.KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
+		rowFacet(catalogmodel.KindMetadataField, "artifact_metadata_layout", "field_id", "artifact_metadata_layout", "field_id",
+			col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
+		rowFacet(catalogmodel.KindMetadataField, "evidence_graph_metadata_layout", "field_id", "evidence_graph_metadata_layout", "field_id",
+			col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 
 		// A type's bindings are audited under the property id (subjectvocab
 		// precedent), released from either parent. Subject types have no

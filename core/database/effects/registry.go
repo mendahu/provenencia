@@ -343,6 +343,22 @@ var registry = map[string]Effect{
 		SourceScope: field("source_id"),
 		Search:      []SearchDoc{{Kind: DocSource, Path: field("source_id")}},
 	},
+	"artifact_metadata": {
+		Entity:      "artifact_metadata",
+		SourceScope: up("artifact_id", "source_id"),
+	},
+	"artifact_metadata_layout": {
+		Entity:      "artifact_metadata_layout",
+		SourceScope: up("artifact_id", "source_id"),
+	},
+	"evidence_graph_metadata": {
+		Entity:      "evidence_graph_metadata",
+		SourceScope: up("graph_id", "source_id"),
+	},
+	"evidence_graph_metadata_layout": {
+		Entity:      "evidence_graph_metadata_layout",
+		SourceScope: up("graph_id", "source_id"),
+	},
 	// An Artifact's own fields move no loaded graph row and no citation
 	// membership: its Citations and Observations carry their own graphs.
 	"artifacts": {
@@ -470,7 +486,7 @@ var registry = map[string]Effect{
 	"file_derivatives":            {Entity: "file_derivative", None: true},
 }
 
-// entityTable maps a catalog table to the entity type stored on a change.
+// entityTable maps an entity type to its catalog table.
 var entityTable map[string]string
 
 func init() {

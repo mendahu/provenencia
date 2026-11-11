@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,7 +20,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/filederivatives"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -566,6 +569,59 @@ func TestArtifactDelete(t *testing.T) {
 	if _, err := files.Lookup(c, fileID); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("last pointer left files %v", err)
 	}
+
+	t.Run("releases its metadata", func(t *testing.T) {
+		art, err := runCreate(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Census page"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		provider, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field", UserID: userID}, func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, "Provider", metadatafields.DataTypeText, "")
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		dismissed, _, err := writes.Run(c, writes.Op{Action: "create_metadata_field", UserID: userID}, func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, "Film", metadatafields.DataTypeText, "")
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		owner := sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: art.ID}
+		if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			_, ch, err := sourcemetadata.Set(tx, userID, owner, sourcemetadata.Input{FieldID: provider.ID, ValueText: "FamilySearch"})
+			if err != nil {
+				return struct{}{}, nil, err
+			}
+			more, err := sourcemetadata.DismissSuggestion(tx, userID, owner, dismissed.ID)
+			return struct{}{}, append(ch, more...), err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := runDelete(c, userID, art.ID); err != nil {
+			t.Fatal(err)
+		}
+		_, revision := dbtest.LatestRevision(t, db)
+		var got []string
+		for _, ch := range revision {
+			got = append(got, ch.EntityType+" "+ch.Action)
+		}
+		// Set also lays the value's field in the layout, so two layout rows.
+		want := []string{"evidence_graph_artifact delete", "artifact_metadata delete", "artifact_metadata_layout delete", "artifact_metadata_layout delete", "artifact delete"}
+		if !slices.Equal(got, want) {
+			t.Fatalf("changes %v, want %v", got, want)
+		}
+		for _, ch := range revision[1:4] {
+			if ch.Fields["artifact_id"].Old != database.UUIDString(art.ID) {
+				t.Fatalf("%s lacks artifact_id: %+v", ch.EntityType, ch.Fields)
+			}
+		}
+		for _, table := range []string{"artifact_metadata", "artifact_metadata_layout"} {
+			if n := dbtest.Count(t, db, `SELECT COUNT(*) FROM `+table); n != 0 {
+				t.Fatalf("%s left %d rows", table, n)
+			}
+		}
+	})
 
 	t.Run("cover erase", func(t *testing.T) {
 		newCoverArtifact := func() artifacts.Artifact {

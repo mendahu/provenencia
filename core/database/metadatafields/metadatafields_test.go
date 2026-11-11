@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -196,6 +198,76 @@ func TestDelete(t *testing.T) {
 				}
 				if _, err := GetByID(c, field.ID); err != nil {
 					t.Fatalf("field gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "a field held only on a graph is in use",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src, _, _ := fieldHolders(t, c, userID)
+				graphID := insertGraph(t, c, src.ID, "Household")
+				field, err := runCreate(c, "Line", DataTypeText, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				db := dbtest.MustDB(t, c)
+				id, err := uuid.NewV7()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`INSERT INTO evidence_graph_metadata (id, graph_id, field_id, value_text) VALUES (?, ?, ?, '14')`,
+					id[:], graphID, field.ID); err != nil {
+					t.Fatal(err)
+				}
+				if err := runDelete(c, userID, field.ID); !errors.Is(err, ErrInUse) {
+					t.Fatalf("got %v, want ErrInUse", err)
+				}
+				if _, err := GetByID(c, field.ID); err != nil {
+					t.Fatalf("field gone: %v", err)
+				}
+			},
+		},
+		{
+			name: "a field only dismissed on an Artifact is released audited",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				_, art, typeID := fieldHolders(t, c, userID)
+				field, err := runCreate(c, "Provider", DataTypeText, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				db := dbtest.MustDB(t, c)
+				if _, err := db.Exec(`INSERT INTO source_type_metadata_fields (source_type_id, field_id, level, sort_order) VALUES (?, ?, 'artifact', 0)`,
+					typeID, field.ID); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := db.Exec(`INSERT INTO artifact_metadata_layout (artifact_id, field_id, sort_order, dismissed) VALUES (?, ?, 0, 1)`,
+					art, field.ID); err != nil {
+					t.Fatal(err)
+				}
+				if n, err := UsedBy(c, field.ID); err != nil || n != 0 {
+					t.Fatalf("UsedBy = %d, %v; want 0", n, err)
+				}
+				var changes []rowchange.Change
+				if _, _, err := writes.Run(c, writes.Op{Action: "delete_metadata_field", UserID: userID},
+					func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						var err error
+						changes, err = Delete(tx, userID, field.ID)
+						return struct{}{}, changes, err
+					}); err != nil {
+					t.Fatal(err)
+				}
+				var layout []rowchange.Change
+				for _, ch := range changes {
+					if ch.EntityType == "artifact_metadata_layout" {
+						layout = append(layout, ch)
+					}
+				}
+				if len(layout) != 1 || layout[0].Action != rowchange.ActionDelete ||
+					layout[0].Fields["artifact_id"].Old != database.UUIDString(art) ||
+					layout[0].Fields["field_id"].Old != database.UUIDString(field.ID) {
+					t.Fatalf("layout changes = %+v", layout)
 				}
 			},
 		},
@@ -538,4 +610,40 @@ func runDelete(c *database.Catalog, userID, id []byte) error {
 			return struct{}{}, changes, err
 		})
 	return err
+}
+
+// fieldHolders makes a Source of a new type with an Artifact and returns the
+// Source, the Artifact id and the type id.
+func fieldHolders(t *testing.T, c *database.Catalog, userID []byte) (src sources.Source, artifactID, typeID []byte) {
+	t.Helper()
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "ledger", Origin: vocabkey.OriginUser, Label: "Ledger"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: "T"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, _, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID}, func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
+		return artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page"})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src, art.ID, typeID
+}
+
+// insertGraph adds a graph to the Source by SQL and returns its id.
+func insertGraph(t *testing.T, c *database.Catalog, sourceID []byte, name string) []byte {
+	t.Helper()
+	id, err := uuid.NewV7()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dbtest.MustDB(t, c).Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, ?)`, id[:], sourceID, name); err != nil {
+		t.Fatal(err)
+	}
+	return id[:]
 }

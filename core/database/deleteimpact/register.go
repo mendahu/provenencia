@@ -154,6 +154,18 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 				JOIN sources s ON s.id = m.source_id
 				WHERE m.field_id = ?
 				ORDER BY s.ref COLLATE NOCASE LIMIT ?`),
+		joinEdge(catalogmodel.KindMetadataField, "artifact_metadata.field_id", catalogmodel.KindArtifact,
+			`SELECT COUNT(DISTINCT artifact_id) FROM artifact_metadata WHERE field_id = ?`,
+			`SELECT a.id, a.ref FROM artifact_metadata m
+				JOIN artifacts a ON a.id = m.artifact_id
+				WHERE m.field_id = ?
+				ORDER BY a.ref COLLATE NOCASE LIMIT ?`),
+		joinEdge(catalogmodel.KindMetadataField, "evidence_graph_metadata.field_id", catalogmodel.KindEvidenceGraph,
+			`SELECT COUNT(DISTINCT graph_id) FROM evidence_graph_metadata WHERE field_id = ?`,
+			`SELECT g.id, COALESCE(g.ref, '') FROM evidence_graph_metadata m
+				JOIN evidence_graphs g ON g.id = m.graph_id
+				WHERE m.field_id = ?
+				ORDER BY COALESCE(g.ref, '') COLLATE NOCASE LIMIT ?`),
 		joinEdge(catalogmodel.KindCredibilityGrade, "source_credibility_assessments.credibility_grade_id", catalogmodel.KindSource,
 			`SELECT COUNT(DISTINCT source_id) FROM source_credibility_assessments WHERE credibility_grade_id = ?`,
 			`SELECT s.id, s.ref FROM source_credibility_assessments a

@@ -1,6 +1,6 @@
 // Package sourcemetadata stores descriptive metadata values for an owner (a
-// Source today; an Artifact and an Evidence graph (S15-08) share the same
-// functions), plus the per-owner layout (dismissed suggestions and field order)
+// Source, an Artifact or an Evidence graph, which share the same functions),
+// plus the per-owner layout (dismissed suggestions and field order)
 // that the metadata editor reads back through ListWorkspace. Every function
 // takes an Owner, a vocabkey.Level and an id; a level with no store entry is
 // ErrInvalid. Set, Clear, DismissSuggestion, Reorder, CreateAll, and Apply run

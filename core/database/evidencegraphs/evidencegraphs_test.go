@@ -20,10 +20,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -1398,6 +1400,55 @@ func TestDelete(t *testing.T) {
 		}
 		if linkedArtifacts(t, f.c, jones.ID) != 0 {
 			t.Fatal("links stayed")
+		}
+	})
+
+	t.Run("a graph releases its metadata", func(t *testing.T) {
+		f := newFixture(t)
+		s, _ := f.createSource(t, "Census 1881")
+		def := evidencegraphstest.SoleGraph(t, f.c, s.ID)
+		a1 := f.newArtifact(t, s, "Page 1")
+		f.link(t, def.ID, a1)
+		jones, _, err := f.createGraph(t, evidencegraphs.CreateInput{SourceID: s.ID, Name: "Jones", ArtifactIDs: [][]byte{a1}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		line, _, err := writes.Run(f.c, writes.Op{Action: "create_metadata_field", UserID: userID}, func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+			return metadatafields.Create(tx, "Line", metadatafields.DataTypeText, "")
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		owner := sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: jones.ID}
+		if _, _, err := writes.Run(f.c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
+			return sourcemetadata.Set(tx, userID, owner, sourcemetadata.Input{FieldID: line.ID, ValueText: "14"})
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if _, _, err := writes.Run(f.c, writes.Op{Action: "reorder_metadata", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			ch, err := sourcemetadata.Reorder(tx, userID, owner, [][]byte{line.ID})
+			return struct{}{}, ch, err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		ch, err := f.deleteGraph(t, jones.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := []string{"evidence_graph_artifact delete", "evidence_graph_metadata delete", "evidence_graph_metadata_layout delete", "evidence_graph delete"}
+		if !reflect.DeepEqual(changeKinds(ch), want) {
+			t.Fatalf("changes %v, want %v", changeKinds(ch), want)
+		}
+		for _, c := range ch[1:3] {
+			if c.Fields["graph_id"].Old != database.UUIDString(jones.ID) {
+				t.Fatalf("%s lacks graph_id: %+v", c.EntityType, c.Fields)
+			}
+		}
+		db := dbtest.MustDB(t, f.c)
+		for _, table := range []string{"evidence_graph_metadata", "evidence_graph_metadata_layout"} {
+			if n := dbtest.Count(t, db, `SELECT COUNT(*) FROM `+table); n != 0 {
+				t.Fatalf("%s left %d rows", table, n)
+			}
 		}
 	})
 

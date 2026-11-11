@@ -296,3 +296,87 @@ func TestReleaseCitationChangeNamesEveryColumn(t *testing.T) {
 		t.Fatalf("delete change fields %v, citations columns %v", got, want)
 	}
 }
+
+// ownerFixture is a Source of a book type holding one Artifact, with its sole
+// graph, for the Artifact and graph metadata cases.
+func ownerFixture(t *testing.T, c *database.Catalog, userID []byte, title string) (src sources.Source, artifact, graph sourcemetadata.Owner) {
+	t.Helper()
+	typeID, err := sourcetypes.Upsert(c, sourcetypes.Type{Key: "book", Origin: vocabkey.OriginProvenencia, Label: "Book"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	src, _, err = writes.Run(c, writes.Op{Action: "create_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.Create(tx, userID, sources.CreateInput{SourceTypeID: typeID, Title: title})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	art, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src,
+		sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: art.ID},
+		sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: evidencegraphstest.SoleGraph(t, c, src.ID).ID}
+}
+
+func runOwnerSet(t *testing.T, c *database.Catalog, userID []byte, o sourcemetadata.Owner, fieldID []byte, text string) {
+	t.Helper()
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
+		func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
+			return sourcemetadata.Set(tx, userID, o, sourcemetadata.Input{FieldID: fieldID, ValueText: text})
+		}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runOwnerDismiss(t *testing.T, c *database.Catalog, userID []byte, o sourcemetadata.Owner, fieldID []byte) {
+	t.Helper()
+	if _, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
+		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+			changes, err := sourcemetadata.DismissSuggestion(tx, userID, o, fieldID)
+			return struct{}{}, changes, err
+		}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestImpactMetadataFieldHolders pins the field delete's inbound groups: a
+// value on any of the three levels blocks, once per holder, in level order.
+func TestImpactMetadataFieldHolders(t *testing.T) {
+	c, userID := testCatalog(t)
+	fieldID, err := metadatafields.Upsert(c, metadatafields.Field{Key: "shelfmark", Origin: vocabkey.OriginUser, Label: "Shelfmark", DataType: "text"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	s1, a1, g1 := ownerFixture(t, c, userID, "S1")
+
+	// AC-2.1: a graph alone.
+	runOwnerSet(t, c, userID, g1, fieldID, "14")
+	got := mustImpact(t, c, catalogmodel.KindMetadataField, fieldID)
+	if got.Allowed || got.Gate != deleteimpact.GateInbound || len(got.Groups) != 1 {
+		t.Fatalf("graph only: %+v", got)
+	}
+	g := got.Groups[0]
+	if g.Via != "evidence_graph_metadata.field_id" || g.Kind != catalogmodel.KindEvidenceGraph || g.Total != 1 || len(g.Listed) != 1 ||
+		!bytes.Equal(g.Listed[0].ID, g1.ID) {
+		t.Fatalf("graph group %+v", g)
+	}
+
+	// AC-2.2: two Sources, an Artifact and a graph.
+	s2, _, _ := ownerFixture(t, c, userID, "S2")
+	runOwnerSet(t, c, userID, a1, fieldID, "p")
+	runOwnerSet(t, c, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: s1.ID}, fieldID, "x")
+	runOwnerSet(t, c, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: s2.ID}, fieldID, "y")
+	got = mustImpact(t, c, catalogmodel.KindMetadataField, fieldID)
+	var vias []string
+	var totals []int
+	for _, g := range got.Groups {
+		vias = append(vias, g.Via)
+		totals = append(totals, g.Total)
+	}
+	if strings.Join(vias, ",") != "source_metadata.field_id,artifact_metadata.field_id,evidence_graph_metadata.field_id" ||
+		len(totals) != 3 || totals[0] != 2 || totals[1] != 1 || totals[2] != 1 {
+		t.Fatalf("groups %v %v", vias, totals)
+	}
+}
