@@ -1,6 +1,6 @@
 # S15-07 — Metadata operations take an owner
 
-**Status:** Planned
+**Status:** Landed in [#787](https://github.com/mendahu/provenencia/pull/787) (2026-11-11)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: a Go refactor; the wire and every view stay as they are)
@@ -27,6 +27,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+---
+
+## Landed
+
+- The store carries the two list-order suffixes (`listSuffix`, `layoutListSuffix`) as fields, not literals at each call; the SQL text is the same.
+- `scanRow(row, st)` scans the owner column into `Row.Owner` instead of taking the owner as an argument.
+- `TestOwnerLevels` and the other new tests live in `sourcemetadata_test.go` with shared helpers (`testWorld`, `applyWorld`, `sourceOwner`, `values`).
+- Not run: the manual check (section 10); this build was verified by the Go and Xcode tests only.
 
 ## 1. Objective
 
