@@ -1152,3 +1152,27 @@ func TestVerifyCatchesAStaleSiblingAnswer(t *testing.T) {
 		t.Fatal("Verify accepted a stale answer")
 	}
 }
+
+func TestPivotKindMismatch(t *testing.T) {
+	// Ann stands in Bea's birth and is also filed as the parent of the birth's
+	// handle, so her chain reads the birth as a person. The handle's event
+	// result is stored first; the chain must not be served it.
+	w := newWorld(t)
+	ann, bea := w.person("Ann"), w.person("Bea")
+	b1 := w.event("B1", vocabkey.EventBirth)
+	w.join("B1/Ann", ann, b1, "mother")
+	w.join("B1/Bea", bea, b1, "subject")
+	w.parent("AB1", ann, b1)
+	got := w.for_(ann)
+	seen := map[string]bool{}
+	for _, l := range got {
+		key := fmt.Sprintf("%x|%x|%s|%x|%x", l.A, l.B, l.Pattern, l.Event, l.Through)
+		if seen[key] {
+			t.Fatalf("For(Ann) repeats %+v in %+v", l, got)
+		}
+		seen[key] = true
+	}
+	if len(got) == 0 {
+		t.Fatal("the fixture implies nothing for Ann")
+	}
+}

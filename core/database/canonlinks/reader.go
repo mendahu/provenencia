@@ -359,12 +359,21 @@ func NewReader(g *graphcache.Graph) (*Reader, error) {
 }
 
 // pivot returns the stored result of kind for id, deriving and storing it when
-// there is none.
+// there is none. An id held under the other kind is derived again and not
+// stored: one handle is both an event and, as a parent between, a person.
 func (r *Reader) pivot(kind pivotKind, id []byte, derive func() ([]kinship.Implied, error)) ([]kinship.Implied, error) {
-	res, err := pivots.Get(r.g, id, func() (pivotResult, error) {
+	result := func() (pivotResult, error) {
 		links, err := derive()
 		return pivotResult{kind: kind, rules: r.d.rules, links: links}, err
-	})
+	}
+	if held, ok := pivots.Peek(r.g, id); ok {
+		if held.kind == kind {
+			return held.links, nil
+		}
+		res, err := result()
+		return res.links, err
+	}
+	res, err := pivots.Get(r.g, id, result)
 	return res.links, err
 }
 
