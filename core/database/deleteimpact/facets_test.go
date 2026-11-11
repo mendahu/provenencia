@@ -69,7 +69,7 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		if _, err := runMetadataSet(c, userID, sourcemetadata.Input{SourceID: src.ID, FieldID: fieldID, ValueText: "MS 12"}); err != nil {
+		if _, err := runMetadataSet(c, userID, src.ID, sourcemetadata.Input{FieldID: fieldID, ValueText: "MS 12"}); err != nil {
 			t.Fatal(err)
 		}
 		if err := runDismissMetadata(c, userID, src.ID, other); err != nil {
@@ -200,10 +200,10 @@ func TestReleaseFacetsReportsHandles(t *testing.T) {
 	}
 }
 
-func runMetadataSet(c *database.Catalog, userID []byte, in sourcemetadata.Input) (sourcemetadata.Row, error) {
+func runMetadataSet(c *database.Catalog, userID, sourceID []byte, in sourcemetadata.Input) (sourcemetadata.Row, error) {
 	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
 		func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
-			return sourcemetadata.Set(tx, userID, in)
+			return sourcemetadata.Set(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}, in)
 		})
 	return row, err
 }
@@ -211,7 +211,7 @@ func runMetadataSet(c *database.Catalog, userID []byte, in sourcemetadata.Input)
 func runDismissMetadata(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
-			changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourceID, fieldID)
+			changes, err := sourcemetadata.DismissSuggestion(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: sourceID}, fieldID)
 			return struct{}{}, changes, err
 		})
 	return err

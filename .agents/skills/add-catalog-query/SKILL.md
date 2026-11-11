@@ -38,13 +38,14 @@ Official **resource / vocab `Delete`**: follow `.agents/skills/add-catalog-delet
 - Take `*database.Catalog`. Get the handle with `c.DB()`; return that error (`database.ErrClosed`).
 - Keep SQL as unexported consts next to the functions. Do not add `core/database/queries/`.
 - Domain validation sentinels stay in this package (`users.ErrInvalid`), except for a value type that a matching layer or the reconciler carries: that lives in a pure `core/<singular>` package (`core/datevalue`, `core/namevalue`, `core/depictionvalue`) that owns its type, `Validate` and `ErrInvalid`, and the table package keeps only the queries. Do **not** add them to `core/database/errors.go` (that file is lock/format/folder/closed only).
+- A by-id `IN` read goes through `core/database/sqlbatch` (`sqlbatch.Query`), never a hand-built `SQLInPlaceholders` list: SQLite binds at most 32,766 values per statement.
 - `database` must **not** import table packages (import cycle). Use-cases (`onboarding`, later FFI) import both.
 - `Delete` for a resource or vocab row calls `deleteimpact.Impact` in the same tx, then deletes the parent, then owned-outbound release. Facet/field deletes (notes, metadata clear) stay ordinary writes.
 - Research writes call `audit.Record` in the same tx. A new audited `EntityType` needs a non-`None` effect, and delete changes carry the parent FK — follow `.agents/skills/add-audit-scope/SKILL.md`. "Last activity" reads (`Updated`) come from the display cache, `Graph.Activity`, which loads `audit_transaction_scopes` once and follows commits.
 
 ## Reads inside a write
 
-The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ListLayoutTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
+The catalog has one connection, so a read through `c.DB()` inside `writes.Run` waits on the transaction that is already open. A read a write needs takes the `*sql.Tx` through an exported `…Tx` twin (`sources.GetTx`, `artifacts.ListBySourceTx`, `sourcemetadata.ReadDraftTx`). Write the SQL and scan once in an unexported function over `database.Querier`; the Catalog read and its Tx twin both call it.
 
 A read made of more than one query opens one read transaction (`db.Begin`, deferred `Rollback`), as `deleteimpact.Snapshot` and `evidencegraphs.List` do, so its queries see one state. Its unexported body takes `*sql.Tx` and the package's writes call it with theirs; add an exported `…Tx` twin only with its first caller outside the package.
 
