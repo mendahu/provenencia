@@ -75,4 +75,6 @@ Reviewers: MNT (had Fix-now majors MNT-1, MNT-2). CON had none; SEC+PRF had only
 No new findings. No Fix plan 2.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: — · to user: Go caches ≈118 MB at 16,000 persons vs the 40 MB budget (reported per plan §10; the caches are today's)
+CI: first run of Go tests failed `TestLargeSourceBudgets/warm` (376 ms vs 375 ms) and `/compose_every_summary` (519 ms vs 500 ms) on the runner. Locally base `01fa954b` vs head, three runs each: warm 124–134 vs 128–138 ms, compose 187–196 vs 190–194 ms; no regression. Re-ran the failed job: pass.
+
+Gate PASS · CI green · open: none · follow-ups: — · to user: Go caches ≈118 MB at 16,000 persons vs the 40 MB budget (reported per plan §10; the caches are today's)
