@@ -248,7 +248,6 @@ CREATE TABLE source_metadata (
     source_id       BLOB NOT NULL REFERENCES sources(id) ON DELETE CASCADE,
     field_id        BLOB NOT NULL REFERENCES source_metadata_fields(id),
     value_text      TEXT,
-    date_value_id   BLOB REFERENCES date_values(id),
     UNIQUE (source_id, field_id)
 ) STRICT;
 ```
@@ -263,7 +262,7 @@ publication_date
   value_text = "about the year 1890"
 ```
 
-The `date_value_id` column is unused: no code reads or writes it, and catalog dates are text in `value_text`. Structured DateValues are Interpretation (and later Conclusion) values, not catalog filing. Application validation should enforce that `data_type = 'url'` and `'text'` both store in `value_text` only.
+There is no `date_value_id` on this table (`000028.sql` dropped it). Structured DateValues are Interpretation (and later Conclusion) values, not catalog filing. Application validation should enforce that `data_type = 'url'` and `'text'` both store in `value_text` only.
 
 ## 5.4 `source_metadata_layout`
 
