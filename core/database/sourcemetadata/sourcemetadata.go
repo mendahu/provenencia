@@ -603,23 +603,46 @@ func readOwnerTx(tx *sql.Tx, st *store, owner Owner) (stored, error) {
 // order and its layout rows by sort_order then field id. An owner with no row
 // holds nothing, so the Draft is empty and there is no error.
 func ReadDraftTx(tx *sql.Tx, owner Owner) (Draft, error) {
-	st, err := storeFor(owner)
+	drafts, err := ReadDraftsTx(tx, []Owner{owner})
 	if err != nil {
 		return Draft{}, err
+	}
+	return drafts[0], nil
+}
+
+// ReadDraftsTx is ReadDraftTx over many owners in one read of values and one of
+// layout per level: the draft at index i is owners[i]'s, and a repeated owner
+// gets the same draft. No owners returns nil without a query. An owner at a
+// level with no store is ErrInvalid before any query.
+func ReadDraftsTx(tx *sql.Tx, owners []Owner) ([]Draft, error) {
+	for _, o := range owners {
+		if _, err := storeFor(o); err != nil {
+			return nil, err
+		}
 	}
 	if tx == nil {
-		return Draft{}, ErrInvalid
+		return nil, ErrInvalid
 	}
-	have, err := readOwnerTx(tx, st, owner)
+	if len(owners) == 0 {
+		return nil, nil
+	}
+	values, err := listByOwners(tx, owners)
 	if err != nil {
-		return Draft{}, err
+		return nil, err
 	}
-	var d Draft
-	for _, v := range have.values {
-		d.Values = append(d.Values, Input{FieldID: v.FieldID, ValueText: v.ValueText})
+	layout, err := listLayoutByOwners(tx, owners)
+	if err != nil {
+		return nil, err
 	}
-	d.Layout = have.layout
-	return d, nil
+	held := make(map[string][]Input, len(owners))
+	for _, v := range values {
+		held[v.Owner.key()] = append(held[v.Owner.key()], Input{FieldID: v.FieldID, ValueText: v.ValueText})
+	}
+	out := make([]Draft, len(owners))
+	for i, o := range owners {
+		out[i] = Draft{Values: held[o.key()], Layout: layout[o.key()]}
+	}
+	return out, nil
 }
 
 // ListByOwnersTx returns the stored values of many owners on an open
@@ -729,8 +752,25 @@ func idsAt(owners []Owner, level vocabkey.Level) [][]byte {
 // have no row yet sorting after them in suggestion-then-extra order; an owner
 // with no layout at all keeps the original suggestion-then-extra order.
 func ListWorkspace(c *database.Catalog, owner Owner) ([]WorkspaceEntry, error) {
-	if _, err := storeFor(owner); err != nil {
+	lists, err := ListWorkspaces(c, []Owner{owner})
+	if err != nil {
 		return nil, err
+	}
+	return lists[0], nil
+}
+
+// ListWorkspaces is ListWorkspace over many owners in one read transaction: the
+// list at index i is owners[i]'s, and a repeated owner gets the same list. No
+// owners returns nil without opening a transaction. An owner at a level with no
+// store, or one that does not exist, is ErrInvalid.
+func ListWorkspaces(c *database.Catalog, owners []Owner) ([][]WorkspaceEntry, error) {
+	for _, o := range owners {
+		if _, err := storeFor(o); err != nil {
+			return nil, err
+		}
+	}
+	if len(owners) == 0 {
+		return nil, nil
 	}
 	db, err := c.DB()
 	if err != nil {
@@ -741,11 +781,15 @@ func ListWorkspace(c *database.Catalog, owner Owner) ([]WorkspaceEntry, error) {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	byOwner, err := listWorkspaces(tx, []Owner{owner})
+	byOwner, err := listWorkspaces(tx, owners)
 	if err != nil {
 		return nil, err
 	}
-	return byOwner[owner.key()], nil
+	out := make([][]WorkspaceEntry, len(owners))
+	for i, o := range owners {
+		out[i] = byOwner[o.key()]
+	}
+	return out, nil
 }
 
 // listWorkspaces is ListWorkspace over many owners, keyed by Owner.key: each

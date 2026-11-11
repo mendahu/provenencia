@@ -759,6 +759,14 @@ func TestCopy(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "artifact metadata travels with its Artifact",
+			run:  func(t *testing.T) { copyArtifactMetadata(t, true) },
+		},
+		{
+			name: "artifact metadata travels without the Metadata tick",
+			run:  func(t *testing.T) { copyArtifactMetadata(t, false) },
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, tt.run)
@@ -777,5 +785,98 @@ func TestReadDraftMissingSourceIsNotFound(t *testing.T) {
 	missing[15] = 9
 	if _, err := ReadDraft(tx, missing); !errors.Is(err, sources.ErrNotFound) {
 		t.Fatalf("got %v, want sources.ErrNotFound", err)
+	}
+}
+
+// copyArtifactMetadata copies the obituary choosing its first Artifact only,
+// which holds a provider value and a dismissed suggestion. The copy's Artifact
+// carries both, and the Source's own metadata follows the Metadata tick; the
+// original's rows stay as they were.
+func copyArtifactMetadata(t *testing.T, metadataTick bool) {
+	c, userID, orig, arts := seedObituary(t)
+	provider, err := metadatafields.Upsert(c, metadatafields.Field{Key: "provider", Origin: vocabkey.OriginUser, Label: "Provider", DataType: metadatafields.DataTypeText})
+	if err != nil {
+		t.Fatal(err)
+	}
+	film, err := metadatafields.Upsert(c, metadatafields.Field{Key: "film", Origin: vocabkey.OriginUser, Label: "Film", DataType: metadatafields.DataTypeText})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a1 := sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: arts[0].ID}
+	if _, err := writeOne(c, userID, "update_metadata", func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, ch, err := sourcemetadata.Set(tx, userID, a1, sourcemetadata.Input{FieldID: provider, ValueText: "FamilySearch"})
+		if err != nil {
+			return struct{}{}, nil, err
+		}
+		more, err := sourcemetadata.DismissSuggestion(tx, userID, a1, film)
+		return struct{}{}, append(ch, more...), err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	readDraft := func(o sourcemetadata.Owner) sourcemetadata.Draft {
+		t.Helper()
+		tx, err := dbtest.MustDB(t, c).Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback()
+		d, err := sourcemetadata.ReadDraftTx(tx, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return d
+	}
+	before := readDraft(a1)
+	if len(before.Values) != 1 || len(before.Layout) != 2 {
+		t.Fatalf("seeded draft %+v", before)
+	}
+	sourceBefore := readDraft(sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: orig.ID})
+
+	var changes []rowchange.Change
+	in := CopyInput{
+		SourceID: orig.ID, Title: "Copy", SourceTypeID: orig.SourceTypeID,
+		Metadata: metadataTick, ArtifactIDs: [][]byte{arts[0].ID},
+	}
+	cp, _, err := writes.Run(c, writes.Op{Action: "copy_source", UserID: userID},
+		func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+			src, ch, err := Copy(tx, userID, in)
+			changes = ch
+			return src, ch, err
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	copied, err := artifacts.ListBySource(c, cp.ID)
+	if err != nil || len(copied) != 1 {
+		t.Fatalf("copied Artifacts %v, %v", copied, err)
+	}
+	got := readDraft(sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: copied[0].ID})
+	if !reflect.DeepEqual(got, before) {
+		t.Fatalf("copied Artifact draft\nwant %+v\nhave %+v", before, got)
+	}
+	gotSource := readDraft(sourcemetadata.Owner{Level: vocabkey.LevelSource, ID: cp.ID})
+	if metadataTick {
+		if !reflect.DeepEqual(gotSource, sourceBefore) {
+			t.Fatalf("copied Source draft %+v, want %+v", gotSource, sourceBefore)
+		}
+	} else if len(gotSource.Values) != 0 || len(gotSource.Layout) != 0 {
+		t.Fatalf("Source metadata copied without the tick: %+v", gotSource)
+	}
+	if after := readDraft(a1); !reflect.DeepEqual(after, before) {
+		t.Fatalf("original Artifact changed: %+v", after)
+	}
+
+	// The changes run the copied Artifact's create, then its metadata.
+	var seq []string
+	for _, ch := range changes {
+		switch ch.EntityType {
+		case "artifact", "artifact_metadata", "artifact_metadata_layout":
+			seq = append(seq, ch.EntityType)
+		}
+	}
+	want := []string{"artifact", "artifact_metadata", "artifact_metadata_layout", "artifact_metadata_layout"}
+	if !reflect.DeepEqual(seq, want) {
+		t.Fatalf("change order %v, want %v", seq, want)
 	}
 }

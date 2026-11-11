@@ -1806,3 +1806,116 @@ func TestOwnerTables(t *testing.T) {
 		})
 	}
 }
+
+// TestListWorkspacesExported reads many owners at once: the lists are
+// index-aligned, a repeated owner gets the same list, and each equals the
+// owner read alone.
+func TestListWorkspacesExported(t *testing.T) {
+	c, userID, src, doc, _, _, _ := applyWorld(t)
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sourcevocab.AppendSuggestion(c, cert.ID, doc.ID, vocabkey.LevelArtifact); err != nil {
+		t.Fatal(err)
+	}
+	s := sourceOwner(src.ID)
+	a1 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	a2 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (Row, []rowchange.Change, error) {
+		return Set(tx, userID, a1, Input{FieldID: doc.ID, ValueText: "No. 7"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	owners := []Owner{s, a1, a2, a1}
+	got, err := ListWorkspaces(c, owners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(owners) {
+		t.Fatalf("lists = %d, want %d", len(got), len(owners))
+	}
+	for i, o := range owners {
+		alone, err := ListWorkspace(c, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got[i], alone) {
+			t.Errorf("list %d differs from the owner read alone", i)
+		}
+	}
+	if !reflect.DeepEqual(got[1], got[3]) {
+		t.Error("a repeated owner got different lists")
+	}
+	if len(got[1]) != 1 || got[1][0].Value == nil || got[1][0].Value.ValueText != "No. 7" {
+		t.Errorf("A1's list = %+v", got[1])
+	}
+	if len(got[2]) != 1 || got[2][0].Value != nil || !got[2][0].Suggested {
+		t.Errorf("A2's list = %+v, want the suggestion only", got[2])
+	}
+
+	if none, err := ListWorkspaces(c, nil); err != nil || none != nil {
+		t.Errorf("no owners = %v, %v; want nil", none, err)
+	}
+	missing := Owner{Level: vocabkey.LevelGraph, ID: bytes.Repeat([]byte{9}, 16)}
+	if _, err := ListWorkspaces(c, []Owner{s, missing}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("missing graph owner = %v, want ErrInvalid", err)
+	}
+}
+
+// TestReadDraftsTx reads many owners' drafts in one pass, index-aligned.
+func TestReadDraftsTx(t *testing.T) {
+	c, userID, src, doc, _, f1, _ := applyWorld(t)
+	a1 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	g1 := newLevelOwner(t, c, userID, src, vocabkey.LevelGraph)
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, ch, err := Set(tx, userID, a1, Input{FieldID: doc.ID, ValueText: "No. 7"})
+		if err != nil {
+			return struct{}{}, nil, err
+		}
+		_, more, err := Set(tx, userID, g1, Input{FieldID: f1.ID, ValueText: "14"})
+		return struct{}{}, append(ch, more...), err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	got, err := ReadDraftsTx(tx, []Owner{a1, g1, a1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("drafts = %d", len(got))
+	}
+	for i, o := range []Owner{a1, g1, a1} {
+		alone, err := ReadDraftTx(tx, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got[i], alone) {
+			t.Errorf("draft %d = %+v, alone %+v", i, got[i], alone)
+		}
+	}
+	if len(got[0].Values) != 1 || !bytes.Equal(got[0].Values[0].FieldID, doc.ID) ||
+		len(got[1].Values) != 1 || !bytes.Equal(got[1].Values[0].FieldID, f1.ID) {
+		t.Errorf("drafts = %+v", got)
+	}
+	if none, err := ReadDraftsTx(tx, nil); err != nil || none != nil {
+		t.Errorf("no owners = %v, %v; want nil", none, err)
+	}
+	if _, err := ReadDraftsTx(nil, []Owner{a1}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("nil tx = %v, want ErrInvalid", err)
+	}
+	if _, err := ReadDraftsTx(tx, []Owner{a1, {Level: vocabkey.LevelCitation, ID: a1.ID}}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("citation owner = %v, want ErrInvalid", err)
+	}
+}
