@@ -1,9 +1,9 @@
 # S15-32 — Copy Source can carry the date
 
-**Status:** Planned
+**Status:** Landed in [#778](https://github.com/mendahu/provenencia/pull/778) (2026-11-10)
 **Spike / slice:** Spike 15 · Slice 1 — Source date, privacy, credibility
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
-**Brief:** [S15-D13](../design/S15-D13-copy-source-dialog.md), board agreed 2026-11-10
+**Brief:** [S15-D13](../design/archive/S15-D13-copy-source-dialog.md), board agreed 2026-11-10
 **Board:** [Claude Design — Source page](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK#artboard-32c863db011e), page *Source page*, row "Copy Source": frames `copy-dated` (1a), `copy-dated-wide` (1b), `copy-undated` (2), `copy-phrase` (3), `copy-date-off` (4), beside the dialog's earlier frames (`copy-page`, `copy-loading`, `copy-absent`, `copy-forty`, `copy-error`, `copy-failed`, `copy-discard`), which are unchanged. Read it with the Artifact tool's `read` on that link, `path` "project/Source page.dc.html" (the frame list) and "project/Source.dc.html" (the dialog markup near `copyParts`, the parts builder `part(…)`, and `openCopy`). As drawn: Published date is the first of four `PVCheckbox` part ticks, all built by one `part` helper; its hint is the date as the row display writes it ("4 Jul 1881", or the phrase); an undated original reads "None on this Source", unticked and disabled; the dialog is 520pt and centered at Wide. No board decision differs from the brief. §6 macOS describes each frame in words
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)), S15-D13
 **Blocks:** —
@@ -28,6 +28,14 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- Version: `main`'s `VERSION` was 0.7.1, not 0.7.0, so the bump is 0.7.1 to 0.8.0 as the header's rule says.
+- `TestCopy` "date chosen on an undated original" is two sub-cases (undated, and the date row deleted with foreign keys off); the second releases its connection before the copy runs, because the catalog holds one.
+- `TestCopySource` shares a helper, `notPublicDatedCopyRequest`, between the two date cases (T-4, T-5).
+- `SourceCopyModelTests` holds the dated fixture as a `fourthOfJuly1881` constant on the suite.
+- Not run: the manual check (section 10) and the board comparison of frames `copy-dated`, `copy-dated-wide`, `copy-undated`, `copy-phrase` and `copy-date-off`; this build was verified by the Go and Xcode tests only.
 
 ## 1. Objective
 

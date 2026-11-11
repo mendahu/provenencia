@@ -455,6 +455,7 @@ message CopySourceRequest {
   bool copy_metadata = 7; // values and their layout
   bool copy_credibility = 8;
   repeated string artifact_ids = 9; // the original's Artifacts to copy
+  bool copy_date = 10; // the original's date, as the copy's own
 }
 
 message CopySourceResponse {

@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
@@ -133,7 +134,9 @@ func TestMemberDeleteEndToEnd(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	action, types := lastRevision(t, c)
+	db := dbtest.MustDB(t, c)
+	action, revision := dbtest.LatestRevision(t, db)
+	types := dbtest.EntityTypes(revision)
 	if action != "delete_subject" || strings.Join(types, ",") != "identity_claim,subject" {
 		t.Fatalf("%s %v", action, types)
 	}
@@ -186,10 +189,7 @@ func TestLastMemberDeleteEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var searchDocs int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs WHERE entity_id = ?`, entityUUID).Scan(&searchDocs); err != nil {
 		t.Fatal(err)

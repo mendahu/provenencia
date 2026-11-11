@@ -97,34 +97,53 @@ private struct SourceCopyForm: View {
 
     private var partCheckboxes: some View {
         VStack(alignment: .leading, spacing: PVSpacing.space5) {
-            PVCheckbox(
+            partTick(
+                L10n.Sources.copySourceDate,
+                hint: model.dateLine ?? "",
+                keyPath: \.includeDate,
+                available: model.dateAvailable,
+                id: "sources.copy.date"
+            )
+            partTick(
                 L10n.Sources.copySourceDescription,
-                description: model.descriptionAvailable
-                    ? L10n.Sources.copySourceDescriptionHint
-                    : L10n.Sources.copySourcePartAbsent,
-                isChecked: partBinding(\.includeDescription, available: model.descriptionAvailable),
-                isDisabled: !model.descriptionAvailable || model.isSaving
+                hint: L10n.string(L10n.Sources.copySourceDescriptionHint),
+                keyPath: \.includeDescription,
+                available: model.descriptionAvailable,
+                id: "sources.copy.description"
             )
-            .accessibilityIdentifier("sources.copy.description")
-            PVCheckbox(
+            partTick(
                 L10n.Sources.copySourceMetadata,
-                description: model.metadataAvailable
-                    ? L10n.Sources.copySourceMetadataHint
-                    : L10n.Sources.copySourcePartAbsent,
-                isChecked: partBinding(\.includeMetadata, available: model.metadataAvailable),
-                isDisabled: !model.metadataAvailable || model.isSaving
+                hint: L10n.string(L10n.Sources.copySourceMetadataHint),
+                keyPath: \.includeMetadata,
+                available: model.metadataAvailable,
+                id: "sources.copy.metadata"
             )
-            .accessibilityIdentifier("sources.copy.metadata")
-            PVCheckbox(
+            partTick(
                 L10n.Sources.copySourceCredibility,
-                description: model.credibilityAvailable
-                    ? L10n.Sources.copySourceCredibilityHint
-                    : L10n.Sources.copySourcePartAbsent,
-                isChecked: partBinding(\.includeCredibility, available: model.credibilityAvailable),
-                isDisabled: !model.credibilityAvailable || model.isSaving
+                hint: L10n.string(L10n.Sources.copySourceCredibilityHint),
+                keyPath: \.includeCredibility,
+                available: model.credibilityAvailable,
+                id: "sources.copy.credibility"
             )
-            .accessibilityIdentifier("sources.copy.credibility")
         }
+    }
+
+    /// One part tick. An unavailable part reads unchecked and disabled, with
+    /// "None on this Source" in place of its hint.
+    private func partTick(
+        _ label: LocalizedStringResource,
+        hint: String,
+        keyPath: WritableKeyPath<SourceCopyChoices, Bool>,
+        available: Bool,
+        id: String
+    ) -> some View {
+        PVCheckbox(
+            verbatim: L10n.string(label),
+            description: available ? hint : L10n.string(L10n.Sources.copySourcePartAbsent),
+            isChecked: partBinding(keyPath, available: available),
+            isDisabled: !available || model.isSaving
+        )
+        .accessibilityIdentifier(id)
     }
 
     /// An unavailable part reads unchecked whatever the stored choice is.

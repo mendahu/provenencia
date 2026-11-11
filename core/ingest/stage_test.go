@@ -23,6 +23,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/users"
@@ -138,19 +139,6 @@ func objectFiles(t *testing.T, c *database.Catalog) []string {
 		t.Fatal(err)
 	}
 	return out
-}
-
-func fileRows(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM files`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
 }
 
 // stageInsert runs one committing write that inserts every stage.
@@ -330,8 +318,8 @@ func TestStagedInsertTx(t *testing.T) {
 		}
 		defer s.Discard()
 		fs, changes := stageInsert(t, c, s)
-		if fileRows(t, c) != 1 {
-			t.Fatalf("rows = %d", fileRows(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 {
+			t.Fatalf("rows = %d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`))
 		}
 		if fs[0].MediaType != "image/png" || fs[0].OriginalFilename != "" {
 			t.Fatalf("%+v", fs[0])
@@ -352,8 +340,8 @@ func TestStagedInsertTx(t *testing.T) {
 		}
 		defer s.Discard()
 		fs, changes := stageInsert(t, c, s, s)
-		if fileRows(t, c) != 1 || len(changes) != 1 || string(fs[0].ID) != string(fs[1].ID) {
-			t.Fatalf("rows=%d changes=%d", fileRows(t, c), len(changes))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || len(changes) != 1 || string(fs[0].ID) != string(fs[1].ID) {
+			t.Fatalf("rows=%d changes=%d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`), len(changes))
 		}
 	})
 
@@ -370,8 +358,8 @@ func TestStagedInsertTx(t *testing.T) {
 		}
 		defer b.Discard()
 		fs, changes := stageInsert(t, c, a, b)
-		if fileRows(t, c) != 1 || len(changes) != 1 || string(fs[0].ID) != string(fs[1].ID) {
-			t.Fatalf("rows=%d changes=%d", fileRows(t, c), len(changes))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || len(changes) != 1 || string(fs[0].ID) != string(fs[1].ID) {
+			t.Fatalf("rows=%d changes=%d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`), len(changes))
 		}
 	})
 }
@@ -404,8 +392,8 @@ func TestStagedSettle(t *testing.T) {
 		defer s.Discard()
 		failingInsert(t, c, s)
 		s.Settle(c)
-		if fileRows(t, c) != 0 || len(objectFiles(t, c)) != 0 {
-			t.Fatalf("rows=%d objects=%v", fileRows(t, c), objectFiles(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 0 || len(objectFiles(t, c)) != 0 {
+			t.Fatalf("rows=%d objects=%v", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`), objectFiles(t, c))
 		}
 	})
 
@@ -424,8 +412,8 @@ func TestStagedSettle(t *testing.T) {
 		defer second.Discard()
 		failingInsert(t, c, second)
 		second.Settle(c)
-		if fileRows(t, c) != 1 || len(objectFiles(t, c)) != 1 {
-			t.Fatalf("rows=%d objects=%v", fileRows(t, c), objectFiles(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || len(objectFiles(t, c)) != 1 {
+			t.Fatalf("rows=%d objects=%v", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`), objectFiles(t, c))
 		}
 	})
 
@@ -439,8 +427,8 @@ func TestStagedSettle(t *testing.T) {
 		s.Settle(c)
 		s.Settle(c)
 		s.Discard()
-		if fileRows(t, c) != 1 || len(objectFiles(t, c)) != 1 {
-			t.Fatalf("rows=%d objects=%v", fileRows(t, c), objectFiles(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || len(objectFiles(t, c)) != 1 {
+			t.Fatalf("rows=%d objects=%v", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`), objectFiles(t, c))
 		}
 	})
 }
@@ -535,8 +523,8 @@ func TestStagedPurgeAndDiscard(t *testing.T) {
 			t.Fatalf("object not installed before settle: %v", objectFiles(t, c))
 		}
 		s.Settle(c)
-		if len(objectFiles(t, c)) != 0 || len(stageTemps(t, c.Dir())) != 0 || fileRows(t, c) != 0 {
-			t.Fatalf("objects=%v temps=%v rows=%d", objectFiles(t, c), stageTemps(t, c.Dir()), fileRows(t, c))
+		if len(objectFiles(t, c)) != 0 || len(stageTemps(t, c.Dir())) != 0 || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 0 {
+			t.Fatalf("objects=%v temps=%v rows=%d", objectFiles(t, c), stageTemps(t, c.Dir()), dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`))
 		}
 	})
 
@@ -549,8 +537,8 @@ func TestStagedPurgeAndDiscard(t *testing.T) {
 		stageInsert(t, c, s)
 		s.Settle(c)
 		s.Discard()
-		if len(objectFiles(t, c)) != 1 || fileRows(t, c) != 1 {
-			t.Fatalf("objects=%v rows=%d", objectFiles(t, c), fileRows(t, c))
+		if len(objectFiles(t, c)) != 1 || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 {
+			t.Fatalf("objects=%v rows=%d", objectFiles(t, c), dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`))
 		}
 	})
 
@@ -596,7 +584,7 @@ func TestPurgeLeavesTemps(t *testing.T) {
 		t.Fatalf("purge removed the staged temp: %v", stageTemps(t, c.Dir()))
 	}
 	stageInsert(t, c, s)
-	if len(objectFiles(t, c)) != 1 || fileRows(t, c) != 1 {
-		t.Fatalf("objects=%v rows=%d", objectFiles(t, c), fileRows(t, c))
+	if len(objectFiles(t, c)) != 1 || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 {
+		t.Fatalf("objects=%v rows=%d", objectFiles(t, c), dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`))
 	}
 }

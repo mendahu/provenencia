@@ -1,8 +1,9 @@
 // Package sourcecopy copies a Source in one write: a new Source with a chosen
 // title and type, and, each only when chosen, the original's description,
-// metadata with its layout, credibility and any subset of its Artifacts. It
-// composes the owner packages inside the caller's writes.Run transaction and
-// never calls writes.Run itself.
+// published date (as a date row of the copy's own), metadata with its layout,
+// credibility and any subset of its Artifacts. It composes the owner packages
+// inside the caller's writes.Run transaction and never calls writes.Run
+// itself.
 //
 // Notes, Subjects, Citations, Observations, graphs and the cover are never
 // copied.
@@ -18,12 +19,14 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcecredibility"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/datevalue"
 )
 
 // Draft is everything a copy can carry from a Source. Every SourceID is nil
 // until CreateFromDraft sets it to the new Source.
 type Draft struct {
 	Source      sources.CreateInput
+	Date        *datevalue.Value // nil when the Source is undated; its ID is always nil
 	Metadata    []sourcemetadata.Input
 	Layout      []sourcemetadata.LayoutRow
 	Credibility *sourcecredibility.UpsertInput // nil when the Source has none
@@ -42,6 +45,7 @@ type CopyInput struct {
 	Title        string
 	SourceTypeID []byte
 	Description  bool
+	Date         bool
 	Metadata     bool
 	Credibility  bool
 	ArtifactIDs  [][]byte
@@ -59,6 +63,12 @@ func ReadDraft(tx *sql.Tx, sourceID []byte) (Draft, error) {
 		Title:        src.Title,
 		Description:  src.Description,
 	}}
+
+	if src.Date != nil {
+		date := *src.Date
+		date.ID = nil
+		d.Date = &date
+	}
 
 	values, err := sourcemetadata.ListBySourceTx(tx, sourceID)
 	if err != nil {
@@ -96,13 +106,22 @@ func ReadDraft(tx *sql.Tx, sourceID []byte) (Draft, error) {
 }
 
 // CreateFromDraft writes the draft as a new Source and returns it with every
-// change, in write order: Source, metadata values, layout rows, credibility,
-// then Artifacts. The new Source keeps the default cover. The caller records
-// the changes.
+// change, in write order: Source, its date, metadata values, layout rows,
+// credibility, then Artifacts. The returned Source carries its date. The new
+// Source keeps the default cover. The caller records the changes.
 func CreateFromDraft(tx *database.Tx, userID []byte, d Draft) (sources.Source, []rowchange.Change, error) {
 	src, changes, err := sources.Create(tx, userID, d.Source)
 	if err != nil {
 		return sources.Source{}, nil, err
+	}
+
+	if d.Date != nil {
+		var more []rowchange.Change
+		src, more, err = sources.SetDate(tx, userID, src.ID, d.Date)
+		if err != nil {
+			return sources.Source{}, nil, err
+		}
+		changes = append(changes, more...)
 	}
 
 	values := make([]sourcemetadata.Input, len(d.Metadata))
@@ -166,6 +185,9 @@ func apply(d Draft, in CopyInput) (Draft, error) {
 	d.Source.SourceTypeID = in.SourceTypeID
 	if !in.Description {
 		d.Source.Description = ""
+	}
+	if !in.Date {
+		d.Date = nil
 	}
 	if !in.Metadata {
 		d.Metadata, d.Layout = nil, nil

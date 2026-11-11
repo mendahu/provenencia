@@ -2,13 +2,13 @@ package canonicalentities_test
 
 import (
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
@@ -67,10 +67,7 @@ func TestCanonicalEntities(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, persons[0].ID, persons[2].ID); err != nil {
 					t.Fatal(err)
 				}
@@ -95,26 +92,14 @@ func TestCanonicalEntities(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
+				db := dbtest.MustDB(t, c)
+				action, revision := dbtest.LatestRevision(t, db)
+				last := revision[len(revision)-1]
+				if action != "create_canonical_entity" || last.EntityType != "canonical_entity" || string(last.EntityID) != string(e.ID) {
+					t.Fatalf("%s %s", action, last.EntityType)
 				}
-				var action, entityType, changes string
-				var entityID []byte
-				if err := db.QueryRow(`SELECT t.action_type, ch.entity_type, ch.entity_id, ch.changes_json
-					FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-					ORDER BY t.revision DESC LIMIT 1`).Scan(&action, &entityType, &entityID, &changes); err != nil {
-					t.Fatal(err)
-				}
-				if action != "create_canonical_entity" || entityType != "canonical_entity" || string(entityID) != string(e.ID) {
-					t.Fatalf("%s %s", action, entityType)
-				}
-				var fields map[string]map[string]any
-				if err := json.Unmarshal([]byte(changes), &fields); err != nil {
-					t.Fatal(err)
-				}
-				if fields["ref"]["new"] != e.Ref {
-					t.Fatalf("%v", fields)
+				if last.Fields["ref"].New != e.Ref {
+					t.Fatalf("%v", last.Fields)
 				}
 			},
 		},

@@ -180,6 +180,7 @@ struct GoStore: GenealogyStore {
         copyDescription: Bool,
         copyMetadata: Bool,
         copyCredibility: Bool,
+        copyDate: Bool,
         artifactIDs: [String]
     ) async throws -> (CatalogSource, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CopySourceRequest()
@@ -191,6 +192,7 @@ struct GoStore: GenealogyStore {
         req.copyDescription = copyDescription
         req.copyMetadata = copyMetadata
         req.copyCredibility = copyCredibility
+        req.copyDate = copyDate
         req.artifactIds = artifactIDs
         let resp: Provenencia_Engine_V1_CopySourceResponse = try await provenenciaCall(
             method: CoreMethod.copySource,

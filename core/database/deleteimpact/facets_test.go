@@ -11,6 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
@@ -92,7 +93,9 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		action, types := lastRevision(t, c)
+		db := dbtest.MustDB(t, c)
+		action, revision := dbtest.LatestRevision(t, db)
+		types := dbtest.EntityTypes(revision)
 		if action != "delete_source" || types[len(types)-1] != "source" {
 			t.Fatalf("%s %v", action, types)
 		}
@@ -120,7 +123,9 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		if err := runFieldDelete(c, userID, other); err != nil {
 			t.Fatal(err)
 		}
-		action, types := lastRevision(t, c)
+		db := dbtest.MustDB(t, c)
+		action, revision := dbtest.LatestRevision(t, db)
+		types := dbtest.EntityTypes(revision)
 		if action != "delete_metadata_field" || strings.Join(types, ",") != "source_metadata_layout,metadata_field" {
 			t.Fatalf("%s %v", action, types)
 		}
@@ -153,7 +158,9 @@ func TestFacetReleaseAuditsSourceSide(t *testing.T) {
 		}); err != nil {
 			t.Fatal(err)
 		}
-		action, types := lastRevision(t, c)
+		db := dbtest.MustDB(t, c)
+		action, revision := dbtest.LatestRevision(t, db)
+		types := dbtest.EntityTypes(revision)
 		if action != "delete_citation" || strings.Join(types, ",") != "citation_note,citation_note,citation" {
 			t.Fatalf("%s %v", action, types)
 		}

@@ -6,9 +6,9 @@
 **Implements later as:** PR **S15-32** (CS-1 – CS-6, CS-W1)
 **Board:** agreed 2026-11-10 — [Claude Design — Source page](https://claude.ai/artifact/443NPNYmGErAmxgV1fBsFK#artboard-32c863db011e), page *Source page*, row "Copy Source": frames `copy-dated` (1a), `copy-dated-wide` (1b), `copy-undated` (2), `copy-phrase` (3), `copy-date-off` (4), beside the dialog's earlier frames (`copy-page`, `copy-loading`, `copy-absent`, `copy-forty`, `copy-error`, `copy-failed`, `copy-discard`), which are unchanged. Read it with the Artifact tool's `read` on that link, `path` "project/Source page.dc.html" (the frame list) and "project/Source.dc.html" (the dialog markup near `copyParts`, the parts builder `part(…)`, and `openCopy`). As drawn: Published date is the first of four `PVCheckbox` part ticks, all built by one `part` helper; its hint is the date as the row display writes it ("4 Jul 1881", or the phrase); an undated original reads "None on this Source", unticked and disabled; the dialog is 520pt and centered at Wide. No board decision differs from the brief
 **Depends on:** S15-02 (landed [#762](https://github.com/mendahu/provenencia/pull/762)): every Source carries one optional date; S15-03 (landed [#766](https://github.com/mendahu/provenencia/pull/766)) and S15-04 (landed [#774](https://github.com/mendahu/provenencia/pull/774)): the date is shown on the Source page and the Sources list, and its one name is **Published** (S15-04 D-14)
-**Related:** [`../source-provenance-date.md`](../source-provenance-date.md); board [S15-D1](S15-D1-source-page.md) (the Source page the copy opens on); [S15-D2](archive/S15-D2-sources-list.md) SL-1 – SL-3 (how the published date reads); [`../../../source-layer-data-model.md` § 4.2](../../../source-layer-data-model.md#42-copy-source); [`macos-client-patterns.md` § 9](../../../macos-client-patterns.md#9-window-widths-regular-and-wide); working rules in [`../deployment-plan.md`](../deployment-plan.md#working-rules); plan [`../prs/S15-32-copy-source-date.md`](../prs/S15-32-copy-source-date.md)
-**Design system layers:** [`docs/design-system-layers.md`](../../../design-system-layers.md)
-**Skill:** [`add-design-brief`](../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../.agents/skills/add-ui-component/SKILL.md)
+**Related:** [`../source-provenance-date.md`](../../source-provenance-date.md); board [S15-D1](../S15-D1-source-page.md) (the Source page the copy opens on); [S15-D2](S15-D2-sources-list.md) SL-1 – SL-3 (how the published date reads); [`../../../source-layer-data-model.md` § 4.2](../../../../source-layer-data-model.md#42-copy-source); [`macos-client-patterns.md` § 9](../../../../macos-client-patterns.md#9-window-widths-regular-and-wide); working rules in [`../deployment-plan.md`](../../deployment-plan.md#working-rules); plan [`../prs/S15-32-copy-source-date.md`](../../prs/S15-32-copy-source-date.md)
+**Design system layers:** [`docs/design-system-layers.md`](../../../../design-system-layers.md)
+**Skill:** [`add-design-brief`](../../../../../.agents/skills/add-design-brief/SKILL.md); [`add-ui-component`](../../../../../.agents/skills/add-ui-component/SKILL.md)
 
 Paste this entire document into Claude Design as the requirements for one board. This file is the whole prompt.
 
@@ -103,7 +103,7 @@ Since Spike 15 a Source has its own date: when the record was made or first publ
 
 - Editing the date in the dialog, or a date field on the form (the date is set on the copy's page).
 - A Private tick, or any note about privacy.
-- Ticks for notes, Subjects, Citations or graphs (never copied, [`source-layer-data-model.md` § 4.2](../../../source-layer-data-model.md#42-copy-source)).
+- Ticks for notes, Subjects, Citations or graphs (never copied, [`source-layer-data-model.md` § 4.2](../../../../source-layer-data-model.md#42-copy-source)).
 - The Add Source dialog (it takes no date).
 - The Source page (S15-D1) and the Sources list (S15-D2), except as the backdrop the dialog sits on.
 
@@ -168,4 +168,4 @@ Draw the dialog over the Source page frames of this board (the page dimmed behin
 
 ## 7. Handoff
 
-When the board is agreed: record the link, the frames and the board's decisions on the **Board** line here, in [`README.md`](README.md) and on S15-32's plan **Board** line; the plan copies CS-1 – CS-6 and CS-W1 and moves from `Blocked — on board S15-D13` to `Planned`. When S15-32 lands, the brief moves to the spike's design archive.
+When the board is agreed: record the link, the frames and the board's decisions on the **Board** line here, in [`README.md`](../README.md) and on S15-32's plan **Board** line; the plan copies CS-1 – CS-6 and CS-W1 and moves from `Blocked — on board S15-D13` to `Planned`. When S15-32 lands, the brief moves to the spike's design archive.

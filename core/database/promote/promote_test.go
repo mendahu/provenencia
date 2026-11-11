@@ -2,11 +2,13 @@ package promote_test
 
 import (
 	"errors"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -50,37 +52,23 @@ func TestSave(t *testing.T) {
 			name: "one promote_subject revision with two changes",
 			run: func(t *testing.T, c *database.Catalog, mk func(string) subjects.Subject) {
 				res := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
+				db := dbtest.MustDB(t, c)
+				action, revision := dbtest.LatestRevision(t, db)
+				if action != "promote_subject" {
+					t.Fatalf("action %s", action)
 				}
-				rows, err := db.Query(`SELECT t.action_type, ch.entity_type, ch.entity_id
-					FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-					WHERE t.revision = (SELECT MAX(revision) FROM audit_transactions)
-					ORDER BY ch.entity_type`)
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer rows.Close()
 				var got []string
-				for rows.Next() {
-					var action, entityType string
-					var id []byte
-					if err := rows.Scan(&action, &entityType, &id); err != nil {
-						t.Fatal(err)
-					}
-					if action != "promote_subject" {
-						t.Fatalf("action %s", action)
-					}
+				for _, ch := range revision {
 					want := res.Claim.ID
-					if entityType == "canonical_entity" {
+					if ch.EntityType == "canonical_entity" {
 						want = res.Entity.ID
 					}
-					if string(id) != string(want) {
-						t.Fatalf("%s id mismatch", entityType)
+					if string(ch.EntityID) != string(want) {
+						t.Fatalf("%s id mismatch", ch.EntityType)
 					}
-					got = append(got, entityType)
+					got = append(got, ch.EntityType)
 				}
+				sort.Strings(got)
 				if strings.Join(got, ",") != "canonical_entity,identity_claim" {
 					t.Fatalf("changes %v", got)
 				}
@@ -134,8 +122,10 @@ func TestSave(t *testing.T) {
 				if err != nil || len(list) != 1 {
 					t.Fatalf("%v handles=%d", err, len(list))
 				}
-				if got := lastRevisionChanges(t, c); got != "promote_subject:identity_claim" {
-					t.Fatalf("revision %s", got)
+				db := dbtest.MustDB(t, c)
+				action, revision := dbtest.LatestRevision(t, db)
+				if action != "promote_subject" || len(revision) != 1 || revision[0].EntityType != "identity_claim" {
+					t.Fatalf("revision %s %+v", action, revision)
 				}
 			},
 		},
@@ -172,10 +162,7 @@ func TestSave(t *testing.T) {
 				}
 				a := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
 				b := promotetest.Save(t, c, userID, promote.Input{SubjectID: mk("person").ID})
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`UPDATE canonical_entities SET merged_into_id = ? WHERE id = ?`, b.Entity.ID, a.Entity.ID); err != nil {
 					t.Fatal(err)
 				}
@@ -223,33 +210,6 @@ func TestSave(t *testing.T) {
 			tt.run(t, c, mk)
 		})
 	}
-}
-
-// lastRevisionChanges is "action:entity_type,…" for the newest revision.
-func lastRevisionChanges(t *testing.T, c *database.Catalog) string {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rows, err := db.Query(`SELECT t.action_type, ch.entity_type
-		FROM audit_changes ch JOIN audit_transactions t ON t.id = ch.audit_transaction_id
-		WHERE t.revision = (SELECT MAX(revision) FROM audit_transactions)
-		ORDER BY ch.entity_type`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var action string
-	var types []string
-	for rows.Next() {
-		var entityType string
-		if err := rows.Scan(&action, &entityType); err != nil {
-			t.Fatal(err)
-		}
-		types = append(types, entityType)
-	}
-	return action + ":" + strings.Join(types, ",")
 }
 
 func newCatalog(t *testing.T) (*database.Catalog, func(key string) subjects.Subject) {

@@ -30,3 +30,25 @@ func QueryPlan(t testing.TB, db *sql.DB, query string, args ...any) []string {
 	}
 	return details
 }
+
+// Count runs a single-integer query (SELECT COUNT(*) …) on a *sql.DB or *sql.Tx.
+func Count(t testing.TB, q interface {
+	QueryRow(string, ...any) *sql.Row
+}, query string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := q.QueryRow(query, args...).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// MustDB opens c's *sql.DB, failing the test on error.
+func MustDB(t testing.TB, c interface{ DB() (*sql.DB, error) }) *sql.DB {
+	t.Helper()
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return db
+}

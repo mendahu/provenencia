@@ -6284,6 +6284,18 @@
         }
       }
     },
+    "sources.copy.date": {
+      "comment": "Copy Source checkbox: give the copy the original's published date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Published date"
+          }
+        }
+      }
+    },
     "sources.copy.description": {
       "comment": "Copy Source checkbox: copy the original's description",
       "extractionState": "manual",

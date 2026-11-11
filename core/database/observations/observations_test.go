@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -158,10 +159,7 @@ func TestObservations(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(
 			`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`,
@@ -442,10 +440,7 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var before int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&before); err != nil {
 					t.Fatal(err)
@@ -538,10 +533,7 @@ func TestObservations(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var dates, names int
 				if err := db.QueryRow(`SELECT COUNT(*) FROM date_values WHERE id = ?`, dateID).Scan(&dates); err != nil {
 					t.Fatal(err)
@@ -581,7 +573,7 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if n := rowCount(t, c, `SELECT COUNT(*) FROM date_values WHERE id = ?`, oldDateID); n != 0 {
+				if n := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values WHERE id = ?`, oldDateID); n != 0 {
 					t.Fatalf("replaced date value left behind: %d rows", n)
 				}
 				if got, want := changeKinds(changes, "date_value"), []string{"date_value/delete"}; !sameStrings(got, want) {
@@ -737,10 +729,7 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var transcription sql.NullString
 				if err := db.QueryRow(`SELECT transcription FROM citations WHERE id = ?`, res.Citation.ID).Scan(&transcription); err != nil || transcription.Valid {
 					t.Fatalf("transcription %+v %v", transcription, err)
@@ -828,10 +817,7 @@ func TestObservations(t *testing.T) {
 							t.Fatal(err)
 						}
 						obs := res.Observations[0]
-						db, err := c.DB()
-						if err != nil {
-							t.Fatal(err)
-						}
+						db := dbtest.MustDB(t, c)
 						var imageID []byte
 						if err := db.QueryRow(`SELECT image_file_id FROM depiction_values WHERE id = ?`, obs.ValueDepictionID).Scan(&imageID); err != nil {
 							t.Fatal(err)
@@ -918,8 +904,8 @@ func TestObservations(t *testing.T) {
 				}
 				for _, tt := range tests {
 					t.Run(tt.name, func(t *testing.T) {
-						filesBefore := rowCount(t, c, `SELECT COUNT(*) FROM files`)
-						valuesBefore := rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`)
+						filesBefore := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`)
+						valuesBefore := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`)
 						objectsBefore := objectCount(t, c)
 						var err error
 						if tt.unstaged {
@@ -930,10 +916,10 @@ func TestObservations(t *testing.T) {
 						if !errors.Is(err, tt.want) {
 							t.Fatalf("got %v want %v", err, tt.want)
 						}
-						if got := rowCount(t, c, `SELECT COUNT(*) FROM files`); got != filesBefore {
+						if got := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`); got != filesBefore {
 							t.Fatalf("files %d want %d", got, filesBefore)
 						}
-						if got := rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`); got != valuesBefore {
+						if got := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`); got != valuesBefore {
 							t.Fatalf("depiction_values %d want %d", got, valuesBefore)
 						}
 						if got := objectCount(t, c); got != objectsBefore {
@@ -956,10 +942,7 @@ func TestObservations(t *testing.T) {
 					t.Fatal(err)
 				}
 				obs := res.Observations[0]
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				lookup := func() (valueID []byte, region string, file files.File) {
 					var imageID []byte
 					if err := db.QueryRow(`SELECT o.value_depiction_id, d.region_json, d.image_file_id
@@ -989,8 +972,8 @@ func TestObservations(t *testing.T) {
 				if string(newValue) == string(oldValue) || region != newRegion || string(newFile.ID) == string(oldFile.ID) {
 					t.Fatalf("value %x->%x region=%q file %x->%x", oldValue, newValue, region, oldFile.ID, newFile.ID)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM depiction_values WHERE id = ?`, oldValue) != 0 ||
-					rowCount(t, c, `SELECT COUNT(*) FROM files WHERE id = ?`, oldFile.ID) != 0 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values WHERE id = ?`, oldValue) != 0 ||
+					dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files WHERE id = ?`, oldFile.ID) != 0 {
 					t.Fatal("old value row or file row left behind")
 				}
 				if objectExists(t, c, oldFile) || !objectExists(t, c, newFile) {
@@ -1061,8 +1044,8 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM name_values WHERE id = ?`, nameID) != 0 ||
-					rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`) != 1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM name_values WHERE id = ?`, nameID) != 0 ||
+					dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`) != 1 {
 					t.Fatal("name value should be released and one depiction value created")
 				}
 				if got, want := changeKinds(changes, "name_value", "depiction_value"),
@@ -1079,8 +1062,8 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`) != 0 ||
-					rowCount(t, c, `SELECT COUNT(*) FROM files`) != 1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`) != 0 ||
+					dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 {
 					t.Fatal("depiction value and its file should be released")
 				}
 				if got := changeKinds(changes, "depiction_value"); !sameStrings(got, []string{"depiction_value/delete"}) {
@@ -1110,7 +1093,7 @@ func TestObservations(t *testing.T) {
 				if err := deleteObservation(c, userID, res.Observations[0].ID); err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`) != 0 || rowCount(t, c, `SELECT COUNT(*) FROM files`) != 1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`) != 0 || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 {
 					t.Fatal("value row or image file left behind")
 				}
 				if objectCount(t, c) != objectsBefore {
@@ -1132,19 +1115,19 @@ func TestObservations(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM files`) != 2 || objectCount(t, c) != objectsBefore+1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 2 || objectCount(t, c) != objectsBefore+1 {
 					t.Fatal("two likenesses of one crop should share one file")
 				}
 				if err := deleteObservation(c, userID, res.Observations[0].ID); err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM files`) != 2 || objectCount(t, c) != objectsBefore+1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 2 || objectCount(t, c) != objectsBefore+1 {
 					t.Fatal("the shared file should stay while the other likeness uses it")
 				}
 				if err := deleteObservation(c, userID, res.Observations[1].ID); err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM files`) != 1 || objectCount(t, c) != objectsBefore {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || objectCount(t, c) != objectsBefore {
 					t.Fatal("the shared file should go with the last likeness")
 				}
 			},
@@ -1172,7 +1155,7 @@ func TestObservations(t *testing.T) {
 				if err := deleteSubject(); !errors.Is(err, subjects.ErrInUse) {
 					t.Fatalf("got %v want ErrInUse", err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`) != 1 || objectCount(t, c) != objectsBefore+1 {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`) != 1 || objectCount(t, c) != objectsBefore+1 {
 					t.Fatal("a refused delete must leave the value, file, and object")
 				}
 				if err := deleteObservation(c, userID, res.Observations[0].ID); err != nil {
@@ -1181,7 +1164,7 @@ func TestObservations(t *testing.T) {
 				if err := deleteSubject(); err != nil {
 					t.Fatal(err)
 				}
-				if rowCount(t, c, `SELECT COUNT(*) FROM depiction_values`) != 0 || rowCount(t, c, `SELECT COUNT(*) FROM files`) != 1 || objectCount(t, c) != objectsBefore {
+				if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM depiction_values`) != 0 || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM files`) != 1 || objectCount(t, c) != objectsBefore {
 					t.Fatal("value row, file, or object left behind")
 				}
 			},
@@ -1212,19 +1195,6 @@ func objectCount(t *testing.T, c *database.Catalog) int {
 		return nil
 	})
 	if err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
-func rowCount(t *testing.T, c *database.Catalog, query string, args ...any) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(query, args...).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	return n
@@ -1364,8 +1334,8 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 	}
 	counts := func() [2]int {
 		return [2]int{
-			rowCount(t, c, `SELECT COUNT(*) FROM citations`),
-			rowCount(t, c, `SELECT COUNT(*) FROM observations`),
+			dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM citations`),
+			dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM observations`),
 		}
 	}
 
@@ -1412,14 +1382,14 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 			t.Fatal(err)
 		}
 		obs := res.Observations[0]
-		before := rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID)
+		before := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID)
 		in := nameOn(ben, "Ben")
 		in.ID = obs.ID
 		if _, err := observationstest.UpdateObservation(c, userID, in); !errors.Is(err, observations.ErrOtherGraph) {
 			t.Fatalf("got %v want ErrOtherGraph", err)
 		}
-		if rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID) != before ||
-			rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ann.ID) != 1 {
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM observations WHERE subject_id = ?`, ben.ID) != before ||
+			dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ann.ID) != 1 {
 			t.Fatal("stored row changed")
 		}
 		in = nameOn(ann, "Ann Three")
@@ -1440,7 +1410,7 @@ func TestObservationsStayInOneGraph(t *testing.T) {
 		if _, err := observationstest.UpdateObservation(c, userID, in); !errors.Is(err, observations.ErrOtherGraph) {
 			t.Fatalf("got %v want ErrOtherGraph", err)
 		}
-		if rowCount(t, c, `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ben.ID) != 1 {
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM observations WHERE id = ? AND subject_id = ?`, obs.ID, ben.ID) != 1 {
 			t.Fatal("stored row changed")
 		}
 	})
@@ -1505,10 +1475,7 @@ func newBooleanFixture(t *testing.T) booleanFixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	if _, err := db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 99)`, personType.ID, id); err != nil {
 		t.Fatal(err)
 	}
@@ -1561,7 +1528,7 @@ func TestBooleanObservationValue(t *testing.T) {
 				if !errors.Is(err, observations.ErrInvalid) {
 					t.Fatalf("got %v, want ErrInvalid", err)
 				}
-				if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations`); n != 0 {
+				if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations`); n != 0 {
 					t.Fatalf("%d rows after refusal", n)
 				}
 				return
@@ -1577,7 +1544,7 @@ func TestBooleanObservationValue(t *testing.T) {
 			if tt.want {
 				stored = 1
 			}
-			if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE value_boolean = ? AND value_integer IS NULL`, stored); n != 1 {
+			if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations WHERE value_boolean = ? AND value_integer IS NULL`, stored); n != 1 {
 				t.Fatalf("value_boolean = %d not stored", stored)
 			}
 			listed, err := observations.ListBySubject(f.c, f.person.ID)
@@ -1614,7 +1581,7 @@ func TestUpdateBooleanObservation(t *testing.T) {
 		return changes
 	}
 	changes := update(true)
-	if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE value_boolean = 1`); n != 1 {
+	if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations WHERE value_boolean = 1`); n != 1 {
 		t.Fatal("value_boolean not 1 after update")
 	}
 	if len(changes) != 1 {
@@ -1708,14 +1675,14 @@ func TestNegationFollowsTheValueType(t *testing.T) {
 			if tc.wantInvalid != errors.Is(err, observations.ErrInvalid) || (!tc.wantInvalid && err != nil) {
 				t.Fatalf("err = %v, wantInvalid %v", err, tc.wantInvalid)
 			}
-			if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations`); n != tc.wantRows {
+			if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations`); n != tc.wantRows {
 				t.Fatalf("%d rows, want %d", n, tc.wantRows)
 			}
-			if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != tc.wantNegative {
+			if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations WHERE polarity = 'negative'`); n != tc.wantNegative {
 				t.Fatalf("%d negative rows, want %d", n, tc.wantNegative)
 			}
 			if tc.stored {
-				if n := rowCount(t, f.c, `SELECT COUNT(*) FROM observations WHERE value_boolean = 1`); n != tc.wantTrue {
+				if n := dbtest.Count(t, dbtest.MustDB(t, f.c), `SELECT COUNT(*) FROM observations WHERE value_boolean = 1`); n != tc.wantTrue {
 					t.Fatalf("%d rows with value_boolean 1, want %d", n, tc.wantTrue)
 				}
 			}

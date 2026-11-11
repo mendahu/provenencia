@@ -1813,6 +1813,9 @@ public nonisolated struct Provenencia_Engine_V1_CopySourceRequest: Sendable {
   /// the original's Artifacts to copy
   public var artifactIds: [String] = []
 
+  /// the original's date, as the copy's own
+  public var copyDate: Bool = false
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -10017,7 +10020,7 @@ nonisolated extension Provenencia_Engine_V1_CreateSourceResponse: SwiftProtobuf.
 
 nonisolated extension Provenencia_Engine_V1_CopySourceRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CopySourceRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{1}title\0\u{3}source_type_id\0\u{3}copy_description\0\u{3}copy_metadata\0\u{3}copy_credibility\0\u{3}artifact_ids\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}project_dir\0\u{3}user_id\0\u{3}source_id\0\u{1}title\0\u{3}source_type_id\0\u{3}copy_description\0\u{3}copy_metadata\0\u{3}copy_credibility\0\u{3}artifact_ids\0\u{3}copy_date\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -10034,6 +10037,7 @@ nonisolated extension Provenencia_Engine_V1_CopySourceRequest: SwiftProtobuf.Mes
       case 7: try { try decoder.decodeSingularBoolField(value: &self.copyMetadata) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.copyCredibility) }()
       case 9: try { try decoder.decodeRepeatedStringField(value: &self.artifactIds) }()
+      case 10: try { try decoder.decodeSingularBoolField(value: &self.copyDate) }()
       default: break
       }
     }
@@ -10067,6 +10071,9 @@ nonisolated extension Provenencia_Engine_V1_CopySourceRequest: SwiftProtobuf.Mes
     if !self.artifactIds.isEmpty {
       try visitor.visitRepeatedStringField(value: self.artifactIds, fieldNumber: 9)
     }
+    if self.copyDate != false {
+      try visitor.visitSingularBoolField(value: self.copyDate, fieldNumber: 10)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -10080,6 +10087,7 @@ nonisolated extension Provenencia_Engine_V1_CopySourceRequest: SwiftProtobuf.Mes
     if lhs.copyMetadata != rhs.copyMetadata {return false}
     if lhs.copyCredibility != rhs.copyCredibility {return false}
     if lhs.artifactIds != rhs.artifactIds {return false}
+    if lhs.copyDate != rhs.copyDate {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

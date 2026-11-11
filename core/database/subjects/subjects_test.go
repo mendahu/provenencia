@@ -3,13 +3,13 @@ package subjects
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -74,10 +74,7 @@ func TestSubjects(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&actionType); err != nil {
 			t.Fatal(err)
@@ -86,17 +83,9 @@ func TestSubjects(t *testing.T) {
 	}
 	latestEntityType := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var entityType string
-		if err := db.QueryRow(`
-			SELECT entity_type FROM audit_changes
-			ORDER BY rowid DESC LIMIT 1`).Scan(&entityType); err != nil {
-			t.Fatal(err)
-		}
-		return entityType
+		db := dbtest.MustDB(t, c)
+		_, revision := dbtest.LatestRevision(t, db)
+		return revision[len(revision)-1].EntityType
 	}
 
 	tests := []struct {
@@ -222,27 +211,15 @@ func TestSubjects(t *testing.T) {
 				if latestEntityType(t, c) != "subject" {
 					t.Fatalf("entity %s", latestEntityType(t, c))
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
-				var raw string
-				if err := db.QueryRow(`
-					SELECT changes_json FROM audit_changes
-					ORDER BY rowid DESC LIMIT 1`).Scan(&raw); err != nil {
-					t.Fatal(err)
-				}
-				var fields map[string]any
-				if err := json.Unmarshal([]byte(raw), &fields); err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
+				_, revision := dbtest.LatestRevision(t, db)
+				fields := revision[len(revision)-1].Fields
 				for _, key := range []string{"id", "ref", "source_id", "subject_type_id", "label", "description"} {
 					if _, ok := fields[key]; !ok {
 						t.Fatalf("subject create missing %q in %+v", key, fields)
 					}
 				}
-				desc, _ := fields["description"].(map[string]any)
-				if desc["new"] != nil {
+				if fields["description"].New != nil {
 					t.Fatalf("empty description should be null: %+v", fields)
 				}
 				got, err := Get(c, s.ID)
@@ -375,10 +352,7 @@ func TestSubjects(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(
 					`INSERT INTO subject_positions (subject_id, grid_x, grid_y) VALUES (?, 1, 2)`,
 					s.ID,

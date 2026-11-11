@@ -12,6 +12,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -144,10 +145,7 @@ func TestSources(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&actionType); err != nil {
 			t.Fatal(err)
@@ -162,10 +160,7 @@ func TestSources(t *testing.T) {
 		{
 			name: "title column is not null at current format",
 			run: func(t *testing.T, c *database.Catalog) {
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				var ver int
 				if err := db.QueryRow(`PRAGMA user_version`).Scan(&ver); err != nil {
 					t.Fatal(err)
@@ -452,10 +447,7 @@ func TestSources(t *testing.T) {
 				if _, err := runAddNote(c, userID, s.ID, "Keep"); err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, s.ID); err != nil {
 					t.Fatal(err)
 				}
@@ -713,10 +705,7 @@ func TestSourceDelete(t *testing.T) {
 	if _, err := GetNote(c, note.ID); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("note left %v", err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var action string
 	if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&action); err != nil {
 		t.Fatal(err)
@@ -968,19 +957,6 @@ func sourceFixture(t *testing.T) (c *database.Catalog, userID, typeID []byte) {
 	return c, userID, typeID
 }
 
-func dateRows(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM date_values`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 func TestSourceDate(t *testing.T) {
 	c, userID, typeID := sourceFixture(t)
 	src, err := runCreate(c, userID, CreateInput{SourceTypeID: typeID, Title: "Parish register"})
@@ -1023,8 +999,8 @@ func TestSourceDate(t *testing.T) {
 		if err != nil || read.Date == nil || !bytes.Equal(read.Date.ID, firstID) {
 			t.Fatalf("Get %+v err=%v", read, err)
 		}
-		if dateRows(t, c) != 1 {
-			t.Fatalf("date rows %d", dateRows(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`) != 1 {
+			t.Fatalf("date rows %d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`))
 		}
 		if len(changes) != 2 || changes[0].EntityType != "date_value" || changes[0].Action != rowchange.ActionCreate ||
 			changes[1].EntityType != "source" || changes[1].Fields["date_value_id"].New != database.UUIDString(firstID) {
@@ -1042,8 +1018,8 @@ func TestSourceDate(t *testing.T) {
 		if len(changes) != 1 || changes[0].EntityType != "date_value" || changes[0].Action != rowchange.ActionUpdate {
 			t.Fatalf("changes %+v", changes)
 		}
-		if dateRows(t, c) != 1 {
-			t.Fatalf("date rows %d", dateRows(t, c))
+		if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`) != 1 {
+			t.Fatalf("date rows %d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`))
 		}
 	})
 	t.Run("same date writes nothing", func(t *testing.T) {
@@ -1069,8 +1045,8 @@ func TestSourceDate(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.Date != nil || got.DateValueID != nil || dateRows(t, c) != 0 {
-			t.Fatalf("got %+v, date rows %d", got, dateRows(t, c))
+		if got.Date != nil || got.DateValueID != nil || dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`) != 0 {
+			t.Fatalf("got %+v, date rows %d", got, dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM date_values`))
 		}
 		if len(changes) != 2 || changes[0].EntityType != "source" || changes[0].Fields["date_value_id"].New != nil ||
 			changes[1].EntityType != "date_value" || changes[1].Action != rowchange.ActionDelete {
@@ -1113,10 +1089,7 @@ func TestSourceDate(t *testing.T) {
 	t.Run("dangling date row reads undated", func(t *testing.T) {
 		dangle := func() []byte {
 			ctx := context.Background()
-			db, err := c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
+			db := dbtest.MustDB(t, c)
 			conn, err := db.Conn(ctx)
 			if err != nil {
 				t.Fatal(err)
@@ -1151,10 +1124,7 @@ func TestSourceDate(t *testing.T) {
 		}
 	})
 	t.Run("one date row per source", func(t *testing.T) {
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		cur, err := Get(c, src.ID)
 		if err != nil {
 			t.Fatal(err)
@@ -1247,10 +1217,7 @@ func TestMissingSourceIsNotFound(t *testing.T) {
 	unused := make([]byte, 16)
 	unused[15] = 9
 	short := []byte{1, 2, 3}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 
 	cases := []struct {
 		name string

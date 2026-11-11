@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
@@ -18,10 +19,7 @@ func TestCountFilePointersIfUnused(t *testing.T) {
 	c := testCatalogInternal(t)
 	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-AAAAA", "Deed")
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 
 	fileA := newFileID(t)
 	const sum = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -206,23 +204,11 @@ func deleteArtifact(t *testing.T, tx *sql.Tx, artID []byte) []files.Object {
 	return objs
 }
 
-func countRows(t *testing.T, tx *sql.Tx, query string, args ...any) int {
-	t.Helper()
-	var n int
-	if err := tx.QueryRow(query, args...).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 func TestReleaseKeepsSharedDerived(t *testing.T) {
 	c := testCatalogInternal(t)
 	typeID := insertSourceType(t, c, "book", "Book")
 	srcID := insertSource(t, c, typeID, "SRC-CCCCC", "Deed")
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -249,16 +235,16 @@ func TestReleaseKeepsSharedDerived(t *testing.T) {
 	if len(objs) != 1 || objs[0].ChecksumSHA256 != sumA {
 		t.Fatalf("objects %+v", objs)
 	}
-	if n := countRows(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, fileA); n != 0 {
+	if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, fileA); n != 0 {
 		t.Fatalf("A left %d", n)
 	}
-	if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ?`, fileA); n != 0 {
+	if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ?`, fileA); n != 0 {
 		t.Fatalf("A link left %d", n)
 	}
-	if n := countRows(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, shared); n != 1 {
+	if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM files WHERE id = ?`, shared); n != 1 {
 		t.Fatalf("shared thumbnail deleted")
 	}
-	if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ? AND derived_file_id = ?`, fileB, shared); n != 1 {
+	if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM file_derivatives WHERE source_file_id = ? AND derived_file_id = ?`, fileB, shared); n != 1 {
 		t.Fatalf("B link gone")
 	}
 }
@@ -282,10 +268,7 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 			c := testCatalogInternal(t)
 			typeID := insertSourceType(t, c, "book", "Book")
 			srcID := insertSource(t, c, typeID, "SRC-DDDDD", "Deed")
-			db, err := c.DB()
-			if err != nil {
-				t.Fatal(err)
-			}
+			db := dbtest.MustDB(t, c)
 			tx, err := db.Begin()
 			if err != nil {
 				t.Fatal(err)
@@ -318,10 +301,10 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 				t.Fatalf("objects %v want %v", sums, tt.want)
 			}
 			if tt.extra {
-				if n := countRows(t, tx, `SELECT COUNT(*) FROM files`); n != 2 {
+				if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM files`); n != 2 {
 					t.Fatalf("files changed: %d", n)
 				}
-				if n := countRows(t, tx, `SELECT COUNT(*) FROM file_derivatives`); n != 1 {
+				if n := dbtest.Count(t, tx, `SELECT COUNT(*) FROM file_derivatives`); n != 1 {
 					t.Fatalf("file_derivatives changed: %d", n)
 				}
 			}
@@ -331,10 +314,7 @@ func TestReleaseReportsReleasedObjects(t *testing.T) {
 
 func TestSnapshotOwnedRequiresParent(t *testing.T) {
 	c := testCatalogInternal(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -353,10 +333,7 @@ func TestSnapshotOwnedRequiresParent(t *testing.T) {
 
 func insertSourceType(t *testing.T, c *database.Catalog, key, label string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -372,10 +349,7 @@ func insertSourceType(t *testing.T, c *database.Catalog, key, label string) []by
 
 func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, title string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -391,10 +365,7 @@ func insertSource(t *testing.T, c *database.Catalog, typeID []byte, sourceRef, t
 
 func insertArtifact(t *testing.T, c *database.Catalog, sourceID, fileID []byte, artRef, label string) []byte {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	id, err := uuid.NewV7()
 	if err != nil {
 		t.Fatal(err)
@@ -449,10 +420,7 @@ type ownedPlanFixture struct {
 func newOwnedPlanFixture(t *testing.T) *ownedPlanFixture {
 	t.Helper()
 	c := testCatalogInternal(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -514,7 +482,7 @@ func (f *ownedPlanFixture) drop(parent []byte) []files.Object {
 
 func (f *ownedPlanFixture) has(table string, id []byte) bool {
 	f.t.Helper()
-	return countRows(f.t, f.tx, `SELECT COUNT(*) FROM `+table+` WHERE id = ?`, id) == 1
+	return dbtest.Count(f.t, f.tx, `SELECT COUNT(*) FROM `+table+` WHERE id = ?`, id) == 1
 }
 
 func TestOwnedPlanRelease(t *testing.T) {

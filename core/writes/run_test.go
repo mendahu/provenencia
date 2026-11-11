@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -46,7 +47,7 @@ func TestRunRollsBack(t *testing.T) {
 	if _, err := users.Lookup(c, id); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("user %v", err)
 	}
-	if n := auditCount(t, c); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -64,7 +65,7 @@ func TestRunSkipsEmptyChanges(t *testing.T) {
 	if got != "kept" || res.Revision != 0 || ran {
 		t.Fatalf("got %q rev %d after %v", got, res.Revision, ran)
 	}
-	if n := auditCount(t, c); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -109,10 +110,7 @@ func TestRunNoneOnlyCommits(t *testing.T) {
 	if res.Revision != 0 || !ran {
 		t.Fatalf("rev %d after %v", res.Revision, ran)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var n int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM file_derivatives WHERE id = ?`, linkID).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -120,7 +118,7 @@ func TestRunNoneOnlyCommits(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("links %d", n)
 	}
-	if n := auditCount(t, c); n != 0 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 0 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -164,10 +162,7 @@ func TestRunMixedOmitsNone(t *testing.T) {
 	if res.Revision == 0 {
 		t.Fatal("expected a revision")
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var entity string
 	if err := db.QueryRow(`SELECT entity_type FROM audit_changes WHERE audit_transaction_id = (
 		SELECT id FROM audit_transactions WHERE revision = ?)`, res.Revision).Scan(&entity); err != nil {
@@ -250,7 +245,7 @@ func TestRunDropsListeners(t *testing.T) {
 	if ok.notices != 1 || bad.notices != 1 || ok.dropped != 1 || bad.dropped != 1 {
 		t.Fatalf("ok %+v bad %+v", ok, bad)
 	}
-	if n := auditCount(t, c); n != 1 {
+	if n := dbtest.Revisions(t, dbtest.MustDB(t, c)); n != 1 {
 		t.Fatalf("audit rows %d", n)
 	}
 }
@@ -267,10 +262,7 @@ func TestRunReportsCommitTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var stored string
 	if err := db.QueryRow(`SELECT created_at FROM audit_transactions WHERE revision = ?`, res.Revision).Scan(&stored); err != nil {
 		t.Fatal(err)
@@ -296,7 +288,7 @@ func TestPropertyTermRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	before := searchCount(t, c)
+	before := dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM catalog_search_docs`)
 
 	term, res, err := writes.Run(c, writes.Op{Action: "create_property_term", UserID: userID},
 		func(tx *database.Tx) (propertyterms.Term, []rowchange.Change, error) {
@@ -306,8 +298,8 @@ func TestPropertyTermRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertTermEffects(t, res)
-	if searchCount(t, c) != before {
-		t.Fatalf("search docs %d, was %d", searchCount(t, c), before)
+	if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM catalog_search_docs`) != before {
+		t.Fatalf("search docs %d, was %d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM catalog_search_docs`), before)
 	}
 	action, scopes := auditAction(t, c, res.Revision)
 	if action != "create_property_term" || scopes != 0 {
@@ -340,8 +332,8 @@ func TestPropertyTermRun(t *testing.T) {
 	if action != "update_property_term" || scopes != 0 {
 		t.Fatalf("action %q scopes %d", action, scopes)
 	}
-	if searchCount(t, c) != before {
-		t.Fatalf("search docs %d, was %d", searchCount(t, c), before)
+	if dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM catalog_search_docs`) != before {
+		t.Fatalf("search docs %d, was %d", dbtest.Count(t, dbtest.MustDB(t, c), `SELECT COUNT(*) FROM catalog_search_docs`), before)
 	}
 }
 
@@ -405,25 +397,9 @@ func mustRef(t *testing.T) string {
 	return r
 }
 
-func auditCount(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
-}
-
 func auditAction(t *testing.T, c *database.Catalog, revision int64) (string, int) {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var action string
 	var id []byte
 	if err := db.QueryRow(`SELECT id, action_type FROM audit_transactions WHERE revision = ?`, revision).Scan(&id, &action); err != nil {
@@ -434,17 +410,4 @@ func auditAction(t *testing.T, c *database.Catalog, revision int64) (string, int
 		t.Fatal(err)
 	}
 	return action, scopes
-}
-
-func searchCount(t *testing.T, c *database.Catalog) int {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var n int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM catalog_search_docs`).Scan(&n); err != nil {
-		t.Fatal(err)
-	}
-	return n
 }

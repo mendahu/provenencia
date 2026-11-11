@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/propertymeta"
@@ -24,7 +25,7 @@ func TestInstallAndLoad(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	tables, err := Load(db)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +65,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 	if err := Warm(c); err != nil {
 		t.Fatal(err)
 	}
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	if _, err := db.Exec(`DELETE FROM name_alias_members WHERE token = 'jas'`); err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +109,7 @@ func TestWarmHoldsAliasTablesUntilInvalidated(t *testing.T) {
 
 func TestEmptyCatalogScoresNoAliases(t *testing.T) {
 	c := newCatalog(t)
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	tables, err := Load(db)
 	if err != nil {
 		t.Fatal(err)
@@ -131,7 +132,7 @@ func TestUserAndPluginRowsScore(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	insertTable(t, db, "xyzzy", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 	insertTable(t, db, "pepe", "plugin:example", "nickname", [][]string{{"josé", "pepe"}})
 	rules, err := Rules(c.Graph(), db, matchregistry.Default().Value)
@@ -157,7 +158,7 @@ func TestInstallStoresComparisonTokens(t *testing.T) {
 	if err := Install(c); err != nil {
 		t.Fatal(err)
 	}
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	tables, err := Load(db)
 	if err != nil {
 		t.Fatal(err)
@@ -184,7 +185,7 @@ func TestDesIsANicknameOfDesireeAndDesirae(t *testing.T) {
 	if err := Warm(c); err != nil {
 		t.Fatal(err)
 	}
-	rules, err := Rules(c.Graph(), mustDB(t, c), matchregistry.Default().Value)
+	rules, err := Rules(c.Graph(), dbtest.MustDB(t, c), matchregistry.Default().Value)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,15 +205,6 @@ func newCatalog(t *testing.T) *database.Catalog {
 	}
 	t.Cleanup(func() { _ = c.Close() })
 	return c
-}
-
-func mustDB(t *testing.T, c *database.Catalog) *sql.DB {
-	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return db
 }
 
 func insertTable(t *testing.T, db *sql.DB, key, origin, kind string, sets [][]string) {
@@ -300,7 +292,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 	if again.Sets != 0 || again.Tokens != 0 {
 		t.Fatalf("second add %+v", again)
 	}
-	tables, err := Load(mustDB(t, c))
+	tables, err := Load(dbtest.MustDB(t, c))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +306,7 @@ func TestAddProductNicknamesFillsAnEmptyCatalog(t *testing.T) {
 
 func TestAddProductNicknamesGrowsTheShortList(t *testing.T) {
 	c := newCatalog(t)
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	insertTable(t, db, "nicknames", vocabkey.OriginProvenencia, "nickname", [][]string{{"james", "jim", "jimmy"}})
 	insertTable(t, db, "nicknames", "user", "nickname", [][]string{{"xyzzy", "plugh"}})
 
@@ -381,7 +373,7 @@ func given(text string) valuecompare.Value {
 
 func TestLoadHugeSetIndex(t *testing.T) {
 	c := newCatalog(t)
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	insertTable(t, db, "huge", "user", "nickname", [][]string{{"jim", "james"}})
 	var id []byte
 	if err := db.QueryRow(`SELECT id FROM name_alias_tables WHERE key = 'huge'`).Scan(&id); err != nil {
@@ -414,7 +406,7 @@ func TestWarmRulesReusesIndex(t *testing.T) {
 	if err := Warm(c); err != nil {
 		t.Fatal(err)
 	}
-	db := mustDB(t, c)
+	db := dbtest.MustDB(t, c)
 	base := matchregistry.Default().Value
 	tables, err := Load(db)
 	if err != nil {

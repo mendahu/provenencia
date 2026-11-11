@@ -20,12 +20,14 @@ struct SourceCopyModelTests {
         )
     }
 
-    private func original() -> CatalogSource {
+    private func original(date: CatalogDateValueInput? = nil) -> CatalogSource {
         CatalogSource(
             id: "s1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Obit",
-            description: "From the Herald"
+            description: "From the Herald", date: date
         )
     }
+
+    private let fourthOfJuly1881 = CatalogDateValueInput(kind: "point", startYear: 1881, startMonth: 7, startDay: 4)
 
     /// Fixture: `s1` with a description, two metadata values, a credibility
     /// grade and two Artifacts (one unlabeled).
@@ -191,9 +193,12 @@ struct SourceCopyModelTests {
 
         #expect(!model.descriptionAvailable)
         #expect(!model.credibilityAvailable)
+        #expect(!model.dateAvailable)
+        #expect(model.dateLine == nil)
         #expect(model.artifactIDsToCopy.isEmpty)
         let copy = await model.copy()
         let id = copy?.id ?? ""
+        #expect(copy?.date == nil)
         #expect(copy?.description == "")
         #expect(store.credibilityBySource[id] == nil)
         #expect((store.artifactsBySource[id] ?? []).isEmpty)
@@ -232,6 +237,32 @@ struct SourceCopyModelTests {
         #expect(model.isDirty)
         model.choices.includeMetadata = true
         #expect(!model.isDirty)
+        model.choices.includeDate = false
+        #expect(model.isDirty)
+        model.choices.includeDate = true
+        #expect(!model.isDirty)
+    }
+
+    /// T-6: a dated original starts with the date tick on, and the copy carries it.
+    @Test func dateTickIsOnWhenDatedAndCarried() async {
+        let dated = original(date: fourthOfJuly1881)
+        let (model, _) = await loaded(makeStore(original: dated), original: dated)
+
+        #expect(model.dateAvailable)
+        #expect(model.dateLine == SourcesRowDate.line(fourthOfJuly1881))
+        #expect(model.choices.includeDate)
+        let copy = await model.copy()
+        #expect(copy?.date == fourthOfJuly1881)
+    }
+
+    /// T-7: an unticked date is not sent.
+    @Test func untickedDateIsNotCarried() async {
+        let dated = original(date: fourthOfJuly1881)
+        let (model, _) = await loaded(makeStore(original: dated), original: dated)
+        model.choices.includeDate = false
+        let copy = await model.copy()
+        #expect(copy != nil)
+        #expect(copy?.date == nil)
     }
 
     @Test func artifactDeletedElsewhereIsDropped() async {

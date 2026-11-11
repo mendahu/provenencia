@@ -2,6 +2,7 @@ package sourcecopy
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"image"
 	"image/png"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -25,6 +27,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
+	"github.com/mendahu/provenencia/core/datevalue"
+	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/derivatives"
 	"github.com/mendahu/provenencia/core/ingest"
 	"github.com/mendahu/provenencia/core/ref"
@@ -198,6 +202,18 @@ func seedObituary(t *testing.T) (c *database.Catalog, userID []byte, orig source
 	return c, userID, orig, arts
 }
 
+// setDate dates a Source through the one owner write.
+func setDate(t *testing.T, c *database.Catalog, userID, sourceID []byte, d *datevalue.Value) sources.Source {
+	t.Helper()
+	src, err := writeOne(c, userID, "set_source_date", func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
+		return sources.SetDate(tx, userID, sourceID, d)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return src
+}
+
 func writeOne[T any](c *database.Catalog, userID []byte, action string, fn func(tx *database.Tx) (T, []rowchange.Change, error)) (T, error) {
 	v, _, err := writes.Run(c, writes.Op{Action: action, UserID: userID}, fn)
 	return v, err
@@ -247,10 +263,7 @@ func artifactKeys(t *testing.T, c *database.Catalog, sourceID []byte) []artKey {
 
 func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) int {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var n int
 	if err := db.QueryRow(query, sourceID).Scan(&n); err != nil {
 		t.Fatal(err)
@@ -260,10 +273,7 @@ func countFor(t *testing.T, c *database.Catalog, query string, sourceID []byte) 
 
 func layoutOf(t *testing.T, c *database.Catalog, sourceID []byte) []sourcemetadata.LayoutRow {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -316,10 +326,7 @@ func snap(t *testing.T, c *database.Catalog, id []byte) snapshot {
 // graphLinks returns the one graph of a Source and the Artifact ids linked to it.
 func graphLinks(t *testing.T, c *database.Catalog, sourceID []byte) ([]byte, []string) {
 	t.Helper()
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var graph []byte
 	if err := db.QueryRow(`SELECT id FROM evidence_graphs WHERE source_id = ?`, sourceID).Scan(&graph); err != nil {
 		t.Fatal(err)
@@ -558,6 +565,143 @@ func TestCopy(t *testing.T) {
 			},
 		},
 		{
+			name: "carries the date as its own row",
+			run: func(t *testing.T) {
+				for _, tc := range []struct {
+					name string
+					date *datevalue.Value
+				}{
+					{"range", datevaluetest.Between(1834, 0, 0, 1840, 0, 0)},
+					{"phrase", datevaluetest.Phrase("in the reign of Victoria")},
+				} {
+					t.Run(tc.name, func(t *testing.T) {
+						c, userID, orig, arts := seedObituary(t)
+						orig = setDate(t, c, userID, orig.ID, tc.date)
+						in := allParts(orig, arts)
+						in.Date = true
+						cp, err := runCopy(c, userID, in)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if cp.Date == nil || bytes.Equal(cp.DateValueID, orig.DateValueID) || len(cp.DateValueID) != 16 {
+							t.Fatalf("copy date %+v id %x original %x", cp.Date, cp.DateValueID, orig.DateValueID)
+						}
+						want, have := *orig.Date, *cp.Date
+						want.ID, have.ID = nil, nil
+						if !reflect.DeepEqual(want, have) {
+							t.Fatalf("date\nwant %+v\nhave %+v", want, have)
+						}
+						var creates, updates int
+						var seen []string
+						db := dbtest.MustDB(t, c)
+						_, revision := dbtest.LatestRevision(t, db)
+						for _, ch := range revision {
+							seen = append(seen, ch.EntityType+" "+string(ch.Action))
+							switch {
+							case ch.EntityType == "date_value" && ch.Action == rowchange.ActionCreate:
+								creates++
+							case ch.EntityType == "source" && ch.Action == rowchange.ActionUpdate && bytes.Equal(ch.EntityID, cp.ID):
+								if _, ok := ch.Fields["date_value_id"]; ok {
+									updates++
+								}
+							}
+						}
+						if creates != 1 || updates != 1 {
+							t.Fatalf("revision changes %v", seen)
+						}
+
+						// The two rows are independent: dating the copy leaves the original.
+						setDate(t, c, userID, cp.ID, datevaluetest.YMD(1841, 0, 0))
+						got, err := sources.Get(c, orig.ID)
+						if err != nil {
+							t.Fatal(err)
+						}
+						if got.Date == nil || !bytes.Equal(got.DateValueID, orig.DateValueID) || !reflect.DeepEqual(*got.Date, *orig.Date) {
+							t.Fatalf("original date changed: %+v", got.Date)
+						}
+					})
+				}
+			},
+		},
+		{
+			name: "date chosen on an undated original",
+			run: func(t *testing.T) {
+				t.Run("undated", func(t *testing.T) {
+					c, userID, orig, arts := seedObituary(t)
+					in := allParts(orig, arts)
+					in.Date = true
+					cp, err := runCopy(c, userID, in)
+					if err != nil {
+						t.Fatal(err)
+					}
+					db := dbtest.MustDB(t, c)
+					if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != 0 {
+						t.Fatalf("copy %+v, date rows %d", cp.Date, rows)
+					}
+					_, revision := dbtest.LatestRevision(t, db)
+					for _, ch := range revision {
+						if ch.EntityType == "date_value" {
+							t.Fatalf("date_value change %+v", ch)
+						}
+					}
+				})
+				t.Run("date row missing", func(t *testing.T) {
+					c, userID, orig, arts := seedObituary(t)
+					orig = setDate(t, c, userID, orig.ID, datevaluetest.YMD(1880, 0, 0))
+					db := dbtest.MustDB(t, c)
+					ctx := context.Background()
+					conn, err := db.Conn(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=OFF`); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := conn.ExecContext(ctx, `DELETE FROM date_values WHERE id = ?`, orig.DateValueID); err != nil {
+						t.Fatal(err)
+					}
+					if _, err := conn.ExecContext(ctx, `PRAGMA foreign_keys=ON`); err != nil {
+						t.Fatal(err)
+					}
+					// Release the connection: the catalog holds one, and the copy needs it.
+					if err := conn.Close(); err != nil {
+						t.Fatal(err)
+					}
+					in := allParts(orig, arts)
+					in.Date = true
+					cp, err := runCopy(c, userID, in)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != 0 {
+						t.Fatalf("copy %+v, date rows %d", cp.Date, rows)
+					}
+					_, revision := dbtest.LatestRevision(t, db)
+					for _, ch := range revision {
+						if ch.EntityType == "date_value" {
+							t.Fatalf("date_value change %+v", ch)
+						}
+					}
+				})
+			},
+		},
+		{
+			name: "date not chosen",
+			run: func(t *testing.T) {
+				c, userID, orig, arts := seedObituary(t)
+				orig = setDate(t, c, userID, orig.ID, datevaluetest.YMD(1880, 7, 4))
+				db := dbtest.MustDB(t, c)
+				before := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`)
+				cp, err := runCopy(c, userID, allParts(orig, arts))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if rows := dbtest.Count(t, db, `SELECT COUNT(*) FROM date_values`); cp.Date != nil || cp.DateValueID != nil || rows != before {
+					t.Fatalf("copy %+v, date rows %d -> %d", cp.Date, before, rows)
+				}
+			},
+		},
+		{
 			name: "invalid input writes nothing",
 			run: func(t *testing.T) {
 				c, userID, orig, arts := seedObituary(t)
@@ -617,10 +761,7 @@ func TestCopy(t *testing.T) {
 
 func TestReadDraftMissingSourceIsNotFound(t *testing.T) {
 	c, _, _, _ := seedObituary(t)
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	tx, err := db.Begin()
 	if err != nil {
 		t.Fatal(err)

@@ -175,6 +175,7 @@ func CopySource(in []byte) ([]byte, error) {
 					Title:        req.GetTitle(),
 					SourceTypeID: typeID,
 					Description:  req.GetCopyDescription(),
+					Date:         req.GetCopyDate(),
 					Metadata:     req.GetCopyMetadata(),
 					Credibility:  req.GetCopyCredibility(),
 					ArtifactIDs:  artifactIDs,

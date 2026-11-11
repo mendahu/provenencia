@@ -3,7 +3,6 @@ package artifacts_test
 import (
 	"bytes"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"image"
 	"image/png"
@@ -98,37 +97,22 @@ func TestArtifacts(t *testing.T) {
 	}
 	latestAction := func(t *testing.T, c *database.Catalog) string {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var actionType string
 		if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&actionType); err != nil {
 			t.Fatal(err)
 		}
 		return actionType
 	}
-	latestChangesJSON := func(t *testing.T, c *database.Catalog) string {
+	latestDiffs := func(t *testing.T, c *database.Catalog) map[string]rowchange.FieldDiff {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var raw string
-		if err := db.QueryRow(`
-			SELECT c.changes_json FROM audit_changes c
-			JOIN audit_transactions t ON t.id = c.audit_transaction_id
-			ORDER BY t.revision DESC LIMIT 1`).Scan(&raw); err != nil {
-			t.Fatal(err)
-		}
-		return raw
+		db := dbtest.MustDB(t, c)
+		_, revision := dbtest.LatestRevision(t, db)
+		return revision[len(revision)-1].Fields
 	}
 	artifactCount := func(t *testing.T, c *database.Catalog) int {
 		t.Helper()
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var n int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM artifacts`).Scan(&n); err != nil {
 			t.Fatal(err)
@@ -291,13 +275,7 @@ func TestArtifacts(t *testing.T) {
 				if latestAction(t, c) != "update_artifact" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
-				var diffs map[string]struct {
-					Old any `json:"old"`
-					New any `json:"new"`
-				}
-				if err := json.Unmarshal([]byte(latestChangesJSON(t, c)), &diffs); err != nil {
-					t.Fatal(err)
-				}
+				diffs := latestDiffs(t, c)
 				if diffs["file_id"].Old != nil || diffs["file_id"].New == nil {
 					t.Fatalf("attach diff %+v", diffs["file_id"])
 				}
@@ -410,10 +388,7 @@ func TestArtifacts(t *testing.T) {
 				if artifactCount(t, c) != 1 {
 					t.Fatalf("count %d", artifactCount(t, c))
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`DELETE FROM sources WHERE id = ?`, src.ID); err == nil {
 					t.Fatal("expected source delete to fail while an artifact remains")
 				}
@@ -435,10 +410,7 @@ func TestArtifacts(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				db, err := c.DB()
-				if err != nil {
-					t.Fatal(err)
-				}
+				db := dbtest.MustDB(t, c)
 				if _, err := db.Exec(`DELETE FROM artifacts WHERE id = ?`, a.ID); err != nil {
 					t.Fatal(err)
 				}
@@ -530,10 +502,7 @@ func TestArtifactDelete(t *testing.T) {
 	if _, err := artifacts.Get(c, fileless.ID); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatalf("artifact left %v", err)
 	}
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	var action string
 	if err := db.QueryRow(`SELECT action_type FROM audit_transactions ORDER BY revision DESC LIMIT 1`).Scan(&action); err != nil {
 		t.Fatal(err)
@@ -1003,10 +972,7 @@ func TestArtifactDeleteKeepsSharedThumbnail(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := c.DB()
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := dbtest.MustDB(t, c)
 	insert := func(tx *sql.Tx, sum string) files.File {
 		t.Helper()
 		id, err := files.NewID()
@@ -1134,10 +1100,7 @@ func TestArtifactUpdateGraphs(t *testing.T) {
 	}
 	jones := evidencegraphstest.Create(t, c, userID, src.ID, "Jones", q.ID).ID
 	revisions := func() int {
-		db, err := c.DB()
-		if err != nil {
-			t.Fatal(err)
-		}
+		db := dbtest.MustDB(t, c)
 		var n int
 		if err := db.QueryRow(`SELECT COUNT(*) FROM audit_transactions`).Scan(&n); err != nil {
 			t.Fatal(err)
