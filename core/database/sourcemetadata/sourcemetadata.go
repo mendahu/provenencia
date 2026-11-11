@@ -251,11 +251,27 @@ func insertLayoutTx(tx *sql.Tx, st *store, owner Owner, l LayoutRow) (rowchange.
 	}), nil
 }
 
+// updateLayoutTx writes next over prev's layout row and returns its update
+// change, which carries only the columns that differ.
+func updateLayoutTx(tx *sql.Tx, st *store, owner Owner, prev, next LayoutRow) (rowchange.Change, error) {
+	if _, err := tx.Exec(st.layoutUpdate, next.SortOrder, boolInt(next.Dismissed), owner.ID, next.FieldID); err != nil {
+		return rowchange.Change{}, mapConstraint(err)
+	}
+	diffs := map[string]rowchange.FieldDiff{}
+	if prev.SortOrder != next.SortOrder {
+		diffs["sort_order"] = rowchange.FieldDiff{Old: prev.SortOrder, New: next.SortOrder}
+	}
+	if prev.Dismissed != next.Dismissed {
+		diffs["dismissed"] = rowchange.FieldDiff{Old: prev.Dismissed, New: next.Dismissed}
+	}
+	return layoutChange(st, owner, next.FieldID, rowchange.ActionUpdate, diffs), nil
+}
+
 // CreateAll writes values and layout rows verbatim onto an owner that has
 // neither, so a copy reads back in the original's order with the original's
-// dismissed flags. Unlike Set it appends no layout row of its own. Changes are
-// the value changes in input order, then the layout changes in input order.
-// The caller records them.
+// dismissed flags. Unlike Set it appends no layout row of its own. It is Apply
+// on an empty owner: changes are the value changes in input order, then the
+// layout changes in input order. The caller records them.
 func CreateAll(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchange.Change, error) {
 	st, err := storeFor(owner)
 	if err != nil {
@@ -270,9 +286,6 @@ func CreateAll(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchang
 	if len(d.Values) == 0 && len(d.Layout) == 0 {
 		return nil, nil
 	}
-	if err := requireOwner(tx.Tx, st, owner); err != nil {
-		return nil, err
-	}
 	have, err := readOwnerTx(tx.Tx, st, owner)
 	if err != nil {
 		return nil, err
@@ -280,34 +293,137 @@ func CreateAll(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchang
 	if len(have.values) > 0 || len(have.layout) > 0 {
 		return nil, ErrInvalid
 	}
+	return apply(tx, userID, st, owner, have, d)
+}
 
-	changes := make([]rowchange.Change, 0, len(d.Values)+len(d.Layout))
+// Apply saves a draft: it makes the owner's stored values equal d.Values and
+// makes each layout row d.Layout lists equal that row, as given. A value the
+// draft leaves out is deleted (an empty draft clears every value); a layout row
+// the draft leaves out stays, so a draft never undoes a dismiss by omission.
+// Apply appends no layout row for a new value: a caller with a board sends the
+// whole order as d.Layout. Only differing rows are written. The caller records
+// the returned changes.
+func Apply(tx *database.Tx, userID []byte, owner Owner, d Draft) ([]rowchange.Change, error) {
+	st, err := storeFor(owner)
+	if err != nil {
+		return nil, err
+	}
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	have, err := readOwnerTx(tx.Tx, st, owner)
+	if err != nil {
+		return nil, err
+	}
+	return apply(tx, userID, st, owner, have, d)
+}
+
+// apply checks the whole draft before it writes anything, then writes the
+// value changes (deletes in field-id order, then inserts and updates in draft
+// order) and the layout changes (inserts and updates in draft order).
+func apply(tx *database.Tx, userID []byte, st *store, owner Owner, have stored, d Draft) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
+		return nil, err
+	}
+	if err := requireOwner(tx.Tx, st, owner); err != nil {
+		return nil, err
+	}
+
+	ids := make([][]byte, 0, len(d.Values)+len(d.Layout))
+	inValues := make(map[string]struct{}, len(d.Values))
 	for _, in := range d.Values {
 		if len(in.FieldID) != 16 {
 			return nil, ErrInvalid
 		}
-		fields, err := loadFields(tx.Tx, [][]byte{in.FieldID})
+		if _, dup := inValues[string(in.FieldID)]; dup {
+			return nil, ErrInvalid
+		}
+		inValues[string(in.FieldID)] = struct{}{}
+		ids = append(ids, in.FieldID)
+	}
+	inLayout := make(map[string]struct{}, len(d.Layout))
+	for _, l := range d.Layout {
+		if len(l.FieldID) != 16 {
+			return nil, ErrInvalid
+		}
+		if _, dup := inLayout[string(l.FieldID)]; dup {
+			return nil, ErrInvalid
+		}
+		inLayout[string(l.FieldID)] = struct{}{}
+		ids = append(ids, l.FieldID)
+	}
+	var fields map[string]metadatafields.Field
+	if len(ids) > 0 {
+		var err error
+		if fields, err = loadFields(tx.Tx, ids); err != nil {
+			return nil, err
+		}
+	}
+	normalized := make([]string, len(d.Values))
+	for i, in := range d.Values {
+		n, err := normalizeValue(fields[string(in.FieldID)].DataType, strings.TrimSpace(in.ValueText))
 		if err != nil {
 			return nil, err
 		}
-		_, change, err := insertValueTx(tx.Tx, st, owner, fields[string(in.FieldID)], in.ValueText)
+		normalized[i] = n
+	}
+
+	haveValue := make(map[string]Row, len(have.values))
+	for _, r := range have.values {
+		haveValue[string(r.FieldID)] = r
+	}
+	haveLayout := make(map[string]LayoutRow, len(have.layout))
+	for _, l := range have.layout {
+		haveLayout[string(l.FieldID)] = l
+	}
+
+	var changes []rowchange.Change
+	for _, prev := range have.values {
+		if _, kept := inValues[string(prev.FieldID)]; kept {
+			continue
+		}
+		change, err := deleteValueTx(tx.Tx, st, prev)
 		if err != nil {
 			return nil, err
 		}
 		changes = append(changes, change)
 	}
+	for i, in := range d.Values {
+		prev, ok := haveValue[string(in.FieldID)]
+		switch {
+		case !ok:
+			_, change, err := insertValueTx(tx.Tx, st, owner, fields[string(in.FieldID)], in.ValueText)
+			if err != nil {
+				return nil, err
+			}
+			changes = append(changes, change)
+		case prev.ValueText != normalized[i]:
+			_, change, err := updateValueTx(tx.Tx, st, prev, normalized[i])
+			if err != nil {
+				return nil, err
+			}
+			changes = append(changes, change)
+		}
+	}
 	for _, l := range d.Layout {
-		if len(l.FieldID) != 16 {
-			return nil, ErrInvalid
+		prev, ok := haveLayout[string(l.FieldID)]
+		switch {
+		case !ok:
+			change, err := insertLayoutTx(tx.Tx, st, owner, l)
+			if err != nil {
+				return nil, err
+			}
+			changes = append(changes, change)
+		case prev.SortOrder != l.SortOrder || prev.Dismissed != l.Dismissed:
+			change, err := updateLayoutTx(tx.Tx, st, owner, prev, l)
+			if err != nil {
+				return nil, err
+			}
+			changes = append(changes, change)
 		}
-		if _, err := loadFields(tx.Tx, [][]byte{l.FieldID}); err != nil {
-			return nil, err
-		}
-		change, err := insertLayoutTx(tx.Tx, st, owner, l)
-		if err != nil {
-			return nil, err
-		}
-		changes = append(changes, change)
 	}
 	return changes, nil
 }
@@ -504,6 +620,26 @@ func ReadDraftTx(tx *sql.Tx, owner Owner) (Draft, error) {
 	}
 	d.Layout = have.layout
 	return d, nil
+}
+
+// ListByOwnersTx returns the stored values of many owners on an open
+// transaction, one query per level: each owner's rows by field id, the owners
+// in the order of their ids within a level, each row carrying its Owner. A
+// repeated owner counts once. No owners returns nil without a query. An owner
+// at a level with no store is ErrInvalid before any query.
+func ListByOwnersTx(tx *sql.Tx, owners []Owner) ([]Row, error) {
+	for _, o := range owners {
+		if _, err := storeFor(o); err != nil {
+			return nil, err
+		}
+	}
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	if len(owners) == 0 {
+		return nil, nil
+	}
+	return listByOwners(tx, owners)
 }
 
 // listByOwners reads the values of the owners, one query per level, each
