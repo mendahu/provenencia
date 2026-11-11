@@ -224,7 +224,7 @@ func TestDelete(t *testing.T) {
 					t.Fatal(err)
 				}
 				if _, err := db.Exec(
-					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order) VALUES (?, ?, 0)`,
+					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, level, sort_order) VALUES (?, ?, 'source', 0)`,
 					id, fieldID,
 				); err != nil {
 					t.Fatal(err)
@@ -485,11 +485,13 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if _, err := db.Exec(
-					`INSERT INTO source_type_metadata_fields (source_type_id, field_id, sort_order) VALUES (?, ?, 0)`,
-					typeID, fieldID,
-				); err != nil {
-					t.Fatal(err)
+				for _, level := range []string{"source", "graph"} {
+					if _, err := db.Exec(
+						`INSERT INTO source_type_metadata_fields (source_type_id, field_id, level, sort_order) VALUES (?, ?, ?, 0)`,
+						typeID, fieldID, level,
+					); err != nil {
+						t.Fatal(err)
+					}
 				}
 				all, err := List(c)
 				if err != nil {
@@ -501,6 +503,9 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				}
 				if byKey["book"] != 1 || byKey["letter"] != 0 {
 					t.Fatalf("got %v", byKey)
+				}
+				if n, err := SuggestedFields(c, typeID); err != nil || n != 1 {
+					t.Fatalf("SuggestedFields = %d, %v, want 1", n, err)
 				}
 			},
 		},

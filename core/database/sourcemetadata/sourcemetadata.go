@@ -20,6 +20,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcevocab"
 	"github.com/mendahu/provenencia/core/urlshape"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 var ErrInvalid = apperr.New(apperr.CodeSourceMetadataInvalid, apperr.KindUser)
@@ -509,7 +510,7 @@ func ListWorkspace(c *database.Catalog, sourceID []byte) ([]WorkspaceEntry, erro
 	if err != nil {
 		return nil, err
 	}
-	suggestions, err := sourcevocab.ListSuggestions(c, src.SourceTypeID)
+	suggestions, err := sourcevocab.ListSuggestions(c, src.SourceTypeID, vocabkey.LevelSource)
 	if err != nil {
 		return nil, err
 	}

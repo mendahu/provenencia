@@ -2,6 +2,7 @@ package sourcevocab
 
 import (
 	"github.com/mendahu/provenencia/core/database/metadatafields"
+	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // Declarative provenencia seed registry (create-time starter for new catalogs).
@@ -14,10 +15,12 @@ type seedField struct {
 	Key, Label, DataType, Description string
 }
 
+// seedSuggestion is one type's suggested fields at one level, in order; a
+// field's position is its sort order.
 type seedSuggestion struct {
 	TypeKey   string
-	FieldKey  string
-	SortOrder int
+	Level     vocabkey.Level
+	FieldKeys []string
 }
 
 var seedTypes = []seedType{
@@ -35,7 +38,5 @@ var seedFields = []seedField{
 }
 
 var seedSuggestions = []seedSuggestion{
-	{TypeKey: "birth_certificate", FieldKey: "document_number", SortOrder: 0},
-	{TypeKey: "birth_certificate", FieldKey: "record_date", SortOrder: 1},
-	{TypeKey: "birth_certificate", FieldKey: "issue_date", SortOrder: 2},
+	{TypeKey: "birth_certificate", Level: vocabkey.LevelSource, FieldKeys: []string{"document_number", "record_date", "issue_date"}},
 }

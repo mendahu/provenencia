@@ -325,6 +325,38 @@ func TestSourceMetadata(t *testing.T) {
 			},
 		},
 		{
+			name: "list workspace suggests the source level only",
+			run: func(t *testing.T, c *database.Catalog) {
+				mustUser(t, c)
+				src := mustSeededSource(t, c)
+				fieldID, err := metadatafields.Upsert(c, metadatafields.Field{
+					Key: "shelf_mark", Origin: vocabkey.OriginUser, Label: "Shelf mark", DataType: metadatafields.DataTypeText,
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := sourcevocab.AppendSuggestion(c, src.SourceTypeID, fieldID, vocabkey.LevelGraph); err != nil {
+					t.Fatal(err)
+				}
+				ws, err := ListWorkspace(c, src.ID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				suggested := 0
+				for _, e := range ws {
+					if e.Field.Key == "shelf_mark" {
+						t.Fatalf("graph-level suggestion listed on the Source page: %+v", e)
+					}
+					if e.Suggested {
+						suggested++
+					}
+				}
+				if suggested != 3 {
+					t.Fatalf("suggested = %d, want the 3 seeded source fields", suggested)
+				}
+			},
+		},
+		{
 			name: "source delete cascades metadata",
 			run: func(t *testing.T, c *database.Catalog) {
 				mustUser(t, c)
