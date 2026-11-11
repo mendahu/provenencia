@@ -5,7 +5,6 @@ import (
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/shortlist"
 )
 
@@ -49,15 +48,7 @@ func MatchIndexGenForTest(g *graphcache.Graph) uint64 {
 // holds no handle, so Verify can fail a test.
 func EmptyShortlistForTest(c *database.Catalog) error {
 	g := c.Graph()
-	cfg, namePattern, err := loadConfig(g)
-	if err != nil {
-		return err
-	}
-	metas, err := valuerules.Metas(g)
-	if err != nil {
-		return err
-	}
-	p, err := newProfiler(g, metas, cfg.Subject, namePattern)
+	cfg, _, p, err := shortlistInputs(g, false)
 	if err != nil {
 		return err
 	}

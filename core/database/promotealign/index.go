@@ -127,15 +127,7 @@ func buildShortlist(g *graphcache.Graph, p *profiler, cfg graphalign.Config) (*s
 // checkMatchIndex rebuilds the stored shortlist index and each stored profile
 // with a profiler that shares nothing with the stored value, and compares.
 func checkMatchIndex(g *graphcache.Graph, stored matchIndex) error {
-	cfg, namePattern, err := loadConfig(g)
-	if err != nil {
-		return err
-	}
-	metas, err := valuerules.Metas(g)
-	if err != nil {
-		return err
-	}
-	p, err := newProfilerWith(g, metas, cfg.Subject, namePattern, map[string]profile{})
+	cfg, namePattern, p, err := shortlistInputs(g, true)
 	if err != nil {
 		return err
 	}
@@ -169,6 +161,27 @@ func checkMatchIndex(g *graphcache.Graph, stored matchIndex) error {
 	return nil
 }
 
+// shortlistInputs is the alignment config, the name pattern and a profiler for
+// the shortlist index. The profiler shares the stored index's profiles, or, with
+// fresh, nothing: a check compares against a build that shares nothing.
+func shortlistInputs(g *graphcache.Graph, fresh bool) (graphalign.Config, string, *profiler, error) {
+	cfg, namePattern, err := loadConfig(g)
+	if err != nil {
+		return graphalign.Config{}, "", nil, err
+	}
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return graphalign.Config{}, "", nil, err
+	}
+	var p *profiler
+	if fresh {
+		p, err = newProfilerWith(g, metas, cfg.Subject, namePattern, map[string]profile{})
+	} else {
+		p, err = newProfiler(g, metas, cfg.Subject, namePattern)
+	}
+	return cfg, namePattern, p, err
+}
+
 // Warm loads the shortlist kinds onto the catalog graph and builds the
 // shortlist index, so the first proposal after a project opens ranks without
 // either. A handle commit drops the index again; the next proposal rebuilds it.
@@ -177,15 +190,7 @@ func Warm(c *database.Catalog) error {
 		return err
 	}
 	g := c.Graph()
-	cfg, namePattern, err := loadConfig(g)
-	if err != nil {
-		return err
-	}
-	metas, err := valuerules.Metas(g)
-	if err != nil {
-		return err
-	}
-	prof, err := newProfiler(g, metas, cfg.Subject, namePattern)
+	cfg, _, prof, err := shortlistInputs(g, false)
 	if err != nil {
 		return err
 	}
