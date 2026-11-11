@@ -1,7 +1,7 @@
 # Review — S16-10 One cache registry
 
-**Verdict:** Fits with changes — Not ready, fixed in round 1 (round 2 waits on the user's answer to M-1)
-**Rounds:** 1. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes, 2 rounds; To user: the keyed Fill wording (M-14)
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -79,3 +79,14 @@
 
 ### X-9 · major · Match-index drop on a vocabulary commit between steps; D-13 errors
 **Answer:** Fixed — STEP-1 keeps the `dropDerived()` call in the vocabulary branch until STEP-4; STEP-3 removes `TestMatchIndexDrops`' alias and name format cases and states the intended gap until STEP-4's DerivedFrom; D-13 returns `loadConfig`'s and `Metas`' errors.
+
+### M-12 · blocker · D-21 guards Build but not `SetValue` on a write's graph
+**Answer:** Fixed — D-21: `SetValue` of a `LifeGraph` whole entry on an `Over` graph stores nothing; AC-1.10, T-4; the reworded rule says "neither builds nor stores".
+
+### M-13 · blocker · Key counts need exported slots
+**Answer:** Fixed — `MemoCount(KeySlot)` replaced by `KeyCounts() map[string]int` by entry `Name` (D-8); the benchmark loops it (D-17).
+
+### M-14 · blocker · D-2 departs from the registry rule; two map lines stay false
+**Answer:** To user (plan § 12 Open question 1, recommendation: accept) for the Fill wording; Fixed for the rest — STEP-8 rewords the "Every cache names the signal" rule's `DropOnHandleCommit` clause to name the three known exceptions, and D-18 marks them in the table.
+
+Minor, round 2: `SourcesModel.searchKeyCache` and `EvidenceGraphModel.snapshotMemo` are not single-entry `Memo` holders — Fixed in D-18. D-13's `Metas` error — already Fixed under X-9.
