@@ -34,8 +34,13 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
         return .irreversible
     }
 
+    /// The ref the preflight lists for the Subject's own handle, nil when it does not list it.
+    var ownHandleDeletedRef: String? {
+        deletedHandles?.listed.first { $0.id == handleID }?.ref
+    }
+
     var message: String {
-        if deletesOwnHandle, let ref = deletedHandles?.listed.first?.ref {
+        if deletesOwnHandle, let ref = ownHandleDeletedRef {
             return L10n.Unpromote.confirmMessageDeletes(kind: kind, ref: ref)
         }
         if let group = deletedHandles,
@@ -54,6 +59,23 @@ struct UnpromoteConfirmItem: Identifiable, Equatable {
         PVUnpromoteConfirmContent(
             id: id, name: name, message: message, tone: confirmTone, connections: connections, error: error
         )
+    }
+}
+
+/// What a page that shows the Subject's own handle does once the Unpromote has written: leave
+/// when the write deleted that handle, else stay. Each carries what VoiceOver says.
+enum UnpromotePageOutcome: Equatable {
+    /// The write deleted the page's handle; the text names the deleted ref, nil when the
+    /// preflight did not list it.
+    case leave(String?)
+    /// The page's handle stays; the text names the record that left.
+    case stay(String)
+
+    static func after(_ effects: CatalogWriteEffects, item: UnpromoteConfirmItem) -> UnpromotePageOutcome {
+        if let handleID = item.handleID, effects.deletedHandles.contains(handleID) {
+            return .leave(item.ownHandleDeletedRef.map { L10n.Unpromote.deletedAnnouncement(ref: $0) })
+        }
+        return .stay(L10n.Unpromote.unpromotedAnnouncement(name: item.name))
     }
 }
 
@@ -128,14 +150,42 @@ final class UnpromoteFlow {
         pending = item
     }
 
-    /// Writes the Unpromote and applies its effects: through `apply` when the page leaves an
-    /// entity the write deleted, else `session.apply(effects)`. Success closes the confirm and
-    /// returns true; a failure stays in the confirm as its error and returns false.
+    /// Writes the Unpromote for a page that shows no handle of its own (the Evidence graph) and
+    /// applies its effects. Success closes the confirm and returns true; a failure stays in the
+    /// confirm as its error and returns false.
+    @discardableResult
+    func confirm(session: WorkspaceSession, userID: String) async -> Bool {
+        await write(session: session, userID: userID) { session.apply($0) }
+    }
+
+    /// Writes the Unpromote for a page that shows the Subject's own handle, and applies its
+    /// effects as `UnpromotePageOutcome` says: `leavingPage` when the write deleted that handle,
+    /// else a plain apply; `announce` then speaks the outcome's text. A failed write calls
+    /// neither; the confirm keeps the error.
     @discardableResult
     func confirm(
         session: WorkspaceSession,
         userID: String,
-        apply: (@MainActor (CatalogWriteEffects) -> Void)? = nil
+        leavingPage leave: @escaping @MainActor () -> Void,
+        announce: @escaping @MainActor (String) -> Void = { AccessibilityAnnouncement.post($0) }
+    ) async -> Bool {
+        guard let item = pending else { return false }
+        return await write(session: session, userID: userID) { effects in
+            switch UnpromotePageOutcome.after(effects, item: item) {
+            case .leave(let text):
+                session.apply(effects, leavingPage: leave)
+                if let text { announce(text) }
+            case .stay(let text):
+                session.apply(effects)
+                announce(text)
+            }
+        }
+    }
+
+    private func write(
+        session: WorkspaceSession,
+        userID: String,
+        apply: @MainActor (CatalogWriteEffects) -> Void
     ) async -> Bool {
         guard let item = pending, !isRunning else { return false }
         isRunning = true
@@ -147,11 +197,7 @@ final class UnpromoteFlow {
                 userID: userID,
                 subjectID: item.id
             )
-            if let apply {
-                apply(effects)
-            } else {
-                session.apply(effects)
-            }
+            apply(effects)
             pending = nil
             return true
         } catch {

@@ -8548,6 +8548,22 @@ enum L10n {
             ), name)
         }
 
+        static func unpromotedAnnouncement(name: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "unpromote.unpromotedAnnouncement",
+                defaultValue: "%@ unpromoted.",
+                comment: "VoiceOver announcement after a record is unpromoted and its person, event or place stays; the argument is the record's name"
+            ), name)
+        }
+
+        static func deletedAnnouncement(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "unpromote.deletedAnnouncement",
+                defaultValue: "%@ deleted.",
+                comment: "VoiceOver announcement after a record's Unpromote deleted the person, event or place the page showed; the argument is its ref"
+            ), ref)
+        }
+
         static let confirmMessage = LocalizedStringResource(
             "unpromote.confirmMessage",
             defaultValue: "This promotion is removed. The cards stay on the graph, and the handle stays.",

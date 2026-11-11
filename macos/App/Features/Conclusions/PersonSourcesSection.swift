@@ -71,21 +71,11 @@ struct PersonSourcesSection: View {
         }
     }
 
-    /// Writes the Unpromote. When the write deleted this person, the app leaves for the Persons
-    /// list as the session applies the effects, so nothing reloads a handle that is gone.
+    /// Writes the Unpromote. The flow decides leave or stay: when the write deleted this person,
+    /// the app leaves for the Persons list as the session applies the effects, so nothing reloads
+    /// a handle that is gone; either way it says what happened.
     private func confirm() async -> Bool {
-        // The ref is read before the write closes the confirm; it is the person's own row of the preflight.
-        let deletedRef = unpromote.pending?.deletedHandles?.listed.first { $0.id == entityId }?.ref
-        return await unpromote.confirm(session: session, userID: userID) { effects in
-            guard effects.deletedHandles.contains(entityId) else {
-                session.apply(effects)
-                return
-            }
-            session.apply(effects, leavingPage: navigation.fallbackToSectionRoot)
-            if let deletedRef {
-                AccessibilityAnnouncement.post(L10n.Conclusions.sourcesPersonDeletedAnnouncement(ref: deletedRef))
-            }
-        }
+        await unpromote.confirm(session: session, userID: userID, leavingPage: navigation.fallbackToSectionRoot)
     }
 }
 

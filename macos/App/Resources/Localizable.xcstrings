@@ -16476,6 +16476,30 @@
         }
       }
     },
+    "unpromote.unpromotedAnnouncement": {
+      "comment": "VoiceOver announcement after a record is unpromoted and its person, event or place stays; the argument is the record's name",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unpromoted."
+          }
+        }
+      }
+    },
+    "unpromote.deletedAnnouncement": {
+      "comment": "VoiceOver announcement after a record's Unpromote deleted the person, event or place the page showed; the argument is its ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ deleted."
+          }
+        }
+      }
+    },
     "unpromote.confirmMessageDeletes.person": {
       "comment": "Unpromote confirm when the Person handle is deleted; argument is its ref",
       "extractionState": "manual",
