@@ -128,3 +128,25 @@ Do:
 - **Rewrite.** `boardWriteKeepsAnEditBegunElsewhere` keeps AC-2.2 – AC-2.4 on the Source's board alone (a Source edit begun after a save, and one open across a note save, both survive).
 - **Records.** The plan's Status stays "Landed in #802" and its **Landed** note gains a "Trimmed before merge (user, 2026-11-12)" paragraph: what went, what stayed, that US-1 moved to S15-34 / S15-35 (S15-D14). `completed.md`'s S15-09 paragraph says what actually lands. The map row's status becomes "Landed #802" when the PR merges (leave "In review, trim pending" now; the orchestrator updates it at finish). Version stays 0.11.0.
 Check: `rg -n "artifactCopyDetails|MetadataBoardStyle|openBoardIDs|setCopyDetails|syncBoards|\.compact\b" macos` prints nothing in `macos/App` (a `.compact` on an unrelated kit type is fine; list any hit); the Source page's Metadata section draws as on `main`; scripts/check-pr.sh PASS.
+
+## Round 3 — fix
+Head `4660065c8`. Gate PASS (orchestrator run against `064e1f393`). F-13 done: the Check `rg` prints only `.compact` on unrelated kit types; eight Artifact-board tests removed; `boardWriteKeepsAnEditBegunElsewhere` rewritten for the Source board.
+
+## Round 3 — review
+Reviewers: CON, MNT (fresh), scope `2dc869a9d...4660065c8`. UX and SEC+PRF not sent: the round only removes chrome and state, and CON checked the Source section's measures against `main`.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| MNT-1 | MNT | major | `keyboard-reorder.md` (added on this branch) and `MetadataBoardDialogs`' doc describe many boards that the trim removed | Fix now → orchestrator (idea file), F-14 (comment) | verified: `rg "Copy details\|many boards" docs/ideas macos/App` |
+| MNT-2 | MNT | major | Style leftovers: `width: 132` at two call sites, the label/controls split, a stale "stacked label" comment | Fix now → F-14 | verified: `MetadataBoardView.swift` 84, 187, 171-193 |
+| CON-1 | CON | minor | AC-2.1's page-level no-reload assertion went with T-5 | Fix now → F-14 | verified: no `getSourceWorkspaceCalls` check on a board save |
+
+Nits (logged, ride F-14): `MNT-3 · PVReorderableList.swift:28 · drop nonisolated if it builds` · `MNT-4 · plan Landed bullet "MetadataBoardLabel.width is optional" → "(reverted by the trim)"` · `CON-2 · same as MNT-2's comment`.
+
+### Fix plan 4
+
+**F-14 — Finish the trim's cleanup** (from MNT-1, MNT-2, CON-1, nits)
+Files: `macos/App/Features/Sources/MetadataBoardView.swift`, `MetadataBoardDialogs.swift`, `macos/App/DesignSystem/Components/ReorderableList/PVReorderableList.swift`, `macos/ProvenenciaTests/SourcePageModelTests.swift`, the plan's Landed note.
+Failing test first: none (no behavior change), except CON-1's assertion, which passes at head and must fail if `SourcePageMetadataHost.didWrite` applies `context.applyWrite(effects)`: check that by hand once, then restore.
+Do: `MetadataBoardLabel` gets `static let width: CGFloat = 132` and loses its `width` parameter; both literals go. `MetadataBoardSuggestionRow` draws one flat `HStack` again (label, input, Save, dismiss), with no `label` / `controls(fieldID:)` split and no "stacked label" comment. `MetadataBoardDialogs`' doc drops "so a page with many boards still has one of each" ("each targets the board that asked"). Try removing `nonisolated` from `PVReorderHandle.width`; keep it only if the build warns or fails, and say which. In `boardWriteKeepsAnEditBegunElsewhere`, record `store.getSourceWorkspaceCalls` before the first save, `settleWrites()`, and expect it unchanged. In the plan's Landed note, mark the `MetadataBoardLabel.width` bullet "(reverted by the trim)".
+Check: `rg -n "width: 132|stacked label|many boards" macos/App` prints nothing; scripts/check-pr.sh PASS.

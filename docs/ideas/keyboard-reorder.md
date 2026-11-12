@@ -4,7 +4,7 @@
 
 ## Problem
 
-A metadata board's saved rows reorder only by dragging the handle. A researcher on the keyboard, or using VoiceOver, cannot change their order at all. That holds on every board: the Source's Metadata section and, since S15-09, each Artifact's Copy details, up to 60 boards on one Source page. S15-10 and S15-11 reuse the same board, so they inherit the gap.
+A metadata board's saved rows reorder only by dragging the handle. A researcher on the keyboard, or using VoiceOver, cannot change their order at all. That holds on every board: the Source's Metadata section today, then the Artifact sheet (S15-34, add mode S15-10) and the Evidence graph form (S15-11), which reuse the same board and inherit the gap.
 
 ## Rough shape
 
