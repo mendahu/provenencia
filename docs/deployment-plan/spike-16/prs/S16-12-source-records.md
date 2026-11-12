@@ -1,6 +1,6 @@
 # S16-12 — Source records in the graph cache
 
-**Status:** Planned
+**Status:** Landed in [#800](https://github.com/mendahu/provenencia/pull/800) (2026-11-12)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Sources section, the record links diagram and the provenance sheet draw the same words; only where they are read from moves)
@@ -27,6 +27,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The Build heap stop was raised from 5 MB to 8 MB (user, 2026-11-12) after round 0 measured 5.76 MB at 3,000 Sources × 10 Artifacts; D-3 and D-5 kept their shape.
+- `api/ffi/handlers/source_write_effects_test.go` `TestUpdateAndCoverReturnEffects` now asserts a rename names no graph (D-9); the plan did not list it.
+- `TestEvidenceGraphsResolve` also asserts the title edit's graph search documents (AC-2.3); the `PersonRecordLinksContentTests` `graph()` helper sets `sourceTitle: "T"`.
+- Review fixes ([ship log](S16-12-source-records.ship.md)): `RelativeOrderColumn` clamps each `sort_order` to ±1,000,000 so a crafted grade cannot overflow it to a REAL (SEC-1); Apply removes every named Source before inserting any, so an Artifact swap keeps both mappings (CON-4); `sourcecredibilitygrades.RelativeOrderJoins` owns the credibility join and the reconciler's `provenanceColumns`/`Joins`/`Dest` are inlined, superseding D-4's column-only move (MNT-1); `sqlbatch.Scan` replaces the private `queryEach` (MNT-3); `databasetest.HeapDelta`/`LiveHeap` replace the hand-rolled heap reads in `sources` and `promotealign` benchmarks (MNT-5).
+- Later PR: the record links key recomputes on any write in a cited Source (PRF-1), held by S16-25's Check.
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
@@ -319,7 +328,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
 - [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
-- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
+- [x] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
 - [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
 - [ ] Domain doc updated if a rule in docs/*.md changed: docs/catalog-caches.md (row and sizes), docs/macos-client-patterns.md (Conclusion keys), core/database/effects/README.md, add-audit-scope, cache-architecture.md (Entity records)
