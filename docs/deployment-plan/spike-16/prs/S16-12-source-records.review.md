@@ -1,7 +1,7 @@
 # Review — S16-12 Source records in the graph cache
 
-**Verdict:** round 1: Fits with changes — Not ready; round 2 pending
-**Rounds:** 1 (round 2 pending). **Reviewers:** maintainability (Opus), executability (Opus)
+**Verdict:** Fits — Ready with changes (round 2); every finding answered, no blocker open
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Opus)
 
 ## To user
 
@@ -73,3 +73,32 @@ Apply bypassed `Whole.Set`, so an entry declared `DerivedFrom: Records` (S16-13,
 
 ### X-13 · nit · Wording slips
 **Answer:** Fixed: the STEP number, the T-4 file, the `measure` body, and the README sentence span.
+
+## Round 2
+
+Maintainability: **Fits** — no new blocker; every round-1 answer checked against the code. Executability: **Ready with changes**.
+
+### X-14 · blocker · T-2's Source delete cannot run on a Source with Artifacts or Subjects
+`sources.Delete` refuses it (`deleteimpact`); `artifacts.source_id` does not cascade.
+**Answer:** Fixed. T-2 and AC-2.1 now delete a second Source that has only its default graph. D-13's "Why" and Edges › Removed inputs are reworded.
+
+### X-15 · blocker · An unlabelled Artifact cannot be created
+**Answer:** Fixed. T-1 uses "Page 2" instead. D-6 drops `COALESCE(label, '')`, since the column is NOT NULL.
+
+### X-16 · blocker · An internal test package cannot import `evidencelayertest`, and the grades must be installed
+**Answer:** Fixed. D-1 puts the tests in `sources_test` and has them call `sourcecredibilitygrades.Install(c)` first.
+
+### X-17 · major · Where T-2's derived entry is registered
+**Answer:** Fixed. T-2 registers it as a package-level `var` in `sources_test` with the default `LifeGraph` lifetime.
+
+### X-18 · minor · STEP-5's `rg` check already passes on `main`
+**Answer:** Fixed. The check now greps `evidence_graph.go` and `load.go` for the bare field names.
+
+### Nit · D-3 field types
+**Answer:** Fixed. D-3 gives every field a type. `TypeID` is renamed `SourceTypeID`, the name `sources.Source` uses (this also answers the maintainability minor below).
+
+### Maintainability notes (below blocker)
+- The dead preview `PersonSourcesPreviewData.untitled` and `#Preview("Untitled Source")`. **Answer:** Fixed. Deleted in STEP-7, and added to Deletes.
+- The provenance sheet keeps its empty-Source-title fallback (`CitationLineDisplay`). **Answer:** Out, to `docs/ideas/structural-debt.md` (STEP-8 adds the line). It belongs to a separate view and component that this PR's chrome-free scope does not touch. US-3 is narrowed to the Sources section and the record links diagram.
+- Two names in one package. **Answer:** `SourceTypeID` is fixed. `sources.loadRecords` is declined: it is unexported in a different package from `conclusiondetails.loadRecords`, so no reader sees both.
+- Stale doc comments on `personGraphsSection` and `.personClaims`. **Answer:** Fixed. STEP-7 rewords both.
