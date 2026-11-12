@@ -192,12 +192,21 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
-	tiles := gallery.Of(n, gallery.PropertyIDs(vocab))
+	galleryProps := gallery.PropertyIDs(vocab)
+	tiles := gallery.Of(n, galleryProps)
 	leads := map[string]bool{}
 	for _, l := range tiles {
 		leads[string(l.ObservationIDs[0])] = true
 	}
-	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, []*graphcache.Node{n}, leads, false)
+	var leadRows []graphcache.Outcome
+	for _, prop := range galleryProps {
+		for _, row := range n.Outcomes[string(prop)] {
+			if leads[string(row.ObservationID)] {
+				leadRows = append(leadRows, row)
+			}
+		}
+	}
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, vocab, []*graphcache.Node{n}, leadRows, false)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -213,9 +222,9 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 // fieldsOf composes the fields of several handles at once, keyed by entity
 // id: the one composition every page's fields come from. A nil or merged
 // node, or a repeated id, is skipped. It also returns the outcomes of the
-// Observations in leads (a gallery's earliest records), which belong to no
-// field.
-func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads map[string]bool, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
+// Observations of leadRows (a gallery's earliest records, the node's own
+// outcome rows), which belong to no field.
+func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*graphcache.Node, leadRows []graphcache.Outcome, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
 	var use []*graphcache.Node
 	seen := map[string]bool{}
 	for _, n := range nodes {
@@ -238,16 +247,8 @@ func fieldsOf(g *graphcache.Graph, q Querier, nodes []*graphcache.Node, leads ma
 			return nil, nil, err
 		}
 	}
-	v, err := g.Vocabulary()
-	if err != nil {
-		return nil, nil, err
-	}
 	toponym := v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
-	var galleryProps [][]byte
-	if len(leads) > 0 {
-		galleryProps = gallery.PropertyIDs(v)
-	}
-	leadOutcomes, err := loadRecords(q, toponym, use, byProp, galleryProps, leads)
+	leadOutcomes, err := loadRecords(q, toponym, use, byProp, leadRows)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -423,7 +424,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 // outcomes of the Observations in leads (a gallery's earliest records, found
 // among the node's rows of the gallery Properties), which belong to no field;
 // their Recorded value has no Date or Name. A row with no record is dropped.
-func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map[string]map[string]*Field, galleryProps [][]byte, leads map[string]bool) (map[string]Outcome, error) {
+func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map[string]map[string]*Field, leadRows []graphcache.Outcome) (map[string]Outcome, error) {
 	leadOutcomes := map[string]Outcome{}
 	type want struct {
 		f   *Field // nil for a lead
@@ -444,13 +445,9 @@ func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map
 				add(f, row)
 			}
 		}
-		for _, prop := range galleryProps {
-			for _, row := range n.Outcomes[string(prop)] {
-				if leads[string(row.ObservationID)] {
-					add(nil, row)
-				}
-			}
-		}
+	}
+	for _, row := range leadRows {
+		add(nil, row)
 	}
 	type pending struct {
 		f                         *Field
@@ -487,10 +484,7 @@ func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map
 			rec.ObservationID = append([]byte(nil), t.row.ObservationID...)
 			rec.Reason = t.row.Reason
 			rec.ValueRank = t.row.ValueRank
-			rec.DeniedBy = append([]byte(nil), t.row.DeniedBy...)
-			if len(rec.DeniedBy) == 0 {
-				rec.DeniedBy = nil
-			}
+			rec.DeniedBy = t.row.DeniedBy // the node's rows are cloned at load
 			rec.Vote = autoreconcile.Vote{Support: t.row.VoteSupport, Of: t.row.VoteOf}
 			if t.f == nil {
 				leadOutcomes[string(rec.ObservationID)] = rec
@@ -643,7 +637,11 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(g, db, nodes, nil, true)
+	v, err := g.Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	fields, _, err := fieldsOf(g, db, v, nodes, nil, true)
 	if err != nil {
 		return nil, err
 	}
