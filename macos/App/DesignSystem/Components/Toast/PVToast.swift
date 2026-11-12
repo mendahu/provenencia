@@ -101,11 +101,15 @@ struct PVToast: View {
             AccessibilityAnnouncement.text(title: title, message: message),
             priority: AccessibilityAnnouncement.priority(danger: tone == .danger)
         )
-        .task {
-            guard let autoDismissAfter else { return }
-            try? await Task.sleep(for: .seconds(autoDismissAfter))
-            onDismiss?()
-        }
+        .task { await Self.autoDismiss(after: autoDismissAfter, onDismiss: onDismiss) }
+    }
+
+    /// Waits `delay`, then dismisses. A toast replaced or removed first cancels the wait,
+    /// and a cancelled wait dismisses nothing.
+    static func autoDismiss(after delay: TimeInterval?, onDismiss: (() -> Void)?) async {
+        guard let delay else { return }
+        do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+        onDismiss?()
     }
 }
 
