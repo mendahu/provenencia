@@ -720,7 +720,7 @@ struct CatalogQueryRegistryTests {
         let project = ProjectKey(projectDir: projectDir)
         let list = CatalogQueryInvalidation.key(.sourcesList(project: project))
         let writes: [CatalogMutation] = [
-            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceWorkspace(sourceId: "s1"),
         ]
         for mutation in writes {
             #expect(!registry.invalidations(by: mutation, project: project).contains(list), "\(mutation)")
@@ -737,7 +737,7 @@ struct CatalogQueryRegistryTests {
             .key(.placesList(project: project)), .allCached(.conclusionDetail),
         ]
         for mutation: CatalogMutation in [
-            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceWorkspace(sourceId: "s1"),
         ] {
             let invalidations = registry.invalidations(by: mutation, project: project)
             for key in conclusionKeys {
@@ -934,7 +934,7 @@ struct CatalogQueryRegistryTests {
             .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
-            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceWorkspace(sourceId: "s1"),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
@@ -944,9 +944,6 @@ struct CatalogQueryRegistryTests {
         // Writes that name their source stay narrow: a Source-page write reports
         // its handles in `WriteEffects`, so the mutation names only the page.
         #expect(registry.invalidations(by: .mutatedSourceWorkspace(sourceId: "s1"), project: project) == [
-            .key(.sourceWorkspace(project: project, sourceId: "s1")),
-        ])
-        #expect(registry.invalidations(by: .mutatedSourceMetadata(sourceId: "s1"), project: project) == [
             .key(.sourceWorkspace(project: project, sourceId: "s1")),
         ])
         #expect(registry.invalidations(by: .changedSourceType(source), project: project) == [
@@ -1395,7 +1392,7 @@ struct CatalogQueryRegistryTests {
             .updatedSource(source), .changedSourceType(source), .createdSource(source), .deletedSource(id: "s1"),
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
-            .mutatedSourceWorkspace(sourceId: "s1"), .mutatedSourceMetadata(sourceId: "s1"),
+            .mutatedSourceWorkspace(sourceId: "s1"),
         ]
         for mutation in mutations {
             for invalidation in registry.invalidations(by: mutation, project: project) {
