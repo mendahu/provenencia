@@ -25,7 +25,7 @@ private struct PVReorderGrip: View {
 /// `List` / `onMove` reorder gesture that actually changes order.
 struct PVReorderHandle: View {
     /// The handle's frame width; a row that lines up with it reads this.
-    nonisolated static let width: CGFloat = 20
+    static let width: CGFloat = 20
 
     var body: some View {
         PVReorderGrip()

@@ -2426,15 +2426,19 @@ struct SourcePageModelTests {
         )
         let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
+        session.apply(location: WorkspaceLocation.sourcePage(sourceId: sourceID))
         await model.warmFromSession()
         let handle = workspaceHandle(session)
 
         store.metadataWriteResults[sourceOwner] = [
             catalogMetadataEntry(a, "A2", order: 0), catalogMetadataEntry(b, "B", order: 1),
         ]
+        let loadsBefore = store.getSourceWorkspaceCalls
         model.metadata.beginEdit(fieldID: a.id)
         model.metadata.drafts[a.id] = "A2"
         await model.metadata.save(fieldID: a.id)
+        await session.settleWrites()
+        #expect(store.getSourceWorkspaceCalls == loadsBefore)
         model.metadata.beginEdit(fieldID: b.id)
         model.sync(from: handle)
         #expect(model.metadata.editingFieldID == b.id)

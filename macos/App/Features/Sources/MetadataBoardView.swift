@@ -78,7 +78,6 @@ struct MetadataBoardView: View {
                 .padding(.top, 6)
             MetadataBoardLabel(
                 text: entry.field.label,
-                width: 132,
                 topPadding: 6,
                 emphasized: true
             )
@@ -169,8 +168,40 @@ private struct MetadataBoardSuggestionRow: View {
         return PVCard(border: .dashed, cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
                 HStack(spacing: PVSpacing.space5) {
-                    label
-                    controls(fieldID: fieldID)
+                    MetadataBoardLabel(
+                        text: entry.field.label,
+                        leadingInset: PVReorderHandle.width
+                    )
+                    PVInput(
+                        text: $draft,
+                        size: .sm,
+                        mono: true,
+                        prompt: L10n.Sources.metadataSuggestionPlaceholder,
+                        isInvalid: error != nil
+                    )
+                    .onSubmit { onSave(draft) }
+                    .accessibilityLabel(entry.field.label)
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
+
+                    PVButton(
+                        L10n.Sources.saveMetadataSuggestion,
+                        variant: .ghost,
+                        size: .sm,
+                        loading: isSaving
+                    ) {
+                        onSave(draft)
+                    }
+                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
+
+                    PVIconButton(
+                        .dismiss,
+                        label: L10n.Sources.dismissMetadataSuggestionLabel(field: entry.field.label),
+                        size: .sm
+                    ) {
+                        onDismiss()
+                    }
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
                 }
                 if let error, !error.isEmpty {
                     PVErrorText(error, size: .caption)
@@ -178,50 +209,6 @@ private struct MetadataBoardSuggestionRow: View {
             }
             .padding(.vertical, PVSpacing.space4)
             .padding(.horizontal, PVSpacing.space5)
-        }
-    }
-
-    private var label: some View {
-        MetadataBoardLabel(
-            text: entry.field.label,
-            width: 132,
-            leadingInset: PVReorderHandle.width
-        )
-    }
-
-    /// The input, Save and dismiss: one line in the row, or the line under a stacked label.
-    private func controls(fieldID: String) -> some View {
-        HStack(spacing: PVSpacing.space5) {
-            PVInput(
-                text: $draft,
-                size: .sm,
-                mono: true,
-                prompt: L10n.Sources.metadataSuggestionPlaceholder,
-                isInvalid: error != nil
-            )
-            .onSubmit { onSave(draft) }
-            .accessibilityLabel(entry.field.label)
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
-
-            PVButton(
-                L10n.Sources.saveMetadataSuggestion,
-                variant: .ghost,
-                size: .sm,
-                loading: isSaving
-            ) {
-                onSave(draft)
-            }
-            .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
-
-            PVIconButton(
-                .dismiss,
-                label: L10n.Sources.dismissMetadataSuggestionLabel(field: entry.field.label),
-                size: .sm
-            ) {
-                onDismiss()
-            }
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
         }
     }
 }
@@ -349,8 +336,9 @@ private extension View {
 
 /// Label column used by metadata saved / suggestion rows.
 private struct MetadataBoardLabel: View {
+    static let width: CGFloat = 132
+
     let text: String
-    let width: CGFloat
     /// Leading inset so suggestion labels align with saved-row labels.
     var leadingInset: CGFloat = 0
     var topPadding: CGFloat = 0
@@ -366,7 +354,7 @@ private struct MetadataBoardLabel: View {
             )
             .foregroundStyle(emphasized ? PVColor.textPrimary : PVColor.textMuted)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(width: width, alignment: .leading)
+            .frame(width: Self.width, alignment: .leading)
             .padding(.leading, leadingInset)
             .padding(.top, topPadding)
     }
