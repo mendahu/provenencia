@@ -4,6 +4,7 @@ package persondetail
 
 import (
 	"bytes"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -11,17 +12,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
 // ClaimGroup is the accepted claims of one Person that come from one Source.
 type ClaimGroup struct {
-	SourceID     []byte
-	SourceRef    string
-	Title        string
-	SourceTypeID []byte
-	Claims       []Claim
+	Source sources.Record
+	Claims []Claim
 }
 
 // Claim is one accepted identity claim: the claimed Subject and its
@@ -72,6 +71,10 @@ func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 	if err != nil {
 		return nil, err
 	}
+	recs, err := sources.RecordsOf(c.Graph())
+	if err != nil {
+		return nil, err
+	}
 	var groups []ClaimGroup
 	bySource := map[string]int{}
 	for _, m := range members {
@@ -83,18 +86,17 @@ func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 		}
 		i, ok := bySource[string(m.graph.SourceID)]
 		if !ok {
+			rec, found := recs.Source(m.graph.SourceID)
+			if !found {
+				return nil, fmt.Errorf("persondetail: graph %x names Source %x, which has no record", m.graph.GraphID, m.graph.SourceID)
+			}
 			i = len(groups)
 			bySource[string(m.graph.SourceID)] = i
-			groups = append(groups, ClaimGroup{
-				SourceID:     m.graph.SourceID,
-				SourceRef:    m.graph.SourceRef,
-				Title:        m.graph.SourceTitle,
-				SourceTypeID: m.graph.SourceTypeID,
-			})
+			groups = append(groups, ClaimGroup{Source: rec})
 		}
 		groups[i].Claims = append(groups[i].Claims, claim)
 	}
-	conclusionsummaries.SortByTitle(groups, func(g ClaimGroup) string { return g.Title }, func(g ClaimGroup) string { return g.SourceRef })
+	conclusionsummaries.SortByTitle(groups, func(g ClaimGroup) string { return g.Source.Title }, func(g ClaimGroup) string { return g.Source.Ref })
 	for i := range groups {
 		claims := groups[i].Claims
 		sort.SliceStable(claims, func(a, b int) bool {

@@ -21,10 +21,12 @@ import (
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
+	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/namevalue"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 
 	_ "github.com/mendahu/provenencia/core/database/graphfill"
@@ -141,7 +143,7 @@ func TestClaimsGroupsBySource(t *testing.T) {
 		t.Fatalf("%d groups, want 1", len(groups))
 	}
 	g := groups[0]
-	if !bytes.Equal(g.SourceID, s.src.ID) || g.SourceRef != s.src.Ref || g.Title != "Parish register" || !bytes.Equal(g.SourceTypeID, f.Source.SourceTypeID) {
+	if !bytes.Equal(g.Source.ID, s.src.ID) || g.Source.Ref != s.src.Ref || g.Source.Title != "Parish register" || !bytes.Equal(g.Source.SourceTypeID, f.Source.SourceTypeID) {
 		t.Fatalf("group %+v", g)
 	}
 	if len(g.Claims) != 2 {
@@ -167,6 +169,34 @@ func TestClaimsGroupsBySource(t *testing.T) {
 	}
 }
 
+// TestClaimsAfterSourceEdit: a Source rename and a type change reach the claims
+// group, and a loaded graph of the Source stays loaded.
+func TestClaimsAfterSourceEdit(t *testing.T) {
+	f := newFixture(t)
+	s := f.burialsAndBaptisms()
+	if got := f.claims(s.person.ID); got[0].Source.Title != "Parish register" {
+		t.Fatalf("title before %q", got[0].Source.Title)
+	}
+	letter, err := sourcetypes.Upsert(f.C, sourcetypes.Type{Key: "letter", Origin: vocabkey.OriginProvenencia, Label: "Letter"})
+	must(t, err)
+	src := s.src
+	src.Title = "Registry of parish"
+	src.SourceTypeID = letter
+	f.Run("update_source", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return sources.Update(tx, userID, src)
+	})
+	g := f.claims(s.person.ID)[0]
+	if g.Source.Title != "Registry of parish" || !bytes.Equal(g.Source.SourceTypeID, letter) {
+		t.Fatalf("group after the edit %q %x", g.Source.Title, g.Source.SourceTypeID)
+	}
+	if rl := f.recordLinks(s.person.ID); rl.Graphs[0].Source.Title != "Registry of parish" {
+		t.Fatalf("record links title after the edit %q", rl.Graphs[0].Source.Title)
+	}
+	if !f.C.Graph().LoadedEvidenceGraphForTest(s.burials.ID) {
+		t.Fatal("a Source edit dropped a loaded Evidence graph")
+	}
+}
+
 func TestClaimsOrderSources(t *testing.T) {
 	f := newFixture(t)
 	var p canonicalentities.Entity
@@ -185,7 +215,7 @@ func TestClaimsOrderSources(t *testing.T) {
 	groups := f.claims(p.ID)
 	var got []string
 	for _, g := range groups {
-		got = append(got, g.Title)
+		got = append(got, g.Source.Title)
 	}
 	want := []string{"Abbey roll", "Abbey roll", "Écluse ledger", "Zion census"}
 	if len(got) != len(want) {
@@ -196,8 +226,8 @@ func TestClaimsOrderSources(t *testing.T) {
 			t.Fatalf("order %v, want %v", got, want)
 		}
 	}
-	if groups[0].SourceRef >= groups[1].SourceRef {
-		t.Fatalf("the two Abbey rolls are ordered %q, %q, want by ref", groups[0].SourceRef, groups[1].SourceRef)
+	if groups[0].Source.Ref >= groups[1].Source.Ref {
+		t.Fatalf("the two Abbey rolls are ordered %q, %q, want by ref", groups[0].Source.Ref, groups[1].Source.Ref)
 	}
 }
 
