@@ -154,4 +154,4 @@ Head `7ce528c53`. F-14 done: `MetadataBoardLabel.width` a static 132; the sugges
 Merged `origin/main` (`7276092ba`, docs only) as `a1b882be9`; gate PASS against `7276092ba`.
 
 ## Result
-Gate PASS · CI pending · open: none · trimmed to the board write's cache patch and its fixes (user, 2026-11-12); the per-Artifact chrome is re-cut as S15-33 – S15-36 under brief S15-D14 · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) · to user: — · manual check §10 steps 1 and 4 (the Source's own board) still apply; the Artifact steps do not
+Gate PASS · CI green (`c637ca4b1`) · open: none · trimmed to the board write's cache patch and its fixes (user, 2026-11-12); the per-Artifact chrome is re-cut as S15-33 – S15-36 under brief S15-D14 · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) · to user: — · manual check §10 steps 1 and 4 (the Source's own board) still apply; the Artifact steps do not
