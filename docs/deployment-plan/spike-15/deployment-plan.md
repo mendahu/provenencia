@@ -310,9 +310,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 **Ships.** Each Artifact on the Source page has a metadata board, the S15-26 board with the Artifact as owner, as S15-D1 draws it.
 **Also (from S15-08 review, CON-2).** A test that runs the real `artifacts.Delete` and `evidencegraphs.Delete` and resolves each released `*_metadata` and `*_metadata_layout` change on its own, with the rest of the revision as ghosts, to the Source scope. Today only the stub `TestScopeThroughDeletedParent` pins this; resolving the whole revision cannot tell, because the Artifact's own delete already scopes the Source.
+**Also (from S15-26 review, MNT-1; required, not only if slow).** A board write patches the cached `sourceWorkspace` instead of reloading it: declare a patch in `CatalogQueryRegistry` (beside `.updatedSourceShell()`) that sets one owner's rows from a mutation carrying them, and have the board host's `didWrite` apply that mutation in place of `.mutatedSourceWorkspace`. Today every save sets the rows, then reloads the whole workspace (every Artifact's board); the reload can also reset a row edit begun before it lands (`SourcePageModel.apply` compares against `appliedWorkspace`).
 **Not this PR.** The add flow (S15-10).
 **Check.** Bar 3's Artifact half on a census Source.
-**Context.** S15-D1; `SourcePageArtifactsView.swift`, `SourcePageMetadataView.swift`, `SourceMetadataSection.swift`.
+**Context.** S15-D1; `SourcePageArtifactsView.swift`, `SourcePageMetadataView.swift`, `MetadataBoardHost.swift`, `MetadataBoardModel.swift`, `MetadataBoardView.swift`.
 
 #### S15-10 — Adding an Artifact asks for its copy details
 
