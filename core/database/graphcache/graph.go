@@ -50,9 +50,10 @@ type Graph struct {
 	// the first Activity read of that type and patched by OnCommit.
 	activity map[string]map[string]effects.Activity
 
-	entityTable string
-	claimTable  string
-	valueTable  string
+	entityTable  string
+	claimTable   string
+	valueTable   string
+	outcomeTable string
 
 	count func()
 
@@ -64,8 +65,10 @@ type Graph struct {
 
 // Node is one canonical entity. Kind is not stored: callers look the type
 // id up. Values keeps every auto-reconciler rank. Members are accepted and
-// provisional subjects in claim id order. Argument and Label are the
-// entity row's own text; a summary uses them when it has no reconciled name.
+// provisional subjects in claim id order. Outcomes keeps every
+// auto-reconciler outcome row of the handle, and PreferredLikeness its chosen
+// portrait. Argument and Label are the entity row's own text; a summary uses
+// them when it has no reconciled name.
 type Node struct {
 	ID            []byte
 	Ref           string
@@ -76,6 +79,12 @@ type Node struct {
 	Values        map[string][]Value // property id -> ranks
 	Links         []Link
 	Members       []Member
+	// Outcomes are the node's outcome rows by property id, each Property's rows
+	// in ascending Observation id.
+	Outcomes map[string][]Outcome
+	// PreferredLikeness is canonical_entities.preferred_likeness_observation_id;
+	// nil for none.
+	PreferredLikeness []byte
 }
 
 // Kept returns the node's kept rows of one property, in rank order as cached.
@@ -116,6 +125,18 @@ type Value struct {
 	ImageFileID []byte
 	Support     int
 	Against     int
+}
+
+// Outcome is one auto_reconciler_outcomes row: what the auto-reconciler did
+// with one record of an accepted or provisional member.
+type Outcome struct {
+	ObservationID []byte
+	SubjectID     []byte // nil when the Observation is gone
+	Reason        string
+	ValueRank     int // the value it went into, 1-based as Value.Rank; 0 for none
+	DeniedBy      []byte
+	VoteSupport   int
+	VoteOf        int
 }
 
 // Member is one accepted or provisional identity claim. SourceID is the Source
@@ -187,6 +208,7 @@ func New(db *sql.DB) *Graph {
 	g.entityTable = mustTable(catalogmodel.KindCanonicalEntity)
 	g.claimTable = mustTable(catalogmodel.KindIdentityClaim)
 	g.valueTable = mustTableName("auto_reconciler_values")
+	g.outcomeTable = mustTableName("auto_reconciler_outcomes")
 	g.clear()
 	return g
 }

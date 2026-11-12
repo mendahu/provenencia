@@ -438,3 +438,193 @@ func TestNodeIs(t *testing.T) {
 		}
 	}
 }
+
+// outcomeRows reads the stored outcome rows of one Property of an entity.
+func outcomeRows(t *testing.T, db *sql.DB, entity []byte, propKey string) []graphcache.Outcome {
+	t.Helper()
+	rows, err := db.Query(`SELECT ao.observation_id, o.subject_id, ao.reason, COALESCE(ao.value_rank, 0), ao.denied_by,
+			COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0)
+		FROM auto_reconciler_outcomes ao
+		JOIN observations o ON o.id = ao.observation_id
+		JOIN properties p ON p.id = ao.property_id
+		WHERE ao.entity_id = ? AND p.key = ? AND p.origin = 'provenencia'
+		ORDER BY ao.observation_id`, entity, propKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []graphcache.Outcome
+	for rows.Next() {
+		var o graphcache.Outcome
+		if err := rows.Scan(&o.ObservationID, &o.SubjectID, &o.Reason, &o.ValueRank, &o.DeniedBy, &o.VoteSupport, &o.VoteOf); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, o)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+func sameOutcomeRow(a, b graphcache.Outcome) bool {
+	return bytes.Equal(a.ObservationID, b.ObservationID) && bytes.Equal(a.SubjectID, b.SubjectID) &&
+		a.Reason == b.Reason && a.ValueRank == b.ValueRank && bytes.Equal(a.DeniedBy, b.DeniedBy) &&
+		a.VoteSupport == b.VoteSupport && a.VoteOf == b.VoteOf
+}
+
+func propertyID(t *testing.T, db *sql.DB, key string) string {
+	t.Helper()
+	var id []byte
+	if err := db.QueryRow(`SELECT id FROM properties WHERE key = ? AND origin = 'provenencia'`, key).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return string(id)
+}
+
+func TestNodeOutcomes(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := graphcachetest.NewCanon(t, c)
+	p := k.Entity("person")
+	k.Term(p, "sex_at_birth", "male")
+	k.Commit(p)
+	g := c.Graph()
+	prop := propertyID(t, db, "sex_at_birth")
+
+	n, err := g.Node(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows := n.Outcomes[prop]
+	if len(rows) != 1 {
+		t.Fatalf("outcome rows %+v", n.Outcomes)
+	}
+	o := rows[0]
+	if !bytes.Equal(o.SubjectID, p) || o.Reason != "kept" || o.ValueRank != 1 || o.DeniedBy != nil || o.VoteSupport != 0 || o.VoteOf != 0 {
+		t.Fatalf("outcome %+v", o)
+	}
+	if want := outcomeRows(t, db, p, "sex_at_birth"); len(want) != 1 || !sameOutcomeRow(o, want[0]) {
+		t.Fatalf("node %+v, stored %+v", rows, want)
+	}
+
+	k.Term(p, "sex_at_birth", "female")
+	k.Commit(p)
+	n, err = g.Node(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rows = n.Outcomes[prop]
+	want := outcomeRows(t, db, p, "sex_at_birth")
+	if len(rows) != 2 || len(want) != 2 {
+		t.Fatalf("node %d rows, stored %d", len(rows), len(want))
+	}
+	for i := range rows {
+		if !sameOutcomeRow(rows[i], want[i]) {
+			t.Errorf("row %d: node %+v, stored %+v", i, rows[i], want[i])
+		}
+	}
+	if bytes.Compare(rows[0].ObservationID, rows[1].ObservationID) >= 0 {
+		t.Error("rows are not in ascending Observation id")
+	}
+	if err := g.Verify(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// likenessObservation returns an Observation id of the entity's Subject.
+func likenessObservation(t *testing.T, db *sql.DB, entity []byte) []byte {
+	t.Helper()
+	var x []byte
+	if err := db.QueryRow(`SELECT id FROM observations WHERE subject_id = ? LIMIT 1`, entity).Scan(&x); err != nil {
+		t.Fatal(err)
+	}
+	return x
+}
+
+func TestNodePreferredLikeness(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := graphcachetest.NewCanon(t, c)
+	p := k.Entity("person")
+	k.Term(p, "sex_at_birth", "male")
+	k.Commit(p)
+	g := c.Graph()
+	if n, err := g.Node(p); err != nil || n.PreferredLikeness != nil {
+		t.Fatalf("node %+v, %v", n, err)
+	}
+	x := likenessObservation(t, db, p)
+	if _, err := db.Exec(`UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`, x, p); err != nil {
+		t.Fatal(err)
+	}
+	commit := func() {
+		t.Helper()
+		if err := g.OnCommit(effects.Commit{Activity: effects.Activity{Revision: 100}, Effects: effects.Set{Handles: [][]byte{p}}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	commit()
+	n, err := g.Node(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(n.PreferredLikeness, x) {
+		t.Fatalf("PreferredLikeness %x, want %x", n.PreferredLikeness, x)
+	}
+	if _, err := db.Exec(`UPDATE canonical_entities SET preferred_likeness_observation_id = NULL WHERE id = ?`, p); err != nil {
+		t.Fatal(err)
+	}
+	commit()
+	if n, err = g.Node(p); err != nil || n.PreferredLikeness != nil {
+		t.Fatalf("PreferredLikeness after clear %x, %v", n.PreferredLikeness, err)
+	}
+}
+
+func TestVerifyChecksOutcomesAndLikeness(t *testing.T) {
+	for _, tc := range []struct {
+		name, sql, want string
+		useObservation  bool
+	}{
+		{"an outcome reason", `UPDATE auto_reconciler_outcomes SET reason = 'outvoted'`, "outcomes", false},
+		{"the chosen likeness", `UPDATE canonical_entities SET preferred_likeness_observation_id = ?`, "", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := graphcachetest.OpenCatalog(t)
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			k := graphcachetest.NewCanon(t, c)
+			p := k.Entity("person")
+			k.Term(p, "sex_at_birth", "male")
+			k.Commit(p)
+			g := c.Graph()
+			if _, err := g.Node(p); err != nil {
+				t.Fatal(err)
+			}
+			if err := g.Verify(); err != nil {
+				t.Fatal(err)
+			}
+			var args []any
+			if tc.useObservation {
+				args = append(args, likenessObservation(t, db, p))
+			}
+			if _, err := db.Exec(tc.sql, args...); err != nil {
+				t.Fatal(err)
+			}
+			err = g.Verify()
+			if err == nil {
+				t.Fatal("Verify accepted a node that differs from the catalog")
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("error %q does not name %q", err, tc.want)
+			}
+		})
+	}
+}
