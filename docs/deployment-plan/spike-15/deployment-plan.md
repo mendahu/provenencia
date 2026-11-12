@@ -36,7 +36,8 @@ Spike 15 makes Sources carry what a standard genealogical citation needs and tur
 | [Source provenance date](source-provenance-date.md) | S15-02, S15-03, S15-04, S15-05 | S15-D1, S15-D2, S15-D3 |
 | [Rethink Source metadata](2026-10-25-rethink-source-metadata-and-type-suggestions.md) | Settled: metadata stays (map § 6.1); S15-06 – S15-12 build on it | — |
 | [Evidence Explained citation map](evidence-explained-citation-map.md) | S15-06 – S15-23 | S15-D1, S15-D3 – S15-D9 |
-| [Move an Artifact to another Source](move-artifact-between-sources.md) | S15-24, S15-25 | S15-D1, S15-D10 |
+| [Move an Artifact to another Source](move-artifact-between-sources.md) | S15-24, S15-25 | S15-D1, S15-D10, S15-D14 |
+| User review of S15-09 (2026-11-12): the Artifact cards grow too tall with their metadata; edit in a sheet; thumbnails pixelated | S15-33 – S15-36, S15-10 | S15-D14 |
 | [Provenance loading and drawing](provenance-loading.md), from `ideas/provenance.md` (retired 2026-11-09) | S15-27, S15-28, S15-29 | S15-D9 |
 
 **Back in the ideas folder** — [`ideas/source-type-packages.md`](../../ideas/source-type-packages.md): citation styles as installable packages. [`source-structure-later.md`](source-structure-later.md) stays in this folder as reference and moves to `ideas/` at close: nested Sources, derivation links, named templates, per-graph credibility.
@@ -50,8 +51,10 @@ These are the calls for this spike. PR plans treat them as binding.
 - **Not public is a stored switch and nothing else.** `sources.is_public INTEGER NOT NULL DEFAULT 1`, toggled on the Source page by a switch labeled "Private", off by default (user, 2026-11-09). No filtering, hiding, list glyph, cascade or Copy Source carry. Binds S15-02, S15-03. Design: [`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md).
 - **Metadata lives at three levels with one vocabulary.** The Source (the record), the Artifact (the copy used) and the Evidence graph (the item cited) each hold values and layout, with the same fields from `source_metadata_fields`, which keeps its name. Tables: `artifact_metadata`, `artifact_metadata_layout`, `evidence_graph_metadata`, `evidence_graph_metadata_layout`. Layout rules (order, dismiss) are the Source's at every level. Binds S15-07 – S15-12. Design: map § 6.6.
 - **One level type.** Source, Artifact, graph and Citation are one Go `Level` type in the pure package `core/vocabkey`, used by suggestion rows, metadata owners, the format prefixes and the built-ins table, and the RPCs. Only the first three hold metadata: `vocabkey.MetadataLevels()` is that subset, and suggestions, owners and the suggestion table's `CHECK` use it; the Citation level has only built-ins. Swift mirrors the whole type as one enum `Level` with a `metadataLevels` subset, each with a row in `api/ffi/swift_vocabulary_test.go` (user, 2026-11-11). S15-06 adds it; S15-14 uses it. (K-6, K-20.)
-- **Metadata saves with its owner's write.** Values entered while adding an Artifact or saving the Evidence graph form go in the same transaction as the Artifact or graph (`CreateArtifactRequest`, the graph create and update requests). Drafts save through one `sourcemetadata.Apply(tx, owner, draft)`, which compares the draft with what is stored and runs the steps `Set`, `Clear`, `DismissSuggestion` and `Reorder` use; `CreateAll` becomes its empty-owner case. Live boards save per field, as the Source page does. (K-1, K-19.) Binds S15-08, S15-10, S15-11. (K-1.)
-- **One metadata board.** The Swift board model and view take an owner (kind, id, its entries and its write operations); the Source page, the Artifact rows, the add flow and the graph form all use it. Binds S15-26, S15-09 – S15-11. (K-2.)
+- **Metadata saves with its owner's write.** Values entered while adding or editing an Artifact, or saving the Evidence graph form, go in the same transaction as the Artifact or graph (`CreateArtifactRequest`, `UpdateArtifactRequest` from S15-33, the graph create and update requests). Drafts save through one `sourcemetadata.Apply(tx, owner, draft)`, which compares the draft with what is stored and runs the steps `Set`, `Clear`, `DismissSuggestion` and `Reorder` use; `CreateAll` becomes its empty-owner case. Live boards save per field, as the Source page does; since S15-34 the Source's own board is the only live one (user, 2026-11-12). (K-1, K-19.) Binds S15-08, S15-10, S15-11, S15-33, S15-34. (K-1.)
+- **One metadata board.** The Swift board model and view take an owner (kind, id, its entries and its write operations); the Source page, the Artifact sheet (add and edit), and the graph form all use it. Binds S15-26, S15-09 – S15-11, S15-34. (K-2.)
+- **An Artifact is added and edited in one sheet.** The Artifact sheet holds the label, the description, the Evidence graphs it is in and its copy details (the board on a draft, with the type's `artifact`-level suggestions); nothing saves until Save, and Cancel discards. Editing saves in one `UpdateArtifact` write with the draft; adding is one `CreateArtifact` write with the draft, then the file's ingest as its own write, as today. Both replies carry the Artifact's saved rows, so the page patches its cached workspace (`.wroteMetadataBoard`) instead of reloading. Editing on the card goes; the list shows each Artifact's saved copy details read-only, more tightly than a form, with a square thumbnail tile of at most 80pt: a square crop fills from the short edge (about 170 pixels of the engine's 256-pixel thumbnail on a census page), so 80pt is the largest that stays sharp at 2x; no derivative size changes (user: "just display a smaller thumbnail"). Rows or compact cards is the board's call (user, 2026-11-12). Replaces S15-D1 SD-9 and SD-10 and folds S15-D4 into S15-D14. Binds S15-33 – S15-36, S15-10, S15-25.
+- **A board adds a field in an inline row.** Add field on every metadata board, the Source's own included, is an inline row in the board (pick a field, type a value), not the Add metadata dialog, which goes (user, 2026-11-12). On a live board the row saves at once; on a draft it adds to the draft. A draft board clears a row with no confirm (Cancel restores it). Binds S15-34, S15-36, S15-11.
 - **One date order.** The rule for where a date sits in an order (today the private `datePlace`, `dateKeyOf` and `dateKeyLess` in `conclusionsummaries`) moves to `core/valuecompare` beside `DateEnds` as an exported key and comparison, which `conclusionsummaries` and `sources` both call; it gives each Source a date sort key on the wire; Swift's Sources list sorts by that key, undated last, and never orders dates itself. Binds S15-02, S15-04. (K-12.)
 - **Suggestions have a level.** `source_type_metadata_fields.level` is `source`, `artifact` or `graph`, in the table's key. An Artifact's and a graph's suggestions are their Source's type's rows at that level. Binds S15-06, S15-09 – S15-12, S15-19.
 - **The item is a graph field.** What a graph is about ("Ada Robins", "baptism of Ada Smith, 3 March 1830") is the seeded graph-level field `item`, typed once per graph and read as `{meta.item}`; nothing derives it from a Citation's Subjects, and no Subject is marked as the graph's principal (parked in [`ideas/evidence-graph-followups.md`](../../ideas/evidence-graph-followups.md) "Primary subject") (user, 2026-11-09). Binds S15-16, S15-19, S15-20. Design: map § 6.5.
@@ -86,9 +89,9 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | [plan](prs/S15-06-type-suggestions-have-a-level.md) | Landed #782 |
 | S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | [plan](prs/S15-07-metadata-operations-take-an-owner.md) | Landed #787 |
 | S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | [plan](prs/S15-08-artifacts-and-graphs-hold-metadata.md) | Landed #791 |
-| S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | [plan](prs/S15-09-artifact-metadata-boards.md) | Landed [#802](https://github.com/mendahu/provenencia/pull/802) |
-| S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: the Artifact's suggested fields in the add flow | S15-D4 | S15-08, S15-26, S15-D4 | — | Scoped |
-| S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-08, S15-26, S15-D5 | — | Scoped |
+| S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact; **trimmed before merge (user, 2026-11-12)** to the board write's cache patch and its fixes; the per-Artifact chrome moved to S15-34 | S15-D1 | S15-08, S15-26, S15-D1 | [plan](prs/S15-09-artifact-metadata-boards.md) | In review [#802](https://github.com/mendahu/provenencia/pull/802), trim pending |
+| S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: Add Artifact opens the Artifact sheet in add mode; copy details save with the new Artifact | S15-D14 | S15-34, S15-36, S15-D14 | — | Scoped |
+| S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-36, S15-34, S15-D5 | — | Scoped |
 | S15-12 | Source types suggest fields at each level | 2 | Swift: the type page edits three suggestion lists | S15-D6 | S15-06, S15-D6 | — | Scoped |
 | S15-13 | The composer records the printed page | 3 | Swift: `page_label` on the page selector | S15-D8 | S15-D8 | — | Scoped |
 | S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse, render, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | S15-06 | — | Scoped |
@@ -102,7 +105,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-22 | The Sources section groups a Source's Citations by citation | 6 | Swift: the section renders on demand and groups | S15-D3 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-23 | The Source page previews its citation | 6 | Swift: preview, missing fields, Copy citation | S15-D1 | S15-16, S15-D1 | — | Scoped |
 | S15-24 | Move a bundle to another Source in the engine | 7 | Go: closure, preflight and move RPCs, one transaction through the effects registry | — | S16-12, S16-13, S16-15 | — | Scoped |
-| S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1 | S15-24, S15-D10, S15-D1 | — | Scoped |
+| S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1, S15-D14 | S15-24, S15-35, S15-D10, S15-D1, S15-D14 | — | Scoped |
 | S15-26 | The metadata board takes an owner | 2 | Preparatory, Swift: the board model and view take an owner; the Source page unchanged | — | — | [plan](prs/S15-26-metadata-board-takes-an-owner.md) | Landed #798 |
 | S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds 50 citation groups at a time with the kit fold | S15-D9 | S15-30, S15-21, S15-D9 | — | Scoped |
 | S15-28 | A value's records load on their own | 8 | Go: `FieldRecordCounts` from the node; one records read by (owner, Property) pairs with denial facts; reports its inputs | — | S16-11, S16-19, S16-24, S16-30 | — | Scoped |
@@ -110,16 +113,19 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-30 | The paged fold moves to the kit | 8 | Preparatory, Swift: S16-07's fold rule and state to `Platform/`, `PVShowMoreRow` in the kit; the Conclusion sections unchanged | — | S16-07 | — | Scoped |
 | S15-31 | Event and Place rows open the provenance sheet | 8 | Swift: `.sheet` provenance on Event and Place pages; the Why accordion and its code go | S15-D11, S15-D12 | S15-D11, S15-D12 | — | Scoped |
 | S15-32 | Copy Source can carry the date | 1 | Go and Swift: a `copy_date` choice on `CopySourceRequest` and `sourcecopy`; a Published date tick on the Copy form | [S15-D13](design/archive/S15-D13-copy-source-dialog.md) | S15-02, S15-D13 | [plan](prs/S15-32-copy-source-date.md) | Landed #778 |
-| S15-99 | Dogfood close / docs | — | Bar pass, the ship logs' follow-ups triaged, the dogfood Install run, the spike's `citation-formats.md` retired in favour of the domain doc, [`archive-docs`](../../../.agents/skills/archive-docs/SKILL.md) | — | all | — | Scoped |
+| S15-33 | Editing an Artifact can save its metadata | 2 | Go: a `MetadataDraft` on `UpdateArtifactRequest`; both Artifact write replies return its saved rows; a refused draft value names its field | — | S15-08 | — | Scoped |
+| S15-34 | Artifacts are edited in a sheet | 2 | Swift: the Artifact sheet (label, description, graphs, copy details on the draft board, one Save); read-only copy details on each card; the inline Add field row on every board; card edit goes | S15-D14 | S15-09, S15-33, S15-36, S15-D14 | — | Scoped |
+| S15-35 | The Artifact list shows each Artifact's copy details | 2 | Swift: the list's new layout (rows or compact cards), a square thumbnail of at most 80pt | S15-D14 | S15-34, S15-D14 | — | Scoped |
+| S15-36 | A metadata board can hold a draft | 2 | Preparatory, Swift: the draft board host, a Swift metadata draft, `metadata:` on the four Artifact and graph writes; no chrome | — | S15-26, S15-33 | — | Scoped |
 
 ## Design track
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S15-D1 | Source page | **S15-03**, S15-09, S15-23, S15-25 | Where the date sits (it reads as the Source's own date, not a metadata row) and whether the page moves onto Page columns ([`wide-layout.md`](../../ideas/wide-layout.md)); the not-public switch; an Artifact's metadata board; the citation preview with missing fields and Copy citation; Move on Artifact rows and graphs. One board for the page, drawn before S15-03 |
+| S15-D1 | Source page | **S15-03**, S15-09, S15-23, S15-25 | Where the date sits (it reads as the Source's own date, not a metadata row) and whether the page moves onto Page columns ([`wide-layout.md`](../../ideas/wide-layout.md)); the not-public switch; an Artifact's metadata board; the citation preview with missing fields and Copy citation; Move on Artifact rows and graphs. One board for the page, drawn before S15-03. SD-9 and SD-10 (the Artifact's board) are replaced by S15-D14 (user, 2026-11-12) |
 | S15-D2 | Sources list | **S15-04** | The date on rows and as a sort |
 | S15-D3 | Person page Sources section | **S15-05**, S15-22 | The date on each Source; Citations grouped under one citation |
-| S15-D4 | Adding an Artifact | **S15-10** | The copy fields in the add flow |
+| S15-D4 | Adding an Artifact | — | **Descoped (2026-11-12):** folded into S15-D14, which draws the Artifact sheet in add mode |
 | S15-D5 | Evidence graph form | **S15-11** | The item's metadata board beside name and description |
 | S15-D6 | Source type page | **S15-12**, S15-17 | Suggestions at three levels; the three formats, Insert field, live preview, warnings |
 | S15-D7 | New Source type dialog | **S15-18** | Copy from |
@@ -129,6 +135,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-D11 | Event page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D12 | Place page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D13 | Copy Source dialog | **S15-32** | A Published date tick beside Description, Metadata and Credibility ([brief](design/archive/S15-D13-copy-source-dialog.md)) |
+| S15-D14 | Source page Artifacts | **S15-34**, S15-35, S15-10, S15-25 | The Artifact list with each Artifact's copy details shown read-only and a thumbnail of at most 80pt (rows or compact cards: the board decides); the Artifact sheet in edit and add mode: label, description, graphs, copy details with suggestions, one Save; where Move sits on the new list. Replaces S15-D1 SD-9, SD-10 and S15-D4 |
 
 ## Slices
 
@@ -149,7 +156,11 @@ SLICE 2 — Metadata at three levels                    (alongside Spike 16)
   S15-08  Artifacts and graphs hold metadata
   S15-26  The metadata board takes an owner
   S15-09  Artifacts show their metadata on the Source page   (S15-D1)
-  ✎ S15-D4 ──▶ S15-10  Adding an Artifact asks for its copy details
+  S15-33  Editing an Artifact can save its metadata
+  S15-36  A metadata board can hold a draft
+  ✎ S15-D14 ──▶ S15-34  Artifacts are edited in a sheet
+  S15-35  The Artifact list shows each Artifact's copy details   (S15-D14)
+  S15-10  Adding an Artifact asks for its copy details           (S15-D14)
   ✎ S15-D5 ──▶ S15-11  Evidence graphs show their metadata
   ✎ S15-D6 ──▶ S15-12  Source types suggest fields at each level
   Check: bar 3 except the composer.
@@ -201,8 +212,11 @@ S15-99 — Dogfood close / docs
 ```text
 S15-02 ──▶ S15-03, S15-04, S15-05, S15-16, S15-32
 S15-06 ──▶ S15-07, S15-08, S15-12, S15-14, S15-18, S15-19
-S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16
-S15-26 ──▶ S15-09, S15-10, S15-11
+S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16, S15-33
+S15-26 ──▶ S15-09
+S15-26, S15-33 ──▶ S15-36 ──▶ S15-34, S15-10, S15-11
+S15-09, S15-33 ──▶ S15-34 ──▶ S15-35, S15-10, S15-11
+S15-35 ──▶ S15-25
 S15-14 ──▶ S15-15 ──▶ S15-16, S15-18, S15-20
 S15-19 ──▶ S15-20
 S15-16 ──▶ S15-17, S15-21, S15-22, S15-23
@@ -226,7 +240,7 @@ S16-09 ──▶ S15-29
 
 Briefs:
 S15-D1 ──▶ S15-03, S15-09, S15-23, S15-25     S15-D2 ──▶ S15-04
-S15-D3 ──▶ S15-05, S15-22                      S15-D4 ──▶ S15-10
+S15-D3 ──▶ S15-05, S15-22                      S15-D14 ──▶ S15-34, S15-35, S15-10, S15-25
 S15-D5 ──▶ S15-11                              S15-D6 ──▶ S15-12, S15-17
 S15-D7 ──▶ S15-18                              S15-D8 ──▶ S15-13
 S15-D9 ──▶ S15-21, S15-27, S15-29              S15-D10 ──▶ S15-25
@@ -313,18 +327,47 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Also (from S15-26 review, MNT-1; required, not only if slow).** A board write patches the cached `sourceWorkspace` instead of reloading it: declare a patch in `CatalogQueryRegistry` (beside `.updatedSourceShell()`) that sets one owner's rows from a mutation carrying them, and have the board host's `didWrite` apply that mutation in place of `.mutatedSourceWorkspace`. Today every save sets the rows, then reloads the whole workspace (every Artifact's board); the reload can also reset a row edit begun before it lands (`SourcePageModel.apply` compares against `appliedWorkspace`).
 **Not this PR.** The add flow (S15-10).
 **Check.** Bar 3's Artifact half on a census Source.
+**Trimmed (user, 2026-11-12).** After review the user rejected the Copy details disclosure on each card (cards grow too tall; S15-D14). Before merge, #802 drops the disclosure, the per-Artifact live boards and the compact board style; it keeps the board write's cache patch, the page-only Artifact write fix (`SourcePageContext.setWorkspace`), the released-metadata scope test, the shared test fixtures, the field-named VoiceOver labels, the pencil inside `PVInlineEdit`, and the reworded refusal; `MetadataBoardStyle` goes with `.compact`. Bar 3's Artifact half moves to S15-34 and S15-35.
 **Context.** S15-D1; `SourcePageArtifactsView.swift`, `SourcePageMetadataView.swift`, `MetadataBoardHost.swift`, `MetadataBoardModel.swift`, `MetadataBoardView.swift`.
+
+#### S15-33 — Editing an Artifact can save its metadata
+
+**Ships.** `UpdateArtifactRequest` gains `MetadataDraft metadata` (absent = metadata unchanged; present = the stored values and layout become the draft), saved through `sourcemetadata.Apply` in the update's transaction, as `UpdateEvidenceGraphRequest` field 7 does since S15-08. `UpdateArtifactResponse` and `CreateArtifactResponse` gain `repeated MetadataWorkspaceEntry metadata`, the Artifact's board after the write, as `SetMetadataResponse` returns it (map review K-1). `Apply` refuses an invalid draft value with `ErrInvalid.WithParams(fieldID)`, as `metadatafields.ErrDuplicateKey.WithParams` does, so a form can put the message under its row (brief review M-1). One Save is one write and one `Apply` over one owner.
+**Not this PR.** Any Swift (S15-36, S15-34).
+**Check.** Handler tests: an update with a draft sets, clears, dismisses and reorders in one write and one audit revision, and returns the rows; an update without one leaves the metadata alone; a refused value refuses the whole update and names its field.
+**Context.** Rule "Metadata saves with its owner's write"; `api/proto/engine.proto` (`UpdateEvidenceGraphRequest`, `UpdateArtifactRequest`, `SetMetadataResponse`); `core/database/sourcemetadata/sourcemetadata.go` (`Apply`, `ErrInvalid`); `api/ffi/handlers/metadata.go`; skills `add-ffi-handler`, `add-audit-scope`. Precedent: S15-08's graph update.
+
+#### S15-36 — A metadata board can hold a draft
+
+**Ships.** Preparatory, no chrome: the draft board host (conforms to `MetadataBoardHost`, `.empty` effects, trims values, empty `openHref`, keeps the clear-a-suggestion rule, sends the whole order; S15-26 plan **Next adds**); a Swift `MetadataDraft` and its proto mapping; `metadata:` on `GenealogyStore`'s `createArtifact`, `updateArtifact`, `createEvidenceGraph` and `updateEvidenceGraph`, in `GoStore` and `FakeStore`; the add row's state on `MetadataBoardModel` for every host, kept across `resetDrafts`; a no-confirm clear for a draft; a refused value's field param mapped to its row; the starting rows of a draft with no owner yet (the type's `artifact` suggestions from `listTypeSuggestions`); the returned `metadata` on the Artifact write replies mapped into Swift. Swift tests drive a draft board against `FakeStore`.
+**Not this PR.** Any chrome: the sheet and the inline Add field row (S15-34), the graph form (S15-11).
+**Check.** Swift tests: a draft collects set, clear, dismiss, reorder and add, writes nothing, and the store write receives the whole draft; a refused value lands on its row.
+**Context.** Rules "One metadata board", "A board adds a field in an inline row", "Metadata saves with its owner's write"; S15-26's plan (**Next adds**, D-4); `MetadataBoardHost.swift`, `MetadataBoardModel.swift`, `GenealogyStore.swift`, `GoStore.swift`, `FakeStore.swift`; skills `add-swift-test`.
+
+#### S15-34 — Artifacts are edited in a sheet
+
+**Ships.** The Artifact's edit control opens the Artifact sheet S15-D14 draws: label, description, the Evidence graphs it is in (with today's unlink locks), and its copy details on S15-36's draft board with the type's `artifact`-level suggestions. One Save sends one `UpdateArtifact` with the draft (S15-33) and applies its effects with `.wroteMetadataBoard` from the returned rows, never `.mutatedSourceWorkspace` (map review K-1); Cancel discards. The sheet's model follows `SourceGraphFormModel` (a `Mode`, one `Draft`, `isDirty = draft != prefill`) so S15-10 adds a mode; `PVFormDialog` gains a scrolling body with a fixed footer, which S15-11's graph form also uses. Each card shows its saved copy details read-only (SA-4) through one value view pulled out of the board's `displayValue` (today's mono text and plain link button, with a line limit; brief review M-6, round 2). "Link to a graph" and "+n more" open the sheet at their section (SA-14). It never calls `SourceArtifactsSection.replace` (which reloads); the Artifact row is patched through `setWorkspace`. Every board's Add field becomes the inline row (S15-36 holds its state): the Add dialog goes with `MetadataBoardAddForm`, its `SourcePageView` presentation and binding, and `isAdding` in `SourcePageModel.acceptsArtifactPageDrop`; the Metadata section's header button opens the row and the empty state loses its button; `MetadataBoardDialogs` keeps only the clear confirm. `PVFormDialog` gains an opt-in scrolling body, and `PVSheet`'s Escape yields to an open row edit or add row; Return in a row confirms the row (SA-15). Card edit state goes (`editingArtifactID`, `PendingEditSwitch`, `labels`, `descriptions`, `fieldErrors`, `cardSaveError`, `saveFields`, `editFields`); `LinkEdit`'s unlink preflight, lock load and the graph-keeps message move into the sheet's model. At Scale: one write per Save, no page reload.
+**Not this PR.** The list's new layout (S15-35); add mode (S15-10).
+**Check.** On a census Source, edit an Artifact: change its label, fill provider and URL, add a field inline, reorder, Save; the card shows the values read-only; Cancel after edits asks to discard; the Source's own board adds a field inline.
+**Context.** Rules "An Artifact is added and edited in one sheet", "A board adds a field in an inline row", "One metadata board"; S15-D14; S15-09's plan and Landed note; `SourcePageArtifactsView.swift`, `SourceArtifactsSection.swift`, `MetadataBoardView.swift`, `MetadataBoardDialogs.swift`, `SourceGraphFormModel.swift`, `PVFormDialog.swift`; skills `add-ui-component`, `add-localized-string`, `add-swift-test`. Updates `add-workspace-place` and `docs/macos-client-patterns.md` (an Artifact Save writes `.wroteMetadataBoard`), `macos/App/DesignSystem/README.md` (`pvExpandedState` callers), and the **Next adds** of S15-26's and S15-09's plans (superseded).
+
+#### S15-35 — The Artifact list shows each Artifact's copy details
+
+**Ships.** The Source page's Artifact list takes S15-D14's layout (rows or compact cards, as the board decides): each Artifact shows a square thumbnail tile (`CachedThumbnail` `.tile`) of at most 80pt, its label, ref and description, its graphs, its saved copy details (S15-34's read-only view), and its actions and right-click menu (`.pvRightClickMenu`). The card grid and `ArtifactSquarePreview` go. Values come from the workspace read; no new query (60 Artifacts at Scale).
+**Not this PR.** Editing (S15-34); Move (S15-25).
+**Check.** A census Source with 12 Artifacts, three with copy details, reads as a list whose height does not grow with a form; every thumbnail is sharp at 2x.
+**Context.** Rule "An Artifact is added and edited in one sheet"; S15-D14; `SourcePageArtifactsView.swift` (`ArtifactSquarePreview`), `macos/App/Platform/CachedThumbnail.swift`, `core/derivatives/ensure.go` (`ThumbnailSpec`, 256); `SourcesListRow.swift` (`.pvRightClickMenu` precedent).
 
 #### S15-10 — Adding an Artifact asks for its copy details
 
-**Ships.** When an Artifact is added, its type's `artifact`-level suggestions can be filled in the add flow (the S15-26 board on a draft owner, which this PR adds and S15-11 reuses: it collects a `sourcemetadata.Draft` with its whole order and writes nothing), and they save with the Artifact in one write.
+**Ships.** Add Artifact opens the Artifact sheet in add mode (S15-D14): the file, label, description, graphs and the type's `artifact`-level copy details on S15-36's draft board. The Artifact and its copy details save in one `CreateArtifact` write; the file then ingests as its own write, as today; a retry after a refused file sends the draft on `UpdateArtifact` (S15-33). The Add Artifact dialog (`addForm`) and its separate `Draft` go.
 **Not this PR.** Filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
 **Check.** Adding a downloaded census image offers provider, URL and accessed date, and the values show on the Artifact afterwards.
-**Context.** S15-D4; map § 1 "Copy details are captured when the Artifact is added"; `IngestFileDropRow.swift`, `SourceFormLoadArea.swift`.
+**Context.** S15-D14 (S15-D4 was folded into it, 2026-11-12); map § 1 "Copy details are captured when the Artifact is added"; `IngestFileDropRow.swift`, `SourceFormLoadArea.swift`, `SourceArtifactsSection.create()`.
 
 #### S15-11 — Evidence graphs show their metadata
 
-**Ships.** The Evidence graph form has a metadata board for the item (the S15-26 board on a draft), with the type's `graph`-level suggestions, saved with the form's one write.
+**Ships.** The Evidence graph form has a metadata board for the item (S15-36's draft board, with S15-34's inline Add field, scrolling form dialog and key order; its rows start from `getMetadataBoard`, which S15-11 adds to the Swift store; the graph write replies return no rows, so a graph Save reloads the workspace), with the type's `graph`-level suggestions, saved with the form's one write.
 **Not this PR.** Nudging researchers toward one graph per household (map § 7).
 **Check.** Bar 3's graph half: dwelling, family and line on a household graph.
 **Context.** S15-D5; map § 6.9; `SourceGraphFormDialog.swift`, `SourceGraphFormModel.swift`.
@@ -442,7 +485,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** **Move to another Source…** on Artifact rows and graphs on the Source page opens the confirm S15-D10 draws: the target picker, the bundle, and the credibility note when the two Sources' grades differ. After the move, the app lands on the moved Artifact under its new Source.
 **Not this PR.** Undo.
 **Check.** Bar 8.
-**Context.** S15-D10, S15-D1; [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md).
+**Context.** S15-D10, S15-D1 (graphs), S15-D14 (where Move sits on the Artifact list); [`add-workspace-location`](../../../.agents/skills/add-workspace-location/SKILL.md).
 
 ### Slice 8 — Provenance loading
 
