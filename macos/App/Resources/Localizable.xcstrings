@@ -8316,6 +8316,42 @@
         }
       }
     },
+    "sources.page.artifactCopyDetails": {
+      "comment": "Disclosure on an artifact card that opens its metadata board, when it holds no value",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy details"
+          }
+        }
+      }
+    },
+    "sources.page.artifactCopyDetailsCount": {
+      "comment": "Disclosure on an artifact card that opens its metadata board; argument is the saved value count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy details (%lld)"
+          }
+        }
+      }
+    },
+    "sources.page.artifactCopyDetailsLabel": {
+      "comment": "VoiceOver label of the Copy details disclosure on an artifact card; argument is the ART- ref",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy details of %@"
+          }
+        }
+      }
+    },
     "sources.page.artifactDescription": {
       "comment": "Field label for optional Artifact description",
       "extractionState": "manual",

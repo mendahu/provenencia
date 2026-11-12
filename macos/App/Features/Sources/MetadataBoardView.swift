@@ -1,5 +1,31 @@
 import SwiftUI
 
+/// How densely a board is drawn: the Source page's wide rows, or a narrow card.
+/// The view reads these measures and holds no branch on the case.
+enum MetadataBoardStyle {
+    case regular
+    case compact
+
+    /// The field-label column.
+    var labelWidth: CGFloat { self == .regular ? 132 : 76 }
+    var rowHorizontalPadding: CGFloat { self == .regular ? PVSpacing.space4 : 0 }
+    /// Between saved rows, suggestions and Add.
+    var groupSpacing: CGFloat { self == .regular ? PVSpacing.space6 : PVSpacing.space4 }
+    /// Above the suggestions heading when saved rows precede it.
+    var suggestionsHeadingTopPadding: CGFloat { self == .regular ? PVSpacing.space7 : groupSpacing }
+    /// The label sits on its own line over the controls instead of beside them.
+    var stacksSuggestionLabel: Bool { self == .compact }
+    /// Lines a suggestion label up with the saved rows' labels past the reorder handle.
+    var suggestionLabelInset: CGFloat { self == .regular ? PVReorderHandle.width : 0 }
+    var suggestionPadding: (vertical: CGFloat, horizontal: CGFloat) {
+        self == .regular
+            ? (PVSpacing.space4, PVSpacing.space5)
+            : (PVSpacing.space3, PVSpacing.space4)
+    }
+    var showsEmptyState: Bool { self == .regular }
+    var showsTrailingAdd: Bool { self == .compact }
+}
+
 /// One owner's metadata board: saved reorderable rows, type suggestions, and the
 /// empty state. The page draws the section header and intro around it, and owns
 /// the Add dialog and clear confirm (`MetadataBoardDialogs`) the board asks for.
@@ -9,10 +35,11 @@ struct MetadataBoardView: View {
     let accessibilityIdentifierPrefix: String
     let onAdd: () -> Void
     let onClear: (String) -> Void
+    var style: MetadataBoardStyle = .regular
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PVSpacing.space6) {
-            if board.saved.isEmpty, board.suggested.isEmpty {
+        VStack(alignment: .leading, spacing: style.groupSpacing) {
+            if style.showsEmptyState, board.saved.isEmpty, board.suggested.isEmpty {
                 PVEmptyState(
                     icon: .list,
                     title: L10n.Sources.metadataEmptyTitle,
@@ -46,10 +73,11 @@ struct MetadataBoardView: View {
                             .tracking(PVTypeScale.micro * PVTracking.caps)
                             .textCase(.uppercase)
                             .foregroundStyle(PVColor.textFaint)
-                            .padding(.top, board.saved.isEmpty ? 0 : PVSpacing.space7)
+                            .padding(.top, board.saved.isEmpty ? 0 : style.suggestionsHeadingTopPadding)
 
                         ForEach(board.suggested) { entry in
-                            SourcePageMetadataSuggestionRow(
+                            MetadataBoardSuggestionRow(
+                                style: style,
                                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                                 entry: entry,
                                 isSaving: board.savingFieldID == entry.field.id,
@@ -69,20 +97,28 @@ struct MetadataBoardView: View {
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).suggestions")
                 }
             }
+
+            if style.showsTrailingAdd {
+                PVButton(L10n.Sources.addMetadata, variant: .ghost, size: .sm, icon: .plus) {
+                    onAdd()
+                }
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).add")
+            }
         }
     }
 
     private func savedRow(_ entry: CatalogMetadataEntry) -> some View {
-        HStack(alignment: .top, spacing: SourcePageLayout.metadataColumnSpacing) {
+        HStack(alignment: .top, spacing: MetadataBoardLayout.columnSpacing) {
             PVReorderHandle()
                 .padding(.top, 6)
-            SourcePageMetadataLabel(
+            MetadataBoardLabel(
                 text: entry.field.label,
+                width: style.labelWidth,
                 topPadding: 6,
                 emphasized: true
             )
 
-            SourcePageMetadataTextEditor(
+            MetadataBoardTextEditor(
                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                 entry: entry,
                 isEditing: board.editingFieldID == entry.field.id,
@@ -100,7 +136,7 @@ struct MetadataBoardView: View {
             )
         }
         .padding(.vertical, PVSpacing.space3)
-        .padding(.horizontal, PVSpacing.space4)
+        .padding(.horizontal, style.rowHorizontalPadding)
     }
 }
 
@@ -153,7 +189,8 @@ struct MetadataBoardAddForm: View {
 }
 
 /// Suggestion quick-add row with a local draft.
-private struct SourcePageMetadataSuggestionRow: View {
+private struct MetadataBoardSuggestionRow: View {
+    let style: MetadataBoardStyle
     let accessibilityIdentifierPrefix: String
     let entry: CatalogMetadataEntry
     let isSaving: Bool
@@ -167,40 +204,60 @@ private struct SourcePageMetadataSuggestionRow: View {
         let fieldID = entry.field.id
         return PVCard(border: .dashed, cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                HStack(spacing: SourcePageLayout.metadataColumnSpacing) {
-                    SourcePageMetadataLabel(text: entry.field.label, alignWithReorderHandle: true)
-                    PVInput(
-                        text: $draft,
-                        size: .sm,
-                        mono: true,
-                        prompt: L10n.Sources.metadataSuggestionPlaceholder,
-                        isInvalid: error != nil
-                    )
-                    .onSubmit { onSave(draft) }
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
-
-                    PVButton(
-                        L10n.Sources.saveMetadataSuggestion,
-                        variant: .ghost,
-                        size: .sm,
-                        loading: isSaving
-                    ) {
-                        onSave(draft)
+                if style.stacksSuggestionLabel {
+                    label
+                    controls(fieldID: fieldID)
+                } else {
+                    HStack(spacing: MetadataBoardLayout.columnSpacing) {
+                        label
+                        controls(fieldID: fieldID)
                     }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
-
-                    PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
-                        onDismiss()
-                    }
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
                 }
                 if let error, !error.isEmpty {
                     PVErrorText(error, size: .caption)
                 }
             }
-            .padding(.vertical, PVSpacing.space4)
-            .padding(.horizontal, PVSpacing.space5)
+            .padding(.vertical, style.suggestionPadding.vertical)
+            .padding(.horizontal, style.suggestionPadding.horizontal)
+        }
+    }
+
+    private var label: some View {
+        MetadataBoardLabel(
+            text: entry.field.label,
+            width: style.stacksSuggestionLabel ? nil : style.labelWidth,
+            leadingInset: style.suggestionLabelInset
+        )
+    }
+
+    /// The input, Save and dismiss: one line in the row, or the line under a stacked label.
+    private func controls(fieldID: String) -> some View {
+        HStack(spacing: style.stacksSuggestionLabel ? PVSpacing.space3 : MetadataBoardLayout.columnSpacing) {
+            PVInput(
+                text: $draft,
+                size: .sm,
+                mono: true,
+                prompt: L10n.Sources.metadataSuggestionPlaceholder,
+                isInvalid: error != nil
+            )
+            .onSubmit { onSave(draft) }
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
+
+            PVButton(
+                L10n.Sources.saveMetadataSuggestion,
+                variant: .ghost,
+                size: .sm,
+                loading: isSaving
+            ) {
+                onSave(draft)
+            }
+            .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
+
+            PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
+                onDismiss()
+            }
+            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
         }
     }
 }
@@ -208,7 +265,7 @@ private struct SourcePageMetadataSuggestionRow: View {
 /// Text metadata row editor with a **local** draft so keystrokes do not rewrite
 /// `MetadataBoardModel.drafts` (and rebuild the reorderable `List`) on every
 /// character — that was dropping TextField focus and feeling multi-second laggy.
-private struct SourcePageMetadataTextEditor: View {
+private struct MetadataBoardTextEditor: View {
     let accessibilityIdentifierPrefix: String
     let entry: CatalogMetadataEntry
     let isEditing: Bool
@@ -290,7 +347,7 @@ private struct SourcePageMetadataTextEditor: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .buttonStyle(.plain)
-            .sourcePageMetadataValueChrome()
+            .metadataBoardValueChrome()
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
             .help(L10n.string(L10n.Sources.openMetadataURL))
         } else {
@@ -298,8 +355,60 @@ private struct SourcePageMetadataTextEditor: View {
                 .font(PVFont.mono(size: PVTypeScale.caption))
                 .foregroundStyle(PVColor.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-                .sourcePageMetadataValueChrome()
+                .metadataBoardValueChrome()
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
         }
+    }
+}
+
+private enum MetadataBoardLayout {
+    /// Spacing between handle, label, and value on metadata rows.
+    static let columnSpacing = PVSpacing.space5
+}
+
+/// Resting metadata value chrome that matches `PVTextArea` `.mono` insets so
+/// entering inline edit does not shift the glyphs when the border appears.
+private struct MetadataBoardValueChrome: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, PVInputChrome.horizontalInset)
+            .padding(.vertical, PVTextArea.Typography.mono.verticalPadding)
+            .overlay(
+                RoundedRectangle(cornerRadius: PVRadius.sm, style: .continuous)
+                    .stroke(Color.clear, lineWidth: 1)
+            )
+    }
+}
+
+private extension View {
+    func metadataBoardValueChrome() -> some View {
+        modifier(MetadataBoardValueChrome())
+    }
+}
+
+/// Label column used by metadata saved / suggestion rows. A nil `width` fills
+/// the line (a label stacked over its controls).
+private struct MetadataBoardLabel: View {
+    let text: String
+    let width: CGFloat?
+    /// Leading inset so suggestion labels align with saved-row labels.
+    var leadingInset: CGFloat = 0
+    var topPadding: CGFloat = 0
+    /// Saved rows use a stronger field name; suggestions stay a muted caption.
+    var emphasized: Bool = false
+
+    var body: some View {
+        Text(verbatim: text)
+            .font(
+                emphasized
+                    ? PVFont.body(size: PVTypeScale.bodySmall, weight: PVFontWeight.semibold)
+                    : PVFont.body(size: PVTypeScale.caption)
+            )
+            .foregroundStyle(emphasized ? PVColor.textPrimary : PVColor.textMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: width, alignment: .leading)
+            .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
+            .padding(.leading, leadingInset)
+            .padding(.top, topPadding)
     }
 }

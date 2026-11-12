@@ -50,6 +50,13 @@ final class MetadataBoardModel {
         syncDrafts()
     }
 
+    /// Resets only when the rows the workspace holds differ from the rows the
+    /// board showed, so a reload or patch that carries the board's own rows
+    /// keeps an edit begun since.
+    func resetIfChanged(from old: [CatalogMetadataEntry]?, to new: [CatalogMetadataEntry]?) {
+        if old != new { resetDrafts() }
+    }
+
     private func syncDrafts() {
         for e in entries where drafts[e.field.id] == nil || e.hasValue {
             drafts[e.field.id] = e.valueText

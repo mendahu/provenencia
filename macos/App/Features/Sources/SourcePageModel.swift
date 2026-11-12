@@ -150,15 +150,20 @@ final class SourcePageModel {
 
     private func apply(_ workspace: CatalogSourceWorkspace) {
         let previous = appliedWorkspace
+        // The boards write their rows into `context.workspace` themselves, so
+        // "differs from what the board shows" is read from it, not from `previous`.
+        let shown = context.workspace
         context.workspace = workspace
         context.clearPageError()
         identity.resetIfChanged(from: previous?.source, to: workspace.source)
         if previous?.credibility != workspace.credibility {
             credibility.resetDrafts()
         }
-        if previous?.metadata != workspace.metadata {
-            metadata.resetDrafts()
-        }
+        let sourceOwner = MetadataOwner(level: .source, id: context.sourceID)
+        metadata.resetIfChanged(
+            from: shown?.metadataRows(for: sourceOwner), to: workspace.metadataRows(for: sourceOwner)
+        )
+        artifacts.syncBoards(shown: shown, to: workspace)
         if previous?.notes != workspace.notes {
             notes.reset()
         }

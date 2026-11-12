@@ -270,7 +270,45 @@ struct SourcePageArtifactsView: View {
             if noGraph {
                 noGraphRow(art)
             }
+            if let board = model.artifacts.board(for: art.id) {
+                copyDetails(art, board: board)
+            }
         }
+    }
+
+    /// The Artifact's own metadata board behind a closed disclosure: a Source can
+    /// hold dozens of Artifacts, so none draws a board until it is opened.
+    private func copyDetails(_ art: CatalogArtifact, board: MetadataBoardModel) -> some View {
+        let isOpen = Binding(
+            get: { model.artifacts.openBoardIDs.contains(art.id) },
+            set: { open in
+                if open {
+                    model.artifacts.openBoardIDs.insert(art.id)
+                } else {
+                    model.artifacts.openBoardIDs.remove(art.id)
+                }
+            }
+        )
+        return VStack(alignment: .leading, spacing: PVSpacing.space4) {
+            PVDivider()
+            PVDisclosureButton(
+                L10n.Sources.artifactCopyDetails(count: board.saved.count),
+                isExpanded: isOpen,
+                flushLeading: true
+            )
+            .accessibilityLabel(L10n.Sources.artifactCopyDetailsLabel(ref: art.ref))
+            .accessibilityIdentifier("sources.page.artifact.\(art.id).copyDetails")
+            if isOpen.wrappedValue {
+                MetadataBoardView(
+                    board: board,
+                    accessibilityIdentifierPrefix: "sources.page.artifact.\(art.id).metadata",
+                    onAdd: { model.metadataDialogs.openAdd(on: board) },
+                    onClear: { model.metadataDialogs.askClear(on: board, fieldID: $0) },
+                    style: .compact
+                )
+            }
+        }
+        .padding(.top, PVSpacing.space4)
     }
 
     /// The badge and **Link to a graph** on a card in no graph: one row with the

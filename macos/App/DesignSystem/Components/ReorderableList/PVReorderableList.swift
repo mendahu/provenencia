@@ -24,10 +24,13 @@ private struct PVReorderGrip: View {
 /// Cursor only — do not attach a local `DragGesture` here; it steals the
 /// `List` / `onMove` reorder gesture that actually changes order.
 struct PVReorderHandle: View {
+    /// The handle's frame width; a row that lines up with it reads this.
+    nonisolated static let width: CGFloat = 20
+
     var body: some View {
         PVReorderGrip()
             .foregroundStyle(PVColor.textFaint)
-            .frame(width: 20, height: 20)
+            .frame(width: Self.width, height: Self.width)
             .contentShape(Rectangle())
             .accessibilityLabel(L10n.string(L10n.DesignSystem.reorderHandle))
             .onHover { hovering in

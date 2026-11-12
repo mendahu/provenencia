@@ -6547,6 +6547,31 @@ enum L10n {
             comment: "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes"
         )
 
+        /// The title of an artifact card's metadata disclosure: bare at no saved value, else the count.
+        static func artifactCopyDetails(count: Int) -> String {
+            if count == 0 {
+                return L10n.string(LocalizedStringResource(
+                    "sources.page.artifactCopyDetails",
+                    defaultValue: "Copy details",
+                    comment: "Disclosure on an artifact card that opens its metadata board, when it holds no value"
+                ))
+            }
+            return L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsCount",
+                defaultValue: "Copy details (%lld)",
+                comment: "Disclosure on an artifact card that opens its metadata board; argument is the saved value count"
+            ), count)
+        }
+
+        /// Argument is the ART- ref.
+        static func artifactCopyDetailsLabel(ref: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsLabel",
+                defaultValue: "Copy details of %@",
+                comment: "VoiceOver label of the Copy details disclosure on an artifact card; argument is the ART- ref"
+            ), ref)
+        }
+
         /// Argument is the ART- ref.
         static func artifactLinkToGraphLabel(ref: String) -> String {
             L10n.format(LocalizedStringResource(
