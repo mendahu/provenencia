@@ -22,12 +22,12 @@ package conclusiondetails
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/autoreconcile"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/datevalues"
@@ -36,6 +36,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/locator"
@@ -148,16 +149,12 @@ const (
 	sqlRecords = `SELECT o.id, o.ref,
 			o.value_text, o.value_integer, o.value_boolean, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
 			o.value_date_id, o.value_name_id, o.value_subject_id,
-			s.id, s.ref, s.graph_id, c.id, a.id, src.id, COALESCE(src.title, ''),
-			COALESCE(a.label, ''), COALESCE(c.label, ''), c.locator_json,
-			COALESCE(sg.key, ''), ` + autoreconciler.ProvenanceColumns + `
+			s.id, s.ref, s.graph_id, c.id, c.artifact_id,
+			COALESCE(c.label, ''), c.locator_json, c.transcription_uncertain
 		FROM observations o INDEXED BY observations_subject_id_idx
 		JOIN subjects s ON s.id = o.subject_id
 		JOIN citations c ON c.id = o.citation_id
-		JOIN artifacts a ON a.id = c.artifact_id
-		JOIN sources src ON src.id = a.source_id
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		` + autoreconciler.ProvenanceJoins + `
 		WHERE o.subject_id IN (`
 )
 
@@ -248,7 +245,11 @@ func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*
 		}
 	}
 	toponym := v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
-	leadOutcomes, err := loadRecords(q, toponym, use, byProp, leadRows)
+	recs, err := sources.RecordsOf(g)
+	if err != nil {
+		return nil, nil, err
+	}
+	leadOutcomes, err := loadRecords(q, recs, toponym, use, byProp, leadRows)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -424,7 +425,7 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 // outcomes of the Observations in leads (a gallery's earliest records, found
 // among the node's rows of the gallery Properties), which belong to no field;
 // their Recorded value has no Date or Name. A row with no record is dropped.
-func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map[string]map[string]*Field, leadRows []graphcache.Outcome) (map[string]Outcome, error) {
+func loadRecords(q Querier, recs *sources.RecordIndex, toponym []byte, nodes []*graphcache.Node, byProp map[string]map[string]*Field, leadRows []graphcache.Outcome) (map[string]Outcome, error) {
 	leadOutcomes := map[string]Outcome{}
 	type want struct {
 		f   *Field // nil for a lead
@@ -464,11 +465,10 @@ func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map
 			o                                                     Outcome
 			locatorJSON                                           string
 		)
-		dest := append([]any{&observationID, &o.ObservationRef,
+		dest := []any{&observationID, &o.ObservationRef,
 			&scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
-			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID, &o.SourceID, &o.SourceTitle,
-			&o.ArtifactLabel, &o.CitationLabel, &locatorJSON,
-			&o.CredibilityKey}, autoreconciler.ProvenanceDest(&o.Provenance)...)
+			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID,
+			&o.CitationLabel, &locatorJSON, &o.Provenance.Uncertain}
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
@@ -476,6 +476,12 @@ func loadRecords(q Querier, toponym []byte, nodes []*graphcache.Node, byProp map
 		if !ok {
 			return nil
 		}
+		src, label, found := recs.Artifact(o.ArtifactID)
+		if !found {
+			return fmt.Errorf("conclusiondetails: Artifact %x has no Source record", o.ArtifactID)
+		}
+		o.SourceID, o.SourceTitle, o.ArtifactLabel = src.ID, src.Title, label
+		o.CredibilityKey, o.Provenance.Credibility = src.CredibilityKey, src.Credibility
 		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
 		o.Recorded.Scalar = scalar.Scalar()
 		o.Recorded.TermID = termID

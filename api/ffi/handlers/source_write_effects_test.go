@@ -130,9 +130,10 @@ func contains(ids []string, id string) bool {
 }
 
 // TestUpdateAndCoverReturnEffects: a rename or a cover change reports the
-// Source and, for a title, its graphs, and never a sidebar recount.
+// Source, and no graph (the Source records hold its words), and never a
+// sidebar recount.
 func TestUpdateAndCoverReturnEffects(t *testing.T) {
-	t.Run("a rename reports the Source and its graph, no counts", func(t *testing.T) {
+	t.Run("a rename reports the Source, no graph and no counts", func(t *testing.T) {
 		dir, userID, sourceID, _, _ := filedSubject(t, false)
 		var listed engine.ListSourcesResponse
 		mustRPC(t, ListSources, &engine.ListSourcesRequest{ProjectDir: dir}, &listed)
@@ -151,8 +152,8 @@ func TestUpdateAndCoverReturnEffects(t *testing.T) {
 		if !contains(eff.GetSourceScopes(), sourceID) {
 			t.Fatalf("source_scopes = %v, want %s", eff.GetSourceScopes(), sourceID)
 		}
-		if graphID := soleGraphID(t, dir, sourceID); !contains(eff.GetEvidenceGraphs(), graphID) {
-			t.Fatalf("evidence_graphs = %v, want %s", eff.GetEvidenceGraphs(), graphID)
+		if len(eff.GetEvidenceGraphs()) != 0 {
+			t.Fatalf("evidence_graphs = %v, a rename names no graph", eff.GetEvidenceGraphs())
 		}
 		if contains(eff.GetLists(), "counts") {
 			t.Fatalf("lists = %v, a rename moved the counts", eff.GetLists())

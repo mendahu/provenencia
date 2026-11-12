@@ -87,3 +87,6 @@ func ToponymPlan(c *database.Catalog) (string, error) {
 	}
 	return strings.Join(plan, "\n"), rows.Err()
 }
+
+// SQLRecordsForTest is the record shells query.
+func SQLRecordsForTest() string { return sqlRecords }

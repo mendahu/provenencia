@@ -44,8 +44,8 @@ struct PersonSourcesContentTests {
                 claims: [claim("c3", graph: "g-a", graphRef: "EVG-3", graphName: "Page 4", subject: subject("s3", ref: "CPR-3"))]
             ),
             CatalogPersonClaimGroup(
-                sourceID: "src-3", sourceRef: "SRC-4KQ7M", title: "", sourceTypeID: "gone",
-                claims: [claim("c4", graph: "g-l", graphRef: "", graphName: "", subject: subject("s4", ref: "CPR-4"))]
+                sourceID: "src-3", sourceRef: "SRC-4KQ7M", title: "Letter", sourceTypeID: "gone",
+                claims: [claim("c4", graph: "g-l", graphRef: "", graphName: "Page 9", subject: subject("s4", ref: "CPR-4"))]
             ),
         ]
     }
@@ -63,7 +63,7 @@ struct PersonSourcesContentTests {
         let result = content(groups)
         #expect(result.rows.map(\.id) == ["src-1", "src-2", "src-3"])
         #expect(result.rows[0].lines.map(\.graphTitle) == ["Household 214", "Household 388"])
-        #expect(result.rows[2].title == .ref("SRC-4KQ7M"))
+        #expect(result.rows[2].title == .name("Letter"))
         #expect(!result.isEmpty)
         #expect(content([]).isEmpty)
     }
@@ -85,21 +85,21 @@ struct PersonSourcesContentTests {
             sourceId: "src-1", sourceRef: "SRC-9TQ2M", sourceTitle: "Hamburg census 1867", graphId: "g-388", subjectId: "s2"
         ))
 
-        // An unknown type id: no type cell; the untyped spoken label, and an untitled Source's ref once.
+        // An unknown type id: no type cell, and the untyped spoken label.
         let letter = rows[2]
         #expect(letter.typeLabel == nil && letter.typeIconKey == nil)
-        #expect(letter.accessibilityLabel == "SRC-4KQ7M, date not recorded")
+        #expect(letter.accessibilityLabel == "Letter, date not recorded, SRC-4KQ7M")
 
-        // A graph with no ref, and one with no name.
+        // A graph with no ref, and one with a ref.
         let noRef = content([CatalogPersonClaimGroup(
             sourceID: "s", sourceRef: "SRC-1", title: "T", sourceTypeID: "type-census",
             claims: [
                 claim("a", graph: "g1", graphRef: "", graphName: "Named", subject: subject("x", ref: "CPR-1")),
-                claim("b", graph: "g2", graphRef: "EVG-9", graphName: "", subject: subject("y", ref: "CPR-2")),
+                claim("b", graph: "g2", graphRef: "EVG-9", graphName: "Other", subject: subject("y", ref: "CPR-2")),
             ]
         )]).rows[0].lines
         #expect(noRef[0].graphTitle == "Named" && noRef[0].graphRef == nil)
-        #expect(noRef[1].graphTitle == "EVG-9" && noRef[1].graphRef == nil)
+        #expect(noRef[1].graphTitle == "Other" && noRef[1].graphRef == "EVG-9")
     }
 
     @Test func foldPastSixLines() {
@@ -244,7 +244,7 @@ struct PersonSourcesContentTests {
         #expect(placed.displayName(orders: orders) == line[0].subjectName)
     }
 
-    @Test func graphLocationsClaimGraphsAndSourceRefsCoverFoldedLines() throws {
+    @Test func graphLocationsAndClaimGraphsCoverFoldedLines() throws {
         let folded = PersonSourcesPreviewData.folded
         let all = content(folded)
         #expect(all.rows[0].lines.count == 5)
@@ -252,7 +252,6 @@ struct PersonSourcesContentTests {
         #expect(all.claimGraphs.count == 7)
         for claim in folded[0].claims {
             #expect(all.claimGraphs[claim.claimID] == claim.graphID)
-            #expect(all.graphSourceRefs[claim.graphID] == "SRC-6P3VD")
             let location = try #require(all.graphLocations[claim.graphID])
             #expect(location == SourcesListNavigation.canvasLocation(
                 sourceId: "src-4", sourceRef: "SRC-6P3VD", sourceTitle: "Kirchenbuch St. Michaelis",

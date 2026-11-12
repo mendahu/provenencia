@@ -116,7 +116,7 @@ func TestRecordLinksBudgets(t *testing.T) {
 func graphIDs(rl persondetail.PersonRecordLinks) [][]byte {
 	out := make([][]byte, len(rl.Graphs))
 	for i, g := range rl.Graphs {
-		out[i] = g.GraphID
+		out[i] = g.Graph.GraphID
 	}
 	return out
 }

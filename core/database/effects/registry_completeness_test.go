@@ -84,13 +84,14 @@ func hasWork(e Effect) bool {
 // its last activity (Effect.SourceScope: the audit source scope). Identity
 // claims change the evidence graph but have never been audited under a Source.
 // An Artifact moves neither graph rows nor reads: its links and Citations do.
+// A Source row names no graph: its words live in the Source records.
 func TestSourceEvidenceIsNotActivity(t *testing.T) {
 	tests := []struct {
 		table    string
 		evidence bool
 		activity bool
 	}{
-		{"sources", true, true},
+		{"sources", false, true},
 		{"source_notes", false, true},
 		{"source_metadata", false, true},
 		{"source_metadata_layout", false, true},
@@ -158,7 +159,7 @@ func TestPropertyUsageList(t *testing.T) {
 // that every such path ends at evidence_graphs.
 func TestEvidenceGraphPathsEndAtGraphs(t *testing.T) {
 	want := []string{
-		"sources", "citations", "observations", "subjects",
+		"citations", "observations", "subjects",
 		"evidence_graphs", "identity_claims",
 		"date_values", "name_values", "depiction_values",
 	}

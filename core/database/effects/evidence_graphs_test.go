@@ -234,14 +234,21 @@ func TestEvidenceGraphsResolve(t *testing.T) {
 	}
 	sameIDs("claim create progress", readIDs(resolve("claim", []rowchange.Change{claim}), effects.ReadEvidenceGraphProgress), jones.ID)
 
-	// A Source title edit names every graph of the Source; an Artifact create
-	// and label edit name none and move no progress.
+	// A Source title edit names no graph (the Source records hold its words),
+	// names the Source, and still reprojects every graph's search document; an
+	// Artifact create and label edit name none and move no progress.
 	titleChanges, err := sources.Update(tx, userID, sources.Source{ID: src.ID, SourceTypeID: typeID, Title: "Census 1851"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	titleSet := resolve("title edit", titleChanges)
-	sameIDs("title edit", titleSet.EvidenceGraphs, def, jones.ID)
+	sameIDs("title edit", titleSet.EvidenceGraphs)
+	sameIDs("title edit source scopes", titleSet.SourceScopes, src.ID)
+	for _, doc := range titleSet.Search {
+		if doc.Kind == effects.DocEvidenceGraph {
+			sameIDs("title edit graph search docs", doc.IDs, def, jones.ID)
+		}
+	}
 	sameIDs("title edit graph reads", readIDs(titleSet, effects.ReadEvidenceGraphs))
 	_, newArtChanges, err := artifacts.Create(tx, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page 2"})
 	if err != nil {

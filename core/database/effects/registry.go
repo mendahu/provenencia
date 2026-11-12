@@ -315,9 +315,8 @@ var observers = chain(
 
 var registry = map[string]Effect{
 	"sources": {
-		Entity:        "source",
-		EvidenceGraph: graphsOfSource(union(onField("title", self()), onField("source_type_id", self()))),
-		SourceScope:   self(),
+		Entity:      "source",
+		SourceScope: self(),
 		Search: []SearchDoc{
 			{Kind: DocSource, Path: self()},
 			{Kind: DocEvidenceGraph, Path: onField("title", graphsOfSource(self()))},

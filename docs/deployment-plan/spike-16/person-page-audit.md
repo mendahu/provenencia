@@ -266,7 +266,7 @@ Today: `["birth", "b1", "undated", "i1", "i2", "death"]`.
 
 **Problem.** The wire repeats the claims read's graph rows but not `source_ref`, so the Sources section hands `graphSourceRefs` to the diagram's adapter, and the "name, else ref" and "title, else ref" fallbacks are written twice. `source_id` and `source_type_id` are decoded and never read.
 
-**Fix.** Add `source_ref`, drop the two unread fields and the handoff, and write each fallback once. With S16-12, which changes the same message (moved from S16-01 when the PRs were combined). The rest (the claims read owning every graph label) stays in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
+**Fix.** Drop the unread `source_type_id` and the handoff, and write each fallback once. S16-12 found `source_ref` unneeded: a Source's title is required, so the diagram labels with the title, and `source_id` stays for the app's `.source` follow (user, 2026-11-12). With S16-12, which changes the same message (moved from S16-01 when the PRs were combined). The rest (the claims read owning every graph label) stays in [`ideas/structural-debt.md`](../../ideas/structural-debt.md).
 
 **Origin.** S13-27 (#743), S13-28 (#744).
 

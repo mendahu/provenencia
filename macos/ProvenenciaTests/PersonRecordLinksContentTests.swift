@@ -12,8 +12,7 @@ struct PersonRecordLinksContentTests {
         if let graphID { locations[graphID] = nil }
         return PersonRecordLinksContent(
             links: PersonSourcesPreviewData.johannRecordLinks,
-            graphLocations: locations,
-            graphSourceRefs: sources.graphSourceRefs
+            graphLocations: locations
         )
     }
 
@@ -53,13 +52,13 @@ struct PersonRecordLinksContentTests {
     @Test func aGraphWithNoRefIsLabelledWithItsName() {
         let links = CatalogPersonRecordLinks(
             graphs: [CatalogRecordLinksGraph(
-                graphID: "g", graphRef: "", graphName: "Page 4", sourceID: "s", sourceTitle: "", sourceTypeID: "t"
+                graphID: "g", graphRef: "", graphName: "Page 4", sourceID: "s", sourceTitle: "Census"
             )],
             pairs: []
         )
-        let content = PersonRecordLinksContent(links: links, graphLocations: [:], graphSourceRefs: ["g": "SRC-1"])
+        let content = PersonRecordLinksContent(links: links, graphLocations: [:])
         #expect(content.dataset.nodes[0].label == "Page 4")
-        #expect(content.dataset.nodes[0].help == "Page 4 — SRC-1")
+        #expect(content.dataset.nodes[0].help == "Page 4 — Census")
     }
 
     @Test func aGraphWithNoLocationIsDrawnAndNotClickable() {
@@ -145,7 +144,7 @@ struct PersonRecordLinksContentTests {
     }
 
     private func graph(_ id: String) -> CatalogRecordLinksGraph {
-        CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: "", sourceID: "s", sourceTitle: "", sourceTypeID: "t")
+        CatalogRecordLinksGraph(graphID: id, graphRef: id, graphName: id, sourceID: "s", sourceTitle: "T")
     }
 
     private func line(_ strength: CatalogRecordLinkStrength = .weak) -> CatalogRecordLink {
@@ -163,9 +162,9 @@ struct PersonRecordLinksContentTests {
         #expect(content.partial == .notCounted)
         #expect(content.dataset.nodes.count == 40)
         #expect(content.dataset.resolvedArcs.isEmpty)
-        let apart = L10n.Conclusions.recordLinksNodeApartAccessibility(ref: "g0", graph: "g0", source: "")
+        let apart = L10n.Conclusions.recordLinksNodeApartAccessibility(ref: "g0", graph: "g0", source: "T")
         #expect(content.dataset.nodes[0].accessibilityLabel
-            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "g0", graph: "g0", source: ""))
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "g0", graph: "g0", source: "T"))
         #expect(content.dataset.nodes.allSatisfy { $0.accessibilityLabel != apart })
     }
 
@@ -194,9 +193,9 @@ struct PersonRecordLinksContentTests {
         )
         #expect(content.partial == .leftOut)
         #expect(content.dataset.nodes[2].accessibilityLabel
-            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "c", graph: "c", source: ""))
+            == L10n.Conclusions.recordLinksNodeUncountedAccessibility(ref: "c", graph: "c", source: "T"))
         #expect(content.dataset.nodes[0].accessibilityLabel
-            == L10n.Conclusions.recordLinksNodeAccessibility(ref: "a", graph: "a", source: "", connected: 1))
+            == L10n.Conclusions.recordLinksNodeAccessibility(ref: "a", graph: "a", source: "T", connected: 1))
     }
 
     @Test func droppedGraphsAreLeftOut() {

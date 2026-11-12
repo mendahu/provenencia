@@ -437,11 +437,14 @@ func TestRecordLinkStrengthProto(t *testing.T) {
 // TestRecordLinksProto: the mapper carries the ids and the two flags that say a
 // read is partial (S16-01 AC-2.7).
 func TestRecordLinksProto(t *testing.T) {
-	graph := func(b byte) graphcache.EvidenceGraph {
-		return graphcache.EvidenceGraph{GraphID: bytes.Repeat([]byte{b}, 16), SourceID: bytes.Repeat([]byte{b + 1}, 16), SourceTypeID: bytes.Repeat([]byte{b + 2}, 16)}
+	graph := func(b byte) persondetail.SourcedGraph {
+		return persondetail.SourcedGraph{
+			Graph:  graphcache.EvidenceGraph{GraphID: bytes.Repeat([]byte{b}, 16), SourceID: bytes.Repeat([]byte{b + 1}, 16)},
+			Source: sources.Record{ID: bytes.Repeat([]byte{b + 1}, 16), Title: "Source", SourceTypeID: bytes.Repeat([]byte{b + 2}, 16)},
+		}
 	}
 	read := persondetail.PersonRecordLinks{
-		Graphs: []graphcache.EvidenceGraph{graph(1), graph(4)},
+		Graphs: []persondetail.SourcedGraph{graph(1), graph(4)},
 		Pairs: []recordlinks.Pair{{A: 0, B: 1, Lines: []recordlinks.Line{
 			{Entity: bytes.Repeat([]byte{9}, 16), Strength: recordlinks.StrengthStrong},
 		}}},
@@ -462,8 +465,8 @@ func TestRecordLinksProto(t *testing.T) {
 				t.Fatalf("not_counted %v lines_dropped %v, want %v and %v", got.GetNotCounted(), got.GetLinesDropped(), tc.notCounted, tc.dropped)
 			}
 			if len(got.Graphs) != 2 || len(got.Pairs) != 1 ||
-				got.Pairs[0].GetGraphAId() != database.UUIDString(read.Graphs[0].GraphID) ||
-				got.Pairs[0].GetGraphBId() != database.UUIDString(read.Graphs[1].GraphID) ||
+				got.Pairs[0].GetGraphAId() != database.UUIDString(read.Graphs[0].Graph.GraphID) ||
+				got.Pairs[0].GetGraphBId() != database.UUIDString(read.Graphs[1].Graph.GraphID) ||
 				got.Pairs[0].Lines[0].GetStrength() != engine.RecordLinkStrength_RECORD_LINK_STRENGTH_STRONG {
 				t.Fatalf("graphs and pairs not mapped: %+v", got)
 			}
@@ -537,8 +540,7 @@ func TestGetPersonRecordLinks(t *testing.T) {
 	for i, g := range got.Graphs {
 		r := records[i]
 		if g.GetGraphId() != database.UUIDString(r.graph.ID) || g.GetGraphRef() != r.graph.Ref || g.GetGraphName() != r.graph.Name ||
-			g.GetSourceId() != database.UUIDString(r.src.ID) || g.GetSourceTitle() != r.title ||
-			g.GetSourceTypeId() != database.UUIDString(r.src.SourceTypeID) {
+			g.GetSourceId() != database.UUIDString(r.src.ID) || g.GetSourceTitle() != r.title {
 			t.Errorf("graph %d = %+v, want the %s", i, g, r.title)
 		}
 	}

@@ -210,8 +210,7 @@ struct PersonSourcesList: View {
             make: {
                 PersonRecordLinksContent(
                     links: $0,
-                    graphLocations: content.graphLocations,
-                    graphSourceRefs: content.graphSourceRefs
+                    graphLocations: content.graphLocations
                 )
             }
         ) { links in
@@ -649,7 +648,6 @@ private struct PersonSourcesPreview: View {
 #Preview("Sources gone") {
     PersonSourcesPreview(groups: PersonSourcesPreviewData.regular, claimsGone: true)
 }
-#Preview("Untitled Source") { PersonSourcesPreview(groups: PersonSourcesPreviewData.untitled) }
 #Preview("Folded") { PersonSourcesPreview(groups: PersonSourcesPreviewData.folded) }
 #Preview("Many Sources") { PersonSourcesPreview(groups: PersonSourcesPreviewData.manySources) }
 #endif

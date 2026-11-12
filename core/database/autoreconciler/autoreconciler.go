@@ -47,6 +47,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -98,26 +99,28 @@ type Querier interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-// ProvenanceColumns is the select-list fragment that reads a candidate's
-// provenance: the Source's credibility grade as sort_order relative to the
-// provenencia default (standard), then whether the transcription is uncertain.
-// No assessment, no grade, or no vocabulary reads as 0. It binds the aliases c
-// for citations and a for artifacts, and the query includes ProvenanceJoins,
-// after which sg (source_credibility_grades) is in scope for a caller's own
-// column. Scan it with ProvenanceDest.
-const ProvenanceColumns = `COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
-				WHERE key = 'standard' AND origin = 'provenencia'), 0),
-			c.transcription_uncertain`
-
-// ProvenanceJoins is the join fragment ProvenanceColumns needs; the alias
-// contract is on ProvenanceColumns.
-const ProvenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
-		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
-
-// ProvenanceDest are the scan targets for ProvenanceColumns, in its order.
-func ProvenanceDest(p *autoreconcile.Provenance) []any {
-	return []any{&p.Credibility, &p.Uncertain}
-}
+// One row per Observation on an accepted or provisional member of the
+// batch (rejected members don't count), with its evidence: polarity, the
+// Source it is cited under, and provenance as grade sort_order relative to
+// the provenencia default grade (standard); no assessment, no grade, or no
+// vocabulary reads as 0.
+var sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
+		o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_term_id,
+		COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
+		o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
+		ic.status = 'provisional', o.polarity = 'negative', a.source_id,
+		` + sourcecredibilitygrades.RelativeOrderColumn + `, c.transcription_uncertain
+	FROM identity_claims ic
+	JOIN observations o ON o.subject_id = ic.subject_id
+	JOIN properties p ON p.id = o.property_id
+	JOIN citations c ON c.id = o.citation_id
+	JOIN artifacts a ON a.id = c.artifact_id
+	LEFT JOIN property_terms t ON t.id = o.value_term_id
+	LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
+	LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
+	` + sourcecredibilitygrades.RelativeOrderJoins("a.source_id") + `
+	WHERE ic.status IN ('accepted', 'provisional')
+	  AND ic.entity_id IN (`
 
 const (
 	sqlDeleteFor         = `DELETE FROM auto_reconciler_values WHERE entity_id IN (`
@@ -132,29 +135,6 @@ const (
 		(entity_id, property_id, rank, value_text, value_integer, value_boolean, value_term_id,
 		 value_entity_id, value_date, value_name, value_image_file_id, date_lo, date_hi, sort_key, support, against, reason)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	// One row per Observation on an accepted or provisional member of the
-	// batch (rejected members don't count), with its evidence: polarity, the
-	// Source it is cited under, and provenance as grade sort_order relative to
-	// the provenencia default grade (standard); no assessment, no grade, or no
-	// vocabulary reads as 0.
-	sqlLoadCandidates = `SELECT ic.entity_id, o.id, o.property_id, p.value_type, p.cardinality,
-			o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_term_id,
-			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
-			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
-			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
-			` + ProvenanceColumns + `
-		FROM identity_claims ic
-		JOIN observations o ON o.subject_id = ic.subject_id
-		JOIN properties p ON p.id = o.property_id
-		JOIN citations c ON c.id = o.citation_id
-		JOIN artifacts a ON a.id = c.artifact_id
-		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
-		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
-		` + ProvenanceJoins + `
-		WHERE ic.status IN ('accepted', 'provisional')
-		  AND ic.entity_id IN (`
 
 	sqlAcceptedEntities = `SELECT subject_id, entity_id FROM identity_claims
 		WHERE status = 'accepted' AND subject_id IN (`
@@ -411,9 +391,9 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 			sourceID                          []byte
 			provenance                        autoreconcile.Provenance
 		)
-		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
+		dest := []any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
-			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
+			&provisional, &negative, &sourceID, &provenance.Credibility, &provenance.Uncertain}
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}

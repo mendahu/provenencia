@@ -51,14 +51,14 @@ func (f *fixture) registerOf(title, father, mother string, birth bool) register 
 // "A-B: entity/facts/strength ...", entities named by names.
 func summary(rl persondetail.PersonRecordLinks, names map[string]string) (graphs []string, pairs []string) {
 	for _, g := range rl.Graphs {
-		graphs = append(graphs, g.SourceTitle)
+		graphs = append(graphs, g.Source.Title)
 	}
 	for _, p := range rl.Pairs {
 		var ls []string
 		for _, l := range p.Lines {
 			ls = append(ls, fmt.Sprintf("%s/%d/%s", names[string(l.Entity)], l.Facts, l.Strength))
 		}
-		pairs = append(pairs, fmt.Sprintf("%s-%s: %s", rl.Graphs[p.A].SourceTitle, rl.Graphs[p.B].SourceTitle, strings.Join(ls, " ")))
+		pairs = append(pairs, fmt.Sprintf("%s-%s: %s", rl.Graphs[p.A].Source.Title, rl.Graphs[p.B].Source.Title, strings.Join(ls, " ")))
 	}
 	return graphs, pairs
 }
@@ -135,7 +135,7 @@ func TestRecordLinks(t *testing.T) {
 			f.promote(second, w.s.ID)
 			n := 0
 			for _, g := range f.recordLinks(w.s.ID).Graphs {
-				if g.SourceTitle == "G register" {
+				if g.Source.Title == "G register" {
 					n++
 				}
 			}
@@ -216,7 +216,7 @@ func TestRecordLinksGraphOrder(t *testing.T) {
 	}
 	var got []string
 	for _, g := range f.recordLinks(s.ID).Graphs {
-		got = append(got, g.SourceTitle+" / "+g.GraphName)
+		got = append(got, g.Source.Title+" / "+g.Graph.GraphName)
 	}
 	want := []string{"Baptisms / Index", "Baptisms / Register", "Census 1841 / Default", "Census 1851 / Default"}
 	if !reflect.DeepEqual(got, want) {

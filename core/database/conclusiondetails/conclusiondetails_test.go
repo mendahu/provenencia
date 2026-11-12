@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/observations"
@@ -514,6 +515,10 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	if _, err := g.Vocabulary(); err != nil {
 		t.Fatal(err)
 	}
+	// The records build on the first read; the count compares two warm reads.
+	if _, err := sources.RecordsOf(g); err != nil {
+		t.Fatal(err)
+	}
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
 	_, err := conclusiondetails.ForEntity(f.C, hs)
@@ -524,6 +529,58 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	must(t, err)
 	if smallN == 0 || smallN != n {
 		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
+	}
+	sql := conclusiondetails.SQLRecordsForTest()
+	for _, table := range []string{"sources", "artifacts", "source_credibility_"} {
+		if strings.Contains(sql, table) {
+			t.Fatalf("the record shells still read %s", table)
+		}
+	}
+}
+
+// TestForEntityAfterSourceEdit: a Source rename, an Artifact relabel and a
+// credibility change reach the record shells.
+func TestForEntityAfterSourceEdit(t *testing.T) {
+	f := newFixture(t)
+	src := f.source("Register")
+	low, err := sourcecredibilitygrades.Lookup(f.C, "low_trust", vocabkey.OriginProvenencia)
+	must(t, err)
+	high, err := sourcecredibilitygrades.Lookup(f.C, "high_trust", vocabkey.OriginProvenencia)
+	must(t, err)
+	grade := func(id []byte) {
+		f.Run("set_source_credibility", func(tx *database.Tx) ([]rowchange.Change, error) {
+			_, ch, err := sourcecredibility.Upsert(tx, userID, sourcecredibility.UpsertInput{SourceID: src.ID, CredibilityGradeID: id})
+			return ch, err
+		})
+	}
+	art := f.arts[string(src.ID)]
+	art.Label = "Page 1"
+	f.Run("update_artifact", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return artifacts.Update(tx, userID, art, evidencegraphs.GraphLinks{})
+	})
+	grade(low.ID)
+	a := f.personOn(src)
+	obs := f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+	h := f.promote(a, nil)
+
+	o := outcomeOf(field(f.detail(h), "name"), obs.ID)
+	if o.SourceTitle != "Register" || o.ArtifactLabel != "Page 1" || o.CredibilityKey != "low_trust" || o.Provenance.Credibility >= 0 {
+		t.Fatalf("before: %+v", o)
+	}
+
+	src.Title = "Parish register"
+	f.Run("update_source", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return sources.Update(tx, userID, src)
+	})
+	art.Label = "Folio 1"
+	f.Run("update_artifact", func(tx *database.Tx) ([]rowchange.Change, error) {
+		return artifacts.Update(tx, userID, art, evidencegraphs.GraphLinks{})
+	})
+	grade(high.ID)
+
+	o = outcomeOf(field(f.detail(h), "name"), obs.ID)
+	if o.SourceTitle != "Parish register" || o.ArtifactLabel != "Folio 1" || o.CredibilityKey != "high_trust" || o.Provenance.Credibility <= 0 {
+		t.Fatalf("after: %+v", o)
 	}
 }
 

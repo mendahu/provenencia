@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/recordlinks"
@@ -12,7 +13,7 @@ import (
 // PersonRecordLinks is a Person's Evidence graphs, in the Sources section's
 // order, and the lines between each pair; Pairs index Graphs.
 type PersonRecordLinks struct {
-	Graphs []graphcache.EvidenceGraph
+	Graphs []SourcedGraph
 	Pairs  []recordlinks.Pair
 	// NotCounted is true when the read passed its work bound: it compared
 	// nothing and lists no pair.
@@ -20,6 +21,12 @@ type PersonRecordLinks struct {
 	// LinesDropped is true when the read found more than maxRecordLinkLines
 	// lines and sent that many, strong lines first.
 	LinesDropped bool
+}
+
+// SourcedGraph is an Evidence graph with the record of the Source it is in.
+type SourcedGraph struct {
+	Graph  graphcache.EvidenceGraph
+	Source sources.Record
 }
 
 // maxRecordLinkLines is the most lines the read sends, strong first.
@@ -52,17 +59,21 @@ func recordLinks(c *database.Catalog, entityID []byte, cfg recordlinks.Config, m
 	if err != nil {
 		return PersonRecordLinks{}, err
 	}
-	var graphs []graphcache.EvidenceGraph
+	var graphs []SourcedGraph
 	seen := map[string]bool{}
 	for _, g := range groups {
 		for _, cl := range g.Claims {
 			if !seen[string(cl.Graph.GraphID)] {
 				seen[string(cl.Graph.GraphID)] = true
-				graphs = append(graphs, cl.Graph)
+				graphs = append(graphs, SourcedGraph{Graph: cl.Graph, Source: g.Source})
 			}
 		}
 	}
-	pairs, counted, err := linksBetween(c, entityID, graphs, cfg)
+	loaded := make([]graphcache.EvidenceGraph, len(graphs))
+	for i, g := range graphs {
+		loaded[i] = g.Graph
+	}
+	pairs, counted, err := linksBetween(c, entityID, loaded, cfg)
 	if err != nil {
 		return PersonRecordLinks{}, err
 	}

@@ -1250,7 +1250,8 @@ struct WorkspaceSessionTests {
             "kept", outcomes: [ReconciledValueDisplayTests.outcome("o1", "kept", source: "s1")]
         )]
         session.setQueryValue(detailKey, value: cited)
-        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s1"])) == [detailKey])
+        #expect(Set(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s1"]))) == [claimsKey, detailKey])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s9"])).isEmpty)
     }
 
     /// T-7 (AC-3.1, AC-3.2): a write that deleted a handle drops that handle's
@@ -1505,7 +1506,7 @@ struct WorkspaceSessionTests {
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])) == [key])
 
         session.setQueryValue(key, value: CatalogPersonRecordLinks(graphs: [
-            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: "", sourceTypeID: ""),
+            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: ""),
         ]))
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g9"])).isEmpty)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])

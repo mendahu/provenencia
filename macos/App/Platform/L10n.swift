@@ -9786,7 +9786,7 @@ enum L10n {
             L10n.format(LocalizedStringResource(
                 "conclusions.recordLinks.nodeHelp",
                 defaultValue: "%1$@ — %2$@",
-                comment: "Help tag of a record in the record links diagram; arguments are the graph's name (else ref) and the Source's title (else ref)"
+                comment: "Help tag of a record in the record links diagram; arguments are the graph's name and the Source's title"
             ), graph, source)
         }
 

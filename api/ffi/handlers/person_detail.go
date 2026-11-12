@@ -56,10 +56,10 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 		next := 0
 		for _, g := range groups {
 			group := &engine.PersonClaimGroup{
-				SourceId:     database.UUIDString(g.SourceID),
-				SourceRef:    g.SourceRef,
-				SourceTitle:  g.Title,
-				SourceTypeId: database.UUIDString(g.SourceTypeID),
+				SourceId:     database.UUIDString(g.Source.ID),
+				SourceRef:    g.Source.Ref,
+				SourceTitle:  g.Source.Title,
+				SourceTypeId: database.UUIDString(g.Source.SourceTypeID),
 			}
 			for _, cl := range g.Claims {
 				n := counts[0]
@@ -224,18 +224,17 @@ func recordLinksProto(links persondetail.PersonRecordLinks) *engine.GetPersonRec
 	out := &engine.GetPersonRecordLinksResponse{NotCounted: links.NotCounted, LinesDropped: links.LinesDropped}
 	for _, g := range links.Graphs {
 		out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
-			GraphId:      database.UUIDString(g.GraphID),
-			GraphRef:     g.GraphRef,
-			GraphName:    g.GraphName,
-			SourceId:     database.UUIDString(g.SourceID),
-			SourceTitle:  g.SourceTitle,
-			SourceTypeId: database.UUIDString(g.SourceTypeID),
+			GraphId:     database.UUIDString(g.Graph.GraphID),
+			GraphRef:    g.Graph.GraphRef,
+			GraphName:   g.Graph.GraphName,
+			SourceId:    database.UUIDString(g.Source.ID),
+			SourceTitle: g.Source.Title,
 		})
 	}
 	for _, p := range links.Pairs {
 		pair := &engine.RecordLinksPair{
-			GraphAId: database.UUIDString(links.Graphs[p.A].GraphID),
-			GraphBId: database.UUIDString(links.Graphs[p.B].GraphID),
+			GraphAId: database.UUIDString(links.Graphs[p.A].Graph.GraphID),
+			GraphBId: database.UUIDString(links.Graphs[p.B].Graph.GraphID),
 		}
 		for _, l := range p.Lines {
 			pair.Lines = append(pair.Lines, &engine.RecordLink{

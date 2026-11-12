@@ -106,11 +106,12 @@ extension CatalogQueryDescriptor {
     }
 
     /// A per-person section key read from the Person's Evidence graphs: it
-    /// reloads when its own handle or one of the graphs its value holds is
-    /// written.
+    /// reloads when its own handle, one of the graphs its value holds, or one
+    /// of the Sources they are on is written.
     static func personGraphsSection<Value>(
         kind: CatalogQueryKey.Kind,
         graphIDs: @escaping @Sendable (Value) -> Set<String>,
+        sourceIDs: @escaping @Sendable (Value) -> Set<String>,
         load: @escaping @Sendable (CatalogQueryKey, any GenealogyStore) async throws -> Value
     ) -> CatalogQueryDescriptor {
         .make(
@@ -120,6 +121,7 @@ extension CatalogQueryDescriptor {
             refreshes: [
                 .applyHiddenPolicy(followsOwnId: .touchedHandles),
                 .applyHiddenPolicy(followsValue: .evidenceGraphs, ids: graphIDs),
+                .applyHiddenPolicy(followsValue: .source, ids: sourceIDs),
                 .followsPropertyLabels,
             ],
             load: load
@@ -564,13 +566,15 @@ extension CatalogQueryKey.Kind {
         case .personClaims:
             // A Person's claims by Source (S13-01). Any Conclusion edit can
             // change who a claim belongs to, so every cached key is stale on a
-            // trigger. Otherwise a write reloads it for its own handle, and for
-            // the Evidence graphs it holds a claim on.
+            // trigger. Otherwise a write reloads it for its own handle, for the
+            // Evidence graphs it holds a claim on, and for the Sources they
+            // are on.
             return .personGraphsSection(
                 kind: self,
                 graphIDs: { (groups: [CatalogPersonClaimGroup]) in
                     Set(groups.flatMap(\.claims).map(\.graphID))
                 },
+                sourceIDs: { (groups: [CatalogPersonClaimGroup]) in Set(groups.map(\.sourceID)) },
                 load: { key, store in
                     guard case .personClaims(let project, let entityId) = key else {
                         mismatchedCatalogKey(key, .personClaims)
@@ -605,12 +609,14 @@ extension CatalogQueryKey.Kind {
         case .personRecordLinks:
             // A Person's Evidence graphs and the lines between them (S13-27).
             // Every write that can change a line names a graph the value holds
-            // (a neighbor's claim names its graph; a Subject, Observation or
-            // Source write names its graph) or the Person's own handle (a graph
-            // gained or lost), so a write elsewhere does not reload the pairs.
+            // (a neighbor's claim names its graph; a Subject or Observation
+            // write names its graph), the Person's own handle (a graph gained
+            // or lost) or a Source the graphs are on (a Source write names the
+            // Source), so a write elsewhere does not reload the pairs.
             return .personGraphsSection(
                 kind: self,
                 graphIDs: { (links: CatalogPersonRecordLinks) in Set(links.graphs.map(\.graphID)) },
+                sourceIDs: { (links: CatalogPersonRecordLinks) in Set(links.graphs.map(\.sourceID)) },
                 load: { key, store in
                     guard case .personRecordLinks(let project, let entityId) = key else {
                         mismatchedCatalogKey(key, .personRecordLinks)

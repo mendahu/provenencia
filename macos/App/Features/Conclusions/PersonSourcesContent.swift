@@ -43,9 +43,9 @@ struct PersonSourcesContent: Equatable {
         var id: String
         var subjectID: String
         var graphID: String
-        /// The graph's name, else its ref.
+        /// The graph's name.
         var graphTitle: String
-        /// Nil when the graph has no ref, or its ref is already the title.
+        /// Nil when the graph has no ref.
         var graphRef: String?
         var subjectName: String
         var subjectRef: String
@@ -63,8 +63,6 @@ struct PersonSourcesContent: Equatable {
     let graphLocations: [String: WorkspaceLocation]
     /// The graph of each claim, by claim id, folded or not.
     let claimGraphs: [String: String]
-    /// The ref of the Source each graph is on, by graph id.
-    let graphSourceRefs: [String: String]
     /// The Sources the row fold leaves out.
     let hiddenRowCount: Int
     /// The claim id of the first line each fold's next page adds; absent when it hides nothing.
@@ -93,16 +91,13 @@ struct PersonSourcesContent: Equatable {
     ) {
         var graphLocations: [String: WorkspaceLocation] = [:]
         var claimGraphs: [String: String] = [:]
-        var graphSourceRefs: [String: String] = [:]
         var revealed: [Fold: String] = [:]
         var foldedGraphs: [Fold: Set<String>] = [:]
         /// Every graph of each Source, in `groups` order, for the rows fold.
         var sourceGraphs: [Set<String>] = []
         let all = groups.map { group in
             let lines = group.claims.map { claim -> Line in
-                let name = claim.graphName.trimmedNonEmpty
-                let ref = claim.graphRef.trimmedNonEmpty
-                let title = name ?? ref ?? ""
+                let title = claim.graphName
                 let subjectName = EvidenceGraphPlacedSubject.displayName(
                     subject: claim.subject,
                     kind: .person,
@@ -119,7 +114,6 @@ struct PersonSourcesContent: Equatable {
                 )
                 if graphLocations[claim.graphID] == nil {
                     graphLocations[claim.graphID] = location
-                    graphSourceRefs[claim.graphID] = group.sourceRef
                 }
                 claimGraphs[claim.claimID] = claim.graphID
                 return Line(
@@ -127,7 +121,7 @@ struct PersonSourcesContent: Equatable {
                     subjectID: claim.subject.id,
                     graphID: claim.graphID,
                     graphTitle: title,
-                    graphRef: name == nil ? nil : ref,
+                    graphRef: claim.graphRef.trimmedNonEmpty,
                     subjectName: subjectName,
                     subjectRef: claim.subject.ref,
                     accessibilityLabel: L10n.Conclusions.sourcesOpenGraph(
@@ -147,7 +141,7 @@ struct PersonSourcesContent: Equatable {
                 let shownGraphs = Set(fold.shown.map(\.graphID))
                 foldedGraphs[lineFold] = Set(lines.dropFirst(fold.shown.count).map(\.graphID)).subtracting(shownGraphs)
             }
-            let title: PVTitleSource = group.title.trimmedNonEmpty.map { .name($0) } ?? .ref(group.sourceRef)
+            let title = PVTitleSource.name(group.title)
             let typeLabel = sourceTypes.label(forTypeID: group.sourceTypeID)
             let date = L10n.string(L10n.Conclusions.sourcesDateNotRecorded)
             return Row(
@@ -157,9 +151,8 @@ struct PersonSourcesContent: Equatable {
                 typeLabel: typeLabel,
                 typeIconKey: sourceTypes.iconKey(forTypeID: group.sourceTypeID),
                 ref: group.sourceRef,
-                // An untitled Source's title is its ref, which is not spoken twice.
                 accessibilityLabel: L10n.DesignSystem.spokenJoin([
-                    title.text, typeLabel ?? "", date, title == .ref(group.sourceRef) ? "" : group.sourceRef,
+                    title.text, typeLabel ?? "", date, group.sourceRef,
                 ]) ?? "",
                 location: SourcesListNavigation.pageLocation(
                     sourceId: group.sourceID, ref: group.sourceRef, title: group.title
@@ -179,7 +172,6 @@ struct PersonSourcesContent: Equatable {
         self.foldedGraphs = foldedGraphs
         self.graphLocations = graphLocations
         self.claimGraphs = claimGraphs
-        self.graphSourceRefs = graphSourceRefs
         hiddenRowCount = fold.hidden
     }
 

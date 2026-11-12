@@ -53,9 +53,6 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 		GraphRef:     head.ref,
 		GraphName:    head.name,
 		SourceID:     head.sourceID,
-		SourceRef:    head.sourceRef,
-		SourceTitle:  head.sourceTitle,
-		SourceTypeID: head.sourceTypeID,
 		Found:        true,
 		Subjects:     subjects,
 		Observations: observations,
@@ -65,20 +62,18 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 	}, nil
 }
 
-// graphHead is the graph's own row and its Source's.
+// graphHead is the graph's own row.
 type graphHead struct {
-	ref, name, sourceRef, sourceTitle string
-	sourceID, sourceTypeID            []byte
+	ref, name string
+	sourceID  []byte
 }
 
-// loadGraphHead reads an Evidence graph's ref and name and its Source's id,
-// ref, title and type, and whether the graph exists. A graph's ref may be
-// NULL and reads "".
+// loadGraphHead reads an Evidence graph's ref, name and Source id, and whether
+// the graph exists. A graph's ref may be NULL and reads "".
 func loadGraphHead(q graphcache.Querier, graphID []byte) (graphHead, bool, error) {
 	var h graphHead
-	err := q.QueryRow(`SELECT COALESCE(g.ref, ''), g.name, g.source_id, s.ref, s.title, s.source_type_id
-		FROM evidence_graphs g JOIN sources s ON s.id = g.source_id WHERE g.id = ?`, graphID).
-		Scan(&h.ref, &h.name, &h.sourceID, &h.sourceRef, &h.sourceTitle, &h.sourceTypeID)
+	err := q.QueryRow(`SELECT COALESCE(ref, ''), name, source_id FROM evidence_graphs WHERE id = ?`, graphID).
+		Scan(&h.ref, &h.name, &h.sourceID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return graphHead{}, false, nil
 	}
@@ -86,7 +81,6 @@ func loadGraphHead(q graphcache.Querier, graphID []byte) (graphHead, bool, error
 		return graphHead{}, false, err
 	}
 	h.sourceID = append([]byte(nil), h.sourceID...)
-	h.sourceTypeID = append([]byte(nil), h.sourceTypeID...)
 	return h, true, nil
 }
 
