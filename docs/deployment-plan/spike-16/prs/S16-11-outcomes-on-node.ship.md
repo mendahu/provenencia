@@ -32,7 +32,7 @@ Reviewers: CON, MNT, SEC+PRF (all Opus). Skipped: UX (no `macos/App/**`, strings
 | MNT-1 | MNT | major | Verify's `sameOutcomes` skips `SubjectID` | Fix now → F-2 | Verified: `verify.go:297` compares Observation, Reason, ValueRank, DeniedBy, votes only. D-4's field list predates review M-1 adding Subject; D-4's stated aim ("the node equals the committed rows, as `sameMembers` does") needs it. `observations/update.go:20` can move `subject_id` |
 | MNT-2 | MNT | minor | Detail read builds gallery Property list twice; finds lead rows a second way | Fix now → F-3 | Code this PR adds (`conclusiondetails.go:191-195`, `:246-249`, `loadRecords`) |
 | PRF-2 | PRF | minor | `gallery.Of` is values × outcomes per Property | Fix now → F-4 | Code this PR adds (`gallery.go:57-64`); group outcomes by rank once |
-| CON-1, PRF-1 | CON, PRF | minor | Portrait-clear budget times a no-op clear; comment claims a commit reload; one-shot load reads every link | CON-1 part: Fix now → F-5. PRF-1 part (load only identity/values/outcomes in a one-shot graph): Follow-up | No-op verified: fixture never sets a portrait, `canonicalentities.go:286` returns early. 38 ms at 6,000 links is D-9's accepted cost; a narrower one-shot load is a graphcache change outside this PR |
+| CON-1, PRF-1 | CON, PRF | minor | Portrait-clear budget times a no-op clear; comment claims a commit reload; one-shot load reads every link | CON-1 part: Fix now → F-5. PRF-1 part (load only identity/values/outcomes in a one-shot graph): Follow-up → dropped (user, 2026-11-12) | No-op verified: fixture never sets a portrait, `canonicalentities.go:286` returns early. 38 ms at 6,000 links is D-9's accepted cost; a narrower one-shot load is a graphcache change outside this PR |
 
 Nits (logged): `MNT-3 · conclusiondetails.go loadRecords · hand-rolled cloneID on DeniedBy` · `MNT-4 · gallery.go Of · redundant ObservationIDs sort` · `MNT-5 · graph_test.go likenessObservation · rename` · `MNT-6 · graph_test.go propertyID · read from vocabulary` · `CON-2 · plan :33 · Landed note says figures are not in the ship log` · `CON-3 · selects_test.go:46 · Read case outside the table`
 
@@ -90,4 +90,4 @@ Nits (logged): `MNT-7 · conclusiondetails.go:422-425 · loadRecords doc comment
 Merged `origin/main` @ `b53c464d7` (S15-26 plan docs only); gate PASS on the merge.
 
 ## Result
-Gate PASS · CI green · open: none · follow-ups: PRF-1 (a write's one-shot graph loads the whole node, including every link, for a portrait check: 38 ms at the 6,000-link city; load only identity, values and outcomes) · to user: SEC-1 (answered 2026-11-12: validate in the load)
+Gate PASS · CI green · open: none · follow-ups: none (PRF-1 dropped by the user, 2026-11-12: rare click, under 40 ms at 6,000 links) · to user: SEC-1 (answered 2026-11-12: validate in the load)
