@@ -304,9 +304,8 @@ private struct MetadataBoardTextEditor: View {
             error: error,
             saveLabel: L10n.Sources.saveMetadataValue,
             cancelLabel: L10n.Sources.cancelEdit,
-            editLabel: L10n.Sources.editMetadataValue,
+            editLabel: L10n.Sources.editMetadataValueLabel(field: entry.field.label),
             saveDisabled: draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            showsEditControl: false,
             axis: .horizontal,
             actionsStyle: .iconStack,
             accessibilityIdentifierPrefix: "\(accessibilityIdentifierPrefix).\(fieldID)",
@@ -330,23 +329,14 @@ private struct MetadataBoardTextEditor: View {
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
             },
             restingTrailing: {
-                HStack(spacing: PVSpacing.space3) {
-                    PVIconButton(
-                        .penLine,
-                        label: L10n.Sources.editMetadataValueLabel(field: entry.field.label),
-                        size: .sm,
-                        action: beginEdit
-                    )
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).edit")
-                    PVIconButton(
-                        .trash,
-                        label: L10n.Sources.deleteMetadataValueLabel(field: entry.field.label),
-                        size: .sm,
-                        tone: .danger,
-                        action: onClear
-                    )
-                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).delete")
-                }
+                PVIconButton(
+                    .trash,
+                    label: L10n.Sources.deleteMetadataValueLabel(field: entry.field.label),
+                    size: .sm,
+                    tone: .danger,
+                    action: onClear
+                )
+                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).delete")
             },
             editingTrailing: { EmptyView() }
         )

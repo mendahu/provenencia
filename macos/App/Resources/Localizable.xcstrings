@@ -4171,7 +4171,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This value can't be saved for this field."
+            "value": "This metadata change can't be saved."
           }
         }
       }
@@ -9654,18 +9654,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Edit"
-          }
-        }
-      }
-    },
-    "sources.page.editMetadataValue": {
-      "comment": "Accessibility label for pencil to edit a saved text metadata value",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit value"
           }
         }
       }

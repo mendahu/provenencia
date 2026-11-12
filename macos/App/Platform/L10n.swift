@@ -5786,12 +5786,6 @@ enum L10n {
             comment: "Accessibility label for pencil to edit Source type"
         )
 
-        static let editMetadataValue = LocalizedStringResource(
-            "sources.page.editMetadataValue",
-            defaultValue: "Edit value",
-            comment: "Accessibility label for pencil to edit a saved text metadata value"
-        )
-
         static let saveMetadataValue = LocalizedStringResource(
             "sources.page.saveMetadataValue",
             defaultValue: "Save value",
@@ -10996,7 +10990,7 @@ enum L10n {
         )
         static let sourceMetadataInvalid = LocalizedStringResource(
             "error.sourcemetadata.invalid",
-            defaultValue: "This value can't be saved for this field.",
+            defaultValue: "This metadata change can't be saved.",
             comment: "FFI error sourcemetadata.invalid"
         )
         static let filesInvalid = LocalizedStringResource(
