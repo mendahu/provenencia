@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 )
 
 type entityRow struct {
@@ -124,14 +125,16 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 // StoredValues reads the stored value rows of ids: entity id, then property id
 // to the rows in rank order. An id with no rows is absent. It is the one read
 // of stored rows into Value; the reconciler's upkeep compares it to the rows it
-// is about to write.
+// is about to write. An image is kept only when its File is a PNG
+// (depictionvalue.ReadableImage), so every node reader gets a readable one.
 func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error) {
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_boolean, r.value_term_id, COALESCE(t.key, ''),
-			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, r.support, r.against
+			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, COALESCE(f.media_type, ''), r.support, r.against
 		FROM ` + g.valueTable + ` r
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
+		LEFT JOIN ` + g.fileTable + ` f ON f.id = r.value_image_file_id
 		WHERE r.entity_id IN (` + placeholders(len(ids)) + `)
 		ORDER BY r.entity_id, r.property_id, r.rank`
 	rows, err := g.query(q, blobArgs(ids)...)
@@ -151,9 +154,10 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			dateBlob         []byte
 			nameBlob         []byte
 			imageID          []byte
+			imageType        string
 			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &imageType, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -167,7 +171,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			EntityID:    cloneID(entityVal),
 			Date:        append([]byte(nil), dateBlob...),
 			Name:        append([]byte(nil), nameBlob...),
-			ImageFileID: cloneID(imageID),
+			ImageFileID: cloneID(depictionvalue.ReadableImage(imageID, imageType)),
 			Support:     support,
 			Against:     against,
 		})

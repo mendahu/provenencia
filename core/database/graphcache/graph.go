@@ -54,6 +54,7 @@ type Graph struct {
 	claimTable   string
 	valueTable   string
 	outcomeTable string
+	fileTable    string
 
 	count func()
 
@@ -209,6 +210,7 @@ func New(db *sql.DB) *Graph {
 	g.claimTable = mustTable(catalogmodel.KindIdentityClaim)
 	g.valueTable = mustTableName("auto_reconciler_values")
 	g.outcomeTable = mustTableName("auto_reconciler_outcomes")
+	g.fileTable = mustTableName("files")
 	g.clear()
 	return g
 }

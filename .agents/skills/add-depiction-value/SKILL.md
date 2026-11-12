@@ -41,7 +41,7 @@ An owned value row: a region plus an image File, replaced never rewritten (a new
 
 ## Read path
 
-Every reader that returns a depiction to the app goes through `depictionvalue.Readable`, usually through `depictionvalues.FromJoin` and the three joins its doc names. `LookupTx` does not (audit records what is stored). Returning paths follows `add-ffi-handler`. The cached `value_image_file_id` was read through `Readable` when the reconciler wrote it, so `gallery.Of` returns it as stored.
+Every reader that returns a depiction to the app goes through `depictionvalue.Readable`, usually through `depictionvalues.FromJoin` and the three joins its doc names. `LookupTx` does not (audit records what is stored). Returning paths follows `add-ffi-handler`. The graphcache values load (`StoredValues`) passes `value_image_file_id` through `depictionvalue.ReadableImage`, so every node reader (the gallery, lead pictures, the likeness check) gets only readable images.
 
 ## Reconcile, gallery and portrait
 

@@ -30,8 +30,9 @@
 
 ## Landed
 
-- The STEP-1 / STEP-8 figures are in the pull request description, not the ship log (the orchestrator owns the log): `nodes-B` at 16,000 persons grew 58.2 -> 76.9 MB (+18.6 MB).
+- The STEP-1 / STEP-8 figures are in the ship log: `nodes-B` at 16,000 persons grew 58.2 -> 76.9 MB (+18.6 MB).
 - `gallery.Of` keeps `ForEntities`' ordering and lead rules; `ForEntities` was deleted in STEP-6 as planned.
+- Review round 1 (SEC-1, user 2026-11-12): the graphcache values load validates each value's image through `depictionvalue.ReadableImage` (a `files` join), superseding D-12a's setup edit and STEP-9's "returns it as stored" skill line; the cached column is no longer trusted on read.
 - The base had moved to `7d2f3e7a` (no Current-state row changed).
 
 ## 1. Objective
