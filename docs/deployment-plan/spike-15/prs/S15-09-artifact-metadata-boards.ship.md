@@ -1,7 +1,7 @@
 # Ship log — S15-09 Artifacts show their metadata on the Source page
 
 **Plan:** [`S15-09-artifact-metadata-boards.md`](S15-09-artifact-metadata-boards.md) · **Branch:** `s15-09-artifact-metadata-boards` · **PR:** #802
-**State:** ready
+**State:** fixing 3 (trim)
 
 ## Round 0 — implement
 Base `main` @ `064e1f393` (plan written against `83895e4`).
@@ -113,3 +113,18 @@ Head `48be23fef`. Gate PASS (orchestrator run against `064e1f393`; `origin/main`
 
 ## Result
 Gate PASS · CI green · open: none · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) (user, 2026-11-12) · to user: — · manual check §10 (incl. item 8, hover lift) not run
+
+## Round 3 — trim (user, 2026-11-12)
+
+After the user looked at the Copy details on each card, they rejected it: cards grow too tall at 60 Artifacts. The work is re-cut in brief [S15-D14](../design/S15-D14-source-page-artifacts.md) and PRs S15-33 – S15-36 (map commit `a8282e8a8`). The user chose to trim #802 before merge so the rejected chrome never reaches `main`. This is a user-directed round, not a review round.
+
+### Fix plan 3
+
+**F-13 — Remove the per-Artifact metadata chrome; keep the board write's cache patch and its fixes** (user)
+Files: `macos/App/Features/Sources/SourcePageArtifactsView.swift`, `SourceArtifactsSection.swift`, `SourcePageModel.swift`, `MetadataBoardView.swift`, `MetadataBoardHost.swift`, `macos/App/Platform/L10n.swift`, `macos/App/Resources/Localizable.xcstrings`, `macos/ProvenenciaTests/SourcePageModelTests.swift`, `macos/App/DesignSystem/README.md`. Skills: `add-localized-string`, `add-swift-test`.
+Do:
+- **Goes.** The card's Copy details disclosure (`SourcePageArtifactsView.copyDetails` and its call); `SourceArtifactsSection.boards`, `openBoardIDs`, `board(for:)`, `setCopyDetails(open:for:)`, `syncBoards` and its call in `SourcePageModel.apply`, and the `boards[id]?.cancelEdit()` lines in `openEdit` / `beginEdit`; `MetadataBoardStyle` entirely (the board draws exactly as `.regular` did, with no style parameter), with every member only `.compact` used and `MetadataBoardLabel.width`'s optionality if only the stacked label needed it; `SourcePageMetadataHost`'s owner parameter (it serves the Source only; the doc comment says so); `L10n.Sources.artifactCopyDetails`, `artifactCopyDetailsValue`, `artifactCopyDetailsLabel` and their catalog keys; the tests that need a per-Artifact board (`artifactBoardsFollowTheWorkspace`, `artifactBoardSaveWritesItsOwnerWithoutReload`, `closingCopyDetailsEndsTheBoardEdit`, `openingTheCardEditEndsItsBoardEdit`, `addDialogOnAnArtifactBoardWritesTheArtifact`, `deletingAnArtifactDropsItsBoard`, `invalidValueOnAnArtifactRowStaysOnTheRow`, `boardsSurviveAReload`). `DesignSystem/README.md:153` drops "the Source page's artifact rows" from `pvExpandedState`'s callers.
+- **Stays.** `.wroteMetadataBoard` and `CatalogQueryPatch.metadataBoard()`; `CatalogSourceWorkspace.artifactMetadata`, `metadataRows(for:)`, `setMetadataRows(_:for:)` (S15-34 patches an Artifact's rows through them) and their tests in `CatalogQueryRegistryTests`; `SourcePageContext.setWorkspace` and `patchArtifacts`; `aBoardWriteKeepsAnArtifactShownOnlyOnThePage`; the Go scope test; `CatalogFixtures.swift`; the field-named VoiceOver labels and `editLabel: any PVCopy`; the reworded refusal; `PVReorderHandle.width`; the board chrome's move into `MetadataBoardView.swift`.
+- **Rewrite.** `boardWriteKeepsAnEditBegunElsewhere` keeps AC-2.2 – AC-2.4 on the Source's board alone (a Source edit begun after a save, and one open across a note save, both survive).
+- **Records.** The plan's Status stays "Landed in #802" and its **Landed** note gains a "Trimmed before merge (user, 2026-11-12)" paragraph: what went, what stayed, that US-1 moved to S15-34 / S15-35 (S15-D14). `completed.md`'s S15-09 paragraph says what actually lands. The map row's status becomes "Landed #802" when the PR merges (leave "In review, trim pending" now; the orchestrator updates it at finish). Version stays 0.11.0.
+Check: `rg -n "artifactCopyDetails|MetadataBoardStyle|openBoardIDs|setCopyDetails|syncBoards|\.compact\b" macos` prints nothing in `macos/App` (a `.compact` on an unrelated kit type is fine; list any hit); the Source page's Metadata section draws as on `main`; scripts/check-pr.sh PASS.
