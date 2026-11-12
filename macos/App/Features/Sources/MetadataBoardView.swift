@@ -1,52 +1,18 @@
 import SwiftUI
 
-/// How densely a board is drawn: the Source page's wide rows, or a narrow card.
-/// The view reads these measures and holds no branch on the case.
-enum MetadataBoardStyle {
-    case regular
-    case compact
-
-    /// The field-label column.
-    var labelWidth: CGFloat { self == .regular ? 132 : 76 }
-    /// Between the reorder handle, label and value on saved rows.
-    var columnSpacing: CGFloat { PVSpacing.space5 }
-    /// The suggestion label's column; nil lets a stacked label take its own width.
-    var suggestionLabelWidth: CGFloat? { self == .regular ? labelWidth : nil }
-    /// Between a suggestion's label and controls, and between the controls themselves.
-    var suggestionControlSpacing: CGFloat { self == .regular ? columnSpacing : PVSpacing.space3 }
-    var rowHorizontalPadding: CGFloat { self == .regular ? PVSpacing.space4 : 0 }
-    /// Between saved rows, suggestions and Add.
-    var groupSpacing: CGFloat { self == .regular ? PVSpacing.space6 : PVSpacing.space4 }
-    /// Above the suggestions heading when saved rows precede it.
-    var suggestionsHeadingTopPadding: CGFloat { self == .regular ? PVSpacing.space7 : groupSpacing }
-    /// The label sits on its own line over the controls instead of beside them.
-    var stacksSuggestionLabel: Bool { self == .compact }
-    /// Lines a suggestion label up with the saved rows' labels past the reorder handle.
-    var suggestionLabelInset: CGFloat { self == .regular ? PVReorderHandle.width : 0 }
-    var suggestionPadding: (vertical: CGFloat, horizontal: CGFloat) {
-        self == .regular
-            ? (PVSpacing.space4, PVSpacing.space5)
-            : (PVSpacing.space3, PVSpacing.space4)
-    }
-    var showsEmptyState: Bool { self == .regular }
-    var showsTrailingAdd: Bool { self == .compact }
-}
-
 /// One owner's metadata board: saved reorderable rows, type suggestions, and the
 /// empty state. The page draws the section header and intro around it, and owns
 /// the Add dialog and clear confirm (`MetadataBoardDialogs`) the board asks for.
-/// The `.compact` style draws a trailing Add button and no empty state.
 struct MetadataBoardView: View {
     @Bindable var board: MetadataBoardModel
     /// Prefix of every accessibility identifier the board draws (`<prefix>.list`, `<prefix>.<fieldID>.value`, …).
     let accessibilityIdentifierPrefix: String
     let onAdd: () -> Void
     let onClear: (String) -> Void
-    var style: MetadataBoardStyle = .regular
 
     var body: some View {
-        VStack(alignment: .leading, spacing: style.groupSpacing) {
-            if style.showsEmptyState, board.saved.isEmpty, board.suggested.isEmpty {
+        VStack(alignment: .leading, spacing: PVSpacing.space6) {
+            if board.saved.isEmpty, board.suggested.isEmpty {
                 PVEmptyState(
                     icon: .list,
                     title: L10n.Sources.metadataEmptyTitle,
@@ -80,11 +46,10 @@ struct MetadataBoardView: View {
                             .tracking(PVTypeScale.micro * PVTracking.caps)
                             .textCase(.uppercase)
                             .foregroundStyle(PVColor.textFaint)
-                            .padding(.top, board.saved.isEmpty ? 0 : style.suggestionsHeadingTopPadding)
+                            .padding(.top, board.saved.isEmpty ? 0 : PVSpacing.space7)
 
                         ForEach(board.suggested) { entry in
                             MetadataBoardSuggestionRow(
-                                style: style,
                                 accessibilityIdentifierPrefix: accessibilityIdentifierPrefix,
                                 entry: entry,
                                 isSaving: board.savingFieldID == entry.field.id,
@@ -104,23 +69,16 @@ struct MetadataBoardView: View {
                     .accessibilityIdentifier("\(accessibilityIdentifierPrefix).suggestions")
                 }
             }
-
-            if style.showsTrailingAdd {
-                PVButton(L10n.Sources.addMetadata, variant: .ghost, size: .sm, icon: .plus) {
-                    onAdd()
-                }
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).add")
-            }
         }
     }
 
     private func savedRow(_ entry: CatalogMetadataEntry) -> some View {
-        HStack(alignment: .top, spacing: style.columnSpacing) {
+        HStack(alignment: .top, spacing: PVSpacing.space5) {
             PVReorderHandle()
                 .padding(.top, 6)
             MetadataBoardLabel(
                 text: entry.field.label,
-                width: style.labelWidth,
+                width: 132,
                 topPadding: 6,
                 emphasized: true
             )
@@ -143,7 +101,7 @@ struct MetadataBoardView: View {
             )
         }
         .padding(.vertical, PVSpacing.space3)
-        .padding(.horizontal, style.rowHorizontalPadding)
+        .padding(.horizontal, PVSpacing.space4)
     }
 }
 
@@ -197,7 +155,6 @@ struct MetadataBoardAddForm: View {
 
 /// Suggestion quick-add row with a local draft.
 private struct MetadataBoardSuggestionRow: View {
-    let style: MetadataBoardStyle
     let accessibilityIdentifierPrefix: String
     let entry: CatalogMetadataEntry
     let isSaving: Bool
@@ -211,35 +168,30 @@ private struct MetadataBoardSuggestionRow: View {
         let fieldID = entry.field.id
         return PVCard(border: .dashed, cornerRadius: PVRadius.sm) {
             VStack(alignment: .leading, spacing: PVSpacing.space2) {
-                if style.stacksSuggestionLabel {
+                HStack(spacing: PVSpacing.space5) {
                     label
                     controls(fieldID: fieldID)
-                } else {
-                    HStack(spacing: style.suggestionControlSpacing) {
-                        label
-                        controls(fieldID: fieldID)
-                    }
                 }
                 if let error, !error.isEmpty {
                     PVErrorText(error, size: .caption)
                 }
             }
-            .padding(.vertical, style.suggestionPadding.vertical)
-            .padding(.horizontal, style.suggestionPadding.horizontal)
+            .padding(.vertical, PVSpacing.space4)
+            .padding(.horizontal, PVSpacing.space5)
         }
     }
 
     private var label: some View {
         MetadataBoardLabel(
             text: entry.field.label,
-            width: style.suggestionLabelWidth,
-            leadingInset: style.suggestionLabelInset
+            width: 132,
+            leadingInset: PVReorderHandle.width
         )
     }
 
     /// The input, Save and dismiss: one line in the row, or the line under a stacked label.
     private func controls(fieldID: String) -> some View {
-        HStack(spacing: style.suggestionControlSpacing) {
+        HStack(spacing: PVSpacing.space5) {
             PVInput(
                 text: $draft,
                 size: .sm,
@@ -395,11 +347,10 @@ private extension View {
     }
 }
 
-/// Label column used by metadata saved / suggestion rows. A nil `width` fills
-/// the line (a label stacked over its controls).
+/// Label column used by metadata saved / suggestion rows.
 private struct MetadataBoardLabel: View {
     let text: String
-    let width: CGFloat?
+    let width: CGFloat
     /// Leading inset so suggestion labels align with saved-row labels.
     var leadingInset: CGFloat = 0
     var topPadding: CGFloat = 0
@@ -416,7 +367,6 @@ private struct MetadataBoardLabel: View {
             .foregroundStyle(emphasized ? PVColor.textPrimary : PVColor.textMuted)
             .fixedSize(horizontal: false, vertical: true)
             .frame(width: width, alignment: .leading)
-            .frame(maxWidth: width == nil ? .infinity : nil, alignment: .leading)
             .padding(.leading, leadingInset)
             .padding(.top, topPadding)
     }

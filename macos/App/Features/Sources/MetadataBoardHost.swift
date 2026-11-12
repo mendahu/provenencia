@@ -29,22 +29,17 @@ protocol MetadataBoardHost: AnyObject {
     func showFailure(_ message: String)
 }
 
-/// A host over the Source page: one owner's rows inside the page's workspace
-/// (the Source's own or one Artifact's), its writes through the page's store,
-/// and its failures in the page banner.
+/// A host over the Source page: the Source's own rows inside the page's
+/// workspace, its writes through the page's store, and its failures in the
+/// page banner.
 @MainActor
 final class SourcePageMetadataHost: MetadataBoardHost {
     private let context: SourcePageContext
     private let owner: MetadataOwner
 
-    init(context: SourcePageContext, owner: MetadataOwner) {
+    init(context: SourcePageContext) {
         self.context = context
-        self.owner = owner
-    }
-
-    /// The host for the Source's own board.
-    static func source(context: SourcePageContext) -> SourcePageMetadataHost {
-        SourcePageMetadataHost(context: context, owner: MetadataOwner(level: .source, id: context.sourceID))
+        self.owner = MetadataOwner(level: .source, id: context.sourceID)
     }
 
     var entries: [CatalogMetadataEntry] {

@@ -55,7 +55,7 @@ final class SourcePageModel {
         self.sessionDisplayName = sessionDisplayName
         identity = SourceIdentitySection(context: context)
         credibility = SourceCredibilitySection(context: context)
-        metadata = MetadataBoardModel(host: SourcePageMetadataHost.source(context: context))
+        metadata = MetadataBoardModel(host: SourcePageMetadataHost(context: context))
         notes = SourceNotesSection(context: context)
         artifacts = SourceArtifactsSection(context: context)
         graphs = SourceGraphsSection(context: context)
@@ -150,7 +150,7 @@ final class SourcePageModel {
 
     private func apply(_ workspace: CatalogSourceWorkspace) {
         let previous = appliedWorkspace
-        // The boards write their rows into `context.workspace` themselves, so
+        // The board writes its rows into `context.workspace` itself, so
         // "differs from what the board shows" is read from it, not from `previous`.
         let shown = context.workspace
         context.workspace = workspace
@@ -163,7 +163,6 @@ final class SourcePageModel {
         metadata.resetIfChanged(
             from: shown?.metadataRows(for: sourceOwner), to: workspace.metadataRows(for: sourceOwner)
         )
-        artifacts.syncBoards(shown: shown, to: workspace)
         if previous?.notes != workspace.notes {
             notes.reset()
         }

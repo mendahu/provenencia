@@ -92,47 +92,6 @@ final class SourceArtifactsSection {
 
     var items: [CatalogArtifact] { context.workspace?.artifacts ?? [] }
 
-    // MARK: Copy details boards
-
-    /// One metadata board per Artifact on the page, by Artifact id.
-    private(set) var boards: [String: MetadataBoardModel] = [:]
-    /// The Artifacts whose Copy details are open. Kept here, not in the card, so
-    /// a card the lazy grid drops, or a resize across 1600pt, keeps its state.
-    var openBoardIDs: Set<String> = []
-
-    func board(for id: String) -> MetadataBoardModel? { boards[id] }
-
-    /// Opens or closes one Artifact's Copy details. Closing ends a row edit
-    /// in progress, so the board reopens showing values, not a blank editor.
-    func setCopyDetails(open: Bool, for id: String) {
-        if open {
-            openBoardIDs.insert(id)
-        } else {
-            openBoardIDs.remove(id)
-            boards[id]?.cancelEdit()
-        }
-    }
-
-    /// Makes a board for each Artifact the page lacks one for, resets a board
-    /// whose rows changed elsewhere, and drops the boards (and open flags) of
-    /// Artifacts no longer on the page. `shown` is the workspace the boards
-    /// last showed.
-    func syncBoards(shown: CatalogSourceWorkspace?, to workspace: CatalogSourceWorkspace) {
-        let ids = Set(workspace.artifacts.map(\.id))
-        for art in workspace.artifacts {
-            let owner = MetadataOwner(level: .artifact, id: art.id)
-            if let board = boards[art.id] {
-                board.resetIfChanged(from: shown?.metadataRows(for: owner), to: workspace.metadataRows(for: owner))
-            } else {
-                let board = MetadataBoardModel(host: SourcePageMetadataHost(context: context, owner: owner))
-                board.resetDrafts()
-                boards[art.id] = board
-            }
-        }
-        boards = boards.filter { ids.contains($0.key) }
-        openBoardIDs.formIntersection(ids)
-    }
-
     /// The Source's Evidence graphs in the session's name order when the
     /// session has them (the link checkboxes show); nil otherwise (the list is
     /// loading, failed, or not refreshed), so no group shows.
@@ -252,7 +211,6 @@ final class SourceArtifactsSection {
             cancelFields(id: current)
         }
         editingArtifactID = id
-        boards[id]?.cancelEdit()
         labels[id] = art.label
         descriptions[id] = art.description
         fieldErrors[id] = nil
