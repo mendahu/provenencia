@@ -222,13 +222,7 @@ final class SourcePageModel {
                 if var workspace = context.workspace {
                     workspace.artifacts.removeAll { $0.id == target.id }
                     apply(workspace)
-                    context.session.setQueryValue(
-                        CatalogQueryKey.sourceWorkspace(
-                            project: context.session.projectKey,
-                            sourceId: context.sourceID
-                        ),
-                        value: workspace
-                    )
+                    context.setWorkspace(workspace)
                 }
                 context.toast = VocabularyToast(
                     title: L10n.string(L10n.Sources.toastArtifactDeletedTitle),

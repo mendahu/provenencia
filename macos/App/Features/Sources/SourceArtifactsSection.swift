@@ -795,11 +795,7 @@ final class SourceArtifactsSection {
     private func patchArtifacts(_ change: (inout [CatalogArtifact]) -> Void) {
         guard var workspace = context.workspace else { return }
         change(&workspace.artifacts)
-        context.workspace = workspace
-        context.session.setQueryValue(
-            CatalogQueryKey.sourceWorkspace(project: context.session.projectKey, sourceId: context.sourceID),
-            value: workspace
-        )
+        context.setWorkspace(workspace)
     }
 
     /// Puts a written Artifact on the page, appended when new. The list is
