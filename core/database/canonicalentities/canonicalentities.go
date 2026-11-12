@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/gallery"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/ref"
 )
@@ -29,7 +30,6 @@ const (
 	sqlListByType = `SELECT ` + sqlColumns + ` FROM canonical_entities
 		WHERE subject_type_id = ?
 		ORDER BY ref COLLATE NOCASE`
-	sqlPreferred    = `SELECT preferred_likeness_observation_id FROM canonical_entities WHERE id = ?`
 	sqlSetPreferred = `UPDATE canonical_entities SET preferred_likeness_observation_id = ? WHERE id = ?`
 	sqlTypePrefix   = `SELECT ref_prefix FROM subject_types WHERE id = ?`
 	// Merged handles are folded into their target and never counted.
@@ -262,21 +262,24 @@ func SetPreferredLikeness(tx *database.Tx, userID, entityID, observationID []byt
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	var prev []byte
-	if err := tx.QueryRow(sqlPreferred, entityID).Scan(&prev); errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrInvalid
-	} else if err != nil {
+	g := graphcache.Over(tx.Tx)
+	n, err := g.Node(entityID)
+	if err != nil {
 		return nil, err
 	}
+	if n == nil {
+		return nil, ErrInvalid
+	}
+	prev := n.PreferredLikeness
 	if len(observationID) > 0 {
 		if len(observationID) != 16 {
 			return nil, ErrInvalid
 		}
-		tiles, err := gallery.ForEntities(tx.Tx, [][]byte{entityID})
+		v, err := g.Vocabulary()
 		if err != nil {
 			return nil, err
 		}
-		if _, ok := gallery.ByObservation(tiles[string(entityID)], observationID); !ok {
+		if _, ok := gallery.ByObservation(gallery.Of(n, gallery.PropertyIDs(v)), observationID); !ok {
 			return nil, ErrInvalid
 		}
 	}
