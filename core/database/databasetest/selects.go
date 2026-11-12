@@ -6,6 +6,7 @@ package databasetest
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -14,14 +15,33 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 )
 
-// Selects counts the SELECT statements a catalog prepares.
-type Selects struct{ n atomic.Int64 }
+// Selects counts the SELECT statements a catalog prepares and remembers which
+// tables they read.
+type Selects struct {
+	n atomic.Int64
+
+	mu    sync.Mutex
+	reads map[string]bool
+}
 
 // N is the number of SELECTs prepared since CountSelects or the last Reset.
 func (s *Selects) N() int { return int(s.n.Load()) }
 
-// Reset sets the count to 0.
-func (s *Selects) Reset() { s.n.Store(0) }
+// Read reports whether any statement since CountSelects or the last Reset read
+// a column of the table.
+func (s *Selects) Read(table string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.reads[table]
+}
+
+// Reset sets the count to 0 and forgets the tables read.
+func (s *Selects) Reset() {
+	s.n.Store(0)
+	s.mu.Lock()
+	s.reads = nil
+	s.mu.Unlock()
+}
 
 // CountSelects counts every SELECT the catalog prepares from now until the test
 // ends, whoever issues it: the graph, a query package, or a raw *sql.DB call.
@@ -52,9 +72,17 @@ func CountSelects(t testing.TB, c *database.Catalog) *Selects {
 			t.Fatal(err)
 		}
 	}
-	set(func(op int, _, _, _ string) int {
-		if op == sqlite3.SQLITE_SELECT {
+	set(func(op int, table, _, _ string) int {
+		switch op {
+		case sqlite3.SQLITE_SELECT:
 			s.n.Add(1)
+		case sqlite3.SQLITE_READ:
+			s.mu.Lock()
+			if s.reads == nil {
+				s.reads = map[string]bool{}
+			}
+			s.reads[table] = true
+			s.mu.Unlock()
 		}
 		return sqlite3.SQLITE_OK
 	})
