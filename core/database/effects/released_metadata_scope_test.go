@@ -31,7 +31,7 @@ func TestReleasedMetadataScopesThroughDeletedOwner(t *testing.T) {
 			owner:    "artifact",
 			run: func(t *testing.T) (*database.Tx, []rowchange.Change, []byte) {
 				tx, userID, _, _, art := readsFixture(t)
-				setValue(t, tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: art.ID})
+				setProviderValue(t, tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: art.ID})
 				changes, err := artifacts.Delete(tx, userID, art.ID)
 				if err != nil {
 					t.Fatal(err)
@@ -45,7 +45,7 @@ func TestReleasedMetadataScopesThroughDeletedOwner(t *testing.T) {
 			owner:    "evidence_graph",
 			run: func(t *testing.T) (*database.Tx, []rowchange.Change, []byte) {
 				tx, userID, _, jones, _ := readsFixture(t)
-				setValue(t, tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: jones.ID})
+				setProviderValue(t, tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: jones.ID})
 				changes, err := evidencegraphs.Delete(tx, userID, jones.ID)
 				if err != nil {
 					t.Fatal(err)
@@ -67,7 +67,7 @@ func TestReleasedMetadataScopesThroughDeletedOwner(t *testing.T) {
 				t.Fatalf("no %s delete among the changes", tt.owner)
 			}
 			for _, entity := range tt.entities {
-				idx := indexOf(changes, entity)
+				idx := indicesOf(changes, entity)
 				if len(idx) != 1 {
 					t.Fatalf("%s changes = %d, want 1", entity, len(idx))
 				}
@@ -78,7 +78,7 @@ func TestReleasedMetadataScopesThroughDeletedOwner(t *testing.T) {
 				if len(got) != 1 || !bytes.Equal(got[0], sourceID) {
 					t.Fatalf("%s scope = %x, want the Source %x", entity, got, sourceID)
 				}
-				j := indexOf(filtered, entity)
+				j := indicesOf(filtered, entity)
 				if len(j) != 1 {
 					t.Fatalf("%s changes without the owner = %d, want 1", entity, len(j))
 				}
@@ -91,7 +91,7 @@ func TestReleasedMetadataScopesThroughDeletedOwner(t *testing.T) {
 	}
 }
 
-func indexOf(changes []rowchange.Change, entity string) []int {
+func indicesOf(changes []rowchange.Change, entity string) []int {
 	var out []int
 	for i, ch := range changes {
 		if ch.EntityType == entity {
@@ -101,7 +101,7 @@ func indexOf(changes []rowchange.Change, entity string) []int {
 	return out
 }
 
-func setValue(t *testing.T, tx *database.Tx, userID []byte, owner sourcemetadata.Owner) {
+func setProviderValue(t *testing.T, tx *database.Tx, userID []byte, owner sourcemetadata.Owner) {
 	t.Helper()
 	field, _, err := metadatafields.Create(tx, "Provider", metadatafields.DataTypeText, "")
 	if err != nil {
