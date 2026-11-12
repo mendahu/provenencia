@@ -1,7 +1,7 @@
 # Ship log — S15-09 Artifacts show their metadata on the Source page
 
 **Plan:** [`S15-09-artifact-metadata-boards.md`](S15-09-artifact-metadata-boards.md) · **Branch:** `s15-09-artifact-metadata-boards` · **PR:** #802
-**State:** fixing 3 (trim)
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `064e1f393` (plan written against `83895e4`).
@@ -111,9 +111,6 @@ Check: `rg -n "can't be saved for this field" macos docs/deployment-plan/spike-1
 ## Round 2 — fix
 Head `48be23fef`. Gate PASS (orchestrator run against `064e1f393`; `origin/main` has not moved). F-10, F-11, F-12 done; orchestrator read both commits. F-10: `SourcePageContext.setWorkspace(_:)`, the only `setQueryValue` under `Features/Sources`. F-11: a `LocalizedStringResource` cannot interpolate under the `localizable` lint, so `PVInlineEdit.editLabel` widened to `any PVCopy` (the fallback F-11 allowed); unused `L10n.Sources.editMetadataValue` deleted. At the default `.top` alignment `editControlTopPadding` is 0, so UX-5 was a position change, not lost padding. F-12: "This metadata change can't be saved."
 
-## Result
-Gate PASS · CI green · open: none · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) (user, 2026-11-12) · to user: — · manual check §10 (incl. item 8, hover lift) not run
-
 ## Round 3 — trim (user, 2026-11-12)
 
 After the user looked at the Copy details on each card, they rejected it: cards grow too tall at 60 Artifacts. The work is re-cut in brief [S15-D14](../design/S15-D14-source-page-artifacts.md) and PRs S15-33 – S15-36 (map commit `a8282e8a8`). The user chose to trim #802 before merge so the rejected chrome never reaches `main`. This is a user-directed round, not a review round.
@@ -150,3 +147,11 @@ Files: `macos/App/Features/Sources/MetadataBoardView.swift`, `MetadataBoardDialo
 Failing test first: none (no behavior change), except CON-1's assertion, which passes at head and must fail if `SourcePageMetadataHost.didWrite` applies `context.applyWrite(effects)`: check that by hand once, then restore.
 Do: `MetadataBoardLabel` gets `static let width: CGFloat = 132` and loses its `width` parameter; both literals go. `MetadataBoardSuggestionRow` draws one flat `HStack` again (label, input, Save, dismiss), with no `label` / `controls(fieldID:)` split and no "stacked label" comment. `MetadataBoardDialogs`' doc drops "so a page with many boards still has one of each" ("each targets the board that asked"). Try removing `nonisolated` from `PVReorderHandle.width`; keep it only if the build warns or fails, and say which. In `boardWriteKeepsAnEditBegunElsewhere`, record `store.getSourceWorkspaceCalls` before the first save, `settleWrites()`, and expect it unchanged. In the plan's Landed note, mark the `MetadataBoardLabel.width` bullet "(reverted by the trim)".
 Check: `rg -n "width: 132|stacked label|many boards" macos/App` prints nothing; scripts/check-pr.sh PASS.
+
+## Round 4 — fix
+Head `7ce528c53`. F-14 done: `MetadataBoardLabel.width` a static 132; the suggestion row one flat `HStack`; `MetadataBoardDialogs`' doc fixed; `nonisolated` dropped from `PVReorderHandle.width` (no warning without it); the Landed bullet marked reverted. The `rg` Check prints only `PVSkeletonBar(width: 132, …)` in `SourcesGraphButton.swift` and `SourcesGraphCountLine.swift`, unrelated. CON-1's assertion: the test now makes the query active (`session.apply(location:)`) and checks the count right after the board save; with `context.applyWrite(effects)` added to `didWrite` it fails (`4 == 2`), restored it passes. MNT-1, MNT-2, CON-1 **Resolved** (orchestrator read `68961be53..7ce528c53`). No round-2 review: the round had no blocker.
+
+Merged `origin/main` (`7276092ba`, docs only) as `a1b882be9`; gate PASS against `7276092ba`.
+
+## Result
+Gate PASS · CI pending · open: none · trimmed to the board write's cache patch and its fixes (user, 2026-11-12); the per-Artifact chrome is re-cut as S15-33 – S15-36 under brief S15-D14 · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) · to user: — · manual check §10 steps 1 and 4 (the Source's own board) still apply; the Artifact steps do not
