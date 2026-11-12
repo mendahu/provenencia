@@ -1,6 +1,6 @@
 # S15-26 — The metadata board takes an owner
 
-**Status:** Planned
+**Status:** Landed in [#798](https://github.com/mendahu/provenencia/pull/798) (2026-11-12)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Source page's Metadata board is drawn by the same views with the same copy, spacing and identifiers; only the types behind it change)
@@ -28,6 +28,12 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The version bump is 0.10.2 → 0.10.3, since `main` was at 0.10.2 when the branch was cut.
+- `api/ffi/handlers/sources_test.go` `unmarshalSetMetadataEntry` also read `SetMetadataResponse.entry` (the plan's `rg GetEntry api` missed `resp.Entry`); it now returns the valued row of `metadata`.
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
