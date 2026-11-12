@@ -169,21 +169,21 @@ private struct SourcePageContent: View {
                 confirm: L10n.Sources.addMetadataConfirm,
                 cancel: L10n.Sources.cancelAction
             ),
-            isRunning: model.metadata.isSavingAdd,
-            isDirty: model.metadata.addSheetIsDirty,
-            confirmDisabled: !model.metadata.canSubmitAdd,
+            isRunning: model.metadataDialogs.isSavingAdd,
+            isDirty: model.metadataDialogs.addSheetIsDirty,
+            confirmDisabled: !model.metadataDialogs.canSubmitAdd,
             accessibilityIdentifierPrefix: "sources.page.addMetadata",
-            onConfirm: { Task { await model.metadata.createFromAdd() } }
+            onConfirm: { Task { await model.metadataDialogs.createFromAdd() } }
         ) {
-            SourcePageMetadataView(model: model).addForm
+            MetadataBoardAddForm(dialogs: model.metadataDialogs, accessibilityIdentifierPrefix: "sources.page.addMetadata")
         }
         .sourceCopyDialog($model.copying)
         .sourceGraphFormDialog($model.graphs.form)
         .sourceDateDialog($model.identity.dateForm)
         .pvConfirm(
             item: Binding(
-                get: { model.metadata.pendingDelete },
-                set: { model.metadata.pendingDelete = $0 }
+                get: { model.metadataDialogs.pendingDelete },
+                set: { model.metadataDialogs.pendingDelete = $0 }
             ),
             copy: { item in
                 PVConfirmCopy(
@@ -193,9 +193,9 @@ private struct SourcePageContent: View {
                     cancel: L10n.Sources.deleteMetadataKeep
                 )
             },
-            isRunning: model.metadata.isClearing,
+            isRunning: model.metadataDialogs.isClearing,
             accessibilityIdentifierPrefix: "sources.page.metadata.delete",
-            onConfirm: { Task { await model.metadata.confirmClear() } }
+            onConfirm: { Task { await model.metadataDialogs.confirmClear() } }
         ) { _ in
             EmptyView()
         }
@@ -309,12 +309,12 @@ private struct SourcePageContent: View {
 
     private var addMetadataPresented: Binding<Bool> {
         Binding(
-            get: { model.metadata.isAdding },
+            get: { model.metadataDialogs.isAdding },
             set: { presented in
                 if presented {
-                    model.metadata.openAdd()
+                    model.metadataDialogs.openAdd(on: model.metadata)
                 } else {
-                    model.metadata.cancelAdd()
+                    model.metadataDialogs.cancelAdd()
                 }
             }
         )

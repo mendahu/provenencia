@@ -862,11 +862,11 @@ struct SourcePageModelTests {
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        model.metadata.addFieldID = author.id
-        model.metadata.addValue = "Eliza"
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.isAdding == false)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        model.metadataDialogs.addFieldID = author.id
+        model.metadataDialogs.addValue = "Eliza"
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.isAdding == false)
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
@@ -909,16 +909,16 @@ struct SourcePageModelTests {
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addFieldError != nil)
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addFieldError != nil)
+        #expect(model.metadataDialogs.isAdding == true)
 
-        model.metadata.addFieldID = author.id
-        model.metadata.addValue = "   "
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addValueError != nil)
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.addFieldID = author.id
+        model.metadataDialogs.addValue = "   "
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addValueError != nil)
+        #expect(model.metadataDialogs.isAdding == true)
         #expect(model.metadata.entries.isEmpty)
     }
 
@@ -991,9 +991,9 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.askClear(fieldID: author.id)
-        await model.metadata.confirmClear()
-        #expect(model.metadata.pendingDelete == nil)
+        model.metadataDialogs.askClear(on: model.metadata, fieldID: author.id)
+        await model.metadataDialogs.confirmClear()
+        #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.saved.isEmpty)
         #expect(model.metadata.suggested.map(\.field.id) == [author.id])
         #expect(store.metadataBySource[sourceID]?.first?.hasValue == false)
@@ -1012,9 +1012,9 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.askClear(fieldID: repo.id)
-        await model.metadata.confirmClear()
-        #expect(model.metadata.pendingDelete == nil)
+        model.metadataDialogs.askClear(on: model.metadata, fieldID: repo.id)
+        await model.metadataDialogs.confirmClear()
+        #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.entries.isEmpty)
         #expect(store.metadataBySource[sourceID]?.isEmpty == true)
     }
@@ -1073,12 +1073,12 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        model.metadata.addFieldID = field.id
-        model.metadata.addValue = "javascript:alert(1)"
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addValueError == L10n.Errors.message(for: store.setMetadataError!))
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        model.metadataDialogs.addFieldID = field.id
+        model.metadataDialogs.addValue = "javascript:alert(1)"
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addValueError == L10n.Errors.message(for: store.setMetadataError!))
+        #expect(model.metadataDialogs.isAdding == true)
         #expect(model.pageError == nil)
         #expect(model.metadata.entries.isEmpty)
     }

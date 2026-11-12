@@ -11,10 +11,12 @@ final class SourcePageModel {
     // `$model.section.draft` bindings; the sections are never reassigned.
     var identity: SourceIdentitySection
     var credibility: SourceCredibilitySection
-    var metadata: SourceMetadataSection
+    var metadata: MetadataBoardModel
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
     var graphs: SourceGraphsSection
+    /// The page's one Add-metadata dialog and clear confirm, for every board on it.
+    let metadataDialogs = MetadataBoardDialogs()
 
     /// The Copy Source form while it is open.
     var copying: SourceCopyModel?
@@ -53,7 +55,7 @@ final class SourcePageModel {
         self.sessionDisplayName = sessionDisplayName
         identity = SourceIdentitySection(context: context)
         credibility = SourceCredibilitySection(context: context)
-        metadata = SourceMetadataSection(context: context)
+        metadata = MetadataBoardModel(host: SourcePageMetadataHost.source(context: context))
         notes = SourceNotesSection(context: context)
         artifacts = SourceArtifactsSection(context: context)
         graphs = SourceGraphsSection(context: context)
@@ -95,8 +97,8 @@ final class SourcePageModel {
     var acceptsArtifactPageDrop: Bool {
         !artifacts.isAdding
             && !artifacts.isAttaching
-            && !metadata.isAdding
-            && metadata.pendingDelete == nil
+            && !metadataDialogs.isAdding
+            && metadataDialogs.pendingDelete == nil
             && notes.pendingDelete == nil
             && pendingImpact == nil
             && artifacts.pendingEditSwitch == nil
