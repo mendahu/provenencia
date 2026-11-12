@@ -47,6 +47,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namevalues"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/searchindex"
+	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -105,8 +106,7 @@ type Querier interface {
 // for citations and a for artifacts, and the query includes ProvenanceJoins,
 // after which sg (source_credibility_grades) is in scope for a caller's own
 // column. Scan it with ProvenanceDest.
-const ProvenanceColumns = `COALESCE(sg.sort_order - (SELECT sort_order FROM source_credibility_grades
-				WHERE key = 'standard' AND origin = 'provenencia'), 0),
+const ProvenanceColumns = sourcecredibilitygrades.RelativeOrderColumn + `,
 			c.transcription_uncertain`
 
 // ProvenanceJoins is the join fragment ProvenanceColumns needs; the alias
