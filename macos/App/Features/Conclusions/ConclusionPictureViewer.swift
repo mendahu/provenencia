@@ -295,7 +295,7 @@ struct ConclusionPictureViewer: View {
                 PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)
                     .accessibilityIdentifier("\(identifier).leadBadge")
             } else {
-                PVButton(gallery.choose.useAs, variant: .primary) {
+                PVButton(gallery.choose.useAs, variant: .primary, loading: lead.savingID == step.tile.id) {
                     Task {
                         _ = await lead.choose(step.tile, copy: gallery.choose)
                         FocusClaim.claim($focus, .image)

@@ -16,7 +16,9 @@ final class ConclusionLeadModel {
     /// The likeness viewer is open and draws the Toast itself, so the page does not draw it a second
     /// time (S13-15 D-10). Only ``viewerOpened()`` and ``viewerClosed()`` write it.
     private(set) var toastInViewer = false
-    private(set) var isSaving = false
+    /// The picture whose save is running ("" for going back to the earliest), nil when none is.
+    private(set) var savingID: String?
+    var isSaving: Bool { savingID != nil }
 
     init(session: WorkspaceSession, userID: String, entityId: String) {
         self.session = session
@@ -54,8 +56,8 @@ final class ConclusionLeadModel {
     @discardableResult
     private func write(observationID: String, copy: ConclusionDetailGallery.LeadCopy, body: String) async -> Bool {
         guard !isSaving else { return false }
-        isSaving = true
-        defer { isSaving = false }
+        savingID = observationID
+        defer { savingID = nil }
         do {
             let effects = try await session.store.setPreferredLikeness(
                 projectDir: session.projectKey.projectDir,
@@ -64,6 +66,11 @@ final class ConclusionLeadModel {
                 observationID: observationID
             )
             session.apply(effects)
+            // The clicked button spins until the page shows the new lead, in place of the page's
+            // Refreshing beside the section picker.
+            let _: CatalogConclusionDetail? = await session.readyValue(
+                .conclusionDetail(project: session.projectKey, entityId: entityId)
+            )
             toast = VocabularyToast(title: copy.toastTitle, body: body, tone: .success)
             return true
         } catch {

@@ -138,7 +138,7 @@ struct ConclusionGallerySection: View {
                 PVBadge(gallery.choose.badge, tone: .accent, icon: .photo)
                     .accessibilityIdentifier("\(tileID).leadBadge")
             } else {
-                PVButton(gallery.choose.useAs, variant: .ghost, size: .sm) {
+                PVButton(gallery.choose.useAs, variant: .ghost, size: .sm, loading: lead.savingID == tile.id) {
                     Task {
                         _ = await lead.choose(tile, copy: gallery.choose)
                         focused = .image(tile.id)

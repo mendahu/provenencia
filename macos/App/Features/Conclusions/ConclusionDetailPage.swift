@@ -336,7 +336,8 @@ private struct ConclusionDetailLoaded<Content: ConclusionDetailBody, Secondary: 
                             pageIdentifier: pageIdentifier,
                             offeredPageSections: offeredPageSections,
                             openPageSection: openPageSection,
-                            refreshing: refreshing || sectionRefreshing,
+                            // A portrait save spins its own button instead.
+                            refreshing: (refreshing || sectionRefreshing) && !lead.isSaving,
                             refreshFailure: refreshFailure,
                             handle: handle,
                             retry: readAgain
