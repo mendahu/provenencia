@@ -86,7 +86,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | [plan](prs/S15-06-type-suggestions-have-a-level.md) | Landed #782 |
 | S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | [plan](prs/S15-07-metadata-operations-take-an-owner.md) | Landed #787 |
 | S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | [plan](prs/S15-08-artifacts-and-graphs-hold-metadata.md) | Landed #791 |
-| S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | [plan](prs/S15-09-artifact-metadata-boards.md) | Draft |
+| S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | [plan](prs/S15-09-artifact-metadata-boards.md) | Planned |
 | S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: the Artifact's suggested fields in the add flow | S15-D4 | S15-08, S15-26, S15-D4 | — | Scoped |
 | S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-08, S15-26, S15-D5 | — | Scoped |
 | S15-12 | Source types suggest fields at each level | 2 | Swift: the type page edits three suggestion lists | S15-D6 | S15-06, S15-D6 | — | Scoped |
