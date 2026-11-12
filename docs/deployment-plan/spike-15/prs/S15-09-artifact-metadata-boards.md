@@ -29,6 +29,23 @@
 
 ---
 
+## Landed
+
+- `MetadataBoardStyle` carries every measure the view reads, which D-10 does not list: `suggestionsHeadingTopPadding`, `suggestionLabelWidth`, `suggestionControlSpacing` and `columnSpacing` (review round 1 folded the private `MetadataBoardLayout` into it, so the view branches on the style only for structure: a stacked or beside label, the empty state, the trailing Add).
+- `MetadataBoardLabel.width` is optional (a stacked suggestion label takes its own width), and `PVReorderHandle.width` is `nonisolated` so the style can read it.
+- `FakeStore` builds the workspace's `artifactMetadata` with `uniquingKeysWith`.
+- The stacked suggestion row (`.compact`) spaces its controls by `space3`; the `.regular` row keeps the column spacing (`space5`).
+- Review round 1 (user, 2026-11-12): `SourceArtifactsSection` changes the page's Artifact list through one `patchArtifacts` helper that also writes the cached `sourceWorkspace`, so a board write's patch no longer starts from a list that lacks an Artifact only the page shows (a refused file's Artifact). Closing an Artifact's Copy details, or opening its card's edit, ends that board's row edit (`setCopyDetails(open:for:)`, `openEdit`), and `MetadataBoardTextEditor` seeds its draft when created while editing.
+- `error.sourcemetadata.invalid` now reads "This value can't be saved for this field." (it said "Invalid source metadata." on an Artifact or graph value).
+- VoiceOver: the Copy details disclosure speaks its saved-value count (`artifactCopyDetailsValue(count:)`); the suggestion input is labelled with its field; the pencil, trash and dismiss buttons on a board row name their field (`editMetadataValueLabel(field:)`, `deleteMetadataValueLabel(field:)`, `dismissMetadataSuggestionLabel(field:)`, replacing `deleteMetadataValue` and `dismissMetadataSuggestion`). The saved row's pencil is hosted in the row's trailing controls (`showsEditControl: false` on its `PVInlineEdit`) so it can carry the field name.
+- D-12's divider sits above the padded disclosure `VStack` (inside `copyDetails`, a `VStack(spacing: 0)` of the `PVDivider()` and the padded stack), so the card gains `space4` less above the rule than the first build drew.
+- `CatalogSourceWorkspace.metadataRows(for:)` and `setMetadataRows(_:for:)` name `.graph` and `.citation` instead of a `default`, and the setter reads the getter's answer for "this workspace holds a board for that owner".
+- Test builders: the per-file `CatalogArtifact` and `CatalogMetadataEntry` builders (and `pageSession`) are replaced by `CatalogFixtures.swift` (`catalogArtifact`, `catalogFileArtifact`, `catalogMetadataField`, `catalogMetadataEntry`); this supersedes any Out line that kept a test file's own builder.
+- `released_metadata_scope_test.go` names its helpers `indicesOf` and `setProviderValue`.
+- Not run: the manual check (section 10); it needs the running app. It gains one item: whether a card keeps its hover lift (`.pvLiftHover(scale: 1.02)`) while it hosts a board's inputs and drag list.
+
+---
+
 ## 1. Objective
 
 Each Artifact card on the Source page gets its own metadata board: the copy details of that Artifact (provider, URL, accessed date on a census), with the same saved rows, type suggestions, edit, clear, reorder and Add as the Source's board. The board sits behind a closed **Copy details (n)** disclosure under the card's description, as S15-D1 draws it, because a Source can hold 60 Artifacts. It is the S15-26 board with the Artifact as owner; the engine has stored and served these values since S15-08.
@@ -319,6 +336,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `S
 5. (AC-1.8, AC-1.9) Resize the window across 1600pt with the disclosure open: it stays open. Put the card in edit (pencil): the disclosure hides; Cancel: it is back, open.
 6. With VoiceOver, the disclosure reads "Copy details of ART-…" and collapsed / expanded. With Accessibility Inspector, `sources.page.artifact.<id>.copyDetails` and `sources.page.artifact.<id>.metadata.add` are present.
 7. (AC-1.10) Delete an Artifact that has values: its card goes; the Metadata fields page's Used by for that field drops by one.
+8. Hover a card whose Copy details are open, then type in a suggestion input and drag a saved row: the card's hover lift (`.pvLiftHover(scale: 1.02)`) does not jitter the inputs or the drag.
 
 ## 11. Risks and stop conditions
 
