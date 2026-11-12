@@ -39,7 +39,8 @@ enum PVToastTone {
 ///
 /// A toast speaks its title and message to VoiceOver when it appears (a danger
 /// toast interrupts), so no call site posts its own announcement. A toast
-/// remounted with `.id(toast)` speaks each new one.
+/// remounted with `.id(toast)` speaks each new one. New content restarts the
+/// auto-dismiss wait whether or not the caller remounts it.
 ///
 /// Auto-dismisses after `autoDismissAfter` (default 5 seconds) by calling
 /// `onDismiss`, unless it's `nil` — pass `autoDismissAfter: nil` to keep a
@@ -101,7 +102,11 @@ struct PVToast: View {
             AccessibilityAnnouncement.text(title: title, message: message),
             priority: AccessibilityAnnouncement.priority(danger: tone == .danger)
         )
-        .task { await Self.autoDismiss(after: autoDismissAfter, onDismiss: onDismiss) }
+        // Keyed on the content, so a toast replaced in place (no `.id` at the caller) waits its
+        // own time: the old wait is cancelled and a new one starts.
+        .task(id: [String(describing: tone), title ?? "", message ?? ""]) {
+            await Self.autoDismiss(after: autoDismissAfter, onDismiss: onDismiss)
+        }
     }
 
     /// Waits `delay`, then dismisses. A toast replaced or removed first cancels the wait,
