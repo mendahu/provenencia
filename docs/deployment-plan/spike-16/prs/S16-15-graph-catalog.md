@@ -1,6 +1,6 @@
 # S16-15 — An Evidence-graph catalog in the graph cache
 
-**Status:** Draft
+**Status:** Planned
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Sources list shows the same counts and graph rows; only where the engine reads them from moves)
@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/ffi-handlers.mdc`
 **Context:** [design § Entity records](../cache-architecture.md#entity-records); [`docs/catalog-caches.md`](../../../catalog-caches.md); [`core/database/effects/README.md`](../../../../core/database/effects/README.md); working rules: "(Batch 2) The point of this batch is simpler code", "(Batch 2) Cache entities and results per key; compose answers", "(Batch 2) One cache registry, two ways to fill", "(Batch 2) Every cache names the signal that updates it, and updates exactly", "(Batch 2) Apply states its fan-out", "(Batch 2) A write's one-shot graph fills only what it reads", "(Batch 2) Warm only what every proposal needs; no background re-warm", "(Batch 2) Orders are defined and results do not move", "(Batch 2) Memory is budgeted", "(Batch 2) Measure growth"; goal bar 12 (the progress clause)
 **Planned:** 2026-11-12 against `main` @ `064e1f3`
-**Review:** [`S16-15-graph-catalog.review.md`](S16-15-graph-catalog.review.md) — Fits with changes / Ready with changes, 1 round; two questions To user
+**Review:** [`S16-15-graph-catalog.review.md`](S16-15-graph-catalog.review.md) — Fits with changes / Ready with changes, 1 round; every finding answered; To user answered 2026-11-12
 
 ### Implementer — read this first
 
@@ -123,7 +123,11 @@ The Sources list shows each Evidence graph's Subject, filed and Observation coun
 | D-10 | The entry is filled on first read only; nothing warms it at open | Rule "Warm only what every proposal needs" | Warming in `WarmOnOpen` — the rule asks for an open-time measurement first |
 | D-11 | A test that writes evidence rows by direct SQL after it has read the catalog calls `c.Graph().Drop()` before its next read, with a one-line comment. Expectations of existing tests do not change | The S16-12 and S16-11 idiom (`TestForEntityQueryCountIsConstant` drops before counting); a direct-SQL write reports no effects | A production invalidation for fixture writes |
 
-**Rules this plan bends.** None.
+**Rules this plan bends.**
+
+| Rule | Decision | Why | User's answer | Step |
+| --- | --- | --- | --- | --- |
+| [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md) "Reads inside a write": a read of more than one query opens one read transaction, with `evidencegraphs.List` as the example | D-5 | The index's loaders run on the session graph under `catalogsession.Do`'s lock, as `sources.loadRecords` already does | 2026-11-12: accept; rewrite the paragraph | STEP-7 |
 
 ## 6. Design
 
@@ -230,7 +234,7 @@ Do: Run the whole Go suite. Where a test fails only because it wrote evidence ro
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/... ./core/...` passes; `PROVENENCIA_GRAPH_VERIFY=1 CGO_ENABLED=1 go test -tags fts5 ./core/database/evidencegraphs/... ./core/database/sources/... ./api/ffi/handlers/...` passes; `scripts/check-pr.sh` prints `check-pr: PASS`.
 
 **STEP-7 — Docs**
-Files: `core/database/effects/README.md` (after the `sources.Records` sentence: "The Evidence-graph index (`evidencegraphs.Index`) reads `Set.Reads` too: it re-lists the Sources under `evidence_graphs` and recounts the graphs under `evidence_graph_progress`, so `subjects`, `observations`, `identity_claims`, `evidence_graphs` and `evidence_graph_artifacts` must keep those `Reads:` paths."; and `Set.Reads` "each with the Evidence graphs it moved them for" → "each with the key ids it moved them for"), `.agents/skills/review-pr/lenses/conformance.md`, `.agents/skills/review-pr/lenses/maintainability.md`, `.agents/skills/review-pr/lenses/performance.md` (each example's `core/database/graphprogress` / `graphprogress` → `evidencegraphs.ListProgress`; the example sentences stay otherwise), `docs/deployment-plan/spike-16/completed.md`, `docs/deployment-plan/spike-16/deployment-plan.md` (map row status; the "Shared with Spike 15" sentence "both Sources are in the write's `SourceScopes`" → "both Sources are in the write's `SourceScopes` (Source records) and its `evidence_graphs` read (the graph index)"; S16-15 scope entry: "`graphprogress` reads it" becomes "`graphprogress` folds into `evidencegraphs`, whose progress and graph list read it", and "`SourceOf` on read paths" becomes "`SourceOf` stays on its write paths"), `docs/deployment-plan/spike-16/cache-architecture.md` (§ Entity records S16-15 bullet: same two changes; "and its subject" → "its Subject"), this plan (status, Landed note).
+Files: `core/database/effects/README.md` (after the `sources.Records` sentence: "The Evidence-graph index (`evidencegraphs.Index`) reads `Set.Reads` too: it re-lists the Sources under `evidence_graphs` and recounts the graphs under `evidence_graph_progress`, so `subjects`, `observations`, `identity_claims`, `evidence_graphs` and `evidence_graph_artifacts` must keep those `Reads:` paths."; and `Set.Reads` "each with the Evidence graphs it moved them for" → "each with the key ids it moved them for"), `.agents/skills/add-catalog-query/SKILL.md` ("Reads inside a write": a registry entry's loader on the session graph runs under `catalogsession.Do`'s lock and opens no transaction, as `sources.loadRecords` and `evidencegraphs.list` do; a read of more than one query straight on `c.DB()` still opens one, as `deleteimpact.Snapshot` does; the unexported body takes `database.Querier` so writes pass their `tx.Tx`), `.agents/skills/review-pr/lenses/conformance.md`, `.agents/skills/review-pr/lenses/maintainability.md`, `.agents/skills/review-pr/lenses/performance.md` (each example's `core/database/graphprogress` / `graphprogress` → `evidencegraphs.ListProgress`; the example sentences stay otherwise), `docs/deployment-plan/spike-16/completed.md`, `docs/deployment-plan/spike-16/deployment-plan.md` (map row status (the S16-15 scope entry and the S16-13 order were updated at planning); the "Shared with Spike 15" sentence "both Sources are in the write's `SourceScopes`" → "both Sources are in the write's `SourceScopes` (Source records) and its `evidence_graphs` read (the graph index)"), `docs/deployment-plan/spike-16/cache-architecture.md` (§ Entity records S16-15 bullet: the measured size and time replace "est."), this plan (status, Landed note).
 Do: per the Definition of done.
 Check: `python3 scripts/check-plan-docs.py --links docs/deployment-plan/spike-16/deployment-plan.md docs/deployment-plan/spike-16/cache-architecture.md docs/deployment-plan/spike-16/completed.md` reports no errors.
 
@@ -301,8 +305,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: te
 
 ## 12. Open questions
 
-1. **Multi-query reads without a transaction (review M-1).** D-5 drops `List`'s read transaction: the index's loaders run on the session graph under `catalogsession.Do`'s lock, as `sources.loadRecords` already does. [`add-catalog-query`](../../../../.agents/skills/add-catalog-query/SKILL.md) "Reads inside a write" names `evidencegraphs.List` as its example of a multi-query read that opens one transaction. Recommendation: accept, and STEP-7 rewrites that paragraph: a registry entry's loader on the session graph runs under the session lock and needs no transaction (`sources.loadRecords`, `evidencegraphs.list`); a direct `c.DB()` read of more than one query still opens one (`deleteimpact.Snapshot`).
-2. **Which graph order S16-13 uses (review M-2).** The index keeps the Sources list's per-Source order (SQLite `NOCASE`: ASCII case folded, accents significant). The Person page orders graphs with `conclusionsummaries.SortByTitle` (root collation, case and accents ignored). The map and design say S16-13 "orders graphs from the catalog", which would move the Person page's order. Recommendation: S16-13 keeps `SortByTitle` and reads only graph shells from the index; STEP-7 corrects the S16-13 text in the map and design. The other answer, one order for both screens, is a product change for a later PR.
+None. Answered 2026-11-12: the transaction bend is accepted (Rules this plan bends); S16-13 keeps `SortByTitle` and the map and design say so.
 
 ## 13. PR
 

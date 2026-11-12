@@ -3,7 +3,7 @@
 **Verdict:** Fits with changes — Ready with changes
 **Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
 
-## To user
+## To user (answered 2026-11-12: both as recommended)
 - M-1: D-5 drops `List`'s read transaction against `add-catalog-query` "Reads inside a write". Recommendation: accept and rewrite the skill paragraph (registry loaders on the session graph run under `catalogsession.Do`'s lock; a direct `c.DB()` multi-query read still opens a transaction).
 - M-2: S16-13's graph order. Recommendation: the Person page keeps `conclusionsummaries.SortByTitle`; S16-13 reads only graph shells from the index; the map and design text for S16-13 are corrected.
 
@@ -17,10 +17,10 @@
 ## Round 1
 
 ### M-1 · blocker · D-5 removes the read transaction `add-catalog-query` uses as its example
-**Answer:** To user (Open question 1). On a yes, the plan gains a Rules-this-plan-bends row and a STEP-7 line that rewrites the skill paragraph.
+**Answer:** To user → accepted 2026-11-12. Rules this plan bends has the row; STEP-7 rewrites the skill paragraph.
 
 ### M-2 · major · S16-13 told to order a person's graphs from `OfSource`, but the Person page uses `SortByTitle`
-**Answer:** Fixed in the plan text (Blocks, Next adds, D-3 and D-4 Rejected now cite `SortByTitle`); the product question goes To user (Open question 2).
+**Answer:** Fixed in the plan text (Blocks, Next adds, D-3 and D-4 Rejected now cite `SortByTitle`); To user → 2026-11-12: S16-13 keeps `SortByTitle`; the map (S16-13 row and scope entry) and the design doc say so.
 
 ### M-3 · major · effects README documents no Go reader of `Set.Reads`
 **Answer:** Fixed — STEP-7 adds the README sentence, corrects "Evidence graphs" to "key ids", and corrects the map's Spike 15 note (both reads named).
