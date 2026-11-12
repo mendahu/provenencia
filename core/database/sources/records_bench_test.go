@@ -2,12 +2,12 @@ package sources_test
 
 import (
 	"encoding/binary"
-	"runtime"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/sourcecredibilitygrades"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -78,18 +78,16 @@ func BenchmarkSourceRecords(b *testing.B) {
 
 	g := c.Graph()
 	g.Drop()
-	runtime.GC()
-	var before, after runtime.MemStats
-	runtime.ReadMemStats(&before)
-	start := time.Now()
-	if _, err := sources.RecordsOf(g); err != nil {
-		b.Fatal(err)
-	}
-	build := time.Since(start)
-	runtime.GC()
-	runtime.ReadMemStats(&after)
+	var build time.Duration
+	heap := databasetest.HeapDelta(func() {
+		start := time.Now()
+		if _, err := sources.RecordsOf(g); err != nil {
+			b.Fatal(err)
+		}
+		build = time.Since(start)
+	})
 	b.ReportMetric(float64(build.Microseconds())/1000, "build-ms")
-	b.ReportMetric(float64(after.HeapAlloc-before.HeapAlloc)/(1<<20), "heap-MB")
+	b.ReportMetric(heap/(1<<20), "heap-MB")
 
 	// The crafted Source joins after the Build measure, which is the 3,000 x 10 shape.
 	if tx, err = db.Begin(); err != nil {

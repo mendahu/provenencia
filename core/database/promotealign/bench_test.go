@@ -14,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
@@ -159,18 +160,15 @@ func BenchmarkProposeColdCity(b *testing.B) {
 	must(b, bulkCanon(db, cityID, benchShape()))
 
 	b.ResetTimer()
-	var heap uint64
+	var heap float64
 	for i := 0; i < b.N; i++ {
 		f.c.Graph().Drop()
 		runtime.GC()
 		_, _, err := promotealign.Propose(f.c, f.Graph(f.source), nil, nil)
 		must(b, err)
-		runtime.GC()
-		var ms runtime.MemStats
-		runtime.ReadMemStats(&ms)
-		heap = ms.HeapAlloc
+		heap = databasetest.LiveHeap()
 	}
-	b.ReportMetric(float64(heap), "heap-B")
+	b.ReportMetric(heap, "heap-B")
 }
 
 // BenchmarkProposeWarmCity times a repeat proposal on BenchmarkProposeColdCity's
@@ -194,10 +192,7 @@ func BenchmarkProposeWarmCity(b *testing.B) {
 		must(b, err)
 	}
 	b.StopTimer()
-	runtime.GC()
-	var ms runtime.MemStats
-	runtime.ReadMemStats(&ms)
-	b.ReportMetric(float64(ms.HeapAlloc), "heap-B")
+	b.ReportMetric(databasetest.LiveHeap(), "heap-B")
 }
 
 // BenchmarkProposeAfterCommit times a proposal that follows a handle commit,
@@ -585,7 +580,7 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 // BenchmarkCacheSizes reports what each Go cache holds on the heap at 4,000 and
 // 16,000 persons, and how many keys each keyed entry holds. Reported, not
 // gated: docs/catalog-caches.md records the figures. Each fill below measures
-// HeapAlloc after a GC before and after, so a number is that cache's own cost
+// the live heap after a GC before and after, so a number is that cache's own cost
 // when it is the next to fill; the order is the order of the metrics.
 func BenchmarkCacheSizes(b *testing.B) {
 	for _, persons := range []int{4000, 16000} {
@@ -602,16 +597,8 @@ func BenchmarkCacheSizes(b *testing.B) {
 			must(b, namealiases.Invalidate(c))
 			must(b, nameformats.Invalidate(c))
 
-			heap := func() float64 {
-				runtime.GC()
-				var ms runtime.MemStats
-				runtime.ReadMemStats(&ms)
-				return float64(ms.HeapAlloc)
-			}
 			measure := func(metric string, fill func()) {
-				before := heap()
-				fill()
-				b.ReportMetric(heap()-before, metric+"-B")
+				b.ReportMetric(databasetest.HeapDelta(fill), metric+"-B")
 			}
 			start := time.Now()
 			measure("nodes", func() {

@@ -42,16 +42,21 @@ func Query(q Querier, head, tail string, args []any, ids [][]byte, scan func(row
 		for _, id := range batch {
 			bound = append(bound, id)
 		}
-		rows, err := q.Query(head+strings.Repeat("?,", len(batch)-1)+"?"+tail, bound...)
-		if err != nil {
+		return Scan(q, head+strings.Repeat("?,", len(batch)-1)+"?"+tail, bound, scan)
+	})
+}
+
+// Scan runs one query and calls scan for each row.
+func Scan(q Querier, query string, args []any, scan func(rows *sql.Rows) error) error {
+	rows, err := q.Query(query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		if err := scan(rows); err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			if err := scan(rows); err != nil {
-				return err
-			}
-		}
-		return rows.Err()
-	})
+	}
+	return rows.Err()
 }

@@ -28,6 +28,7 @@ type Record struct {
 	CredibilityKey string
 	Credibility    int
 	// ArtifactLabels maps each Artifact id to its label as stored. Never nil.
+	// The held RecordIndex owns the map; readers treat it as read-only.
 	ArtifactLabels map[string]string
 }
 
@@ -179,10 +180,10 @@ func loadRecords(q graphcache.Querier, ids [][]byte) (map[string]Record, error) 
 		return nil
 	}
 	if ids == nil {
-		if err := queryEach(q, sqlRecordSources, scanSource); err != nil {
+		if err := sqlbatch.Scan(q, sqlRecordSources, nil, scanSource); err != nil {
 			return nil, err
 		}
-		if err := queryEach(q, sqlRecordArtifacts, scanArtifact); err != nil {
+		if err := sqlbatch.Scan(q, sqlRecordArtifacts, nil, scanArtifact); err != nil {
 			return nil, err
 		}
 		return out, nil
@@ -194,18 +195,4 @@ func loadRecords(q graphcache.Querier, ids [][]byte) (map[string]Record, error) 
 		return nil, err
 	}
 	return out, nil
-}
-
-func queryEach(q graphcache.Querier, query string, scan func(*sql.Rows) error) error {
-	rows, err := q.Query(query)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		if err := scan(rows); err != nil {
-			return err
-		}
-	}
-	return rows.Err()
 }
