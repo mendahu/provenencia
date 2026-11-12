@@ -99,23 +99,23 @@ type Querier interface {
 	QueryRow(query string, args ...any) *sql.Row
 }
 
-// ProvenanceColumns is the select-list fragment that reads a candidate's
+// provenanceColumns is the select-list fragment that reads a candidate's
 // provenance: the Source's credibility grade as sort_order relative to the
 // provenencia default (standard), then whether the transcription is uncertain.
 // No assessment, no grade, or no vocabulary reads as 0. It binds the aliases c
-// for citations and a for artifacts, and the query includes ProvenanceJoins,
+// for citations and a for artifacts, and the query includes provenanceJoins,
 // after which sg (source_credibility_grades) is in scope for a caller's own
-// column. Scan it with ProvenanceDest.
-const ProvenanceColumns = sourcecredibilitygrades.RelativeOrderColumn + `,
+// column. Scan it with provenanceDest.
+const provenanceColumns = sourcecredibilitygrades.RelativeOrderColumn + `,
 			c.transcription_uncertain`
 
-// ProvenanceJoins is the join fragment ProvenanceColumns needs; the alias
-// contract is on ProvenanceColumns.
-const ProvenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
+// provenanceJoins is the join fragment provenanceColumns needs; the alias
+// contract is on provenanceColumns.
+const provenanceJoins = `LEFT JOIN source_credibility_assessments sca ON sca.source_id = a.source_id
 		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
 
-// ProvenanceDest are the scan targets for ProvenanceColumns, in its order.
-func ProvenanceDest(p *autoreconcile.Provenance) []any {
+// provenanceDest are the scan targets for provenanceColumns, in its order.
+func provenanceDest(p *autoreconcile.Provenance) []any {
 	return []any{&p.Credibility, &p.Uncertain}
 }
 
@@ -143,7 +143,7 @@ const (
 			COALESCE(t.key, ''), COALESCE(t.neutral, 0), o.value_subject_id,
 			o.value_depiction_id, dpv.region_json, dpv.image_file_id, c.locator_json, dpf.media_type,
 			ic.status = 'provisional', o.polarity = 'negative', a.source_id,
-			` + ProvenanceColumns + `
+			` + provenanceColumns + `
 		FROM identity_claims ic
 		JOIN observations o ON o.subject_id = ic.subject_id
 		JOIN properties p ON p.id = o.property_id
@@ -152,7 +152,7 @@ const (
 		LEFT JOIN property_terms t ON t.id = o.value_term_id
 		LEFT JOIN depiction_values dpv ON dpv.id = o.value_depiction_id
 		LEFT JOIN files dpf ON dpf.id = dpv.image_file_id
-		` + ProvenanceJoins + `
+		` + provenanceJoins + `
 		WHERE ic.status IN ('accepted', 'provisional')
 		  AND ic.entity_id IN (`
 
@@ -413,7 +413,7 @@ func load(q Querier, ids [][]byte) ([]*group, error) {
 		)
 		dest := append([]any{&entityID, &obsID, &propertyID, &valueType, &cardinality, &scalar.Text, &scalar.Integer, &scalar.Boolean, &dateID, &nameID, &termID, &termKey, &neutral, &subjectID,
 			&depictionID, &region, &imageID, &locatorJSON, &mediaType,
-			&provisional, &negative, &sourceID}, ProvenanceDest(&provenance)...)
+			&provisional, &negative, &sourceID}, provenanceDest(&provenance)...)
 		if err := rows.Scan(dest...); err != nil {
 			return err
 		}
