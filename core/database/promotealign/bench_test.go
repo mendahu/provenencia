@@ -18,6 +18,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promotealign"
+	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -620,6 +621,7 @@ func BenchmarkCacheSizes(b *testing.B) {
 				}
 			})
 			b.ReportMetric(float64(time.Since(start).Milliseconds()), "nodes-ms")
+			measure("sourceRecords", func() { _, err := sources.RecordsOf(g); must(b, err) })
 			measure("aliasIndex", func() { must(b, namealiases.Warm(c)) })
 			measure("nameFormat", func() { must(b, nameformats.Warm(c)) })
 			measure("matchIndex", func() { must(b, promotealign.Warm(c)) })

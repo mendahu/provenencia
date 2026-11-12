@@ -15,6 +15,7 @@ import (
 	_ "github.com/mendahu/provenencia/core/database/namealiases"
 	_ "github.com/mendahu/provenencia/core/database/nameformats"
 	_ "github.com/mendahu/provenencia/core/database/promotealign"
+	_ "github.com/mendahu/provenencia/core/database/sources"
 )
 
 // TestCacheDocListsEveryEntry holds docs/catalog-caches.md to the cache
