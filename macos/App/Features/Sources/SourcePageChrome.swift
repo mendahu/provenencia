@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Shared layout metrics for Source page section rows — replaces ad-hoc
-/// `170` / `150` / `20 + space5 + …` paddings scattered through the page.
+/// Shared layout metrics for Source page section rows (the notes byline column).
 enum SourcePageLayout {
     /// Author / timestamp column on note rows and the composer byline.
     static let notesBylineWidth: CGFloat = 150

@@ -1682,18 +1682,14 @@ struct SourcePageModelTests {
         evidenceGraph(id, sourceID: sourceID, name: name, artifactIDs: artifactIDs)
     }
 
-    private func page(_ id: String) -> CatalogArtifact {
-        CatalogArtifact(
-            id: id, ref: "ART-\(id)", sourceID: sourceID, fileID: "", label: "Page \(id)", description: ""
-        )
-    }
-
     /// The census: Brown (`g-b`, P9), Jones (`g-j`, P3 P4), Smith (`g-s`, P3 P6), with the
     /// page location applied so the graph list is a visible key and graph writes refresh it.
     private func makeCensus(
         graphs: [CatalogEvidenceGraph]? = nil
     ) async -> (model: SourcePageModel, store: FakeStore, session: WorkspaceSession) {
-        let artifacts = ["P3", "P4", "P6", "P9"].map(page)
+        let artifacts = ["P3", "P4", "P6", "P9"].map {
+            catalogArtifact($0, sourceID: sourceID, label: "Page \($0)")
+        }
         let store = makeStore(artifacts: artifacts)
         store.evidenceGraphsByProject[projectDir] = graphs ?? [
             graph("g-b", "Brown household", ["P9"]),
@@ -2412,18 +2408,6 @@ struct SourcePageModelTests {
 
     // MARK: Artifact boards
 
-    private func boardArtifact(_ id: String) -> CatalogArtifact {
-        CatalogArtifact(id: id, ref: "ART-\(id)", sourceID: sourceID, fileID: "", label: id, description: "", file: nil)
-    }
-
-    private func boardRow(
-        _ field: CatalogMetadataField, _ value: String = "", suggested: Bool = false, order: Int32 = 0
-    ) -> CatalogMetadataEntry {
-        CatalogMetadataEntry(
-            field: field, valueText: value, hasValue: !value.isEmpty, suggested: suggested, sortOrder: order
-        )
-    }
-
     private func artifactOwner(_ id: String) -> MetadataOwner { MetadataOwner(level: .artifact, id: id) }
 
     private func workspaceHandle(_ session: WorkspaceSession) -> QueryHandle<CatalogSourceWorkspace> {
@@ -2433,15 +2417,11 @@ struct SourcePageModelTests {
         return handle!
     }
 
-    private func pageSession(_ store: FakeStore) -> WorkspaceSession {
-        WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
-    }
-
     /// T-4
     @Test func artifactBoardsFollowTheWorkspace() async {
         let author = authorField()
-        let store = makeStore(artifacts: [boardArtifact("a1"), boardArtifact("a2")], fields: [author])
-        store.metadataByOwner[artifactOwner("a1")] = [boardRow(author, "Ancestry")]
+        let store = makeStore(artifacts: ["a1", "a2"].map { catalogArtifact($0, sourceID: sourceID) }, fields: [author])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(author, "Ancestry")]
         let model = makeModel(store: store)
         await model.warmFromSession()
         #expect(model.artifacts.board(for: "a1")?.saved.map(\.valueText) == ["Ancestry"])
@@ -2452,18 +2432,18 @@ struct SourcePageModelTests {
 
     /// T-5
     @Test func artifactBoardSaveWritesItsOwnerWithoutReload() async throws {
-        let image = repositoryField()
-        let store = makeStore(artifacts: [boardArtifact("a1")], fields: [image])
-        store.metadataByOwner[artifactOwner("a1")] = [boardRow(image, suggested: true)]
-        let session = pageSession(store)
+        let repository = repositoryField()
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [repository])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(repository, suggested: true)]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
-        let answer = [boardRow(image, "0473")]
+        let answer = [catalogMetadataEntry(repository, "0473")]
         store.metadataWriteResults[artifactOwner("a1")] = answer
         let board = try #require(model.artifacts.board(for: "a1"))
-        board.drafts[image.id] = "0473"
+        board.drafts[repository.id] = "0473"
         let calls = store.getSourceWorkspaceCalls
-        await board.save(fieldID: image.id)
+        await board.save(fieldID: repository.id)
         await session.settleWrites()
         #expect(store.metadataByOwner[artifactOwner("a1")] == answer)
         #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.isEmpty == true)
@@ -2479,17 +2459,19 @@ struct SourcePageModelTests {
         let p = urlField()
         let sourceOwner = MetadataOwner(level: .source, id: sourceID)
         let store = makeStore(
-            artifacts: [boardArtifact("a1")],
-            metadata: [boardRow(a, "A", order: 0), boardRow(b, "B", order: 1)],
+            artifacts: [catalogArtifact("a1", sourceID: sourceID)],
+            metadata: [catalogMetadataEntry(a, "A", order: 0), catalogMetadataEntry(b, "B", order: 1)],
             fields: [a, b, p]
         )
-        store.metadataByOwner[artifactOwner("a1")] = [boardRow(p, "P")]
-        let session = pageSession(store)
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(p, "P")]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
         let handle = workspaceHandle(session)
 
-        store.metadataWriteResults[sourceOwner] = [boardRow(a, "A2", order: 0), boardRow(b, "B", order: 1)]
+        store.metadataWriteResults[sourceOwner] = [
+            catalogMetadataEntry(a, "A2", order: 0), catalogMetadataEntry(b, "B", order: 1),
+        ]
         model.metadata.beginEdit(fieldID: a.id)
         model.metadata.drafts[a.id] = "A2"
         await model.metadata.save(fieldID: a.id)
@@ -2499,31 +2481,88 @@ struct SourcePageModelTests {
 
         let board = try #require(model.artifacts.board(for: "a1"))
         board.beginEdit(fieldID: p.id)
-        store.metadataWriteResults[sourceOwner] = [boardRow(a, "A3", order: 0), boardRow(b, "B", order: 1)]
+        store.metadataWriteResults[sourceOwner] = [
+            catalogMetadataEntry(a, "A3", order: 0), catalogMetadataEntry(b, "B", order: 1),
+        ]
         model.metadata.beginEdit(fieldID: a.id)
         model.metadata.drafts[a.id] = "A3"
         await model.metadata.save(fieldID: a.id)
         model.sync(from: handle)
         #expect(board.editingFieldID == p.id)
 
+        model.metadata.beginEdit(fieldID: b.id)
         model.notes.draft = "A note"
         await model.notes.add()
         await session.settleWrites()
         model.sync(from: handle)
         #expect(board.editingFieldID == p.id)
+        #expect(model.metadata.editingFieldID == b.id)
+    }
+
+    @Test func aBoardWriteKeepsAnArtifactShownOnlyOnThePage() async throws {
+        let author = authorField()
+        let store = makeStore(fields: [author])
+        store.ingestArtifactFileError = CoreInvokeError.coded(
+            status: 1, code: "ingest.invalid", kind: .user, params: []
+        )
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
+        let model = makeModel(store: store, session: session)
+        await model.warmFromSession()
+        model.artifacts.openAdd()
+        model.artifacts.draft.label = "Scan"
+        model.artifacts.draft.filePath = "/tmp/provenencia-missing-\(UUID().uuidString).bin"
+        await model.artifacts.create()
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+
+        let sourceOwner = MetadataOwner(level: .source, id: sourceID)
+        store.metadataWriteResults[sourceOwner] = [catalogMetadataEntry(author, "Eliza")]
+        model.metadata.beginEdit(fieldID: author.id)
+        model.metadata.drafts[author.id] = "Eliza"
+        await model.metadata.save(fieldID: author.id)
+        await session.settleWrites()
+        model.sync(from: workspaceHandle(session))
+        #expect(model.artifacts.items.map(\.label) == ["Scan"])
+    }
+
+    @Test func closingCopyDetailsEndsTheBoardEdit() async throws {
+        let author = authorField()
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [author])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(author, "Ancestry")]
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let board = try #require(model.artifacts.board(for: "a1"))
+        model.artifacts.setCopyDetails(open: true, for: "a1")
+        board.beginEdit(fieldID: author.id)
+        #expect(board.editingFieldID == author.id)
+        model.artifacts.setCopyDetails(open: false, for: "a1")
+        #expect(board.editingFieldID == nil)
+        #expect(!model.artifacts.openBoardIDs.contains("a1"))
+    }
+
+    @Test func openingTheCardEditEndsItsBoardEdit() async throws {
+        let author = authorField()
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [author])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(author, "Ancestry")]
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        let board = try #require(model.artifacts.board(for: "a1"))
+        board.beginEdit(fieldID: author.id)
+        model.artifacts.beginEdit("a1")
+        #expect(model.artifacts.editingArtifactID == "a1")
+        #expect(board.editingFieldID == nil)
     }
 
     /// T-7
     @Test func addDialogOnAnArtifactBoardWritesTheArtifact() async throws {
         let author = authorField()
-        let store = makeStore(artifacts: [boardArtifact("a1")], fields: [author])
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
         let board = try #require(model.artifacts.board(for: "a1"))
         model.metadataDialogs.openAdd(on: board)
         model.metadataDialogs.addFieldID = author.id
         model.metadataDialogs.addValue = "Eliza"
-        let answer = [boardRow(author, "Eliza")]
+        let answer = [catalogMetadataEntry(author, "Eliza")]
         store.metadataWriteResults[artifactOwner("a1")] = answer
         await model.metadataDialogs.createFromAdd()
         #expect(model.metadataDialogs.isAdding == false)
@@ -2533,7 +2572,7 @@ struct SourcePageModelTests {
 
     /// T-8
     @Test func deletingAnArtifactDropsItsBoard() async throws {
-        let store = makeStore(artifacts: [boardArtifact("a1"), boardArtifact("a2")])
+        let store = makeStore(artifacts: ["a1", "a2"].map { catalogArtifact($0, sourceID: sourceID) })
         let model = makeModel(store: store)
         await model.warmFromSession()
         let second = try #require(model.artifacts.board(for: "a2"))
@@ -2550,8 +2589,8 @@ struct SourcePageModelTests {
     /// T-9
     @Test func invalidValueOnAnArtifactRowStaysOnTheRow() async throws {
         let field = urlField()
-        let store = makeStore(artifacts: [boardArtifact("a1")], fields: [field])
-        store.metadataByOwner[artifactOwner("a1")] = [boardRow(field, "https://example.com")]
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [field])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(field, "https://example.com")]
         store.setMetadataError = CoreInvokeError.coded(
             status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
         )
@@ -2571,9 +2610,9 @@ struct SourcePageModelTests {
     /// T-10
     @Test func boardsSurviveAReload() async throws {
         let author = authorField()
-        let store = makeStore(artifacts: [boardArtifact("a1")], fields: [author])
-        store.metadataByOwner[artifactOwner("a1")] = [boardRow(author, "Ancestry")]
-        let session = pageSession(store)
+        let store = makeStore(artifacts: [catalogArtifact("a1", sourceID: sourceID)], fields: [author])
+        store.metadataByOwner[artifactOwner("a1")] = [catalogMetadataEntry(author, "Ancestry")]
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: projectDir), store: store)
         let model = makeModel(store: store, session: session)
         await model.warmFromSession()
         let board = try #require(model.artifacts.board(for: "a1"))

@@ -5798,11 +5798,23 @@ enum L10n {
             comment: "Accessibility label for check to save an inline metadata text edit"
         )
 
-        static let deleteMetadataValue = LocalizedStringResource(
-            "sources.page.deleteMetadataValue",
-            defaultValue: "Delete value",
-            comment: "Accessibility label for trash on a saved metadata row"
-        )
+        /// Trash on a saved metadata row. Argument is the field label.
+        static func deleteMetadataValueLabel(field: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.deleteMetadataValueLabel",
+                defaultValue: "Delete %@",
+                comment: "VoiceOver label for trash on a saved metadata row; argument is the field label"
+            ), field)
+        }
+
+        /// Pencil on a saved metadata row. Argument is the field label.
+        static func editMetadataValueLabel(field: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.editMetadataValueLabel",
+                defaultValue: "Edit %@",
+                comment: "VoiceOver label for the pencil on a saved metadata row; argument is the field label"
+            ), field)
+        }
 
         static let openMetadataURL = LocalizedStringResource(
             "sources.page.openMetadataURL",
@@ -6563,6 +6575,15 @@ enum L10n {
             ), count)
         }
 
+        /// The disclosure's spoken value; argument is the saved value count.
+        static func artifactCopyDetailsValue(count: Int) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifactCopyDetailsValue",
+                defaultValue: "%#@values@",
+                comment: "VoiceOver value of the Copy details disclosure on an artifact card; argument is the saved value count"
+            ), count)
+        }
+
         /// Argument is the ART- ref.
         static func artifactCopyDetailsLabel(ref: String) -> String {
             L10n.format(LocalizedStringResource(
@@ -6667,11 +6688,14 @@ enum L10n {
             comment: "Empty-state body when a Source has no metadata rows"
         )
 
-        static let dismissMetadataSuggestion = LocalizedStringResource(
-            "sources.page.dismissMetadataSuggestion",
-            defaultValue: "Dismiss this suggestion",
-            comment: "Accessibility label for dismissing a type metadata suggestion"
-        )
+        /// Dismiss on a type suggestion. Argument is the field label.
+        static func dismissMetadataSuggestionLabel(field: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.dismissMetadataSuggestionLabel",
+                defaultValue: "Dismiss the suggestion for %@",
+                comment: "VoiceOver label for dismissing a type metadata suggestion; argument is the field label"
+            ), field)
+        }
 
         static let addMetadataDialogTitle = LocalizedStringResource(
             "sources.page.addMetadataDialogTitle",
@@ -10972,7 +10996,7 @@ enum L10n {
         )
         static let sourceMetadataInvalid = LocalizedStringResource(
             "error.sourcemetadata.invalid",
-            defaultValue: "Invalid source metadata.",
+            defaultValue: "This value can't be saved for this field.",
             comment: "FFI error sourcemetadata.invalid"
         )
         static let filesInvalid = LocalizedStringResource(

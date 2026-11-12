@@ -4171,7 +4171,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Invalid source metadata."
+            "value": "This value can't be saved for this field."
           }
         }
       }
@@ -8352,6 +8352,40 @@
         }
       }
     },
+    "sources.page.artifactCopyDetailsValue": {
+      "comment": "VoiceOver value of the Copy details disclosure on an artifact card; argument is the saved value count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%#@values@"
+          },
+          "substitutions": {
+            "values": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg saved value"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg saved values"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "sources.page.artifactDescription": {
       "comment": "Field label for optional Artifact description",
       "extractionState": "manual",
@@ -8768,6 +8802,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hour must be between 0 and 23."
+          }
+        }
+      }
+    },
+    "sources.page.deleteMetadataValueLabel": {
+      "comment": "VoiceOver label for trash on a saved metadata row; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@"
+          }
+        }
+      }
+    },
+    "sources.page.dismissMetadataSuggestionLabel": {
+      "comment": "VoiceOver label for dismissing a type metadata suggestion; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss the suggestion for %@"
+          }
+        }
+      }
+    },
+    "sources.page.editMetadataValueLabel": {
+      "comment": "VoiceOver label for the pencil on a saved metadata row; argument is the field label",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit %@"
           }
         }
       }
@@ -9492,18 +9562,6 @@
         }
       }
     },
-    "sources.page.deleteMetadataValue": {
-      "comment": "Accessibility label for trash on a saved metadata row",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete value"
-          }
-        }
-      }
-    },
     "sources.page.deleteNote": {
       "comment": "Accessibility label for deleting a Source note",
       "extractionState": "manual",
@@ -9560,18 +9618,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "What this source is, and where you consulted it"
-          }
-        }
-      }
-    },
-    "sources.page.dismissMetadataSuggestion": {
-      "comment": "Accessibility label for dismissing a type metadata suggestion",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismiss this suggestion"
           }
         }
       }

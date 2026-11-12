@@ -8,6 +8,12 @@ enum MetadataBoardStyle {
 
     /// The field-label column.
     var labelWidth: CGFloat { self == .regular ? 132 : 76 }
+    /// Between the reorder handle, label and value on saved rows.
+    var columnSpacing: CGFloat { PVSpacing.space5 }
+    /// The suggestion label's column; nil lets a stacked label take its own width.
+    var suggestionLabelWidth: CGFloat? { self == .regular ? labelWidth : nil }
+    /// Between a suggestion's label and controls, and between the controls themselves.
+    var suggestionControlSpacing: CGFloat { self == .regular ? columnSpacing : PVSpacing.space3 }
     var rowHorizontalPadding: CGFloat { self == .regular ? PVSpacing.space4 : 0 }
     /// Between saved rows, suggestions and Add.
     var groupSpacing: CGFloat { self == .regular ? PVSpacing.space6 : PVSpacing.space4 }
@@ -29,6 +35,7 @@ enum MetadataBoardStyle {
 /// One owner's metadata board: saved reorderable rows, type suggestions, and the
 /// empty state. The page draws the section header and intro around it, and owns
 /// the Add dialog and clear confirm (`MetadataBoardDialogs`) the board asks for.
+/// The `.compact` style draws a trailing Add button and no empty state.
 struct MetadataBoardView: View {
     @Bindable var board: MetadataBoardModel
     /// Prefix of every accessibility identifier the board draws (`<prefix>.list`, `<prefix>.<fieldID>.value`, …).
@@ -108,7 +115,7 @@ struct MetadataBoardView: View {
     }
 
     private func savedRow(_ entry: CatalogMetadataEntry) -> some View {
-        HStack(alignment: .top, spacing: MetadataBoardLayout.columnSpacing) {
+        HStack(alignment: .top, spacing: style.columnSpacing) {
             PVReorderHandle()
                 .padding(.top, 6)
             MetadataBoardLabel(
@@ -208,7 +215,7 @@ private struct MetadataBoardSuggestionRow: View {
                     label
                     controls(fieldID: fieldID)
                 } else {
-                    HStack(spacing: MetadataBoardLayout.columnSpacing) {
+                    HStack(spacing: style.suggestionControlSpacing) {
                         label
                         controls(fieldID: fieldID)
                     }
@@ -225,14 +232,14 @@ private struct MetadataBoardSuggestionRow: View {
     private var label: some View {
         MetadataBoardLabel(
             text: entry.field.label,
-            width: style.stacksSuggestionLabel ? nil : style.labelWidth,
+            width: style.suggestionLabelWidth,
             leadingInset: style.suggestionLabelInset
         )
     }
 
     /// The input, Save and dismiss: one line in the row, or the line under a stacked label.
     private func controls(fieldID: String) -> some View {
-        HStack(spacing: style.stacksSuggestionLabel ? PVSpacing.space3 : MetadataBoardLayout.columnSpacing) {
+        HStack(spacing: style.suggestionControlSpacing) {
             PVInput(
                 text: $draft,
                 size: .sm,
@@ -241,6 +248,7 @@ private struct MetadataBoardSuggestionRow: View {
                 isInvalid: error != nil
             )
             .onSubmit { onSave(draft) }
+            .accessibilityLabel(entry.field.label)
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
 
             PVButton(
@@ -254,7 +262,11 @@ private struct MetadataBoardSuggestionRow: View {
             .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).save")
 
-            PVIconButton(.dismiss, label: L10n.Sources.dismissMetadataSuggestion, size: .sm) {
+            PVIconButton(
+                .dismiss,
+                label: L10n.Sources.dismissMetadataSuggestionLabel(field: entry.field.label),
+                size: .sm
+            ) {
                 onDismiss()
             }
             .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).dismiss")
@@ -279,6 +291,11 @@ private struct MetadataBoardTextEditor: View {
     @Environment(\.openURL) private var openURL
     @State private var draft = ""
 
+    private func beginEdit() {
+        draft = entry.valueText
+        onBeginEdit()
+    }
+
     var body: some View {
         let fieldID = entry.field.id
         return PVInlineEdit(
@@ -289,13 +306,11 @@ private struct MetadataBoardTextEditor: View {
             cancelLabel: L10n.Sources.cancelEdit,
             editLabel: L10n.Sources.editMetadataValue,
             saveDisabled: draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            showsEditControl: false,
             axis: .horizontal,
             actionsStyle: .iconStack,
             accessibilityIdentifierPrefix: "\(accessibilityIdentifierPrefix).\(fieldID)",
-            onEdit: {
-                draft = entry.valueText
-                onBeginEdit()
-            },
+            onEdit: beginEdit,
             onSave: { onSave(draft) },
             onCancel: {
                 draft = entry.valueText
@@ -315,18 +330,27 @@ private struct MetadataBoardTextEditor: View {
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
             },
             restingTrailing: {
-                PVIconButton(
-                    .trash,
-                    label: L10n.Sources.deleteMetadataValue,
-                    size: .sm,
-                    tone: .danger,
-                    action: onClear
-                )
-                .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).delete")
+                HStack(spacing: PVSpacing.space3) {
+                    PVIconButton(
+                        .penLine,
+                        label: L10n.Sources.editMetadataValueLabel(field: entry.field.label),
+                        size: .sm,
+                        action: beginEdit
+                    )
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).edit")
+                    PVIconButton(
+                        .trash,
+                        label: L10n.Sources.deleteMetadataValueLabel(field: entry.field.label),
+                        size: .sm,
+                        tone: .danger,
+                        action: onClear
+                    )
+                    .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).delete")
+                }
             },
             editingTrailing: { EmptyView() }
         )
-        .onChange(of: isEditing) { _, editing in
+        .onChange(of: isEditing, initial: true) { _, editing in
             if editing {
                 draft = entry.valueText
             }
@@ -359,11 +383,6 @@ private struct MetadataBoardTextEditor: View {
                 .accessibilityIdentifier("\(accessibilityIdentifierPrefix).\(fieldID).value")
         }
     }
-}
-
-private enum MetadataBoardLayout {
-    /// Spacing between handle, label, and value on metadata rows.
-    static let columnSpacing = PVSpacing.space5
 }
 
 /// Resting metadata value chrome that matches `PVTextArea` `.mono` insets so
