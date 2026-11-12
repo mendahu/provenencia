@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/autoreconciler"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
@@ -386,6 +387,9 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
 	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
 	must(t, err)
+	// The value, not the file row, is the reading: rebuild it and drop the graph.
+	must(t, autoreconciler.Rebuild(db))
+	f.C.Graph().Drop()
 	if d := f.detail(h); len(d.Pictures) != 0 {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}
