@@ -63,3 +63,11 @@
 
 ### X-7 · minor · Apply edges
 **Answer:** Fixed — D-7 (5): a named graph that is not in `graphs` gets no row; an unknown Source leaves no `bySource` key (already stated).
+
+## Round 2
+
+### X-8 · blocker · `r.Person` reads `SoleGraph`, so it fails once a Source has several graphs
+**Answer:** Fixed — T-1 builds Ada before the extra graphs; T-2 adds its Observation with `r.Cite` on Ada and its Subject with `subjectstest.On` on Smith.
+
+### X-9 · major · Test package, second Artifact, `r.Run`, the `check` closure
+**Answer:** Fixed — T-1 names package `evidencegraphs_test` and the second Artifact (`artifactstest.Create`, "Page 2"); T-2 runs every `tx` call in `r.Run`, and inlines `check` and a package-level `derivedFromIndex` probe.
