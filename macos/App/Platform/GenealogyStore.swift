@@ -1275,7 +1275,7 @@ struct CatalogSourceWorkspace: Sendable, Equatable {
             return owner.id == source.id ? metadata : nil
         case .artifact:
             return artifacts.contains { $0.id == owner.id } ? (artifactMetadata[owner.id] ?? []) : nil
-        default:
+        case .graph, .citation:
             return nil
         }
     }
@@ -1284,18 +1284,16 @@ struct CatalogSourceWorkspace: Sendable, Equatable {
     /// workspace holds no board for that owner.
     @discardableResult
     mutating func setMetadataRows(_ rows: [CatalogMetadataEntry], for owner: MetadataOwner) -> Bool {
+        guard metadataRows(for: owner) != nil else { return false }
         switch owner.level {
         case .source:
-            guard owner.id == source.id else { return false }
             metadata = rows
-            return true
         case .artifact:
-            guard artifacts.contains(where: { $0.id == owner.id }) else { return false }
             artifactMetadata[owner.id] = rows
-            return true
-        default:
+        case .graph, .citation:
             return false
         }
+        return true
     }
 }
 
