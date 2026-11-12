@@ -309,6 +309,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 #### S15-09 — Artifacts show their metadata on the Source page
 
 **Ships.** Each Artifact on the Source page has a metadata board, the S15-26 board with the Artifact as owner, as S15-D1 draws it.
+**Also (from S15-08 review, CON-2).** A test that runs the real `artifacts.Delete` and `evidencegraphs.Delete` and resolves each released `*_metadata` and `*_metadata_layout` change on its own, with the rest of the revision as ghosts, to the Source scope. Today only the stub `TestScopeThroughDeletedParent` pins this; resolving the whole revision cannot tell, because the Artifact's own delete already scopes the Source.
 **Not this PR.** The add flow (S15-10).
 **Check.** Bar 3's Artifact half on a census Source.
 **Context.** S15-D1; `SourcePageArtifactsView.swift`, `SourcePageMetadataView.swift`, `SourceMetadataSection.swift`.

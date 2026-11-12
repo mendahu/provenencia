@@ -96,4 +96,4 @@ Nits (logged, round 2): `MNT · facets.go · releaseRow and rowFacet both build 
 No Fix plan 2 (no round-2 blockers). `origin/main` unmoved since the branch was cut (`cba6e263`); gate on `e6f4fa06` stands.
 
 ## Result
-Gate PASS · CI green (test ×2, localizable) · open: CON-2 (minor, per-change ghost resolution over a real delete) · follow-ups: CON-2, nits MNT-6, MNT-7, CON-6, CON-7, UX-4 · to user: MNT-1, PRF-1, UX-1 – UX-3 (answered 2026-11-11, fixed)
+Gate PASS · CI green (test ×2, localizable) · open: CON-2 (minor, per-change ghost resolution over a real delete) · follow-ups: CON-2 → S15-09 map scope entry (user, 2026-11-11), nits MNT-6, MNT-7, CON-6, CON-7, UX-4 · to user: MNT-1, PRF-1, UX-1 – UX-3 (answered 2026-11-11, fixed)
