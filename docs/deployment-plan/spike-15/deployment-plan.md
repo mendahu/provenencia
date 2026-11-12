@@ -103,7 +103,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-23 | The Source page previews its citation | 6 | Swift: preview, missing fields, Copy citation | S15-D1 | S15-16, S15-D1 | — | Scoped |
 | S15-24 | Move a bundle to another Source in the engine | 7 | Go: closure, preflight and move RPCs, one transaction through the effects registry | — | S16-12, S16-13, S16-15 | — | Scoped |
 | S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1 | S15-24, S15-D10, S15-D1 | — | Scoped |
-| S15-26 | The metadata board takes an owner | 2 | Preparatory, Swift: the board model and view take an owner; the Source page unchanged | — | — | — | Scoped |
+| S15-26 | The metadata board takes an owner | 2 | Preparatory, Swift: the board model and view take an owner; the Source page unchanged | — | — | [plan](prs/S15-26-metadata-board-takes-an-owner.md) | Planned |
 | S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds 50 citation groups at a time with the kit fold | S15-D9 | S15-30, S15-21, S15-D9 | — | Scoped |
 | S15-28 | A value's records load on their own | 8 | Go: `FieldRecordCounts` from the node; one records read by (owner, Property) pairs with denial facts; reports its inputs | — | S16-11, S16-19, S16-24, S16-30 | — | Scoped |
 | S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D9 | S15-28, S15-21, S15-31, S16-09, S15-D9 | — | Scoped |
@@ -301,8 +301,8 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-26 — The metadata board takes an owner
 
-**Ships.** Preparatory, Swift: `SourceMetadataSection` and `SourcePageMetadataView` become one board model and view that take an owner (level, id, its entries and its write operations, or a draft for a form); the Source page moves onto it with no visible change.
-**Not this PR.** Any new board (S15-09 – S15-11).
+**Ships.** Preparatory: `SourceMetadataSection` and `SourcePageMetadataView` become one board model and view over a host (an owner's entries, its write operations and where its failures show), with the page's Add dialog and clear confirm as one page-level model that targets a board; the Swift store's four metadata writes take a `MetadataOwner` (level, id); Set and Clear answer the owner's rows like dismiss and reorder (two wire fields), so Swift stops re-deriving row placement and the Clear rule; `.mutatedSourceMetadata` goes (it reaches the same key as `.mutatedSourceWorkspace` since S15-08). The Source page moves onto it with no visible change.
+**Not this PR.** Any new board (S15-09 – S15-11); the draft owner a form uses (S15-10, its first caller; plan D-4 leaves it a slot).
 **Check.** The Source page's metadata behaves as before; Swift tests drive the board against a fake owner.
 **Context.** Rule "One metadata board"; `macos/App/Features/Sources/SourceMetadataSection.swift`, `SourcePageMetadataView.swift`; [`add-swift-test`](../../../.agents/skills/add-swift-test/SKILL.md).
 
@@ -316,7 +316,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-10 — Adding an Artifact asks for its copy details
 
-**Ships.** When an Artifact is added, its type's `artifact`-level suggestions can be filled in the add flow (the S15-26 board on a draft), and they save with the Artifact in one write.
+**Ships.** When an Artifact is added, its type's `artifact`-level suggestions can be filled in the add flow (the S15-26 board on a draft owner, which this PR adds and S15-11 reuses: it collects a `sourcemetadata.Draft` with its whole order and writes nothing), and they save with the Artifact in one write.
 **Not this PR.** Filling them automatically ([`registry-source-import.md`](../../ideas/registry-source-import.md)).
 **Check.** Adding a downloaded census image offers provider, URL and accessed date, and the values show on the Artifact afterwards.
 **Context.** S15-D4; map § 1 "Copy details are captured when the Artifact is added"; `IngestFileDropRow.swift`, `SourceFormLoadArea.swift`.
