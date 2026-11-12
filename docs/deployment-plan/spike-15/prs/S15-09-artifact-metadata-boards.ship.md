@@ -112,4 +112,4 @@ Check: `rg -n "can't be saved for this field" macos docs/deployment-plan/spike-1
 Head `48be23fef`. Gate PASS (orchestrator run against `064e1f393`; `origin/main` has not moved). F-10, F-11, F-12 done; orchestrator read both commits. F-10: `SourcePageContext.setWorkspace(_:)`, the only `setQueryValue` under `Features/Sources`. F-11: a `LocalizedStringResource` cannot interpolate under the `localizable` lint, so `PVInlineEdit.editLabel` widened to `any PVCopy` (the fallback F-11 allowed); unused `L10n.Sources.editMetadataValue` deleted. At the default `.top` alignment `editControlTopPadding` is 0, so UX-5 was a position change, not lost padding. F-12: "This metadata change can't be saved."
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: UX-4 (keyboard / VoiceOver reorder of saved metadata rows, every board) · to user: — · manual check §10 (incl. item 8, hover lift) not run
+Gate PASS · CI green · open: none · follow-ups: UX-4 (keyboard / VoiceOver reorder of saved metadata rows, every board) · to user: — · manual check §10 (incl. item 8, hover lift) not run
