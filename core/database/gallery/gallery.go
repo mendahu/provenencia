@@ -51,28 +51,25 @@ func Of(n *graphcache.Node, props [][]byte) []Picture {
 	}
 	var out []Picture
 	for _, prop := range props {
-		outcomes := n.Outcomes[string(prop)]
+		// One pass over the Property's rows (ascending Observation id, so each
+		// rank's ids stay ascending): the gallery rows by the rank they went into.
+		byRank := map[int][][]byte{}
+		for _, o := range n.Outcomes[string(prop)] {
+			if autoreconcile.Reason(o.Reason).InGallery() {
+				byRank[o.ValueRank] = append(byRank[o.ValueRank], append([]byte(nil), o.ObservationID...))
+			}
+		}
 		for _, v := range n.Values[string(prop)] {
 			if len(v.ImageFileID) == 0 {
 				continue
 			}
-			p := Picture{Rank: v.Rank, ImageFileID: append([]byte(nil), v.ImageFileID...)}
-			for _, o := range outcomes {
-				if o.ValueRank == v.Rank && autoreconcile.Reason(o.Reason).InGallery() {
-					p.ObservationIDs = append(p.ObservationIDs, append([]byte(nil), o.ObservationID...))
-				}
-			}
-			if len(p.ObservationIDs) > 0 {
-				out = append(out, p)
+			if ids := byRank[v.Rank]; len(ids) > 0 {
+				out = append(out, Picture{Rank: v.Rank, ImageFileID: append([]byte(nil), v.ImageFileID...), ObservationIDs: ids})
 			}
 		}
 	}
 	if len(out) == 0 {
 		return nil
-	}
-	for i := range out {
-		ids := out[i].ObservationIDs
-		sort.Slice(ids, func(a, b int) bool { return bytes.Compare(ids[a], ids[b]) < 0 })
 	}
 	sort.SliceStable(out, func(i, j int) bool {
 		if c := bytes.Compare(out[i].ObservationIDs[0], out[j].ObservationIDs[0]); c != 0 {
