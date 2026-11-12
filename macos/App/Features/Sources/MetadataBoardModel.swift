@@ -109,13 +109,9 @@ final class MetadataBoardModel {
                 editingFieldID = nil
             }
         } catch {
-            // `sourcemetadata.invalid` stays on the row; I/O goes to the host's failure place.
-            guard let message = host.failureMessage(for: error) else { return }
-            if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid {
+            if case .invalid(let message) = classifySetFailure(error) {
                 fieldError = message
                 fieldErrorID = fieldID
-            } else {
-                host.showFailure(message)
             }
         }
     }
@@ -147,13 +143,24 @@ final class MetadataBoardModel {
             applySet(updated, fieldID: fieldID, effects: effects)
             return .saved
         } catch {
-            guard let message = host.failureMessage(for: error) else { return .failed }
-            if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid {
-                return .invalid(message)
-            }
-            host.showFailure(message)
+            if case .invalid(let message) = classifySetFailure(error) { return .invalid(message) }
             return .failed
         }
+    }
+
+    private enum SetFailure {
+        case ownerGone
+        case invalid(String)
+        case shown
+    }
+
+    /// A failed set: `sourcemetadata.invalid` stays on the row or dialog; I/O goes
+    /// to the host's failure place; nothing shows when the owner is gone.
+    private func classifySetFailure(_ error: Error) -> SetFailure {
+        guard let message = host.failureMessage(for: error) else { return .ownerGone }
+        if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid { return .invalid(message) }
+        host.showFailure(message)
+        return .shown
     }
 
     func dismissSuggestion(fieldID: String) async {

@@ -142,20 +142,6 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var citationNotesByID: [String: [String]] = [:]
     /// Metadata rows by owner: the one stored map, whatever the level.
     var metadataByOwner: [MetadataOwner: [CatalogMetadataEntry]] = [:]
-    /// The `.source` owners of `metadataByOwner` by Source id, for the tests and
-    /// reads that need one level. Like every stored property it is read and
-    /// written inside `withState`, which already holds `stateLock`.
-    var metadataBySource: [String: [CatalogMetadataEntry]] {
-        get {
-            var out: [String: [CatalogMetadataEntry]] = [:]
-            for (owner, list) in metadataByOwner where owner.level == .source { out[owner.id] = list }
-            return out
-        }
-        set {
-            for owner in metadataByOwner.keys where owner.level == .source { metadataByOwner[owner] = nil }
-            for (id, list) in newValue { metadataByOwner[MetadataOwner(level: .source, id: id)] = list }
-        }
-    }
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
     /// Last `closeCatalogSession` argument (tests only).
@@ -489,7 +475,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             return CatalogSourceWorkspace(
                 source: enrichCoverFields(raw),
                 notes: notesBySource[sourceID] ?? [],
-                metadata: metadataBySource[sourceID] ?? [],
+                metadata: metadataByOwner[MetadataOwner(level: .source, id: sourceID)] ?? [],
                 artifacts: artifactsBySource[sourceID] ?? [],
                 credibility: credibilityBySource[sourceID]
             )
@@ -547,7 +533,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             if copyMetadata {
                 // Entries copy as they are; a `suggested` flag can be stale under
                 // another type in the fake.
-                metadataBySource[copyID] = metadataBySource[sourceID]
+                metadataByOwner[MetadataOwner(level: .source, id: copyID)] = metadataByOwner[MetadataOwner(level: .source, id: sourceID)]
             }
             if copyCredibility, var assessment = credibilityBySource[sourceID] {
                 assessment.id = UUID().uuidString.lowercased()
@@ -722,7 +708,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             for (project, graphs) in evidenceGraphsByProject {
                 evidenceGraphsByProject[project] = graphs.filter { $0.sourceID != sourceID }
             }
-            metadataBySource[sourceID] = nil
+            metadataByOwner[MetadataOwner(level: .source, id: sourceID)] = nil
             credibilityBySource[sourceID] = nil
             return nextWriteEffects
         }
@@ -738,71 +724,43 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
+    /// The rows the engine would return for a write to an owner. The fake runs no
+    /// Set, Clear or Dismiss rule (the engine's tests pin those): a test seeds the
+    /// post-write rows here, and a write with none scripted returns the stored rows.
+    var metadataWriteResults: [MetadataOwner: [CatalogMetadataEntry]] = [:]
+
+    private func scriptedMetadataWrite(_ owner: MetadataOwner) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
+        if let scripted = metadataWriteResults[owner] { metadataByOwner[owner] = scripted }
+        if owner.level == .source { bumpActivity(owner.id) }
+        return (metadataByOwner[owner] ?? [], nextWriteEffects)
+    }
+
     func setMetadata(
-        projectDir: String,
+        projectDir _: String,
         userID _: String,
         owner: MetadataOwner,
-        fieldID: String,
-        valueText: String
+        fieldID _: String,
+        valueText _: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return try withState {
             if let setMetadataError { throw setMetadataError }
-            var list = metadataByOwner[owner] ?? []
-            if let idx = list.firstIndex(where: { $0.field.id == fieldID }) {
-                list[idx].valueText = valueText
-                list[idx].hasValue = true
-                // The fake computes no web link; a test that needs one seeds `openHref`.
-                list[idx].openHref = ""
-            } else {
-                let field = (fieldsByProject[projectDir] ?? []).first { $0.id == fieldID }
-                    ?? CatalogMetadataField(
-                        id: fieldID, key: "field", origin: "user", label: "Field", dataType: "text", description: ""
-                    )
-                list.append(CatalogMetadataEntry(
-                    field: field,
-                    valueText: valueText,
-                    hasValue: true,
-                    suggested: false,
-                    sortOrder: Int32(list.count)
-                ))
-            }
-            metadataByOwner[owner] = list
-            if owner.level == .source { bumpActivity(owner.id) }
-            return (list, nextWriteEffects)
+            return scriptedMetadataWrite(owner)
         }
     }
 
     func clearMetadata(
-        projectDir _: String, userID _: String, owner: MetadataOwner, fieldID: String
+        projectDir _: String, userID _: String, owner: MetadataOwner, fieldID _: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
-        withState {
-            var list = metadataByOwner[owner] ?? []
-            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return (list, nextWriteEffects) }
-            if list[idx].suggested {
-                list[idx].valueText = ""
-                list[idx].hasValue = false
-            } else {
-                list.remove(at: idx)
-            }
-            metadataByOwner[owner] = list
-            if owner.level == .source { bumpActivity(owner.id) }
-            return (list, nextWriteEffects)
-        }
+        withState { scriptedMetadataWrite(owner) }
     }
 
     func dismissMetadataSuggestion(
         projectDir _: String,
         userID _: String,
         owner: MetadataOwner,
-        fieldID: String
+        fieldID _: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
-        return withState {
-            var list = metadataByOwner[owner] ?? []
-            list.removeAll { $0.field.id == fieldID && !$0.hasValue }
-            metadataByOwner[owner] = list
-            if owner.level == .source { bumpActivity(owner.id) }
-            return (list, nextWriteEffects)
-        }
+        withState { scriptedMetadataWrite(owner) }
     }
 
     func reorderMetadata(
@@ -2935,7 +2893,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     private func sourcesHoldingField(projectDir: String, fieldID: String) -> [CatalogSource] {
         (sourcesByProject[projectDir] ?? []).filter { source in
-            (metadataBySource[source.id] ?? []).contains { $0.field.id == fieldID && $0.hasValue }
+            (metadataByOwner[MetadataOwner(level: .source, id: source.id)] ?? []).contains { $0.field.id == fieldID && $0.hasValue }
         }
     }
 

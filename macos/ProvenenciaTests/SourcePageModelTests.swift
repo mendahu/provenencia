@@ -41,7 +41,7 @@ struct SourcePageModelTests {
         store.sourceTypesByProject[projectDir] = [photoType()]
         store.notesBySource[sourceID] = notes
         store.artifactsBySource[sourceID] = artifacts
-        store.metadataBySource[sourceID] = metadata
+        store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)] = metadata
         store.fieldsByProject[projectDir] = fields
         store.credibilityGradesByProject[projectDir] = seededGrades()
         if let credibility {
@@ -732,6 +732,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         #expect(model.metadata.suggested.count == 1)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "Mary Robins",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[author.id] = "Mary Robins"
         await model.metadata.save(fieldID: author.id)
         #expect(model.metadata.saved.map(\.valueText) == ["Mary Robins"])
@@ -773,6 +779,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: repo.id)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: repo, valueText: "Norfolk Record Office",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[repo.id] = "Norfolk Record Office"
         await model.metadata.save(fieldID: repo.id)
         #expect(model.metadata.editingFieldID == nil)
@@ -792,6 +804,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = []
         await model.metadata.dismissSuggestion(fieldID: author.id)
         #expect(model.metadata.entries.isEmpty)
         #expect(model.metadata.suggested.isEmpty)
@@ -854,7 +867,7 @@ struct SourcePageModelTests {
         await model.metadata.moveSaved(from: IndexSet(integer: 0), to: 2)
         #expect(model.pageError != nil)
         #expect(model.metadata.saved.map(\.field.id) == before)
-        #expect(store.metadataBySource[sourceID]?.map(\.field.id) == before)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.map(\.field.id) == before)
     }
 
     @Test func addMetadataFromDialog() async {
@@ -864,6 +877,12 @@ struct SourcePageModelTests {
         await model.warmFromSession()
         model.metadataDialogs.openAdd(on: model.metadata)
         model.metadataDialogs.addFieldID = author.id
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "Eliza",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadataDialogs.addValue = "Eliza"
         await model.metadataDialogs.createFromAdd()
         #expect(model.metadataDialogs.isAdding == false)
@@ -971,6 +990,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: dateField.id)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: dateField, valueText: "abt 1890",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[dateField.id] = "abt 1890"
         await model.metadata.save(fieldID: dateField.id)
         #expect(model.metadata.editingFieldID == nil)
@@ -991,12 +1016,18 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "",
+                hasValue: false, suggested: true, sortOrder: 0
+            ),
+        ]
         model.metadataDialogs.askClear(on: model.metadata, fieldID: author.id)
         await model.metadataDialogs.confirmClear()
         #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.saved.isEmpty)
         #expect(model.metadata.suggested.map(\.field.id) == [author.id])
-        #expect(store.metadataBySource[sourceID]?.first?.hasValue == false)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.first?.hasValue == false)
     }
 
     @Test func clearExtraMetadataRemovesRow() async {
@@ -1012,11 +1043,12 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = []
         model.metadataDialogs.askClear(on: model.metadata, fieldID: repo.id)
         await model.metadataDialogs.confirmClear()
         #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.entries.isEmpty)
-        #expect(store.metadataBySource[sourceID]?.isEmpty == true)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.isEmpty == true)
     }
 
     @Test func saveSchemeLessURLValue() async {
@@ -1032,6 +1064,12 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: field, valueText: "www.url.com",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[field.id] = "www.url.com"
         await model.metadata.save(fieldID: field.id)
         #expect(model.metadata.saved.map(\.valueText) == ["www.url.com"])

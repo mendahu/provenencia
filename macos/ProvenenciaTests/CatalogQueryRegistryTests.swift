@@ -1018,8 +1018,8 @@ struct CatalogQueryRegistryTests {
         store.sourcesByProject[projectDir]?.append(
             CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
         )
-        store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author")]
-        store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [suggestedAuthorEntry(label: "Author")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [suggestedAuthorEntry(label: "Author")]
         let session = makeSession(store: store)
         let project = session.projectKey
         let firstKey = CatalogQueryKey.sourceWorkspace(project: project, sourceId: "s1")
@@ -1030,8 +1030,8 @@ struct CatalogQueryRegistryTests {
         await waitForQuery(firstHandle)
         await waitForQuery(secondHandle)
 
-        store.metadataBySource["s1"] = [suggestedAuthorEntry(label: "Author name")]
-        store.metadataBySource["s2"] = [suggestedAuthorEntry(label: "Author name")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [suggestedAuthorEntry(label: "Author name")]
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [suggestedAuthorEntry(label: "Author name")]
         session.apply(CatalogWriteEffects(lists: [.sourceVocabulary]), .updatedMetadataField(id: "f1"))
 
         let _: QueryHandle<CatalogSourceWorkspace> = session.query(firstKey)
@@ -1150,7 +1150,7 @@ struct CatalogQueryRegistryTests {
             id: "s1", ref: "SRC-1", sourceTypeID: "t2", title: "Alpha", description: ""
         )
         store.sourcesByProject[projectDir] = [moved]
-        store.metadataBySource["s1"] = [
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
             CatalogMetadataEntry(
                 field: CatalogMetadataField(
                     id: "f1", key: "author", origin: "user", label: "Author",

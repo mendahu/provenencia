@@ -46,7 +46,7 @@ struct SourceCopyModelTests {
             ),
         ]
         if metadata {
-            store.metadataBySource["s1"] = [
+            store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
                 CatalogMetadataEntry(
                     field: field("f1", "Publication"), valueText: "Herald",
                     hasValue: true, suggested: false, sortOrder: 0
@@ -149,10 +149,10 @@ struct SourceCopyModelTests {
         #expect(store.sourcesByProject[projectDir]?.count == 2)
         let id = copy?.id ?? ""
         #expect(copy?.description == "From the Herald")
-        #expect(store.metadataBySource[id]?.count == 2)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: id)]?.count == 2)
         #expect(store.credibilityBySource[id] != nil)
         #expect(store.artifactsBySource[id]?.map(\.label) == ["Front page", ""])
-        #expect(store.metadataBySource["s1"]?.count == 2)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: "s1")]?.count == 2)
         #expect(store.artifactsBySource["s1"]?.count == 2)
         #expect(model.copyError == nil)
     }
