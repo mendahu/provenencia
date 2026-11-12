@@ -14,12 +14,6 @@ struct SourceCopyModelTests {
         )
     }
 
-    private func artifact(_ id: String, label: String) -> CatalogArtifact {
-        CatalogArtifact(
-            id: id, ref: "ART-\(id)", sourceID: "s1", fileID: "", label: label, description: ""
-        )
-    }
-
     private func original(date: CatalogDateValueInput? = nil) -> CatalogSource {
         CatalogSource(
             id: "s1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Obit",
@@ -47,14 +41,8 @@ struct SourceCopyModelTests {
         ]
         if metadata {
             store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
-                CatalogMetadataEntry(
-                    field: field("f1", "Publication"), valueText: "Herald",
-                    hasValue: true, suggested: false, sortOrder: 0
-                ),
-                CatalogMetadataEntry(
-                    field: field("f2", "Page"), valueText: "5",
-                    hasValue: true, suggested: false, sortOrder: 1
-                ),
+                catalogMetadataEntry(field("f1", "Publication"), "Herald"),
+                catalogMetadataEntry(field("f2", "Page"), "5", order: 1),
             ]
         }
         if credibility {
@@ -65,8 +53,8 @@ struct SourceCopyModelTests {
         }
         if artifacts {
             store.artifactsBySource["s1"] = [
-                artifact("a1", label: "Front page"),
-                artifact("a2", label: ""),
+                catalogArtifact("a1", label: "Front page"),
+                catalogArtifact("a2", label: ""),
             ]
         }
         return store
@@ -270,7 +258,7 @@ struct SourceCopyModelTests {
         let (model, session) = await loaded(store)
         #expect(model.artifactIDsToCopy == ["a1", "a2"])
 
-        store.artifactsBySource["s1"] = [artifact("a1", label: "Front page")]
+        store.artifactsBySource["s1"] = [catalogArtifact("a1", label: "Front page")]
         session.invalidate(workspaceKey(session))
         let handle: QueryHandle<CatalogSourceWorkspace> = session.query(workspaceKey(session))
         await waitForQuery(handle)

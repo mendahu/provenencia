@@ -11,15 +11,9 @@ struct SourceGraphFormModelTests {
 
     private struct Boom: Error {}
 
-    private func artifact(_ id: String, label: String) -> CatalogArtifact {
-        CatalogArtifact(
-            id: id, ref: "ART-\(id)", sourceID: "src-1", fileID: "", label: label, description: ""
-        )
-    }
-
     /// `a1` – `a<count>` on Source `src-1`, in that page order.
     private func artifacts(_ count: Int) -> [CatalogArtifact] {
-        (1...max(count, 1)).prefix(count).map { artifact("a\($0)", label: "Page \($0)") }
+        (1...max(count, 1)).prefix(count).map { catalogArtifact("a\($0)", sourceID: "src-1", label: "Page \($0)") }
     }
 
     private func makeStore(artifactCount: Int, graphs: [CatalogEvidenceGraph]) -> FakeStore {

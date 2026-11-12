@@ -138,26 +138,21 @@ struct CitationComposerModelTests {
         return store
     }
 
-    private func artifact(_ n: Int) -> CatalogArtifact {
-        CatalogArtifact(
-            id: "art-\(n)",
-            ref: "ART-\(n)",
-            sourceID: sourceID,
-            fileID: "file-\(n)",
-            label: "Scan \(n + 1)",
-            description: "",
-            file: CatalogFileRef(
-                id: "file-\(n)",
-                relPath: "objects/file-\(n).pdf",
-                originalFilename: "scan.pdf",
-                mediaType: "application/pdf",
-                byteSize: 10
+    /// `art-0` – `art-<count - 1>` on the Source, each with a one-page PDF.
+    private func scans(_ count: Int) -> [CatalogArtifact] {
+        (0..<count).map { n in
+            catalogArtifact(
+                "art-\(n)", ref: "ART-\(n)", sourceID: sourceID, label: "Scan \(n + 1)", fileID: "file-\(n)",
+                file: CatalogFileRef(
+                    id: "file-\(n)", relPath: "objects/file-\(n).pdf", originalFilename: "scan.pdf",
+                    mediaType: "application/pdf", byteSize: 10
+                )
             )
-        )
+        }
     }
 
     private func seedArtifact(_ store: FakeStore) {
-        store.artifactsBySource[sourceID] = [artifact(0)]
+        store.artifactsBySource[sourceID] = scans(1)
     }
 
     /// Replaces the fixture graph's links.
@@ -509,7 +504,7 @@ struct CitationComposerModelTests {
 
     @Test func composerListsOnlyTheGraphsLinkedArtifacts() async {
         let store = makeStore()
-        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        store.artifactsBySource[sourceID] = scans(2)
         link(store, ["art-1"])
         let model = makeModel(store: store)
         await model.prepare()
@@ -519,7 +514,7 @@ struct CitationComposerModelTests {
 
     @Test func composerKeepsPageOrderForLinkedArtifacts() async {
         let store = makeStore()
-        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        store.artifactsBySource[sourceID] = scans(2)
         link(store, ["art-1", "art-0"])
         let model = makeModel(store: store)
         await model.prepare()
@@ -538,7 +533,7 @@ struct CitationComposerModelTests {
 
     @Test func unlinkedEntryArtifactOpensANewCitation() async {
         let store = makeStore()
-        store.artifactsBySource[sourceID] = [artifact(0), artifact(1)]
+        store.artifactsBySource[sourceID] = scans(2)
         link(store, ["art-1"])
         let model = makeModel(store: store)
         await model.prepare()

@@ -1127,7 +1127,11 @@ struct EvidenceGraphModelTests {
             CatalogQueryKey.sourceWorkspace(project: model.session.projectKey, sourceId: sourceID),
             value: CatalogSourceWorkspace(
                 source: source, notes: [], metadata: [],
-                artifacts: [artifact("P1", label: "Page 1"), artifact("P2", label: "Page 2"), artifact("P3", label: "Page 3")],
+                artifacts: [
+                    catalogFileArtifact("P1", sourceID: sourceID, label: "Page 1"),
+                    catalogFileArtifact("P2", sourceID: sourceID, label: "Page 2"),
+                    catalogFileArtifact("P3", sourceID: sourceID, label: "Page 3"),
+                ],
                 credibility: nil
             )
         )
@@ -2219,42 +2223,14 @@ struct EvidenceGraphModelTests {
 
     // MARK: Open a file (S10-20)
 
-    private func artifact(
-        _ id: String,
-        label: String,
-        ref: String = "",
-        fileID: String? = nil,
-        relPath: String? = nil,
-        mediaType: String = "image/jpeg",
-        withFile: Bool = true
-    ) -> CatalogArtifact {
-        CatalogArtifact(
-            id: id,
-            ref: ref.isEmpty ? "ART-\(id.uppercased())" : ref,
-            sourceID: sourceID,
-            fileID: fileID ?? "file-\(id)",
-            label: label,
-            description: "",
-            file: withFile
-                ? CatalogFileRef(
-                    id: fileID ?? "file-\(id)",
-                    relPath: relPath ?? "objects/\(id).jpg",
-                    originalFilename: "\(id).jpg",
-                    mediaType: mediaType,
-                    byteSize: 4_200_000
-                )
-                : nil
-        )
-    }
-
     @Test func fileBearingListKeepsCoverAndDropsFileless() {
         let artifacts = [
-            artifact("a", label: "Page 1", ref: "ART-AAAA"),
-            artifact("b", label: "Page 2"),
-            artifact("c", label: "Loose note", withFile: false),
-            artifact("d", label: "", ref: "ART-7Q2KD"),
-            artifact("e", label: "No file id", fileID: ""),
-            artifact("f", label: "Blank path", relPath: "   "),
+            catalogFileArtifact("a", ref: "ART-AAAA", sourceID: sourceID, label: "Page 1"),
+            catalogFileArtifact("b", sourceID: sourceID, label: "Page 2"),
+            catalogArtifact("c", ref: "ART-C", sourceID: sourceID, label: "Loose note", fileID: "file-c"),
+            catalogFileArtifact("d", ref: "ART-7Q2KD", sourceID: sourceID, label: ""),
+            catalogFileArtifact("e", sourceID: sourceID, label: "No file id", fileID: ""),
+            catalogFileArtifact("f", sourceID: sourceID, label: "Blank path", relPath: "   "),
         ]
         let rows = EvidenceGraphFiles.fileBearing(artifacts, coverArtifactID: "a")
         #expect(rows.map(\.id) == ["a", "b", "d"])
@@ -2304,9 +2280,9 @@ struct EvidenceGraphModelTests {
                 notes: [],
                 metadata: [],
                 artifacts: [
-                    artifact("b", label: "Page 2"),
-                    artifact("a", label: "Page 1"),
-                    artifact("c", label: "Loose note", withFile: false),
+                    catalogFileArtifact("b", sourceID: sourceID, label: "Page 2"),
+                    catalogFileArtifact("a", sourceID: sourceID, label: "Page 1"),
+                    catalogArtifact("c", ref: "ART-C", sourceID: sourceID, label: "Loose note", fileID: "file-c"),
                 ],
                 credibility: nil
             )
@@ -2348,7 +2324,9 @@ struct EvidenceGraphModelTests {
                 source: source,
                 notes: [],
                 metadata: [],
-                artifacts: artifactIDs.map { artifact($0, label: "Page \($0)", relPath: relPath) },
+                artifacts: artifactIDs.map {
+                    catalogFileArtifact($0, sourceID: sourceID, label: "Page \($0)", relPath: relPath)
+                },
                 credibility: nil
             )
         )
