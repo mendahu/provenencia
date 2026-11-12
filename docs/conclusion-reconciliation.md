@@ -143,7 +143,7 @@ Each module answers three questions:
 
 A boolean follows the integer rules, with one caveat: negative polarity is not folded into the value. A negative `true` denies positive `true` candidates; it does not create a `false`; only a row edited by hand can be a negative boolean, because `observations` refuses one on add and update. A boolean Property is single-valued, so two Sources that answer differently read `mixed`, and a `false` is a recorded value, never an absent one.
 
-A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). The gallery shows each record's own `depiction_values.image_file_id`, not the reconciler cache copy. The Person page lists no depiction field.
+A depiction's value is its image File; the loader reads it through `depictionvalue.Readable`, and the cache stores it as `value_image_file_id`. Gallery keys (`likeness`, `event_picture`, `place_picture`) are `multiple`, so a handle's images form a gallery, built from the records whose own outcome is `kept` or `weak` ([conclusion layer §6](conclusion-layer-data-model.md#6-canonical_entities)). Each tile shows the value's image File (`value_image_file_id`), which every record counted into that value shows. The Person page lists no depiction field.
 
 Promote's scoring uses value compare's similarity ([`matching-model.md`](matching-model.md)), so a partial resemblance can raise a match. Promote writes no Observation pins ([`conclusion-layer-data-model.md`](conclusion-layer-data-model.md) §5).
 
@@ -207,7 +207,7 @@ The model allows a Person with two birth Events, and the reconciler must handle 
 
 # 10. Cache and upkeep
 
-The reconciler's output is stored in the auto-reconciler cache (Spike 9 R3, `core/database/autoreconciler`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open.
+The reconciler's output is stored in the auto-reconciler cache (Spike 9 R3, `core/database/autoreconciler`) and rewritten in the transaction of every write that can change it. A change to reconciliation rules is a cache version bump, which rebuilds on open. The graph cache's node holds the handle's outcome rows and reloads with the handle (`effects.Set.Handles`), and `Verify` reads them back from the table.
 
 Writes that recompute affected entities:
 

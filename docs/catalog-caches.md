@@ -25,7 +25,7 @@ These stay fields of `graphcache.Graph`, not registry entries, because each is e
 
 | Field | Holds | Why typed | Updated by | Size at 4,000 / 16,000 persons |
 | --- | --- | --- | --- | --- |
-| `nodes`, `holders`, `kinds`, `kindOn`, `kindSet` | the canonical nodes, their links and the per-type id lists | They are the graph the entries derive from; OnCommit reloads them before any Apply runs | `effects.Set.Handles` (reload), `Structure` (Drop) | 45.3 / 58.2 MB (Person, Event and Place kinds loaded) |
+| `nodes`, `holders`, `kinds`, `kindOn`, `kindSet` | the canonical nodes (values, members, links, outcome rows and the chosen likeness) and the per-type id lists | They are the graph the entries derive from; OnCommit reloads them before any Apply runs | `effects.Set.Handles` (reload), `Structure` (Drop) | 57.0 / 76.9 MB (Person, Event and Place kinds loaded; 45.3 / 58.2 MB before S16-11 added outcome rows) |
 | `vocab` | properties, terms, subject types | Read by nearly every feature; the vocabulary is the source other entries declare in `DerivedFrom` | `ListPropertyVocabulary` | part of `nodes` |
 | `labels` | the vocabulary label map rows resolve at read time | Stored by `conclusionsummaries`; dropped with the vocabulary | `ListPropertyVocabulary` | not measured |
 | `displays` | composed, not finished, summary rows by handle | Verified by `conclusionsummaries`'s display check; dropped by roots and `SummaryDeps` | `Handles`, `SummaryDeps` | 11 KB / 11 KB (`RowsForSearch` keeps none) |
