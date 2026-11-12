@@ -24,7 +24,7 @@ Reviewers: CON, MNT, UX, SEC+PRF. UX: the diff touches `macos/App/**` and `Local
 | CON-4 | CON | minor | `macos-client-patterns.md:89` list of kept mutations omits `.wroteMetadataBoard` | Fix now → F-4 | verified at line 89 |
 | PRF (from MNT outside lens) | PRF | minor | `syncBoards` reassigns `boards` every sync | Rejected | SEC+PRF review: every card already reads `context.workspace` through `items`, so cards re-rendered each sync before this PR; bounded by one Source's Artifacts (60) |
 | UX (from CON outside lens) | UX | minor | Card keeps `.pvLiftHover(scale: 1.02)` while hosting a board's inputs and drag list | Logged → manual check | no evidence of a defect without the app; added to §10 manual check for the user |
-| UX-4 | UX | nit | Saved-row reorder is drag-only on every board | Follow-up | pre-existing on the Source board; ask the user where it goes |
+| UX-4 | UX | nit | Saved-row reorder is drag-only on every board | Follow-up → `docs/ideas/keyboard-reorder.md` | pre-existing on the Source board; the user chose an idea file |
 
 Nits (logged): `MNT-4 · SourcePageChrome.swift:3 · doc comment cites the moved paddings` · `MNT-5 · MetadataBoardView doc comment · say compact draws a trailing Add and no empty state` · `MNT-6 · released_metadata_scope_test.go:94,104 · indexOf → indicesOf; setValue → setProviderValue` · `MNT-7 · SourcePageModelTests T-5 · variable image holds repositoryField()` · `CON-5 · SourcePageArtifactsView.swift:457-476 · PVDivider inside the padded VStack, D-12 puts it above`. Nits ride along in F-9 since every one is in a file this PR adds or changes.
 
@@ -112,4 +112,4 @@ Check: `rg -n "can't be saved for this field" macos docs/deployment-plan/spike-1
 Head `48be23fef`. Gate PASS (orchestrator run against `064e1f393`; `origin/main` has not moved). F-10, F-11, F-12 done; orchestrator read both commits. F-10: `SourcePageContext.setWorkspace(_:)`, the only `setQueryValue` under `Features/Sources`. F-11: a `LocalizedStringResource` cannot interpolate under the `localizable` lint, so `PVInlineEdit.editLabel` widened to `any PVCopy` (the fallback F-11 allowed); unused `L10n.Sources.editMetadataValue` deleted. At the default `.top` alignment `editControlTopPadding` is 0, so UX-5 was a position change, not lost padding. F-12: "This metadata change can't be saved."
 
 ## Result
-Gate PASS · CI green · open: none · follow-ups: UX-4 (keyboard / VoiceOver reorder of saved metadata rows, every board) · to user: — · manual check §10 (incl. item 8, hover lift) not run
+Gate PASS · CI green · open: none · follow-ups: UX-4 → [`docs/ideas/keyboard-reorder.md`](../../../ideas/keyboard-reorder.md) (user, 2026-11-12) · to user: — · manual check §10 (incl. item 8, hover lift) not run
