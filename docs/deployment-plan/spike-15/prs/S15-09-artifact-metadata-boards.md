@@ -1,6 +1,6 @@
 # S15-09 — Artifacts show their metadata on the Source page
 
-**Status:** Planned
+**Status:** Landed in [#802](https://github.com/mendahu/provenencia/pull/802) (2026-11-12)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D1](../design/S15-D1-source-page.md) SD-9, SD-10, board drawn and validated 2026-11-10
