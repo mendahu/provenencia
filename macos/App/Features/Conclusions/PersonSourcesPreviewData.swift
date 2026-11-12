@@ -37,14 +37,6 @@ enum PersonSourcesPreviewData {
         ),
     ]
 
-    /// A Source with no title (its ref stands in) and a graph with no name.
-    static let untitled = [
-        CatalogPersonClaimGroup(
-            sourceID: "src-3", sourceRef: "SRC-4KQ7M", title: "", sourceTypeID: "type-census",
-            claims: [claim("c4", graph: "g-l", ref: "EVG-7", name: "", subject: johann)]
-        ),
-    ]
-
     /// Seven records: five shown and "Show 2 more".
     static let folded = [
         CatalogPersonClaimGroup(
@@ -111,7 +103,7 @@ enum PersonSourcesPreviewData {
                 group.claims.map {
                     CatalogRecordLinksGraph(
                         graphID: $0.graphID, graphRef: $0.graphRef, graphName: $0.graphName,
-                        sourceID: group.sourceID, sourceTitle: group.title, sourceTypeID: group.sourceTypeID
+                        sourceID: group.sourceID, sourceTitle: group.title
                     )
                 }
             },

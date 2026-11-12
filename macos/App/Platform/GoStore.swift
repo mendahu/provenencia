@@ -1335,8 +1335,7 @@ struct GoStore: GenealogyStore {
                     graphRef: $0.graphRef,
                     graphName: $0.graphName,
                     sourceID: $0.sourceID,
-                    sourceTitle: $0.sourceTitle,
-                    sourceTypeID: $0.sourceTypeID
+                    sourceTitle: $0.sourceTitle
                 )
             },
             pairs: resp.pairs.map {

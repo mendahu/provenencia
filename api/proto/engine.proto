@@ -1779,7 +1779,8 @@ message RecordLinksGraph {
   string graph_name = 3;
   string source_id = 4;
   string source_title = 5;
-  string source_type_id = 6;
+  reserved 6;
+  reserved "source_type_id";
 }
 
 // RecordLinksPair is the lines between two graphs of the response, by graph id.

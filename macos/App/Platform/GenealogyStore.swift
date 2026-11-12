@@ -806,7 +806,6 @@ struct CatalogRecordLinksGraph: Sendable, Equatable, Identifiable {
     var graphName: String
     var sourceID: String
     var sourceTitle: String
-    var sourceTypeID: String
 
     var id: String { graphID }
 }

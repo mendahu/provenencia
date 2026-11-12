@@ -13665,7 +13665,6 @@ type RecordLinksGraph struct {
 	GraphName     string                 `protobuf:"bytes,3,opt,name=graph_name,json=graphName,proto3" json:"graph_name,omitempty"`
 	SourceId      string                 `protobuf:"bytes,4,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	SourceTitle   string                 `protobuf:"bytes,5,opt,name=source_title,json=sourceTitle,proto3" json:"source_title,omitempty"`
-	SourceTypeId  string                 `protobuf:"bytes,6,opt,name=source_type_id,json=sourceTypeId,proto3" json:"source_type_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -13731,13 +13730,6 @@ func (x *RecordLinksGraph) GetSourceId() string {
 func (x *RecordLinksGraph) GetSourceTitle() string {
 	if x != nil {
 		return x.SourceTitle
-	}
-	return ""
-}
-
-func (x *RecordLinksGraph) GetSourceTypeId() string {
-	if x != nil {
-		return x.SourceTypeId
 	}
 	return ""
 }
@@ -21410,15 +21402,14 @@ const file_engine_proto_rawDesc = "" +
 	"\x05pairs\x18\x02 \x03(\v2&.provenencia.engine.v1.RecordLinksPairR\x05pairs\x12\x1f\n" +
 	"\vnot_counted\x18\x03 \x01(\bR\n" +
 	"notCounted\x12#\n" +
-	"\rlines_dropped\x18\x04 \x01(\bR\flinesDropped\"\xcf\x01\n" +
+	"\rlines_dropped\x18\x04 \x01(\bR\flinesDropped\"\xbf\x01\n" +
 	"\x10RecordLinksGraph\x12\x19\n" +
 	"\bgraph_id\x18\x01 \x01(\tR\agraphId\x12\x1b\n" +
 	"\tgraph_ref\x18\x02 \x01(\tR\bgraphRef\x12\x1d\n" +
 	"\n" +
 	"graph_name\x18\x03 \x01(\tR\tgraphName\x12\x1b\n" +
 	"\tsource_id\x18\x04 \x01(\tR\bsourceId\x12!\n" +
-	"\fsource_title\x18\x05 \x01(\tR\vsourceTitle\x12$\n" +
-	"\x0esource_type_id\x18\x06 \x01(\tR\fsourceTypeId\"\x86\x01\n" +
+	"\fsource_title\x18\x05 \x01(\tR\vsourceTitleJ\x04\b\x06\x10\aR\x0esource_type_id\"\x86\x01\n" +
 	"\x0fRecordLinksPair\x12\x1c\n" +
 	"\n" +
 	"graph_a_id\x18\x01 \x01(\tR\bgraphAId\x12\x1c\n" +

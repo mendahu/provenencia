@@ -5930,8 +5930,6 @@ public nonisolated struct Provenencia_Engine_V1_RecordLinksGraph: Sendable {
 
   public var sourceTitle: String = String()
 
-  public var sourceTypeID: String = String()
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -18123,7 +18121,7 @@ nonisolated extension Provenencia_Engine_V1_GetPersonRecordLinksResponse: SwiftP
 
 nonisolated extension Provenencia_Engine_V1_RecordLinksGraph: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RecordLinksGraph"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}graph_id\0\u{3}graph_ref\0\u{3}graph_name\0\u{3}source_id\0\u{3}source_title\0\u{3}source_type_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}graph_id\0\u{3}graph_ref\0\u{3}graph_name\0\u{3}source_id\0\u{3}source_title\0\u{b}source_type_id\0\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -18136,7 +18134,6 @@ nonisolated extension Provenencia_Engine_V1_RecordLinksGraph: SwiftProtobuf.Mess
       case 3: try { try decoder.decodeSingularStringField(value: &self.graphName) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.sourceID) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.sourceTitle) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.sourceTypeID) }()
       default: break
       }
     }
@@ -18158,9 +18155,6 @@ nonisolated extension Provenencia_Engine_V1_RecordLinksGraph: SwiftProtobuf.Mess
     if !self.sourceTitle.isEmpty {
       try visitor.visitSingularStringField(value: self.sourceTitle, fieldNumber: 5)
     }
-    if !self.sourceTypeID.isEmpty {
-      try visitor.visitSingularStringField(value: self.sourceTypeID, fieldNumber: 6)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -18170,7 +18164,6 @@ nonisolated extension Provenencia_Engine_V1_RecordLinksGraph: SwiftProtobuf.Mess
     if lhs.graphName != rhs.graphName {return false}
     if lhs.sourceID != rhs.sourceID {return false}
     if lhs.sourceTitle != rhs.sourceTitle {return false}
-    if lhs.sourceTypeID != rhs.sourceTypeID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

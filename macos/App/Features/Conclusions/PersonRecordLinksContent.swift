@@ -25,13 +25,12 @@ struct PersonRecordLinksContent: Equatable {
     // decided: S13-28 round 1 (SEC-1), same rule: 20 times the 50 graphs of that Scale
     static let maxNodes = 1_000
 
-    /// `graphLocations` and `graphSourceRefs` come from `PersonSourcesContent`, the one
+    /// `graphLocations` come from `PersonSourcesContent`, the one
     /// builder of a graph's location. A duplicate graph id keeps the first; a pair that
     /// names a graph not in the list is dropped.
     init(
         links: CatalogPersonRecordLinks,
-        graphLocations: [String: WorkspaceLocation],
-        graphSourceRefs: [String: String] = [:]
+        graphLocations: [String: WorkspaceLocation]
     ) {
         var ids = Set<String>()
         var graphs: [CatalogRecordLinksGraph] = []
@@ -63,11 +62,9 @@ struct PersonRecordLinksContent: Equatable {
         )
         dataset = bare.mappingNodes { _, node in
             guard let graph = graphsByID[node.id] else { return node }
-            let name = graph.graphName.trimmedNonEmpty
-            let ref = graph.graphRef.trimmedNonEmpty
-            let graphTitle = name ?? ref ?? ""
-            let sourceTitle = graph.sourceTitle.trimmedNonEmpty ?? graphSourceRefs[graph.graphID] ?? ""
-            let label = ref ?? name ?? ""
+            let graphTitle = graph.graphName
+            let sourceTitle = graph.sourceTitle
+            let label = graph.graphRef.trimmedNonEmpty ?? graph.graphName
             let connected = bare.neighborCount(of: graph.graphID)
             return CircularLinkNode(
                 id: graph.graphID,

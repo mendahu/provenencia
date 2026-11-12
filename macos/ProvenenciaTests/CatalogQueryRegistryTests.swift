@@ -922,7 +922,7 @@ struct CatalogQueryRegistryTests {
         )
         #expect(
             CatalogQueryKey.Kind.personClaims.descriptor.refreshes.map(\.follows)
-                == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]
+                == [.touchedHandles, .evidenceGraphs, .source, .list(.propertyVocabulary)]
         )
         // A read follows only its own entry of the effects.
         let reads = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .citations, ids: ["g-1"])])
@@ -1526,7 +1526,7 @@ struct CatalogQueryRegistryTests {
         #expect(CatalogQueryKey.Kind.personEvents.descriptor.refreshes.map(\.follows) == [.touchedHandles, .list(.propertyVocabulary)])
     }
 
-    /// A write that names a graph the value holds, or the Person's own handle,
+    /// A write that names a graph or Source the value holds, or the Person's own handle,
     /// revalidates the cached `personRecordLinks` key; a write that names only a
     /// handle and a graph it does not hold does not. The key is marked stale
     /// while hidden.
@@ -1535,19 +1535,21 @@ struct CatalogQueryRegistryTests {
         let project = session.projectKey
         let key = CatalogQueryKey.personRecordLinks(project: project, entityId: "e1")
         session.setQueryValue(key, value: CatalogPersonRecordLinks(graphs: [
-            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: "", sourceTypeID: ""),
-            CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "", sourceID: "s2", sourceTitle: "", sourceTypeID: ""),
+            CatalogRecordLinksGraph(graphID: "g1", graphRef: "", graphName: "", sourceID: "s1", sourceTitle: ""),
+            CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "", sourceID: "s2", sourceTitle: ""),
         ]))
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(evidenceGraphs: ["g1"])) == [key])
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e1"])) == [key])
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(handles: ["e7"], evidenceGraphs: ["g9"])).isEmpty)
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s1"])) == [key])
+        #expect(session.revalidatedKeys(for: CatalogWriteEffects(sourceScopes: ["s9"])).isEmpty)
         #expect(session.revalidatedKeys(for: CatalogWriteEffects(lists: [.propertyVocabulary])).contains(key))
         #expect(key.kind == .personRecordLinks)
         #expect(key.project == project)
         #expect(CatalogQueryRegistry.standard.hiddenPolicy(key) == .markStale)
         #expect(
             CatalogQueryKey.Kind.personRecordLinks.descriptor.refreshes.map(\.follows)
-                == [.touchedHandles, .evidenceGraphs, .list(.propertyVocabulary)]
+                == [.touchedHandles, .evidenceGraphs, .source, .list(.propertyVocabulary)]
         )
     }
 
@@ -1557,8 +1559,8 @@ struct CatalogQueryRegistryTests {
         let store = FakeStore()
         let links = CatalogPersonRecordLinks(
             graphs: [
-                CatalogRecordLinksGraph(graphID: "g1", graphRef: "EG-1", graphName: "Default", sourceID: "s1", sourceTitle: "A", sourceTypeID: "t1"),
-                CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "Default", sourceID: "s2", sourceTitle: "B", sourceTypeID: "t1"),
+                CatalogRecordLinksGraph(graphID: "g1", graphRef: "EG-1", graphName: "Default", sourceID: "s1", sourceTitle: "A"),
+                CatalogRecordLinksGraph(graphID: "g2", graphRef: "", graphName: "Default", sourceID: "s2", sourceTitle: "B"),
             ],
             pairs: [CatalogRecordLinksPair(
                 graphAID: "g1", graphBID: "g2",

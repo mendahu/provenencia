@@ -224,12 +224,11 @@ func recordLinksProto(links persondetail.PersonRecordLinks) *engine.GetPersonRec
 	out := &engine.GetPersonRecordLinksResponse{NotCounted: links.NotCounted, LinesDropped: links.LinesDropped}
 	for _, g := range links.Graphs {
 		out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
-			GraphId:      database.UUIDString(g.Graph.GraphID),
-			GraphRef:     g.Graph.GraphRef,
-			GraphName:    g.Graph.GraphName,
-			SourceId:     database.UUIDString(g.Source.ID),
-			SourceTitle:  g.Source.Title,
-			SourceTypeId: database.UUIDString(g.Source.SourceTypeID),
+			GraphId:     database.UUIDString(g.Graph.GraphID),
+			GraphRef:    g.Graph.GraphRef,
+			GraphName:   g.Graph.GraphName,
+			SourceId:    database.UUIDString(g.Source.ID),
+			SourceTitle: g.Source.Title,
 		})
 	}
 	for _, p := range links.Pairs {

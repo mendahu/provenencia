@@ -540,8 +540,7 @@ func TestGetPersonRecordLinks(t *testing.T) {
 	for i, g := range got.Graphs {
 		r := records[i]
 		if g.GetGraphId() != database.UUIDString(r.graph.ID) || g.GetGraphRef() != r.graph.Ref || g.GetGraphName() != r.graph.Name ||
-			g.GetSourceId() != database.UUIDString(r.src.ID) || g.GetSourceTitle() != r.title ||
-			g.GetSourceTypeId() != database.UUIDString(r.src.SourceTypeID) {
+			g.GetSourceId() != database.UUIDString(r.src.ID) || g.GetSourceTitle() != r.title {
 			t.Errorf("graph %d = %+v, want the %s", i, g, r.title)
 		}
 	}
