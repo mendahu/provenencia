@@ -142,6 +142,19 @@ struct CatalogQueryPatch: Sendable {
             }
         }
     }
+
+    /// Writes a board write's rows onto the cached Source page, for the owner
+    /// the write named. A partial patch like `updatedSourceShell()`: an owner the
+    /// page cannot place leaves it unchanged.
+    static func metadataBoard() -> Self {
+        Self(follows: nil) { session, key, _, _, mutation in
+            guard case .wroteMetadataBoard(let sourceId, let owner, let entries)? = mutation else { return .unchanged }
+            guard case .sourceWorkspace(_, let keySource) = key, keySource == sourceId else { return .unchanged }
+            return session.patchCached(key, as: CatalogSourceWorkspace.self) { workspace in
+                workspace.setMetadataRows(entries, for: owner)
+            }
+        }
+    }
 }
 
 /// What a warmed key does when a write reports ids its `follows` slot names.

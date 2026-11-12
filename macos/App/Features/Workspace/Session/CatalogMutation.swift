@@ -28,6 +28,11 @@ enum CatalogMutation: Sendable, Equatable {
 
     /// Bust-only: non-identity source page edits (notes, artifacts, credibility).
     case mutatedSourceWorkspace(sourceId: String)
+
+    /// Patch-only: a metadata board write. `entries` is the owner's whole board
+    /// in display order, which `CatalogQueryPatch.metadataBoard()` writes into
+    /// the cached Source page with no reload.
+    case wroteMetadataBoard(sourceId: String, owner: MetadataOwner, entries: [CatalogMetadataEntry])
 }
 
 /// A catalog-wide list a write changed. The raw values are Go's
@@ -149,7 +154,7 @@ extension CatalogMutation {
     /// Kind tag for registry `invalidateOn` lookup. Nil for patch-only mutations.
     var invalidationKind: CatalogMutationKind? {
         switch self {
-        case .updatedSource:
+        case .updatedSource, .wroteMetadataBoard:
             return nil
         case .changedSourceType:
             return .changedSourceType

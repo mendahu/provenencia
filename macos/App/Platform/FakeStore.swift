@@ -477,7 +477,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 notes: notesBySource[sourceID] ?? [],
                 metadata: metadataByOwner[MetadataOwner(level: .source, id: sourceID)] ?? [],
                 artifacts: artifactsBySource[sourceID] ?? [],
-                credibility: credibilityBySource[sourceID]
+                credibility: credibilityBySource[sourceID],
+                artifactMetadata: Dictionary(
+                    (artifactsBySource[sourceID] ?? []).map {
+                        ($0.id, metadataByOwner[MetadataOwner(level: .artifact, id: $0.id)] ?? [])
+                    },
+                    uniquingKeysWith: { _, last in last }
+                )
             )
         }
     }
@@ -851,6 +857,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         withState {
             markCatalogSessionHeld(projectDir)
             deleteArtifactCalls += 1
+            metadataByOwner[MetadataOwner(level: .artifact, id: artifactID)] = nil
             for (sourceID, arts) in artifactsBySource where arts.contains(where: { $0.id == artifactID }) {
                 artifactsBySource[sourceID] = arts.filter { $0.id != artifactID }
                 bumpActivity(sourceID)

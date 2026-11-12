@@ -29,42 +29,29 @@ protocol MetadataBoardHost: AnyObject {
     func showFailure(_ message: String)
 }
 
-/// A host over the Source page: one owner's rows inside the page's workspace,
-/// its writes through the page's store, and its failures in the page banner.
+/// A host over the Source page: one owner's rows inside the page's workspace
+/// (the Source's own or one Artifact's), its writes through the page's store,
+/// and its failures in the page banner.
 @MainActor
 final class SourcePageMetadataHost: MetadataBoardHost {
     private let context: SourcePageContext
     private let owner: MetadataOwner
-    private let rows: (CatalogSourceWorkspace) -> [CatalogMetadataEntry]
-    private let setRows: (inout CatalogSourceWorkspace, [CatalogMetadataEntry]) -> Void
 
-    init(
-        context: SourcePageContext,
-        owner: MetadataOwner,
-        rows: @escaping (CatalogSourceWorkspace) -> [CatalogMetadataEntry],
-        setRows: @escaping (inout CatalogSourceWorkspace, [CatalogMetadataEntry]) -> Void
-    ) {
+    init(context: SourcePageContext, owner: MetadataOwner) {
         self.context = context
         self.owner = owner
-        self.rows = rows
-        self.setRows = setRows
     }
 
     /// The host for the Source's own board.
     static func source(context: SourcePageContext) -> SourcePageMetadataHost {
-        SourcePageMetadataHost(
-            context: context,
-            owner: MetadataOwner(level: .source, id: context.sourceID),
-            rows: { $0.metadata },
-            setRows: { $0.metadata = $1 }
-        )
+        SourcePageMetadataHost(context: context, owner: MetadataOwner(level: .source, id: context.sourceID))
     }
 
     var entries: [CatalogMetadataEntry] {
-        get { context.workspace.map(rows) ?? [] }
+        get { context.workspace?.metadataRows(for: owner) ?? [] }
         set {
             guard var workspace = context.workspace else { return }
-            setRows(&workspace, newValue)
+            workspace.setMetadataRows(newValue, for: owner)
             context.workspace = workspace
         }
     }
@@ -96,7 +83,11 @@ final class SourcePageMetadataHost: MetadataBoardHost {
         )
     }
 
-    func didWrite(_ effects: CatalogWriteEffects) { context.applyWrite(effects) }
+    func didWrite(_ effects: CatalogWriteEffects) {
+        context.session.apply(
+            effects, .wroteMetadataBoard(sourceId: context.sourceID, owner: owner, entries: entries)
+        )
+    }
     func clearFailure() { context.clearPageError() }
     func failureMessage(for error: Error) -> String? { context.fail(error) }
     func showFailure(_ message: String) { context.showPageError(message) }

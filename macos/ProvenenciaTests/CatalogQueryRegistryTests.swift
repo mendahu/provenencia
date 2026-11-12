@@ -652,6 +652,73 @@ struct CatalogQueryRegistryTests {
         #expect(store.heldCatalogProjectDir == nil)
     }
 
+    private func metadataRow(_ value: String) -> CatalogMetadataEntry {
+        CatalogMetadataEntry(
+            field: CatalogMetadataField(
+                id: "f1", key: "author", origin: "user", label: "Author", dataType: "text", description: ""
+            ),
+            valueText: value, hasValue: true, suggested: false, sortOrder: 0
+        )
+    }
+
+    private func artifact(_ id: String, source: String = "s1") -> CatalogArtifact {
+        CatalogArtifact(id: id, ref: "ART-\(id)", sourceID: source, fileID: "", label: id, description: "", file: nil)
+    }
+
+    /// T-2: a board write puts the owner's rows on the cached page and reloads nothing.
+    @Test func metadataBoardWritePatchesTheWorkspace() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.sourcesByProject[projectDir]?.append(
+            CatalogSource(id: "s2", ref: "SRC-2", sourceTypeID: "t1", title: "Beta", description: "")
+        )
+        store.artifactsBySource["s1"] = [artifact("a1"), artifact("a2")]
+        store.metadataByOwner[MetadataOwner(level: .artifact, id: "a1")] = [metadataRow("old")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let first: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s1"))
+        let second: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s2"))
+        await waitForQuery(first)
+        await waitForQuery(second)
+        let calls = store.getSourceWorkspaceCalls
+        let x = [metadataRow("new")]
+
+        session.apply(
+            .empty, .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .artifact, id: "a1"), entries: x)
+        )
+        await session.settleWrites()
+        #expect(first.value?.artifactMetadata["a1"] == x)
+        #expect(first.value?.metadata.isEmpty == true)
+        #expect(first.value?.artifactMetadata["a2"] == [])
+        #expect(second.value?.artifactMetadata.isEmpty == true)
+
+        session.apply(
+            .empty, .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: x)
+        )
+        await session.settleWrites()
+        #expect(first.value?.metadata == x)
+        #expect(store.getSourceWorkspaceCalls == calls)
+    }
+
+    /// T-3: an owner the page cannot place changes nothing and invalidates nothing.
+    @Test func metadataBoardPatchIgnoresOwnersItCannotPlace() async {
+        let store = FakeStore()
+        seedStore(store)
+        store.artifactsBySource["s1"] = [artifact("a1")]
+        let session = makeSession(store: store)
+        let project = session.projectKey
+        let handle: QueryHandle<CatalogSourceWorkspace> = session.query(.sourceWorkspace(project: project, sourceId: "s1"))
+        await waitForQuery(handle)
+        let before = handle.value
+        for owner in [MetadataOwner(level: .graph, id: "g1"), MetadataOwner(level: .artifact, id: "a9")] {
+            let mutation = CatalogMutation.wroteMetadataBoard(sourceId: "s1", owner: owner, entries: [metadataRow("x")])
+            session.apply(.empty, mutation)
+            await session.settleWrites()
+            #expect(handle.value == before)
+            #expect(CatalogQueryRegistry.standard.invalidations(by: mutation, project: project).isEmpty)
+        }
+    }
+
     @Test func applyCreatedSourceInsertsRow() async {
         let store = FakeStore()
         seedStore(store)
@@ -935,6 +1002,7 @@ struct CatalogQueryRegistryTests {
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"),
+            .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: []),
         ]
         #expect(everyMutation.allSatisfy { mutation in
             !registry.invalidations(by: mutation, project: project).contains(
@@ -1393,6 +1461,7 @@ struct CatalogQueryRegistryTests {
             .updatedMetadataField(id: "f1"), .deletedMetadataField(id: "f1"),
             .assignedTypeSuggestion(typeId: "t1"), .removedTypeSuggestion(typeId: "t1"),
             .mutatedSourceWorkspace(sourceId: "s1"),
+            .wroteMetadataBoard(sourceId: "s1", owner: MetadataOwner(level: .source, id: "s1"), entries: []),
         ]
         for mutation in mutations {
             for invalidation in registry.invalidations(by: mutation, project: project) {
