@@ -333,54 +333,54 @@ struct GoStore: GenealogyStore {
         return Self.mapWriteEffects(resp.effects)
     }
 
-    func setSourceMetadata(
+    func setMetadata(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String,
         valueText: String
-    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_SetMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.owner.level = Level.source.rawValue
-        req.owner.id = sourceID
+        req.owner.level = owner.level.rawValue
+        req.owner.id = owner.id
         req.fieldID = fieldID
         req.valueText = valueText
         let resp: Provenencia_Engine_V1_SetMetadataResponse = try await provenenciaCall(
             method: CoreMethod.setMetadata,
             request: req
         )
-        return (Self.mapMetadataEntry(resp.entry), Self.mapWriteEffects(resp.effects))
+        return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
     }
 
-    func clearSourceMetadata(
-        projectDir: String, userID: String, sourceID: String, fieldID: String
-    ) async throws -> CatalogWriteEffects {
+    func clearMetadata(
+        projectDir: String, userID: String, owner: MetadataOwner, fieldID: String
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_ClearMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.owner.level = Level.source.rawValue
-        req.owner.id = sourceID
+        req.owner.level = owner.level.rawValue
+        req.owner.id = owner.id
         req.fieldID = fieldID
         let resp: Provenencia_Engine_V1_ClearMetadataResponse = try await provenenciaCall(
             method: CoreMethod.clearMetadata,
             request: req
         )
-        return Self.mapWriteEffects(resp.effects)
+        return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
     }
 
-    func dismissSourceMetadataSuggestion(
+    func dismissMetadataSuggestion(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_DismissMetadataSuggestionRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.owner.level = Level.source.rawValue
-        req.owner.id = sourceID
+        req.owner.level = owner.level.rawValue
+        req.owner.id = owner.id
         req.fieldID = fieldID
         let resp: Provenencia_Engine_V1_DismissMetadataSuggestionResponse = try await provenenciaCall(
             method: CoreMethod.dismissMetadataSuggestion,
@@ -389,17 +389,17 @@ struct GoStore: GenealogyStore {
         return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
     }
 
-    func reorderSourceMetadata(
+    func reorderMetadata(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_ReorderMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.owner.level = Level.source.rawValue
-        req.owner.id = sourceID
+        req.owner.level = owner.level.rawValue
+        req.owner.id = owner.id
         req.fieldIds = fieldIDs
         let resp: Provenencia_Engine_V1_ReorderMetadataResponse = try await provenenciaCall(
             method: CoreMethod.reorderMetadata,

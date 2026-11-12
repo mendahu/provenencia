@@ -1,10 +1,7 @@
 package handlers
 
 import (
-	"bytes"
-
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
@@ -113,17 +110,8 @@ func SetMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		for _, e := range entries {
-			if bytes.Equal(e.Field.ID, fieldID) {
-				out = &engine.SetMetadataResponse{
-					Entry:   metadataEntryProto(e),
-					Effects: writeEffectsProto(wrote),
-				}
-				return nil
-			}
-		}
-		// Set succeeded, so the row is always in the workspace list.
-		return apperr.New(apperr.CodeInternalUnknown, apperr.KindInternal)
+		out = &engine.SetMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -158,7 +146,11 @@ func ClearMetadata(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		out = &engine.ClearMetadataResponse{Effects: writeEffectsProto(wrote)}
+		entries, err := sourcemetadata.ListWorkspace(c, owner)
+		if err != nil {
+			return err
+		}
+		out = &engine.ClearMetadataResponse{Effects: writeEffectsProto(wrote), Metadata: metadataEntriesProto(entries)}
 		return nil
 	})
 	if err != nil {

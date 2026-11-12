@@ -357,10 +357,14 @@ func unmarshalSetMetadataEntry(t *testing.T, raw []byte) *engine.MetadataWorkspa
 	if err := proto.Unmarshal(raw, &resp); err != nil {
 		t.Fatal(err)
 	}
-	if resp.Entry == nil {
-		t.Fatal("missing entry")
+	// The response is the owner's whole board; these cases write one value.
+	for _, e := range resp.GetMetadata() {
+		if e.GetHasValue() {
+			return e
+		}
 	}
-	return resp.Entry
+	t.Fatal("no valued entry in the board")
+	return nil
 }
 
 func TestGetSourceWorkspace(t *testing.T) {

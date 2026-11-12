@@ -50,17 +50,21 @@ func TestMetadataOwners(t *testing.T) {
 			mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
 				ProjectDir: m.dir, UserId: m.userID, Owner: owner, FieldId: m.suggested, ValueText: "FamilySearch",
 			}, &set)
-			if set.GetEntry().GetField().GetId() != m.suggested || set.GetEntry().GetValueText() != "FamilySearch" || !set.GetEntry().GetSuggested() {
-				t.Fatalf("entry %+v", set.GetEntry())
+			if got := metadataByField(set.GetMetadata(), m.suggested); got == nil || got.GetValueText() != "FamilySearch" || !got.GetSuggested() {
+				t.Fatalf("set metadata %+v", set.GetMetadata())
 			}
 			if !slices.Contains(set.GetEffects().GetSourceScopes(), m.sourceID) {
 				t.Fatalf("source_scopes %v, want %s", set.GetEffects().GetSourceScopes(), m.sourceID)
 			}
 
 			var dismissed engine.DismissMetadataSuggestionResponse
+			var setExtra engine.SetMetadataResponse
 			mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
 				ProjectDir: m.dir, UserId: m.userID, Owner: owner, FieldId: m.extra, ValueText: "14",
-			}, &engine.SetMetadataResponse{})
+			}, &setExtra)
+			if ids := metadataFieldIDs(setExtra.GetMetadata()); !slices.Equal(ids, []string{m.suggested, m.extra}) {
+				t.Fatalf("set extra order %v, want suggested then extra", ids)
+			}
 			var reordered engine.ReorderMetadataResponse
 			mustRPC(t, ReorderMetadata, &engine.ReorderMetadataRequest{
 				ProjectDir: m.dir, UserId: m.userID, Owner: owner, FieldIds: []string{m.extra, m.suggested},
@@ -70,13 +74,20 @@ func TestMetadataOwners(t *testing.T) {
 				t.Fatalf("reordered %+v", &reordered)
 			}
 
+			var clearedSuggested engine.ClearMetadataResponse
 			mustRPC(t, ClearMetadata, &engine.ClearMetadataRequest{
 				ProjectDir: m.dir, UserId: m.userID, Owner: owner, FieldId: m.suggested,
-			}, &engine.ClearMetadataResponse{})
+			}, &clearedSuggested)
+			if got := metadataByField(clearedSuggested.GetMetadata(), m.suggested); got == nil || got.GetHasValue() || !got.GetSuggested() {
+				t.Fatalf("cleared suggested field %+v, want an empty suggestion", clearedSuggested.GetMetadata())
+			}
 			var cleared engine.ClearMetadataResponse
 			mustRPC(t, ClearMetadata, &engine.ClearMetadataRequest{
 				ProjectDir: m.dir, UserId: m.userID, Owner: owner, FieldId: m.extra,
 			}, &cleared)
+			if metadataByField(cleared.GetMetadata(), m.extra) != nil {
+				t.Fatalf("cleared extra field still listed: %+v", cleared.GetMetadata())
+			}
 			if !slices.Contains(cleared.GetEffects().GetSourceScopes(), m.sourceID) {
 				t.Fatalf("clear source_scopes %v", cleared.GetEffects().GetSourceScopes())
 			}
@@ -118,6 +129,25 @@ func TestMetadataOwners(t *testing.T) {
 			}
 		})
 	}
+}
+
+// metadataByField is the entry for a field id, or nil.
+func metadataByField(entries []*engine.MetadataWorkspaceEntry, fieldID string) *engine.MetadataWorkspaceEntry {
+	for _, e := range entries {
+		if e.GetField().GetId() == fieldID {
+			return e
+		}
+	}
+	return nil
+}
+
+// metadataFieldIDs lists the field ids of a board in its order.
+func metadataFieldIDs(entries []*engine.MetadataWorkspaceEntry) []string {
+	ids := make([]string, len(entries))
+	for i, e := range entries {
+		ids[i] = e.GetField().GetId()
+	}
+	return ids
 }
 
 func TestGetMetadataBoard(t *testing.T) {

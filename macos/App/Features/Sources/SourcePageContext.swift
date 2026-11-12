@@ -136,12 +136,6 @@ final class SourcePageContext {
         session.apply(effects, .mutatedSourceWorkspace(sourceId: sourceID))
     }
 
-    /// Same, plus the Source workspace's metadata mutation (the field list's
-    /// `usedBy` follows the effects' `metadata_field_usage`).
-    func applyMetadataWrite(_ effects: CatalogWriteEffects) {
-        session.apply(effects, .mutatedSourceMetadata(sourceId: sourceID))
-    }
-
     /// Reloads Source cover fields after Artifact create/ingest (raster may appear).
     func refreshCoverFromStore() async {
         clearPageError()

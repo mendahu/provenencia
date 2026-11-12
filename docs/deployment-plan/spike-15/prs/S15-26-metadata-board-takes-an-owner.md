@@ -1,6 +1,6 @@
 # S15-26 — The metadata board takes an owner
 
-**Status:** Planned
+**Status:** Landed in [#798](https://github.com/mendahu/provenencia/pull/798) (2026-11-12)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Source page's Metadata board is drawn by the same views with the same copy, spacing and identifiers; only the types behind it change)
@@ -28,6 +28,14 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- The version bump is 0.10.2 → 0.10.3, since `main` was at 0.10.2 when the branch was cut.
+- `api/ffi/handlers/sources_test.go` `unmarshalSetMetadataEntry` also read `SetMetadataResponse.entry` (the plan's `rg GetEntry api` missed `resp.Entry`); it now returns the valued row of `metadata`.
+- D-4 is superseded by review round 1 (user, 2026-11-12): `FakeStore` has no `metadataBySource` view (every site reads `metadataByOwner[MetadataOwner(level: .source, id:)]`), and `setMetadata`, `clearMetadata` and `dismissMetadataSuggestion` run no engine rule; a test seeds the post-write rows in `metadataWriteResults`, and a write with none scripted returns the stored rows.
+- The Out row for patching the cached `sourceWorkspace` (review M-2) is now required in S15-09, not only if its measurement shows the reload is slow (user, 2026-11-12, review MNT-1).
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
@@ -90,7 +98,7 @@ The Source page's Metadata board becomes one board model and one board view that
 | Out | Home |
 | --- | --- |
 | A board on each Artifact card; mapping `GetSourceWorkspaceResponse.artifact_metadata` into Swift; a host per Artifact | S15-09 |
-| Patching the cached `sourceWorkspace` from a board write instead of reloading it (review M-2; the Go read is about 2 ms at Scale, §6) | S15-09, only if its own measurement of 60 drawn boards shows the reload is slow; not planned otherwise |
+| Patching the cached `sourceWorkspace` from a board write instead of reloading it (review M-2; the Go read is about 2 ms at Scale, §6) | S15-09, required (user, 2026-11-12, S15-26 review MNT-1); no longer conditional on its measurement |
 | A draft host (the board on a form, collecting a `sourcemetadata.Draft` with its whole order, no store writes) and the Swift `Draft` type sent on `CreateArtifactRequest.metadata` | S15-10 (S15-11 reuses it) |
 | `GenealogyStore.getMetadataBoard` over `METHOD_GET_METADATA_BOARD` | S15-11 (its first reader) |
 | Renaming `SourcePageMetadataLabel`, `SourcePageMetadataValueChrome`, `SourcePageLayout.metadata*`, the private row views and the `L10n.Sources.metadata*` keys to board names | S15-09 decides when a second view first draws them; not planned before that |

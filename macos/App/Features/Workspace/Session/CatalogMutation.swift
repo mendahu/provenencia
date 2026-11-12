@@ -28,10 +28,6 @@ enum CatalogMutation: Sendable, Equatable {
 
     /// Bust-only: non-identity source page edits (notes, artifacts, credibility).
     case mutatedSourceWorkspace(sourceId: String)
-
-    /// Metadata values for one source changed. Narrower than
-    /// `mutatedSourceWorkspace` because it also moves each field's `usedBy`.
-    case mutatedSourceMetadata(sourceId: String)
 }
 
 /// A catalog-wide list a write changed. The raw values are Go's
@@ -147,7 +143,6 @@ enum CatalogMutationKind: Hashable, Sendable {
     case assignedTypeSuggestion
     case removedTypeSuggestion
     case mutatedSourceWorkspace
-    case mutatedSourceMetadata
 }
 
 extension CatalogMutation {
@@ -172,8 +167,6 @@ extension CatalogMutation {
             return .removedTypeSuggestion
         case .mutatedSourceWorkspace:
             return .mutatedSourceWorkspace
-        case .mutatedSourceMetadata:
-            return .mutatedSourceMetadata
         }
     }
 

@@ -2569,36 +2569,29 @@ public nonisolated struct Provenencia_Engine_V1_SetMetadataRequest: Sendable {
   fileprivate var _owner: Provenencia_Engine_V1_MetadataOwner? = nil
 }
 
-/// SetMetadataResponse returns the refreshed workspace entry so the
-/// client can patch its list without refetching.
-public nonisolated struct Provenencia_Engine_V1_SetMetadataResponse: @unchecked Sendable {
+/// SetMetadataResponse returns the owner's whole board in display order, so
+/// the client never re-derives where a row goes.
+public nonisolated struct Provenencia_Engine_V1_SetMetadataResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var entry: Provenencia_Engine_V1_MetadataWorkspaceEntry {
-    get {_storage._entry ?? Provenencia_Engine_V1_MetadataWorkspaceEntry()}
-    set {_uniqueStorage()._entry = newValue}
-  }
-  /// Returns true if `entry` has been explicitly set.
-  public var hasEntry: Bool {_storage._entry != nil}
-  /// Clears the value of `entry`. Subsequent reads from it will return its default value.
-  public mutating func clearEntry() {_uniqueStorage()._entry = nil}
-
   public var effects: Provenencia_Engine_V1_WriteEffects {
-    get {_storage._effects ?? Provenencia_Engine_V1_WriteEffects()}
-    set {_uniqueStorage()._effects = newValue}
+    get {_effects ?? Provenencia_Engine_V1_WriteEffects()}
+    set {_effects = newValue}
   }
   /// Returns true if `effects` has been explicitly set.
-  public var hasEffects: Bool {_storage._effects != nil}
+  public var hasEffects: Bool {self._effects != nil}
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
-  public mutating func clearEffects() {_uniqueStorage()._effects = nil}
+  public mutating func clearEffects() {self._effects = nil}
+
+  public var metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
-  fileprivate var _storage = _StorageClass.defaultInstance
+  fileprivate var _effects: Provenencia_Engine_V1_WriteEffects? = nil
 }
 
 public nonisolated struct Provenencia_Engine_V1_ClearMetadataRequest: Sendable {
@@ -2628,6 +2621,8 @@ public nonisolated struct Provenencia_Engine_V1_ClearMetadataRequest: Sendable {
   fileprivate var _owner: Provenencia_Engine_V1_MetadataOwner? = nil
 }
 
+/// ClearMetadataResponse returns the owner's whole board in display order: a
+/// cleared suggested field stays as an empty suggestion, any other leaves.
 public nonisolated struct Provenencia_Engine_V1_ClearMetadataResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -2641,6 +2636,8 @@ public nonisolated struct Provenencia_Engine_V1_ClearMetadataResponse: Sendable 
   public var hasEffects: Bool {self._effects != nil}
   /// Clears the value of `effects`. Subsequent reads from it will return its default value.
   public mutating func clearEffects() {self._effects = nil}
+
+  public var metadata: [Provenencia_Engine_V1_MetadataWorkspaceEntry] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -11902,76 +11899,38 @@ nonisolated extension Provenencia_Engine_V1_SetMetadataRequest: SwiftProtobuf.Me
 
 nonisolated extension Provenencia_Engine_V1_SetMetadataResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SetMetadataResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}entry\0\u{1}effects\0")
-
-  fileprivate class _StorageClass {
-    var _entry: Provenencia_Engine_V1_MetadataWorkspaceEntry? = nil
-    var _effects: Provenencia_Engine_V1_WriteEffects? = nil
-
-      // This property is used as the initial default value for new instances of the type.
-      // The type itself is protecting the reference to its storage via CoW semantics.
-      // This will force a copy to be made of this reference when the first mutation occurs;
-      // hence, it is safe to mark this as `nonisolated(unsafe)`.
-      static nonisolated(unsafe) let defaultInstance = _StorageClass()
-
-    private init() {}
-
-    init(copying source: _StorageClass) {
-      _entry = source._entry
-      _effects = source._effects
-    }
-  }
-
-  fileprivate mutating func _uniqueStorage() -> _StorageClass {
-    if !isKnownUniquelyReferenced(&_storage) {
-      _storage = _StorageClass(copying: _storage)
-    }
-    return _storage
-  }
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{2}effects\0\u{1}metadata\0\u{b}entry\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    _ = _uniqueStorage()
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      while let fieldNumber = try decoder.nextFieldNumber() {
-        // The use of inline closures is to circumvent an issue where the compiler
-        // allocates stack space for every case branch when no optimizations are
-        // enabled. https://github.com/apple/swift-protobuf/issues/1034
-        switch fieldNumber {
-        case 1: try { try decoder.decodeSingularMessageField(value: &_storage._entry) }()
-        case 2: try { try decoder.decodeSingularMessageField(value: &_storage._effects) }()
-        default: break
-        }
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._effects) }()
+      case 3: try { try decoder.decodeRepeatedMessageField(value: &self.metadata) }()
+      default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every if/case branch local when no optimizations
-      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-      // https://github.com/apple/swift-protobuf/issues/1182
-      try { if let v = _storage._entry {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
-      } }()
-      try { if let v = _storage._effects {
-        try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-      } }()
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._effects {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if !self.metadata.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.metadata, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_SetMetadataResponse, rhs: Provenencia_Engine_V1_SetMetadataResponse) -> Bool {
-    if lhs._storage !== rhs._storage {
-      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
-        let _storage = _args.0
-        let rhs_storage = _args.1
-        if _storage._entry != rhs_storage._entry {return false}
-        if _storage._effects != rhs_storage._effects {return false}
-        return true
-      }
-      if !storagesAreEqual {return false}
-    }
+    if lhs._effects != rhs._effects {return false}
+    if lhs.metadata != rhs.metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -12028,7 +11987,7 @@ nonisolated extension Provenencia_Engine_V1_ClearMetadataRequest: SwiftProtobuf.
 
 nonisolated extension Provenencia_Engine_V1_ClearMetadataResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ClearMetadataResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{1}metadata\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -12037,6 +11996,7 @@ nonisolated extension Provenencia_Engine_V1_ClearMetadataResponse: SwiftProtobuf
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._effects) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.metadata) }()
       default: break
       }
     }
@@ -12050,11 +12010,15 @@ nonisolated extension Provenencia_Engine_V1_ClearMetadataResponse: SwiftProtobuf
     try { if let v = self._effects {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    if !self.metadata.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.metadata, fieldNumber: 2)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Provenencia_Engine_V1_ClearMetadataResponse, rhs: Provenencia_Engine_V1_ClearMetadataResponse) -> Bool {
     if lhs._effects != rhs._effects {return false}
+    if lhs.metadata != rhs.metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

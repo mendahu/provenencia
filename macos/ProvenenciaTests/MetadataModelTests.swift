@@ -368,10 +368,10 @@ struct MetadataModelTests {
             CatalogSource(id: "s1", ref: "SRC-AAAAA", sourceTypeID: "t1", title: "Parish", description: ""),
             CatalogSource(id: "s2", ref: "SRC-BBBBB", sourceTypeID: "t1", title: "Census", description: ""),
         ]
-        store.metadataBySource["s1"] = [
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s1")] = [
             CatalogMetadataEntry(field: field, valueText: "a", hasValue: true, suggested: false, sortOrder: 0),
         ]
-        store.metadataBySource["s2"] = [
+        store.metadataByOwner[MetadataOwner(level: .source, id: "s2")] = [
             CatalogMetadataEntry(field: field, valueText: "b", hasValue: true, suggested: false, sortOrder: 0),
         ]
         let (model, session) = makeModel(store: store, fields: [field])

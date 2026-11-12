@@ -237,7 +237,7 @@ extension CatalogQueryKey.Kind {
             return .make(
                 kind: self,
                 invalidateOn: [
-                    .mutatedSourceWorkspace, .mutatedSourceMetadata, .changedSourceType,
+                    .mutatedSourceWorkspace, .changedSourceType,
                     .updatedMetadataField, .deletedMetadataField,
                     .assignedTypeSuggestion, .removedTypeSuggestion,
                     .deletedSource,
@@ -245,8 +245,7 @@ extension CatalogQueryKey.Kind {
                 whenHidden: .markStale,
                 invalidation: { project, mutation in
                     switch mutation {
-                    case .mutatedSourceWorkspace(let sourceId), .mutatedSourceMetadata(let sourceId),
-                         .deletedSource(let sourceId):
+                    case .mutatedSourceWorkspace(let sourceId), .deletedSource(let sourceId):
                         return .key(.sourceWorkspace(project: project, sourceId: sourceId))
                     case .changedSourceType(let source):
                         return .key(.sourceWorkspace(project: project, sourceId: source.id))

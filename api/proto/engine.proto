@@ -665,11 +665,13 @@ message SetMetadataRequest {
   MetadataOwner owner = 7;
 }
 
-// SetMetadataResponse returns the refreshed workspace entry so the
-// client can patch its list without refetching.
+// SetMetadataResponse returns the owner's whole board in display order, so
+// the client never re-derives where a row goes.
 message SetMetadataResponse {
-  MetadataWorkspaceEntry entry = 1;
+  reserved 1;
+  reserved "entry";
   WriteEffects effects = 2;
+  repeated MetadataWorkspaceEntry metadata = 3;
 }
 
 message ClearMetadataRequest {
@@ -681,8 +683,11 @@ message ClearMetadataRequest {
   MetadataOwner owner = 5;
 }
 
+// ClearMetadataResponse returns the owner's whole board in display order: a
+// cleared suggested field stays as an empty suggestion, any other leaves.
 message ClearMetadataResponse {
   WriteEffects effects = 1;
+  repeated MetadataWorkspaceEntry metadata = 2;
 }
 
 // DismissMetadataSuggestionRequest permanently hides an unfilled type

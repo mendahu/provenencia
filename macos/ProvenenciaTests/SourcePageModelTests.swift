@@ -41,7 +41,7 @@ struct SourcePageModelTests {
         store.sourceTypesByProject[projectDir] = [photoType()]
         store.notesBySource[sourceID] = notes
         store.artifactsBySource[sourceID] = artifacts
-        store.metadataBySource[sourceID] = metadata
+        store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)] = metadata
         store.fieldsByProject[projectDir] = fields
         store.credibilityGradesByProject[projectDir] = seededGrades()
         if let credibility {
@@ -732,6 +732,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         #expect(model.metadata.suggested.count == 1)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "Mary Robins",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[author.id] = "Mary Robins"
         await model.metadata.save(fieldID: author.id)
         #expect(model.metadata.saved.map(\.valueText) == ["Mary Robins"])
@@ -773,6 +779,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: repo.id)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: repo, valueText: "Norfolk Record Office",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[repo.id] = "Norfolk Record Office"
         await model.metadata.save(fieldID: repo.id)
         #expect(model.metadata.editingFieldID == nil)
@@ -792,6 +804,7 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = []
         await model.metadata.dismissSuggestion(fieldID: author.id)
         #expect(model.metadata.entries.isEmpty)
         #expect(model.metadata.suggested.isEmpty)
@@ -845,7 +858,7 @@ struct SourcePageModelTests {
             ],
             fields: [author, repo]
         )
-        store.reorderSourceMetadataError = CoreInvokeError.coded(
+        store.reorderMetadataError = CoreInvokeError.coded(
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
         let model = makeModel(store: store)
@@ -854,7 +867,7 @@ struct SourcePageModelTests {
         await model.metadata.moveSaved(from: IndexSet(integer: 0), to: 2)
         #expect(model.pageError != nil)
         #expect(model.metadata.saved.map(\.field.id) == before)
-        #expect(store.metadataBySource[sourceID]?.map(\.field.id) == before)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.map(\.field.id) == before)
     }
 
     @Test func addMetadataFromDialog() async {
@@ -862,11 +875,17 @@ struct SourcePageModelTests {
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        model.metadata.addFieldID = author.id
-        model.metadata.addValue = "Eliza"
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.isAdding == false)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        model.metadataDialogs.addFieldID = author.id
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "Eliza",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
+        model.metadataDialogs.addValue = "Eliza"
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.isAdding == false)
         #expect(model.metadata.entries.contains { $0.field.id == author.id && $0.valueText == "Eliza" })
     }
 
@@ -909,16 +928,16 @@ struct SourcePageModelTests {
         let store = makeStore(fields: [author])
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addFieldError != nil)
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addFieldError != nil)
+        #expect(model.metadataDialogs.isAdding == true)
 
-        model.metadata.addFieldID = author.id
-        model.metadata.addValue = "   "
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addValueError != nil)
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.addFieldID = author.id
+        model.metadataDialogs.addValue = "   "
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addValueError != nil)
+        #expect(model.metadataDialogs.isAdding == true)
         #expect(model.metadata.entries.isEmpty)
     }
 
@@ -971,6 +990,12 @@ struct SourcePageModelTests {
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: dateField.id)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: dateField, valueText: "abt 1890",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[dateField.id] = "abt 1890"
         await model.metadata.save(fieldID: dateField.id)
         #expect(model.metadata.editingFieldID == nil)
@@ -991,12 +1016,18 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.askClear(fieldID: author.id)
-        await model.metadata.confirmClear()
-        #expect(model.metadata.pendingDelete == nil)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: author, valueText: "",
+                hasValue: false, suggested: true, sortOrder: 0
+            ),
+        ]
+        model.metadataDialogs.askClear(on: model.metadata, fieldID: author.id)
+        await model.metadataDialogs.confirmClear()
+        #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.saved.isEmpty)
         #expect(model.metadata.suggested.map(\.field.id) == [author.id])
-        #expect(store.metadataBySource[sourceID]?.first?.hasValue == false)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.first?.hasValue == false)
     }
 
     @Test func clearExtraMetadataRemovesRow() async {
@@ -1012,11 +1043,12 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.askClear(fieldID: repo.id)
-        await model.metadata.confirmClear()
-        #expect(model.metadata.pendingDelete == nil)
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = []
+        model.metadataDialogs.askClear(on: model.metadata, fieldID: repo.id)
+        await model.metadataDialogs.confirmClear()
+        #expect(model.metadataDialogs.pendingDelete == nil)
         #expect(model.metadata.entries.isEmpty)
-        #expect(store.metadataBySource[sourceID]?.isEmpty == true)
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.isEmpty == true)
     }
 
     @Test func saveSchemeLessURLValue() async {
@@ -1032,6 +1064,12 @@ struct SourcePageModelTests {
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = [
+            CatalogMetadataEntry(
+                field: field, valueText: "www.url.com",
+                hasValue: true, suggested: false, sortOrder: 0
+            ),
+        ]
         model.metadata.drafts[field.id] = "www.url.com"
         await model.metadata.save(fieldID: field.id)
         #expect(model.metadata.saved.map(\.valueText) == ["www.url.com"])
@@ -1051,7 +1089,7 @@ struct SourcePageModelTests {
             ],
             fields: [field]
         )
-        store.setSourceMetadataError = CoreInvokeError.coded(
+        store.setMetadataError = CoreInvokeError.coded(
             status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
         )
         let model = makeModel(store: store)
@@ -1059,7 +1097,7 @@ struct SourcePageModelTests {
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "file:/tmp"
         await model.metadata.save(fieldID: field.id)
-        #expect(model.metadata.fieldError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.fieldError == L10n.Errors.message(for: store.setMetadataError!))
         #expect(model.metadata.fieldErrorID == field.id)
         #expect(model.metadata.editingFieldID == field.id)
         #expect(model.pageError == nil)
@@ -1068,17 +1106,17 @@ struct SourcePageModelTests {
     @Test func invalidMetadataAddLandsOnValueField() async {
         let field = urlField()
         let store = makeStore(fields: [field])
-        store.setSourceMetadataError = CoreInvokeError.coded(
+        store.setMetadataError = CoreInvokeError.coded(
             status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
         )
         let model = makeModel(store: store)
         await model.warmFromSession()
-        model.metadata.openAdd()
-        model.metadata.addFieldID = field.id
-        model.metadata.addValue = "javascript:alert(1)"
-        await model.metadata.createFromAdd()
-        #expect(model.metadata.addValueError == L10n.Errors.message(for: store.setSourceMetadataError!))
-        #expect(model.metadata.isAdding == true)
+        model.metadataDialogs.openAdd(on: model.metadata)
+        model.metadataDialogs.addFieldID = field.id
+        model.metadataDialogs.addValue = "javascript:alert(1)"
+        await model.metadataDialogs.createFromAdd()
+        #expect(model.metadataDialogs.addValueError == L10n.Errors.message(for: store.setMetadataError!))
+        #expect(model.metadataDialogs.isAdding == true)
         #expect(model.pageError == nil)
         #expect(model.metadata.entries.isEmpty)
     }
@@ -1094,13 +1132,13 @@ struct SourcePageModelTests {
             ],
             fields: [field]
         )
-        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        store.setMetadataError = CoreInvokeError.failed(status: 2)
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "https://example.org"
         await model.metadata.save(fieldID: field.id)
-        #expect(model.pageError?.message == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.pageError?.message == L10n.Errors.message(for: store.setMetadataError!))
         #expect(model.metadata.fieldError == nil)
         #expect(model.metadata.editingFieldID == field.id)
     }
@@ -2227,7 +2265,7 @@ struct SourcePageModelTests {
         )
 
         // The next failed write replaces the whole banner: no stale title.
-        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        store.setMetadataError = CoreInvokeError.failed(status: 2)
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "https://example.org"
         await model.metadata.save(fieldID: field.id)
@@ -2277,6 +2315,29 @@ struct SourcePageModelTests {
         await third.artifacts.revertCoverToTypeIcon()
         #expect(third.gone == notice)
         #expect(third.pageError == nil)
+    }
+
+    @Test func metadataWriteOnDeletedSourceLeavesThePage() async {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "https://example.com",
+                    hasValue: true, suggested: false, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.setMetadataError = FakeStore.sourceNotFound
+        model.metadata.beginEdit(fieldID: field.id)
+        model.metadata.drafts[field.id] = "https://example.org"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+        #expect(model.pageError == nil)
+        #expect(model.metadata.fieldError == nil)
+        #expect(model.metadata.entries.first?.valueText == "https://example.com")
     }
 
     @Test func deletedSourceClosesTheDateDialog() async throws {
