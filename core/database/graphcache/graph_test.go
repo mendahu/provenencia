@@ -6,10 +6,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/observations"
+	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/writes"
 )
 
 func TestNodeAndKindAndVerify(t *testing.T) {
@@ -590,9 +594,11 @@ func TestVerifyChecksOutcomesAndLikeness(t *testing.T) {
 	for _, tc := range []struct {
 		name, sql, want string
 		useObservation  bool
+		moveSubject     bool
 	}{
-		{"an outcome reason", `UPDATE auto_reconciler_outcomes SET reason = 'outvoted'`, "outcomes", false},
-		{"the chosen likeness", `UPDATE canonical_entities SET preferred_likeness_observation_id = ?`, "", true},
+		{"an outcome reason", `UPDATE auto_reconciler_outcomes SET reason = 'outvoted'`, "outcomes", false, false},
+		{"the chosen likeness", `UPDATE canonical_entities SET preferred_likeness_observation_id = ?`, "", true, false},
+		{"an outcome's Subject", `UPDATE observations SET subject_id = ?`, "outcomes", false, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := graphcachetest.OpenCatalog(t)
@@ -603,6 +609,20 @@ func TestVerifyChecksOutcomesAndLikeness(t *testing.T) {
 			k := graphcachetest.NewCanon(t, c)
 			p := k.Entity("person")
 			k.Term(p, "sex_at_birth", "male")
+			// A second member of the handle: the Observation moves to it and the
+			// handle's values do not change.
+			other := []byte{7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7}
+			var typeID, source, graph []byte
+			if err := db.QueryRow(`SELECT subject_type_id, source_id, graph_id FROM subjects WHERE id = ?`, p).Scan(&typeID, &source, &graph); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, 'SUB-OTHER', ?, ?, ?)`, other, source, graph, typeID); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := db.Exec(`INSERT INTO identity_claims (id, subject_id, entity_id, subject_type_id, status) VALUES (?, ?, ?, ?, 'accepted')`,
+				[]byte{8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8}, other, p, typeID); err != nil {
+				t.Fatal(err)
+			}
 			k.Commit(p)
 			g := c.Graph()
 			if _, err := g.Node(p); err != nil {
@@ -615,6 +635,9 @@ func TestVerifyChecksOutcomesAndLikeness(t *testing.T) {
 			if tc.useObservation {
 				args = append(args, likenessObservation(t, db, p))
 			}
+			if tc.moveSubject {
+				args = append(args, other)
+			}
 			if _, err := db.Exec(tc.sql, args...); err != nil {
 				t.Fatal(err)
 			}
@@ -626,5 +649,52 @@ func TestVerifyChecksOutcomesAndLikeness(t *testing.T) {
 				t.Fatalf("error %q does not name %q", err, tc.want)
 			}
 		})
+	}
+}
+
+// A committed write that moves an Observation to another Subject reloads the
+// handle's node, so its outcome rows name the new Subject and Verify passes.
+func TestOutcomeSubjectFollowsAWrite(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	k := graphcachetest.NewCanon(t, c)
+	p, q := k.Entity("person"), k.Entity("person")
+	k.Term(p, "sex_at_birth", "male")
+	k.Commit(p, q)
+	g := c.Graph()
+	if _, err := g.Node(p); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := g.Node(q); err != nil {
+		t.Fatal(err)
+	}
+	userID := []byte{9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9}
+	var id, prop, term []byte
+	if err := db.QueryRow(`SELECT id, property_id, value_term_id FROM observations WHERE subject_id = ?`, p).Scan(&id, &prop, &term); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writes.Call(c, writes.Op{Action: "update_observation", UserID: userID}, func(tx *database.Tx) (observations.Listed, []rowchange.Change, error) {
+		return observations.Update(tx, userID, observations.Input{ID: id, SubjectID: q, PropertyID: prop, ValueTermID: term})
+	}); err != nil {
+		t.Fatal(err)
+	}
+	n, err := g.Node(q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	moved := false
+	for _, rows := range n.Outcomes {
+		for _, o := range rows {
+			moved = moved || (bytes.Equal(o.ObservationID, id) && bytes.Equal(o.SubjectID, q))
+		}
+	}
+	if !moved {
+		t.Fatalf("outcomes of the new Subject's node: %+v", n.Outcomes)
+	}
+	if err := g.Verify(); err != nil {
+		t.Fatal(err)
 	}
 }

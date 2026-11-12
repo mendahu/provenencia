@@ -305,7 +305,7 @@ func sameOutcomes(got, want map[string][]Outcome) error {
 		}
 		for i, o := range rows {
 			w := truth[i]
-			if !sameID(o.ObservationID, w.ObservationID) || o.Reason != w.Reason || o.ValueRank != w.ValueRank ||
+			if !sameID(o.ObservationID, w.ObservationID) || !sameID(o.SubjectID, w.SubjectID) || o.Reason != w.Reason || o.ValueRank != w.ValueRank ||
 				!sameID(o.DeniedBy, w.DeniedBy) || o.VoteSupport != w.VoteSupport || o.VoteOf != w.VoteOf {
 				return fmt.Errorf("property %x row %d differs", prop, i)
 			}
