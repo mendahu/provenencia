@@ -192,11 +192,11 @@ A Source's words (ref, title, type, credibility, its Artifacts' labels) are copi
 
 At the map's Batch 2 Scale (3,000 Sources, 10,000 Evidence graphs, 50,000 Observations; large fixture at 4,000 and 16,000 persons):
 
-- **Build** (first read of a session, or after `Drop`): two full scans, 3,000 Source rows and every Artifact row (est. 30,000). Est. 5–15 ms, 1.5–4 MB. Measured by `BenchmarkSourceRecords` (T-13); Stop over 50 ms or 5 MB.
+- **Build** (first read of a session, or after `Drop`): two full scans, 3,000 Source rows and every Artifact row (est. 30,000). Est. 5–15 ms, about 6 MB (measured 5.76 MB in round 0: two string-keyed maps of 30,000 Artifacts). Measured by `BenchmarkSourceRecords` (T-13); Stop over 50 ms or 8 MB (user, 2026-11-12, raised from 5 MB).
 - **Apply per commit.** `SourceScopes` is the audit activity scope, so nearly every write inside a Source names it: Source, Artifact and credibility edits, and also every Observation, Subject, Citation, note and owned-value edit in the Source's graphs (user, 2026-11-12: keep this signal). While the records are held, each such commit runs two queries for its Source (usually one) and reads that Source's whole Artifact list. Real: a few hundred Artifacts at most. Crafted: a Source with 10,000 Artifacts reloads 10,000 rows on every Observation edit inside it; T-13 measures that Apply, budget 20 ms. A write naming every Source does not exist (a Source type delete is refused while in use).
 - **Evidence graphs:** a rename or type change reloads zero graphs (today: every loaded graph of the Source, up to 64, each a full load on its next read).
 - **Swift:** the claims and record links keys now also revalidate on writes in a cited Source that touch no claimed graph (another graph's Observation, an Artifact label, a credibility change, a note). While the Sources section is visible that is one `ListPersonClaims` and one `GetPersonRecordLinks` per such write; hidden keys mark stale. Both reads are within S13-27's 50-graph budget; S16-25 narrows the follow to the value's inputs.
-- **Memory:** `docs/catalog-caches.md` gets the entry's size at 4,000 and 16,000 persons (`BenchmarkCacheSizes`) and at 3,000 Sources (T-13); est. under 5 MB against the 250 MB ceiling.
+- **Memory:** `docs/catalog-caches.md` gets the entry's size at 4,000 and 16,000 persons (`BenchmarkCacheSizes`) and at 3,000 Sources (T-13); est. under 8 MB against the 250 MB ceiling.
 
 ### Edges
 
@@ -351,7 +351,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `c
 - A Swift view outside the files in STEP-7 reads `CatalogRecordLinksGraph.sourceTypeID`, or a Source title or graph name can be stored empty (a write path not in "Titles are required").
 - `rg -n "source_credibility_grades" --type go` shows a write other than `sourcecredibilitygrades.Upsert` from `Install` (D-4's premise).
 - A caller of `persondetail.Claims`, `persondetail.RecordLinks` or `conclusiondetails.ForEntity` runs on a `graphcache.Over` graph (D-2's premise).
-- `BenchmarkSourceRecords` shows Build over 50 ms or 5 MB at 3,000 Sources × 10 Artifacts, or Apply over 20 ms for the 10,000-Artifact Source.
+- `BenchmarkSourceRecords` shows Build over 50 ms or 8 MB at 3,000 Sources × 10 Artifacts, or Apply over 20 ms for the 10,000-Artifact Source.
 - The Swift Evidence graph canvas, Promote or the Citation composer shows a Source title read from the `.evidenceGraph` key's value (D-9's premise).
 
 ## 12. Open questions
