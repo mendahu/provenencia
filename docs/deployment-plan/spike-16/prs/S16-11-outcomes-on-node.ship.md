@@ -90,4 +90,4 @@ Nits (logged): `MNT-7 · conclusiondetails.go:422-425 · loadRecords doc comment
 Merged `origin/main` @ `b53c464d7` (S15-26 plan docs only); gate PASS on the merge.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: PRF-1 (a write's one-shot graph loads the whole node, including every link, for a portrait check: 38 ms at the 6,000-link city; load only identity, values and outcomes) · to user: SEC-1 (answered 2026-11-12: validate in the load)
+Gate PASS · CI green · open: none · follow-ups: PRF-1 (a write's one-shot graph loads the whole node, including every link, for a portrait check: 38 ms at the 6,000-link city; load only identity, values and outcomes) · to user: SEC-1 (answered 2026-11-12: validate in the load)
