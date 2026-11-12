@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
@@ -119,6 +120,23 @@ func TestRecordsBuild(t *testing.T) {
 	}
 }
 
+// TestRecordsBuildOutOfRangeGrade: a crafted grade order does not overflow the
+// relative column to REAL, so the records still build.
+func TestRecordsBuildOutOfRangeGrade(t *testing.T) {
+	r := recordsFixture(t)
+	db, err := r.C.DB()
+	evidencelayertest.Must(t, err)
+	_, err = db.Exec(`UPDATE source_credibility_grades SET sort_order = -9223372036854775807 WHERE key = ?`, sourcecredibilitygrades.DefaultKey)
+	evidencelayertest.Must(t, err)
+	_, err = sourcecredibilitygrades.Upsert(r.C, sourcecredibilitygrades.Grade{Key: "crafted", Origin: vocabkey.OriginProvenencia, Label: "Crafted", SortOrder: 9223372036854775807})
+	evidencelayertest.Must(t, err)
+	setGrade(t, r, r.Source, "crafted")
+	rec, ok := records(t, r).Source(r.Source.ID)
+	if !ok || rec.CredibilityKey != "crafted" || rec.Credibility <= 0 {
+		t.Fatalf("record %+v %v", rec, ok)
+	}
+}
+
 // TestRecordsApply: every write that changes a Source's words leaves the held
 // records equal to a fresh build, and empties what is derived from them.
 func TestRecordsApply(t *testing.T) {
@@ -220,6 +238,38 @@ func TestRecordsApply(t *testing.T) {
 			t.Fatal("the deleted Source still resolves")
 		}
 	})
+}
+
+// TestRecordsApplySwap: two Artifacts that trade Sources in one write keep
+// their new mappings, whichever order the write names the Sources in.
+func TestRecordsApplySwap(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		order func(a, b []byte) [][]byte
+	}{
+		{"first then second", func(a, b []byte) [][]byte { return [][]byte{a, b} }},
+		{"second then first", func(a, b []byte) [][]byte { return [][]byte{b, a} }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := recordsFixture(t)
+			g := r.C.Graph()
+			s1, a := r.Source, r.Artifact
+			s2, b := r.NewSource("Second")
+			records(t, r)
+			db, err := r.C.DB()
+			evidencelayertest.Must(t, err)
+			_, err = db.Exec(`UPDATE artifacts SET source_id = CASE id WHEN ? THEN ? ELSE ? END WHERE id IN (?, ?)`, a.ID, s2.ID, s1.ID, a.ID, b.ID)
+			evidencelayertest.Must(t, err)
+			evidencelayertest.Must(t, g.OnCommit(effects.Commit{Effects: effects.Set{SourceScopes: tc.order(s1.ID, s2.ID)}}))
+			if rec, _, ok := records(t, r).Artifact(b.ID); !ok || !bytes.Equal(rec.ID, s1.ID) {
+				t.Fatalf("Artifact(B) = %x %v, want the first Source", rec.ID, ok)
+			}
+			if rec, _, ok := records(t, r).Artifact(a.ID); !ok || !bytes.Equal(rec.ID, s2.ID) {
+				t.Fatalf("Artifact(A) = %x %v, want the second Source", rec.ID, ok)
+			}
+			evidencelayertest.Must(t, g.Verify())
+		})
+	}
 }
 
 func writesCreate(r *evidencelayertest.Records, out *sources.Source) error {

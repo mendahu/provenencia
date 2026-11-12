@@ -57,14 +57,12 @@ func (x *RecordIndex) Artifact(id []byte) (Record, string, bool) {
 	return r, r.ArtifactLabels[string(id)], true
 }
 
-const (
-	sqlRecordSources = `SELECT s.id, s.ref, s.title, s.source_type_id, COALESCE(sg.key, ''), ` +
-		sourcecredibilitygrades.RelativeOrderColumn + `
+var sqlRecordSources = `SELECT s.id, s.ref, s.title, s.source_type_id, COALESCE(sg.key, ''), ` +
+	sourcecredibilitygrades.RelativeOrderColumn + `
 		FROM sources s
-		LEFT JOIN source_credibility_assessments sca ON sca.source_id = s.id
-		LEFT JOIN source_credibility_grades sg ON sg.id = sca.credibility_grade_id`
-	sqlRecordArtifacts = `SELECT id, source_id, label FROM artifacts`
-)
+		` + sourcecredibilitygrades.RelativeOrderJoins("s.id")
+
+const sqlRecordArtifacts = `SELECT id, source_id, label FROM artifacts`
 
 // Records is the Source records entry: one Record per Source, built on the
 // first read of an open catalog and patched from effects.Set.SourceScopes.
@@ -93,6 +91,8 @@ func init() {
 			if err != nil {
 				return err
 			}
+			// Every named Source leaves before any returns, so an Artifact that
+			// moved between two named Sources keeps its new mapping.
 			for _, id := range set.SourceScopes {
 				if old, ok := idx.bySource[string(id)]; ok {
 					for aid := range old.ArtifactLabels {
@@ -100,6 +100,8 @@ func init() {
 					}
 					delete(idx.bySource, string(id))
 				}
+			}
+			for _, id := range set.SourceScopes {
 				if rec, ok := fresh[string(id)]; ok {
 					idx.bySource[string(id)] = rec
 					for aid := range rec.ArtifactLabels {
