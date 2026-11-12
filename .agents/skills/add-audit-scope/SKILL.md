@@ -64,6 +64,7 @@ Source scopes come from the effect's `SourceScope` path, not a hand resolver. Th
   parent through that parent's delete change (the ghost map). Every hop of a path reads it: the
   second hop of `up("artifact_id", "source_id")` takes `source_id` from the deleted Artifact's
   delete change, so the parent's delete change must carry it.
+  Pin a released child table's scope against the real owner delete with `effects.SourceScopeOfChange` in an `effects_test` test (`released_metadata_scope_test.go`).
 - A `rowFacet(...)` must list its FK column in `cols` for the same reason.
 - A row that moves between parents (update with `old` ≠ `new` parent id) scopes to both.
 
