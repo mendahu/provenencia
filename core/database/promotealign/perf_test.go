@@ -61,10 +61,9 @@ const (
 	// events are not reprojected. S14-33 measured 2.75 s before the walk
 	// followed only the associations that moved.
 	budgetSecondPartOfAtCity = 500 * time.Millisecond
-	// budgetClearPortraitAtCity: clearing the city's portrait checks the choice
-	// through the city's node on the write's one-shot graph, which reads its
-	// 6,000 location links (S16-11). It has the commit shape of filing one
-	// location: one handle reloaded, none reprojected.
+	// budgetClearPortraitAtCity: the city has no portrait, so the clear is a
+	// no-op that commits nothing. The budget holds the write's one-shot graph
+	// loading the city's node, with its 6,000 location links (S16-11).
 	budgetClearPortraitAtCity = 500 * time.Millisecond
 	// budgetComposeAll: composing every person and every event row once, warm.
 	// S14-40 measured 220 ms before the rows recorded their inputs; 500 ms
