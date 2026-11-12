@@ -136,8 +136,8 @@ final class SourcePageContext {
         session.apply(effects, .mutatedSourceWorkspace(sourceId: sourceID))
     }
 
-    /// Same, plus the field list, whose `usedBy` counts move with every
-    /// metadata value written or cleared here.
+    /// Same, plus the Source workspace's metadata mutation (the field list's
+    /// `usedBy` follows the effects' `metadata_field_usage`).
     func applyMetadataWrite(_ effects: CatalogWriteEffects) {
         session.apply(effects, .mutatedSourceMetadata(sourceId: sourceID))
     }

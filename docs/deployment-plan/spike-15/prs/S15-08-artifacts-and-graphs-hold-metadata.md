@@ -1,6 +1,6 @@
 # S15-08 — Artifacts and graphs hold metadata
 
-**Status:** Planned
+**Status:** Landed in [#791](https://github.com/mendahu/provenencia/pull/791) (2026-11-11)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the engine, the wire and three strings in existing copy; the delete notice draws its groups as today, and S15-09 – S15-11 add every board; user, 2026-11-11)
@@ -28,6 +28,19 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- D-18 reads the entity type through `entityOf(table)`, not `registry[table].Entity`: the registry's initializer reaches the path functions, so naming it there is an initialization cycle. `entityOf` reads `tableEntity`, the reverse of `entityTable`, filled in the same `init()` (review round 1, F-4).
+- `TestListByOwnersTx`' refused owner changed from `graph` to `citation`, since `graph` is now wired (`TestOwnerLevels` changed the same way, as planned).
+- `TestImpactMetadataFieldHolders` (AC-2.1, AC-2.2 groups) lives in `deleteimpact/facets_test.go` beside the shared owner helpers; the `metadatafields` cases that need raw SQL inserts (the package cannot import `sourcemetadata`) sit in its `TestDelete` table, and the `UsedBy`/`List` case beside them.
+- The Artifact and graph delete cases (T-9) are subtests (`TestArtifactDelete/releases_its_metadata`, `TestDelete/a_graph_releases_its_metadata`) and the Artifact's change list includes its graph link delete ahead of the metadata deletes.
+- T-3 (`TestSourceScopes`) creates its field inline with `metadatafields.Create`, since the scope seed installs no vocabulary.
+- Review round 1 changed what the plan said: §6 Scale "no other key or cache is invalidated" no longer holds. A new `metadata_field_usage` list (`effects.ListMetadataFieldUsage`, on `source_metadata`, `artifact_metadata` and `evidence_graph_metadata` with `ListsOnCreateDelete`) refreshes the field list's Used by; `metadataFieldsList` follows it and no longer rides `.mutatedSourceMetadata` (F-1).
+- D-5's "`COUNT(*)` rejected, keep one form" and D-8's per-row `InboundTotal` loop are superseded: the three metadata edges count `COUNT(*)` (`UNIQUE (owner, field_id)` makes it equal), and a list reads its Used by from one `deleteimpact.InboundTotals` per edge, grouped through `sqlbatch` (`FillUsedBy`). The per-kind `UsedBy` wrappers became `deleteimpact.UsedBy` (F-2).
+- D-7's "`rowFacet` does not change" still holds, but `releaseGraph` and `releaseCitation` now share `releaseRow`, one single-row snapshot, release and delete change; `releaseClaimRow` keeps its own because it returns the row's columns (F-3).
+- Each Artifact's board on `GetSourceWorkspace` keys on the stored Artifact id, not a parsed copy (F-6). Three strings changed again: the Property inspector label ("In use by"), `error.metadatafields.in_use` and the Copy Source Metadata hint (F-9).
+- Not run: the manual check (section 10); no view changed, and the Go and Xcode tests cover the renamed RPCs.
 
 ## 1. Objective
 

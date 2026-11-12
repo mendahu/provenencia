@@ -5632,7 +5632,7 @@ enum L10n {
 
         static let copySourceMetadataHint = LocalizedStringResource(
             "sources.copy.metadataHint",
-            defaultValue: "Values and field layout",
+            defaultValue: "This Source's values and field layout. Artifacts keep their own.",
             comment: "Hint under the Copy Source Metadata checkbox"
         )
 
@@ -7662,14 +7662,14 @@ enum L10n {
         )
         static let inspectorUsedOn = LocalizedStringResource(
             "properties.inspector.usedOn",
-            defaultValue: "Used on",
-            comment: "Inspector meta label: observation count for the selected property"
+            defaultValue: "In use by",
+            comment: "Inspector label beside the count of Observations and terms using the Property"
         )
         static func usedOnCount(count: Int) -> String {
             return L10n.format(LocalizedStringResource(
                 "properties.inspector.usedOnCount",
-                defaultValue: "%lld observations",
-                comment: "Inspector observation count; argument is UsedBy"
+                defaultValue: "%lld observations and terms",
+                comment: "Inspector count of Observations and terms using the Property; argument is UsedBy"
             ), count)
         }
         static let bindingsSection = LocalizedStringResource(
@@ -8283,13 +8283,13 @@ enum L10n {
         private static let removedBodyNoValues = LocalizedStringResource(
             "sourceTypes.toast.removedBodyNoValues",
             defaultValue: "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary.",
-            comment: "Toast body after detaching a field no source carries a value for; arguments are the field label then the type label"
+            comment: "Toast body after detaching a field no Source, Artifact or graph carries a value for; arguments are the field label then the type label"
         )
 
         private static let removedBodyWithValues = LocalizedStringResource(
             "sourceTypes.toast.removedBodyWithValues",
-            defaultValue: "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %3$lld sources already carrying a value keep it.",
-            comment: "Toast body after detaching a field sources still carry values for; arguments are the field label, the type label, then how many sources hold a value"
+            defaultValue: "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %3$lld Sources, Artifacts and graphs already carrying a value keep it.",
+            comment: "Toast body after detaching a field that Sources, Artifacts or graphs still carry values for; arguments are the field label, the type label, then how many Sources, Artifacts and graphs hold a value"
         )
 
         static let toastAddedTitle = LocalizedStringResource(
@@ -8924,6 +8924,16 @@ enum L10n {
                 "deleteImpact.via.sourcesSourceTypeId",
                 defaultValue: "%lld sources have this type",
                 comment: "Inbound heading for sources.source_type_id; argument is how many"
+            ),
+            "artifact_metadata.field_id": LocalizedStringResource(
+                "deleteImpact.via.artifactMetadataFieldId",
+                defaultValue: "%lld artifacts record a value for this field",
+                comment: "Inbound heading for artifact_metadata.field_id; argument is how many"
+            ),
+            "evidence_graph_metadata.field_id": LocalizedStringResource(
+                "deleteImpact.via.evidenceGraphMetadataFieldId",
+                defaultValue: "%lld Evidence graphs record a value for this field",
+                comment: "Inbound heading for evidence_graph_metadata.field_id; argument is how many"
             ),
             "source_metadata.field_id": LocalizedStringResource(
                 "deleteImpact.via.sourceMetadataFieldId",
@@ -11259,7 +11269,7 @@ enum L10n {
         }
         static let metadataInUse = LocalizedStringResource(
             "error.metadatafields.in_use",
-            defaultValue: "That metadata field is still used on one or more sources.",
+            defaultValue: "That metadata field still holds a value on a Source, Artifact or Evidence graph.",
             comment: "FFI error metadatafields.in_use"
         )
         static let metadataOriginLocked = LocalizedStringResource(

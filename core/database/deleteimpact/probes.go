@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
 func fkEdge(parent catalogmodel.Kind, via string, child catalogmodel.Kind, table, fkCol, refCol string) inboundEdge {
@@ -19,6 +20,7 @@ func fkEdge(parent catalogmodel.Kind, via string, child catalogmodel.Kind, table
 		Child:  child,
 		Bucket: catalogmodel.BucketResource,
 		Count:  countSQLFn(countSQL),
+		Totals: groupedTotalsFn(table, fkCol),
 		List:   listSQLFn(listSQL),
 	}
 }
@@ -31,6 +33,32 @@ func joinEdge(parent catalogmodel.Kind, via string, child catalogmodel.Kind, cou
 		Bucket: catalogmodel.BucketResource,
 		Count:  countSQLFn(countSQL),
 		List:   listSQLFn(listSQL),
+	}
+}
+
+// withTotals gives a join edge whose count is COUNT(*) of table rows with col
+// equal to the parent its grouped form.
+func withTotals(e inboundEdge, table, col string) inboundEdge {
+	e.Totals = groupedTotalsFn(table, col)
+	return e
+}
+
+// groupedTotalsFn counts the rows of table per value of col among a batch of
+// parent ids: the grouped form of `SELECT COUNT(*) FROM table WHERE col = ?`.
+func groupedTotalsFn(table, col string) func(*sql.Tx, [][]byte) (map[string]int, error) {
+	head := fmt.Sprintf(`SELECT %s, COUNT(*) FROM %s WHERE %s IN (`, col, table, col)
+	return func(tx *sql.Tx, ids [][]byte) (map[string]int, error) {
+		out := map[string]int{}
+		err := sqlbatch.Query(tx, head, fmt.Sprintf(`) GROUP BY %s`, col), nil, ids, func(rows *sql.Rows) error {
+			var id []byte
+			var n int
+			if err := rows.Scan(&id, &n); err != nil {
+				return err
+			}
+			out[string(id)] += n
+			return nil
+		})
+		return out, err
 	}
 }
 

@@ -49,7 +49,6 @@ const (
 
 	sqlGet = `SELECT id, COALESCE(ref, ''), source_id, name, COALESCE(description, '')
 		FROM evidence_graphs WHERE id = ?`
-	sqlDelete = `DELETE FROM evidence_graphs WHERE id = ?`
 	sqlUpdate = `UPDATE evidence_graphs SET name = ?, description = ? WHERE id = ?`
 
 	sqlSubjectGraph = `SELECT graph_id FROM subjects WHERE id = ?`
@@ -220,11 +219,9 @@ func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error)
 	if err := database.RequireUserID(userID, ErrInvalid); err != nil {
 		return nil, err
 	}
-	g, err := getTx(tx.Tx, graphID)
-	if errors.Is(err, sql.ErrNoRows) {
+	if _, err := getTx(tx.Tx, graphID); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 	report, err := deleteimpact.Impact(tx.Tx, catalogmodel.KindEvidenceGraph, graphID)
@@ -236,19 +233,7 @@ func Delete(tx *database.Tx, userID, graphID []byte) ([]rowchange.Change, error)
 	}); err != nil {
 		return nil, err
 	}
-	released, err := deleteimpact.ReleaseFacets(tx, catalogmodel.KindEvidenceGraph, graphID)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := tx.Exec(sqlDelete, graphID); err != nil {
-		return nil, err
-	}
-	return append(released, rowchange.Change{
-		EntityType: "evidence_graph",
-		EntityID:   append([]byte(nil), graphID...),
-		Action:     rowchange.ActionDelete,
-		Fields:     rowchange.DeletedRow(graphFields(g)),
-	}), nil
+	return deleteimpact.ReleaseGraph(tx, graphID)
 }
 
 // UpdateInput is the input of Update.
@@ -436,7 +421,8 @@ func insert(tx *sql.Tx, sourceID []byte, name, description string) (Graph, rowch
 	return g, change, nil
 }
 
-// graphFields is the audit field map of a graph row, for its create and delete.
+// graphFields is the audit field map of a graph row, for its create. A delete
+// is audited by deleteimpact.releaseGraph.
 func graphFields(g Graph) map[string]any {
 	return map[string]any{
 		"id":          database.UUIDJSON(g.ID),

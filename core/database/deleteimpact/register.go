@@ -16,6 +16,10 @@ type inboundEdge struct {
 	Child  catalogmodel.Kind
 	Bucket catalogmodel.Bucket
 	Count  func(tx *sql.Tx, parentID []byte) (int, error)
+	// Totals is Count for many parents in one grouped statement per batch:
+	// the count of each id that has any, keyed by string(id). Nil when the
+	// edge has no single grouped form; InboundTotals then calls Count per id.
+	Totals func(tx *sql.Tx, parentIDs [][]byte) (map[string]int, error)
 	List   func(tx *sql.Tx, parentID []byte, limit int) ([]probeRow, error)
 }
 
@@ -148,12 +152,26 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 		subjectResourceInbound(),
 		fkEdge(catalogmodel.KindSubject, "observations.value_subject_id", catalogmodel.KindObservation, "observations", "value_subject_id", "ref"),
 		fkEdge(catalogmodel.KindSourceType, "sources.source_type_id", catalogmodel.KindSource, "sources", "source_type_id", "ref"),
-		joinEdge(catalogmodel.KindMetadataField, "source_metadata.field_id", catalogmodel.KindSource,
-			`SELECT COUNT(DISTINCT source_id) FROM source_metadata WHERE field_id = ?`,
+		// UNIQUE (owner, field_id) makes COUNT(*) the number of owners holding a
+		// value, without the DISTINCT that cannot use a covering index.
+		withTotals(joinEdge(catalogmodel.KindMetadataField, "source_metadata.field_id", catalogmodel.KindSource,
+			`SELECT COUNT(*) FROM source_metadata WHERE field_id = ?`,
 			`SELECT s.id, s.ref FROM source_metadata m
 				JOIN sources s ON s.id = m.source_id
 				WHERE m.field_id = ?
-				ORDER BY s.ref COLLATE NOCASE LIMIT ?`),
+				ORDER BY s.ref COLLATE NOCASE LIMIT ?`), "source_metadata", "field_id"),
+		withTotals(joinEdge(catalogmodel.KindMetadataField, "artifact_metadata.field_id", catalogmodel.KindArtifact,
+			`SELECT COUNT(*) FROM artifact_metadata WHERE field_id = ?`,
+			`SELECT a.id, a.ref FROM artifact_metadata m
+				JOIN artifacts a ON a.id = m.artifact_id
+				WHERE m.field_id = ?
+				ORDER BY a.ref COLLATE NOCASE LIMIT ?`), "artifact_metadata", "field_id"),
+		withTotals(joinEdge(catalogmodel.KindMetadataField, "evidence_graph_metadata.field_id", catalogmodel.KindEvidenceGraph,
+			`SELECT COUNT(*) FROM evidence_graph_metadata WHERE field_id = ?`,
+			`SELECT g.id, COALESCE(g.ref, '') FROM evidence_graph_metadata m
+				JOIN evidence_graphs g ON g.id = m.graph_id
+				WHERE m.field_id = ?
+				ORDER BY COALESCE(g.ref, '') COLLATE NOCASE LIMIT ?`), "evidence_graph_metadata", "field_id"),
 		joinEdge(catalogmodel.KindCredibilityGrade, "source_credibility_assessments.credibility_grade_id", catalogmodel.KindSource,
 			`SELECT COUNT(DISTINCT source_id) FROM source_credibility_assessments WHERE credibility_grade_id = ?`,
 			`SELECT s.id, s.ref FROM source_credibility_assessments a
@@ -162,9 +180,9 @@ var inboundEdgeList = sync.OnceValue(func() []inboundEdge {
 				ORDER BY s.ref COLLATE NOCASE LIMIT ?`),
 		fkEdge(catalogmodel.KindSubjectType, "subjects.subject_type_id", catalogmodel.KindSubject, "subjects", "subject_type_id", "ref"),
 		fkEdge(catalogmodel.KindProperty, "observations.property_id", catalogmodel.KindObservation, "observations", "property_id", "ref"),
-		joinEdge(catalogmodel.KindProperty, "property_terms.property_id", catalogmodel.KindPropertyTerm,
+		withTotals(joinEdge(catalogmodel.KindProperty, "property_terms.property_id", catalogmodel.KindPropertyTerm,
 			`SELECT COUNT(*) FROM property_terms WHERE property_id = ?`,
-			`SELECT id, key FROM property_terms WHERE property_id = ? ORDER BY key COLLATE NOCASE LIMIT ?`),
+			`SELECT id, key FROM property_terms WHERE property_id = ? ORDER BY key COLLATE NOCASE LIMIT ?`), "property_terms", "property_id"),
 		fkEdge(catalogmodel.KindPropertyTerm, "observations.value_term_id", catalogmodel.KindObservation, "observations", "value_term_id", "ref"),
 		fkEdge(catalogmodel.KindFile, "artifacts.file_id", catalogmodel.KindArtifact, "artifacts", "file_id", "ref"),
 		fkEdge(catalogmodel.KindSubjectType, "canonical_entities.subject_type_id", catalogmodel.KindCanonicalEntity, "canonical_entities", "subject_type_id", "ref"),

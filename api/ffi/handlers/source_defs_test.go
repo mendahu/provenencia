@@ -404,8 +404,8 @@ func TestDeleteMetadataField(t *testing.T) {
 				if err := proto.Unmarshal(sout, &src); err != nil {
 					t.Fatal(err)
 				}
-				if _, err := SetSourceMetadata(marshalProto(t, &engine.SetSourceMetadataRequest{
-					ProjectDir: dir, UserId: userID, SourceId: src.Source.GetId(),
+				if _, err := SetMetadata(marshalProto(t, &engine.SetMetadataRequest{
+					ProjectDir: dir, UserId: userID, Owner: sourceOwnerProto(src.Source.GetId()),
 					FieldId: field.Field.GetId(), ValueText: "12",
 				})); err != nil {
 					t.Fatal(err)
@@ -413,6 +413,25 @@ func TestDeleteMetadataField(t *testing.T) {
 				return &engine.DeleteMetadataFieldRequest{
 					ProjectDir: dir, UserId: userID, FieldId: field.Field.GetId(),
 				}
+			},
+			wantErr:   true,
+			wantErrIs: metadatafields.ErrInUse,
+		},
+		{
+			name: "a field held only on a graph is in use",
+			reqFn: func(t *testing.T) proto.Message {
+				m := newMetadataOwners(t)
+				mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
+					ProjectDir: m.dir, UserId: m.userID, Owner: m.graph, FieldId: m.extra, ValueText: "14",
+				}, &engine.SetMetadataResponse{})
+				var list engine.ListMetadataFieldsResponse
+				mustRPC(t, ListMetadataFields, &engine.ListMetadataFieldsRequest{ProjectDir: m.dir}, &list)
+				for _, f := range list.GetFields() {
+					if f.GetId() == m.extra && f.GetUsedBy() != 1 {
+						t.Fatalf("used_by = %d, want 1", f.GetUsedBy())
+					}
+				}
+				return &engine.DeleteMetadataFieldRequest{ProjectDir: m.dir, UserId: m.userID, FieldId: m.extra}
 			},
 			wantErr:   true,
 			wantErrIs: metadatafields.ErrInUse,

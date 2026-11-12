@@ -3,6 +3,7 @@ package deleteimpact
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
@@ -180,6 +181,12 @@ func buildFacetReleases() []facetRelease {
 		rowFacet(catalogmodel.KindArtifact, "evidence_graph_artifacts", "artifact_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
 		optionalPointer(catalogmodel.KindArtifact, "sources", "primary_artifact_id", "source", "id", col{"cover_mode", colText}),
+		// An Artifact's metadata goes with it; layout rows are audited under
+		// field_id, as a Source's are.
+		rowFacet(catalogmodel.KindArtifact, "artifact_metadata", "artifact_id", "artifact_metadata", "id",
+			col{"id", colUUID}, col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
+		rowFacet(catalogmodel.KindArtifact, "artifact_metadata_layout", "artifact_id", "artifact_metadata_layout", "field_id",
+			col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 		// A graph's Citations go with it, each through releaseCitation (a graph
 		// with Subjects is refused first, so none has an Observation).
 		{
@@ -193,12 +200,21 @@ func buildFacetReleases() []facetRelease {
 		// A graph's links go with it, audited under its id.
 		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_artifacts", "graph_id", "evidence_graph_artifact", "graph_id",
 			col{"graph_id", colUUID}, col{"artifact_id", colUUID}),
+		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_metadata", "graph_id", "evidence_graph_metadata", "id",
+			col{"id", colUUID}, col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
+		rowFacet(catalogmodel.KindEvidenceGraph, "evidence_graph_metadata_layout", "graph_id", "evidence_graph_metadata_layout", "field_id",
+			col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 
 		// --- Source ---------------------------------------------------------
 		rowFacet(catalogmodel.KindSource, "source_notes", "source_id", "source_note", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"body", colText}),
-		rowFacet(catalogmodel.KindSource, "evidence_graphs", "source_id", "evidence_graph", "id",
-			col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText}, col{"description", colText}),
+		// Each graph goes through releaseGraph, in id order: its own facets
+		// (a deletable Source's graphs hold only metadata), then its row and change.
+		{
+			Parent: catalogmodel.KindSource, Via: "evidence_graphs.source_id",
+			Remaining: `SELECT COUNT(*) FROM evidence_graphs WHERE source_id = ?`,
+			Release:   releaseEach(`SELECT id FROM evidence_graphs WHERE source_id = ? ORDER BY id`, releaseGraph),
+		},
 		rowFacet(catalogmodel.KindSource, "source_metadata", "source_id", "source_metadata", "id",
 			col{"id", colUUID}, col{"source_id", colUUID}, col{"field_id", colUUID}, col{"value_text", colText}),
 		rowFacet(catalogmodel.KindSource, "source_credibility_assessments", "source_id", "source_credibility_assessment", "id",
@@ -208,6 +224,10 @@ func buildFacetReleases() []facetRelease {
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 		rowFacet(catalogmodel.KindMetadataField, "source_metadata_layout", "field_id", "source_metadata_layout", "field_id",
 			col{"source_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
+		rowFacet(catalogmodel.KindMetadataField, "artifact_metadata_layout", "field_id", "artifact_metadata_layout", "field_id",
+			col{"artifact_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
+		rowFacet(catalogmodel.KindMetadataField, "evidence_graph_metadata_layout", "field_id", "evidence_graph_metadata_layout", "field_id",
+			col{"graph_id", colUUID}, col{"field_id", colUUID}, col{"sort_order", colInt}, col{"dismissed", colBool}),
 
 		// A type's bindings are audited under the property id (subjectvocab
 		// precedent), released from either parent. Subject types have no
@@ -348,39 +368,69 @@ func releaseCitation(tx *sql.Tx, citationID []byte) (released, error) {
 	if tx == nil || len(citationID) != 16 {
 		return released{}, ErrInvalid
 	}
-	var (
-		id, artifactID, graphID                 []byte
-		ref, locator                            string
-		transcription, label, transcriptionNote sql.NullString
-		uncertain                               int
-	)
-	if err := tx.QueryRow(`SELECT id, ref, artifact_id, graph_id, locator_json, transcription, label,
-		transcription_uncertain, transcription_note FROM citations WHERE id = ?`, citationID).
-		Scan(&id, &ref, &artifactID, &graphID, &locator, &transcription, &label, &uncertain, &transcriptionNote); err != nil {
+	return releaseRow(tx, catalogmodel.KindCitation, "citations", "citation", citationID,
+		col{"id", colUUID}, col{"ref", colText}, col{"artifact_id", colUUID}, col{"graph_id", colUUID},
+		col{"locator_json", colText}, col{"transcription", colText}, col{"label", colText},
+		col{"transcription_uncertain", colBool}, col{"transcription_note", colText})
+}
+
+// ReleaseGraph is releaseGraph on the write's Tx: it schedules the purge of any
+// File released and returns the audit changes.
+func ReleaseGraph(tx *database.Tx, graphID []byte) ([]rowchange.Change, error) {
+	if tx == nil {
+		return nil, ErrInvalid
+	}
+	r, err := releaseGraph(tx.Tx, graphID)
+	if err != nil {
+		return nil, err
+	}
+	files.PurgeAfterCommit(tx, r.Objects)
+	return r.Changes, nil
+}
+
+// releaseGraph removes one Evidence graph, audited: its facets (through
+// releaseFacets), then the row, then the graph's own delete change over every
+// column. It is the one graph removal; evidencegraphs.Delete and a Source
+// delete both call it. The caller has already refused a graph that still has
+// Subjects. Does not commit.
+func releaseGraph(tx *sql.Tx, graphID []byte) (released, error) {
+	if tx == nil || len(graphID) != 16 {
+		return released{}, ErrInvalid
+	}
+	return releaseRow(tx, catalogmodel.KindEvidenceGraph, "evidence_graphs", "evidence_graph", graphID,
+		col{"id", colUUID}, col{"ref", colText}, col{"source_id", colUUID}, col{"name", colText},
+		col{"description", colText})
+}
+
+// releaseRow removes one row by id, audited whole: its facets (through
+// releaseFacets), then the row, then a delete change of entityType over cols.
+// Citation and graph removal share it. Does not commit.
+func releaseRow(tx *sql.Tx, kind catalogmodel.Kind, table, entityType string, id []byte, cols ...col) (released, error) {
+	names := make([]string, len(cols))
+	for i, c := range cols {
+		names[i] = c.name
+	}
+	dest, vals := colScanDest(cols)
+	if err := tx.QueryRow(fmt.Sprintf(`SELECT %s FROM %s WHERE id = ?`, strings.Join(names, ", "), table), id).
+		Scan(dest...); err != nil {
 		return released{}, err
 	}
-	out, err := releaseFacets(tx, catalogmodel.KindCitation, id)
+	out, err := releaseFacets(tx, kind, id)
 	if err != nil {
 		return released{}, err
 	}
-	if _, err := tx.Exec(`DELETE FROM citations WHERE id = ?`, id); err != nil {
+	if _, err := tx.Exec(fmt.Sprintf(`DELETE FROM %s WHERE id = ?`, table), id); err != nil {
 		return released{}, err
 	}
+	fields := make(map[string]any, len(cols))
+	for i, c := range cols {
+		fields[c.name] = colJSON(c.kind, vals[i])
+	}
 	out.Changes = append(out.Changes, rowchange.Change{
-		EntityType: "citation",
+		EntityType: entityType,
 		EntityID:   id,
 		Action:     rowchange.ActionDelete,
-		Fields: rowchange.DeletedRow(map[string]any{
-			"id":                      database.UUIDJSON(id),
-			"ref":                     ref,
-			"artifact_id":             database.UUIDJSON(artifactID),
-			"graph_id":                database.UUIDJSON(graphID),
-			"locator_json":            locator,
-			"transcription":           nullStringJSON(transcription),
-			"label":                   nullStringJSON(label),
-			"transcription_uncertain": uncertain != 0,
-			"transcription_note":      nullStringJSON(transcriptionNote),
-		}),
+		Fields:     rowchange.DeletedRow(fields),
 	})
 	return out, nil
 }

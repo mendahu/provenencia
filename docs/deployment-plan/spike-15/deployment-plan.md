@@ -85,7 +85,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-05 | The Person page's Sources section shows each Source's date | 5 | Go and Swift: the date on the Source record and in the section | S15-D3 | S15-02, S16-12, S16-13, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
 | S15-06 | Type suggestions have a level | 2 | Go: one `Level` type; migration rebuilding `source_type_metadata_fields` with `level`; readers and RPCs take it | — | — | [plan](prs/S15-06-type-suggestions-have-a-level.md) | Landed #782 |
 | S15-07 | Metadata operations take an owner | 2 | Preparatory, Go: every `sourcemetadata` function on an owner, a batch read by owners, and `Apply` for drafts; Sources unchanged | — | S15-06 | [plan](prs/S15-07-metadata-operations-take-an-owner.md) | Landed #787 |
-| S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | [plan](prs/S15-08-artifacts-and-graphs-hold-metadata.md) | Planned |
+| S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | [plan](prs/S15-08-artifacts-and-graphs-hold-metadata.md) | Landed #791 |
 | S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact | S15-D1 | S15-08, S15-26, S15-D1 | — | Scoped |
 | S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: the Artifact's suggested fields in the add flow | S15-D4 | S15-08, S15-26, S15-D4 | — | Scoped |
 | S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-08, S15-26, S15-D5 | — | Scoped |
@@ -309,6 +309,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 #### S15-09 — Artifacts show their metadata on the Source page
 
 **Ships.** Each Artifact on the Source page has a metadata board, the S15-26 board with the Artifact as owner, as S15-D1 draws it.
+**Also (from S15-08 review, CON-2).** A test that runs the real `artifacts.Delete` and `evidencegraphs.Delete` and resolves each released `*_metadata` and `*_metadata_layout` change on its own, with the rest of the revision as ghosts, to the Source scope. Today only the stub `TestScopeThroughDeletedParent` pins this; resolving the whole revision cannot tell, because the Artifact's own delete already scopes the Source.
 **Not this PR.** The add flow (S15-10).
 **Check.** Bar 3's Artifact half on a census Source.
 **Context.** S15-D1; `SourcePageArtifactsView.swift`, `SourcePageMetadataView.swift`, `SourceMetadataSection.swift`.

@@ -7,7 +7,9 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/ingest"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
 )
@@ -36,18 +38,27 @@ func CreateArtifact(in []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	draft, err := parseDraft(req.GetMetadata())
+	if err != nil {
+		return nil, err
+	}
 	var out *engine.CreateArtifactResponse
 	pass := &thumbnailPass{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
 		a, wrote, err := writes.Run(c, writes.Op{Action: "create_artifact", UserID: userID},
 			func(tx *database.Tx) (artifacts.Artifact, []rowchange.Change, error) {
-				return artifacts.Create(tx, userID, artifacts.CreateInput{
+				a, changes, err := artifacts.Create(tx, userID, artifacts.CreateInput{
 					SourceID:    sourceID,
 					FileID:      fileID,
 					Label:       req.GetLabel(),
 					Description: req.GetDescription(),
 					Graphs:      graphs,
 				})
+				if err != nil {
+					return artifacts.Artifact{}, nil, err
+				}
+				more, err := applyDraft(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: a.ID}, draft)
+				return a, append(changes, more...), err
 			})
 		if err != nil {
 			return err
@@ -236,20 +247,23 @@ func IngestArtifactFile(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func listArtifactsProto(c *database.Catalog, sourceID []byte, pass *thumbnailPass) ([]*engine.Artifact, error) {
+// listArtifactsProto reads a Source's Artifacts with their raw ids, in order.
+func listArtifactsProto(c *database.Catalog, sourceID []byte, pass *thumbnailPass) ([]*engine.Artifact, [][]byte, error) {
 	rows, err := artifacts.ListBySource(c, sourceID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	out := make([]*engine.Artifact, 0, len(rows))
+	ids := make([][]byte, 0, len(rows))
 	for _, a := range rows {
 		ap, err := artifactProto(c, a, pass)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		out = append(out, ap)
+		ids = append(ids, a.ID)
 	}
-	return out, nil
+	return out, ids, nil
 }
 
 // artifactProto builds the Artifact's proto. Its thumbnail path is filled by

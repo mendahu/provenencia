@@ -47,11 +47,13 @@ Research rows that a delete takes with it are removed **explicitly** and audited
 
 | Audited (released) | Silent (`CASCADE` only) |
 | --- | --- |
-| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `citation_notes`, `citations` (`graph_id`, released under the Citation's own id), `observation_notes`, `identity_claims` (both FKs; `entity_id` released with the handle when its last member goes), `evidence_graphs` (`source_id`), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs, released under the property id: a Property delete releases its bindings; subject types have no delete command yet, but the audited FK has its release, as `TestFacetReleaseHonesty` requires) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
+| `source_notes`, `source_metadata`, `source_credibility_assessments`, `source_metadata_layout` (both FKs), `artifact_metadata` and `artifact_metadata_layout` (the Artifact FK, and the layout's field FK), `evidence_graph_metadata` and `evidence_graph_metadata_layout` (the graph FK, and the layout's field FK), `citation_notes`, `citations` (`graph_id`, released under the Citation's own id), `observation_notes`, `identity_claims` (both FKs; `entity_id` released with the handle when its last member goes), `evidence_graphs` (`source_id`, each graph released through `deleteimpact.ReleaseGraph`, the one graph removal a graph delete shares), `evidence_graph_artifacts` (both FKs), `subject_type_properties` (both FKs, released under the property id: a Property delete releases its bindings; subject types have no delete command yet, but the audited FK has its release, as `TestFacetReleaseHonesty` requires) | `subject_positions` (unaudited layout), `source_type_metadata_fields` (a vocab join, a UI hint, never audited), `name_value_parts` (part of its name value) |
 
 A silent `CASCADE` is only for rows that are never audited on create either. If a row has an audit entity type, its delete is audited.
 
 **Optional pointer releases** (`optionalPointer`): `sources.primary_artifact_id` (Artifact delete; `cover_mode` re-read after `sources_clear_cover_on_primary_null`) and `canonical_entities.preferred_likeness_observation_id` (Observation delete). They are not `Named` and do not appear in `Report.Cascades`.
+
+A metadata field is in use while `source_metadata`, `artifact_metadata` or `evidence_graph_metadata` holds a value for it: three inbound probes, one group each in the delete notice. Its layout rows at the three levels never block; they are released, audited, with it. `deleteimpact.InboundTotal` sums the same probes, and a vocabulary row's Used by (a field, a Source type, a Property) reads that total, so the count a list shows is the count that blocks the delete.
 
 ### Origin locks
 

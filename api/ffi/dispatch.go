@@ -29,8 +29,8 @@ const (
 	MethodAddSourceNote                     = int32(engine.Method_METHOD_ADD_SOURCE_NOTE)
 	MethodUpdateSourceNote                  = int32(engine.Method_METHOD_UPDATE_SOURCE_NOTE)
 	MethodDeleteSourceNote                  = int32(engine.Method_METHOD_DELETE_SOURCE_NOTE)
-	MethodSetSourceMetadata                 = int32(engine.Method_METHOD_SET_SOURCE_METADATA)
-	MethodClearSourceMetadata               = int32(engine.Method_METHOD_CLEAR_SOURCE_METADATA)
+	MethodSetMetadata                       = int32(engine.Method_METHOD_SET_METADATA)
+	MethodClearMetadata                     = int32(engine.Method_METHOD_CLEAR_METADATA)
 	MethodCreateArtifact                    = int32(engine.Method_METHOD_CREATE_ARTIFACT)
 	MethodIngestArtifactFile                = int32(engine.Method_METHOD_INGEST_ARTIFACT_FILE)
 	MethodListSourceTypes                   = int32(engine.Method_METHOD_LIST_SOURCE_TYPES)
@@ -48,12 +48,13 @@ const (
 	MethodUpdateArtifact                    = int32(engine.Method_METHOD_UPDATE_ARTIFACT)
 	MethodListSourceCredibilityGrades       = int32(engine.Method_METHOD_LIST_SOURCE_CREDIBILITY_GRADES)
 	MethodUpsertSourceCredibilityAssessment = int32(engine.Method_METHOD_UPSERT_SOURCE_CREDIBILITY_ASSESSMENT)
-	MethodDismissSourceMetadataSuggestion   = int32(engine.Method_METHOD_DISMISS_SOURCE_METADATA_SUGGESTION)
-	MethodReorderSourceMetadata             = int32(engine.Method_METHOD_REORDER_SOURCE_METADATA)
+	MethodDismissMetadataSuggestion         = int32(engine.Method_METHOD_DISMISS_METADATA_SUGGESTION)
+	MethodReorderMetadata                   = int32(engine.Method_METHOD_REORDER_METADATA)
 	MethodCloseCatalogSession               = int32(engine.Method_METHOD_CLOSE_CATALOG_SESSION)
 	MethodSetSourceCover                    = int32(engine.Method_METHOD_SET_SOURCE_COVER)
 	MethodSetSourceDate                     = int32(engine.Method_METHOD_SET_SOURCE_DATE)
 	MethodSetSourcePublic                   = int32(engine.Method_METHOD_SET_SOURCE_PUBLIC)
+	MethodGetMetadataBoard                  = int32(engine.Method_METHOD_GET_METADATA_BOARD)
 	MethodSearchCatalog                     = int32(engine.Method_METHOD_SEARCH_CATALOG)
 	MethodCreateSubject                     = int32(engine.Method_METHOD_CREATE_SUBJECT)
 	MethodUpdateSubject                     = int32(engine.Method_METHOD_UPDATE_SUBJECT)
@@ -170,10 +171,10 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.UpdateSourceNote(in)
 	case MethodDeleteSourceNote:
 		return handlers.DeleteSourceNote(in)
-	case MethodSetSourceMetadata:
-		return handlers.SetSourceMetadata(in)
-	case MethodClearSourceMetadata:
-		return handlers.ClearSourceMetadata(in)
+	case MethodSetMetadata:
+		return handlers.SetMetadata(in)
+	case MethodClearMetadata:
+		return handlers.ClearMetadata(in)
 	case MethodCreateArtifact:
 		return handlers.CreateArtifact(in)
 	case MethodIngestArtifactFile:
@@ -208,10 +209,10 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.ListSourceCredibilityGrades(in)
 	case MethodUpsertSourceCredibilityAssessment:
 		return handlers.UpsertSourceCredibilityAssessment(in)
-	case MethodDismissSourceMetadataSuggestion:
-		return handlers.DismissSourceMetadataSuggestion(in)
-	case MethodReorderSourceMetadata:
-		return handlers.ReorderSourceMetadata(in)
+	case MethodDismissMetadataSuggestion:
+		return handlers.DismissMetadataSuggestion(in)
+	case MethodReorderMetadata:
+		return handlers.ReorderMetadata(in)
 	case MethodCloseCatalogSession:
 		return handlers.CloseCatalogSession(in)
 	case MethodSetSourceCover:
@@ -220,6 +221,8 @@ func route(method int32, in []byte) ([]byte, error) {
 		return handlers.SetSourceDate(in)
 	case MethodSetSourcePublic:
 		return handlers.SetSourcePublic(in)
+	case MethodGetMetadataBoard:
+		return handlers.GetMetadataBoard(in)
 	case MethodSearchCatalog:
 		return handlers.SearchCatalog(in)
 	case MethodCreateSubject:

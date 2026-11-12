@@ -2652,6 +2652,30 @@
         }
       }
     },
+    "deleteImpact.via.artifactMetadataFieldId": {
+      "comment": "Inbound heading for artifact_metadata.field_id; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld artifact records a value for this field"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld artifacts record a value for this field"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "deleteImpact.via.artifactsFileId": {
       "comment": "Inbound heading for artifacts.file_id; argument is how many",
       "extractionState": "manual",
@@ -2933,6 +2957,30 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%lld sources have this type"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "deleteImpact.via.evidenceGraphMetadataFieldId": {
+      "comment": "Inbound heading for evidence_graph_metadata.field_id; argument is how many",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Evidence graph records a value for this field"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Evidence graphs record a value for this field"
                 }
               }
             }
@@ -4087,7 +4135,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "That metadata field is still used on one or more sources."
+            "value": "That metadata field still holds a value on a Source, Artifact or Evidence graph."
           }
         }
       }
@@ -6399,7 +6447,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Values and field layout"
+            "value": "This Source's values and field layout. Artifacts keep their own."
           }
         }
       }
@@ -7349,7 +7397,7 @@
       }
     },
     "sourceTypes.toast.removedBodyNoValues": {
-      "comment": "Toast body after detaching a field no source carries a value for; arguments are the field label then the type label",
+      "comment": "Toast body after detaching a field no Source, Artifact or graph carries a value for; arguments are the field label then the type label",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -7361,16 +7409,16 @@
       }
     },
     "sourceTypes.toast.removedBodyWithValues": {
-      "comment": "Toast body after detaching a field sources still carry values for; arguments are the field label, the type label, then how many sources hold a value",
+      "comment": "Toast body after detaching a field that Sources, Artifacts or graphs still carry values for; arguments are the field label, the type label, then how many Sources, Artifacts and graphs hold a value",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %#@sources@ it."
+            "value": "%1$@ is no longer suggested for %2$@. The field stays in this project’s vocabulary, and the %#@records@ it."
           },
           "substitutions": {
-            "sources": {
+            "records": {
               "argNum": 3,
               "formatSpecifier": "lld",
               "variations": {
@@ -7378,13 +7426,13 @@
                   "one": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg source already carrying a value keeps"
+                      "value": "%arg Source, Artifact or graph already carrying a value keeps"
                     }
                   },
                   "other": {
                     "stringUnit": {
                       "state": "translated",
-                      "value": "%arg sources already carrying a value keep"
+                      "value": "%arg Sources, Artifacts and graphs already carrying a value keep"
                     }
                   }
                 }
@@ -16287,19 +16335,19 @@
       }
     },
     "properties.inspector.usedOn": {
-      "comment": "Inspector meta label: observation count for the selected property",
+      "comment": "Inspector label beside the count of Observations and terms using the Property",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Used on"
+            "value": "In use by"
           }
         }
       }
     },
     "properties.inspector.usedOnCount": {
-      "comment": "Inspector observation count; argument is UsedBy",
+      "comment": "Inspector count of Observations and terms using the Property; argument is UsedBy",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -16308,13 +16356,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld observation"
+                  "value": "%lld observation or term"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld observations"
+                  "value": "%lld observations and terms"
                 }
               }
             }

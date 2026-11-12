@@ -340,14 +340,15 @@ struct GoStore: GenealogyStore {
         fieldID: String,
         valueText: String
     ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) {
-        var req = Provenencia_Engine_V1_SetSourceMetadataRequest()
+        var req = Provenencia_Engine_V1_SetMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.owner.level = Level.source.rawValue
+        req.owner.id = sourceID
         req.fieldID = fieldID
         req.valueText = valueText
-        let resp: Provenencia_Engine_V1_SetSourceMetadataResponse = try await provenenciaCall(
-            method: CoreMethod.setSourceMetadata,
+        let resp: Provenencia_Engine_V1_SetMetadataResponse = try await provenenciaCall(
+            method: CoreMethod.setMetadata,
             request: req
         )
         return (Self.mapMetadataEntry(resp.entry), Self.mapWriteEffects(resp.effects))
@@ -356,13 +357,14 @@ struct GoStore: GenealogyStore {
     func clearSourceMetadata(
         projectDir: String, userID: String, sourceID: String, fieldID: String
     ) async throws -> CatalogWriteEffects {
-        var req = Provenencia_Engine_V1_ClearSourceMetadataRequest()
+        var req = Provenencia_Engine_V1_ClearMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.owner.level = Level.source.rawValue
+        req.owner.id = sourceID
         req.fieldID = fieldID
-        let resp: Provenencia_Engine_V1_ClearSourceMetadataResponse = try await provenenciaCall(
-            method: CoreMethod.clearSourceMetadata,
+        let resp: Provenencia_Engine_V1_ClearMetadataResponse = try await provenenciaCall(
+            method: CoreMethod.clearMetadata,
             request: req
         )
         return Self.mapWriteEffects(resp.effects)
@@ -374,13 +376,14 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         fieldID: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
-        var req = Provenencia_Engine_V1_DismissSourceMetadataSuggestionRequest()
+        var req = Provenencia_Engine_V1_DismissMetadataSuggestionRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.owner.level = Level.source.rawValue
+        req.owner.id = sourceID
         req.fieldID = fieldID
-        let resp: Provenencia_Engine_V1_DismissSourceMetadataSuggestionResponse = try await provenenciaCall(
-            method: CoreMethod.dismissSourceMetadataSuggestion,
+        let resp: Provenencia_Engine_V1_DismissMetadataSuggestionResponse = try await provenenciaCall(
+            method: CoreMethod.dismissMetadataSuggestion,
             request: req
         )
         return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))
@@ -392,13 +395,14 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
-        var req = Provenencia_Engine_V1_ReorderSourceMetadataRequest()
+        var req = Provenencia_Engine_V1_ReorderMetadataRequest()
         req.projectDir = projectDir
         req.userID = userID
-        req.sourceID = sourceID
+        req.owner.level = Level.source.rawValue
+        req.owner.id = sourceID
         req.fieldIds = fieldIDs
-        let resp: Provenencia_Engine_V1_ReorderSourceMetadataResponse = try await provenenciaCall(
-            method: CoreMethod.reorderSourceMetadata,
+        let resp: Provenencia_Engine_V1_ReorderMetadataResponse = try await provenenciaCall(
+            method: CoreMethod.reorderMetadata,
             request: req
         )
         return (resp.metadata.map(Self.mapMetadataEntry), Self.mapWriteEffects(resp.effects))

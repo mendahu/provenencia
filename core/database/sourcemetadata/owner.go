@@ -8,7 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
-// Owner is the record metadata hangs off: a Source today. Level names which
+// Owner is the record metadata hangs off: a Source, an Artifact or an Evidence graph. Level names which
 // store holds its values, and ID is the owner row's id.
 type Owner struct {
 	Level vocabkey.Level
@@ -109,6 +109,10 @@ func newStore(level vocabkey.Level, ownerTable, ownerColumn, values, layout, typ
 var stores = map[vocabkey.Level]*store{
 	vocabkey.LevelSource: newStore(vocabkey.LevelSource, "sources", "source_id", "source_metadata", "source_metadata_layout",
 		"SELECT id, source_type_id FROM sources WHERE id IN ("),
+	vocabkey.LevelArtifact: newStore(vocabkey.LevelArtifact, "artifacts", "artifact_id", "artifact_metadata", "artifact_metadata_layout",
+		"SELECT a.id, s.source_type_id FROM artifacts a JOIN sources s ON s.id = a.source_id WHERE a.id IN ("),
+	vocabkey.LevelGraph: newStore(vocabkey.LevelGraph, "evidence_graphs", "graph_id", "evidence_graph_metadata", "evidence_graph_metadata_layout",
+		"SELECT g.id, s.source_type_id FROM evidence_graphs g JOIN sources s ON s.id = g.source_id WHERE g.id IN ("),
 }
 
 // storeFor is the first check of every exported function: the owner's level

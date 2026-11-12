@@ -427,10 +427,15 @@ func readChangeColumn(w *walk, col string) ([][]byte, string, error) {
 	return ids, next, err
 }
 
+// entityOf is the entity type a catalog table's changes carry, or "". It reads
+// tableEntity rather than registry: registry's initializer reaches this file's
+// path functions, so naming it here would be an initialization cycle.
+func entityOf(table string) string { return tableEntity[table] }
+
 func readRowsColumn(w *walk, table string, ids [][]byte, col string) ([][]byte, error) {
 	pk := pkOf(table)
 	q := fmt.Sprintf(`SELECT %s FROM %s WHERE %s = ?`, ident(col), ident(table), ident(pk))
-	entity := entityTable[table]
+	entity := entityOf(table)
 	var out [][]byte
 	seen := map[string]bool{}
 	for _, id := range ids {

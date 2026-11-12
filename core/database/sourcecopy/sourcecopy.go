@@ -1,7 +1,9 @@
 // Package sourcecopy copies a Source in one write: a new Source with a chosen
 // title and type, and, each only when chosen, the original's description,
 // published date (as a date row of the copy's own), metadata with its layout,
-// credibility and any subset of its Artifacts. It composes the owner packages
+// credibility and any subset of its Artifacts, each chosen Artifact with its
+// own metadata whatever the metadata choice says (the Artifact's metadata is
+// part of the Artifact). It composes the owner packages
 // inside the caller's writes.Run transaction and never calls writes.Run
 // itself.
 //
@@ -35,8 +37,9 @@ type Draft struct {
 
 // DraftArtifact is one Artifact to create; FromID is the Artifact it was read from.
 type DraftArtifact struct {
-	FromID []byte
-	In     artifacts.CreateInput
+	FromID   []byte
+	In       artifacts.CreateInput
+	Metadata sourcemetadata.Draft // the Artifact's own, kept whatever CopyInput.Metadata says
 }
 
 // CopyInput is what the researcher chose on the Copy form.
@@ -89,10 +92,19 @@ func ReadDraft(tx *sql.Tx, sourceID []byte) (Draft, error) {
 	if err != nil {
 		return Draft{}, err
 	}
-	for _, a := range arts {
+	owners := make([]sourcemetadata.Owner, len(arts))
+	for i, a := range arts {
+		owners[i] = sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: a.ID}
+	}
+	held, err := sourcemetadata.ReadDraftsTx(tx, owners)
+	if err != nil {
+		return Draft{}, err
+	}
+	for i, a := range arts {
 		d.Artifacts = append(d.Artifacts, DraftArtifact{
-			FromID: a.ID,
-			In:     artifacts.CreateInput{FileID: a.FileID, Label: a.Label, Description: a.Description},
+			FromID:   a.ID,
+			In:       artifacts.CreateInput{FileID: a.FileID, Label: a.Label, Description: a.Description},
+			Metadata: held[i],
 		})
 	}
 	return d, nil
@@ -100,7 +112,7 @@ func ReadDraft(tx *sql.Tx, sourceID []byte) (Draft, error) {
 
 // CreateFromDraft writes the draft as a new Source and returns it with every
 // change, in write order: Source, its date, metadata values, layout rows,
-// credibility, then Artifacts. The returned Source carries its date. The new
+// credibility, then each Artifact followed by its metadata. The returned Source carries its date. The new
 // Source keeps the default cover. The caller records the changes.
 func CreateFromDraft(tx *database.Tx, userID []byte, d Draft) (sources.Source, []rowchange.Change, error) {
 	src, changes, err := sources.Create(tx, userID, d.Source)
@@ -136,7 +148,12 @@ func CreateFromDraft(tx *database.Tx, userID []byte, d Draft) (sources.Source, [
 	for _, a := range d.Artifacts {
 		in := a.In
 		in.SourceID = src.ID
-		_, more, err := artifacts.Create(tx, userID, in)
+		art, more, err := artifacts.Create(tx, userID, in)
+		if err != nil {
+			return sources.Source{}, nil, err
+		}
+		changes = append(changes, more...)
+		more, err = sourcemetadata.CreateAll(tx, userID, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: art.ID}, a.Metadata)
 		if err != nil {
 			return sources.Source{}, nil, err
 		}

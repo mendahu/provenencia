@@ -13,11 +13,13 @@ import (
 	"github.com/mendahu/provenencia/core/database/effects"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
+	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/sourcemetadata"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -247,6 +249,22 @@ func (s scopeSeed) handleRevision(t *testing.T, id []byte) int64 {
 	return rev
 }
 
+// setMetadata sets a new field's value on the owner.
+func (s scopeSeed) setMetadata(t *testing.T, owner sourcemetadata.Owner) {
+	t.Helper()
+	field, err := writes.Call(s.c, writes.Op{Action: "create_metadata_field", UserID: scopeUserID}, func(tx *database.Tx) (metadatafields.Field, []rowchange.Change, error) {
+		return metadatafields.Create(tx, "Shelf mark", metadatafields.DataTypeText, "")
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writes.Call(s.c, writes.Op{Action: "update_metadata", UserID: scopeUserID}, func(tx *database.Tx) (sourcemetadata.Row, []rowchange.Change, error) {
+		return sourcemetadata.Set(tx, scopeUserID, owner, sourcemetadata.Input{FieldID: field.ID, ValueText: "No. 7"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // TestSourceScopes drives real write paths and checks each one moves the
 // Sources list "Updated" revision of exactly the Sources it touched.
 func TestSourceScopes(t *testing.T) {
@@ -395,6 +413,19 @@ func TestSourceScopes(t *testing.T) {
 						t.Fatal(err)
 					}
 				})
+			},
+		},
+		{
+			name: "artifact metadata set",
+			run: func(t *testing.T, s scopeSeed) {
+				s.bumpsA(t, func() { s.setMetadata(t, sourcemetadata.Owner{Level: vocabkey.LevelArtifact, ID: s.artifact.ID}) })
+			},
+		},
+		{
+			name: "graph metadata set",
+			run: func(t *testing.T, s scopeSeed) {
+				graph := evidencegraphstest.SoleGraph(t, s.c, s.a.ID).ID
+				s.bumpsA(t, func() { s.setMetadata(t, sourcemetadata.Owner{Level: vocabkey.LevelGraph, ID: graph}) })
 			},
 		},
 		{

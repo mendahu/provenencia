@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/catalogmodel"
+	"github.com/mendahu/provenencia/core/database/deleteimpact"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -446,7 +448,7 @@ func TestCreateUpdateGetByID(t *testing.T) {
 						t.Fatal(err)
 					}
 				}
-				n, err := UsedBy(c, used)
+				n, err := deleteimpact.UsedBy(c, catalogmodel.KindSourceType, used)
 				if err != nil || n != 2 {
 					t.Fatalf("UsedBy %d %v", n, err)
 				}
@@ -460,6 +462,18 @@ func TestCreateUpdateGetByID(t *testing.T) {
 				}
 				if byKey["book"] != 2 || byKey["letter"] != 0 {
 					t.Fatalf("got %v", byKey)
+				}
+				db, err := c.DB()
+				if err != nil {
+					t.Fatal(err)
+				}
+				tx, err := db.Begin()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback()
+				if total, err := deleteimpact.InboundTotal(tx, catalogmodel.KindSourceType, used); err != nil || total != n {
+					t.Fatalf("InboundTotal = %d, %v; want %d", total, err, n)
 				}
 			},
 		},

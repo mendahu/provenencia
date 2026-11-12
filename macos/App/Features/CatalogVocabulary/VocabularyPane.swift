@@ -10,7 +10,7 @@ protocol CatalogVocabularyRow: Identifiable where ID == String {
     var origin: String { get }
     var label: String { get }
     var description: String { get }
-    /// How many sources refer to this row — the delete gate.
+    /// How many records refer to this row — the delete gate.
     var usedBy: Int { get }
 }
 

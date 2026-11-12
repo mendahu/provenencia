@@ -6,9 +6,13 @@ import (
 	"math/rand"
 	"reflect"
 	"slices"
+	"sort"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/artifacts"
+	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
 	"github.com/mendahu/provenencia/core/database/catalogmodel"
 	"github.com/mendahu/provenencia/core/database/metadatafields"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -125,7 +129,7 @@ func TestSourceMetadata(t *testing.T) {
 				if row.ValueText != "12345" {
 					t.Fatalf("%+v", row)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 			},
@@ -225,7 +229,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runClear(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				list = values(t, c, src.ID)
@@ -382,7 +386,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runDismissSuggestion(c, userID, src.ID, issue.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "dismiss_source_metadata_suggestion" {
+				if latestAction(t, c) != "dismiss_metadata_suggestion" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				if _, dismissed := layoutOf(t, c, src.ID, issue.ID); dismissed != 1 {
@@ -412,7 +416,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runDismissSuggestion(c, userID, src.ID, doc.ID); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "update_source_metadata" {
+				if latestAction(t, c) != "update_metadata" {
 					t.Fatalf("dismiss audited a value field: %q", latestAction(t, c))
 				}
 				if _, dismissed := layoutOf(t, c, src.ID, doc.ID); dismissed != 0 {
@@ -437,7 +441,7 @@ func TestSourceMetadata(t *testing.T) {
 				if err := runReorder(c, userID, src.ID, [][]byte{rec.ID, doc.ID, issue.ID}); err != nil {
 					t.Fatal(err)
 				}
-				if latestAction(t, c) != "reorder_source_metadata" {
+				if latestAction(t, c) != "reorder_metadata" {
 					t.Fatalf("action %q", latestAction(t, c))
 				}
 				keys := workspaceKeys(t, c, src.ID)
@@ -673,7 +677,7 @@ func values(t *testing.T, c *database.Catalog, sourceID []byte) []Row {
 }
 
 func runSet(c *database.Catalog, userID, sourceID []byte, in Input) (Row, error) {
-	row, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	row, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (Row, []rowchange.Change, error) {
 			return Set(tx, userID, sourceOwner(sourceID), in)
 		})
@@ -681,7 +685,7 @@ func runSet(c *database.Catalog, userID, sourceID []byte, in Input) (Row, error)
 }
 
 func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := Clear(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
@@ -690,7 +694,7 @@ func runClear(c *database.Catalog, userID, sourceID, fieldID []byte) error {
 }
 
 func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := DismissSuggestion(tx, userID, sourceOwner(sourceID), fieldID)
 			return struct{}{}, changes, err
@@ -699,7 +703,7 @@ func runDismissSuggestion(c *database.Catalog, userID, sourceID, fieldID []byte)
 }
 
 func runReorder(c *database.Catalog, userID, sourceID []byte, fieldIDs [][]byte) error {
-	_, _, err := writes.Run(c, writes.Op{Action: "reorder_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "reorder_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			changes, err := Reorder(tx, userID, sourceOwner(sourceID), fieldIDs)
 			return struct{}{}, changes, err
@@ -961,6 +965,18 @@ func birthOfAlice(t *testing.T, c *database.Catalog, userID []byte) sources.Sour
 }
 
 func TestStoresAreRegistered(t *testing.T) {
+	var want, got []string
+	for _, l := range vocabkey.MetadataLevels() {
+		want = append(want, string(l))
+	}
+	for l := range stores {
+		got = append(got, string(l))
+	}
+	sort.Strings(want)
+	sort.Strings(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("store levels = %v, want vocabkey.MetadataLevels %v", got, want)
+	}
 	tables := map[string]bool{}
 	for _, tb := range catalogmodel.Tables {
 		tables[tb.Name] = true
@@ -993,11 +1009,11 @@ func TestOwnerLevels(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	owners := map[string]Owner{"short id": {Level: vocabkey.LevelSource, ID: src.ID[:15]}}
-	for _, l := range vocabkey.Levels() {
-		if l != vocabkey.LevelSource {
-			owners[string(l)] = Owner{Level: l, ID: src.ID}
-		}
+	owners := map[string]Owner{
+		"short id":          {Level: vocabkey.LevelSource, ID: src.ID[:15]},
+		"short artifact id": {Level: vocabkey.LevelArtifact, ID: src.ID[:15]},
+		"short graph id":    {Level: vocabkey.LevelGraph, ID: src.ID[:15]},
+		"citation":          {Level: vocabkey.LevelCitation, ID: src.ID},
 	}
 	owners["empty level"] = Owner{Level: "", ID: src.ID}
 	owners["page"] = Owner{Level: "page", ID: src.ID}
@@ -1008,7 +1024,7 @@ func TestOwnerLevels(t *testing.T) {
 	}
 	write := func(f func(tx *database.Tx, o Owner) ([]rowchange.Change, error)) func(Owner) error {
 		return func(o Owner) error {
-			_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+			_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 				func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 					ch, err := f(tx, o)
 					return struct{}{}, ch, err
@@ -1061,7 +1077,11 @@ func TestOwnerLevels(t *testing.T) {
 			if err := op(o); !errors.Is(err, ErrInvalid) {
 				t.Fatalf("%s on %s owner = %v, want ErrInvalid", opName, ownerName, err)
 			}
-			if n := countRows(t, c, "source_metadata") + countRows(t, c, "source_metadata_layout"); n != 0 {
+			n := 0
+			for _, st := range stores {
+				n += countRows(t, c, st.values) + countRows(t, c, st.layout)
+			}
+			if n != 0 {
 				t.Fatalf("%s on %s owner wrote %d rows", opName, ownerName, n)
 			}
 		}
@@ -1175,7 +1195,7 @@ func applyWorld(t *testing.T) (c *database.Catalog, userID []byte, src sources.S
 
 func runApply(c *database.Catalog, userID, sourceID []byte, d Draft) ([]rowchange.Change, error) {
 	var changes []rowchange.Change
-	_, _, err := writes.Run(c, writes.Op{Action: "update_source_metadata", UserID: userID},
+	_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
 		func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 			var err error
 			changes, err = Apply(tx, userID, sourceOwner(sourceID), d)
@@ -1407,7 +1427,7 @@ func TestApply(t *testing.T) {
 			run: func(t *testing.T) {
 				c, userID, src, _, _, f1, _ := applyWorld(t)
 				var changes []rowchange.Change
-				_, _, err := writes.Run(c, writes.Op{Action: "dismiss_source_metadata_suggestion", UserID: userID},
+				_, _, err := writes.Run(c, writes.Op{Action: "dismiss_metadata_suggestion", UserID: userID},
 					func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
 						var err error
 						changes, err = DismissSuggestion(tx, userID, sourceOwner(src.ID), f1.ID)
@@ -1544,8 +1564,8 @@ func TestListByOwnersTx(t *testing.T) {
 	if none, err := ListByOwnersTx(tx, nil); err != nil || none != nil {
 		t.Fatalf("nil owners = %+v, %v", none, err)
 	}
-	if _, err := ListByOwnersTx(tx, []Owner{sourceOwner(a.ID), {Level: vocabkey.LevelGraph, ID: a.ID}}); !errors.Is(err, ErrInvalid) {
-		t.Fatalf("graph owner = %v", err)
+	if _, err := ListByOwnersTx(tx, []Owner{sourceOwner(a.ID), {Level: vocabkey.LevelCitation, ID: a.ID}}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("citation owner = %v", err)
 	}
 
 	listByOwnersBatches(t)
@@ -1627,4 +1647,284 @@ func listByOwnersBatches(t *testing.T) {
 			}
 		}
 	})
+}
+
+// newLevelOwner makes one more owner at the level on the Source: an Artifact
+// (linked to its graphs) or a bare graph inserted by SQL, since a graph made
+// through evidencegraphs.Create needs an Artifact and keeps its last one.
+func newLevelOwner(t *testing.T, c *database.Catalog, userID []byte, src sources.Source, level vocabkey.Level) Owner {
+	t.Helper()
+	switch level {
+	case vocabkey.LevelArtifact:
+		a, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Page"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return Owner{Level: level, ID: a.ID}
+	case vocabkey.LevelGraph:
+		db, err := c.DB()
+		if err != nil {
+			t.Fatal(err)
+		}
+		id, err := uuid.NewV7()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(`INSERT INTO evidence_graphs (id, source_id, name) VALUES (?, ?, ?)`, id[:], src.ID, "Household"); err != nil {
+			t.Fatal(err)
+		}
+		return Owner{Level: level, ID: id[:]}
+	}
+	t.Fatalf("no fixture for level %s", level)
+	return Owner{}
+}
+
+// TestOwnerTables runs every operation on an Artifact owner and a graph owner:
+// each writes its own level's tables and nothing else.
+func TestOwnerTables(t *testing.T) {
+	tables := map[vocabkey.Level]struct{ values, layout, column string }{
+		vocabkey.LevelArtifact: {"artifact_metadata", "artifact_metadata_layout", "artifact_id"},
+		vocabkey.LevelGraph:    {"evidence_graph_metadata", "evidence_graph_metadata_layout", "graph_id"},
+	}
+	for _, level := range []vocabkey.Level{vocabkey.LevelArtifact, vocabkey.LevelGraph} {
+		t.Run(string(level), func(t *testing.T) {
+			tb := tables[level]
+			c, userID, src, doc, _, f1, f2 := applyWorld(t)
+			cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := sourcevocab.AppendSuggestion(c, cert.ID, doc.ID, level); err != nil {
+				t.Fatal(err)
+			}
+			// A field suggested at each other level must not reach this owner.
+			for _, other := range []vocabkey.Level{vocabkey.LevelSource, vocabkey.LevelArtifact, vocabkey.LevelGraph} {
+				if other == level {
+					continue
+				}
+				if err := sourcevocab.AppendSuggestion(c, cert.ID, f2.ID, other); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := artifactstest.Create(c, userID, artifacts.CreateInput{SourceID: src.ID, Label: "Anchor"}); err != nil {
+				t.Fatal(err)
+			}
+			o := newLevelOwner(t, c, userID, src, level)
+
+			// Only this level's suggestion, not the Source level's.
+			ws, err := ListWorkspace(c, o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ws) != 1 || !bytes.Equal(ws[0].Field.ID, doc.ID) || !ws[0].Suggested || ws[0].Value != nil {
+				t.Fatalf("workspace = %+v, want document_number suggested only", ws)
+			}
+
+			run := func(f func(tx *database.Tx) ([]rowchange.Change, error)) []rowchange.Change {
+				t.Helper()
+				var changes []rowchange.Change
+				_, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
+					func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+						var err error
+						changes, err = f(tx)
+						return struct{}{}, changes, err
+					})
+				if err != nil {
+					t.Fatal(err)
+				}
+				return changes
+			}
+			ownerIs := func(ch rowchange.Change) bool {
+				return ch.Fields[tb.column].New == database.UUIDString(o.ID) || ch.Fields[tb.column].Old == database.UUIDString(o.ID)
+			}
+
+			changes := run(func(tx *database.Tx) ([]rowchange.Change, error) {
+				_, ch, err := Set(tx, userID, o, Input{FieldID: doc.ID, ValueText: "No. 7"})
+				return ch, err
+			})
+			if len(changes) != 1 || changes[0].EntityType != tb.values || !ownerIs(changes[0]) {
+				t.Fatalf("Set changes = %+v, want one %s create carrying %s", changes, tb.values, tb.column)
+			}
+			if n := countRows(t, c, tb.values); n != 1 {
+				t.Fatalf("%s rows = %d", tb.values, n)
+			}
+			if n := countRows(t, c, "source_metadata") + countRows(t, c, "source_metadata_layout"); n != 0 {
+				t.Fatalf("Source tables hold %d rows", n)
+			}
+
+			run(func(tx *database.Tx) ([]rowchange.Change, error) { return Clear(tx, userID, o, doc.ID) })
+			if n := countRows(t, c, tb.values); n != 0 {
+				t.Fatalf("Clear left %d values", n)
+			}
+			changes = run(func(tx *database.Tx) ([]rowchange.Change, error) { return DismissSuggestion(tx, userID, o, doc.ID) })
+			if len(changes) != 1 || changes[0].EntityType != tb.layout || !ownerIs(changes[0]) {
+				t.Fatalf("DismissSuggestion changes = %+v, want one %s change carrying %s", changes, tb.layout, tb.column)
+			}
+			run(func(tx *database.Tx) ([]rowchange.Change, error) {
+				return Reorder(tx, userID, o, [][]byte{f2.ID, f1.ID, doc.ID})
+			})
+			draft := Draft{
+				Values: []Input{{FieldID: f1.ID, ValueText: "a"}},
+				Layout: []LayoutRow{{FieldID: f1.ID, SortOrder: 0}, {FieldID: doc.ID, SortOrder: 1, Dismissed: true}},
+			}
+			run(func(tx *database.Tx) ([]rowchange.Change, error) { return Apply(tx, userID, o, draft) })
+
+			db, err := c.DB()
+			if err != nil {
+				t.Fatal(err)
+			}
+			tx, err := db.Begin()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer tx.Rollback()
+			got, err := ReadDraftTx(tx, o)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(got.Values) != 1 || !bytes.Equal(got.Values[0].FieldID, f1.ID) || got.Values[0].ValueText != "a" {
+				t.Fatalf("draft values = %+v", got.Values)
+			}
+			rows, err := ListByOwnersTx(tx, []Owner{o})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(rows) != 1 || rows[0].Owner.Level != level || !bytes.Equal(rows[0].Owner.ID, o.ID) {
+				t.Fatalf("ListByOwnersTx = %+v", rows)
+			}
+			if err := tx.Rollback(); err != nil {
+				t.Fatal(err)
+			}
+
+			// CreateAll on a fresh owner of the level.
+			o2 := newLevelOwner(t, c, userID, src, level)
+			run(func(tx *database.Tx) ([]rowchange.Change, error) { return CreateAll(tx, userID, o2, draft) })
+			if n := countRows(t, c, tb.values); n != 2 {
+				t.Fatalf("%s rows after CreateAll = %d", tb.values, n)
+			}
+
+			// A missing owner is refused.
+			missing := Owner{Level: level, ID: bytes.Repeat([]byte{9}, 16)}
+			_, _, err = writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID},
+				func(tx *database.Tx) (Row, []rowchange.Change, error) {
+					return Set(tx, userID, missing, Input{FieldID: doc.ID, ValueText: "x"})
+				})
+			if !errors.Is(err, ErrInvalid) {
+				t.Fatalf("Set on missing owner = %v, want ErrInvalid", err)
+			}
+		})
+	}
+}
+
+// TestListWorkspacesExported reads many owners at once: the lists are
+// index-aligned, a repeated owner gets the same list, and each equals the
+// owner read alone.
+func TestListWorkspacesExported(t *testing.T) {
+	c, userID, src, doc, _, _, _ := applyWorld(t)
+	cert, err := sourcetypes.Lookup(c, "birth_certificate", vocabkey.OriginProvenencia)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := sourcevocab.AppendSuggestion(c, cert.ID, doc.ID, vocabkey.LevelArtifact); err != nil {
+		t.Fatal(err)
+	}
+	s := sourceOwner(src.ID)
+	a1 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	a2 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (Row, []rowchange.Change, error) {
+		return Set(tx, userID, a1, Input{FieldID: doc.ID, ValueText: "No. 7"})
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	owners := []Owner{s, a1, a2, a1}
+	got, err := ListWorkspaces(c, owners)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != len(owners) {
+		t.Fatalf("lists = %d, want %d", len(got), len(owners))
+	}
+	for i, o := range owners {
+		alone, err := ListWorkspace(c, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got[i], alone) {
+			t.Errorf("list %d differs from the owner read alone", i)
+		}
+	}
+	if !reflect.DeepEqual(got[1], got[3]) {
+		t.Error("a repeated owner got different lists")
+	}
+	if len(got[1]) != 1 || got[1][0].Value == nil || got[1][0].Value.ValueText != "No. 7" {
+		t.Errorf("A1's list = %+v", got[1])
+	}
+	if len(got[2]) != 1 || got[2][0].Value != nil || !got[2][0].Suggested {
+		t.Errorf("A2's list = %+v, want the suggestion only", got[2])
+	}
+
+	if none, err := ListWorkspaces(c, nil); err != nil || none != nil {
+		t.Errorf("no owners = %v, %v; want nil", none, err)
+	}
+	missing := Owner{Level: vocabkey.LevelGraph, ID: bytes.Repeat([]byte{9}, 16)}
+	if _, err := ListWorkspaces(c, []Owner{s, missing}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("missing graph owner = %v, want ErrInvalid", err)
+	}
+}
+
+// TestReadDraftsTx reads many owners' drafts in one pass, index-aligned.
+func TestReadDraftsTx(t *testing.T) {
+	c, userID, src, doc, _, f1, _ := applyWorld(t)
+	a1 := newLevelOwner(t, c, userID, src, vocabkey.LevelArtifact)
+	g1 := newLevelOwner(t, c, userID, src, vocabkey.LevelGraph)
+	if _, _, err := writes.Run(c, writes.Op{Action: "update_metadata", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+		_, ch, err := Set(tx, userID, a1, Input{FieldID: doc.ID, ValueText: "No. 7"})
+		if err != nil {
+			return struct{}{}, nil, err
+		}
+		_, more, err := Set(tx, userID, g1, Input{FieldID: f1.ID, ValueText: "14"})
+		return struct{}{}, append(ch, more...), err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	db, err := c.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+
+	got, err := ReadDraftsTx(tx, []Owner{a1, g1, a1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("drafts = %d", len(got))
+	}
+	for i, o := range []Owner{a1, g1, a1} {
+		alone, err := ReadDraftTx(tx, o)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(got[i], alone) {
+			t.Errorf("draft %d = %+v, alone %+v", i, got[i], alone)
+		}
+	}
+	if len(got[0].Values) != 1 || !bytes.Equal(got[0].Values[0].FieldID, doc.ID) ||
+		len(got[1].Values) != 1 || !bytes.Equal(got[1].Values[0].FieldID, f1.ID) {
+		t.Errorf("drafts = %+v", got)
+	}
+	if none, err := ReadDraftsTx(tx, nil); err != nil || none != nil {
+		t.Errorf("no owners = %v, %v; want nil", none, err)
+	}
+	if _, err := ReadDraftsTx(nil, []Owner{a1}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("nil tx = %v, want ErrInvalid", err)
+	}
+	if _, err := ReadDraftsTx(tx, []Owner{a1, {Level: vocabkey.LevelCitation, ID: a1.ID}}); !errors.Is(err, ErrInvalid) {
+		t.Errorf("citation owner = %v, want ErrInvalid", err)
+	}
 }

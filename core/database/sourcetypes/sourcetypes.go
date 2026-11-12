@@ -51,12 +51,10 @@ const (
 	// rule for which suggestions count lives.
 	sqlSuggestedFields = `SELECT COUNT(*) FROM source_type_metadata_fields j WHERE j.level = ? AND j.source_type_id = `
 	sqlList            = `SELECT t.id, t.key, t.origin, t.label, COALESCE(t.description, ''), t.icon_key,
-			(SELECT COUNT(*) FROM sources s WHERE s.source_type_id = t.id),
 			(` + sqlSuggestedFields + `t.id)
 		FROM source_types t ORDER BY t.label COLLATE NOCASE, t.origin, t.key`
 	sqlUpdate = `UPDATE source_types SET label = ?, description = ?, icon_key = ? WHERE id = ?`
 	sqlDelete = `DELETE FROM source_types WHERE id = ?`
-	sqlUsedBy = `SELECT COUNT(*) FROM sources WHERE source_type_id = ?`
 )
 
 // Type is one source_types row.
@@ -141,29 +139,46 @@ func Lookup(c *database.Catalog, key, origin string) (Type, error) {
 	return t, nil
 }
 
-// List returns all source_types rows.
+// List returns all source_types rows, each with its UsedBy total, read in one
+// transaction.
 func List(c *database.Catalog) ([]Type, error) {
 	db, err := c.DB()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := db.Query(sqlList, string(vocabkey.LevelSource))
+	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.Query(sqlList, string(vocabkey.LevelSource))
+	if err != nil {
+		return nil, err
+	}
 	var out []Type
 	for rows.Next() {
 		var t Type
 		if err := rows.Scan(
 			&t.ID, &t.Key, &t.Origin, &t.Label, &t.Description, &t.IconKey,
-			&t.UsedBy, &t.SuggestedFields,
+			&t.SuggestedFields,
 		); err != nil {
+			rows.Close()
 			return nil, err
 		}
 		out = append(out, t)
 	}
-	return out, rows.Err()
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	err = deleteimpact.FillUsedBy(tx, catalogmodel.KindSourceType, out,
+		func(t Type) []byte { return t.ID }, func(t *Type, n int) { t.UsedBy = n })
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // Create mints a kebab-case key from label (see core/slug.Kebab) and
@@ -299,19 +314,6 @@ func GetByID(c *database.Catalog, id []byte) (Type, error) {
 		return Type{}, err
 	}
 	return t, nil
-}
-
-// UsedBy reports how many sources reference the type.
-func UsedBy(c *database.Catalog, id []byte) (int, error) {
-	db, err := c.DB()
-	if err != nil {
-		return 0, err
-	}
-	var n int
-	if err := db.QueryRow(sqlUsedBy, id).Scan(&n); err != nil {
-		return 0, err
-	}
-	return n, nil
 }
 
 // SuggestedFields reports how many fields the type suggests at the Source
