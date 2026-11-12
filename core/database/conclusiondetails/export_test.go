@@ -23,7 +23,11 @@ func FieldsOf(c *database.Catalog, ids [][]byte) (map[string][]Field, error) {
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(c.Graph(), db, nodes, nil, false)
+	v, err := c.Graph().Vocabulary()
+	if err != nil {
+		return nil, err
+	}
+	fields, _, err := fieldsOf(c.Graph(), db, v, nodes, nil, false)
 	return fields, err
 }
 
@@ -52,8 +56,12 @@ func CountFieldsOfQueries(c *database.Catalog, ids [][]byte, subjectValued bool)
 	if err != nil {
 		return 0, err
 	}
+	v, err := c.Graph().Vocabulary()
+	if err != nil {
+		return 0, err
+	}
 	var n int
-	_, _, err = fieldsOf(c.Graph(), countingQuerier{db, &n}, nodes, nil, subjectValued)
+	_, _, err = fieldsOf(c.Graph(), countingQuerier{db, &n}, v, nodes, nil, subjectValued)
 	return n, err
 }
 

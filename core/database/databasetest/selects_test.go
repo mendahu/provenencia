@@ -43,6 +43,21 @@ func TestCountSelects(t *testing.T) {
 		{"Reset starts again from 0", sel.Reset, 0},
 		{"a query after Reset is counted and does not block", one, 1},
 	}
+	t.Run("Read names the tables a statement read", func(t *testing.T) {
+		sel.Reset()
+		var n int
+		if err := db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		if !sel.Read("users") || sel.Read("files") {
+			t.Fatalf("Read(users) = %v, Read(files) = %v", sel.Read("users"), sel.Read("files"))
+		}
+		sel.Reset()
+		if sel.Read("users") {
+			t.Fatal("Read(users) after Reset")
+		}
+		sel.Reset()
+	})
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.do()

@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/artifacts/artifactstest"
+	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
@@ -60,6 +61,10 @@ const (
 	// events are not reprojected. S14-33 measured 2.75 s before the walk
 	// followed only the associations that moved.
 	budgetSecondPartOfAtCity = 500 * time.Millisecond
+	// budgetClearPortraitAtCity: the city has no portrait, so the clear is a
+	// no-op that commits nothing. The budget holds the write's one-shot graph
+	// loading the city's node, with its 6,000 location links (S16-11).
+	budgetClearPortraitAtCity = 500 * time.Millisecond
 	// budgetComposeAll: composing every person and every event row once, warm.
 	// S14-40 measured 220 ms before the rows recorded their inputs; 500 ms
 	// allows the recording plus a slow runner and fails a per-row place graph,
@@ -348,6 +353,19 @@ func TestLargeSourceBudgets(t *testing.T) {
 			return databasetest.Since(func() { f.PlaceRel(lf.other, lf.otherA, p.from, p.to, "part_of") })
 		})
 		databasetest.WithinBudget(t, "file a second part_of from the city", d, budgetSecondPartOfAtCity)
+	})
+
+	t.Run("clear the portrait at the city", func(t *testing.T) {
+		d := databasetest.Fastest(3, func() time.Duration {
+			return databasetest.Since(func() {
+				_, err := writes.Call(f.c, writes.Op{Action: "set_preferred_likeness", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
+					ch, err := canonicalentities.SetPreferredLikeness(tx, userID, lf.city, nil)
+					return struct{}{}, ch, err
+				})
+				must(t, err)
+			})
+		})
+		databasetest.WithinBudget(t, "clear the portrait at the city", d, budgetClearPortraitAtCity)
 	})
 
 	t.Run("compose every summary", func(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
@@ -494,6 +495,15 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 			return err
 		}
 	}
+	// Every bulk value has a record, so every bulk value gets its outcome row:
+	// one per value, the floor of a real catalog. A handle a real reconcile
+	// wrote keeps its own rows.
+	if _, err := tx.Exec(`INSERT INTO auto_reconciler_outcomes (entity_id, property_id, observation_id, reason, value_rank)
+		SELECT v.entity_id, v.property_id, randomblob(16), v.reason, v.rank
+		FROM auto_reconciler_values v
+		WHERE NOT EXISTS (SELECT 1 FROM auto_reconciler_outcomes o WHERE o.entity_id = v.entity_id)`); err != nil {
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -602,12 +612,14 @@ func BenchmarkCacheSizes(b *testing.B) {
 				fill()
 				b.ReportMetric(heap()-before, metric+"-B")
 			}
+			start := time.Now()
 			measure("nodes", func() {
 				for _, kind := range []string{"person", "event", "place"} {
 					_, err := g.Kind(graphcachetest.SubjectTypeID(b, c, kind))
 					must(b, err)
 				}
 			})
+			b.ReportMetric(float64(time.Since(start).Milliseconds()), "nodes-ms")
 			measure("aliasIndex", func() { must(b, namealiases.Warm(c)) })
 			measure("nameFormat", func() { must(b, nameformats.Warm(c)) })
 			measure("matchIndex", func() { must(b, promotealign.Warm(c)) })

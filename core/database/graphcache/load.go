@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
+	"github.com/mendahu/provenencia/core/depictionvalue"
 )
 
 type entityRow struct {
@@ -18,6 +19,7 @@ type entityRow struct {
 	typeKey  string
 	argument string
 	label    string
+	likeness []byte
 }
 
 // loadIDs loads ids that are not already cached. replace reloads ids that are.
@@ -62,6 +64,10 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 	if err != nil {
 		return err
 	}
+	outcomes, err := g.loadOutcomes(present)
+	if err != nil {
+		return err
+	}
 	links, err := g.loadLinks(present)
 	if err != nil {
 		return err
@@ -69,18 +75,23 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 	for _, id := range present {
 		row := rows[string(id)]
 		n := &Node{
-			ID:            cloneID(row.id),
-			Ref:           row.ref,
-			SubjectTypeID: cloneID(row.typeID),
-			Argument:      row.argument,
-			Label:         row.label,
-			Merged:        row.merged,
-			Values:        values[string(id)],
-			Links:         links[string(id)],
-			Members:       members[string(id)],
+			ID:                cloneID(row.id),
+			Ref:               row.ref,
+			SubjectTypeID:     cloneID(row.typeID),
+			Argument:          row.argument,
+			Label:             row.label,
+			Merged:            row.merged,
+			Values:            values[string(id)],
+			Links:             links[string(id)],
+			Members:           members[string(id)],
+			Outcomes:          outcomes[string(id)],
+			PreferredLikeness: cloneID(row.likeness),
 		}
 		if n.Values == nil {
 			n.Values = map[string][]Value{}
+		}
+		if n.Outcomes == nil {
+			n.Outcomes = map[string][]Outcome{}
 		}
 		g.install(n)
 	}
@@ -91,13 +102,13 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 	out := map[string]entityRow{}
 	ids = uniqueIDs(ids)
 	head := `SELECT e.id, e.ref, e.subject_type_id, e.merged_into_id IS NOT NULL, st.key,
-			COALESCE(e.argument, ''), COALESCE(e.label, '')
+			COALESCE(e.argument, ''), COALESCE(e.label, ''), e.preferred_likeness_observation_id
 		FROM ` + g.entityTable + ` e
 		JOIN subject_types st ON st.id = e.subject_type_id
 		WHERE e.id IN (`
 	err := sqlbatch.Query(g, head, `)`, nil, ids, func(rows *sql.Rows) error {
 		var row entityRow
-		if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey, &row.argument, &row.label); err != nil {
+		if err := rows.Scan(&row.id, &row.ref, &row.typeID, &row.merged, &row.typeKey, &row.argument, &row.label, &row.likeness); err != nil {
 			return err
 		}
 		row.id = cloneID(row.id)
@@ -114,14 +125,16 @@ func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
 // StoredValues reads the stored value rows of ids: entity id, then property id
 // to the rows in rank order. An id with no rows is absent. It is the one read
 // of stored rows into Value; the reconciler's upkeep compares it to the rows it
-// is about to write.
+// is about to write. An image is kept only when its File is a PNG
+// (depictionvalue.ReadableImage), so every node reader gets a readable one.
 func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error) {
 	out := map[string]map[string][]Value{}
 	q := `SELECT r.entity_id, r.property_id, r.rank, r.reason,
 			r.value_text, r.value_integer, r.value_boolean, r.value_term_id, COALESCE(t.key, ''),
-			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, r.support, r.against
+			r.value_entity_id, r.value_date, r.value_name, r.value_image_file_id, COALESCE(f.media_type, ''), r.support, r.against
 		FROM ` + g.valueTable + ` r
 		LEFT JOIN property_terms t ON t.id = r.value_term_id
+		LEFT JOIN ` + g.fileTable + ` f ON f.id = r.value_image_file_id
 		WHERE r.entity_id IN (` + placeholders(len(ids)) + `)
 		ORDER BY r.entity_id, r.property_id, r.rank`
 	rows, err := g.query(q, blobArgs(ids)...)
@@ -141,9 +154,10 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			dateBlob         []byte
 			nameBlob         []byte
 			imageID          []byte
+			imageType        string
 			support, against int
 		)
-		if err := rows.Scan(&entityID, &propID, &rank, &reason, &scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &support, &against); err != nil {
+		if err := rows.Scan(&entityID, &propID, &rank, &reason, &scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &termKey, &entityVal, &dateBlob, &nameBlob, &imageID, &imageType, &support, &against); err != nil {
 			return nil, err
 		}
 		ek, pk := string(entityID), string(propID)
@@ -157,7 +171,7 @@ func (g *Graph) StoredValues(ids [][]byte) (map[string]map[string][]Value, error
 			EntityID:    cloneID(entityVal),
 			Date:        append([]byte(nil), dateBlob...),
 			Name:        append([]byte(nil), nameBlob...),
-			ImageFileID: cloneID(imageID),
+			ImageFileID: cloneID(depictionvalue.ReadableImage(imageID, imageType)),
 			Support:     support,
 			Against:     against,
 		})
@@ -188,6 +202,40 @@ func (g *Graph) loadMembers(ids [][]byte) (map[string][]Member, error) {
 			GraphID:   cloneID(graphID),
 			Accepted:  status == "accepted",
 		})
+	}
+	return out, rows.Err()
+}
+
+// loadOutcomes reads the outcome rows of ids: entity id, then property id to
+// the rows in ascending Observation id. A row whose Observation is gone keeps
+// a nil SubjectID. An id with no rows is absent.
+func (g *Graph) loadOutcomes(ids [][]byte) (map[string]map[string][]Outcome, error) {
+	out := map[string]map[string][]Outcome{}
+	q := `SELECT ao.entity_id, ao.property_id, ao.observation_id, o.subject_id, ao.reason,
+			COALESCE(ao.value_rank, 0), ao.denied_by, COALESCE(ao.vote_support, 0), COALESCE(ao.vote_total, 0)
+		FROM ` + g.outcomeTable + ` ao
+		LEFT JOIN observations o ON o.id = ao.observation_id
+		WHERE ao.entity_id IN (` + placeholders(len(ids)) + `)
+		ORDER BY ao.entity_id, ao.property_id, ao.observation_id`
+	rows, err := g.query(q, blobArgs(ids)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var entityID, propID []byte
+		var o Outcome
+		if err := rows.Scan(&entityID, &propID, &o.ObservationID, &o.SubjectID, &o.Reason, &o.ValueRank, &o.DeniedBy, &o.VoteSupport, &o.VoteOf); err != nil {
+			return nil, err
+		}
+		o.ObservationID = cloneID(o.ObservationID)
+		o.SubjectID = cloneID(o.SubjectID)
+		o.DeniedBy = cloneID(o.DeniedBy)
+		ek, pk := string(entityID), string(propID)
+		if out[ek] == nil {
+			out[ek] = map[string][]Outcome{}
+		}
+		out[ek][pk] = append(out[ek][pk], o)
 	}
 	return out, rows.Err()
 }

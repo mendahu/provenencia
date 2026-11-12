@@ -189,6 +189,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var listEvidenceGraphsSourceIDs: [String?] = []
     /// While on, `listEvidenceGraphs` suspends after recording the call and before it reads.
     let listEvidenceGraphsHold = FakeHold()
+    /// While on, `getConclusionDetail` suspends before it reads.
+    let getConclusionDetailHold = FakeHold()
     /// How many times `listSources` was called.
     var listSourcesCalls = 0
     var createEvidenceGraphError: Error?
@@ -1836,7 +1838,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
 
     func getConclusionDetail(projectDir: String, entityID: String) async throws -> CatalogConclusionDetail {
         // A read: no `recordedCalls`.
-        try withState {
+        await getConclusionDetailHold.wait()
+        return try withState {
             markCatalogSessionHeld(projectDir)
             if let getConclusionDetailError { throw getConclusionDetailError }
             if let seeded = seededConclusionDetails[entityID] {

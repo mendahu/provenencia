@@ -98,6 +98,10 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 	if err != nil {
 		return err
 	}
+	outcomes, err := g.loadOutcomes(ids)
+	if err != nil {
+		return err
+	}
 	var assocIDs [][]byte
 	for _, id := range ids {
 		n := g.nodes[string(id)]
@@ -109,7 +113,8 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 			return fmt.Errorf("graphcache: %x is loaded but has no entity row", id)
 		}
 		if n.Ref != row.ref || n.Argument != row.argument || n.Label != row.label ||
-			!sameID(n.SubjectTypeID, row.typeID) || n.Merged != row.merged {
+			!sameID(n.SubjectTypeID, row.typeID) || n.Merged != row.merged ||
+			!sameID(n.PreferredLikeness, row.likeness) {
 			return fmt.Errorf("graphcache: %x identity does not match the catalog", id)
 		}
 		if err := sameValues(n.Values, truth[string(id)]); err != nil {
@@ -117,6 +122,9 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 		}
 		if err := sameMembers(n.Members, members[string(id)]); err != nil {
 			return fmt.Errorf("graphcache: %x members: %w", id, err)
+		}
+		if err := sameOutcomes(n.Outcomes, outcomes[string(id)]); err != nil {
+			return fmt.Errorf("graphcache: %x outcomes: %w", id, err)
 		}
 		for _, l := range n.Links {
 			assocIDs = append(assocIDs, l.Association)
@@ -279,6 +287,28 @@ func sameMembers(got, want []Member) error {
 	for i := range got {
 		if !sameID(got[i].SubjectID, want[i].SubjectID) || !sameID(got[i].SourceID, want[i].SourceID) || !sameID(got[i].GraphID, want[i].GraphID) || got[i].Accepted != want[i].Accepted {
 			return fmt.Errorf("claim %d differs", i)
+		}
+	}
+	return nil
+}
+
+// sameOutcomes compares the node's outcome rows to the committed rows: the
+// same Properties, and per Property the same rows in order.
+func sameOutcomes(got, want map[string][]Outcome) error {
+	if len(got) != len(want) {
+		return fmt.Errorf("property count %d, catalog %d", len(got), len(want))
+	}
+	for prop, rows := range got {
+		truth := want[prop]
+		if len(rows) != len(truth) {
+			return fmt.Errorf("property %x row count %d, catalog %d", prop, len(rows), len(truth))
+		}
+		for i, o := range rows {
+			w := truth[i]
+			if !sameID(o.ObservationID, w.ObservationID) || !sameID(o.SubjectID, w.SubjectID) || o.Reason != w.Reason || o.ValueRank != w.ValueRank ||
+				!sameID(o.DeniedBy, w.DeniedBy) || o.VoteSupport != w.VoteSupport || o.VoteOf != w.VoteOf {
+				return fmt.Errorf("property %x row %d differs", prop, i)
+			}
 		}
 	}
 	return nil

@@ -41,13 +41,13 @@ An owned value row: a region plus an image File, replaced never rewritten (a new
 
 ## Read path
 
-Every reader that returns a depiction to the app goes through `depictionvalue.Readable`, usually through `depictionvalues.FromJoin` and the three joins its doc names. `LookupTx` does not (audit records what is stored). Returning paths follows `add-ffi-handler`.
+Every reader that returns a depiction to the app goes through `depictionvalue.Readable`, usually through `depictionvalues.FromJoin` and the three joins its doc names. `LookupTx` does not (audit records what is stored). Returning paths follows `add-ffi-handler`. The graphcache values load (`StoredValues`) passes `value_image_file_id` through `depictionvalue.ReadableImage`, so every node reader (the gallery, lead pictures, the likeness check) gets only readable images.
 
 ## Reconcile, gallery and portrait
 
 - Depictions group by image File id (`core/autoreconcile/modules.go`).
-- The gallery is `gallery.ForEntities`, admitted by `autoreconcile.Reason.InGallery` and filtered on `vocabkey.GalleryKeys()` (`likeness`, `event_picture`, `place_picture`); the rule is in [`docs/conclusion-layer-data-model.md`](../../../docs/conclusion-layer-data-model.md) §6 and [`docs/conclusion-reconciliation.md`](../../../docs/conclusion-reconciliation.md). Do not restate it here.
-- Each gallery tile's image is the Observation's own `depiction_values.image_file_id`, not the reconciler cache's `value_image_file_id`.
+- The gallery is `gallery.Of` over the canonical node (`gallery.PropertyIDs` names the Properties), admitted by `autoreconcile.Reason.InGallery` and filtered on `vocabkey.GalleryKeys()` (`likeness`, `event_picture`, `place_picture`); the rule is in [`docs/conclusion-layer-data-model.md`](../../../docs/conclusion-layer-data-model.md) §6 and [`docs/conclusion-reconciliation.md`](../../../docs/conclusion-reconciliation.md). Do not restate it here.
+- Each gallery tile's image is the value's image File (`value_image_file_id`), which every record counted into that value shows.
 - `gallery.Lead` is the one lead rule. The preferred portrait or thumbnail is `canonical_entities.preferred_likeness_observation_id`, written by `canonicalentities.SetPreferredLikeness`.
 - Tests save depictions with `observationstest.SaveDepiction` (or `SaveLikeness` / `SaveNegativeLikeness` for the Person key).
 

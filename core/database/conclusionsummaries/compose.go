@@ -608,7 +608,11 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	if err != nil {
 		return nil, nil, err
 	}
-	leads, err := leadPictures(g, need)
+	needNodes := make([]*graphcache.Node, len(need))
+	for i, id := range need {
+		needNodes[i] = byID[string(id)]
+	}
+	leads, err := leadPictures(g, needNodes)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -639,17 +643,18 @@ func finishPerson(v vocab, h PersonSummary) PersonSummary {
 	return h
 }
 
-// leadPictures returns each handle's leading gallery image File id, keyed by
-// string(entity id). A handle with no gallery picture is absent.
-func leadPictures(g *graphcache.Graph, ids [][]byte) (map[string][]byte, error) {
-	tiles, err := gallery.ForEntities(g, ids)
+// leadPictures returns each node's leading gallery image File id, keyed by
+// string(entity id). A node with no gallery picture is absent.
+func leadPictures(g *graphcache.Graph, nodes []*graphcache.Node) (map[string][]byte, error) {
+	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
+	props := gallery.PropertyIDs(v)
 	out := map[string][]byte{}
-	for _, id := range ids {
-		if l, ok := gallery.Lead(tiles[string(id)]); ok {
-			out[string(id)] = l.ImageFileID
+	for _, n := range nodes {
+		if l, ok := gallery.Lead(gallery.Of(n, props)); ok {
+			out[string(n.ID)] = l.ImageFileID
 		}
 	}
 	return out, nil
@@ -991,11 +996,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 	if err != nil {
 		return nil, nil, err
 	}
-	needIDs := make([][]byte, len(need))
-	for i, n := range need {
-		needIDs[i] = n.ID
-	}
-	leads, err := leadPictures(g, needIDs)
+	leads, err := leadPictures(g, need)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1230,11 +1231,7 @@ func eventWhen(v vocab, ev *graphcache.Node) (*datevalue.Value, error) {
 
 func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool, rec *inputBudget) ([]PlaceSummary, map[string][]graphcache.InputKey, error) {
 	need := needed[PlaceSummary](g, nodes, store)
-	needIDs := make([][]byte, len(need))
-	for i, n := range need {
-		needIDs[i] = n.ID
-	}
-	leads, err := leadPictures(g, needIDs)
+	leads, err := leadPictures(g, need)
 	if err != nil {
 		return nil, nil, err
 	}

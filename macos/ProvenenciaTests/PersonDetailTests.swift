@@ -328,6 +328,34 @@ struct PersonDetailTests {
         #expect(!model.isSaving)
     }
 
+    /// The clicked button spins until the page has re-read the save, so the page's own
+    /// Refreshing never shows beside the section picker for a portrait choice.
+    @MainActor
+    @Test func choosingAPortraitStaysSavingUntilThePageReloads() async throws {
+        let store = FakeStore()
+        store.seededConclusionDetails["per-1"] = detail()
+        store.nextWriteEffects = CatalogWriteEffects(handles: ["per-1"])
+        let session = WorkspaceSession(projectKey: ProjectKey(projectDir: "/tmp/p.provenencia"), store: store)
+        session.apply(location: .personDetail(entityId: "per-1", ref: "PER-1", title: "Ada"))
+        let key = CatalogQueryKey.conclusionDetail(project: session.projectKey, entityId: "per-1")
+        let page: QueryHandle<CatalogConclusionDetail> = session.query(key)
+        await waitForQuery(page)
+        let model = ConclusionLeadModel(session: session, userID: "user-1", entityId: "per-1")
+        let tile = censusTile()
+
+        store.getConclusionDetailHold.isOn = true
+        let save = Task { await model.choose(tile, copy: .personPortrait) }
+        while store.getConclusionDetailHold.count == 0 { await Task.yield() }
+        #expect(model.savingID == tile.id)
+        #expect(model.isSaving)
+
+        store.getConclusionDetailHold.isOn = false
+        store.getConclusionDetailHold.release()
+        #expect(await save.value)
+        #expect(model.savingID == nil)
+        #expect(!model.isSaving)
+    }
+
     @MainActor
     @Test func useEarliestClearsAndToasts() async {
         let store = FakeStore()

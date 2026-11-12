@@ -685,9 +685,12 @@ func TestDepictionsReconcileByImage(t *testing.T) {
 	}
 	galleryOf := func(w *world) []gallery.Picture {
 		t.Helper()
-		g, err := gallery.ForEntities(w.f.C.Graph(), [][]byte{w.h})
+		g := w.f.C.Graph()
+		n, err := g.Node(w.h)
 		must(t, err)
-		return g[string(w.h)]
+		v, err := g.Vocabulary()
+		must(t, err)
+		return gallery.Of(n, gallery.PropertyIDs(v))
 	}
 	// finish holds upkeep to a rebuild and the graph cache to the catalog.
 	finish := func(t *testing.T, w *world, name string) {

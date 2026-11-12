@@ -386,6 +386,8 @@ func TestForEntityLikenessNeedsAPNG(t *testing.T) {
 		JOIN depiction_values dv ON dv.id = o.value_depiction_id WHERE o.id = ?`, oa.ID).Scan(&image))
 	_, err = db.Exec(`UPDATE files SET media_type = 'image/jpeg' WHERE id = ?`, image)
 	must(t, err)
+	// The read refuses it: no rebuild, only a fresh graph load.
+	f.C.Graph().Drop()
 	if d := f.detail(h); len(d.Pictures) != 0 {
 		t.Fatalf("pictures %+v", d.Pictures)
 	}

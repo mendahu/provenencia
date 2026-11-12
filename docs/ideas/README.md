@@ -58,6 +58,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 - [`shared-list-helpers.md`](shared-list-helpers.md) — empty search state, catalog querier, popup dismissal / list, history menu rows, type-select on disabled menus, Source section counts, silent sidebar recount
 - [`value-row-owner-check.md`](value-row-owner-check.md) — a date or name row shared by two owners in a crafted catalog; `PutTx` edits it in place for both
+- [`stacked-toasts.md`](stacked-toasts.md) — toasts that stack and expire on their own timers instead of replacing each other
 - [`structural-debt.md`](structural-debt.md) — audit refactors with no visible change; leftover test artifact and Subject fixtures
 
 Closed spikes (decisions, not PR order): [`docs/deployment-plan/archive/`](../deployment-plan/archive/).

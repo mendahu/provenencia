@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -292,6 +293,49 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 	}
 	if got := d.GetSummary().GetPerson().GetPictureImageRelPath(); got == "" || got != d.GetPictures()[0].GetImageRelPath() {
 		t.Fatalf("person lead %q, first tile %q", got, d.GetPictures()[0].GetImageRelPath())
+	}
+}
+
+// A warm open composes the Why and the gallery from the canonical node: it
+// reads neither the reconciler's outcome rows nor the depiction values, and
+// issues no graph query.
+func TestGetConclusionDetailWarmReadsNoReconcilerOrGallerySQL(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 100))
+	saveLikeness(t, dir, userID, artifactID, personID, likenessID, writeCrop(t, 300, 200, 200))
+	promoted := promoteInDir(t, dir, userID, personID, "")
+	req := marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(promoted.Entity.ID)})
+	if _, err := GetConclusionDetail(req); err != nil {
+		t.Fatal(err)
+	}
+	var sel *databasetest.Selects
+	var graphQueries int
+	if err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		sel = databasetest.CountSelects(t, c)
+		c.Graph().SetQueryCounterForTest(func() { graphQueries++ })
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	out, err := GetConclusionDetail(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var d engine.ConclusionDetail
+	if err := proto.Unmarshal(out, &d); err != nil {
+		t.Fatal(err)
+	}
+	if len(d.GetPictures()) != 2 {
+		t.Fatalf("pictures %+v", d.GetPictures())
+	}
+	for _, table := range []string{"auto_reconciler_outcomes", "depiction_values"} {
+		if sel.Read(table) {
+			t.Errorf("a warm open read %s", table)
+		}
+	}
+	if graphQueries != 0 {
+		t.Errorf("a warm open issued %d graph queries", graphQueries)
 	}
 }
 
