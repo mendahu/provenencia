@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/catalog-queries.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/ffi-handlers.mdc`
 **Context:** [design § Entity records](../cache-architecture.md#entity-records); [`docs/catalog-caches.md`](../../../catalog-caches.md); [`core/database/effects/README.md`](../../../../core/database/effects/README.md); working rules: "(Batch 2) The point of this batch is simpler code", "(Batch 2) Cache entities and results per key; compose answers", "(Batch 2) One cache registry, two ways to fill", "(Batch 2) Every cache names the signal that updates it, and updates exactly", "(Batch 2) Apply states its fan-out", "(Batch 2) A write's one-shot graph fills only what it reads", "(Batch 2) Warm only what every proposal needs; no background re-warm", "(Batch 2) Orders are defined and results do not move", "(Batch 2) Memory is budgeted", "(Batch 2) Measure growth"; goal bar 12 (the progress clause)
 **Planned:** 2026-11-12 against `main` @ `064e1f3`
-**Review:** [`S16-15-graph-catalog.review.md`](S16-15-graph-catalog.review.md) — Fits with changes / Ready with changes, 1 round; every finding answered; To user answered 2026-11-12
+**Review:** [`S16-15-graph-catalog.review.md`](S16-15-graph-catalog.review.md) — Fits / Ready with changes, 2 rounds; every finding answered; To user answered 2026-11-12
 
 ### Implementer — read this first
 

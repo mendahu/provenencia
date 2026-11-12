@@ -1,7 +1,7 @@
 # Review — S16-15 An Evidence-graph catalog in the graph cache
 
-**Verdict:** Fits with changes — Ready with changes
-**Rounds:** 1. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits — Ready with changes (round 2 fixes applied)
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user (answered 2026-11-12: both as recommended)
 - M-1: D-5 drops `List`'s read transaction against `add-catalog-query` "Reads inside a write". Recommendation: accept and rewrite the skill paragraph (registry loaders on the session graph run under `catalogsession.Do`'s lock; a direct `c.DB()` multi-query read still opens a transaction).
@@ -71,3 +71,6 @@
 
 ### X-9 · major · Test package, second Artifact, `r.Run`, the `check` closure
 **Answer:** Fixed — T-1 names package `evidencegraphs_test` and the second Artifact (`artifactstest.Create`, "Page 2"); T-2 runs every `tx` call in `r.Run`, and inlines `check` and a package-level `derivedFromIndex` probe.
+
+### Round 2 maintainability
+No new blockers; every round-1 answer holds. Verdict: Fits.
