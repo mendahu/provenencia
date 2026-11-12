@@ -140,7 +140,22 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var edgeObservationIDs: Set<String> = []
     var citationsByID: [String: CatalogCitation] = [:]
     var citationNotesByID: [String: [String]] = [:]
-    var metadataBySource: [String: [CatalogMetadataEntry]] = [:]
+    /// Metadata rows by owner: the one stored map, whatever the level.
+    var metadataByOwner: [MetadataOwner: [CatalogMetadataEntry]] = [:]
+    /// The `.source` owners of `metadataByOwner` by Source id, for the tests and
+    /// reads that need one level. Like every stored property it is read and
+    /// written inside `withState`, which already holds `stateLock`.
+    var metadataBySource: [String: [CatalogMetadataEntry]] {
+        get {
+            var out: [String: [CatalogMetadataEntry]] = [:]
+            for (owner, list) in metadataByOwner where owner.level == .source { out[owner.id] = list }
+            return out
+        }
+        set {
+            for owner in metadataByOwner.keys where owner.level == .source { metadataByOwner[owner] = nil }
+            for (id, list) in newValue { metadataByOwner[MetadataOwner(level: .source, id: id)] = list }
+        }
+    }
     /// Project dir for which a catalog RPC has “held” a session (tests only).
     var heldCatalogProjectDir: String?
     /// Last `closeCatalogSession` argument (tests only).
@@ -230,8 +245,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     private var depictionSequence = 0
     /// The temporary image path of every depiction input seen, in call order.
     private(set) var recordedDepictionPaths: [String] = []
-    /// When set, `reorderSourceMetadata` throws (optimistic move should revert).
-    var reorderSourceMetadataError: Error?
+    /// When set, `reorderMetadata` throws (optimistic move should revert).
+    var reorderMetadataError: Error?
     /// When set, `unpromoteSubject` throws (the Unpromote confirm shows the error).
     var unpromoteSubjectError: Error?
     /// Scripted reports for `getUnpromoteImpact` by subject id.
@@ -257,8 +272,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var createPropertyTermError: Error?
     /// When set for a subject type id, `assignSubjectTypeProperty` throws for that type.
     var assignSubjectTypePropertyErrors: [String: Error] = [:]
-    /// When set, `setSourceMetadata` throws (field vs page error tests).
-    var setSourceMetadataError: Error?
+    /// When set, `setMetadata` throws (field vs page error tests).
+    var setMetadataError: Error?
     /// When set, `addSourceNote` throws (`pageError` surfacing).
     var addSourceNoteError: Error?
     /// When set, `ingestArtifactFile` throws before mutating artifacts.
@@ -723,83 +738,82 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         }
     }
 
-    func setSourceMetadata(
+    func setMetadata(
         projectDir: String,
         userID _: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String,
         valueText: String
-    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) {
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return try withState {
-            if let setSourceMetadataError { throw setSourceMetadataError }
-            var list = metadataBySource[sourceID] ?? []
-            let entry: CatalogMetadataEntry
+            if let setMetadataError { throw setMetadataError }
+            var list = metadataByOwner[owner] ?? []
             if let idx = list.firstIndex(where: { $0.field.id == fieldID }) {
                 list[idx].valueText = valueText
                 list[idx].hasValue = true
                 // The fake computes no web link; a test that needs one seeds `openHref`.
                 list[idx].openHref = ""
-                entry = list[idx]
             } else {
                 let field = (fieldsByProject[projectDir] ?? []).first { $0.id == fieldID }
                     ?? CatalogMetadataField(
                         id: fieldID, key: "field", origin: "user", label: "Field", dataType: "text", description: ""
                     )
-                let order = Int32(list.count)
-                entry = CatalogMetadataEntry(
+                list.append(CatalogMetadataEntry(
                     field: field,
                     valueText: valueText,
                     hasValue: true,
                     suggested: false,
-                    sortOrder: order
-                )
-                list.append(entry)
+                    sortOrder: Int32(list.count)
+                ))
             }
-            metadataBySource[sourceID] = list
-            bumpActivity(sourceID); return (entry, nextWriteEffects)
+            metadataByOwner[owner] = list
+            if owner.level == .source { bumpActivity(owner.id) }
+            return (list, nextWriteEffects)
         }
     }
 
-    func clearSourceMetadata(
-        projectDir _: String, userID _: String, sourceID: String, fieldID: String
-    ) async throws -> CatalogWriteEffects {
+    func clearMetadata(
+        projectDir _: String, userID _: String, owner: MetadataOwner, fieldID: String
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         withState {
-            var list = metadataBySource[sourceID] ?? []
-            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return nextWriteEffects }
+            var list = metadataByOwner[owner] ?? []
+            guard let idx = list.firstIndex(where: { $0.field.id == fieldID }) else { return (list, nextWriteEffects) }
             if list[idx].suggested {
                 list[idx].valueText = ""
                 list[idx].hasValue = false
             } else {
                 list.remove(at: idx)
             }
-            metadataBySource[sourceID] = list
-            bumpActivity(sourceID); return nextWriteEffects
+            metadataByOwner[owner] = list
+            if owner.level == .source { bumpActivity(owner.id) }
+            return (list, nextWriteEffects)
         }
     }
 
-    func dismissSourceMetadataSuggestion(
+    func dismissMetadataSuggestion(
         projectDir _: String,
         userID _: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return withState {
-            var list = metadataBySource[sourceID] ?? []
+            var list = metadataByOwner[owner] ?? []
             list.removeAll { $0.field.id == fieldID && !$0.hasValue }
-            metadataBySource[sourceID] = list
-            bumpActivity(sourceID); return (list, nextWriteEffects)
+            metadataByOwner[owner] = list
+            if owner.level == .source { bumpActivity(owner.id) }
+            return (list, nextWriteEffects)
         }
     }
 
-    func reorderSourceMetadata(
+    func reorderMetadata(
         projectDir _: String,
         userID _: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return try withState {
-            if let reorderSourceMetadataError { throw reorderSourceMetadataError }
-            let current = metadataBySource[sourceID] ?? []
+            if let reorderMetadataError { throw reorderMetadataError }
+            let current = metadataByOwner[owner] ?? []
             var byID = Dictionary(uniqueKeysWithValues: current.map { ($0.field.id, $0) })
             var next: [CatalogMetadataEntry] = []
             for (i, id) in fieldIDs.enumerated() {
@@ -812,8 +826,9 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                 entry.sortOrder = Int32(next.count)
                 next.append(entry)
             }
-            metadataBySource[sourceID] = next
-            bumpActivity(sourceID); return (next, nextWriteEffects)
+            metadataByOwner[owner] = next
+            if owner.level == .source { bumpActivity(owner.id) }
+            return (next, nextWriteEffects)
         }
     }
 

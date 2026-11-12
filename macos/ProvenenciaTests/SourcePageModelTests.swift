@@ -845,7 +845,7 @@ struct SourcePageModelTests {
             ],
             fields: [author, repo]
         )
-        store.reorderSourceMetadataError = CoreInvokeError.coded(
+        store.reorderMetadataError = CoreInvokeError.coded(
             status: 1, code: "internal.unknown", kind: .internal, params: []
         )
         let model = makeModel(store: store)
@@ -1051,7 +1051,7 @@ struct SourcePageModelTests {
             ],
             fields: [field]
         )
-        store.setSourceMetadataError = CoreInvokeError.coded(
+        store.setMetadataError = CoreInvokeError.coded(
             status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
         )
         let model = makeModel(store: store)
@@ -1059,7 +1059,7 @@ struct SourcePageModelTests {
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "file:/tmp"
         await model.metadata.save(fieldID: field.id)
-        #expect(model.metadata.fieldError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.fieldError == L10n.Errors.message(for: store.setMetadataError!))
         #expect(model.metadata.fieldErrorID == field.id)
         #expect(model.metadata.editingFieldID == field.id)
         #expect(model.pageError == nil)
@@ -1068,7 +1068,7 @@ struct SourcePageModelTests {
     @Test func invalidMetadataAddLandsOnValueField() async {
         let field = urlField()
         let store = makeStore(fields: [field])
-        store.setSourceMetadataError = CoreInvokeError.coded(
+        store.setMetadataError = CoreInvokeError.coded(
             status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
         )
         let model = makeModel(store: store)
@@ -1077,7 +1077,7 @@ struct SourcePageModelTests {
         model.metadata.addFieldID = field.id
         model.metadata.addValue = "javascript:alert(1)"
         await model.metadata.createFromAdd()
-        #expect(model.metadata.addValueError == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.metadata.addValueError == L10n.Errors.message(for: store.setMetadataError!))
         #expect(model.metadata.isAdding == true)
         #expect(model.pageError == nil)
         #expect(model.metadata.entries.isEmpty)
@@ -1094,13 +1094,13 @@ struct SourcePageModelTests {
             ],
             fields: [field]
         )
-        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        store.setMetadataError = CoreInvokeError.failed(status: 2)
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "https://example.org"
         await model.metadata.save(fieldID: field.id)
-        #expect(model.pageError?.message == L10n.Errors.message(for: store.setSourceMetadataError!))
+        #expect(model.pageError?.message == L10n.Errors.message(for: store.setMetadataError!))
         #expect(model.metadata.fieldError == nil)
         #expect(model.metadata.editingFieldID == field.id)
     }
@@ -2227,7 +2227,7 @@ struct SourcePageModelTests {
         )
 
         // The next failed write replaces the whole banner: no stale title.
-        store.setSourceMetadataError = CoreInvokeError.failed(status: 2)
+        store.setMetadataError = CoreInvokeError.failed(status: 2)
         model.metadata.beginEdit(fieldID: field.id)
         model.metadata.drafts[field.id] = "https://example.org"
         await model.metadata.save(fieldID: field.id)
@@ -2277,6 +2277,29 @@ struct SourcePageModelTests {
         await third.artifacts.revertCoverToTypeIcon()
         #expect(third.gone == notice)
         #expect(third.pageError == nil)
+    }
+
+    @Test func metadataWriteOnDeletedSourceLeavesThePage() async {
+        let field = urlField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: field, valueText: "https://example.com",
+                    hasValue: true, suggested: false, sortOrder: 0
+                ),
+            ],
+            fields: [field]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.setMetadataError = FakeStore.sourceNotFound
+        model.metadata.beginEdit(fieldID: field.id)
+        model.metadata.drafts[field.id] = "https://example.org"
+        await model.metadata.save(fieldID: field.id)
+        #expect(model.gone == L10n.Sources.sourceDeletedNotice(title: "Family album"))
+        #expect(model.pageError == nil)
+        #expect(model.metadata.fieldError == nil)
+        #expect(model.metadata.entries.first?.valueText == "https://example.com")
     }
 
     @Test func deletedSourceClosesTheDateDialog() async throws {

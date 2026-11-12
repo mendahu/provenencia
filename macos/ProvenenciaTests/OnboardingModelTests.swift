@@ -421,25 +421,25 @@ private struct ThrowingStore: GenealogyStore {
     func deleteSourceNote(projectDir _: String, userID _: String, noteID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
-    func setSourceMetadata(
+    func setMetadata(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        owner _: MetadataOwner,
         fieldID _: String,
         valueText _: String
-    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects) { throw StoreBoom.boom }
-    func clearSourceMetadata(projectDir _: String, userID _: String, sourceID _: String, fieldID _: String)
-        async throws -> CatalogWriteEffects { throw StoreBoom.boom }
-    func dismissSourceMetadataSuggestion(
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
+    func clearMetadata(projectDir _: String, userID _: String, owner _: MetadataOwner, fieldID _: String)
+        async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
+    func dismissMetadataSuggestion(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        owner _: MetadataOwner,
         fieldID _: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
-    func reorderSourceMetadata(
+    func reorderMetadata(
         projectDir _: String,
         userID _: String,
-        sourceID _: String,
+        owner _: MetadataOwner,
         fieldIDs _: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) { throw StoreBoom.boom }
     func createArtifact(

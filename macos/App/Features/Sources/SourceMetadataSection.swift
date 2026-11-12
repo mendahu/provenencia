@@ -131,14 +131,14 @@ final class SourceMetadataSection {
         fieldError = nil
         fieldErrorID = nil
         do {
-            let (updated, effects) = try await context.store.setSourceMetadata(
+            let (updated, effects) = try await context.store.setMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
+                owner: MetadataOwner(level: .source, id: context.sourceID),
                 fieldID: fieldID,
                 valueText: value
             )
-            replaceEntry(updated, effects: effects)
+            replaceEntry(updated, fieldID: fieldID, effects: effects)
             if editingFieldID == fieldID {
                 editingFieldID = nil
             }
@@ -159,13 +159,13 @@ final class SourceMetadataSection {
         defer { isClearing = false }
         context.clearPageError()
         do {
-            let effects = try await context.store.clearSourceMetadata(
+            let (updated, effects) = try await context.store.clearMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
+                owner: MetadataOwner(level: .source, id: context.sourceID),
                 fieldID: item.fieldID
             )
-            applyCleared(fieldID: item.fieldID, effects: effects)
+            applyCleared(updated, fieldID: item.fieldID, effects: effects)
             pendingDelete = nil
         } catch {
             context.showFailure(error)
@@ -175,10 +175,10 @@ final class SourceMetadataSection {
     func dismissSuggestion(fieldID: String) async {
         context.clearPageError()
         do {
-            let (updated, effects) = try await context.store.dismissSourceMetadataSuggestion(
+            let (updated, effects) = try await context.store.dismissMetadataSuggestion(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
+                owner: MetadataOwner(level: .source, id: context.sourceID),
                 fieldID: fieldID
             )
             context.workspace?.metadata = updated
@@ -199,10 +199,10 @@ final class SourceMetadataSection {
         context.workspace?.metadata = ordered
         context.clearPageError()
         do {
-            let (updated, effects) = try await context.store.reorderSourceMetadata(
+            let (updated, effects) = try await context.store.reorderMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
+                owner: MetadataOwner(level: .source, id: context.sourceID),
                 fieldIDs: ordered.map(\.field.id)
             )
             context.workspace?.metadata = updated
@@ -245,14 +245,14 @@ final class SourceMetadataSection {
         defer { isSavingAdd = false }
         context.clearPageError()
         do {
-            let (entry, effects) = try await context.store.setSourceMetadata(
+            let (updated, effects) = try await context.store.setMetadata(
                 projectDir: context.projectDir,
                 userID: context.userID,
-                sourceID: context.sourceID,
+                owner: MetadataOwner(level: .source, id: context.sourceID),
                 fieldID: addFieldID,
                 valueText: value
             )
-            replaceEntry(entry, effects: effects)
+            replaceEntry(updated, fieldID: addFieldID, effects: effects)
             isAdding = false
         } catch {
             applySetError(error, fieldID: nil)
@@ -274,29 +274,15 @@ final class SourceMetadataSection {
         context.showPageError(message)
     }
 
-    /// Patches one workspace row from a `setSourceMetadata` response.
-    private func replaceEntry(_ entry: CatalogMetadataEntry, effects: CatalogWriteEffects) {
-        if let idx = entries.firstIndex(where: { $0.field.id == entry.field.id }) {
-            context.workspace?.metadata[idx] = entry
-        } else {
-            context.workspace?.metadata.append(entry)
-        }
-        drafts[entry.field.id] = entry.valueText
+    /// Takes the owner's rows from a `setMetadata` response.
+    private func replaceEntry(_ updated: [CatalogMetadataEntry], fieldID: String, effects: CatalogWriteEffects) {
+        context.workspace?.metadata = updated
+        drafts[fieldID] = updated.first { $0.field.id == fieldID }?.valueText ?? ""
         context.applyMetadataWrite(effects)
     }
 
-    private func applyCleared(fieldID: String, effects: CatalogWriteEffects) {
-        guard var list = context.workspace?.metadata,
-              let idx = list.firstIndex(where: { $0.field.id == fieldID })
-        else { return }
-        if list[idx].suggested {
-            list[idx].valueText = ""
-            list[idx].hasValue = false
-            list[idx].openHref = ""
-        } else {
-            list.remove(at: idx)
-        }
-        context.workspace?.metadata = list
+    private func applyCleared(_ updated: [CatalogMetadataEntry], fieldID: String, effects: CatalogWriteEffects) {
+        context.workspace?.metadata = updated
         drafts[fieldID] = ""
         if editingFieldID == fieldID {
             editingFieldID = nil

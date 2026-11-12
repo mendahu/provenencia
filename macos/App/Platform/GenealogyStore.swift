@@ -1250,6 +1250,13 @@ struct CatalogMetadataEntry: Sendable, Equatable, Identifiable {
     }
 }
 
+/// What holds metadata: a Source, an Artifact or an Evidence graph. Mirrors the
+/// wire `MetadataOwner`; Go refuses a level that holds none.
+struct MetadataOwner: Sendable, Hashable {
+    var level: Level
+    var id: String
+}
+
 struct CatalogSourceWorkspace: Sendable, Equatable {
     var source: CatalogSource
     var notes: [CatalogSourceNote]
@@ -1376,30 +1383,33 @@ protocol GenealogyStore: Sendable {
     func updateSourceNote(projectDir: String, userID: String, noteID: String, body: String) async throws
         -> (CatalogSourceNote, CatalogWriteEffects)
     func deleteSourceNote(projectDir: String, userID: String, noteID: String) async throws -> CatalogWriteEffects
-    /// Returns the refreshed workspace entry so callers can patch without refetching.
-    func setSourceMetadata(
+    /// Set the owner's value for a field. Returns the owner's whole board in display order.
+    func setMetadata(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String,
         valueText: String
-    ) async throws -> (CatalogMetadataEntry, CatalogWriteEffects)
-    func clearSourceMetadata(
-        projectDir: String, userID: String, sourceID: String, fieldID: String
-    ) async throws -> CatalogWriteEffects
-    /// Permanently dismiss an unfilled type suggestion for this Source.
-    /// Returns the updated workspace metadata list.
-    func dismissSourceMetadataSuggestion(
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
+    /// Clear the owner's value for a field: a suggested field stays as an empty suggestion, any other leaves.
+    /// Returns the owner's whole board in display order.
+    func clearMetadata(
+        projectDir: String, userID: String, owner: MetadataOwner, fieldID: String
+    ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
+    /// Permanently dismiss an unfilled type suggestion for this owner.
+    /// Returns the owner's whole board in display order.
+    func dismissMetadataSuggestion(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldID: String
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
-    /// Persist display order for visible metadata rows (field ids in order).
-    func reorderSourceMetadata(
+    /// Persist display order for the owner's visible metadata rows (field ids in order).
+    /// Returns the owner's whole board in display order.
+    func reorderMetadata(
         projectDir: String,
         userID: String,
-        sourceID: String,
+        owner: MetadataOwner,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
     /// `graphIDs` nil is every graph of the Source; `[]` is none.
