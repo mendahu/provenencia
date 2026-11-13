@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -298,9 +299,6 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 	}
 }
 
-// A warm open composes the Why and the gallery from the canonical node: it
-// reads neither the reconciler's outcome rows nor the depiction values, and
-// issues no graph query.
 // warmReadTables are the tables a warm open of a Conclusion page reads none of:
 // its records, their Sources and vocabulary, and the reconciler's outcomes.
 var warmReadTables = []string{
@@ -308,6 +306,9 @@ var warmReadTables = []string{
 	"identity_claims", "evidence_graphs", "sources", "artifacts", "auto_reconciler_outcomes",
 }
 
+// A warm open composes the Why and the gallery from the canonical node: it
+// reads neither the reconciler's outcome rows nor the depiction values, and
+// issues no graph query.
 func TestGetConclusionDetailWarmReadsNoReconcilerOrGallerySQL(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
@@ -338,7 +339,7 @@ func TestGetConclusionDetailWarmReadsNoReconcilerOrGallerySQL(t *testing.T) {
 	if len(d.GetPictures()) != 2 {
 		t.Fatalf("pictures %+v", d.GetPictures())
 	}
-	for _, table := range warmReadTables {
+	for _, table := range append(slices.Clone(warmReadTables), "depiction_values") {
 		if sel.Read(table) {
 			t.Errorf("a warm open read %s", table)
 		}
@@ -371,6 +372,19 @@ func TestGetConclusionDetailWarmReadsNoRecordSQL(t *testing.T) {
 	second, err := GetConclusionDetail(req)
 	if err != nil {
 		t.Fatal(err)
+	}
+	var d engine.ConclusionDetail
+	if err := proto.Unmarshal(second, &d); err != nil {
+		t.Fatal(err)
+	}
+	nameOutcomes := 0
+	for _, f := range d.GetFields() {
+		if f.GetPropertyKey() == "name" {
+			nameOutcomes += len(f.GetOutcomes())
+		}
+	}
+	if nameOutcomes == 0 {
+		t.Fatalf("no name outcome in %+v", d.GetFields())
 	}
 	for _, table := range warmReadTables {
 		if sel.Read(table) {
@@ -514,8 +528,8 @@ func TestSetPreferredLikeness(t *testing.T) {
 	}
 }
 
-// derivedRowsFixture is a Person who took part in an Event that is a birth on a
-// date, both promoted.
+// derivedRowsFixture is a Person with a cited name who took part in an Event
+// that is a birth on a date, both promoted.
 func derivedRowsFixture(t *testing.T) (dir string, person, event promote.Result) {
 	t.Helper()
 	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, _ := connectFixture(t)
@@ -568,6 +582,12 @@ func derivedRowsFixture(t *testing.T) (dir string, person, event promote.Result)
 		})); err != nil {
 			t.Fatalf("citation %d: %v", i, err)
 		}
+	}
+	if _, err := CreateCitationWithObservations(marshalProto(t, &engine.CreateCitationWithObservationsRequest{
+		ProjectDir: dir, UserId: userID, ArtifactId: artifactID, GraphId: graphLinking(t, dir, artifactID), LocatorJson: validLocatorJSON,
+		Observations: []*engine.ObservationDraft{{SubjectId: personID, PropertyId: propertyIDByKey(t, dir, "name"), Name: &engine.NameValueInput{Form: "Ada Lovelace"}}},
+	})); err != nil {
+		t.Fatalf("name citation: %v", err)
 	}
 	person = promoteInDir(t, dir, userID, personID, "")
 	event = promoteInDir(t, dir, userID, eventID, "")
