@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -299,6 +301,13 @@ func TestGetConclusionDetailListsPictures(t *testing.T) {
 // A warm open composes the Why and the gallery from the canonical node: it
 // reads neither the reconciler's outcome rows nor the depiction values, and
 // issues no graph query.
+// warmReadTables are the tables a warm open of a Conclusion page reads none of:
+// its records, their Sources and vocabulary, and the reconciler's outcomes.
+var warmReadTables = []string{
+	"observations", "citations", "subjects", "date_values", "name_values", "property_terms", "subject_types",
+	"identity_claims", "evidence_graphs", "sources", "artifacts", "auto_reconciler_outcomes",
+}
+
 func TestGetConclusionDetailWarmReadsNoReconcilerOrGallerySQL(t *testing.T) {
 	t.Cleanup(func() { _ = catalogsession.CloseAll() })
 	dir, userID, _, artifactID, personID, likenessID := likenessFixture(t)
@@ -329,13 +338,50 @@ func TestGetConclusionDetailWarmReadsNoReconcilerOrGallerySQL(t *testing.T) {
 	if len(d.GetPictures()) != 2 {
 		t.Fatalf("pictures %+v", d.GetPictures())
 	}
-	for _, table := range []string{"auto_reconciler_outcomes", "depiction_values"} {
+	for _, table := range warmReadTables {
 		if sel.Read(table) {
 			t.Errorf("a warm open read %s", table)
 		}
 	}
 	if graphQueries != 0 {
 		t.Errorf("a warm open issued %d graph queries", graphQueries)
+	}
+}
+
+// TestGetConclusionDetailWarmReadsNoRecordSQL: a second open of a Person with a
+// provenance sheet, a birth and its date reads none of the record tables and
+// issues no graph query, and answers the same bytes.
+func TestGetConclusionDetailWarmReadsNoRecordSQL(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, person, _ := derivedRowsFixture(t)
+	req := marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(person.Entity.ID)})
+	first, err := GetConclusionDetail(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sel *databasetest.Selects
+	var graphQueries int
+	if err := catalogsession.Do(dir, func(c *database.Catalog) error {
+		sel = databasetest.CountSelects(t, c)
+		c.Graph().SetQueryCounterForTest(func() { graphQueries++ })
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	second, err := GetConclusionDetail(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, table := range warmReadTables {
+		if sel.Read(table) {
+			t.Errorf("a warm open read %s", table)
+		}
+	}
+	if graphQueries != 0 {
+		t.Errorf("a warm open issued %d graph queries", graphQueries)
+	}
+	if !bytes.Equal(first, second) {
+		t.Error("the second read answers other bytes")
 	}
 }
 
@@ -468,8 +514,10 @@ func TestSetPreferredLikeness(t *testing.T) {
 	}
 }
 
-func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
-	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+// derivedRowsFixture is a Person who took part in an Event that is a birth on a
+// date, both promoted.
+func derivedRowsFixture(t *testing.T) (dir string, person, event promote.Result) {
+	t.Helper()
 	dir, userID, _, artifactID, personID, eventID, personProp, eventProp, roleProp, _ := connectFixture(t)
 
 	termID := func(propertyID, key string) string {
@@ -521,8 +569,14 @@ func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
 			t.Fatalf("citation %d: %v", i, err)
 		}
 	}
-	person := promoteInDir(t, dir, userID, personID, "")
-	event := promoteInDir(t, dir, userID, eventID, "")
+	person = promoteInDir(t, dir, userID, personID, "")
+	event = promoteInDir(t, dir, userID, eventID, "")
+	return dir, person, event
+}
+
+func TestGetConclusionDetailCarriesDerivedRows(t *testing.T) {
+	t.Cleanup(func() { _ = catalogsession.CloseAll() })
+	dir, person, event := derivedRowsFixture(t)
 
 	out, err := GetConclusionDetail(marshalProto(t, &engine.GetConclusionDetailRequest{ProjectDir: dir, EntityId: database.UUIDString(person.Entity.ID)}))
 	if err != nil {

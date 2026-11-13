@@ -8,7 +8,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/files"
 	"github.com/mendahu/provenencia/core/database/rowchange"
-	"github.com/mendahu/provenencia/core/database/subjecttypes"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
@@ -202,15 +201,13 @@ func conclusionValueProto(v conclusiondetails.Value, depiction *engine.Depiction
 // attachSummary reads the handle's summary for its kind beside the detail. It
 // returns the summary's picture lead File id (nil when none).
 func attachSummary(c *database.Catalog, d conclusiondetails.Detail, out *engine.ConclusionDetail) ([]byte, error) {
-	st, err := subjecttypes.GetByID(c, d.Entity.SubjectTypeID)
+	vocab, err := c.Graph().Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	if st.Origin != vocabkey.OriginProvenencia {
-		return nil, nil
-	}
+	// Only a provenencia subject type has a key; any other has no summary.
 	ids := [][]byte{d.Entity.ID}
-	switch st.Key {
+	switch vocab.TypeKeysByID()[string(d.Entity.SubjectTypeID)] {
 	case vocabkey.Person:
 		h, err := conclusionsummaries.PersonsByIDs(c, ids)
 		if err != nil || len(h) != 1 {
