@@ -62,4 +62,25 @@ struct TextEmphasisRenderingTests {
         let emphasized = try #require(headerBitmap(strong))
         #expect(plain != emphasized)
     }
+
+    private func titleHeight(_ source: PVTitleSource) -> Int? {
+        let renderer = ImageRenderer(
+            content: PVTitleText(source, lineLimit: 1)
+                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+        )
+        renderer.scale = 2
+        return renderer.cgImage?.height
+    }
+
+    /// A compact person card sets its title at the caption size inside a 38pt tile. A name
+    /// with a former surname ("Mary (Smith) Jones") italicizes that run; the italic run keeps
+    /// the caller's size, so the title is no taller than the same name drawn plain.
+    @Test func anEmphasizedRunInARowTitleKeepsTheCallersFontSize() throws {
+        var styled = AttributedString("Mary (Smith) Jones")
+        let smith = try #require(styled.range(of: "Smith"))
+        styled[smith][AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized
+        let plain = try #require(titleHeight(.name("Mary (Smith) Jones")))
+        let italic = try #require(titleHeight(.name("Mary (Smith) Jones", styled: styled)))
+        #expect(italic == plain)
+    }
 }
