@@ -83,3 +83,15 @@ T-2 and T-6 cover them.
 
 ### M-8 · nit · Doc comments made stale
 **Answer:** Fixed. **Deletes** lists the four rewordings, and STEP-3 makes them.
+
+## Round 2
+
+The maintainability reviewer (Opus, fresh context) found that every round-1 answer holds against the code, with the notes below.
+
+### M-9 · blocker · The dialog's `canSubmitAdd` keeps its own copy of the add row's confirm gate
+**Answer:** Fixed. In D-12, `canSubmitAdd` is now `addTarget?.canConfirmAddRow ?? false`, and `addSheetIsDirty` keeps its body.
+
+### Notes on round-1 answers
+- M-2: D-5's "Why" pointed at D-12 instead of D-13. **Fixed.** The `.coded` matches inside `CoreInvokeError.errorDescription` and `L10n.Errors.message(for:)` predate this PR and are no worse after it. **Logged.**
+- M-4: `FakeStore.reorderMetadata` now uses the production `reordered(by:)` instead of its own local sort. The reviewer judged this no worse than today. **Logged.**
+- M-6: the map's Ships line still said the starting rows come "from `listTypeSuggestions`". **Fixed:** STEP-5 rewords it too.
