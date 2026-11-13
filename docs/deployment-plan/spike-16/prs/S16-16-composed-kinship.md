@@ -82,7 +82,7 @@ The graph cache keeps one kinship result per pivot (`canonlinks.kinship`: what a
 | The match index's drop-on-any-handle Apply | S16-20 |
 | The Family read reporting its inputs on the wire | S16-24 |
 | A kinship index, reverse map or open-time warm of the pivots | not planned (map review K-20; rule "No stored answer without a measurement") |
-| Memoising a composed `For` if it measures slow | [`docs/ideas/promote-ranking.md`](../../../ideas/promote-ranking.md#memoise-a-persons-composed-kinship): STEP-4 measured warm-ms 1.68× at 16,000 and the user accepted it as the new normal (2026-11-13) |
+| Memoising a composed `For` if it measures slow | [`docs/ideas/promote-ranking.md`](../../../ideas/promote-ranking.md#memoise-a-persons-composed-kinship): STEP-4 measured warm-ms at 1.56–1.74× the base at 4,000 and 1.68–2.27× at 16,000 (ship log), and the user accepted it as the new normal (2026-11-13) |
 | Family trees beyond the nuclear family | [`docs/ideas/kinship-view.md`](../../../ideas/kinship-view.md) |
 | Changing the pivot Apply's one-hop drop | not planned (exact already) |
 
@@ -225,7 +225,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestComposedAnswersReusePivots|Te
 **STEP-4 — Measure after**
 Files: none changed unless a figure fails the Stop conditions.
 Do: run the STEP-1 commands on the same machine (same `hostname`); write the after figures beside the base in the ship log.
-Check: `TestLargeSourceBudgets` passes (if it failed on the base in STEP-1, it fails no subtest the base passed); `warm-ms` at 16,000 is recorded against its base (the 1.25× limit was lifted by the user on 2026-11-13, after a first run measured 1.68×: see §11); `kinship-B` at each size is at most 1.1 × its base (one `HeapDelta` is noisy; report both figures) (§11).
+Check: `TestLargeSourceBudgets` passes (if it failed on the base in STEP-1, it fails no subtest the base passed); `warm-ms` at 16,000 is recorded against its base (the 1.25× limit was lifted by the user on 2026-11-13, after a first run measured 1.68× at 16,000: see §11); `kinship-B` at each size is at most 1.1 × its base (one `HeapDelta` is noisy; report both figures) (§11).
 
 **STEP-5 — Docs**
 Files: `docs/catalog-caches.md`, `.agents/skills/add-match-rule/SKILL.md`, `docs/matching-model.md`, `core/database/promotealign/canon.go` (comment), `docs/deployment-plan/spike-16/deployment-plan.md`, `docs/deployment-plan/spike-16/completed.md`, this plan.
@@ -295,7 +295,7 @@ Must stay green: everything `scripts/check-pr.sh` runs, and the Go suites with `
 **Stop and report if:**
 
 - `Reader.For`, `Reader.Relationships`, `LoadRelationships`, `forLinks`, `siblingsOf`, `loadSteps` or `Families` no longer do what §4 says.
-- `TestLargeSourceBudgets` fails after STEP-2 where it passed at STEP-1 on the same machine: report both figures. (A `warm-ms` limit of 1.25 × the STEP-1 base stood here. The first run measured 1.68× at 16,000; the user accepted the cost as the new normal on 2026-11-13, raised `budgetWarm` to match, and parked memoising `For` in [`promote-ranking.md`](../../../ideas/promote-ranking.md#memoise-a-persons-composed-kinship).)
+- `TestLargeSourceBudgets` fails after STEP-2 where it passed at STEP-1 on the same machine: report both figures. (A `warm-ms` limit of 1.25 × the STEP-1 base stood here. The runs measured 1.56–1.74× at 4,000 and 1.68–2.27× at 16,000; the user accepted the cost as the new normal on 2026-11-13, raised `budgetWarm` to match, and parked memoising `For` in [`promote-ranking.md`](../../../ideas/promote-ranking.md#memoise-a-persons-composed-kinship).)
 - `BenchmarkCacheSizes`' `kinship-B` is more than 1.1 × its STEP-1 base at either size.
 - A test in T-7 needs its expected values changed to pass.
 - The existing `TestPersonFamilyQueryCount` subtests named "AC-2.2" or "AC-2.3" (S16-01's labels, not this plan's ACs) give unequal counts after STEP-2.
@@ -309,3 +309,7 @@ None.
 
 **Title:** S16-16 — Kinship answers are composed from the pivots, and the Family read is one pass
 **Body:** objective in one sentence; what shipped against each US; AC evidence; the STEP-1 / STEP-4 figures; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-16/prs/S16-16-composed-kinship.md`.
+
+## Landed
+
+The code matches the plan. Differences: `budgetWarm` is 950 ms, not unchanged, and the warm-ms 1.25× limit is lifted (user, 2026-11-13: STEP-4 measured 1.56–1.74× at 4,000 and 1.68–2.27× at 16,000; memoising `For` is parked in `docs/ideas/promote-ranking.md`); `warmProposal` uses `databasetest.Warm`, which `main` already had; `TestComposedAnswersReusePivots` is subtests ("commit ann", "commit cal", "commit a stranger"), not a two-row table; the `canonlinks.kinship` size cell gives its keys and no heap figure of its own, because the evidence fill already holds every pivot (kinship-B 0, explained in the ship log); `Families` passes every named relative and every `Around` id to the graph cache and the reader without a first-seen dedupe of its own (`g.Nodes` and `loadSteps` dedupe), takes `want` from `database.UniqueBlobIDs`, and fills `aroundKin` from the `Relationships` map; T-6's "a commit elsewhere" is joined by a `canonlinks` subtest that no kinship pivot is dropped by a commit on a person linked to nobody.
