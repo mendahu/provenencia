@@ -6,10 +6,12 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/sourcemetadata"
+	"google.golang.org/protobuf/proto"
 )
 
 // metadataOwners is the graphFixture's Source with its two metadata fields
@@ -106,6 +108,16 @@ func TestMetadataOwners(t *testing.T) {
 		})
 	}
 
+	t.Run("a refused url value names its field", func(t *testing.T) {
+		link := newField(t, m.dir, m.userID, "Link", "url")
+		err := rpc(t, SetMetadata, &engine.SetMetadataRequest{
+			ProjectDir: m.dir, UserId: m.userID, Owner: m.artifact, FieldId: link, ValueText: "not a link",
+		}, &engine.SetMetadataResponse{})
+		if !errors.Is(err, sourcemetadata.ErrInvalid) || !slices.Equal(errParams(t, err), []string{link}) {
+			t.Fatalf("got %v, params %v, want params [%s]", err, errParams(t, err), link)
+		}
+	})
+
 	// Owners the wire refuses: an unwired level and a missing owner are
 	// sourcemetadata.invalid; a malformed id is request.invalid_id.
 	bad := map[string]struct {
@@ -193,6 +205,33 @@ func latestRevisionTypes(t *testing.T, dir string) []string {
 		t.Fatal(err)
 	}
 	return out
+}
+
+// errParams is the params of the *apperr.Error in err's chain.
+func errParams(t *testing.T, err error) []string {
+	t.Helper()
+	var ae *apperr.Error
+	if !errors.As(err, &ae) {
+		t.Fatalf("not an apperr: %v", err)
+	}
+	return ae.Params()
+}
+
+// assertReplyBoard fails unless got is the owner's board as GetMetadataBoard
+// reads it now, entry for entry.
+func assertReplyBoard(t *testing.T, dir string, owner *engine.MetadataOwner, got []*engine.MetadataWorkspaceEntry) {
+	t.Helper()
+	var board engine.GetMetadataBoardResponse
+	mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: dir, Owner: owner}, &board)
+	want := board.GetBoard().GetEntries()
+	if len(got) != len(want) {
+		t.Fatalf("reply board has %d entries, want %d: %+v vs %+v", len(got), len(want), got, want)
+	}
+	for i := range want {
+		if !proto.Equal(got[i], want[i]) {
+			t.Fatalf("reply entry %d = %+v, want %+v", i, got[i], want[i])
+		}
+	}
 }
 
 // draftOf is a draft with one value and its layout row at the top.

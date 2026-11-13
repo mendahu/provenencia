@@ -5,9 +5,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
+	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -343,6 +345,178 @@ func TestUpdateArtifactGraphLinks(t *testing.T) {
 	})
 }
 
+// TestUpdateArtifactMetadata saves an Artifact's metadata draft with its edit
+// in one revision, and returns the Artifact's board.
+func TestUpdateArtifactMetadata(t *testing.T) {
+	m := newMetadataOwners(t)
+	accessed := newUserField(t, m.dir, m.userID, "Accessed")
+	link := newField(t, m.dir, m.userID, "URL", "url")
+	provider := m.suggested
+	id := m.page1
+	labelOf := func(t *testing.T) string {
+		t.Helper()
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &ws)
+		for _, a := range ws.GetArtifacts() {
+			if a.GetId() == id {
+				return a.GetLabel()
+			}
+		}
+		t.Fatalf("artifact %s not found", id)
+		return ""
+	}
+	set := func(t *testing.T, field, text string) int64 {
+		t.Helper()
+		var out engine.SetMetadataResponse
+		mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
+			ProjectDir: m.dir, UserId: m.userID, Owner: m.artifact, FieldId: field, ValueText: text,
+		}, &out)
+		return out.GetEffects().GetRevision()
+	}
+	update := func(label string, draft *engine.MetadataDraft, links *engine.GraphLinks) (*engine.UpdateArtifactResponse, error) {
+		var out engine.UpdateArtifactResponse
+		err := rpc(t, UpdateArtifact, &engine.UpdateArtifactRequest{
+			ProjectDir: m.dir, UserId: m.userID, ArtifactId: id, Label: label, GraphLinks: links, Metadata: draft,
+		}, &out)
+		return &out, err
+	}
+	board := func(t *testing.T) []*engine.MetadataWorkspaceEntry {
+		t.Helper()
+		var out engine.GetMetadataBoardResponse
+		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: m.dir, Owner: m.artifact}, &out)
+		return out.GetBoard().GetEntries()
+	}
+	valueOf := func(t *testing.T, field string) string {
+		t.Helper()
+		if e := metadataByField(board(t), field); e != nil {
+			return e.GetValueText()
+		}
+		return ""
+	}
+	holdsNoMetadataChange := func(t *testing.T) {
+		t.Helper()
+		for _, ty := range latestRevisionTypes(t, m.dir) {
+			if strings.HasPrefix(ty, "artifact_metadata") {
+				t.Fatalf("metadata changed: %v", latestRevisionTypes(t, m.dir))
+			}
+		}
+	}
+
+	t.Run("saves the edit and the draft in one revision", func(t *testing.T) {
+		set(t, provider, "FamilySearch")
+		before := set(t, link, "https://example.org/a")
+		resp, err := update("Scan (front)", &engine.MetadataDraft{
+			Values: []*engine.MetadataValue{
+				{FieldId: provider, ValueText: "Ancestry"},
+				{FieldId: accessed, ValueText: "12 March 2025"},
+			},
+			Layout: []*engine.MetadataLayoutRow{
+				{FieldId: accessed, SortOrder: 0},
+				{FieldId: provider, SortOrder: 1},
+			},
+		}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.GetEffects().GetRevision() != before+1 {
+			t.Fatalf("revision %d -> %d", before, resp.GetEffects().GetRevision())
+		}
+		want := []string{
+			"artifact update", "artifact_metadata delete", "artifact_metadata update",
+			"artifact_metadata create", "artifact_metadata_layout create", "artifact_metadata_layout update",
+		}
+		if got := latestRevisionTypes(t, m.dir); !slices.Equal(got, want) {
+			t.Fatalf("changes %v, want %v", got, want)
+		}
+		if got := metadataFieldIDs(resp.GetMetadata()); !slices.Equal(got, []string{accessed, provider}) {
+			t.Fatalf("board order %v, want accessed, provider", got)
+		}
+		assertReplyBoard(t, m.dir, m.artifact, resp.GetMetadata())
+		if labelOf(t) != "Scan (front)" || valueOf(t, provider) != "Ancestry" || valueOf(t, link) != "" {
+			t.Fatalf("label %q provider %q url %q", labelOf(t), valueOf(t, provider), valueOf(t, link))
+		}
+	})
+	t.Run("absent leaves metadata, empty clears", func(t *testing.T) {
+		resp, err := update("Scan (back)", nil, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		holdsNoMetadataChange(t)
+		assertReplyBoard(t, m.dir, m.artifact, resp.GetMetadata())
+		if valueOf(t, provider) != "Ancestry" {
+			t.Fatalf("provider %q, want it held", valueOf(t, provider))
+		}
+		resp, err = update("Scan (back)", &engine.MetadataDraft{}, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertReplyBoard(t, m.dir, m.artifact, resp.GetMetadata())
+		for _, e := range resp.GetMetadata() {
+			if e.GetHasValue() {
+				t.Fatalf("board still holds %+v", e)
+			}
+		}
+	})
+	t.Run("nothing changed writes no revision", func(t *testing.T) {
+		// page2 has no layout yet, so one SetMetadata leaves provider at 0.
+		other := &engine.MetadataOwner{Level: "artifact", Id: m.page2}
+		mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
+			ProjectDir: m.dir, UserId: m.userID, Owner: other, FieldId: provider, ValueText: "Ancestry",
+		}, &engine.SetMetadataResponse{})
+		var ws engine.GetSourceWorkspaceResponse
+		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &ws)
+		var label string
+		for _, a := range ws.GetArtifacts() {
+			if a.GetId() == m.page2 {
+				label = a.GetLabel()
+			}
+		}
+		var resp engine.UpdateArtifactResponse
+		mustRPC(t, UpdateArtifact, &engine.UpdateArtifactRequest{
+			ProjectDir: m.dir, UserId: m.userID, ArtifactId: m.page2, Label: label,
+			Metadata: draftOf(provider, "Ancestry"),
+		}, &resp)
+		if resp.GetEffects().GetRevision() != 0 {
+			t.Fatalf("revision %d, want 0", resp.GetEffects().GetRevision())
+		}
+		assertReplyBoard(t, m.dir, other, resp.GetMetadata())
+	})
+	t.Run("a refused value names its field and writes nothing", func(t *testing.T) {
+		set(t, provider, "Ancestry")
+		label := labelOf(t)
+		_, err := update("Renamed", &engine.MetadataDraft{Values: []*engine.MetadataValue{
+			{FieldId: provider, ValueText: "Other"}, {FieldId: link, ValueText: "not a link"},
+		}}, nil)
+		var ae *apperr.Error
+		if !errors.As(err, &ae) || ae.Code() != apperr.CodeSourceMetadataInvalid || !slices.Equal(ae.Params(), []string{link}) {
+			t.Fatalf("got %v, params %v", err, errParams(t, err))
+		}
+		if labelOf(t) != label || valueOf(t, provider) != "Ancestry" {
+			t.Fatalf("label %q provider %q, want %q and Ancestry", labelOf(t), valueOf(t, provider), label)
+		}
+	})
+	t.Run("a refused unlink drops the draft", func(t *testing.T) {
+		pageID := m.createArtifact(t, m.sourceID, "P6", &engine.GraphLinks{GraphIds: []string{m.defaultGraphID}})
+		mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
+			ProjectDir: m.dir, UserId: m.userID, ArtifactId: pageID, GraphId: graphLinking(t, m.dir, pageID), LocatorJson: validLocatorJSON,
+		}, &engine.CreateCitationWithObservationsResponse{})
+		err := rpc(t, UpdateArtifact, &engine.UpdateArtifactRequest{
+			ProjectDir: m.dir, UserId: m.userID, ArtifactId: pageID, Label: "P6",
+			GraphLinks: &engine.GraphLinks{}, Metadata: draftOf(provider, "Ancestry"),
+		}, &engine.UpdateArtifactResponse{})
+		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
+			t.Fatalf("got %v", err)
+		}
+		var got engine.GetMetadataBoardResponse
+		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{
+			ProjectDir: m.dir, Owner: &engine.MetadataOwner{Level: "artifact", Id: pageID},
+		}, &got)
+		if e := metadataByField(got.GetBoard().GetEntries(), provider); e != nil && e.GetHasValue() {
+			t.Fatalf("provider saved beside the refused unlink: %+v", e)
+		}
+	})
+}
+
 // filelessArtifact is a project with one Artifact that has no File.
 func filelessArtifact(t *testing.T) (dir, userID, artifactID string) {
 	t.Helper()
@@ -427,6 +601,11 @@ func TestCreateArtifactMetadata(t *testing.T) {
 	mustRPC(t, CreateSource, &engine.CreateSourceRequest{ProjectDir: dir, UserId: userID, SourceTypeId: typeID, Title: "Census"}, &src)
 	sourceID := src.GetSource().GetId()
 	provider := newUserField(t, dir, userID, "Provider")
+	link := newField(t, dir, userID, "URL", "url")
+	mustRPC(t, AssignTypeField, &engine.AssignTypeFieldRequest{
+		ProjectDir: dir, TypeId: typeID, FieldId: link, Level: "artifact",
+	}, &engine.AssignTypeFieldResponse{})
+	owner := func(id string) *engine.MetadataOwner { return &engine.MetadataOwner{Level: "artifact", Id: id} }
 	artifactCount := func() int {
 		var ws engine.GetSourceWorkspaceResponse
 		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &ws)
@@ -436,6 +615,10 @@ func TestCreateArtifactMetadata(t *testing.T) {
 	var plain engine.CreateArtifactResponse
 	mustRPC(t, CreateArtifact, &engine.CreateArtifactRequest{ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Plain"}, &plain)
 	plainTypes := latestRevisionTypes(t, dir)
+	assertReplyBoard(t, dir, owner(plain.GetArtifact().GetId()), plain.GetMetadata())
+	if e := metadataByField(plain.GetMetadata(), link); e == nil || !e.GetSuggested() || e.GetHasValue() {
+		t.Fatalf("plain create board %+v, want url suggested and empty", plain.GetMetadata())
+	}
 	if slices.ContainsFunc(plainTypes, func(s string) bool { return s == "artifact_metadata create" }) {
 		t.Fatalf("a create without metadata wrote metadata: %v", plainTypes)
 	}
@@ -450,18 +633,12 @@ func TestCreateArtifactMetadata(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("changes %v, want the plain create's %v then the value and layout creates", got, plainTypes)
 	}
-	var ws engine.GetSourceWorkspaceResponse
-	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &ws)
-	var found bool
-	for _, board := range ws.GetArtifactMetadata() {
-		if board.GetOwnerId() != resp.GetArtifact().GetId() {
-			continue
-		}
-		found = len(board.GetEntries()) == 1 && board.GetEntries()[0].GetField().GetId() == provider &&
-			board.GetEntries()[0].GetValueText() == "FamilySearch"
+	assertReplyBoard(t, dir, owner(resp.GetArtifact().GetId()), resp.GetMetadata())
+	if e := metadataByField(resp.GetMetadata(), link); e == nil || !e.GetSuggested() || e.GetHasValue() {
+		t.Fatalf("board %+v, want url suggested and empty", resp.GetMetadata())
 	}
-	if !found {
-		t.Fatalf("board missing the saved value: %+v", ws.GetArtifactMetadata())
+	if e := metadataByField(resp.GetMetadata(), provider); e == nil || e.GetValueText() != "FamilySearch" {
+		t.Fatalf("board %+v, want provider FamilySearch", resp.GetMetadata())
 	}
 
 	before := artifactCount()
@@ -474,6 +651,16 @@ func TestCreateArtifactMetadata(t *testing.T) {
 	}
 	if artifactCount() != before {
 		t.Fatal("an Artifact was created beside the refused draft")
+	}
+	err = rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
+		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Bad",
+		Metadata: draftOf(link, "not a link"),
+	}, &engine.CreateArtifactResponse{})
+	if !errors.Is(err, sourcemetadata.ErrInvalid) || !slices.Equal(errParams(t, err), []string{link}) {
+		t.Fatalf("bad url: %v, params %v", err, errParams(t, err))
+	}
+	if artifactCount() != before {
+		t.Fatal("an Artifact was created beside the refused url")
 	}
 	err = rpc(t, CreateArtifact, &engine.CreateArtifactRequest{
 		ProjectDir: dir, UserId: userID, SourceId: sourceID, Label: "Bad",

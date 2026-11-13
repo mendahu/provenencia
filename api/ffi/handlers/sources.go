@@ -67,7 +67,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		meta, err := sourcemetadata.ListWorkspace(c, owner)
+		meta, err := ownerBoardProto(c, owner)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func GetSourceWorkspace(in []byte) ([]byte, error) {
 		for _, n := range notes {
 			out.Notes = append(out.Notes, noteProto(n))
 		}
-		out.Metadata = metadataEntriesProto(meta)
+		out.Metadata = meta
 		boards, err := artifactBoardsProto(c, artIDs)
 		if err != nil {
 			return err

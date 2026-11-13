@@ -343,11 +343,7 @@ func metadataSetFixture(t *testing.T, dataType string) *engine.SetMetadataReques
 func urlMetadataSetFixture(t *testing.T) *engine.SetMetadataRequest {
 	t.Helper()
 	req := metadataSetFixture(t, "text")
-	var field engine.CreateMetadataFieldResponse
-	mustRPC(t, CreateMetadataField, &engine.CreateMetadataFieldRequest{
-		ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Catalogue URL", DataType: "url",
-	}, &field)
-	req.FieldId = field.Field.GetId()
+	req.FieldId = newField(t, req.ProjectDir, req.UserId, "Catalogue URL", "url")
 	return req
 }
 
@@ -649,17 +645,7 @@ func TestSetMetadata(t *testing.T) {
 			name: "set url metadata accepts host-shaped values",
 			reqFn: func(t *testing.T) proto.Message {
 				req := metadataSetFixture(t, "text")
-				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
-					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Catalogue URL", DataType: "url",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var field engine.CreateMetadataFieldResponse
-				if err := proto.Unmarshal(fout, &field); err != nil {
-					t.Fatal(err)
-				}
-				req.FieldId = field.Field.GetId()
+				req.FieldId = newField(t, req.ProjectDir, req.UserId, "Catalogue URL", "url")
 				req.ValueText = "www.url.com"
 				return req
 			},
@@ -688,17 +674,7 @@ func TestSetMetadata(t *testing.T) {
 			name: "set url metadata rejects file scheme",
 			reqFn: func(t *testing.T) proto.Message {
 				req := metadataSetFixture(t, "text")
-				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
-					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Bad URL", DataType: "url",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var field engine.CreateMetadataFieldResponse
-				if err := proto.Unmarshal(fout, &field); err != nil {
-					t.Fatal(err)
-				}
-				req.FieldId = field.Field.GetId()
+				req.FieldId = newField(t, req.ProjectDir, req.UserId, "Bad URL", "url")
 				req.ValueText = "file:/tmp"
 				return req
 			},
@@ -709,17 +685,7 @@ func TestSetMetadata(t *testing.T) {
 			name: "set url metadata rejects a single label",
 			reqFn: func(t *testing.T) proto.Message {
 				req := metadataSetFixture(t, "text")
-				fout, err := CreateMetadataField(marshalProto(t, &engine.CreateMetadataFieldRequest{
-					ProjectDir: req.ProjectDir, UserId: req.UserId, Label: "Bare word URL", DataType: "url",
-				}))
-				if err != nil {
-					t.Fatal(err)
-				}
-				var field engine.CreateMetadataFieldResponse
-				if err := proto.Unmarshal(fout, &field); err != nil {
-					t.Fatal(err)
-				}
-				req.FieldId = field.Field.GetId()
+				req.FieldId = newField(t, req.ProjectDir, req.UserId, "Bare word URL", "url")
 				req.ValueText = "jakerobins"
 				return req
 			},
