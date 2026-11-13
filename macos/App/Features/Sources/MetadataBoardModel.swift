@@ -1,6 +1,14 @@
 import Foundation
 import Observation
 
+/// The row a researcher fills to add a field to a board: the picked field, the typed value,
+/// and the refusal under the value.
+struct MetadataBoardAddRow: Equatable {
+    var fieldID = ""
+    var value = ""
+    var error: String?
+}
+
 /// One owner's metadata rows (saved values + type suggestions), over the host
 /// that holds the rows and runs the writes.
 @MainActor
@@ -11,11 +19,15 @@ final class MetadataBoardModel {
     /// Saved row currently in explicit edit mode (one at a time).
     var editingFieldID: String?
     private(set) var savingFieldID: String?
-    /// Inline value error after `sourcemetadata.invalid` (cleared on next edit).
+    /// Inline value error after `sourcemetadata.invalid`, from a row's own save or the owner's write
+    /// (`showRefusal`); cleared on next edit.
     var fieldError: String?
     var fieldErrorID: String?
+    /// The add row; nil is closed. Kept across `resetDrafts`.
+    var addRow: MetadataBoardAddRow?
+    private(set) var isSavingAddRow = false
 
-    /// Read by `MetadataBoardDialogs` for the Add dialog and clear confirm that target this board.
+    /// Read by `MetadataBoardDialogs` for the clear confirm and the Add dialog over the add row.
     let host: any MetadataBoardHost
 
     init(host: any MetadataBoardHost) {
@@ -42,12 +54,16 @@ final class MetadataBoardModel {
     }
 
     /// Seeds edit buffers for saved values and drops buffers for rows that no
-    /// longer exist (dismissed suggestions). Also exits any open edit mode.
+    /// longer exist (dismissed suggestions). Also exits any open edit mode. An open add row stays;
+    /// a field it picked that the rows now hold is cleared from it, and its value stays.
     func resetDrafts() {
         editingFieldID = nil
         fieldError = nil
         fieldErrorID = nil
         syncDrafts()
+        if let picked = addRow?.fieldID, entries.contains(where: { $0.field.id == picked }) {
+            addRow?.fieldID = ""
+        }
     }
 
     /// Resets only when the rows the workspace holds differ from the rows the
@@ -151,7 +167,41 @@ final class MetadataBoardModel {
         }
     }
 
-    /// Saves a value for a field with no saved value yet (the Add dialog's write).
+    // MARK: Add row
+
+    /// True when the open add row has a field, a value with text, and no write in flight.
+    var canConfirmAddRow: Bool {
+        guard let row = addRow, !isSavingAddRow else { return false }
+        return !row.fieldID.isEmpty
+            && !row.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Opens an empty add row; an open one keeps its field, value and error.
+    func openAddRow() {
+        if addRow == nil { addRow = MetadataBoardAddRow() }
+    }
+
+    func closeAddRow() {
+        guard !isSavingAddRow else { return }
+        addRow = nil
+    }
+
+    /// Adds the row's field with its trimmed value. A saved value closes the row; a refusal stays
+    /// on it; any other failure shows where the host shows failures and leaves the row as it is.
+    func confirmAddRow() async {
+        guard canConfirmAddRow, let row = addRow else { return }
+        addRow?.error = nil
+        isSavingAddRow = true
+        defer { isSavingAddRow = false }
+        let value = row.value.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch await add(fieldID: row.fieldID, valueText: value) {
+        case .saved: addRow = nil
+        case .invalid(let message): addRow?.error = message
+        case .failed: break
+        }
+    }
+
+    /// Saves a value for a field with no saved value yet (the add row's write).
     func add(fieldID: String, valueText: String) async -> MetadataBoardAddResult {
         host.clearFailure()
         do {

@@ -139,6 +139,44 @@ struct MetadataBoardModelTests {
         #expect(host.calls.contains(.clear("f-author")))
     }
 
+    @Test func addRowOnLiveBoard() async {
+        let host = TestMetadataBoardHost(entries: [])
+        host.fields = [catalogMetadataField("film", label: "Film number")]
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.addRow?.fieldID = "film"
+        board.addRow?.value = "F-7"
+
+        host.setError = invalid
+        host.failureText = "Bad"
+        await board.confirmAddRow()
+        #expect(board.addRow?.error == "Bad")
+        #expect(board.addRow?.fieldID == "film" && board.addRow?.value == "F-7")
+        #expect(!board.isSavingAddRow)
+
+        host.setError = boom
+        await board.confirmAddRow()
+        #expect(host.calls.contains(.showFailure("Bad")))
+        #expect(board.addRow?.error == nil)
+        #expect(board.addRow != nil)
+    }
+
+    @Test func addRowSurvivesReset() {
+        let host = TestMetadataBoardHost(entries: [])
+        host.fields = [catalogMetadataField("film", label: "Film number")]
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.addRow?.fieldID = "film"
+        board.addRow?.value = "F-7"
+
+        board.resetDrafts()
+        #expect(board.addRow == MetadataBoardAddRow(fieldID: "film", value: "F-7"))
+
+        host.entries = [catalogMetadataEntry(catalogMetadataField("film", label: "Film number"), "F-1")]
+        board.resetDrafts()
+        #expect(board.addRow == MetadataBoardAddRow(fieldID: "", value: "F-7"))
+    }
+
     @Test func invalidValueStaysOnTheFieldOrDialog() async {
         let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [repo])

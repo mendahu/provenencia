@@ -150,4 +150,24 @@ struct MetadataDraftHostTests {
         #expect(rows.allSatisfy { $0.suggested && !$0.hasValue && $0.valueText.isEmpty })
         #expect(MetadataDraftHost.unsavedRows(from: []).isEmpty)
     }
+
+    @Test func addRowConfirmsOnlyWhenFilled() async {
+        let host = makeHost()
+        let board = MetadataBoardModel(host: host)
+        #expect(!board.canConfirmAddRow)
+        board.openAddRow()
+        #expect(!board.canConfirmAddRow)
+        board.addRow?.fieldID = "film"
+        board.addRow?.value = "  "
+        #expect(!board.canConfirmAddRow)
+        await board.confirmAddRow()
+        #expect(board.addRow != nil)
+        #expect(!ids(host.entries).contains("film"))
+        board.addRow?.value = " F-7 "
+        #expect(board.canConfirmAddRow)
+        await board.confirmAddRow()
+        #expect(host.entries.last?.field.id == "film")
+        #expect(host.entries.last?.valueText == "F-7")
+        #expect(board.addRow == nil)
+    }
 }
