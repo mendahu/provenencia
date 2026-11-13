@@ -25,6 +25,7 @@ PR plans (docs/deployment-plan/<spike>/prs/S#-NN-<slug>.md), per plan-pr:
 Briefs (docs/deployment-plan/<spike>/design/S#-D#-<slug>.md), per
 add-design-brief:
   - header fields present
+  - **Implements later as** names exactly one PR (one brief, one PR)
   - the Paste block matches add-design-brief word for word
   - the UI building-block inventory exists, its Status words are known,
     and its Home paths exist
@@ -295,6 +296,12 @@ def check_brief(report: Report, text: str) -> None:
     for name in BRIEF_FIELDS:
         if name not in fields:
             report.error(0, f"missing header field **{name}:**")
+
+    if "Implements later as" in fields:
+        line, value = fields["Implements later as"]
+        prs = sorted(set(re.findall(r"\bS\d+-\d+\b", value)))
+        if len(prs) != 1:
+            report.error(line, f"**Implements later as** names {len(prs)} PRs ({', '.join(prs) or 'none'}); a brief gates exactly one PR (add-design-brief, One brief, one PR)")
 
     skill = BRIEF_SKILL.read_text(encoding="utf-8")
     m = re.search(r"## Paste block\s*```markdown\n(.*?)\n```", skill, re.DOTALL)

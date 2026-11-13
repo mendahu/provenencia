@@ -19,6 +19,16 @@ immediately after “Paste this entire document…”.
 Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md),
 [`docs/design-system-layers.md`](../../../docs/design-system-layers.md).
 
+## One brief, one PR
+
+**A brief gates exactly one PR, and draws only what that PR ships.** Its
+**Implements later as** line names that one PR. Do not put a later PR's
+section, state or requirement into this brief "while we're on the page". When
+later work changes the same view, it gets its own brief, written just before
+that PR is planned, on top of the frames this one leaves. A requirement that no
+PR in this brief ships is a sign it belongs in a later brief.
+(S15-D1 carried a citation section for S15-23, which was missed; user, 2026-11-13.)
+
 ## When this applies
 
 | Change | This skill |
@@ -33,7 +43,8 @@ Layers / implementing chrome: [`add-ui-component`](../add-ui-component/SKILL.md)
 
 ```
 - [ ] Path: docs/deployment-plan/<open-spike>/design/S#-D#-<slug>.md (or `docs/ideas/` when no spike is open)
-- [ ] Header: Kind, Spike, Implements later as, Depends on, Related, layers, skills
+- [ ] Header: Kind, Spike, Implements later as (**one** PR), Depends on, Related, layers, skills
+- [ ] Every requirement ships in that one PR; nothing drawn for a later PR
 - [ ] Paste line + **working-rules Paste block** (verbatim from this skill)
 - [ ] In-place note: rethink (replace frames) vs enhancement (extend frames)
 - [ ] Objective, domain facts, what this board is not
