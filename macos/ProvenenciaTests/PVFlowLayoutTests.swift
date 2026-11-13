@@ -38,6 +38,18 @@ struct PVFlowLayoutTests {
         #expect(calls.contains("0:250.0"))
     }
 
+    @Test func stillWiderThanTheRowIsPlacedAtTheRowWidth() {
+        let result = PVFlowLayout.arrange(
+            width: 250, spacing: 10, lineSpacing: 6, count: 2
+        ) { index, offered in
+            // The first item ignores the offer: ideal 300, 280 when offered 250.
+            if index == 0 { return CGSize(width: offered == nil ? 300 : 280, height: 40) }
+            return CGSize(width: 50, height: 40)
+        }
+        #expect(result.frames[0].width == 250)
+        #expect(result.frames[1].minX == 0 && result.frames[1].minY == 46)
+    }
+
     @Test func exactlyTheRowWidthStaysIdeal() {
         var calls: [String] = []
         let result = arrange(widths: [250], rowWidth: 250, calls: &calls)
