@@ -49,11 +49,13 @@ extension View {
     /// VoiceOver action. The trigger and panel share this view's coordinates.
     func pvRightClickMenu(
         title: LocalizedStringResource? = nil,
+        verbatimTitle: String? = nil,
         accessibilityIdentifier: String?,
         items: [PVActionMenuItem]
     ) -> some View {
         modifier(PVRightClickMenuModifier(
             title: title,
+            verbatimTitle: verbatimTitle,
             accessibilityIdentifier: accessibilityIdentifier,
             items: items
         ))
@@ -62,6 +64,7 @@ extension View {
 
 private struct PVRightClickMenuModifier: ViewModifier {
     let title: LocalizedStringResource?
+    let verbatimTitle: String?
     let accessibilityIdentifier: String?
     let items: [PVActionMenuItem]
 
@@ -82,7 +85,9 @@ private struct PVRightClickMenuModifier: ViewModifier {
                 keyboard: titles == nil ? nil : $keyboard,
                 keyboardTitles: titles
             ) {
-                PVContextMenuPanel(title: title, accessibilityIdentifier: accessibilityIdentifier) {
+                PVContextMenuPanel(
+                    title: title, verbatimTitle: verbatimTitle, accessibilityIdentifier: accessibilityIdentifier
+                ) {
                     PVActionMenuRows(items: items)
                 }
             }

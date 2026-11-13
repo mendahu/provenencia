@@ -80,8 +80,10 @@ enum PVContextMenuPlacement {
 
 /// Floating menu chrome: card surface, subtle border, overlay shadow.
 /// Optional caps section title matches Source-thumbnail / filter-style menus.
+/// `verbatimTitle` is a title that is data (a ref), drawn as given; it wins over `title`.
 struct PVContextMenuPanel<Content: View>: View {
     var title: LocalizedStringResource?
+    var verbatimTitle: String?
     var width: CGFloat = 180
     var maxHeight: CGFloat?
     var accessibilityIdentifier: String?
@@ -89,8 +91,8 @@ struct PVContextMenuPanel<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let title {
-                Text(title)
+            if let heading = verbatimTitle.map({ Text(verbatim: $0) }) ?? title.map({ Text($0) }) {
+                heading
                     .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                     .tracking(PVTypeScale.micro * PVTracking.caps)
                     .textCase(.uppercase)

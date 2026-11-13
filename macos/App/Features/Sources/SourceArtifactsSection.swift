@@ -1,6 +1,13 @@
 import Foundation
 import Observation
 
+/// One Artifact row's graph line: none for an Artifact in no graph (the badge and the
+/// link), else the graphs it is in (`shown` the first two names, `more` the rest).
+enum ArtifactGraphLine: Equatable {
+    case none
+    case graphs(all: [String], shown: [String], more: Int)
+}
+
 /// Artifacts on the Source page: the Artifact sheet, the Add-artifact
 /// dialog, and file attach/open.
 @MainActor
@@ -111,10 +118,36 @@ final class SourceArtifactsSection {
         attachDraft.filePath != nil
     }
 
-    /// The page's Artifacts that none of the Source's graphs links; empty while
-    /// the session has no graphs for the Source, so no card is marked.
-    var inNoGraph: Set<String> {
-        context.session.artifactIDsInNoGraph(sourceID: context.sourceID, artifactIDs: items.map(\.id)) ?? []
+    /// What an Artifact row's graph line shows, by Artifact id. Empty until the session has the
+    /// Source's graphs and has settled which Artifacts are in none: then an Artifact in no
+    /// graph is `.none` and every other has its graph names, in the Graphs section's order.
+    /// An id with no entry draws no graph line.
+    var graphLines: [String: ArtifactGraphLine] {
+        guard let noGraph = context.session.artifactIDsInNoGraph(
+            sourceID: context.sourceID, artifactIDs: items.map(\.id)
+        ), let graphs = visibleGraphs else { return [:] }
+        var names: [String: [String]] = [:]
+        for graph in graphs {
+            for id in graph.artifactIDs {
+                names[id, default: []].append(graph.name)
+            }
+        }
+        var lines: [String: ArtifactGraphLine] = [:]
+        for item in items {
+            if noGraph.contains(item.id) {
+                lines[item.id] = ArtifactGraphLine.none
+            } else {
+                let all = names[item.id] ?? []
+                let shown = Array(all.prefix(2))
+                lines[item.id] = .graphs(all: all, shown: shown, more: all.count - shown.count)
+            }
+        }
+        return lines
+    }
+
+    /// The type mark an Artifact with no file shows in its thumbnail: the Source type's.
+    func thumbnailTypeIconKey(for art: CatalogArtifact) -> String? {
+        art.thumbnailTypeIconKey(sourceTypeIconKey: context.sourceTypeIconKey)
     }
 
     /// The Artifact's saved copy details, read from the workspace the page already holds.

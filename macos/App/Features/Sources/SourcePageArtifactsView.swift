@@ -41,10 +41,10 @@ struct SourcePageArtifactsView: View {
                 }
                 .accessibilityIdentifier("sources.page.artifacts.empty")
             } else {
-                let inNoGraph = model.artifacts.inNoGraph
+                let lines = model.artifacts.graphLines
                 LazyVGrid(columns: cardColumns, spacing: PVSpacing.space6) {
                     ForEach(model.artifacts.items, id: \.id) { art in
-                        artifactCard(art, noGraph: inNoGraph.contains(art.id))
+                        artifactCard(art, noGraph: lines[art.id] == ArtifactGraphLine.none)
                             .frame(maxWidth: .infinity, alignment: .top)
                     }
                 }

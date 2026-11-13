@@ -6759,6 +6759,27 @@ enum L10n {
             comment: "Validation when Add Artifact is submitted without a label"
         )
 
+        static let artifactMenuEdit = LocalizedStringResource(
+            "sources.page.artifact.menu.edit",
+            defaultValue: "Edit…",
+            comment: "Artifact row menu item that opens the Artifact sheet"
+        )
+
+        static let artifactMenuDelete = LocalizedStringResource(
+            "sources.page.artifact.menu.delete",
+            defaultValue: "Delete…",
+            comment: "Artifact row menu item that asks to delete the Artifact"
+        )
+
+        /// Argument is the graph names, already joined for speech.
+        static func artifactGraphsSpoken(names: String) -> String {
+            L10n.format(LocalizedStringResource(
+                "sources.page.artifact.graphsSpoken",
+                defaultValue: "Evidence graphs: %@",
+                comment: "VoiceOver label of an Artifact row's graph line; argument is the graph names"
+            ), names)
+        }
+
         static let artifactNoDescription = LocalizedStringResource(
             "sources.page.artifactNoDescription",
             defaultValue: "No description",
@@ -7072,7 +7093,7 @@ enum L10n {
         static let useAsThumbnail = LocalizedStringResource(
             "sources.page.useAsThumbnail",
             defaultValue: "Set cover",
-            comment: "Button to pin an Artifact as the Source list/identity cover"
+            comment: "Button and row menu item that pins an Artifact as the Source cover"
         )
 
         static let thumbnailMenuTitle = LocalizedStringResource(
