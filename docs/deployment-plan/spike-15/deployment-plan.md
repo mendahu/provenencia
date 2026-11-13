@@ -116,7 +116,7 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-33 | Editing an Artifact can save its metadata | 2 | Go: a `MetadataDraft` on `UpdateArtifactRequest`; both Artifact write replies return its saved rows; a refused draft value names its field | — | S15-08 | [plan](prs/S15-33-artifact-update-saves-metadata.md) | Landed #806 |
 | S15-34 | Artifacts are edited in a sheet | 2 | Swift: the Artifact sheet (label, description, graphs, copy details on the draft board, one Save); read-only copy details on each card; the inline Add field row on every board; card edit goes | S15-D14 | S15-09, S15-33, S15-36, S15-D14 | — | Scoped |
 | S15-35 | The Artifact list shows each Artifact's copy details | 2 | Swift: the list's new layout (rows or compact cards), a square thumbnail of at most 80pt | S15-D14 | S15-34, S15-D14 | — | Scoped |
-| S15-36 | A metadata board can hold a draft | 2 | Preparatory, Swift: the draft board host, a Swift metadata draft, `metadata:` on the four Artifact and graph writes; no chrome | — | S15-26, S15-33 | [plan](prs/S15-36-metadata-board-holds-a-draft.md) | Planned |
+| S15-36 | A metadata board can hold a draft | 2 | Preparatory, Swift: the draft board host, a Swift metadata draft, `metadata:` on the four Artifact and graph writes; no chrome | — | S15-26, S15-33 | [plan](prs/S15-36-metadata-board-holds-a-draft.md) | Landed #810 |
 
 ## Design track
 

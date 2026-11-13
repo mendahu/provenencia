@@ -1,6 +1,6 @@
 # S15-36 — A metadata board can hold a draft
 
-**Status:** Planned
+**Status:** Landed in [#810](https://github.com/mendahu/provenencia/pull/810) (2026-11-13)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the draft host, the add row's state and the refusal mapping have no view until S15-34; the Source page's board draws and behaves as today)
@@ -349,3 +349,7 @@ None.
 
 **Title:** S15-36 — A metadata board can hold a draft
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-15/prs/S15-36-metadata-board-holds-a-draft.md`.
+
+## Landed
+
+- `isRowRefusal(_:)` is a private predicate on `MetadataBoardModel` that `classifySetFailure` and `rowRefusalMessage` both call, so D-13's "one check" is one function; the outcomes are as planned.
