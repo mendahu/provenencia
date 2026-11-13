@@ -10043,13 +10043,13 @@
       }
     },
     "sources.page.artifactCopyDetailsLabel": {
-      "comment": "Label of the Copy details section of the Artifact sheet",
+      "comment": "Label of the Artifact metadata section of the Artifact sheet",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy details"
+            "value": "Artifact metadata"
           }
         }
       }

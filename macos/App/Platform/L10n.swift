@@ -6800,8 +6800,8 @@ enum L10n {
 
         static let artifactCopyDetailsLabel = LocalizedStringResource(
             "sources.page.artifactCopyDetailsLabel",
-            defaultValue: "Copy details",
-            comment: "Label of the Copy details section of the Artifact sheet"
+            defaultValue: "Artifact metadata",
+            comment: "Label of the Artifact metadata section of the Artifact sheet"
         )
 
         static func artifactCopyDetailsMore(count: Int) -> String {
