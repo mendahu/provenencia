@@ -340,7 +340,7 @@ func TestIndexOf(t *testing.T) {
 		queries := 0
 		over := graphcache.Over(tx.Tx)
 		over.SetQueryCounterForTest(func() { queries++ })
-		if _, err := evidencegraphs.IndexOf(over); !errors.Is(err, evidencegraphs.ErrIndexOnWrite) {
+		if _, err := evidencegraphs.IndexOf(over); !errors.Is(err, database.ErrWholeOnWrite) {
 			t.Fatalf("IndexOf on a write's graph: %v", err)
 		}
 		if queries != 0 {

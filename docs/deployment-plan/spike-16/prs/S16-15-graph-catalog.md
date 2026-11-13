@@ -35,6 +35,7 @@
 - `TestFiledCounts` calls `c.Graph().Drop()` before its SQL claim inserts (D-11); no other test file needed it.
 - `api/ffi/handlers/evidence_graphs_test.go` gained a `mustParseID` helper for the id comparison.
 - Measured: `BenchmarkGraphIndex` build 96.7 ms and 5.2 MB, `apply-progress-10k-ms` 0.43, `apply-list-10k-ms` 32.7; `graphIndex` is 12,680 B at 4,000 and 16,000 persons in `BenchmarkCacheSizes`.
+- D-2's "Rejected: a shared guard and sentinel for both entries" was superseded by the same-pass rule (ship log MNT-4): `database.ReadWhole` and `database.ErrWholeOnWrite` replace `ErrRecordsOnWrite` and `ErrIndexOnWrite`; `RecordsOf` and `IndexOf` stay as one-line typed entry points.
 - Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective

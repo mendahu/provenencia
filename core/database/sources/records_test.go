@@ -289,7 +289,7 @@ func TestRecordsOf(t *testing.T) {
 		queries := 0
 		over := graphcache.Over(tx.Tx)
 		over.SetQueryCounterForTest(func() { queries++ })
-		if _, err := sources.RecordsOf(over); !errors.Is(err, sources.ErrRecordsOnWrite) {
+		if _, err := sources.RecordsOf(over); !errors.Is(err, database.ErrWholeOnWrite) {
 			t.Fatalf("RecordsOf on a write's graph: %v", err)
 		}
 		if queries != 0 {

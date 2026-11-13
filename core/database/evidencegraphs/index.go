@@ -10,10 +10,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 )
 
-// ErrIndexOnWrite is returned by IndexOf on a write's graph: the index is
-// built once per open catalog, never once per write.
-var ErrIndexOnWrite = errors.New("evidencegraphs: the graph index is not read on a write's graph")
-
 // GraphIndex holds every Evidence graph's row and counts, and each Source's
 // graphs in list order. A reader treats it, and the ArtifactIDs of the graphs
 // it returns, as read-only.
@@ -179,20 +175,9 @@ func init() {
 }
 
 // IndexOf returns the graph index of an open catalog's graph, building it on
-// the first read. A write's graph is ErrIndexOnWrite; a nil graph is
-// database.ErrClosed.
+// the first read; see database.ReadWhole for a write's or a nil graph.
 func IndexOf(g *graphcache.Graph) (*GraphIndex, error) {
-	if g == nil {
-		return nil, database.ErrClosed
-	}
-	idx, ok, err := Index.Get(g)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, ErrIndexOnWrite
-	}
-	return idx, nil
+	return database.ReadWhole(Index, g)
 }
 
 func buildIndex(q database.Querier) (*GraphIndex, error) {
