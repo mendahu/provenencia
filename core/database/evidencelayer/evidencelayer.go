@@ -78,32 +78,43 @@ func Load(g *graphcache.Graph, graphID []byte) (Layer, error) {
 		if err != nil {
 			return Layer{}, err
 		}
-		if !eg.Found {
-			return Layer{}, ErrNoGraph
-		}
-		loaded, err := nameformats.LoadFor(g)
-		if err != nil {
-			return Layer{}, err
-		}
-		return Build(g, eg, loaded.Key)
+		return layerOf(g, eg)
 	})
+}
+
+// Fresh builds the graph's layer from a fresh read of the graph, storing
+// nothing. A graph id the cache does not find is ErrNoGraph.
+func Fresh(g *graphcache.Graph, graphID []byte) (Layer, error) {
+	if g == nil {
+		return Layer{}, errNilGraph
+	}
+	eg, err := graphfill.LoadEvidenceGraph(g, graphID)
+	if err != nil {
+		return Layer{}, err
+	}
+	return layerOf(g, eg)
+}
+
+// layerOf builds the layer of a loaded graph under the name pattern now in
+// force.
+func layerOf(g *graphcache.Graph, eg graphcache.EvidenceGraph) (Layer, error) {
+	if !eg.Found {
+		return Layer{}, ErrNoGraph
+	}
+	loaded, err := nameformats.LoadFor(g)
+	if err != nil {
+		return Layer{}, err
+	}
+	return build(g, eg, loaded.Key)
 }
 
 // checkLayer builds the graph's layer again from a fresh read of the graph,
 // storing nothing, and compares.
 func checkLayer(g *graphcache.Graph, graphID []byte, stored Layer) error {
-	eg, err := graphfill.LoadEvidenceGraph(g, graphID)
-	if err != nil {
-		return err
-	}
-	if !eg.Found {
+	fresh, err := Fresh(g, graphID)
+	if errors.Is(err, ErrNoGraph) {
 		return fmt.Errorf("evidencelayer: a layer is held for %x, which is no Evidence graph", graphID)
 	}
-	loaded, err := nameformats.LoadFor(g)
-	if err != nil {
-		return err
-	}
-	fresh, err := Build(g, eg, loaded.Key)
 	if err != nil {
 		return err
 	}
@@ -119,9 +130,9 @@ type participation struct {
 	role          string
 }
 
-// Build makes the layer from a loaded Evidence graph under a name pattern. Each
+// build makes the layer from a loaded Evidence graph under a name pattern. Each
 // primary Subject's side is built here, once, with the profile builder.
-func Build(g *graphcache.Graph, eg graphcache.EvidenceGraph, namePattern string) (Layer, error) {
+func build(g *graphcache.Graph, eg graphcache.EvidenceGraph, namePattern string) (Layer, error) {
 	rules := matchregistry.Default()
 	terms, err := canonlinks.LoadTerms(g)
 	if err != nil {

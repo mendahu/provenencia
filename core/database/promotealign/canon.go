@@ -2,6 +2,7 @@ package promotealign
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"maps"
 	"reflect"
@@ -12,7 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/nameformats"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
@@ -318,26 +318,21 @@ func checkCandidates(g *graphcache.Graph, graphID []byte, stored candidatesMemo)
 	if m.shortlist == nil || stored.gen != m.gen {
 		return nil
 	}
-	eg, err := graphfill.LoadEvidenceGraph(g, graphID)
-	if err != nil {
-		return err
-	}
-	if !eg.Found {
+	ev, err := evidencelayer.Fresh(g, graphID)
+	if errors.Is(err, evidencelayer.ErrNoGraph) {
 		return fmt.Errorf("promotealign: candidates are held for %x, which is no Evidence graph", graphID)
 	}
-	cfg, namePattern, prof, err := shortlistInputs(g, true)
 	if err != nil {
 		return err
 	}
-	ev, err := evidencelayer.Build(g, eg, namePattern)
+	cfg, _, prof, err := shortlistInputs(g, true)
 	if err != nil {
 		return err
 	}
-	metas, err := valuerules.Metas(g)
+	layer, err := alignLayer(g, ev)
 	if err != nil {
 		return err
 	}
-	layer := graphalign.Layer{Subjects: ev.Subjects, Bridges: ev.Links, Metas: metas}
 	var subjects []graphalign.Subject
 	for id := range stored.bySubject {
 		s, ok := ev.Subject([]byte(id))

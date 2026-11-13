@@ -137,12 +137,20 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	metas, err := valuerules.Metas(c.Graph())
+	layer, err := alignLayer(c.Graph(), evidence)
 	if err != nil {
 		return inputs{}, err
 	}
-	layer := graphalign.Layer{Subjects: evidence.Subjects, Bridges: evidence.Links, Metas: metas}
 	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, evidence: evidence, layer: layer}, nil
+}
+
+// alignLayer is the evidence layer with the value metas graphalign compares by.
+func alignLayer(g *graphcache.Graph, ev evidencelayer.Layer) (graphalign.Layer, error) {
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return graphalign.Layer{}, err
+	}
+	return graphalign.Layer{Subjects: ev.Subjects, Bridges: ev.Links, Metas: metas}, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
