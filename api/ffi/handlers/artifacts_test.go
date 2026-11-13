@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/api/proto/engine"
-	"github.com/mendahu/provenencia/core/apperr"
 	"github.com/mendahu/provenencia/core/catalogsession"
 	"github.com/mendahu/provenencia/core/catalogsession/catalogsessiontest"
 	"github.com/mendahu/provenencia/core/database/artifacts"
@@ -288,17 +287,7 @@ func TestUpdateArtifactGraphLinks(t *testing.T) {
 		}
 		return ids
 	}
-	labelOf := func(artifactID string) string {
-		var ws engine.GetSourceWorkspaceResponse
-		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: f.dir, SourceId: f.sourceID}, &ws)
-		for _, a := range ws.GetArtifacts() {
-			if a.GetId() == artifactID {
-				return a.GetLabel()
-			}
-		}
-		t.Fatalf("artifact %s not found", artifactID)
-		return ""
-	}
+	labelOf := func(artifactID string) string { return artifactLabel(t, f.dir, f.sourceID, artifactID) }
 	update := func(artifactID, label string, links *engine.GraphLinks) (*engine.UpdateArtifactResponse, error) {
 		var out engine.UpdateArtifactResponse
 		err := rpc(t, UpdateArtifact, &engine.UpdateArtifactRequest{
@@ -345,6 +334,20 @@ func TestUpdateArtifactGraphLinks(t *testing.T) {
 	})
 }
 
+// artifactLabel is the label the Source's workspace shows for an Artifact.
+func artifactLabel(t *testing.T, dir, sourceID, artifactID string) string {
+	t.Helper()
+	var ws engine.GetSourceWorkspaceResponse
+	mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: dir, SourceId: sourceID}, &ws)
+	for _, a := range ws.GetArtifacts() {
+		if a.GetId() == artifactID {
+			return a.GetLabel()
+		}
+	}
+	t.Fatalf("artifact %s not found", artifactID)
+	return ""
+}
+
 // TestUpdateArtifactMetadata saves an Artifact's metadata draft with its edit
 // in one revision, and returns the Artifact's board.
 func TestUpdateArtifactMetadata(t *testing.T) {
@@ -355,15 +358,7 @@ func TestUpdateArtifactMetadata(t *testing.T) {
 	id := m.page1
 	labelOf := func(t *testing.T) string {
 		t.Helper()
-		var ws engine.GetSourceWorkspaceResponse
-		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &ws)
-		for _, a := range ws.GetArtifacts() {
-			if a.GetId() == id {
-				return a.GetLabel()
-			}
-		}
-		t.Fatalf("artifact %s not found", id)
-		return ""
+		return artifactLabel(t, m.dir, m.sourceID, id)
 	}
 	set := func(t *testing.T, field, text string) int64 {
 		t.Helper()
@@ -382,9 +377,7 @@ func TestUpdateArtifactMetadata(t *testing.T) {
 	}
 	board := func(t *testing.T) []*engine.MetadataWorkspaceEntry {
 		t.Helper()
-		var out engine.GetMetadataBoardResponse
-		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: m.dir, Owner: m.artifact}, &out)
-		return out.GetBoard().GetEntries()
+		return boardEntries(t, m.dir, m.artifact)
 	}
 	valueOf := func(t *testing.T, field string) string {
 		t.Helper()
@@ -463,14 +456,7 @@ func TestUpdateArtifactMetadata(t *testing.T) {
 		mustRPC(t, SetMetadata, &engine.SetMetadataRequest{
 			ProjectDir: m.dir, UserId: m.userID, Owner: other, FieldId: provider, ValueText: "Ancestry",
 		}, &engine.SetMetadataResponse{})
-		var ws engine.GetSourceWorkspaceResponse
-		mustRPC(t, GetSourceWorkspace, &engine.GetSourceWorkspaceRequest{ProjectDir: m.dir, SourceId: m.sourceID}, &ws)
-		var label string
-		for _, a := range ws.GetArtifacts() {
-			if a.GetId() == m.page2 {
-				label = a.GetLabel()
-			}
-		}
+		label := artifactLabel(t, m.dir, m.sourceID, m.page2)
 		var resp engine.UpdateArtifactResponse
 		mustRPC(t, UpdateArtifact, &engine.UpdateArtifactRequest{
 			ProjectDir: m.dir, UserId: m.userID, ArtifactId: m.page2, Label: label,
@@ -487,9 +473,8 @@ func TestUpdateArtifactMetadata(t *testing.T) {
 		_, err := update("Renamed", &engine.MetadataDraft{Values: []*engine.MetadataValue{
 			{FieldId: provider, ValueText: "Other"}, {FieldId: link, ValueText: "not a link"},
 		}}, nil)
-		var ae *apperr.Error
-		if !errors.As(err, &ae) || ae.Code() != apperr.CodeSourceMetadataInvalid || !slices.Equal(ae.Params(), []string{link}) {
-			t.Fatalf("got %v, params %v", err, errParams(t, err))
+		if !errors.Is(err, sourcemetadata.ErrInvalid) || !slices.Equal(errParams(t, err), []string{link}) {
+			t.Fatalf("got %v", err)
 		}
 		if labelOf(t) != label || valueOf(t, provider) != "Ancestry" {
 			t.Fatalf("label %q provider %q, want %q and Ancestry", labelOf(t), valueOf(t, provider), label)
@@ -500,18 +485,22 @@ func TestUpdateArtifactMetadata(t *testing.T) {
 		mustRPC(t, CreateCitationWithObservations, &engine.CreateCitationWithObservationsRequest{
 			ProjectDir: m.dir, UserId: m.userID, ArtifactId: pageID, GraphId: graphLinking(t, m.dir, pageID), LocatorJson: validLocatorJSON,
 		}, &engine.CreateCitationWithObservationsResponse{})
+		before := latestRevisionTypes(t, m.dir)
 		err := rpc(t, UpdateArtifact, &engine.UpdateArtifactRequest{
-			ProjectDir: m.dir, UserId: m.userID, ArtifactId: pageID, Label: "P6",
+			ProjectDir: m.dir, UserId: m.userID, ArtifactId: pageID, Label: "P6 renamed",
 			GraphLinks: &engine.GraphLinks{}, Metadata: draftOf(provider, "Ancestry"),
 		}, &engine.UpdateArtifactResponse{})
 		if !errors.Is(err, evidencegraphs.ErrArtifactInUse) {
 			t.Fatalf("got %v", err)
 		}
-		var got engine.GetMetadataBoardResponse
-		mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{
-			ProjectDir: m.dir, Owner: &engine.MetadataOwner{Level: "artifact", Id: pageID},
-		}, &got)
-		if e := metadataByField(got.GetBoard().GetEntries(), provider); e != nil && e.GetHasValue() {
+		if got := artifactLabel(t, m.dir, m.sourceID, pageID); got != "P6" {
+			t.Fatalf("label %q, want P6", got)
+		}
+		if after := latestRevisionTypes(t, m.dir); !slices.Equal(after, before) {
+			t.Fatalf("revision changes %v, want %v", after, before)
+		}
+		board := boardEntries(t, m.dir, &engine.MetadataOwner{Level: "artifact", Id: pageID})
+		if e := metadataByField(board, provider); e != nil && e.GetHasValue() {
 			t.Fatalf("provider saved beside the refused unlink: %+v", e)
 		}
 	})

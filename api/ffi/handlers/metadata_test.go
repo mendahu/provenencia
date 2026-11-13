@@ -217,13 +217,19 @@ func errParams(t *testing.T, err error) []string {
 	return ae.Params()
 }
 
+// boardEntries is the owner's board entries as GetMetadataBoard reads them.
+func boardEntries(t *testing.T, dir string, owner *engine.MetadataOwner) []*engine.MetadataWorkspaceEntry {
+	t.Helper()
+	var board engine.GetMetadataBoardResponse
+	mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: dir, Owner: owner}, &board)
+	return board.GetBoard().GetEntries()
+}
+
 // assertReplyBoard fails unless got is the owner's board as GetMetadataBoard
 // reads it now, entry for entry.
 func assertReplyBoard(t *testing.T, dir string, owner *engine.MetadataOwner, got []*engine.MetadataWorkspaceEntry) {
 	t.Helper()
-	var board engine.GetMetadataBoardResponse
-	mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: dir, Owner: owner}, &board)
-	want := board.GetBoard().GetEntries()
+	want := boardEntries(t, dir, owner)
 	if len(got) != len(want) {
 		t.Fatalf("reply board has %d entries, want %d: %+v vs %+v", len(got), len(want), got, want)
 	}
@@ -273,9 +279,7 @@ func TestMetadataBoardsKeepTheirLevel(t *testing.T) {
 		"graph":    {m.graph, sorted(m.suggested, graphOnly)},
 	} {
 		t.Run(name, func(t *testing.T) {
-			var board engine.GetMetadataBoardResponse
-			mustRPC(t, GetMetadataBoard, &engine.GetMetadataBoardRequest{ProjectDir: m.dir, Owner: tt.owner}, &board)
-			if got := ids(board.GetBoard().GetEntries()); !slices.Equal(got, tt.want) {
+			if got := ids(boardEntries(t, m.dir, tt.owner)); !slices.Equal(got, tt.want) {
 				t.Fatalf("board fields %v, want %v", got, tt.want)
 			}
 		})
