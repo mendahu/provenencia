@@ -240,9 +240,13 @@ cancel-action button) and **a click outside the sheet**
 (`.pvOutsideClick(isEnabled:perform:)`, `Components/Panel/PVOutsideClick.swift`; a
 macOS sheet gives that click to no one, so the modifier watches the event
 stream; menus and popovers are not this path). Both call one rule,
-`PVSheetDismiss.action(isRunning:isDirty:isConfirmingDiscard:)`: running work is
-ignored, a dirty sheet shows the discard question (and Escape on that question
-returns to the form), a clean sheet closes. The visible Cancel button closes at
+`PVSheetDismiss.action(isRunning:isDirty:isConfirmingDiscard:innerEditOpen:)`: running work is
+ignored, an open inner edit stands the sheet's Escape, Return and outside click
+down (the edit owns its own dismissal), a dirty sheet shows the discard question
+(and Escape on that question returns to the form), a clean sheet closes. A
+control that owns an open edit inside a sheet raises `.pvSheetInnerEdit(isOpen)`
+and takes Escape with a `.cancelAction` Cancel; `PVInlineEdit` and
+`PVInlineEditActions` do both. The visible Cancel button closes at
 once and carries no key of its own. A new sheet gets all of this by presenting
 with `.pvSheet`; do not add a raw `.sheet`, `.pvOutsideClick` or
 `.keyboardShortcut(.cancelAction)` for a sheet.
