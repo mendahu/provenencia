@@ -11,7 +11,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/artifacts"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
@@ -418,7 +418,7 @@ func TestSubjects(t *testing.T) {
 				}); err != nil {
 					t.Fatal(err)
 				}
-				eg, err := c.Graph().EvidenceGraph(a.GraphID)
+				eg, err := graphfill.EvidenceGraph(c.Graph(), a.GraphID)
 				if err != nil || len(eg.Subjects) != 1 || eg.Subjects[0].Label != "A" {
 					t.Fatalf("%v %+v", err, eg.Subjects)
 				}

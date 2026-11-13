@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/citations"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 	"google.golang.org/protobuf/proto"
@@ -118,7 +119,7 @@ func GetCitation(in []byte) ([]byte, error) {
 		if err != nil {
 			return err
 		}
-		eg, err := c.Graph().EvidenceGraph(graphID)
+		eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 		if err != nil {
 			return err
 		}

@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/grapheventtitles"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/eventtitle"
 	"github.com/mendahu/provenencia/core/valuecodec"
 	"google.golang.org/protobuf/proto"
@@ -52,7 +53,7 @@ func ListEvidenceGraphEventTitles(in []byte) ([]byte, error) {
 	}
 	out := &engine.ListEvidenceGraphEventTitlesResponse{}
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := c.Graph().EvidenceGraph(graphID)
+		eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 		if err != nil {
 			return err
 		}

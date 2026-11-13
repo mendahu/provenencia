@@ -8,6 +8,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -15,8 +16,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
-
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
 var walkUser = evidencelayertest.UserID
@@ -117,7 +116,7 @@ func TestWalkEvidenceGraphEdges(t *testing.T) {
 		{name: "no from Subjects", hop: participates},
 	}
 	g := f.C.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
+	eg, err := graphfill.EvidenceGraph(g, evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -210,7 +209,7 @@ func TestWalkEvidenceGraphStaysOnItsGraph(t *testing.T) {
 	f.Participation(f.Source, f.Artifact, james, birth, "subject")
 	other, _ := f.NewSource("Elsewhere")
 	g := f.C.Graph()
-	eg, err := g.EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, other.ID).ID)
+	eg, err := graphfill.EvidenceGraph(g, evidencegraphstest.SoleGraph(t, f.C, other.ID).ID)
 	if err != nil {
 		t.Fatal(err)
 	}

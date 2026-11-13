@@ -6,6 +6,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/files"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -24,7 +25,7 @@ func ListObservationsByEvidenceGraph(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListObservationsByEvidenceGraphResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := c.Graph().EvidenceGraph(graphID)
+		eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 		if err != nil {
 			return err
 		}

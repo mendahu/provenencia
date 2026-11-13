@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promotealign"
@@ -607,6 +608,14 @@ func BenchmarkCacheSizes(b *testing.B) {
 			measure("nameFormat", func() { must(b, nameformats.Warm(c)) })
 			measure("matchIndex", func() { must(b, promotealign.Warm(c)) })
 			measure("evidence", func() { f.propose(f.Graph(f.source), nil) })
+			measure("graphRecords", func() {
+				idx, err := evidencegraphs.IndexOf(g)
+				must(b, err)
+				for _, gr := range idx.All() {
+					_, err := graphfill.RecordsOf(g, [][]byte{gr.ID})
+					must(b, err)
+				}
+			})
 			measure("kinship", func() {
 				r, err := canonlinks.NewReader(g)
 				must(b, err)

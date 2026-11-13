@@ -1,5 +1,6 @@
 // Package evidencelayer loads one Evidence graph's primary Subjects with their
-// comparable values and its links, recorded and implied, memoized on the graph.
+// comparable values and its links, recorded and implied, kept in the Layers
+// entry.
 // Promote and the Person page share it. Decode, the one row decoder, also
 // serves Promote's canon side, since a cached handle value carries the same
 // value columns.
@@ -7,11 +8,15 @@ package evidencelayer
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/connectrules"
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -25,10 +30,6 @@ import (
 var ErrNoGraph = errors.New("evidencelayer: no such Evidence graph")
 
 var errNilGraph = errors.New("evidencelayer: nil graph")
-
-// memoKey is the Evidence graph memo key of a built Layer, with the name
-// pattern it was built under after it.
-const memoKey = "evidencelayer\x00"
 
 // Layer is one Evidence graph's primary Subjects and links.
 type Layer struct {
@@ -47,35 +48,69 @@ func (l Layer) Subject(id []byte) (subjectcompare.Subject, bool) {
 	return l.Subjects[i], true
 }
 
-// Load is the Evidence graph's layer: the one memoized on its graph, or the
-// one built, memoized. The layer reads the Evidence graph, the vocabulary, the
-// terms, the name pattern and the static registry, and the memo is dropped
-// with the graph (a commit that moves the graph's rows, `Set.EvidenceGraphs`) and by a vocabulary change.
-// A reader never changes a layer, so every caller shares it. A
-// graph id the cache does not find is ErrNoGraph, and nothing is stored.
-func Load(g *graphcache.Graph, graphID []byte, namePattern string) (Layer, error) {
+// Layers is the matching layer of each Evidence graph, keyed by graph id. A
+// layer reads the Evidence graph, the vocabulary, the terms, the name pattern
+// and the static registry, so a vocabulary commit or a name format change
+// empties the entry, and a commit that moves the graph's rows
+// (Set.EvidenceGraphs) drops that graph's layer. A held layer needs no loaded
+// graph. A reader never changes a layer, so every caller shares it.
+var Layers graphcache.Keyed[Layer]
+
+func init() {
+	Layers = graphcache.RegisterKeyed(graphcache.KeyedEntry[Layer]{
+		Name:        "evidencelayer.layers",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}, nameformats.Default},
+		Apply:       graphcache.DropNamedGraphs[Layer],
+		Check:       checkLayer,
+		Cap:         graphfill.MaxEvidenceGraphs,
+	})
+}
+
+// Load is the Evidence graph's layer: the one held in Layers, or the one built
+// from the loaded graph, held. A graph id the cache does not find is
+// ErrNoGraph, and nothing is stored.
+func Load(g *graphcache.Graph, graphID []byte) (Layer, error) {
 	if g == nil {
 		return Layer{}, errNilGraph
 	}
-	eg, err := g.EvidenceGraph(graphID)
+	return Layers.Get(g, graphID, func() (Layer, error) {
+		eg, err := graphfill.EvidenceGraph(g, graphID)
+		if err != nil {
+			return Layer{}, err
+		}
+		if !eg.Found {
+			return Layer{}, ErrNoGraph
+		}
+		loaded, err := nameformats.LoadFor(g)
+		if err != nil {
+			return Layer{}, err
+		}
+		return Build(g, eg, loaded.Key)
+	})
+}
+
+// checkLayer builds the graph's layer again from a fresh read of the graph,
+// storing nothing, and compares.
+func checkLayer(g *graphcache.Graph, graphID []byte, stored Layer) error {
+	eg, err := graphfill.LoadEvidenceGraph(g, graphID)
 	if err != nil {
-		return Layer{}, err
+		return err
 	}
 	if !eg.Found {
-		return Layer{}, ErrNoGraph
+		return fmt.Errorf("evidencelayer: a layer is held for %x, which is no Evidence graph", graphID)
 	}
-	key := memoKey + namePattern
-	if v, ok := g.EvidenceGraphMemo(graphID, key); ok {
-		if l, ok := v.(Layer); ok {
-			return l, nil
-		}
-	}
-	l, err := build(g, eg, namePattern)
+	loaded, err := nameformats.LoadFor(g)
 	if err != nil {
-		return Layer{}, err
+		return err
 	}
-	g.SetEvidenceGraphMemo(graphID, key, l)
-	return l, nil
+	fresh, err := Build(g, eg, loaded.Key)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(stored, fresh) {
+		return fmt.Errorf("evidencelayer: the stored layer of %x does not match a fresh build", graphID)
+	}
+	return nil
 }
 
 // participation is one person taking part in one event on the layer, in a role.
@@ -84,9 +119,9 @@ type participation struct {
 	role          string
 }
 
-// build makes the layer from a loaded Evidence graph. Each primary Subject's
-// side is built here, once, with the profile builder.
-func build(g *graphcache.Graph, eg graphcache.EvidenceGraph, namePattern string) (Layer, error) {
+// Build makes the layer from a loaded Evidence graph under a name pattern. Each
+// primary Subject's side is built here, once, with the profile builder.
+func Build(g *graphcache.Graph, eg graphcache.EvidenceGraph, namePattern string) (Layer, error) {
 	rules := matchregistry.Default()
 	terms, err := canonlinks.LoadTerms(g)
 	if err != nil {

@@ -11,7 +11,9 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/matchregistry"
 	"github.com/mendahu/provenencia/core/vocabkey"
@@ -23,14 +25,14 @@ type ClaimGroup struct {
 	Claims []Claim
 }
 
-// Claim is one accepted identity claim: the claimed Subject and its
-// Observations, on the Evidence graph that holds them. Graph is the loaded
-// graph, shared and read-only.
+// Claim is one accepted identity claim: the claimed Subject, its claim
+// (Accepted.ClaimID) and its Observations, on the Evidence graph that holds
+// them. Graph is the graph's shell and Records its Subject records, shared and
+// read-only.
 type Claim struct {
-	ClaimID      []byte
-	Graph        graphcache.EvidenceGraph
-	Subject      graphcache.EvidenceSubject
-	Observations []graphcache.EvidenceObservation
+	Graph evidencegraphs.Graph
+	graphfill.SubjectRecord
+	Records *graphfill.GraphRecords
 }
 
 // Claims returns a Person's accepted claims grouped by Source. Groups are
@@ -65,36 +67,58 @@ func personNode(c *database.Catalog, entityID []byte) (*graphcache.Node, error) 
 	return n, nil
 }
 
-// claims is Claims for a handle already read.
+// claims is Claims for a handle already read. It loads no Evidence graph: each
+// accepted member is looked up in the graph index (the graph's shell), the
+// Source records and the graph's Subject records. A member whose graph left the
+// index, or whose Subject or claim is missing from the records or names
+// another entity, is skipped: it names a graph dropped mid-read, and the next
+// read is right.
 func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
-	members, err := memberGraphs(c, n)
+	g := c.Graph()
+	members := boundedMembers(n)
+	idx, err := evidencegraphs.IndexOf(g)
 	if err != nil {
 		return nil, err
 	}
-	recs, err := sources.RecordsOf(c.Graph())
+	recs, err := sources.RecordsOf(g)
+	if err != nil {
+		return nil, err
+	}
+	var graphIDs [][]byte
+	asked := map[string]bool{}
+	for _, m := range members {
+		if _, ok := idx.Graph(m.GraphID); ok && !asked[string(m.GraphID)] {
+			asked[string(m.GraphID)] = true
+			graphIDs = append(graphIDs, m.GraphID)
+		}
+	}
+	records, err := graphfill.RecordsOf(g, graphIDs)
 	if err != nil {
 		return nil, err
 	}
 	var groups []ClaimGroup
 	bySource := map[string]int{}
 	for _, m := range members {
-		claim := Claim{ClaimID: m.member.ClaimID, Graph: m.graph, Subject: m.subject}
-		for _, o := range m.graph.Observations {
-			if bytes.Equal(o.SubjectID, m.subject.ID) {
-				claim.Observations = append(claim.Observations, o)
-			}
-		}
-		i, ok := bySource[string(m.graph.SourceID)]
+		shell, ok := idx.Graph(m.GraphID)
 		if !ok {
-			rec, found := recs.Source(m.graph.SourceID)
+			continue
+		}
+		r := records[string(m.GraphID)]
+		rec, ok := r.Subject(m.SubjectID)
+		if !ok || rec.Accepted.ClaimID == nil || !bytes.Equal(rec.Accepted.EntityID, n.ID) {
+			continue
+		}
+		i, ok := bySource[string(shell.SourceID)]
+		if !ok {
+			source, found := recs.Source(shell.SourceID)
 			if !found {
-				return nil, fmt.Errorf("persondetail: graph %x names Source %x, which has no record", m.graph.GraphID, m.graph.SourceID)
+				return nil, fmt.Errorf("persondetail: graph %x names Source %x, which has no record", shell.ID, shell.SourceID)
 			}
 			i = len(groups)
-			bySource[string(m.graph.SourceID)] = i
-			groups = append(groups, ClaimGroup{Source: rec})
+			bySource[string(shell.SourceID)] = i
+			groups = append(groups, ClaimGroup{Source: source})
 		}
-		groups[i].Claims = append(groups[i].Claims, claim)
+		groups[i].Claims = append(groups[i].Claims, Claim{Graph: shell, SubjectRecord: rec, Records: r})
 	}
 	conclusionsummaries.SortByTitle(groups, func(g ClaimGroup) string { return g.Source.Title }, func(g ClaimGroup) string { return g.Source.Ref })
 	for i := range groups {
@@ -102,7 +126,7 @@ func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 		sort.SliceStable(claims, func(a, b int) bool {
 			return strings.ToLower(claims[a].Subject.Ref) < strings.ToLower(claims[b].Subject.Ref)
 		})
-		conclusionsummaries.SortByTitle(claims, func(cl Claim) string { return cl.Graph.GraphName }, func(cl Claim) string { return cl.Graph.GraphRef })
+		conclusionsummaries.SortByTitle(claims, func(cl Claim) string { return cl.Graph.Name }, func(cl Claim) string { return cl.Graph.Ref })
 	}
 	return groups, nil
 }
@@ -111,7 +135,7 @@ func claims(c *database.Catalog, n *graphcache.Node) ([]ClaimGroup, error) {
 // recordlinks MaxEntityMembers per Evidence graph, in member order; every
 // accepted member counts, the person's first record included. More is crafted
 // data: a real person files one or two records in a graph, and the claims read
-// scans the whole graph for each record it keeps.
+// returns each record it keeps.
 func boundedMembers(n *graphcache.Node) []graphcache.Member {
 	most := matchregistry.Default().RecordLinks.MaxEntityMembers
 	perGraph := map[string]int{}
@@ -124,53 +148,4 @@ func boundedMembers(n *graphcache.Node) []graphcache.Member {
 		kept = append(kept, m)
 	}
 	return kept
-}
-
-// memberGraph is one accepted member of a handle with what its Evidence graph
-// says about it.
-type memberGraph struct {
-	member  graphcache.EvidenceMember
-	graph   graphcache.EvidenceGraph
-	subject graphcache.EvidenceSubject
-}
-
-// memberGraphs returns each accepted member of n with its loaded Evidence
-// graph, claim and Subject, in member order. A member whose graph is not
-// found, or whose Subject or claim is missing from the loaded graph, is
-// skipped: it names a graph dropped mid-read, and the next read is right.
-func memberGraphs(c *database.Catalog, n *graphcache.Node) ([]memberGraph, error) {
-	graphs := map[string]graphcache.EvidenceGraph{}
-	var out []memberGraph
-	for _, m := range boundedMembers(n) {
-		eg, ok := graphs[string(m.GraphID)]
-		if !ok {
-			var err error
-			if eg, err = c.Graph().EvidenceGraph(m.GraphID); err != nil {
-				return nil, err
-			}
-			graphs[string(m.GraphID)] = eg
-		}
-		if !eg.Found {
-			continue
-		}
-		var member *graphcache.EvidenceMember
-		for i := range eg.Members {
-			if bytes.Equal(eg.Members[i].SubjectID, m.SubjectID) && bytes.Equal(eg.Members[i].EntityID, n.ID) {
-				member = &eg.Members[i]
-				break
-			}
-		}
-		var subject *graphcache.EvidenceSubject
-		for i := range eg.Subjects {
-			if bytes.Equal(eg.Subjects[i].ID, m.SubjectID) {
-				subject = &eg.Subjects[i]
-				break
-			}
-		}
-		if member == nil || member.ClaimID == nil || subject == nil {
-			continue
-		}
-		out = append(out, memberGraph{member: *member, graph: eg, subject: *subject})
-	}
-	return out, nil
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -69,7 +70,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, cfg)
-	eg, err := c.Graph().EvidenceGraph(in.graphID)
+	eg, err := graphfill.EvidenceGraph(c.Graph(), in.graphID)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -115,7 +116,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if _, err := c.DB(); err != nil {
 		return inputs{}, err
 	}
-	eg, err := c.Graph().EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 	if err != nil {
 		return inputs{}, err
 	}
@@ -132,7 +133,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	evidence, err := evidencelayer.Load(c.Graph(), graphID, namePattern)
+	evidence, err := evidencelayer.Load(c.Graph(), graphID)
 	if err != nil {
 		return inputs{}, err
 	}
@@ -162,7 +163,7 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, layer evidencelayer.Layer, 
 		seen[string(f.SubjectID)] = true
 	}
 
-	eg, err := g.EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(g, graphID)
 	if err != nil {
 		return nil, nil, err
 	}

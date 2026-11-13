@@ -2,31 +2,50 @@ package promotealign
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
+	"reflect"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/database/canonlinks"
+	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/nameformats"
+	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/kinship"
 	"github.com/mendahu/provenencia/core/segmentcompare"
+	"github.com/mendahu/provenencia/core/shortlist"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-// candidatesMemoKey is the Evidence graph memo key of each Subject's candidates,
-// with the name pattern they were ranked under after it.
-const candidatesMemoKey = "promotealign.candidates\x00"
 
 // candidatesMemo is the candidates (handle ids, in order) of each Subject the
 // graph's Evidence graph has had ranked, and the generation of the match index
 // they were ranked against. Candidates depend on the Subject's values and the
-// vocabulary and aliases (the memo is dropped with the Evidence graph's other
-// memos), the handles' profiles and the shortlist index (dropped together on
-// every handle commit, which gives the next index a new generation), and the
-// name pattern (in the key). A stored memo is never changed.
+// vocabulary and aliases (the entry is derived from the vocabulary and the name
+// format), the handles' profiles and the shortlist index (dropped together on
+// every handle commit, which gives the next index a new generation). A stored
+// memo is never changed.
 type candidatesMemo struct {
 	gen       uint64
 	bySubject map[string][][]byte
+}
+
+// candidates holds each Evidence graph's candidatesMemo, keyed by graph id. It
+// is derived from the vocabulary and the name format, and a commit that moves
+// the graph's rows (Set.EvidenceGraphs) drops that graph's. A held memo is
+// used only while its generation is the stored shortlist index's.
+var candidates graphcache.Keyed[candidatesMemo]
+
+func init() {
+	candidates = graphcache.RegisterKeyed(graphcache.KeyedEntry[candidatesMemo]{
+		Name:        "promotealign.candidates",
+		DerivedFrom: []graphcache.Source{graphcache.Vocabulary{}, nameformats.Default},
+		Apply:       graphcache.DropNamedGraphs[candidatesMemo],
+		Check:       checkCandidates,
+		Cap:         graphfill.MaxEvidenceGraphs,
+	})
 }
 
 // loadCanon reads the open catalog's graph: fixed anchors, the candidates of
@@ -239,21 +258,18 @@ func loadCanon(g *graphcache.Graph, graphID []byte, prof *profiler, layer grapha
 }
 
 // loadCandidatesMemo is the ranked candidate ids of each Subject in todo:
-// graphalign.Candidates over the handles the shortlist index offers it,
-// remembered on the Evidence graph's memo until the index changes. It reads the
-// stored memo for the current index generation, ranks only the Subjects it
-// lacks, and stores a new map, never changing the stored one.
+// graphalign.Candidates over the handles the shortlist index offers it, held in
+// the candidates entry until the index changes. It reads the stored memo for
+// the current index generation, ranks only the Subjects it lacks, and stores a
+// new map, never changing the stored one. A stale generation is a miss.
 func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, layer graphalign.Layer, todo []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
 	ix, gen, err := loadShortlist(g, prof, cfg)
 	if err != nil {
 		return nil, err
 	}
-	key := candidatesMemoKey + prof.namePattern
 	var known map[string][][]byte
-	if v, ok := g.EvidenceGraphMemo(graphID, key); ok {
-		if m, ok := v.(candidatesMemo); ok && m.gen == gen {
-			known = m.bySubject
-		}
+	if m, ok := candidates.Peek(g, graphID); ok && m.gen == gen {
+		known = m.bySubject
 	}
 	var missing []graphalign.Subject
 	for _, s := range todo {
@@ -264,19 +280,78 @@ func loadCandidatesMemo(g *graphcache.Graph, graphID []byte, prof *profiler, lay
 	if len(missing) == 0 {
 		return known, nil
 	}
-	shortlisted, err := seedHandles(g, prof, ix, missing)
+	ranked, err := rankCandidates(g, prof, ix, layer, missing, cfg)
 	if err != nil {
 		return nil, err
 	}
 	stored := make(map[string][][]byte, len(known)+len(missing))
 	maps.Copy(stored, known)
-	for i, s := range missing {
+	maps.Copy(stored, ranked)
+	candidates.Set(g, graphID, candidatesMemo{gen: gen, bySubject: stored})
+	return stored, nil
+}
+
+// rankCandidates is the ranked candidate ids of each Subject: the handles the
+// shortlist index offers it, profiled once together, ordered by
+// graphalign.Candidates. Every Subject has an entry, an empty list for none.
+func rankCandidates(g *graphcache.Graph, prof *profiler, ix *shortlist.Index, layer graphalign.Layer, subjects []graphalign.Subject, cfg graphalign.Config) (map[string][][]byte, error) {
+	shortlisted, err := seedHandles(g, prof, ix, subjects)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string][][]byte, len(subjects))
+	for i, s := range subjects {
 		ranked := [][]byte{}
 		for _, h := range graphalign.Candidates(s.Kind, s.Values, shortlisted[i], layer.Metas, cfg) {
 			ranked = append(ranked, h.ID)
 		}
-		stored[string(s.ID)] = ranked
+		out[string(s.ID)] = ranked
 	}
-	g.SetEvidenceGraphMemo(graphID, key, candidatesMemo{gen: gen, bySubject: stored})
-	return stored, nil
+	return out, nil
+}
+
+// checkCandidates ranks the held graph's Subjects again from fresh inputs,
+// storing nothing, and compares. A memo ranked against an index that is no
+// longer the stored one is never used, so it is not compared.
+func checkCandidates(g *graphcache.Graph, graphID []byte, stored candidatesMemo) error {
+	m := matchIndexOf(g)
+	if m.shortlist == nil || stored.gen != m.gen {
+		return nil
+	}
+	eg, err := graphfill.LoadEvidenceGraph(g, graphID)
+	if err != nil {
+		return err
+	}
+	if !eg.Found {
+		return fmt.Errorf("promotealign: candidates are held for %x, which is no Evidence graph", graphID)
+	}
+	cfg, namePattern, prof, err := shortlistInputs(g, true)
+	if err != nil {
+		return err
+	}
+	ev, err := evidencelayer.Build(g, eg, namePattern)
+	if err != nil {
+		return err
+	}
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return err
+	}
+	layer := graphalign.Layer{Subjects: ev.Subjects, Bridges: ev.Links, Metas: metas}
+	var subjects []graphalign.Subject
+	for id := range stored.bySubject {
+		s, ok := ev.Subject([]byte(id))
+		if !ok {
+			return fmt.Errorf("promotealign: candidates are held for Subject %x, which is no primary Subject of %x", id, graphID)
+		}
+		subjects = append(subjects, s)
+	}
+	fresh, err := rankCandidates(g, prof, m.shortlist, layer, subjects, cfg)
+	if err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(fresh, stored.bySubject) {
+		return fmt.Errorf("promotealign: the stored candidates of %x do not match a fresh ranking", graphID)
+	}
+	return nil
 }

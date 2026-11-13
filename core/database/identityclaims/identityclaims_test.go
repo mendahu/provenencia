@@ -12,7 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/dbtest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
@@ -345,7 +345,7 @@ func TestAcceptedClaimsAreSourceMembers(t *testing.T) {
 	mustClaim(t, f, f.jim, f.per1, identityclaims.StatusAccepted)
 	mustClaim(t, f, f.york, f.plc1, identityclaims.StatusProvisional)
 
-	eg, err := f.c.Graph().EvidenceGraph(f.james.GraphID)
+	eg, err := graphfill.EvidenceGraph(f.c.Graph(), f.james.GraphID)
 	if err != nil {
 		t.Fatal(err)
 	}

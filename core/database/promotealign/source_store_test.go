@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -15,7 +16,7 @@ func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()
-	eg, err := g.EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(g, graphID)
 	must(t, err)
 	if len(eg.Members) != 1 || string(eg.Members[0].EntityID) != string(res.Entity.ID) {
 		t.Fatalf("members %+v", eg.Members)
@@ -25,7 +26,7 @@ func TestEvidenceGraphSecondReadIssuesNoQueries(t *testing.T) {
 	}
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	again, err := g.EvidenceGraph(graphID)
+	again, err := graphfill.EvidenceGraph(g, graphID)
 	must(t, err)
 	if n != 0 {
 		t.Fatalf("second read issued %d graph queries", n)
@@ -46,13 +47,13 @@ func TestPromoteDropsTheSource(t *testing.T) {
 	s := f.Person(f.source, f.artifact, "Ann Lee")
 	g := f.c.Graph()
 	g.Drop()
-	before, err := g.EvidenceGraph(graphID)
+	before, err := graphfill.EvidenceGraph(g, graphID)
 	must(t, err)
 	if len(before.Members) != 0 {
 		t.Fatalf("members before promote %+v", before.Members)
 	}
 	res := f.promote(s)
-	after, err := g.EvidenceGraph(graphID)
+	after, err := graphfill.EvidenceGraph(g, graphID)
 	must(t, err)
 	if len(after.Members) != 1 || string(after.Members[0].EntityID) != string(res.Entity.ID) {
 		t.Fatalf("members after promote %+v", after.Members)
@@ -66,7 +67,7 @@ func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	res := f.promote(s)
 	g := f.c.Graph()
 	g.Drop()
-	if _, err := g.EvidenceGraph(graphID); err != nil {
+	if _, err := graphfill.EvidenceGraph(g, graphID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := g.Node(res.Entity.ID); err != nil {
@@ -86,7 +87,7 @@ func TestHandleLabelDoesNotDropTheSource(t *testing.T) {
 	must(t, err)
 	var n int
 	g.SetQueryCounterForTest(func() { n++ })
-	if _, err := g.EvidenceGraph(graphID); err != nil {
+	if _, err := graphfill.EvidenceGraph(g, graphID); err != nil {
 		t.Fatal(err)
 	}
 	if n != 0 {

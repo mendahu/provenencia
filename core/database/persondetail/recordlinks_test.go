@@ -216,7 +216,7 @@ func TestRecordLinksGraphOrder(t *testing.T) {
 	}
 	var got []string
 	for _, g := range f.recordLinks(s.ID).Graphs {
-		got = append(got, g.Source.Title+" / "+g.Graph.GraphName)
+		got = append(got, g.Source.Title+" / "+g.Graph.Name)
 	}
 	want := []string{"Baptisms / Index", "Baptisms / Register", "Census 1841 / Default", "Census 1851 / Default"}
 	if !reflect.DeepEqual(got, want) {

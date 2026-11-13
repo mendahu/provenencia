@@ -72,13 +72,6 @@ func (g *Graph) Verify() error {
 	if err := g.verifyEntries(); err != nil {
 		return err
 	}
-	if evidenceGraphFn != nil {
-		for key, e := range g.evidenceGraphs {
-			if err := evidenceGraphFn(g, []byte(key), e.graph); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
 

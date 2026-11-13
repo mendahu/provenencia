@@ -12,7 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/grapheventtitles"
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -196,7 +196,7 @@ func TestForEvidenceGraph(t *testing.T) {
 		f.subject("event", "Default event")
 		_, jones, _ := artifactstest.Split(t, f.C, userID, f.Source.ID, "Jones")
 		jonesEvent := subjectstest.On(t, f.C, userID, jones.ID, "event", "Jones event")
-		eg, err := f.C.Graph().EvidenceGraph(jones.ID)
+		eg, err := graphfill.EvidenceGraph(f.C.Graph(), jones.ID)
 		must(t, err)
 		got := grapheventtitles.FromStored(eg, nil, nil)
 		if len(got) != 1 || string(got[0].SubjectID) != string(jonesEvent.ID) {
@@ -214,7 +214,7 @@ func TestForEvidenceGraph(t *testing.T) {
 
 func titlesFromStored(t *testing.T, f *fixture) []grapheventtitles.Title {
 	t.Helper()
-	eg, err := f.C.Graph().EvidenceGraph(evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
+	eg, err := graphfill.EvidenceGraph(f.C.Graph(), evidencegraphstest.SoleGraph(t, f.C, f.Source.ID).ID)
 	must(t, err)
 	v, err := f.C.Graph().Vocabulary()
 	must(t, err)
