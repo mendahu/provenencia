@@ -17,7 +17,8 @@
 
 ## Landed
 
-- No ship log was committed: the orchestrator kept `S16-19-summary-rows-carry-owners.ship.md` untracked, so STEP-1 and STEP-8's figures are in the PR description (the plan's DoD names both).
+- The ship log, `S16-19-summary-rows-carry-owners.ship.md`, is committed on the branch and carries the STEP-1 and STEP-8 figures (the plan's DoD names both).
+- A life row keeps at most `maxLifeOwners` (64) owners, date and place together, in date order and then link order (review SEC-1). This supersedes the §6 Edges line "Owners per life row ... uncapped"; at base nothing was retained, so the uncapped owners this PR keeps would have grown the stored rows by persons x location links.
 - AC-2.3's test cites the toponym with `f.Cite(f.Artifact, york, …)`, not `f.citeToponyms`: `citeToponyms` writes through `observationstest.Cite`, which `f.Reported` does not hear.
 - `TestPersonDerivedRows`' "graph queries do not grow" case calls `nameformats.Invalidate` before each count: the person row's sort now loads the name format once per connection, which the first count paid and the second did not. Its expected values are unchanged.
 - STEP-5 made no private copy of the collapse in `persondetail`: it stayed as it was until STEP-7 deleted it, and `TestRolesByNeighbor` and `TestRolesByNeighborManyLinks` were copied into `placechains_internal_test.go` in the step 5 and 6 commit (one commit, since the moved function has no caller until the event row uses it). The case that skipped `D` through `keep` became a case with no skip.
