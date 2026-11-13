@@ -619,10 +619,8 @@ func BenchmarkCacheSizes(b *testing.B) {
 			measure("kinship", func() {
 				r, err := canonlinks.NewReader(g)
 				must(b, err)
-				for _, id := range conclusionsummariestest.HandleIDs(b, db, vocabkey.Person) {
-					_, err := r.Relationships(id, canonlinks.Options{Siblings: true})
-					must(b, err)
-				}
+				_, err = r.Relationships(conclusionsummariestest.HandleIDs(b, db, vocabkey.Person), canonlinks.Options{Siblings: true})
+				must(b, err)
 			})
 			measure("displays", func() {
 				w := conclusionsummaries.Want{
@@ -638,6 +636,22 @@ func BenchmarkCacheSizes(b *testing.B) {
 			for name, n := range g.KeyCounts() {
 				b.ReportMetric(float64(n), name+"-keys")
 			}
+		})
+	}
+}
+
+// BenchmarkLargeSourcePropose reports Promote's proposal of Source A on the
+// large fixture at 4,000 and 16,000 persons: warm, and right after a handle
+// commit. Reported, not gated: TestLargeSourceBudgets gates the figures at 4,000
+// persons. It ignores b.N, as BenchmarkCacheSizes does.
+func BenchmarkLargeSourcePropose(b *testing.B) {
+	for _, persons := range []int{4000, 16000} {
+		b.Run(fmt.Sprintf("persons=%d", persons), func(b *testing.B) {
+			lf := newLargeFixture(b, persons)
+			ms := func(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
+			b.ReportMetric(ms(lf.warmProposal()), "warm-ms")
+			n := 0
+			b.ReportMetric(ms(lf.proposalAfterCommit(&n)), "after-commit-ms")
 		})
 	}
 }

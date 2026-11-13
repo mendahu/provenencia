@@ -54,7 +54,7 @@ func init() {
 // order the walk used to break ties. Every handle's profile is built once:
 // the shortlisted ones together, the ones the walk reaches after it. Recorded
 // links come from the walk and implied ones from canonlinks.Reader.For, which
-// answers from the graph cache's results for each walked person; both go
+// composes them from the graph cache's kinship pivots for each walked person; both go
 // through one kinship.LinkSet, so a link read from either end or recorded
 // both ways merges, and the implied links follow the recorded ones in walk
 // order.

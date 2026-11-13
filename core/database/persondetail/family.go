@@ -40,14 +40,7 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 		return nil, err
 	}
 	typeID := v.TypeIDsByKey()[vocabkey.Person]
-	var want [][]byte
-	seen := map[string]bool{}
-	for _, id := range ids {
-		if len(id) == 16 && !seen[string(id)] {
-			seen[string(id)] = true
-			want = append(want, id)
-		}
-	}
+	want := database.UniqueBlobIDs(ids)
 	// One batched load of the nodes, so an id that is no node costs no query of
 	// its own; only the people among them are read further.
 	if err := g.Nodes(want); err != nil {
@@ -59,47 +52,48 @@ func Families(c *database.Catalog, ids [][]byte) ([]Family, error) {
 			people = append(people, id)
 		}
 	}
-	if err := r.LoadRelationships(people, canonlinks.Options{Siblings: true}); err != nil {
+	links, err := r.Relationships(people, canonlinks.Options{Siblings: true})
+	if err != nil {
 		return nil, err
 	}
 
-	// The capped, unfiltered kin of each person that is read, and every relative
-	// they name.
-	var relatives [][]byte
-	kins := map[string]kinship.Kin{}
-	named := map[string]bool{}
+	// The capped, unfiltered kin of each person, and every relative they name,
+	// loaded so shownKin reads them.
+	var named [][]byte
+	kin := map[string]kinship.Kin{}
 	for _, id := range people {
-		links, err := r.Relationships(id, canonlinks.Options{Siblings: true})
-		if err != nil {
-			return nil, err
-		}
-		kin := kinship.KinOf(id, links, terms, rules)
-		kins[string(id)] = kin
+		kin[string(id)] = kinship.KinOf(id, links[string(id)], terms, rules)
 		for _, role := range kinship.Roles() {
-			for _, l := range kin[role] {
-				if other, _, _ := l.From(id); !named[string(other)] {
-					named[string(other)] = true
-					relatives = append(relatives, other)
-				}
+			for _, l := range kin[string(id)][role] {
+				other, _, _ := l.From(id)
+				named = append(named, other)
 			}
 		}
 	}
-	if err := r.LoadRelationships(relatives, canonlinks.Options{}); err != nil {
+	if err := g.Nodes(named); err != nil {
 		return nil, err
+	}
+
+	// The kin of each shown relative a family unit reads, read once.
+	shown := map[string]kinship.Kin{}
+	var around [][]byte
+	for _, id := range people {
+		shown[string(id)] = shownKin(g, typeID, id, kin[string(id)])
+		around = append(around, shown[string(id)].Around(id)...)
+	}
+	aroundLinks, err := r.Relationships(around, canonlinks.Options{})
+	if err != nil {
+		return nil, err
+	}
+	aroundKin := map[string]kinship.Kin{}
+	for id, ls := range aroundLinks {
+		other := []byte(id)
+		aroundKin[id] = shownKin(g, typeID, other, kinship.KinOf(other, ls, terms, rules))
 	}
 
 	out := make([]Family, 0, len(people))
 	for _, id := range people {
-		kin := shownKin(g, typeID, id, kins[string(id)])
-		around := map[string]kinship.Kin{}
-		for _, other := range kin.Around(id) {
-			links, err := r.Relationships(other, canonlinks.Options{})
-			if err != nil {
-				return nil, err
-			}
-			around[string(other)] = shownKin(g, typeID, other, kinship.KinOf(other, links, terms, rules))
-		}
-		out = append(out, Family{Person: id, Units: kinship.FamilyUnits(id, kin, around, rules)})
+		out = append(out, Family{Person: id, Units: kinship.FamilyUnits(id, shown[string(id)], aroundKin, rules)})
 	}
 	return out, nil
 }

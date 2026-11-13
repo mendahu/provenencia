@@ -52,12 +52,12 @@ func TestCraftedFamily(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	links, err := r.Relationships(pat, canonlinks.Options{Siblings: true})
+	links, err := r.Relationships([][]byte{pat}, canonlinks.Options{Siblings: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := map[string]bool{}
-	for _, l := range kinship.KinOf(pat, links, terms, matchregistry.Default().Kinship)[kinship.RoleChild] {
+	for _, l := range kinship.KinOf(pat, links[string(pat)], terms, matchregistry.Default().Kinship)[kinship.RoleChild] {
 		other, _, _ := l.From(pat)
 		want[string(other)] = true
 	}

@@ -1,10 +1,12 @@
 // Package canonlinks reads the canon's links: each filed link as an edge
 // between its two ends with the key it has from each (EdgeOf), the catalog's
-// bridge terms (LoadTerms), and the links the kinship patterns imply for one
-// person (Reader.For), and one person's relationship links, recorded and
-// implied, merged through kinship.LinkSet (Reader.Relationships), with, on
-// request, the siblings a shared parent implies (Options{Siblings: true},
-// LoadSiblings), and, for many people at once, LoadRelationships. Matching and later readers share it.
+// bridge terms (LoadTerms), the links the kinship patterns imply for one person
+// (Reader.For, which composes them from the pivot results at each call), and
+// each person's relationship links, recorded and implied, merged through
+// kinship.LinkSet (Reader.Relationships), with, on request, the siblings a
+// shared parent implies (Options{Siblings: true}). Relationships reads many
+// people at once and loads what it reads in a fixed number of batches. Matching
+// and later readers share it.
 package canonlinks
 
 import (

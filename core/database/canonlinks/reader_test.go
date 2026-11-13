@@ -332,11 +332,11 @@ func (w *world) relShapes(links []kinship.Link) []relShape {
 
 func (w *world) relationships(id []byte) []kinship.Link {
 	w.t.Helper()
-	links, err := w.r.Relationships(id, Options{})
+	links, err := w.r.Relationships([][]byte{id}, Options{})
 	if err != nil {
 		w.t.Fatal(err)
 	}
-	return links
+	return links[string(id)]
 }
 
 // lesserFirst turns each link so the lesser end's name is A, keys with it.
@@ -438,12 +438,6 @@ func TestRelationships(t *testing.T) {
 // hasPivot reports whether a kinship result is stored for an id.
 func (w *world) hasPivot(id []byte) bool {
 	_, ok := pivots.Peek(w.g, id)
-	return ok
-}
-
-// hasSiblings reports whether a sibling answer is stored for an id.
-func (w *world) hasSiblings(id []byte) bool {
-	_, ok := siblingAnswers.Peek(w.g, id)
 	return ok
 }
 
@@ -683,12 +677,12 @@ func (w *world) sibling(name string, a, b []byte) []byte {
 func (w *world) siblings(id []byte) []kinship.Link {
 	w.t.Helper()
 	ka, kb := w.keys(vocabkey.BridgeRelationship, vocabkey.TermSibling)
-	links, err := w.r.Relationships(id, Options{Siblings: true})
+	links, err := w.r.Relationships([][]byte{id}, Options{Siblings: true})
 	if err != nil {
 		w.t.Fatal(err)
 	}
 	var out []kinship.Link
-	for _, l := range links {
+	for _, l := range links[string(id)] {
 		if l.KeyA == ka && l.KeyB == kb {
 			out = append(out, l)
 		}
@@ -830,11 +824,12 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		check(t, read(w, w.person("Ann")))
 		check(t, read(w, make([]byte, 16)))
 		check(t, read(w, []byte{1, 2, 3}))
-		if _, ok := siblingAnswers.Peek(w.g, []byte{1, 2, 3}); ok {
-			t.Fatal("a wrong-length id stored an answer")
+		got, err := w.r.Relationships([][]byte{{1, 2, 3}, make([]byte, 16)}, Options{Siblings: true})
+		if err != nil {
+			t.Fatal(err)
 		}
-		if _, ok := siblingAnswers.Peek(w.g, make([]byte, 16)); ok {
-			t.Fatal("an unknown id stored an answer")
+		if len(got) != 0 {
+			t.Fatalf("a wrong-length id and an unknown id gave %d entries", len(got))
 		}
 		bea := w.person("Bea")
 		w.sibling("BB", bea, bea)
@@ -849,15 +844,19 @@ func TestRelationshipsOptionsSiblings(t *testing.T) {
 		check(t, read(w, bea), want(w, "Bea", "Cal", []string{"AB", "AC"}, sharedParent("Ann")))
 	})
 	t.Run("an edge in both lists is read once", func(t *testing.T) {
-		// fromNames reads the names of the associations of Bea's stored
-		// sibling link's From edges.
+		// fromNames reads the names of the associations of Bea's sibling
+		// link's From edges, from the derivation itself.
 		fromNames := func(w *world, id []byte) []string {
-			v, ok := siblingAnswers.Peek(w.g, id)
-			if !ok {
-				t.Fatal("no stored sibling answer")
+			steps, err := w.r.d.loadSteps([][]byte{id}, w.r.event)
+			if err != nil {
+				t.Fatal(err)
+			}
+			answers, err := w.r.d.siblingsOf(steps, w.r.event)
+			if err != nil {
+				t.Fatal(err)
 			}
 			var out []string
-			for _, imp := range v.links {
+			for _, imp := range answers[string(id)] {
 				for _, f := range imp.From {
 					for _, a := range f.Associations {
 						out = append(out, w.name(a))
@@ -933,29 +932,26 @@ func TestSiblingsFollowCommits(t *testing.T) {
 		if len(w.siblings(bea)) != 1 {
 			t.Fatal("setup: want one sibling")
 		}
-		if !w.hasSiblings(bea) {
-			t.Fatal("setup: the answer was not stored")
-		}
 		return
+	}
+	// fresh reads Bea's siblings on a new world with the same links filed.
+	fresh := func(t *testing.T) []relShape {
+		w, ann, bea, cal := w2(t)
+		w.parent("AC", ann, cal)
+		return w.relShapes(w.siblings(bea))
 	}
 	t.Run("AC-2.4", func(t *testing.T) {
 		w, ann, bea := filed(t)
 		w.k.Commit(ann)
-		if w.hasSiblings(bea) {
-			t.Fatal("a commit naming Ann kept the answer")
-		}
-		if len(w.siblings(bea)) != 1 || !w.hasSiblings(bea) {
-			t.Fatal("the next read did not derive again")
+		if got := w.relShapes(w.siblings(bea)); len(got) != 1 || !reflect.DeepEqual(got, fresh(t)) {
+			t.Fatalf("got %+v, want the fresh read %+v", got, fresh(t))
 		}
 	})
 	t.Run("AC-2.5", func(t *testing.T) {
 		w, _, bea := filed(t)
 		w.k.CommitVocabulary()
-		if w.hasSiblings(bea) {
-			t.Fatal("a vocabulary commit kept the answer")
-		}
-		if len(w.siblings(bea)) != 1 || !w.hasSiblings(bea) {
-			t.Fatal("the next read did not derive again")
+		if got := w.relShapes(w.siblings(bea)); len(got) != 1 || !reflect.DeepEqual(got, fresh(t)) {
+			t.Fatalf("got %+v, want the fresh read %+v", got, fresh(t))
 		}
 	})
 	t.Run("AC-2.7", func(t *testing.T) {
@@ -977,74 +973,7 @@ func TestSiblingsFollowCommits(t *testing.T) {
 	})
 }
 
-func TestLoadSiblingsQueryCount(t *testing.T) {
-	t.Run("AC-2.1", func(t *testing.T) {
-		w := newWorld(t)
-		ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
-		w.parent("AB", ann, bea)
-		w.parent("AC", ann, cal)
-		first, err := w.r.Relationships(bea, Options{Siblings: true})
-		if err != nil {
-			t.Fatal(err)
-		}
-		var queries int
-		w.g.SetQueryCounterForTest(func() { queries++ })
-		second, err := w.r.Relationships(bea, Options{Siblings: true})
-		if err != nil {
-			t.Fatal(err)
-		}
-		if queries != 0 {
-			t.Fatalf("a second read issued %d queries", queries)
-		}
-		if !reflect.DeepEqual(first, second) {
-			t.Fatalf("second read differs:\n%+v\n%+v", first, second)
-		}
-	})
-	t.Run("AC-2.2", func(t *testing.T) {
-		// family files a parent of a first child and of more, each also a
-		// birth's subject when births is set; it returns the first child.
-		family := func(w *world, tag string, others int, births bool) []byte {
-			ann := w.person(tag + "Ann")
-			first := w.person(tag + "Bea")
-			w.parent(tag+"AB", ann, first)
-			for i := 0; i < others; i++ {
-				kid := w.person(fmt.Sprintf("%sK%d", tag, i))
-				w.parent(fmt.Sprintf("%sAK%d", tag, i), ann, kid)
-				if births {
-					b := w.event(fmt.Sprintf("%sB%d", tag, i), vocabkey.EventBirth)
-					w.join(fmt.Sprintf("%sB%d/Ann", tag, i), ann, b, "father")
-					w.join(fmt.Sprintf("%sB%d/K", tag, i), kid, b, "subject")
-				}
-			}
-			return first
-		}
-		count := func(build func(w *world) [][]byte) int {
-			w := newWorld(t)
-			ids := build(w)
-			var queries int
-			w.g.SetQueryCounterForTest(func() { queries++ })
-			if err := w.r.LoadSiblings(ids); err != nil {
-				t.Fatal(err)
-			}
-			for _, id := range ids {
-				if !w.hasSiblings(id) {
-					t.Fatalf("no answer stored for %s", w.name(id))
-				}
-			}
-			return queries
-		}
-		a := count(func(w *world) [][]byte { return [][]byte{family(w, "", 1, false)} })
-		b := count(func(w *world) [][]byte { return [][]byte{family(w, "", 7, true)} })
-		c := count(func(w *world) [][]byte {
-			return [][]byte{family(w, "x", 1, false), family(w, "y", 1, false), family(w, "z", 1, false)}
-		})
-		if a == 0 || a != b || a != c {
-			t.Fatalf("queries: one other child %d, seven with births %d, three families %d", a, b, c)
-		}
-	})
-}
-
-func TestLoadRelationshipsQueryCount(t *testing.T) {
+func TestRelationshipsQueryCount(t *testing.T) {
 	// family files a parent of a first child and of more, each also the subject
 	// of a birth the parent is the father of; it returns the parent and the
 	// first child.
@@ -1063,42 +992,45 @@ func TestLoadRelationshipsQueryCount(t *testing.T) {
 		}
 		return parent, first
 	}
-	t.Run("AC-2.4 warm", func(t *testing.T) {
+	t.Run("warm", func(t *testing.T) {
 		w := newWorld(t)
 		parent, first := family(w, "", 3)
 		ids := [][]byte{parent, first}
-		if err := w.r.LoadRelationships(ids, Options{Siblings: true}); err != nil {
+		got, err := w.r.Relationships(ids, Options{Siblings: true})
+		if err != nil {
 			t.Fatal(err)
 		}
 		var queries int
 		w.g.SetQueryCounterForTest(func() { queries++ })
-		for _, id := range ids {
-			if _, err := w.r.Relationships(id, Options{Siblings: true}); err != nil {
-				t.Fatal(err)
-			}
+		again, err := w.r.Relationships(ids, Options{Siblings: true})
+		if err != nil {
+			t.Fatal(err)
 		}
 		if queries != 0 {
-			t.Fatalf("Relationships issued %d queries after LoadRelationships", queries)
+			t.Fatalf("a second read issued %d queries", queries)
+		}
+		if !reflect.DeepEqual(got, again) {
+			t.Fatalf("second read differs:\n%+v\n%+v", got, again)
 		}
 	})
-	t.Run("AC-2.4 cold", func(t *testing.T) {
+	t.Run("cold", func(t *testing.T) {
 		count := func(build func(w *world) [][]byte) int {
 			w := newWorld(t)
 			ids := build(w)
 			var queries int
 			w.g.SetQueryCounterForTest(func() { queries++ })
-			if err := w.r.LoadRelationships(ids, Options{Siblings: true}); err != nil {
+			if _, err := w.r.Relationships(ids, Options{Siblings: true}); err != nil {
 				t.Fatal(err)
 			}
 			return queries
 		}
-		a := count(func(w *world) [][]byte { p, _ := family(w, "", 1); return [][]byte{p} })
-		b := count(func(w *world) [][]byte { p, _ := family(w, "", 7); return [][]byte{p} })
+		a := count(func(w *world) [][]byte { p, f := family(w, "", 1); return [][]byte{p, f} })
+		b := count(func(w *world) [][]byte { p, f := family(w, "", 7); return [][]byte{p, f} })
 		c := count(func(w *world) [][]byte {
-			x, _ := family(w, "x", 1)
-			y, _ := family(w, "y", 1)
-			z, _ := family(w, "z", 1)
-			return [][]byte{x, y, z}
+			x, xf := family(w, "x", 1)
+			y, yf := family(w, "y", 1)
+			z, zf := family(w, "z", 1)
+			return [][]byte{x, xf, y, yf, z, zf}
 		})
 		if a == 0 || a != b || a != c {
 			t.Fatalf("queries: one child %d, seven with births %d, three families %d", a, b, c)
@@ -1136,23 +1068,6 @@ func TestSiblingsLeaveMatchingAlone(t *testing.T) {
 	}
 }
 
-func TestVerifyCatchesAStaleSiblingAnswer(t *testing.T) {
-	w := newWorld(t)
-	ann, bea, cal := w.person("Ann"), w.person("Bea"), w.person("Cal")
-	w.parent("AB", ann, bea)
-	w.parent("AC", ann, cal)
-	if len(w.siblings(bea)) != 1 {
-		t.Fatal("setup: want one sibling link")
-	}
-	if err := w.g.Verify(); err != nil {
-		t.Fatalf("a fresh answer failed Verify: %v", err)
-	}
-	siblingAnswers.Set(w.g, bea, personAnswer{rules: shipped})
-	if err := w.g.Verify(); err == nil {
-		t.Fatal("Verify accepted a stale answer")
-	}
-}
-
 func TestPivotKindMismatch(t *testing.T) {
 	// Ann stands in Bea's birth and is also filed as the parent of the birth's
 	// handle, so her chain reads the birth as a person. The handle's event
@@ -1174,5 +1089,154 @@ func TestPivotKindMismatch(t *testing.T) {
 	}
 	if len(got) == 0 {
 		t.Fatal("the fixture implies nothing for Ann")
+	}
+}
+
+func TestComposedAnswersReusePivots(t *testing.T) {
+	// Ann and Bob married (M1); Bea born of Ann and Bob (B1); Cal born of Bea
+	// (B2).
+	build := func(t *testing.T) (w *world, people []*[]byte, ann, cal []byte) {
+		w = newWorld(t)
+		ann, bob, bea := w.person("Ann"), w.person("Bob"), w.person("Bea")
+		cal = w.person("Cal")
+		w.marriage("M1", ann, bob)
+		b1, b2 := w.event("B1", vocabkey.EventBirth), w.event("B2", vocabkey.EventBirth)
+		w.join("B1/Ann", ann, b1, "father")
+		w.join("B1/Bob", bob, b1, "mother")
+		w.join("B1/Bea", bea, b1, "subject")
+		w.join("B2/Bea", bea, b2, "mother")
+		w.join("B2/Cal", cal, b2, "subject")
+		return w, []*[]byte{&ann, &bob, &bea, &cal}, ann, cal
+	}
+	heldOf := func(w *world) map[string]bool {
+		out := map[string]bool{}
+		for _, id := range w.all {
+			if w.hasPivot(id) {
+				out[string(id)] = true
+			}
+		}
+		return out
+	}
+	readAll := func(w *world, people []*[]byte) {
+		for _, p := range people {
+			w.for_(*p)
+		}
+	}
+	t.Run("commit ann", func(t *testing.T) {
+		w, people, ann, _ := build(t)
+		readAll(w, people)
+		held := heldOf(w)
+
+		n, ok := w.g.Cached(ann)
+		if !ok {
+			t.Fatal("Ann's node is not cached")
+		}
+		expected := map[string]bool{string(ann): true}
+		for _, l := range n.Links {
+			expected[string(l.Neighbor)] = true
+		}
+		var names []string
+		for id := range expected {
+			names = append(names, w.name([]byte(id)))
+		}
+		sort.Strings(names)
+		if !reflect.DeepEqual(names, []string{"Ann", "B1", "M1"}) {
+			t.Fatalf("the ids a commit on Ann names: %v", names)
+		}
+
+		w.k.Commit(ann)
+		after := heldOf(w)
+		dropped := map[string]bool{}
+		for id := range held {
+			if !after[id] {
+				dropped[id] = true
+			}
+		}
+		for id := range after {
+			if !held[id] {
+				t.Fatalf("%s is held after a commit and was not before", w.name([]byte(id)))
+			}
+		}
+		for id := range expected {
+			if held[id] != dropped[id] {
+				t.Fatalf("%s: held before %v, dropped %v", w.name([]byte(id)), held[id], dropped[id])
+			}
+		}
+		if len(dropped) > len(expected) {
+			t.Fatalf("dropped %d pivots, want at most the %d ids the commit names", len(dropped), len(expected))
+		}
+
+		readAll(w, people)
+		derived := map[string]bool{}
+		for id := range heldOf(w) {
+			if !after[id] {
+				derived[id] = true
+			}
+		}
+		if !reflect.DeepEqual(derived, dropped) {
+			t.Fatalf("derived %d pivots, dropped %d", len(derived), len(dropped))
+		}
+	})
+	t.Run("commit a stranger", func(t *testing.T) {
+		w, people, _, _ := build(t)
+		stranger := w.person("Stranger")
+		readAll(w, people)
+		held := heldOf(w)
+		if len(held) == 0 {
+			t.Fatal("no pivot is held after reading every person")
+		}
+		w.k.Commit(stranger)
+		after := heldOf(w)
+		for id := range held {
+			if !after[id] {
+				t.Fatalf("a commit on a person linked to nobody dropped the pivot of %s", w.name([]byte(id)))
+			}
+		}
+	})
+	t.Run("commit cal", func(t *testing.T) {
+		w, people, ann, cal := build(t)
+		readAll(w, people)
+		before := w.shapes(w.for_(ann))
+		held := heldOf(w)
+		w.k.Commit(cal)
+		held2 := heldOf(w)
+		got := w.shapes(w.for_(ann))
+		for id := range heldOf(w) {
+			if !held2[id] {
+				t.Fatalf("For(Ann) derived the pivot of %s", w.name([]byte(id)))
+			}
+		}
+		if !reflect.DeepEqual(got, before) {
+			t.Fatalf("For(Ann) changed:\n%+v\n%+v", got, before)
+		}
+		if len(held2) >= len(held) {
+			t.Fatalf("the commit dropped no pivot: held %d before, %d after", len(held), len(held2))
+		}
+	})
+}
+
+func TestEdgeKey(t *testing.T) {
+	e := func(a, b string, assoc ...string) kinship.Edge {
+		edge := kinship.Edge{A: []byte(a), B: []byte(b)}
+		for _, x := range assoc {
+			edge.Associations = append(edge.Associations, []byte(x))
+		}
+		return edge
+	}
+	for _, c := range []struct {
+		name      string
+		x, y      kinship.Edge
+		wantEqual bool
+	}{
+		{"ends split differently", e("ab", "c"), e("a", "bc"), false},
+		{"associations split differently", e("a", "b", "xy", "z"), e("a", "b", "x", "yz"), false},
+		{"same edge", e("a", "b", "x", "y"), e("a", "b", "x", "y"), true},
+		{"ends swapped with an empty end", e("a", ""), e("", "a"), false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			if got := edgeKey(c.x) == edgeKey(c.y); got != c.wantEqual {
+				t.Fatalf("keys equal = %v, want %v", got, c.wantEqual)
+			}
+		})
 	}
 }
