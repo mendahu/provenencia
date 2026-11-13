@@ -1,7 +1,7 @@
 # Review — S15-34 Artifacts are edited in a sheet
 
-**Verdict:** round 1: Fits with changes — Not ready; answered below. Round 2: pending.
-**Rounds:** 1 so far. **Reviewers:** maintainability (fresh, read-only), executability (fresh, read-only)
+**Verdict:** Fits with changes — Ready with changes, 2 rounds; every blocker Fixed; two user answers (Cancel, Save with unconfirmed text); M-8 Logged.
+**Rounds:** 2. **Reviewers:** maintainability (fresh, read-only), executability (fresh, read-only)
 
 ## To user
 
@@ -100,3 +100,22 @@
 
 ### X-15 · nit · Lint warning
 **Answer:** Logged — "Move to another Source…" is the menu's real label.
+
+## Round 2
+
+Fresh reviewers checked every round-1 answer against the code at `bc4dec3`; all hold. Five new blockers came from round-1 fix text; each is answered below. Round 2 is the cap: nothing is left open.
+
+### M2-1 · blocker · Two typed-text signals (`typedFieldIDs` beside `hasTypedEdit`)
+**Answer:** Fixed — D-5 deletes `hasTypedEdit`; `showRefusal` reads `typedFieldIDs`; ids are cleared where their buffer is (leaving edit, a fill, an Escape that clears a suggestion, `dismissSuggestion`, `clear`, `resetDrafts` for rows gone). T-6's typed-elsewhere case moves to T-2 as a direct `showRefusal` test, since D-6 stops Save first.
+
+### M2-2 · blocker · The rows written into the cached key twice
+**Answer:** Fixed — D-7: `setWorkspace` carries the Artifact list (no slot patches it); the rows go to the page's workspace only, as `SourcePageMetadataHost` does, and into the cache only through `.wroteMetadataBoard`'s slot. The `add-workspace-place` § 6 line S15-36 wrote stays true, so no rule changes and nothing goes To user.
+
+### X2-1 · blocker · Escape still taken by the sheet's hidden button
+**Answer:** Fixed — D-2: the hidden button's shortcut is `innerEditOpen ? nil : .cancelAction` (the `PVConfirm` precedent); `innerEditOpen` reaches `PVSheetCloseRule.outcome` for the outside click only; a content-initiated `pvSheetClose` follows the dirty rule as today. T-1 extends `sheetCloseOutcomes`.
+
+### X2-2 · blocker · Two tests break STEP-7
+**Answer:** Fixed — `restingCardMarksAnArtifactInNoGraph` keeps its section half and its card half is ported to `sheetMarksAnArtifactInNoGraph` (T-5); `pageDropStagesFileWithoutCreating` is updated for the sheet (T-7).
+
+### X2-3 · blocker · A typed suggestion has no way out, and ✕ can lock Save
+**Answer:** Fixed — `dismissSuggestion` and `clear` drop the id (D-5, T-2 `dismissingATypedSuggestionClearsItsFlag`); Escape in a suggestion with typed text clears it (D-2, AC-2.4); the Save-stop copy is reworded for every field kind, "Finish the open field first: save its value or clear it." (D-6, D-17, AC-2.6). Writer's call: the wording change keeps the user's decision (stop and say so) and fits a suggestion row's "Save" and ✕ controls.
