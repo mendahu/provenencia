@@ -1,6 +1,6 @@
 # S16-30 — Provenance records compose from cached records
 
-**Status:** Landed #812
+**Status:** Landed in [#812](https://github.com/mendahu/provenencia/pull/812) (2026-11-13)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the provenance sheet, the Gallery captions and the life rows show the same records; only where the engine reads them from moves)
