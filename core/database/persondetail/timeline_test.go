@@ -686,3 +686,37 @@ func TestPersonEventsReadsParticipantsFromRows(t *testing.T) {
 		}
 	}
 }
+
+// TestPersonEventsFollowsParticipationWrites: the Timeline reads participants
+// from the stored event row, so a participation written after the row was
+// stored must show on the next read (S16-19 CON-2).
+func TestPersonEventsFollowsParticipationWrites(t *testing.T) {
+	t.Run("a new participant", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat, ned, zed := w.person("Pat"), w.person("Ned"), w.person("Zed")
+		u := w.event("U", vocabkey.EventBurial, 1890)
+		w.k.Join(ned, u, "subject")
+		w.k.Join(pat, u, "witness")
+		w.k.Commit()
+		w.expectEvents(pat, "U(witness;Ned:subject)")
+
+		join := w.k.Join(zed, u, "witness")
+		w.k.Commit(zed, u, join)
+		w.expectEvents(pat, "U(witness;Ned:subject,Zed:witness)")
+	})
+	t.Run("a changed role", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat, ned, zed := w.person("Pat"), w.person("Ned"), w.person("Zed")
+		u := w.event("U", vocabkey.EventBurial, 1890)
+		w.k.Join(ned, u, "subject")
+		w.k.Join(pat, u, "witness")
+		witness := w.k.Join(zed, u, "witness")
+		w.k.Commit()
+		w.expectEvents(pat, "U(witness;Ned:subject,Zed:witness)")
+
+		w.k.Remove(witness)
+		changed := w.k.Join(zed, u, "informant")
+		w.k.Commit(zed, u, witness, changed)
+		w.expectEvents(pat, "U(witness;Ned:subject,Zed:informant)")
+	})
+}
