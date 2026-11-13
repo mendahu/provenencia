@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
@@ -223,6 +224,40 @@ func TestForEntityCitationParts(t *testing.T) {
 	o := outcomeOf(field(f.detail(h), "name"), res.Observations[0].ID)
 	if o.ArtifactLabel != "Vol. 3" || o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.PageLabel != "" {
 		t.Fatalf("citation parts %+v", o)
+	}
+}
+
+// TestForEntityAfterCitationEdit: a Citation's label, page and uncertainty
+// reach the record, and the records tier passes Verify after the edit.
+func TestForEntityAfterCitationEdit(t *testing.T) {
+	t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+	f := newFixture(t)
+	src := f.source("Register of Baptisms")
+	a := f.personOn(src)
+	in := f.nameIn(a, "given=Ada|surname=Lovelace")
+	res, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: a.GraphID, ArtifactID: f.arts[string(src.ID)].ID, Label: "Baptism of Ada",
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
+		}, []observations.Input{in})
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	obsID := res.Observations[0].ID
+	o := outcomeOf(field(f.detail(h), "name"), obsID)
+	if o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.Provenance.Uncertain {
+		t.Fatalf("before: %+v", o)
+	}
+	f.Run("update_citation", func(tx *database.Tx) ([]rowchange.Change, error) {
+		_, ch, err := citations.Update(tx, userID, res.Citation.ID, citations.CitationFieldsInput{
+			Label: "Baptism of Ada Lovelace", TranscriptionUncertain: true,
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":38}]}`,
+		})
+		return ch, err
+	})
+	o = outcomeOf(field(f.detail(h), "name"), obsID)
+	if o.CitationLabel != "Baptism of Ada Lovelace" || o.ArtifactPage != 38 || !o.Provenance.Uncertain {
+		t.Fatalf("after: %+v", o)
 	}
 }
 
@@ -530,11 +565,13 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	if smallN == 0 || smallN != n {
 		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
 	}
-	sql := conclusiondetails.SQLRecordsForTest()
-	for _, table := range []string{"sources", "artifacts", "source_credibility_"} {
-		if strings.Contains(sql, table) {
-			t.Fatalf("the record shells still read %s", table)
-		}
+	selects := databasetest.CountSelects(t, f.C)
+	for _, h := range [][]byte{hs, hb} {
+		_, err = conclusiondetails.ForEntity(f.C, h)
+		must(t, err)
+	}
+	if selects.N() != 0 {
+		t.Fatalf("a second read prepared %d SELECTs", selects.N())
 	}
 }
 

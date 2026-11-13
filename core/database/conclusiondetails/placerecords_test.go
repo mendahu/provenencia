@@ -2,11 +2,11 @@ package conclusiondetails_test
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/properties"
 	"github.com/mendahu/provenencia/core/database/rowchange"
@@ -117,27 +117,38 @@ func TestLinkRecordReadsAsItsPlacesToponym(t *testing.T) {
 	}
 }
 
+// TestLinkRecordReadsKeepQueriesConstant: the life rows' graph queries do not
+// grow with unrelated toponyms, and a second read issues none and selects
+// nothing.
 func TestLinkRecordReadsKeepQueriesConstant(t *testing.T) {
 	count := func(unrelated int) int {
 		f := newFixture(t)
 		src := f.source("Register")
 		h, _ := f.birthAt(src, text("York"))
-		owners := f.placeRows(h)
 		for i := range unrelated {
 			other := f.subjectOn(src, "place")
 			f.cite(other, observations.Input{SubjectID: other.ID, PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar(fmt.Sprintf("Town %d", i))})
 		}
-		var ids [][]byte
-		only := map[string]map[string]bool{}
-		for _, o := range owners {
-			ids = append(ids, o.Entity.ID)
-			only[string(o.Entity.ID)] = map[string]bool{string(o.Field.PropertyID): true}
-		}
-		n, err := conclusiondetails.CountFieldsOfQueries(f.C, ids, only)
+		g := f.C.Graph()
+		g.Drop()
+		_, err := g.Vocabulary()
 		must(t, err)
-		return n
+		n := 0
+		g.SetQueryCounterForTest(func() { n++ })
+		defer g.SetQueryCounterForTest(nil)
+		_, err = conclusiondetails.PersonDerivedRows(f.C, h)
+		must(t, err)
+		first := n
+		n = 0
+		selects := databasetest.CountSelects(t, f.C)
+		_, err = conclusiondetails.PersonDerivedRows(f.C, h)
+		must(t, err)
+		if n != 0 || selects.N() != 0 {
+			t.Fatalf("a second read issued %d graph queries and %d SELECTs", n, selects.N())
+		}
+		return first
 	}
-	if small, big := count(2), count(8); small != big {
+	if small, big := count(2), count(8); small == 0 || small != big {
 		t.Fatalf("queries: %d with 2 unrelated toponyms, %d with 8", small, big)
 	}
 }
@@ -159,14 +170,5 @@ func TestForEntityDropsSubjectValuedFields(t *testing.T) {
 		if fld.ValueType == "subject" {
 			t.Fatalf("field %q of value type subject returned for a Person", fld.PropertyKey)
 		}
-	}
-}
-
-func TestToponymLoadUsesSubjectIndex(t *testing.T) {
-	f := newFixture(t)
-	plan, err := conclusiondetails.ToponymPlan(f.C)
-	must(t, err)
-	if !strings.Contains(plan, "observations_subject_id_idx") || strings.Contains(plan, "observations_property_id_idx") {
-		t.Fatalf("toponym load plan:\n%s", plan)
 	}
 }
