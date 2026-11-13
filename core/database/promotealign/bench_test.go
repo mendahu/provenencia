@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/namealiases"
 	"github.com/mendahu/provenencia/core/database/nameformats"
@@ -609,6 +610,7 @@ func BenchmarkCacheSizes(b *testing.B) {
 			})
 			b.ReportMetric(float64(time.Since(start).Milliseconds()), "nodes-ms")
 			measure("sourceRecords", func() { _, err := sources.RecordsOf(g); must(b, err) })
+			measure("graphIndex", func() { _, err := evidencegraphs.IndexOf(g); must(b, err) })
 			measure("aliasIndex", func() { must(b, namealiases.Warm(c)) })
 			measure("nameFormat", func() { must(b, nameformats.Warm(c)) })
 			measure("matchIndex", func() { must(b, promotealign.Warm(c)) })
