@@ -292,9 +292,9 @@ func personEventProto(r persondetail.PersonEvent, summaries conclusionsummaries.
 		out.Age = &engine.AgeRange{Lo: int32(r.Age.Lo), Hi: int32(r.Age.Hi), OpenLo: r.Age.OpenLo, OpenHi: r.Age.OpenHi}
 	}
 	for _, p := range r.Participants {
-		ph, ok := summaries.Person(p.Person)
+		ph, ok := summaries.Person(p.ID)
 		if !ok {
-			return nil, fmt.Errorf("list_person_events: participant %s has no summary", database.UUIDString(p.Person))
+			return nil, fmt.Errorf("list_person_events: participant %s has no summary", database.UUIDString(p.ID))
 		}
 		out.Participants = append(out.Participants, &engine.EventParticipant{Person: personSummaryProto(ph, paths), Roles: termsProto(p.Roles)})
 	}

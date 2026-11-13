@@ -6,7 +6,6 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -20,7 +19,7 @@ import (
 type PersonEvent struct {
 	Event        []byte
 	Roles        []conclusionsummaries.Term
-	Participants []EventParticipant
+	Participants []conclusionsummaries.EventParticipant
 	Span         *conclusionsummaries.TimelineSpan
 	Age          *conclusionsummaries.AgeRange
 }
@@ -31,55 +30,6 @@ type PersonEvent struct {
 type Timeline struct {
 	Events       []PersonEvent
 	Birth, Death LifeMarker
-}
-
-// EventParticipant is one other canonical person on the event and their roles.
-type EventParticipant struct {
-	Person []byte
-	Roles  []conclusionsummaries.Term
-}
-
-// neighborRoles is one neighbor of a walk and the distinct roles its links
-// carry.
-type neighborRoles struct {
-	id    []byte
-	roles []conclusionsummaries.Term
-	seen  map[string]struct{}
-}
-
-// rolesByNeighbor is the one collapse rule for both timeline walks: links in
-// input order; a link whose neighbor fails keep is skipped; neighbors are
-// de-duplicated in first-seen order; each link adds its role term to its
-// neighbor's roles unless that term is already there. A link with no term, or
-// whose term label does not know, adds no role.
-func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) (conclusionsummaries.Term, bool), keep func(id []byte) bool) []neighborRoles {
-	var out []neighborRoles
-	index := map[string]int{}
-	for _, l := range links {
-		if !keep(l.Neighbor) {
-			continue
-		}
-		i, ok := index[string(l.Neighbor)]
-		if !ok {
-			i = len(out)
-			index[string(l.Neighbor)] = i
-			out = append(out, neighborRoles{id: l.Neighbor})
-		}
-		if len(l.TermID) == 0 {
-			continue
-		}
-		if _, have := out[i].seen[string(l.TermID)]; have {
-			continue
-		}
-		if t, ok := label(l.TermID, l.TermKey); ok {
-			if out[i].seen == nil {
-				out[i].seen = map[string]struct{}{}
-			}
-			out[i].seen[string(l.TermID)] = struct{}{}
-			out[i].roles = append(out[i].roles, t)
-		}
-	}
-	return out
 }
 
 // PersonEvents is the Timeline section's read: every canonical event the
@@ -105,64 +55,73 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	if err != nil {
 		return Timeline{}, none, err
 	}
-	keepAll := func([]byte) bool { return true }
-
 	links, err := g.Follow(entityID, hops.EventsOfParticipant)
 	if err != nil {
 		return Timeline{}, none, err
 	}
-	mine := rolesByNeighbor(links, label, keepAll)
-	eventIDs := make([][]byte, len(mine))
-	for i, m := range mine {
-		eventIDs[i] = m.id
+	var eventIDs [][]byte
+	seenEvent := map[string]bool{}
+	for _, l := range links {
+		if !seenEvent[string(l.Neighbor)] {
+			seenEvent[string(l.Neighbor)] = true
+			eventIDs = append(eventIDs, l.Neighbor)
+		}
 	}
 	if err := g.Nodes(eventIDs); err != nil {
 		return Timeline{}, none, err
 	}
-
-	// The canonical events, each with the links to its participants.
-	type walk struct {
-		roles []conclusionsummaries.Term
-		links []graphcache.Link
+	var events [][]byte
+	for _, id := range eventIDs {
+		if e, _ := g.Cached(id); e.Canonical(eventType) {
+			events = append(events, id)
+		}
 	}
-	walks := map[string]walk{}
-	var events, others [][]byte
-	for _, m := range mine {
-		if e, _ := g.Cached(m.id); !e.Canonical(eventType) {
-			continue
-		}
-		ls, err := g.Follow(m.id, hops.ParticipantsOfEvent)
-		if err != nil {
-			return Timeline{}, none, err
-		}
-		walks[string(m.id)] = walk{roles: m.roles, links: ls}
-		events = append(events, m.id)
-		for _, l := range ls {
-			if !bytes.Equal(l.Neighbor, entityID) {
-				others = append(others, l.Neighbor)
+	eventRows, err := conclusionsummaries.EventsByIDs(c, events)
+	if err != nil {
+		return Timeline{}, none, err
+	}
+	// The other participants come from the event rows, read in one load.
+	var others [][]byte
+	for _, h := range eventRows {
+		for _, p := range h.Participants {
+			if !bytes.Equal(p.ID, entityID) {
+				others = append(others, p.ID)
 			}
 		}
 	}
 	if err := g.Nodes(others); err != nil {
 		return Timeline{}, none, err
 	}
-	keep := func(id []byte) bool {
+	canonicalPerson := func(id []byte) bool {
 		p, _ := g.Cached(id)
-		return !bytes.Equal(id, entityID) && p.Canonical(personType)
+		return p.Canonical(personType)
 	}
-	participants := map[string][]neighborRoles{}
-	var people [][]byte
-	for _, id := range events {
-		ps := rolesByNeighbor(walks[string(id)].links, label, keep)
-		participants[string(id)] = ps
-		for _, p := range ps {
-			people = append(people, p.id)
+	// Roles are labelled on copies: the stored row's slices stay as composed.
+	labelled := func(roles []conclusionsummaries.Term) []conclusionsummaries.Term {
+		var out []conclusionsummaries.Term
+		for _, r := range roles {
+			if t, ok := label(r.ID, r.Key); ok {
+				out = append(out, t)
+			}
 		}
+		return out
 	}
-
-	eventRows, err := conclusionsummaries.EventsByIDs(c, events)
-	if err != nil {
-		return Timeline{}, none, err
+	rows := make([]PersonEvent, 0, len(eventRows))
+	var people [][]byte
+	for _, h := range eventRows {
+		row := PersonEvent{Event: h.Entity.ID}
+		for _, p := range h.Participants {
+			if bytes.Equal(p.ID, entityID) {
+				row.Roles = labelled(p.Roles)
+				continue
+			}
+			if !canonicalPerson(p.ID) {
+				continue
+			}
+			people = append(people, p.ID)
+			row.Participants = append(row.Participants, conclusionsummaries.EventParticipant{ID: p.ID, Roles: labelled(p.Roles)})
+		}
+		rows = append(rows, row)
 	}
 	personRows, err := conclusionsummaries.PersonsByIDs(c, append(people, entityID))
 	if err != nil {
@@ -174,15 +133,6 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 		index[string(p.Entity.ID)] = i
 	}
 
-	rows := make([]PersonEvent, 0, len(eventRows))
-	for _, h := range eventRows {
-		id := h.Entity.ID
-		row := PersonEvent{Event: id, Roles: walks[string(id)].roles}
-		for _, p := range participants[string(id)] {
-			row.Participants = append(row.Participants, EventParticipant{Person: p.id, Roles: p.roles})
-		}
-		rows = append(rows, row)
-	}
 	rows = dropUnreadEvents(rows, summaries)
 	me, haveMe := summaries.Person(entityID)
 	var birthDate *datevalue.Value
@@ -244,9 +194,9 @@ func dropUnreadEvents(events []PersonEvent, summaries conclusionsummaries.Summar
 		if _, ok := summaries.Event(e.Event); !ok {
 			continue
 		}
-		var kept []EventParticipant
+		var kept []conclusionsummaries.EventParticipant
 		for _, p := range e.Participants {
-			if _, ok := summaries.Person(p.Person); ok {
+			if _, ok := summaries.Person(p.ID); ok {
 				kept = append(kept, p)
 			}
 		}

@@ -37,7 +37,7 @@ func (w *kinWorld) participantNames(pat []byte) string {
 	}
 	var out []string
 	for _, p := range rows[0].Participants {
-		out = append(out, w.name(p.Person))
+		out = append(out, w.name(p.ID))
 	}
 	return strings.Join(out, ",")
 }

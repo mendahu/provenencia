@@ -12,9 +12,11 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
@@ -57,7 +59,7 @@ func keys(ts []conclusionsummaries.Term) string {
 func (w *kinWorld) line(r persondetail.PersonEvent) string {
 	var ps []string
 	for _, p := range r.Participants {
-		ps = append(ps, w.name(p.Person)+":"+keys(p.Roles))
+		ps = append(ps, w.name(p.ID)+":"+keys(p.Roles))
 	}
 	return fmt.Sprintf("%s(%s;%s)", w.name(r.Event), keys(r.Roles), strings.Join(ps, ","))
 }
@@ -90,8 +92,8 @@ func (w *kinWorld) timeline(id []byte) (persondetail.Timeline, conclusionsummari
 			w.t.Errorf("no summary for event %s", w.name(r.Event))
 		}
 		for _, p := range r.Participants {
-			if _, ok := summaries.Person(p.Person); !ok {
-				w.t.Errorf("no summary for participant %s", w.name(p.Person))
+			if _, ok := summaries.Person(p.ID); !ok {
+				w.t.Errorf("no summary for participant %s", w.name(p.ID))
 			}
 		}
 	}
@@ -640,4 +642,47 @@ func TestPersonEventsLifeline(t *testing.T) {
 		tl := check(t, w, pat, markers{birth: before(u), deathEvent: d})
 		order(t, w, tl, "U", "D")
 	})
+}
+
+// TestPersonEventsReadsParticipantsFromRows checks that the Timeline takes each
+// event's participants from the event rows it loads: it follows no event's
+// participants, leaves a participant with no accepted member out, and labels
+// copies of the roles, not the stored rows'.
+func TestPersonEventsReadsParticipantsFromRows(t *testing.T) {
+	w := newKinWorld(t)
+	pat, ned, ghost := w.person("Pat"), w.person("Ned"), w.person("Ghost")
+	u := w.event("U", vocabkey.EventBurial, 1890)
+	w.k.Join(ned, u, "subject")
+	w.k.Join(pat, u, "witness")
+	w.k.Join(ghost, u, "witness")
+	w.k.Provisional(ghost)
+	w.k.Commit(ghost)
+
+	// The first read stores the event rows; the second is the one measured.
+	w.expectEvents(pat, "U(witness;Ned:subject)")
+	g := w.c.Graph()
+	var heard []graphcache.InputKey
+	g.SetInputRecorderForTest(func(k graphcache.InputKey) { heard = append(heard, k) })
+	defer g.SetInputRecorderForTest(nil)
+	w.expectEvents(pat, "U(witness;Ned:subject)")
+	for _, k := range heard {
+		if k.Bridge == hops.ParticipantsOfEvent.Bridge() && k.Endpoint == hops.ParticipantsOfEvent.From() {
+			t.Errorf("the Timeline followed the participants of event %x", k.ID)
+		}
+	}
+
+	rows, err := conclusionsummaries.EventsByIDs(w.c, [][]byte{u})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("event rows %d, err %v", len(rows), err)
+	}
+	if len(rows[0].Participants) != 3 {
+		t.Fatalf("the event row lists %d participants, want all 3", len(rows[0].Participants))
+	}
+	for _, p := range rows[0].Participants {
+		for _, r := range p.Roles {
+			if r.Label != "" {
+				t.Errorf("the stored row's role %q was labelled %q by the Timeline", r.Key, r.Label)
+			}
+		}
+	}
 }
