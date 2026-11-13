@@ -53,3 +53,22 @@ None.
 
 ### M-6 · minor · Artifact replies carry the board, graph replies do not
 **Answer:** Logged — S15-11's scope entry now asks its planner to decide it; the Out row points there.
+
+## Round 2
+
+Executability (Sonnet) accepted X-1 – X-5, X-7 and M-1 – M-6; X-6 partly, with the test recipes below.
+
+### X-9 · blocker · T-1 asserts "no params" on the blank-value case D-3 gives a param
+**Answer:** Fixed — T-1's loop skips "blank value", which its first row covers with `[doc id]`.
+
+### X-10 · major · AC-2.2 and T-7 name different suggested fields
+**Answer:** Fixed — T-7 adds a `newField(.., "url")` assigned at the `artifact` level; `provider` stays the drafted text field.
+
+### X-11 · major · The equal-draft recipe can write layout rows
+**Answer:** Fixed — AC-1.5 and T-4 name A's stored rows (`provider` by one `SetMetadata`) and list a layout row only for that field.
+
+### X-12 · minor · AC-1.1's label does not match the fixture
+**Answer:** Fixed — `page1`, label "Scan" → "Scan (front)".
+
+### X-13 · minor · Wording and placement left open
+**Answer:** Fixed — D-6 gives the `add-ffi-handler` sentence; T-9 is a new subtest on `m.artifact`; AC-1.1's draft is built by hand.
