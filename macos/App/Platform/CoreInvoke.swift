@@ -37,6 +37,15 @@ extension CoreInvokeError {
         }
     }
 
+    /// The coded error's params, `[]` for a failure that carried none. A caller reads params
+    /// through this, not the case.
+    var params: [String] {
+        switch self {
+        case .coded(_, _, _, let params): params
+        case .failed: []
+        }
+    }
+
     /// The code when it is one the client branches on.
     var engineCode: EngineErrorCode? {
         code.flatMap(EngineErrorCode.init(wire:))

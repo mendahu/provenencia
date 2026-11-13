@@ -1992,7 +1992,7 @@ struct SourcePageModelTests {
         store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: "Walker household", description: "", artifactIDs: ["P3"]
+            name: "Walker household", description: "", artifactIDs: ["P3"], metadata: nil
         )
         session.apply(effects)
         await session.settleWrites()

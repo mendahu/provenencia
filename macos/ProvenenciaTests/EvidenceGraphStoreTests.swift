@@ -20,11 +20,11 @@ struct EvidenceGraphStoreTests {
         let store = seededStore()
         _ = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: "Smith", description: "", artifactIDs: ["a1"]
+            name: "Smith", description: "", artifactIDs: ["a1"], metadata: nil
         )
         let (jones, _) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: " Jones ", description: "Household 12", artifactIDs: ["a1"]
+            name: " Jones ", description: "Household 12", artifactIDs: ["a1"], metadata: nil
         )
         #expect(jones.name == "Jones")
         let listed = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
@@ -52,11 +52,11 @@ struct EvidenceGraphStoreTests {
         let expected: Set<CatalogList> = [.propertyVocabulary]
         let (made, created) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: "Jones", description: "", artifactIDs: ["a1"]
+            name: "Jones", description: "", artifactIDs: ["a1"], metadata: nil
         )
         let updated = try await store.updateEvidenceGraph(
             projectDir: projectDir, userID: userID, graphID: made.id,
-            name: "Jones family", description: "", artifactIDs: ["a2"]
+            name: "Jones family", description: "", artifactIDs: ["a2"], metadata: nil
         )
         let deleted = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: made.id)
         for effects in [created, updated, deleted] {
@@ -69,7 +69,7 @@ struct EvidenceGraphStoreTests {
         let store = seededStore()
         store.evidenceGraphsByProject[projectDir] = [evidenceGraph("g1", name: "Default", artifactIDs: ["a1", "a2"])]
         _ = try await store.updateEvidenceGraph(
-            projectDir: projectDir, userID: userID, graphID: "g1", name: "Household", description: "d", artifactIDs: []
+            projectDir: projectDir, userID: userID, graphID: "g1", name: "Household", description: "d", artifactIDs: [], metadata: nil
         )
         let listed = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)
         #expect(listed[0].name == "Household")
@@ -104,13 +104,13 @@ struct EvidenceGraphStoreTests {
         await #expect(throws: (any Error).self) {
             _ = try await store.createEvidenceGraph(
                 projectDir: projectDir, userID: userID, sourceID: sourceID,
-                name: "Jones", description: "", artifactIDs: ["a1"]
+                name: "Jones", description: "", artifactIDs: ["a1"], metadata: nil
             )
         }
         store.createEvidenceGraphError = nil
         _ = try? await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: "  ", description: "", artifactIDs: []
+            name: "  ", description: "", artifactIDs: [], metadata: nil
         )
         await #expect(throws: (any Error).self) {
             _ = try await store.deleteEvidenceGraph(projectDir: projectDir, userID: userID, graphID: "nope")
@@ -125,22 +125,22 @@ struct EvidenceGraphStoreTests {
             evidenceGraph("g2", name: "Jones", artifactIDs: ["a0"]),
         ]
         store.evidenceGraphsByProject[otherDir] = [evidenceGraph("g2-other", name: "Default", artifactIDs: ["b0"])]
-        let (nilLinks, _) = try await store.createArtifact(
+        let (nilLinks, _, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            fileID: "f1", label: "Page 1", description: "", graphIDs: nil
+            fileID: "f1", label: "Page 1", description: "", graphIDs: nil, metadata: nil
         )
         #expect(store.createArtifactGraphIDs == [nil])
         #expect(store.evidenceGraphsByProject[projectDir]?.map(\.artifactIDs) == [["a0"], ["a0"]])
-        let (chosen, _) = try await store.createArtifact(
+        let (chosen, _, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            fileID: "", label: "Page 2", description: "", graphIDs: ["g2"]
+            fileID: "", label: "Page 2", description: "", graphIDs: ["g2"], metadata: nil
         )
         #expect(store.createArtifactGraphIDs.last == ["g2"])
         #expect(chosen.id != nilLinks.id)
         #expect(store.evidenceGraphsByProject[projectDir]?.map(\.artifactIDs) == [["a0"], ["a0"]])
-        let (empty, _) = try await store.createArtifact(
+        let (empty, _, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            fileID: "", label: "Page 3", description: "", graphIDs: []
+            fileID: "", label: "Page 3", description: "", graphIDs: [], metadata: nil
         )
         #expect(store.createArtifactGraphIDs.last == [])
         #expect(store.evidenceGraphsByProject[projectDir]?.map(\.artifactIDs) == [["a0"], ["a0"]])
@@ -161,9 +161,9 @@ struct EvidenceGraphStoreTests {
         #expect(graphs.first?.id != created.id)
         #expect(graphs.first?.artifactIDs == [])
 
-        let (artifact, _) = try await store.createArtifact(
+        let (artifact, _, _) = try await store.createArtifact(
             projectDir: projectDir, userID: userID, sourceID: created.id,
-            fileID: "", label: "Page 1", description: "", graphIDs: nil
+            fileID: "", label: "Page 1", description: "", graphIDs: nil, metadata: nil
         )
         #expect(store.createArtifactGraphIDs == [nil])
         let linked = try await store.listEvidenceGraphs(projectDir: projectDir, sourceID: nil)

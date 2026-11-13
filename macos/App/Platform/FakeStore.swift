@@ -169,6 +169,14 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     var createArtifactGraphIDs: [[String]?] = []
     /// The `graphIDs` of each `updateArtifact` call, in order. The fake moves no link.
     var updateArtifactGraphIDs: [[String]?] = []
+    /// The `metadata` of each `createArtifact` call, in order (nil: none sent). The fake applies none.
+    var createArtifactMetadata: [CatalogMetadataDraft?] = []
+    /// The `metadata` of each `updateArtifact` call, in order. The fake applies none.
+    var updateArtifactMetadata: [CatalogMetadataDraft?] = []
+    /// The `metadata` of each `createEvidenceGraph` call, in order. The fake applies none.
+    var createEvidenceGraphMetadata: [CatalogMetadataDraft?] = []
+    /// The `metadata` of each `updateEvidenceGraph` call, in order. The fake applies none.
+    var updateEvidenceGraphMetadata: [CatalogMetadataDraft?] = []
     /// When set, `updateArtifact` throws.
     var updateArtifactError: Error?
     /// While on, `updateArtifact` suspends after recording the call and before it
@@ -735,10 +743,15 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     /// post-write rows here, and a write with none scripted returns the stored rows.
     var metadataWriteResults: [MetadataOwner: [CatalogMetadataEntry]] = [:]
 
-    private func scriptedMetadataWrite(_ owner: MetadataOwner) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
+    private func scriptedMetadataRows(_ owner: MetadataOwner) -> [CatalogMetadataEntry] {
         if let scripted = metadataWriteResults[owner] { metadataByOwner[owner] = scripted }
+        return metadataByOwner[owner] ?? []
+    }
+
+    private func scriptedMetadataWrite(_ owner: MetadataOwner) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
+        let rows = scriptedMetadataRows(owner)
         if owner.level == .source { bumpActivity(owner.id) }
-        return (metadataByOwner[owner] ?? [], nextWriteEffects)
+        return (rows, nextWriteEffects)
     }
 
     func setMetadata(
@@ -777,19 +790,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         return try withState {
             if let reorderMetadataError { throw reorderMetadataError }
-            let current = metadataByOwner[owner] ?? []
-            var byID = Dictionary(uniqueKeysWithValues: current.map { ($0.field.id, $0) })
-            var next: [CatalogMetadataEntry] = []
-            for (i, id) in fieldIDs.enumerated() {
-                guard var entry = byID.removeValue(forKey: id) else { continue }
-                entry.sortOrder = Int32(i)
-                next.append(entry)
-            }
-            for (_, leftover) in byID {
-                var entry = leftover
-                entry.sortOrder = Int32(next.count)
-                next.append(entry)
-            }
+            let next = (metadataByOwner[owner] ?? []).reordered(by: fieldIDs)
             metadataByOwner[owner] = next
             if owner.level == .source { bumpActivity(owner.id) }
             return (next, nextWriteEffects)
@@ -803,10 +804,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
         return withState {
             createArtifactGraphIDs.append(graphIDs)
+            createArtifactMetadata.append(metadata)
             let art = CatalogArtifact(
                 id: UUID().uuidString.lowercased(),
                 ref: "ART-FAKE1",
@@ -818,7 +821,7 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
             )
             artifactsBySource[sourceID, default: []].append(art)
             bumpActivity(sourceID)
-            return (art, nextWriteEffects)
+            return (art, scriptedMetadataRows(MetadataOwner(level: .artifact, id: art.id)), nextWriteEffects)
         }
     }
 
@@ -828,11 +831,13 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         artifactID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
         withState {
             updateArtifactCalls += 1
             updateArtifactGraphIDs.append(graphIDs)
+            updateArtifactMetadata.append(metadata)
         }
         await updateArtifactHold.wait()
         return try withState {
@@ -844,7 +849,8 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
                     copy[idx].description = description
                     artifactsBySource[sourceID] = copy
                     bumpActivity(sourceID)
-                    return (copy[idx], nextWriteEffects)
+                    let rows = scriptedMetadataRows(MetadataOwner(level: .artifact, id: artifactID))
+                    return (copy[idx], rows, nextWriteEffects)
                 }
             }
             throw StoreBoom.boom
@@ -901,10 +907,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         sourceID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
         try withState {
             createEvidenceGraphCalls += 1
+            createEvidenceGraphMetadata.append(metadata)
             if let createEvidenceGraphError { throw createEvidenceGraphError }
             markCatalogSessionHeld(projectDir)
             let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -922,10 +930,12 @@ final class FakeStore: GenealogyStore, @unchecked Sendable {
         graphID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> CatalogWriteEffects {
         try withState {
             updateEvidenceGraphCalls += 1
+            updateEvidenceGraphMetadata.append(metadata)
             if let updateEvidenceGraphError { throw updateEvidenceGraphError }
             markCatalogSessionHeld(projectDir)
             guard let idx = evidenceGraphsByProject[projectDir]?.firstIndex(where: { $0.id == graphID }) else {

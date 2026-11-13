@@ -409,13 +409,14 @@ final class SourceArtifactsSection {
         savingID = id
         defer { savingID = nil }
         do {
-            let (updated, effects) = try await context.store.updateArtifact(
+            let (updated, _, effects) = try await context.store.updateArtifact(
                 projectDir: context.projectDir,
                 userID: context.userID,
                 artifactID: id,
                 label: label,
                 description: desc,
-                graphIDs: graphIDs
+                graphIDs: graphIDs,
+                metadata: nil
             )
             // Its effects reload the graph list when links moved.
             replace(updated, effects: effects)
@@ -545,19 +546,20 @@ final class SourceArtifactsSection {
             if let id = draft.createdID, let existing = items.first(where: { $0.id == id }) {
                 art = existing
                 if label != art.label || description != art.description {
-                    let (updated, effects) = try await context.store.updateArtifact(
+                    let (updated, _, effects) = try await context.store.updateArtifact(
                         projectDir: context.projectDir,
                         userID: context.userID,
                         artifactID: id,
                         label: label,
                         description: description,
-                        graphIDs: nil
+                        graphIDs: nil,
+                        metadata: nil
                     )
                     art = updated
                     show(art, effects: effects)
                 }
             } else {
-                let (created, effects) = try await context.store.createArtifact(
+                let (created, _, effects) = try await context.store.createArtifact(
                     projectDir: context.projectDir,
                     userID: context.userID,
                     sourceID: context.sourceID,
@@ -565,7 +567,8 @@ final class SourceArtifactsSection {
                     label: label,
                     description: description,
                     // Nil when the boxes are hidden: the engine links every graph.
-                    graphIDs: draftGraphIDs
+                    graphIDs: draftGraphIDs,
+                    metadata: nil
                 )
                 art = created
                 // Shown before the file is ingested: if the file is refused,
@@ -597,8 +600,8 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            if let coded = error as? CoreInvokeError, case .coded(_, let code, _, let params) = coded,
-               let callout = L10n.Errors.ingestCallout(code: code, params: params)
+            if let coded = error as? CoreInvokeError, let code = coded.code,
+               let callout = L10n.Errors.ingestCallout(code: code, params: coded.params)
             {
                 draft.reject = callout
                 draft.filePath = nil
@@ -700,8 +703,8 @@ final class SourceArtifactsSection {
                 tone: .success
             )
         } catch {
-            if let coded = error as? CoreInvokeError, case .coded(_, let code, _, let params) = coded,
-               let callout = L10n.Errors.ingestCallout(code: code, params: params)
+            if let coded = error as? CoreInvokeError, let code = coded.code,
+               let callout = L10n.Errors.ingestCallout(code: code, params: coded.params)
             {
                 attachDraft.reject = callout
                 attachDraft.filePath = nil

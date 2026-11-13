@@ -1256,6 +1256,44 @@ struct MetadataOwner: Sendable, Hashable {
     var id: String
 }
 
+/// What a form holds for an owner's metadata until its one Save: one value per field, and
+/// layout rows written as given. Mirrors the wire `MetadataDraft` (`sourcemetadata.Draft`).
+struct CatalogMetadataDraft: Sendable, Equatable {
+    var values: [Value] = []
+    var layout: [LayoutRow] = []
+
+    struct Value: Sendable, Equatable {
+        var fieldID: String
+        var valueText: String
+    }
+
+    struct LayoutRow: Sendable, Equatable {
+        var fieldID: String
+        var sortOrder: Int32
+        var dismissed: Bool
+    }
+}
+
+extension Array where Element == CatalogMetadataEntry {
+    /// The rows in `fieldIDs` order (ids with no row, and repeats of an id already placed,
+    /// skipped), then the rows the ids left out in their current order. Every row's
+    /// `sortOrder` becomes its index. The one client reorder rule.
+    func reordered(by fieldIDs: [String]) -> [CatalogMetadataEntry] {
+        var byID: [String: CatalogMetadataEntry] = [:]
+        for row in self { byID[row.field.id] = row }
+        var next: [CatalogMetadataEntry] = []
+        for id in fieldIDs {
+            guard let row = byID.removeValue(forKey: id) else { continue }
+            next.append(row)
+        }
+        for row in self where byID[row.field.id] != nil {
+            next.append(row)
+        }
+        for i in next.indices { next[i].sortOrder = Int32(i) }
+        return next
+    }
+}
+
 struct CatalogSourceWorkspace: Sendable, Equatable {
     var source: CatalogSource
     var notes: [CatalogSourceNote]
@@ -1443,7 +1481,9 @@ protocol GenealogyStore: Sendable {
         owner: MetadataOwner,
         fieldIDs: [String]
     ) async throws -> ([CatalogMetadataEntry], CatalogWriteEffects)
-    /// `graphIDs` nil is every graph of the Source; `[]` is none.
+    /// `graphIDs` nil is every graph of the Source; `[]` is none. `metadata` nil sends none (the write
+    /// leaves metadata as it is, or a new owner holds none); otherwise the owner's stored values and
+    /// listed layout rows become it, in the same write. Answers the Artifact's board after the write.
     func createArtifact(
         projectDir: String,
         userID: String,
@@ -1451,19 +1491,23 @@ protocol GenealogyStore: Sendable {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects)
     func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects
     /// `graphIDs` nil leaves the Artifact's links as they are; otherwise it is
-    /// the full set, and `[]` is none.
+    /// the full set, and `[]` is none. `metadata` nil sends none (the write leaves metadata as it is);
+    /// otherwise the Artifact's stored values and listed layout rows become it, in the same write.
+    /// Answers the Artifact's board after the write.
     func updateArtifact(
         projectDir: String,
         userID: String,
         artifactID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects)
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects)
     func ingestArtifactFile(
         projectDir: String,
         userID: String,
@@ -1472,22 +1516,28 @@ protocol GenealogyStore: Sendable {
     ) async throws -> (artifact: CatalogArtifact, file: CatalogFileRef, reused: Bool, effects: CatalogWriteEffects)
     /// The project's graphs, or one Source's when `sourceID` is set.
     func listEvidenceGraphs(projectDir: String, sourceID: String?) async throws -> [CatalogEvidenceGraph]
+    /// `metadata` nil sends none (a new graph holds none); otherwise the graph's stored values and
+    /// listed layout rows become it, in the same write.
     func createEvidenceGraph(
         projectDir: String,
         userID: String,
         sourceID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects)
-    /// Empty `artifactIDs` leaves the links unchanged; otherwise it is the full set.
+    /// Empty `artifactIDs` leaves the links unchanged; otherwise it is the full set. `metadata` nil
+    /// sends none (the write leaves metadata as it is); otherwise the graph's stored values and
+    /// listed layout rows become it, in the same write.
     func updateEvidenceGraph(
         projectDir: String,
         userID: String,
         graphID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> CatalogWriteEffects
     func deleteEvidenceGraph(projectDir: String, userID: String, graphID: String) async throws -> CatalogWriteEffects
     /// Which of `pairs` an edit would unlink that the engine refuses, in pair order.
