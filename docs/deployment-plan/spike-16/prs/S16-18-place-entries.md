@@ -408,7 +408,8 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - A Verify run reports a stale place entry after any write in the suites (a change D-5 does not cover: report the write).
 - An existing entry's test changes result after STEP-3 (the registry change must not change an entry that declares no `Inputs`).
 - `BenchmarkListPlaces` cold at 16,000 persons is more than 50 ms slower after than before, or warm is more than 10 % slower.
-- `BenchmarkPlaceMesh` cold or after a location at the hub is more than 1.25 × slower after than before, comparing the median of three `-benchtime 1x` runs on each side.
+- `BenchmarkPlaceMesh` after a location at the hub is more than 1.25 × slower after than before, comparing the median of three `-benchtime 1x` runs on each side.
+- `BenchmarkPlaceMesh` cold takes 3 s or more after (any of three `-benchtime 1x` runs). Same reason as the hub commit below: the crafted hub only has to stay bounded (user, 2026-11-13, after round 0 measured medians 1865 and 1974 ms against a 1362 ms base: the cold fill reads the hub's 20,000 association value sets through `NodesOnBridges`).
 - `BenchmarkPlaceMesh` after the hub commit takes 1 s or more after. The crafted hub only has to stay bounded (the map's **Scale**), so this row has an absolute ceiling, not a ratio (user, 2026-11-13, after round 0 measured 560–668 ms against a 142 ms base: the refill reads the hub's 20,000 association value sets, see **Performance** "Hub entry").
 - `BenchmarkCacheSizes` `placeEntries-B` exceeds 5 MB at 16,000 persons.
 - `TestLargeSourceBudgets` fails a subtest it passed in STEP-1.
