@@ -1,6 +1,6 @@
 # S16-30 — Provenance records compose from cached records
 
-**Status:** Planned
+**Status:** Landed #812
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the provenance sheet, the Gallery captions and the life rows show the same records; only where the engine reads them from moves)
@@ -346,3 +346,7 @@ None. Answered 2026-11-13: the handler reads the subject type from the vocabular
 
 **Title:** S16-30 — Provenance records compose from cached records
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; TestDetailBudgets, BenchmarkGraphRecords and BenchmarkCacheSizes figures, base and after; `Plan: docs/deployment-plan/spike-16/prs/S16-30-provenance-from-records.md`.
+
+## Landed
+
+The code matches the plan. Differences: the base and after figures are in the pull request description, not the ship log (the orchestrator owns the log); `derivedRowsFixture` in `conclusion_detail_test.go` is the setup of `TestGetConclusionDetailCarriesDerivedRows` lifted out so `TestGetConclusionDetailWarmReadsNoRecordSQL` shares it; the `FieldsOf` test cases that T-5 names live in `TestFieldsOfOnly`, beside `TestFieldsOf`.
