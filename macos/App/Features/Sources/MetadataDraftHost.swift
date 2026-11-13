@@ -95,14 +95,14 @@ final class MetadataDraftHost: MetadataBoardHost {
                 )
             )
         } else {
-            return (entries, CatalogWriteEffects())
+            return (entries, .empty)
         }
         dismissed.removeAll { $0 == fieldID }
-        return (entries, CatalogWriteEffects())
+        return (entries, .empty)
     }
 
     func clear(fieldID: String) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
-        guard let index = entries.firstIndex(where: { $0.field.id == fieldID }) else { return (entries, CatalogWriteEffects()) }
+        guard let index = entries.firstIndex(where: { $0.field.id == fieldID }) else { return (entries, .empty) }
         if entries[index].suggested {
             entries[index].valueText = ""
             entries[index].hasValue = false
@@ -110,21 +110,21 @@ final class MetadataDraftHost: MetadataBoardHost {
         } else {
             entries.remove(at: index)
         }
-        return (entries, CatalogWriteEffects())
+        return (entries, .empty)
     }
 
     func dismissSuggestion(fieldID: String) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         guard let index = entries.firstIndex(where: { $0.field.id == fieldID }),
               entries[index].suggested, !entries[index].hasValue
-        else { return (entries, CatalogWriteEffects()) }
+        else { return (entries, .empty) }
         entries.remove(at: index)
         dismissed.append(fieldID)
-        return (entries, CatalogWriteEffects())
+        return (entries, .empty)
     }
 
     func reorder(fieldIDs: [String]) -> ([CatalogMetadataEntry], CatalogWriteEffects) {
         entries = entries.reordered(by: fieldIDs)
-        return (entries, CatalogWriteEffects())
+        return (entries, .empty)
     }
 
     func didWrite(_: CatalogWriteEffects) {}
