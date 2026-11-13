@@ -102,3 +102,11 @@ Merged `origin/main` @ `b95dbb1a7` (docs only: S16-19 plan). Gate PASS (orchestr
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: none · to user: §10 manual check (CON-1; the only evidence for AC-1.1, AC-2.4, AC-2.5, AC-4.2, AC-5.1, AC-5.6 and the §11 runtime stop conditions)
+
+## User change (2026-11-13, after ready)
+The user asked that the Artifact sheet's "Copy details" heading read "Artifact metadata", to match the Source's Metadata section. Sentence case, as the sheet's other labels ("Evidence graphs").
+
+**F-9 — The sheet's copy-details heading reads "Artifact metadata"** (user, 2026-11-13)
+Files: `macos/App/Platform/L10n.swift` (`artifactCopyDetailsLabel`), `macos/App/Resources/Localizable.xcstrings`, the plan's Landed note. Skill: `add-localized-string`.
+Do: change the default value of `sources.page.artifactCopyDetailsLabel` to "Artifact metadata" in L10n and the xcstrings en value; comment "Label of the Artifact metadata section of the Artifact sheet". Keep the key, the section id `.copyDetails`, the accessibility ids, and the card's "+n more" / "more copy details of" copy unchanged. Add one Landed-note bullet: the sheet heading reads "Artifact metadata" (user, 2026-11-13), superseding AC-1.1's "Copy details" label.
+Check: `rg -n '"Copy details"' macos/App` prints nothing; scripts/check-pr.sh PASS.
