@@ -205,10 +205,10 @@ struct MetadataDraftHostTests {
         let typedElsewhere = MetadataBoardModel(host: makeHost())
         typedElsewhere.beginEdit(fieldID: "url")
         typedElsewhere.drafts["url"] = "https://example.org/typed"
-        #expect(typedElsewhere.showRefusal(invalid(["roll"])))
+        #expect(!typedElsewhere.showRefusal(invalid(["roll"])))
         #expect(typedElsewhere.drafts["url"] == "https://example.org/typed")
         #expect(typedElsewhere.editingFieldID == "url")
-        #expect(typedElsewhere.fieldErrorID == "roll")
+        #expect(typedElsewhere.fieldError == nil && typedElsewhere.fieldErrorID == nil)
 
         let fresh = MetadataBoardModel(host: makeHost())
         for refused in [invalid([]), invalid([""]), invalid(["gone"]), notMetadata] {

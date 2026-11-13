@@ -250,15 +250,19 @@ final class MetadataBoardModel {
 
     /// Lands an owner's refused write on the row it names: the refused value's field id is
     /// `params[0]`. True when the row took it (its error placed); false when the error is no row
-    /// refusal or names no row with a value, and nothing changes. Typed text is never discarded:
-    /// the row's own open edit keeps its buffer, and another row's open edit with a buffer that
-    /// differs from its saved value stays open; otherwise the refused row opens for edit.
+    /// refusal, names no row with a value, or another row holds typed text (that row stays in
+    /// edit and the owner shows its general failure); nothing changes then. Typed text is never
+    /// discarded: the row's own open edit keeps its buffer; otherwise the refused row opens for
+    /// edit, where `PVInlineEdit` draws its error.
     func showRefusal(_ error: Error) -> Bool {
         guard let fieldID = (error as? CoreInvokeError)?.params.first,
               savedEntry(fieldID: fieldID) != nil,
               let message = rowRefusalMessage(error)
         else { return false }
-        if editingFieldID != fieldID, !hasTypedEdit { beginEdit(fieldID: fieldID) }
+        if editingFieldID != fieldID {
+            if hasTypedEdit { return false }
+            beginEdit(fieldID: fieldID)
+        }
         placeRowError(message, fieldID: fieldID)
         return true
     }
