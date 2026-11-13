@@ -59,14 +59,11 @@ func PersonEvents(c *database.Catalog, entityID []byte) (Timeline, conclusionsum
 	if err != nil {
 		return Timeline{}, none, err
 	}
-	var eventIDs [][]byte
-	seenEvent := map[string]bool{}
-	for _, l := range links {
-		if !seenEvent[string(l.Neighbor)] {
-			seenEvent[string(l.Neighbor)] = true
-			eventIDs = append(eventIDs, l.Neighbor)
-		}
+	ids := make([][]byte, len(links))
+	for i, l := range links {
+		ids[i] = l.Neighbor
 	}
+	eventIDs := database.UniqueBlobIDs(ids)
 	if err := g.Nodes(eventIDs); err != nil {
 		return Timeline{}, none, err
 	}
