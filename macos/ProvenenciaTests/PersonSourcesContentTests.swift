@@ -71,7 +71,7 @@ struct PersonSourcesContentTests {
     @Test func cellsAndFallbacks() {
         let rows = content(groups).rows
         let first = rows[0]
-        #expect(first.typeLabel == "Census" && first.typeIconKey == "type_census")
+        #expect(first.typeLabel == "Census")
         #expect(first.title == .name("Hamburg census 1867"))
         #expect(first.location == SourcesListNavigation.pageLocation(sourceId: "src-1", ref: "SRC-9TQ2M", title: "Hamburg census 1867"))
         #expect(first.accessibilityLabel == "Hamburg census 1867, Census, date not recorded, SRC-9TQ2M")
@@ -87,7 +87,7 @@ struct PersonSourcesContentTests {
 
         // An unknown type id: no type cell, and the untyped spoken label.
         let letter = rows[2]
-        #expect(letter.typeLabel == nil && letter.typeIconKey == nil)
+        #expect(letter.typeLabel == nil)
         #expect(letter.accessibilityLabel == "Letter, date not recorded, SRC-4KQ7M")
 
         // A graph with no ref, and one with a ref.

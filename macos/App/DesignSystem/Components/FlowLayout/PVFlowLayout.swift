@@ -1,67 +1,82 @@
 import SwiftUI
 
 /// Wraps children onto new lines when the row runs out of width. Children are
-/// measured at their ideal width, so a caller caps a long child's width.
+/// measured at their ideal width; one wider than the row gets the row's width.
 struct PVFlowLayout: Layout {
     var spacing: CGFloat
     var lineSpacing: CGFloat
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = rows(in: proposal.width ?? 0, subviews: subviews)
-        let height = rows.reduce(CGFloat(0)) { $0 + $1.height } + lineSpacing * CGFloat(max(rows.count - 1, 0))
-        return CGSize(width: proposal.width ?? 0, height: height)
+        let width = proposal.width ?? 0
+        let result = Self.arrange(
+            width: width, spacing: spacing, lineSpacing: lineSpacing, count: subviews.count,
+            fit: { subviews[$0].sizeThatFits(ProposedViewSize(width: $1, height: nil)) }
+        )
+        return CGSize(width: width, height: result.height)
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let rows = rows(in: bounds.width, subviews: subviews)
-        var y = bounds.minY
-        for row in rows {
-            var x = bounds.minX
-            for item in row.items {
-                let originY = y + (row.height - item.size.height) / 2
-                item.view.place(
-                    at: CGPoint(x: x, y: originY),
-                    anchor: .topLeading,
-                    proposal: ProposedViewSize(item.size)
+        let result = Self.arrange(
+            width: bounds.width, spacing: spacing, lineSpacing: lineSpacing, count: subviews.count,
+            fit: { subviews[$0].sizeThatFits(ProposedViewSize(width: $1, height: nil)) }
+        )
+        for (index, frame) in result.frames.enumerated() {
+            subviews[index].place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                anchor: .topLeading,
+                proposal: ProposedViewSize(frame.size)
+            )
+        }
+    }
+
+    /// The frames of `count` items in a row `width` wide, and the height they fill. `fit(i, nil)`
+    /// is item `i`'s ideal size; `fit(i, w)` its size when offered `w`. An item wider than the
+    /// row is measured again at the row's width, and one still wider is placed at the row's
+    /// width, so no frame passes the row's edge. A width of 0 or not finite measures nothing
+    /// again: 0 puts one item on each line, infinity puts them all on one.
+    static func arrange(
+        width: CGFloat,
+        spacing: CGFloat,
+        lineSpacing: CGFloat,
+        count: Int,
+        fit: (Int, CGFloat?) -> CGSize
+    ) -> (frames: [CGRect], height: CGFloat) {
+        var lines: [[(index: Int, size: CGSize)]] = []
+        var line: [(index: Int, size: CGSize)] = []
+        var lineWidth: CGFloat = 0
+        for index in 0..<count {
+            var size = fit(index, nil)
+            if width.isFinite, width > 0, size.width > width {
+                size = fit(index, width)
+                size.width = min(size.width, width)
+            }
+            let next = lineWidth == 0 ? size.width : lineWidth + spacing + size.width
+            if lineWidth > 0, next > width {
+                lines.append(line)
+                line = []
+                lineWidth = 0
+            }
+            line.append((index, size))
+            lineWidth = lineWidth == 0 ? size.width : lineWidth + spacing + size.width
+        }
+        if !line.isEmpty {
+            lines.append(line)
+        }
+        var frames = [CGRect](repeating: .zero, count: count)
+        var y: CGFloat = 0
+        for line in lines {
+            let lineHeight = line.reduce(CGFloat(0)) { max($0, $1.size.height) }
+            var x: CGFloat = 0
+            for item in line {
+                frames[item.index] = CGRect(
+                    origin: CGPoint(x: x, y: y + (lineHeight - item.size.height) / 2),
+                    size: item.size
                 )
                 x += item.size.width + spacing
             }
-            y += row.height + lineSpacing
+            y += lineHeight + lineSpacing
         }
-    }
-
-    private func rows(in width: CGFloat, subviews: Subviews) -> [Row] {
-        var rows: [Row] = []
-        var items: [Item] = []
-        var rowWidth: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
-            let next = rowWidth == 0 ? size.width : rowWidth + spacing + size.width
-            if rowWidth > 0, next > width {
-                rows.append(Row(items: items, height: rowHeight))
-                items = []
-                rowWidth = 0
-                rowHeight = 0
-            }
-            items.append(Item(view: view, size: size))
-            rowWidth = rowWidth == 0 ? size.width : rowWidth + spacing + size.width
-            rowHeight = max(rowHeight, size.height)
-        }
-        if !items.isEmpty {
-            rows.append(Row(items: items, height: rowHeight))
-        }
-        return rows
-    }
-
-    private struct Item {
-        var view: LayoutSubview
-        var size: CGSize
-    }
-
-    private struct Row {
-        var items: [Item]
-        var height: CGFloat
+        return (frames, lines.isEmpty ? 0 : y - lineSpacing)
     }
 }
 
