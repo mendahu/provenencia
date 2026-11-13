@@ -636,9 +636,6 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 		row := DerivedRow{Kind: l.kind}
 		for _, o := range l.owners {
 			node := nodeOf[string(o.ID)]
-			if node == nil || node.Merged {
-				continue
-			}
 			for _, f := range fields[string(o.ID)] {
 				if !bytes.Equal(f.PropertyID, o.PropertyID) {
 					continue
@@ -659,13 +656,13 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 }
 
 // copyPlace is a copy of p that shares no slice with it, so nothing outside the
-// summary row points into the row.
+// summary row points into the row. A place owner holds an entity and its names,
+// never parents, so Parents is not cloned.
 func copyPlace(p *conclusionsummaries.ChainedPlace) *conclusionsummaries.ChainedPlace {
 	if p == nil {
 		return nil
 	}
 	out := *p
 	out.Names = slices.Clone(p.Names)
-	out.Parents = slices.Clone(p.Parents)
 	return &out
 }
