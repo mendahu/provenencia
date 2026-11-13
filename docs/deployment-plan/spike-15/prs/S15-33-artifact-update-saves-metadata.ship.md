@@ -1,7 +1,7 @@
 # Ship log — S15-33 Editing an Artifact can save its metadata
 
 **Plan:** [`S15-33-artifact-update-saves-metadata.md`](S15-33-artifact-update-saves-metadata.md) · **Branch:** `s15-33-artifact-update-saves-metadata` · **PR:** #806
-**State:** stopped — CI Go tests red on an unrelated timing budget
+**State:** ready
 
 ## Round 0 — implement
 Head `b243ef591`. Gate PASS (orchestrator rerun). Report deviations: T-4 runs on `page2` (page1's layout already holds `provider` after the "empty clears" subtest; noted in the plan's Landed note); an `errParams` test helper in `sourcemetadata_test.go` and `handlers/metadata_test.go` instead of inline `errors.As`; large regenerated `engine.pb.go` descriptor diff. The implementer's first gate run failed `promotealign` `TestLargeSourceBudgets` under CPU contention from a concurrent run; clean rerun passed.
@@ -50,6 +50,8 @@ Head `456ef4fbb`. Gate PASS (orchestrator rerun). F-1 – F-4 done. Deviation: `
 Not dispatched: round 1 had no Fix-now blocker or major. Orchestrator read the fix commit: CON-1 **Resolved** (T-6 sends "P6 renamed", asserts label "P6" and unchanged `latestRevisionTypes`); MNT-1 **Resolved** (`artifactLabel`, one `range ws.GetArtifacts()`); MNT-2 **Resolved** (`boardEntries`; remaining inline calls are the owner-id test and the error path); MNT-3 **Resolved** (`errors.Is` + `errParams`, `apperr` import gone).
 
 ## Result
-`origin/main` unchanged since the branch was cut. Gate PASS · CI red (Go tests) · open: none · follow-ups: none · to user: CI budget below
+`origin/main` unchanged since the branch was cut. Gate PASS · CI red (Go tests) · open: none · follow-ups: none · to user: CI budget below (answered)
 
 **CI.** `test` (app) and `localizable` pass. `Go tests` fails twice (run 43349656962, first attempt and rerun) on `core/database/promotealign` `TestLargeSourceBudgets/compose_every_summary`: 517ms then 507ms against a 500ms budget. Not this PR: the diff touches nothing in `promotealign`, and its only shared dependency is `core/apperr`, where this PR changed doc comments only (`go list -deps`). Locally on this head the subtest takes 176–181ms. The CI runner sits right at the budget. A fix round would mean changing an unrelated perf budget or test, which is outside this plan; taken to the user.
+
+**User (2026-11-12):** "increase the budget to 600ms on this pr". `budgetComposeAll` in `core/database/promotealign/perf_test.go` raised from 500 to 600 ms with the CI measurements in its comment; 600 ms still fails a per-row place graph (about four times the 220 ms baseline). Gate PASS.
