@@ -1,7 +1,7 @@
 # Ship log — S16-19 Summary composers read the place entries and keep what readers re-derive
 
 **Plan:** [`S16-19-summary-rows-carry-owners.md`](S16-19-summary-rows-carry-owners.md) · **Branch:** `s16-19-summary-rows-carry-owners` · **PR:** #821
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `bd0b20e27`. Gate PASS (orchestrator run; go-test cached). Report deviations: AC-2.3 test cites the toponym with `f.Cite` (not `f.citeToponyms`, which `f.Reported` does not hear); the derived-rows query-count case calls `nameformats.Invalidate` before each count (name format loaded once per connection); Steps 5 and 6 in one commit; `source_read.go` gofmt carried into the STEP-7 commit; `func entityOf` sweep still matches two unrelated functions (`core/subjectprofile/invariants_test.go`, `core/database/effects/path.go`); one full-suite run failed `TestLargeSourceBudgets` warm/cold over 2.5 s under load, passes alone (0.90 s / 0.76 s), no budget changed; manual check not run (engine refactor, no UI).
@@ -67,3 +67,23 @@ Check: plan-docs PASS in scripts/check-pr.sh.
 Files: `core/database/persondetail/timeline_test.go`.
 Failing test first: add cases to `TestPersonEventsReadsParticipantsFromRows`, or to `TestPersonEvents`. Read the Timeline, which stores the event row. Join a new person to the event with a non-subject role, read again, and expect the new participant in `sortParticipants`' order. Add a second case that changes an existing witness's role. Both are expected green today, as guards. If either is red, that is a real defect: report it before fixing it.
 Check: passes; scripts/check-pr.sh PASS.
+
+## Round 1 — fix
+Head `34e35071c`. Gate PASS. F-1 done (`TestCraftedLifeOwners` red first at 1,281 owners, then green; largest owner count per life row on the 4,000-source fixture is 1). F-2–F-6 done; F-6's two guards green as expected. Three fix commits lack the Co-Authored-By trailer (not amended).
+
+## Round 2 — review
+Reviewers: SEC+PRF (SEC-1 major). CON and MNT not sent back: their findings were all minors.
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-1 | SEC | major | Uncapped life-row owners | Resolved | reviewer: `maxLifeOwners` checked before each append in `lifeFacts`; one shared `ChainedPlace` per folded place; `TestCraftedLifeOwners` 1,280 filings → 64 |
+| MNT-1, MNT-2, MNT-3 (+MNT-4) | MNT | minor | F-2, F-3, F-4 | Resolved | orchestrator read `bd0b20e27..34e35071c`: `UniqueBlobIDs` in `timeline.go`; `neighborRoles` gone, `rolesByNeighbor` returns `[]EventParticipant`; the nil/merged skip and the `Parents` clone gone |
+| CON-1, CON-2 | CON | minor | F-5, F-6 | Resolved | Landed note matches the committed ship log; `TestPersonEventsFollowsParticipationWrites` added |
+
+No new blockers.
+
+## Finish
+Merged `origin/main` @ `64a91aeb7` (S15-34) → `61c6664ce`. Gate PASS.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: PRF-1, CON-5 · to user: —
