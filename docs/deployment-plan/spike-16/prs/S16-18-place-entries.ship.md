@@ -1,7 +1,7 @@
 # Ship log — S16-18 Place entries
 
 **Plan:** [`S16-18-place-entries.md`](S16-18-place-entries.md) · **Branch:** `s16-18-place-entries` · **PR:** #817
-**State:** fixing 1
+**State:** ready
 
 ## Round 0 — implement
 Head `3b58acf2b` (7 local commits on `b9a881b65`, not pushed, no PR). Gate not run.
@@ -104,3 +104,39 @@ Do: in the "removed location" and "merge" steps, assert with `kv.Peek` which key
 Check: passes.
 
 Also: correct the plan's Landed note (deviation 6: cold has a 3 s ceiling, after-location compares medians) and add the round-1 amendments to it; update the Performance "Hub entry" line with the new figures.
+
+## Round 1 — fix
+Head `e470c3ada` (4 commits on `0ec77f85a`). Gate PASS (orchestrator). Not pushed: github.com does not resolve from this machine (implementer and orchestrator both); review 2 runs on the local head.
+
+F-1 to F-6 done. Deviations: "bad part date" asserts that City's and Town's chains succeed and the Hill (whose own climbed link is bad) errors, as at base; `ListPlaces` builds every chain, so it still errors there, as at base. Self-loop: `Follow(PartsOfPlace)` never returns a self-loop, so the page fill also follows `ParentsOfPlace` and keeps only id→id links (inputs include their keys). City's chain entry survives removing Town's link; only its page drops. F-1, F-2, F-5 share one commit.
+
+Figures (ms, three runs; base = `1dd02710d` + write-under-hub):
+
+| BenchmarkPlaceMesh | base | head |
+| --- | --- | --- |
+| list-cold | 1382 / 1427 / 1610 | 1555 / 1589 / 1640 |
+| list-warm | 152.9 / 162.0 / 233.3 | 90.4 / 87.2 / 90.4 |
+| page-cold | 1986 / 1930 / 3051 | 2039 / 2065 / 1989 |
+| list-after-hub-commit | 172.4 / 169.0 / 536.0 | 333.0 / 331.8 / 371.0 |
+| list-after-location | 186.2 / 161.0 / 157.1 | 88.4 / 90.3 / 173.9 |
+| write-under-hub | 324.5 / 325.5 / 331.5 | 246.8 / 250.7 / 405.7 |
+
+`BenchmarkListPlaces` 16,000 cold +10.4 ms (limit 50). `placeEntries-B` 137 KB, `placePages-B` 44 KB. `TestLargeSourceBudgets` passes on an idle rerun (one run under a concurrent Verify job missed 2.5 s).
+
+Minors read by the orchestrator: MNT-2 Resolved (no `_ *inputBudget`); MNT-3 Resolved (`UniqueInputKeys` in graphcache, isolator, `dependentsOf`, both fills; `sortedKeys` gone from the package); MNT-4 Resolved (`placeInputs` gone; page inputs from real `Follow`); MNT-5/CON-3 Resolved; CON-1 Resolved ("self-loop" case); CON-2 Resolved (`held()` names keys).
+
+## Round 2 — review
+Reviewers: SEC+PRF (Fix-now majors SEC-1, PRF-1). Not sent: CON (no major), MNT (its major MNT-1 was a Follow-up; minors read above).
+
+| ID | Lens | Severity | Title | Decision | Evidence / reason |
+| --- | --- | --- | --- | --- | --- |
+| SEC-1 | SEC | major | (round 1) | Resolved | chain fill follows only `ParentsOfPlace`; `placePagesOf` called only from `placeStep`; "bad succession date", "bad part date", "chain fills no page" pass, also under Verify |
+| PRF-1 | PRF | major | (round 1) | Resolved | association reads only for followed links; write-under-hub median 325.5 → 250.7 ms |
+
+No new findings. Nits: none.
+
+## Finish
+Merged `origin/main` (`2810bfee8`, docs and plan-skill changes only); gate PASS against `2810bfee8`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: MNT-1 (kinship `deps` → `Inputs`, already a `structural-debt.md` row), CON outside-lens (chained merge of a self-looped place leaves a stale cached node; pre-existing) · to user: — (SEC-1/PRF-1 answered: split the entry; §11 ceilings answered)
