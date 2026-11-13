@@ -170,4 +170,27 @@ struct MetadataDraftHostTests {
         #expect(host.entries.last?.valueText == "F-7")
         #expect(board.addRow == nil)
     }
+
+    @Test func refusalLandsOnItsRow() {
+        let host = makeHost()
+        let board = MetadataBoardModel(host: host)
+        func invalid(_ params: [String], code: String = "sourcemetadata.invalid") -> CoreInvokeError {
+            .coded(status: 1, code: code, kind: .user, params: params)
+        }
+
+        board.beginEdit(fieldID: "roll")
+        let error = invalid(["url"])
+        #expect(board.showRefusal(error))
+        #expect(board.editingFieldID == "url")
+        #expect(board.drafts["roll"] == "12")
+        #expect(board.drafts["url"] == "https://example.org/a")
+        #expect(board.fieldErrorID == "url")
+        #expect(board.fieldError == L10n.Errors.message(for: error))
+
+        let fresh = MetadataBoardModel(host: makeHost())
+        for refused in [invalid([]), invalid([""]), invalid(["gone"]), invalid(["url"], code: "artifacts.invalid")] {
+            #expect(!fresh.showRefusal(refused))
+        }
+        #expect(fresh.editingFieldID == nil && fresh.fieldError == nil && fresh.fieldErrorID == nil)
+    }
 }

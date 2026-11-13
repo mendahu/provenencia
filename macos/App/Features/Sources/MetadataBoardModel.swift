@@ -133,8 +133,7 @@ final class MetadataBoardModel {
             }
         } catch {
             if case .invalid(let message) = classifySetFailure(error) {
-                fieldError = message
-                fieldErrorID = fieldID
+                placeRowError(message, fieldID: fieldID)
             }
         }
     }
@@ -224,9 +223,37 @@ final class MetadataBoardModel {
     /// to the host's failure place; nothing shows when the owner is gone.
     private func classifySetFailure(_ error: Error) -> SetFailure {
         guard let message = host.failureMessage(for: error) else { return .ownerGone }
-        if (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid { return .invalid(message) }
+        if isRowRefusal(error) { return .invalid(message) }
         host.showFailure(message)
         return .shown
+    }
+
+    /// The message for a `sourcemetadata.invalid` refusal, or nil for any other error.
+    private func rowRefusalMessage(_ error: Error) -> String? {
+        guard isRowRefusal(error) else { return nil }
+        return host.failureMessage(for: error)
+    }
+
+    private func isRowRefusal(_ error: Error) -> Bool {
+        (error as? CoreInvokeError)?.engineCode == .sourceMetadataInvalid
+    }
+
+    private func placeRowError(_ message: String, fieldID: String) {
+        fieldError = message
+        fieldErrorID = fieldID
+    }
+
+    /// Lands an owner's refused write on the row it names: the refused value's field id is
+    /// `params[0]`. True when the row took it (its edit open, its error placed); false when the error
+    /// is no row refusal or names no row with a value, and nothing changes.
+    func showRefusal(_ error: Error) -> Bool {
+        guard let fieldID = (error as? CoreInvokeError)?.params.first,
+              entries.contains(where: { $0.field.id == fieldID && $0.hasValue }),
+              let message = rowRefusalMessage(error)
+        else { return false }
+        beginEdit(fieldID: fieldID)
+        placeRowError(message, fieldID: fieldID)
+        return true
     }
 
     func dismissSuggestion(fieldID: String) async {
