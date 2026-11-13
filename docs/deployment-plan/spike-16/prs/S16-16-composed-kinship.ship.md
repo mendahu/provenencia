@@ -1,7 +1,7 @@
 # Ship log — S16-16 Kinship answers are composed from the pivots, and the Family read is one pass
 
 **Plan:** [`S16-16-composed-kinship.md`](S16-16-composed-kinship.md) · **Branch:** `s16-16-composed-kinship` · **PR:** #814
-**State:** fixing 1
+**State:** fixed 1, awaiting review
 
 ## Round 0 — implement
 Base `main` @ `aa150de0f`. Dispatched `pr-implementer`, round 0.
@@ -92,3 +92,15 @@ Do: reword to match `canon.go:56`: `For` composes the links from the graph cache
 Check: `rg -n "answers from the graph cache's results" docs core` prints nothing.
 
 Nits: fix MNT-6 and CON-6 (lines in tests this PR adds or changes) if they are one line each; leave the rest logged.
+
+## Round 1 — fix
+Dispatched `pr-implementer`, fix round 1. All five items applied as new commits.
+
+- F-1: idea file, plan §3 Out row and §11, and `completed.md` quote the ship-log range (warm 1.56–1.74× at 4,000, 1.68–2.27× at 16,000; after a commit unchanged within noise) and name no deleted entry. AC-3.3's `rg` prints nothing.
+- F-2: plan has a `## Landed` section listing the differences.
+- F-3: `TestComposedAnswersReusePivots/commit a stranger` (in `canonlinks`, where `Peek` is reachable) asserts every held pivot survives a commit on an unlinked person. Checked by temporarily replacing the pivot Apply with `k.Clear(g)` (reverted): the subtest failed ("dropped the pivot of Bob"); it passes at head.
+- F-4: `Families` drops `isNamed` and `isAround`, uses `database.UniqueBlobIDs`, fills `aroundKin` from the `Relationships` map. `persondetail` suites pass with and without `PROVENENCIA_GRAPH_VERIFY=1` (also `canonlinks`, `promotealign`).
+- F-5: `matching-model.md` reworded.
+- Nits: MNT-6 done (comment). CON-6 not done: the dropped ⊆ expected check is a loop, not one line; left logged.
+
+Gate: check-pr PASS.
