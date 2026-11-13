@@ -69,4 +69,18 @@ Reviewers: CON (CON-1 blocker), UX (UX-1 major). Scope `e771ec007...b33f359a4`. 
 CON: Clean. UX: Clean, no nits. No Fix plan 2.
 
 ## Result
-Gate PASS (head `b33f359a4`, `origin/main` unmoved at `d18918601`) · CI pending at commit · open: none · follow-ups: none · to user: CON-2 (§ 10 manual check), MNT-2 (exclusive `title` / `verbatimTitle` vs D-13)
+Gate PASS (head `b33f359a4`, `origin/main` unmoved at `d18918601`) · CI green · open: none · follow-ups: none · to user: CON-2 (§ 10 manual check), MNT-2 (answered below)
+
+## User answers
+2026-11-13 — MNT-2: "Make them exclusive." Supersedes D-13's `verbatimTitle: String? = nil` beside `title:`. Not a review round; the orchestrator reads the diff and runs the gate.
+
+**F-6 — A menu title is a key or data, never both** (from MNT-2, user 2026-11-13)
+Files: `macos/App/DesignSystem/Components/ContextMenu/PVContextMenu.swift`, `macos/App/DesignSystem/Components/ContextMenu/PVActionMenu.swift`, `macos/App/DesignSystem/README.md` (ContextMenu row), the plan's D-13 Landed note.
+Failing test first: none (the type system enforces it: a call passing both no longer compiles).
+Do: Follow `PVEmptyState` (`init(verbatimTitle:)` builds the `Text` at init). `PVContextMenuPanel` stores one `heading: Text?`; it keeps its existing memberwise-style call with `title: LocalizedStringResource? = nil` for today's callers (`PVSelect`, `WorkspaceToolbar`, `CitationComposerViewerPane`, `PVActionMenu`) through an `init(title:width:maxHeight:accessibilityIdentifier:content:)`, and gains `init(verbatimTitle: String, width:maxHeight:accessibilityIdentifier:content:)`. `pvRightClickMenu(title:accessibilityIdentifier:items:)` keeps its signature without `verbatimTitle`; a second overload `pvRightClickMenu(verbatimTitle: String, accessibilityIdentifier:items:)` builds the heading with `Text(verbatim:)`. `PVRightClickMenuModifier` stores `heading: Text?`. Remove the "wins over `title`" doc comment. `SourcePageArtifactRow`'s call is unchanged at the call site. Grep after: `rg -n "verbatimTitle" macos/App/DesignSystem/Components/ContextMenu` shows only the two inits/overloads and their doc comments. Add a line to the plan's Landed note that D-13 was changed by the user's answer to MNT-2.
+Check: scripts/check-pr.sh PASS.
+
+F-6 done in `e5a44ef43`. Gate PASS (orchestrator run). Orchestrator read the diff: one `heading: Text?` in `PVContextMenuPanel` and `PVRightClickMenuModifier`; `init(title:…)` and `init(verbatimTitle:…)` delegate to `init(heading:…)` (implementer's addition, for the modifier's pre-built heading); `pvRightClickMenu` has a `title:` form and a `verbatimTitle:` overload; no caller changed; README and the plan's Landed note updated. MNT-2 **Resolved**.
+
+## Result (final)
+Gate PASS (head `e5a44ef43`) · open: none · follow-ups: none · to user: CON-2 (§ 10 manual check)
