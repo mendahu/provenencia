@@ -249,7 +249,7 @@ func originSiblings(family Family, byBirth func([]kinship.Relative), summaries c
 }
 
 // dropUnread drops each relative whose summary was not read (a node dropped
-// mid-read: the next read is right, as memberGraphs skips) and then each unit
+// mid-read: the next read is right, as the claims read skips) and then each unit
 // that is left empty: a parents or partner unit with no partner, and a one
 // parent or siblings unit with no child.
 func dropUnread(family Family, summaries conclusionsummaries.Summaries) Family {

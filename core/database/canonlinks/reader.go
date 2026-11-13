@@ -42,7 +42,7 @@ type personAnswer struct {
 }
 
 // maxKeys caps each kinship entry: a crafted catalog cannot grow one past it,
-// and a key not stored is derived again on read.
+// and past it the least recently used key leaves and is derived again on read.
 const maxKeys = 65_536
 
 // pivots holds what each event, or each person as the parent between, implies.

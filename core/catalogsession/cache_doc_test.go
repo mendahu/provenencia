@@ -12,7 +12,9 @@ import (
 
 	_ "github.com/mendahu/provenencia/core/database/canonlinks"
 	_ "github.com/mendahu/provenencia/core/database/evidencegraphs"
+	_ "github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	_ "github.com/mendahu/provenencia/core/database/graphfill"
 	_ "github.com/mendahu/provenencia/core/database/namealiases"
 	_ "github.com/mendahu/provenencia/core/database/nameformats"
 	_ "github.com/mendahu/provenencia/core/database/promotealign"

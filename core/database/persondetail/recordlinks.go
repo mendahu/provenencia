@@ -2,8 +2,9 @@ package persondetail
 
 import (
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
-	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/matchregistry"
@@ -23,9 +24,10 @@ type PersonRecordLinks struct {
 	LinesDropped bool
 }
 
-// SourcedGraph is an Evidence graph with the record of the Source it is in.
+// SourcedGraph is an Evidence graph (its shell) with the record of the Source
+// it is in.
 type SourcedGraph struct {
-	Graph  graphcache.EvidenceGraph
+	Graph  evidencegraphs.Graph
 	Source sources.Record
 }
 
@@ -60,20 +62,18 @@ func recordLinks(c *database.Catalog, entityID []byte, cfg recordlinks.Config, m
 		return PersonRecordLinks{}, err
 	}
 	var graphs []SourcedGraph
+	var records []*graphfill.GraphRecords
 	seen := map[string]bool{}
 	for _, g := range groups {
 		for _, cl := range g.Claims {
-			if !seen[string(cl.Graph.GraphID)] {
-				seen[string(cl.Graph.GraphID)] = true
+			if !seen[string(cl.Graph.ID)] {
+				seen[string(cl.Graph.ID)] = true
 				graphs = append(graphs, SourcedGraph{Graph: cl.Graph, Source: g.Source})
+				records = append(records, cl.Records)
 			}
 		}
 	}
-	loaded := make([]graphcache.EvidenceGraph, len(graphs))
-	for i, g := range graphs {
-		loaded[i] = g.Graph
-	}
-	pairs, counted, err := linksBetween(c, entityID, loaded, cfg)
+	pairs, counted, err := linksBetween(c, entityID, records, cfg)
 	if err != nil {
 		return PersonRecordLinks{}, err
 	}
@@ -81,17 +81,18 @@ func recordLinks(c *database.Catalog, entityID []byte, cfg recordlinks.Config, m
 	return PersonRecordLinks{Graphs: graphs, Pairs: pairs, NotCounted: !counted, LinesDropped: dropped}, nil
 }
 
-// linksBetween is the lines between every pair of the Evidence graphs, other
-// than those naming the page's own entity. It assumes nothing about the page's
-// kind. Each graph's Subjects take the entity of their accepted claim; a
-// Subject with none draws no line. cfg is the caller's; its Value is set from
-// the catalog's rules on a copy. counted is Pairs' report.
-func linksBetween(c *database.Catalog, page []byte, graphs []graphcache.EvidenceGraph, cfg recordlinks.Config) ([]recordlinks.Pair, bool, error) {
+// linksBetween is the lines between every pair of the Evidence graphs whose
+// records it is given, other than those naming the page's own entity. It
+// assumes nothing about the page's kind. Each graph's Subjects take the entity
+// of their accepted claim; a Subject with none draws no line. cfg is the
+// caller's; its Value is set from the catalog's rules on a copy. counted is
+// Pairs' report.
+func linksBetween(c *database.Catalog, page []byte, graphs []*graphfill.GraphRecords, cfg recordlinks.Config) ([]recordlinks.Pair, bool, error) {
 	if _, err := c.DB(); err != nil {
 		return nil, false, err
 	}
 	g := c.Graph()
-	rules, namePattern, err := valuerules.Load(g)
+	rules, _, err := valuerules.Load(g)
 	if err != nil {
 		return nil, false, err
 	}
@@ -101,18 +102,14 @@ func linksBetween(c *database.Catalog, page []byte, graphs []graphcache.Evidence
 	}
 	cfg.Value = rules
 	built := make([]recordlinks.Graph, len(graphs))
-	for i, graph := range graphs {
-		layer, err := evidencelayer.Load(g, graph.GraphID, namePattern)
+	for i, r := range graphs {
+		layer, err := evidencelayer.Load(g, r.GraphID)
 		if err != nil {
 			return nil, false, err
 		}
-		entityOf := map[string][]byte{}
-		for _, m := range graph.Members {
-			entityOf[string(m.SubjectID)] = m.EntityID
-		}
 		members := make([]recordlinks.Member, len(layer.Subjects))
 		for j, s := range layer.Subjects {
-			members[j] = recordlinks.Member{Subject: s, Entity: entityOf[string(s.ID)]}
+			members[j] = recordlinks.Member{Subject: s, Entity: r.Entity(s.ID)}
 		}
 		built[i] = recordlinks.NewGraph(members, layer.Links)
 	}

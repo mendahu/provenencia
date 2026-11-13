@@ -8,7 +8,7 @@ The six layers, their packages and what each says are in the stack ([`matching-m
 
 ## Where it runs
 
-**Promote.** [`core/database/evidencelayer`](../core/database/evidencelayer) builds each Evidence graph's side with `subjectprofile.ForSubject` from a Source Subject's own Observations and the dated events it takes part in, memoized on the graph, and [`core/database/promotealign`](../core/database/promotealign) builds the canon's with `subjectprofile.Build` from a handle's reconciled values and its participations. [`core/graphalign`](../core/graphalign) scores every pair with `subjectcompare.Compare` and adds link support ([promote-graph-alignment.md](promote-graph-alignment.md)). A handle is a candidate when it is shortlisted with similarity at least `alignment.MinSimilarity` (`graphalign.Candidates`), or reached through a link to an accepted pair.
+**Promote.** [`core/database/evidencelayer`](../core/database/evidencelayer) builds each Evidence graph's side with `subjectprofile.ForSubject` from a Source Subject's own Observations and the dated events it takes part in, held in `evidencelayer.Layers`, and [`core/database/promotealign`](../core/database/promotealign) builds the canon's with `subjectprofile.Build` from a handle's reconciled values and its participations. [`core/graphalign`](../core/graphalign) scores every pair with `subjectcompare.Compare` and adds link support ([promote-graph-alignment.md](promote-graph-alignment.md)). A handle is a candidate when it is shortlisted with similarity at least `alignment.MinSimilarity` (`graphalign.Candidates`), or reached through a link to an accepted pair.
 
 **The reconciler** groups values with value compare under its own policy ([conclusion-reconciliation.md](conclusion-reconciliation.md)).
 

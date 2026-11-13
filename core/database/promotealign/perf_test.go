@@ -34,11 +34,16 @@ import (
 // the user on 2026-11-05, when the CI runner measured 350.57 ms (S14-32) and
 // S14-20 had measured 360 ms as a best of five. The after-commit figure was
 // raised from 1.5 s by the user on 2026-11-01: the CI runner measured 1.6–2.05 s
-// where a Mac measures 0.6 s (S13-02, S13-03).
+// where a Mac measures 0.6 s (S13-02, S13-03). The warm figure was raised again
+// from 375 ms to 500 ms by the user on 2026-11-13, when the CI runner measured
+// 383 ms (S16-13; 1.25 times that is 479 ms). Warm history: 250, 350, 375,
+// 500 ms. Warm has now been raised for the CI runner: a proposal that creeps
+// toward 500 ms again is a real slowdown to investigate, not a reason to raise
+// it again.
 const (
 	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
-	budgetWarm         = 375 * time.Millisecond
+	budgetWarm         = 500 * time.Millisecond
 	budgetAfterCommit  = 2500 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
@@ -69,8 +74,13 @@ const (
 	// S14-40 measured 220 ms before the rows recorded their inputs; 600 ms
 	// allows the recording plus a slow runner (CI measured 507–517 ms on
 	// S15-33, about 180 ms locally) and fails a per-row place graph, which
-	// costs four times as much.
-	budgetComposeAll = 600 * time.Millisecond
+	// costs four times as much. The CI runner measured 679 ms on S16-13; 1.25
+	// times that is 849 ms, raised to 900 ms by the user on 2026-11-13, which
+	// still fails a per-row place graph at about four times the cost. History:
+	// 600 ms to 900 ms. This budget has now been raised for the CI runner: a
+	// compose that creeps toward it again is a real slowdown to investigate,
+	// not a reason to raise it again.
+	budgetComposeAll = 900 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the

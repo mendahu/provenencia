@@ -15,7 +15,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
-	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/persondetail"
 	"github.com/mendahu/provenencia/core/database/promote"
@@ -439,7 +438,7 @@ func TestRecordLinkStrengthProto(t *testing.T) {
 func TestRecordLinksProto(t *testing.T) {
 	graph := func(b byte) persondetail.SourcedGraph {
 		return persondetail.SourcedGraph{
-			Graph:  graphcache.EvidenceGraph{GraphID: bytes.Repeat([]byte{b}, 16), SourceID: bytes.Repeat([]byte{b + 1}, 16)},
+			Graph:  evidencegraphs.Graph{ID: bytes.Repeat([]byte{b}, 16), SourceID: bytes.Repeat([]byte{b + 1}, 16)},
 			Source: sources.Record{ID: bytes.Repeat([]byte{b + 1}, 16), Title: "Source", SourceTypeID: bytes.Repeat([]byte{b + 2}, 16)},
 		}
 	}
@@ -465,8 +464,8 @@ func TestRecordLinksProto(t *testing.T) {
 				t.Fatalf("not_counted %v lines_dropped %v, want %v and %v", got.GetNotCounted(), got.GetLinesDropped(), tc.notCounted, tc.dropped)
 			}
 			if len(got.Graphs) != 2 || len(got.Pairs) != 1 ||
-				got.Pairs[0].GetGraphAId() != database.UUIDString(read.Graphs[0].Graph.GraphID) ||
-				got.Pairs[0].GetGraphBId() != database.UUIDString(read.Graphs[1].Graph.GraphID) ||
+				got.Pairs[0].GetGraphAId() != database.UUIDString(read.Graphs[0].Graph.ID) ||
+				got.Pairs[0].GetGraphBId() != database.UUIDString(read.Graphs[1].Graph.ID) ||
 				got.Pairs[0].Lines[0].GetStrength() != engine.RecordLinkStrength_RECORD_LINK_STRENGTH_STRONG {
 				t.Fatalf("graphs and pairs not mapped: %+v", got)
 			}

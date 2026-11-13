@@ -41,7 +41,7 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 		var counts []int
 		for _, g := range groups {
 			for _, cl := range g.Claims {
-				claimRows, err := lc.rowsOf(cl.Graph, cl.Observations)
+				claimRows, err := lc.rowsOf(cl.Records.Labels(), cl.Observations)
 				if err != nil {
 					return err
 				}
@@ -65,10 +65,10 @@ func ListPersonClaims(in []byte) ([]byte, error) {
 				n := counts[0]
 				counts = counts[1:]
 				group.Claims = append(group.Claims, &engine.PersonClaim{
-					ClaimId:      database.UUIDString(cl.ClaimID),
-					GraphId:      database.UUIDString(cl.Graph.GraphID),
-					GraphRef:     cl.Graph.GraphRef,
-					GraphName:    cl.Graph.GraphName,
+					ClaimId:      database.UUIDString(cl.Accepted.ClaimID),
+					GraphId:      database.UUIDString(cl.Graph.ID),
+					GraphRef:     cl.Graph.Ref,
+					GraphName:    cl.Graph.Name,
 					Subject:      evidenceSubjectProto(cl.Subject),
 					Observations: protos[next : next+n : next+n],
 				})
@@ -224,17 +224,17 @@ func recordLinksProto(links persondetail.PersonRecordLinks) *engine.GetPersonRec
 	out := &engine.GetPersonRecordLinksResponse{NotCounted: links.NotCounted, LinesDropped: links.LinesDropped}
 	for _, g := range links.Graphs {
 		out.Graphs = append(out.Graphs, &engine.RecordLinksGraph{
-			GraphId:     database.UUIDString(g.Graph.GraphID),
-			GraphRef:    g.Graph.GraphRef,
-			GraphName:   g.Graph.GraphName,
+			GraphId:     database.UUIDString(g.Graph.ID),
+			GraphRef:    g.Graph.Ref,
+			GraphName:   g.Graph.Name,
 			SourceId:    database.UUIDString(g.Source.ID),
 			SourceTitle: g.Source.Title,
 		})
 	}
 	for _, p := range links.Pairs {
 		pair := &engine.RecordLinksPair{
-			GraphAId: database.UUIDString(links.Graphs[p.A].Graph.GraphID),
-			GraphBId: database.UUIDString(links.Graphs[p.B].Graph.GraphID),
+			GraphAId: database.UUIDString(links.Graphs[p.A].Graph.ID),
+			GraphBId: database.UUIDString(links.Graphs[p.B].Graph.ID),
 		}
 		for _, l := range p.Lines {
 			pair.Lines = append(pair.Lines, &engine.RecordLink{

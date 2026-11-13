@@ -12,6 +12,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/identityclaims"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
@@ -28,8 +29,6 @@ import (
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
-
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
 var userID = evidencelayertest.UserID
@@ -150,10 +149,10 @@ func TestClaimsGroupsBySource(t *testing.T) {
 		t.Fatalf("%d claims, want 2 (the provisional one is not returned)", len(g.Claims))
 	}
 	baptisms, burials := g.Claims[0], g.Claims[1]
-	if baptisms.Graph.GraphName != "Baptisms" || burials.Graph.GraphName != "Burials" {
-		t.Fatalf("claims ordered %q, %q", baptisms.Graph.GraphName, burials.Graph.GraphName)
+	if baptisms.Graph.Name != "Baptisms" || burials.Graph.Name != "Burials" {
+		t.Fatalf("claims ordered %q, %q", baptisms.Graph.Name, burials.Graph.Name)
 	}
-	if !bytes.Equal(burials.Graph.GraphID, s.burials.ID) || burials.Graph.GraphRef != s.burials.Ref || !bytes.Equal(burials.Subject.ID, s.burialsSubject.ID) || len(burials.ClaimID) != 16 {
+	if !bytes.Equal(burials.Graph.ID, s.burials.ID) || burials.Graph.Ref != s.burials.Ref || !bytes.Equal(burials.Subject.ID, s.burialsSubject.ID) || len(burials.Accepted.ClaimID) != 16 {
 		t.Fatalf("burials claim %+v", burials)
 	}
 	if len(burials.Observations) != 2 {
@@ -192,7 +191,7 @@ func TestClaimsAfterSourceEdit(t *testing.T) {
 	if rl := f.recordLinks(s.person.ID); rl.Graphs[0].Source.Title != "Registry of parish" {
 		t.Fatalf("record links title after the edit %q", rl.Graphs[0].Source.Title)
 	}
-	if !f.C.Graph().LoadedEvidenceGraphForTest(s.burials.ID) {
+	if _, ok := graphfill.Graphs.Peek(f.C.Graph(), s.burials.ID); !ok {
 		t.Fatal("a Source edit dropped a loaded Evidence graph")
 	}
 }
@@ -287,6 +286,78 @@ func TestClaimsWarmReadIssuesNoQuery(t *testing.T) {
 	}
 	if len(second) != len(first) {
 		t.Fatalf("second read %d groups, first %d", len(second), len(first))
+	}
+
+	// A person in 80 graphs, past the 64 the loaded-graph store keeps: the
+	// read loads no Evidence graph, and the second read issues no query.
+	t.Run("80 graphs", func(t *testing.T) {
+		f := newFixture(t)
+		son := households(f, 80)
+		g := f.C.Graph()
+		g.Drop()
+		first := f.claims(son)
+		if len(first) != 80 {
+			t.Fatalf("%d groups, want 80", len(first))
+		}
+		for _, grp := range first {
+			if len(grp.Claims) != 1 {
+				t.Fatalf("group %q has %d claims, want 1", grp.Source.Title, len(grp.Claims))
+			}
+		}
+		if n := g.KeyCounts()["graphfill.graphs"]; n != 0 {
+			t.Fatalf("the read loaded %d Evidence graphs", n)
+		}
+		n := 0
+		g.SetQueryCounterForTest(func() { n++ })
+		defer g.SetQueryCounterForTest(nil)
+		second := f.claims(son)
+		if n != 0 {
+			t.Fatalf("the second read issued %d queries", n)
+		}
+		if len(second) != 80 {
+			t.Fatalf("second read %d groups, want 80", len(second))
+		}
+	})
+}
+
+// TestClaimsSkipsWhatLeft: a claim whose graph's records no longer hold its
+// Subject (the graph changed mid-read) is skipped, and the person's other claims
+// stay.
+func TestClaimsSkipsWhatLeft(t *testing.T) {
+	cases := []struct {
+		name string
+		// records is what graph A's records become: empty records of another
+		// graph, or graph B's.
+		records func(t *testing.T, f *fixture, s shape) *graphfill.GraphRecords
+	}{
+		{"an empty graph's records", func(t *testing.T, f *fixture, s shape) *graphfill.GraphRecords {
+			empty := evidencegraphstest.SoleGraph(t, f.C, f.source("Empty").ID).ID
+			got, err := graphfill.RecordsOf(f.C.Graph(), [][]byte{empty})
+			must(t, err)
+			return got[string(empty)]
+		}},
+		{"records without the Subject", func(t *testing.T, f *fixture, s shape) *graphfill.GraphRecords {
+			got, err := graphfill.RecordsOf(f.C.Graph(), [][]byte{s.baptisms.ID})
+			must(t, err)
+			return got[string(s.baptisms.ID)]
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			s := f.burialsAndBaptisms()
+			if got := f.claims(s.person.ID); len(got) != 1 || len(got[0].Claims) != 2 {
+				t.Fatalf("the warm read: %+v", got)
+			}
+			graphfill.Records.Set(f.C.Graph(), s.burials.ID, tc.records(t, f, s))
+			groups := f.claims(s.person.ID)
+			if len(groups) != 1 || len(groups[0].Claims) != 1 {
+				t.Fatalf("groups %+v, want one group of the one claim that stayed", groups)
+			}
+			if !bytes.Equal(groups[0].Claims[0].Subject.ID, s.baptismSubject.ID) {
+				t.Fatalf("the claim that stayed is %x, want the baptisms Subject", groups[0].Claims[0].Subject.ID)
+			}
+		})
 	}
 }
 

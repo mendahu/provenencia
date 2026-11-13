@@ -147,7 +147,7 @@ Nothing names a Property or a relationship. Every weight comes from metadata or 
 
 There are no database calls during the walk. Everything it reads is loaded first:
 
-1. **The layer:** one Evidence graph's Subjects, bridges, Observations and provenance, held on the catalog's in-memory graph (`graphcache`, `g.EvidenceGraph`).
+1. **The layer:** one Evidence graph's Subjects, bridges, Observations and provenance, loaded as a `graphfill.EvidenceGraph` and held as the `evidencelayer.Layers` entry, keyed by graph and derived from the vocabulary and `nameformats.Default`.
 2. **Seed handles:**
    - the fixed pairs;
    - the handles of already-promoted Subjects;
@@ -162,11 +162,11 @@ Every read is batched (`sqlbatch`, 500 ids per IN list), so the query count foll
 # 8. Caching and decisions
 
 - **Decisions live in the page's draft:** the Swift row list (suggested or decided, target). They're sent as `fixed` on every call and never stored.
-- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision. It keeps at most `maxEvidenceGraphs` Evidence graphs (`graphcache`); loading one more drops the least recently used graph with its memos, and a dropped graph loads again on its next read.
+- **Loads read the catalog's in-memory graph** (`graphcache`), which keeps handles, Evidence graphs (keyed by graph id) and the match index between calls, so re-runs after decisions skip loading. Each commit drops what it touched (its effects), not a whole revision. It keeps at most `graphfill.MaxEvidenceGraphs` Evidence graphs (`graphfill.Graphs`), and as many matching layers and candidate lists (`evidencelayer.Layers`, `promotealign.candidates`); a key past the cap drops the least recently used one, and a dropped graph loads again on its next read.
 - **Every cache** is one row of [`catalog-caches.md`](catalog-caches.md): its key, fill, updating signal, lifetime, cap and size.
 - **The match index** (the shortlist index) is a registry entry (`promotealign.MatchIndex`, [`catalog-caches.md`](catalog-caches.md)) derived from the vocabulary (its keys read term keys and metas), the alias index and the name format, so a change to any of them empties it; its Apply also drops it on any commit that names a handle.
-- **The Evidence layer memo** (`evidencelayer.Load`) holds one Evidence graph's primary Subjects, values and links; Promote and the Person page share it, and it drops with the Evidence graph memo.
-- **The candidates memo** holds each Subject's ranked candidate ids on that graph's memo. It is valid for one match index generation: it is dropped with the Evidence graph memo and ignored when the index generation changes.
+- **The Evidence layer** (`evidencelayer.Layers`, filled by `evidencelayer.Load`) holds one Evidence graph's primary Subjects, values and links, keyed by graph; Promote and the Person page share it. It is derived from the vocabulary and `nameformats.Default`, dropped on `Set.EvidenceGraphs` for that graph, and held at most 64 at a time (least recently used out).
+- **The candidates** (`promotealign.candidates`) hold each Subject's ranked candidate ids, keyed by graph. They are dropped on `Set.EvidenceGraphs` for that graph, held at most 64 at a time, and used only at the match index generation they were ranked against.
 - **Open-time warms** (`catalogsession.WarmOnOpen`, behind the open spinner) are held on the graph until the project closes: the built alias index, the default name format, then `promotealign.Warm`, which loads the shortlist kinds (every person, event and place) and builds the shortlist index, so the first proposal pays only for its own Source. The alias index and name format live with the catalog connection, so a `Drop` or a vocabulary commit leaves them and nothing warms them again; the shortlist index is built at open and by the next proposal after it is dropped, and a failure to build it never fails the open: the next proposal builds it and reports the error. A handle commit drops only the shortlist index, and the next proposal rebuilds it ([`promote-ranking.md`](ideas/promote-ranking.md#name-index-on-commit)).
 
 ---

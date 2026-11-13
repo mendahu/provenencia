@@ -25,7 +25,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/subjects/subjectstest"
 	"github.com/mendahu/provenencia/core/database/subjectvocab"
 	"github.com/mendahu/provenencia/core/database/users"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/datevalue/datevaluetest"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
@@ -301,13 +300,10 @@ func (r *Records) Graph(src sources.Source) []byte {
 	return evidencegraphstest.SoleGraph(r.T, r.C, src.ID).ID
 }
 
-// Layer is the Evidence layer of the graph, loaded under the catalog's name
-// pattern: the memoized one, or one built.
+// Layer is the Evidence layer of the graph: the held one, or one built.
 func (r *Records) Layer(graph []byte) evidencelayer.Layer {
 	r.T.Helper()
-	_, namePattern, err := valuerules.Load(r.C.Graph())
-	Must(r.T, err)
-	layer, err := evidencelayer.Load(r.C.Graph(), graph, namePattern)
+	layer, err := evidencelayer.Load(r.C.Graph(), graph)
 	Must(r.T, err)
 	return layer
 }

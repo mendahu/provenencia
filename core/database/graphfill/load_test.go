@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/observations/observationstest"
 	"github.com/mendahu/provenencia/core/database/properties"
@@ -27,7 +28,6 @@ import (
 	"github.com/mendahu/provenencia/core/writes"
 
 	_ "github.com/mendahu/provenencia/core/database/autoreconciler"
-	_ "github.com/mendahu/provenencia/core/database/graphfill"
 )
 
 var userID = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
@@ -68,6 +68,12 @@ func newSingleSource(t *testing.T) (c *database.Catalog, src sources.Source, boo
 	return c, src, book, letter
 }
 
+// loaded reports whether the Evidence graph is held in graphfill.Graphs.
+func loaded(g *graphcache.Graph, id []byte) bool {
+	_, ok := graphfill.Graphs.Peek(g, id)
+	return ok
+}
+
 func updateSource(t *testing.T, c *database.Catalog, s sources.Source) {
 	t.Helper()
 	if _, _, err := writes.Run(c, writes.Op{Action: "update_source", UserID: userID}, func(tx *database.Tx) (sources.Source, []rowchange.Change, error) {
@@ -79,23 +85,19 @@ func updateSource(t *testing.T, c *database.Catalog, s sources.Source) {
 }
 
 // TestRetitleKeepsEvidenceGraph: an Evidence graph holds no Source words, so a
-// rename leaves every loaded graph of the Source loaded with its memo. An id no
-// graph has reads as not found.
+// rename leaves every loaded graph of the Source loaded. An id no graph has
+// reads as not found.
 func TestRetitleKeepsEvidenceGraph(t *testing.T) {
 	f := newTwoGraphs(t)
 	g := f.c.Graph()
 	for _, id := range [][]byte{f.def.ID, f.jones.ID} {
 		f.read(t, id)
-		g.SetEvidenceGraphMemo(id, "k", "memo")
 	}
 	f.src.Title = "Parish register"
 	updateSource(t, f.c, f.src)
 	for _, id := range [][]byte{f.def.ID, f.jones.ID} {
-		if !g.LoadedEvidenceGraphForTest(id) {
+		if !loaded(g, id) {
 			t.Fatalf("a rename dropped graph %x", id)
-		}
-		if _, ok := g.EvidenceGraphMemo(id, "k"); !ok {
-			t.Fatalf("a rename dropped the memo of graph %x", id)
 		}
 		if eg := f.read(t, id); !bytes.Equal(eg.SourceID, f.src.ID) {
 			t.Fatalf("source %x after the rename", eg.SourceID)
@@ -115,14 +117,14 @@ func TestSourceEditKeepsEvidenceGraph(t *testing.T) {
 	f.read(t, f.jones.ID)
 	f.src.Description = "Baptisms 1790 to 1820"
 	updateSource(t, f.c, f.src)
-	if !g.LoadedEvidenceGraphForTest(f.def.ID) || !g.LoadedEvidenceGraphForTest(f.jones.ID) {
+	if !loaded(g, f.def.ID) || !loaded(g, f.jones.ID) {
 		t.Fatal("a description edit dropped an evidence graph")
 	}
 	subjectstest.On(t, f.c, userID, f.def.ID, "person", "Cal")
-	if g.LoadedEvidenceGraphForTest(f.def.ID) {
+	if loaded(g, f.def.ID) {
 		t.Fatal("a Subject create left its graph loaded")
 	}
-	if !g.LoadedEvidenceGraphForTest(f.jones.ID) {
+	if !loaded(g, f.jones.ID) {
 		t.Fatal("a Subject create in one graph dropped the other")
 	}
 }
@@ -135,7 +137,7 @@ func TestSourceTypeChangeKeepsEvidenceGraph(t *testing.T) {
 	sole := evidencegraphstest.SoleGraph(t, c, src.ID)
 	read := func() graphcache.EvidenceGraph {
 		t.Helper()
-		eg, err := g.EvidenceGraph(sole.ID)
+		eg, err := graphfill.EvidenceGraph(g, sole.ID)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -146,7 +148,7 @@ func TestSourceTypeChangeKeepsEvidenceGraph(t *testing.T) {
 	}
 	src.SourceTypeID = letter
 	updateSource(t, c, src)
-	if !g.LoadedEvidenceGraphForTest(sole.ID) {
+	if !loaded(g, sole.ID) {
 		t.Fatal("a type change dropped the evidence graph")
 	}
 
@@ -243,7 +245,7 @@ func newTwoGraphs(t *testing.T) twoGraphs {
 
 func (f twoGraphs) read(t *testing.T, graphID []byte) graphcache.EvidenceGraph {
 	t.Helper()
-	eg, err := f.c.Graph().EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(f.c.Graph(), graphID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,32 +288,22 @@ func TestTwoEvidenceGraphsLoadApart(t *testing.T) {
 }
 
 // TestGraphWriteDropsOnlyThatGraph: a write that names an Evidence graph drops
-// that loaded graph with its memo, and leaves its Source's other graph and
-// another Source's graph.
+// that loaded graph, and leaves its Source's other graph and another Source's
+// graph.
 func TestGraphWriteDropsOnlyThatGraph(t *testing.T) {
 	f := newTwoGraphs(t)
 	g := f.c.Graph()
 	otherGraph := evidencegraphstest.SoleGraph(t, f.c, f.other.ID).ID
 	for _, id := range [][]byte{f.def.ID, f.jones.ID, otherGraph} {
 		f.read(t, id)
-		g.SetEvidenceGraphMemo(id, "k", "memo")
-		if _, ok := g.EvidenceGraphMemo(id, "k"); !ok {
-			t.Fatalf("memo for %x not held", id)
-		}
 	}
 	subjectstest.On(t, f.c, userID, f.jones.ID, "person", "Cal")
-	if g.LoadedEvidenceGraphForTest(f.jones.ID) {
+	if loaded(g, f.jones.ID) {
 		t.Fatal("the written graph is still loaded")
 	}
-	if _, ok := g.EvidenceGraphMemo(f.jones.ID, "k"); ok {
-		t.Fatal("the memo of the written graph outlived it")
-	}
 	for _, id := range [][]byte{f.def.ID, otherGraph} {
-		if !g.LoadedEvidenceGraphForTest(id) {
+		if !loaded(g, id) {
 			t.Fatalf("a write on Jones dropped graph %x", id)
-		}
-		if _, ok := g.EvidenceGraphMemo(id, "k"); !ok {
-			t.Fatalf("a write on Jones dropped the memo of graph %x", id)
 		}
 	}
 	if got := labels(f.read(t, f.jones.ID)); len(got) != 2 {
@@ -328,7 +320,7 @@ func TestDeletedGraphIsNotFound(t *testing.T) {
 		t.Fatalf("empty graph found %v, subjects %d", eg.Found, len(eg.Subjects))
 	}
 	g := f.c.Graph()
-	if !g.LoadedEvidenceGraphForTest(empty.ID) {
+	if !loaded(g, empty.ID) {
 		t.Fatal("graph not loaded")
 	}
 	if _, _, err := writes.Run(f.c, writes.Op{Action: "delete_evidence_graph", UserID: userID}, func(tx *database.Tx) (struct{}, []rowchange.Change, error) {
@@ -337,7 +329,7 @@ func TestDeletedGraphIsNotFound(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if g.LoadedEvidenceGraphForTest(empty.ID) {
+	if loaded(g, empty.ID) {
 		t.Fatal("a deleted graph is still loaded")
 	}
 	if eg := f.read(t, empty.ID); eg.Found {

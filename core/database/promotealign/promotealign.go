@@ -10,6 +10,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/canonlinks"
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -69,7 +70,7 @@ func propose(c *database.Catalog, graphID []byte, fixed []graphalign.Fixed, only
 	}
 
 	prop := graphalign.Align(layer, canon, anchors, cfg)
-	eg, err := c.Graph().EvidenceGraph(in.graphID)
+	eg, err := graphfill.EvidenceGraph(c.Graph(), in.graphID)
 	if err != nil {
 		return graphalign.Proposal{}, 0, nil, err
 	}
@@ -115,7 +116,7 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if _, err := c.DB(); err != nil {
 		return inputs{}, err
 	}
-	eg, err := c.Graph().EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 	if err != nil {
 		return inputs{}, err
 	}
@@ -132,16 +133,24 @@ func loadInputs(c *database.Catalog, graphID []byte) (inputs, error) {
 	if err != nil {
 		return inputs{}, err
 	}
-	evidence, err := evidencelayer.Load(c.Graph(), graphID, namePattern)
+	evidence, err := evidencelayer.Load(c.Graph(), graphID)
 	if err != nil {
 		return inputs{}, err
 	}
-	metas, err := valuerules.Metas(c.Graph())
+	layer, err := alignLayer(c.Graph(), evidence)
 	if err != nil {
 		return inputs{}, err
 	}
-	layer := graphalign.Layer{Subjects: evidence.Subjects, Bridges: evidence.Links, Metas: metas}
 	return inputs{graphID: graphID, cfg: cfg, namePattern: namePattern, terms: terms, evidence: evidence, layer: layer}, nil
+}
+
+// alignLayer is the evidence layer with the value metas graphalign compares by.
+func alignLayer(g *graphcache.Graph, ev evidencelayer.Layer) (graphalign.Layer, error) {
+	metas, err := valuerules.Metas(g)
+	if err != nil {
+		return graphalign.Layer{}, err
+	}
+	return graphalign.Layer{Subjects: ev.Subjects, Bridges: ev.Links, Metas: metas}, nil
 }
 
 // mergeFixed validates caller fixed pairs and adds already-promoted Subjects
@@ -162,7 +171,7 @@ func mergeFixed(g *graphcache.Graph, graphID []byte, layer evidencelayer.Layer, 
 		seen[string(f.SubjectID)] = true
 	}
 
-	eg, err := g.EvidenceGraph(graphID)
+	eg, err := graphfill.EvidenceGraph(g, graphID)
 	if err != nil {
 		return nil, nil, err
 	}

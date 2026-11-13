@@ -108,3 +108,16 @@ Fresh reviewers given the plan and this log. Maintainability: **Fits with change
 ## Verdict
 
 Two rounds done. Every blocker Fixed; nothing To user. Plan **Planned**.
+
+## Amendment — 2026-11-12, ship round 0
+
+**D-1:** the LRU's use-order list is held in the items of `keyedValues[T]` (prev/next links in the item), not `container/list`. The implementer stopped on §11's kinship +20% bound: `container/list` measured +20.4% / +34.6% (4,000 / 16,000 persons); the in-item list measured −6.6% / +3.2%. Eviction semantics unchanged. User approved the amendment ("Amend D-1, resume"). The 20% stop stays.
+
+## Amendment — 2026-11-12, ship round 1
+
+**D-15:** `budgetLinks80` is 200 ms (planning base 113 ms x 1.25, rounded up); "no lower than `budgetLinksPast`" is dropped, since a 1.5 s floor could not catch growth. User: "Set 200 ms".
+**CON-2:** `EmptyShortlistForTest` keeps minting an index generation (a §11 test-helper deviation). User: "Keep it". Recorded in the Landed note.
+
+## Amendment — 2026-11-13, CI fix
+
+**D-15:** `budgetLinks80` is 600 ms (CI 414 ms x 1.25, rounded up). `promotealign` `budgetWarm` is 500 ms (CI 383 ms x 1.25) and `budgetComposeAll` 900 ms (CI 679 ms x 1.25; still fails a per-row place graph at about four times the cost). CI run 43364250762. Raised by the user on 2026-11-13 (ship log F-7).

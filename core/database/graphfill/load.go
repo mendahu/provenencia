@@ -1,6 +1,7 @@
 // Package graphfill loads one Evidence graph onto the catalog graph: subjects,
-// observations, members, and the edges an event title reads. Promote builds
-// its own bridge signatures when it reads the layer.
+// observations, members, and the edges an event title reads, and each graph's
+// Subject records. Promote builds its own bridge signatures when it reads the
+// layer.
 package graphfill
 
 import (
@@ -19,29 +20,55 @@ import (
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
 
+// MaxEvidenceGraphs is how many Evidence graphs stay loaded, and how many
+// matching layers and candidate lists stay held. A full evidence pass over
+// S11-21's 100-Subject Source reads 21; 64 keeps about three such pages warm.
+const MaxEvidenceGraphs = 64
+
+// Graphs is the loaded Evidence graphs, keyed by graph id, filled by
+// EvidenceGraph. A commit that names a graph (Set.EvidenceGraphs) drops it; at
+// the Cap the least recently used graph leaves and loads again on its next
+// read. A loaded graph is shared, so every reader treats it as read-only.
+var Graphs graphcache.Keyed[graphcache.EvidenceGraph]
+
 func init() {
-	graphcache.SetEvidenceGraphLoader(loadEvidenceGraph)
-	graphcache.SetEvidenceGraphCheck(checkEvidenceGraph)
+	Graphs = graphcache.RegisterKeyed(graphcache.KeyedEntry[graphcache.EvidenceGraph]{
+		Name:  "graphfill.graphs",
+		Apply: graphcache.DropNamedGraphs[graphcache.EvidenceGraph],
+		Check: checkEvidenceGraph,
+		Cap:   MaxEvidenceGraphs,
+	})
 }
 
-func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, error) {
+// EvidenceGraph returns the loaded Evidence graph, loading it on first read. A
+// graph that does not exist is returned not Found.
+func EvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, error) {
+	if g == nil || len(graphID) != 16 {
+		return graphcache.EvidenceGraph{}, fmt.Errorf("graphfill: evidence graph id is invalid")
+	}
+	return Graphs.Get(g, graphID, func() (graphcache.EvidenceGraph, error) {
+		return LoadEvidenceGraph(g, graphID)
+	})
+}
+
+// PeekEvidenceGraph returns the Evidence graph when it is loaded and never
+// loads it. A hit counts as a use.
+func PeekEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, bool) {
+	return Graphs.Peek(g, graphID)
+}
+
+// LoadEvidenceGraph reads an Evidence graph from the catalog and stores
+// nothing: EvidenceGraph's fill, and what a Check compares a stored value to.
+func LoadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.EvidenceGraph, error) {
 	q := graphcache.Querier(g)
 	head, found, err := loadGraphHead(q, graphID)
 	if err != nil {
 		return graphcache.EvidenceGraph{}, err
 	}
 	if !found {
-		return graphcache.EvidenceGraph{Found: false}, nil
+		return graphcache.EvidenceGraph{GraphID: append([]byte(nil), graphID...)}, nil
 	}
-	subjects, err := loadGraphSubjects(q, graphID)
-	if err != nil {
-		return graphcache.EvidenceGraph{}, err
-	}
-	observations, err := loadGraphObservations(q, graphID)
-	if err != nil {
-		return graphcache.EvidenceGraph{}, err
-	}
-	members, err := loadGraphMembers(q, graphID)
+	subjects, observations, members, err := loadGraphRows(q, graphID)
 	if err != nil {
 		return graphcache.EvidenceGraph{}, err
 	}
@@ -50,6 +77,7 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 		return graphcache.EvidenceGraph{}, err
 	}
 	return graphcache.EvidenceGraph{
+		GraphID:      append([]byte(nil), graphID...),
 		GraphRef:     head.ref,
 		GraphName:    head.name,
 		SourceID:     head.sourceID,
@@ -60,6 +88,25 @@ func loadEvidenceGraph(g *graphcache.Graph, graphID []byte) (graphcache.Evidence
 		EventPeople:  people,
 		EventPlaces:  places,
 	}, nil
+}
+
+// loadGraphRows reads a graph's Subjects, Observations and accepted claims
+// (members): the rows both the loaded graph and the graph's records are made
+// from. A graph with no row has none.
+func loadGraphRows(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceSubject, []graphcache.EvidenceObservation, []graphcache.EvidenceMember, error) {
+	subjects, err := loadGraphSubjects(q, graphID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	observations, err := loadGraphObservations(q, graphID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	members, err := loadGraphMembers(q, graphID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return subjects, observations, members, nil
 }
 
 // graphHead is the graph's own row.
@@ -240,11 +287,10 @@ func loadTitleEdges(g *graphcache.Graph, eg graphcache.EvidenceGraph) ([]graphca
 }
 
 func checkEvidenceGraph(g *graphcache.Graph, graphID []byte, stored graphcache.EvidenceGraph) error {
-	fresh, err := loadEvidenceGraph(g, graphID)
+	fresh, err := LoadEvidenceGraph(g, graphID)
 	if err != nil {
 		return err
 	}
-	fresh.GraphID = append([]byte(nil), graphID...)
 	if !reflect.DeepEqual(stored, fresh) {
 		return fmt.Errorf("graphfill: stored evidence graph %x does not match a fresh read", graphID)
 	}

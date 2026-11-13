@@ -71,19 +71,15 @@ func (lc listedContext) rows(eg graphcache.EvidenceGraph, keep func(graphcache.E
 			kept = append(kept, o)
 		}
 	}
-	return lc.rowsOf(eg, kept)
+	return lc.rowsOf(graphcache.SubjectLabels(eg.Subjects), kept)
 }
 
-// rowsOf projects the given stored Observations of eg, in order, with the
-// Subject labels of eg.
-func (lc listedContext) rowsOf(eg graphcache.EvidenceGraph, obs []graphcache.EvidenceObservation) ([]observations.Listed, error) {
-	subjectLabels := map[string]string{}
-	for _, s := range eg.Subjects {
-		subjectLabels[string(s.ID)] = s.Label
-	}
+// rowsOf projects the given stored Observations, in order, with the Subject
+// labels of their graph (graphcache.SubjectLabels, or a graph's records).
+func (lc listedContext) rowsOf(labels map[string]string, obs []graphcache.EvidenceObservation) ([]observations.Listed, error) {
 	var rows []observations.Listed
 	for _, o := range obs {
-		listed, err := listedFromSource(o, lc.props, lc.terms, subjectLabels)
+		listed, err := listedFromSource(o, lc.props, lc.terms, labels)
 		if err != nil {
 			return nil, err
 		}

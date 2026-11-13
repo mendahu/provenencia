@@ -26,18 +26,12 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		g.DropLabels()
 		g.vocabOK = false
 		g.vocab = Vocabulary{}
-		// Evidence-graph memos follow the vocabulary here until the records
-		// tier moves them onto the registry (S16-13).
-		for _, e := range g.evidenceGraphs {
-			e.memos = nil
-		}
 		g.dropReaders(vocabularySource)
 	}
 	if set.Structure {
 		g.Drop()
 		return g.verifyIfSet()
 	}
-	g.dropEvidenceGraphs(set.EvidenceGraphs)
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
 		if err := g.applyEntries(nil, set); err != nil {
@@ -64,7 +58,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 				roots = append(roots, touched...)
 				continue
 			}
-			// The node's neighbors read it, and the memos that name them
+			// The node's neighbors read it, and the stored rows that name them
 			// are dropped from the roots.
 			if n, cached := g.nodes[string(id)]; cached {
 				for _, l := range n.Links {

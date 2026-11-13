@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,14 +15,15 @@ import (
 	"github.com/mendahu/provenencia/core/database/evidencelayer"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/namealiases"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promotealign"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
-	"github.com/mendahu/provenencia/core/database/valuerules"
 	"github.com/mendahu/provenencia/core/graphalign"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/valuecompare"
@@ -165,28 +167,19 @@ func TestMemoIsNotMutated(t *testing.T) {
 	}
 }
 
-// T-3 (AC-1.1): Propose stores the layer on the graph under the Evidence
-// layer's memo key, and evidencelayer.Load reads that layer with no query; a
-// second Load shares it.
+// T-3 (AC-1.1): Propose holds the layer in the Layers entry, and
+// evidencelayer.Load reads that layer with no query; a second Load shares it.
 func TestLoadSharesPromotesMemo(t *testing.T) {
 	w := newWarmFixture(t)
 	graph := w.f.Graph(w.srcB)
 	w.f.propose(graph, nil)
-	_, namePattern, err := valuerules.Load(w.f.c.Graph())
-	if err != nil {
-		t.Fatal(err)
-	}
-	v, ok := w.f.c.Graph().EvidenceGraphMemo(graph, "evidencelayer\x00"+namePattern)
-	if !ok {
-		t.Fatal("Propose memoized no layer")
-	}
-	stored, ok := v.(evidencelayer.Layer)
+	stored, ok := evidencelayer.Layers.Peek(w.f.c.Graph(), graph)
 	if !ok || len(stored.Subjects) == 0 {
-		t.Fatalf("Propose memoized %T with no Subjects", v)
+		t.Fatalf("Propose held no layer with Subjects: %v, %v", stored, ok)
 	}
 	n := 0
 	w.f.c.Graph().SetQueryCounterForTest(func() { n++ })
-	got, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
+	got, err := evidencelayer.Load(w.f.c.Graph(), graph)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,15 +187,191 @@ func TestLoadSharesPromotesMemo(t *testing.T) {
 		t.Fatalf("Load issued %d graph queries after a Propose", n)
 	}
 	if &got.Subjects[0] != &stored.Subjects[0] {
-		t.Fatal("Load built its own layer, not the one Propose memoized")
+		t.Fatal("Load built its own layer, not the one Propose held")
 	}
-	again, err := evidencelayer.Load(w.f.c.Graph(), graph, namePattern)
+	again, err := evidencelayer.Load(w.f.c.Graph(), graph)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if &again.Subjects[0] != &got.Subjects[0] {
-		t.Fatal("a second Load did not share the memo")
+		t.Fatal("a second Load did not share the held layer")
 	}
+}
+
+// entriesWorld is two incoming graphs, each proposed, so the Layers and
+// candidates entries hold both.
+type entriesWorld struct {
+	w    *warmFixture
+	a, b []byte
+	artB artifacts.Artifact
+}
+
+func newEntriesWorld(t *testing.T) entriesWorld {
+	t.Helper()
+	w := newWarmFixture(t)
+	srcC, artC := w.f.NewSource("Register")
+	w.f.Person(srcC, artC, "Mary Jones")
+	e := entriesWorld{w: w, a: w.f.Graph(w.srcB), b: w.f.Graph(srcC), artB: w.artB}
+	w.f.propose(e.a, nil)
+	w.f.propose(e.b, nil)
+	for _, id := range [][]byte{e.a, e.b} {
+		if !e.layer(id) || !e.candidates(id) {
+			t.Fatalf("after Propose graph %x holds layer %v, candidates %v", id, e.layer(id), e.candidates(id))
+		}
+	}
+	return e
+}
+
+func (e entriesWorld) layer(id []byte) bool {
+	_, ok := evidencelayer.Layers.Peek(e.w.f.c.Graph(), id)
+	return ok
+}
+
+func (e entriesWorld) candidates(id []byte) bool {
+	return promotealign.CandidatesHeldForTest(e.w.f.c.Graph(), id)
+}
+
+// AC-4.1, AC-4.2, AC-4.3, AC-4.8: the Layers and candidates entries empty on
+// a vocabulary commit and a name format change, drop only the graph a write
+// names, and pass Verify after a proposal.
+func TestEntriesFollowSignals(t *testing.T) {
+	none := func(t *testing.T, e entriesWorld) {
+		t.Helper()
+		counts := e.w.f.c.Graph().KeyCounts()
+		if counts["evidencelayer.layers"] != 0 || counts["promotealign.candidates"] != 0 {
+			t.Fatalf("held %d layers and %d candidates, want none", counts["evidencelayer.layers"], counts["promotealign.candidates"])
+		}
+	}
+	t.Run("a vocabulary commit", func(t *testing.T) {
+		e := newEntriesWorld(t)
+		if err := e.w.f.c.Graph().OnCommit(effects.Commit{
+			Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		none(t, e)
+	})
+	t.Run("a name format change", func(t *testing.T) {
+		e := newEntriesWorld(t)
+		if err := nameformats.Invalidate(e.w.f.c); err != nil {
+			t.Fatal(err)
+		}
+		none(t, e)
+	})
+	t.Run("a write that names a graph", func(t *testing.T) {
+		e := newEntriesWorld(t)
+		e.w.f.Cite(e.artB, e.w.bPerson, observations.Input{
+			PropertyID: e.w.f.Prop("name").ID, Name: namevaluetest.Western("Johnny Smith"),
+		})
+		if e.layer(e.a) || e.candidates(e.a) {
+			t.Errorf("the written graph kept layer %v, candidates %v", e.layer(e.a), e.candidates(e.a))
+		}
+		if !e.layer(e.b) || !e.candidates(e.b) {
+			t.Errorf("the other graph lost layer %v, candidates %v", e.layer(e.b), e.candidates(e.b))
+		}
+	})
+	t.Run("Verify after a proposal", func(t *testing.T) {
+		t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+		e := newEntriesWorld(t)
+		if err := e.w.f.c.Graph().OnCommit(effects.Commit{
+			Activity: effects.Activity{Revision: 2000}, Effects: effects.Set{SourceScopes: [][]byte{e.w.f.source.ID}},
+		}); err != nil {
+			t.Fatalf("Verify after a proposal: %v", err)
+		}
+	})
+}
+
+// AC-4.9: Verify reads the entries without counting a use, so a commit with
+// Verify on leaves every entry's use order as one with Verify off: the key
+// that leaves next is the same.
+func TestVerifyLeavesEntriesAlone(t *testing.T) {
+	for _, verify := range []string{"1", "0"} {
+		t.Run("verify="+verify, func(t *testing.T) {
+			t.Setenv("PROVENENCIA_GRAPH_VERIFY", verify)
+			e := newEntriesWorld(t)
+			g := e.w.f.c.Graph()
+			// Six graphs, so a Check that touched keys in map order would
+			// leave a least recently used only one time in six.
+			ids := [][]byte{e.a, e.b}
+			for i := 0; i < 4; i++ {
+				src, art := e.w.f.NewSource(fmt.Sprintf("Extra %d", i))
+				e.w.f.Person(src, art, "Mary Jones")
+				id := e.w.f.Graph(src)
+				e.w.f.propose(id, nil)
+				ids = append(ids, id)
+			}
+			// A fresh read of every graph's records and loaded graph, in order, so a is the least recently used of each entry.
+			for _, id := range ids {
+				if _, err := graphfill.EvidenceGraph(g, id); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := graphfill.RecordsOf(g, ids); err != nil {
+				t.Fatal(err)
+			}
+			for _, id := range ids {
+				graphfill.Records.Peek(g, id)
+				if _, err := evidencelayer.Load(g, id); err != nil {
+					t.Fatal(err)
+				}
+				if !e.candidates(id) {
+					t.Fatalf("graph %x holds no candidates", id)
+				}
+			}
+			// Full caps on every entry, then a commit naming none of the graphs.
+			graphfill.Graphs.SetCapForTest(g, len(ids))
+			graphfill.Records.SetCapForTest(g, len(ids))
+			evidencelayer.Layers.SetCapForTest(g, len(ids))
+			promotealign.SetCandidatesCapForTest(g, len(ids))
+			t.Cleanup(func() {
+				graphfill.Graphs.SetCapForTest(g, 0)
+				graphfill.Records.SetCapForTest(g, 0)
+				evidencelayer.Layers.SetCapForTest(g, 0)
+				promotealign.SetCandidatesCapForTest(g, 0)
+			})
+			if err := g.OnCommit(effects.Commit{
+				Activity: effects.Activity{Revision: 3000}, Effects: effects.Set{SourceScopes: [][]byte{e.w.f.source.ID}},
+			}); err != nil {
+				t.Fatal(err)
+			}
+			// Another key arrives at each full entry: a, the least recently
+			// used, leaves and the rest stay.
+			c := bytes.Repeat([]byte{9}, 16)
+			evidencelayer.Layers.Set(g, c, evidencelayer.Layer{})
+			graphfill.Graphs.Set(g, c, graphcache.EvidenceGraph{})
+			graphfill.Records.Set(g, c, nil)
+			promotealign.HoldCandidatesForTest(g, c)
+			for name, got := range map[string][2]bool{
+				"graphs":     held(ids, func(id []byte) bool { return peekGraph(g, id) }),
+				"records":    held(ids, func(id []byte) bool { return peekRecords(g, id) }),
+				"layers":     held(ids, e.layer),
+				"candidates": held(ids, e.candidates),
+			} {
+				if got[0] || !got[1] {
+					t.Errorf("%s: a held %v, the rest held %v, want a evicted and the rest held", name, got[0], got[1])
+				}
+			}
+		})
+	}
+}
+
+// held is whether the first id is held, and whether all the others are.
+func held(ids [][]byte, has func([]byte) bool) [2]bool {
+	rest := true
+	for _, id := range ids[1:] {
+		rest = rest && has(id)
+	}
+	return [2]bool{has(ids[0]), rest}
+}
+
+func peekGraph(g *graphcache.Graph, id []byte) bool {
+	_, ok := graphfill.PeekEvidenceGraph(g, id)
+	return ok
+}
+
+func peekRecords(g *graphcache.Graph, id []byte) bool {
+	_, ok := graphfill.Records.Peek(g, id)
+	return ok
 }
 
 // snapshot is the layer of the incoming Source's graph, as the memo holds it
@@ -258,6 +427,20 @@ func TestCandidatesMemoFollowsCommits(t *testing.T) {
 			srcC, artC := w.f.NewSource("Parish register")
 			_, _, ph, _ := w.f.filedBirth(srcC, artC, "John Smith", 1817, nil, nil)
 			return ph
+		}},
+		{"a vocabulary commit", func(w *warmFixture) []byte {
+			if err := w.f.c.Graph().OnCommit(effects.Commit{
+				Activity: effects.Activity{Revision: 1 << 40}, Effects: effects.Set{Lists: []effects.List{effects.ListPropertyVocabulary}},
+			}); err != nil {
+				t.Fatal(err)
+			}
+			return nil
+		}},
+		{"a name format change", func(w *warmFixture) []byte {
+			if err := nameformats.Invalidate(w.f.c); err != nil {
+				t.Fatal(err)
+			}
+			return nil
 		}},
 		{"a Source edit", func(w *warmFixture) []byte {
 			w.f.Cite(w.artB, w.bPerson, observations.Input{

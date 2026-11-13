@@ -4,6 +4,7 @@ import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -81,7 +82,7 @@ func ListSubjectMemberships(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListSubjectMembershipsResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		eg, err := c.Graph().EvidenceGraph(graphID)
+		eg, err := graphfill.EvidenceGraph(c.Graph(), graphID)
 		if err != nil {
 			return err
 		}
