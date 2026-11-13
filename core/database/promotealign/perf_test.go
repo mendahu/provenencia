@@ -66,10 +66,11 @@ const (
 	// loading the city's node, with its 6,000 location links (S16-11).
 	budgetClearPortraitAtCity = 500 * time.Millisecond
 	// budgetComposeAll: composing every person and every event row once, warm.
-	// S14-40 measured 220 ms before the rows recorded their inputs; 500 ms
-	// allows the recording plus a slow runner and fails a per-row place graph,
-	// which costs four times as much.
-	budgetComposeAll = 500 * time.Millisecond
+	// S14-40 measured 220 ms before the rows recorded their inputs; 600 ms
+	// allows the recording plus a slow runner (CI measured 507–517 ms on
+	// S15-33, about 180 ms locally) and fails a per-row place graph, which
+	// costs four times as much.
+	budgetComposeAll = 600 * time.Millisecond
 )
 
 // largeFixture is a realistic large catalog (largeShape) and the Sources the
