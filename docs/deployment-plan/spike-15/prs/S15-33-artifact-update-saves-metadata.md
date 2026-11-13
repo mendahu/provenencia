@@ -43,11 +43,11 @@ Editing an Artifact saves its copy details in the same write as its label, descr
 
 | AC | Given / when | Then |
 | --- | --- | --- |
-| AC-1.1 | Artifact A (label "Page 1") holds `provider` = "FamilySearch" and `url` = "https://example.org/a"; `UpdateArtifact` with label "Page 1 (front)" and a draft: `provider` = "Ancestry", `accessed` = "12 March 2025" (new), `url` left out, layout `accessed` 0, `provider` 1 | One revision, one more than the last; its changes are the `artifact` update, then `artifact_metadata` delete (`url`), update (`provider`), create (`accessed`), then `artifact_metadata_layout` changes only; the board reads `accessed`, `provider` in that order, `url` gone |
+| AC-1.1 | Artifact A (label "Page 1") given `provider` = "FamilySearch", then `url` = "https://example.org/a", each by `SetMetadata` (so A's layout holds `provider` 0, `url` 1); `UpdateArtifact` with label "Page 1 (front)" and a draft: values `provider` = "Ancestry", then `accessed` = "12 March 2025" (new), `url` left out; layout `accessed` 0, `provider` 1 | One revision, one more than the last; `latestRevisionTypes` is exactly `artifact update`, `artifact_metadata delete` (`url`), `artifact_metadata update` (`provider`), `artifact_metadata create` (`accessed`), `artifact_metadata_layout create` (`accessed`), `artifact_metadata_layout update` (`provider` 0 → 1); the board reads `accessed`, `provider` in that order, and no `url` entry (its layout row stays, but `ListWorkspace` lists no field that is neither suggested nor valued) |
 | AC-1.2 | A holds `provider`; `UpdateArtifact` with the same label and no `metadata` | No `artifact_metadata` change; `provider` still held |
 | AC-1.3 | A holds `provider`; `UpdateArtifact` with a present, empty `metadata` | `provider` deleted; the board holds no value |
 | AC-1.4 | A in graph G, whose Citations use A; `UpdateArtifact` with `graph_links` that leave G, and a draft setting `provider` | `evidencegraphs.ErrArtifactInUse`; label, links and metadata unchanged; no revision |
-| AC-1.5 | A with nothing changed: same label and description, no `graph_links`, a draft equal to what is stored | No revision (`effects.revision` 0); the reply still carries the board |
+| AC-1.5 | A with nothing changed: same label and description, no `graph_links`, a draft whose values and layout rows both equal what is stored (build it from `GetMetadataBoard`: each valued entry's field and text, and each entry's `sort_order`, none dismissed) | No revision (`effects.revision` 0); the reply still carries the board |
 
 **US-2.** As the app, both Artifact write replies carry the Artifact's board after the write, so that I patch the page's cached workspace from the reply.
 
@@ -65,7 +65,7 @@ Editing an Artifact saves its copy details in the same write as its label, descr
 | AC-3.2 | A draft whose second value is "   " (blank after trim) on field `accessed` | `sourcemetadata.invalid` with params `[<accessed field id>]` |
 | AC-3.3 | A draft with two refused values, `url` = "x" first, `accessed` = " " second | params `[<url field id>]` (the first in draft order) |
 | AC-3.4 | `CreateArtifact` with a draft `url` = "not a link" | `sourcemetadata.invalid` with params `[<url field id>]`; no Artifact created |
-| AC-3.5 | A draft that repeats a field, names an unknown field id, or targets a missing Artifact | `sourcemetadata.invalid` with no params |
+| AC-3.5 | `sourcemetadata.Apply` with a draft that repeats a field, or names an unknown field id, or on an owner with no row | `ErrInvalid` with no params. (Through `UpdateArtifact` a missing Artifact never reaches `Apply`: `artifacts.Get` refuses it first, as today) |
 
 ## 3. Scope
 
@@ -91,7 +91,7 @@ Verified at `9732554`.
 
 | Area | Where | Today |
 | --- | --- | --- |
-| Update request | `api/proto/engine.proto` `UpdateArtifactRequest` (fields 1–6) | Label, description, `graph_links`; no metadata. Its comment says "patches label and/or description, and … graph links" |
+| Update request | `api/proto/engine.proto` `UpdateArtifactRequest` (fields 1–6) | Label, description, `graph_links`; no metadata. Its comment: "patches label and/or description, and, when graph_links is present, sets the Artifact's graph links in the same write. File attach stays IngestArtifactFile (first-attach only)." The last sentence stays |
 | Replies | `api/proto/engine.proto` `CreateArtifactResponse`, `UpdateArtifactResponse` (fields 1, 2) | `artifact`, `effects`; no board |
 | Precedent request | `api/proto/engine.proto` `UpdateEvidenceGraphRequest.metadata = 7`, `CreateArtifactRequest.metadata = 9` | `MetadataDraft`, "absent = metadata unchanged; present = the stored values become these" |
 | Precedent reply | `api/proto/engine.proto` `SetMetadataResponse.metadata = 3` | The owner's whole board in display order |
@@ -174,6 +174,7 @@ Errors: `sourcemetadata.invalid` with params `[fieldID]` → a draft value is bl
 // UpdateArtifactRequest patches label and/or description, and, when graph_links
 // is present, sets the Artifact's graph links, and, when metadata is present,
 // its metadata, all in the same write.
+// File attach stays IngestArtifactFile (first-attach only).
 message UpdateArtifactRequest {
   // fields 1–6 unchanged
   MetadataDraft metadata = 7; // absent = metadata unchanged; present = the stored values become these
@@ -230,15 +231,15 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 
 | ID | Layer | File · test | Case: input → expected | Covers |
 | --- | --- | --- | --- | --- |
-| T-1 | Go | `core/database/sourcemetadata/sourcemetadata_test.go` `TestApply` "a refused value names its field" *(new case)* | Rows: blank second value on `doc` → params `[UUIDString(doc.ID)]`; `link` = "not a link" → `[UUIDString(link.ID)]`; `link` = "x" then `doc` = " " → `[UUIDString(link.ID)]`; `CreateAll` with `link` = "x" → `[UUIDString(link.ID)]`; repeated field, unknown field, missing owner → no params. Each writes no row | AC-3.2, AC-3.3, AC-3.5, D-3 |
+| T-1 | Go | `core/database/sourcemetadata/sourcemetadata_test.go` `TestApply` "a refused value names its field" *(new case)* | From `applyWorld`, through `runApply` unless named: values `f1` = "a", `doc` = "   " → params `[database.UUIDString(doc.ID)]`; `link` = "not a link" → `[UUIDString(link.ID)]`; `link` = "x" then `doc` = " " → `[UUIDString(link.ID)]`; `runCreateAll` with `link` = "x" → `[UUIDString(link.ID)]`; each of the existing "refused drafts write nothing" cases → no params (extend that case's loop to assert `len(ae.Params()) == 0`). Params read with `errors.As(err, &ae)` on `*apperr.Error`. Each writes no row: `countRows` over `source_metadata` and `source_metadata_layout` is 0 | AC-3.2, AC-3.3, AC-3.5, D-3 |
 | T-2 | Go | `api/ffi/handlers/artifacts_test.go` `TestUpdateArtifactMetadata` *(new)* "saves the edit and the draft in one revision" | AC-1.1's Artifact and draft → revision +1; `latestRevisionTypes` = `artifact update`, then the value delete, update, create, then the layout creates; reply `metadata` equals `GetMetadataBoard` | AC-1.1, AC-2.1 |
 | T-3 | Go | `TestUpdateArtifactMetadata` "absent leaves metadata, empty clears" | No `metadata` → `provider` held, no `artifact_metadata` change; `&engine.MetadataDraft{}` → nothing held | AC-1.2, AC-1.3, AC-2.3 |
-| T-4 | Go | `TestUpdateArtifactMetadata` "nothing changed writes no revision" | Same label, description, no links, a draft equal to the stored rows → `effects.revision` 0; reply `metadata` is the board | AC-1.5 |
+| T-4 | Go | `TestUpdateArtifactMetadata` "nothing changed writes no revision" | Same label, description, no links, the AC-1.5 draft built from `GetMetadataBoard` (values and layout) → `effects.revision` 0; reply `metadata` equals the board | AC-1.5 |
 | T-5 | Go | `TestUpdateArtifactMetadata` "a refused value names its field and writes nothing" | Label change plus draft `url` = "not a link" → `apperr` code `sourcemetadata.invalid`, params `[url field id]`; label and values as before | AC-3.1 |
 | T-6 | Go | `TestUpdateArtifactMetadata` "a refused unlink drops the draft" | Links leaving a graph whose Citations use A, plus a valid draft → `evidencegraphs.ErrArtifactInUse`; no metadata change | AC-1.4 |
 | T-7 | Go | `TestCreateArtifactMetadata` *(extended)* | The create with `provider` → reply `metadata` equals `GetMetadataBoard` for the new Artifact; the plain create's reply `metadata` equals its board; a draft `url` = "not a link" → params `[url field id]`, no Artifact created | AC-2.2, AC-2.3, AC-3.4 |
 
-**Fixtures.** T-2 – T-6 start from `newMetadataOwners` (`metadata_test.go`): its `artifact` owner is `f.page1`, and its `suggested` field ("Provider") is suggested at the `artifact` level, so it stands for `provider`. `accessed` and `notes` are `newUserField` text fields. The url field is created inline with `CreateMetadataField` and `DataType: "url"` (`newUserField` makes only text fields; do not change it). T-6 copies `TestUpdateArtifactGraphLinks` "a refused unlink rolls back the label": a new page in the default graph, a Citation on it through `CreateCitationWithObservations` with `graphLinking` and `validLocatorJSON`, then `UpdateArtifact` with `&engine.GraphLinks{}` and a draft. T-7 keeps `TestCreateArtifactMetadata`'s setup and assigns its `provider` field at the `artifact` level with `AssignTypeField`, as `newMetadataOwners` does, for AC-2.2's suggested entry. Compare a reply's `metadata` with `GetMetadataBoard` by `proto.Equal` on each entry. Read params with `errors.As(err, &ae)` on `*apperr.Error` and `ae.Params()`, as `conclusion_detail_test.go` reads `ae.Code()`.
+**Fixtures.** T-2 – T-6 start from `newMetadataOwners` (`metadata_test.go`): its `artifact` owner is `f.page1`, and its `suggested` field ("Provider") is suggested at the `artifact` level, so it stands for `provider`. `accessed` is a `newUserField` text field the test creates. The url field is created inline with `CreateMetadataField` and `DataType: "url"` (`newUserField` makes only text fields; do not change it). T-6 copies `TestUpdateArtifactGraphLinks` "a refused unlink rolls back the label": a new page A in the default graph G (`f.createArtifactResp` with `GraphIds: []string{f.defaultGraphID}`), a Citation on it through `CreateCitationWithObservations` with `graphLinking` and `validLocatorJSON`, then `UpdateArtifact` with `&engine.GraphLinks{}` and a draft. T-7 keeps `TestCreateArtifactMetadata`'s setup and assigns its `provider` field at the `artifact` level with `AssignTypeField`, as `newMetadataOwners` does, for AC-2.2's suggested entry. Compare a reply's `metadata` with `GetMetadataBoard` by `proto.Equal` on each entry. Read params with `errors.As(err, &ae)` on `*apperr.Error` and `ae.Params()`, as `conclusion_detail_test.go` reads `ae.Code()`.
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestApply`, `TestCreateArtifactMetadata`, `TestUpdateArtifactGraphLinks`.
 
@@ -256,7 +257,7 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `T
 - [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together)
 - [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
 - [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ — not gated
+- [ ] Brief moved to design/archive/ — n/a, no brief (S15-D14 moves with S15-34)
 - [ ] Domain doc — none states this rule
 - [ ] PR description: what shipped, AC evidence, deviations, manual check
 ```
