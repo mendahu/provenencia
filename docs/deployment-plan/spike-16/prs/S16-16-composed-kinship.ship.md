@@ -1,7 +1,7 @@
 # Ship log — S16-16 Kinship answers are composed from the pivots, and the Family read is one pass
 
 **Plan:** [`S16-16-composed-kinship.md`](S16-16-composed-kinship.md) · **Branch:** `s16-16-composed-kinship` · **PR:** #814
-**State:** fixed 1, awaiting review
+**State:** ready
 
 ## Round 0 — implement
 Base `main` @ `aa150de0f`. Dispatched `pr-implementer`, round 0.
@@ -104,3 +104,14 @@ Dispatched `pr-implementer`, fix round 1. All five items applied as new commits.
 - Nits: MNT-6 done (comment). CON-6 not done: the dropped ⊆ expected check is a loop, not one line; left logged.
 
 Gate: check-pr PASS.
+Head `92544a8b0`. Orchestrator gate: check-pr PASS. MNT-1 (F-4) and MNT-2 (F-5): **Resolved** (read by the orchestrator: `UniqueBlobIDs` keeps the 16-byte first-seen filter; `g.Nodes` and `loadSteps` dedupe; `aroundKin` from the map leaves a non-node id with no entry, which `FamilyUnits` reads as nil, as before).
+
+## Round 2 — review
+Reviewers: CON only (the one lens with a Fix-now major). Scope `4a5e60b38...92544a8b0`.
+CON-1 Resolved (AC-3.3 `rg` prints nothing). CON-2 Resolved (`## Landed` lists every difference). CON-3, CON-4 checked and resolved. No new findings, no new nits. Verdict: Clean.
+
+## Finish
+Merged `origin/main` @ `898d040f9` (S16-18 plan docs only). check-pr PASS against `898d040f9`.
+
+## Result
+Gate PASS · CI pending · open: none · follow-ups: none · to user: warm-proposal slowdown accepted by the user (2026-11-13), memoising `For` parked in `docs/ideas/promote-ranking.md`.
