@@ -37,3 +37,17 @@ Maintainability: **Fits with changes** — every round-1 answer holds.
 | ID | Sev | Finding | Answer |
 | --- | --- | --- | --- |
 | M-10 | blocker | D-2 called `subjects` once per kind, so Build would profile persons before events and give every person an empty life; Check reuses Build, so Verify would not catch it | Fixed — D-2: one `subjects` call over all three kinds, never per kind; T-2 asserts the person's lifespan lead is non-empty after `Warm` |
+
+Executability: **Not ready** (one new blocker); every round-1 answer it checked holds.
+
+| ID | Sev | Finding | Answer |
+| --- | --- | --- | --- |
+| X-10 | blocker | With a Build, `MatchIndex.Get` rebuilds on a miss, so every "emptied" assertion (`stored`, `warm_test.go`) loses its meaning; `TestNameFormatDropsItsReaders` was not in the plan | Fixed — D-15: `graphcache.Whole.Peek` (never builds), used by every held probe in `memo_test.go` and `warm_test.go`; Current state lists the `warm_test.go` tests; STEP-3 adds it with a `cache_test.go` case |
+| X-11 | major | STEP-3 applies D-14 while Apply still drops | Fixed — STEP-3 excludes the two handle-commit flips, which STEP-4 makes |
+| X-12 | major | Probe Values for `IndexedForTest` unspecified | Fixed — `HandleForTest` hook; T-3 and AC-1.1 probe with the held profile before and after |
+| X-13 | major | T-3 / T-6 per-row choices | Fixed — each row names its helper, event type, year, role, term key and committed ids |
+| X-14 | minor | STEP-3 is large | Fixed — STEP-3 states an order within the step with a build check after each part; not split, since the parts compile only together (the old profiler's callers go with it) |
+| X-15 | minor | Map Ships sentence quoted badly; row status value unstated | Fixed — STEP-7 quotes the whole sentence and the status |
+| X-16 | nit | `registry_test.go` line 46; `CandidatesHeldForTest` not listed | Fixed |
+
+Round 2 is the last round. No blocker is open.
