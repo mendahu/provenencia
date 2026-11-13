@@ -107,3 +107,24 @@ Merged `origin/main` (`71773c1be`, docs only). Gate PASS against `71773c1be`.
 
 ## Result
 Gate PASS · CI pending · open: none · follow-ups: PRF-2 (already homed in `docs/ideas/structural-debt.md`) · to user: PRF-1 (answered: 200 ms), CON-2 (answered: keep)
+
+## CI — round 1 (red)
+Run 43364250762 (head `add73b9c4`): Go tests failed on three timing budgets only; macOS tests and localizable green.
+
+| Test | Budget | CI | Local head | Local base |
+| --- | --- | --- | --- | --- |
+| `TestRecordLinksBudgets/80_graphs` | 200 ms | 414 ms | 93–109 ms | 113 ms |
+| `TestLargeSourceBudgets/warm` | 375 ms | 383 ms | 120–134 ms | 120–126 ms |
+| `TestLargeSourceBudgets/compose_every_summary` | 600 ms | 679 ms | — | — |
+
+User (2026-11-13): "we can increase the budget on all three of those." New budgets = CI measurement × 1.25, rounded up to the next 100 ms.
+
+### CI fix plan
+**F-7 — Raise three budgets to the CI runner** (CI run 43364250762; user 2026-11-13)
+Files: `core/database/persondetail/recordlinks_perf_test.go`, `core/database/promotealign/perf_test.go`; plan D-15 and Landed note; review log amendment.
+Do: `budgetLinks80 = 600 ms` (CI 414 ms × 1.25 = 518, rounded up; the planning base on a Mac was 113 ms). `budgetWarm = 500 ms` (CI 383 ms × 1.25 = 479). `budgetComposeAll = 900 ms` (CI 679 ms × 1.25 = 849; still fails a per-row place graph at about four times the cost). Extend each budget's existing comment with the S16-13 CI figure and "raised by the user on 2026-11-13", in the style of the comment above `budgetWarm`. Update D-15's figure and the Landed note's `budgetLinks80` line; add a review-log amendment quoting the user.
+Check: the three tests pass alone; scripts/check-pr.sh PASS; push.
+F-7 addition (user, 2026-11-13): each budget comment records its raise history and says that creeping toward the budget again is a slowdown to investigate, not a reason to raise it.
+
+## CI fix — done
+Head `7d9d36d1d`. Gate PASS (orchestrator). F-7 done: `budgetLinks80` 600 ms, `budgetWarm` 500 ms, `budgetComposeAll` 900 ms; each comment records its history and that creep toward it is a slowdown to investigate. Deviation: commit `c6e334ec6`'s review-log amendment misquoted the user (the F-7 title); reworded in `7d9d36d1d`.
