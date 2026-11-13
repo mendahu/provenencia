@@ -50,18 +50,22 @@ struct SourcePageArtifactRow: View {
     private var id: String { art.id }
 
     var body: some View {
-        HStack(alignment: .top, spacing: PVSpacing.space7) {
+        let canSetCover = model.artifacts.canUseAsThumbnail(art)
+        return HStack(alignment: .top, spacing: PVSpacing.space7) {
             thumbnail
             textColumn
                 .frame(maxWidth: .infinity, alignment: .leading)
-            ArtifactCopyDetailsView(
-                rows: model.artifacts.copyDetails(for: art.id),
-                ref: art.ref,
-                artifactID: art.id,
-                onMore: { model.artifacts.openSheet(artifactID: art.id, at: .copyDetails) }
-            )
+            // The wrapper keeps the column when the details draw nothing; a bare empty view has nothing to size.
+            VStack(alignment: .leading, spacing: 0) {
+                ArtifactCopyDetailsView(
+                    rows: model.artifacts.copyDetails(for: art.id),
+                    ref: art.ref,
+                    artifactID: art.id,
+                    onMore: { model.artifacts.openSheet(artifactID: art.id, at: .copyDetails) }
+                )
+            }
             .frame(minWidth: 0, maxWidth: Self.copyDetailsWidth(widthClass), alignment: .topLeading)
-            actions
+            actions(canSetCover: canSetCover)
         }
         .padding(.vertical, PVSpacing.space6)
         .overlay(alignment: .bottom) { PVDivider() }
@@ -69,7 +73,7 @@ struct SourcePageArtifactRow: View {
         .pvRightClickMenu(
             verbatimTitle: art.ref,
             accessibilityIdentifier: "sources.page.artifact.\(id).menu",
-            items: ArtifactRowAction.menuActions(canSetCover: model.artifacts.canUseAsThumbnail(art)).map { action in
+            items: ArtifactRowAction.menuActions(canSetCover: canSetCover).map { action in
                 PVActionMenuItem(
                     title: action.title,
                     accessibilityIdentifier: "sources.page.artifact.\(id).menu.\(action.idSuffix)",
@@ -174,6 +178,7 @@ struct SourcePageArtifactRow: View {
                         .layoutPriority(1)
                 }
             }
+            .help(all.joined(separator: " · "))
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(L10n.Sources.artifactGraphsSpoken(names: L10n.DesignSystem.spokenJoin(all) ?? ""))
             .accessibilityIdentifier("sources.page.artifact.\(id).graphs")
@@ -196,11 +201,10 @@ struct SourcePageArtifactRow: View {
 
     // MARK: Actions
 
-    private var actions: some View {
-        let canSetCover = model.artifacts.canUseAsThumbnail(art)
-        return HStack(spacing: PVSpacing.space2) {
+    private func actions(canSetCover: Bool) -> some View {
+        HStack(spacing: PVSpacing.space2) {
             PVButton(L10n.Sources.useAsThumbnail, variant: .ghost, size: .sm, icon: .imageUp) {
-                Task { await model.artifacts.useAsThumbnail(art) }
+                perform(.setCover)
             }
             .opacity(canSetCover ? 1 : 0)
             .disabled(!canSetCover)
@@ -211,7 +215,7 @@ struct SourcePageArtifactRow: View {
                 label: L10n.Sources.editArtifactLabel(ref: art.ref),
                 size: .sm
             ) {
-                model.artifacts.openSheet(artifactID: art.id)
+                perform(.edit)
             }
             .accessibilityIdentifier("sources.page.artifact.\(id).edit")
             PVIconButton(
@@ -220,7 +224,7 @@ struct SourcePageArtifactRow: View {
                 size: .sm,
                 tone: .danger
             ) {
-                Task { await model.askDeleteArtifact(id: art.id) }
+                perform(.delete)
             }
             .accessibilityIdentifier("sources.page.artifact.\(id).delete")
         }
