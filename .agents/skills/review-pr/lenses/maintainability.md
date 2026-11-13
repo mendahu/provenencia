@@ -298,7 +298,7 @@ the rule; do not restate it.
 - A migration test, a schema-hash constant — [`add-catalog-migration`](../../add-catalog-migration/SKILL.md).
 - A private `sqlInUse` instead of `deleteimpact` — [`add-catalog-delete`](../../add-catalog-delete/SKILL.md).
 - A new kit primitive for one call site — [`add-ui-component`](../../add-ui-component/SKILL.md).
-- A cache that empties itself on any write, or a drop rule written in `OnCommit` instead of an entry's Apply and DerivedFrom — [`docs/catalog-caches.md`](../../../../docs/catalog-caches.md), rule "Every cache names the signal that updates it".
+- A cache that empties itself on any write, or a drop rule written in `OnCommit` instead of an entry's `Inputs`, Apply and DerivedFrom — [`docs/catalog-caches.md`](../../../../docs/catalog-caches.md), rule "Every cache names the signal that updates it".
 - A feature model copying `handle.value` into its own array — Q9.
 - Domain logic in an `api/ffi/handlers` function — Q3.
 - New files in legacy `DesignSystem/Components/Core|Forms|Research/` or loose at a layer root — Q4.
