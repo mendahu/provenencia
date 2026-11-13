@@ -8,8 +8,17 @@ enum PVSheetDismiss: Equatable {
     case confirmDiscard
     case close
 
-    static func action(isRunning: Bool, isDirty: Bool, isConfirmingDiscard: Bool) -> PVSheetDismiss {
+    /// `innerEditOpen` is true while content reports an open inner edit (a row in
+    /// edit, an add row): a click outside then does nothing, since the edit owns
+    /// its own dismissal.
+    static func action(
+        isRunning: Bool,
+        isDirty: Bool,
+        isConfirmingDiscard: Bool,
+        innerEditOpen: Bool = false
+    ) -> PVSheetDismiss {
         if isRunning { return .ignore }
+        if innerEditOpen && !isConfirmingDiscard { return .ignore }
         if isConfirmingDiscard { return .keepEditing }
         if isDirty { return .confirmDiscard }
         return .close

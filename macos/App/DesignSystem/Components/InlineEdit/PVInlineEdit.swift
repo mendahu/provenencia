@@ -78,6 +78,8 @@ struct PVInlineEdit<Display: View, Editor: View, RestingTrailing: View, EditingT
                 restingBody
             }
         }
+        // An open edit keeps Escape (its Cancel) from the enclosing sheet.
+        .pvSheetInnerEdit(isEditing)
     }
 
     @ViewBuilder
