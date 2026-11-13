@@ -634,14 +634,14 @@ func BenchmarkCacheSizes(b *testing.B) {
 					must(b, conclusionsummaries.AttachPlaceRelationships(c, &places[i]))
 				}
 			})
+			start = time.Now()
 			measure("displays", func() {
-				w := conclusionsummaries.Want{
-					Persons: conclusionsummariestest.HandleIDs(b, db, vocabkey.Person),
-					Events:  conclusionsummariestest.HandleIDs(b, db, vocabkey.Event),
-				}
-				_, err := conclusionsummaries.RowsForSearch(g, w)
+				_, err := conclusionsummaries.ListPersons(c)
+				must(b, err)
+				_, err = conclusionsummaries.ListEvents(c)
 				must(b, err)
 			})
+			b.ReportMetric(float64(time.Since(start).Milliseconds()), "displays-ms")
 			var handles float64
 			must(b, db.QueryRow(`SELECT COUNT(*) FROM canonical_entities`).Scan(&handles))
 			b.ReportMetric(handles, "handles")
