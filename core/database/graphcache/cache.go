@@ -1,6 +1,7 @@
 package graphcache
 
 import (
+	"container/list"
 	"fmt"
 	"slices"
 
@@ -36,7 +37,8 @@ const vocabularySource = -1
 // vocabulary commit.
 func (Vocabulary) source() int { return vocabularySource }
 
-// KeyedEntry registers a cache with one value of type T per 16-byte node id.
+// KeyedEntry registers a cache with one value of type T per 16-byte id (a
+// handle's, or a graph's for entries whose Apply is DropNamedGraphs).
 type KeyedEntry[T any] struct {
 	Name string
 	// Apply runs after a commit's reload when the entry holds data. roots are
@@ -47,7 +49,8 @@ type KeyedEntry[T any] struct {
 	DerivedFrom []Source
 	// Check rebuilds one stored value and compares it. Nil: Verify skips.
 	Check func(g *Graph, id []byte, stored T) error
-	// Cap is the most keys held. Required, > 0.
+	// Cap is the most keys held; past it the least recently used leaves.
+	// Required, > 0.
 	Cap int
 }
 
@@ -136,12 +139,17 @@ func RegisterKeyed[T any](e KeyedEntry[T]) Keyed[T] {
 	info.apply = func(g *Graph, roots [][]byte, set effects.Set) error {
 		return e.Apply(g, k, roots, set)
 	}
-	info.held = func(g *Graph) bool { return len(k.data(g)) > 0 }
-	info.count = func(g *Graph) int { return len(k.data(g)) }
+	info.held = func(g *Graph) bool { return k.data(g).len() > 0 }
+	info.count = func(g *Graph) int { return k.data(g).len() }
 	if e.Check != nil {
+		// A Check reads the stored values without counting a use.
 		info.check = func(g *Graph) error {
-			for key, v := range k.data(g) {
-				if err := e.Check(g, []byte(key), v); err != nil {
+			kv := k.data(g)
+			if kv == nil {
+				return nil
+			}
+			for key, el := range kv.items {
+				if err := e.Check(g, []byte(key), el.Value.(*keyedItem[T]).v); err != nil {
 					return err
 				}
 			}
@@ -200,39 +208,119 @@ func (g *Graph) KeyCounts() map[string]int {
 
 // --- keyed handle ---
 
-func (k Keyed[T]) data(g *Graph) map[string]T {
-	m, _ := g.entries[k.id].(map[string]T)
-	return m
+// keyedValues is a keyed entry's data on one graph: each key's value, and the
+// keys in use order, the most recently used first.
+type keyedValues[T any] struct {
+	items map[string]*list.Element
+	order *list.List
 }
 
-// store keeps v under id when the key is held or the entry has room.
+// keyedItem is one stored key and its value.
+type keyedItem[T any] struct {
+	key string
+	v   T
+}
+
+func (kv *keyedValues[T]) len() int {
+	if kv == nil {
+		return 0
+	}
+	return len(kv.items)
+}
+
+func (k Keyed[T]) data(g *Graph) *keyedValues[T] {
+	kv, _ := g.entries[k.id].(*keyedValues[T])
+	return kv
+}
+
+// capOf is the most keys the entry holds on g: its Cap, or the test override.
+func (k Keyed[T]) capOf(g *Graph) int {
+	if n, ok := g.capsForTest[k.id]; ok {
+		return n
+	}
+	return registry[k.id-1].cap
+}
+
+// SetCapForTest overrides the entry's Cap for g, evicting at once down to it.
+// The override survives Drop and Clear and applies to data created later; n <= 0
+// restores the Cap. Tests only.
+func (k Keyed[T]) SetCapForTest(g *Graph, n int) {
+	if g == nil {
+		return
+	}
+	if n <= 0 {
+		delete(g.capsForTest, k.id)
+		return
+	}
+	if g.capsForTest == nil {
+		g.capsForTest = map[int]int{}
+	}
+	g.capsForTest[k.id] = n
+	if kv := k.data(g); kv != nil {
+		for len(kv.items) > n {
+			kv.evict()
+		}
+	}
+}
+
+// evict removes the least recently used key.
+func (kv *keyedValues[T]) evict() {
+	el := kv.order.Back()
+	delete(kv.items, el.Value.(*keyedItem[T]).key)
+	kv.order.Remove(el)
+}
+
+// hit returns the value held for id and counts a use. A key that is not 16
+// bytes is never held.
+func (k Keyed[T]) hit(g *Graph, id []byte) (T, bool) {
+	var zero T
+	kv := k.data(g)
+	if kv == nil || len(id) != 16 {
+		return zero, false
+	}
+	el, ok := kv.items[string(id)]
+	if !ok {
+		return zero, false
+	}
+	kv.order.MoveToFront(el)
+	return el.Value.(*keyedItem[T]).v, true
+}
+
+// store keeps v under id as the most recently used key, evicting the least
+// recently used one when a new key arrives at the Cap.
 func (k Keyed[T]) store(g *Graph, id []byte, v T) {
 	if g == nil || len(id) != 16 {
 		return
 	}
-	m := k.data(g)
-	if _, held := m[string(id)]; !held && len(m) >= registry[k.id-1].cap {
-		return
-	}
-	if m == nil {
-		m = map[string]T{}
+	kv := k.data(g)
+	if kv == nil {
+		kv = &keyedValues[T]{items: map[string]*list.Element{}, order: list.New()}
 		if g.entries == nil {
 			g.entries = map[int]any{}
 		}
-		g.entries[k.id] = m
+		g.entries[k.id] = kv
 	}
-	m[string(id)] = v
+	if el, ok := kv.items[string(id)]; ok {
+		el.Value.(*keyedItem[T]).v = v
+		kv.order.MoveToFront(el)
+		return
+	}
+	for len(kv.items) >= k.capOf(g) {
+		kv.evict()
+	}
+	kv.items[string(id)] = kv.order.PushFront(&keyedItem[T]{key: string(id), v: v})
 }
 
-// Get returns the value held for id, else calls fill, stores its result under
-// the entry's Cap and returns it. A fill error is returned and nothing is
-// stored. A nil graph returns the zero value.
+// Get returns the value held for id, else calls fill, stores its result and
+// returns it. A hit and a store count as a use of the key; a new key at the
+// Cap evicts the least recently used one. A fill error is returned and nothing
+// is stored. A nil graph returns the zero value.
 func (k Keyed[T]) Get(g *Graph, id []byte, fill func() (T, error)) (T, error) {
 	var zero T
 	if g == nil {
 		return zero, nil
 	}
-	if v, ok := k.data(g)[string(id)]; ok && len(id) == 16 {
+	if v, ok := k.hit(g, id); ok {
 		return v, nil
 	}
 	v, err := fill()
@@ -244,18 +332,20 @@ func (k Keyed[T]) Get(g *Graph, id []byte, fill func() (T, error)) (T, error) {
 }
 
 // GetMany returns the values for ids, calling fill once with every id not held
-// and storing what it returns under the Cap. The map holds each id that has a
-// value. A fill error is returned and nothing is stored.
+// and storing what it returns for those ids. Held ids count as a use first, in
+// ids order, then the fill's values are stored in the order of the missing ids;
+// a key the fill returns that was not asked for is neither stored nor
+// returned. The map holds each id that has a value, even one a later store
+// evicted. A fill error is returned and nothing is stored.
 func (k Keyed[T]) GetMany(g *Graph, ids [][]byte, fill func(missing [][]byte) (map[string]T, error)) (map[string]T, error) {
 	out := map[string]T{}
 	if g == nil {
 		return out, nil
 	}
-	held := k.data(g)
 	var missing [][]byte
 	asked := map[string]bool{}
 	for _, id := range ids {
-		if v, ok := held[string(id)]; ok && len(id) == 16 {
+		if v, ok := k.hit(g, id); ok {
 			out[string(id)] = v
 			continue
 		}
@@ -271,24 +361,28 @@ func (k Keyed[T]) GetMany(g *Graph, ids [][]byte, fill func(missing [][]byte) (m
 	if err != nil {
 		return nil, err
 	}
-	for key, v := range filled {
-		k.store(g, []byte(key), v)
-		out[key] = v
+	for _, id := range missing {
+		v, ok := filled[string(id)]
+		if !ok {
+			continue
+		}
+		k.store(g, id, v)
+		out[string(id)] = v
 	}
 	return out, nil
 }
 
-// Peek returns the value held for id and never fills.
+// Peek returns the value held for id and never fills. It counts as a use.
 func (k Keyed[T]) Peek(g *Graph, id []byte) (T, bool) {
-	var zero T
-	if g == nil || len(id) != 16 {
+	if g == nil {
+		var zero T
 		return zero, false
 	}
-	v, ok := k.data(g)[string(id)]
-	return v, ok
+	return k.hit(g, id)
 }
 
-// Set stores v for id under the Cap. An id that is not 16 bytes stores nothing.
+// Set stores v for id as the most recently used key. An id that is not 16
+// bytes stores nothing.
 func (k Keyed[T]) Set(g *Graph, id []byte, v T) { k.store(g, id, v) }
 
 // Drop forgets the values held for ids.
@@ -296,9 +390,15 @@ func (k Keyed[T]) Drop(g *Graph, ids [][]byte) {
 	if g == nil {
 		return
 	}
-	m := k.data(g)
+	kv := k.data(g)
+	if kv == nil {
+		return
+	}
 	for _, id := range ids {
-		delete(m, string(id))
+		if el, ok := kv.items[string(id)]; ok {
+			kv.order.Remove(el)
+			delete(kv.items, string(id))
+		}
 	}
 }
 
@@ -308,6 +408,13 @@ func (k Keyed[T]) Clear(g *Graph) {
 		return
 	}
 	delete(g.entries, k.id)
+}
+
+// DropNamedGraphs is the Apply of an entry keyed by Evidence graph: a commit
+// drops the graphs its effects name (Set.EvidenceGraphs) and nothing else.
+func DropNamedGraphs[T any](g *Graph, k Keyed[T], _ [][]byte, set effects.Set) error {
+	k.Drop(g, set.EvidenceGraphs)
+	return nil
 }
 
 // --- whole handle ---

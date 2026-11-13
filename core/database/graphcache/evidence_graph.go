@@ -42,6 +42,16 @@ type EvidenceSubject struct {
 	TypeOrigin    string
 }
 
+// SubjectLabels maps each Subject's id (as a string) to its label: the one
+// label rule, for an Observation whose value is another Subject.
+func SubjectLabels(subjects []EvidenceSubject) map[string]string {
+	labels := make(map[string]string, len(subjects))
+	for _, s := range subjects {
+		labels[string(s.ID)] = s.Label
+	}
+	return labels
+}
+
 // EvidenceObservation is one observation on an Evidence graph. Property and term labels are applied
 // when the row is shown. Date and Name are the stored value blobs.
 type EvidenceObservation struct {

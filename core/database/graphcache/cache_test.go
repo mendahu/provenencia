@@ -108,42 +108,135 @@ func TestEntryDerivedFrom(t *testing.T) {
 	})
 }
 
-func TestEntryCap(t *testing.T) {
+// TestKeyedEvictsLeastRecentlyUsed: a keyed entry at its Cap drops the key used
+// least recently; a Get hit, a Peek, a Set and a store are uses; a Check and
+// KeyCounts are not.
+func TestKeyedEvictsLeastRecentlyUsed(t *testing.T) {
 	defer graphcache.SnapshotRegistryForTest()()
-	k := graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{Name: "t.capped", Apply: noApply[string], Cap: 2})
-	g := graphcachetest.OpenCatalog(t).Graph()
-	k.Set(g, idA, "1")
-	k.Set(g, idB, "2")
-	k.Set(g, idC, "3")
-	if _, ok := k.Peek(g, idC); ok {
-		t.Error("a key past the cap was stored")
-	}
-	if v, err := k.Get(g, idC, func() (string, error) { return "filled", nil }); err != nil || v != "filled" {
-		t.Errorf("Get past the cap = %q, %v, want the filled value", v, err)
-	}
-	if _, ok := k.Peek(g, idC); ok {
-		t.Error("Get stored a key past the cap")
-	}
-	k.Set(g, idA, "again")
-	if v, _ := k.Peek(g, idA); v != "again" {
-		t.Errorf("a held key = %q, want it replaced", v)
-	}
-	if n := g.KeyCounts()["t.capped"]; n != 2 {
-		t.Errorf("KeyCounts = %d, want 2", n)
-	}
-	got, err := k.GetMany(g, [][]byte{idA, idB, idC}, func(missing [][]byte) (map[string]string, error) {
-		if len(missing) != 1 || !bytes.Equal(missing[0], idC) {
-			t.Errorf("GetMany asked for %x, want only the id not held", missing)
-		}
-		return map[string]string{string(idC): "m"}, nil
+	checked := 0
+	k := graphcache.RegisterKeyed(graphcache.KeyedEntry[string]{
+		Name: "t.lru", Apply: noApply[string], Cap: 2,
+		Check: func(*graphcache.Graph, []byte, string) error { checked++; return nil },
 	})
-	if err != nil || len(got) != 3 || got[string(idC)] != "m" {
-		t.Errorf("GetMany = %v, %v", got, err)
+	g := graphcachetest.OpenCatalog(t).Graph()
+	fill := func(v string) func() (string, error) { return func() (string, error) { return v, nil } }
+	held := func(ids ...[]byte) string {
+		t.Helper()
+		var out []byte
+		for _, id := range ids {
+			if _, ok := k.Peek(g, id); ok {
+				out = append(out, 'A'+id[0]-1)
+			} else {
+				out = append(out, '-')
+			}
+		}
+		return string(out)
 	}
-	boom := errors.New("boom")
-	if _, err := k.GetMany(g, [][]byte{idC}, func([][]byte) (map[string]string, error) { return nil, boom }); !errors.Is(err, boom) {
-		t.Errorf("GetMany error = %v, want boom", err)
+	cases := []struct {
+		name string
+		run  func()
+		want string // idA, idB, idC held
+	}{
+		{"a Get hit is a use", func() {
+			k.Set(g, idA, "1")
+			k.Set(g, idB, "2")
+			if v, err := k.Get(g, idA, fill("x")); err != nil || v != "1" {
+				t.Fatalf("Get hit = %q, %v", v, err)
+			}
+			k.Set(g, idC, "3")
+		}, "A-C"},
+		{"a Peek is a use", func() {
+			k.Set(g, idA, "1")
+			k.Set(g, idB, "2")
+			k.Peek(g, idA)
+			k.Set(g, idC, "3")
+		}, "A-C"},
+		{"a Set of a held key is a use", func() {
+			k.Set(g, idA, "1")
+			k.Set(g, idB, "2")
+			k.Set(g, idA, "again")
+			k.Set(g, idC, "3")
+			if v, _ := k.Peek(g, idA); v != "again" {
+				t.Errorf("a held key = %q, want it replaced", v)
+			}
+		}, "A-C"},
+		{"a Get fill stores and evicts", func() {
+			k.Set(g, idA, "1")
+			k.Set(g, idB, "2")
+			if v, err := k.Get(g, idC, fill("filled")); err != nil || v != "filled" {
+				t.Fatalf("Get fill = %q, %v", v, err)
+			}
+		}, "-BC"},
+		{"GetMany touches held ids, then stores in the order asked", func() {
+			k.Set(g, idA, "1")
+			got, err := k.GetMany(g, [][]byte{idA, idB, idC}, func(missing [][]byte) (map[string]string, error) {
+				if len(missing) != 2 || !bytes.Equal(missing[0], idB) || !bytes.Equal(missing[1], idC) {
+					t.Errorf("GetMany asked for %x, want B then C", missing)
+				}
+				return map[string]string{string(idB): "b", string(idC): "c", string(idA[:1]): "stray"}, nil
+			})
+			if err != nil || len(got) != 3 || got[string(idA)] != "1" || got[string(idB)] != "b" || got[string(idC)] != "c" {
+				t.Errorf("GetMany = %v, %v", got, err)
+			}
+		}, "-BC"},
+		{"a Check and KeyCounts are no use", func() {
+			k.Set(g, idA, "1")
+			k.Set(g, idB, "2")
+			if err := g.Verify(); err != nil {
+				t.Fatal(err)
+			}
+			if checked == 0 {
+				t.Error("Verify ran no Check")
+			}
+			if n := g.KeyCounts()["t.lru"]; n != 2 {
+				t.Errorf("KeyCounts = %d, want 2", n)
+			}
+			k.Set(g, idC, "3")
+		}, "-BC"},
+		{"a fill error stores nothing", func() {
+			k.Set(g, idA, "1")
+			boom := errors.New("boom")
+			if _, err := k.GetMany(g, [][]byte{idB}, func([][]byte) (map[string]string, error) { return nil, boom }); !errors.Is(err, boom) {
+				t.Errorf("GetMany error = %v, want boom", err)
+			}
+			if _, err := k.Get(g, idB, func() (string, error) { return "", boom }); !errors.Is(err, boom) {
+				t.Errorf("Get error = %v, want boom", err)
+			}
+		}, "A--"},
 	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			k.Clear(g)
+			tc.run()
+			if got := held(idA, idB, idC); got != tc.want {
+				t.Errorf("held = %q, want %q", got, tc.want)
+			}
+			if n := g.KeyCounts()["t.lru"]; n > 2 {
+				t.Errorf("KeyCounts = %d, want at most the Cap", n)
+			}
+		})
+	}
+
+	t.Run("SetCapForTest evicts at once and survives Drop", func(t *testing.T) {
+		k.Clear(g)
+		k.Set(g, idA, "1")
+		k.Set(g, idB, "2")
+		k.SetCapForTest(g, 1)
+		if got := held(idA, idB); got != "-B" {
+			t.Errorf("after SetCapForTest(1) held = %q, want -B", got)
+		}
+		g.Drop()
+		k.Set(g, idA, "1")
+		k.Set(g, idB, "2")
+		if n := g.KeyCounts()["t.lru"]; n != 1 {
+			t.Errorf("KeyCounts after Drop = %d, want the overridden Cap 1", n)
+		}
+		k.SetCapForTest(g, 0)
+		k.Set(g, idC, "3")
+		if n := g.KeyCounts()["t.lru"]; n != 2 {
+			t.Errorf("KeyCounts after restoring the Cap = %d, want 2", n)
+		}
+	})
 }
 
 func TestEntryBuild(t *testing.T) {

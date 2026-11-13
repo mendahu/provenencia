@@ -26,7 +26,9 @@ type Graph struct {
 	kindSet map[string]map[string]bool
 
 	// entries holds each registered cache's data by entry id (cache.go).
-	entries map[int]any
+	// capsForTest overrides a keyed entry's Cap by entry id; Drop leaves it.
+	entries     map[int]any
+	capsForTest map[int]int
 
 	vocab   Vocabulary
 	vocabOK bool
