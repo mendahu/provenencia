@@ -2,8 +2,10 @@ package sourcemetadata
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"math/rand"
+	"os"
 	"reflect"
 	"slices"
 	"sort"
@@ -1997,5 +1999,200 @@ func TestReadDraftsTx(t *testing.T) {
 	}
 	if _, err := ReadDraftsTx(tx, []Owner{a1, {Level: vocabkey.LevelCitation, ID: a1.ID}}); !errors.Is(err, ErrInvalid) {
 		t.Errorf("citation owner = %v, want ErrInvalid", err)
+	}
+}
+
+// draftBoardFile is testdata/draft_board_scenarios.json, shared with the Swift
+// MetadataDraftHostParityTests: the rules the client's draft board mirrors.
+type draftBoardFile struct {
+	Suggestions []string        `json:"suggestions"`
+	Extras      []string        `json:"extras"`
+	Scenarios   []draftScenario `json:"scenarios"`
+}
+
+type draftScenario struct {
+	Name            string        `json:"name"`
+	KnownDivergence string        `json:"known_divergence"`
+	Seed            []draftAction `json:"seed"`
+	Start           draftBoard    `json:"start"`
+	Actions         []draftAction `json:"actions"`
+	Board           draftBoard    `json:"board"`
+	Draft           *struct {
+		Values []struct {
+			Field string `json:"field"`
+			Value string `json:"value"`
+		} `json:"values"`
+		Layout []struct {
+			Field     string `json:"field"`
+			SortOrder int    `json:"sortOrder"`
+			Dismissed bool   `json:"dismissed"`
+		} `json:"layout"`
+	} `json:"draft"`
+}
+
+type draftAction struct {
+	Op     string  `json:"op"`
+	Field  string  `json:"field"`
+	Value  string  `json:"value"`
+	Before *string `json:"before"`
+}
+
+// draftBoard is a board as it is drawn: the saved rows in order, then the empty suggestions.
+type draftBoard struct {
+	Saved []draftSaved `json:"saved"`
+	Empty []string     `json:"empty"`
+}
+
+type draftSaved struct {
+	Field     string `json:"field"`
+	Value     string `json:"value"`
+	Suggested bool   `json:"suggested"`
+}
+
+func TestDraftBoardScenarios(t *testing.T) {
+	raw, err := os.ReadFile("testdata/draft_board_scenarios.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file draftBoardFile
+	if err := json.Unmarshal(raw, &file); err != nil {
+		t.Fatal(err)
+	}
+	if len(file.Scenarios) == 0 {
+		t.Fatal("no scenarios")
+	}
+
+	// world is a Source of the seeded type whose fields are named by key.
+	type world struct {
+		c      *database.Catalog
+		userID []byte
+		src    sources.Source
+		byKey  map[string]metadatafields.Field
+	}
+	newWorld := func(t *testing.T) world {
+		t.Helper()
+		c, userID := testWorld(t)
+		w := world{c: c, userID: userID, src: birthOfAlice(t, c, userID), byKey: map[string]metadatafields.Field{}}
+		for _, key := range file.Suggestions {
+			f, err := metadatafields.Lookup(c, key, vocabkey.OriginProvenencia)
+			if err != nil {
+				t.Fatal(err)
+			}
+			w.byKey[key] = f
+		}
+		for _, key := range file.Extras {
+			f, err := runFieldCreate(c, key, metadatafields.DataTypeText, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if f.Key != key {
+				t.Fatalf("extra %q got key %q", key, f.Key)
+			}
+			w.byKey[key] = f
+		}
+		return w
+	}
+	boardOf := func(t *testing.T, w world) draftBoard {
+		t.Helper()
+		entries, err := ListWorkspace(w.c, sourceOwner(w.src.ID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		board := draftBoard{Saved: []draftSaved{}, Empty: []string{}}
+		for _, e := range entries {
+			switch {
+			case e.Value != nil:
+				board.Saved = append(board.Saved, draftSaved{Field: e.Field.Key, Value: e.Value.ValueText, Suggested: e.Suggested})
+			case e.Suggested:
+				board.Empty = append(board.Empty, e.Field.Key)
+			}
+		}
+		return board
+	}
+	run := func(t *testing.T, w world, actions []draftAction) {
+		t.Helper()
+		for _, a := range actions {
+			id := w.byKey[a.Field].ID
+			var err error
+			switch a.Op {
+			case "set":
+				_, err = runSet(w.c, w.userID, w.src.ID, Input{FieldID: id, ValueText: a.Value})
+			case "clear":
+				err = runClear(w.c, w.userID, w.src.ID, id)
+			case "dismiss":
+				err = runDismissSuggestion(w.c, w.userID, w.src.ID, id)
+			case "move":
+				// The client's drag: saved rows with the moved one before another, then the empty suggestions.
+				board := boardOf(t, w)
+				var order []string
+				for _, s := range board.Saved {
+					if s.Field != a.Field {
+						order = append(order, s.Field)
+					}
+				}
+				at := len(order)
+				if a.Before != nil {
+					at = slices.Index(order, *a.Before)
+				}
+				order = slices.Insert(order, at, a.Field)
+				order = append(order, board.Empty...)
+				ids := make([][]byte, len(order))
+				for i, key := range order {
+					ids[i] = w.byKey[key].ID
+				}
+				err = runReorder(w.c, w.userID, w.src.ID, ids)
+			default:
+				t.Fatalf("unknown op %q", a.Op)
+			}
+			if err != nil {
+				t.Fatalf("%s %s: %v", a.Op, a.Field, err)
+			}
+		}
+	}
+	// ordered is the board with its saved rows sorted, for a scenario whose order the draft host
+	// is known to differ on.
+	ordered := func(b draftBoard) draftBoard {
+		b.Saved = slices.Clone(b.Saved)
+		slices.SortFunc(b.Saved, func(x, y draftSaved) int { return bytes.Compare([]byte(x.Field), []byte(y.Field)) })
+		return b
+	}
+
+	for _, sc := range file.Scenarios {
+		t.Run(sc.Name, func(t *testing.T) {
+			w := newWorld(t)
+			run(t, w, sc.Seed)
+			if got := boardOf(t, w); !reflect.DeepEqual(got, sc.Start) {
+				t.Fatalf("start board\n got %+v\nwant %+v", got, sc.Start)
+			}
+			run(t, w, sc.Actions)
+			if got := boardOf(t, w); !reflect.DeepEqual(got, sc.Board) {
+				t.Fatalf("live board\n got %+v\nwant %+v", got, sc.Board)
+			}
+
+			// The draft the client sends from the same actions gives the same board.
+			w = newWorld(t)
+			run(t, w, sc.Seed)
+			want := sc.Start
+			if sc.Draft != nil {
+				var d Draft
+				for _, v := range sc.Draft.Values {
+					d.Values = append(d.Values, Input{FieldID: w.byKey[v.Field].ID, ValueText: v.Value})
+				}
+				for _, l := range sc.Draft.Layout {
+					d.Layout = append(d.Layout, LayoutRow{FieldID: w.byKey[l.Field].ID, SortOrder: l.SortOrder, Dismissed: l.Dismissed})
+				}
+				if _, err := runApply(w.c, w.userID, w.src.ID, d); err != nil {
+					t.Fatal(err)
+				}
+				want = sc.Board
+			}
+			got := boardOf(t, w)
+			if sc.KnownDivergence == "order" {
+				got, want = ordered(got), ordered(want)
+			}
+			if !reflect.DeepEqual(got, want) {
+				t.Fatalf("applied draft board\n got %+v\nwant %+v", got, want)
+			}
+		})
 	}
 }
