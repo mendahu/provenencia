@@ -203,7 +203,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 			}
 		}
 	}
-	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, vocab, []*graphcache.Node{n}, leadRows, false)
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, vocab, []*graphcache.Node{n}, leadRows, nil)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -220,8 +220,11 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 // id: the one composition every page's fields come from. A nil or merged
 // node, or a repeated id, is skipped. It also returns the outcomes of the
 // Observations of leadRows (a gallery's earliest records, the node's own
-// outcome rows), which belong to no field.
-func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*graphcache.Node, leadRows []graphcache.Outcome, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
+// outcome rows), which belong to no field. only nil composes each node's
+// page fields: every Property but depiction and subject-valued ones. Non-nil,
+// it names the Properties to compose (any value type but depiction) under
+// each node's id; a node it does not name has no field.
+func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*graphcache.Node, leadRows []graphcache.Outcome, only map[string]map[string]bool) (map[string][]Field, map[string]Outcome, error) {
 	var use []*graphcache.Node
 	seen := map[string]bool{}
 	for _, n := range nodes {
@@ -235,7 +238,7 @@ func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*
 	if len(use) == 0 {
 		return out, map[string]Outcome{}, nil
 	}
-	ordered, byProp, err := loadProperties(g, use, subjectValued)
+	ordered, byProp, err := loadProperties(g, use, only)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -336,8 +339,8 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 
 // loadProperties lists each node's fields in its kind's binding order, and
 // the same fields by entity id then property id. A node's fields are the
-// Properties its outcome rows name.
-func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued bool) (map[string][]*Field, map[string]map[string]*Field, error) {
+// Properties its outcome rows name, narrowed by only (see fieldsOf).
+func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, only map[string]map[string]bool) (map[string][]*Field, map[string]map[string]*Field, error) {
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, nil, err
@@ -348,6 +351,9 @@ func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued
 	for _, n := range nodes {
 		ids := make([]string, 0, len(n.Outcomes))
 		for id := range n.Outcomes {
+			if only != nil && !only[string(n.ID)][id] {
+				continue
+			}
 			ids = append(ids, id)
 		}
 		// Ties in the type order keep a fixed order: the Properties' id bytes.
@@ -355,7 +361,7 @@ func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued
 		var got []*Field
 		for _, id := range ids {
 			p, ok := props[id]
-			if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (p.ValueType == propertymeta.ValueTypeSubject && !subjectValued) {
+			if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (only == nil && p.ValueType == propertymeta.ValueTypeSubject) {
 				continue
 			}
 			got = append(got, &Field{
@@ -647,7 +653,16 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(g, db, v, nodes, nil, true)
+	only := map[string]map[string]bool{}
+	for _, l := range lists {
+		for _, o := range l.owners {
+			if only[string(o.Entity.ID)] == nil {
+				only[string(o.Entity.ID)] = map[string]bool{}
+			}
+			only[string(o.Entity.ID)][string(o.PropertyID)] = true
+		}
+	}
+	fields, _, err := fieldsOf(g, db, v, nodes, nil, only)
 	if err != nil {
 		return nil, err
 	}

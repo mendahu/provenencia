@@ -128,10 +128,12 @@ func TestLinkRecordReadsKeepQueriesConstant(t *testing.T) {
 			f.cite(other, observations.Input{SubjectID: other.ID, PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar(fmt.Sprintf("Town %d", i))})
 		}
 		var ids [][]byte
+		only := map[string]map[string]bool{}
 		for _, o := range owners {
 			ids = append(ids, o.Entity.ID)
+			only[string(o.Entity.ID)] = map[string]bool{string(o.Field.PropertyID): true}
 		}
-		n, err := conclusiondetails.CountFieldsOfQueries(f.C, ids, true)
+		n, err := conclusiondetails.CountFieldsOfQueries(f.C, ids, only)
 		must(t, err)
 		return n
 	}

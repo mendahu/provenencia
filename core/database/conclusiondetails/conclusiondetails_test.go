@@ -682,11 +682,55 @@ func TestFieldsOf(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := conclusiondetails.FieldsOf(f.C, tc.ids)
+			got, err := conclusiondetails.FieldsOf(f.C, tc.ids, nil)
 			must(t, err)
 			tc.check(t, got)
 		})
 	}
+}
+
+// TestFieldsOfOnly: only names the Properties composed, per handle.
+func TestFieldsOfOnly(t *testing.T) {
+	t.Run("one of three Properties", func(t *testing.T) {
+		f := newFixture(t)
+		literate, err := properties.Upsert(f.C, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+		must(t, err)
+		db, err := f.C.DB()
+		must(t, err)
+		_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.person.ID, literate)
+		must(t, err)
+		a := f.personOn(f.source("Register"))
+		f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+		f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: f.sex.ID, ValueTermID: f.Term("sex_at_birth", "female").ID})
+		f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: literate, Scalar: propertymeta.BooleanScalar(true)})
+		h := f.promote(a, nil)
+		all, err := conclusiondetails.FieldsOf(f.C, [][]byte{h}, nil)
+		must(t, err)
+		if len(all[string(h)]) != 3 {
+			t.Fatalf("every field %+v, want 3", all[string(h)])
+		}
+		got, err := conclusiondetails.FieldsOf(f.C, [][]byte{h}, map[string]map[string]bool{string(h): {string(f.sex.ID): true}})
+		must(t, err)
+		if fs := got[string(h)]; len(fs) != 1 || fs[0].PropertyKey != "sex_at_birth" {
+			t.Fatalf("only sex_at_birth: %+v", fs)
+		}
+	})
+
+	t.Run("a place end reads as its Place's toponym", func(t *testing.T) {
+		f := newFixture(t)
+		h, _ := f.birthAt(f.source("Register"), text("York"))
+		owners := f.placeRows(h)
+		if len(owners) != 1 {
+			t.Fatalf("owners %+v", owners)
+		}
+		id, prop := owners[0].Entity.ID, owners[0].Field.PropertyID
+		got, err := conclusiondetails.FieldsOf(f.C, [][]byte{id}, map[string]map[string]bool{string(id): {string(prop): true}})
+		must(t, err)
+		fs := got[string(id)]
+		if len(fs) != 1 || !bytes.Equal(fs[0].PropertyID, prop) || len(fs[0].Outcomes) != 1 || fs[0].Outcomes[0].Recorded.Text != "York" {
+			t.Fatalf("only the place end: %+v", fs)
+		}
+	})
 }
 
 // A yes/no field reads through the detail with false kept distinct from absent,
