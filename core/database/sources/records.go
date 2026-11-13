@@ -12,10 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/sqlbatch"
 )
 
-// ErrRecordsOnWrite is returned by RecordsOf on a write's graph: the records
-// are built once per open catalog, never once per write.
-var ErrRecordsOnWrite = errors.New("sources: records are not read on a write's graph")
-
 // Record is a Source's words, held once: every answer that names a Source
 // composes them from here.
 type Record struct {
@@ -129,20 +125,9 @@ func init() {
 }
 
 // RecordsOf returns the Source records of an open catalog's graph, building
-// them on the first read. A write's graph is ErrRecordsOnWrite; a nil graph is
-// database.ErrClosed.
+// them on the first read; see database.ReadWhole for a write's or a nil graph.
 func RecordsOf(g *graphcache.Graph) (*RecordIndex, error) {
-	if g == nil {
-		return nil, database.ErrClosed
-	}
-	idx, ok, err := Records.Get(g)
-	if err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, ErrRecordsOnWrite
-	}
-	return idx, nil
+	return database.ReadWhole(Records, g)
 }
 
 func newRecordIndex(recs map[string]Record) *RecordIndex {

@@ -26,8 +26,8 @@ func evidenceGraphProto(g evidencegraphs.Graph) *engine.EvidenceGraph {
 	return out
 }
 
-// ListEvidenceGraphs returns every graph of the project, or of one Source, by
-// name.
+// ListEvidenceGraphs returns the graphs of one Source in list order, or of the
+// whole project grouped by Source.
 func ListEvidenceGraphs(in []byte) ([]byte, error) {
 	var req engine.ListEvidenceGraphsRequest
 	if err := proto.Unmarshal(in, &req); err != nil {

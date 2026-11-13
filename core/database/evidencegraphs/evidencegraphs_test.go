@@ -975,6 +975,11 @@ func TestList(t *testing.T) {
 	f.link(t, jones, b)
 	f.link(t, jones, a)
 
+	// The project lists Sources by id, each in list order (D-4).
+	whole := []string{"Default", "Jones", "smith", "Archive"}
+	if bytes.Compare(other.ID, s.ID) < 0 {
+		whole = []string{"Archive", "Default", "Jones", "smith"}
+	}
 	unknown := make([]byte, 16)
 	unknown[0] = 9
 	tests := []struct {
@@ -984,8 +989,8 @@ func TestList(t *testing.T) {
 		wantErr   error
 	}{
 		{name: "one Source, case-insensitive by name", sourceID: s.ID, wantNames: []string{"Default", "Jones", "smith"}},
-		{name: "the whole project", sourceID: nil, wantNames: []string{"Archive", "Default", "Jones", "smith"}},
-		{name: "empty id is the whole project", sourceID: []byte{}, wantNames: []string{"Archive", "Default", "Jones", "smith"}},
+		{name: "the whole project", sourceID: nil, wantNames: whole},
+		{name: "empty id is the whole project", sourceID: []byte{}, wantNames: whole},
 		{name: "another Source", sourceID: other.ID, wantNames: []string{"Archive"}},
 		{name: "unknown Source", sourceID: unknown, wantNames: nil},
 		{name: "short id", sourceID: unknown[:15], wantErr: evidencegraphs.ErrInvalid},

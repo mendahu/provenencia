@@ -13,12 +13,13 @@ Sizes are `runtime.MemStats.HeapAlloc` after a GC, before and after the fill, on
 | `canonlinks.kinship` | `core/database/canonlinks/reader.go` · `pivots` | event or person handle id | `Reader.pivot`: the caller's derive closure, through `Keyed.Get` | `DerivedFrom` the vocabulary; Apply drops the commit's roots and their cached neighbours | graph | 65,536 | 14,162 / 14,162 keys; 1.4 / 4.4 MB with `canonlinks.for` and `canonlinks.siblings` |
 | `canonlinks.for` | `core/database/canonlinks/reader.go` · `forAnswers` | person handle id | `Reader.For`, through `Keyed.Get` | `DerivedFrom` the vocabulary; Apply empties it on any commit that names a handle (known exception) | graph | 65,536 | 8,115 / 20,115 keys |
 | `canonlinks.siblings` | `core/database/canonlinks/reader.go` · `siblingAnswers` | person handle id | `Reader.LoadSiblings` and `Reader.Relationships`, through `Keyed.GetMany` | `DerivedFrom` the vocabulary; Apply empties it on any commit that names a handle (known exception) | graph | 65,536 | 8,115 / 20,115 keys |
+| `evidencegraphs.index` | `core/database/evidencegraphs/index.go` · `Index` | one value | Build: four queries (every graph row, every link, the Subject and Observation counts), on first read | Apply re-lists the Sources in `effects.Set.Reads` `evidence_graphs` and recounts the graphs in `evidence_graph_progress`, then `Set` | graph | none | 12.4 KB / 12.4 KB on the large fixture (`BenchmarkCacheSizes`); 5.2 MB and 97 ms to build at 3,000 Sources, 10,000 graphs, 50,000 Observations (`BenchmarkGraphIndex`) |
 | `namealiases.index` | `core/database/namealiases/namealiases.go` · `Index` | one value | Build: every alias table, at open (`namealiases.Warm`) or on first read | none; `Invalidate` drops it | catalog | none | 0.77 / 0.77 MB |
 | `nameformats.default` | `core/database/nameformats/nameformats.go` · `Default` | one value | Build: the project's default name format, at open (`nameformats.Warm`) or on first read | none; `Invalidate` drops it | catalog | none | 1.5 KB / 1.5 KB |
 | `promotealign.matchindex` | `core/database/promotealign/index.go` · `MatchIndex` | one value | The owner stores it (`loadShortlist`, the profiler's `keep`); no Build until S16-20 | `DerivedFrom` the vocabulary, `namealiases.index` and `nameformats.default`; Apply drops it on any commit that names a handle (known exception) | graph | none | 6.2 / 9.8 MB |
 | `sources.records` | `core/database/sources/records.go` · `Records` | one value | Build: two queries (every Source with its grade, every Artifact), on first read | Apply reloads the Sources in `effects.Set.SourceScopes`, then `Set` | graph | none | 16 KB / 16 KB on the large fixture (one Source); 5.7 MB at 3,000 Sources of 10 Artifacts (`BenchmarkSourceRecords`) |
 
-A whole entry has no cap: it is bounded by what it is built from. On a write's graph (`graphcache.Over`) a catalog-lifetime entry builds once through the write's transaction and lives with that graph; a graph-lifetime entry is neither built nor stored there.
+A whole entry has no cap: it is bounded by what it is built from. On a write's graph (`graphcache.Over`) a catalog-lifetime entry builds once through the write's transaction and lives with that graph; a graph-lifetime entry is neither built nor stored there, and is read through `database.ReadWhole`, which returns `database.ErrWholeOnWrite` for a write's graph and `database.ErrClosed` for a nil one.
 
 ## Typed `Graph` fields
 
@@ -46,7 +47,7 @@ Sizes are not measured. S16-24 – S16-29 reshape these.
 | Cache | Owner (path · symbol) | Key | Fill | Updated by | Lifetime | Cap |
 | --- | --- | --- | --- | --- | --- | --- |
 | Per-view query results | `macos/App/Features/Workspace/Session/CatalogQueryRegistry.swift` · `CatalogQueryKey.Kind.descriptor` (the source of truth for each kind's key, fill and invalidation) | `CatalogQueryKey` | the descriptor's loader | the descriptor's `invalidateOn` mutation kinds | the session | 50 hidden entities (`WorkspaceSession.maxHiddenEntities`) |
-| Evidence-graph index | `WorkspaceSession.evidenceGraphIndex` | catalog revision | built on first read, patched per Source | `WriteEffects`' revision | the session | none |
+| Evidence-graph index (Swift) | `WorkspaceSession.evidenceGraphIndex` | catalog revision | built on first read, patched per Source | `WriteEffects`' revision | the session | none |
 | Name format | `WorkspaceSession.nameFormat` | one value | loaded at open | a name format write | the session | none |
 | Sidebar counts | `CatalogCounts` | section | `refreshAll` | `WriteEffects.lists` with `counts` | the workspace | none |
 | Thumbnails | `ThumbnailCache.shared` | artifact and size | decoded on first draw | none (immutable files) | the process | 100 entries, LRU |

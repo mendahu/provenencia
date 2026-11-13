@@ -3,7 +3,7 @@ package handlers
 import (
 	"github.com/mendahu/provenencia/api/proto/engine"
 	"github.com/mendahu/provenencia/core/database"
-	"github.com/mendahu/provenencia/core/database/graphprogress"
+	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -14,7 +14,7 @@ func ListEvidenceGraphProgress(in []byte) ([]byte, error) {
 	}
 	var out *engine.ListEvidenceGraphProgressResponse
 	err := withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		rows, err := graphprogress.List(c)
+		rows, err := evidencegraphs.ListProgress(c)
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func GetEvidenceGraphProgress(in []byte) ([]byte, error) {
 	}
 	var out *engine.GetEvidenceGraphProgressResponse
 	err = withProjectCatalog(req.GetProjectDir(), func(c *database.Catalog) error {
-		row, err := graphprogress.Get(c, graphID)
+		row, err := evidencegraphs.GetProgress(c, graphID)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ func GetEvidenceGraphProgress(in []byte) ([]byte, error) {
 	return proto.Marshal(out)
 }
 
-func protoProgress(row graphprogress.Progress) *engine.EvidenceGraphProgress {
+func protoProgress(row evidencegraphs.Progress) *engine.EvidenceGraphProgress {
 	return &engine.EvidenceGraphProgress{
 		GraphId:          database.UUIDString(row.GraphID),
 		SubjectCount:     row.SubjectCount,

@@ -92,27 +92,36 @@ type GraphLinks struct {
 // Pair is one (graph, Artifact) link.
 type Pair struct{ GraphID, ArtifactID []byte }
 
-// List returns the graphs of one Source, or of the whole project when sourceID
-// is empty, by name (case-insensitive), each with its linked Artifact ids by
-// Artifact ref. An unknown Source has no graphs.
+// List returns the graphs of one Source in list order (name, case-insensitive,
+// then ref, then id), or of the whole project, Sources by id, when sourceID is
+// empty, each with its linked Artifact ids by Artifact ref. An unknown Source
+// has no graphs.
 func List(c *database.Catalog, sourceID []byte) ([]Graph, error) {
 	if len(sourceID) != 0 && len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
-	db, err := c.DB()
+	idx, err := catalogIndex(c)
 	if err != nil {
 		return nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
+	if len(sourceID) == 0 {
+		return idx.All(), nil
+	}
+	return idx.OfSource(sourceID), nil
+}
+
+// catalogIndex is the graph index of an open catalog; a closed catalog is
+// database.ErrClosed (Close leaves c.Graph() non-nil, so the connection is
+// asked first).
+func catalogIndex(c *database.Catalog) (*GraphIndex, error) {
+	if _, err := c.DB(); err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
-	return list(tx, sourceID)
+	return IndexOf(c.Graph())
 }
 
 // list is the one read of graph rows, shared by List and the package's writes.
-func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
+func list(q database.Querier, sourceID []byte) ([]Graph, error) {
 	if len(sourceID) != 0 && len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
@@ -122,7 +131,7 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 		graphQuery, linkQuery = sqlListBySource, sqlListLinksBySource
 		args = []any{sourceID}
 	}
-	rows, err := tx.Query(graphQuery, args...)
+	rows, err := q.Query(graphQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +154,7 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 	for i, g := range out {
 		index[string(g.ID)] = i
 	}
-	links, err := tx.Query(linkQuery, args...)
+	links, err := q.Query(linkQuery, args...)
 	if err != nil {
 		return nil, err
 	}

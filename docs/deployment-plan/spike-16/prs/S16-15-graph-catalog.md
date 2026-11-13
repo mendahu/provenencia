@@ -1,6 +1,6 @@
 # S16-15 — An Evidence-graph catalog in the graph cache
 
-**Status:** Planned
+**Status:** Landed in [#805](https://github.com/mendahu/provenencia/pull/805) (2026-11-12)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Sources list shows the same counts and graph rows; only where the engine reads them from moves)
@@ -27,6 +27,16 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- T-8 and D-4 were amended during the build (user, 2026-11-12, commit 3feb6d888): `TestListEvidenceGraphs` follows the project-wide order by Source id, derived from `bytes.Compare` of the two ids.
+- Apply loads counts only when the commit names graphs: a nil id list to `loadProgress` means every graph, so the call is guarded.
+- `TestFiledCounts` calls `c.Graph().Drop()` before its SQL claim inserts (D-11); no other test file needed it.
+- `api/ffi/handlers/evidence_graphs_test.go` gained a `mustParseID` helper for the id comparison.
+- Measured: `BenchmarkGraphIndex` build 96.7 ms and 5.2 MB, `apply-progress-10k-ms` 0.43, `apply-list-10k-ms` 32.7; `graphIndex` is 12,680 B at 4,000 and 16,000 persons in `BenchmarkCacheSizes`.
+- D-2's "Rejected: a shared guard and sentinel for both entries" was superseded by the same-pass rule (ship log MNT-4): `database.ReadWhole` and `database.ErrWholeOnWrite` replace `ErrRecordsOnWrite` and `ErrIndexOnWrite`; `RecordsOf` and `IndexOf` stay as one-line typed entry points.
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
@@ -220,7 +230,7 @@ Check: `CGO_ENABLED=1 go test -tags fts5 -run 'TestGraphIndex|TestIndexOf' ./cor
 
 **STEP-4 — Reads go through the catalog**
 Files: `core/database/evidencegraphs/evidencegraphs.go`, `core/database/evidencegraphs/progress.go` *(new)*, `core/database/evidencegraphs/evidencegraphs_test.go`, `core/database/evidencegraphs/progress_test.go` *(new)*, `api/ffi/handlers/evidence_graphs.go`. Skill: `add-ffi-handler`.
-Do: D-9 for `List`, `ListProgress` (`AllProgress`), `GetProgress` (`Progress`). Update `TestList`'s "whole project" rows (D-4, AC-2.4); add T-7 and T-8. Apply D-11 where a progress test's fixture writes by SQL after a read. Update the handler comment (FFI section).
+Do: D-9 for `List`, `ListProgress` (`AllProgress`), `GetProgress` (`Progress`). Update `TestList`'s "whole project" rows (D-4, AC-2.4) and `TestListEvidenceGraphs`' project-wide order (D-4, T-8); add T-7 and run T-8. Apply D-11 where a progress test's fixture writes by SQL after a read. Update the handler comment (FFI section).
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/evidencegraphs/... ./api/ffi/handlers/...` passes.
 
 **STEP-5 — Measure and document the entry**
@@ -251,7 +261,7 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-5 | Go | `core/database/evidencegraphs/progress_test.go` *(new)* `TestGraphProgress`, `TestFiledCounts` (moved) | Today's cases and expectations, through `ListProgress` / `GetProgress`, including zeros, the reification-only graph, `evidencegraphs.invalid` and `ErrClosed` | AC-1.1, AC-2.3, D-6 |
 | T-6 | Go | `core/database/evidencegraphs/evidencegraphs_test.go` `TestList` (changed) | "the whole project" and "empty id" want the lower-id Source's graphs first (Default, Jones, smith and Archive, ordered by `bytes.Compare` of the two Source ids); the other rows unchanged; closed catalog → `ErrClosed` | AC-2.4, AC-2.3, D-4, D-9 |
 | T-7 | Go | `progress_test.go` `TestWarmReadsIssueNoQuery` *(new)* | After one `ListProgress`, `c.Graph().SetQueryCounterForTest(func(){ n++ })`; `ListProgress`, `GetProgress(def)`, `List(c, nil)`, `List(c, worked)` → `n == 0` | AC-1.2 |
-| T-8 | Go | `api/ffi/handlers/evidence_graph_progress_test.go` `TestListEvidenceGraphProgress`, `TestGetEvidenceGraphProgress`, `TestEvidenceGraphProgressPerGraph`; `api/ffi/handlers/evidence_graphs_test.go` `TestListEvidenceGraphs`, `TestListEvidenceGraphsSourceID` (unchanged) | Pass as they are through the wire | AC-1.1, D-9 |
+| T-8 | Go | `api/ffi/handlers/evidence_graph_progress_test.go` `TestListEvidenceGraphProgress`, `TestGetEvidenceGraphProgress`, `TestEvidenceGraphProgressPerGraph`; `api/ffi/handlers/evidence_graphs_test.go` `TestListEvidenceGraphsSourceID` (unchanged); `api/ffi/handlers/evidence_graphs_test.go` `TestListEvidenceGraphs` (changed) | The unchanged tests pass as they are through the wire. `TestListEvidenceGraphs`' project-wide names want the lower-id Source's graphs first (A: Default, Smith; B: Default), the order derived from `bytes.Compare` of `f.sourceID` and the other Source's id, not hard-coded; its per-Source assertions are unchanged | AC-1.1, D-4, D-9 |
 | T-9 | Go | `core/database/evidencegraphs/index_bench_test.go` `BenchmarkGraphIndex` *(new)* | Direct-SQL fixture in the shape of `BenchmarkSourceRecords` and `graphcachetest.NewCanon`: 3,000 Sources each with one Artifact; 10,000 graphs (graph i on Source i mod 3,000, linked to its Artifact) each with one Citation; 20,000 person Subjects; 50,000 Observations (`value_text`, the seeded `remark` Property) → reports `build-ms` (≤ 150) and `heap-MB` (≤ 8). Then a graph with 10,000 Observations and a Source with 10,000 graphs; `g.OnCommit` with the matching read → `apply-progress-10k-ms` (≤ 20), `apply-list-10k-ms` (≤ 50) | Scale, D-7 |
 | T-10 | Go | `core/database/promotealign/bench_test.go` `BenchmarkCacheSizes` (changed); `core/catalogsession/cache_doc_test.go` `TestCacheDocListsEveryEntry` | `graphIndex` measured at 4,000 and 16,000 persons; the doc row matches the registry | Scale, D-2 |
 
@@ -262,21 +272,21 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: te
 ## 9. Definition of done
 
 ```
-- [ ] Every AC in §2 is true: test name or manual check line for each
-- [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
-- [ ] No Out line was implemented; no code outside §4 / §6 was refactored
-- [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
-- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
-- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
-- [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
-- [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
-- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
-- [ ] Domain doc updated if a rule in docs/*.md changed: docs/catalog-caches.md row and sizes; cache-architecture.md S16-15 bullet
-- [ ] PR description: what shipped, AC evidence, deviations, manual check
-- [ ] Sweep for this PR: `rg -n "graphprogress" core api .agents .cursor docs/*.md` finds nothing (AC-3.1); the ship log records BenchmarkCacheSizes before and after, and T-9's four figures
+- [x] Every AC in §2 is true: test name or manual check line for each
+- [x] Every T-# in §8 exists and passes
+- [x] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [x] No Out line was implemented; no code outside §4 / §6 was refactored
+- [x] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
+- [x] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [x] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
+- [x] UI matches the brief inventory; no new kit primitive unless the brief marks it New
+- [x] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
+- [x] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
+- [x] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
+- [x] Brief moved to design/archive/ and design/README.md updated (if gated)
+- [x] Domain doc updated if a rule in docs/*.md changed: docs/catalog-caches.md row and sizes; cache-architecture.md S16-15 bullet
+- [x] PR description: what shipped, AC evidence, deviations, manual check
+- [x] Sweep for this PR: `rg -n "graphprogress" core api .agents .cursor docs/*.md` finds nothing (AC-3.1); the ship log records BenchmarkCacheSizes before and after, and T-9's four figures
 ```
 
 ## 10. Manual check

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	_ "github.com/mendahu/provenencia/core/database/canonlinks"
+	_ "github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/graphcache"
 	_ "github.com/mendahu/provenencia/core/database/namealiases"
 	_ "github.com/mendahu/provenencia/core/database/nameformats"
