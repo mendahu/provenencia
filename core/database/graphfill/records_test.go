@@ -4,18 +4,23 @@ import (
 	"bytes"
 	"crypto/rand"
 	"reflect"
+	"strings"
 	"testing"
+	"unsafe"
 
 	"github.com/mendahu/provenencia/core/database"
+	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/promote/promotetest"
 	"github.com/mendahu/provenencia/core/database/rowchange"
 	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/namevalue/namevaluetest"
 	"github.com/mendahu/provenencia/core/writes"
 )
@@ -225,5 +230,153 @@ func TestGraphRecordsOutliveLoadedGraph(t *testing.T) {
 	}
 	if _, ok := graphfill.Records.Peek(g, f.graph); !ok {
 		t.Error("A's records left with its loaded graph")
+	}
+}
+
+// TestGraphRecordsCarryCitationWords: every Observation in the records carries
+// its Citation's Artifact, label, page and uncertainty, from the loaded graph
+// and from the rows alike.
+func TestGraphRecordsCarryCitationWords(t *testing.T) {
+	cite := func(t *testing.T, f family, in citations.CreateInput) []byte {
+		t.Helper()
+		in.GraphID, in.ArtifactID = f.graph, f.r.Artifact.ID
+		name := f.r.Prop("name").ID
+		var res citations.CreateResult
+		f.r.Run("create_citation_with_observations", func(tx *database.Tx) ([]rowchange.Change, error) {
+			var ch []rowchange.Change
+			var err error
+			res, ch, err = citations.CreateWithObservations(tx, evidencelayertest.UserID, in, []observations.Input{{
+				SubjectID: f.ann.ID, PropertyID: name, Name: namevaluetest.Western("Ada Lovelace"),
+			}})
+			return ch, err
+		})
+		if len(res.Observations) != 1 {
+			t.Fatalf("created %d Observations", len(res.Observations))
+		}
+		return res.Observations[0].ID
+	}
+	fills := func(t *testing.T, f family) (loaded, cold *graphfill.GraphRecords) {
+		t.Helper()
+		g := f.r.C.Graph()
+		graphfill.Records.Drop(g, [][]byte{f.graph})
+		g.Drop()
+		if _, err := graphfill.EvidenceGraph(g, f.graph); err != nil {
+			t.Fatal(err)
+		}
+		loaded = f.records(t)
+		graphfill.Records.Drop(g, [][]byte{f.graph})
+		g.Drop()
+		cold = f.records(t)
+		if !reflect.DeepEqual(loaded, cold) {
+			t.Fatalf("the two fills differ:\nloaded %+v\ncold   %+v", loaded, cold)
+		}
+		return loaded, cold
+	}
+
+	t.Run("a labelled, paged, uncertain Citation", func(t *testing.T) {
+		f := newFamily(t)
+		id := cite(t, f, citations.CreateInput{
+			Label: "Baptism of Ada", TranscriptionUncertain: true,
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
+		})
+		loaded, cold := fills(t, f)
+		for _, rec := range []*graphfill.GraphRecords{loaded, cold} {
+			_, o, ok := rec.Observation(id)
+			if !ok {
+				t.Fatal("the Observation is not in the records")
+			}
+			if !bytes.Equal(o.ArtifactID, f.r.Artifact.ID) || o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.PageLabel != "" || !o.TranscriptionUncertain {
+				t.Fatalf("citation words %+v", o)
+			}
+		}
+	})
+
+	t.Run("a Citation with no label and no page", func(t *testing.T) {
+		f := newFamily(t)
+		id := cite(t, f, citations.CreateInput{LocatorJSON: `{"version":1,"selectors":[{"type":"note"}]}`})
+		_, cold := fills(t, f)
+		_, o, ok := cold.Observation(id)
+		if !ok {
+			t.Fatal("the Observation is not in the records")
+		}
+		if o.CitationLabel != "" || o.ArtifactPage != 0 || o.PageLabel != "" || o.TranscriptionUncertain {
+			t.Fatalf("citation words %+v", o)
+		}
+	})
+}
+
+// TestLoadParsesEachCitationOnce: the Observations of one Citation share one
+// copy of its words, so a large locator is parsed once however many
+// Observations cite it.
+func TestLoadParsesEachCitationOnce(t *testing.T) {
+	f := newFamily(t)
+	name := f.r.Prop("name").ID
+	filler := strings.Repeat("x", locator.MaxDocumentBytes-1024)
+	var inputs []observations.Input
+	for _, n := range []string{"Ada Lovelace", "Ada King", "Augusta Ada"} {
+		inputs = append(inputs, observations.Input{SubjectID: f.ann.ID, PropertyID: name, Name: namevaluetest.Western(n)})
+	}
+	var res citations.CreateResult
+	f.r.Run("create_citation_with_observations", func(tx *database.Tx) ([]rowchange.Change, error) {
+		var ch []rowchange.Change
+		var err error
+		res, ch, err = citations.CreateWithObservations(tx, evidencelayertest.UserID, citations.CreateInput{
+			GraphID: f.graph, ArtifactID: f.r.Artifact.ID, Label: "Baptism of Ada",
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37,"page_label":"xxxvii"},{"type":"text_quote","exact":"` + filler + `"}]}`,
+		}, inputs)
+		return ch, err
+	})
+	g := f.r.C.Graph()
+	g.Drop()
+	eg, err := graphfill.EvidenceGraph(g, f.graph)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cited []graphcache.EvidenceObservation
+	for _, o := range eg.Observations {
+		if bytes.Equal(o.CitationID, res.Citation.ID) {
+			cited = append(cited, o)
+		}
+	}
+	if len(cited) != len(inputs) {
+		t.Fatalf("%d Observations cite the Citation, want %d", len(cited), len(inputs))
+	}
+	first := cited[0]
+	if first.ArtifactPage != 37 || first.PageLabel != "xxxvii" || first.CitationLabel != "Baptism of Ada" {
+		t.Fatalf("citation words %+v", first)
+	}
+	for _, o := range cited[1:] {
+		if unsafe.StringData(o.PageLabel) != unsafe.StringData(first.PageLabel) ||
+			unsafe.StringData(o.CitationLabel) != unsafe.StringData(first.CitationLabel) ||
+			&o.ArtifactID[0] != &first.ArtifactID[0] {
+			t.Fatalf("an Observation holds its own copy of the Citation's words: %+v", o)
+		}
+	}
+}
+
+// TestGraphRecordsObservation: an Observation is found by id with its
+// Subject's record.
+func TestGraphRecordsObservation(t *testing.T) {
+	f := newFamily(t)
+	rec := f.records(t)
+	rel, ok := rec.Subject(f.rel.ID)
+	if !ok || len(rel.Observations) == 0 {
+		t.Fatalf("the Relationship has no Observations: %+v, %v", rel, ok)
+	}
+	want := rel.Observations[0]
+	gotRec, got, ok := rec.Observation(want.ID)
+	if !ok || !reflect.DeepEqual(got, want) || !bytes.Equal(gotRec.Subject.ID, f.rel.ID) {
+		t.Fatalf("Observation = %+v, %+v, %v", gotRec.Subject.ID, got, ok)
+	}
+	id := make([]byte, 16)
+	if _, err := rand.Read(id); err != nil {
+		t.Fatal(err)
+	}
+	if r, o, ok := rec.Observation(id); ok || r.Subject.ID != nil || o.ID != nil {
+		t.Errorf("an unknown id found %+v %+v", r, o)
+	}
+	var none *graphfill.GraphRecords
+	if _, _, ok := none.Observation(want.ID); ok {
+		t.Error("a nil records found an Observation")
 	}
 }

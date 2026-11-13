@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-30 — Provenance records compose from cached records
+
+**Landed 2026-11-13** in [#812](https://github.com/mendahu/provenencia/pull/812). A Conclusion page's provenance record is the node's outcome row, the Observation and Subject from the graph's cached records, and the Source record, composed with no SQL: the records now carry each Observation's Citation label, page, Artifact and uncertainty and index Observations by id (each Citation's locator is parsed once per graph load, and its Observations share the words), so a Citation edit reaches the sheet through the existing graph drop. `sqlRecords`, `sqlToponyms`, `loadRecords`, `toponymsOf` and the detail read's date and name lookups are gone, a Person's life rows compose only the Property each owner is read for, and the detail handler reads the subject type from the graph vocabulary. A warm open reads nothing from SQL but the pictures' paths. The records take 22.4 MB at 4,096 held graphs (17.2 MB before). No change a researcher can see, so no version bump.
+
 ## S16-13 — Per-graph records in the cache registry, and the Sources section reads them
 
 **Landed 2026-11-12** in [#809](https://github.com/mendahu/provenencia/pull/809). A person's Sources section now reads its groups and claims from cached per-graph Subject records, so a person in more than 64 Evidence graphs no longer reloads them on every visit (13 ms cold and 0.2 ms warm at 80 graphs). Cache entries keep their most recently used keys at their cap, and the loaded graphs, matching layers and Promote's candidates are registry entries keyed by graph.

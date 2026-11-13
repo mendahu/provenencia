@@ -1,6 +1,11 @@
 package observations
 
-import "strings"
+import (
+	"bytes"
+	"strings"
+
+	"github.com/mendahu/provenencia/core/database/graphcache"
+)
 
 // TextRecord is the part of an Observation a first-text pick reads.
 type TextRecord struct {
@@ -33,4 +38,16 @@ func refBefore(a, b string) bool {
 		return la < lb
 	}
 	return a < b
+}
+
+// FirstTextOf is FirstText over the cached Observations of one Property: a
+// Subject's first text of propertyID. It returns "" when none qualifies.
+func FirstTextOf(obs []graphcache.EvidenceObservation, propertyID []byte) string {
+	var records []TextRecord
+	for _, o := range obs {
+		if bytes.Equal(o.PropertyID, propertyID) {
+			records = append(records, TextRecord{Ref: o.Ref, Polarity: o.Polarity, Text: o.Text})
+		}
+	}
+	return FirstText(records)
 }

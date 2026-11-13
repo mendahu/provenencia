@@ -23,7 +23,9 @@ type EvidenceSubject struct {
 }
 
 // SubjectLabels maps each Subject's id (as a string) to its label: the one
-// label rule, for an Observation whose value is another Subject.
+// label rule, for an Observation whose value is another Subject, except a Place
+// on an event–place link, which reads as its first toponym
+// (observations.FirstTextOf).
 func SubjectLabels(subjects []EvidenceSubject) map[string]string {
 	labels := make(map[string]string, len(subjects))
 	for _, s := range subjects {
@@ -33,7 +35,10 @@ func SubjectLabels(subjects []EvidenceSubject) map[string]string {
 }
 
 // EvidenceObservation is one observation on an Evidence graph. Property and term labels are applied
-// when the row is shown. Date and Name are the stored value blobs.
+// when the row is shown. Date and Name are the stored value blobs. ArtifactID,
+// CitationLabel, ArtifactPage, PageLabel and TranscriptionUncertain are the
+// Observation's Citation's: its Artifact, label, the locator's page and printed
+// page label, and whether the transcription is uncertain.
 type EvidenceObservation struct {
 	ID         []byte
 	Ref        string
@@ -54,6 +59,12 @@ type EvidenceObservation struct {
 	DepictionImageFileID []byte
 	Date                 []byte
 	Name                 []byte
+
+	ArtifactID             []byte
+	CitationLabel          string
+	ArtifactPage           int
+	PageLabel              string
+	TranscriptionUncertain bool
 }
 
 // EvidenceMember is an accepted claim on an Evidence graph: the subject, the claim, and the handle.

@@ -6,10 +6,11 @@
 //
 // Field values are the node's auto-reconciler ranks, and the Why's reconciler
 // half (reason, value rank, denied by, vote) is the node's outcome rows. Term
-// labels come from the graph vocabulary. The record shells (Observation,
-// Subject, Citation, Artifact, Source words) are one SQL read keyed by the
-// rows' Subjects until the records tier holds them. A Property no
-// record mentions isn't returned. Pictures are listed apart from the
+// labels come from the graph vocabulary. A record is three cached pieces
+// composed with no SQL: the node's outcome row, the Observation and its
+// Subject from the graph's records (graphfill.RecordsOf, which carry the
+// Observation's Citation words), and the Source record (sources.RecordsOf). A
+// Property no record mentions isn't returned. Pictures are listed apart from the
 // fields, earliest first (gallery.Of over the node). Which empty fields a page
 // still shows is the page's choice. Go returns structures; the app formats text.
 // Reconciliation Claims are never in these tables: when they ship, a
@@ -21,7 +22,6 @@ package conclusiondetails
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
 	"sort"
 
@@ -30,16 +30,12 @@ import (
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/canonicalentities"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
-	"github.com/mendahu/provenencia/core/database/datevalues"
 	"github.com/mendahu/provenencia/core/database/gallery"
 	"github.com/mendahu/provenencia/core/database/graphcache"
-	"github.com/mendahu/provenencia/core/database/namevalues"
+	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/observations"
-	"github.com/mendahu/provenencia/core/database/scalarcols"
 	"github.com/mendahu/provenencia/core/database/sources"
-	"github.com/mendahu/provenencia/core/database/sqlbatch"
 	"github.com/mendahu/provenencia/core/datevalue"
-	"github.com/mendahu/provenencia/core/locator"
 	"github.com/mendahu/provenencia/core/namevalue"
 	"github.com/mendahu/provenencia/core/propertymeta"
 	"github.com/mendahu/provenencia/core/valuecodec"
@@ -48,11 +44,6 @@ import (
 
 // ErrNotFound is returned for an unknown or merged handle.
 var ErrNotFound = apperr.New(apperr.CodeConclusionDetailsNotFound, apperr.KindUser)
-
-// Querier is *sql.Tx or *sql.DB.
-type Querier interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-}
 
 // Value is one Property value. Exactly the field for the value type is set.
 type Value struct {
@@ -136,28 +127,6 @@ type Detail struct {
 	Pictures    []PictureTile // earliest recorded first
 }
 
-const (
-	// A Subject-valued record reads as its Subject's toponym: every positive
-	// toponym Observation of the Subjects in the IN list. INDEXED BY: there are
-	// no planner stats, and property_id would scan every toponym.
-	sqlToponyms = `SELECT o.subject_id, o.ref, o.polarity, COALESCE(o.value_text, '') FROM observations o INDEXED BY observations_subject_id_idx
-		WHERE o.property_id = ? AND o.polarity = 'positive' AND o.subject_id IN (`
-
-	// The record shells of the Observations of the Subjects in the IN list:
-	// what each record said and where it came from. The reconciler half of the
-	// Why is the node's outcome row. INDEXED BY as sqlToponyms.
-	sqlRecords = `SELECT o.id, o.ref,
-			o.value_text, o.value_integer, o.value_boolean, o.value_term_id, COALESCE(t.key, ''), COALESCE(t.label, ''), COALESCE(t.origin, ''),
-			o.value_date_id, o.value_name_id, o.value_subject_id,
-			s.id, s.ref, s.graph_id, c.id, c.artifact_id,
-			COALESCE(c.label, ''), c.locator_json, c.transcription_uncertain
-		FROM observations o INDEXED BY observations_subject_id_idx
-		JOIN subjects s ON s.id = o.subject_id
-		JOIN citations c ON c.id = o.citation_id
-		LEFT JOIN property_terms t ON t.id = o.value_term_id
-		WHERE o.subject_id IN (`
-)
-
 // Handle returns the graph node of one unmerged handle. A nil catalog or
 // graph, a malformed id, and an unknown or merged handle are ErrNotFound.
 func Handle(c *database.Catalog, entityID []byte) (*graphcache.Node, error) {
@@ -180,10 +149,6 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
-	db, err := c.DB()
-	if err != nil {
-		return Detail{}, err
-	}
 	d := Detail{Entity: entityOf(n), MemberCount: len(n.AcceptedMembers())}
 	vocab, err := c.Graph().Vocabulary()
 	if err != nil {
@@ -203,7 +168,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 			}
 		}
 	}
-	fields, leadOutcomes, err := fieldsOf(c.Graph(), db, vocab, []*graphcache.Node{n}, leadRows, false)
+	fields, leadOutcomes, err := fieldsOf(c.Graph(), vocab, []*graphcache.Node{n}, leadRows, nil)
 	if err != nil {
 		return Detail{}, err
 	}
@@ -220,8 +185,11 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 // id: the one composition every page's fields come from. A nil or merged
 // node, or a repeated id, is skipped. It also returns the outcomes of the
 // Observations of leadRows (a gallery's earliest records, the node's own
-// outcome rows), which belong to no field.
-func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*graphcache.Node, leadRows []graphcache.Outcome, subjectValued bool) (map[string][]Field, map[string]Outcome, error) {
+// outcome rows), which belong to no field. only nil composes each node's
+// page fields: every Property but depiction and subject-valued ones. Non-nil,
+// it names the Properties to compose (any value type but depiction) under
+// each node's id; a node it does not name has no field.
+func fieldsOf(g *graphcache.Graph, v graphcache.Vocabulary, nodes []*graphcache.Node, leadRows []graphcache.Outcome, only map[string]map[string]bool) (map[string][]Field, map[string]Outcome, error) {
 	var use []*graphcache.Node
 	seen := map[string]bool{}
 	for _, n := range nodes {
@@ -235,7 +203,7 @@ func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*
 	if len(use) == 0 {
 		return out, map[string]Outcome{}, nil
 	}
-	ordered, byProp, err := loadProperties(g, use, subjectValued)
+	ordered, byProp, err := loadProperties(g, use, only)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -244,14 +212,43 @@ func fieldsOf(g *graphcache.Graph, q Querier, v graphcache.Vocabulary, nodes []*
 			return nil, nil, err
 		}
 	}
-	toponym := v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia)
-	recs, err := sources.RecordsOf(g)
+	// The rows to compose: each field's outcome rows, then the leads (no field).
+	type want struct {
+		f   *Field // nil for a lead
+		row graphcache.Outcome
+	}
+	var wanted []want
+	var rows []graphcache.Outcome
+	for _, n := range use {
+		for prop, f := range byProp[string(n.ID)] {
+			for _, row := range n.Outcomes[prop] {
+				wanted = append(wanted, want{f, row})
+				rows = append(rows, row)
+			}
+		}
+	}
+	for _, row := range leadRows {
+		wanted = append(wanted, want{nil, row})
+		rows = append(rows, row)
+	}
+	reader, err := newRecordReader(g, v, use, rows)
 	if err != nil {
 		return nil, nil, err
 	}
-	leadOutcomes, err := loadRecords(q, recs, toponym, use, byProp, leadRows)
-	if err != nil {
-		return nil, nil, err
+	// A lead's Recorded value has no Date or Name: a depiction Observation has none.
+	leadOutcomes := map[string]Outcome{}
+	for _, w := range wanted {
+		o, ok, err := reader.outcome(w.row)
+		if err != nil {
+			return nil, nil, err
+		}
+		switch {
+		case !ok: // a row the records cannot place is dropped
+		case w.f == nil:
+			leadOutcomes[string(o.ObservationID)] = o
+		default:
+			w.f.Outcomes = append(w.f.Outcomes, o)
+		}
 	}
 	for id, fs := range ordered {
 		for _, f := range fs {
@@ -336,8 +333,8 @@ func state(values []ReconciledValue, cardinality string) autoreconcile.State {
 
 // loadProperties lists each node's fields in its kind's binding order, and
 // the same fields by entity id then property id. A node's fields are the
-// Properties its outcome rows name.
-func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued bool) (map[string][]*Field, map[string]map[string]*Field, error) {
+// Properties its outcome rows name, narrowed by only (see fieldsOf).
+func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, only map[string]map[string]bool) (map[string][]*Field, map[string]map[string]*Field, error) {
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, nil, err
@@ -348,6 +345,9 @@ func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued
 	for _, n := range nodes {
 		ids := make([]string, 0, len(n.Outcomes))
 		for id := range n.Outcomes {
+			if only != nil && !only[string(n.ID)][id] {
+				continue
+			}
 			ids = append(ids, id)
 		}
 		// Ties in the type order keep a fixed order: the Properties' id bytes.
@@ -355,7 +355,7 @@ func loadProperties(g *graphcache.Graph, nodes []*graphcache.Node, subjectValued
 		var got []*Field
 		for _, id := range ids {
 			p, ok := props[id]
-			if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (p.ValueType == propertymeta.ValueTypeSubject && !subjectValued) {
+			if !ok || p.ValueType == propertymeta.ValueTypeDepiction || (only == nil && p.ValueType == propertymeta.ValueTypeSubject) {
 				continue
 			}
 			got = append(got, &Field{
@@ -391,28 +391,13 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 			continue // a depiction Property, or one the outcomes no longer name
 		}
 		for _, rank := range ranks {
+			value, err := valueOf(rank.Scalar, rank.TermID, nil, rank.Date, nil, rank.Name, terms)
+			if err != nil {
+				return err
+			}
 			v := ReconciledValue{
 				Rank: rank.Rank, Reason: rank.Reason,
-				Support: rank.Support, Against: rank.Against,
-			}
-			v.Value.Scalar = rank.Scalar
-			v.Value.TermID = append([]byte(nil), rank.TermID...)
-			if name, ok := terms[string(rank.TermID)]; ok {
-				v.Value.TermKey, v.Value.TermLabel, v.Value.TermOrigin = name.Key, name.Label, name.Origin
-			}
-			if len(rank.Date) > 0 {
-				d, err := valuecodec.UnmarshalDate(rank.Date)
-				if err != nil {
-					return err
-				}
-				v.Value.Date = &d
-			}
-			if len(rank.Name) > 0 {
-				decoded, err := valuecodec.UnmarshalName(rank.Name)
-				if err != nil {
-					return err
-				}
-				v.Value.Name = &decoded
+				Support: rank.Support, Against: rank.Against, Value: value,
 			}
 			f.Values = append(f.Values, v)
 		}
@@ -420,153 +405,135 @@ func attachValues(g *graphcache.Graph, n *graphcache.Node, byProp map[string]*Fi
 	return nil
 }
 
-// loadRecords attaches each field's outcomes to it: the node's outcome row
-// with the record shell read by the rows' Subjects. It also returns the
-// outcomes of the Observations in leads (a gallery's earliest records, found
-// among the node's rows of the gallery Properties), which belong to no field;
-// their Recorded value has no Date or Name. A row with no record is dropped.
-func loadRecords(q Querier, recs *sources.RecordIndex, toponym []byte, nodes []*graphcache.Node, byProp map[string]map[string]*Field, leadRows []graphcache.Outcome) (map[string]Outcome, error) {
-	leadOutcomes := map[string]Outcome{}
-	type want struct {
-		f   *Field // nil for a lead
-		row graphcache.Outcome
+// valueOf decodes a recorded or ranked value: the scalar, the term with its
+// label from terms, and the stored date and name blobs, whose ids are the rows'
+// (nil for a node's value, which has no row id).
+func valueOf(s propertymeta.Scalar, termID, dateID, date, nameID, name []byte, terms map[string]graphcache.VocabTerm) (Value, error) {
+	v := Value{Scalar: s, TermID: append([]byte(nil), termID...)}
+	if t, ok := terms[string(termID)]; ok {
+		v.TermKey, v.TermLabel, v.TermOrigin = t.Key, t.Label, t.Origin
 	}
-	wanted := map[string][]want{}
-	var subjectIDs [][]byte
-	add := func(f *Field, row graphcache.Outcome) {
-		if len(row.SubjectID) == 0 {
-			return
+	if len(date) > 0 {
+		d, err := valuecodec.UnmarshalDate(date)
+		if err != nil {
+			return Value{}, err
 		}
-		wanted[string(row.ObservationID)] = append(wanted[string(row.ObservationID)], want{f: f, row: row})
-		subjectIDs = append(subjectIDs, row.SubjectID)
+		d.ID = append([]byte(nil), dateID...)
+		v.Date = &d
 	}
-	for _, n := range nodes {
-		for prop, f := range byProp[string(n.ID)] {
-			for _, row := range n.Outcomes[prop] {
-				add(f, row)
-			}
+	if len(name) > 0 {
+		n, err := valuecodec.UnmarshalName(name)
+		if err != nil {
+			return Value{}, err
 		}
+		n.ID = append([]byte(nil), nameID...)
+		v.Name = &n
 	}
-	for _, row := range leadRows {
-		add(nil, row)
-	}
-	type pending struct {
-		f                         *Field
-		o                         Outcome
-		dateID, nameID, subjectID []byte
-	}
-	var all []pending
-	var dateIDs, nameIDs [][]byte
-	var valueSubjectIDs [][]byte
-	err := sqlbatch.Query(q, sqlRecords, ")", nil, database.UniqueBlobIDs(subjectIDs), func(rows *sql.Rows) error {
-		var (
-			observationID, termID, dateID, nameID, valueSubjectID []byte
-			scalar                                                scalarcols.Columns
-			o                                                     Outcome
-			locatorJSON                                           string
-		)
-		dest := []any{&observationID, &o.ObservationRef,
-			&scalar.Text, &scalar.Integer, &scalar.Boolean, &termID, &o.Recorded.TermKey, &o.Recorded.TermLabel, &o.Recorded.TermOrigin, &dateID, &nameID, &valueSubjectID,
-			&o.SubjectID, &o.SubjectRef, &o.GraphID, &o.CitationID, &o.ArtifactID,
-			&o.CitationLabel, &locatorJSON, &o.Provenance.Uncertain}
-		if err := rows.Scan(dest...); err != nil {
-			return err
-		}
-		targets, ok := wanted[string(observationID)]
-		if !ok {
-			return nil
-		}
-		src, label, found := recs.Artifact(o.ArtifactID)
-		if !found {
-			return fmt.Errorf("conclusiondetails: Artifact %x has no Source record", o.ArtifactID)
-		}
-		o.SourceID, o.SourceTitle, o.ArtifactLabel = src.ID, src.Title, label
-		o.CredibilityKey, o.Provenance.Credibility = src.CredibilityKey, src.Credibility
-		o.ArtifactPage, o.PageLabel = locator.Page(locatorJSON)
-		o.Recorded.Scalar = scalar.Scalar()
-		o.Recorded.TermID = termID
-		for _, t := range targets {
-			rec := o
-			rec.ObservationID = append([]byte(nil), t.row.ObservationID...)
-			rec.Reason = t.row.Reason
-			rec.ValueRank = t.row.ValueRank
-			rec.DeniedBy = t.row.DeniedBy // the node's rows are cloned at load
-			rec.Vote = autoreconcile.Vote{Support: t.row.VoteSupport, Of: t.row.VoteOf}
-			if t.f == nil {
-				leadOutcomes[string(rec.ObservationID)] = rec
-				continue
-			}
-			all = append(all, pending{f: t.f, o: rec, dateID: dateID, nameID: nameID, subjectID: valueSubjectID})
-			if len(valueSubjectID) > 0 {
-				valueSubjectIDs = append(valueSubjectIDs, valueSubjectID)
-			}
-			if len(dateID) > 0 {
-				dateIDs = append(dateIDs, dateID)
-			}
-			if len(nameID) > 0 {
-				nameIDs = append(nameIDs, nameID)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	dates, err := datevalues.LookupManyTx(q, dateIDs)
-	if err != nil {
-		return nil, err
-	}
-	names, err := namevalues.LookupManyTx(q, nameIDs)
-	if err != nil {
-		return nil, err
-	}
-	toponyms, err := toponymsOf(q, toponym, valueSubjectIDs)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range all {
-		if len(p.subjectID) > 0 {
-			// A record on an event–place link's place end holds a Place: it
-			// reads as that Place's first toponym (D-21).
-			p.o.Recorded.Text = toponyms[string(p.subjectID)]
-			p.o.Recorded.HasText = p.o.Recorded.Text != ""
-		}
-		if d, ok := dates[string(p.dateID)]; ok {
-			p.o.Recorded.Date = &d
-		}
-		if n, ok := names[string(p.nameID)]; ok {
-			p.o.Recorded.Name = &n
-		}
-		p.f.Outcomes = append(p.f.Outcomes, p.o)
-	}
-	return leadOutcomes, nil
+	return v, nil
 }
 
-// toponymsOf reads each Subject as its first toponym (observations.FirstText),
-// from one batched load. A Subject with none is absent.
-func toponymsOf(q Querier, toponym []byte, subjectIDs [][]byte) (map[string]string, error) {
-	subjectIDs = database.UniqueBlobIDs(subjectIDs)
-	out := map[string]string{}
-	if len(subjectIDs) == 0 {
-		return out, nil
+// recordReader composes an Outcome from the node's outcome row, the graph's
+// Subject record and the Source record.
+type recordReader struct {
+	recs     *sources.RecordIndex
+	graphs   map[string]*graphfill.GraphRecords // by graph id
+	graphOf  map[string][]byte                  // Subject id -> graph id
+	terms    map[string]graphcache.VocabTerm
+	toponym  []byte
+	toponyms map[string]string // value Subject id -> first toponym
+}
+
+// newRecordReader holds the records of every graph the rows' Subjects are on,
+// found among the members of nodes: one fill, and the Source records.
+func newRecordReader(g *graphcache.Graph, v graphcache.Vocabulary, nodes []*graphcache.Node, rows []graphcache.Outcome) (*recordReader, error) {
+	r := &recordReader{
+		graphOf:  map[string][]byte{},
+		terms:    v.TermsByID(),
+		toponym:  v.PropertyID(vocabkey.PropertyToponym, vocabkey.OriginProvenencia),
+		toponyms: map[string]string{},
 	}
-	records := map[string][]observations.TextRecord{}
-	err := sqlbatch.Query(q, sqlToponyms, ")", []any{toponym}, subjectIDs, func(rows *sql.Rows) error {
-		var id []byte
-		var r observations.TextRecord
-		if err := rows.Scan(&id, &r.Ref, &r.Polarity, &r.Text); err != nil {
-			return err
+	for _, n := range nodes {
+		for _, m := range n.Members {
+			r.graphOf[string(m.SubjectID)] = m.GraphID
 		}
-		records[string(id)] = append(records[string(id)], r)
-		return nil
-	})
-	if err != nil {
+	}
+	var graphIDs [][]byte
+	for _, row := range rows {
+		if len(row.SubjectID) == 0 {
+			continue
+		}
+		if graph, ok := r.graphOf[string(row.SubjectID)]; ok {
+			graphIDs = append(graphIDs, graph)
+		}
+	}
+	var err error
+	if r.graphs, err = graphfill.RecordsOf(g, database.UniqueBlobIDs(graphIDs)); err != nil {
 		return nil, err
 	}
-	for id, rs := range records {
-		out[id] = observations.FirstText(rs)
+	if r.recs, err = sources.RecordsOf(g); err != nil {
+		return nil, err
 	}
-	return out, nil
+	return r, nil
+}
+
+// outcome composes the outcome of one row, and false when the records cannot
+// place it (no Subject, a Subject on no member's graph, an Observation not on
+// the graph).
+func (r *recordReader) outcome(row graphcache.Outcome) (Outcome, bool, error) {
+	if len(row.SubjectID) == 0 {
+		return Outcome{}, false, nil
+	}
+	graph, ok := r.graphOf[string(row.SubjectID)]
+	if !ok {
+		return Outcome{}, false, nil
+	}
+	records := r.graphs[string(graph)]
+	subject, obs, ok := records.Observation(row.ObservationID)
+	if !ok {
+		return Outcome{}, false, nil
+	}
+	src, label, found := r.recs.Artifact(obs.ArtifactID)
+	if !found {
+		return Outcome{}, false, fmt.Errorf("conclusiondetails: Artifact %x has no Source record", obs.ArtifactID)
+	}
+	recorded, err := valueOf(obs.Scalar, obs.TermID, obs.DateID, obs.Date, obs.NameID, obs.Name, r.terms)
+	if err != nil {
+		return Outcome{}, false, err
+	}
+	if len(obs.ValueSubjectID) > 0 {
+		// A record on an event–place link's place end holds a Place: it reads
+		// as that Place's first toponym (D-21).
+		text, done := r.toponyms[string(obs.ValueSubjectID)]
+		if !done {
+			if place, ok := records.Subject(obs.ValueSubjectID); ok {
+				text = observations.FirstTextOf(place.Observations, r.toponym)
+			}
+			r.toponyms[string(obs.ValueSubjectID)] = text
+		}
+		recorded.Text, recorded.HasText = text, text != ""
+	}
+	return Outcome{
+		ObservationID:  append([]byte(nil), row.ObservationID...),
+		ObservationRef: obs.Ref,
+		Reason:         row.Reason,
+		ValueRank:      row.ValueRank,
+		DeniedBy:       row.DeniedBy, // the node's rows are cloned at load
+		Vote:           autoreconcile.Vote{Support: row.VoteSupport, Of: row.VoteOf},
+		Recorded:       recorded,
+		SubjectID:      subject.Subject.ID,
+		SubjectRef:     subject.Subject.Ref,
+		GraphID:        records.GraphID,
+		CitationID:     obs.CitationID,
+		ArtifactID:     obs.ArtifactID,
+		SourceID:       src.ID,
+		SourceTitle:    src.Title,
+		ArtifactLabel:  label,
+		CitationLabel:  obs.CitationLabel,
+		ArtifactPage:   obs.ArtifactPage,
+		PageLabel:      obs.PageLabel,
+		CredibilityKey: src.CredibilityKey,
+		Provenance:     autoreconcile.Provenance{Credibility: src.Credibility, Uncertain: obs.TranscriptionUncertain},
+	}, true, nil
 }
 
 // DerivedRowKind names a Person life row.
@@ -639,15 +606,20 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 		}
 		nodes = append(nodes, n)
 	}
-	db, err := c.DB()
-	if err != nil {
-		return nil, err
-	}
 	v, err := g.Vocabulary()
 	if err != nil {
 		return nil, err
 	}
-	fields, _, err := fieldsOf(g, db, v, nodes, nil, true)
+	only := map[string]map[string]bool{}
+	for _, l := range lists {
+		for _, o := range l.owners {
+			if only[string(o.Entity.ID)] == nil {
+				only[string(o.Entity.ID)] = map[string]bool{}
+			}
+			only[string(o.Entity.ID)][string(o.PropertyID)] = true
+		}
+	}
+	fields, _, err := fieldsOf(g, v, nodes, nil, only)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,6 @@
 # S16-30 — Provenance records compose from cached records
 
-**Status:** Planned
+**Status:** Landed in [#812](https://github.com/mendahu/provenencia/pull/812) (2026-11-13)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the provenance sheet, the Gallery captions and the life rows show the same records; only where the engine reads them from moves)
@@ -346,3 +346,7 @@ None. Answered 2026-11-13: the handler reads the subject type from the vocabular
 
 **Title:** S16-30 — Provenance records compose from cached records
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; TestDetailBudgets, BenchmarkGraphRecords and BenchmarkCacheSizes figures, base and after; `Plan: docs/deployment-plan/spike-16/prs/S16-30-provenance-from-records.md`.
+
+## Landed
+
+The code matches the plan. Differences: the base and after figures are in the pull request description, not the ship log (the orchestrator owns the log); `derivedRowsFixture` in `conclusion_detail_test.go` is the setup of `TestGetConclusionDetailCarriesDerivedRows` lifted out so `TestGetConclusionDetailWarmReadsNoRecordSQL` shares it, and its Person carries a cited name so the sheet's own records are composed; T-7's list is AC-1.1's tables (`warmReadTables`, shared with T-6) plus `depiction_values`; the `FieldsOf` test cases that T-5 names live in `TestFieldsOfOnly`, beside `TestFieldsOf`; `loadGraphObservations` parses each Citation's locator once per graph load and every Observation of it shares that copy (`TestLoadParsesEachCitationOnce`), so a large locator costs its bytes once, not once per Observation; the four warm budget tests time through one `databasetest.Warm` (a same-pass cleanup of the copied timing block; no check changed).

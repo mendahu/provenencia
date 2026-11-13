@@ -16,6 +16,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/citations"
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
+	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs/evidencegraphstest"
 	"github.com/mendahu/provenencia/core/database/evidencelayer/evidencelayertest"
@@ -223,6 +224,40 @@ func TestForEntityCitationParts(t *testing.T) {
 	o := outcomeOf(field(f.detail(h), "name"), res.Observations[0].ID)
 	if o.ArtifactLabel != "Vol. 3" || o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.PageLabel != "" {
 		t.Fatalf("citation parts %+v", o)
+	}
+}
+
+// TestForEntityAfterCitationEdit: a Citation's label, page and uncertainty
+// reach the record, and the records tier passes Verify after the edit.
+func TestForEntityAfterCitationEdit(t *testing.T) {
+	t.Setenv("PROVENENCIA_GRAPH_VERIFY", "1")
+	f := newFixture(t)
+	src := f.source("Register of Baptisms")
+	a := f.personOn(src)
+	in := f.nameIn(a, "given=Ada|surname=Lovelace")
+	res, err := writes.Call(f.C, writes.Op{Action: "create_citation_with_observations", UserID: userID}, func(tx *database.Tx) (citations.CreateResult, []rowchange.Change, error) {
+		return citations.CreateWithObservations(tx, userID, citations.CreateInput{
+			GraphID: a.GraphID, ArtifactID: f.arts[string(src.ID)].ID, Label: "Baptism of Ada",
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":37}]}`,
+		}, []observations.Input{in})
+	})
+	must(t, err)
+	h := f.promote(a, nil)
+	obsID := res.Observations[0].ID
+	o := outcomeOf(field(f.detail(h), "name"), obsID)
+	if o.CitationLabel != "Baptism of Ada" || o.ArtifactPage != 37 || o.Provenance.Uncertain {
+		t.Fatalf("before: %+v", o)
+	}
+	f.Run("update_citation", func(tx *database.Tx) ([]rowchange.Change, error) {
+		_, ch, err := citations.Update(tx, userID, res.Citation.ID, citations.CitationFieldsInput{
+			Label: "Baptism of Ada Lovelace", TranscriptionUncertain: true,
+			LocatorJSON: `{"version":1,"selectors":[{"type":"page","artifact_page":38}]}`,
+		})
+		return ch, err
+	})
+	o = outcomeOf(field(f.detail(h), "name"), obsID)
+	if o.CitationLabel != "Baptism of Ada Lovelace" || o.ArtifactPage != 38 || !o.Provenance.Uncertain {
+		t.Fatalf("after: %+v", o)
 	}
 }
 
@@ -530,16 +565,18 @@ func TestForEntityQueryCountIsConstant(t *testing.T) {
 	if smallN == 0 || smallN != n {
 		t.Fatalf("graph queries: %d for a small Person, %d for a big one", smallN, n)
 	}
-	sql := conclusiondetails.SQLRecordsForTest()
-	for _, table := range []string{"sources", "artifacts", "source_credibility_"} {
-		if strings.Contains(sql, table) {
-			t.Fatalf("the record shells still read %s", table)
-		}
+	selects := databasetest.CountSelects(t, f.C)
+	for _, h := range [][]byte{hs, hb} {
+		_, err = conclusiondetails.ForEntity(f.C, h)
+		must(t, err)
+	}
+	if selects.N() != 0 {
+		t.Fatalf("a second read prepared %d SELECTs", selects.N())
 	}
 }
 
 // TestForEntityAfterSourceEdit: a Source rename, an Artifact relabel and a
-// credibility change reach the record shells.
+// credibility change reach the record through its Source record.
 func TestForEntityAfterSourceEdit(t *testing.T) {
 	f := newFixture(t)
 	src := f.source("Register")
@@ -682,11 +719,55 @@ func TestFieldsOf(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := conclusiondetails.FieldsOf(f.C, tc.ids)
+			got, err := conclusiondetails.FieldsOf(f.C, tc.ids, nil)
 			must(t, err)
 			tc.check(t, got)
 		})
 	}
+}
+
+// TestFieldsOfOnly: only names the Properties composed, per handle.
+func TestFieldsOfOnly(t *testing.T) {
+	t.Run("one of three Properties", func(t *testing.T) {
+		f := newFixture(t)
+		literate, err := properties.Upsert(f.C, properties.Property{Key: "literate", Origin: vocabkey.OriginUser, Label: "Literate", ValueType: propertymeta.ValueTypeBoolean})
+		must(t, err)
+		db, err := f.C.DB()
+		must(t, err)
+		_, err = db.Exec(`INSERT INTO subject_type_properties (subject_type_id, property_id, sort_order) VALUES (?, ?, 98)`, f.person.ID, literate)
+		must(t, err)
+		a := f.personOn(f.source("Register"))
+		f.cite(a, f.nameIn(a, "given=Ann|surname=Lee"))
+		f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: f.sex.ID, ValueTermID: f.Term("sex_at_birth", "female").ID})
+		f.cite(a, observations.Input{SubjectID: a.ID, PropertyID: literate, Scalar: propertymeta.BooleanScalar(true)})
+		h := f.promote(a, nil)
+		all, err := conclusiondetails.FieldsOf(f.C, [][]byte{h}, nil)
+		must(t, err)
+		if len(all[string(h)]) != 3 {
+			t.Fatalf("every field %+v, want 3", all[string(h)])
+		}
+		got, err := conclusiondetails.FieldsOf(f.C, [][]byte{h}, map[string]map[string]bool{string(h): {string(f.sex.ID): true}})
+		must(t, err)
+		if fs := got[string(h)]; len(fs) != 1 || fs[0].PropertyKey != "sex_at_birth" {
+			t.Fatalf("only sex_at_birth: %+v", fs)
+		}
+	})
+
+	t.Run("a place end reads as its Place's toponym", func(t *testing.T) {
+		f := newFixture(t)
+		h, _ := f.birthAt(f.source("Register"), text("York"))
+		owners := f.placeRows(h)
+		if len(owners) != 1 {
+			t.Fatalf("owners %+v", owners)
+		}
+		id, prop := owners[0].Entity.ID, owners[0].Field.PropertyID
+		got, err := conclusiondetails.FieldsOf(f.C, [][]byte{id}, map[string]map[string]bool{string(id): {string(prop): true}})
+		must(t, err)
+		fs := got[string(id)]
+		if len(fs) != 1 || !bytes.Equal(fs[0].PropertyID, prop) || len(fs[0].Outcomes) != 1 || fs[0].Outcomes[0].Recorded.Text != "York" {
+			t.Fatalf("only the place end: %+v", fs)
+		}
+	})
 }
 
 // A yes/no field reads through the detail with false kept distinct from absent,
