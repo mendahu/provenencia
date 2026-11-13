@@ -1,6 +1,6 @@
 # S15-35 — The Artifact list shows each Artifact's copy details
 
-**Status:** Planned
+**Status:** Landed in [#824](https://github.com/mendahu/provenencia/pull/824) (2026-11-13)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D14](../design/S15-D14-source-page-artifacts.md) SA-1 – SA-3, SA-5 (without Move), SA-10, SA-11, SA-W1, board agreed 2026-11-13; plus the user's 2026-11-13 additions on the same board (the header's type pill as the kit Tag, the meta row that never clips, the description at caption size)
@@ -341,3 +341,9 @@ None.
 
 **Title:** S15-35 — The Artifact list shows each Artifact's copy details
 **Body:** objective in one sentence; what shipped against US-1 – US-5; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-15/prs/S15-35-artifact-list-rows.md`.
+
+## Landed
+
+- STEP-1 and STEP-2 are one commit (the header file carries both steps' edits), and the three `ArtifactRowAction`, `graphLines` and menu-title additions of STEP-4 share one commit with their tests.
+- `artifactGraphsSpoken` (STEP-5's key) and the `restingCardMarksAnArtifactInNoGraph` rename (STEP-6) landed in STEP-4's commit, with the other new L10n keys, so the build and tests stay green at each commit.
+- The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
