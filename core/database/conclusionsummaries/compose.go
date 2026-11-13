@@ -143,16 +143,6 @@ func (v vocab) finishFacts(f TermFacts, propertyKey string) TermFacts {
 	return f
 }
 
-func entityOf(n *graphcache.Node) canonicalentities.Entity {
-	return canonicalentities.Entity{
-		ID:            append([]byte(nil), n.ID...),
-		SubjectTypeID: append([]byte(nil), n.SubjectTypeID...),
-		Ref:           n.Ref,
-		Argument:      n.Argument,
-		Label:         n.Label,
-	}
-}
-
 // follow reads a hop through a scope, so a row's inputs record it. A nil scope
 // follows nothing.
 func follow(in *graphcache.InputScope, id []byte, hop hops.Hop) ([]graphcache.Link, error) {
@@ -665,7 +655,7 @@ func leadPictures(g *graphcache.Graph, nodes []*graphcache.Node) (map[string][]b
 }
 
 func onePerson(v vocab, n *graphcache.Node, in *graphcache.InputScope, pg *placeGraph, lead []byte, births, deaths []lifePick) (PersonSummary, error) {
-	h := PersonSummary{Entity: entityOf(n), PictureImageFileID: lead}
+	h := PersonSummary{Entity: canonicalentities.FromNode(n), PictureImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
 		return PersonSummary{}, err
@@ -789,7 +779,7 @@ func leadLife(in *graphcache.InputScope, v vocab, pg *placeGraph, items []lifePi
 	if err != nil {
 		return LifeFacts{}, err
 	}
-	ev := entityOf(lead.event)
+	ev := canonicalentities.FromNode(lead.event)
 	return LifeFacts{
 		Event: &ev, EventCount: len(items),
 		Date: lead.date, DateCount: lead.count,
@@ -923,7 +913,7 @@ func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []life
 	for _, pick := range picks {
 		if !dated[string(pick.event.ID)] {
 			dated[string(pick.event.ID)] = true
-			out.Dates = append(out.Dates, FieldOwner{Entity: entityOf(pick.event), PropertyID: pick.dateProp})
+			out.Dates = append(out.Dates, FieldOwner{Entity: canonicalentities.FromNode(pick.event), PropertyID: pick.dateProp})
 		}
 		places, err := eventPlaces(v, pg, pick.event, linksOf[string(pick.event.ID)])
 		if err != nil {
@@ -946,7 +936,7 @@ func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []life
 					return LifeOwners{}, fmt.Errorf("conclusionsummaries: association %x is missing", l.Association)
 				}
 				out.Places = append(out.Places, FieldOwner{
-					Entity: entityOf(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
+					Entity: canonicalentities.FromNode(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
 					Place: &ChainedPlace{Entity: p.Entity, Names: p.Names},
 				})
 			}
@@ -1009,7 +999,7 @@ func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 }
 
 func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.Node, locations []graphcache.Link) (EventSummary, error) {
-	h := EventSummary{Entity: entityOf(n)}
+	h := EventSummary{Entity: canonicalentities.FromNode(n)}
 	h.EventName, h.EventNameCount = keptText(n, v.prop("event_name"))
 	h.Type = keptTermFacts(n, v.prop(vocabkey.PropertyEventType))
 	var err error
@@ -1048,7 +1038,7 @@ func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.
 			return EventSummary{}, err
 		}
 		h.Subjects = append(h.Subjects, EventSubject{
-			Entity: entityOf(person), Name: name, NameValueCount: count,
+			Entity: canonicalentities.FromNode(person), Name: name, NameValueCount: count,
 		})
 	}
 	if h.Date != nil {
@@ -1237,7 +1227,7 @@ func composePlaces(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store
 }
 
 func placeShell(n *graphcache.Node, v vocab) (PlaceSummary, error) {
-	h := PlaceSummary{Entity: entityOf(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
+	h := PlaceSummary{Entity: canonicalentities.FromNode(n), Names: toponyms(n, v.prop(vocabkey.PropertyToponym))}
 	var err error
 	if h.StartDate, _, err = keptDateAt(n, v.prop(vocabkey.PropertyStartDate)); err != nil {
 		return PlaceSummary{}, err

@@ -149,7 +149,7 @@ func ForEntity(c *database.Catalog, entityID []byte) (Detail, error) {
 	if err != nil {
 		return Detail{}, err
 	}
-	d := Detail{Entity: entityOf(n), MemberCount: len(n.AcceptedMembers())}
+	d := Detail{Entity: canonicalentities.FromNode(n), MemberCount: len(n.AcceptedMembers())}
 	vocab, err := c.Graph().Vocabulary()
 	if err != nil {
 		return Detail{}, err
@@ -294,16 +294,6 @@ func finish(f *Field) {
 		}
 		return string(f.Outcomes[i].ObservationID) < string(f.Outcomes[j].ObservationID)
 	})
-}
-
-func entityOf(n *graphcache.Node) canonicalentities.Entity {
-	return canonicalentities.Entity{
-		ID:            append([]byte(nil), n.ID...),
-		SubjectTypeID: append([]byte(nil), n.SubjectTypeID...),
-		Ref:           n.Ref,
-		Argument:      n.Argument,
-		Label:         n.Label,
-	}
 }
 
 // state reads a field's state off its displayed values, by the same rule as

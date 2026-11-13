@@ -48,6 +48,17 @@ type Entity struct {
 	MergedIntoID  []byte // nil unless merged
 }
 
+// FromNode is the Entity of a graph node, with its own copies of the id slices.
+func FromNode(n *graphcache.Node) Entity {
+	return Entity{
+		ID:            append([]byte(nil), n.ID...),
+		SubjectTypeID: append([]byte(nil), n.SubjectTypeID...),
+		Ref:           n.Ref,
+		Argument:      n.Argument,
+		Label:         n.Label,
+	}
+}
+
 // CreateInput is the fields for a new handle. Subject type is immutable after insert.
 type CreateInput struct {
 	SubjectTypeID []byte
