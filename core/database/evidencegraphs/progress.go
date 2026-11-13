@@ -57,13 +57,10 @@ func ListProgress(c *database.Catalog) ([]Progress, error) {
 // GetProgress returns counts for one Evidence graph. An unknown or empty graph
 // is zeros.
 func GetProgress(c *database.Catalog, graphID []byte) (Progress, error) {
-	if _, err := c.DB(); err != nil {
-		return Progress{}, err
-	}
 	if len(graphID) != 16 {
 		return Progress{}, ErrInvalid
 	}
-	idx, err := IndexOf(c.Graph())
+	idx, err := catalogIndex(c)
 	if err != nil {
 		return Progress{}, err
 	}
