@@ -103,16 +103,11 @@ func List(c *database.Catalog, sourceID []byte) ([]Graph, error) {
 	if err != nil {
 		return nil, err
 	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	return list(tx, sourceID)
+	return list(db, sourceID)
 }
 
 // list is the one read of graph rows, shared by List and the package's writes.
-func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
+func list(q database.Querier, sourceID []byte) ([]Graph, error) {
 	if len(sourceID) != 0 && len(sourceID) != 16 {
 		return nil, ErrInvalid
 	}
@@ -122,7 +117,7 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 		graphQuery, linkQuery = sqlListBySource, sqlListLinksBySource
 		args = []any{sourceID}
 	}
-	rows, err := tx.Query(graphQuery, args...)
+	rows, err := q.Query(graphQuery, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +140,7 @@ func list(tx *sql.Tx, sourceID []byte) ([]Graph, error) {
 	for i, g := range out {
 		index[string(g.ID)] = i
 	}
-	links, err := tx.Query(linkQuery, args...)
+	links, err := q.Query(linkQuery, args...)
 	if err != nil {
 		return nil, err
 	}
