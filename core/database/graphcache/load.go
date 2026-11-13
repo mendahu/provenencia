@@ -2,6 +2,8 @@ package graphcache
 
 import (
 	"database/sql"
+	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -41,36 +43,63 @@ func (g *Graph) loadIDs(ids [][]byte, replace bool) error {
 }
 
 func (g *Graph) loadChunk(ids [][]byte) error {
-	rows, err := g.entityRows(ids)
+	nodes, err := g.readNodes(ids, readOpts{bridges: bridgeKeys(), full: true})
 	if err != nil {
 		return err
+	}
+	for _, id := range ids {
+		if n, ok := nodes[string(id)]; ok {
+			g.install(n)
+		} else {
+			g.removeNode(id)
+		}
+	}
+	return nil
+}
+
+// readOpts says what readNodes reads besides the entity rows and values: the
+// links on bridges, and with full the members and outcomes.
+type readOpts struct {
+	bridges []string
+	full    bool
+}
+
+// readNodes builds a node for each id that has an entity row, and installs
+// none. It is the one place a node is built from rows.
+func (g *Graph) readNodes(ids [][]byte, o readOpts) (map[string]*Node, error) {
+	out := map[string]*Node{}
+	rows, err := g.entityRows(ids)
+	if err != nil {
+		return nil, err
 	}
 	present := make([][]byte, 0, len(rows))
 	for _, id := range ids {
 		if _, ok := rows[string(id)]; ok {
 			present = append(present, id)
-		} else {
-			g.removeNode(id)
 		}
 	}
 	if len(present) == 0 {
-		return nil
+		return out, nil
 	}
 	values, err := g.StoredValues(present)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	members, err := g.loadMembers(present)
-	if err != nil {
-		return err
+	var members map[string][]Member
+	var outcomes map[string]map[string][]Outcome
+	if o.full {
+		if members, err = g.loadMembers(present); err != nil {
+			return nil, err
+		}
+		if outcomes, err = g.loadOutcomes(present); err != nil {
+			return nil, err
+		}
 	}
-	outcomes, err := g.loadOutcomes(present)
-	if err != nil {
-		return err
-	}
-	links, err := g.loadLinks(present)
-	if err != nil {
-		return err
+	var links map[string][]Link
+	if len(o.bridges) > 0 {
+		if links, err = g.loadLinks(present, o.bridges); err != nil {
+			return nil, err
+		}
 	}
 	for _, id := range present {
 		row := rows[string(id)]
@@ -93,9 +122,50 @@ func (g *Graph) loadChunk(ids [][]byte) error {
 		if n.Outcomes == nil {
 			n.Outcomes = map[string][]Outcome{}
 		}
-		g.install(n)
+		out[string(id)] = n
 	}
-	return nil
+	return out, nil
+}
+
+// NodesOnBridges reads ids' entity rows and values, and their links on the
+// named bridges only, without caching them: Members and Outcomes are empty. A
+// missing id is absent. With no bridge no link query runs. A bridge key that is
+// not registered is an error.
+func (g *Graph) NodesOnBridges(ids [][]byte, bridges ...string) (map[string]*Node, error) {
+	out := map[string]*Node{}
+	if g == nil {
+		return out, nil
+	}
+	for _, b := range bridges {
+		if _, ok := connectrules.LookupBridge(b); !ok {
+			return nil, fmt.Errorf("graphcache: bridge %q is not registered", b)
+		}
+	}
+	ids = uniqueIDs(ids)
+	err := sqlbatch.Each(ids, func(chunk [][]byte) error {
+		nodes, err := g.readNodes(chunk, readOpts{bridges: bridges})
+		if err != nil {
+			return err
+		}
+		for k, n := range nodes {
+			out[k] = n
+		}
+		return nil
+	})
+	return out, err
+}
+
+// bridgeKeys lists the key of every registered bridge.
+func bridgeKeys() []string {
+	var keys []string
+	seen := map[string]bool{}
+	for _, b := range connectrules.Bridges() {
+		if !seen[b.BridgeTypeKey] {
+			seen[b.BridgeTypeKey] = true
+			keys = append(keys, b.BridgeTypeKey)
+		}
+	}
+	return keys
 }
 
 func (g *Graph) entityRows(ids [][]byte) (map[string]entityRow, error) {
@@ -248,8 +318,8 @@ type linkRaw struct {
 	neighborRef, neighborTypeKey string
 }
 
-func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
-	raws, err := g.linkRaws(ids)
+func (g *Graph) loadLinks(ids [][]byte, bridges []string) (map[string][]Link, error) {
+	raws, err := g.linkRaws(ids, bridges)
 	if err != nil {
 		return nil, err
 	}
@@ -262,8 +332,8 @@ func (g *Graph) loadLinks(ids [][]byte) (map[string][]Link, error) {
 
 // linkRaws runs the link query for ids and keeps the rows a registered
 // bridge accepts. It does not read disambiguation.
-func (g *Graph) linkRaws(ids [][]byte) ([]linkRaw, error) {
-	q, args := linkLoadSQL(g.valueTable, g.entityTable, ids)
+func (g *Graph) linkRaws(ids [][]byte, bridges []string) ([]linkRaw, error) {
+	q, args := linkLoadSQL(g.valueTable, g.entityTable, ids, bridges)
 	rows, err := g.query(q, args...)
 	if err != nil {
 		return nil, err
@@ -298,15 +368,15 @@ func (g *Graph) linkRaws(ids [][]byte) ([]linkRaw, error) {
 // LinkLoadSQL is the association-edge query loadLinks runs.
 func LinkLoadSQL(ids [][]byte) (string, []any) {
 	g := New(nil)
-	return linkLoadSQL(g.valueTable, g.entityTable, ids)
+	return linkLoadSQL(g.valueTable, g.entityTable, ids, bridgeKeys())
 }
 
 // linkLoadSQL constrains the association type and endpoint property to the
 // registered bridges, each at its own origin. CROSS JOIN and INDEXED BY keep
 // SQLite on auto_reconciler_values_edge_idx (property_id, value_entity_id)
 // instead of starting at every unmerged entity.
-func linkLoadSQL(valueTable, entityTable string, ids [][]byte) (string, []any) {
-	types, props := bridgePredicates()
+func linkLoadSQL(valueTable, entityTable string, ids [][]byte, bridges []string) (string, []any) {
+	types, props := bridgePredicates(bridges)
 	q := `SELECT a.value_entity_id, a.entity_id, assoc.ref, ast.key, a.property_id, ap.key, bp.key,
 			b.value_entity_id, n.ref, n.subject_type_id, nt.key
 		FROM ` + valueTable + ` a INDEXED BY auto_reconciler_values_edge_idx
@@ -328,10 +398,13 @@ func linkLoadSQL(valueTable, entityTable string, ids [][]byte) (string, []any) {
 	return q, args
 }
 
-func bridgePredicates() (types, props [][2]string) {
+func bridgePredicates(bridges []string) (types, props [][2]string) {
 	seenT := map[string]bool{}
 	seenP := map[string]bool{}
 	for _, b := range connectrules.Bridges() {
+		if !slices.Contains(bridges, b.BridgeTypeKey) {
+			continue
+		}
 		tk := b.BridgeTypeKey + "\x00" + b.OriginKey()
 		if !seenT[tk] {
 			seenT[tk] = true

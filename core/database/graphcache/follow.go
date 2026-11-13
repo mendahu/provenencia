@@ -12,7 +12,7 @@ import (
 func (g *Graph) Follow(id []byte, hop hops.Hop) ([]Link, error) {
 	out, err := g.follow(id, hop)
 	if err == nil && g != nil && g.inputRecorder != nil {
-		for _, k := range followKeys(id, hop, out) {
+		for _, k := range FollowKeys(id, hop, out) {
 			g.inputRecorder(k)
 		}
 	}
@@ -26,6 +26,11 @@ func (g *Graph) follow(id []byte, hop hops.Hop) ([]Link, error) {
 	if err != nil || n == nil {
 		return nil, err
 	}
+	return n.Follow(hop)
+}
+
+// Follow returns the node's links that match hop, in the node's order.
+func (n *Node) Follow(hop hops.Hop) ([]Link, error) {
 	b, ok := connectrules.LookupBridge(hop.Bridge())
 	if !ok || len(b.Endpoints) == 0 {
 		return nil, fmt.Errorf("graphcache: hop bridge %q is not registered", hop.Bridge())

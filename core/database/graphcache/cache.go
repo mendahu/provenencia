@@ -42,8 +42,16 @@ type KeyedEntry[T any] struct {
 	Name string
 	// Apply runs after a commit's reload when the entry holds data. roots are
 	// the handles the commit reloaded or touched (nil when it names none).
-	// Required.
+	// Required unless the entry declares Inputs.
 	Apply func(g *Graph, k Keyed[T], roots [][]byte, set effects.Set) error
+	// Inputs lists the keys value v of key id was built from, in InputScope's
+	// sense: {h} is h's values (an association's included) and {h, bridge} the
+	// links h has on that bridge. A commit that moves one of them drops the
+	// key before Apply runs. A moved input is a written handle, an end of a
+	// committed association at its bridge, or a merged handle's neighbour at
+	// the link's bridge. A removed association moves only its own {assoc}, so
+	// an entry that reads a link lists its association's values. Optional.
+	Inputs func(id []byte, v T) []InputKey
 	// DerivedFrom lists what a change empties this entry for.
 	DerivedFrom []Source
 	// Check rebuilds one stored value and compares it. Nil: Verify skips.
@@ -83,9 +91,13 @@ type entry struct {
 	cap   int
 	build any
 	apply func(g *Graph, roots [][]byte, set effects.Set) error
-	check func(g *Graph) error
-	held  func(g *Graph) bool
-	count func(g *Graph) int
+	// inputs is the typed Inputs func of a keyed entry, nil without one.
+	inputs any
+	// dropMoved drops the keys whose declared inputs moved.
+	dropMoved func(g *Graph, moved []InputKey)
+	check     func(g *Graph) error
+	held      func(g *Graph) bool
+	count     func(g *Graph) int
 }
 
 // registry holds every entry in registration order. An entry's id is its
@@ -130,13 +142,21 @@ func RegisterKeyed[T any](e KeyedEntry[T]) Keyed[T] {
 	if e.Cap <= 0 {
 		panic("graphcache: keyed entry " + e.Name + " needs a Cap")
 	}
-	if e.Apply == nil {
-		panic("graphcache: keyed entry " + e.Name + " needs an Apply")
+	if e.Apply == nil && e.Inputs == nil {
+		panic("graphcache: keyed entry " + e.Name + " needs an Apply or Inputs")
 	}
 	info := &entry{name: e.Name, life: LifeGraph, cap: e.Cap}
+	if e.Inputs != nil {
+		info.inputs = e.Inputs
+	}
 	k := Keyed[T]{id: register(info, e.DerivedFrom)}
-	info.apply = func(g *Graph, roots [][]byte, set effects.Set) error {
-		return e.Apply(g, k, roots, set)
+	if e.Apply != nil {
+		info.apply = func(g *Graph, roots [][]byte, set effects.Set) error {
+			return e.Apply(g, k, roots, set)
+		}
+	}
+	if e.Inputs != nil {
+		info.dropMoved = func(g *Graph, moved []InputKey) { k.dropMoved(g, moved) }
 	}
 	info.held = func(g *Graph) bool { return k.data(g).len() > 0 }
 	info.count = func(g *Graph) int { return k.data(g).len() }
@@ -210,6 +230,56 @@ func (g *Graph) KeyCounts() map[string]int {
 type keyedValues[T any] struct {
 	items       map[string]*keyedItem[T]
 	front, back *keyedItem[T]
+	// inputsOf, with the two maps below, is the input index of an entry that
+	// declares Inputs: each held key's (ID, Bridge) index keys, and for each
+	// index key the held keys that name it.
+	inputsOf func(id []byte, v T) []InputKey
+	inputs   map[string][]string
+	byInput  map[string]map[string]bool
+}
+
+// inputIndexKey is the index key of an input: Endpoint is not matched.
+func inputIndexKey(k InputKey) string { return string(k.ID) + "\x00" + k.Bridge }
+
+// index records the inputs of the value held under key, replacing any before.
+func (kv *keyedValues[T]) index(key string, v T) {
+	if kv.inputsOf == nil {
+		return
+	}
+	kv.unindex(key)
+	seen := map[string]bool{}
+	var names []string
+	for _, in := range kv.inputsOf([]byte(key), v) {
+		n := inputIndexKey(in)
+		if seen[n] {
+			continue
+		}
+		seen[n] = true
+		names = append(names, n)
+		if kv.byInput[n] == nil {
+			kv.byInput[n] = map[string]bool{}
+		}
+		kv.byInput[n][key] = true
+	}
+	kv.inputs[key] = names
+}
+
+// unindex forgets the inputs of key.
+func (kv *keyedValues[T]) unindex(key string) {
+	for _, n := range kv.inputs[key] {
+		delete(kv.byInput[n], key)
+		if len(kv.byInput[n]) == 0 {
+			delete(kv.byInput, n)
+		}
+	}
+	delete(kv.inputs, key)
+}
+
+// remove forgets the item and its inputs.
+func (kv *keyedValues[T]) remove(it *keyedItem[T]) {
+	kv.unlink(it)
+	delete(kv.items, it.key)
+	kv.unindex(it.key)
 }
 
 type keyedItem[T any] struct {
@@ -295,9 +365,7 @@ func (k Keyed[T]) SetCapForTest(g *Graph, n int) {
 
 // evict removes the least recently used key.
 func (kv *keyedValues[T]) evict() {
-	it := kv.back
-	kv.unlink(it)
-	delete(kv.items, it.key)
+	kv.remove(kv.back)
 }
 
 // hit returns the value held for id and counts a use. A key that is not 16
@@ -325,6 +393,11 @@ func (k Keyed[T]) store(g *Graph, id []byte, v T) {
 	kv := k.data(g)
 	if kv == nil {
 		kv = &keyedValues[T]{items: map[string]*keyedItem[T]{}}
+		if fn, ok := registry[k.id-1].inputs.(func(id []byte, v T) []InputKey); ok {
+			kv.inputsOf = fn
+			kv.inputs = map[string][]string{}
+			kv.byInput = map[string]map[string]bool{}
+		}
 		if g.entries == nil {
 			g.entries = map[int]any{}
 		}
@@ -333,6 +406,7 @@ func (k Keyed[T]) store(g *Graph, id []byte, v T) {
 	if it, ok := kv.items[string(id)]; ok {
 		it.v = v
 		kv.touch(it)
+		kv.index(it.key, v)
 		return
 	}
 	for len(kv.items) >= k.capOf(g) {
@@ -342,6 +416,7 @@ func (k Keyed[T]) store(g *Graph, id []byte, v T) {
 	it := &keyedItem[T]{key: key, v: v}
 	kv.items[key] = it
 	kv.pushFront(it)
+	kv.index(key, v)
 }
 
 // Get returns the value held for id, else calls fill, stores its result and
@@ -429,8 +504,26 @@ func (k Keyed[T]) Drop(g *Graph, ids [][]byte) {
 	}
 	for _, id := range ids {
 		if it, ok := kv.items[string(id)]; ok {
-			kv.unlink(it)
-			delete(kv.items, string(id))
+			kv.remove(it)
+		}
+	}
+}
+
+// dropMoved forgets every key with a declared input among moved.
+func (k Keyed[T]) dropMoved(g *Graph, moved []InputKey) {
+	kv := k.data(g)
+	if kv == nil || kv.inputsOf == nil {
+		return
+	}
+	var drop []string
+	for _, m := range moved {
+		for key := range kv.byInput[inputIndexKey(m)] {
+			drop = append(drop, key)
+		}
+	}
+	for _, key := range drop {
+		if it, ok := kv.items[key]; ok {
+			kv.remove(it)
 		}
 	}
 }
@@ -540,10 +633,17 @@ func (g *Graph) dropGraphEntries() {
 	}
 }
 
-// applyEntries runs each held entry's Apply, in registration order. The first
-// error stops the loop.
-func (g *Graph) applyEntries(roots [][]byte, set effects.Set) error {
+// applyEntries drops, in each held entry that declares Inputs, the keys whose
+// inputs the commit moved, then runs each held entry's Apply, in registration
+// order. The first error stops the loop.
+func (g *Graph) applyEntries(roots [][]byte, set effects.Set, moved []InputKey) error {
 	for _, e := range registry {
+		if e.held == nil || !e.held(g) {
+			continue
+		}
+		if e.dropMoved != nil {
+			e.dropMoved(g, moved)
+		}
 		if e.apply == nil || !e.held(g) {
 			continue
 		}

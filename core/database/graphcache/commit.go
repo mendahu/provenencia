@@ -34,7 +34,7 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	}
 	ids := uniqueIDs(set.Handles)
 	if len(ids) == 0 {
-		if err := g.applyEntries(nil, set); err != nil {
+		if err := g.applyEntries(nil, set, nil); err != nil {
 			return err
 		}
 		return g.verifyIfSet()
@@ -46,6 +46,13 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 	var entities, assocs []entityRow
 	var reload, merged [][]byte
 	roots := append([][]byte(nil), ids...)
+	// moved is what the commit moved, in InputKey's terms, for the entries that
+	// declare Inputs: each written handle, each end of a committed association
+	// at its bridge, and each neighbour of a merged handle at the link's bridge.
+	moved := make([]InputKey, 0, len(ids))
+	for _, id := range ids {
+		moved = append(moved, NodeKey(id))
+	}
 	for _, id := range ids {
 		row, ok := rows[string(id)]
 		if !ok {
@@ -89,19 +96,23 @@ func (g *Graph) OnCommit(c effects.Commit) error {
 		}
 		reload = append(reload, ends...)
 		roots = append(roots, touched...)
+		for _, end := range touched {
+			moved = append(moved, InputKey{ID: end, Bridge: row.typeKey})
+		}
 	}
-	neighbors, touched, err := g.mergedNeighbors(merged)
+	neighbors, touched, links, err := g.mergedNeighbors(merged)
 	if err != nil {
 		return err
 	}
 	reload = append(reload, neighbors...)
 	roots = append(roots, touched...)
+	moved = append(moved, links...)
 	if err := g.loadIDs(reload, true); err != nil {
 		return err
 	}
 	roots = uniqueIDs(roots)
 	g.dropCommittedDisplays(roots, set)
-	if err := g.applyEntries(roots, set); err != nil {
+	if err := g.applyEntries(roots, set, moved); err != nil {
 		return err
 	}
 	return g.verifyIfSet()
@@ -144,25 +155,27 @@ func (g *Graph) detachAssociation(id []byte) (reload, touched [][]byte, err erro
 
 // mergedNeighbors finds the unmerged nodes each merged handle's own links
 // name. reload is the ones already loaded, whose links to the handle a fresh
-// load would drop; touched is all of them, which a stored row may still name.
-func (g *Graph) mergedNeighbors(ids [][]byte) (reload, touched [][]byte, err error) {
+// load would drop; touched is all of them, which a stored row may still name;
+// moved is each of them at the bridge of the link that names the handle.
+func (g *Graph) mergedNeighbors(ids [][]byte) (reload, touched [][]byte, moved []InputKey, err error) {
 	if len(ids) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 	err = sqlbatch.Each(ids, func(chunk [][]byte) error {
-		raws, err := g.linkRaws(chunk)
+		raws, err := g.linkRaws(chunk, bridgeKeys())
 		if err != nil {
 			return err
 		}
 		for _, r := range raws {
 			touched = append(touched, r.neighbor)
+			moved = append(moved, InputKey{ID: r.neighbor, Bridge: r.bridgeKey})
 			if _, ok := g.nodes[string(r.neighbor)]; ok {
 				reload = append(reload, r.neighbor)
 			}
 		}
 		return nil
 	})
-	return reload, touched, err
+	return reload, touched, moved, err
 }
 
 func (g *Graph) verifyIfSet() error {

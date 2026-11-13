@@ -26,17 +26,17 @@ func (k InputKey) Equal(o InputKey) bool {
 	return bytes.Equal(k.ID, o.ID) && k.Bridge == o.Bridge && k.Endpoint == o.Endpoint
 }
 
-// nodeKey is the key a read of id's values records.
-func nodeKey(id []byte) InputKey { return InputKey{ID: id} }
+// NodeKey is the key a read of id's values records.
+func NodeKey(id []byte) InputKey { return InputKey{ID: id} }
 
-// followKeys are the keys a Follow of hop from id that returned links
+// FollowKeys are the keys a Follow of hop from id that returned links
 // records: the bridge end, which covers the links a filter drops, and each
 // returned association's values.
-func followKeys(id []byte, hop hops.Hop, links []Link) []InputKey {
+func FollowKeys(id []byte, hop hops.Hop, links []Link) []InputKey {
 	keys := make([]InputKey, 0, 1+len(links))
 	keys = append(keys, InputKey{ID: id, Bridge: hop.Bridge(), Endpoint: hop.From()})
 	for _, l := range links {
-		keys = append(keys, nodeKey(l.Association))
+		keys = append(keys, NodeKey(l.Association))
 	}
 	return keys
 }
@@ -70,7 +70,7 @@ func (g *Graph) NoInputs() *InputScope {
 func (s *InputScope) Node(id []byte) (*Node, error) {
 	n, err := s.g.Node(id)
 	if err == nil {
-		s.Add(nodeKey(id))
+		s.add(NodeKey(id))
 	}
 	return n, err
 }
@@ -85,13 +85,26 @@ func (s *InputScope) Nodes(ids [][]byte) error {
 func (s *InputScope) Follow(id []byte, hop hops.Hop) ([]Link, error) {
 	links, err := s.g.Follow(id, hop)
 	if err == nil {
-		s.Add(followKeys(id, hop, links)...)
+		s.add(FollowKeys(id, hop, links)...)
 	}
 	return links, err
 }
 
-// Add records keys, leaving out the dependent's own values.
+// Add records keys, leaving out the dependent's own values. A graph with a test
+// recorder reports each key to it first, so a key handed in from a registry
+// entry is heard as a read is.
 func (s *InputScope) Add(keys ...InputKey) {
+	if s != nil && s.g != nil && s.g.inputRecorder != nil {
+		for _, k := range keys {
+			s.g.inputRecorder(k)
+		}
+	}
+	s.add(keys...)
+}
+
+// add records keys without reporting them: Node and Follow read through the
+// graph, which reports.
+func (s *InputScope) add(keys ...InputKey) {
 	if s == nil || s.off {
 		return
 	}
@@ -132,6 +145,21 @@ func SortInputKeys(keys []InputKey) {
 		}
 		return keys[i].Endpoint < keys[j].Endpoint
 	})
+}
+
+// UniqueInputKeys returns keys once each (by Key), sorted by ID, Bridge,
+// Endpoint, as a new slice: it does not alias or reorder keys.
+func UniqueInputKeys(keys []InputKey) []InputKey {
+	seen := make(map[string]bool, len(keys))
+	out := make([]InputKey, 0, len(keys))
+	for _, k := range keys {
+		if mk := k.Key(); !seen[mk] {
+			seen[mk] = true
+			out = append(out, k)
+		}
+	}
+	SortInputKeys(out)
+	return out
 }
 
 // AssociationInputs returns, for each id that is an unmerged association of a
@@ -182,8 +210,8 @@ func (g *Graph) AssociationInputs(ids [][]byte) (map[string][]InputKey, error) {
 	return out, nil
 }
 
-// SetInputRecorderForTest reports every key the exported Node and Follow read
-// on this graph, with no self rule. Tests only.
+// SetInputRecorderForTest reports every key Node and Follow read on this graph
+// and every key handed to InputScope.Add, with no self rule. Tests only.
 func (g *Graph) SetInputRecorderForTest(fn func(InputKey)) {
 	if g == nil {
 		return

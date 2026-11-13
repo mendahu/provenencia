@@ -3,6 +3,8 @@ package graphcache_test
 import (
 	"bytes"
 	"database/sql"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/vocabkey"
 	"github.com/mendahu/provenencia/core/writes"
 )
 
@@ -697,4 +700,86 @@ func TestOutcomeSubjectFollowsAWrite(t *testing.T) {
 	if err := g.Verify(); err != nil {
 		t.Fatal(err)
 	}
+}
+
+func TestNodesOnBridges(t *testing.T) {
+	c := graphcachetest.OpenCatalog(t)
+	k := graphcachetest.NewCanon(t, c)
+	city, region := k.Entity("place"), k.Entity("place")
+	event := k.Event(vocabkey.EventBirth)
+	part := k.PartOf(city, region)
+	loc := k.Location(event, city)
+	k.Commit(city, region, event, part, loc)
+	g := c.Graph()
+	g.Drop()
+	missing := bytes.Repeat([]byte{0xee}, 16)
+
+	tests := []struct {
+		name    string
+		bridges []string
+		want    []string // bridge keys of the links
+	}{
+		{"one bridge", []string{"place_relationship"}, []string{"place_relationship"}},
+		{"no bridge", nil, nil},
+		{"two bridges", []string{"place_relationship", "location"}, []string{"location", "place_relationship"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := g.NodesOnBridges([][]byte{city, city}, tc.bridges...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			n := got[string(city)]
+			if len(got) != 1 || n == nil {
+				t.Fatalf("got %d nodes, want the city's", len(got))
+			}
+			var keys []string
+			for _, l := range n.Links {
+				keys = append(keys, l.BridgeTypeKey)
+			}
+			slices.Sort(keys)
+			if !slices.Equal(keys, tc.want) {
+				t.Fatalf("link bridges %v, want %v", keys, tc.want)
+			}
+			if loaded(g, city) {
+				t.Fatal("the city was cached")
+			}
+		})
+	}
+	t.Run("one link is the part_of to the region", func(t *testing.T) {
+		got, err := g.NodesOnBridges([][]byte{city}, "place_relationship")
+		if err != nil {
+			t.Fatal(err)
+		}
+		l := got[string(city)].Links
+		if len(l) != 1 || !bytes.Equal(l[0].Neighbor, region) || l[0].TermKey != "part_of" {
+			t.Fatalf("links %+v", l)
+		}
+	})
+	t.Run("a missing id is absent", func(t *testing.T) {
+		got, err := g.NodesOnBridges([][]byte{missing}, "place_relationship")
+		if err != nil || len(got) != 0 {
+			t.Fatalf("got %v, %v", got, err)
+		}
+	})
+	t.Run("an unregistered bridge is an error", func(t *testing.T) {
+		if _, err := g.NodesOnBridges([][]byte{city}, "nope"); err == nil {
+			t.Fatal("no error")
+		}
+	})
+	t.Run("every bridge equals the cached node but for members and outcomes", func(t *testing.T) {
+		all, err := g.NodesOnBridges([][]byte{city}, "place_relationship", "location", "participation", "relationship")
+		if err != nil {
+			t.Fatal(err)
+		}
+		full, err := g.Node(city)
+		if err != nil {
+			t.Fatal(err)
+		}
+		a, b := *all[string(city)], *full
+		a.Members, a.Outcomes, b.Members, b.Outcomes = nil, nil, nil, nil
+		if !reflect.DeepEqual(a, b) {
+			t.Fatalf("narrow %+v\nfull %+v", a, b)
+		}
+	})
 }

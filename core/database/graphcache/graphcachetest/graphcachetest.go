@@ -288,6 +288,12 @@ func (k *Canon) Location(event, place []byte) []byte {
 	return k.Link("location", map[string][]byte{"event": event, "place": place}, "", "")
 }
 
+// PartOf files part as part_of whole and returns the place relationship's id.
+func (k *Canon) PartOf(part, whole []byte) []byte {
+	k.t.Helper()
+	return k.Link("place_relationship", map[string][]byte{"from": part, "to": whole}, "place_relationship_type", "part_of")
+}
+
 // Person adds a canonical Person and returns its id.
 func (k *Canon) Person() []byte {
 	k.t.Helper()

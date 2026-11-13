@@ -45,7 +45,7 @@ func (f *fixture) placeSubject(name string, start, end *int, x, y int64) subject
 	return s
 }
 
-func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) {
+func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, linkEnd *int) subjects.Subject {
 	f.T.Helper()
 	term := f.Term("place_relationship_type", kind)
 	fromProp := f.Prop("from").ID
@@ -80,6 +80,7 @@ func (f *fixture) placeRel(from, to subjects.Subject, kind string, linkStart, li
 		})
 		must(f.T, err)
 	}
+	return res.Subject
 }
 
 func TestPlaceParentsAtDateFromPeriods(t *testing.T) {

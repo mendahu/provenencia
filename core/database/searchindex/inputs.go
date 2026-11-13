@@ -172,14 +172,7 @@ func ReprojectChanged(q Querier, written, moved [][]byte) ([][]byte, error) {
 
 // dependentsOf is the rows whose inputs hold any of the exact keys.
 func dependentsOf(q Querier, keys []graphcache.InputKey) ([][]byte, error) {
-	seen := map[string]graphcache.InputKey{}
-	for _, k := range keys {
-		seen[k.Key()] = k
-	}
-	unique := make([]graphcache.InputKey, 0, len(seen))
-	for _, k := range seen {
-		unique = append(unique, k)
-	}
+	unique := graphcache.UniqueInputKeys(keys)
 	var out [][]byte
 	for start := 0; start < len(unique); start += keysPerLookup {
 		batch := unique[start:min(start+keysPerLookup, len(unique))]

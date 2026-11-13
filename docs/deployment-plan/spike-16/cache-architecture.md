@@ -44,7 +44,7 @@ A write composes summary rows on a throwaway graph over its own transaction (`se
 
 ### A cache a composer reads hands its inputs to the row
 
-S14-40 records each summary row's inputs through `graphcache.InputScope` (`Node`, `Follow`), and S14-42 finds a write's dependent rows in that record. A composer that reads a cache entry instead of `Node` and `Follow` must still record what the entry was built from, or S14-42's lookup misses the row and it goes stale. So an entry keeps the `InputKey`s it was built from, built with `graphcache`'s key constructors (exported by S16-18, today the unexported `nodeKey` and `followKeys`), and the composer adds them to its scope. `buildPlaceGraph` already does this per place (`pg.inputs`, `inputBudget.addClosure`), with a cap past which a chain stops at the depth its inputs cover; the place entries keep both.
+S14-40 records each summary row's inputs through `graphcache.InputScope` (`Node`, `Follow`), and S14-42 finds a write's dependent rows in that record. A composer that reads a cache entry instead of `Node` and `Follow` must still record what the entry was built from, or S14-42's lookup misses the row and it goes stale. So an entry keeps the `InputKey`s it was built from, built with `graphcache`'s key constructors (`graphcache.NodeKey` and `FollowKeys`), and the composer adds them to its scope. `buildPlaceGraph` already does this per place (each place entry's `inputs`, which `inputBudget.addClosure` hands to the row), with a cap past which a chain stops at the depth its inputs cover; the place entries keep both.
 
 ### Entity records
 

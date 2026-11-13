@@ -123,7 +123,7 @@ func (g *Graph) verifyIDs(ids [][]byte) error {
 			assocIDs = append(assocIDs, l.Association)
 		}
 	}
-	fresh, err := g.loadLinks(ids)
+	fresh, err := g.loadLinks(ids, bridgeKeys())
 	if err != nil {
 		return err
 	}

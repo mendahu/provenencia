@@ -35,6 +35,24 @@ func TestInputScope(t *testing.T) {
 	g := c.Graph()
 	missing := bytes.Repeat([]byte{0xee}, 16)
 
+	t.Run("the recorder hears Add", func(t *testing.T) {
+		var heard []graphcache.InputKey
+		g.SetInputRecorderForTest(func(k graphcache.InputKey) { heard = append(heard, k) })
+		defer g.SetInputRecorderForTest(nil)
+		k := keyOf(other, "", "")
+		g.Inputs(person).Add(k)
+		g.NoInputs().Add(k)
+		if len(heard) != 2 || !heard[0].Equal(k) || !heard[1].Equal(k) {
+			t.Fatalf("heard %+v, want the key twice", heard)
+		}
+		heard = nil
+		if _, err := g.Inputs(person).Node(other); err != nil {
+			t.Fatal(err)
+		}
+		if len(heard) != 1 {
+			t.Fatalf("Node was heard %d times, want once", len(heard))
+		}
+	})
 	t.Run("Node records the node's values", func(t *testing.T) {
 		in := g.Inputs(person)
 		if _, err := in.Node(other); err != nil {
