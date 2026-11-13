@@ -2,6 +2,10 @@
 
 One short paragraph per landed PR, newest first. Written by the PR that lands it.
 
+## S16-16 — Kinship answers are composed from the pivots, and the Family read is one pass
+
+**Landed 2026-11-13** in [#814](https://github.com/mendahu/provenencia/pull/814). Nothing a researcher sees changes. A person's implied links and siblings are composed from the cached kinship pivots at each read, so a commit no longer empties two catalog-wide caches: only the pivots one hop from what it touched are recomputed. The Family section reads each person's kin in one batched `Relationships` call and the `LoadRelationships` and `LoadSiblings` loaders are gone; `edgeKey` length-prefixes its parts. A warm Promote proposal costs more (115.9 to 201 ms at 4,000 persons, 137.9 to 313 ms at 16,000, on an M1), which the user accepted: `budgetWarm` is 950 ms and memoising `For` is parked in `docs/ideas/promote-ranking.md`.
+
 ## S16-30 — Provenance records compose from cached records
 
 **Landed 2026-11-13** in [#812](https://github.com/mendahu/provenencia/pull/812). A Conclusion page's provenance record is the node's outcome row, the Observation and Subject from the graph's cached records, and the Source record, composed with no SQL: the records now carry each Observation's Citation label, page, Artifact and uncertainty and index Observations by id (each Citation's locator is parsed once per graph load, and its Observations share the words), so a Citation edit reaches the sheet through the existing graph drop. `sqlRecords`, `sqlToponyms`, `loadRecords`, `toponymsOf` and the detail read's date and name lookups are gone, a Person's life rows compose only the Property each owner is read for, and the detail handler reads the subject type from the graph vocabulary. A warm open reads nothing from SQL but the pictures' paths. The records take 22.4 MB at 4,096 held graphs (17.2 MB before). No change a researcher can see, so no version bump.

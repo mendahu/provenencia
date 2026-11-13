@@ -1,6 +1,6 @@
 # S16-16 — Kinship answers are composed from the pivots, and the Family read is one pass
 
-**Status:** Planned
+**Status:** Landed in [#814](https://github.com/mendahu/provenencia/pull/814) (2026-11-13)
 **Spike / slice:** Spike 16 · Slice 2c — Walks
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine refactor; the Family section draws the same units)
