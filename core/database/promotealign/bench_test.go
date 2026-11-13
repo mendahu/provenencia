@@ -15,6 +15,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries/conclusionsummariestest"
 	"github.com/mendahu/provenencia/core/database/databasetest"
 	"github.com/mendahu/provenencia/core/database/evidencegraphs"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
 	"github.com/mendahu/provenencia/core/database/graphfill"
 	"github.com/mendahu/provenencia/core/database/namealiases"
@@ -652,6 +653,37 @@ func BenchmarkLargeSourcePropose(b *testing.B) {
 			b.ReportMetric(ms(lf.warmProposal()), "warm-ms")
 			n := 0
 			b.ReportMetric(ms(lf.proposalAfterCommit(&n)), "after-commit-ms")
+		})
+	}
+}
+
+// BenchmarkListPlaces reports the Places list at 4,000 and 16,000 persons: cold
+// (right after Drop), warm (a second read), and a write's one-shot read of every
+// place's row on graphcache.Over. Reported, not gated: the S16-18 plan records
+// the figures before and after place entries. It ignores b.N, as
+// BenchmarkCacheSizes does.
+func BenchmarkListPlaces(b *testing.B) {
+	for _, persons := range []int{4000, 16000} {
+		b.Run(fmt.Sprintf("persons=%d", persons), func(b *testing.B) {
+			lf := newLargeFixture(b, persons)
+			c := lf.fixture.c
+			db, err := c.DB()
+			must(b, err)
+			ms := func(d time.Duration) float64 { return float64(d.Microseconds()) / 1000 }
+			list := func() time.Duration {
+				return databasetest.Since(func() {
+					_, err := conclusionsummaries.ListPlaces(c)
+					must(b, err)
+				})
+			}
+			c.Graph().Drop()
+			b.ReportMetric(ms(list()), "cold-ms")
+			b.ReportMetric(ms(list()), "warm-ms")
+			places := conclusionsummariestest.HandleIDs(b, db, vocabkey.Place)
+			b.ReportMetric(ms(databasetest.Since(func() {
+				_, err := conclusionsummaries.RowsForSearch(graphcache.Over(db), conclusionsummaries.Want{Places: places})
+				must(b, err)
+			})), "write-ms")
 		})
 	}
 }
