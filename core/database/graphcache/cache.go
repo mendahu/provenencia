@@ -1,7 +1,6 @@
 package graphcache
 
 import (
-	"container/list"
 	"fmt"
 	"slices"
 
@@ -148,8 +147,8 @@ func RegisterKeyed[T any](e KeyedEntry[T]) Keyed[T] {
 			if kv == nil {
 				return nil
 			}
-			for key, el := range kv.items {
-				if err := e.Check(g, []byte(key), el.Value.(*keyedItem[T]).v); err != nil {
+			for key, it := range kv.items {
+				if err := e.Check(g, []byte(key), it.v); err != nil {
 					return err
 				}
 			}
@@ -208,17 +207,15 @@ func (g *Graph) KeyCounts() map[string]int {
 
 // --- keyed handle ---
 
-// keyedValues is a keyed entry's data on one graph: each key's value, and the
-// keys in use order, the most recently used first.
 type keyedValues[T any] struct {
-	items map[string]*list.Element
-	order *list.List
+	items       map[string]*keyedItem[T]
+	front, back *keyedItem[T]
 }
 
-// keyedItem is one stored key and its value.
 type keyedItem[T any] struct {
-	key string
-	v   T
+	key        string
+	v          T
+	prev, next *keyedItem[T]
 }
 
 func (kv *keyedValues[T]) len() int {
@@ -226,6 +223,39 @@ func (kv *keyedValues[T]) len() int {
 		return 0
 	}
 	return len(kv.items)
+}
+
+func (kv *keyedValues[T]) unlink(it *keyedItem[T]) {
+	if it.prev != nil {
+		it.prev.next = it.next
+	} else {
+		kv.front = it.next
+	}
+	if it.next != nil {
+		it.next.prev = it.prev
+	} else {
+		kv.back = it.prev
+	}
+	it.prev, it.next = nil, nil
+}
+
+func (kv *keyedValues[T]) pushFront(it *keyedItem[T]) {
+	it.next = kv.front
+	if kv.front != nil {
+		kv.front.prev = it
+	}
+	kv.front = it
+	if kv.back == nil {
+		kv.back = it
+	}
+}
+
+func (kv *keyedValues[T]) touch(it *keyedItem[T]) {
+	if kv.front == it {
+		return
+	}
+	kv.unlink(it)
+	kv.pushFront(it)
 }
 
 func (k Keyed[T]) data(g *Graph) *keyedValues[T] {
@@ -265,9 +295,9 @@ func (k Keyed[T]) SetCapForTest(g *Graph, n int) {
 
 // evict removes the least recently used key.
 func (kv *keyedValues[T]) evict() {
-	el := kv.order.Back()
-	delete(kv.items, el.Value.(*keyedItem[T]).key)
-	kv.order.Remove(el)
+	it := kv.back
+	kv.unlink(it)
+	delete(kv.items, it.key)
 }
 
 // hit returns the value held for id and counts a use. A key that is not 16
@@ -278,12 +308,12 @@ func (k Keyed[T]) hit(g *Graph, id []byte) (T, bool) {
 	if kv == nil || len(id) != 16 {
 		return zero, false
 	}
-	el, ok := kv.items[string(id)]
+	it, ok := kv.items[string(id)]
 	if !ok {
 		return zero, false
 	}
-	kv.order.MoveToFront(el)
-	return el.Value.(*keyedItem[T]).v, true
+	kv.touch(it)
+	return it.v, true
 }
 
 // store keeps v under id as the most recently used key, evicting the least
@@ -294,21 +324,24 @@ func (k Keyed[T]) store(g *Graph, id []byte, v T) {
 	}
 	kv := k.data(g)
 	if kv == nil {
-		kv = &keyedValues[T]{items: map[string]*list.Element{}, order: list.New()}
+		kv = &keyedValues[T]{items: map[string]*keyedItem[T]{}}
 		if g.entries == nil {
 			g.entries = map[int]any{}
 		}
 		g.entries[k.id] = kv
 	}
-	if el, ok := kv.items[string(id)]; ok {
-		el.Value.(*keyedItem[T]).v = v
-		kv.order.MoveToFront(el)
+	if it, ok := kv.items[string(id)]; ok {
+		it.v = v
+		kv.touch(it)
 		return
 	}
 	for len(kv.items) >= k.capOf(g) {
 		kv.evict()
 	}
-	kv.items[string(id)] = kv.order.PushFront(&keyedItem[T]{key: string(id), v: v})
+	key := string(id) // one copy, shared by the map and the item
+	it := &keyedItem[T]{key: key, v: v}
+	kv.items[key] = it
+	kv.pushFront(it)
 }
 
 // Get returns the value held for id, else calls fill, stores its result and
@@ -395,8 +428,8 @@ func (k Keyed[T]) Drop(g *Graph, ids [][]byte) {
 		return
 	}
 	for _, id := range ids {
-		if el, ok := kv.items[string(id)]; ok {
-			kv.order.Remove(el)
+		if it, ok := kv.items[string(id)]; ok {
+			kv.unlink(it)
 			delete(kv.items, string(id))
 		}
 	}
