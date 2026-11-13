@@ -1,16 +1,102 @@
 package conclusionsummaries_test
 
 import (
+	"bytes"
 	"fmt"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/mendahu/provenencia/core/database"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/databasetest"
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/propertyterms"
+	"github.com/mendahu/provenencia/core/database/subjects"
+	"github.com/mendahu/provenencia/core/hops"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
+
+// chainWorld is Town part_of City part_of Region, promoted, with three births
+// located at City and one at Town.
+type chainWorld struct {
+	town, city, region []byte
+	townRel, cityRel   subjects.Subject
+	events             [][]byte
+}
+
+func (f *fixture) chainWorld() *chainWorld {
+	f.T.Helper()
+	town := f.placeSubject("Town", nil, nil, 0, 0)
+	city := f.placeSubject("City", nil, nil, 2, 0)
+	region := f.placeSubject("Region", nil, nil, 4, 0)
+	w := &chainWorld{
+		townRel: f.placeRel(town, city, propertyterms.KeyPartOf, nil, nil),
+		cityRel: f.placeRel(city, region, propertyterms.KeyPartOf, nil, nil),
+	}
+	p := f.lifePerson()
+	var evs []subjects.Subject
+	for i, at := range []subjects.Subject{city, city, city, town} {
+		evs = append(evs, f.lifeEvent(p, "birth", "date", 1800+i, int64(2+2*i), at))
+	}
+	w.town, w.city, w.region = f.promoteSubject(town), f.promoteSubject(city), f.promoteSubject(region)
+	f.promoteSubject(p)
+	for _, e := range evs {
+		w.events = append(w.events, f.promoteSubject(e))
+	}
+	return w
+}
+
+func TestPlaceEntryInputsMatchReads(t *testing.T) {
+	f := newFixture(t)
+	w := f.chainWorld()
+	unknown := bytes.Repeat([]byte{0xee}, 16)
+	g := f.C.Graph()
+	g.Drop()
+	must(t, conclusionsummaries.FillPlaceEntriesForTest(g, w.town, w.city, w.region, unknown))
+	db, err := f.C.DB()
+	must(t, err)
+	// reads is what a scope records reading id and following hopList.
+	reads := func(id []byte, hopList ...hops.Hop) []graphcache.InputKey {
+		in := graphcache.Over(db).Inputs(nil)
+		n, err := in.Node(id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if n == nil {
+			return in.Keys() // a missing place follows nothing
+		}
+		for _, hop := range hopList {
+			links, err := in.Follow(id, hop)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, l := range links {
+				if _, err := in.Node(l.Association); err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+		return in.Keys()
+	}
+	for name, id := range map[string][]byte{"town": w.town, "city": w.city, "region": w.region, "unknown": unknown} {
+		t.Run(name, func(t *testing.T) {
+			held, _, inputs, dropBy := conclusionsummaries.PlaceEntryForTest(g, id)
+			if !held {
+				t.Fatal("the entry is not held")
+			}
+			same := func(what string, got, want []graphcache.InputKey) {
+				t.Helper()
+				if !slices.EqualFunc(got, want, graphcache.InputKey.Equal) {
+					t.Errorf("%s: got %+v, want %+v", what, got, want)
+				}
+			}
+			same("inputs", inputs, reads(id, hops.ParentsOfPlace))
+			same("drop inputs", dropBy, reads(id, hops.ParentsOfPlace, hops.PartsOfPlace, hops.SuccessorsOfPlace, hops.PredecessorsOfPlace))
+		})
+	}
+}
 
 // meshWorld is the crafted part_of mesh BenchmarkPlaceMesh reads: a hub with
 // 20,000 parts that is the lowest place of a chain of eight, and one event
