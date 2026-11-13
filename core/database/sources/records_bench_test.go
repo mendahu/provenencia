@@ -1,7 +1,6 @@
 package sources_test
 
 import (
-	"encoding/binary"
 	"strconv"
 	"testing"
 	"time"
@@ -14,13 +13,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-func benchID(kind byte, n int) []byte {
-	id := make([]byte, 16)
-	id[0] = kind
-	binary.BigEndian.PutUint64(id[8:], uint64(n))
-	return id
-}
 
 // BenchmarkSourceRecords: Build of the records at 3,000 Sources of 10
 // Artifacts (every tenth assessed), and Apply of one commit that names an
@@ -53,18 +45,18 @@ func BenchmarkSourceRecords(b *testing.B) {
 	}
 	n := 0
 	seed := func(src, artifacts int) {
-		sid := benchID(1, src)
+		sid := databasetest.BenchID(1, src)
 		if _, err := tx.Exec(`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, ?, ?, ?)`, sid, "SRC-B"+string(rune('A'+src%26))+strconv.Itoa(src), typeID, "Source "+strconv.Itoa(src)); err != nil {
 			b.Fatal(err)
 		}
 		if src%10 == 0 {
-			if _, err := tx.Exec(`INSERT INTO source_credibility_assessments (id, source_id, credibility_grade_id) VALUES (?, ?, ?)`, benchID(3, src), sid, gradeID); err != nil {
+			if _, err := tx.Exec(`INSERT INTO source_credibility_assessments (id, source_id, credibility_grade_id) VALUES (?, ?, ?)`, databasetest.BenchID(3, src), sid, gradeID); err != nil {
 				b.Fatal(err)
 			}
 		}
 		for i := 0; i < artifacts; i++ {
 			n++
-			if _, err := tx.Exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, ?, ?, ?)`, benchID(2, n), "ART-B"+strconv.Itoa(n), sid, "Page "+strconv.Itoa(i)); err != nil {
+			if _, err := tx.Exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, ?, ?, ?)`, databasetest.BenchID(2, n), "ART-B"+strconv.Itoa(n), sid, "Page "+strconv.Itoa(i)); err != nil {
 				b.Fatal(err)
 			}
 		}
@@ -111,6 +103,6 @@ func BenchmarkSourceRecords(b *testing.B) {
 		}
 		b.ReportMetric(float64(time.Since(start).Microseconds())/1000/float64(b.N), metric)
 	}
-	apply("apply-ms", benchID(1, 7))
-	apply("apply-10k-ms", benchID(1, sourcesN+1))
+	apply("apply-ms", databasetest.BenchID(1, 7))
+	apply("apply-10k-ms", databasetest.BenchID(1, sourcesN+1))
 }

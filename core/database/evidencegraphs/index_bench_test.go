@@ -1,7 +1,6 @@
 package evidencegraphs_test
 
 import (
-	"encoding/binary"
 	"strconv"
 	"testing"
 	"time"
@@ -13,13 +12,6 @@ import (
 	"github.com/mendahu/provenencia/core/database/sourcetypes"
 	"github.com/mendahu/provenencia/core/vocabkey"
 )
-
-func benchID(kind byte, n int) []byte {
-	id := make([]byte, 16)
-	id[0] = kind
-	binary.BigEndian.PutUint64(id[8:], uint64(n))
-	return id
-}
 
 // BenchmarkGraphIndex: Build of the index at 3,000 Sources, 10,000 graphs each
 // linked to an Artifact and holding a Citation, 20,000 person Subjects and
@@ -51,19 +43,19 @@ func BenchmarkGraphIndex(b *testing.B) {
 		}
 	}
 	for s := 1; s <= sourcesN+2; s++ {
-		exec(`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, ?, ?, ?)`, benchID(1, s), "SRC-B"+strconv.Itoa(s), typeID, "Source "+strconv.Itoa(s))
-		exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, ?, ?, ?)`, benchID(2, s), "ART-B"+strconv.Itoa(s), benchID(1, s), "Page")
+		exec(`INSERT INTO sources (id, ref, source_type_id, title) VALUES (?, ?, ?, ?)`, databasetest.BenchID(1, s), "SRC-B"+strconv.Itoa(s), typeID, "Source "+strconv.Itoa(s))
+		exec(`INSERT INTO artifacts (id, ref, source_id, label) VALUES (?, ?, ?, ?)`, databasetest.BenchID(2, s), "ART-B"+strconv.Itoa(s), databasetest.BenchID(1, s), "Page")
 	}
 	graph := func(i, source int) {
-		exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, ?, ?, ?)`, benchID(3, i), "GPH-B"+strconv.Itoa(i), benchID(1, source), "Graph "+strconv.Itoa(i))
-		exec(`INSERT INTO evidence_graph_artifacts (graph_id, artifact_id) VALUES (?, ?)`, benchID(3, i), benchID(2, source))
-		exec(`INSERT INTO citations (id, ref, artifact_id, graph_id, locator_json) VALUES (?, ?, ?, ?, '{}')`, benchID(4, i), "CIT-B"+strconv.Itoa(i), benchID(2, source), benchID(3, i))
+		exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, ?, ?, ?)`, databasetest.BenchID(3, i), "GPH-B"+strconv.Itoa(i), databasetest.BenchID(1, source), "Graph "+strconv.Itoa(i))
+		exec(`INSERT INTO evidence_graph_artifacts (graph_id, artifact_id) VALUES (?, ?)`, databasetest.BenchID(3, i), databasetest.BenchID(2, source))
+		exec(`INSERT INTO citations (id, ref, artifact_id, graph_id, locator_json) VALUES (?, ?, ?, ?, '{}')`, databasetest.BenchID(4, i), "CIT-B"+strconv.Itoa(i), databasetest.BenchID(2, source), databasetest.BenchID(3, i))
 	}
 	subject := func(i, graphN, source int) {
-		exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, ?, ?, ?, ?)`, benchID(5, i), "SUB-B"+strconv.Itoa(i), benchID(1, source), benchID(3, graphN), personType)
+		exec(`INSERT INTO subjects (id, ref, source_id, graph_id, subject_type_id) VALUES (?, ?, ?, ?, ?)`, databasetest.BenchID(5, i), "SUB-B"+strconv.Itoa(i), databasetest.BenchID(1, source), databasetest.BenchID(3, graphN), personType)
 	}
 	obs := func(i, subjectN, graphN int) {
-		exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, value_text) VALUES (?, ?, ?, ?, ?, 'x')`, benchID(6, i), "OBS-B"+strconv.Itoa(i), benchID(4, graphN), benchID(5, subjectN), propID)
+		exec(`INSERT INTO observations (id, ref, citation_id, subject_id, property_id, value_text) VALUES (?, ?, ?, ?, ?, 'x')`, databasetest.BenchID(6, i), "OBS-B"+strconv.Itoa(i), databasetest.BenchID(4, graphN), databasetest.BenchID(5, subjectN), propID)
 	}
 	for i := 1; i <= graphsN; i++ {
 		graph(i, (i-1)%sourcesN+1)
@@ -105,7 +97,7 @@ func BenchmarkGraphIndex(b *testing.B) {
 	}
 	wide := sourcesN + 2
 	for i := 1; i <= crafted; i++ {
-		exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, ?, ?, ?)`, benchID(3, heavy+i), "GPH-B"+strconv.Itoa(heavy+i), benchID(1, wide), "Wide "+strconv.Itoa(i))
+		exec(`INSERT INTO evidence_graphs (id, ref, source_id, name) VALUES (?, ?, ?, ?)`, databasetest.BenchID(3, heavy+i), "GPH-B"+strconv.Itoa(heavy+i), databasetest.BenchID(1, wide), "Wide "+strconv.Itoa(i))
 	}
 	if err := tx.Commit(); err != nil {
 		b.Fatal(err)
@@ -124,8 +116,8 @@ func BenchmarkGraphIndex(b *testing.B) {
 		}
 		b.ReportMetric(float64(time.Since(start).Microseconds())/1000/float64(b.N), metric)
 	}
-	apply("apply-progress-ms", effects.ReadEvidenceGraphProgress, benchID(3, 7))
-	apply("apply-progress-10k-ms", effects.ReadEvidenceGraphProgress, benchID(3, heavy))
-	apply("apply-list-ms", effects.ReadEvidenceGraphs, benchID(1, 7))
-	apply("apply-list-10k-ms", effects.ReadEvidenceGraphs, benchID(1, wide))
+	apply("apply-progress-ms", effects.ReadEvidenceGraphProgress, databasetest.BenchID(3, 7))
+	apply("apply-progress-10k-ms", effects.ReadEvidenceGraphProgress, databasetest.BenchID(3, heavy))
+	apply("apply-list-ms", effects.ReadEvidenceGraphs, databasetest.BenchID(1, 7))
+	apply("apply-list-10k-ms", effects.ReadEvidenceGraphs, databasetest.BenchID(1, wide))
 }

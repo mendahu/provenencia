@@ -2,7 +2,6 @@ package promotealign_test
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"math/rand/v2"
@@ -217,13 +216,6 @@ func BenchmarkProposeAfterCommit(b *testing.B) {
 	}
 }
 
-func benchID(n int) []byte {
-	var id [16]byte
-	id[0] = 0xB0
-	binary.BigEndian.PutUint64(id[8:], uint64(n))
-	return id[:]
-}
-
 // idOf is the id of the provenencia row with this key in a vocabulary table.
 func idOf(db *sql.DB, table, key string) ([]byte, error) {
 	var id []byte
@@ -378,7 +370,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	cities := make([][]byte, shape.Cities)
 	cities[0] = city
 	for i := 1; i < shape.Cities; i++ {
-		id := benchID(i)
+		id := databasetest.BenchID(0xB0, i)
 		if _, err := ent.Exec(id, placeT, benchRef("PLC", i)); err != nil {
 			return err
 		}
@@ -386,7 +378,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	}
 	towns := make([][]byte, shape.Towns)
 	for k := range towns {
-		id := benchID(900000 + k)
+		id := databasetest.BenchID(0xB0, 900000+k)
 		if _, err := ent.Exec(id, placeT, benchRef("PLC", 90000+k)); err != nil {
 			return err
 		}
@@ -398,7 +390,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	persons := make([][]byte, shape.Persons)
 	birthYear := make([]int, shape.Persons)
 	for i := 0; i < shape.Persons; i++ {
-		id := benchID(100 + i)
+		id := databasetest.BenchID(0xB0, 100+i)
 		if _, err := ent.Exec(id, personT, benchRef("PER", i)); err != nil {
 			return err
 		}
@@ -423,7 +415,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 	// event writes one event with its subject participation, its place and,
 	// when it has one, its date.
 	event := func(eventID, partID, locID, n, refN int, person, place, typeTerm []byte, d *datevalue.Value) error {
-		ev := benchID(eventID + n)
+		ev := databasetest.BenchID(0xB0, eventID+n)
 		if _, err := ent.Exec(ev, eventT, benchRef("EVT", refN)); err != nil {
 			return err
 		}
@@ -439,7 +431,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 				return err
 			}
 		}
-		part := benchID(partID + n)
+		part := databasetest.BenchID(0xB0, partID+n)
 		if _, err := ent.Exec(part, partT, benchRef("PAR", refN)); err != nil {
 			return err
 		}
@@ -452,7 +444,7 @@ func bulkCanon(db *sql.DB, city []byte, shape catalogShape) error {
 		if _, err := val.Exec(part, roleP, roleTerm, nil); err != nil {
 			return err
 		}
-		loc := benchID(locID + n)
+		loc := databasetest.BenchID(0xB0, locID+n)
 		if _, err := ent.Exec(loc, locT, benchRef("LOC", refN)); err != nil {
 			return err
 		}
@@ -519,7 +511,7 @@ type treeIDs struct {
 // filed links.
 func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) error {
 	n := 1<<shape.TreeGenerations - 1 // persons 1..n
-	person := func(i int) []byte { return benchID(1000000 + i) }
+	person := func(i int) []byte { return databasetest.BenchID(0xB0, 1000000+i) }
 	for i := 1; i <= n; i++ {
 		if _, err := ent.Exec(person(i), ids.person, benchRef("PER", 100000+i)); err != nil {
 			return err
@@ -538,7 +530,7 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 	}
 	link := 0
 	for i := 1; 2*i+1 <= n; i++ {
-		ev := benchID(2000000 + i)
+		ev := databasetest.BenchID(0xB0, 2000000+i)
 		if _, err := ent.Exec(ev, ids.event, benchRef("EVT", 100000+i)); err != nil {
 			return err
 		}
@@ -546,7 +538,7 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 			return err
 		}
 		for k, mate := range []int{2 * i, 2*i + 1} {
-			part := benchID(3000000 + 2*i + k)
+			part := databasetest.BenchID(0xB0, 3000000+2*i+k)
 			if _, err := ent.Exec(part, ids.participation, benchRef("PAR", 100000+2*i+k)); err != nil {
 				return err
 			}
@@ -560,7 +552,7 @@ func bulkTree(ids treeIDs, ent, val, nameVal *sql.Stmt, shape catalogShape) erro
 				return err
 			}
 			link++
-			rel := benchID(4000000 + link)
+			rel := databasetest.BenchID(0xB0, 4000000+link)
 			if _, err := ent.Exec(rel, ids.relationship, benchRef("REL", 100000+link)); err != nil {
 				return err
 			}
