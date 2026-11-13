@@ -36,7 +36,7 @@ Do: in `MetadataBoardAddRowView` replace `confirmControl` and the ✕ `PVIconBut
 Check: `rg -n "onExitCommand" macos/App/Features/Sources/MetadataBoardView.swift` prints only the suggestion row's line; `rg -n "addRow.confirm" macos` prints nothing; scripts/check-pr.sh PASS.
 
 **F-2 — A Save failure scrolls the sheet's body to its message** (from UX-2)
-Files: `macos/App/Features/Sources/ArtifactSheet.swift`, `ArtifactSheetModel.swift`, and `PVFormDialog.swift` only if the scroll target must be passed as a request. 
+Files: `macos/App/Features/Sources/ArtifactSheet.swift`, `ArtifactSheetModel.swift`, and `PVFormDialog.swift` only if the scroll target must be passed as a request.
 Failing test first: `sheetSaveErrorAsksToScrollToTop` — after `save()` stops on unconfirmed input (and on empty label), the model's scroll request token has changed and its target is the top section.
 Do: on setting `saveError` or `labelError` in `save()`, bump a request token and set the scroll target to the top section; drive the existing `pvScrollsRowIntoView(_, request:)` path (no new `ScrollViewReader`, D-1). Keep D-6's copy unchanged.
 Check: the test passes; scripts/check-pr.sh PASS.
