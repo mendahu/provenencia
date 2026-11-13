@@ -108,3 +108,7 @@ Fresh reviewers given the plan and this log. Maintainability: **Fits with change
 ## Verdict
 
 Two rounds done. Every blocker Fixed; nothing To user. Plan **Planned**.
+
+## Amendment — 2026-11-12, ship round 0
+
+**D-1:** the LRU's use-order list is held in the items of `keyedValues[T]` (prev/next links in the item), not `container/list`. The implementer stopped on §11's kinship +20% bound: `container/list` measured +20.4% / +34.6% (4,000 / 16,000 persons); the in-item list measured −6.6% / +3.2%. Eviction semantics unchanged. User approved the amendment ("Amend D-1, resume"). The 20% stop stays.
