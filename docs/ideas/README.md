@@ -48,6 +48,7 @@ Use this folder when something useful pops up mid-work and would otherwise get l
 
 ### Properties, vocabulary, Sources
 
+- [`copy-source-list-entries.md`](copy-source-list-entries.md) — copy the source-list entries of several Sources at once for a bibliography; Spike 15 copies one from the Source page
 - [`source-type-packages.md`](source-type-packages.md) — citation styles as installable packages of types, fields and formats; raised in Spike 15, which seeds the *Evidence Explained*-style set as the product default
 - [`properties-and-terms.md`](properties-and-terms.md) — binding order, event-type-scoped properties, Occupation seed, term management (direction / inverses), failed bind after create
 - [`source-to-source-relationships.md`](source-to-source-relationships.md)

@@ -82,7 +82,7 @@ Of about 20 elements, 2 are there (title, item label) and 3 are partial (record 
 2. **Seed the fields** for the common types (census, parish register, civil certificate, newspaper item, online image, published book) with [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md): new projects only, and existing ones keep their keys.
 3. **Printed page labels in the composer**, so the locator says "p. 23".
 4. **The formatter in Go** with a template per seeded type and a fallback to today's line for any other type or a missing field. The citation line on the provenance sheet reads from it.
-5. **A citation preview on the Source page** that shows the formatted note and names the fields it is missing, so researchers can fill them.
+5. **Needed fields flagged on each metadata board** (the earlier idea of a citation preview on the Source page was dropped, user, 2026-11-13; [`evidence-explained-citation-map.md`](evidence-explained-citation-map.md) § 6.10).
 6. **Copy citation** (full or short) from the provenance sheet and the Source page.
 7. **Move an Artifact to another Source**, with the Evidence graphs built on it, so researchers can re-file Artifacts as their Sources take on these fields ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)).
 

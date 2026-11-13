@@ -2,7 +2,7 @@
 
 Spike 15 makes Sources carry what a standard genealogical citation needs and turns it into citations. It pulls in every design doc in this folder: the Source date ([`source-provenance-date.md`](source-provenance-date.md)), citation formats and the seed ([`evidence-explained-citation-map.md`](evidence-explained-citation-map.md), which supersedes the arrival steps of [`citation-formats.md`](citation-formats.md)), moving an Artifact ([`move-artifact-between-sources.md`](move-artifact-between-sources.md)), the privacy toggle ([`2026-10-27-source-privacy-toggle.md`](2026-10-27-source-privacy-toggle.md)), the credibility field ([`2026-10-18-credibility-field-truncates-and-ignores-enter.md`](2026-10-18-credibility-field-truncates-and-ignores-enter.md)) and the metadata rethink ([`2026-10-25-rethink-source-metadata-and-type-suggestions.md`](2026-10-25-rethink-source-metadata-and-type-suggestions.md), settled: metadata stays). One behavior, one PR.
 
-**A brief covers one view.** A PR that adds, changes or removes chrome waits on a brief for each view it touches; a removal is gated too. Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). Only a PR whose views look the same before and after is not gated.
+**One brief, one PR.** A PR that adds, changes or removes chrome waits on its own brief; a removal is gated too. A brief gates exactly one PR, and draws only what that PR ships; a later PR on the same view gets its own brief (user, 2026-11-13). Briefs and PR plans are written just before the PR ([`add-design-brief`](../../../.agents/skills/add-design-brief/SKILL.md), [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md)). Only a PR whose views look the same before and after is not gated. S15-D1 and S15-D14 were written before this rule and gate several PRs; they stay as written.
 
 ## Status
 
@@ -17,13 +17,14 @@ Spike 15 makes Sources carry what a standard genealogical citation needs and tur
 1. **A Source has a date.** Set, change and clear it on the Source page with the app's date entry. The Sources list shows it on each row and sorts by it, undated last. The Person page's Sources section shows it on each Source.
 2. **A Source can be marked not public.** A switch on the Source page; it is saved and survives reopening. Nothing else changes yet.
 3. **Copy and item details live where they belong.** On a census Source, the Artifact holds provider, URL and accessed date (also offered when the Artifact is added), and each household's Evidence graph holds dwelling, family and line. The citation composer gains only the printed page.
-4. **Citations read like citations.** A census Citation's provenance sheet reads "1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (… : accessed 12 March 2025)". Copy citation gives the full or short form. The Source page previews its citation and names the fields its format expects and is missing.
+4. **Citations read like citations.** A census Citation's provenance sheet reads "1880 U.S. census, Ottawa County, Kansas, population schedule, ED 236, p. 14, dwelling 112, family 118, Ada Robins; digital image, *Ancestry* (… : accessed 12 March 2025)". Copy citation gives the full or short form. Each metadata board flags the fields its type's citation needs and are empty (the census Artifact: "URL, needed for citation"); the Source page copies its source-list entry.
 5. **Formats are the researcher's.** Editing the census full format on its Source type page updates a live preview against a real Source. A new type can **Copy from** an existing one and starts with its formats and suggestions.
 6. **A new project knows the citation styles.** It starts with the 26 seeded types, 63 fields, suggestions at each level and formats (map § 6.8). The product owner's dogfood project gets them by running Install once.
 7. **One household, one citation.** The five Citations drawn on one household row show as one citation, with the highlighted pieces beneath it, on the provenance sheet and in the Person page's Sources section.
 8. **An Artifact moves with its graphs.** **Move to another Source…** from an Artifact or a graph shows everything that moves together, keeps every ref, and the moved Citations then read the target Source.
 10. **A heavy provenance sheet stays quick.** Person, Event and Place rows all open the same provenance sheet (the Why accordion is gone); a page loads without any record behind its values; a value's records arrive when its sheet opens, with a loading state and a Try again on failure; a value with 1,200 records opens on a page of rows with Show more.
 9. **The credibility argument behaves like a text area.** A long argument wraps, and it saves with the Save button, like the Source description.
+11. **A researcher can say a value is unknown or supplied.** A book Source with no place of publication marked unknown cites "n.p."; an undated letter dated from its postmark cites "[12 March 1880]"; marked-unknown values are no longer flagged as needed. A date in a citation reads "ca. 1880", where the app's pages read "abt 1880".
 
 **Scale** (user, 2026-11-09). A census Source with **60 household graphs of 1 to 10 Citations each** (600 Citations); a Person page citing **30 Sources**, so a provenance sheet or Sources section renders up to **300 citations**; a move bundle of **5 Artifacts and 5 graphs**; up to **1,200 records on one value** (a crafted project, or a Place's name row; [`provenance-loading.md`](provenance-loading.md)); the seed's **26 types and 63 fields**. Also: a project of **3,000 Sources** (Spike 16's Scale) for the Sources list; a Source with up to **60 Artifacts**; a move bundle's graphs holding up to **100 Subjects** in all; a format or field edit on a type used by **500 Sources**. Plans write their fan-out against these.
 
@@ -36,11 +37,12 @@ Spike 15 makes Sources carry what a standard genealogical citation needs and tur
 | [Source provenance date](source-provenance-date.md) | S15-02, S15-03, S15-04, S15-05 | S15-D1, S15-D2, S15-D3 |
 | [Rethink Source metadata](2026-10-25-rethink-source-metadata-and-type-suggestions.md) | Settled: metadata stays (map § 6.1); S15-06 – S15-12 build on it | — |
 | [Evidence Explained citation map](evidence-explained-citation-map.md) | S15-06 – S15-23 | S15-D1, S15-D3 – S15-D9 |
+| User review of the citation preview (2026-11-13): too much space for a rare copy; missing fields belong where they are fixed; unknown and supplied values | S15-23 (re-scoped), S15-37 – S15-42, S15-11, S15-13, S15-14, S15-16 | S15-D19 – S15-D23, S15-D5, S15-D8 |
 | [Move an Artifact to another Source](move-artifact-between-sources.md) | S15-24, S15-25 | S15-D1, S15-D10, S15-D14 |
 | User review of S15-09 (2026-11-12): the Artifact cards grow too tall with their metadata; edit in a sheet; thumbnails pixelated | S15-33 – S15-36, S15-10 | S15-D14 |
 | [Provenance loading and drawing](provenance-loading.md), from `ideas/provenance.md` (retired 2026-11-09) | S15-27, S15-28, S15-29 | S15-D9 |
 
-**Back in the ideas folder** — [`ideas/source-type-packages.md`](../../ideas/source-type-packages.md): citation styles as installable packages. [`source-structure-later.md`](source-structure-later.md) stays in this folder as reference and moves to `ideas/` at close: nested Sources, derivation links, named templates, per-graph credibility.
+**Back in the ideas folder** — [`ideas/source-type-packages.md`](../../ideas/source-type-packages.md): citation styles as installable packages. [`ideas/copy-source-list-entries.md`](../../ideas/copy-source-list-entries.md): copying the source-list entries of several Sources at once. [`source-structure-later.md`](source-structure-later.md) stays in this folder as reference and moves to `ideas/` at close: nested Sources, derivation links, named templates, per-graph credibility.
 
 ## Working rules
 
@@ -57,14 +59,19 @@ These are the calls for this spike. PR plans treat them as binding.
 - **A board adds a field in an inline row.** Add field on every metadata board, the Source's own included, is an inline row in the board (pick a field, type a value), not the Add metadata dialog, which goes (user, 2026-11-12). On a live board the row saves at once; on a draft it adds to the draft. A draft board clears a row with no confirm (Cancel restores it). Binds S15-34, S15-36, S15-11.
 - **One date order.** The rule for where a date sits in an order (today the private `datePlace`, `dateKeyOf` and `dateKeyLess` in `conclusionsummaries`) moves to `core/valuecompare` beside `DateEnds` as an exported key and comparison, which `conclusionsummaries` and `sources` both call; it gives each Source a date sort key on the wire; Swift's Sources list sorts by that key, undated last, and never orders dates itself. Binds S15-02, S15-04. (K-12.)
 - **Suggestions have a level.** `source_type_metadata_fields.level` is `source`, `artifact` or `graph`, in the table's key. An Artifact's and a graph's suggestions are their Source's type's rows at that level. Binds S15-06, S15-09 – S15-12, S15-19.
-- **The item is a graph field.** What a graph is about ("Ada Robins", "baptism of Ada Smith, 3 March 1830") is the seeded graph-level field `item`, typed once per graph and read as `{meta.item}`; nothing derives it from a Citation's Subjects, and no Subject is marked as the graph's principal (parked in [`ideas/evidence-graph-followups.md`](../../ideas/evidence-graph-followups.md) "Primary subject") (user, 2026-11-09). Binds S15-16, S15-19, S15-20. Design: map § 6.5.
+- **The item is a graph field.** What a graph is about ("Ada Robins", "baptism of Ada Smith, 3 March 1830") is the seeded graph-level field `item`, typed once per graph and read as `{graph.meta.item|source.meta.item}`; nothing derives it from a Citation's Subjects, and no Subject is marked as the graph's principal (parked in [`ideas/evidence-graph-followups.md`](../../ideas/evidence-graph-followups.md) "Primary subject") (user, 2026-11-09). Binds S15-16, S15-19, S15-20. Design: map § 6.5.
 - **Citations carry no metadata.** The composer's only new input is the printed page (`page_label` on the `page` selector, already in the locator). Binds S15-13. Design: map § 6.9.
-- **Citation formats are data on the Source type.** Three nullable columns, `citation_full`, `citation_short`, `citation_list`, in the syntax of map § 6.3: `{level.meta.key}` and `{meta.key}` (graph, else Artifact, else Source), built-ins directly under their level (`{source.title}`, `{source.date:year}`, `{citation.page}`, `{citation.label}` …), `[optional groups]`, `{a|b}`, `*italic*`, backslash escapes. The list form reads the Source only. A type with no full format shows today's citation line. Binds S15-14 – S15-23.
+- **Citation formats are data on the Source type.** Three nullable columns, `citation_full`, `citation_short`, `citation_list`, in the syntax of map § 6.3: `{source.meta.key}`, `{artifact.meta.key}`, `{graph.meta.key}`, built-ins directly under their level (`{source.title}`, `{source.date:year}`, `{citation.page}`, `{citation.label}` …), `[optional groups]`, `{a|b}`, `*italic*`, backslash escapes. The list form reads the Source only. A type with no full format shows today's citation line. Binds S15-14 – S15-23.
+- **Every placeholder names its level; fallback is written.** There is no unprefixed `{meta.key}` and no hidden graph-else-Artifact-else-Source rule: a format that falls back writes the chain, `{graph.meta.line_number|source.meta.line_number}`, read like SQL `COALESCE`. An unprefixed `{meta.key}` is a parse error. The seed reads each field at its usual level, and item fields as `{graph.meta.key|source.meta.key}` so a researcher who files one Source per household still gets them (user, 2026-11-13). Binds S15-14, S15-16, S15-17, S15-20. Design: map §§ 6.3, 6.6.
+- **A format's fields are needed or used.** A placeholder outside any group is needed; inside a group, used. A chain is one requirement, met when any option has a value; empty everywhere, it is flagged on its first option, with a hint naming the others. The engine returns, per Source type, each level's requirements from the three formats; it depends on the type only, so nothing is rendered to get it, and Swift never parses a format (user, 2026-11-13). Binds S15-14, S15-38. Design: map §§ 6.3, 6.10.
+- **Boards flag needed fields; the Source page has no citation preview.** Each metadata board (the Source's, the Artifact sheet's, the graph form's) shows its level's needed fields that are empty as rows flagged unfilled, which cannot be dismissed, and used fields with a quieter mark; a field both suggested and needed shows once, as needed; a field filled at another level of its chain is not flagged. The Source date is flagged in the Source page header, the printed page in the composer. The Source page's "Citation" section of S15-D1 (SD-11 – SD-13) is not built; the Source page offers only **Copy source-list entry**, because that form belongs to the Source, and notes are copied where Citations are shown (S15-21) (user, 2026-11-13). Binds S15-23, S15-39, S15-40, S15-11, S15-13. Design: map § 6.10.
+- **A value can be marked unknown or supplied.** Every metadata value, the Source date and a Citation's printed page carry two facts: **unknown** (the record does not give it; no text) and **supplied** (the value is not on the record; the researcher took it from elsewhere). They are independent of a date's precision. Unknown meets the requirement and prints the field's `unknown_text` (seeded "n.p." on `publication_place` and `publisher`), "n.d." for the date, "unpaginated" for the page; supplied prints in square brackets. One migration: `is_unknown` and `is_supplied` on the three value tables, `unknown_text` on `source_metadata_fields`, `date_unknown` and `date_supplied` on `sources`; the page's two facts go in the locator JSON. Copy Source and a move carry them; the audit records them with the value (user, 2026-11-13). Binds S15-37, S15-16, S15-41, S15-42, S15-13, S15-19. Design: map § 6.10.
+- **Dates in citations use citation terms.** A DateValue in a citation prints "ca.", "bef.", "aft." and day-month-year, months spelled out except in the short note; the app's pages keep "abt". The table lives in `core/citationformat`; check the terms against the edition on hand (user, 2026-11-13). Binds S15-14, S15-16. Design: map § 6.3.
 - **No transforms on metadata.** Values print exactly as typed; only the Source date (a DateValue) has formatting options (`:year`, `:full`). Each field's description says to enter the value as it should appear. Refused: inverting, reversing, abbreviating. Binds S15-14, S15-19.
 - **Formats name fields by id.** `core/citationformat` defines the stored token for a field id and one rewrite of the parse tree between keys and ids; one `metadatafields.ResolveKeysTx(tx, keys, preferOrigin)`, beside `lookupTx`, maps keys to ids, and both the `sourcetypes` format write and `sourcevocab.Install` call it. A field named in any format is in use: its delete is refused by a delete-impact probe over the three format columns, listing the types ([`add-catalog-delete`](../../../.agents/skills/add-catalog-delete/SKILL.md), which gains the text-reference case). Field keys stay unrenamable, as today. Binds S15-14, S15-15, S15-17, S15-20. (K-7.)
 - **One engine, in Go.** `core/citationformat` parses and renders; values go in after parsing, so a `*` or `[` in a value never formats. The app renders only through FFI. Binds S15-14, S15-16, S15-21 – S15-23.
 - **Citations render on demand, from SQL.** One Go function renders a batch of Citations and returns, per Citation, the styled runs, the plain text, the missing fields and a group key. It reads the catalog directly in a few batched queries (types and formats; Source, Artifact and graph values through S15-07's batch read by owners; Source titles and dates), not Spike 16's caches, and nothing it produces is cached in Go or Swift: a screen asks for its citations when it shows them (the provenance sheet when it opens, the Sources section when it appears), so a format or field edit needs no refresh signal; a screen already open while a format is edited elsewhere catches up the next time it is shown. The provenance sheet holds its on-open call as one `CatalogQueryKey` only while it is shown (`whenHidden: .evict`), so it gets S16-04's failure reading and the registry's refresh on the inputs its read reports; nothing outlives the sheet (map review K-26). Measured at Scale (300 Citations per call) in S15-16; caching is a later decision if it is slow (user, 2026-11-09). This is a deliberate exception to Spike 16's "A Source's words live once". It is the first step of [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens": the sheet's on-open call is the one that idea grows, not a second one. Binds S15-16, S15-21 – S15-23. (Replaces the round-1 answer to K-3; closes K-18.)
-- **One render request for previews.** The editor and the Source page preview through one request: a form, an optional unsaved format, and a target (Citation ids, or a Source for the list form); it returns runs, missing fields and parse diagnostics. Swift never parses a format. Binds S15-16, S15-17, S15-23. (K-10.)
+- **One render request for previews.** The format editor previews through one request: a form, an optional unsaved format, and a target (Citation ids, or a Source for the list form); it returns runs, missing fields and parse diagnostics. Swift never parses a format. Binds S15-16, S15-17. (K-10.)
 - **Built-in placeholders are one table.** `core/citationformat` declares each built-in once (name, level, allowed in the list form, options such as `:year`, `:full`); parsing, the list-form rule, missing fields, the resolver and the editor's Insert field list (over FFI) all read it. Binds S15-14, S15-16, S15-17. (K-5.)
 - **Today's line stays the fallback, in Swift.** For a type with no full format the engine returns no text, and the app shows today's localized line from `CitationLineDisplay`, which stays for that and for its other callers (Gallery captions, the likeness viewer, a denier's Source name). Go does not write a second copy. Binds S15-16, S15-21. (K-4.)
 - **Build on Spike 16's caches.** The Person page date comes from the Source records (S16-12, S16-13); the provenance sheet and the Sources section are edited after S16-30 and S16-13 have reshaped them; the move lands after S16-12, S16-13 and S16-15 so their Apply sees it. Citation rendering reads SQL instead (rule "Citations render on demand, from SQL"). Spike 15 PRs that touch those land after them; the rest run alongside Spike 16 (user, 2026-11-09). Spike 16's map names this spike in **Shared with Spike 15**. Spike 15's new Swift query keys are added to today's `CatalogQueryKey` enum and converted with the rest by S16-25, rather than waiting for it, so slices 1 to 4 can run alongside Spike 16 (user, 2026-11-09). Binds S15-05, S15-16, S15-21, S15-22, S15-24.
@@ -75,7 +82,7 @@ These are the calls for this spike. PR plans treat them as binding.
 - **The provenance table folds a page at a time.** `PVProvenanceRecordTable` folds with the kit's paged fold: S16-07's fold rule and fold state move to `macos/App/Platform/` and its Show more row becomes a kit component, `PVShowMoreRow`, so a recipe can use them (`docs/design-system-layers.md`: a recipe never names a `Features/` type). The fold counts citation groups (a group's full citation with its Citations), never splitting a group, 50 at a time. Binds S15-30, S15-27. Design: [`provenance-loading.md`](provenance-loading.md) "Cap". (K-25, K-33.)
 - **The Why accordion goes.** It is deprecated: Event and Place rows open the provenance sheet as Person rows do, and the Why and its code are deleted before records leave the page read (user, 2026-11-09). Binds S15-31. (K-30.)
 - **Records load when the sheet opens.** The detail page read stops carrying each value's records. It keeps what it already sends (`Support`, `Against`, the values and their state) and adds `FieldRecordCounts` per field (the record count and, for a mixed field, the distinct Source count), composed from the node's outcome rows and the records tier after S16-11 and S16-30, with no new SQL query. A sheet's records come from one read that takes the row's (owner, Property) pairs, mirroring `RecordsSource` (`.field`, `.spanning`, `.derived`), and returns them grouped by pair, each outcome carrying whether it denied a value and the denier's Source title; it reports its inputs as S16-24's reads do. The sheet's on-open call (S15-21's key) carries these records with their citations. Swift's `distinctSourceCount`, `recordCount` derivation, `deniedSomething` and denier search go. Binds S15-28, S15-29. Design: [`provenance-loading.md`](provenance-loading.md) "Load records when the sheet opens". (K-24, K-27, K-28, K-34.)
-- **Refused in this spike.** A shared Repository record; per-Source format overrides; a fourth citation form; source type packages ([idea](../../ideas/source-type-packages.md)); install on open; undo of a move; Merge Sources; moving to a new Source; filling the jurisdiction from the graph; a per-Artifact page map. Each is recorded in the map (§ 7) or the move doc.
+- **Refused in this spike.** A shared Repository record; per-Source format overrides; a fourth citation form; source type packages ([idea](../../ideas/source-type-packages.md)); install on open; undo of a move; Merge Sources; moving to a new Source; filling the jurisdiction from the graph; a per-Artifact page map; a citation preview on the Source page (user, 2026-11-13); copying several Sources' list entries at once ([idea](../../ideas/copy-source-list-entries.md)). Each is recorded in the map (§ 7) or the move doc.
 
 ## PR map
 
@@ -91,25 +98,25 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-08 | Artifacts and graphs hold metadata | 2 | Go: the four tables, model, audit, delete, Copy Source, FFI; values in the Artifact and graph writes; Used by from delete impact | — | S15-06, S15-07 | [plan](prs/S15-08-artifacts-and-graphs-hold-metadata.md) | Landed #791 |
 | S15-09 | Artifacts show their metadata on the Source page | 2 | Swift: a metadata board per Artifact; **trimmed before merge (user, 2026-11-12)** to the board write's cache patch and its fixes; the per-Artifact chrome moved to S15-34 | S15-D1 | S15-08, S15-26, S15-D1 | [plan](prs/S15-09-artifact-metadata-boards.md) | Landed [#802](https://github.com/mendahu/provenencia/pull/802) (trimmed) |
 | S15-10 | Adding an Artifact asks for its copy details | 2 | Swift: Add Artifact opens the Artifact sheet in add mode; copy details save with the new Artifact | S15-D14 | S15-34, S15-36, S15-D14 | — | Scoped |
-| S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form | S15-D5 | S15-36, S15-34, S15-D5 | — | Scoped |
+| S15-11 | Evidence graphs show their metadata | 2 | Swift: a metadata board in the graph form, with the needed fields flagged | S15-D5 | S15-36, S15-34, S15-38, S15-D5 | — | Scoped |
 | S15-12 | Source types suggest fields at each level | 2 | Swift: the type page edits three suggestion lists | S15-D6 | S15-06, S15-D6 | — | Scoped |
-| S15-13 | The composer records the printed page | 3 | Swift: `page_label` on the page selector | S15-D8 | S15-D8 | — | Scoped |
-| S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse, render, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | S15-06 | — | Scoped |
+| S15-13 | The composer records the printed page | 3 | Swift: `page_label` on the page selector, marked unknown or supplied; flagged when needed | S15-D8 | S15-37, S15-38, S15-D8 | — | Scoped |
+| S15-14 | The citation format engine | 4 | Go: `core/citationformat` parse (levels named, no shorthand), render (unknown, supplied, citation date terms), needed and used requirements, diagnostics, the built-ins table and the field-id token; table tests; syntax doc | — | S15-06 | — | Scoped |
 | S15-15 | Source types store citation formats | 4 | Go: migration (three columns), id-keyed storage, delete impact, type read and write | — | S15-14 | — | Scoped |
-| S15-16 | Citations render through their type's formats | 4 | Go: the SQL resolver; one batch render RPC; one render request for previews; built-ins over FFI | — | S15-08, S15-15, S15-02 | — | Scoped |
-| S15-17 | The format editor | 5 | Swift: three formats, Insert field by level, live preview, warnings | S15-D6 | S15-16, S15-12, S15-D6 | — | Scoped |
+| S15-16 | Citations render through their type's formats | 4 | Go: the SQL resolver with unknown and supplied values; one batch render RPC; one render request for previews; built-ins over FFI | — | S15-08, S15-15, S15-02, S15-37 | — | Scoped |
+| S15-17 | The format editor | 5 | Swift: three formats, Insert field by level, live preview, warnings | S15-D16 | S15-16, S15-12, S15-D16 | — | Scoped |
 | S15-18 | A new type can copy another's formats and suggestions | 4 | Go and Swift: one write; **Copy from** in the new type dialog | S15-D7 | S15-15, S15-06, S15-D7 | — | Scoped |
 | S15-19 | Seed the citation types, fields and suggestions | 4 | Go: `sourcevocab` registry and Install for 26 types, 63 fields, levelled suggestions | — | S15-06 | — | Scoped |
 | S15-20 | Seed the citation formats | 4 | Go: each seeded type's three formats; a render test per type | — | S15-19, S15-15 | — | Scoped |
 | S15-21 | The provenance sheet shows formatted citations | 6 | Swift: the sheet's on-open key renders and groups; Copy citation copies rich text | S15-D9 | S15-16, S16-30, S16-04, S15-D9 | — | Scoped |
-| S15-22 | The Sources section groups a Source's Citations by citation | 6 | Swift: the section renders on demand and groups | S15-D3 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D3 | — | Scoped |
-| S15-23 | The Source page previews its citation | 6 | Swift: preview, missing fields, Copy citation | S15-D1 | S15-16, S15-D1 | — | Scoped |
+| S15-22 | The Sources section groups a Source's Citations by citation | 6 | Swift: the section renders on demand and groups | S15-D15 | S15-16, S15-05, S16-03, S16-06, S16-07, S15-D15 | — | Scoped |
+| S15-23 | The Source page copies its source-list entry | 9 | Swift: **Copy source-list entry** on the Source page; **re-scoped (user, 2026-11-13)**: the citation preview is not built | S15-D19 | S15-16, S15-21, S15-D19 | — | Scoped |
 | S15-24 | Move a bundle to another Source in the engine | 7 | Go: closure, preflight and move RPCs, one transaction through the effects registry | — | S16-12, S16-13, S16-15 | — | Scoped |
 | S15-25 | Move from an Artifact or a graph | 7 | Swift: the menu items and the bundle confirm | S15-D10, S15-D1, S15-D14 | S15-24, S15-35, S15-D10, S15-D1, S15-D14 | — | Scoped |
 | S15-26 | The metadata board takes an owner | 2 | Preparatory, Swift: the board model and view take an owner; the Source page unchanged | — | — | [plan](prs/S15-26-metadata-board-takes-an-owner.md) | Landed #798 |
-| S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds 50 citation groups at a time with the kit fold | S15-D9 | S15-30, S15-21, S15-D9 | — | Scoped |
+| S15-27 | The provenance table folds a page at a time | 8 | Swift: the record table folds 50 citation groups at a time with the kit fold | S15-D17 | S15-30, S15-21, S15-D17 | — | Scoped |
 | S15-28 | A value's records load on their own | 8 | Go: `FieldRecordCounts` from the node; one records read by (owner, Property) pairs with denial facts; reports its inputs | — | S16-11, S16-19, S16-24, S16-30 | — | Scoped |
-| S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D9 | S15-28, S15-21, S15-31, S16-09, S15-D9 | — | Scoped |
+| S15-29 | The provenance sheet loads its records when it opens | 8 | Swift: rows from the counts; the sheet's key carries records; Swift's count and denial rules go | S15-D18 | S15-28, S15-21, S15-31, S16-09, S15-D18 | — | Scoped |
 | S15-30 | The paged fold moves to the kit | 8 | Preparatory, Swift: S16-07's fold rule and state to `Platform/`, `PVShowMoreRow` in the kit; the Conclusion sections unchanged | — | S16-07 | — | Scoped |
 | S15-31 | Event and Place rows open the provenance sheet | 8 | Swift: `.sheet` provenance on Event and Place pages; the Why accordion and its code go | S15-D11, S15-D12 | S15-D11, S15-D12 | — | Scoped |
 | S15-32 | Copy Source can carry the date | 1 | Go and Swift: a `copy_date` choice on `CopySourceRequest` and `sourcecopy`; a Published date tick on the Copy form | [S15-D13](design/archive/S15-D13-copy-source-dialog.md) | S15-02, S15-D13 | [plan](prs/S15-32-copy-source-date.md) | Landed #778 |
@@ -117,25 +124,40 @@ These are the calls for this spike. PR plans treat them as binding.
 | S15-34 | Artifacts are edited in a sheet | 2 | Swift: the Artifact sheet (label, description, graphs, copy details on the draft board, one Save); read-only copy details on each card; the inline Add field row on every board; card edit goes | S15-D14 | S15-09, S15-33, S15-36, S15-D14 | — | Scoped |
 | S15-35 | The Artifact list shows each Artifact's copy details | 2 | Swift: the list's new layout (rows or compact cards), a square thumbnail of at most 80pt | S15-D14 | S15-34, S15-D14 | — | Scoped |
 | S15-36 | A metadata board can hold a draft | 2 | Preparatory, Swift: the draft board host, a Swift metadata draft, `metadata:` on the four Artifact and graph writes; no chrome | — | S15-26, S15-33 | [plan](prs/S15-36-metadata-board-holds-a-draft.md) | Landed #810 |
+| S15-37 | Values can be marked unknown or supplied | 4 | Go: one migration (two facts on the three value tables, `unknown_text` on fields, two on `sources`); the page's facts in the locator; reads, writes, FFI, Copy Source, audit | — | S15-08, S15-02 | — | Scoped |
+| S15-38 | A Source type reports its citation's needed fields | 4 | Go: the per-level requirements of a type's formats over FFI, with each board read | — | S15-14, S15-15 | — | Scoped |
+| S15-39 | The Source page flags its needed fields | 9 | Swift: the Source's board shows needed and used fields; the header flags an empty date | S15-D20 | S15-38, S15-D20 | — | Scoped |
+| S15-40 | The Artifact sheet flags its needed fields | 9 | Swift: the sheet's board shows needed and used fields; the list entry marks an Artifact with a needed field empty | S15-D21 | S15-38, S15-34, S15-35, S15-D21 | — | Scoped |
+| S15-41 | A metadata row can be marked unknown or supplied | 9 | Swift: the board row's Unknown and Supplied, on every board | S15-D22 | S15-37, S15-39, S15-D22 | — | Scoped |
+| S15-42 | The Source date can be unknown or supplied | 9 | Swift: the date dialog's No date and Supplied; the header shows them | S15-D23 | S15-37, S15-D23 | — | Scoped |
 
 ## Design track
 
 | Brief | View | Gates | Notes |
 | --- | --- | --- | --- |
-| S15-D1 | Source page | **S15-03**, S15-09, S15-23, S15-25 | Where the date sits (it reads as the Source's own date, not a metadata row) and whether the page moves onto Page columns ([`wide-layout.md`](../../ideas/wide-layout.md)); the not-public switch; an Artifact's metadata board; the citation preview with missing fields and Copy citation; Move on Artifact rows and graphs. One board for the page, drawn before S15-03. SD-9 and SD-10 (the Artifact's board) are replaced by S15-D14 (user, 2026-11-12) |
+| S15-D1 | Source page | **S15-03**, S15-09, S15-25 | Where the date sits (it reads as the Source's own date, not a metadata row) and whether the page moves onto Page columns ([`wide-layout.md`](../../ideas/wide-layout.md)); the not-public switch; an Artifact's metadata board; the citation preview with missing fields and Copy citation; Move on Artifact rows and graphs. One board for the page, drawn before S15-03. SD-9 and SD-10 (the Artifact's board) are replaced by S15-D14 (user, 2026-11-12). Its "Citation" section (SD-11 – SD-13) is not built: S15-23 is re-scoped to S15-D19, and needed fields go to S15-D20 (user, 2026-11-13). Written before "One brief, one PR"; stays as written |
 | S15-D2 | Sources list | **S15-04** | The date on rows and as a sort |
-| S15-D3 | Person page Sources section | **S15-05**, S15-22 | The date on each Source; Citations grouped under one citation |
+| S15-D3 | Person page Sources section | **S15-05** | The date on each Source. Split under "One brief, one PR": the grouping is S15-D15 |
 | S15-D4 | Adding an Artifact | — | **Descoped (2026-11-12):** folded into S15-D14, which draws the Artifact sheet in add mode |
-| S15-D5 | Evidence graph form | **S15-11** | The item's metadata board beside name and description |
-| S15-D6 | Source type page | **S15-12**, S15-17 | Suggestions at three levels; the three formats, Insert field, live preview, warnings |
+| S15-D5 | Evidence graph form | **S15-11** | The item's metadata board beside name and description, with needed fields flagged |
+| S15-D6 | Source type page | **S15-12** | Suggestions at three levels. Split under "One brief, one PR": the format editor is S15-D16 |
 | S15-D7 | New Source type dialog | **S15-18** | Copy from |
-| S15-D8 | Citation composer | **S15-13** | The printed page beside the page in the file |
-| S15-D9 | Provenance sheet | **S15-21**, S15-27, S15-29 | The formatted citation, grouped Citations, Copy citation; the loading and failed states of the on-open call; the record table's fold |
+| S15-D8 | Citation composer | **S15-13** | The printed page beside the page in the file; Unknown and Supplied on it; flagged when needed |
+| S15-D9 | Provenance sheet | **S15-21** | The formatted citation, grouped Citations, Copy citation; the loading and failed states of the on-open call. Split under "One brief, one PR": the fold is S15-D17, records on open S15-D18 |
 | S15-D10 | Move confirm | **S15-25** | The bundle, the target picker, the credibility note |
 | S15-D11 | Event page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D12 | Place page | **S15-31** | Value rows open the provenance sheet; the Why accordion is removed |
 | S15-D13 | Copy Source dialog | **S15-32** | A Published date tick beside Description, Metadata and Credibility ([brief](design/archive/S15-D13-copy-source-dialog.md)) |
-| S15-D14 | Source page Artifacts | **S15-34**, S15-35, S15-10, S15-25 | The Artifact list with each Artifact's copy details shown read-only and a thumbnail of at most 80pt (rows or compact cards: the board decides); the Artifact sheet in edit and add mode: label, description, graphs, copy details with suggestions, one Save; where Move sits on the new list. Replaces S15-D1 SD-9, SD-10 and S15-D4 |
+| S15-D14 | Source page Artifacts | **S15-34**, S15-35, S15-10, S15-25 | The Artifact list with each Artifact's copy details shown read-only and a thumbnail of at most 80pt (rows or compact cards: the board decides); the Artifact sheet in edit and add mode: label, description, graphs, copy details with suggestions, one Save; where Move sits on the new list. Replaces S15-D1 SD-9, SD-10 and S15-D4. Written before "One brief, one PR"; stays as written |
+| S15-D15 | Person page Sources section | **S15-22** | Citations grouped under one citation |
+| S15-D16 | Source type page | **S15-17** | The three formats, Insert field, live preview, warnings |
+| S15-D17 | Provenance sheet | **S15-27** | The record table's fold |
+| S15-D18 | Provenance sheet | **S15-29** | Records loading when the sheet opens, and their failure |
+| S15-D19 | Source page | **S15-23** | Where Copy source-list entry sits |
+| S15-D20 | Source page | **S15-39** | Needed and used fields on the Source's board; the header's flag on an empty date |
+| S15-D21 | Artifact sheet and list | **S15-40** | Needed and used fields in the sheet's board; the list entry's mark |
+| S15-D22 | Metadata board row | **S15-41** | Unknown and Supplied on a row, how a marked row reads |
+| S15-D23 | Source date dialog | **S15-42** | No date and Supplied; how the header shows them |
 
 ## Slices
 
@@ -175,19 +197,20 @@ SLICE 4 — Formats as data                             (alongside Spike 16)
   ✎ S15-D7 ──▶ S15-18  A new type can copy another's formats and suggestions
   S15-19  Seed the citation types, fields and suggestions
   S15-20  Seed the citation formats
+  S15-37  Values can be marked unknown or supplied
+  S15-38  A Source type reports its citation's needed fields
   S15-16  Citations render through their type's formats
   Check: bar 6 on a new project; bar 5's Copy from; the census example renders in a handler test.
 
 SLICE 5 — Person page date and the format editor
   S15-05  The Person page's Sources section shows each Source's date   (S15-D3, after S16-12, S16-13)
-  S15-17  The format editor                                            (S15-D6)
+  ✎ S15-D16 ──▶ S15-17  The format editor
   Check: bar 1 on the Person page; bar 5.
 
 SLICE 6 — Citations in the app                        (after S16-30)
   ✎ S15-D9 ──▶ S15-21  The provenance sheet shows formatted citations
-  S15-22  The Sources section groups a Source's Citations by citation  (S15-D3)
-  S15-23  The Source page previews its citation                        (S15-D1)
-  Check: bar 4, bar 7.
+  ✎ S15-D15 ──▶ S15-22  The Sources section groups a Source's Citations by citation
+  Check: bar 4's provenance sheet and copy, bar 7.
 
 SLICE 7 — Move                                        (after S16-12, S16-13, S16-15)
   S15-24  Move a bundle to another Source in the engine
@@ -196,30 +219,43 @@ SLICE 7 — Move                                        (after S16-12, S16-13, S
 
 SLICE 8 — Provenance loading                         (after S16-07, S16-09, S16-11, S16-19, S16-24, S16-30)
   S15-30  The paged fold moves to the kit
-  S15-27  The provenance table folds a page at a time                 (S15-D9)
+  ✎ S15-D17 ──▶ S15-27  The provenance table folds a page at a time
   ✎ S15-D11, S15-D12 ──▶ S15-31  Event and Place rows open the provenance sheet
   S15-28  A value's records load on their own
-  S15-29  The provenance sheet loads its records when it opens        (S15-D9)
+  ✎ S15-D18 ──▶ S15-29  The provenance sheet loads its records when it opens
   Check: bar 10.
+
+SLICE 9 — Needed fields, unknown and supplied values   (after slice 4; S15-40 after S15-35, S15-23 after S15-21)
+  ✎ S15-D20 ──▶ S15-39  The Source page flags its needed fields
+  ✎ S15-D21 ──▶ S15-40  The Artifact sheet flags its needed fields
+  ✎ S15-D22 ──▶ S15-41  A metadata row can be marked unknown or supplied
+  ✎ S15-D23 ──▶ S15-42  The Source date can be unknown or supplied
+  ✎ S15-D19 ──▶ S15-23  The Source page copies its source-list entry
+  Check: bar 4's boards and copy, bar 11. (The graph form's flags ride S15-11, the page's S15-13.)
 
 S15-99 — Dogfood close / docs
 ```
 
-**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06 and S15-26 have no dependencies and can start at once, with S15-07 and S15-14 right after S15-06; slice 1's UI waits on S15-D1 and S15-D2. In slice 5, S15-17 needs only slice 4; S15-05 waits for S16-12 and S16-13 (and S16-03, S16-06 and S16-07, which edit the same Sources section files); slice 6 when S16-30 lands, slice 7 when S16-15 lands as well.
+**In parallel with Spike 16:** slices 1 to 4 need nothing from it. Within them, S15-01, S15-02, S15-06 and S15-26 have no dependencies and can start at once, with S15-07 and S15-14 right after S15-06; slice 1's UI waits on S15-D1 and S15-D2. In slice 5, S15-17 needs only slice 4; S15-05 waits for S16-12 and S16-13 (and S16-03, S16-06 and S16-07, which edit the same Sources section files); slice 6 when S16-30 lands, slice 7 when S16-15 lands as well. Slice 9 needs only slices 2 and 4, except S15-23, which reuses S15-21's rich copy.
 
 ### Dependencies at a glance
 
 ```text
-S15-02 ──▶ S15-03, S15-04, S15-05, S15-16, S15-32
+S15-02 ──▶ S15-03, S15-04, S15-05, S15-16, S15-32, S15-37
 S15-06 ──▶ S15-07, S15-08, S15-12, S15-14, S15-18, S15-19
-S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16, S15-33
+S15-07 ──▶ S15-08 ──▶ S15-09, S15-10, S15-11, S15-16, S15-33, S15-37
 S15-26 ──▶ S15-09
 S15-26, S15-33 ──▶ S15-36 ──▶ S15-34, S15-10, S15-11
 S15-09, S15-33 ──▶ S15-34 ──▶ S15-35, S15-10, S15-11
-S15-35 ──▶ S15-25
-S15-14 ──▶ S15-15 ──▶ S15-16, S15-18, S15-20
+S15-35 ──▶ S15-25, S15-40
+S15-14 ──▶ S15-15 ──▶ S15-16, S15-18, S15-20, S15-38
+S15-37 ──▶ S15-16, S15-13, S15-41, S15-42
+S15-38 ──▶ S15-11, S15-13, S15-39, S15-40
+S15-34 ──▶ S15-40
+S15-39 ──▶ S15-41
 S15-19 ──▶ S15-20
 S15-16 ──▶ S15-17, S15-21, S15-22, S15-23
+S15-21 ──▶ S15-23
 S15-12 ──▶ S15-17
 S15-05 ──▶ S15-22
 S15-24 ──▶ S15-25
@@ -239,12 +275,15 @@ S16-04 ──▶ S15-21
 S16-09 ──▶ S15-29
 
 Briefs:
-S15-D1 ──▶ S15-03, S15-09, S15-23, S15-25     S15-D2 ──▶ S15-04
-S15-D3 ──▶ S15-05, S15-22                      S15-D14 ──▶ S15-34, S15-35, S15-10, S15-25
-S15-D5 ──▶ S15-11                              S15-D6 ──▶ S15-12, S15-17
+S15-D1 ──▶ S15-03, S15-09, S15-25 (written before one brief, one PR)
+S15-D14 ──▶ S15-34, S15-35, S15-10, S15-25 (written before one brief, one PR)
+S15-D2 ──▶ S15-04                              S15-D3 ──▶ S15-05
+S15-D5 ──▶ S15-11                              S15-D6 ──▶ S15-12
 S15-D7 ──▶ S15-18                              S15-D8 ──▶ S15-13
-S15-D9 ──▶ S15-21, S15-27, S15-29              S15-D10 ──▶ S15-25
+S15-D9 ──▶ S15-21                              S15-D10 ──▶ S15-25
 S15-D11, S15-D12 ──▶ S15-31
+S15-D15 ──▶ S15-22   S15-D16 ──▶ S15-17   S15-D17 ──▶ S15-27   S15-D18 ──▶ S15-29
+S15-D19 ──▶ S15-23   S15-D20 ──▶ S15-39   S15-D21 ──▶ S15-40   S15-D22 ──▶ S15-41   S15-D23 ──▶ S15-42
 ```
 
 ---
@@ -367,10 +406,10 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-11 — Evidence graphs show their metadata
 
-**Ships.** The Evidence graph form has a metadata board for the item (S15-36's draft board, with S15-34's inline Add field, scrolling form dialog and key order; its rows start from `getMetadataBoard`, which S15-11 adds to the Swift store; the graph write replies return no rows, so a graph Save reloads the workspace), with the type's `graph`-level suggestions, saved with the form's one write.
+**Ships.** The Evidence graph form has a metadata board for the item (S15-36's draft board, with S15-34's inline Add field, scrolling form dialog and key order; its rows start from `getMetadataBoard`, which S15-11 adds to the Swift store; the graph write replies return no rows, so a graph Save reloads the workspace), with the type's `graph`-level suggestions, saved with the form's one write; the board flags the graph level's needed and used fields from S15-38 (rule "Boards flag needed fields").
 **Not this PR.** Nudging researchers toward one graph per household (map § 7).
 **Decide in the plan.** Whether the graph write replies return the graph's rows, as the Artifact writes do since S15-33 (`ownerBoardProto`), so a graph Save patches instead of reloading; name and membership still change through effects (S15-33 review M-6).
-**Check.** Bar 3's graph half: dwelling, family and line on a household graph.
+**Check.** Bar 3's graph half: dwelling, family and line on a household graph; a census graph with no item shows "Item" flagged as needed.
 **Context.** S15-D5; map § 6.9; `SourceGraphFormDialog.swift`, `SourceGraphFormModel.swift`.
 
 #### S15-12 — Source types suggest fields at each level
@@ -384,19 +423,19 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-13 — The composer records the printed page
 
-**Ships.** The citation composer offers the printed page beside the page in the file and writes it as `page_label` on the `page` selector.
+**Ships.** The citation composer offers the printed page beside the page in the file and writes it as `page_label` on the `page` selector; the page can be marked unknown (`page_unknown`) or supplied (`page_supplied`), and is flagged when the type's formats need `{citation.page}` and it is empty.
 **Not this PR.** A per-Artifact page map (map § 7).
-**Check.** A Citation saved with printed page "14" shows "p. 14" on today's citation line.
-**Context.** S15-D8; rule "Citations carry no metadata"; [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) § 3.2; `CitationLocatorDraft.swift`, `CitationFieldsDraft.swift`.
+**Check.** A Citation saved with printed page "14" shows "p. 14" on today's citation line; one marked unknown is not flagged.
+**Context.** S15-D8; rules "Citations carry no metadata", "A value can be marked unknown or supplied", "Boards flag needed fields"; S15-37, S15-38; [`interpretation-layer-data-model.md`](../../interpretation-layer-data-model.md) § 3.2; `CitationLocatorDraft.swift`, `CitationFieldsDraft.swift`.
 
 ### Slice 4 — Formats as data
 
 #### S15-14 — The citation format engine
 
-**Ships.** `core/citationformat`: `Parse` to a tree (literals, placeholders with alternatives, groups, italic spans), `Render` through a resolver interface to styled runs and plain text, a missing-field list, and diagnostics with positions for unknown syntax and unbalanced brackets; the built-ins table; the stored token for a field id and the rewrite between keys and ids. No database.
+**Ships.** `core/citationformat`: `Parse` to a tree (literals, placeholders with alternatives, groups, italic spans), `Render` through a resolver interface to styled runs and plain text (a resolved value carries its unknown and supplied facts: unknown prints its unknown text, supplied prints in brackets; a date prints with citation terms), a missing-field list, each format's needed and used requirements per level, and diagnostics with positions for unknown syntax, an unprefixed `{meta.key}` and unbalanced brackets; the built-ins table; the stored token for a field id and the rewrite between keys and ids. No database.
 **Not this PR.** The resolver over the catalog (S15-16); storage (S15-15).
-**Check.** Table tests: every syntax rule of map § 6.3, nested groups, escapes, a value holding `*` and `[`, the census example of map § 6.8.
-**Context.** Rules "Citation formats are data", "No transforms", "One engine, in Go", "Built-in placeholders are one table", "Formats name fields by id"; map § 6.3. Writes the syntax as a domain doc (new `docs/citation-formats.md`, linked from [`source-layer-data-model.md`](../../source-layer-data-model.md)); S15-99 retires the spike's `citation-formats.md`.
+**Check.** Table tests: every syntax rule of map § 6.3, nested groups, escapes, a value holding `*` and `[`, the census example of map § 6.8; requirements for a chain and a group; "n.p.", "[Topeka]", "[ca. 1880]".
+**Context.** Rules "Citation formats are data", "Every placeholder names its level", "A format's fields are needed or used", "Dates in citations use citation terms", "No transforms", "One engine, in Go", "Built-in placeholders are one table", "Formats name fields by id"; map § 6.3. Writes the syntax as a domain doc (new `docs/citation-formats.md`, linked from [`source-layer-data-model.md`](../../source-layer-data-model.md)); S15-99 retires the spike's `citation-formats.md`.
 
 #### S15-15 — Source types store citation formats
 
@@ -417,13 +456,13 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** `sourcevocab`'s registry gains the 26 types (with icons from `sourcetypes/icons.go`), 63 fields (with descriptions) and suggestions at their levels in format order (map § 6.8); `birth_certificate` stops suggesting `record_date` and `issue_date`.
 **Not this PR.** Formats (S15-20).
 **Check.** A new project lists the 26 types; a census Source suggests its Source fields, its Artifacts the copy fields, its graphs the item fields; Install run twice changes nothing.
-**Context.** Rule "The seed is the product default"; map § 6.8; skill `add-seeded-vocabulary`. Updates [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.
+**Context.** Rule "The seed is the product default"; map § 6.8; skill `add-seeded-vocabulary`. Seeds `unknown_text` ("n.p." on `publication_place` and `publisher`) once S15-37 has the column; if S15-19 lands first, S15-37 seeds it. Updates [`seeded-vocabulary.md`](../../seeded-vocabulary.md) § 2.
 
 #### S15-20 — Seed the citation formats
 
 **Ships.** Each seeded type's three formats, as in map § 6.8, installed with the types; Install writes them after the fields so keys resolve to ids. Says in the PR how to run Install against an existing dogfood project.
 **Not this PR.** Rendering them in the app (S15-16 on).
-**Check.** A test renders every seeded format in all three forms against an invented Source of its type and compares the expected text.
+**Check.** A test renders every seeded format in all three forms against an invented Source of its type and compares the expected text; no seeded format has an unprefixed `{meta.key}`.
 **Context.** Rules "Follow the style; never copy the book", "The seed is the product default", "Formats name fields by id" (Install calls `metadatafields.ResolveKeysTx`); map § 6.8 "Formats". [`add-seeded-vocabulary`](../../../.agents/skills/add-seeded-vocabulary/SKILL.md) keeps `Install` out of FFI, Swift and open, so the plan names how the dogfood run happens (a test-harness or developer command against a copy of the catalog) and warns that re-running `Install` overwrites edited product labels and formats and restores deleted product rows.
 
 ### Slice 5 — Rendering
@@ -437,7 +476,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 #### S15-16 — Citations render through their type's formats
 
-**Ships.** The catalog resolver for `core/citationformat`, reading SQL: built-ins from the Source row and its date and the Citation's locator and label; metadata at each level with the `meta.` fallback, through S15-07's batch read; one batch render RPC (runs, plain text, missing fields, group key per Citation); one render request for previews; the built-ins table over FFI. A type with no full format renders no text. Nothing is cached.
+**Ships.** The catalog resolver for `core/citationformat`, reading SQL: built-ins from the Source row and its date and the Citation's locator and label; metadata at each named level with its unknown and supplied facts (S15-37), through S15-07's batch read; one batch render RPC (runs, plain text, missing fields, group key per Citation); one render request for previews; the built-ins table over FFI. A type with no full format renders no text. Nothing is cached.
 **Not this PR.** Any screen (S15-17, S15-21 – S15-23).
 **Check.** Handler tests: the census example renders from values spread over Source, Artifact and graph; 300 and 1,200 Citations render in one call in a fixed number of queries, timed at both.
 **Context.** Rules "One engine, in Go", "Citations render on demand, from SQL", "One render request for previews", "Today's line stays the fallback"; map §§ 6.3, 6.5, 6.6.
@@ -447,7 +486,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** The Source type page edits its three formats with Insert field (the built-ins table and the fields, grouped by level, inserting the prefixed form), a live preview against a Source of that type the researcher picks, and the engine's diagnostics shown at their position. Swift does not parse formats.
 **Not this PR.** Copy from (S15-18).
 **Check.** Bar 5: editing the census full format updates the preview.
-**Context.** S15-D6; map § 6.3 "The editor". A new query key goes into `docs/catalog-caches.md` (S16-10) and, if it lands after S16-25, uses S16-25's value keys.
+**Context.** S15-D16; map § 6.3 "The editor". A new query key goes into `docs/catalog-caches.md` (S16-10) and, if it lands after S16-25, uses S16-25's value keys.
 
 ### Slice 6 — Citations in the app
 
@@ -463,14 +502,14 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** When the Sources section appears it asks S15-16's batch render for its Citations, and a Source's Citations with the same group key show as one citation with the pieces beneath. Lands after S16-03, S16-06 and S16-07.
 **Not this PR.** Re-ordering Sources.
 **Check.** Bar 7 in the Sources section, on a person cited 5 times on one household.
-**Context.** S15-D3; rule "Grouping is by the rendered full citation"; `PersonSourcesContent.swift`.
+**Context.** S15-D15; rule "Grouping is by the rendered full citation"; `PersonSourcesContent.swift`.
 
-#### S15-23 — The Source page previews its citation
+#### S15-23 — The Source page copies its source-list entry
 
-**Ships.** Through the one render request, the Source page shows its list entry and a full citation for one of its Citations, names the fields the format expects and is missing, and offers Copy citation through the same rich-payload write as S15-21.
-**Not this PR.** Editing the format here (it is on the type, S15-17).
-**Check.** Bar 4's Source page half: a census Source with no ED names "Enumeration district" as missing.
-**Context.** S15-D1; map § 6.3 "Empty placeholders outside a group". A new query key goes into `docs/catalog-caches.md` (S16-10) and, if it lands after S16-25, uses S16-25's value keys.
+**Ships.** **Copy source-list entry** on the Source page: the list form rendered through the one render request and copied as rich and plain text through S15-21's rich-payload write. A type with no list format offers nothing. **Re-scoped (user, 2026-11-13):** the citation preview (S15-D1 SD-11 – SD-13) is not built; needed fields are flagged on the boards (S15-39, S15-40, S15-11).
+**Not this PR.** Copying several Sources' entries ([idea](../../ideas/copy-source-list-entries.md)); notes, which are copied where Citations are shown (S15-21).
+**Check.** On a census Source, Copy source-list entry pastes "Kansas. Ottawa County. 1880 U.S. census, population schedule." with its italics into a rich-text editor.
+**Context.** S15-D19; rule "Boards flag needed fields; the Source page has no citation preview"; map § 6.10.
 
 ### Slice 7 — Move
 
@@ -502,7 +541,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** `PVProvenanceRecordTable` shows 50 citation groups and a `PVShowMoreRow` that reveals the next 50 and moves focus to the first, never splitting a group from its Citations.
 **Not this PR.** Loading records on open (S15-29); making the assembly linear (S15-28 and S15-29 send the denial facts); the Why accordion (removed by S15-31).
 **Check.** A value with 1,200 records opens on 50 groups; first layout measured in a Release build at 300 and 1,200 records before and after; Tab order holds through the shown rows.
-**Context.** S15-D9; rule "The provenance table folds a page at a time"; [`provenance-loading.md`](provenance-loading.md) "Cap" (its Debug timings).
+**Context.** S15-D17; rule "The provenance table folds a page at a time"; [`provenance-loading.md`](provenance-loading.md) "Cap" (its Debug timings).
 
 #### S15-31 — Event and Place rows open the provenance sheet
 
@@ -523,4 +562,48 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 **Ships.** Person, Event and Place rows draw their counts from `FieldRecordCounts`; the sheet's key (S15-21) carries the row's records with their citations, keyed by its (owner, Property) pairs, and refreshes through the registry on the inputs the read reports (once per write that touches them); `ReconciledValueDisplay.distinctSourceCount`, `sourceCount`, the `recordCount` derivation, `deniedSomething` and the denier search go, so the assembly is linear. `.conclusionDetail`'s Source follow (S16-09) is restated for a detail that no longer carries records.
 **Not this PR.** The Why accordion, removed by S15-31.
 **Check.** Bar 10: the page loads without records; the sheet loads on open, recovers from a failure, and refetches after a write to a cited Source; a sheet of 1,200 records loads and renders, timed.
-**Context.** S15-D9; rule "Records load when the sheet opens"; S16-04, S16-09, S16-25; `PVProvenanceSheetContent.swift`, `ReconciledValueDisplay.swift`, `ReconciledValueRowModel.swift` (`RecordsSource`). Updates [`macos-client-patterns.md`](../../macos-client-patterns.md) (the detail key no longer carries every outcome; when `provenanceContent()` is built), [`design-system-layers.md`](../../design-system-layers.md) and [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) (recipe content built after an async read), and retires [`provenance-loading.md`](provenance-loading.md).
+**Context.** S15-D18; rule "Records load when the sheet opens"; S16-04, S16-09, S16-25; `PVProvenanceSheetContent.swift`, `ReconciledValueDisplay.swift`, `ReconciledValueRowModel.swift` (`RecordsSource`). Updates [`macos-client-patterns.md`](../../macos-client-patterns.md) (the detail key no longer carries every outcome; when `provenanceContent()` is built), [`design-system-layers.md`](../../design-system-layers.md) and [`add-ui-component`](../../../.agents/skills/add-ui-component/SKILL.md) (recipe content built after an async read), and retires [`provenance-loading.md`](provenance-loading.md).
+
+### Slice 9 — Needed fields, unknown and supplied values
+
+#### S15-37 — Values can be marked unknown or supplied
+
+**Ships.** One migration: `is_unknown` and `is_supplied` (with their checks) on `source_metadata`, `artifact_metadata` and `evidence_graph_metadata`; `unknown_text` on `source_metadata_fields`; `date_unknown` and `date_supplied` on `sources`. The locator gains `page_unknown` and `page_supplied` beside `page_label`. Metadata reads, the draft `Apply` and the single-row writes, the Source date write, FFI, Copy Source and the audit carry the two facts.
+**Not this PR.** Rendering them (S15-16); any chrome (S15-41, S15-42, S15-13).
+**Check.** Handler tests: a value saved unknown reads back unknown with no text; supplied and unknown together are refused; Copy Source keeps both facts; the audit shows the change.
+**Context.** Rule "A value can be marked unknown or supplied"; map § 6.10; skills `add-catalog-migration`, `add-catalog-model`, `add-audit-scope`, `add-ffi-handler`, `add-date-value`. Updates [`source-layer-data-model.md`](../../source-layer-data-model.md).
+
+#### S15-38 — A Source type reports its citation's needed fields
+
+**Ships.** From a type's three stored formats, the engine's requirements per level (field ids or built-ins, first option first, needed or used), returned with each metadata board read (`getMetadataBoard` and the Source workspace) so a board needs no second call. Computed per type once per read; at Scale, 60 Artifacts and 60 graphs share their Source's one type.
+**Not this PR.** Any chrome (S15-39, S15-40, S15-11, S15-13).
+**Check.** Handler tests: the seeded census type reports `artifact.url` needed and `graph.line_number` used with its Source option; a type with no formats reports none.
+**Context.** Rule "A format's fields are needed or used"; map §§ 6.3, 6.10; S15-14, S15-15.
+
+#### S15-39 — The Source page flags its needed fields
+
+**Ships.** The Source's metadata board shows the Source level's needed fields that are empty as flagged rows that cannot be dismissed, and used fields with a quieter mark; a field both suggested and needed shows once. The header flags an empty date when the type needs `{source.date}`.
+**Not this PR.** Unknown and supplied (S15-41, S15-42).
+**Check.** Bar 4's Source half: a census Source with no ED shows "Enumeration district" flagged as needed; filling it clears the flag.
+**Context.** S15-D20; rule "Boards flag needed fields"; S15-38; `MetadataBoardView.swift`.
+
+#### S15-40 — The Artifact sheet flags its needed fields
+
+**Ships.** The Artifact sheet's board flags the Artifact level's needed and used fields as S15-39 does; the Artifact list entry marks an Artifact with a needed field empty.
+**Not this PR.** The graph form (S15-11).
+**Check.** Bar 4's Artifact half: a census Artifact with no URL shows "URL" flagged in its sheet and a mark on its list entry.
+**Context.** S15-D21; rule "Boards flag needed fields"; S15-38, S15-34, S15-35.
+
+#### S15-41 — A metadata row can be marked unknown or supplied
+
+**Ships.** On every metadata board, a row can be marked **Unknown** (no text; reads as the field's unknown text) or **Supplied** (its text, marked); live boards save at once, draft boards with their owner's Save. A row marked unknown is not flagged as needed.
+**Not this PR.** The Source date (S15-42) and the page (S15-13); editing a field's unknown text (the field's own editor, later).
+**Check.** Bar 11's metadata half: a book Source with publication place marked unknown is not flagged, and its citation reads "n.p.".
+**Context.** S15-D22; rule "A value can be marked unknown or supplied"; S15-37, S15-39.
+
+#### S15-42 — The Source date can be unknown or supplied
+
+**Ships.** The date dialog offers **No date** (stores unknown; the header reads "No date") and **Supplied** beside the date form; the header shows both. A Source marked no date is not flagged.
+**Not this PR.** The shared date form itself, unchanged.
+**Check.** Bar 11's date half: an undated letter dated from its postmark, marked supplied, cites "[12 March 1880]"; one marked no date cites "n.d.".
+**Context.** S15-D23; rule "A value can be marked unknown or supplied"; S15-37; `add-date-value`.
