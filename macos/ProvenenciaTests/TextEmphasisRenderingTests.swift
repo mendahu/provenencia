@@ -66,7 +66,7 @@ struct TextEmphasisRenderingTests {
     private func titleHeight(_ source: PVTitleSource) -> Int? {
         let renderer = ImageRenderer(
             content: PVTitleText(source, lineLimit: 1)
-                .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium))
+                .font(PVPersonCard.titleFont(.compact))
         )
         renderer.scale = 2
         return renderer.cgImage?.height
@@ -82,5 +82,17 @@ struct TextEmphasisRenderingTests {
         let plain = try #require(titleHeight(.name("Mary (Smith) Jones")))
         let italic = try #require(titleHeight(.name("Mary (Smith) Jones", styled: styled)))
         #expect(italic == plain)
+    }
+
+    /// A compact card's former surname draws italic: the card's title font has an italic
+    /// face, so the emphasized run does not come out upright.
+    @Test func anEmphasizedRunInACompactCardTitleDrawsItalic() throws {
+        let font = PVPersonCard.titleFont(.compact)
+        var styled = AttributedString("Mary (Smith) Jones")
+        let smith = try #require(styled.range(of: "Smith"))
+        styled[smith][AttributeScopes.FoundationAttributes.InlinePresentationIntentAttribute.self] = .emphasized
+        let plain = try #require(bitmap(Text(verbatim: "Mary (Smith) Jones"), font: font))
+        let italic = try #require(bitmap(Text(PVTitleText.italicizingEmphasis(styled, font: font)), font: font))
+        #expect(plain != italic)
     }
 }

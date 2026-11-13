@@ -62,6 +62,18 @@ struct PVPersonCard: View {
     /// Opens the person; ignored for the focus.
     var open: () -> Void = {}
 
+    /// The AppKit face of the title at `size`, so a measure matches the paint. Regular
+    /// weight at both sizes: Spectral ships an italic at that weight, which a former
+    /// surname's italic run needs.
+    static func nsTitleFont(_ size: PVTileCardSize) -> NSFont {
+        PVFont.nsBody(size: size == .compact ? PVTypeScale.caption : PVTypeScale.body)
+    }
+
+    static func titleFont(_ size: PVTileCardSize) -> Font { Font(nsTitleFont(size)) }
+
+    /// The AppKit face of the compact size's life span.
+    static let nsCompactYearsFont = PVFont.nsMono(size: PVTypeScale.micro)
+
     var body: some View {
         if content.isFocus && size == .regular {
             PVTileCard(
@@ -107,7 +119,7 @@ struct PVPersonCard: View {
 
     private var title: some View {
         PVTitleText(content.title, lineLimit: size.titleLineLimit, emphasized: content.isFocus)
-            .font(size == .compact ? PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.medium) : PVListText.titleFont)
+            .font(Self.titleFont(size))
             .foregroundStyle(PVColor.textPrimary)
     }
 
@@ -117,7 +129,7 @@ struct PVPersonCard: View {
             HStack(spacing: 12) {
                 if !content.years.isEmpty {
                     Text(verbatim: content.years)
-                        .font(PVFont.mono(size: PVTypeScale.micro))
+                        .font(Font(Self.nsCompactYearsFont))
                         .foregroundStyle(PVColor.textMuted)
                         .lineLimit(size.linesLineLimit)
                 }
