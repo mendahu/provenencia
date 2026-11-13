@@ -1,7 +1,7 @@
 # Review — S16-18 Place entries
 
-**Verdict:** Round 1: Fits with changes — Ready with changes. Round 2: pending.
-**Rounds:** 1 of 2 so far. **Reviewers:** maintainability (opus), executability (sonnet)
+**Verdict:** Fits with changes — Ready with changes, all findings answered.
+**Rounds:** 2. **Reviewers:** maintainability (opus), executability (sonnet)
 
 ## To user
 
@@ -74,3 +74,33 @@ Maintainability: every round-1 answer holds; the D-16 / D-17 premises hold at `4
 
 ### M-11 · minor · `Deps` means the opposite of `SummaryDeps`
 **Answer:** Fixed by M-10 (the field is `Inputs`).
+
+Executability (dry run of `44ac023`, before M-10's rename; each finding is answered against the `Inputs` shape): every round-1 answer holds; every Current state row is true.
+
+### X-7 · major · Registry internals left open
+**Answer:** Fixed — D-16 names the wiring: an `entry.dropMoved` closure built in `RegisterKeyed`, `keyedValues.inputs` for unindexing in `store`, `evict`, `Drop`, `Clear`, and the order in `applyEntries` (drop when held, then Apply when set and still held).
+
+### X-8 · major · A removed link moves no bridge
+**Answer:** Fixed — with `Inputs` the removal moves `{assoc}` through `Handles`; D-16 and D-17 now say an entry that reads a link declares its association's key (as `FollowKeys` does), and T-10 gains a "remove the location" case.
+
+### X-9 · major · STEP-5 too wide; the fill untested until after it
+**Answer:** Fixed — T-8 and the test hooks move into STEP-4; the chain rewrite splits into STEP-5 (chains and the Places list) and STEP-6 (the place page). Ten steps.
+
+### X-10 · minor · Test helper shapes
+**Answer:** Fixed — `InputIndexSizeForTest[T]` signature and unit, `PlaceEntryForTest`'s return tuple, `SnapshotRegistryForTest` for T-9 / T-10, and how T-9 commits.
+
+### X-11 · minor · `Commit` ids in AC-2.4
+**Answer:** Fixed — (a) `Location(Event("birth"), city)`, `Commit(loc)`; (b) `Commit(link)`; (c) `Commit(region, into)`.
+
+### X-12 · minor · Stale STEP reference
+**Answer:** Fixed — the rules-bent line names STEP-10.
+
+### X-13 · minor · `NodesOnBridges` edges
+**Answer:** Fixed — D-2: duplicates read once, an unregistered bridge key is an error, no bridge runs no link or disambiguation query.
+
+### X-14 · minor · Sweep and rg wording
+**Answer:** Fixed — the sweep matches `NodesOnBridge(`; STEP-6's rg names the removed map names; `newLargeFixture`'s file corrected.
+
+## Verdict
+
+Round 2: maintainability Fits with changes (M-10 fixed, M-11 fixed); executability Ready with changes (all fixed). No open blocker; every To user item answered. Two rounds done, so the M-10 reshape was not reviewed a third time; it changes vocabulary only, and the commit-side premises round 2 checked are the same.
