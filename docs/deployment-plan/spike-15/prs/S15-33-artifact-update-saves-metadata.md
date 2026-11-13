@@ -1,6 +1,6 @@
 # S15-33 — Editing an Artifact can save its metadata
 
-**Status:** Planned
+**Status:** Landed in [#806](https://github.com/mendahu/provenencia/pull/806) (2026-11-12)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: engine and wire only; the app sends no draft and reads no new field until S15-36 and S15-34)
@@ -28,6 +28,11 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- T-4 (AC-1.5, "nothing changed writes no revision") runs on `page2`, which has no layout, instead of on the Artifact the earlier subtests edit: after "empty clears" that Artifact's layout has `provider` at 1, so the AC's precondition (layout `provider` 0) would not hold.
+- `errParams` is a helper in `metadata_test.go` (handlers) and in `sourcemetadata_test.go`, as T-1 and T-5 read params with it.
 
 ## 1. Objective
 
