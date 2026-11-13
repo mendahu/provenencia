@@ -449,8 +449,11 @@ private struct ThrowingStore: GenealogyStore {
         fileID _: String,
         label _: String,
         description _: String,
-        graphIDs _: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
+        graphIDs _: [String]?,
+        metadata _: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
+        throw StoreBoom.boom
+    }
     func deleteArtifact(projectDir _: String, userID _: String, artifactID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom
     }
@@ -460,8 +463,11 @@ private struct ThrowingStore: GenealogyStore {
         artifactID _: String,
         label _: String,
         description _: String,
-        graphIDs _: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) { throw StoreBoom.boom }
+        graphIDs _: [String]?,
+        metadata _: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
+        throw StoreBoom.boom
+    }
     func ingestArtifactFile(
         projectDir _: String,
         userID _: String,
@@ -476,7 +482,8 @@ private struct ThrowingStore: GenealogyStore {
         sourceID _: String,
         name _: String,
         description _: String,
-        artifactIDs _: [String]
+        artifactIDs _: [String],
+        metadata _: CatalogMetadataDraft?
     ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) { throw StoreBoom.boom }
     func updateEvidenceGraph(
         projectDir _: String,
@@ -484,7 +491,8 @@ private struct ThrowingStore: GenealogyStore {
         graphID _: String,
         name _: String,
         description _: String,
-        artifactIDs _: [String]
+        artifactIDs _: [String],
+        metadata _: CatalogMetadataDraft?
     ) async throws -> CatalogWriteEffects { throw StoreBoom.boom }
     func deleteEvidenceGraph(projectDir _: String, userID _: String, graphID _: String) async throws -> CatalogWriteEffects {
         throw StoreBoom.boom

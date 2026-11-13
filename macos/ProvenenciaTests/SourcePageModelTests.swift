@@ -1030,6 +1030,25 @@ struct SourcePageModelTests {
         #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.first?.hasValue == false)
     }
 
+    @Test func sourcePageBoardAsksBeforeClearing() async {
+        let author = authorField()
+        let store = makeStore(
+            metadata: [
+                CatalogMetadataEntry(
+                    field: author, valueText: "Mary Robins",
+                    hasValue: true, suggested: true, sortOrder: 0
+                ),
+            ],
+            fields: [author]
+        )
+        let model = makeModel(store: store)
+        await model.warmFromSession()
+        store.metadataWriteResults[MetadataOwner(level: .source, id: sourceID)] = []
+        #expect(await model.metadata.requestClear(fieldID: author.id) == true)
+        #expect(model.metadata.saved.map(\.valueText) == ["Mary Robins"])
+        #expect(store.metadataByOwner[MetadataOwner(level: .source, id: sourceID)]?.first?.hasValue == true)
+    }
+
     @Test func clearExtraMetadataRemovesRow() async {
         let repo = repositoryField()
         let store = makeStore(
@@ -1089,9 +1108,7 @@ struct SourcePageModelTests {
             ],
             fields: [field]
         )
-        store.setMetadataError = CoreInvokeError.coded(
-            status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
-        )
+        store.setMetadataError = catalogMetadataRefusal()
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadata.beginEdit(fieldID: field.id)
@@ -1106,9 +1123,7 @@ struct SourcePageModelTests {
     @Test func invalidMetadataAddLandsOnValueField() async {
         let field = urlField()
         let store = makeStore(fields: [field])
-        store.setMetadataError = CoreInvokeError.coded(
-            status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
-        )
+        store.setMetadataError = catalogMetadataRefusal()
         let model = makeModel(store: store)
         await model.warmFromSession()
         model.metadataDialogs.openAdd(on: model.metadata)
@@ -1992,7 +2007,7 @@ struct SourcePageModelTests {
         store.nextWriteEffects = CatalogWriteEffects(reads: [CatalogWriteEffectsRead(read: .evidenceGraphs, ids: [sourceID])])
         let (created, effects) = try await store.createEvidenceGraph(
             projectDir: projectDir, userID: userID, sourceID: sourceID,
-            name: "Walker household", description: "", artifactIDs: ["P3"]
+            name: "Walker household", description: "", artifactIDs: ["P3"], metadata: nil
         )
         session.apply(effects)
         await session.settleWrites()

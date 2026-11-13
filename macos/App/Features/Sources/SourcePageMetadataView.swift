@@ -28,7 +28,13 @@ struct SourcePageMetadataView: View {
                 board: model.metadata,
                 accessibilityIdentifierPrefix: "sources.page.metadata",
                 onAdd: { model.metadataDialogs.openAdd(on: model.metadata) },
-                onClear: { model.metadataDialogs.askClear(on: model.metadata, fieldID: $0) }
+                onClear: { id in
+                    Task {
+                        if await model.metadata.requestClear(fieldID: id) {
+                            model.metadataDialogs.askClear(on: model.metadata, fieldID: id)
+                        }
+                    }
+                }
             )
         }
     }

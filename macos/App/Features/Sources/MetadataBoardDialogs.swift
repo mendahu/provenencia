@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// What a board's Add reports to the dialog that asked: written, refused by the
+/// What a board's Add reports to the add row that asked: written, refused by the
 /// engine with a message for the value field, or failed with the host showing it.
 enum MetadataBoardAddResult {
     case saved
@@ -30,38 +30,49 @@ final class MetadataBoardDialogs {
     /// The board the open Add dialog writes to.
     private(set) var addTarget: MetadataBoardModel?
     var isAdding: Bool { addTarget != nil }
-    var addFieldID = ""
-    var addValue = ""
     var addFieldError: String?
-    var addValueError: String?
-    private(set) var isSavingAdd = false
     /// Confirm target for clearing a saved value.
     var pendingDelete: MetadataBoardDeleteItem?
     private(set) var isClearing = false
 
     var fieldComboOptions: [PVComboBoxOption] { addTarget?.fieldComboOptions ?? [] }
 
+    /// The Add dialog presents its target's add row; these read and write that row.
+    var addFieldID: String {
+        get { addTarget?.addRow?.fieldID ?? "" }
+        set { addTarget?.addRow?.fieldID = newValue }
+    }
+
+    var addValue: String {
+        get { addTarget?.addRow?.value ?? "" }
+        set { addTarget?.addRow?.value = newValue }
+    }
+
+    var addValueError: String? {
+        get { addTarget?.addRow?.error }
+        set { addTarget?.addRow?.error = newValue }
+    }
+
+    var isSavingAdd: Bool { addTarget?.isSavingAddRow ?? false }
+
     var addSheetIsDirty: Bool {
         !addFieldID.isEmpty
             || !addValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    var canSubmitAdd: Bool {
-        !isSavingAdd
-            && !addFieldID.isEmpty
-            && !addValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
+    var canSubmitAdd: Bool { addTarget?.canConfirmAddRow ?? false }
 
     func openAdd(on board: MetadataBoardModel) {
-        addFieldID = ""
-        addValue = ""
-        addFieldError = nil
-        addValueError = nil
+        if let other = addTarget, other !== board { other.closeAddRow() }
+        board.closeAddRow()
+        board.openAddRow()
         addTarget = board
+        addFieldError = nil
     }
 
     func cancelAdd() {
         guard !isSavingAdd else { return }
+        addTarget?.closeAddRow()
         addTarget = nil
     }
 
@@ -73,22 +84,16 @@ final class MetadataBoardDialogs {
             addFieldError = L10n.string(L10n.Sources.metadataFieldRequired)
             return
         }
-        let value = addValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.isEmpty {
+        if addValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             addValueError = L10n.string(L10n.Sources.metadataValueRequired)
             return
         }
-        isSavingAdd = true
-        defer { isSavingAdd = false }
-        switch await target.add(fieldID: addFieldID, valueText: value) {
-        case .saved: addTarget = nil
-        case .invalid(let message): addValueError = message
-        case .failed: break
-        }
+        await target.confirmAddRow()
+        if target.addRow == nil { addTarget = nil }
     }
 
     func askClear(on board: MetadataBoardModel, fieldID: String) {
-        guard let entry = board.entries.first(where: { $0.field.id == fieldID }), entry.hasValue else { return }
+        guard let entry = board.savedEntry(fieldID: fieldID) else { return }
         pendingDelete = MetadataBoardDeleteItem(fieldID: fieldID, label: entry.field.label, board: board)
     }
 

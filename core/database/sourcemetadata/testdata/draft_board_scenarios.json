@@ -1,0 +1,784 @@
+{
+  "_note": "Shared by Go (TestDraftBoardScenarios) and Swift (MetadataDraftHostParityTests). Go runs each scenario's actions through the live writes and applies each expected draft with Apply; Swift runs them through MetadataBoardModel over MetadataDraftHost. Both must produce 'board' (the saved rows in row order, then the empty suggestions in order, as the board draws them) and, in Swift, 'draft' (null when nothing changed). Fields are named by key: the type's three suggestions, and 'film' and 'roll' as extras. Actions: set, clear, dismiss, and move (a saved row lands before another saved row, or last when 'before' is null). Known divergences, which the engine and the draft host disagree on and a scenario names in 'known_divergence' so the side that differs does not compare it: 'suggested' (a field the stored layout had dismissed comes back as an extra in the draft host, the same drift as dismissing a suggestion, re-adding it and clearing it in one draft, which no scenario covers), and 'order' (the engine places a newly valued row last by the time it was filled; the draft host leaves it where it sits).",
+  "suggestions": [
+    "document_number",
+    "record_date",
+    "issue_date"
+  ],
+  "extras": [
+    "film",
+    "roll"
+  ],
+  "scenarios": [
+    {
+      "name": "opening board shows the type's suggestions and no draft",
+      "seed": [],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [],
+      "board": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": null
+    },
+    {
+      "name": "a value on a suggestion moves it above the empty ones",
+      "seed": [],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "record_date",
+          "value": "R1"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "record_date",
+            "value": "R1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "document_number",
+          "issue_date"
+        ]
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "record_date",
+            "value": "R1"
+          }
+        ],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "clearing a suggested row leaves it empty",
+      "seed": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "clear",
+          "field": "document_number"
+        }
+      ],
+      "board": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": {
+        "values": [],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "clearing an extra row removes it",
+      "seed": [
+        {
+          "op": "set",
+          "field": "film",
+          "value": "F1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "film",
+            "value": "F1",
+            "suggested": false
+          }
+        ],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "clear",
+          "field": "film"
+        }
+      ],
+      "board": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": {
+        "values": [],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "dismissing an empty suggestion drops it and lists it dismissed",
+      "seed": [],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "dismiss",
+          "field": "record_date"
+        }
+      ],
+      "board": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "issue_date"
+        ]
+      },
+      "draft": {
+        "values": [],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 2,
+            "dismissed": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "dismissing a valued suggestion changes nothing",
+      "seed": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "dismiss",
+          "field": "document_number"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": null
+    },
+    {
+      "name": "dismissing an extra row changes nothing",
+      "seed": [
+        {
+          "op": "set",
+          "field": "film",
+          "value": "F1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "film",
+            "value": "F1",
+            "suggested": false
+          }
+        ],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "dismiss",
+          "field": "film"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "film",
+            "value": "F1",
+            "suggested": false
+          }
+        ],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": null
+    },
+    {
+      "name": "a new value goes after the rows already laid out",
+      "seed": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        },
+        {
+          "op": "set",
+          "field": "film",
+          "value": "F1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          },
+          {
+            "field": "film",
+            "value": "F1",
+            "suggested": false
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "roll",
+          "value": "12"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          },
+          {
+            "field": "film",
+            "value": "F1",
+            "suggested": false
+          },
+          {
+            "field": "roll",
+            "value": "12",
+            "suggested": false
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "document_number",
+            "value": "D1"
+          },
+          {
+            "field": "film",
+            "value": "F1"
+          },
+          {
+            "field": "roll",
+            "value": "12"
+          }
+        ],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "film",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 2,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 3,
+            "dismissed": false
+          },
+          {
+            "field": "roll",
+            "sortOrder": 4,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "filling two suggestions out of row order",
+      "known_divergence": "order",
+      "seed": [],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "issue_date",
+          "value": "I1"
+        },
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "issue_date",
+            "value": "I1",
+            "suggested": true
+          },
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date"
+        ]
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "document_number",
+            "value": "D1"
+          },
+          {
+            "field": "issue_date",
+            "value": "I1"
+          }
+        ],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "dragging a saved row reorders the layout",
+      "seed": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        },
+        {
+          "op": "set",
+          "field": "record_date",
+          "value": "R1"
+        },
+        {
+          "op": "set",
+          "field": "issue_date",
+          "value": "I1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          },
+          {
+            "field": "record_date",
+            "value": "R1",
+            "suggested": true
+          },
+          {
+            "field": "issue_date",
+            "value": "I1",
+            "suggested": true
+          }
+        ],
+        "empty": []
+      },
+      "actions": [
+        {
+          "op": "move",
+          "field": "issue_date",
+          "before": "document_number"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "issue_date",
+            "value": "I1",
+            "suggested": true
+          },
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          },
+          {
+            "field": "record_date",
+            "value": "R1",
+            "suggested": true
+          }
+        ],
+        "empty": []
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "issue_date",
+            "value": "I1"
+          },
+          {
+            "field": "document_number",
+            "value": "D1"
+          },
+          {
+            "field": "record_date",
+            "value": "R1"
+          }
+        ],
+        "layout": [
+          {
+            "field": "issue_date",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "document_number",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "a value set back to its opened text is no draft",
+      "seed": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        }
+      ],
+      "start": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D2"
+        },
+        {
+          "op": "set",
+          "field": "document_number",
+          "value": "D1"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "document_number",
+            "value": "D1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "record_date",
+          "issue_date"
+        ]
+      },
+      "draft": null
+    },
+    {
+      "name": "a suggestion dismissed in the stored layout stays out",
+      "seed": [
+        {
+          "op": "dismiss",
+          "field": "issue_date"
+        }
+      ],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "record_date",
+          "value": "R1"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "record_date",
+            "value": "R1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "document_number"
+        ]
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "record_date",
+            "value": "R1"
+          }
+        ],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "adding a field the stored layout had dismissed",
+      "known_divergence": "suggested",
+      "seed": [
+        {
+          "op": "dismiss",
+          "field": "issue_date"
+        }
+      ],
+      "start": {
+        "saved": [],
+        "empty": [
+          "document_number",
+          "record_date"
+        ]
+      },
+      "actions": [
+        {
+          "op": "set",
+          "field": "issue_date",
+          "value": "I1"
+        }
+      ],
+      "board": {
+        "saved": [
+          {
+            "field": "issue_date",
+            "value": "I1",
+            "suggested": true
+          }
+        ],
+        "empty": [
+          "document_number",
+          "record_date"
+        ]
+      },
+      "draft": {
+        "values": [
+          {
+            "field": "issue_date",
+            "value": "I1"
+          }
+        ],
+        "layout": [
+          {
+            "field": "document_number",
+            "sortOrder": 0,
+            "dismissed": false
+          },
+          {
+            "field": "record_date",
+            "sortOrder": 1,
+            "dismissed": false
+          },
+          {
+            "field": "issue_date",
+            "sortOrder": 2,
+            "dismissed": false
+          }
+        ]
+      }
+    }
+  ]
+}

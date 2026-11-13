@@ -419,8 +419,9 @@ struct GoStore: GenealogyStore {
         fileID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateArtifactRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -431,11 +432,15 @@ struct GoStore: GenealogyStore {
         if let graphIDs {
             req.graphLinks = Provenencia_Engine_V1_GraphLinks.with { $0.graphIds = graphIDs }
         }
+        if let metadata { req.metadata = Self.mapMetadataDraft(metadata) }
         let resp: Provenencia_Engine_V1_CreateArtifactResponse = try await provenenciaCall(
             method: CoreMethod.createArtifact,
             request: req
         )
-        return (Self.mapArtifact(resp.artifact), Self.mapWriteEffects(resp.effects))
+        return (
+            Self.mapArtifact(resp.artifact), resp.metadata.map(Self.mapMetadataEntry),
+            Self.mapWriteEffects(resp.effects)
+        )
     }
 
     func updateArtifact(
@@ -444,8 +449,9 @@ struct GoStore: GenealogyStore {
         artifactID: String,
         label: String,
         description: String,
-        graphIDs: [String]?
-    ) async throws -> (CatalogArtifact, CatalogWriteEffects) {
+        graphIDs: [String]?,
+        metadata: CatalogMetadataDraft?
+    ) async throws -> (artifact: CatalogArtifact, metadata: [CatalogMetadataEntry], effects: CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_UpdateArtifactRequest()
         req.projectDir = projectDir
         req.userID = userID
@@ -455,11 +461,15 @@ struct GoStore: GenealogyStore {
         if let graphIDs {
             req.graphLinks = Provenencia_Engine_V1_GraphLinks.with { $0.graphIds = graphIDs }
         }
+        if let metadata { req.metadata = Self.mapMetadataDraft(metadata) }
         let resp: Provenencia_Engine_V1_UpdateArtifactResponse = try await provenenciaCall(
             method: CoreMethod.updateArtifact,
             request: req
         )
-        return (Self.mapArtifact(resp.artifact), Self.mapWriteEffects(resp.effects))
+        return (
+            Self.mapArtifact(resp.artifact), resp.metadata.map(Self.mapMetadataEntry),
+            Self.mapWriteEffects(resp.effects)
+        )
     }
 
     func deleteArtifact(projectDir: String, userID: String, artifactID: String) async throws -> CatalogWriteEffects {
@@ -512,7 +522,8 @@ struct GoStore: GenealogyStore {
         sourceID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> (CatalogEvidenceGraph, CatalogWriteEffects) {
         var req = Provenencia_Engine_V1_CreateEvidenceGraphRequest()
         req.projectDir = projectDir
@@ -521,6 +532,7 @@ struct GoStore: GenealogyStore {
         req.name = name
         req.description_p = description
         req.artifactIds = artifactIDs
+        if let metadata { req.metadata = Self.mapMetadataDraft(metadata) }
         let resp: Provenencia_Engine_V1_CreateEvidenceGraphResponse = try await provenenciaCall(
             method: CoreMethod.createEvidenceGraph,
             request: req
@@ -534,7 +546,8 @@ struct GoStore: GenealogyStore {
         graphID: String,
         name: String,
         description: String,
-        artifactIDs: [String]
+        artifactIDs: [String],
+        metadata: CatalogMetadataDraft?
     ) async throws -> CatalogWriteEffects {
         var req = Provenencia_Engine_V1_UpdateEvidenceGraphRequest()
         req.projectDir = projectDir
@@ -543,6 +556,7 @@ struct GoStore: GenealogyStore {
         req.name = name
         req.description_p = description
         req.artifactIds = artifactIDs
+        if let metadata { req.metadata = Self.mapMetadataDraft(metadata) }
         let resp: Provenencia_Engine_V1_UpdateEvidenceGraphResponse = try await provenenciaCall(
             method: CoreMethod.updateEvidenceGraph,
             request: req
@@ -2550,6 +2564,24 @@ struct GoStore: GenealogyStore {
             sortOrder: e.sortOrder,
             openHref: e.openHref
         )
+    }
+
+    private static func mapMetadataDraft(_ d: CatalogMetadataDraft) -> Provenencia_Engine_V1_MetadataDraft {
+        Provenencia_Engine_V1_MetadataDraft.with {
+            $0.values = d.values.map { v in
+                Provenencia_Engine_V1_MetadataValue.with {
+                    $0.fieldID = v.fieldID
+                    $0.valueText = v.valueText
+                }
+            }
+            $0.layout = d.layout.map { r in
+                Provenencia_Engine_V1_MetadataLayoutRow.with {
+                    $0.fieldID = r.fieldID
+                    $0.sortOrder = r.sortOrder
+                    $0.dismissed = r.dismissed
+                }
+            }
+        }
     }
 
     private static func mapDateValue(_ d: Provenencia_Engine_V1_DateValueInput) -> CatalogDateValueInput {

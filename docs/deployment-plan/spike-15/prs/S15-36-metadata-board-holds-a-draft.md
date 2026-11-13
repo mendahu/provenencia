@@ -1,6 +1,6 @@
 # S15-36 — A metadata board can hold a draft
 
-**Status:** Planned
+**Status:** Landed in [#810](https://github.com/mendahu/provenencia/pull/810) (2026-11-13)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the draft host, the add row's state and the refusal mapping have no view until S15-34; the Source page's board draws and behaves as today)
@@ -349,3 +349,10 @@ None.
 
 **Title:** S15-36 — A metadata board can hold a draft
 **Body:** objective in one sentence; what shipped against each US; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-15/prs/S15-36-metadata-board-holds-a-draft.md`.
+
+## Landed
+
+- `isRowRefusal(_:)` is a private predicate on `MetadataBoardModel` that `classifySetFailure` and `rowRefusalMessage` both call, so D-13's "one check" is one function; the outcomes are as planned.
+- Supersedes §5 "Rules this plan bends: None" (review MNT-1, user decision): the draft host's board rules are pinned to the engine's by `core/database/sourcemetadata/testdata/draft_board_scenarios.json`, which Go's `TestDraftBoardScenarios` (live writes and `Apply`) and Swift's `MetadataDraftHostParityTests` both run, and `macos-client.mdc` names it beside the fixture-table line. The file names two known divergences, which the draft host keeps: a field the stored layout had dismissed comes back as an extra rather than a suggestion, and two suggestions filled out of row order stay in row order where the engine orders them by the time each was filled. Dismissing a suggestion, re-adding it and clearing it in one draft is the same drift and has no scenario (review CON-1, rejected by the user).
+- Supersedes D-13's `showRefusal` "`beginEdit` … seeds the buffer" (review UX-1, user decision): `showRefusal` keeps every typed buffer. A refused row already in edit keeps its text; otherwise the refused row opens for edit. A refusal while another row holds typed text answers false and changes nothing, so the owner shows its general failure in its top Callout (review UX-4): `PVInlineEdit` draws a row's error only while that row is in edit.
+- `MetadataBoardModel.savedEntry(fieldID:)` is the one lookup of a row holding a value, used by `beginEdit`, `requestClear`, `showRefusal` and `MetadataBoardDialogs.askClear`; `catalogMetadataRefusal(params:)` is the one test `sourcemetadata.invalid` error.

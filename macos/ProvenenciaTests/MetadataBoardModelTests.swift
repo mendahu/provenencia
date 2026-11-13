@@ -7,9 +7,7 @@ import Testing
 @Suite
 @MainActor
 struct MetadataBoardModelTests {
-    private let invalid = CoreInvokeError.coded(
-        status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
-    )
+    private let invalid = catalogMetadataRefusal()
     private let boom = CoreInvokeError.failed(status: 2)
 
     @Test func saveFillsSuggestionThenReportsWrite() async {
@@ -126,6 +124,57 @@ struct MetadataBoardModelTests {
         #expect(dialogs.pendingDelete != nil)
     }
 
+    @Test func liveBoardAsksBeforeClearing() async {
+        let saved = catalogMetadataEntry(catalogMetadataField("f-author", label: "Author"), "Mary")
+        let host = TestMetadataBoardHost(entries: [saved])
+        let board = MetadataBoardModel(host: host)
+
+        #expect(await board.requestClear(fieldID: "f-author"))
+        #expect(!host.calls.contains(.clear("f-author")))
+
+        host.confirmsClear = false
+        #expect(await board.requestClear(fieldID: "f-author") == false)
+        #expect(host.calls.contains(.clear("f-author")))
+    }
+
+    @Test func addRowOnLiveBoard() async {
+        let host = TestMetadataBoardHost(entries: [])
+        host.fields = [catalogMetadataField("film", label: "Film number")]
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.addRow?.fieldID = "film"
+        board.addRow?.value = "F-7"
+
+        host.setError = invalid
+        host.failureText = "Bad"
+        await board.confirmAddRow()
+        #expect(board.addRow?.error == "Bad")
+        #expect(board.addRow?.fieldID == "film" && board.addRow?.value == "F-7")
+        #expect(!board.isSavingAddRow)
+
+        host.setError = boom
+        await board.confirmAddRow()
+        #expect(host.calls.contains(.showFailure("Bad")))
+        #expect(board.addRow?.error == nil)
+        #expect(board.addRow != nil)
+    }
+
+    @Test func addRowSurvivesReset() {
+        let host = TestMetadataBoardHost(entries: [])
+        host.fields = [catalogMetadataField("film", label: "Film number")]
+        let board = MetadataBoardModel(host: host)
+        board.openAddRow()
+        board.addRow?.fieldID = "film"
+        board.addRow?.value = "F-7"
+
+        board.resetDrafts()
+        #expect(board.addRow == MetadataBoardAddRow(fieldID: "film", value: "F-7"))
+
+        host.entries = [catalogMetadataEntry(catalogMetadataField("film", label: "Film number"), "F-1")]
+        board.resetDrafts()
+        #expect(board.addRow == MetadataBoardAddRow(fieldID: "", value: "F-7"))
+    }
+
     @Test func invalidValueStaysOnTheFieldOrDialog() async {
         let repo = catalogMetadataEntry(catalogMetadataField("f-repo", label: "Repository"), "NRO")
         let host = TestMetadataBoardHost(entries: [repo])
@@ -165,6 +214,7 @@ private final class TestMetadataBoardHost: MetadataBoardHost {
 
     var entries: [CatalogMetadataEntry]
     var fields: [CatalogMetadataField] = []
+    var confirmsClear = true
     private(set) var calls: [Call] = []
     /// What `entries` held when `didWrite` ran.
     private(set) var entriesAtDidWrite: [CatalogMetadataEntry] = []

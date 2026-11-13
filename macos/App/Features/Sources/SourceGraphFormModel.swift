@@ -156,7 +156,8 @@ final class SourceGraphFormModel {
                     sourceID: context.sourceID,
                     name: name,
                     description: description,
-                    artifactIDs: checkedArtifactIDs
+                    artifactIDs: checkedArtifactIDs,
+                    metadata: nil
                 )
                 context.session.apply(effects)
                 context.toast = VocabularyToast(
@@ -172,7 +173,8 @@ final class SourceGraphFormModel {
                     graphID: graph.id,
                     name: name,
                     description: description,
-                    artifactIDs: checkedArtifactIDs
+                    artifactIDs: checkedArtifactIDs,
+                    metadata: nil
                 )
                 context.session.apply(effects)
             }
