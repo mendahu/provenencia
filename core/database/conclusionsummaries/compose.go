@@ -2,7 +2,6 @@ package conclusionsummaries
 
 import (
 	"bytes"
-	"fmt"
 	"maps"
 	"strings"
 
@@ -614,13 +613,11 @@ func composePersons(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, stor
 	inputs := map[string][]graphcache.InputKey{}
 	for _, id := range need {
 		in, l := scopes[string(id)], lives[string(id)]
-		h, err := onePerson(v, byID[string(id)], in, pg, leads[string(id)], l.births, l.deaths)
+		h, seeds, err := onePerson(v, byID[string(id)], in, pg, leads[string(id)], l.births, l.deaths)
 		if err != nil {
 			return nil, nil, err
 		}
-		if err := pg.addChains(in, rec, lifeEvents(l.births, l.deaths)); err != nil {
-			return nil, nil, err
-		}
+		rec.addClosure(in, pg, seeds)
 		rec.keep(inputs, id, in)
 		fresh[string(id)] = h
 		if store {
@@ -654,23 +651,25 @@ func leadPictures(g *graphcache.Graph, nodes []*graphcache.Node) (map[string][]b
 	return out, nil
 }
 
-func onePerson(v vocab, n *graphcache.Node, in *graphcache.InputScope, pg *placeGraph, lead []byte, births, deaths []lifePick) (PersonSummary, error) {
+// onePerson composes a person's row, and returns the places its birth and
+// death events are located at, which the caller records the closure of.
+func onePerson(v vocab, n *graphcache.Node, in *graphcache.InputScope, pg *placeGraph, lead []byte, births, deaths []lifePick) (PersonSummary, [][]byte, error) {
 	h := PersonSummary{Entity: canonicalentities.FromNode(n), PictureImageFileID: lead}
 	name, count, err := keptName(n, v.prop(vocabkey.PropertyName))
 	if err != nil {
-		return PersonSummary{}, err
+		return PersonSummary{}, nil, err
 	}
 	h.Name, h.NameValueCount = name, count
 	h.Gender = keptTermFacts(n, v.prop(vocabkey.PropertyGender))
 	h.SexAtBirth = keptTermFacts(n, v.prop(vocabkey.PropertySexAtBirth))
-	var errLife error
-	if h.Birth, errLife = leadLife(in, v, pg, births); errLife != nil {
-		return PersonSummary{}, errLife
+	var birthSeeds, deathSeeds [][]byte
+	if h.Birth, birthSeeds, err = lifeFacts(in, v, pg, births); err != nil {
+		return PersonSummary{}, nil, err
 	}
-	if h.Death, errLife = leadLife(in, v, pg, deaths); errLife != nil {
-		return PersonSummary{}, errLife
+	if h.Death, deathSeeds, err = lifeFacts(in, v, pg, deaths); err != nil {
+		return PersonSummary{}, nil, err
 	}
-	return h, nil
+	return h, append(birthSeeds, deathSeeds...), nil
 }
 
 type lifePick struct {
@@ -761,71 +760,58 @@ func eventDate(v vocab, ev *graphcache.Node) (dating eventDated, count int, prop
 	return dating, count, propID, nil
 }
 
-func leadLife(in *graphcache.InputScope, v vocab, pg *placeGraph, items []lifePick) (LifeFacts, error) {
-	if len(items) == 0 {
-		return LifeFacts{}, nil
+// lifeFacts composes a birth or a death from the person's events of that kind:
+// the earliest event's date and places, and the owners behind them. Every
+// event's places are folded at its own date, and the places the events are
+// located at are returned for the caller to record the closure of.
+//
+// Owners are one date owner per event, and one place owner per event–place link
+// to a folded place, both in date order, each once.
+func lifeFacts(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifePick) (LifeFacts, [][]byte, error) {
+	if len(picks) == 0 {
+		return LifeFacts{}, nil, nil
 	}
-	lead := items[0]
-	for _, item := range items[1:] {
-		if dateKeyLess(item.key, lead.key) {
-			lead = item
+	sorted := append([]lifePick(nil), picks...)
+	sortByDateKey(sorted, func(p lifePick) dateKey { return p.key })
+	lead := sorted[0]
+	facts := LifeFacts{EventCount: len(picks), Date: lead.date, DateCount: lead.count}
+	ev := canonicalentities.FromNode(lead.event)
+	facts.Event = &ev
+	placeProp := v.prop(hops.PlacesOfEvent.To())
+	var seeds [][]byte
+	dated := map[string]bool{}
+	listed := map[string]bool{}
+	for i, pick := range sorted {
+		locations, err := eventLocations(in, pick.event.ID)
+		if err != nil {
+			return LifeFacts{}, nil, err
+		}
+		seeds = append(seeds, neighborsOf(locations)...)
+		places, err := eventPlaces(v, pg, pick.event, locations)
+		if err != nil {
+			return LifeFacts{}, nil, err
+		}
+		if i == 0 {
+			facts.Places = places
+		}
+		if !dated[string(pick.event.ID)] {
+			dated[string(pick.event.ID)] = true
+			facts.Owners.Dates = append(facts.Owners.Dates, FieldOwner{ID: pick.event.ID, PropertyID: pick.dateProp})
+		}
+		for _, p := range places {
+			for _, l := range locations {
+				if !bytes.Equal(l.Neighbor, p.Entity.ID) || len(l.Association) == 0 || listed[string(l.Association)] {
+					continue
+				}
+				listed[string(l.Association)] = true
+				facts.Owners.Places = append(facts.Owners.Places, FieldOwner{
+					ID: l.Association, PropertyID: placeProp,
+					Place: &ChainedPlace{Entity: p.Entity, Names: p.Names},
+				})
+			}
 		}
 	}
-	locations, err := eventLocations(in, lead.event.ID)
-	if err != nil {
-		return LifeFacts{}, err
-	}
-	places, err := eventPlaces(v, pg, lead.event, locations)
-	if err != nil {
-		return LifeFacts{}, err
-	}
-	ev := canonicalentities.FromNode(lead.event)
-	return LifeFacts{
-		Event: &ev, EventCount: len(items),
-		Date: lead.date, DateCount: lead.count,
-		Places: places,
-	}, nil
-}
-
-// PersonLifeOwners names, for a Person's birth and death rows, the entity
-// and Property each row reads: one date owner per surviving birth (or death)
-// event, lead first, and one owner per event–place link of those events, in
-// the order the events give their Places (folded at each event's date), each
-// holding its link's place end and that Place. A nil or merged
-// Person gives none.
-func PersonLifeOwners(c *database.Catalog, personID []byte) (birth, death LifeOwners, err error) {
-	if c == nil || c.Graph() == nil || len(personID) != 16 {
-		return LifeOwners{}, LifeOwners{}, nil
-	}
-	g := c.Graph()
-	n, err := g.Node(personID)
-	if err != nil || n == nil || n.Merged {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	v, err := vocabulary(g)
-	if err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	in := g.NoInputs()
-	births, deaths, err := lifePicks(in, v, n)
-	if err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	seeds, err := placesOfEvents(g.NoInputs(), lifeEvents(births, deaths))
-	if err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	pg, err := buildPlaceGraph(g, v, seeds)
-	if err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	if birth, err = lifeOwners(in, v, pg, births); err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	if death, err = lifeOwners(in, v, pg, deaths); err != nil {
-		return LifeOwners{}, LifeOwners{}, err
-	}
-	return birth, death, nil
+	return facts, seeds, nil
 }
 
 // lifeEvents are the ids of the births' and then the deaths' events.
@@ -886,63 +872,6 @@ func neighborsOf(links []graphcache.Link) [][]byte {
 		out[i] = l.Neighbor
 	}
 	return out
-}
-
-func lifeOwners(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifePick) (LifeOwners, error) {
-	sortByDateKey(picks, func(p lifePick) dateKey { return p.key })
-	var out LifeOwners
-	listed := map[string]bool{}
-	dated := map[string]bool{}
-	// One load for every link's association, so the walk's queries do not
-	// grow with the links. The links are kept for the walk below.
-	var assocIDs [][]byte
-	linksOf := map[string][]graphcache.Link{}
-	for _, pick := range picks {
-		links, err := eventLocations(in, pick.event.ID)
-		if err != nil {
-			return LifeOwners{}, err
-		}
-		linksOf[string(pick.event.ID)] = links
-		for _, l := range links {
-			assocIDs = append(assocIDs, l.Association)
-		}
-	}
-	if err := in.Nodes(assocIDs); err != nil {
-		return LifeOwners{}, err
-	}
-	for _, pick := range picks {
-		if !dated[string(pick.event.ID)] {
-			dated[string(pick.event.ID)] = true
-			out.Dates = append(out.Dates, FieldOwner{Entity: canonicalentities.FromNode(pick.event), PropertyID: pick.dateProp})
-		}
-		places, err := eventPlaces(v, pg, pick.event, linksOf[string(pick.event.ID)])
-		if err != nil {
-			return LifeOwners{}, err
-		}
-		for _, p := range places {
-			for _, l := range linksOf[string(pick.event.ID)] {
-				if !bytes.Equal(l.Neighbor, p.Entity.ID) || listed[string(l.Association)] {
-					continue
-				}
-				if len(l.Association) == 0 {
-					return LifeOwners{}, fmt.Errorf("conclusionsummaries: location link of event %x to place %x has no association", pick.event.ID, l.Neighbor)
-				}
-				listed[string(l.Association)] = true
-				assoc, err := in.Node(l.Association)
-				if err != nil {
-					return LifeOwners{}, err
-				}
-				if assoc == nil {
-					return LifeOwners{}, fmt.Errorf("conclusionsummaries: association %x is missing", l.Association)
-				}
-				out.Places = append(out.Places, FieldOwner{
-					Entity: canonicalentities.FromNode(assoc), PropertyID: v.prop(hops.PlacesOfEvent.To()),
-					Place: &ChainedPlace{Entity: p.Entity, Names: p.Names},
-				})
-			}
-		}
-	}
-	return out, nil
 }
 
 func composeEvents(g *graphcache.Graph, v vocab, nodes []*graphcache.Node, store bool, rec *inputBudget) ([]EventSummary, map[string][]graphcache.InputKey, error) {

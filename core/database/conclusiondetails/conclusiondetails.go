@@ -23,6 +23,7 @@ package conclusiondetails
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 
 	"github.com/mendahu/provenencia/core/apperr"
@@ -555,14 +556,21 @@ type DerivedRow struct {
 }
 
 // PersonDerivedRows returns the records behind a Person's birth date, birth
-// place, death date and death place rows, in that order. A row with no
-// owners is not returned. An owner merged or gone, or without the field the
-// row reads, is dropped.
+// place, death date and death place rows, in that order. The owners come from
+// the Person's summary row. A row with no owners is not returned. An owner
+// merged or gone, or without the field the row reads, is dropped.
 func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, error) {
-	birth, death, err := conclusionsummaries.PersonLifeOwners(c, personID)
+	if c == nil || c.Graph() == nil || len(personID) != 16 {
+		return nil, nil
+	}
+	people, err := conclusionsummaries.PersonsByIDs(c, [][]byte{personID})
 	if err != nil {
 		return nil, err
 	}
+	if len(people) == 0 {
+		return nil, nil
+	}
+	birth, death := people[0].Birth.Owners, people[0].Death.Owners
 	lists := []struct {
 		kind   DerivedRowKind
 		owners []conclusionsummaries.FieldOwner
@@ -574,9 +582,9 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	var all, eventIDs [][]byte
 	for _, l := range lists {
 		for _, o := range l.owners {
-			all = append(all, o.Entity.ID)
+			all = append(all, o.ID)
 			if l.events {
-				eventIDs = append(eventIDs, o.Entity.ID)
+				eventIDs = append(eventIDs, o.ID)
 			}
 		}
 	}
@@ -589,12 +597,14 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 		return nil, err
 	}
 	nodes := make([]*graphcache.Node, 0, len(ids))
+	nodeOf := map[string]*graphcache.Node{}
 	for _, id := range ids {
 		n, err := g.Node(id)
 		if err != nil {
 			return nil, err
 		}
 		nodes = append(nodes, n)
+		nodeOf[string(id)] = n
 	}
 	v, err := g.Vocabulary()
 	if err != nil {
@@ -603,10 +613,10 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	only := map[string]map[string]bool{}
 	for _, l := range lists {
 		for _, o := range l.owners {
-			if only[string(o.Entity.ID)] == nil {
-				only[string(o.Entity.ID)] = map[string]bool{}
+			if only[string(o.ID)] == nil {
+				only[string(o.ID)] = map[string]bool{}
 			}
-			only[string(o.Entity.ID)][string(o.PropertyID)] = true
+			only[string(o.ID)][string(o.PropertyID)] = true
 		}
 	}
 	fields, _, err := fieldsOf(g, v, nodes, nil, only)
@@ -625,13 +635,17 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 	for _, l := range lists {
 		row := DerivedRow{Kind: l.kind}
 		for _, o := range l.owners {
-			for _, f := range fields[string(o.Entity.ID)] {
+			node := nodeOf[string(o.ID)]
+			if node == nil || node.Merged {
+				continue
+			}
+			for _, f := range fields[string(o.ID)] {
 				if !bytes.Equal(f.PropertyID, o.PropertyID) {
 					continue
 				}
-				owner := OwnerField{Entity: o.Entity, Place: o.Place, Field: f}
+				owner := OwnerField{Entity: canonicalentities.FromNode(node), Place: copyPlace(o.Place), Field: f}
 				if l.events {
-					owner.Event = eventOf[string(o.Entity.ID)]
+					owner.Event = eventOf[string(o.ID)]
 				}
 				row.Owners = append(row.Owners, owner)
 				break
@@ -642,4 +656,16 @@ func PersonDerivedRows(c *database.Catalog, personID []byte) ([]DerivedRow, erro
 		}
 	}
 	return out, nil
+}
+
+// copyPlace is a copy of p that shares no slice with it, so nothing outside the
+// summary row points into the row.
+func copyPlace(p *conclusionsummaries.ChainedPlace) *conclusionsummaries.ChainedPlace {
+	if p == nil {
+		return nil
+	}
+	out := *p
+	out.Names = slices.Clone(p.Names)
+	out.Parents = slices.Clone(p.Parents)
+	return &out
 }

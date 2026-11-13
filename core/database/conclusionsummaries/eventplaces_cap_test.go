@@ -71,11 +71,14 @@ func (w *placesWorld) event(t *testing.T) conclusionsummaries.EventSummary {
 
 func (w *placesWorld) owners(t *testing.T) conclusionsummaries.LifeOwners {
 	t.Helper()
-	birth, _, err := conclusionsummaries.PersonLifeOwners(w.c, w.pat)
+	rows, err := conclusionsummaries.PersonsByIDs(w.c, [][]byte{w.pat})
 	if err != nil {
 		t.Fatal(err)
 	}
-	return birth
+	if len(rows) != 1 {
+		t.Fatalf("PersonsByIDs returned %d rows, want 1", len(rows))
+	}
+	return rows[0].Birth.Owners
 }
 
 // firstPlaces is the first 20 distinct places of the birth's location links, in link order.
@@ -152,7 +155,7 @@ func TestCraftedEventPlaces(t *testing.T) {
 			databasetest.WithinBudget(t, what+" at 4,000 places", d, time.Second)
 		}
 		cold("EventsByIDs", func() { ev = w.event(t) })
-		cold("PersonLifeOwners", func() { owners = w.owners(t) })
+		cold("PersonsByIDs owners", func() { owners = w.owners(t) })
 		var rows conclusionsummaries.Summaries
 		cold("RowsForSearch", func() {
 			var err error

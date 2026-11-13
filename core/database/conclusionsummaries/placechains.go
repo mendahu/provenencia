@@ -99,17 +99,6 @@ func (g *placeGraph) closureSize(seeds [][]byte) int {
 	return n
 }
 
-// addChains follows each event's locations through in and records the closure
-// of their places, through the call's cap.
-func (g *placeGraph) addChains(in *graphcache.InputScope, rec *inputBudget, eventIDs [][]byte) error {
-	seeds, err := placesOfEvents(in, eventIDs)
-	if err != nil {
-		return err
-	}
-	rec.addClosure(in, g, seeds)
-	return nil
-}
-
 // inputBudget counts the keys one RowsForSearch call records for the place
 // chains of all its rows. Over inputKeyCap the call counts nothing: it stops
 // recording and hands back no inputs for any row. A nil budget is a read that
