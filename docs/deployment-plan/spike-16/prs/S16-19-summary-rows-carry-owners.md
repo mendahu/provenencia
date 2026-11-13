@@ -1,6 +1,6 @@
 # S16-19 — Summary composers read the place entries and keep what readers re-derive
 
-**Status:** Planned
+**Status:** Landed in [#821](https://github.com/mendahu/provenencia/pull/821) (2026-11-13)
 **Spike / slice:** Spike 16 · Slice 2c — Walks
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: an engine refactor; every summary row, life row, Timeline row and title reads as today)
@@ -14,6 +14,17 @@
 **Context:** [design § Results per key](../cache-architecture.md#results-per-key-for-the-walks), [design § A cache a composer reads hands its inputs to the row](../cache-architecture.md#a-cache-a-composer-reads-hands-its-inputs-to-the-row), [`docs/catalog-caches.md`](../../../catalog-caches.md) (`displays`), [Spike 14 summary inputs](../../archive/spike-14/summary-inputs.md), [S16-18 plan and Landed note](S16-18-place-entries.md#landed), [`person-page-performance.md`](../../../ideas/person-page-performance.md) P-8, working rules: "The point of this batch is simpler code", "Cache entities and results per key; compose answers", "Every cache names the signal that updates it, and updates exactly", "Apply states its fan-out", "A write's one-shot graph fills only what it reads", "A cache a composer reads hands its inputs to the row", "Orders are defined and results do not move", "Memory is budgeted", "Batch 1's caps stay where S16-01 puts them", "No new persisted projections, and no stored answer without a measurement", "Measure growth"
 **Planned:** 2026-11-13 against `origin/main` @ `7455758`
 **Review:** [`S16-19-summary-rows-carry-owners.review.md`](S16-19-summary-rows-carry-owners.review.md) — Fits with changes / Ready with changes, two rounds, no open blocker
+
+## Landed
+
+- The ship log, `S16-19-summary-rows-carry-owners.ship.md`, is committed on the branch and carries the STEP-1 and STEP-8 figures (the plan's DoD names both).
+- A life row keeps at most `maxLifeOwners` (64) owners, date and place together, in date order and then link order (review SEC-1). This supersedes the §6 Edges line "Owners per life row ... uncapped"; at base nothing was retained, so the uncapped owners this PR keeps would have grown the stored rows by persons x location links.
+- AC-2.3's test cites the toponym with `f.Cite(f.Artifact, york, …)`, not `f.citeToponyms`: `citeToponyms` writes through `observationstest.Cite`, which `f.Reported` does not hear.
+- `TestPersonDerivedRows`' "graph queries do not grow" case calls `nameformats.Invalidate` before each count: the person row's sort now loads the name format once per connection, which the first count paid and the second did not. Its expected values are unchanged.
+- STEP-5 made no private copy of the collapse in `persondetail`: it stayed as it was until STEP-7 deleted it, and `TestRolesByNeighbor` and `TestRolesByNeighborManyLinks` were copied into `placechains_internal_test.go` in the step 5 and 6 commit (one commit, since the moved function has no caller until the event row uses it). The case that skipped `D` through `keep` became a case with no skip.
+- The STEP-3 commit left `api/ffi/handlers/source_read.go` unformatted; the STEP-7 commit gofmts it.
+- The plan's sweep `func entityOf` still matches an unrelated test helper in `core/subjectprofile/invariants_test.go` and `core/database/effects/path.go`.
+- `go test ./core/... ./api/...` run alone, in parallel with itself, put `TestLargeSourceBudgets`' "warm at open" and "cold" over their 2.5 s budget once (3.4 s, 2.7 s); both pass alone (0.90 s, 0.76 s) and in `scripts/check-pr.sh`.
 
 ### Implementer — read this first
 

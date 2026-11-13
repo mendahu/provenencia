@@ -35,3 +35,11 @@ The dated rows after the death marker never fold: every dated row after the pers
 ## The family response sends each sibling two or three times (P-23)
 
 Siblings ship as the parents units' children, the siblings unit, and `origin_siblings`, each with a full `PersonSummary` (`api/proto/engine.proto` 1549–1553, 1680–1692; `core/database/persondetail/family.go` 173–241). The app reads only the parents units' partners and `originSiblings` (`PersonFamilyContent.swift` 224–262). Units are the family tree's shape (S13-12 D-3, [`kinship-view.md`](kinship-view.md)), so the tree may read them later. **Shape:** send `origin_siblings` as indexes into one relatives table, or leave the unit children off the page response until a tree reads them.
+
+## The Persons list reads a shared life event's places once per person (S16-19 PRF-1)
+
+`composePersons` and `lifeFacts` (`core/database/conclusionsummaries/compose.go`) call `eventLocations` for each person's birth and death events, so P persons who share one event with K location links materialize P × K links on every list fill. S16-19's review measured about 160 ms at 400 persons × 400 links, the same before and after that PR, and about four times as long for each doubling of both. `maxLifeOwners` (64) bounds what a person row keeps, not this time. **Shape:** follow each distinct life event's locations once per call and share the result across the persons that cite it.
+
+## The large fixture cannot show participation inputs (S16-19 CON-5)
+
+`bulkCanon` (`core/database/promotealign/bench_test.go`) files only `subject` roles, so `catalog_search_inputs` and the event key count cannot show what S16-19 D-7 adds: one recorded input per non-subject participation (a witness, an informant). The growth is linear in participation rows. **Shape:** file a share of non-subject roles in `bulkCanon`, and take new benchmark baselines in the same PR, since every figure moves.

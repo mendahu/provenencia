@@ -169,11 +169,8 @@ func membershipsFromGraph(g *graphcache.Graph, eg graphcache.EvidenceGraph, name
 			SubjectID: m.SubjectID,
 			ClaimID:   m.ClaimID,
 			Kind:      m.Kind,
-			Entity: canonicalentities.Entity{
-				ID: append([]byte(nil), n.ID...), SubjectTypeID: append([]byte(nil), n.SubjectTypeID...),
-				Ref: n.Ref, Argument: n.Argument, Label: n.Label,
-			},
-			Name: keptName(n, nameProperty),
+			Entity:    canonicalentities.FromNode(n),
+			Name:      keptName(n, nameProperty),
 		})
 	}
 	return out, nil

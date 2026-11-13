@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -11,6 +12,8 @@ import (
 	"github.com/mendahu/provenencia/core/database/conclusiondetails"
 	"github.com/mendahu/provenencia/core/database/conclusionsummaries"
 	"github.com/mendahu/provenencia/core/database/connect"
+	"github.com/mendahu/provenencia/core/database/graphcache/graphcachetest"
+	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/observations"
 	"github.com/mendahu/provenencia/core/database/propertyterms"
 	"github.com/mendahu/provenencia/core/database/subjects"
@@ -512,7 +515,9 @@ func (f *fixture) deniedDate(event subjects.Subject, y int) {
 	}
 }
 
-func TestPersonLifeOwners(t *testing.T) {
+// TestPersonRowOwners checks the owners a person's summary row keeps behind its
+// birth and death rows.
+func TestPersonRowOwners(t *testing.T) {
 	type owner struct {
 		entity []byte
 		prop   string
@@ -639,8 +644,15 @@ func TestPersonLifeOwners(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			w := tc.build(f)
-			birth, death, err := conclusionsummaries.PersonLifeOwners(f.C, w.person)
+			rows, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{w.person})
 			must(t, err)
+			var row conclusionsummaries.PersonSummary
+			if len(rows) == 1 {
+				row = rows[0]
+			} else if w.person[0] != 0x7a {
+				t.Fatalf("PersonsByIDs returned %d rows", len(rows))
+			}
+			birth, death := row.Birth.Owners, row.Death.Owners
 			check := func(side string, got conclusionsummaries.LifeOwners, want struct{ dates, places []owner }) {
 				t.Helper()
 				for _, part := range []struct {
@@ -656,7 +668,7 @@ func TestPersonLifeOwners(t *testing.T) {
 						t.Fatalf("%s %s: %d owners, want %d", side, part.name, len(part.got), len(part.want))
 					}
 					for i := range part.got {
-						if !bytes.Equal(part.got[i].Entity.ID, part.want[i].entity) {
+						if !bytes.Equal(part.got[i].ID, part.want[i].entity) {
 							t.Fatalf("%s %s[%d]: wrong entity", side, part.name, i)
 						}
 						if (part.want[i].place == nil) != (part.got[i].Place == nil) ||
@@ -672,9 +684,7 @@ func TestPersonLifeOwners(t *testing.T) {
 			check("birth", birth, w.birth)
 			check("death", death, w.death)
 			if tc.name == "death at two Places that do not fold" {
-				persons, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{w.person})
-				must(t, err)
-				summary := persons[0].Death.Places
+				summary := row.Death.Places
 				if len(death.Places) != 2 || len(summary) != 2 {
 					t.Fatalf("death places %d, summary %d", len(death.Places), len(summary))
 				}
@@ -695,6 +705,50 @@ func TestPersonDerivedRows(t *testing.T) {
 		name string
 		run  func(t *testing.T, f *fixture)
 	}{
+		{"a toponym cited on the birth place reaches the stored row's owners", func(t *testing.T, f *fixture) {
+			york := f.placeSubject("York", nil, nil, 0, 0)
+			p := f.lifePerson()
+			birth := f.lifeEvent(p, "birth", "date", 1817, 2, york)
+			id := f.promoteSubject(p)
+			f.promoteSubject(birth)
+			f.promoteSubject(york)
+			if _, err := conclusiondetails.PersonDerivedRows(f.C, id); err != nil {
+				t.Fatal(err)
+			}
+			f.Cite(f.Artifact, york, observations.Input{PropertyID: f.Prop("toponym").ID, Scalar: propertymeta.TextScalar("Upper York")})
+			if !database.ContainsBlobID(f.Reported, id) {
+				t.Fatalf("a toponym cited on the birth place did not report the person (%d ids)", len(f.Reported))
+			}
+			rows, err := conclusiondetails.PersonDerivedRows(f.C, id)
+			must(t, err)
+			var place *conclusionsummaries.ChainedPlace
+			for _, r := range rows {
+				if r.Kind == conclusiondetails.DerivedRowBirthPlace && len(r.Owners) == 1 {
+					place = r.Owners[0].Place
+				}
+			}
+			if place == nil || !slices.Contains(place.Names, "Upper York") {
+				t.Fatalf("birth place owner %+v, want Upper York among its names", place)
+			}
+		}},
+		{"a merged person, a non-person, an unknown id and no catalog give no rows", func(t *testing.T, f *fixture) {
+			c := graphcachetest.OpenCatalog(t)
+			k := graphcachetest.NewCanon(t, c)
+			merged, into, place := k.Person(), k.Person(), k.Entity("place")
+			birth, _ := k.Birth(merged, nil, nil)
+			k.Commit(merged, into, place, birth)
+			k.Merge(merged, into)
+			k.Commit(merged, into)
+			for name, tc := range map[string]struct {
+				c  *database.Catalog
+				id []byte
+			}{"merged": {c, merged}, "place": {c, place}, "unknown": {c, bytes16(0x7a)}, "nil catalog": {nil, merged}} {
+				rows, err := conclusiondetails.PersonDerivedRows(tc.c, tc.id)
+				if err != nil || len(rows) != 0 {
+					t.Errorf("%s: rows %+v, err %v, want none", name, rows, err)
+				}
+			}
+		}},
 		{"graph queries do not grow with events and Places", func(t *testing.T, f *fixture) {
 			york := f.placeSubject("York", nil, nil, 0, 0)
 			small := f.lifePerson()
@@ -721,6 +775,9 @@ func TestPersonDerivedRows(t *testing.T) {
 				t.Helper()
 				g := f.C.Graph()
 				g.Drop()
+				// The name format lives with the connection: Drop leaves it,
+				// and the person row's sort loads it once.
+				must(t, nameformats.Invalidate(f.C))
 				_, err := g.Vocabulary()
 				must(t, err)
 				n := 0

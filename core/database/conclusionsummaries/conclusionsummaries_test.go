@@ -3,6 +3,7 @@ package conclusionsummaries_test
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -1490,6 +1491,75 @@ func TestEventAge(t *testing.T) {
 			got, ok := p.Age, p.Aged
 			if ok != tc.wantOK || got != tc.want {
 				t.Errorf("EventAge = %+v, %v; want %+v, %v", got, ok, tc.want, tc.wantOK)
+			}
+		})
+	}
+}
+
+// TestEventParticipants checks that an event row keeps every participant by id
+// with the distinct roles their links carry, in link order, and that the
+// subjects stay the title's name summaries.
+func TestEventParticipants(t *testing.T) {
+	type part struct {
+		who   string
+		roles string
+	}
+	tests := []struct {
+		name         string
+		build        func(k *graphcachetest.Canon, ned, pat []byte) (event []byte)
+		want         []part
+		wantSubjects []string
+	}{
+		{"a subject and a witness", func(k *graphcachetest.Canon, ned, pat []byte) []byte {
+			ev := k.Event(vocabkey.EventBurial)
+			k.Join(ned, ev, string(vocabkey.RoleSubject))
+			k.Join(pat, ev, string(vocabkey.RoleWitness))
+			return ev
+		}, []part{{"ned", "subject"}, {"pat", "witness"}}, []string{"ned"}},
+		{"one person with two roles is one participant", func(k *graphcachetest.Canon, ned, pat []byte) []byte {
+			ev := k.Event(vocabkey.EventBurial)
+			k.Join(ned, ev, string(vocabkey.RoleSubject))
+			k.Join(ned, ev, string(vocabkey.RoleWitness))
+			return ev
+		}, []part{{"ned", "subject+witness"}}, []string{"ned"}},
+		{"a participant with no accepted member is listed", func(k *graphcachetest.Canon, ned, pat []byte) []byte {
+			ev := k.Event(vocabkey.EventBurial)
+			k.Join(ned, ev, string(vocabkey.RoleSubject))
+			k.Join(pat, ev, string(vocabkey.RoleWitness))
+			k.Provisional(pat)
+			return ev
+		}, []part{{"ned", "subject"}, {"pat", "witness"}}, []string{"ned"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			c := graphcachetest.OpenCatalog(t)
+			k := graphcachetest.NewCanon(t, c)
+			ned, pat := k.Person(), k.Person()
+			ev := tc.build(k, ned, pat)
+			k.Commit(ned, pat, ev)
+			rows, err := conclusionsummaries.EventsByIDs(c, [][]byte{ev})
+			must(t, err)
+			if len(rows) != 1 {
+				t.Fatalf("%d rows", len(rows))
+			}
+			who := map[string]string{string(ned): "ned", string(pat): "pat"}
+			var got []part
+			for _, p := range rows[0].Participants {
+				var keys []string
+				for _, r := range p.Roles {
+					keys = append(keys, r.Key)
+				}
+				got = append(got, part{who[string(p.ID)], strings.Join(keys, "+")})
+			}
+			if !slices.Equal(got, tc.want) {
+				t.Fatalf("participants %v, want %v", got, tc.want)
+			}
+			var subjects []string
+			for _, s := range rows[0].Subjects {
+				subjects = append(subjects, who[string(s.Entity.ID)])
+			}
+			if !slices.Equal(subjects, tc.wantSubjects) {
+				t.Fatalf("subjects %v, want %v", subjects, tc.wantSubjects)
 			}
 		})
 	}
