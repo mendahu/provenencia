@@ -21,7 +21,9 @@ const (
 	// budgetLinks80: S16-13 D-15, a repeat read at 80 graphs. The planning base
 	// read in 113 ms; 1.25 times that rounded up to 200 ms. The CI runner
 	// measured 414 ms (S16-13, run 43364250762); 1.25 times that rounds up to
-	// 600 ms, raised by the user on 2026-11-13.
+	// 600 ms, raised by the user on 2026-11-13 (200 ms to 600 ms). This budget
+	// has now been raised for the CI runner: a read that creeps toward it again
+	// is a real slowdown to investigate, not a reason to raise it again.
 	budgetLinks80 = 600 * time.Millisecond // measured: S16-13 CI 414 ms x 1.25, rounded up
 )
 

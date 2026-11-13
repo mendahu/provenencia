@@ -120,4 +120,4 @@ Two rounds done. Every blocker Fixed; nothing To user. Plan **Planned**.
 
 ## Amendment — 2026-11-13, CI fix
 
-**D-15:** `budgetLinks80` is 600 ms (CI 414 ms x 1.25, rounded up). `promotealign` `budgetWarm` is 500 ms (CI 383 ms x 1.25) and `budgetComposeAll` 900 ms (CI 679 ms x 1.25; still fails a per-row place graph at about four times the cost). CI run 43364250762. User: "Raise three budgets to the CI runner".
+**D-15:** `budgetLinks80` is 600 ms (CI 414 ms x 1.25, rounded up). `promotealign` `budgetWarm` is 500 ms (CI 383 ms x 1.25) and `budgetComposeAll` 900 ms (CI 679 ms x 1.25; still fails a per-row place graph at about four times the cost). CI run 43364250762. Raised by the user on 2026-11-13 (ship log F-7).
