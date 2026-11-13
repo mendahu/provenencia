@@ -1,6 +1,6 @@
 # S16-15 — An Evidence-graph catalog in the graph cache
 
-**Status:** Planned
+**Status:** Landed in [#805](https://github.com/mendahu/provenencia/pull/805) (2026-11-12)
 **Spike / slice:** Spike 16 · Slice 2b — Entity records
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** — (no chrome change: the Sources list shows the same counts and graph rows; only where the engine reads them from moves)
@@ -27,6 +27,15 @@
 8. **Docs-only lines in the DoD are part of the PR.** Do not skip them.
 
 ---
+
+## Landed
+
+- T-8 and D-4 were amended during the build (user, 2026-11-12, commit 3feb6d888): `TestListEvidenceGraphs` follows the project-wide order by Source id, derived from `bytes.Compare` of the two ids.
+- Apply loads counts only when the commit names graphs: a nil id list to `loadProgress` means every graph, so the call is guarded.
+- `TestFiledCounts` calls `c.Graph().Drop()` before its SQL claim inserts (D-11); no other test file needed it.
+- `api/ffi/handlers/evidence_graphs_test.go` gained a `mustParseID` helper for the id comparison.
+- Measured: `BenchmarkGraphIndex` build 96.7 ms and 5.2 MB, `apply-progress-10k-ms` 0.43, `apply-list-10k-ms` 32.7; `graphIndex` is 12,680 B at 4,000 and 16,000 persons in `BenchmarkCacheSizes`.
+- Not run: the manual check (section 10); it needs the running app.
 
 ## 1. Objective
 
@@ -262,21 +271,21 @@ Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: te
 ## 9. Definition of done
 
 ```
-- [ ] Every AC in §2 is true: test name or manual check line for each
-- [ ] Every T-# in §8 exists and passes
-- [ ] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
-- [ ] No Out line was implemented; no code outside §4 / §6 was refactored
-- [ ] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
-- [ ] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
-- [ ] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
-- [ ] UI matches the brief inventory; no new kit primitive unless the brief marks it New
-- [ ] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
-- [ ] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
-- [ ] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
-- [ ] Brief moved to design/archive/ and design/README.md updated (if gated)
-- [ ] Domain doc updated if a rule in docs/*.md changed: docs/catalog-caches.md row and sizes; cache-architecture.md S16-15 bullet
-- [ ] PR description: what shipped, AC evidence, deviations, manual check
-- [ ] Sweep for this PR: `rg -n "graphprogress" core api .agents .cursor docs/*.md` finds nothing (AC-3.1); the ship log records BenchmarkCacheSizes before and after, and T-9's four figures
+- [x] Every AC in §2 is true: test name or manual check line for each
+- [x] Every T-# in §8 exists and passes
+- [x] scripts/check-pr.sh prints check-pr: PASS (gofmt, go vet, go test, Xcode tests with no Swift warning, catalog and plan-doc checks)
+- [x] No Out line was implemented; no code outside §4 / §6 was refactored
+- [x] New user-facing copy is in L10n + Localizable.xcstrings; no stale strings left
+- [x] Sweep: each renamed or deleted name `rg`'d by its old, qualified name across `.agents/`, `.cursor/rules/`, `docs/*.md` and `L10n.swift` with no hit left; `scripts/check-guidance-names.py` passes (check-pr runs it)
+- [x] Every row of **Rules this plan bends** has the user's answer, and its rule is updated
+- [x] UI matches the brief inventory; no new kit primitive unless the brief marks it New
+- [x] Version bump as the header says (VERSION, core/version.go, MARKETING_VERSION together) — or none
+- [x] This plan: Status → Landed in #N (date); a Landed note lists every difference from the plan
+- [x] deployment-plan.md: map row status; completed.md: one short paragraph of what shipped
+- [x] Brief moved to design/archive/ and design/README.md updated (if gated)
+- [x] Domain doc updated if a rule in docs/*.md changed: docs/catalog-caches.md row and sizes; cache-architecture.md S16-15 bullet
+- [x] PR description: what shipped, AC evidence, deviations, manual check
+- [x] Sweep for this PR: `rg -n "graphprogress" core api .agents .cursor docs/*.md` finds nothing (AC-3.1); the ship log records BenchmarkCacheSizes before and after, and T-9's four figures
 ```
 
 ## 10. Manual check
