@@ -1,7 +1,7 @@
 # Review — S16-19 Summary composers read the place entries and keep what readers re-derive
 
-**Verdict:** round 1: Fits with changes — Not ready; round 2 pending
-**Rounds:** 1 so far. **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 
@@ -66,3 +66,32 @@ Participant names have no reader (the Timeline uses person rows, `personEventPro
 
 ### X-8 · nit · Smaller ambiguities
 **Answer:** Fixed — D-5 guards a nil catalog and graph; D-10 labels roles through `label(r.ID, r.Key)` (`TermLabeler`); AC-3.4 names the full key `{event, "participation", hops.ParticipantsOfEvent.From()}`.
+
+## Round 2
+
+Both reviewers checked every round-1 answer against the plan and the code and found them held.
+
+### M-9 · blocker · The Timeline still collapsed the person's own roles from its own links while the event row carries them
+The Timeline's `mine` and the composer would both collapse one person's roles on one event; after D-10 both callers of `RolesByNeighbor` passed an always-true `keep`.
+**Answer:** Fixed — D-10: the Timeline takes event ids from the person's links and the person's roles from the row's `Participants` entry; D-9: the collapse is private to `conclusionsummaries`, without `keep`; its tests move to `placechains_internal_test.go`.
+
+### X-9 · major · STEP-1 / STEP-8 measurements undefined
+**Answer:** Fixed — STEP-1 names the subtest, the query, `searchindex.ReprojectHandles(db, ids)` over `handles(t, 0)`, and commits the test edits and ship log as the branch's first commit, before any composer change. The name-edit timing is dropped: after M-1's answer no row records a person key it did not before (§6 Scale says why).
+
+### X-10 · major · An empty `Association` would fail every row compose
+**Answer:** Fixed — D-4 skips such a link (it cannot occur: links come from association rows); §6 Go core lists both removed errors and where each case goes.
+
+### X-11 · minor · The `cold("PersonLifeOwners", …)` label would hit the sweep
+**Answer:** Fixed — STEP-4 renames it.
+
+### X-12 · minor · AC-2.3's cite and assertion
+**Answer:** Fixed — AC-2.3 uses `f.citeToponyms(f.Artifact, yorkSubject.ID, "Upper York")` and asserts `f.Reported` holds the person id, then the names. §4 names `newFixture` in `conclusionsummaries_test.go`.
+
+### X-13 · minor · `onePerson`'s signature
+**Answer:** Fixed — D-4 states `(PersonSummary, [][]byte, error)`, birth seeds then death seeds.
+
+### X-14 · nit · Smaller points
+**Answer:** Fixed — D-12 reuses `start =`; D-5 copies `*o.Place`; the DoD brief line reads n/a; STEP-8 names the catalog-caches cell. `TestPersonDerivedRows`' query-count case is held by AC-2.2's stop ("an existing test's expected value must change").
+
+### Checks the dry run could not run
+`scripts/check-pr.sh`'s Xcode legs need macOS. Declined as a plan change: every Spike 16 plan carries this DoD line, and `ship-pr` runs the gate on the user's Mac (see `S16-18-place-entries.ship.md`).
