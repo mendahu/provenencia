@@ -623,24 +623,36 @@ func TestKeyedInputLinks(t *testing.T) {
 		kv.Set(g, event, "e")
 		kv.Set(g, place, "p")
 	}
-	held := func() int { return g.KeyCounts()["t.links"] }
+	// held names the keys still held: "e" for the event's, "p" for the place's.
+	held := func() string {
+		var out string
+		for _, h := range []struct {
+			id   []byte
+			name string
+		}{{event, "e"}, {place, "p"}} {
+			if _, ok := kv.Peek(g, h.id); ok {
+				out += h.name
+			}
+		}
+		return out
+	}
 
 	set()
 	link = canon.Location(event, place)
 	canon.Commit(link)
-	if n := held(); n != 0 {
-		t.Fatalf("a new location left %d keys held, want 0", n)
+	if got := held(); got != "" {
+		t.Fatalf("a new location left %q held, want none", got)
 	}
 	set()
 	join := canon.Join(person, event, "subject")
 	canon.Commit(join)
-	if n := held(); n != 2 {
-		t.Fatalf("a participation left %d keys held, want 2", n)
+	if got := held(); got != "ep" {
+		t.Fatalf("a participation left %q held, want ep", got)
 	}
 	canon.Remove(link)
 	canon.Commit(link)
-	if n := held(); n != 1 { // the event's inputs do not list the association
-		t.Fatalf("a removed location left %d keys held, want 1 (the event)", n)
+	if got := held(); got != "e" { // the event's inputs do not list the association
+		t.Fatalf("a removed location left %q held, want e (the event)", got)
 	}
 	set()
 	second := canon.Event("birth")
@@ -648,7 +660,7 @@ func TestKeyedInputLinks(t *testing.T) {
 	set()
 	canon.Merge(second, event)
 	canon.Commit(second, event)
-	if n := held(); n != 1 {
-		t.Fatalf("merging a handle located at the place left %d keys held, want 1", n)
+	if got := held(); got != "e" {
+		t.Fatalf("merging a handle located at the place left %q held, want e (the event)", got)
 	}
 }
