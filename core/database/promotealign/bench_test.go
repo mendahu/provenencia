@@ -623,6 +623,7 @@ func BenchmarkCacheSizes(b *testing.B) {
 				_, err = r.Relationships(conclusionsummariestest.HandleIDs(b, db, vocabkey.Person), canonlinks.Options{Siblings: true})
 				must(b, err)
 			})
+			measure("placeEntries", func() { _, err := conclusionsummaries.ListPlaces(c); must(b, err) })
 			measure("displays", func() {
 				w := conclusionsummaries.Want{
 					Persons: conclusionsummariestest.HandleIDs(b, db, vocabkey.Person),
