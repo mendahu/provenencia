@@ -47,6 +47,12 @@ func catalogMetadataField(_ id: String, label: String, key: String? = nil) -> Ca
     )
 }
 
+/// The engine's refusal of a metadata value (`sourcemetadata.invalid`) for tests; the refused
+/// value's field id is `params[0]`.
+func catalogMetadataRefusal(params: [String] = []) -> CoreInvokeError {
+    .coded(status: 1, code: "sourcemetadata.invalid", kind: .user, params: params)
+}
+
 /// A metadata row for tests; it holds a value exactly when `value` is not empty.
 func catalogMetadataEntry(
     _ field: CatalogMetadataField, _ value: String = "", suggested: Bool = false, order: Int32 = 0

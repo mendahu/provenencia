@@ -7,9 +7,7 @@ import Testing
 @Suite
 @MainActor
 struct MetadataBoardModelTests {
-    private let invalid = CoreInvokeError.coded(
-        status: 1, code: "sourcemetadata.invalid", kind: .user, params: []
-    )
+    private let invalid = catalogMetadataRefusal()
     private let boom = CoreInvokeError.failed(status: 2)
 
     @Test func saveFillsSuggestionThenReportsWrite() async {
