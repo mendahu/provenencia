@@ -13,7 +13,7 @@
 **Rules that bind:** `.cursor/rules/ffi-handlers.mdc`, `.cursor/rules/go-tests.mdc`, `.cursor/rules/versioning.mdc`
 **Context:** working rules "Metadata saves with its owner's write" and "An Artifact is added and edited in one sheet" ([`../deployment-plan.md`](../deployment-plan.md#working-rules)); map review K-36 ([`../deployment-plan.review.md`](../deployment-plan.review.md)); brief review M-1 ([`../design/S15-D14-source-page-artifacts.review.md`](../design/S15-D14-source-page-artifacts.review.md)) and S15-D14 SA-9 ([`../design/S15-D14-source-page-artifacts.md`](../design/S15-D14-source-page-artifacts.md)); S15-08's [plan](S15-08-artifacts-and-graphs-hold-metadata.md) (the graph update's draft); S15-26's [plan](S15-26-metadata-board-takes-an-owner.md) (board writes return the owner's rows)
 **Planned:** 2026-11-13 against `main` @ `9732554`
-**Review:** — (not reviewed yet)
+**Review:** [`S15-33-artifact-update-saves-metadata.review.md`](S15-33-artifact-update-saves-metadata.review.md) — round 1 answered; round 2 pending
 **Runs on:** STEP-2's `./scripts/generate-proto.sh` needs `protoc`, `protoc-gen-go` and `protoc-gen-swift`; `scripts/check-pr.sh` needs Xcode (the regenerated `engine.pb.swift` must build). Without them, stop: never hand-edit the generated `engine.pb.go` or `engine.pb.swift`
 
 ### Implementer — read this first
@@ -65,6 +65,7 @@ Editing an Artifact saves its copy details in the same write as its label, descr
 | AC-3.2 | A draft whose second value is "   " (blank after trim) on field `accessed` | `sourcemetadata.invalid` with params `[<accessed field id>]` |
 | AC-3.3 | A draft with two refused values, `url` = "x" first, `accessed` = " " second | params `[<url field id>]` (the first in draft order) |
 | AC-3.4 | `CreateArtifact` with a draft `url` = "not a link" | `sourcemetadata.invalid` with params `[<url field id>]`; no Artifact created |
+| AC-3.6 | `SetMetadata` on a url field with "not a link" | `sourcemetadata.invalid` with params `[<url field id>]`, as a draft refusal |
 | AC-3.5 | `sourcemetadata.Apply` with a draft that repeats a field, or names an unknown field id, or on an owner with no row | `ErrInvalid` with no params. (Through `UpdateArtifact` a missing Artifact never reaches `Apply`: `artifacts.Get` refuses it first, as today) |
 
 ## 3. Scope
@@ -73,7 +74,9 @@ Editing an Artifact saves its copy details in the same write as its label, descr
 | --- | --- |
 | `UpdateArtifactRequest.metadata` (`MetadataDraft`, field 7), applied through `applyDraft` in the update's write | STEP-2, STEP-3, AC-1.1 – AC-1.5 |
 | `repeated MetadataWorkspaceEntry metadata = 3` on `UpdateArtifactResponse` and `CreateArtifactResponse`, read after the write | STEP-2, STEP-3, AC-2.1 – AC-2.3 |
-| `apply` refuses a value `normalizeValue` refuses with `ErrInvalid.WithParams(fieldID)` (wire form of the id); `Apply` and `CreateAll` both reach it | STEP-1, AC-3.1 – AC-3.5 |
+| One value step `normalizeFor` *(new)* that trims, normalizes and refuses with `ErrInvalid.WithParams(fieldID)` (wire form of the id); `Set` and `apply` both call it, so `Set`, `Apply` and `CreateAll` all name the field | STEP-1, AC-3.1 – AC-3.6 |
+| The params contract written down: `Error.params`' proto comment, `sourcemetadata.ErrInvalid`'s doc comment, one line in `add-ffi-handler` | STEP-1, STEP-2, D-6 |
+| `ownerBoardProto` *(new)* in `metadata.go`: the one "owner's board after a write" read; the five board handlers and both Artifact handlers use it | STEP-3, D-2 |
 | Version bump, docs | STEP-4 |
 
 | Out | Home |
@@ -81,8 +84,8 @@ Editing an Artifact saves its copy details in the same write as its label, descr
 | Any hand-written Swift: the Swift draft, `metadata:` on the store writes, mapping the returned rows and the param | S15-36 |
 | The Artifact sheet, applying `.wroteMetadataBoard` from the reply | S15-34 |
 | Add mode and the retry after a refused file | S15-10 |
-| Graph write replies returning their rows | Not planned: S15-11's scope says a graph Save reloads the workspace |
-| A param on `Set`'s refusals (the live board already knows its row) | Not planned |
+| Graph write replies returning their rows | S15-11: its scope entry now asks its planner to decide this (review M-6) |
+| Moving the four inline url-field creations in `sources_test.go` onto `newField` | Not planned: they build their requests inside `runRPC` table closures from `req`; the helper serves new tests |
 | A param when a value's field was deleted meanwhile (plain `ErrInvalid`; SA-9's top Callout shows it) | Not planned |
 
 ## 4. Current state
@@ -100,13 +103,15 @@ Verified at `9732554`.
 | Graph update | `api/ffi/handlers/evidence_graphs.go` `UpdateEvidenceGraph` | The shape to copy: `parseDraft` before the catalog opens; inside `writes.Run`, `evidencegraphs.Update` then `applyDraft(tx, userID, Owner{LevelGraph, graphID}, draft)`, changes appended |
 | Draft helpers | `api/ffi/handlers/metadata.go` `parseDraft`, `applyDraft`, `metadataEntriesProto` | nil draft = no change; `applyDraft` calls `sourcemetadata.Apply` |
 | Board read after a write | `api/ffi/handlers/metadata.go` `SetMetadata` | `sourcemetadata.ListWorkspace(c, owner)` after `writes.Run`, then `metadataEntriesProto` |
-| Refusal | `core/database/sourcemetadata/sourcemetadata.go` `apply` | Checks the whole draft before writing; `normalizeValue` (blank, non-text/url type, a URL `urlshape.Canonical` refuses) returns bare `ErrInvalid`; the loop over `d.Values` returns the first refusal in draft order |
+| Refusal | `core/database/sourcemetadata/sourcemetadata.go` `apply`, `Set`, `normalizeValue` | `apply` checks the whole draft before writing; its loop over `d.Values` trims at the call and returns the first `normalizeValue` refusal (blank, non-text/url type, a URL `urlshape.Canonical` refuses) as bare `ErrInvalid`, in draft order. `Set` trims `in.ValueText` at its top and calls `normalizeValue` the same way: two copies of one value step |
+| Board after a write | `api/ffi/handlers/metadata.go` `SetMetadata`, `ClearMetadata`, `DismissMetadataSuggestion`, `ReorderMetadata`, `GetMetadataBoard` | Each repeats `sourcemetadata.ListWorkspace(c, owner)` then `metadataEntriesProto(entries)` |
+| Params contract | `api/proto/engine.proto` `message Error` `params = 3` "ordered args for L10n format strings"; `.agents/skills/add-ffi-handler/SKILL.md` Delete paragraph ("do not … stuff refs into `apperr` params", for Delete refusals); `sourcemetadata.ErrInvalid` has no doc comment | Every `WithParams` caller today passes display text |
 | Error params | `core/apperr/apperr.go` `(*Error).WithParams`; `api/ffi/error.go` | Params ride the wire `Error.params`; `errors.Is` ignores params |
 | Swift copy | `macos/App/Platform/L10n.swift` `L10n.Errors.message(code:params:)` case `"sourcemetadata.invalid"` | Ignores params: the copy does not change |
 | Tests | `core/database/sourcemetadata/sourcemetadata_test.go` `TestApply` "refused drafts write nothing" | Asserts `errors.Is(err, ErrInvalid)` and no rows; does not look at params |
 | Tests | `api/ffi/handlers/artifacts_test.go` `TestCreateArtifactMetadata`, `TestUpdateArtifactGraphLinks` | Create with a draft; update links. No update-with-draft test |
 | Tests | `api/ffi/handlers/evidence_graphs_test.go` `TestUpdateEvidenceGraph` "metadata: absent changes nothing, present replaces" | The update-with-draft precedent test |
-| Test helpers | `api/ffi/handlers/metadata_test.go` `draftOf`, `latestRevisionTypes`; `source_defs_test.go` `newUserField`; `harness_test.go` `sourceFixture`, `rpc`, `mustRPC` | Reuse them |
+| Test helpers | `api/ffi/handlers/metadata_test.go` `draftOf`, `latestRevisionTypes`, `newMetadataOwners`, `metadataByField`, `metadataFieldIDs`; `source_defs_test.go` `newUserField` (hard-codes `DataType: "text"`); `harness_test.go` `sourceFixture`, `rpc`, `mustRPC` | Reuse them. Url fields are created inline today (`sources_test.go` `urlMetadataSetFixture` and three cases) |
 
 **Precedent.** S15-08 ([#791](https://github.com/mendahu/provenencia/pull/791)) put `MetadataDraft` on `UpdateEvidenceGraphRequest` (field 7) and `CreateArtifactRequest` (field 9): copy `UpdateEvidenceGraph`'s parse-then-`applyDraft` shape line for line. S15-26 ([#798](https://github.com/mendahu/provenencia/pull/798)) made `SetMetadataResponse` return the owner's board: copy its `ListWorkspace` after the write.
 
@@ -115,12 +120,13 @@ Verified at `9732554`.
 | ID | Decision | Why | Rejected |
 | --- | --- | --- | --- |
 | D-1 | `UpdateArtifactRequest` gains `MetadataDraft metadata = 7` with the graph's comment ("absent = metadata unchanged; present = the stored values become these"). The handler parses it with `parseDraft` before the catalog opens and runs `applyDraft` after `artifacts.Update`, inside the same `writes.Run` closure, appending its changes | One write and one revision per Save (working rule); the graph update already does exactly this | A separate `ApplyMetadata` RPC — two writes, two revisions, a half-saved sheet on failure |
-| D-2 | `UpdateArtifactResponse` and `CreateArtifactResponse` gain `repeated MetadataWorkspaceEntry metadata = 3`, filled on every success (draft or not) from `sourcemetadata.ListWorkspace(c, Owner{LevelArtifact, id})` after `writes.Run`, through `metadataEntriesProto` | The client patches its cache from every Artifact write without asking whether a draft was sent; same read and same entry type `SetMetadataResponse` uses | `MetadataBoard` (adds an `owner_id` the client already has); filling only when a draft was sent (the client would need two code paths) |
-| D-3 | `apply` refuses a value whose `normalizeValue` fails with `ErrInvalid.WithParams(database.UUIDString(in.FieldID))`. Nothing else in `sourcemetadata` gains a param: repeated ids, unknown field ids, a missing owner, a nil tx or user stay bare `ErrInvalid` | Those are the refusals the researcher can fix on one row (a blank value, a malformed link); the others are a client bug or a race, which SA-9's top Callout covers. The param is the id's wire form, which Swift's board rows already key on | Naming the field in `loadFields` too (changes `Set`, `DismissSuggestion`, `Reorder` and `ListWorkspace`, which no row-level UI reads); a new error code (the copy is the same; SA-9 shows today's message) |
+| D-2 | `UpdateArtifactResponse` and `CreateArtifactResponse` gain `repeated MetadataWorkspaceEntry metadata = 3`, filled on every success (draft or not) by `ownerBoardProto(c, Owner{LevelArtifact, id})` *(new)* after `writes.Run`. `ownerBoardProto` is `ListWorkspace` then `metadataEntriesProto`; `SetMetadata`, `ClearMetadata`, `DismissMetadataSuggestion`, `ReorderMetadata` and `GetMetadataBoard` move onto it (review M-3) | The client patches its cache from every Artifact write without asking whether a draft was sent; same read and same entry type `SetMetadataResponse` uses | `MetadataBoard` (adds an `owner_id` the client already has); filling only when a draft was sent (the client would need two code paths) |
+| D-3 | A new unexported `normalizeFor(field metadatafields.Field, text string) (string, error)` trims `text`, calls `normalizeValue(field.DataType, …)`, and on refusal returns `ErrInvalid.WithParams(database.UUIDString(field.ID))`. `Set` (in place of its top-of-function trim and its `normalizeValue` call) and `apply`'s `d.Values` loop call it. Nothing else gains a param: repeated ids, unknown field ids, a missing owner, a nil tx or user stay bare `ErrInvalid` | One value step, so every value refusal names its field on a live board and a draft alike (review M-1); those are the refusals a researcher fixes on one row. The others are a client bug or a race, which SA-9's top Callout covers. The param is the id's wire form, which Swift's board rows key on | Only `apply` names it (two copies of one rule, review M-1); naming the field in `loadFields` too (no row-level UI reads it); a new error code (SA-9 shows today's copy) |
 | D-4 | Reply metadata is read outside the write transaction, after `writes.Run` returns, as `SetMetadata` does; the update handler's existing `artifacts.Get` re-read stays | Same consistency as every board write today; the catalog session serializes ops | Reading inside the closure (changes `writes.Run`'s return value for one caller) |
+| D-6 | A field id in `params` is a locator, never copy. The proto comment on `Error.params` becomes "ordered args for L10n format strings, or, where the error's Go doc says so, the id of the row the refusal is about"; `sourcemetadata.ErrInvalid` gains a doc comment: "A refused value carries its field's wire id as params[0], for the client to place the message on its row; it is never shown."; `add-ffi-handler` gains one line beside its Delete paragraph saying the same | The first id-valued param; the contract the next agent reads must say so, and copy must never interpolate it (review M-2) | A new `Error` field for locators (a wire change for one caller) |
 | D-5 | Tests: one new table-driven handler test `TestUpdateArtifactMetadata` in `artifacts_test.go`; `TestCreateArtifactMetadata` gains the reply and param assertions; `TestApply` gains a "a refused value names its field" case | Handler tests drive the wire (add-ffi-handler); the param rule lives in `sourcemetadata` and is tested there | A Swift test (no Swift changes here) |
 
-**Rules this plan bends.** None.
+**Rules this plan bends.** None. `add-ffi-handler`'s rule against stuffing refs into `apperr` params is scoped to Delete refusals (the report is the preview); this is a value refusal, and the map's S15-33 scope entry (user-reviewed, brief review M-1) chose `ErrInvalid.WithParams(fieldID)`. D-6 writes the contract down.
 
 ## 6. Design
 
@@ -130,13 +136,17 @@ Verified at `9732554`.
 | --- | --- | --- | --- |
 | `UpdateArtifactRequest.metadata` *(new)* | proto field | `UpdateEvidenceGraphRequest.metadata` | Reuses `MetadataDraft`, `parseDraft`, `applyDraft` as they are |
 | `UpdateArtifactResponse.metadata`, `CreateArtifactResponse.metadata` *(new)* | proto field | `SetMetadataResponse.metadata` | Reuses `MetadataWorkspaceEntry`, `ListWorkspace`, `metadataEntriesProto` |
+| `normalizeFor` *(new)* | func | `normalizeValue` (kept; `normalizeFor` wraps it) and the trims in `Set` and `apply` | Replaces the two copies of trim-then-normalize with one step that also names the field |
+| `ownerBoardProto` *(new)* | func | `metadataEntriesProto`; the five inline `ListWorkspace` + `metadataEntriesProto` pairs | Replaces them; this PR would add the sixth and seventh |
+| `newField` *(new)* | test helper | `newUserField` (`source_defs_test.go`) | `newUserField` delegates to it with `"text"`; its callers do not change |
+| `assertReplyBoard` *(new)* | test helper | `metadataByField`, inline `GetMetadataBoard` fetches in `evidence_graphs_test.go` | No shared "the reply is the board" assertion exists; T-2, T-4, T-7 use it |
 | `TestUpdateArtifactMetadata` *(new)* | test | `TestUpdateEvidenceGraph` metadata subtest | A new test function: the Artifact handler's tests live in `artifacts_test.go` |
 
-Searched: `parseDraft`, `applyDraft`, `metadataEntriesProto`, `ListWorkspace(` callers, `WithParams` in `core/database`. No new Go function, type, helper or L10n key.
+Searched: `parseDraft`, `applyDraft`, `metadataEntriesProto`, `ListWorkspace(` callers, `normalizeValue(` callers, `WithParams` in `core/`, `DataType: "url"` in handler tests. No new type or L10n key.
 
 **Builds on.** S15-08's draft-on-write (`parseDraft`, `applyDraft`), S15-26's board-in-reply, `apperr.WithParams` as `metadatafields.ErrDuplicateKey.WithParams(key)` uses it.
-**Deletes.** None — nothing becomes dead; `UpdateArtifactRequest`'s comment is rewritten to name the draft.
-**Next adds.** S15-36 maps `metadata` on the store writes and the reply's rows; S15-34 applies `.wroteMetadataBoard` from `UpdateArtifactResponse.metadata` and puts the param's message under its row; S15-10 reads `CreateArtifactResponse.metadata` and retries a refused file with the draft on `UpdateArtifact`.
+**Deletes.** `Set`'s top-of-function `strings.TrimSpace` and both direct `normalizeValue` calls (in `Set` and `apply`; `normalizeFor` is its only caller after); the five inline board reads in `metadata.go`. `UpdateArtifactRequest`'s and `Error.params`' comments are rewritten.
+**Next adds.** S15-36 maps `metadata` on the store writes and the reply's rows; S15-34 applies `.wroteMetadataBoard` from `UpdateArtifactResponse.metadata` and puts the param's message under its row; S15-10 reads `CreateArtifactResponse.metadata` and retries a refused file with the draft on `UpdateArtifact`. S15-11, if it returns graph rows, is two proto fields and two `ownerBoardProto` calls.
 
 ### Reach
 
@@ -162,9 +172,10 @@ None — no catalog change.
 
 | Package | Change |
 | --- | --- |
-| `core/database/sourcemetadata` | `apply`: the `normalizeValue` refusal in the `d.Values` loop returns `ErrInvalid.WithParams(database.UUIDString(in.FieldID))`. `Apply`'s doc comment says a refused value names its field |
+| `core/database/sourcemetadata` | `func normalizeFor(field metadatafields.Field, text string) (string, error)` *(new)*, beside `normalizeValue`; `Set` and `apply` call it (D-3). `ErrInvalid` gains D-6's doc comment; `Apply`'s and `Set`'s doc comments say a refused value names its field |
+| `api/ffi/handlers` | `func ownerBoardProto(c *database.Catalog, owner sourcemetadata.Owner) ([]*engine.MetadataWorkspaceEntry, error)` *(new)* in `metadata.go`, beside `metadataEntriesProto` (D-2). `GetMetadataBoard` wraps its result in `MetadataBoard` as today |
 
-Errors: `sourcemetadata.invalid` with params `[fieldID]` → a draft value is blank after trim or not a valid value for its field's type; with no params → every other refusal, as today.
+Errors: `sourcemetadata.invalid` with params `[fieldID]` → a value (live or draft) is blank after trim or not a valid value for its field's type; with no params → every other refusal, as today.
 
 ### FFI
 
@@ -207,17 +218,17 @@ None — `error.sourcemetadata.invalid` keeps its copy and ignores the param.
 
 **STEP-1 — A refused draft value names its field**
 Files: `core/database/sourcemetadata/sourcemetadata.go`, `core/database/sourcemetadata/sourcemetadata_test.go`.
-Do: D-3 in `apply`; update `Apply`'s comment. Add T-1 to `TestApply`.
+Do: D-3 (`normalizeFor`, `Set` and `apply` on it); D-6's `ErrInvalid` comment; `Set`'s and `Apply`'s comments. Add T-1 and T-8.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./core/database/sourcemetadata/...` passes.
 
 **STEP-2 — The wire fields**
 Files: `api/proto/engine.proto`, generated `api/proto/engine/engine.pb.go`, `macos/App/Platform/Generated/engine.pb.swift`. Skill: `add-ffi-handler`.
-Do: the three fields and the rewritten comment of §6 FFI; run `./scripts/generate-proto.sh`.
-Check: `go build ./...` passes; `git diff --stat` shows only the proto and the two generated files.
+Do: the three fields and the rewritten comment of §6 FFI; D-6's `Error.params` comment and its `add-ffi-handler` line (`.agents/skills/add-ffi-handler/SKILL.md`, after the Delete paragraph); run `./scripts/generate-proto.sh`.
+Check: `go build ./...` passes; `git diff --stat` shows only the proto, the two generated files and the skill.
 
 **STEP-3 — The handlers**
-Files: `api/ffi/handlers/artifacts.go`, `api/ffi/handlers/artifacts_test.go`.
-Do: D-1 in `UpdateArtifact` (copy `UpdateEvidenceGraph`); D-2 in both handlers (`ListWorkspace` after `writes.Run`, before building the reply). Add T-2 – T-7.
+Files: `api/ffi/handlers/metadata.go`, `api/ffi/handlers/artifacts.go`, `api/ffi/handlers/artifacts_test.go`, `api/ffi/handlers/metadata_test.go`, `api/ffi/handlers/source_defs_test.go`.
+Do: `ownerBoardProto` and the five board handlers on it (their tests must pass unchanged); D-1 in `UpdateArtifact` (copy `UpdateEvidenceGraph`); D-2 in both Artifact handlers (after `writes.Run`, before building the reply). Test helpers: `newField(t, dir, userID, label, dataType string) string` in `source_defs_test.go`, with `newUserField` calling it with `"text"`; `assertReplyBoard(t, dir string, owner *engine.MetadataOwner, got []*engine.MetadataWorkspaceEntry)` in `metadata_test.go` beside `draftOf` (fetches `GetMetadataBoard`, compares lengths, `proto.Equal` per entry). Add T-2 – T-7, T-9.
 Check: `CGO_ENABLED=1 go test -tags fts5 ./api/ffi/...` passes.
 
 **STEP-4 — Version and docs**
@@ -239,7 +250,10 @@ Commits: one per behavior. The subject is one full imperative sentence that says
 | T-6 | Go | `TestUpdateArtifactMetadata` "a refused unlink drops the draft" | Links leaving a graph whose Citations use A, plus a valid draft → `evidencegraphs.ErrArtifactInUse`; no metadata change | AC-1.4 |
 | T-7 | Go | `TestCreateArtifactMetadata` *(extended)* | The create with `provider` → reply `metadata` equals `GetMetadataBoard` for the new Artifact; the plain create's reply `metadata` equals its board; a draft `url` = "not a link" → params `[url field id]`, no Artifact created | AC-2.2, AC-2.3, AC-3.4 |
 
-**Fixtures.** T-2 – T-6 start from `newMetadataOwners` (`metadata_test.go`): its `artifact` owner is `f.page1`, and its `suggested` field ("Provider") is suggested at the `artifact` level, so it stands for `provider`. `accessed` is a `newUserField` text field the test creates. The url field is created inline with `CreateMetadataField` and `DataType: "url"` (`newUserField` makes only text fields; do not change it). T-6 copies `TestUpdateArtifactGraphLinks` "a refused unlink rolls back the label": a new page A in the default graph G (`f.createArtifactResp` with `GraphIds: []string{f.defaultGraphID}`), a Citation on it through `CreateCitationWithObservations` with `graphLinking` and `validLocatorJSON`, then `UpdateArtifact` with `&engine.GraphLinks{}` and a draft. T-7 keeps `TestCreateArtifactMetadata`'s setup and assigns its `provider` field at the `artifact` level with `AssignTypeField`, as `newMetadataOwners` does, for AC-2.2's suggested entry. Compare a reply's `metadata` with `GetMetadataBoard` by `proto.Equal` on each entry. Read params with `errors.As(err, &ae)` on `*apperr.Error` and `ae.Params()`, as `conclusion_detail_test.go` reads `ae.Code()`.
+**Fixtures.** T-2 – T-6 start from `newMetadataOwners` (`metadata_test.go`): its `artifact` owner is `f.page1`, and its `suggested` field ("Provider") is suggested at the `artifact` level, so it stands for `provider`. `accessed` is a `newUserField` text field the test creates. The url field is `newField(t, dir, userID, "URL", "url")`. T-6 copies `TestUpdateArtifactGraphLinks` "a refused unlink rolls back the label": a new page A in the default graph G (`f.createArtifactResp` with `GraphIds: []string{f.defaultGraphID}`), a Citation on it through `CreateCitationWithObservations` with `graphLinking` and `validLocatorJSON`, then `UpdateArtifact` with `&engine.GraphLinks{}` and a draft. T-7 keeps `TestCreateArtifactMetadata`'s setup and assigns its `provider` field at the `artifact` level with `AssignTypeField`, as `newMetadataOwners` does, for AC-2.2's suggested entry. Compare a reply's `metadata` with the board through `assertReplyBoard`. Read params with `errors.As(err, &ae)` on `*apperr.Error` and `ae.Params()`, as `conclusion_detail_test.go` reads `ae.Code()`.
+
+| T-8 | Go | `sourcemetadata_test.go` `TestSourceMetadata`, beside the blank-value `runSet` case (~line 571) | `runSet` on `link` with "not a link" → `ErrInvalid`, params `[UUIDString(link.ID)]`; `runSet` on a missing field → no params | AC-3.6, D-3 |
+| T-9 | Go | `api/ffi/handlers/metadata_test.go` `TestMetadataOwners` *(extended)* | `SetMetadata` on the artifact owner with a `newField(.., "url")` field and "not a link" → params `[field id]` | AC-3.6 |
 
 Must stay green: everything `scripts/check-pr.sh` runs. Most likely to break: `TestApply`, `TestCreateArtifactMetadata`, `TestUpdateArtifactGraphLinks`.
 
@@ -271,7 +285,8 @@ None in the app: no view sends the new field until S15-34. The handler tests dri
 | Risk | Mitigation |
 | --- | --- |
 | A Swift caller decodes `metadata` as something else | Fields 3 and 7 are free on all three messages at the base; the generated Swift only adds properties |
-| A test fixture lacks a url-typed field | §8 **Fixtures**: created inline with `CreateMetadataField`, `DataType: "url"` |
+| A test fixture lacks a url-typed field | §8 **Fixtures**: `newField(.., "url")` |
+| Moving five handlers onto `ownerBoardProto` changes a reply | Their existing tests must pass unchanged in STEP-3; the helper is the same two calls |
 
 **Stop and report if:**
 

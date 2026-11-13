@@ -369,6 +369,7 @@ Input to [`plan-pr`](../../../.agents/skills/plan-pr/SKILL.md). Two to six lines
 
 **Ships.** The Evidence graph form has a metadata board for the item (S15-36's draft board, with S15-34's inline Add field, scrolling form dialog and key order; its rows start from `getMetadataBoard`, which S15-11 adds to the Swift store; the graph write replies return no rows, so a graph Save reloads the workspace), with the type's `graph`-level suggestions, saved with the form's one write.
 **Not this PR.** Nudging researchers toward one graph per household (map § 7).
+**Decide in the plan.** Whether the graph write replies return the graph's rows, as the Artifact writes do since S15-33 (`ownerBoardProto`), so a graph Save patches instead of reloading; name and membership still change through effects (S15-33 review M-6).
 **Check.** Bar 3's graph half: dwelling, family and line on a household graph.
 **Context.** S15-D5; map § 6.9; `SourceGraphFormDialog.swift`, `SourceGraphFormModel.swift`.
 
