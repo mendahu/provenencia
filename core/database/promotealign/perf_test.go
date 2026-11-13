@@ -19,6 +19,7 @@ import (
 	"github.com/mendahu/provenencia/core/database/nameformats"
 	"github.com/mendahu/provenencia/core/database/promote"
 	"github.com/mendahu/provenencia/core/database/rowchange"
+	"github.com/mendahu/provenencia/core/database/searchindex"
 	"github.com/mendahu/provenencia/core/database/sources"
 	"github.com/mendahu/provenencia/core/database/subjects"
 	"github.com/mendahu/provenencia/core/graphalign"
@@ -434,5 +435,23 @@ func TestLargeSourceBudgets(t *testing.T) {
 		// The cap on keys one call records (conclusionsummaries
 		// maxInputKeysPerCall) is set from the largest 500-row call here.
 		t.Logf("largest keys in one 500-row call, by kind: %v", conclusionsummariestest.LargestBatch(t, db, handles(t, 0), 500))
+	})
+
+	t.Run("search inputs and reindex", func(t *testing.T) {
+		db, err := f.c.DB()
+		must(t, err)
+		count := func() int {
+			var n int
+			must(t, db.QueryRow(`SELECT COUNT(*) FROM catalog_search_inputs`).Scan(&n))
+			return n
+		}
+		t.Logf("catalog_search_inputs rows before the reindex: %d", count())
+		var ids [][]byte
+		for _, kind := range conclusionsummariestest.Kinds {
+			ids = append(ids, handles(t, 0)[kind]...)
+		}
+		d := databasetest.Since(func() { must(t, searchindex.ReprojectHandles(db, ids)) })
+		t.Logf("reindex of %d handles: %v", len(ids), d)
+		t.Logf("catalog_search_inputs rows after the reindex: %d", count())
 	})
 }

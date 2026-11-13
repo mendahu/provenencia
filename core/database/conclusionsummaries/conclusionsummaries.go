@@ -74,6 +74,10 @@ type LifeFacts struct {
 	Date      *datevalue.Value
 	DateCount int
 	Places    []ChainedPlace
+	// Owners are the entities and Properties these facts were read from, which
+	// a Person page lists as the row's records
+	// (conclusiondetails.PersonDerivedRows).
+	Owners LifeOwners
 }
 
 // ChainedPlace is one Place a walk reached (or a folded location chain).
@@ -88,18 +92,18 @@ type ChainedPlace struct {
 	ParentsAreCandidates bool
 }
 
-// FieldOwner is one entity and the Property of it that a Person's life row
-// reads. A Place row's owner is the event-place link's association and the
-// Property of its place end; Place is the Place that end holds, with its
-// own toponyms and no parents. Place is nil for a date owner.
+// FieldOwner is the id of one entity and the Property of it that a Person's
+// life row reads. A place owner's entity is the event-place link's association
+// and its Property is that of the place end; Place is the Place that end holds,
+// with its own toponyms and no parents. Place is nil for a date owner.
 type FieldOwner struct {
-	Entity     canonicalentities.Entity
+	ID         []byte
 	PropertyID []byte
 	Place      *ChainedPlace
 }
 
-// LifeOwners are the owners behind one life row pair: the date owners (one
-// per surviving event, lead first) and the Place owners (each event–place link once).
+// LifeOwners are the owners behind one life row: the date owners (one per
+// surviving event, lead first) and the Place owners (each event–place link once).
 type LifeOwners struct {
 	Dates, Places []FieldOwner
 }

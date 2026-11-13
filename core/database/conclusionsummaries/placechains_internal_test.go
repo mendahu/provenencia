@@ -1,8 +1,10 @@
 package conclusionsummaries
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/mendahu/provenencia/core/database/graphcache"
 	"github.com/mendahu/provenencia/core/datevalue"
 	"github.com/mendahu/provenencia/core/valuecompare"
 )
@@ -156,4 +158,65 @@ func TestMembershipDatesByDayBranches(t *testing.T) {
 			t.Fatalf("got %p %p want %p", start, end, a)
 		}
 	})
+}
+
+func TestRolesByNeighbor(t *testing.T) {
+	id := func(n byte) []byte { return []byte{n} }
+	link := func(neighbor, term byte) graphcache.Link {
+		l := graphcache.Link{Neighbor: id(neighbor)}
+		if term != 0 {
+			l.TermID, l.TermKey = id(term), "t"
+		}
+		return l
+	}
+	label := func(termID []byte, key string) (Term, bool) {
+		if bytes.Equal(termID, id(9)) {
+			return Term{}, false
+		}
+		return Term{ID: termID, Key: key}, true
+	}
+	// A subject (1), A informant (2), A subject again (1), B no term, C a term
+	// the labeller does not know (9), D a neighbor like any other.
+	links := []graphcache.Link{link('A', 1), link('A', 2), link('A', 1), link('B', 0), link('C', 9), link('D', 1)}
+	got := rolesByNeighbor(links, label)
+	if len(got) != 4 {
+		t.Fatalf("%d neighbors, want 4: %+v", len(got), got)
+	}
+	if !bytes.Equal(got[0].ID, id('A')) || len(got[0].Roles) != 2 ||
+		!bytes.Equal(got[0].Roles[0].ID, id(1)) || !bytes.Equal(got[0].Roles[1].ID, id(2)) {
+		t.Fatalf("A: %+v", got[0])
+	}
+	if !bytes.Equal(got[1].ID, id('B')) || len(got[1].Roles) != 0 {
+		t.Fatalf("B: %+v", got[1])
+	}
+	if !bytes.Equal(got[2].ID, id('C')) || len(got[2].Roles) != 0 {
+		t.Fatalf("C: %+v", got[2])
+	}
+	if !bytes.Equal(got[3].ID, id('D')) || len(got[3].Roles) != 1 || !bytes.Equal(got[3].Roles[0].ID, id(1)) {
+		t.Fatalf("D: %+v", got[3])
+	}
+}
+
+// TestRolesByNeighborManyLinks pins the contract for one neighbor reached by
+// many links: each distinct role once, in first-seen order.
+func TestRolesByNeighborManyLinks(t *testing.T) {
+	id := func(n byte) []byte { return []byte{n} }
+	label := func(termID []byte, key string) (Term, bool) {
+		return Term{ID: termID, Key: key}, true
+	}
+	var links []graphcache.Link
+	for i := 0; i < 50; i++ {
+		for _, term := range []byte{3, 1, 2, 3, 1} {
+			links = append(links, graphcache.Link{Neighbor: id('A'), TermID: id(term), TermKey: "t"})
+		}
+	}
+	got := rolesByNeighbor(links, label)
+	if len(got) != 1 || len(got[0].Roles) != 3 {
+		t.Fatalf("got %+v", got)
+	}
+	for i, want := range []byte{3, 1, 2} {
+		if !bytes.Equal(got[0].Roles[i].ID, id(want)) {
+			t.Fatalf("role %d: %+v, want %d", i, got[0].Roles[i], want)
+		}
+	}
 }

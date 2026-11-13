@@ -2,6 +2,7 @@ package conclusionsummaries_test
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"github.com/mendahu/provenencia/core/database"
@@ -381,5 +382,55 @@ func TestCompetingLifeEvents(t *testing.T) {
 				t.Fatalf("lead year %d, want %d", year, tt.wantYear)
 			}
 		})
+	}
+}
+
+func TestEventRowReadsPlaceEntries(t *testing.T) {
+	f := newFixture(t)
+	city := f.placeSubject("City", nil, nil, 0, 0)
+	p := f.lifePerson()
+	var events [][]byte
+	for i := range 3 {
+		events = append(events, f.promoteSubject(f.lifeEvent(p, "birth", "date", 1800+i, int64(2+2*i), city)))
+	}
+	cityID := f.promoteSubject(city)
+	f.promoteSubject(p)
+	g := f.C.Graph()
+	g.Drop()
+	rows, err := conclusionsummaries.EventsByIDs(f.C, events[:1])
+	must(t, err)
+	if len(rows) != 1 || len(rows[0].Places) != 1 || !slices.Equal(rows[0].Places[0].Names, []string{"City"}) {
+		t.Fatalf("places %+v", rows)
+	}
+	if _, ok := g.Cached(cityID); ok {
+		t.Error("the city node was loaded to name an event's place")
+	}
+}
+
+func TestPersonRowReadsPlaceEntries(t *testing.T) {
+	f := newFixture(t)
+	town := f.placeSubject("Town", nil, nil, 0, 0)
+	city := f.placeSubject("City", nil, nil, 2, 0)
+	f.placeRel(town, city, propertyterms.KeyPartOf, nil, nil)
+	p := f.lifePerson()
+	birth := f.lifeEvent(p, "birth", "date", 1800, 2, town)
+	townID, cityID := f.promoteSubject(town), f.promoteSubject(city)
+	f.promoteSubject(birth)
+	pid := f.promoteSubject(p)
+	g := f.C.Graph()
+	g.Drop()
+	rows, err := conclusionsummaries.PersonsByIDs(f.C, [][]byte{pid})
+	must(t, err)
+	if len(rows) != 1 || len(rows[0].Birth.Places) != 1 {
+		t.Fatalf("rows %+v", rows)
+	}
+	got := rows[0].Birth.Places[0]
+	if !slices.Equal(got.Names, []string{"Town"}) || !slices.Equal(got.Parents, []string{"City"}) {
+		t.Fatalf("birth place %+v, want Town under City", got)
+	}
+	for name, id := range map[string][]byte{"town": townID, "city": cityID} {
+		if _, ok := g.Cached(id); ok {
+			t.Errorf("the %s node was loaded to name a person's birth place", name)
+		}
 	}
 }

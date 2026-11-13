@@ -22,7 +22,7 @@ var participantRoleOrder = []vocabkey.Role{
 // participantRoleOrder; a role the researcher defined ranks after every listed
 // one, the event's own such roles ordered by label; a participant with no role
 // ranks last.
-func sortParticipants(ps []EventParticipant, index map[string]int) {
+func sortParticipants(ps []conclusionsummaries.EventParticipant, index map[string]int) {
 	var unlisted []conclusionsummaries.Term
 	seen := map[string]bool{}
 	listed := func(t conclusionsummaries.Term) int {
@@ -48,7 +48,7 @@ func sortParticipants(ps []EventParticipant, index map[string]int) {
 		unlistedRank[string(t.ID)] = len(participantRoleOrder) + i
 	}
 	none := len(participantRoleOrder) + len(unlisted)
-	rank := func(p EventParticipant) int {
+	rank := func(p conclusionsummaries.EventParticipant) int {
 		best := none
 		for _, t := range p.Roles {
 			r, ok := unlistedRank[string(t.ID)]
@@ -63,13 +63,13 @@ func sortParticipants(ps []EventParticipant, index map[string]int) {
 	}
 	ranks := make(map[string]int, len(ps))
 	for _, p := range ps {
-		ranks[string(p.Person)] = rank(p)
+		ranks[string(p.ID)] = rank(p)
 	}
 	sort.SliceStable(ps, func(i, j int) bool {
-		ri, rj := ranks[string(ps[i].Person)], ranks[string(ps[j].Person)]
+		ri, rj := ranks[string(ps[i].ID)], ranks[string(ps[j].ID)]
 		if ri != rj {
 			return ri < rj
 		}
-		return index[string(ps[i].Person)] < index[string(ps[j].Person)]
+		return index[string(ps[i].ID)] < index[string(ps[j].ID)]
 	})
 }
