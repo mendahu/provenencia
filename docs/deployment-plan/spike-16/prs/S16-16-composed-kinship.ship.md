@@ -1,7 +1,7 @@
 # Ship log — S16-16 Kinship answers are composed from the pivots, and the Family read is one pass
 
 **Plan:** [`S16-16-composed-kinship.md`](S16-16-composed-kinship.md) · **Branch:** `s16-16-composed-kinship` · **PR:** #TBD
-**State:** implementing (resumed)
+**State:** draft PR open
 
 ## Round 0 — implement
 Base `main` @ `aa150de0f`. Dispatched `pr-implementer`, round 0.
@@ -27,3 +27,23 @@ Deviation: `warmProposal` uses `databasetest.Warm` (main already had it), same b
 
 ## Round 0 — resume
 Dispatched `pr-implementer` from STEP-4 (memory re-measure) onward.
+
+Machine: `Jakes-M1-Macbook-Pro.local` (Apple M1), `-benchtime 1x`, one run each.
+
+| Measure | Base (`42b032773`) | After | Ratio |
+| --- | --- | --- | --- |
+| warm-ms 4,000 | 115.9 | 201.2 | 1.74 |
+| warm-ms 16,000 | 137.9 | 312.8 | 2.27 |
+| after-commit-ms 4,000 | 621.5 | 919.5 | 1.48 |
+| after-commit-ms 16,000 | 1399 | 1817 | 1.30 |
+| TestLargeSourceBudgets warm | 131.8 ms | 141.8 ms (budget 950) | 1.08 |
+| kinship-B 4,000 / 16,000 | 1,345,832 / 4,534,264 | 0 / 0 | — |
+| evidence-B 4,000 / 16,000 | 34,491,240 / 44,955,880 | 28,430,544 / 38,494,000 | 0.82 / 0.86 |
+| canonlinks.kinship-keys | 14,162 / 14,162 | 14,162 / 14,162 | 1.00 |
+| canonlinks.for-keys, siblings-keys | 8,115 / 20,115 each | entries gone | — |
+
+The machine was loaded (the earlier run's 180.3 / 231.6 warm figures are the same code), so timings vary run to run: the budget test's warm run read 141.8 ms.
+
+**kinship-B 0 is real, not a HeapDelta artefact.** The `evidence` fill (a proposal of Source A) runs before the `kinship` fill and holds all 14,162 pivots; a temporary log showed `Relationships` over all 8,115 / 20,115 persons leaving the key count at 14,162. The base's 1.3 / 4.5 MB were the stored `for` and `siblings` answers, which no longer exist, and `evidence-B` fell by 6.1 / 6.5 MB for the same reason (its proposal stored `for` answers). The 1.1x memory check on the sum of the two fills: 35.8 / 49.5 MB before, 28.4 / 38.5 MB after (0.79 / 0.78). Passes.
+
+Budget raised to 950 ms (`budgetWarm`). `PROVENENCIA_GRAPH_VERIFY=1` suites of canonlinks, persondetail and promotealign pass. check-pr: PASS.
