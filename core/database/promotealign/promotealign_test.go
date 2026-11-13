@@ -1301,7 +1301,8 @@ func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name st
 }
 
 // A shared parent is not sibling evidence for Promote (R-18a): the siblings the
-// page reads leave the proposal as it was.
+// page reads leave the proposal as it was. Siblings are no longer stored, so
+// the read composes them and the proposal still cannot see them.
 func TestProposeIgnoresPageSiblings(t *testing.T) {
 	f := newFixture(t)
 	ann := f.Person(f.source, f.artifact, "Ann Ames")
