@@ -157,6 +157,14 @@ func loadGraphSubjects(q graphcache.Querier, graphID []byte) ([]graphcache.Evide
 	return out, rows.Err()
 }
 
+// citationWords are the words every Observation of one Citation shares.
+type citationWords struct {
+	artifactID       []byte
+	label, pageLabel string
+	page             int
+	uncertain        bool
+}
+
 func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.EvidenceObservation, error) {
 	rows, err := q.Query(`SELECT o.id, o.ref, o.citation_id, o.subject_id, o.property_id, o.polarity,
 			o.value_text, o.value_integer, o.value_boolean, o.value_date_id, o.value_name_id, o.value_subject_id, o.value_term_id, o.value_depiction_id,
@@ -174,6 +182,9 @@ func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.E
 	}
 	var out []graphcache.EvidenceObservation
 	var dateIDs, nameIDs [][]byte
+	// words is each Citation's words, parsed once: its locator can be large
+	// and an Observation only points at it.
+	words := map[string]citationWords{}
 	for rows.Next() {
 		var (
 			o                               graphcache.EvidenceObservation
@@ -199,10 +210,16 @@ func loadGraphObservations(q graphcache.Querier, graphID []byte) ([]graphcache.E
 		o.ValueSubjectID = append([]byte(nil), o.ValueSubjectID...)
 		o.TermID = append([]byte(nil), o.TermID...)
 		o.DepictionID = append([]byte(nil), o.DepictionID...)
-		o.ArtifactID = append([]byte(nil), o.ArtifactID...)
-		if citationLocator.Valid {
-			o.ArtifactPage, o.PageLabel = locator.Page(citationLocator.String)
+		w, seen := words[string(o.CitationID)]
+		if !seen {
+			w = citationWords{artifactID: append([]byte(nil), o.ArtifactID...), label: o.CitationLabel, uncertain: o.TranscriptionUncertain}
+			if citationLocator.Valid {
+				w.page, w.pageLabel = locator.Page(citationLocator.String)
+			}
+			words[string(o.CitationID)] = w
 		}
+		o.ArtifactID, o.CitationLabel, o.TranscriptionUncertain = w.artifactID, w.label, w.uncertain
+		o.ArtifactPage, o.PageLabel = w.page, w.pageLabel
 		if dv := depictionvalues.FromJoin(o.DepictionID, depictionRegion, depictionImage, citationLocator, imageMediaType); dv != nil {
 			o.DepictionRegion, o.DepictionImageFileID = dv.RegionJSON, dv.ImageFileID
 		}
