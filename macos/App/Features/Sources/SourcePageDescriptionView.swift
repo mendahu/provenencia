@@ -49,9 +49,10 @@ struct SourcePageDescriptionView: View {
                     }
                 ) {
                     Text(model.identity.description)
-                        .font(PVFont.body(size: PVTypeScale.body, weight: PVFontWeight.regular))
-                        .foregroundStyle(PVColor.textSecondary)
-                        .lineSpacing((PVLineHeight.normal - 1) * PVTypeScale.body)
+                        .font(PVFont.body(size: PVTypeScale.caption, weight: PVFontWeight.regular))
+                        .foregroundStyle(PVColor.textMuted)
+                        .lineSpacing((PVLineHeight.normal - 1) * PVTypeScale.caption)
+                        .frame(maxWidth: PVSpacing.measureProse, alignment: .leading)
                         .accessibilityIdentifier("sources.page.description")
                 } editor: {
                     PVTextArea(
