@@ -82,4 +82,4 @@ No new blockers from any reviewer.
 Nits (logged): `SEC+PRF · graphfill/load.go loadGraphObservations · citationLocator still scanned into sql.NullString per row (short-lived copy); sql.RawBytes would drop it`
 
 ## Result
-Gate PASS (head `6b8669ebb`, `main` unchanged at `d1d13478e`) · CI pending · open: none · follow-ups: SEC-1 depiction part (`depictionvalues.FromJoin` parses the Citation locator once per depiction Observation) · to user: —
+Gate PASS (head `6b8669ebb`, `main` unchanged at `d1d13478e`) · CI green · open: none · follow-ups: SEC-1 depiction part (`depictionvalues.FromJoin` parses the Citation locator once per depiction Observation) · to user: —
