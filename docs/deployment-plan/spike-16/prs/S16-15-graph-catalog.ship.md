@@ -66,4 +66,4 @@ No new findings. Minors MNT-2, MNT-3, MNT-4: Resolved (orchestrator read of `f3a
 Merged `origin/main` (`df55dbae5`, S15-33 plan docs only); gate PASS against `df55dbae5`.
 
 ## Result
-Gate PASS · CI pending · open: none · follow-ups: none · to user: — (T-8/D-4 amendment answered by the user before review)
+Gate PASS · CI green · open: none · follow-ups: none · to user: — (T-8/D-4 amendment answered by the user before review)
