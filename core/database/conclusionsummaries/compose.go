@@ -776,7 +776,8 @@ func eventDate(v vocab, ev *graphcache.Node) (dating eventDated, count int, prop
 // located at are returned for the caller to record the closure of.
 //
 // Owners are one date owner per event, and one place owner per event–place link
-// to a folded place, both in date order, each once.
+// to a folded place, both in date order, each once, up to maxLifeOwners in all.
+// Every owner of a folded place shares the one ChainedPlace built for it.
 func lifeFacts(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifePick) (LifeFacts, [][]byte, error) {
 	if len(picks) == 0 {
 		return LifeFacts{}, nil, nil
@@ -791,6 +792,7 @@ func lifeFacts(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifeP
 	var seeds [][]byte
 	dated := map[string]bool{}
 	listed := map[string]bool{}
+	owned := 0
 	for i, pick := range sorted {
 		locations, err := eventLocations(in, pick.event.ID)
 		if err != nil {
@@ -804,19 +806,24 @@ func lifeFacts(in *graphcache.InputScope, v vocab, pg *placeGraph, picks []lifeP
 		if i == 0 {
 			facts.Places = places
 		}
-		if !dated[string(pick.event.ID)] {
+		if !dated[string(pick.event.ID)] && owned < maxLifeOwners {
 			dated[string(pick.event.ID)] = true
+			owned++
 			facts.Owners.Dates = append(facts.Owners.Dates, FieldOwner{ID: pick.event.ID, PropertyID: pick.dateProp})
 		}
 		for _, p := range places {
+			shared := &ChainedPlace{Entity: p.Entity, Names: p.Names}
 			for _, l := range locations {
+				if owned >= maxLifeOwners {
+					break
+				}
 				if !bytes.Equal(l.Neighbor, p.Entity.ID) || len(l.Association) == 0 || listed[string(l.Association)] {
 					continue
 				}
 				listed[string(l.Association)] = true
+				owned++
 				facts.Owners.Places = append(facts.Owners.Places, FieldOwner{
-					ID: l.Association, PropertyID: placeProp,
-					Place: &ChainedPlace{Entity: p.Entity, Names: p.Names},
+					ID: l.Association, PropertyID: placeProp, Place: shared,
 				})
 			}
 		}
@@ -832,6 +839,11 @@ func lifeEvents(births, deaths []lifePick) [][]byte {
 	}
 	return out
 }
+
+// maxLifeOwners is the most owners (date and place together) one life row keeps;
+// the rest are dropped, in date order and then link order.
+// decided: user, 2026-11-08 (Spike 16 rule "Crafted fan-out is capped, not engineered"): a real life row has one to three events with one to three places each
+const maxLifeOwners = 64
 
 // maxEventPlaces is the most places one event names to the page; the rest are
 // not read.

@@ -223,3 +223,78 @@ func TestEventPlacesCapInputs(t *testing.T) {
 		t.Fatal("the 21st place did not move in")
 	}
 }
+
+// TestCraftedLifeOwners: persons sharing a birth filed at one place many times
+// each keep at most the first 64 owners behind their birth row, in link order,
+// and the read stays fast (S16-19 SEC-1, Spike 16 rule "Crafted fan-out is
+// capped, not engineered").
+func TestCraftedLifeOwners(t *testing.T) {
+	const most = 64 // conclusionsummaries.maxLifeOwners
+	for _, tc := range []struct {
+		name            string
+		persons, filing int
+		wantOwners      int
+	}{
+		// The birth's date owner counts with its place owners.
+		{"under the cap", 3, 21, 22},
+		{"at the cap", 3, most - 1, most},
+		{"past the cap", 3, 20 * most, most},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c := graphcachetest.OpenCatalog(t)
+			if err := nameformats.Warm(c); err != nil {
+				t.Fatal(err)
+			}
+			k := graphcachetest.NewCanon(t, c)
+			birth := k.Event(vocabkey.EventBirth)
+			place := k.Entity("place")
+			ids := [][]byte{birth, place}
+			var persons, links [][]byte
+			k.Bulk(func() {
+				for i := 0; i < tc.persons; i++ {
+					p := k.Person()
+					persons = append(persons, p)
+					ids = append(ids, p, k.Join(p, birth, "subject"))
+				}
+				for i := 0; i < tc.filing; i++ {
+					l := k.Location(birth, place)
+					links = append(links, l)
+					ids = append(ids, l)
+				}
+			})
+			k.Commit(ids...)
+			var rows []conclusionsummaries.PersonSummary
+			d := catalogsessiontest.Cold(t, c, 2, func() {
+				var err error
+				if rows, err = conclusionsummaries.PersonsByIDs(c, persons); err != nil {
+					t.Fatal(err)
+				}
+			})
+			databasetest.WithinBudget(t, "PersonsByIDs with crafted owners", d, time.Second)
+			if len(rows) != tc.persons {
+				t.Fatalf("%d rows, want %d", len(rows), tc.persons)
+			}
+			for _, r := range rows {
+				o := r.Birth.Owners
+				if n := len(o.Dates) + len(o.Places); n != tc.wantOwners {
+					t.Fatalf("a row keeps %d owners, want %d", n, tc.wantOwners)
+				}
+				for i, own := range o.Places {
+					if !bytes.Equal(own.ID, linkAt(t, c, birth, i)) {
+						t.Fatalf("owner %d is not the %dth link in link order", i, i)
+					}
+				}
+			}
+		})
+	}
+}
+
+// linkAt is the association of the birth's i-th location link in link order.
+func linkAt(t *testing.T, c *database.Catalog, birth []byte, i int) []byte {
+	t.Helper()
+	links, err := c.Graph().Follow(birth, hops.PlacesOfEvent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return links[i].Association
+}
