@@ -97,7 +97,7 @@ Gracie Gates appears on a Source with a name and a birth on 1 May 1901. The rese
 | **kinship pattern** | A row of `core/kinship`'s table that says a fact recorded one way implies a relationship link: a marriage's two subjects imply spouses, a birth's father or mother and subject imply a parent, and a parent of a parent implies a grandparent |
 | **implied link** | A relationship link a kinship pattern adds to one side, keyed as a recorded relationship; never stored or filed |
 | **shape** | One way a side records a link: a kinship pattern and the event or middle parent (its pivot) it passes through |
-| **pivot** | The one node a kinship pattern reads: an event (a marriage or a birth), or the person between in a chain; the graph cache keeps one result per pivot, derived on first read (`canonlinks.Reader.For`) |
+| **pivot** | The one node a kinship pattern reads: an event (a marriage or a birth), or the person between in a chain; the graph cache keeps one result per pivot, derived on first read and composed into a person's answer at each read (`canonlinks.Reader.For`) |
 | **match registry** | The one package holding every matching tunable, one section per layer group |
 | **knob** | One registry field a developer can tune; changing it is one edit in the registry |
 
