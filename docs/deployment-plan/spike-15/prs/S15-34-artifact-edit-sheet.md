@@ -1,6 +1,6 @@
 # S15-34 — Artifacts are edited in a sheet
 
-**Status:** Planned
+**Status:** Landed in [#819](https://github.com/mendahu/provenencia/pull/819) (2026-11-13)
 **Spike / slice:** Spike 15 · Slice 2 — Metadata at three levels
 **Map row:** [`../deployment-plan.md`](../deployment-plan.md#pr-map)
 **Brief:** [S15-D14](../design/S15-D14-source-page-artifacts.md) SA-4, SA-6, SA-8, SA-9, SA-12 – SA-15 and the Wide rows for the Metadata section and the sheet, board agreed 2026-11-13; plus the user's 2026-11-13 additions on the same board (the Metadata section header: help tooltip, no field count)
@@ -402,3 +402,13 @@ None.
 
 **Title:** S15-34 — Artifacts are edited in a sheet
 **Body:** objective in one sentence; what shipped against US-1 – US-5; AC evidence; deviations from the plan; manual check; `Plan: docs/deployment-plan/spike-15/prs/S15-34-artifact-edit-sheet.md`.
+
+## Landed
+
+- `ArtifactSheetModel`'s `onSaved` carries the reply rows as optional (`[CatalogMetadataEntry]?`, nil when the draft was nil) instead of D-4's non-optional array, so a text-only Save leaves the page's rows and the cached key alone, as D-7 says "when `metadata` is set".
+- The sheet model sets its graph choices and starts its lock read in `init` when the session's graph list is loaded (`graphsChanged()` is the one place both happen), instead of `openSheet` starting `linkLoadTask`.
+- `ArtifactSheetModel.subtitle` ("<Source ref> · <Source title>") is a model property the view's copy reads; `SourceArtifactsSection.copyDetails(for:)` reads a card's rows from the page's workspace.
+- `MetadataBoardModel` also clears a field's typed flag on a successful set (`applySet`) and on `cancelEdit`, not only in `dismissSuggestion`, `clear` and `resetDrafts`, so a filled suggestion cannot leave a stale flag that would block Save.
+- `MetadataBoardDialogs.openAdd`'s callers and the `MetadataBoardView` `onAdd` parameter are gone with the dialog; the `.page` placement's empty state has no button.
+- STEP-3 and STEP-4 are one commit (the header's Add field opens the inline row, so the two share code and strings).
+- The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
