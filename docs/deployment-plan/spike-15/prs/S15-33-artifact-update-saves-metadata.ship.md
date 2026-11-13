@@ -50,7 +50,7 @@ Head `456ef4fbb`. Gate PASS (orchestrator rerun). F-1 – F-4 done. Deviation: `
 Not dispatched: round 1 had no Fix-now blocker or major. Orchestrator read the fix commit: CON-1 **Resolved** (T-6 sends "P6 renamed", asserts label "P6" and unchanged `latestRevisionTypes`); MNT-1 **Resolved** (`artifactLabel`, one `range ws.GetArtifacts()`); MNT-2 **Resolved** (`boardEntries`; remaining inline calls are the owner-id test and the error path); MNT-3 **Resolved** (`errors.Is` + `errParams`, `apperr` import gone).
 
 ## Result
-`origin/main` unchanged since the branch was cut. Gate PASS · CI red (Go tests) · open: none · follow-ups: none · to user: CI budget below (answered)
+`origin/main` unchanged since the branch was cut. Gate PASS · CI green (after the budget change) · open: none · follow-ups: none · to user: CI budget below (answered)
 
 **CI.** `test` (app) and `localizable` pass. `Go tests` fails twice (run 43349656962, first attempt and rerun) on `core/database/promotealign` `TestLargeSourceBudgets/compose_every_summary`: 517ms then 507ms against a 500ms budget. Not this PR: the diff touches nothing in `promotealign`, and its only shared dependency is `core/apperr`, where this PR changed doc comments only (`go list -deps`). Locally on this head the subtest takes 176–181ms. The CI runner sits right at the budget. A fix round would mean changing an unrelated perf budget or test, which is outside this plan; taken to the user.
 
