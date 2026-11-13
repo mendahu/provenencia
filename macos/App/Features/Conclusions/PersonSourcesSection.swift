@@ -433,6 +433,7 @@ private struct PersonSourcesRowView: View {
     private var typeCell: some View {
         if let label = row.typeLabel {
             CatalogSourceTypePill(label: label)
+                .help(label)
         } else {
             Color.clear.frame(height: 1)
         }

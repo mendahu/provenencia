@@ -31,6 +31,7 @@ struct ArtifactCopyDetailsView: View {
                                 .foregroundStyle(PVColor.textMuted)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
+                                .help(entry.field.label)
                                 .frame(width: Self.labelWidth, alignment: .leading)
                                 .gridColumnAlignment(.leading)
                             MetadataValueText(
