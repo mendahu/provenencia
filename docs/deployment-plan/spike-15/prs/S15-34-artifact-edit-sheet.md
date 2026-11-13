@@ -412,3 +412,4 @@ None.
 - `MetadataBoardDialogs.openAdd`'s callers and the `MetadataBoardView` `onAdd` parameter are gone with the dialog; the `.page` placement's empty state has no button.
 - STEP-3 and STEP-4 are one commit (the header's Add field opens the inline row, so the two share code and strings).
 - The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
+- Review round 1, user's call of 2026-11-13: the add row uses the kit's `PVInlineEditActions(.iconRow)` ✓/✕ (ids `.addRow.save` / `.addRow.cancel`), takes Escape through the ✕'s `.cancelAction` and has no `.onExitCommand`, and its picker takes focus on open; this supersedes D-10's rejected ".cancelAction ✕". A suggestion row raises `.pvSheetInnerEdit` only while its input is focused with text, which supersedes D-2's `hasTypedText` signal.

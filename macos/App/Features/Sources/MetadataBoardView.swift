@@ -133,6 +133,9 @@ private struct MetadataBoardAddRowView: View {
     let comboWidth: CGFloat
     let accessibilityIdentifierPrefix: String
 
+    private enum Field { case picker }
+    @FocusState private var focus: Field?
+
     var body: some View {
         let prefix = "\(accessibilityIdentifierPrefix).addRow"
         VStack(alignment: .leading, spacing: PVSpacing.space2) {
@@ -149,8 +152,10 @@ private struct MetadataBoardAddRowView: View {
                         emptyLabel: L10n.Sources.typeNoMatch,
                         isInvalid: false,
                         label: L10n.Sources.metadataField,
-                        accessibilityIdentifierPrefix: "\(prefix).field"
+                        accessibilityIdentifierPrefix: "\(prefix).field",
+                        focus: PVFieldFocus($focus, equals: .picker)
                     )
+                    .onAppear { DispatchQueue.main.async { focus = .picker } }
                     .frame(width: comboWidth)
                     PVInput(
                         text: Binding(
@@ -165,15 +170,16 @@ private struct MetadataBoardAddRowView: View {
                     .onSubmit { Task { await board.confirmAddRow() } }
                     .accessibilityLabel(L10n.string(L10n.Sources.metadataValue))
                     .accessibilityIdentifier("\(prefix).value")
-                    confirmControl
-                    PVIconButton(
-                        .dismiss,
-                        label: L10n.Sources.metadataAddRowCancelLabel,
-                        size: .sm
-                    ) {
-                        board.closeAddRow()
-                    }
-                    .accessibilityIdentifier("\(prefix).cancel")
+                    PVInlineEditActions(
+                        isSaving: board.isSavingAddRow,
+                        saveLabel: L10n.Sources.metadataAddRowConfirmLabel,
+                        cancelLabel: L10n.Sources.metadataAddRowCancelLabel,
+                        saveDisabled: !board.canConfirmAddRow,
+                        style: .iconRow,
+                        accessibilityIdentifierPrefix: prefix,
+                        onSave: { Task { await board.confirmAddRow() } },
+                        onCancel: { board.closeAddRow() }
+                    )
                 }
                 .padding(.vertical, PVSpacing.space4)
                 .padding(.horizontal, PVSpacing.space5)
@@ -187,29 +193,8 @@ private struct MetadataBoardAddRowView: View {
                     .pvAnnounce(L10n.Sources.metadataAddRowFieldTaken(field: taken))
             }
         }
-        // Escape closes the row; the enclosing sheet's own Escape stands down while it is open.
-        .onExitCommand { board.closeAddRow() }
+        // The ✕ takes Escape; the enclosing sheet's own Escape stands down while the row is open.
         .pvSheetInnerEdit(true)
-    }
-
-    @ViewBuilder
-    private var confirmControl: some View {
-        if board.isSavingAddRow {
-            ProgressView()
-                .controlSize(.small)
-                .frame(width: PVControlSize.sm.height, height: PVControlSize.sm.height)
-        } else {
-            PVIconButton(
-                .check,
-                label: L10n.Sources.metadataAddRowConfirmLabel,
-                size: .sm,
-                tone: .accent
-            ) {
-                Task { await board.confirmAddRow() }
-            }
-            .disabled(!board.canConfirmAddRow)
-            .accessibilityIdentifier("\(accessibilityIdentifierPrefix).addRow.confirm")
-        }
     }
 }
 
@@ -224,6 +209,7 @@ private struct MetadataBoardSuggestionRow: View {
     let onDismiss: () -> Void
 
     @State private var draft = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         let fieldID = entry.field.id
@@ -239,7 +225,8 @@ private struct MetadataBoardSuggestionRow: View {
                         size: .sm,
                         mono: true,
                         prompt: L10n.Sources.metadataSuggestionPlaceholder,
-                        isInvalid: error != nil
+                        isInvalid: error != nil,
+                        focused: $isFocused
                     )
                     .onSubmit { onSave(draft) }
                     .accessibilityLabel(entry.field.label)
@@ -272,8 +259,8 @@ private struct MetadataBoardSuggestionRow: View {
             .padding(.vertical, PVSpacing.space4)
             .padding(.horizontal, PVSpacing.space5)
         }
-        // Typed text is an inner edit: Escape clears it before the sheet reacts.
-        .pvSheetInnerEdit(!draft.isEmpty)
+        // Typed text in the focused input is an inner edit: Escape clears it before the sheet reacts.
+        .pvSheetInnerEdit(isFocused && !draft.isEmpty)
         .onExitCommand { draft = "" }
         .onChange(of: draft) { _, text in onTyped(!text.isEmpty) }
     }
