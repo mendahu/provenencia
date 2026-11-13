@@ -347,3 +347,4 @@ None.
 - STEP-1 and STEP-2 are one commit (the header file carries both steps' edits), and the three `ArtifactRowAction`, `graphLines` and menu-title additions of STEP-4 share one commit with their tests.
 - `artifactGraphsSpoken` (STEP-5's key) and the `restingCardMarksAnArtifactInNoGraph` rename (STEP-6) landed in STEP-4's commit, with the other new L10n keys, so the build and tests stay green at each commit.
 - The manual check (section 10) was not run by the implementer; the Swift checks and `scripts/check-pr.sh` pass.
+- D-13 was changed by the user's answer to MNT-2 (2026-11-13): a menu title is a key or data, never both. `PVContextMenuPanel` and `pvRightClickMenu` each have a `title:` form and a `verbatimTitle:` form (the panel stores one `heading: Text?`, as `PVEmptyState` does), so `verbatimTitle: String? = nil` beside `title:` is gone.

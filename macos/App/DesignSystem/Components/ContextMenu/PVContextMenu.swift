@@ -80,18 +80,59 @@ enum PVContextMenuPlacement {
 
 /// Floating menu chrome: card surface, subtle border, overlay shadow.
 /// Optional caps section title matches Source-thumbnail / filter-style menus.
-/// `verbatimTitle` is a title that is data (a ref), drawn as given; it wins over `title`.
+/// A title is a localized key (`init(title:…)`) or data such as a ref, drawn as
+/// given (`init(verbatimTitle:…)`); never both.
 struct PVContextMenuPanel<Content: View>: View {
-    var title: LocalizedStringResource?
-    var verbatimTitle: String?
-    var width: CGFloat = 180
+    private let heading: Text?
+    var width: CGFloat
     var maxHeight: CGFloat?
     var accessibilityIdentifier: String?
     @ViewBuilder var content: () -> Content
 
+    init(
+        title: LocalizedStringResource? = nil,
+        width: CGFloat = 180,
+        maxHeight: CGFloat? = nil,
+        accessibilityIdentifier: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.init(
+            heading: title.map { Text($0) }, width: width, maxHeight: maxHeight,
+            accessibilityIdentifier: accessibilityIdentifier, content: content
+        )
+    }
+
+    init(
+        verbatimTitle: String,
+        width: CGFloat = 180,
+        maxHeight: CGFloat? = nil,
+        accessibilityIdentifier: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.init(
+            heading: Text(verbatim: verbatimTitle), width: width, maxHeight: maxHeight,
+            accessibilityIdentifier: accessibilityIdentifier, content: content
+        )
+    }
+
+    /// For a host that already built its heading (`pvRightClickMenu`).
+    init(
+        heading: Text?,
+        width: CGFloat = 180,
+        maxHeight: CGFloat? = nil,
+        accessibilityIdentifier: String? = nil,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.heading = heading
+        self.width = width
+        self.maxHeight = maxHeight
+        self.accessibilityIdentifier = accessibilityIdentifier
+        self.content = content
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let heading = verbatimTitle.map({ Text(verbatim: $0) }) ?? title.map({ Text($0) }) {
+            if let heading {
                 heading
                     .font(PVFont.body(size: PVTypeScale.micro, weight: PVFontWeight.semibold))
                     .tracking(PVTypeScale.micro * PVTracking.caps)
