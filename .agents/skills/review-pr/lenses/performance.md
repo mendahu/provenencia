@@ -189,4 +189,4 @@ The shape to copy. Names in the example are illustrative.
 "`SourcesListModel` calls `store.sourceEvidenceStatus(id)` once per row
 (N FFI calls, each a query) when the list loads. With 2,000 Sources that is
 2,000 round trips on the main actor. The working rule for S10-41 asks for one
-grouped query beside `graphprogress`; return the counts with the list."
+grouped query beside `evidencegraphs.ListProgress`; return the counts with the list."

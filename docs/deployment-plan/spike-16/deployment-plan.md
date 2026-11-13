@@ -27,7 +27,7 @@ Spike 16 is an odds-and-ends spike ([odd and even spikes](../README.md#odd-and-e
 | S16-09 | S15-29 | `.conclusionDetail`'s Source follow: once its records move to the sheet's key, S15-29 restates what the detail key follows |
 | S16-25 | — | Converts any `CatalogQueryKey` cases Spike 15 adds before it lands (likely S15-11, S15-17, S15-21's sheet key, S15-23) along with the rest; Spike 15 keys added after it use the value keys |
 
-Spike 16's Apply for Source records and the graph catalog must handle an Artifact or graph whose `source_id` changes (S15-24): both Sources are in the write's `SourceScopes`.
+Spike 16's Apply for Source records and the graph catalog must handle an Artifact or graph whose `source_id` changes (S15-24): both Sources are in the write's `SourceScopes` (Source records) and its `evidence_graphs` read (the graph index).
 
 ## Goal (dogfood bar)
 
