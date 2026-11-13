@@ -478,7 +478,7 @@
       }
     },
     "designSystem.formDialog.discardConfirm": {
-      "comment": "Confirms dropping the edits of a form sheet or an Artifact card with unsaved edits (outside click, Escape, a row that navigates, another card's edit)",
+      "comment": "Confirms dropping the edits of a form sheet with unsaved edits (outside click, Escape, a row that navigates)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -490,7 +490,7 @@
       }
     },
     "designSystem.formDialog.discardKeep": {
-      "comment": "Keeps the edits of a form sheet or an Artifact card with unsaved edits and returns to the form or card (outside click, Escape, a row that navigates, another card's edit)",
+      "comment": "Keeps the edits of a form sheet with unsaved edits and returns to the form (outside click, Escape, a row that navigates)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -502,7 +502,7 @@
       }
     },
     "designSystem.formDialog.discardMessage": {
-      "comment": "Body of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
+      "comment": "Body of the confirm shown when a form sheet with unsaved edits is about to drop them (outside click, Escape, a row that navigates)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -514,7 +514,7 @@
       }
     },
     "designSystem.formDialog.discardTitle": {
-      "comment": "Title of the confirm shown when a form sheet or an Artifact card with unsaved edits is about to drop them (outside click, Escape, a row that navigates, another card's edit)",
+      "comment": "Title of the confirm shown when a form sheet with unsaved edits is about to drop them (outside click, Escape, a row that navigates)",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -8364,18 +8364,6 @@
         }
       }
     },
-    "sources.page.artifactNoDescription": {
-      "comment": "Placeholder on an artifact card when the description is empty",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No description"
-          }
-        }
-      }
-    },
     "sources.page.artifactOpenFileTip": {
       "comment": "Tooltip on an artifact preview that opens the file in its default app",
       "extractionState": "manual",
@@ -9553,7 +9541,7 @@
       }
     },
     "sources.page.editArtifactLabel": {
-      "comment": "Tooltip and VoiceOver label for the pencil on an artifact card, and the Artifact sheet title; argument is the ART- ref",
+      "comment": "Tooltip and VoiceOver label for the pencil on an Artifact row, and the Artifact sheet title; argument is the ART- ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -9997,7 +9985,7 @@
       }
     },
     "sources.page.artifactCopyDetailsMore": {
-      "comment": "Button on an artifact card after its first copy details; argument is how many more it holds",
+      "comment": "Button on an Artifact row after its first copy details; argument is how many more it holds",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -10009,7 +9997,7 @@
       }
     },
     "sources.page.artifactCopyDetailsMoreLabel": {
-      "comment": "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref",
+      "comment": "VoiceOver label of the more button on an Artifact row; %1$lld is how many more, %2$@ is the ART- ref",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23406,7 +23394,7 @@
       }
     },
     "sources.page.artifact.notInGraph": {
-      "comment": "Badge on a resting artifact card when no evidence graph links the artifact",
+      "comment": "Badge on an Artifact row when no evidence graph links the artifact",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -23418,7 +23406,7 @@
       }
     },
     "sources.page.artifact.linkToGraph": {
-      "comment": "Button on a resting artifact card in no evidence graph; opens the card's edit with the graph boxes",
+      "comment": "Button on an Artifact row in no evidence graph; opens the Artifact sheet at its graph boxes",
       "extractionState": "manual",
       "localizations": {
         "en": {

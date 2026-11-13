@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Individual Source page (S2-18 / S2-25): pinned identity header, Description +
-/// Credibility beside Metadata (Metadata in a side column at Wide), graphs, artifact cards, Notes,
+/// Credibility beside Metadata (Metadata in a side column at Wide), graphs, Artifact rows, Notes,
 /// on Page columns. Section bodies live in sibling `SourcePage*View` files; this shell owns cache
 /// sync, dialogs, and layout.
 struct SourcePageView: View {

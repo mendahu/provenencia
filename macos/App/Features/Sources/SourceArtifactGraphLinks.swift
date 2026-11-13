@@ -38,7 +38,7 @@ struct SourceArtifactGraphLinks: View {
 extension CatalogEvidenceGraphUnlinkBlock {
     /// The hint under a locked row: the Citations the engine says would be
     /// left or are using the Artifact, else the engine's own reason. One
-    /// wording for the Artifact card and the graph form; no reason is
+    /// wording for the Artifact sheet and the graph form; no reason is
     /// decided here.
     var lockHint: String {
         citations.total > 0
