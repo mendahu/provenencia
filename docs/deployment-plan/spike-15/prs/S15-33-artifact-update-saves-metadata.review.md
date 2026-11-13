@@ -1,6 +1,6 @@
 # Review — S15-33 Editing an Artifact can save its metadata
 
-**Verdict:** (after round 2)
+**Verdict:** Fits with changes — Ready with changes
 **Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
@@ -72,3 +72,19 @@ Executability (Sonnet) accepted X-1 – X-5, X-7 and M-1 – M-6; X-6 partly, wi
 
 ### X-13 · minor · Wording and placement left open
 **Answer:** Fixed — D-6 gives the `add-ffi-handler` sentence; T-9 is a new subtest on `m.artifact`; AC-1.1's draft is built by hand.
+
+Maintainability (Opus) accepted X-1 – X-7, M-1, M-5, M-6; challenged M-2, M-3 and M-4's answers.
+
+### M-8 · blocker · T-1 asserts "no params" on the blank-value case
+**Answer:** Fixed — same as X-9.
+
+### M-2 (round 2) · major · `core/apperr`'s doc comments still say params are L10n args
+**Answer:** Fixed — STEP-1 rewords `apperr.Error`'s and `apperr.New`'s comments to D-6's wording.
+
+### M-3 (round 2) · major · A sixth inline board read in `GetSourceWorkspace`
+**Answer:** Fixed — `sources.go` `GetSourceWorkspace`'s Source board moves onto `ownerBoardProto`; `artifactBoardsProto` named as the batch form that stays.
+
+### M-4 (round 2) · major · The decline's premise was wrong
+**Answer:** Fixed — the four inline url-field creations in `sources_test.go` have `t` and `req` in scope; STEP-3 moves them onto `newField`; the Out row is gone.
+
+Optional (M-1, round 2): change `normalizeValue`'s signature instead of adding `normalizeFor`. Logged: `normalizeFor` wraps it, and both stay unexported in one file.
