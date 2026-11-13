@@ -6815,7 +6815,7 @@ enum L10n {
         static func artifactCopyDetailsMoreLabel(count: Int, ref: String) -> String {
             L10n.format(LocalizedStringResource(
                 "sources.page.artifactCopyDetailsMoreLabel",
-                defaultValue: "%1$lld more copy details of %2$@",
+                defaultValue: "%#@details@ of %2$@",
                 comment: "VoiceOver label of the more button on an artifact card; %1$lld is how many more, %2$@ is the ART- ref"
             ), count, ref)
         }

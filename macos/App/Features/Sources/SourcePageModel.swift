@@ -15,7 +15,7 @@ final class SourcePageModel {
     var notes: SourceNotesSection
     var artifacts: SourceArtifactsSection
     var graphs: SourceGraphsSection
-    /// The page's one Add-metadata dialog and clear confirm, for every board on it.
+    /// The page's one clear confirm, for every board on it.
     let metadataDialogs = MetadataBoardDialogs()
 
     /// The Copy Source form while it is open.

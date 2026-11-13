@@ -9979,7 +9979,29 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld more copy details of %2$@"
+            "value": "%#@details@ of %2$@"
+          },
+          "substitutions": {
+            "details": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg more copy detail"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg more copy details"
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }

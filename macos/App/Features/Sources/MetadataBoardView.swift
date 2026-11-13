@@ -376,12 +376,16 @@ struct MetadataValueText: View {
             .buttonStyle(.plain)
             .modifier(MetadataValueChromeIf(chrome: chrome))
             .accessibilityIdentifier(accessibilityIdentifier)
-            .help(L10n.string(L10n.Sources.openMetadataURL))
+            .help(lineLimit == nil
+                ? L10n.string(L10n.Sources.openMetadataURL)
+                : "\(L10n.string(L10n.Sources.openMetadataURL))\n\(entry.valueText)")
         } else {
             valueText
                 .foregroundStyle(PVColor.textPrimary)
                 .modifier(MetadataValueChromeIf(chrome: chrome))
                 .accessibilityIdentifier(accessibilityIdentifier)
+                // A truncated value shows whole on hover.
+                .help(lineLimit == nil ? "" : entry.valueText)
         }
     }
 
