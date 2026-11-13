@@ -77,40 +77,34 @@ type EventParticipant struct {
 	Roles []Term
 }
 
-// neighborRoles is one neighbor of a walk and the distinct roles its links
-// carry.
-type neighborRoles struct {
-	id    []byte
-	roles []Term
-	seen  map[string]struct{}
-}
-
 // rolesByNeighbor is the one collapse rule for an event's participants: links
 // in input order; neighbors are de-duplicated in first-seen order; each link
 // adds its role term to its neighbor's roles unless that term is already
 // there. A link with no term, or whose term label does not know, adds no role.
-func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) (Term, bool)) []neighborRoles {
-	var out []neighborRoles
+// The ids are copies, so the result does not alias the links.
+func rolesByNeighbor(links []graphcache.Link, label func(id []byte, key string) (Term, bool)) []EventParticipant {
+	var out []EventParticipant
 	index := map[string]int{}
+	seen := map[string]map[string]struct{}{}
 	for _, l := range links {
 		i, ok := index[string(l.Neighbor)]
 		if !ok {
 			i = len(out)
 			index[string(l.Neighbor)] = i
-			out = append(out, neighborRoles{id: l.Neighbor})
+			out = append(out, EventParticipant{ID: append([]byte(nil), l.Neighbor...)})
 		}
 		if len(l.TermID) == 0 {
 			continue
 		}
-		if _, have := out[i].seen[string(l.TermID)]; have {
+		if _, have := seen[string(l.Neighbor)][string(l.TermID)]; have {
 			continue
 		}
 		if t, ok := label(l.TermID, l.TermKey); ok {
-			if out[i].seen == nil {
-				out[i].seen = map[string]struct{}{}
+			if seen[string(l.Neighbor)] == nil {
+				seen[string(l.Neighbor)] = map[string]struct{}{}
 			}
-			out[i].seen[string(l.TermID)] = struct{}{}
-			out[i].roles = append(out[i].roles, t)
+			seen[string(l.Neighbor)][string(l.TermID)] = struct{}{}
+			out[i].Roles = append(out[i].Roles, t)
 		}
 	}
 	return out

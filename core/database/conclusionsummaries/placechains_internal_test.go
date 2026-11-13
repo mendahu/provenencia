@@ -182,17 +182,17 @@ func TestRolesByNeighbor(t *testing.T) {
 	if len(got) != 4 {
 		t.Fatalf("%d neighbors, want 4: %+v", len(got), got)
 	}
-	if !bytes.Equal(got[0].id, id('A')) || len(got[0].roles) != 2 ||
-		!bytes.Equal(got[0].roles[0].ID, id(1)) || !bytes.Equal(got[0].roles[1].ID, id(2)) {
+	if !bytes.Equal(got[0].ID, id('A')) || len(got[0].Roles) != 2 ||
+		!bytes.Equal(got[0].Roles[0].ID, id(1)) || !bytes.Equal(got[0].Roles[1].ID, id(2)) {
 		t.Fatalf("A: %+v", got[0])
 	}
-	if !bytes.Equal(got[1].id, id('B')) || len(got[1].roles) != 0 {
+	if !bytes.Equal(got[1].ID, id('B')) || len(got[1].Roles) != 0 {
 		t.Fatalf("B: %+v", got[1])
 	}
-	if !bytes.Equal(got[2].id, id('C')) || len(got[2].roles) != 0 {
+	if !bytes.Equal(got[2].ID, id('C')) || len(got[2].Roles) != 0 {
 		t.Fatalf("C: %+v", got[2])
 	}
-	if !bytes.Equal(got[3].id, id('D')) || len(got[3].roles) != 1 || !bytes.Equal(got[3].roles[0].ID, id(1)) {
+	if !bytes.Equal(got[3].ID, id('D')) || len(got[3].Roles) != 1 || !bytes.Equal(got[3].Roles[0].ID, id(1)) {
 		t.Fatalf("D: %+v", got[3])
 	}
 }
@@ -211,12 +211,12 @@ func TestRolesByNeighborManyLinks(t *testing.T) {
 		}
 	}
 	got := rolesByNeighbor(links, label)
-	if len(got) != 1 || len(got[0].roles) != 3 {
+	if len(got) != 1 || len(got[0].Roles) != 3 {
 		t.Fatalf("got %+v", got)
 	}
 	for i, want := range []byte{3, 1, 2} {
-		if !bytes.Equal(got[0].roles[i].ID, id(want)) {
-			t.Fatalf("role %d: %+v, want %d", i, got[0].roles[i], want)
+		if !bytes.Equal(got[0].Roles[i].ID, id(want)) {
+			t.Fatalf("role %d: %+v, want %d", i, got[0].Roles[i], want)
 		}
 	}
 }

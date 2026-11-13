@@ -984,9 +984,7 @@ func oneEvent(in *graphcache.InputScope, v vocab, pg *placeGraph, n *graphcache.
 	if err != nil {
 		return EventSummary{}, err
 	}
-	for _, p := range rolesByNeighbor(participantLinks, v.term) {
-		h.Participants = append(h.Participants, EventParticipant{ID: append([]byte(nil), p.id...), Roles: p.roles})
-	}
+	h.Participants = append(h.Participants, rolesByNeighbor(participantLinks, v.term)...)
 	if h.Date != nil {
 		h.StartDate = nil
 		h.EndDate = nil
