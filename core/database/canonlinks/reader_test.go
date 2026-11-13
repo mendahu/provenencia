@@ -1177,6 +1177,22 @@ func TestComposedAnswersReusePivots(t *testing.T) {
 			t.Fatalf("derived %d pivots, dropped %d", len(derived), len(dropped))
 		}
 	})
+	t.Run("commit a stranger", func(t *testing.T) {
+		w, people, _, _ := build(t)
+		stranger := w.person("Stranger")
+		readAll(w, people)
+		held := heldOf(w)
+		if len(held) == 0 {
+			t.Fatal("no pivot is held after reading every person")
+		}
+		w.k.Commit(stranger)
+		after := heldOf(w)
+		for id := range held {
+			if !after[id] {
+				t.Fatalf("a commit on a person linked to nobody dropped the pivot of %s", w.name([]byte(id)))
+			}
+		}
+	})
 	t.Run("commit cal", func(t *testing.T) {
 		w, people, ann, cal := build(t)
 		readAll(w, people)
