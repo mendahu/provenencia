@@ -44,7 +44,7 @@ func TestEvidenceGraphCap(t *testing.T) {
 	}{
 		{"oldest is evicted", []capStep{{"read", 0}, {"read", 1}, {"read", 2}}, []int{1, 2}, []int{0}},
 		{"a read is a use", []capStep{{"read", 0}, {"read", 1}, {"read", 0}, {"read", 2}}, []int{0, 2}, []int{1}},
-		{"a drop clears the loaded set", []capStep{{"read", 0}, {"read", 1}, {"drop", 0}, {"read", 2}, {"read", 3}}, []int{2, 3}, []int{0, 1}},
+		{"a drop clears the loaded set and keeps the cap", []capStep{{"read", 0}, {"read", 1}, {"drop", 0}, {"read", 1}, {"read", 2}, {"read", 3}}, []int{2, 3}, []int{0, 1}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

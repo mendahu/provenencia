@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -289,17 +290,26 @@ func TestVerifyLeavesEntriesAlone(t *testing.T) {
 			t.Setenv("PROVENENCIA_GRAPH_VERIFY", verify)
 			e := newEntriesWorld(t)
 			g := e.w.f.c.Graph()
-			// A fresh read of both graphs' records and loaded graphs, in the
-			// order a then b, so a is the least recently used of each entry.
-			for _, id := range [][]byte{e.a, e.b} {
+			// Six graphs, so a Check that touched keys in map order would
+			// leave a least recently used only one time in six.
+			ids := [][]byte{e.a, e.b}
+			for i := 0; i < 4; i++ {
+				src, art := e.w.f.NewSource(fmt.Sprintf("Extra %d", i))
+				e.w.f.Person(src, art, "Mary Jones")
+				id := e.w.f.Graph(src)
+				e.w.f.propose(id, nil)
+				ids = append(ids, id)
+			}
+			// A fresh read of every graph's records and loaded graph, in order, so a is the least recently used of each entry.
+			for _, id := range ids {
 				if _, err := graphfill.EvidenceGraph(g, id); err != nil {
 					t.Fatal(err)
 				}
 			}
-			if _, err := graphfill.RecordsOf(g, [][]byte{e.a, e.b}); err != nil {
+			if _, err := graphfill.RecordsOf(g, ids); err != nil {
 				t.Fatal(err)
 			}
-			for _, id := range [][]byte{e.a, e.b} {
+			for _, id := range ids {
 				graphfill.Records.Peek(g, id)
 				if _, err := evidencelayer.Load(g, id); err != nil {
 					t.Fatal(err)
@@ -308,11 +318,11 @@ func TestVerifyLeavesEntriesAlone(t *testing.T) {
 					t.Fatalf("graph %x holds no candidates", id)
 				}
 			}
-			// Full caps of two on every entry, then a commit naming neither graph.
-			graphfill.Graphs.SetCapForTest(g, 2)
-			graphfill.Records.SetCapForTest(g, 2)
-			evidencelayer.Layers.SetCapForTest(g, 2)
-			promotealign.SetCandidatesCapForTest(g, 2)
+			// Full caps on every entry, then a commit naming none of the graphs.
+			graphfill.Graphs.SetCapForTest(g, len(ids))
+			graphfill.Records.SetCapForTest(g, len(ids))
+			evidencelayer.Layers.SetCapForTest(g, len(ids))
+			promotealign.SetCandidatesCapForTest(g, len(ids))
 			t.Cleanup(func() {
 				graphfill.Graphs.SetCapForTest(g, 0)
 				graphfill.Records.SetCapForTest(g, 0)
@@ -324,25 +334,34 @@ func TestVerifyLeavesEntriesAlone(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			// A third key arrives at each full entry: a, the least recently
-			// used, leaves and b stays.
+			// Another key arrives at each full entry: a, the least recently
+			// used, leaves and the rest stay.
 			c := bytes.Repeat([]byte{9}, 16)
 			evidencelayer.Layers.Set(g, c, evidencelayer.Layer{})
 			graphfill.Graphs.Set(g, c, graphcache.EvidenceGraph{})
 			graphfill.Records.Set(g, c, nil)
 			promotealign.HoldCandidatesForTest(g, c)
 			for name, got := range map[string][2]bool{
-				"graphs":     {peekGraph(g, e.a), peekGraph(g, e.b)},
-				"records":    {peekRecords(g, e.a), peekRecords(g, e.b)},
-				"layers":     {e.layer(e.a), e.layer(e.b)},
-				"candidates": {e.candidates(e.a), e.candidates(e.b)},
+				"graphs":     held(ids, func(id []byte) bool { return peekGraph(g, id) }),
+				"records":    held(ids, func(id []byte) bool { return peekRecords(g, id) }),
+				"layers":     held(ids, e.layer),
+				"candidates": held(ids, e.candidates),
 			} {
 				if got[0] || !got[1] {
-					t.Errorf("%s: a held %v, b held %v, want a evicted and b held", name, got[0], got[1])
+					t.Errorf("%s: a held %v, the rest held %v, want a evicted and the rest held", name, got[0], got[1])
 				}
 			}
 		})
 	}
+}
+
+// held is whether the first id is held, and whether all the others are.
+func held(ids [][]byte, has func([]byte) bool) [2]bool {
+	rest := true
+	for _, id := range ids[1:] {
+		rest = rest && has(id)
+	}
+	return [2]bool{has(ids[0]), rest}
 }
 
 func peekGraph(g *graphcache.Graph, id []byte) bool {

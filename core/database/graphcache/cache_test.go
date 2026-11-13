@@ -179,20 +179,6 @@ func TestKeyedEvictsLeastRecentlyUsed(t *testing.T) {
 				t.Errorf("GetMany = %v, %v", got, err)
 			}
 		}, "-BC"},
-		{"a Check and KeyCounts are no use", func() {
-			k.Set(g, idA, "1")
-			k.Set(g, idB, "2")
-			if err := g.Verify(); err != nil {
-				t.Fatal(err)
-			}
-			if checked == 0 {
-				t.Error("Verify ran no Check")
-			}
-			if n := g.KeyCounts()["t.lru"]; n != 2 {
-				t.Errorf("KeyCounts = %d, want 2", n)
-			}
-			k.Set(g, idC, "3")
-		}, "-BC"},
 		{"a fill error stores nothing", func() {
 			k.Set(g, idA, "1")
 			boom := errors.New("boom")
@@ -216,6 +202,38 @@ func TestKeyedEvictsLeastRecentlyUsed(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("a Check and KeyCounts are no use", func(t *testing.T) {
+		// 64 keys, so a Check that touched keys in map order would leave key 1
+		// the least recently used only one time in 64.
+		const n = 64
+		id := func(i int) []byte { return bytes.Repeat([]byte{byte(i)}, 16) }
+		k.Clear(g)
+		k.SetCapForTest(g, n)
+		defer k.SetCapForTest(g, 0)
+		for i := 1; i <= n; i++ {
+			k.Set(g, id(i), "v")
+		}
+		checked = 0
+		if err := g.Verify(); err != nil {
+			t.Fatal(err)
+		}
+		if checked == 0 {
+			t.Error("Verify ran no Check")
+		}
+		if got := g.KeyCounts()["t.lru"]; got != n {
+			t.Errorf("KeyCounts = %d, want %d", got, n)
+		}
+		k.Set(g, id(n+1), "v")
+		if _, ok := k.Peek(g, id(1)); ok {
+			t.Error("key 1 is held, want it evicted as the least recently used")
+		}
+		for i := 2; i <= n+1; i++ {
+			if _, ok := k.Peek(g, id(i)); !ok {
+				t.Errorf("key %d is not held", i)
+			}
+		}
+	})
 
 	t.Run("SetCapForTest evicts at once and survives Drop", func(t *testing.T) {
 		k.Clear(g)
