@@ -157,6 +157,25 @@ func newLargeFixture(t testing.TB, persons int) *largeFixture {
 	return &largeFixture{fixture: f, a: f.source, onePlace: placeSrc, pageArt: pageArt, other: otherSrc, otherA: otherArt, city: cityID, citySubject: city}
 }
 
+// warmProposal is how long a warm proposal of Source A takes: the figure
+// TestLargeSourceBudgets gates and BenchmarkLargeSourcePropose reports.
+func (lf *largeFixture) warmProposal() time.Duration {
+	g := lf.Graph(lf.a)
+	return databasetest.Warm(func() { lf.propose(g, nil) })
+}
+
+// proposalAfterCommit is how long a proposal of Source A takes right after a
+// handle commit (a Person added to the other Source). n counts the people
+// added, so a name is never repeated across calls.
+func (lf *largeFixture) proposalAfterCommit(n *int) time.Duration {
+	g := lf.Graph(lf.a)
+	return databasetest.Fastest(2, func() time.Duration {
+		*n++
+		lf.promote(lf.Person(lf.other, lf.otherA, "Added "+letters(*n)+" Person"))
+		return databasetest.Since(func() { lf.propose(g, nil) })
+	})
+}
+
 // TestLargeSourceBudgets holds Promote to the times of S11-21 D-1 on a catalog
 // of 4,000 persons and 8,000 events (one city with 6,000), so a change that
 // makes it slow fails here instead of in a dogfood session. Subtests share one
@@ -205,8 +224,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// runner against 110 – 190 ms on a Mac). The cost itself is
 	// docs/ideas/promote-ranking.md#narrower-canon-walk.
 	t.Run("warm", func(t *testing.T) {
-		d := databasetest.Warm(func() { propose() })
-		databasetest.WithinBudget(t, "warm proposal", d, budgetWarm)
+		databasetest.WithinBudget(t, "warm proposal", lf.warmProposal(), budgetWarm)
 	})
 
 	t.Run("memo matches a fresh run", func(t *testing.T) {
@@ -220,12 +238,7 @@ func TestLargeSourceBudgets(t *testing.T) {
 
 	t.Run("after a handle commit", func(t *testing.T) {
 		n := 0
-		d := databasetest.Fastest(2, func() time.Duration {
-			n++
-			f.promote(f.Person(lf.other, lf.otherA, "Added "+letters(n)+" Person"))
-			return databasetest.Since(func() { propose() })
-		})
-		databasetest.WithinBudget(t, "proposal after a handle commit", d, budgetAfterCommit)
+		databasetest.WithinBudget(t, "proposal after a handle commit", lf.proposalAfterCommit(&n), budgetAfterCommit)
 	})
 
 	t.Run("warm queries", func(t *testing.T) {
