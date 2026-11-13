@@ -1,7 +1,7 @@
 # Review — S15-36 A metadata board can hold a draft
 
-**Verdict:** round 1: Fits with changes — Ready with changes. Round 2: pending.
-**Rounds:** 1 (round 2 due: round 1 had blockers). **Reviewers:** maintainability (Opus), executability (Sonnet)
+**Verdict:** Fits with changes — Ready with changes
+**Rounds:** 2. **Reviewers:** maintainability (Opus), executability (Sonnet)
 
 ## To user
 - None.
@@ -95,3 +95,24 @@ The maintainability reviewer (Opus, fresh context) found that every round-1 answ
 - M-2: D-5's "Why" pointed at D-12 instead of D-13. **Fixed.** The `.coded` matches inside `CoreInvokeError.errorDescription` and `L10n.Errors.message(for:)` predate this PR and are no worse after it. **Logged.**
 - M-4: `FakeStore.reorderMetadata` now uses the production `reordered(by:)` instead of its own local sort. The reviewer judged this no worse than today. **Logged.**
 - M-6: the map's Ships line still said the starting rows come "from `listTypeSuggestions`". **Fixed:** STEP-5 rewords it too.
+
+The executability reviewer (Sonnet, fresh context) traced D-12 against every view and test that reads the dialog's members and found that all of them compile and pass unchanged. It confirmed T-1 – T-12 can be run.
+
+### X-11 · minor · The dialog loses a picked field when a reset puts that field on the board
+**Answer:** Fixed. D-12 now states this, as the one dialog behaviour that changes.
+
+### X-12 · minor · `openAdd(on:)` on a second board leaves the first board's row open
+**Answer:** Fixed. D-12's `openAdd` closes the previous target's row, then opens an empty row on the new board.
+
+### X-13 · minor · D-13 reads as two `host.failureMessage` calls
+**Answer:** Fixed. `classifySetFailure` calls it once; `rowRefusalMessage` serves only `showRefusal`.
+
+### X-14 · minor · Test setup left to inference
+**Answer:** Fixed. §8 names the host's `fields`, and T-8's live half spells out how the row is opened and filled.
+
+### X-15 · nit · `FakeStore.createArtifact`'s rows can't be scripted
+`createArtifact` mints a random id, so a test cannot key the scripted rows to it.
+**Answer:** Logged for S15-10, which is the first PR to read those rows.
+
+### X-16 · nit · The §4 Docs row is imprecise
+**Answer:** Fixed.
