@@ -35,14 +35,18 @@ import (
 // raised from 1.5 s by the user on 2026-11-01: the CI runner measured 1.6–2.05 s
 // where a Mac measures 0.6 s (S13-02, S13-03). The warm figure was raised again
 // from 375 ms to 500 ms by the user on 2026-11-13, when the CI runner measured
-// 383 ms (S16-13; 1.25 times that is 479 ms). Warm history: 250, 350, 375,
-// 500 ms. Warm has now been raised for the CI runner: a proposal that creeps
-// toward 500 ms again is a real slowdown to investigate, not a reason to raise
-// it again.
+// 383 ms (S16-13; 1.25 times that is 479 ms), and again from 500 ms to 950 ms
+// by the user on 2026-11-13, because S16-16 composes each walked person's
+// kinship at every call instead of reading a stored answer (see
+// docs/ideas/promote-ranking.md#memoise-a-persons-composed-kinship): the CI
+// figure 383 ms times the worst ratio seen (1.96) times 1.25 headroom. Warm
+// history: 250, 350, 375, 500, 950 ms. Warm has now been raised for the CI
+// runner: a proposal that creeps toward 950 ms again is a real slowdown to
+// investigate, not a reason to raise it again.
 const (
 	budgetWarmOnOpen   = 2500 * time.Millisecond
 	budgetCold         = 2500 * time.Millisecond
-	budgetWarm         = 500 * time.Millisecond
+	budgetWarm         = 950 * time.Millisecond
 	budgetAfterCommit  = 2500 * time.Millisecond
 	budgetOnePlaceCold = 5 * time.Second
 	budgetOnePlaceWarm = 3 * time.Second
@@ -221,8 +225,9 @@ func TestLargeSourceBudgets(t *testing.T) {
 	// A warm proposal rebuilds the canon each time, about 120 MB of short-lived
 	// allocations over a heap of about 170 MB, so each run sets off one or two
 	// collections (2026-11-03, a best of three measured 388 ms on a loaded CI
-	// runner against 110 – 190 ms on a Mac). The cost itself is
-	// docs/ideas/promote-ranking.md#narrower-canon-walk.
+	// runner against 110 – 190 ms on a Mac). The cost itself is S16-22's to
+	// narrow: it reads each handle's links from the kinship pivots instead of
+	// walking the component.
 	t.Run("warm", func(t *testing.T) {
 		databasetest.WithinBudget(t, "warm proposal", lf.warmProposal(), budgetWarm)
 	})
