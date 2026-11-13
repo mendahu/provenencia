@@ -98,4 +98,26 @@ func TestPersonFamilyQueryCount(t *testing.T) {
 			t.Fatalf("queries: three people %d, three people and two unknown ids %d", b, c)
 		}
 	})
+	t.Run("a commit elsewhere", func(t *testing.T) {
+		w := newKinWorld(t)
+		pat := w.shape("", 2, 2, true)
+		stranger := w.person("Stranger")
+		firstFamily, firstOrigin, firstSummaries, err := persondetail.PersonFamily(w.c, pat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		w.k.Commit(stranger)
+		var queries int
+		w.c.Graph().SetQueryCounterForTest(func() { queries++ })
+		family, origin, summaries, err := persondetail.PersonFamily(w.c, pat)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if queries != 0 {
+			t.Fatalf("a read after a commit elsewhere issued %d graph queries", queries)
+		}
+		if !reflect.DeepEqual(firstFamily, family) || !reflect.DeepEqual(firstOrigin, origin) || !reflect.DeepEqual(firstSummaries, summaries) {
+			t.Fatal("the family, origin siblings or summaries changed after a commit elsewhere")
+		}
+	})
 }

@@ -1302,7 +1302,7 @@ func (f *fixture) filedBirth(src sources.Source, art artifacts.Artifact, name st
 
 // A shared parent is not sibling evidence for Promote (R-18a): the siblings the
 // page reads leave the proposal as it was.
-func TestProposeIgnoresStoredSiblings(t *testing.T) {
+func TestProposeIgnoresPageSiblings(t *testing.T) {
 	f := newFixture(t)
 	ann := f.Person(f.source, f.artifact, "Ann Ames")
 	bea := f.Person(f.source, f.artifact, "Bea Ames")
@@ -1321,17 +1321,16 @@ func TestProposeIgnoresStoredSiblings(t *testing.T) {
 
 	reader, err := canonlinks.NewReader(f.c.Graph())
 	must(t, err)
-	must(t, reader.LoadSiblings([][]byte{beaID, calID}))
-	links, err := reader.Relationships(beaID, canonlinks.Options{Siblings: true})
+	all, err := reader.Relationships([][]byte{beaID, calID}, canonlinks.Options{Siblings: true})
 	must(t, err)
-	if !slices.ContainsFunc(links, func(l kinship.Link) bool {
+	if !slices.ContainsFunc(all[string(beaID)], func(l kinship.Link) bool {
 		return slices.ContainsFunc(l.Shapes, func(sh kinship.Shape) bool { return sh.Pattern == kinship.PatternSharedParent })
 	}) {
 		t.Fatal("setup: Bea has no sibling through Ann")
 	}
 	after := f.propose(f.Graph(src), nil)
 	if !reflect.DeepEqual(before, after) {
-		t.Fatalf("proposal changed after siblings were stored:\n%+v\n%+v", before, after)
+		t.Fatalf("proposal changed after the page read siblings:\n%+v\n%+v", before, after)
 	}
 }
 
